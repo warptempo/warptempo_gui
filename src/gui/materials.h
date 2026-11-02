@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cool_edit_derive.h" // the HLS round trip the ring tones take
 #include "render.h"           // GuiRect, GuiColor, the chokepoints
 
 #include <cairo/cairo.h>
@@ -10,8 +9,7 @@
 // panel of 2026-10-23: "whatever ruling it needs to, we need to reverse to go
 // flat"; Live's grammar, every number measured on his Live 12 shots at
 // 100 %). This header is the one owner of the ground, the key, the lit fill,
-// the text tones and the well's tones, and of the hi-fi panel's constants
-// the overlays still read until their own flat pass lands.
+// the text tones, the well's tones and the pane.
 //
 // THE GROUND IS ONE FLAT COLOR, kGround 242424, everywhere outside the well's
 // regions and the keys: the band and its logo lane, row 8, the well's side
@@ -22,9 +20,10 @@
 // of the ground is a solid fill through the palette's chokepoint
 // (set_palette_source, render.h), which converts it for the window as it
 // converts every color (display_color), so True Colors holds with no cache
-// of its own. The palette's `face` and the chrome's `ground` and `light_3d`
-// roles ARE this constant (render.cpp's fill_program_palette,
-// chrome_derive.h).
+// of its own. The palette's `face` and the chrome's `ground` role ARE this
+// constant (render.cpp's fill_program_palette, chrome_derive.h). The modal
+// family's panel margins are this ground too, its box's outer rows and
+// columns included (modal_box.h).
 //
 // THE KEY (paint_key below; every key alike — the band's, row 8's, the
 // controls rows', the word buttons, the scrub's thumb, the on-screen
@@ -88,7 +87,10 @@ inline constexpr uint32_t kKeyFace  = 0x363636;
 inline constexpr uint32_t kLitFill  = 0xFFAD56;
 inline constexpr int      kKeyGapPx = 2;
 
-// THE WELL'S TONES (the head's THE WELL).
+// THE WELL'S TONES (the head's THE WELL). kWellFrame is THE GRAMMAR'S ONE
+// FRAME TONE (architect 2026-11-02, M14 "d"): the trim bar's frame and the
+// span's verticals, the scrub's one-px channel (render.h's scrub block) and
+// the cards' and the tooltip's one-px border (the chrome's `card_frame`).
 inline constexpr uint32_t kTrimBarFace = 0x3C3C3C;
 inline constexpr uint32_t kWellFrame   = 0x757575;
 inline constexpr uint32_t kRulerFace   = 0x363636;
@@ -102,29 +104,15 @@ inline constexpr uint32_t kLaneFace    = 0x303030;
 inline constexpr uint32_t kSelectionFill = 0x637E86;
 inline constexpr uint32_t kSelectionText = kTextOnLit;
 
-// -- WHAT THE OVERLAYS STILL READ ---------------------------------------------
-// The constants below are the hi-fi panel's, left standing for the overlays
-// (the modal box, the cards, the tooltip, the scrub's channel, the lists)
-// until their flat pass lands.
-//
-// THE FIELD (2026-10-23): every overlay field, the modal family's box, the
-// cards and the tooltip.
-inline constexpr uint32_t kFieldGround     = 0x0A0A0C;
-
-// THE RING TONES OFF A GROUND (2026-10-23): light L + .16 with S × .9, dark
-// L × .40, the hue kept. NO LINE OF THE MAIN PAGE WEARS THEM since the flat
-// look (the well's part 2026-11-02); the scrub's channel, the modal box's
-// ring and the cards' and the tooltip's rings do, off the flat ground
-// (kRingLight / kRingDark, the palette's `ce_hilight` / `ce_dark` and the
-// chrome's `hilight` / `shadow`), until their part lands.
-constexpr uint32_t ring_light_of(uint32_t mean) {
-    return cool_edit_derive::tone(mean, 1.0, 0.16, 0.9, 0.0);
-}
-constexpr uint32_t ring_dark_of(uint32_t mean) {
-    return cool_edit_derive::tone(mean, 0.40, 0.0);
-}
-inline constexpr uint32_t kRingLight = ring_light_of(kGround);
-inline constexpr uint32_t kRingDark  = ring_dark_of(kGround);
+// THE PANE (architect 2026-11-01 night, M6 A; 2026-11-02, M11 / M14): Live's
+// panel face, which is the keys' face — ONE CONSTANT, kKeyFace's own value,
+// named for what it paints: the modal family's box interior, flat, with no
+// frame, ring, shadow or row separator (modal_box.h's head; the score
+// viewer's darker pane, the one exception, is recorded there), and the
+// cards' and the tooltip's face (the chrome's `card_ground`,
+// chrome_derive.h) inside their one-px kWellFrame border (`card_frame`, the
+// trim bar's frame tone, paint_popup_chrome).
+inline constexpr uint32_t kPaneFace = kKeyFace;
 
 // -- THE KEY'S PAINTERS ------------------------------------------------------
 

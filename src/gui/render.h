@@ -168,44 +168,15 @@ struct TrimRange {
 // From 2026-10-02 until this ruling the bytes went to the P3 layer
 // unconverted, a hex then being a P3 triple.
 //
-// THE GRAMMAR WAS WINDOWS 95's DrawEdge, AT THE WINDOWS PIXEL (architect
-// 2026-10-02: every raised or sunken edge TWO lines a side, each one
-// Windows px), and IS ONE LINE AT ONE DEVICE PX since the hi-fi skin and its
-// sweep (2026-10-23; hairline_px, below), each ring's two tones MITRED where
-// they meet (architect 2026-10-06, overruling Windows' square join: the
-// top-right and bottom-left corner blocks split along the 45-degree
-// diagonal, the rule and its words at the mitre, paint_hairline_frame,
-// render.cpp). RELIEF COLOURS ARE SET IN ONE PLACE (architect 2026-10-04): every
-// edge below takes its quartet by Windows 95's scheme of how many lines a
-// side, and no other role draws a relief line. THE FAMILIES, lines given
-// outer then inner, top-left / bottom-right, each with its painter and its
-// wearers:
-//   (SOFT RAISED, SOFT SUNKEN and PLAIN RAISED — the caption buttons, the
-//                 scrub's pointed thumb and the restored window's sizing
-//                 frame, Windows 2000's Standard quartet — went 2026-10-23
-//                 with those parts: the hi-fi skin's keys,
-//                 cool_edit_paint.h; its caption and border went in turn
-//                 2026-10-24);
-//   (PLAIN SUNKEN, Shadow / Hilight, DkShadow / 3DLight (EDGE_SUNKEN) —
-//                 paint_relief_plain_sunken, the scrub's channel's until it
-//                 became two hairlines — went 2026-10-23 with the sweep);
-//   THE HAIRLINE RING (2026-10-23, paint_hairline_frame) — one device px a
-//                 side in the ring tones: the modal box, the cards and the
-//                 tooltip, the time fields, the canvas's wells, the view
-//                 bar's span;
-//   (SUNKEN OUTER, ONE line, Shadow / Hilight — the open menu title and
-//                 the program's frame's ring — went 2026-10-21 with both,
-//                 the frame's top row alone a flat Shadow line until it
-//                 went too, 2026-10-22);
-//   (ETCHED, a Shadow line with a Hilight line beside it — the menu
-//                 separator — went with the Settings popup, 2026-10-21.)
-// (The toolbar band, row 8 and their cases and time fields, the view bar,
-// the ruler and the marker lane are the PROGRAM'S since 2026-10-09 — Cool
-// Edit's grammar in Live's flat look — and wear none of these families nor
-// any ring since the flat look, 2026-11-01.)
-// THE CARDS' AND THE TOOLTIP'S RING is the one-device-px sunken ring in the
-// ring tones (THE CARD FACE, below); the `card_frame` role is painted by
-// nothing since 2026-10-23 (its one flat line, 2026-10-04 to 2026-10-23).
+// NO RELIEF AND NO RING (the flat look, architect 2026-11-01; the overlays'
+// part 2026-11-02): no edge in the product is raised, sunken or two-toned —
+// Windows 95's DrawEdge grammar, its one-device-px mitred hairline ring of
+// 2026-10-23 and the ring tones it wore are git history. THE CHROME'S LINES
+// are flat ONE-DEVICE-PX lines (hairline_px, below) of ONE TONE,
+// materials.h's kWellFrame 757575: the trim bar's frame and the span's
+// verticals, the scrub's channel (the scrub block) and the cards' and the
+// tooltip's border (THE CARD FACE, below, the `card_frame` role); the modal
+// family's box has none (modal_box.h's head).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
@@ -215,15 +186,10 @@ struct TrimRange {
 //                 the dialog's taskbar ground beside it 2026-10-10 to
 //                 2026-10-14) — every chrome button face, a
 //                 DISABLED cue's triangle (the band, row 8, the canvas
-//                 column's lanes and the modal family's box are the program's
-//                 panel since 2026-10-09, below);
-//   label         chrome text and glyphs, a prompt's question in the modal
-//                 family's box;
-//   the quartet   every relief line, the families unchanged; Hilight also the
-//                 light copy of THE DISABLED EMBOSS (below), a disabled cue
-//                 label's included (the taskbar overlays' one top line,
-//                 2026-10-10 to 2026-10-14, is retired); DkShadow also the
-//                 dialog focus frame until it retired (2026-10-23);
+//                 column's lanes and the modal family's panel margins are the
+//                 program's panel since 2026-10-09, below);
+//   label         chrome text and glyphs, a prompt's question and the
+//                 progress modal's sentence in the modal family's box;
 //   selected pair the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
@@ -234,20 +200,11 @@ struct TrimRange {
 //                 inactive selection face retired, architect 2026-10-03, on
 //                 Windows 95's Network Neighborhood, where a selection keeps
 //                 Hilight / HilightText in a window that has lost the focus);
-//   field pair    the modal dialogs' fields, the caret its field's text
-//                 (architect 2026-10-03); THE LIST — the folder overlay's
-//                 band under the player and the picker, Windows 95's list
-//                 view, its resting names and its glyphs' text-class paths
-//                 in the field text (architect 2026-10-06,
-//                 paint_folder_overlay) — and THE FLAG EDITOR'S FIELD, its
-//                 ground, its one-quantum outline, its text and its caret
-//                 (architect 2026-10-09; EDITING, below);
-//   clock pair    UNREAD BY ANY PAINTER since 2026-10-09: the time fields
-//                 are the program's, Cool Edit's dark field
-//                 (paint_ce_time_field); the pair stays in the role table
-//                 and the derivation (Windows' status bar's ButtonFace /
-//                 ButtonText, the Face and the program text since
-//                 2026-10-10);
+//   field_text    the dialog editors' line on the modal family's pane, the
+//                 caret its text (architect 2026-10-03); THE LIST — the
+//                 folder overlay's resting names on the pane (architect
+//                 2026-10-06, paint_folder_overlay) — and THE FLAG EDITOR'S
+//                 text and caret (architect 2026-10-09; EDITING, below);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
 //   (THE CAPTION and THE WINDOW BORDER went 2026-10-24, the
@@ -273,23 +230,23 @@ struct TrimRange {
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
-//                 the program's band, row 8 and the canvas column's lanes,
-//                 every other panel tone derived from it, the COOL EDIT
-//                 BLOCK, cool_edit_derive.h) is the flat ground
-//                 (materials.h's kGround), no palette role.
-// THE CARD FACE (architect 2026-10-04, the period's tooltip; the hi-fi skin
-// 2026-10-23): the tooltip, both of its lines, and every notification card
-// stand on `card_ground` — THE FIELD, kFieldGround — INSIDE A ONE-DEVICE-PX
-// SUNKEN RING in the ring tones, dark top and left, light bottom and right,
-// mitred (paint_popup_chrome, paint_hairline_frame), the cards' words the
-// text tone (`card_text`) at the body size, THE TOOLTIP'S NAME LINE the flags'
-// own program face (2026-10-23, "the same as the flags", 22 px since the
-// flags' size settled 2026-10-26) in the text tone kTextInk like the cards'
-// words, ITS HINT LINE the hint face (18 px) in the dim tone kTextDimInk
-// (architect 2026-10-31; Live's 757575 since M11, 2026-11-02,
-// paint_shift_tooltip). (Windows 2000's one-W `card_frame`
-// border, square, on the Face, 2026-10-04 to 2026-10-23, is git history.)
-// THIS PARAGRAPH IS THE RULE'S ONE STATEMENT.
+//                 the program's band, row 8 and the canvas column's lanes)
+//                 is the flat ground (materials.h's kGround), no palette
+//                 role.
+// THE CARD FACE (architect 2026-10-04, the period's tooltip; flat since
+// 2026-11-02, M11 with M14 "d"): the tooltip, both of its lines, and every
+// notification card are A FLAT BOX of `card_ground` — THE PANE, materials.h's
+// kPaneFace 363636 — INSIDE A ONE-DEVICE-PX `card_frame` BORDER on all four
+// sides, kWellFrame 757575, the grammar's one frame tone (paint_popup_chrome),
+// the border standing on the box's own outer rows and columns, so the card is
+// 53 rows and the one-line tooltip 41 at 300 %; NO RING TONES, NO SHADOW. The
+// cards' words the text tone (`card_text`) at the body size, THE TOOLTIP'S
+// NAME LINE the flags' own program face (2026-10-23, "the same as the
+// flags", 22 px since the flags' size settled 2026-10-26) in the text tone
+// kTextInk like the cards' words, ITS HINT LINE the hint face (18 px) in the
+// dim tone kTextDimInk (architect 2026-10-31; Live's 757575 since M11,
+// 2026-11-02, paint_shift_tooltip). THIS PARAGRAPH IS THE RULE'S ONE
+// STATEMENT.
 // THE CANVAS HAS NO FRAME since the well's flat look (architect 2026-11-01
 // night, "THE MAIN PAGE IS SETTLED"): its two channels' wells are parted by
 // one row of the ground (waveform_divider), its edges the well's columns,
@@ -344,25 +301,18 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // constant since 2026-10-21 (chrome_derive.h) — and the palette's program
 // roles, one field each — the chrome's in kGuiThemeRoles' order
 // (theme_file.h), the program's in kGuiPaletteRoles' (palette_file.h), the
-// panel's `face`, and THE COOL EDIT BLOCK derived from that `face`
-// (cool_edit_derive.h's painted tones, 2026-10-09) — the tables covering the
-// struct exactly (palette_file.cpp's static_asserts); the mapping above says
-// what each paints. Every field is a solid byte triple.
+// panel's `face`, and the disabled cue's two faded colors
+// (cool_edit_derive.h) — the tables covering the struct exactly
+// (palette_file.cpp's static_asserts); the mapping above says what each
+// paints. Every field is a solid byte triple.
 struct GuiPalette {
-    // THE CHROME (Windows' element names; the values Cool Edit's tones,
-    // chrome_derive.h).
+    // THE CHROME (Windows' element names; the values the flat look's
+    // constants, chrome_derive.h).
     GuiColor ground;          // COLOR_3DFACE
     GuiColor label;           // COLOR_BTNTEXT
-    GuiColor hilight;         // COLOR_3DHILIGHT
-    GuiColor light_3d;        // COLOR_3DLIGHT
-    GuiColor shadow;          // COLOR_3DSHADOW
-    GuiColor dk_shadow;       // COLOR_3DDKSHADOW
     GuiColor selected_fill;   // COLOR_HIGHLIGHT
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
-    GuiColor field_ground;    // COLOR_WINDOW
     GuiColor field_text;      // COLOR_WINDOWTEXT
-    GuiColor clock_ground;    // the status bar's ButtonFace
-    GuiColor clock_text;      // the status bar's ButtonText
     GuiColor card_ground;     // COLOR_INFOBK
     GuiColor card_text;       // COLOR_INFOTEXT
     GuiColor card_frame;      // the tooltip's border (COLOR_WINDOWFRAME)
@@ -378,19 +328,13 @@ struct GuiPalette {
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of the toolbar band, row 8 and the well's
-    // margins — THE FLAT GROUND since 2026-11-01 (materials.h's kGround):
-    // the Cool Edit block derives from it.
+    // margins — THE FLAT GROUND since 2026-11-01 (materials.h's kGround).
     GuiColor face;
-    // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
-    // the panel's tones, each DERIVED from `face` by Cool Edit's own HLS
-    // rule at every install of the program's words, then overwritten by the
-    // RING TONES off the flat ground (render.cpp's fill_program_palette,
-    // materials.h's kRingLight / kRingDark) — the overlays' rings, the scrub's
-    // channel; no file names them.
-    GuiColor ce_dark;
-    GuiColor ce_hilight;
-    // (The ruler's ground `ce_mid`, the time fields' two ring tones, the
-    // panel label's pair and the cue shadow left with the flat well,
+    // (THE COOL EDIT BLOCK'S PAINTED TONES — cool_edit_derive.h's kTones off
+    // `face` — are gone: the ring's dark and light tones, the overlays'
+    // rings and the scrub's two lines, left with the overlays' flat pass
+    // 2026-11-02; the ruler's ground `ce_mid`, the time fields' two ring
+    // tones, the panel label's pair and the cue shadow with the flat well,
     // 2026-11-02; THE BAND'S RECESS AND THE TAB STRIP'S FOUR EDGE TONES
     // 2026-10-22 with the band's void and the strip, the simple layout;
     // THE BUTTON CASE's twenty-four members 2026-10-21, replaced by
@@ -1238,10 +1182,9 @@ inline int logo_lane_h_px() {
 // the one shape of every text field of the modal dialogs, the choice
 // editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
 // re-authored) — IS GONE with the field, architect 2026-10-14: a dialog
-// editor's line stands in the modal family's box, its text at the box's own
-// pad (modal_box.h's modal_box_text_pad_px: the field's two lines and 5-W
-// pad read as one 7-W number until 2026-10-23, one device px and 1 W that
-// morning, 12 px of plain field inside the ring at 300 % since that night).
+// editor's line stands in the modal family's box, its text on the box's own
+// text seat (modal_box.h's modal_box_text_seat_px, M8b: 18 px in from the
+// box's outer edges at 300 %).
 // THE TIME FIELDS were never this field: row 8's clock and the render
 // player's position and length are Cool Edit's dark field, its height and
 // its pad program_spec.h's own, the pad 5 W since 2026-10-10, equal to this
@@ -1261,27 +1204,22 @@ inline int logo_lane_h_px() {
 // above the bar, the ruler's and the marker lane's foot rows, the stereo
 // divider's row, the well's foot and its edge columns; the ruler's ticks two
 // device px, kRulerTickWidthPx), the group gap between two keys (two device
-// px, materials.h's kKeyGapPx, the flat look's M5b), the modal box's ring,
-// the cards' and the tooltip's rings and the player's scrub lines — and,
-// since the sweep of 2026-10-23 (architect: "let's do a sweep for all of
-// these Windows Pixel lines. I guess we should get rid of most of them"),
-// the dialog editors' and the flag editor's carets (paint_modal_dialog,
-// render.cpp's flag editor) — read at those sites and nowhere else.
-// Everything else keeps scaled_px or skin_px, AREAS: the keys' cells, the
-// lanes' heights, the pads and gaps (the lists' row gap, the dialog
-// text's pad, the keyboard's pad and key gap), the flags' triangles and the
+// px, materials.h's kKeyGapPx, the flat look's M5b), the modal box's outer
+// rows and columns of ground round its pane (modal_box.h), the cards' and
+// the tooltip's border and the scrub's channel (the overlays' flat pass,
+// 2026-11-02) — and, since the sweep of 2026-10-23 (architect: "let's do a
+// sweep for all of these Windows Pixel lines. I guess we should get rid of
+// most of them"), the dialog editors' and the flag editor's carets
+// (paint_modal_dialog, render.cpp's flag editor) — read at those sites and
+// nowhere else. Everything else keeps scaled_px or skin_px, AREAS: the keys'
+// cells, the lanes' heights, the pads and gaps (the lists' row gap, the
+// dialog text's seat, the keyboard's pad and key gap), the flags' triangles and the
 // cue boxes. ARTWORK IS AN AREA IN THIS SENSE (2026-10-23): a drawing's
 // stroke weight is part of the drawing, so it scales with the drawing — the
 // icons, the faces' strokes, the quaver and the logo lane's bolt and
 // battery (the retired caption buttons' procedural glyphs too, matched to
 // the quaver's stem), never a chrome line.
 inline int hairline_px() { return 1; }
-// A MITRED RING of one-device-px lines (the mitre's construction, render.cpp,
-// at hairline_px): `top_left` on the top row and left column, `bottom_right`
-// on the bottom row and right column, the two-tone corners split on the
-// diagonal.
-void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
-                          GuiColor bottom_right);
 
 // (THE PROGRAM'S FRAME — Cool Edit's frame window round the program, one
 // sunken line in the chrome's Shadow and Hilight, mitred, its top row a lane
@@ -1404,65 +1342,31 @@ inline int program_run_gap_px() {
 // its box is the key's (materials.h's paint_key), and no corner in the
 // chrome is rounded.
 
-// -- THE PLAY-SCRUB (architect 2026-10-02; the thumb 2026-10-06) -------------
+// -- THE PLAY-SCRUB (architect 2026-10-02; flat 2026-11-01 night, M7) -------
 //
-// The render player's modal row carries the transport's scrub: Sound
-// Recorder's channel, nothing filled ("Sound Recorder doesn't fill it"),
-// under WINDOWS' TRACKBAR THUMB:
-//   THE CHANNEL — the PLAIN SUNKEN edge collapsed to its lines, NO INTERIOR:
-//     kScrubChannelLines relief lines tall, top to bottom Shadow, DkShadow,
-//     3DLight, Hilight (the edge's two rings on a rect four lines tall, its
-//     end columns the same rings' sides), spanning the slider's track and
-//     centred in the buttons' band (row 8's case band since 2026-10-05, the
-//     program's case since 2026-10-09, bottom_row_seats in
-//     paint_handler.cpp). Its height is the sum of its rounded
-//     lines, 4 × relief_line_px (12 device rows at 300 %, 4 at 138 %).
-//   THE THUMB — WINDOWS' POINTED TRACKBAR THUMB (TBS_BOTTOM; architect
-//     2026-10-06, the source ReactOS's own, measured at 100 % on
-//     a ReactOS capture of mplay32's position slider, and confirmed on
-//     one of the Device volume slider disabled): a
-//     rectangle kScrubThumbWidthPx = 11 wide whose bottom ends in a
-//     downward point kScrubThumbPointPx = 5 rows tall, the tip a single
-//     DkShadow pixel under the middle column (mplay32: columns 96..106,
-//     rows 99..121, straight sides rows 99..116, the point 117..121, the
-//     tip at (101, 121); the disabled one 199..209 by rows 212..232, its
-//     straight sides 16 rows — comctl32 sizes the straight part to the
-//     control, the width and the point never). ITS EDGE IS THE SOFT RAISED
-//     PAIR on the pentagon (EDGE_RAISED | BF_SOFT): the outer line Hilight
-//     on the top, the left and the left diagonal, DkShadow on the right and
-//     the right diagonal; the inner line 3DLight (the face's own colour in
-//     Windows 2000 Standard, invisible on the capture) and Shadow; the face
-//     the ground (the disabled capture's face is the Hilight checker — the
-//     scrub had no disabled state: with no item there was no thumb). DRAWN
-//     SCALABLE (paint_scrub_thumb, render.cpp): the pentagon's rings in
-//     device px, antialiased, the light and dark halves MITRED at the
-//     top-right corner along the 45-degree diagonal (paint_relief_frame's
-//     rule) and meeting at the tip on the axis, as the playhead's head does.
-//     Its height stays THE SCRUB'S SEAT, kScrubThumbAbovePx rows above the
-//     channel, the channel's four lines and kScrubThumbBelowPx below — 8 +
-//     4 + 9 = 21 Windows px, the volume slider's 16 + 5 (mplay32's taller
-//     control draws 18 + 5 = 23; the seat was kept rather than the channel
-//     moved), the straight part over the channel and the point below it,
-//     toward the channel's bottom: 63 device rows at 300 % (24 + 12 + 27),
-//     27 at 138 %, each part rounded on its own.
-// NO PLAYED EXTENT AND NOTHING THAT READS THE WINDOW'S FOCUS: the channel is
-// lines on the ground, the position is the thumb. The painter is
-// paint_modal_dialog's player branch; the press is claim_player_scrub_press.
-// THE SCRUB SINCE 2026-10-23 (architect: "looks good … the
-// scrub fits"; the record above is the Windows thumb it replaced): THE
-// CHANNEL a ONE-DEVICE-PX light line over a one-device-px dark line, the
-// two ring tones, across the scrub's span (kScrubChannelLines hairlines);
-// THE THUMB A KEY-SHAPED BLOCK kScrubThumbWidthPx = 8 W wide (architect
-// 2026-10-23, on the installed player: "too tiny. The trough is okay at 1
-// pixel, but the thumb itself should be larger"; his pick, row 2 of his
-// thumb sheet) and THE KEY'S HEIGHT (architect 2026-10-29: "Shrink it to the
-// height of the key."; scrub_thumb_h_px is icon_case_h_px, following the
-// `key_height` tuning key live, so the thumb fills the controls row's case
-// band the channel stands centered in — 33 device px at 300 % at
-// key_height 33), painted by the key painter at rest (the flat key, never
-// lit: it is dragged, not pressed on or off; materials.h) with no legend,
-// centred on the channel; ITS HIT ZONE ITS PAINTED RECT
-// (render_player_scrub_handle_hit: on screen is as painted).
+// The render player's controls row and the score viewer's (its media face
+// and its page road's face alike) carry ONE SCRUB, Live's flat slider
+// (architect 2026-11-01 night, M7, "agree both"; M9 A2 for the score viewer):
+//   THE CHANNEL — ONE DEVICE PX (scrub_channel_h_px, hairline_px: never
+//     scaled) of materials.h's kWellFrame 757575, the trim bar's frame tone,
+//     on THE CASE'S CENTER ROW — the centered elements' tie rule, (case rows
+//     − 1) / 2 below the case's top, rounded down (scrub_channel_above_px):
+//     row 1384 at 300 % on the case rows 1368..1400 at key_height 33 —
+//     across the channel's own columns, from the thumb's center at frame 0
+//     to its center at the last frame (at 300 % x 254..1565 in the player),
+//     nothing else: no fill, no played extent, nothing that reads the
+//     window's focus.
+//   THE THUMB — A BLANK FLAT KEY BLOCK (paint_scrub_thumb: the key painter
+//     at rest, never lit — it is dragged, not turned on or off, the flat
+//     look's ruling, materials.h — with no legend) kScrubThumbWidthPx = 8 W
+//     wide, 24 device px at 300 % (architect 2026-10-23, on the installed
+//     player: "too tiny … the thumb itself should be larger"), by THE KEY'S
+//     HEIGHT (architect 2026-10-29: "Shrink it to the height of the key.";
+//     scrub_thumb_h_px is icon_case_h_px, following the `key_height` tuning
+//     key live), so it stands on the case's rows; ITS HIT ZONE ITS PAINTED
+//     RECT (render_player_scrub_handle_hit: on screen is as painted).
+// The painter is paint_modal_dialog's paint_scrub_item; the press is
+// claim_player_scrub_press (the score viewer's its own claim).
 // THE THUMB ALWAYS STANDS (architect 2026-10-25, "agreed"): whenever the
 // channel has a width, at frame 0 while no item is loaded — the clock's own
 // zeros — so the player opens with its thumb at the channel's left end
@@ -1481,7 +1385,6 @@ inline int program_run_gap_px() {
 // and a moving thumb's end column is always inside the damage. (The 14-W
 // grab box the mapping inset the channel by — half of it at each end, a
 // leftover of the pointed Windows thumb — stood 2026-10-02 to 2026-10-25.)
-inline constexpr int    kScrubChannelLines  = 2;
 inline constexpr double kScrubThumbWidthPx  = 8.0;
 // The thumb's width floors at three device px; its height is the case's,
 // floored there (scrub_thumb_h_px).
@@ -1904,20 +1807,21 @@ static_assert(chrome_stack_authored_h() == 39);
 // left edge four device px left of its column), so a marker just past the last
 // column shows the left half of its triangle there, and no dots (the stem
 // stash is gated to [0, w)).
-// THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because the channel
-// counts hairlines (the slider's block, with its constants, is above): the
-// channel its kScrubChannelLines one-device-px lines; the thumb THE KEY'S
-// HEIGHT (architect 2026-10-29, "Shrink it to the height of the key."),
-// icon_case_h_px itself, so it fills the controls row's case band exactly
-// and follows `key_height` live.
+// THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because the channel is a
+// hairline (the slider's block, with its constants, is above): the channel
+// ONE device px; the thumb THE KEY'S HEIGHT (architect 2026-10-29, "Shrink
+// it to the height of the key."), icon_case_h_px itself, so it fills the
+// controls row's case band exactly and follows `key_height` live.
 inline int scrub_channel_h_px() {
-    return kScrubChannelLines * hairline_px();
+    return hairline_px();
 }
 inline int scrub_thumb_h_px() {
     return icon_case_h_px();
 }
-// The thumb's rows above the channel: the thumb centred on it.
-inline int scrub_thumb_above_px() {
+// The channel's rows below the case's top: THE CASE'S CENTER ROW, the
+// centered elements' tie rule (the remainder rounded down, the upper row
+// winning a tie) — 16 at 300 % on the 33-row case, row 1384.
+inline int scrub_channel_above_px() {
     return (scrub_thumb_h_px() - scrub_channel_h_px()) / 2;
 }
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas has none (row 6's canvas
@@ -2487,13 +2391,9 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 void paint_canvas_skirt(cairo_t* cr, const GuiRect& area, int column_x,
                         int column_w);
 
-// (THE RELIEF HELPERS — paint_relief_frame, paint_relief_plain_sunken and
-// paint_relief_line_frame, the chrome's one painter family for the
-// Windows-95 edge grammar from 2026-10-02, every line one scaled Windows px
-// — RETIRED 2026-10-23 with the hairline sweep (the line rule at
-// hairline_px): every ring the chrome draws is paint_hairline_frame's, the
-// same mitre at one device px, the view bar's span the family's last
-// wearer.)
+// (THE RELIEF HELPERS — the Windows-95 edge family of 2026-10-02 and the
+// one-device-px mitred ring that replaced it 2026-10-23 — are retired: the
+// palette block's NO RELIEF AND NO RING.)
 // One cell rect in `c` — a surface: the ground, a lane, a field, a ring's
 // line (set_palette_source; every surface is flat since the flat look,
 // materials.h).

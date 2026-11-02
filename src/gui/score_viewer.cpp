@@ -1,7 +1,7 @@
 #include "score_viewer.h"
 
 #include "canvas_sink.h"        // the GPU page: GuiCanvasPage
-#include "materials.h"          // kFieldGround, the page's field
+#include "modal_box.h"          // kScorePaneFace, the page's field
 #include "notifications.h"
 #include "score_viewer_file.h"  // the write-through
 #include "text_editor.h"   // next_session_id (the one modal counter)
@@ -78,7 +78,9 @@ void score_viewer_publish_gpu_page(const AppState& app, GuiCanvasPage& out) {
     const AppState::ScoreViewer& sv = app.score_viewer;
     out.stands       = score_viewer_page_stands(app);
     out.session      = sv.session;
-    out.field        = argb32_opaque_word(display_color(hex(kFieldGround)));
+    // THE FIELD ROUND THE PAGE IS THE SCORE VIEWER'S PANE, 191919 (modal_box.h's
+    // kScorePaneFace, the one exception to the box's pane, M9 A2).
+    out.field        = argb32_opaque_word(display_color(hex(kScorePaneFace)));
     out.shown_page   = sv.page;
     out.shown_serial = 0;
     out.shown_failed = false;

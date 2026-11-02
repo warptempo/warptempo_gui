@@ -759,8 +759,12 @@ GuiRect tooltip_box_rect(const AppState& a, const GuiRect& btn, int w, int h) {
     int x = t.shown_x;
     int y = t.shown_y + tooltip_pointer_drop_px();
     if (y + h > a.height) y = btn.y - tooltip_flip_gap_px() - h;
-    if (x + w > a.width) x = a.width - w;
-    if (x < 0) x = 0;
+    // THE EDGE RULE (architect 2026-11-02, M11 ruling 4): the box between the
+    // keys' outer columns — the right clamp first, then the left, so a box
+    // wider than the span pins its left edge.
+    const WellColumns keys = well_columns(a);
+    if (x + w > keys.end) x = keys.end - w;
+    if (x < keys.x) x = keys.x;
     if (y < 0) y = 0;
     return GuiRect{x, y, w, h};
 }

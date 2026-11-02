@@ -20,9 +20,9 @@
 // inside the body … even the font color, all of that would be inherited
 // from Cool Edit"; "whatever luminous rules we previously had are
 // superseded by the Cool Edit follow") — and SINCE 2026-11-01 THE FLAT
-// LOOK'S: every chrome role a constant of the flat look or one of the two
-// ring tones off the flat ground (materials.h; the per-role mapping is
-// chrome_derive.h's, the one owner), installed at every install. THE CAPTION HAS NO ROLE: the app paints none
+// LOOK'S: every chrome role a constant of the flat look (materials.h; the
+// per-role mapping is chrome_derive.h's, the one owner), installed at every
+// install. THE CAPTION HAS NO ROLE: the app paints none
 // since 2026-10-24 (render.h's caption note); its six roles — the active and inactive
 // title's start, gradient end and text, a scheme's keys — were removed
 // 2026-10-21 with the 42 built-in captions and the `caption` key
@@ -31,17 +31,19 @@
 // THE ROLES are the role table below — THE ONE ENUMERATION of the chrome's:
 // its name and the GuiPalette field it fills (render.h, whose palette block
 // owns what each role paints). They are Windows' own element names
-// (ButtonFace, ButtonText, the relief quartet, Hilight / HilightText, Window
-// / WindowText, the status bar's pair, InfoWindow / InfoText and the
-// tooltip's border), the chrome's painters written against them; the values
-// are no longer Windows'.
+// (ButtonFace, ButtonText, Hilight / HilightText, WindowText, InfoWindow /
+// InfoText and the tooltip's border), the chrome's painters written against
+// them; the values are no longer Windows'. A ROLE STANDS IFF A PAINTER READS
+// IT (chrome_derive.h's head; the relief quartet, the field ground and the
+// clock pair retired 2026-11-02 with the overlays' flat pass).
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15), as the
 // captures show them; the tablet converts each at the painter's entry
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the Windows chrome's fifteen (the
-// caption's six, 2026-10-05..10-21, left with the captions). The program's
+// 2026-10-04), in GuiPalette's order: the chrome's eight (the caption's six,
+// 2026-10-05..10-21, left with the captions; the seven unread ones,
+// 2026-11-02, with the overlays' rings). The program's
 // roles left for the palette's own table 2026-10-07 (kGuiPaletteRoles,
 // palette_file.h). The
 // derivation (chrome_derive.h, which decides every role exactly once) and
@@ -55,16 +57,9 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // THE CHROME — the live palette's tones (chrome_derive.h).
     {"ground",                    &GuiPalette::ground},
     {"label",                     &GuiPalette::label},
-    {"hilight",                   &GuiPalette::hilight},
-    {"light_3d",                  &GuiPalette::light_3d},
-    {"shadow",                    &GuiPalette::shadow},
-    {"dk_shadow",                 &GuiPalette::dk_shadow},
     {"selected_fill",             &GuiPalette::selected_fill},
     {"selected_text",             &GuiPalette::selected_text},
-    {"field_ground",              &GuiPalette::field_ground},
     {"field_text",                &GuiPalette::field_text},
-    {"clock_ground",              &GuiPalette::clock_ground},
-    {"clock_text",                &GuiPalette::clock_text},
     {"card_ground",               &GuiPalette::card_ground},
     {"card_text",                 &GuiPalette::card_text},
     {"card_frame",                &GuiPalette::card_frame},

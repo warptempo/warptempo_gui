@@ -86,7 +86,7 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // — lists `tmp/` — its batch folders and their
 // cells, THE PLAYER'S WHOLE SUBJECT since 2026-09-01 (the ruling below) — and
 // the family's CONTROLS ROW under it (row 8's rows, its outermost cases flush
-// with the box's ring) carries the transport
+// with the box's outer columns) carries the transport
 // (THE MAIN WINDOW'S OWN
 // TRANSPORT TRIPLE since 2026-09-01 — Home / Play-Pause / End, the same three
 // keys as the roster's, and the same three acts until 2026-09-04, when the

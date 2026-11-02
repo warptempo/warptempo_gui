@@ -200,8 +200,9 @@ double gui_font_cap_px(const GuiFont& f);
 // THE ASCENDER LINE in device px above the baseline at the font's scale,
 // unrounded: the em times the use's file's own "l" ink per em (Liberation
 // Sans 1484 / 2048 units, 15.9 px at 300 %'s 22) — the top of the
-// lowercase ink, which the modal box's text seats under 12 px of plain
-// field inside the ring (modal_box.h's modal_box_text_baseline0, 2026-10-23: the air the eye
+// lowercase ink, which the modal box's text seats on the list rows' text
+// seat, 18 px under the box's top row at 300 % (modal_box.h's
+// modal_box_text_baseline0, 2026-10-23 / M8b 2026-11-01: the air the eye
 // sees is the ink's, not the line box's).
 double gui_font_ascender_ink_px(const GuiFont& f);
 // THE X-HEIGHT in device px at the font's scale, unrounded: the em times the

@@ -18,8 +18,8 @@ int notification_cap_px() {
 }
 
 int notification_card_h_px() {
-    // ring + pad + cap + pad + ring, each its own rounded part (the
-    // composite rule, scaled_px's head).
+    // border + pad + cap + pad + border, each its own rounded part (the
+    // composite rule, scaled_px's head): 1 + 18 + 15 + 18 + 1 = 53 at 300 %.
     return 2 * hairline_px() + 2 * notification_pad_px() +
            notification_cap_px();
 }
@@ -33,31 +33,36 @@ int notification_card_max_w_px(const AppState& a) {
     const int floor_w   = scaled_px(kNotificationMinWidthPx);
     const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
     // THE WINDOW IS A SAFETY BELOW THE CEILING AND NOTHING ABOVE THE FLOOR:
-    // the stack sits inside the panel's two margins, so a window that cannot
-    // hold the ceiling gets what it has; a window that cannot hold the FLOOR
+    // the stack sits inside the keys' outer columns (well_columns, THE EDGE
+    // RULE; notification_stack_bound), so a window that cannot hold the
+    // ceiling gets what it has; a window that cannot hold the FLOOR
     // keeps the floor and lets the card overhang, because this number is also
     // the ROOM the painter clips and the damage owner erases (a bound under
     // the floor would strand pixels outside it).
-    const int room_w = a.width - 2 * folder_overlay::pad_px();
+    const WellColumns well = well_columns(a);
+    const int room_w = well.end - well.x;
     return std::max(floor_w, std::min(ceiling_w, room_w));
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
-    // THE STACK'S MARGINS: THE VIEW BAR FRAME'S TOP ABOVE, kPanelPadPx AT THE
-    // RIGHT AND THE FOOT. The right and the foot are the panel's own
-    // kPanelPadPx (architect 2026-08-29, the foot joining 2026-08-30; the
-    // right margin was the icon row's 8 px pad for the cards' first day,
-    // which read wider than the air above them). THE TOP IS ONE RULE FOR
+    // THE STACK'S MARGINS: THE TRIM BAR'S FRAME ROW ABOVE, THE KEYS' OUTER
+    // COLUMN AT THE RIGHT, kPanelPadPx AT THE FOOT. THE RIGHT EDGE IS THE
+    // KEYS' OUTER COLUMN (well_columns' end, THE EDGE RULE — 2280 at 300 %,
+    // as the tooltip's clamp, tooltip_box_rect; architect 2026-11-02, M11's
+    // and M14's record pictures, the card's right edge on 2280; the panel's
+    // kPanelPadPx from the window's edge until then). The foot is the
+    // panel's own kPanelPadPx (architect 2026-08-30). THE TOP IS ONE RULE FOR
     // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
     // "it looks like absolute positioning where it should be relative to the
-    // elements"): THE TRIM LANE'S FIRST ROW, the row of ground above the
-    // trim bar's frame since the flat well (2026-11-02; the view bar ring's
-    // top row until then, which hid under the first card, architect
-    // 2026-10-11, judged on a tablet mock). The cards have no bevels, so
+    // elements"): THE TRIM BAR'S FRAME ROW, the row under the trim lane's
+    // first row of ground (render_trim_flags' bar, one hairline down), so the
+    // first card's top border and the bar's top frame line are ONE LINE of
+    // the one frame tone (architect 2026-11-02, M14 "d": "the card's top
+    // border one line with the trim bar's frame row"; row 145 at 300 %).
+    // The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
-    // bevelled card, 2026-10-07..14, was tucked inside the waveform's well);
-    // the right
-    // edge keeps the panel's margin from the window's edge. It is anchored on
+    // bevelled card, 2026-10-07..14, was tucked inside the waveform's well).
+    // It is anchored on
     // the trim lane and not on the icon row, so whatever stands between the
     // band's cases and the trim lane — the strip pad since 2026-10-22, the
     // tab strip and the canvas column's air before — the card meets the bar
@@ -73,8 +78,8 @@ GuiRect notification_stack_bound(const AppState& a) {
     // to grow into and the painter clips to it.
     const int pad     = folder_overlay::pad_px();
     const int w       = notification_card_max_w_px(a);
-    const int x       = a.width - pad - w;
-    const int y       = top_trim_row_area(a).y;
+    const int x       = well_columns(a).end - w;
+    const int y       = top_trim_row_area(a).y + hairline_px();
     const int floor_y = bottom_row_area(a).y - pad;
     return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }

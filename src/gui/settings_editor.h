@@ -29,7 +29,7 @@ struct GuiInputHandler;
 // editor's primitive (text_editor::State, kind-dispatched keyboard
 // vocabulary, the whole text selected and a card on a refusal) painted IN THE
 // MODAL FAMILY'S BOX (architect 2026-10-14, modal_box.h: the box is the edit
-// control, the whole line on its field ground from the box's first row,
+// control, the whole line on its pane on the box's text seat,
 // soft-wrapped at its width and never scrolling, OK and Cancel flush right on
 // the controls row under it, NO LABEL — "Setting:" removed, "pointless that
 // far away"), the on-screen keyboard standing inside the frame under it on

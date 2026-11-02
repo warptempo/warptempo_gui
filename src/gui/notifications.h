@@ -12,12 +12,12 @@
 // folder's and the quaver's form (icons.h's THE BOXED GLYPHS; architect: "a
 // very simple basic small rectangle with a larger rectangle below, that's
 // the i, and then an X … for the error … Spartan and minimalist … sit
-// nicely with the other icons, the note and the folder"), and ONE PAD of plain field between the ring and the
+// nicely with the other icons, the note and the folder"), and ONE PAD of plain face between the border and the
 // content on all four sides (notification_pad_px below; P18, architect
-// 2026-10-24), ON THE CARD FACE — the tooltip's look, the
-// theme's `card_ground` under `card_text` inside the one-device-px sunken
-// ring (architect 2026-10-04, the sides 2026-10-06, the ring 2026-10-23;
-// render.h's palette block, THE CARD FACE): the
+// 2026-10-24), ON THE CARD FACE — the tooltip's look, a flat
+// `card_ground` box under `card_text` inside a one-device-px `card_frame`
+// border (architect 2026-10-04, the sides 2026-10-06; flat since 2026-11-02,
+// M11 with M14 "d"; render.h's palette block, THE CARD FACE): the
 // tooltip's own box (paint_popup_chrome), square, with no drop shadow
 // (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
@@ -772,10 +772,11 @@ inline constexpr double kNotificationGlyphRatio = 0.525;
 int notification_cap_px();
 
 // A ONE-LINE card's height, and the height every card's FIRST line occupies
-// (architect 2026-10-24): ring + pad + THE BODY FACE'S CAP + pad + ring —
-// the text's CAP BAND, not its ascender, between the two pads (the clock
+// (architect 2026-10-24): border + pad + THE BODY FACE'S CAP + pad + border
+// — the text's CAP BAND, not its ascender, between the two pads (the clock
 // field's and the mock's rule; the modal box's ascender rule is not the
-// card's), so the first line's cap top stands at ring + pad. AT THE FIRST
+// card's), so the first line's cap top stands at border + pad; 53 rows at
+// 300 % (architect 2026-11-02, M11: the border where the ring stood). AT THE FIRST
 // LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30: the text
 // grows downward under the glyph, nothing reflows beside it). A card of
 // `lines` lines is this plus (lines - 1) line spacings, which only the
@@ -799,13 +800,12 @@ int notification_card_h_px();
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
-// right-aligned at kPanelPadPx from the window's right edge (architect
-// 2026-08-29; the right one was the icon row's 8 px pad for the cards' first
-// day), from THE CARD SEAT — one relief line above the trim lane's first
-// row, read off the live lane table, so the card's frame ends where the
-// scroll bar begins under every chrome (architect 2026-10-08; the
-// reasoning at the definition) — DOWN TO THE SAME
-// kPanelPadPx OF AIR ABOVE THE BOTTOM ROW'S LANE.
+// right-aligned on the keys' outer column (well_columns, THE EDGE RULE;
+// architect 2026-11-02, M11 / M14), from THE CARD SEAT — the trim bar's
+// frame row, read off the live lane table, so the first card's top border
+// and the bar's frame are one line (architect 2026-10-08, 2026-11-02; the
+// reasoning at the definition) — DOWN TO kPanelPadPx OF AIR ABOVE THE
+// BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
 // was "three cards of one line each", which a wrapped card outgrows, and no

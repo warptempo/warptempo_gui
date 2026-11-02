@@ -1001,12 +1001,10 @@ private:
     // with. (The Settings dropdown, the second floater of this kind, retired
     // 2026-10-21 with paint_dropdown.)
     void paint_shift_tooltip(cairo_t* cr);
-    // THE CARD FACE every floating surface draws, the period's tooltip
-    // (architect 2026-10-04): `card_ground` with a thin `card_frame` line on
-    // all four sides (the tooltip and the notification cards; the sides
-    // 2026-10-06; Cool Edit's colors 2026-10-10;
-    // render.h's palette block). (Its MENU face, the dropdown's plain raised
-    // panel, went with the Settings popup, 2026-10-21.)
+    // THE CARD FACE every floating surface draws (the tooltip and the
+    // notification cards): a flat `card_ground` box inside a one-device-px
+    // `card_frame` border on all four sides (architect 2026-11-02, M11 with
+    // M14 "d"; render.h's palette block, THE CARD FACE).
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box — above every lane and the
@@ -1141,7 +1139,8 @@ private:
     void paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed);
 
     // THE FOLDER OVERLAY (2026-08-28, the render player): the keyboard-slot
-    // list panel, Windows' list view on a sunken field (2026-10-06) — folder
+    // list panel, Live's browser list on the modal family's pane (M6 A,
+    // 2026-11-01 night) — folder
     // and wav rows with their glyphs, the pickers' glyph-less rows, the
     // settings page's group rows in the dead key's print (2026-10-28), the
     // highlight band and the pressed face, all under the band's

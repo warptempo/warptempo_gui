@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render.h"   // GuiPalette, GuiColor: the painted tones' members
+#include "program_spec.h"   // kProgramSpec: the case ramp's glyph seat
 
 #include <array>
 #include <cstddef>
@@ -54,20 +54,17 @@
 //                                        C1B791, the text tones below)
 //
 // ONE ENUMERATOR PER TONE A PAINTER PUTS DOWN, BY NEED (2026-10-07's rule
-// for a generated block of tones): every measured tone stands in the table below as the record, and
-// those the painters read carry a GuiPalette member (the COOL EDIT BLOCK,
-// render.h's palette struct), filled at every install of the palette
-// (fill_program_palette, render.cpp) — a new Face moves them all live.
-// THE TWO PAINTED TODAY are the dark and the hilight, the overlays' ring
-// (the modal box, the cards, the tooltip, the scrub's channel), which
-// fill_program_palette overwrites with materials.h's ring tones off the flat
-// ground. EVERY OTHER TONE IS A RECORD: the mid, the field's two lines and
-// the cue shadow since the well went flat (architect 2026-11-02: the ruler
-// kRulerFace, the time fields flat, no shadow anywhere, materials.h's THE
-// WELL); the band's recess, its panes' mid lines, the dock bar and the tab
-// strip's four Organizer tones since the simple layout (2026-10-22). (Cool
-// Edit's view bar span bevels off the waveform's ink, the panel label's
-// swapping pair and their proofs stood until the flat well; git history.)
+// for a generated block of tones): every measured tone stands in the table
+// below as the record, and NO PAINTER PUTS ONE DOWN since the overlays'
+// flat pass (2026-11-02: the dark and the hilight, the overlays' ring and
+// the scrub's two lines, the last two painted, left with the ring; the mid,
+// the field's two lines and the cue shadow with the flat well the same day;
+// the band's recess, its panes' mid lines, the dock bar and the tab strip's
+// four Organizer tones with the simple layout, 2026-10-22). EVERY TONE IS A
+// RECORD, its proof below. (The GuiPalette member a painted tone carried,
+// filled at every install, and Cool Edit's view bar span bevels off the
+// waveform's ink, the panel label's swapping pair and their proofs, are git
+// history.)
 //
 // THE BUTTON CASE FOLLOWS FACE TOO (architect 2026-10-10, reopening
 // 2026-10-09's "the buttons did not change color with the preset": the fit's
@@ -205,14 +202,12 @@ constexpr uint32_t tone(uint32_t face, double a, double b, double c = 1.0,
 
 // -- THE TONES ----------------------------------------------------------------
 
-// Every tone is derived from the panel's `face` (§2.1).
+// Every tone is derived from the panel's `face` (§2.1); every row is a
+// record (the head's ONE ENUMERATOR PER TONE).
 struct Tone {
     const char*            name;
     uint32_t               measured;   // Cool Edit's byte on `measured_on`
     double                 a, b;       // the fit: L' = a·L + b
-    // The panel's painted ones; nullptr = a record, or a tone the chrome
-    // wears through its own roles (chrome_derive.h, by name).
-    GuiColor GuiPalette::* member;
     double                 c = 1.0, d = 0.0;   // S' = c·S + d (the head)
     // The source color `measured` was captured on: the default Face for
     // every Face tone but the swapped text, which the default never shows
@@ -223,44 +218,44 @@ struct Tone {
 inline constexpr Tone kTones[] = {
     // the dock's recess and the band's stretch where no pane stands (a
     // record since 2026-10-22: the band is the bare ground, the simple layout)
-    {"recess",        0x4E5662, 0.798,  0.000, nullptr},
+    {"recess",        0x4E5662, 0.798,  0.000},
     // a pane's bottom and right line, a groove's left column, the end bar's
     // and the gripper's mid lines, the time field's ground
-    {"mid",           0x414751, 0.668, -0.006, nullptr},
+    {"mid",           0x414751, 0.668, -0.006},
     // the organizer dock's gripper (dark line)
-    {"gripper_dark",  0x32383F, 0.526, -0.004, nullptr},
+    {"gripper_dark",  0x32383F, 0.526, -0.004},
     // the band's dark outline, a groove's middle column, the end bar's and
     // the dock bar's dark line, the panel label's shadow
-    {"dark",          0x2B2F36, 0.442, -0.004, &GuiPalette::ce_dark},
+    {"dark",          0x2B2F36, 0.442, -0.004},
     // the organizer tab's right edge (an inactive tab's; a record since the
     // tab strip went, 2026-10-22)
-    {"tab_dark",      0x1F2227, 0.324, -0.004, nullptr},
+    {"tab_dark",      0x1F2227, 0.324, -0.004},
     // the time field's top and left line
-    {"field_dark",    0x191B1F, 0.272, -0.006, nullptr},
+    {"field_dark",    0x191B1F, 0.272, -0.006},
     // the organizer page's right dark line — the active tab's drop shadow
     // (a record since the tab strip went, 2026-10-22)
-    {"page_dark",     0x181B1E, 0.248, -0.002, nullptr},
+    {"page_dark",     0x181B1E, 0.248, -0.002},
     // Cool Edit's "Hilight": a pane's top and left line, the band's last
     // line, the gripper's and the end bar's light lines, the dock bar's top
-    {"hilight",       0xAEB5BE, 0.492,  0.500, &GuiPalette::ce_hilight},
+    {"hilight",       0xAEB5BE, 0.492,  0.500},
     // the organizer dock's gripper (light line)
-    {"gripper_light", 0xA1A9B4, 0.390,  0.498, nullptr},
+    {"gripper_light", 0xA1A9B4, 0.390,  0.498},
     // the time field's bottom and right line
-    {"field_light",   0xABB1BB, 0.272,  0.584, nullptr},
+    {"field_light",   0xABB1BB, 0.272,  0.584},
     // the organizer tab's left and top light line (an inactive tab's; a
     // record since 2026-10-22)
-    {"tab_light",     0xB2B8C1, 0.322,  0.586, nullptr},
+    {"tab_light",     0xB2B8C1, 0.322,  0.586},
     // the organizer tab's bottom line: the page line's run under the inactive
     // tabs (a record since the tab strip went, 2026-10-22)
-    {"tab_line",      0xBCC2CA, 0.414,  0.584, nullptr},
+    {"tab_line",      0xBCC2CA, 0.414,  0.584},
     // the panel label's ink on a dark face (its shadow `dark` at (+1, +1)).
     // (.244, .750) the refit over seven Faces (worst 1; 2026-10-10), the
     // (.264, .740) of the five 2026-10-09 presets missing Midnight, Stealth
     // and Safari by 2.
-    {"label",         0xD6DADE, 0.244,  0.750, nullptr},
+    {"label",         0xD6DADE, 0.244,  0.750},
     // the cue's and the playhead head's shadow under Cool Edit's tones (the
     // product's shadows retired with the flat well, 2026-11-02)
-    {"cue_shadow",    0x31363D, 0.502, -0.004, nullptr},
+    {"cue_shadow",    0x31363D, 0.502, -0.004},
     // THE PROGRAM TEXT (2026-10-10, the head's text tones): the clock's,
     // "Files"' and the field digits' light ink on a dark Face — the chrome's
     // label, clock and card text below the swap and its field text at
@@ -268,17 +263,9 @@ inline constexpr Tone kTones[] = {
     // `ce_field_text`, 2026-10-10..10-21, the chrome's ink since, materials.h) —
     // and Cool Edit's swapped dark ink above the
     // threshold, measured on Safari So Good (C1B791, its clock 312A10).
-    {"text",         0xEFF0F0, 0.086,  0.900, nullptr, 0.2, 0.0},
-    {"text_dark",     0x312A10, 0.160,  0.025, nullptr, 0.58, 0.32, 0xC1B791},
+    {"text",         0xEFF0F0, 0.086,  0.900, 0.2, 0.0},
+    {"text_dark",     0x312A10, 0.160,  0.025, 0.58, 0.32, 0xC1B791},
 };
-
-constexpr std::size_t painted_tone_count() {
-    std::size_t n = 0;
-    for (const Tone& t : kTones)
-        if (t.member != nullptr) ++n;
-    return n;
-}
-inline constexpr std::size_t kPaintedToneCount = painted_tone_count();
 
 constexpr bool within_one(uint32_t x, uint32_t y) {
     for (int shift = 0; shift <= 16; shift += 8) {

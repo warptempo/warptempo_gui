@@ -137,7 +137,8 @@ struct GuiCanvasPrimitive {
 // is not painted into the backbuffer: the box's interior is the frame's hole
 // (the list's clip) and the GPU draws it whole at every swap — THE FIELD
 // GROUND (`field`, argb32_opaque_word of display_color, the sink's word for
-// the field color) and over it THE PAGE, one R8 texture of THE GRAY STORE's
+// the score viewer's pane, modal_box.h's kScorePaneFace) and over it THE
+// PAGE, one R8 texture of THE GRAY STORE's
 // bytes (GuiScoreGrayPage, score_page_worker.h), texelFetched at integer
 // coordinates and written (g, g, g, 1) at gui_page_place's rect, centered.
 // NO COLOR TABLE: sRGB -> P3 is the identity on every neutral word (all 256

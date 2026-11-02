@@ -2997,16 +2997,22 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
 void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
     // ONE BOX PAINTER FOR EVERY FLOATING SURFACE — the tooltip and every
-    // notification card, whose words their painters set (architect
-    // 2026-10-23; the overlays' part of the flat arc restyles it): ONE
-    // SUNKEN FLAT FIELD, `card_ground` (the field kFieldGround), under a
-    // ONE-DEVICE-PX RING in the ring tones, dark on the top row and left
-    // column, light on the bottom row and right column, mitred
-    // (paint_hairline_frame; render.h's line rule). The tooltip and each
-    // card keep their own height rule and pad (paint_shift_tooltip,
-    // notification_pad_px).
-    paint_cell_rect(cr, r, palette().card_ground);
-    paint_hairline_frame(cr, r, palette().ce_dark, palette().ce_hilight);
+    // notification card, whose words their painters set (render.h's THE CARD
+    // FACE, the rule's one statement; architect 2026-11-02, M11 with M14
+    // "d"): A FLAT `card_ground` BOX (the pane, kPaneFace) inside a
+    // ONE-DEVICE-PX `card_frame` BORDER (kWellFrame) on its own outer rows
+    // and columns, all four sides one tone — the border laid as the whole
+    // box, the face over its inside. No ring tones, no shadow. The tooltip
+    // and each card keep their own height rule and pad (paint_shift_tooltip,
+    // notification_pad_px), the border inside their heights.
+    if (r.w <= 0 || r.h <= 0) return;
+    const int px = hairline_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, r, palette().card_frame);
+    paint_cell_rect(cr, GuiRect{r.x + px, r.y + px, r.w - 2 * px, r.h - 2 * px},
+                    palette().card_ground);
+    cairo_restore(cr);
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
@@ -3148,8 +3154,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // edge at the pointer's x and the top 18 Windows px below it, the pointer
     // where it stood at the show; ABOVE THE OWNER'S BUTTON where that would
     // cross the window's foot — every bottom-row owner, the roster's and the
-    // modal's alike, the lane resting on the foot — and shifted left at the
-    // right edge, the box never shrinking (a truncated hint would be worse
+    // modal's alike, the lane resting on the foot — and held between the
+    // keys' outer columns (the edge rule, 2026-11-02), the box never
+    // shrinking (a truncated hint would be worse
     // than one that shifted). The rule's one statement is tooltip_box_rect
     // (app_state.h); the measurement is at render.h's kTooltipPointerDropPx.
     const GuiRect box = tooltip_box_rect(app, btn, w, h);
@@ -3281,24 +3288,22 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // classes, the hit rule and the inventory at notifications.h). THE WHOLE
 // STACK — AppState::Notifications::cards, newest first, every one of them on
 // screen since the queue retired 2026-08-30 — painted top-right, right-aligned
-// at kPanelPadPx from the window's edge, its first card at the chrome spec's
-// card seat — one relief line above the trim lane's first row, read off the
-// live lane table, so the card's frame ends where the view bar begins
-// under every chrome (architect 2026-10-08: "it looks like absolute
-// positioning where it should be relative to the elements"; the rule and
-// the margins at
+// on the keys' outer column, its first card's top border on the trim bar's
+// frame row, read off the live lane table (architect 2026-10-08: "it looks
+// like absolute positioning where it should be relative to the elements";
+// 2026-11-02, M14; the rule and the margins at
 // notification_stack_bound) — growing
 // DOWN over whatever lies there (the icon row's empty right, the thin lanes,
 // the waveform), the cards kNotificationGapPx apart (the card's own 1 px
 // since 2026-10-01, the icon row's 2 before — the ruling at the constant).
 //
-// THE LOOK (architect 2026-10-02, the Windows-95 chrome; its colours
-// 2026-10-04; the hi-fi skin 2026-10-23): THE CARD FACE — the tooltip's own
-// look (architect 2026-10-06, his word: the cards take the tooltip's look),
-// `card_ground` inside the one-device-px sunken ring, its words `card_text`
-// (render.h's palette block, THE CARD FACE) — square, NO DROP SHADOW,
-// through the one popup box painter (paint_popup_chrome, the tooltip's own);
-// inside the ring ONE PAD of plain field on all four sides (P18, architect
+// THE LOOK (architect 2026-10-02; flat since 2026-11-02, M11 with M14 "d"):
+// THE CARD FACE — the tooltip's own look (architect 2026-10-06, his word:
+// the cards take the tooltip's look), a flat `card_ground` box inside its
+// one-device-px `card_frame` border, its words `card_text` (render.h's
+// palette block, THE CARD FACE) — square, NO DROP SHADOW, through the one
+// popup box painter (paint_popup_chrome, the tooltip's own); inside the
+// border ONE PAD of plain face on all four sides (P18, architect
 // 2026-10-24; notification_pad_px), the first line THE BODY FACE'S CAP tall
 // between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
 // the planner's i or X, a BOXED GLYPH (icons.h), its ink .525 of the first
@@ -3354,9 +3359,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = scaled_px(kNotificationGapPx, 1);
-    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1): ring, ONE PAD of plain field (notifications.h,
-    // every side), the class glyph's box, the logo lane's brand gap, the
-    // text's pen; the wrap's room ends one pad short of the right ring. The
+    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1): the border
+    // (`ring`, one device px), ONE PAD of plain face (notifications.h, every
+    // side), the class glyph's box, the logo lane's brand gap, the text's
+    // pen; the wrap's room ends one pad short of the right border. The
     // first line's INSIDE rows are pad + cap + pad; the glyph's ink is
     // kNotificationGlyphRatio of them, its box the ink's 40 / 27 rounded
     // (icons::icon_box_live_px), the box's rows centered on the inside rows
@@ -5050,13 +5056,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // over the window's foot, 2026-10-10 to 2026-10-14): the controls on the
 // controls row (row 8's rows on the ground, or the same row lifted onto
 // the on-screen keyboard under a dialog editor on the glass), their outermost
-// cases or buttons flush with the box's ring's outer edges
+// cases or buttons flush with the box's outer columns
 // (modal_controls_seats). CONTENT PER KIND:
-//   A PROMPT — its question on the box's FIRST ROW at the list's row metrics,
-//   on the box's one flat field (modal_box.h's head),
+//   A PROMPT — its question on the box's FIRST ROW on the text seat
+//   (modal_box.h's THE TEXT SEAT), on the box's one flat pane,
 //   the chrome's text color, and
 //   the answer buttons FLUSH RIGHT on the controls row in painted order, the
-//   last one's right edge the ring's outer edge. Each button wears its
+//   last one's right edge the box's outer right column. Each button wears its
 //   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
 //   "Delete"), no letter underlined (architect 2026-10-30: the buttons are
 //   the prompt's one road, no keyboard standing under it). ONE BUTTON
@@ -5069,15 +5075,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   few dozen lines into the body below, the rule at PromptState.
 //   THE PROGRESS MODAL (2026-10-14, AppState::BatchProgress) — a prompt's
 //   shape with a sentence for its question: "Rendering X of Y..." on the box's
-//   first row on the field, and Cancel alone flush right on the controls row,
+//   first row on the pane, and Cancel alone flush right on the controls row,
 //   raised with passive focus on it.
 //   AN EDITOR — THE BOX IS ITS EDIT CONTROL:
-//   the whole pending line on the box's flat field in the field's text,
-//   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
+//   the whole pending line on the box's flat pane in the field's text,
+//   from the box's first row on the text seat, SOFT-WRAPPED at the
 //   box's width and never scrolling (text_editor::soft_wrap_rows), NO LABEL
 //   (every kind on the settings editor's buffer shares one shape);
 //   then OK and Cancel flush right on the controls row, Cancel's right edge
-//   the ring's outer edge and OK one button gap before it. The line is the
+//   the box's outer right column and OK one button gap before it. The line is the
 //   existing text_editor machinery — selection, caret, click-to-caret,
 //   byte-identical editing — on the wrapped rows, and a refused Enter selects
 //   the whole text, nothing recolored, its owner's card saying why (architect
@@ -5114,13 +5120,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // at the field's declaration).
 //
 // METRICS. The seats are the controls row's (modal_controls_seats: the box's
-// ring's outer columns, no row-8 pad, no tail): every key the program's case
+// outer columns, no row-8 pad, no tail): every key the program's case
 // at the case's seat, the cells abutting (modal_word_buttons, the player's
 // player_row_layout), each key its cell less the group gap (the button
 // walk, key_in_cell). (The 6-W inter-button gap, the old popup's 8 laptop
-// px, stood until 2026-10-23.) The text in the box stands 12 px from the
-// ring at 300 % on both axes (modal_box.h's THE TEXT INSIDE THE BOX), one
-// list row pitch a row.
+// px, stood until 2026-10-23.) The text in the box stands on the list rows'
+// text seat, 18 px in from the box's outer edges at 300 % on all four sides
+// (modal_box.h's THE TEXT SEAT), one list row pitch a row.
 // (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
 // at 29 W, kModalFieldHeightPx 23 W tall with its text kModalFieldPadXPx 5 W
 // in, its label before it and its horizontal travel — stood on the bottom
@@ -5187,7 +5193,7 @@ constexpr std::string_view kModalCloseLabel  = "Close";
 // as the player's and the band's do (each key its cell less the group gap,
 // the button walk's key_in_cell), THE CLUSTER
 // FLUSH RIGHT, its last key's right edge the row's right seat (the box's
-// ring's outer edge); wider than the row it starts at the row's left seat.
+// outer right column); wider than the row it starts at the row's left seat.
 // A legend never widens its key, so the layout reads the words' count alone.
 // (Windows' push button — the label's run between the spec's pads, floored
 // at 75 W, the button gap between — 2026-10-02 to 2026-10-23.)
@@ -5262,10 +5268,9 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // was Load in place · Close as WORDS, measured runs in label boxes):
     // both are the program's key now, so the cluster is two abutting
     // boxes — right-flushed where THE CONTROLS ROW'S
-    // CASES END, the last box's right edge the box's ring's outer edge
+    // CASES END, the last box's right edge the box's outer right column
     // (architect 2026-10-14, modal_controls_seats' cases_right; row 8's
-    // last case's from 2026-10-05; the other owners' clusters keep the
-    // reserved ring).
+    // last case's from 2026-10-05).
     const int words_w  = bw + bw;
     const int words_x0 = std::max(cx0, seats.cases_right - words_w);
     // What the row owes AFTER the scrub: the group space, the clock
@@ -5408,11 +5413,12 @@ static AppState::PlayerButtonAct trim_presets_pair_twin(
 
 
 // THE MODAL FAMILY'S BOX'S PAINTER (defined with the folder overlay's
-// painter below, its other caller; `hole` the GL canvas's page hole, the
-// definition's head).
+// painter below, its other caller; `hole` the GL canvas's page hole and
+// `pane` the interior's tone, the definition's head).
 static void paint_modal_box(cairo_t* cr, const AppState& app,
                             int keyboard_h,
-                            const GuiRect& hole = GuiRect{0, 0, 0, 0});
+                            const GuiRect& hole = GuiRect{0, 0, 0, 0},
+                            uint32_t pane = kPaneFace);
 
 namespace {
 
@@ -5560,7 +5566,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // editor on the glass, the same row lifted onto the on-screen keyboard's
     // band (`kb_h`, onscreen_keyboard::modal_keyboard_h_px), its face the
     // family's painter's. A PROMPT AND A DIALOG EDITOR (`boxed`) ALSO TAKE
-    // THE BOX: this body paints it (paint_modal_box) — one flat field for a
+    // THE BOX: this body paints it (paint_modal_box) — one flat pane for a
     // prompt's question and an editor's line alike — where the render player's
     // and the picker's list is the folder overlay's painter's. (THE TASKBAR
     // DIALOG, the prompts' and the editors' surface from 2026-10-10 until
@@ -5600,7 +5606,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         assert(frame.page.stands == score_up);
         if (frame.page.stands) page_hole = frame.clip;
     }
-    if (boxed) paint_modal_box(cr, app, kb_h, page_hole);
+    // THE PANE kPaneFace, the score viewer's kScorePaneFace its one exception
+    // (modal_box.h's head, M9 A2).
+    if (boxed)
+        paint_modal_box(cr, app, kb_h, page_hole,
+                        score_up ? kScorePaneFace : kPaneFace);
 
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
@@ -5608,7 +5618,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // owner's row but THE PLAYER'S, whose buttons are row 8's case, the
     // program's, at row 8's seat (architect 2026-10-05). EVERY OWNER'S SEATS
     // ARE THE FAMILY'S CONTROLS ROW'S (modal_controls_seats, architect
-    // 2026-10-14: the outermost cases and buttons flush with the box's ring;
+    // 2026-10-14: the outermost cases and buttons flush with the box's outer
+    // columns;
     // the prompts and the editors took row 8's pads until that afternoon).
     // `btn_y` and `btn_h` are the one band the walk and the scrub read.
     const BottomRowSeats seats = modal_controls_seats(app, kb_h);
@@ -6002,7 +6013,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // word (Cancel or Close by content, kModalCancelLabel's rule) and the
     // trim presets list's four (its highlight pair, the player's, directly
     // before them in the one cluster) and the BPM form's two — the last
-    // one's right edge the box's ring's outer edge (x 2280 at 300 %), today's button gap between them; the render player's row
+    // one's right edge the box's outer right column (x 2280 at 300 %), today's button gap between them; the render player's row
     // reads from the left, its transport first and its right pair flush
     // right (its branch below). (From 2026-08-13 a prompt's message and an
     // editor's label and field sat FLUSH LEFT on the bottom row with their
@@ -6024,12 +6035,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // taskbar dialog's centered band before it, until that day.)
     const int btn_y = seats.case_y;
 
-    // THE TEXT IN THE BOX — a prompt's question, an editor's line — 12 PX
-    // OF PLAIN FIELD INSIDE THE RING ON BOTH AXES at 300 % (modal_box.h's
-    // THE TEXT INSIDE THE BOX, 2026-10-23): the pen at the text room's x,
-    // the wrap its width, the first row's baseline modal_box_text_baseline0
-    // (the "l"'s ink top the pad under the ring's own px), each further row
-    // one list row pitch below.
+    // THE TEXT IN THE BOX — a prompt's question, the progress modal's
+    // sentence, an editor's line — ON THE LIST ROWS' TEXT SEAT, 18 px in
+    // from the box's outer edges at 300 % on all four sides (modal_box.h's
+    // THE TEXT SEAT, M8b): the pen at the text room's x, the wrap its width,
+    // the foot its clip's bottom, the first row's baseline
+    // modal_box_text_baseline0 (the "l"'s ink top the seat under the box's
+    // top row), each further row one list row pitch below.
     // The rows keep the list's band (row_h) for the published geometry, the
     // first row's band placed so redesign_baseline lands on that baseline.
     const GuiRect box_rect   = boxed ? modal_box_rect(app, kb_h)
@@ -6045,17 +6057,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int     row0_y     = static_cast<int>(baseline0) -
                                static_cast<int>(redesign_baseline(font, 0.0,
                                                 static_cast<double>(row_h)));
-    // ONE LINE ON THE BOX'S FIRST ROW, in the chrome's text on the face —
+    // ONE LINE ON THE BOX'S FIRST ROW, in the chrome's text on the pane —
     // a prompt's question and the progress modal's sentence alike — CLIPPED
-    // at the text room's right edge, the pad short of the ring: a line longer
-    // than the box's width is cut there, the buttons under it on the
+    // to the text room, the seat short of the box's right column: a line
+    // longer than the box's width is cut there, the buttons under it on the
     // controls row always whole.
     const auto paint_first_row_line = [&](const std::string& text) {
         const text_shape::ShapedRun msg =
             text_shape::shape_text_run(font, text);
-        if (text_w <= 0 || interior.h <= 0) return;
+        if (text_w <= 0 || text_room.h <= 0) return;
         cairo_save(cr);
-        cairo_rectangle(cr, text_x0, interior.y, text_w, interior.h);
+        cairo_rectangle(cr, text_x0, text_room.y, text_w, text_room.h);
         cairo_clip(cr);
         set_palette_source(cr, palette().label);
         text_shape::show_shaped_run(cr, msg, static_cast<double>(text_x0),
@@ -6081,12 +6093,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const GuiRect track{scrub_x0 - thumb_w / 2, btn_y,
                                 scrub_w - 1 + thumb_w, btn_h};
             dlg.scrub = track;
-            // THE THUMB'S ROWS, CENTERED IN THE TRACK'S BAND, and THE CHANNEL
-            // at its seat inside them: the thumb is its rows above the
-            // channel, the channel's own four lines and its rows below, each
-            // part rounded on its own.
+            // THE THUMB'S ROWS, CENTERED IN THE TRACK'S BAND (the case's
+            // rows), and THE CHANNEL on their center row (render.h's
+            // scrub_channel_above_px).
             const int channel_h = scrub_channel_h_px();
-            const int above     = scrub_thumb_above_px();
+            const int above     = scrub_channel_above_px();
             const int thumb_h   = scrub_thumb_h_px();
             const int thumb_y   = track.y + (track.h - thumb_h) / 2;
             // THE THUMB'S COLUMN — THE THUMB ALWAYS STANDS (2026-10-25,
@@ -6095,22 +6106,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // published (its mapping reads dlg.scrub): the player's at its
             // branch, the score viewer's at its own.
             const int hx = thumb_x_of();
-            // THE CHANNEL (render.h's scrub block, 2026-10-23): a ONE-DEVICE-PX
-            // line of the ring's light tone over one of its dark tone, across
-            // the channel's width, nothing filled.
+            // THE CHANNEL (render.h's scrub block, M7): ONE DEVICE PX of
+            // kWellFrame on the case's center row, across the channel's
+            // width, nothing else.
+            paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above,
+                                        channel.w, channel_h},
+                            hex(kWellFrame));
             {
-                const int px = hairline_px();
-                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above,
-                                            channel.w, px},
-                                palette().ce_hilight);
-                paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above + px,
-                                            channel.w, channel_h - px},
-                                palette().ce_dark);
-            }
-            {
-                // THE THUMB — the key-shaped block (render.h's scrub block:
-                // the flat key at rest, no legend, 8 W by the key's height,
-                // 2026-10-29), centered on the column and on the channel —
+                // THE THUMB — the blank flat key block (render.h's scrub
+                // block: the key at rest, no legend, 8 W by the key's height),
+                // centered on the column and on the channel —
                 // the track's whole band, its rows the case's — its box
                 // inside the item at
                 // every column of the travel. No hover face: its painted rect
@@ -6210,7 +6215,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    2026-10-14, modal_box.h; row 8's own from 2026-10-05): the
         //    buttons stand at row 8's case seat on row 8's rows, the
         //    transport's
-        //    first case at the box's ring's left outer edge and the
+        //    first case at the box's outer left column and the
         //    right-flushed pair's last ending at its right outer edge (no
         //    focus-frame reserve inside it; modal_controls_seats), today's
         //    gaps between the groups, and the scrub fills whatever lies
@@ -6446,9 +6451,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    block above). With nothing to its left the row is that one
         //    button, ON THE MODAL FAMILY'S CONTROLS ROW (architect,
         //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
-        //    ALONE, FLUSH RIGHT, ITS RIGHT EDGE THE BOX'S RING'S OUTER EDGE
-        //    (x 2280 at 300 %), as the player's Close ends there; the focus
-        //    frame, when worn, stands in the face beside the ring.
+        //    ALONE, FLUSH RIGHT, ITS RIGHT EDGE THE BOX'S OUTER RIGHT COLUMN
+        //    (x 2280 at 300 %), as the player's Close ends there.
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
         //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above
@@ -6464,12 +6468,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner = AppState::ModalDialogOwner::Editor;
         {
             // THE EDIT CONTROL'S CHROME IS THE BOX (paint_modal_box, laid at
-            // this body's head): the canvas column's ring round the theme's
-            // FIELD ground (architect 2026-10-03, the field pair; the sunken
-            // two-line field of 2026-10-02 stood on the bottom row until
-            // 2026-10-14), square. No outline says hover or focus: a FOCUSED
-            // FIELD SHOWS ITS CARET and nothing else, the caret painting only
-            // while the ring has not stepped onto a button (below).
+            // this body's head): the flat pane, no frame (modal_box.h's head,
+            // M8: "the editor's line bare on the pane"). No outline says
+            // hover or focus: a FOCUSED FIELD SHOWS ITS CARET and nothing
+            // else, the caret painting only while the focus has not stepped
+            // onto a button (below).
             //
             // FOCUS IS `modal_dialog_focus < 0` and needs no term of its own: on
             // an editor dialog -1 IS the field, the ring's own meaning for it
@@ -6478,13 +6481,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             //
             // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red
             // outline and the card is redundant"; the red frame retired from both
-            // editors): the ring stays its pair and the ground the field
-            // ground, the whole text is selected (text_editor::refuse) so
+            // editors): the pane stays the pane, the whole text is selected
+            // (text_editor::refuse) so
             // the first keystroke replaces it, and the reason card the refusing
             // commit posts (the owner's own sentence, GuiFlagEditor::notifications
             // and the settings editor's equivalent) says why. The flag editor
             // takes the same rule (render_flag_editor_box). Its text,
-            // selection and caret take the field pair and the selected pair.
+            // selection and caret take the field text and the selected pair.
             const bool field_focused = app.modal_dialog_focus < 0;
             const GuiColor ink_text     = palette().field_text;
             const GuiColor ink_sel_fill = palette().selected_fill;
@@ -6496,15 +6499,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // 2026-08-13 retired with the field). ONE SHAPED RUN, the rows cut
             // from its own pen (text_shape::byte_offsets_px) by the one wrap
             // rule, text_editor::soft_wrap_rows: each row the most text that
-            // fits the text room (the box less its pad each side) less THE
+            // fits the text room (the box less its seat each side) less THE
             // CARET'S COLUMN, reserved at the right so a caret at a full
             // row's end stands inside the room. Row i stands one list row
             // pitch under the one before (row0_y + i · row_pitch, the first
-            // row's band seated on the pad's baseline above), its bytes
+            // row's band seated on the seat's baseline above), its bytes
             // painting from the line's start (`line_x0`, the pen): its origin
             // is that start less its first byte's pen. A line taller
-            // than the box is cut at the box's interior — nothing scrolls, and
-            // the 1024-byte cap keeps a real line inside it.
+            // than the box is cut at the text room's foot, the seat over the
+            // box's bottom row — nothing scrolls, and the 1024-byte cap keeps
+            // a real line inside it.
             // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14: the Settings
             // editor's "Setting:" and the BPM editor's "BPM:" both removed,
             // architect "drop"): the line starts at the pen on every row.
@@ -6542,12 +6546,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 out.rows.push_back(row);
             }
 
-            // Everything from here paints CLIPPED TO THE BOX'S INTERIOR, and
-            // each row's run under its own row's clip (its text range's
-            // columns), so a row shows its own bytes and no other row's.
+            // Everything from here paints CLIPPED TO THE PANE'S COLUMNS AND
+            // THE TEXT ROOM'S ROWS (the seat over the box's foot, modal_box.h's
+            // THE TEXT SEAT), and each row's run under its own row's clip
+            // (its text range's columns), so a row shows its own bytes and no
+            // other row's.
             cairo_save(cr);
-            cairo_rectangle(cr, interior.x, interior.y, interior.w,
-                            interior.h);
+            cairo_rectangle(cr, interior.x, text_room.y, interior.w,
+                            text_room.h);
             cairo_clip(cr);
 
             const bool has_sel = text_editor::has_selection(*ed);
@@ -7081,11 +7087,12 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 
 // -- THE MODAL FAMILY'S BOX (architect 2026-10-14) -------------------------
 //
-// The shape and every rect are modal_box.h's: THE PANEL in the program's
-// ground (the box's margins), THE BOX'S RING — one device px in the ring
-// tones on the box's outer edge, `ce_dark` top and left, `ce_hilight` right
-// and bottom, mitred — and the interior ONE FLAT FIELD, kFieldGround, for
-// every member (modal_box.h's head). The controls row under the panel stands
+// The shape and every rect are modal_box.h's: ONE GROUND, ONE PANE — THE
+// PANEL in the program's ground (the box's margins and the box's own outer
+// rows and columns), and the interior ONE FLAT PANE in `pane` (kPaneFace for
+// every member, the score viewer's kScorePaneFace its one exception: the
+// caller's answer, modal_box.h's head), no frame, no ring, no shadow. The
+// controls row under the panel stands
 // on row 8's own rows, whose ground paint_bottom_strip lays (the row standing down under
 // the modal, modal_owns_bottom_row) — UNLESS THE STACK STANDS ON THE
 // ON-SCREEN KEYBOARD (`keyboard_h` > 0, a dialog editor on the glass,
@@ -7097,17 +7104,17 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 // THE GPU PAGE'S HOLE (architect 2026-10-27, "1 a"; canvas_sink.h's
 // TRANSPARENCY INVARIANT): `hole`, the box's interior while the score
 // viewer's page stands under the GL canvas (the frame's clip; empty
-// otherwise), takes neither the panel's ground nor the field — both laid
+// otherwise), takes neither the panel's ground nor the pane — both laid
 // under one clip of the panel less the hole — and is CLEARED to alpha 0,
 // erasing what the lanes painted there under the box (on_redraw's paint
-// order, step 12); the ring stands outside it. So every CPU pixel inside the
-// hole is 0 until a floater paints over it, and the GPU's field and page
-// show there.
+// order, step 12). So every CPU pixel inside the hole is 0 until a floater
+// paints over it, and the GPU's field and page show there.
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            int keyboard_h, const GuiRect& hole) {
+                            int keyboard_h, const GuiRect& hole,
+                            uint32_t pane) {
     const GuiRect panel = modal_panel_rect(app, keyboard_h);
     if (panel.w <= 0 || panel.h <= 0) return;
-    const GuiRect box = modal_box_rect(app, keyboard_h);
+    const GuiRect interior = modal_box_interior_rect(app, keyboard_h);
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -7125,21 +7132,13 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
         cairo_clip(cr);
     }
     {
-        // THE PANEL'S MARGINS AND THE LIFTED CONTROLS ROW the flat GROUND
-        // (the palette's `face`); THE BOX ONE SUNKEN FLAT FIELD, kFieldGround,
-        // whatever the member (a prompt's question too: the field is the box)
-        // — the ring's slot included — under a ONE-DEVICE-PX RING in the ring
-        // tones on its outer edge, dark top and left, light bottom and right
-        // (render.h's line rule; architect 2026-10-23, the overlays' part of
-        // the flat arc restyles the box).
+        // THE PANEL'S MARGINS, THE BOX'S OUTER ROWS AND COLUMNS AND THE LIFTED
+        // CONTROLS ROW the flat GROUND (the palette's `face`); THE INTERIOR
+        // ONE FLAT PANE, whatever the member (a prompt's question too: the
+        // pane is the box), nothing on its edge (modal_box.h's head).
         paint_cell_rect(cr, panel, p.face);
-        if (box.w > 0 && box.h > 0) {
-            paint_cell_rect(cr, box, hex(kFieldGround));
-            if (holed) cairo_restore(cr);   // the ring outside the hole
-            paint_hairline_frame(cr, box, p.ce_dark, p.ce_hilight);
-        } else if (holed) {
-            cairo_restore(cr);
-        }
+        paint_cell_rect(cr, interior, hex(pane));
+        if (holed) cairo_restore(cr);
         if (keyboard_h > 0)
             paint_cell_rect(cr, modal_controls_row_rect(app, keyboard_h),
                             p.face);
@@ -7165,15 +7164,13 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // monospace TEXT rows, at a line's pitch, were a second row class from
 // 2026-09-03 to 2026-09-30 and went with the panel.)
 //
-// THE BAND IS WINDOWS 95'S LIST VIEW, A SUNKEN FIELD (architect 2026-10-06,
-// over the 2026-10-02 raised panel on the chrome ground — "like a file
-// explorer, not popping out like a rising bevel"): the theme's FIELD GROUND
-// inside THE MODAL FAMILY'S BOX since 2026-10-14 (paint_modal_box, the canvas
-// column's ring; the plain sunken two-line edge round the band before it),
-// the names in the FIELD TEXT, each row 17 Windows px with its BOXED GLYPH
-// (the walk's glyph block below; folder_overlay.h's row box), and the faces
-// Windows' list:
-//   a RESTING row         -> NO FILL AT ALL: the field shows through
+// THE BAND IS LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; a
+// Windows 95 list view in a sunken field 2026-10-06 to then): THE MODAL
+// FAMILY'S PANE (paint_modal_box), no frame and no row separators, the
+// names in the FIELD TEXT, each row 17 Windows px with its BOXED GLYPH
+// (the walk's glyph block below; folder_overlay.h's row box), and the
+// faces:
+//   a RESTING row         -> NO FILL AT ALL: the pane shows through
 //   the HIGHLIGHT         -> a FLAT FILL in the theme's SELECTED PAIR, the
 //                            selection, which is also the list's keyboard
 //                            focus — ONE PAIR FOCUSED OR NOT (architect
@@ -7198,9 +7195,11 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // past the modal box's outer left edge, device px at 300 % (skin_px) — the
 // name's x in a listing with glyph rows; a glyph-less listing's names stand
 // at the glyph's x (the names' column, paint_folder_overlay, 2026-10-28
-// night).
+// night). THE GLYPH'S x IS THE BOX'S TEXT SEAT (modal_box.h's
+// kModalBoxTextSeatAt300, the one owner, M8b), so a glyph-less list's names
+// and a dialog's text stand on one column.
 static constexpr double kListGlyphInkAt300 = 27.0;
-static constexpr double kListGlyphXAt300   = 18.0;
+static constexpr double kListGlyphXAt300   = kModalBoxTextSeatAt300;
 static constexpr double kListNameXAt300    = 64.0;
 
 void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
@@ -7213,10 +7212,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 
     cairo_save(cr);
     // THE MODAL FAMILY'S BOX (modal_box.h, architect 2026-10-14): the panel's
-    // ground, the ring and THE FLAT FIELD inside it; then
+    // ground and THE FLAT PANE; then
     // EVERYTHING ELSE UNDER THE CONTENT RECT'S CLIP, because a scrolled
     // listing's first and last rows straddle the content's edges and must not
-    // paint into the ring or the controls row below.
+    // paint onto the ground round the pane or the controls row below.
     paint_modal_box(cr, app, /*keyboard_h=*/0);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
     // SAME RECT (folder_overlay.h's content_rect, the box's interior), so
@@ -7288,7 +7287,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                                  ov.press.inside && !ov.press.scrolling;
             // THE FACE (the block above): LIT — the highlight, or a live
             // press arm promising it — is the flat selected fill; a row that
-            // is neither takes NO FILL and the band's field shows through it.
+            // is neither takes NO FILL and the pane shows through it.
             const bool lit = pressed || highlighted;
             if (lit) paint_cell_rect(cr, r, pal.selected_fill);
             // NO FOCUS FRAME (architect 2026-10-23: "a highlight around the
@@ -7308,7 +7307,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // = 27 px, .525 of the 51-px row, so its box icon_box_px(27) (40
             // px at 300 %), the box's rows centered on the row (rounded
             // down), its left edge kListGlyphXAt300 = 18 px past the box's
-            // outer left edge; the name at kListNameXAt300 = 64 (the names'
+            // outer left edge (the text seat); the name at kListNameXAt300 =
+            // 64 (the names'
             // column above). THE PLAYING
             // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain
             // renders row looks good now" — the clock and the scrub say

@@ -7,7 +7,7 @@
 #include "text_shape.h"
 #include "theme_file.h"
 #include "palette_file.h"   // kGuiPaletteRoles
-#include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
+#include "cool_edit_derive.h"  // the disabled cue's faded colors
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "chrome_derive.h"  // live_chrome_words (the chrome's roles)
 #include "materials.h"      // the flat look's ground, key and text tones
@@ -389,81 +389,11 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
     cairo_fill(cr);
 }
 
-// THE MITRE (architect 2026-10-06, overruling the planner's reading that
-// Windows' DrawEdge joins its edges squarely, the dark side owning the corner,
-// at every DPI: "Buttons don't have corners like that in real life. A perfect
-// square button, like a keyboard key with a relief and bevels, would have a
-// smooth straight corner, not a pixelated corner. ... Anything the original
-// designers would have drawn with a diagonal if they could, we should." — THE
-// CHROME IS SCALABLE). At the TOP-RIGHT and BOTTOM-LEFT corner blocks, where
-// the top-left tone meets the bottom-right tone, each line's square (one
-// device px, render.h's line rule, since 2026-10-23) is split along its
-// diagonal from the ring's outer corner to its inner corner, the top-left
-// tone on the half toward the top and left edges, the bottom-right tone on
-// the half toward the bottom and right. The top-left and bottom-right corners
-// are one tone already and stay square. THE FILLS: the top-left tone is ONE
-// square L (the top row and the left column, both corner blocks whole),
-// unantialiased; the bottom-right tone ONE mitred L over it (the bottom row
-// and the right column, each end cut along the diagonal), antialiased by
-// cairo — so every pixel on the diagonal is that tone at its coverage over
-// the other, exactly the two tones' blend with no ground in it (two abutting
-// antialiased fills would let the ground through their shared seam). The
-// anti-aliasing is the renderer's, not a colour (the palette head).
-namespace {
-void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
-                       GuiColor bottom_right, int lw);
-} // namespace
-
-// THE HAIRLINE RING (render.h's line rule, 2026-10-23): the same mitred
-// ring, its lines ONE DEVICE PX.
-void paint_hairline_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
-                          GuiColor bottom_right) {
-    const int lw = hairline_px();
-    if (r.w <= 0 || r.h <= 0) return;
-    if (r.w < 2 * lw || r.h < 2 * lw) {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        paint_cell_rect(cr, r, top_left);
-        cairo_restore(cr);
-        return;
-    }
-    paint_mitred_ring(cr, r, top_left, bottom_right, lw);
-}
-
-namespace {
-void paint_mitred_ring(cairo_t* cr, const GuiRect& r, GuiColor top_left,
-                       GuiColor bottom_right, int lw) {
-    const double x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h;
-    cairo_save(cr);
-    cairo_new_path(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_move_to(cr, x0, y0);
-    cairo_line_to(cr, x1, y0);
-    cairo_line_to(cr, x1, y0 + lw);
-    cairo_line_to(cr, x0 + lw, y0 + lw);
-    cairo_line_to(cr, x0 + lw, y1);
-    cairo_line_to(cr, x0, y1);
-    cairo_close_path(cr);
-    set_palette_source(cr, top_left);
-    cairo_fill(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    cairo_move_to(cr, x1, y0);
-    cairo_line_to(cr, x1, y1);
-    cairo_line_to(cr, x0, y1);
-    cairo_line_to(cr, x0 + lw, y1 - lw);
-    cairo_line_to(cr, x1 - lw, y1 - lw);
-    cairo_line_to(cr, x1 - lw, y0 + lw);
-    cairo_close_path(cr);
-    set_palette_source(cr, bottom_right);
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
-} // namespace
-
-// (THE RELIEF FAMILY — paint_relief_frame, the two-line paint_relief_edge,
-// paint_relief_plain_sunken and paint_relief_line_frame, every line one
-// scaled Windows px (relief_line_px) — went 2026-10-23 with the hairline
-// sweep: render.h's line rule; every ring takes paint_hairline_frame.)
+// (THE RELIEF FAMILY — paint_relief_frame, paint_relief_edge,
+// paint_relief_plain_sunken, paint_relief_line_frame, every line one scaled
+// Windows px — went 2026-10-23, and its one-device-px successor, the mitred
+// two-tone ring, 2026-11-02 with the overlays' flat pass: render.h's NO
+// RELIEF AND NO RING.)
 
 // (THE WINDOWS PARTS' EDGES — paint_windows_soft_raised, _soft_sunken and
 // _plain_raised in Windows 2000's Standard quartet, the caption buttons' and
@@ -2438,23 +2368,11 @@ namespace {
 // THE PROGRAM'S EIGHT into the installed struct (palette_file.h's role
 // table) — the install's first half (the chrome's members are the other's)
 // — with THE PANEL'S FACE THE FLAT GROUND (materials.h's kGround, the flat
-// look, 2026-11-01), and the Cool Edit block off that face.
+// look, 2026-11-01), and the disabled cue's two faded colors.
 void fill_program_palette() {
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
         g_palette.*(r.member) = hex(r.word);
-    // THE COOL EDIT BLOCK, derived from the panel's face by Cool Edit's own
-    // rule (cool_edit_derive.h).
-    const uint32_t face = kGround;
-    g_palette.face = hex(face);
-    for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
-        if (t.member != nullptr)
-            g_palette.*(t.member) = hex(cool_edit_derive::tone_of(t, face));
-    // THE RING TONES OVER THE COOL EDIT BLOCK (materials.h's kRingLight /
-    // kRingDark, off the flat ground): the rings the overlays still wear
-    // until their part of the flat arc — the modal box's ring, the cards'
-    // and the tooltip's, the scrub's channel.
-    g_palette.ce_hilight     = hex(kRingLight);
-    g_palette.ce_dark        = hex(kRingDark);
+    g_palette.face = hex(kGround);
     // The disabled cue's faded triangle and label (2026-10-10): the label
     // from the text tone, BOTH MIXED TOWARD THE MARKER LANE'S FACE, the
     // ground the cues stand on (architect 2026-10-22, truthful to the
@@ -2467,8 +2385,7 @@ void fill_program_palette() {
     }
 }
 // THE CHROME'S MEMBERS (live_chrome_words, chrome_derive.h: the flat look's
-// constants and the ring tones off the flat ground) — the install's other
-// half.
+// constants) — the install's other half.
 void fill_chrome_palette() {
     const GuiThemeWords w = live_chrome_words();
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)

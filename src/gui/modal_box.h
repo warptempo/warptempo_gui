@@ -26,44 +26,41 @@
 // caption over it too, until 2026-10-24) stays as the main window paints
 // it. Across, it runs the window's width,
 // as every program lane does. Top to bottom:
-//   1. ONE SUNKEN BOX WEARING A RING — it stands where the program ring
-//      stood round the well until the well's flat look (2026-11-02): one
-//      hairline, `ce_dark` top and left, `ce_hilight` right and bottom,
-//      mitred — in the well's own columns (the side margin of the ground in
+//   1. THE BOX — in the well's own columns (the side margin of the ground in
 //      from each side, the waveform area's x and width one edge column, one
-//      hairline, out: render.h's well_columns), its top row the trim lane's
-//      first row, its bottom row the well's foot (the overlays' part of the
-//      flat arc restyles it);
+//      hairline, out: render.h's well_columns, the keys' outer columns), its
+//      top row the trim lane's first row, its bottom row the well's foot;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
 //      the case (key_height tall, render.h's icon_case_h_px), the strip pad
 //      (strip_h_px) — on the ground,
 //      no line, bar or border, its outermost cases or buttons FLUSH WITH THE
-//      RING'S OUTER EDGES; on the window's foot.
-// THE PANEL'S MARGINS AND THE CONTROLS ROW are the flat ground (materials.h,
-// the flat look 2026-11-01); THE BOX (architect 2026-10-23; the overlays'
-// part of the flat arc restyles it) IS
-// ONE SUNKEN FLAT FIELD, kFieldGround, under a ONE-DEVICE-PX RING in the
-// ring tones on its outer edge (render.h's line rule) — every member's, a
-// prompt's question included ("the user shouldn't be typing on a non-flat
-// color"); EVERY BUTTON THE FLAT KEY with its legend under it, the word
-// buttons' words in capitals (paint_handler.cpp's modal_word_buttons and
-// paint_key_legend) (paint_modal_box). (The earlier word buttons and a
-// prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
+//      BOX'S OUTER COLUMNS; on the window's foot.
+// ONE GROUND, ONE PANE (architect 2026-11-01 night, M6 A — "the list pane
+// with no frame" — for every member, M7 / M8 / M11 after it): THE PANEL'S
+// MARGINS, THE CONTROLS ROW AND THE BOX'S OWN OUTER ROWS AND COLUMNS are the
+// flat ground (materials.h's kGround); THE BOX'S INTERIOR — the box less one
+// device px on each side — IS ONE FLAT PANE, materials.h's kPaneFace 363636
+// (Live's panel face, the keys' face), with NO FRAME, NO RING, NO SHADOW AND
+// NO ROW SEPARATOR, every member's alike: the lists, a prompt's question,
+// the progress modal's sentence, a dialog editor's line ("the user
+// shouldn't be typing on a non-flat color", 2026-10-23). THE ONE EXCEPTION
+// IS THE SCORE VIEWER'S PANE, kScorePaneFace 191919 (below). EVERY BUTTON
+// THE FLAT KEY with its legend under it, the word buttons' words in
+// capitals (paint_handler.cpp's modal_word_buttons and paint_key_legend)
+// (paint_modal_box).
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
-// it lands on the well's rows of ground: the box's ring stands where the
-// program ring stood. At the tablet's 2304 x 1440, 300 %, the strip pad's
-// 13 W and key_height 33 (re-derived 2026-11-02, the flat well): the box's
-// top row 144 (the trim lane's first row, the row of ground directly under
-// the band's rows 0–143, the logo lane 0–71), its bottom row 1328 (the
-// well's foot) and its columns 23 and 2280 (the well's edge columns), the
-// one-device-px ring on rows 144 and 1328 and columns 23 and 2280, the
-// interior x 24..2279 — the main canvas's own columns — and y 145..1327
-// (THE RING IS THE ONLY MARGIN, below; the main canvas's own rows
-// 236–1327); the controls row 1329–1439, its case rows 1368–1400, its first
-// case's columns 23–91 and its last 2212–2280. A DIALOG'S TEXT (THE TEXT
-// INSIDE THE BOX, below) 12 px of plain field inside the ring on both axes:
-// its pen on column 36, its ascender line on row 157, its first baseline at
-// y 173 (the "l" 15.9 px tall), its wrap ending one past column 2267.
+// it lands on the well's rows of ground. At the tablet's 2304 x 1440, 300 %,
+// the strip pad's 13 W and key_height 33: the box's top row 144 (the trim
+// lane's first row, the row of ground directly under the band's rows 0–143,
+// the logo lane 0–71), its bottom row 1328 (the well's foot) and its columns
+// 23 and 2280 (the well's edge columns), those rows and columns ground, the
+// PANE x 24..2279 — the main canvas's own columns — and y 145..1327 (the
+// main canvas's own rows 236–1327); the controls row 1329–1439, its case
+// rows 1368–1400, its first case's columns 23–91 and its last 2212–2280. A
+// DIALOG'S TEXT (THE TEXT SEAT, below) on the list rows' seat, 18 px in
+// from the box's outer edges: its pen on column 41, its ascender line on
+// row 162, its wrap ending one past column 2262, its foot clip one past row
+// 1310.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -87,12 +84,7 @@
 // the compact keyboard's band 352 rows where the full-width one's was 403,
 // so the box 51 rows taller): the keyboard's band 1088–1439 (its first key
 // row's top 1102), the controls row 977–1087 (its case rows 1016–1048), the
-// ring's bottom row 976, the interior y 145..975.
-//
-// THE INTERIOR IS ONE FLAT FIELD FOR EVERY MEMBER (2026-10-23, above):
-// the lists, a dialog editor's line, a prompt's question and the progress
-// modal's sentence alike. (The Field / Face choice by what the surface is,
-// ModalBoxGround, 2026-10-14 to 2026-10-23, is git history.)
+// box's bottom row 976 (ground), the pane y 145..975.
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);
@@ -100,9 +92,12 @@
 // and every hit site of a member reads these rects (on screen is as
 // painted).
 #include "app_state.h"
+#include "materials.h"      // kPaneFace
+#include "palette_file.h"   // kPaletteInk, the score viewer's pane
 #include "render.h"
 
 #include <algorithm>
+#include <cstdint>
 
 // THE BOX'S DIALOG MEMBERS STAND (architect 2026-10-14): A PROMPT — over any
 // surface, the render player's and the picker's lists included, its question
@@ -133,57 +128,62 @@ inline bool modal_box_stands(const AppState& a) {
 // THE CONTROLS ROW (item 2): row 8's own rows — the lane itself
 // (bottom_row_area) on the window's foot, or, with the keyboard under the
 // stack, the same rows lifted onto the keyboard's band. Its seats are row
-// 8's (paint_handler.cpp's bottom_row_seats, the one owner): the ring's
-// outer columns, the box's x and right edge (modal_box_rect's).
+// 8's (paint_handler.cpp's bottom_row_seats, the one owner): the box's
+// outer columns, its x and right edge (modal_box_rect's).
 inline GuiRect modal_controls_row_rect(const AppState& a, int keyboard_h) {
     const GuiRect lane = bottom_row_area(a);
     if (lane.w <= 0 || lane.h <= 0) return GuiRect{0, 0, 0, 0};
     return GuiRect{lane.x, lane.y - std::max(0, keyboard_h), lane.w, lane.h};
 }
 
-// THE BOX (item 1), the ring's outer rect: the well's columns across
-// (render.h's well_columns, the program ring's outer columns until the flat
-// well), the trim lane's first row down to the controls row's top (the
-// box's last row the well's foot, the row above it). A zero rect on a
+// THE BOX (item 1), its outer rect: the well's columns across (render.h's
+// well_columns), the trim lane's first row down to the controls row's top
+// (the box's last row the well's foot, the row above it). A zero rect on a
 // degenerate stack.
 inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
     const WellColumns well = well_columns(a);
     const GuiRect trim  = top_trim_row_area(a);
     const GuiRect row   = modal_controls_row_rect(a, keyboard_h);
-    const int     lw    = hairline_px();   // the ring's line, as the interior's
+    const int     lw    = hairline_px();   // the ground round the pane
     const int     y1    = row.y;
     const GuiRect box{well.x, trim.y, well.end - well.x, y1 - trim.y};
     if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
     return box;
 }
 
-// THE RING IS THE ONLY MARGIN (architect 2026-10-23, on the installed
-// player: "the amount of spacing there is between the selection, the left
-// edge, top edge, and the frame itself … at most one device pixel, since the
-// bevel is one pixel. It looks like there's too much space around the
-// selection row"; and "if you're going to remove padding from the player,
-// then remove a similar amount of padding from the modal text editor, like
-// the settings editor"). THE INTERIOR is the box inside its ONE-DEVICE-PX
-// ring (hairline_px, the line the painter draws on the slot's outer edge —
-// the slot's other rows the field like the interior), and the lists' rows
-// stand ONE DEVICE PX OF AIR inside that (modal_box_content_pad_px) on the
-// left, the top and the right, so the lit row's bar reaches to one px
-// from the ring's columns and the first row stands one px under its top row;
-// a dialog's text — a prompt's question, a dialog editor's line — keeps its
-// own pad, 12 px at 300 % (THE TEXT INSIDE THE BOX, below). (The interior
-// one program line in, its 3-px slot at 300 %, with the list's 1-W pad and
-// the text's 7-W inset inside it — 6 px of air round the lit row, 24 before
-// the text — stood 2026-10-14 to 2026-10-23.)
+// THE PANE (architect 2026-10-23, on the installed player: "the amount of
+// spacing there is between the selection, the left edge, top edge, and the
+// frame itself … at most one device pixel"; the frame's ring retired
+// 2026-11-01 night, M6 A, its rows and columns become ground): THE INTERIOR
+// is the box less ONE DEVICE PX on each side (hairline_px; the box's outer
+// rows and columns the ground), the pane every member stands on, and the
+// lists' rows stand ONE DEVICE PX OF AIR inside it
+// (modal_box_content_pad_px) on the left, the top and the right, so the lit
+// row's bar reaches to one px from the pane's edges and the first row
+// stands one px under its top row; a dialog's text — a prompt's question, a
+// dialog editor's line — stands on the list rows' text seat (THE TEXT SEAT,
+// below).
 inline GuiRect modal_box_interior_rect(const AppState& a, int keyboard_h) {
     const GuiRect box = modal_box_rect(a, keyboard_h);
     const int     lw  = hairline_px();
     if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
     return GuiRect{box.x + lw, box.y + lw, box.w - 2 * lw, box.h - 2 * lw};
 }
-// THE CONTENT'S AIR inside the interior (THE RING IS THE ONLY MARGIN,
-// above): one device px at every scale, never scaled — it is measured
-// against the one-px ring.
+// THE CONTENT'S AIR inside the pane (THE PANE, above): one device px at
+// every scale, never scaled — it is measured against the one-px edge.
 inline int modal_box_content_pad_px() { return 1; }
+
+// THE SCORE VIEWER'S PANE — THE ONE DELIBERATE EXCEPTION to kPaneFace
+// (architect 2026-11-01 night, M9 A2, "THE SCORE VIEWER IS SETTLED": "not
+// lighter, preferably from ableton palette directly"): 191919, Live's ink —
+// the palette's canvas-ink tone, palette_file.h's kPaletteInk, the one
+// constant reused. THE REASON: the score's page is a picture on a dark mat,
+// not a list field. The GPU's field round the page (score_viewer.cpp's
+// score_viewer_publish_gpu_page) and the CPU's pane under the score
+// viewer's box (paint_modal_dialog's call of paint_modal_box, for a frame
+// with no page hole) both read it; the page's fit and centering are
+// untouched.
+inline constexpr uint32_t kScorePaneFace = kPaletteInk;
 
 // THE PANEL: everything the modal takes ABOVE the controls row — the box
 // and the ground margins beside it — across the lane, from
@@ -210,49 +210,53 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
     return GuiRect{row.x, y0, row.w, std::max(0, y1 - y0)};
 }
 
-// THE TEXT INSIDE THE BOX — a prompt's question, the progress modal's
-// sentence and the dialog editors' line (architect 2026-10-14; the pad
-// 2026-10-23, on his capture at 300 %:
-// the ink 5 px right of the ring and 18 under it — "it looks odd because the
-// horizontal padding is very small, but the vertical padding is large"; his
-// pick S3, the clock fields' pad; "okay to go up to 12" the same night):
-// TWELVE PX OF PLAIN FIELD BETWEEN THE RING AND THE INK ON BOTH AXES at
-// 300 %, the pad an AREA scaled with gui_scale through skin_px
-// (kModalBoxTextPadAt300: 12 at 300 %, 8 at 200 %, 6 at 150 %, 14 at
-// 360 %), the ring's one device px (hairline_px) standing outside it: THE
-// PEN on the ring's left column plus its px plus the pad, THE WRAP the same
-// short of the ring's right column, and THE FIRST ROW'S ASCENDER LINE — the
-// face's own "l" ink top, gui_font_ascender_ink_px, never the line box's
-// top: the air he sees is the ink's — on the ring's top row plus its px
-// plus the pad (modal_box_text_baseline0), each further row one list row
-// pitch below (the row and its 1-W gap). THE LISTS (the project picker, the
-// render player) KEEP THEIR ROWS ("the player's rows look good"): the folder
-// overlay's row box, 17 W, at the content's one px under the ring, the cap
-// centred on each row's band (redesign_baseline). (The 7-W inset of
-// 2026-10-14 — Windows' edit-control inset, the mock's
-// x 45 at 300 % — and the 1-W pad past the content's one px of air that
-// replaced it the morning of 2026-10-23, kModalBoxTextPadPx, its first row
-// the list's, are retired.)
-inline constexpr double kModalBoxTextPadAt300 = 12.0;
-inline int modal_box_text_pad_px() {
-    return skin_px(kModalBoxTextPadAt300, 1);
+// THE TEXT SEAT — ONE OWNER for the box's text and the lists' text column
+// (architect 2026-11-01 night, M8b, "m8b_lineeditor.png APPROVED": the
+// editor's line on the list row's seat, "a little more padding on top/left
+// (and presumably bottom/right)"; 2026-11-02, M14, "keep" — the question's
+// seat the line editor's and the settings rows'): kModalBoxTextSeatAt300,
+// 18 DEVICE PX AT 300 % IN FROM THE BOX'S OUTER EDGE (modal_box_rect's, the
+// ground's column and row round the pane), an AREA scaled with gui_scale
+// through skin_px at the element (18 at 300 %, 12 at 200 %, 9 at 150 %).
+// Its readers, which cannot drift apart:
+//   THE BOX'S TEXT — a prompt's question, the progress modal's sentence and
+//     the dialog editors' line, symmetric on all four sides: THE PEN the
+//     seat in from the box's left column (column 41 at 300 %), THE WRAP
+//     ending the seat short of its right column (one past 2262), THE FIRST
+//     ROW'S ASCENDER LINE — the face's own "l" ink top,
+//     gui_font_ascender_ink_px, never the line box's top: the air he sees is
+//     the ink's — the seat under its top row (row 162; modal_box_text_
+//     baseline0), each further row one list row pitch below (the row and
+//     its 1-W gap), and THE FOOT the seat over its bottom row (the text
+//     room's clip, one past row 1310);
+//   THE LISTS' TEXT COLUMN — paint_handler.cpp's kListGlyphXAt300, the
+//     glyph's box in a listing with glyph rows and the names' column in a
+//     glyph-less one (the settings page, the value lists, the trim presets,
+//     the BPM form), the same seat in from the box's left column. (The
+//     lists keep their rows: the folder overlay's row box, 17 W, at the
+//     content's one px under the pane's top, the cap centred on each row's
+//     band, redesign_baseline.)
+// (A 12-px pad inside a one-px ring stood 2026-10-23 to 2026-11-02.)
+inline constexpr double kModalBoxTextSeatAt300 = 18.0;
+inline int modal_box_text_seat_px() {
+    return skin_px(kModalBoxTextSeatAt300, 1);
 }
 // THE TEXT'S ROOM in the box `box` (modal_box_rect): x the pen's column
-// (the ring's px and the pad in from its left column), w the soft wrap's
-// width (the box less the ring and the pad on each side), zero on a box too
-// narrow to hold it; y and h the interior's rows, the text's clip.
+// (the seat in from its left column), w the soft wrap's width (the box less
+// the seat on each side), zero on a box too narrow to hold it; y the
+// pane's top row (a row's band rises above the ascender line it seats) and
+// the bottom one past the seat over the box's bottom row: the text's clip.
 inline GuiRect modal_box_text_room(const GuiRect& box) {
-    const int pad = modal_box_text_pad_px();
-    const int lw  = hairline_px();
-    if (box.w <= 2 * (lw + pad) || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
-    return GuiRect{box.x + lw + pad, box.y + lw, box.w - 2 * (lw + pad),
-                   box.h - 2 * lw};
+    const int seat = modal_box_text_seat_px();
+    const int lw   = hairline_px();
+    if (box.w <= 2 * seat || box.h <= lw + seat) return GuiRect{0, 0, 0, 0};
+    return GuiRect{box.x + seat, box.y + lw, box.w - 2 * seat,
+                   box.h - lw - seat};
 }
-// THE FIRST ROW'S BASELINE in the box `box`: the ring's top row plus its px
-// plus the pad is the ascender line, the baseline the ascender's own height
-// under it, rounded at the element.
+// THE FIRST ROW'S BASELINE in the box `box`: the seat under the box's top
+// row is the ascender line, the baseline the ascender's own height under it,
+// rounded at the element.
 inline double modal_box_text_baseline0(const GuiFont& font, const GuiRect& box) {
-    return static_cast<double>(box.y + hairline_px() +
-                               modal_box_text_pad_px()) +
+    return static_cast<double>(box.y + modal_box_text_seat_px()) +
            std::nearbyint(gui_font_ascender_ink_px(font));
 }

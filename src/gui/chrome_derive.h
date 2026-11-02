@@ -1,7 +1,6 @@
 #pragma once
 
 #include "theme_file.h"        // GuiThemeWords, the role table
-#include "cool_edit_derive.h"  // the tones the chrome wears
 #include "materials.h"         // the flat look's constants
 
 #include <array>
@@ -12,39 +11,33 @@
 
 // THE CHROME'S ROLES IN THE FLAT LOOK (architect 2026-11-01; materials.h's
 // head). This header is THE ONE OWNER OF EVERY CHROME ROLE'S SOURCE: every
-// role is A CONSTANT OF THE FLAT LOOK or ONE OF THE TWO RING TONES OFF THE
-// FLAT GROUND (materials.h's kRingLight / kRingDark, which the overlays
-// still wear until their part of the flat arc), installed at
-// every install of the palette (render.cpp's install_palette). THE CAPTION
-// HAS NO ROLE: the app paints none since 2026-10-24 (render.h's caption
-// note).
+// role is A CONSTANT OF THE FLAT LOOK, installed at every install of the
+// palette (render.cpp's install_palette). A ROLE EXISTS IFF A PAINTER READS
+// IT (the overlays' flat pass, 2026-11-02: the relief quartet, the field
+// ground and the clock pair, read by nothing, retired from this table and
+// theme_file.h's). THE CAPTION HAS NO ROLE: the app paints none since
+// 2026-10-24 (render.h's caption note).
 //
-// THE PER-ROLE TABLE (kChromeRoles below; the role table's 15, each decided
-// once — the build proves every role is listed exactly once):
-//   ground, light_3d                     = the flat ground kGround 242424
-//   hilight                              = the ring's LIGHT tone
-//   shadow, card_frame                   = the ring's DARK tone (the cards'
-//                                          and the tooltip's ring, render.h's
-//                                          card face)
-//   dk_shadow                            = black
-//   label, clock_text, card_text,
-//   field_text                           = THE TEXT TONE kTextInk B5B5B5
+// THE PER-ROLE TABLE (kChromeRoles below; the role table's eight, each
+// decided once — the build proves every role is listed exactly once):
+//   ground                               = the flat ground kGround 242424
+//   label, field_text, card_text         = THE TEXT TONE kTextInk B5B5B5
 //                                          (M13, 2026-11-02)
-//   field_ground, clock_ground,
-//   card_ground                          = THE FIELD kFieldGround 0A0A0C
-//                                          (every field, the cards, the
-//                                          tooltip, the modal box)
 //   selected_fill                        = THE CONSTANT kSelectionFill,
 //                                          637E86, Live's browser selection
 //                                          (architect 2026-11-01 night, M5g /
 //                                          M6)
 //   selected_text                        = THE CONSTANT kSelectionText,
 //                                          111111 (kTextOnLit)
+//   card_ground                          = THE PANE kPaneFace 363636 (the
+//                                          cards' and the tooltip's face,
+//                                          architect 2026-11-02, M11)
+//   card_frame                           = THE FRAME TONE kWellFrame 757575
+//                                          (their one-px border, M14 "d")
 namespace chrome_derive {
 
 enum class Source {
-    Ground, RingLight, RingDark, Black, Text, Field, SelectionFill,
-    SelectionText,
+    Ground, Text, Pane, Frame, SelectionFill, SelectionText,
 };
 struct ChromeRole {
     const char* role;
@@ -53,19 +46,12 @@ struct ChromeRole {
 inline constexpr ChromeRole kChromeRoles[] = {
     {"ground",                    Source::Ground},
     {"label",                     Source::Text},
-    {"hilight",                   Source::RingLight},
-    {"light_3d",                  Source::Ground},
-    {"shadow",                    Source::RingDark},
-    {"dk_shadow",                 Source::Black},
     {"selected_fill",             Source::SelectionFill},
     {"selected_text",             Source::SelectionText},
-    {"field_ground",              Source::Field},
     {"field_text",                Source::Text},
-    {"clock_ground",              Source::Field},
-    {"clock_text",                Source::Text},
-    {"card_ground",               Source::Field},
+    {"card_ground",               Source::Pane},
     {"card_text",                 Source::Text},
-    {"card_frame",                Source::RingDark},
+    {"card_frame",                Source::Frame},
 };
 
 // Each listed role's index in the theme's role table, found once.
@@ -99,11 +85,9 @@ constexpr GuiThemeWords derive_chrome() {
         uint32_t v = 0;
         switch (kChromeRoles[i].source) {
             case Source::Ground:        v = kGround;            break;
-            case Source::RingLight:     v = kRingLight;         break;
-            case Source::RingDark:      v = kRingDark;          break;
-            case Source::Black:         v = 0x000000u;          break;
             case Source::Text:          v = kTextInk;           break;
-            case Source::Field:         v = kFieldGround;       break;
+            case Source::Pane:          v = kPaneFace;          break;
+            case Source::Frame:         v = kWellFrame;         break;
             case Source::SelectionFill: v = kSelectionFill;     break;
             case Source::SelectionText: v = kSelectionText;     break;
         }
@@ -117,16 +101,13 @@ constexpr GuiThemeWords derive_chrome() {
 // THE ROLES AS LISTED.
 inline constexpr GuiThemeWords kDefaultCheck = derive_chrome();
 static_assert(kDefaultCheck[theme_role_index("ground")] == 0x242424);
-static_assert(kDefaultCheck[theme_role_index("hilight")] == kRingLight);
-static_assert(kDefaultCheck[theme_role_index("shadow")] == kRingDark);
-static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
 static_assert(kDefaultCheck[theme_role_index("label")] == 0xB5B5B5);
-static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x0A0A0C);
 static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xB5B5B5);
 static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x637E86);
 static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x111111);
-static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x0A0A0C);
-static_assert(kDefaultCheck[theme_role_index("card_frame")] == kRingDark);
+static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x363636);
+static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xB5B5B5);
+static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x757575);
 } // namespace chrome_derive
 
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads

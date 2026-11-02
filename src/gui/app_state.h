@@ -10124,8 +10124,12 @@ inline DialogEditorStop dialog_editor_byte_at(
 // and its top tooltip_pointer_drop_px() below the pointer's y, the pointer
 // as it stood at the show (RedesignTooltip::shown_x/y); where that box would
 // cross the window's foot, ABOVE `btn` (the owner's painted button) with
-// tooltip_flip_gap_px() between them; then shifted left to fit the window's
-// right edge, never past its left or top. The box never shrinks.
+// tooltip_flip_gap_px() between them; then held between THE KEYS' OUTER
+// COLUMNS (render.h's well_columns, THE EDGE RULE; architect 2026-11-02,
+// M11 ruling 4: x 23 .. 2280 at 300 %, where the window's own edges stood
+// until then) — shifted left to end on the right one, never past the left
+// one (a box wider than the span pins its left edge there), never above the
+// window's top. The box never shrinks.
 // tooltip_hang_bands is the DAMAGE twin, read by the three owners that must
 // damage a box before its rect is published (the show edge, tick_tooltip;
 // main.cpp's roster words comparator; Viewport::invalidate_modal_dialog_area

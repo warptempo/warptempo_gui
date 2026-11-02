@@ -66,7 +66,7 @@
 // modal_box.h, the one owner of the shape: "overlays/modals can take over the
 // area from the trim bar on down, with just the bottom new border
 // remaining"; the simple layout 2026-10-22): from THE VIEW BAR'S TOP ROW
-// down, one sunken box wearing the program ring, and under it the CONTROLS
+// down, one box — the flat pane on the ground, no frame — and under it the CONTROLS
 // ROW on row 8's rows (the modal dialog's, paint_modal_dialog) — so EVERY
 // LANE FROM THE VIEW BAR TO ROW 8 is under it, and THE ICON ROW STANDS ABOVE
 // IT, as the main window paints it, the icon row
@@ -85,8 +85,8 @@
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces
 // to a zero-height rect, its top above the canvas's) while the lanes it
-// covers paint and are covered. THE BOX'S RING IS THE BAND'S ONE EDGE; the
-// FIRST ROW STANDS AT THE BOX'S TOP, one pad under the ring (the folder-name
+// covers paint and are covered. THE PANE'S EDGE IS THE BAND'S ONE EDGE; the
+// FIRST ROW STANDS AT THE PANE'S TOP, one pad under it (the folder-name
 // header that stood above the player's list 2026-10-10 to 2026-10-14 is
 // removed, content_rect's note).
 // The architect's ruling (2026-08-28):
@@ -137,17 +137,15 @@
 //     panel's deletion on 2026-09-30.)
 // The panel's own authored numbers are the four below.
 //
-// THE FACES ARE WINDOWS' LIST VIEW (architect 2026-10-02, the ladder at the
-// painter; the field 2026-10-06): the box's interior is THE FIELD GROUND, the
-// field pair, "like a file explorer, not popping out like a rising bevel" —
-// a surface you pick from (the modal box's one flat field, modal_box.h) — inside the
-// canvas column's sunken ring since 2026-10-14 (the plain sunken two-line
-// edge round the keyboard slot's band before it). IT COVERS EVERY CONTENT,
+// THE FACES ARE LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; the
+// ladder at the painter): the box's interior is THE PANE, kPaneFace with the
+// field text, a surface you pick from (modal_box.h's ONE GROUND, ONE PANE),
+// no frame round it. IT COVERS EVERY CONTENT,
 // this one widget being every
 // Windows list in the product (the player's folders and wavs, the project
 // picker's projects, the settings page's keys, the value list's values, the
 // trim presets); the controls row under it — the transport, the scrub,
-// the buttons — stands on the face. A
+// the buttons — stands on the ground. A
 // resting row paints no fill at all, and the highlighted row is a flat fill
 // in the theme's selected pair (render.h's palette block), focused or not.
 // No hover face and NO ALTERNATING ROWS.
@@ -239,18 +237,17 @@ inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
 // notifications.cpp: the rows stand at row_inset_px below.)
 inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
 // THE ROWS' INSET INSIDE THE BOX'S INTERIOR — left, top and right, and the
-// listing's foot: THE CONTENT'S ONE DEVICE PX OF AIR (modal_box.h's THE RING
-// IS THE ONLY MARGIN, architect 2026-10-23: "at most one device pixel, since
-// the bevel is one pixel"), so the lit row's bar stands one px from the
-// ring's columns and the first row one px under its top row. (kPanelPadPx's
-// 1 W inside the interior's 1-W slot stood 2026-10-14 to 2026-10-23.)
+// listing's foot: THE CONTENT'S ONE DEVICE PX OF AIR (modal_box.h's THE
+// PANE, architect 2026-10-23: "at most one device pixel"), so the lit row's
+// bar stands one px from the pane's edges and the first row one px under its
+// top row.
 inline int row_inset_px()         { return modal_box_content_pad_px(); }
 // (THE ROW'S GLYPH AT WINDOWS' SMALL 16-W ICON, its 3-W lead and its 6-W
 // gap to the name stood 2026-10-02 to 2026-10-23; the boxed glyph's
 // geometry is the painter's since, paint_handler.cpp's kListGlyph*.)
 
 // (THE BAND OWNS NO LINE OF ITS OWN — its one edge is the modal family's
-// ring, modal_box.h.)
+// pane meeting the ground, modal_box.h.)
 
 // -- Standing ----------------------------------------------------------------
 
@@ -278,7 +275,7 @@ inline int content_height_px(const AppState& a) {
 }
 
 // THE BAND: THE MODAL FAMILY'S PANEL (architect 2026-10-14, modal_box.h —
-// the box wearing the program ring and its margins of ground, from the view
+// the box's pane and its margins of ground, from the view
 // bar's top row to the controls row's top), a FIXED height
 // whatever the listing's length (2026-08-28, the ruling above). Like the
 // keyboard's own accessor it does not ask whether the panel stands.
@@ -311,13 +308,12 @@ inline GuiRect surface_rect(const AppState& a) {
     return modal_panel_rect(a, /*keyboard_h=*/0);
 }
 
-// The rows' band: THE BOX'S INTERIOR, inside the canvas column's ring
-// (modal_box_interior_rect; the list's ground the box's flat field). Every
-// geometry below reads this and not the surface — the rows,
+// The rows' band: THE BOX'S INTERIOR, the pane (modal_box_interior_rect).
+// Every geometry below reads this and not the surface — the rows,
 // the scroll ceiling, the keep-visible walk, the painter's row-walk clip and
-// row_at's containment — so a row can never paint over the ring or be
-// pressed through it. THE FIRST ROW STANDS AT THE BOX'S TOP, one device px
-// under the ring (row_inset_px).
+// row_at's containment — so a row can never paint onto the ground round the
+// pane or be pressed through it. THE FIRST ROW STANDS AT THE PANE'S TOP, one
+// device px under it (row_inset_px).
 // (THE FOLDER NAME ABOVE THE PLAYLIST — the viewed folder's name in one list
 // row and an etched pair under it, the render player's alone, 2026-10-10 to
 // 2026-10-14 — IS REMOVED, architect 2026-10-14: "it was icon padding but no
@@ -374,10 +370,10 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
 
 // The row under (x, y), or -1 — a point outside the ROWS' BAND (content_rect,
 // the box's interior) answers -1 whatever row's rect would contain it, so a
-// row scrolled out of the band cannot be pressed through the ring or the
-// controls row below. It is the content rect and not the surface because the
-// surface is the band's outer CLAIM (the press router's own test, one call
-// up) while the rows live in the content — the box inside its ring.
+// row scrolled out of the band cannot be pressed through the ground round
+// the pane or the controls row below. It is the content rect and not the
+// surface because the surface is the band's outer CLAIM (the press router's
+// own test, one call up) while the rows live in the content — the pane.
 // The painter clips its row walk to this same rect, so paint and hit agree on
 // every pixel of the band.
 inline int row_at(const AppState& a, int x, int y) {
