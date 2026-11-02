@@ -1622,8 +1622,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // each marker individually"). It is not a policy this body enforces, it is a
 // state that cannot arise: EVERY ROAD ONTO A BOUND AXIS SINGLE-SELECTS — the
 // plain cell press (run_marker_click_act, whose modified arms refuse a
-// non-payload cell outright), the Tab cell step (cycle_marker_focus's
-// same-marker arm) and the bound editor's open (enter_iter_bound_edit) — and
+// non-payload cell outright) and the bound editor's open
+// (enter_iter_bound_edit), the walk landing on the payload alone (architect
+// 2026-11-02, marker_walk_landing) — and
 // every Selection mutator that GROWS a selection seats the focus through
 // Selection::seat_focus, which puts the axis back on the payload. So a 2+
 // selection with Lower or Upper addressed does not exist, and the group arm,

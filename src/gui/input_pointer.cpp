@@ -3569,10 +3569,10 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
         // selects and lands on every shape and the axis is one more thing the
         // press says. Written AFTER the fork, because every mutator above resets
         // the axis to the payload as it seats the focus (Selection::seat_focus),
-        // and a press is one of the THREE routes that name a cell — the bound
-        // editor's open and the TAB WALK's cell step are
-        // the others, each writing behind its own selection write; a focus reached
-        // by none of them is addressed at its payload. Read-only does not refuse
+        // and a press is one of the TWO routes that name a cell — the bound
+        // editor's open is the other, writing behind its own selection write;
+        // a focus reached by neither (the walk included, 2026-11-02) is
+        // addressed at its payload. Read-only does not refuse
         // it: the axis is navigation, as the selection is, and the act it
         // addresses meets the lock at its own gate. The axis paints nothing
         // (2026-11-02, render.h's SELECTED row), so it owes no damage.

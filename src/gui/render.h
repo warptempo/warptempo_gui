@@ -183,8 +183,7 @@ struct TrimRange {
 //                 under the band, the on-screen
 //                 keyboard's band (inside the program frame since 2026-10-14;
 //                 the dialog's taskbar ground beside it 2026-10-10 to
-//                 2026-10-14) — every chrome button face, a
-//                 DISABLED cue's triangle (the band, row 8, the canvas
+//                 2026-10-14) — every chrome button face (the band, row 8, the canvas
 //                 column's lanes and the modal family's panel margins are the
 //                 program's panel since 2026-10-09, below);
 //   label         chrome text and glyphs, a prompt's question and the
@@ -193,9 +192,10 @@ struct TrimRange {
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
 //                 band and selected substring of every text field, the flag
-//                 editor's included, and THE SELECTED CUE'S LABEL — its text
-//                 alone, on the panel's face (THE MARKER LANE, below) — ONE
-//                 PAIR, FOCUSED OR NOT (the 2026-09-02
+//                 editor's included — never a selected cue's resting label,
+//                 which paints as at rest (architect 2026-11-02, M10 rule 1:
+//                 the selection shows on the canvas; THE MARKER LANE, below)
+//                 — ONE PAIR, FOCUSED OR NOT (the 2026-09-02
 //                 inactive selection face retired, architect 2026-10-03, on
 //                 Windows 95's Network Neighborhood, where a selection keeps
 //                 Hilight / HilightText in a window that has lost the focus);

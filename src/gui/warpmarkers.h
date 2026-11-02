@@ -477,8 +477,8 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // a card — the whole of what it does with this predicate since the group arm
 // went (2026-09-10: a bound axis implies a singleton selection); the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
-// paints — no cell, no editor; and the TAB WALK stops on a marker's two
-// purple cells only where they are painted, asking through the painter's own
+// paints — no cell, no editor; and the value drag steps a marker's bound
+// only where its cells are painted, asking through the painter's own
 // composed predicate (marker_paints_iter_cells, app_state.h, this column's
 // arm). (The name is the retired hover popup's — the
 // eligibility rule outlived the surface that first displayed it.)

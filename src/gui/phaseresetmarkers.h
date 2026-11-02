@@ -196,9 +196,10 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // focus on a card, the warp twin's own reading since its group arm went
 // (2026-09-10); the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
-// paints — no cell, no editor; and the TAB WALK stops on a reset's two bound
-// cells only where they are painted, asking through the painter's own composed
-// predicate (marker_paints_iter_cells, app_state.h, this column's arm).
+// paints — no cell, no editor; and the value drag steps a reset's bound
+// only where its cells are painted, asking through the painter's own
+// composed predicate (marker_paints_iter_cells, app_state.h, this column's
+// arm).
 inline bool phase_reset_iter_eligible_marker(
     const std::vector<GuiPhaseResetMarker>& pv, int idx) {
     if (idx < 0 || idx >= static_cast<int>(pv.size())) return false;

@@ -397,10 +397,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // carry the column with them (the individual bare `t`/`p` keys were deleted
     // whole with their view lamps 2026-09-15, so the selectors are the axis's
     // only road); the mode is lit for the column you are in —
-    // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
-    // selection, so its second step could never walk the bound cells honestly
-    // (architect 2026-09-10; Ctrl+Tab stays admitted in every state, the two
-    // tabs sharing both stores) — MINUS BARE `o` ON A WRITABLE TAB, the
+    // MINUS THE Ctrl+Shift+Tab PAIRED MARCH (architect 2026-09-10; the
+    // ruling's reason at iteration_lock_key_blocked's header; Ctrl+Tab stays
+    // admitted in every state, the two tabs sharing both stores) — MINUS BARE `o` ON A WRITABLE TAB, the
     // read-only toggle's lock direction (architect 2026-09-10; narrowed
     // 2026-10-13: the padlock cannot lock the tab the lamp stands lit on, and
     // its unlock is admitted) —
@@ -2132,27 +2131,17 @@ bool GuiInputHandler::car_play_refused_by_key_gates() {
     return false;
 }
 
-// THE ADDRESSED-CELL WRITE, spelled once for the walk. It owes NO DAMAGE
-// (architect 2026-11-02, M10 rule 1): the selected look is the cue's, on the
-// canvas, never a segment's (render.h's SELECTED row), so the axis paints
-// nothing in the lane; the Up / Down keys' faces that read it are repaired by
-// the roster's staleness comparator (main.cpp). This is the marker press's
-// own write (run_marker_click_act, input_pointer.cpp).
-void GuiInputHandler::write_addressed_cell(MarkerCell cell) {
-    app.addressed_cell = cell;
-}
-
 void GuiInputHandler::cycle_marker_focus(bool forward,
                                          MarkerLandingFrame frame) {
     // THE WALK REFUSES WHOLE AT A WALL (architect 2026-08-30, the strictness
-    // ruling), and the test is THE STEP OWNER'S — marker_walk_step
-    // (app_state.h), whose `marker` field is -1 where the step would land
-    // nothing. A step with nothing ahead writes NOTHING: no select, no
-    // playhead land, no recentre. THE Ctrl+Shift+Tab MARCH
-    // takes this answer at each of its two cycles (its tab switches and its
-    // two `c`s are their own acts and still run); it reads nothing back, the
-    // step being this body's own business since the march stopped walking
-    // cells.
+    // ruling), and the test is THE LANDING OWNER'S — marker_walk_landing
+    // (app_state.h), -1 where the step would land nothing. A step with
+    // nothing ahead writes NOTHING: no select, no playhead land, no
+    // recentre. THE WALK STEPS MARKERS ONLY, in grid iterations as outside it
+    // (architect 2026-11-02, the declaration's rule): a tap addresses a
+    // bound cell, never the walk. THE Ctrl+Shift+Tab MARCH takes this answer
+    // at each of its two cycles (its tab switches and its two `c`s are their
+    // own acts and still run); it reads nothing back.
     //
     // THE REFUSAL IS SILENT (architect 2026-08-31): a benign
     // one-dimensional refusal already at its state says nothing — one glance
@@ -2160,41 +2149,12 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // lit there (its ctrl form, the tab switch, always acts — the twin rule
     // at redesign_button_enabled), so its plain or shifted lift at the wall
     // reaches this same silence.
-    const MarkerWalkStep step = marker_walk_step(app, audio, forward);
-    if (step.marker < 0) return;
-
-    // A STEP BETWEEN THE CELLS OF ONE MARKER IS A COLLAPSE AND AN AXIS WRITE,
-    // AND NOTHING ELSE (architect 2026-09-10, the bound cells joining the
-    // walk; the collapse the same day, the cells being "a separate system"
-    // that "is by design targeting each marker individually"): the focus has
-    // not moved, so there is no OTHER marker to select, the playhead is
-    // already sitting on this one — it is what made it the seat — and moving
-    // it would be a movement in the music for no reason. `frame` GOVERNS
-    // MARKER-TO-MARKER STEPS ALONE for the same reason: there is no new marker
-    // to frame, and a recentre here would move the camera under a user reading
-    // the cell he just stepped onto.
-    //
-    // THE COLLAPSE IS WHAT KEEPS A BOUND AXIS SINGLETON, which every road onto
-    // one now does (the plain cell press and the bound editor's open both
-    // single-select already): a walk that stepped onto a cell while a 2+
-    // selection stood would address a bound the arrows could only step for one
-    // marker of it. set_single_selection on the seat is the cheapest spelling
-    // of that — it is a no-op on the store's membership when the seat is
-    // already the singleton. It runs BEFORE the
-    // axis write for the family's own reason: the seat resets the axis to the
-    // payload (Selection::seat_focus), so the cell is written behind it, as
-    // the marker press and the two cell editors' opens write theirs.
-
-    if (step.same_marker) {
-        selection.set_single_selection(step.marker);
-        write_addressed_cell(step.cell);
-        return;
-    }
+    if (marker_walk_landing(app, audio, forward) < 0) return;
 
     // The marker step. Selection::cycle_selection asks marker_walk_landing
-    // again on the way through, which is the same landing this step carries:
-    // the same-marker arm has already returned above, so the only way here is
-    // the one where the step IS the landing owner's answer.
+    // again on the way through, which is the same landing the gate above
+    // proved; the select seats the focus on the marker's PAYLOAD
+    // (Selection::seat_focus), which is where the walk comes to rest.
     if (forward) selection.select_next_marker();
     else         selection.select_prev_marker();
 
@@ -2228,13 +2188,6 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // THE HOLD POSTURE is the landing owner's to arm, on the walk's centring
     // of the single landing (AppState::camera_hold); nothing here arms it.
     jump_playhead_to_focused_marker(frame);
-
-    // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because
-    // every Selection mutator resets the axis to the payload as it seats the
-    // focus (Selection::seat_focus) — the marker press's and the two cell
-    // editors' opens do the same for the same reason. Payload needs no write:
-    // the seat has already put it there.
-    if (step.cell != MarkerCell::Payload) write_addressed_cell(step.cell);
 }
 
 bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) {

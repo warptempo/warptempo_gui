@@ -92,10 +92,11 @@ struct Selection {
     // in the product writes that field except the reorder remap (which
     // follows the same marker to its new index — not a focus change). It is
     // the chokepoint because the ADDRESSED CELL rides the focus: a focus
-    // reached by any route but a marker press, a cell editor's open or the
-    // TAB WALK's cell step is addressed at its payload by default, so
-    // the reset lives here and the FOUR routes that address another cell write
-    // it AFTER their mutator returns (the inventory is at
+    // reached by any route but a marker press or a cell editor's open is
+    // addressed at its payload by default, so the reset lives here and the
+    // TWO routes that address another cell write it AFTER their mutator
+    // returns (the walk lands on the payload through this reset, 2026-11-02;
+    // the inventory is at
     // AppState::addressed_cell). No damage of its own — every caller damages
     // the top strip.
     void seat_focus(int idx);

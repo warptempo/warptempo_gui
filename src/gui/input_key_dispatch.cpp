@@ -579,9 +579,11 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // with them (architect 2026-09-10: the mode is lit for the column you are IN,
 // which is also what retired the stamped column that stood beside the mode
 // bit for a few hours of that day) — THE
-// Ctrl+Shift+Tab PAIRED MARCH, whose tab switch clears the selection and
-// re-seats the payload, so its second tab could never walk the cells honestly
-// (architect 2026-09-10) — and BARE `o`, THE READ-ONLY TOGGLE, IN ITS LOCK
+// Ctrl+Shift+Tab PAIRED MARCH (architect 2026-09-10: its tab switch clears
+// the selection and re-seats the payload, ruled while the walk stepped the
+// bound cells, so its second tab could not repeat the first; the walk
+// steps markers alone since 2026-11-02, cycle_marker_focus, and the refusal
+// stands as ruled) — and BARE `o`, THE READ-ONLY TOGGLE, IN ITS LOCK
 // DIRECTION ALONE (architect 2026-09-10, that morning; narrowed 2026-10-13).
 // The padlock is the odd one out in what it protects: a lock writes no store
 // and pushes nothing, so the undo domain has no interest in it. What it keeps
@@ -8892,20 +8894,14 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // both of its switches since 2026-10-18, ab_audition.h.) The playback
     // stop is the switch's own (switch_active_tab_view_to).
     //
-    // IT NEVER MEETS A BOUND CELL, because it never runs while grid iterations
-    // is lit (architect 2026-09-10): the march is one of delta (a)'s members
-    // at the authoring lock's keyboard gate, refused on
-    // kIterationLockCard (iteration_lock_key_blocked, above) — the march's
-    // two pointer roads, the other tab's shifted press and the walk button's
-    // ctrl-shift press, dispatching this chord and meeting the same card. The
-    // reason is this arm's own
-    // middle — switch_active_tab_view_to CLEARS THE SELECTION and re-seats the
-    // payload (Selection::seat_focus), so a second step through the purple
-    // cells could not honestly repeat what the first one did, and he refused
-    // the act rather than keep the workaround that had it repeat the first
-    // step's shape. So both steps here are ordinary MARKER steps: with the
-    // lamp dark marker_walk_step has no cell arm to take, and with it lit this
-    // arm is unreachable.
+    // IT NEVER RUNS WHILE GRID ITERATIONS IS LIT (architect 2026-09-10): the
+    // march is one of delta (a)'s members at the authoring lock's keyboard
+    // gate, refused on kIterationLockCard (iteration_lock_key_blocked, above,
+    // whose header carries the ruling's reason) — the march's two pointer
+    // roads, the other tab's shifted press and the walk button's ctrl-shift
+    // press, dispatching this chord and meeting the same card. Both steps
+    // here are ordinary MARKER steps, as every walk step is (2026-11-02,
+    // cycle_marker_focus).
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
@@ -8924,9 +8920,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // painted, the landing is centred, on screen or not, arming the hold
     // posture; at every other zoom, finer or coarser, an on-screen landing
     // moves nothing and an off-screen one is paged in the edge margin from
-    // the left edge. The zoom is never written. Under a lit grid
-    // iterations the walk steps the cells (marker_walk_step's same-marker arm
-    // writes no camera).
+    // the left edge. The zoom is never written. Grid iterations changes
+    // nothing here: the walk steps markers only (architect 2026-11-02,
+    // marker_walk_landing).
     //
     // The `h` view's own Tab arm states the same Land over its diff-flag
     // cycle (handle_history_mode_key). The Ctrl+Tab branch above

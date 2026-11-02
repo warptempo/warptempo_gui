@@ -2291,22 +2291,13 @@ private:
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
     // this rule, over its own list (handle_history_mode_key).
     //
-    // THE STEP'S UNIT IS A CELL WHILE GRID ITERATIONS IS LIT (architect
-    // 2026-09-10): marker_walk_step (app_state.h) owns the whole rule — the
-    // seat's boxes in painted order, then the next marker — and this
-    // body is its two acts. A SAME-MARKER step writes AppState::addressed_cell
-    // and does NOTHING else (no picture: the axis paints nothing since
-    // 2026-11-02, render.h's SELECTED row): no select, no
-    // playhead land, no framing and no zoom, so `frame` governs
-    // marker-to-marker steps alone. A marker step runs the
-    // gate, the select and the jump as it always has and then seats the step's
-    // cell behind them. THE MARCH MEETS NO CELL AT ALL: it is refused while
-    // grid iterations is lit (the lock's keyboard gate), so its two calls are
-    // marker steps whatever the mode, and nothing reads the step back.
+    // THE STEP'S UNIT IS A MARKER, IN GRID ITERATIONS AS OUTSIDE IT
+    // (architect 2026-11-02; marker_walk_landing, app_state.h, owns the
+    // rule): the gate, the select and the jump, the walk coming to rest on
+    // the marker's payload cell (Selection::seat_focus). A tap is the one
+    // road onto a bound cell (run_marker_click_act, the bound editor's
+    // open).
     void cycle_marker_focus(bool forward, MarkerLandingFrame frame);
-
-    // The addressed-cell write, spelled once for the walk (input_handler.cpp).
-    void write_addressed_cell(MarkerCell cell);
 
     // Jump the playhead directly onto the currently focused marker
     // (app.last_selected_marker), stopping playback and then treating the

@@ -176,7 +176,7 @@ struct GuiWarpMarkersOps {
     // NO GROUP ARM (architect 2026-09-10: the bound cells are "a separate
     // system" and the mode "is by design targeting each marker
     // individually"): every road onto a bound axis single-selects — the plain
-    // cell press, the Tab cell step and the bound editor's open alike — and
+    // cell press and the bound editor's open alike — and
     // every Selection mutator that GROWS a selection reseats the axis on the
     // payload, so a 2+ selection with a bound addressed does not exist and the
     // group arm that answered it is deleted. Its predicates are the tempo

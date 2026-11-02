@@ -1206,8 +1206,8 @@ struct IterCellText {
 // the cells end.
 //
 // `iteration_on && iter_popup_eligible_marker` IS marker_paints_iter_cells
-// (app_state.h) spelled across this painter's parameter boundary: the Tab
-// walk asks that predicate whether a marker has bound cells to stop on, and
+// (app_state.h) spelled across this painter's parameter boundary: the value
+// drag asks that predicate whether a marker has bound cells to step, and
 // the two readings compose the same two owners — the caller's one
 // iteration_column_lit read (waveform_cache.cpp, over the column this pass
 // paints) and the eligibility predicate below. This body cannot call it
@@ -1219,7 +1219,7 @@ static IterCellText warp_iter_cells(const std::vector<GuiWarpMarker>& markers,
     if (!iteration_on || !iter_popup_eligible_marker(markers, i)) return c;
     // THE BRACKET IS THE GOVERNING MARKER'S (iter_bracket_governor,
     // warpmarkers.h): its own for an untied marker or a tie's leader, THE
-    // LEADER'S for a follower — one owner for the walk, so the cells and
+    // LEADER'S for a follower — one owner, so the cells and
     // every act that reads a bound name the same bracket.
     const GuiWarpMarker& m = iter_bracket_governor(markers, i);
     c.present  = true;
