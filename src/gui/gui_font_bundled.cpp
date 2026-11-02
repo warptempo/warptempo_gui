@@ -80,6 +80,7 @@ struct OutlineFace {
 // EACH FILE'S OWN METRICS (gui_font.h's head, 2026-10-23), per em, read
 // once at the install: the "H" ink height the cap band is measured on, the
 // "l" ink height the ascender line is measured on (gui_font_ascender_ink_px),
+// the "x" ink height the marker lane's band centers (gui_font_x_ink_px),
 // and the face's ascender, descender and line height (FreeType's, the file's
 // hhea) — the vertical metrics every seat reads — and THE STRIKE'S TWO
 // (gui_font_strike_band, 2026-10-26): the "l" ink WIDTH, its one stem, and
@@ -89,6 +90,7 @@ struct OutlineFace {
 struct FileMetrics {
     double cap_em     = 0.0;
     double l_ink_em   = 0.0;
+    double x_ink_em   = 0.0;
     double ascent_em  = 0.0;
     double descent_em = 0.0;
     double line_em    = 0.0;
@@ -233,13 +235,14 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     // own vertical metrics (FreeType's ascender, descender and height, the
     // file's hhea, per em), its strike's stem and position (the "l" across,
     // the OS/2 yStrikeoutPosition) and its sign axis are read off it; every
-    // file must carry the "H", the "l", an OS/2 table and the seven glyphs
+    // file must carry the "H", the "l", the "x", an OS/2 table and the seven glyphs
     // its axis is measured on.
     for (std::size_t i = 0; i < kGuiFontFileCount; ++i) {
         build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
         FileMetrics& m = g_metrics[i];
         m.cap_em   = outline_ink_em(g_outline[i], U'H');
         m.l_ink_em = outline_ink_em(g_outline[i], U'l');
+        m.x_ink_em = outline_ink_em(g_outline[i], U'x');
         m.l_stem_em = outline_ink_width_em(g_outline[i], U'l');
         if (const FT_Face ft = g_outline[i].ft) {
             const double upem = static_cast<double>(ft->units_per_EM);
@@ -251,7 +254,8 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
                 m.strike_em =
                     static_cast<double>(os2->yStrikeoutPosition) / upem;
         }
-        if (m.cap_em <= 0.0 || m.l_ink_em <= 0.0 || m.ascent_em <= 0.0 ||
+        if (m.cap_em <= 0.0 || m.l_ink_em <= 0.0 || m.x_ink_em <= 0.0 ||
+            m.ascent_em <= 0.0 ||
             m.l_stem_em <= 0.0 || m.strike_em <= 0.0)
             ok = false;
         g_sign_axis_ok[i] = measure_sign_axis(g_outline[i], g_sign_axis[i]);
@@ -278,6 +282,10 @@ double gui_font_cap_px(const GuiFont& f) {
 
 double gui_font_ascender_ink_px(const GuiFont& f) {
     return g_metrics[file_of(f.face)].l_ink_em * gui_font_em_px(f);
+}
+
+double gui_font_x_ink_px(const GuiFont& f) {
+    return g_metrics[file_of(f.face)].x_ink_em * gui_font_em_px(f);
 }
 
 GuiStrikeBand gui_font_strike_band(const GuiFont& f) {

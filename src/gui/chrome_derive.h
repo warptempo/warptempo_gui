@@ -13,8 +13,8 @@
 // THE CHROME'S ROLES IN THE FLAT LOOK (architect 2026-11-01; materials.h's
 // head). This header is THE ONE OWNER OF EVERY CHROME ROLE'S SOURCE: every
 // role is A CONSTANT OF THE FLAT LOOK or ONE OF THE TWO RING TONES OFF THE
-// FLAT GROUND (materials.h's kRingLight / kRingDark, which the well and the
-// overlays still wear until their parts of the flat arc), installed at
+// FLAT GROUND (materials.h's kRingLight / kRingDark, which the overlays
+// still wear until their part of the flat arc), installed at
 // every install of the palette (render.cpp's install_palette). THE CAPTION
 // HAS NO ROLE: the app paints none since 2026-10-24 (render.h's caption
 // note).
@@ -35,10 +35,11 @@
 //                                          (every field, the cards, the
 //                                          tooltip, the modal box)
 //   selected_fill                        = THE CONSTANT kSelectionFill,
-//                                          3E4044, the grey bar (architect
-//                                          2026-10-23: "the grey everywhere")
-//   selected_text                        = THE CONSTANT kSelectionText, the
-//                                          text tone
+//                                          637E86, Live's browser selection
+//                                          (architect 2026-11-01 night, M5g /
+//                                          M6)
+//   selected_text                        = THE CONSTANT kSelectionText,
+//                                          111111 (kTextOnLit)
 namespace chrome_derive {
 
 enum class Source {
@@ -122,8 +123,8 @@ static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
 static_assert(kDefaultCheck[theme_role_index("label")] == 0xB5B5B5);
 static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x0A0A0C);
 static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xB5B5B5);
-static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x3E4044);
-static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xB5B5B5);
+static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x637E86);
+static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x111111);
 static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x0A0A0C);
 static_assert(kDefaultCheck[theme_role_index("card_frame")] == kRingDark);
 } // namespace chrome_derive

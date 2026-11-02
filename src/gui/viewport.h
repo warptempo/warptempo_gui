@@ -524,7 +524,7 @@ struct Viewport {
     // holds every lane that DRAWS the viewport, the zoom or the cursor — the
     // view bar (paint_trim: the trim window is the
     // span), the ruler (its ticks and digits, the cursor's head), the marker
-    // lane (the cues and their labels), the canvas's top frame row, and the
+    // lane (the cues and their labels), the lane's foot line, and the
     // canvas (the plate, the grid, the center lines, the stems, the
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS

@@ -328,7 +328,7 @@ DIFF_W, DIFF_H = 480, 270
 #   ACROSS (re-derived 2026-10-28, the canvas's frame column one hairline): the canvas interior (waveform_area,
 #   src/gui/main.cpp) stands column_inner_x_px in from each side, the column margin's 6 W plus the frame column's
 #   one device px, 18 + 1 = 19 px; the room 2304 - 38 = 2266 floors to the 16-px grid step, 2256, its slack of 10
-#   split, so x = 24; the ring's outer columns (program_ring_columns) one frame column outside it, 23 and 2281, the
+#   split, so x = 24; the well's outer columns (well_columns, render.h) one column outside it, 23 and 2281, the
 #   box's x and width 2258; the interior one hairline_px (1 at every scale) in from each side: x 24, WIDTH 2256 —
 #   the canvas's own columns.
 #   DOWN: the box runs from the view bar's top row (top_trim_row_area) to the controls row's top

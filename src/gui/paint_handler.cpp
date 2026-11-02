@@ -646,8 +646,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // is Cool Edit; the simple layout 2026-10-22, program_spec.h's head). Its
 // metrics — the case and its glyph seat, the strip pad and the run gap —
 // live in program_spec.h and render.h's program block, where the lane table
-// and row 8 read them too; its ends are the program ring's outer columns
-// (render.h's program_ring_columns, 2026-10-23); this row spells none of
+// and row 8 read them too; its ends are the well's edge columns
+// (render.h's well_columns, 2026-10-23); this row spells none of
 // them.
 //
 // THE VERTICAL STORY: the logo lane (render.h's logo lane block, the band's
@@ -1109,15 +1109,15 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // (the plain menu bar's seat, a capture of the real OS
 // beating ReactOS's band, architect 2026-10-09 ~17:40).
 //
-// THE CANVAS COLUMN'S TEXT TAKES ANOTHER SEAT (2026-10-09, the program is
-// Cool Edit): THE RULER'S DIGITS stand on an AUTHORED BASELINE ROW of their
-// lane — program_spec.h's ruler_baseline_px (the architect's row under one
-// W of air, 2026-10-09 ~21:00); THE CUES' LABELS stand on THEIR CAP BAND
-// CENTRED IN THE MARKER LANE by their own rounding (architect 2026-10-26
-// ~11:30: the lane's centre plus half the cap band, rounded once —
-// render.h's cue_baseline_px), the flag editor's selection band, the face's
-// line box, standing from that baseline. (This solver is declared in
-// render.h for its readers there.)
+// THE WELL'S TEXT TAKES ANOTHER SEAT (2026-10-09, the program is Cool Edit;
+// the flat well 2026-11-01 night): THE RULER'S DIGITS stand on an AUTHORED
+// BASELINE ROW of their lane — render.h's ruler_baseline_px, the air and the
+// face's ascent, the line box on the major tick's top; THE CUES' LABELS
+// stand on THE LANE'S ONE BASELINE by the metrics rule (render.h's
+// marker_lane_h_px and cue_baseline_px: the legal set's band, the x-height
+// band centered in it, inside the editor's box), the flag editor's
+// selection band that band. (This solver is declared in render.h for its
+// readers there.)
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
@@ -1361,8 +1361,8 @@ static void icon_row_walk(bool history,
 // strip pad until then). THE RIGHT RUN IS
 // RESOLVED FIRST, because it decides where every run to its left may paint
 // (the overflow rule at kIconRowViewPairs): its last case ends AT THE
-// PROGRAM RING'S RIGHT EDGE (one past its outer right column; render.h's
-// program_ring_columns, architect 2026-10-23), and THE LEFT RUNS' LIMIT
+// WELL'S RIGHT EDGE (one past its right edge column; render.h's
+// well_columns, architect 2026-10-23), and THE LEFT RUNS' LIMIT
 // stands one run gap left of its first case — they paint under a clip
 // ending there and publish only the columns they painted, so a window too
 // narrow for the band covers them and never the right run. THE LEFT WALK
@@ -1380,14 +1380,14 @@ struct IconRowSeats {
     int next_run_x(int run_x, int n) const { return run_x + n * btn_w + gap; }
 };
 static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
-    const ProgramRingColumns ring = program_ring_columns(app);
+    const WellColumns well = well_columns(app);
     IconRowSeats s;
     s.btn_w = icon_case_w_px();
     s.btn_h = icon_case_h_px();
     s.gap   = program_run_gap_px();
     s.btn_y = lane.y + band_case_top_offset_px();
-    s.left_x = ring.x;
-    const int right_end = ring.end;
+    s.left_x = well.x;
+    const int right_end = well.end;
     s.right_x =
         right_end - static_cast<int>(std::size(kIconRowRightRun)) * s.btn_w;
     s.left_limit = s.right_x - s.gap;
@@ -1421,13 +1421,13 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
                                     const GuiLogoLegend& legend) {
     LogoLegendLayout l;
     l.lane = logo_lane_rect(app);
-    const ProgramRingColumns ring = program_ring_columns(app);
+    const WellColumns well = well_columns(app);
     const GuiFont body = gui_font(GuiFace::Body);
     l.baseline = redesign_baseline(body, static_cast<double>(l.lane.y),
                                    static_cast<double>(l.lane.h));
     const double space = text_shape::memoized_run(body, " ")->width_px;
     l.clock = text_shape::memoized_run(body, legend.clock);
-    l.clock_x = static_cast<double>(ring.end) - text_shape::ink_right_px(*l.clock);
+    l.clock_x = static_cast<double>(well.end) - text_shape::ink_right_px(*l.clock);
     const int cell_w = skin_px(kLogoGlyphCellWAt300, 1);
     const int cell_h = skin_px(kLogoGlyphCellHAt300, 1);
     const int cell_right = static_cast<int>(std::nearbyint(
@@ -1454,7 +1454,7 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     // '|', the legend's one descender) under the cap-centered baseline ends
     // about 48 rows down the 72-row lane at 300 %; the glyph cell, one row
     // below the baseline, less.
-    l.extent = GuiRect{first, l.lane.y, std::max(0, ring.end + 1 - first),
+    l.extent = GuiRect{first, l.lane.y, std::max(0, well.end + 1 - first),
                        l.lane.h};
     return l;
 }
@@ -1473,17 +1473,17 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     const GuiRect lane{band.x, band.y, band.w,
                        std::min(band.h, logo_lane_h_px())};
     if (lane.w <= 0 || lane.h <= 0) return;
-    const ProgramRingColumns ring = program_ring_columns(app);
+    const WellColumns well = well_columns(app);
     const GuiColor text = hex(kTextInk);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
-    // THE QUAVER: its first ink column on the ring's outer left column and
+    // THE QUAVER: its first ink column on the well's left edge column and
     // its ink rows centered on the lane, both off the raster's own alpha
     // (icons::boxed_ink), in the file's own ink.
     const int box_h = icons::icon_box_px(kLogoQuaverInkAt300);
     const icons::BoxedInk ink = icons::boxed_ink(icons::Icon::Quaver, box_h);
-    const int box_x = ring.x - ink.left;
+    const int box_x = well.x - ink.left;
     const int box_y =
         lane.y +
         static_cast<int>(std::nearbyint((lane.h - (ink.bottom - ink.top)) * 0.5)) -
@@ -1629,15 +1629,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // with one run gap of bare ground before the right run the band holds every
     // run at
     //   536 + 15 + 115 = 666
-    // Windows px outside the view (459 inside it) — the ring's 2258 device
+    // Windows px outside the view (459 inside it) — the well's 2258 device
     // px on the tablet at 300 % (752⅔ W) with 260 px (86⅔ W) of ground
     // between the left runs and the right run beyond the run gap. IN DEVICE
     // PX, off the painted
     // walk (each case its rounded parts, the gap its own scaled_px, the ends
-    // program_ring_columns'; re-derived 2026-10-28, the ring's columns the
-    // canvas's frame hairlines, and again 2026-10-29 with the Restrict
+    // well_columns'; re-derived 2026-10-28, the columns the
+    // well's edge hairlines, and again 2026-10-29 with the Restrict
     // lamp): at
-    // the tablet's 300 % (cases 69, the gap 45, the ring 23 .. 2281) the left
+    // the tablet's 300 % (cases 69, the gap 45, the well 23 .. 2281) the left
     // runs on x 23..1630, the right run 1936..2280; at 138 % on a 1920-px
     // window (cases 31, the gap 21, the ring 15 .. 1905) the left runs on x 15..738,
     // the right run 1750..1904. A roster move restates these numbers.
@@ -2220,22 +2220,22 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 
 // THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
 // LENGTH, ONE FIELD SHAPE (architect 2026-10-09, the program is Cool Edit;
-// THE HI-FI SKIN'S FIELD since 2026-10-23, paint_ce_time_field): BLACK
-// (kTimeFieldGround) under a ONE-DEVICE-PX SUNKEN RING in the ring tones,
-// dark on the top and left, light on the bottom and right, the digits THE
+// FLAT since 2026-11-01 night, M5m, paint_ce_time_field): A FLAT kKeyFace
+// 363636 BOX, NO RING (Live's numeric fields), the digits THE
 // TEXT TONE kTextInk (M13, 2026-11-02; architect 2026-10-23: "the font
-// color should not be this yellowish color") — 40 DEVICE PX TALL at
+// color should not be this yellowish color") — 39 DEVICE PX TALL at
 // 300 % (time_field_h_px, scaled with gui_scale; it does not follow the
 // key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a half-row tie
 // toward the top, the cap rule's own; taller than the case at key_height
-// 33, it stands over the strip pads either side, time_field_rect), its
+// 33, it stands three rows over the strip pads either side,
+// time_field_rect: row 8's 1365 .. 1403 round the case's 1368 .. 1400), its
 // run in THE
 // PROGRAM FACE, 22 px at 300 %, in every time field (row 8's clock,
 // architect 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to
 // symmetry; gui_font.h's table), its cap band centred in the field by
-// redesign_baseline — at 300 % the 15.1-row cap band in the 40-row field,
-// its 25-row line inside it; at 138 % a 10-px em, its 6.9-row cap band in
-// the 18-row field, its 11-row line inside it. The digits are
+// redesign_baseline — at 300 % the 15.1-row cap band in the 39-row field,
+// twelve rows of field above it and twelve below (M5m: "an odd field
+// height round an odd cap band is what makes the pads even"). The digits are
 // TABULAR — Liberation Sans's every digit 0.556 em — with no kerning between
 // the digits, the colon and the point — so the colon and the point stand
 // still as the time runs.
@@ -2315,8 +2315,11 @@ static std::string clock_time_text(const AppState& app,
 }
 
 // THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once, one
-// constant at every time field — THE HI-FI SKIN'S FIELD (architect 2026-10-23, "symmetrical and much
-// tighter"): 40 DEVICE PX TALL AND 12 PX OF PAD
+// constant at every time field (architect 2026-10-23, "symmetrical and much
+// tighter"; the height 39 since 2026-11-01 night, M5m: "buttons are 33px
+// tall, bottom left timestamp is 38px — add 1px to clock and other related
+// fields to make the spacing even", the flat field's 38 interior grown by
+// one): 39 DEVICE PX TALL AND 12 PX OF PAD
 // EACH SIDE OF THE DIGITS' CELL, both authored at 300 % and scaled with
 // gui_scale (skin_px; the amendment of the same night) — 18 and 6 at 138 %.
 // THE PAD IS ONE NUMBER WITH TWO WEARERS: the time fields and the hover
@@ -2325,11 +2328,11 @@ static std::string clock_time_text(const AppState& app,
 // paint_shift_tooltip).
 // (17 W tall with a 5-W pad, scaled_px, 2026-10-09 to 2026-10-23: Cool
 // Edit's field, then the dialog field's pad; git history.)
-// THE FIELD STANDS AT 40 WHATEVER THE KEY'S HEIGHT (architect 2026-10-29):
+// THE FIELD STANDS AT 39 WHATEVER THE KEY'S HEIGHT (architect 2026-10-29):
 // it does not shrink with the `key_height` tuning key, so at 33 it is the
 // taller of the two, centred on the case's rows over the pads
 // (time_field_rect).
-constexpr double kTimeFieldHeightAt300 = 40.0;
+constexpr double kTimeFieldHeightAt300 = 39.0;
 constexpr double kTimeFieldPadAt300    = 12.0;
 static int time_field_h_px() {
     return skin_px(kTimeFieldHeightAt300, 1);
@@ -2387,13 +2390,13 @@ static const TimeFieldMetrics& time_field_metrics() {
 // strip?" — yes): the LEFT SEAT where a row's content starts and the RIGHT
 // SEAT where its right-aligned cluster ends; CASES_RIGHT is where the row's
 // last case ends; THE CASE the strip pad under the row's top
-// (icon_case_top_offset_px, the band's own seat). ALL THREE ARE THE PROGRAM
-// RING'S OUTER COLUMNS (render.h's program_ring_columns): the left seat its
-// outer left column, the right seat and the cases' end one past its outer
-// right column — the band's ends (icon_row_seats) and the modal box's
+// (icon_case_top_offset_px, the band's own seat). ALL THREE ARE THE WELL'S
+// EDGE COLUMNS (render.h's well_columns): the left seat its
+// left edge column, the right seat and the cases' end one past its right
+// edge column — the band's ends (icon_row_seats) and the modal box's
 // (modal_box_rect), so both strips and the controls row stand flush with
-// the ring at every scale; 23 and 2281 at 300 %, 15 and 1905 at 200 % and
-// at 138 % (re-derived 2026-10-28, the ring's columns the hairlines). The
+// the well at every scale; 23 and 2281 at 300 %, 15 and 1905 at 200 % and
+// at 138 % (re-derived 2026-10-28, the edge columns the hairlines). The
 // two rows differ only in `row`: row 8's lane (bottom_row_area), or the
 // controls row's, the same rows lifted onto the keyboard's band
 // (modal_controls_row_rect; modal_controls_seats below reads this). Every
@@ -2409,8 +2412,8 @@ struct BottomRowSeats {
 };
 static BottomRowSeats bottom_row_seats(const AppState& app,
                                        const GuiRect& row) {
-    const ProgramRingColumns ring = program_ring_columns(app);
-    return BottomRowSeats{ring.x, ring.end, ring.end,
+    const WellColumns well = well_columns(app);
+    return BottomRowSeats{well.x, well.end, well.end,
                           row.y + icon_case_top_offset_px(), icon_case_w_px(),
                           icon_case_h_px()};
 }
@@ -2514,10 +2517,10 @@ static void row8_block_walk(bool history, const Row8Block& b,
 }
 
 // THE CLOCK (2026-10-22, the simple layout): the time field at the row's
-// left seat (bottom_row_seats: the program ring's outer left column, the
-// field's ring standing on it), its cell and its two pads
-// (time_field_w_px), the field's own rect its ring (paint_ce_time_field's
-// clock ring). The row's painter's one layout.
+// left seat (bottom_row_seats: the well's left edge column, the field's
+// first column standing on it), its cell and its two pads
+// (time_field_w_px), the field's own rect the flat field
+// (paint_ce_time_field). The row's painter's one layout.
 struct Row8Clock {
     int field_x = 0, field_w = 0;
     double cell_w = 0.0;    // the digits' specimen (time_field_metrics)
@@ -2559,7 +2562,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     cairo_save(cr);
     // THE FLAT GROUND (materials.h's kGround, 2026-11-01) under the block and
-    // between its keys; the clock's ring the well's part's (the time field,
+    // between its keys; the clock's flat field (the time field,
     // paint_ce_time_field); the keys blank (paint_roster_case), their
     // legends under them.
 
@@ -2712,8 +2715,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (architect 2026-10-26 ~11:30, settled ~13:05; gui_font.h's table),
     // named
     // through the one face owner (gui_font.h), inside the save/restore this
-    // body already opened, IN ITS RING (2026-10-22: the program ring's two
-    // tones round the field, paint_ce_time_field's clock ring). The render
+    // body already opened, IN ITS FLAT FIELD (paint_ce_time_field). The render
     // player's two fields share its shape, its face and its metrics
     // (time_field_metrics); THE TWO NEVER PAINT IN THE SAME FRAME: the
     // player owns the row whole while it stands.
@@ -2764,9 +2766,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // (clip_meets): the run lies inside the cell published below, which
         // lies inside the field.
         const bool clock_drawn = clip_meets(cr, clock_field);
-        if (clock_drawn)
-            paint_ce_time_field(cr, clock_field, palette().ce_dark,
-                                palette().ce_hilight);
+        if (clock_drawn) paint_ce_time_field(cr, clock_field);
         // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the face
         // split above and below its digits by the one box solver. THE NAME
         // AND THE STATE LINE TAKE IT TOO (the ONE BASELINE block below).
@@ -2775,7 +2775,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                               static_cast<double>(clock_field.h));
         // THE ACTIVE TAB'S NAME (architect 2026-10-22: the tab strip goes,
         // "Tab A" / "Tab B" on the bare ground right of the clock): its FIRST
-        // INK the name's air (5 W) past the ring's light column, the run's
+        // INK the name's air (5 W) past the field's right edge, the run's
         // origin its own left bearing short of that; the program face in THE
         // TEXT TONE kTextInk, NO SHADOW (the flat look, 2026-11-01; M13's
         // tone 2026-11-02), on the clock's baseline.
@@ -3497,20 +3497,15 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes COOL EDIT'S LOOK
 // and REAPER'S GEOMETRY MODEL.
-//   LOOK, Cool Edit's FLIPPED RULER (architect 2026-10-09, the program is
-//     Cool Edit; render.h's canvas-column
-//     paragraph): the Face-derived ground under the view bar's light line,
-//     its own light bottom line, the ticks E0E0E0 STANDING ON THE GROUND'S
-//     BOTTOM ROW — majors four W, minors two — and the digits bare (Cool
-//     Edit's black (+1, +1) shadow under them not drawn, architect
-//     2026-10-25); THE GROUND 11 W, THE DIGITS THE BASE'S SIX-ROW SMALL
-//     DIGIT on its rows 1 .. 6 under one row of air, their baseline the top
-//     of row 7 (architect 2026-10-09 ~16:50 / ~21:00, the product's rows
-//     where Cool Edit's ruler is 17 with cap-7 digits: "one Windows pixel of
-//     empty space above", the six rows saved given to the marker lane;
-//     program_spec.h's ruler fields). (Kdenlive's look — the majors rising
-//     above the flags, the etched ticks — stood 2026-08-01 to 2026-10-09;
-//     git history.)
+//   LOOK, Cool Edit's FLIPPED RULER IN LIVE'S TONES (architect 2026-10-09,
+//     the program is Cool Edit; flat since 2026-11-01 night; render.h's well
+//     paragraph and its ruler block): flat kRulerFace under the trim bar's
+//     frame, no line on its top, the ticks kRulerTick two device px wide
+//     STANDING ON ITS FOOT — majors 9 rows, minors 3 at 300 % — and the
+//     digits Bold 14 in the text tone, bare; then a row of ground. (Kdenlive's
+//     look — the majors rising above the flags, the etched ticks — stood
+//     2026-08-01 to 2026-10-09; Cool Edit's E0E0E0 on the dark ground until
+//     the flat well; git history.)
 //   MODEL, from Reaper (architect 2026-08-01): WHERE the ticks go. A round
 //     ladder of labeled steps, the smallest rung whose label pitch clears the
 //     minimum, and eight binary minors inside each step; the labels' text.
@@ -3648,31 +3643,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
 
     cairo_save(cr);
-    // THE LANES (architect 2026-10-23; the well's part of the flat arc
-    // restyles them): the lanes' margins beside the program ring the flat
-    // GROUND (the palette's `face`); the ruler's ground THE FLAT
-    // kRulerGround (the palette's `ce_mid`); the marker lane FLAT IN THE
-    // GROUND'S COLOR (the palette's `face`, 2026-10-29) between the ring's
-    // outer columns; THE PROGRAM RING's two columns ONE DEVICE PX, the
-    // canvas's frame columns (render.h's program_ring_columns, the hairline
-    // itself since 2026-10-28), the dark one left and the light one right,
-    // carried down from the view bar (render_trim_flags) into the canvas
-    // ring's (paint_canvas_column_frame); THE RULER'S FOOT LINE one device px
-    // of the ring's light tone on its one-W slot's last row
-    // (program_line_px), the slot's other rows the ruler's ground. (The
-    // earlier flat ruler and its strip, the ring a scaled line,
-    // 2026-10-21 to 2026-10-23, are git history.)
+    // THE LANES (architect 2026-11-01 night, the flat well; render.h's well
+    // paragraph): the lanes' margins beside the well and the ruler lane's
+    // last row THE GROUND (the palette's `face`, kGround); the ruler FLAT
+    // kRulerFace between the well's edge columns; the marker lane FLAT
+    // kLaneFace between them (render.h's well_columns: THE EDGE RULE), no
+    // ring, no line.
     const GuiPalette& pal = palette();
-    const int ground_h = ruler_ground_h_px();
-    const int lw       = program_line_px();
-    const int px       = hairline_px();
-    const ProgramRingColumns ring = program_ring_columns(app);
-    const int ring_x0 = ring.x;
-    const int ring_x1 = ring.end;
+    const int ruler_h = ruler_h_px();
+    const WellColumns well = well_columns(app);
+    const int well_x0 = well.x;
+    const int well_x1 = well.end;
     paint_cell_rect(cr, lane, pal.face);
     if (marker.w > 0 && marker.h > 0) {
-        const int in0 = std::clamp(ring_x0, marker.x, marker.x + marker.w);
-        const int in1 = std::clamp(ring_x1, in0, marker.x + marker.w);
+        const int in0 = std::clamp(well_x0, marker.x, marker.x + marker.w);
+        const int in1 = std::clamp(well_x1, in0, marker.x + marker.w);
         if (in0 > marker.x)
             paint_cell_rect(cr, GuiRect{marker.x, marker.y, in0 - marker.x,
                                         marker.h},
@@ -3683,13 +3668,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                             pal.face);
         if (in1 > in0)
             paint_cell_rect(cr, GuiRect{in0, marker.y, in1 - in0, marker.h},
-                            pal.face);
-        // THE RING THROUGH THE LANE — never targets (the cues' paint and
-        // hits stop at the canvas's columns).
-        paint_cell_rect(cr, GuiRect{ring_x0, marker.y, px, marker.h},
-                        pal.ce_dark);
-        paint_cell_rect(cr, GuiRect{ring_x1 - px, marker.y, px, marker.h},
-                        pal.ce_hilight);
+                            hex(kLaneFace));
     }
 
     // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
@@ -3705,8 +3684,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         return;
     }
     // THE RULER'S COLUMNS ARE THE CANVAS'S (2026-10-09, the column's
-    // margins): the ground and every tick, digit and the head from the
-    // waveform area's x, the frame's side columns directly outside it.
+    // margins): every tick, digit and the head from the waveform area's x,
+    // the well's edge columns directly outside it.
     const GuiRect area = waveform_area(app);
     const int cx = area.x;
 
@@ -3729,23 +3708,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         cairo_restore(cr);
         return;
     }
-    // THE GROUND, ITS RING COLUMNS AND ITS FOOT (the head of this body): the
-    // flat ruler ground between the ring's columns and across the foot's
-    // slot, then the two hairline columns and the light foot line. The ground
-    // and the columns read the LIVE area, as the canvas's own frame does
-    // (paint_canvas_column_frame); the walk below reads the plate's width.
-    {
-        const int frame_h = ground_h + lw;
-        const int ring_w  = ring_x1 - ring_x0;
-        paint_cell_rect(cr, GuiRect{ring_x0, lane.y, ring_w, frame_h},
-                        pal.ce_mid);
-        paint_cell_rect(cr, GuiRect{ring_x0, lane.y, px, frame_h}, pal.ce_dark);
-        paint_cell_rect(cr, GuiRect{ring_x1 - px, lane.y, px, frame_h},
-                        pal.ce_hilight);
-        paint_cell_rect(cr, GuiRect{ring_x0 + px, lane.y + frame_h - px,
-                                    ring_w - 2 * px, px},
-                        pal.ce_hilight);
-    }
+    // THE RULER'S FACE (the head of this body): flat kRulerFace between the
+    // well's edge columns over the ruler's rows, the lane's last row the
+    // ground laid above. The face reads the LIVE area, as the canvas's skirt
+    // does (paint_canvas_column_frame); the walk below reads the plate's
+    // width.
+    paint_cell_rect(cr, GuiRect{well_x0, lane.y, well_x1 - well_x0,
+                                std::min(ruler_h, lane.h)},
+                    hex(kRulerFace));
 
     const int64_t step   = comb.step;
     const double  end_ms = comb.end_ms();
@@ -3757,32 +3727,25 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // ladder's own kRulerMinorsPerStep; only its expression as a duration is
     // gone.)
 
-    // THE TICKS STAND ON THE GROUND'S BOTTOM ROW (the flipped ruler): each ONE DEVICE PX wide in kCeRulerTick (hairline_px,
-    // render.h's line rule, 2026-10-23), rising the major's four W or the
-    // minor's two into the ground from its foot — its rows 7 .. 10 and
-    // 9 .. 10 of 0 .. 10, the lengths areas (scaled_px).
-    const int ground_bottom = lane.y + ground_h;   // one past the ground's rows
-    const int major_top = ground_bottom - scaled_px(kProgramSpec.ruler_major_tick_px);
-    const int minor_top = ground_bottom - scaled_px(kProgramSpec.ruler_minor_tick_px);
+    // THE TICKS STAND ON THE RULER'S FOOT (the flipped ruler; render.h's
+    // ruler block): each kRulerTickWidthPx TWO DEVICE PX wide in kRulerTick
+    // (not scaling), rising the major's 9 rows or the minor's 3 at 300 %
+    // (skin_px) from the foot, NO SHADOW.
+    const int ruler_bottom = lane.y + std::min(ruler_h, lane.h);   // one past
+    const int major_top = ruler_bottom - ruler_major_tick_h_px();
+    const int minor_top = ruler_bottom - ruler_minor_tick_h_px();
 
-    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: 16 px
-    // at 300 %, scaled with gui_scale — architect 2026-10-24, "R16"; R17 the
-    // night before, 15 the skin's first night, the six-row Windows digit
-    // before it), their
-    // BASELINE THE TOP OF THE GROUND'S ROW 7 — the digits standing above it
-    // under the air, "basically touching the trim bar" (architect 2026-10-09
-    // ~21:00): at 300 % the baseline 21 device rows under the lane's top, a
-    // digit's ink 11.2 px tall (Liberation Sans's 1430 / 2048 em of 16), so
-    // its top stands 9.8 rows down, just inside row 9, with 9 whole rows of
-    // ground above it under the trim bar's light line, and its "0"'s
-    // overshoot a fifth of a px below the baseline into row 7, a major
-    // tick's top row; NO SHADOW under them (architect 2026-10-25, on the
-    // glass: "the shadow on the timestamp is basically useless because it's
-    // so dark, it has no effect") — an authored row of the lane, neither
+    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: BOLD 14
+    // at 300 %, scaled with gui_scale — architect 2026-11-01 night, M5c) in
+    // the text tone kTextInk (2026-11-02, the font audit: Live's own ruler
+    // digits), BARE, their line box standing on the major tick's top — the
+    // BASELINE the ruler's air and the face's ascent under the lane's top
+    // (render.h's ruler_baseline_px: 19 rows at 300 %, the digits' ink on
+    // rows 9 .. 18 of the ruler) — an authored row of the lane, neither
     // solver asked (redesign_baseline's block).
     const GuiFont font = gui_font(GuiFace::Small);
     const double baseline =
-        static_cast<double>(lane.y + scaled_px(kProgramSpec.ruler_baseline_px));
+        static_cast<double>(lane.y + ruler_baseline_px());
 
     // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
@@ -3835,12 +3798,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (the loop's break), the major just right of the end whose label's left
     // half reaches in — a label is narrower than a step (the ladder keeps a
     // step at least 72 W), so one step each side is all there is.
-    // THE TICK'S WIDTH IS ONE DEVICE PX, and so is its shadow's offset
-    // (render.h's line rule, architect 2026-10-23; the program's quantum
-    // 2026-10-09 to 2026-10-23).
-    const int t = hairline_px();
+    // THE TICK'S WIDTH IS TWO DEVICE PX AT EVERY SCALE (render.h's
+    // kRulerTickWidthPx, architect 2026-11-01 night, M5b: "2px lines that
+    // don't scale"), standing on its column and the one right of it.
+    const int t = kRulerTickWidthPx;
     // ONE MAJOR'S LABEL at its column `col` and its step time `step_ms`,
-    // CENTERED ON THE MAJOR'S COLUMN (the tick's own t wide, the run's centre
+    // CENTERED ON THE MAJOR'S TICK (the tick's own t wide, the run's centre
     // on the tick's). The label's TIME is still the exact step time — only
     // tick PLACEMENT is distributed, and a major is at its own exact time
     // anyway. Its x rides `col`, which for a major IS the rounded major, so
@@ -3866,17 +3829,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int run_w = static_cast<int>(std::ceil(run.width_px));
         const int lx = col + t / 2 - run_w / 2;   // the walk's clip cuts it
         // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
-        // colour to all the numbers"): the tick's ink, bare (2026-10-25, the
-        // digits' shadow removed; the block above).
+        // colour to all the numbers"): the text tone, bare (the block above).
         const double x = static_cast<double>(cx + lx);
-        set_palette_source(cr, hex(kCeRulerTick));
+        set_palette_source(cr, hex(kTextInk));
         text_shape::show_shaped_run(cr, run, x, baseline);
     };
-    // THE WALK'S CLIP: the waveform's columns [0, wave_w) over the ground's
+    // THE WALK'S CLIP: the waveform's columns [0, wave_w) over the ruler's
     // rows, so a tick past the last column and the leftover strip a
     // non-multiple-of-16 window leaves beside wave_w carry nothing.
     cairo_save(cr);
-    cairo_rectangle(cr, cx, lane.y, wave_w, ground_h);
+    cairo_rectangle(cr, cx, lane.y, wave_w, ruler_bottom - lane.y);
     cairo_clip(cr);
     for (int64_t k = first_step; ; ++k) {
         const double step_ms = static_cast<double>(k) * static_cast<double>(step);
@@ -3900,27 +3862,20 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const bool tick_on_lane = col >= 0 && col < wave_w;
             if (!tick_on_lane && !major) continue;
             // A MAJOR'S LABEL PAINTS BEFORE ITS TICK, so the tick stands whole
-            // over a digit's overshoot below the baseline, where the
-            // overshoot meets the major's top row 7 (program_spec.h's ruler
-            // fields, 2026-10-09 ~21:00; the ticks paint over). Only the
-            // label's own major can meet it: a minor rises to row 9, below
-            // the overshoot's row 7, and the next major stands a whole step —
-            // at least eight minimum minor pitches — away.
+            // over whatever of a label's descent reaches the major's top row
+            // (the line box stands on it; a comma's tail). Only the label's
+            // own major can meet it: a minor rises a third as far, and the
+            // next major stands a whole step — at least eight minimum minor
+            // pitches — away.
             if (major) paint_major_label(col, step_ms);
-            // ONE DEVICE PX wide (`t`, hairline_px: render.h's line rule,
-            // 2026-10-23), on the tick's own column, clipped at the right
-            // edge, in kCeRulerTick, standing on the ground's bottom row.
-            // THE TICK'S SHADOW (2026-10-23): one device px of black at
-            // (+1, +1), under it, the walk's clip cutting its last row.
+            // TWO DEVICE PX wide (`t`, kRulerTickWidthPx), on the tick's own
+            // column and the next, clipped at the right edge, in kRulerTick,
+            // standing on the ruler's foot.
             if (tick_on_lane) {
-                set_palette_source(cr, hex(kCeRulerShadow));
-                fill_waveform_line(cr, cx, wave_w, col + t,
-                                   (major ? major_top : minor_top) + t,
-                                   ground_bottom + t, t);
-                set_palette_source(cr, hex(kCeRulerTick));
+                set_palette_source(cr, hex(kRulerTick));
                 fill_waveform_line(cr, cx, wave_w, col,
                                    major ? major_top : minor_top,
-                                   ground_bottom, t);
+                                   ruler_bottom, t);
             }
         }
     }
@@ -3934,18 +3889,18 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // 300 %) in whole device cells, Cool Edit's aliased staircase
     // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
     // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
-    // cue_triangle_unit_px, render.h), in the palette's `playhead_stem` (Cool Edit's Curs yellow
-    // FFFF00 by default, 2026-10-09) over the same triangle one label
-    // quantum right and down in `ce_cue_shadow` (2026-10-26 ~13:05, the
-    // label's own offset), ON THE GROUND'S LAST `rows` DEVICE ROWS, its
-    // apex — the bottom centre of the playhead's one-px column — on the
-    // ground's bottom row (2026-10-09 ~21:00, the 11-W ground). It is OPAQUE over the ticks and digits the walk above laid
-    // down, covering whatever stands under it (every cell whole, no edge
-    // blended over them). NO SNAP, NO
+    // cue_triangle_unit_px, render.h), in the palette's `playhead_stem`
+    // (Live's cyan 03C3D5 since 2026-11-01), NO SHADOW (2026-11-02), ON THE
+    // RULER'S LAST `rows` DEVICE ROWS, its apex — the bottom centre of the
+    // playhead's one-px column — on the ruler's foot row, over the ticks'
+    // feet (2026-10-09 ~21:00; the ruler's foot since the flat well, its
+    // 8 rows inside the major tick's 9 at 300 %). It is OPAQUE over the ticks
+    // and digits the walk above laid down, covering whatever stands under it
+    // (every cell whole, no edge blended over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
-    // playhead paragraph). It draws NOTHING across the view bar, the marker
-    // lane and the canvas's top frame row; its canvas dots are
+    // playhead paragraph). It draws NOTHING across the trim bar, the marker
+    // lane and the rows of ground; its canvas dots are
     // paint_playheads'. CENTRED ON THE PLAYHEAD'S ONE-PX COLUMN (architect
     // 2026-10-09 ~14:35; paint_ce_cue_triangle).
     //
@@ -3971,28 +3926,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int right = cue_triangle_reach_right_px();
         GuiRect head_hit{0, 0, 0, 0};
         if (col + right - 1 >= 0 && col - left <= wave_w - 1) {
-            const int head_top = ground_bottom - rows;
+            const int head_top = ruler_bottom - rows;
             // THE HEAD'S CLIP: the waveform's columns over the head's own
-            // rows, the ground's last `rows` — so the shadow, one label
-            // quantum right AND DOWN (paint_ce_cue_triangle's head,
-            // 2026-10-26 ~13:05), loses its bottom rows at the ground's
-            // bottom row and never reaches the ruler's line or the marker
-            // lane below, the marker lane's clip cutting the cues' shadows
-            // alike (paint_cues, render.cpp). Whole pixels, so the stamp's
+            // rows, the ruler's last `rows`. Whole pixels, so the stamp's
             // identity holds.
             cairo_save(cr);
             cairo_rectangle(cr, cx, head_top, wave_w, rows);
             cairo_clip(cr);
             paint_ce_cue_triangle(cr, cx + col, head_top,
-                                  palette().playhead_stem,
-                                  palette().ce_cue_shadow);
+                                  palette().playhead_stem);
             cairo_restore(cr);
             // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
             // point_on_playhead_head, input_pointer.cpp): EXACTLY THE PAINTED
-            // HEAD — its triangle's and shadow's columns [col − left,
-            // col + right) cut to the waveform's columns as the clip above
-            // cuts them, over the head's `rows` device rows of the ruler's
-            // (the shadow's rows below them cut by that clip) — and
+            // HEAD — its triangle's columns [col − left, col + right) cut to
+            // the waveform's columns as the clip above cuts them, over the
+            // head's `rows` device rows of the ruler's — and
             // nothing beyond it ("I don't think we should get in the habit of
             // making invisible hitboxes"), published by the pass's rule
             // (publish_head, the pass's head).
@@ -4431,8 +4379,8 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
 
-// The LIVE trim pass: every trim pixel — the view bar's ring and field and
-// the span (render_trim_flags) — paints here per frame, entirely inside its
+// The LIVE trim pass: every trim pixel — the bar, its frame and the span
+// (render_trim_flags) — paints here per frame, entirely inside its
 // lane,
 // which no later pass paints on; its slot is in the paint-order block in
 // on_redraw (the one authoritative sequence).
@@ -4492,15 +4440,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
-    // The trim lane's own ground the panel face, under the view bar, so the
-    // column's margins beside the bar's frame (render_trim_flags spans the
-    // canvas's columns and its two frame columns alone, 2026-10-09) read as
-    // the panel. (The column's 5-W air above it, painted here 2026-10-09 to
-    // 2026-10-22, went with the simple layout: the bar stands directly under
-    // the band.)
-    // THE FLAT GROUND (materials.h's kGround, the palette's `face`): the
-    // lane's ground, the column's margins beside the bar; the bar, its field
-    // and its ring render_trim_flags'.
+    // THE TRIM LANE'S OWN GROUND (materials.h's kGround, the palette's
+    // `face`), under the bar: the lane's first row (the row of ground above
+    // the bar) and the well's margins beside it (render_trim_flags spans the
+    // canvas's columns and the well's two edge columns alone); the bar, its
+    // frame and the span render_trim_flags'.
     const GuiRect trim_row = top_trim_row_area(app);
     if (trim_row.w > 0 && trim_row.h > 0)
         paint_cell_rect(cr, trim_row, palette().face);
@@ -4850,7 +4794,7 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 //
 // EVERY MODAL STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
 // (architect 2026-10-14, modal_box.h, the one owner of the shape): a sunken
-// box wearing the program ring from the view bar's top row down, and under
+// box wearing its ring from the trim lane's first row down, and under
 // it the controls row on row 8's rows. NOTHING ABOUT THE
 // RENDERER MOVED for it — one window, one surface, one frame, one painter —
 // so this is emphatically not the scrapped second-toplevel model
@@ -6341,8 +6285,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 const int field_x = clock_x0 + i * (field_w + field_gap);
                 const GuiRect field = time_field_rect(
                     field_x, field_w, seats.case_y, seats.case_h);
-                paint_ce_time_field(cr, field, palette().ce_field_dark,
-                                    palette().ce_field_light);
+                paint_ce_time_field(cr, field);
                 // RIGHT-ALIGNED, ending at the field's right pad (the rule at
                 // kTimeShape's block).
                 const text_shape::ShapedRun run = text_shape::shape_text_run(
@@ -6415,8 +6358,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                         ml.clock_x0 + i * (ml.field_w + ml.field_gap);
                     const GuiRect field = time_field_rect(
                         field_x, ml.field_w, seats.case_y, seats.case_h);
-                    paint_ce_time_field(cr, field, palette().ce_field_dark,
-                                        palette().ce_field_light);
+                    paint_ce_time_field(cr, field);
                     const text_shape::ShapedRun run =
                         text_shape::shape_text_run(
                             cfont, format_timestamp(seconds_of(shown[i])));
@@ -6452,7 +6394,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 });
             }
 
-            // THE PAGE CELL where the player's clock stands: one sunken time
+            // THE PAGE CELL where the player's clock stands: one flat time
             // field reading "<ordinal> / <count>" — the shown page's ordinal
             // WITHIN THE RANGE and the range's count (the architect's "a page
             // number of its own") — right-aligned on the field's pad as the
@@ -6470,8 +6412,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 cairo_rectangle(cr, sl.cell_x0, content.y,
                                 cell_right - sl.cell_x0, content.h);
                 cairo_clip(cr);
-                paint_ce_time_field(cr, field, palette().ce_field_dark,
-                                    palette().ce_field_light);
+                paint_ce_time_field(cr, field);
                 const text_shape::ShapedRun run =
                     text_shape::shape_text_run(cfont, text);
                 set_palette_source(cr, hex(kTextInk));
@@ -7425,82 +7366,50 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     cairo_restore(cr);
 }
 
-// -- THE CANVAS'S FRAME AND THE COLUMN'S MARGINS ---------------------------
+// -- THE CANVAS'S SKIRTS AND THE WELL'S MARGINS ----------------------------
 //
-// (architect 2026-10-09, the third part, "accurate to the mock-up";
-// program_spec.h's column_margin_px,
-// render.h's canvas-frame accessors.) ONE PAINTER for the rows from the
-// canvas's top frame row (top lane 5) through its bottom frame row (bottom
-// lane 1, the program ring's last row since the simple layout, 2026-10-22;
-// the column's 5-W foot under it until then): the panel's FACE across them —
-// the margins beside the canvas and the frame rows' own ground — then THE
-// CANVAS'S FRAME, A RING
-// ROUND EACH CHANNEL'S WELL (Cool Edit's stereo divider, architect
-// 2026-10-16; one ring round the waveform area 2026-10-09 to then): the
-// `ce_dark` top row and left column, the `ce_hilight` right column and
-// bottom row, MITRED at the top-right and bottom-left corner blocks where
-// the dark meets the light (the mitre, cool_edit_paint.h's diagonal
-// rule), the face row between the two rings running through the frame
-// columns to the margins. It runs before render_canvas, which lays the canvas over the
-// interior this face covered; the view bar's and the ruler's own side
-// columns are their painters' (render_trim_flags, paint_ruler_row). THE
-// SAME UNDER EVERY CHROME; the program's colors alone.
-// THE HOLE (2026-10-13, canvas_sink.h's transparency invariant): the face
-// and the rings skip `hole`, the canvas's paint area, which on_redraw clears
+// (architect 2026-10-09, the third part, "accurate to the mock-up"; flat
+// since 2026-11-01 night, THE EDGE RULE; program_spec.h's column_margin_px,
+// render.h's well-edge accessors.) ONE PAINTER for the rows from the lane's
+// foot line (top lane 4) through the well's foot (bottom lane 1): THE
+// GROUND across them — the margins beside the canvas, the lane's foot line
+// and the well's foot, no ring, no frame — then THE CANVAS'S TWO SKIRTS, the
+// well's edge columns over the canvas's rows, in the canvas's own color with
+// its grid, its center lines and the divider's row run through them
+// (paint_canvas_skirt, render.cpp), so the canvas reads the well's whole
+// width. It runs before render_canvas; the trim bar's and the ruler's own
+// edge columns are their painters' (render_trim_flags, paint_ruler_row).
+// THE HOLE (2026-10-13, canvas_sink.h's transparency invariant): the ground
+// and the skirts skip `hole`, the canvas's paint area, which on_redraw clears
 // for the GPU.
 namespace {
 void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
                                const GuiRect& hole) {
     const GuiRect area = waveform_area(app);
-    const GuiRect top  = top_canvas_frame_area(app);
-    const GuiRect foot = bottom_canvas_frame_area(app);
+    const GuiRect top  = lane_foot_line_area(app);
+    const GuiRect foot = well_foot_area(app);
     const int y1 = foot.y + foot.h;
     if (top.w <= 0 || y1 <= top.y) return;
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE FACE the flat GROUND (the palette's `face`, materials.h's kGround;
-    // the canvas interior none of it, the hole) and THE RINGS ONE DEVICE PX
-    // (render.h's line rule) in the two ring tones. THE WELLS RUN OUT TO THE
-    // HAIRLINES BECAUSE THE SLOT IS THE HAIRLINE (2026-10-28, render.h's
-    // canvas-frame block): the frame rows and columns are one device px, so
-    // the waveform area — what every canvas painter and hit test reads — is
-    // the whole inside of the rings. NO SLOT FILL STANDS UNDER THE RINGS:
-    // every cell of the rings' rect outside the area is a ring cell (the two
-    // mitred rings cover their rows and columns opaquely, paint_hairline_frame
-    // — the top-left run aliased over the whole top row and left column, the
-    // bottom-right run over the rest) or the divider's face row below, and
-    // inside the area the hole is left alone, the GPU's.
     const GuiRect face{top.x, top.y, top.w, y1 - top.y};
-    // THE HOLE IS LEFT ALONE WHOLE: the face and the rings below paint
-    // under one clip of the column's rows less the hole, so the rings'
-    // divider lines, which cross the area, write nothing inside it (the
+    // THE HOLE IS LEFT ALONE WHOLE: the ground and the skirts paint under one
+    // clip of the rows less the hole, so nothing writes inside it (the
     // known-clear record counts on that, on_redraw).
     for_each_part_outside(face, hole, [&](const GuiRect& part) {
         cairo_rectangle(cr, part.x, part.y, part.w, part.h);
     });
     cairo_clip(cr);
     paint_cell_rect(cr, face, p.face);
-    // THE TWO WELLS' RINGS (the stereo divider, render.h's waveform_divider;
-    // architect 2026-10-16): the upper from the top frame row through its
-    // light bottom line, the divider's first row; the lower from its dark
-    // top line, the divider's last row, through the bottom frame row; the
-    // divider's middle row the flat ground across the frame columns.
-    // Inside the area the divider's rows are render_waveform_divider's
-    // (through the canvas sink, over the canvas's ground and the plate,
-    // on_redraw's paint order), so on the GL canvas the list draws them.
-    const WaveformDivider d = waveform_divider(area.h);
-    const ProgramRingColumns ring = program_ring_columns(app);
-    const int ring_x = ring.x;
-    const int ring_w = ring.end - ring.x;
-    const int upper_end = area.y + d.y + d.line;        // past its light line
-    const int lower_top = area.y + d.y + d.line + d.face;
-    paint_hairline_frame(cr, GuiRect{ring_x, top.y, ring_w, upper_end - top.y},
-                         p.ce_dark, p.ce_hilight);
-    paint_hairline_frame(cr,
-                         GuiRect{ring_x, lower_top, ring_w, y1 - lower_top},
-                         p.ce_dark, p.ce_hilight);
-    paint_cell_rect(cr, GuiRect{ring_x, upper_end, ring_w, d.face}, p.face);
+    // THE TWO SKIRTS (render.h's well paragraph): the well's edge columns
+    // beside the waveform area, over its rows.
+    const WellColumns well = well_columns(app);
+    if (area.h > 0) {
+        paint_canvas_skirt(cr, area, well.x, area.x - well.x);
+        paint_canvas_skirt(cr, area, area.x + area.w,
+                           well.end - (area.x + area.w));
+    }
     cairo_restore(cr);
 }
 } // namespace
@@ -7553,9 +7462,8 @@ static bool floating_surface_stands(const AppState& app) {
 //     read;
 //   * THE LOGO LANE (paint_logo_lane, the band's upper pad since
 //     2026-10-24): the legend the tick composed (AppState::logo_legend);
-//     the quaver, the brand, the ring's columns and the lane's rect are the
-//     globals' and the band's, the shadow's color (`ce_cue_shadow`) and
-//     offset the palette's and the scale's (2026-10-28);
+//     the quaver, the brand, the well's columns and the lane's rect are the
+//     globals' and the band's;
 //   * THE TOOLBAR BAND (paint_icon_row): its lane (the strip pad among the
 //     lane's inputs, its rect moving with it); the `h` view; the standing
 //     members in the walk's order and their runs (icon_row_walk, the right
@@ -7970,8 +7878,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                                 part.h);
                           });
     // THE GROUND SPLIT: the chrome erase above covers the exposed rect less
-    // the canvas's paint area; the canvas's frame and the column's margins
-    // then take the panel's face and the two wells' rings
+    // the canvas's paint area; the well's margins and rows of ground then
+    // take the ground and the canvas's skirts their canvas
     // (paint_canvas_column_frame, above), and the waveform area is the GPU's
     // (the block above): its `waveform_canvas` ground with the horizontal
     // grid over it (render_canvas, render.h's row-6 canvas paragraph) is the
@@ -8153,9 +8061,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // leaves that interior alpha 0:
         //   1. render_background — the chrome erase over the whole exposed
         //      rect (above, unconditional).
-        //   2. paint_canvas_column_frame — the panel's face from the canvas's
-        //      top frame row through its bottom frame row and the two wells'
-        //      rings — then render_canvas — the waveform area's ground and
+        //   2. paint_canvas_column_frame — the ground from the lane's foot
+        //      line through the well's foot and the canvas's two skirts —
+        //      then render_canvas — the waveform area's ground and
         //      the horizontal grid (above, unconditional; 2026-10-09; no
         //      vertical grid, render.h's row-6 canvas paragraph) — and, on a
         //      frame with no audio loaded (no source, or a load running:

@@ -26,19 +26,15 @@ constexpr bool palette_members_disjoint() {
 static_assert(palette_members_disjoint());
 // THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled off the
 // flat ground, render.cpp) are the struct's third part — the table's
-// painted tones and the panel label's swapping pair: distinct, and neither a
-// chrome role's member nor a program role's nor the panel's `face` — and the
-// disabled cue's three faded colors (kDisabledCueMemberCount) after them.
+// painted tones: distinct, and neither a chrome role's member nor a program
+// role's nor the panel's `face` — and the disabled cue's two faded colors
+// (kDisabledCueMemberCount) after them.
 constexpr bool cool_edit_tones_disjoint() {
-    std::array<GuiColor GuiPalette::*,
-               cool_edit_derive::kPaintedToneCount +
-                   std::size(cool_edit_derive::kLabelPairMembers)>
+    std::array<GuiColor GuiPalette::*, cool_edit_derive::kPaintedToneCount>
         members{};
     std::size_t n = 0;
     for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
         if (t.member != nullptr) members[n++] = t.member;
-    for (GuiColor GuiPalette::* m : cool_edit_derive::kLabelPairMembers)
-        members[n++] = m;
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t j = i + 1; j < n; ++j)
             if (members[j] == members[i]) return false;
@@ -53,11 +49,10 @@ constexpr bool cool_edit_tones_disjoint() {
 static_assert(cool_edit_tones_disjoint());
 // The struct's members: the chrome's roles, the program's roles, the
 // panel's `face` (the flat ground, one member of its own), the Cool Edit
-// block's painted tones and label pair, and the disabled cue's three.
+// block's painted tones, and the disabled cue's two.
 static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount + 1 +
                cool_edit_derive::kPaintedToneCount +
-               std::size(cool_edit_derive::kLabelPairMembers) +
                cool_edit_derive::kDisabledCueMemberCount) *
                   sizeof(GuiColor));
 

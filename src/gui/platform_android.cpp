@@ -533,9 +533,9 @@ GuiPlatform::~GuiPlatform() {
 // unit's change, 44 device px — and its earlier values are git history and
 // a closed question.) The icon row fits this panel whole (the arithmetic is
 // at paint_icon_row, paint_handler.cpp: the left runs' 1470, the run gap's
-// 45 and the right run's 345 of the ring's 2258 device px outside the `h`
-// view at 300, re-derived 2026-10-28 with the ring's columns the canvas's
-// frame hairlines and again with the NOISE lamp), clearing it by 398.
+// 45 and the right run's 345 of the well's 2258 device px outside the `h`
+// view at 300, re-derived 2026-10-28 with the well's edge columns one
+// hairline each and again with the NOISE lamp), clearing it by 398.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into

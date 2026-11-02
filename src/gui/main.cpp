@@ -79,7 +79,7 @@ namespace {
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
 // the authored gui_scale row heights (icon_row_h_px() — its key's rows, and
 // row 8's, the `key_height` tuning key's since 2026-10-29 —
-// the canvas column's four, its bottom frame row, plus bottom_row_h_px() —
+// the well's four, its foot, plus bottom_row_h_px() —
 // the unified bottom row), kRowGapPx and kFlagBottomLiftPx (see the
 // geometry helpers below); nothing is window-proportional, and since row 7
 // nothing is font-proportional either.
@@ -155,27 +155,27 @@ namespace {
 // since 2026-10-29, the strip pad on the flat ground — render.h's
 // program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
-// BLOCK's four, THE PROGRAM'S CANVAS COLUMN inside the program ring
-// (architect 2026-10-09, the program is Cool Edit; program_spec.h, render.h's
-// canvas column lanes): the TRIM lane (trim_lane_h_px(), Cool Edit's view
-// bar, 21 device px at 300 % — the ring's dark top line, the black field
-// (15 px at 300 % since 2026-10-24) and the span, the light line), the RULER lane (ruler_lane_h_px(), Cool Edit's
-// flipped ruler at the product's rows, 11 W of ground and its line — one W
-// of air, the six-row timestamps, the ticks and the PLAYHEAD'S HEAD on its
-// bottom rows — and a PLACEMENT LANE: a motionless click places the playhead
+// BLOCK's four, THE WELL — THE PROGRAM'S CANVAS COLUMN, flat regions on the
+// ground (architect 2026-10-09, the program is Cool Edit; 2026-11-01 night,
+// "THE MAIN PAGE IS SETTLED"; render.h's well paragraph and its lanes block):
+// the TRIM lane (trim_lane_h_px(), a row of ground and Live's overview bar,
+// 19 device px at 300 % — the bar's frame, its 16-px interior and the
+// span), the RULER lane (ruler_lane_h_px(), Cool Edit's flipped ruler in
+// Live's tones, 31 rows and a row of ground — the air, the Bold-14
+// timestamps, the ticks and the PLAYHEAD'S HEAD on its foot rows — and a
+// PLACEMENT LANE: a motionless click places the playhead
 // and every drag there does nothing but the head's, which drags the playhead
 // (2026-10-09), the navigation surface being the waveform alone
 // (point_on_placement_lanes and point_on_playhead_head, input_pointer.cpp)),
-// the MARKER lane (marker_lane_h_px(), 17 W, Cool Edit's cues, the label's
-// box the whole lane) and THE CANVAS'S TOP FRAME ROW (canvas_top_frame_h_px(),
-// one dark hairline), whose bottom edge is the waveform top. EVERY LANE
-// rides the gui_scale axis but the canvas's two frame rows, one device px at
-// every scale (2026-10-28, render.h's canvas-frame block). The BOTTOM strip
-// is TWO LANES: THE CANVAS'S BOTTOM FRAME
-// ROW (canvas_bottom_frame_h_px(), the program ring's light last row)
+// the MARKER lane (marker_lane_h_px(), 40 rows at 300 %, Cool Edit's cues,
+// the label's box and the flag editor's the whole lane) and THE LANE'S FOOT
+// LINE (lane_foot_line_h_px(), one hairline of ground), whose bottom edge is
+// the waveform top. EVERY LANE rides the gui_scale axis but the well's lines,
+// one device px at every scale (render.h's line rule). The BOTTOM strip
+// is TWO LANES: THE WELL'S FOOT (well_foot_h_px(), a hairline of ground)
 // directly under the waveform, and THE UNIFIED BOTTOM ROW,
 // bottom_row_h_px() tall — the strip pad, the case, the strip pad, on the
-// window's foot — the clock in its ringed dark time field, the active tab's
+// window's foot — the clock in its flat time field, the active tab's
 // name and THE STATE LINE on the ground beside it, and, packed against the
 // right edge, the two skips (Go to Start, Go to End; 2026-10-24), the
 // MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp, owns its
@@ -199,11 +199,10 @@ namespace {
 //   THE ICON ROW, at the window's top, at its natural height;
 //   GAP 1 — flexible band of blank window ground;
 //   THE CENTERED BLOCK — the trim lane, the ruler, the marker lane, the
-//     canvas's top frame row, then THE WAVEFORM, the canvas's interior (its
-//     frame columns and the margins beside it, waveform_area's x);
+//     lane's foot line, then THE WAVEFORM, the canvas's interior (its
+//     skirt columns and the margins beside it, waveform_area's x);
 //   GAP 2 — flexible blank window ground;
-//   THE CANVAS'S BOTTOM FRAME ROW and THE UNIFIED BOTTOM ROW at the
-//     window's foot.
+//   THE WELL'S FOOT and THE UNIFIED BOTTOM ROW at the window's foot.
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, which
@@ -214,9 +213,9 @@ namespace {
 // remainder above the block, and the lanes above the gap are part of the top
 // lane stack whichever side of it they sit on):
 //   leftover = win_h - (the top lanes whole) - the bottom strip's two lanes
-//              = centered_leftover_h; the canvas's top frame row is top lane
-//                5 and its bottom frame row bottom lane 1, so the waveform is
-//                the frame's interior and nothing inside its area is a
+//              = centered_leftover_h; the lane's foot line is top lane
+//                4 and the well's foot bottom lane 1, so the waveform is
+//                the canvas's interior and nothing inside its area is a
 //                border,
 //   W        = max(0, leftover)                            = waveform_h,
 //   gap 1    = max(0, win_h/2 - (the top lanes whole) - W/2)
@@ -233,86 +232,61 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-29 rather than adjusted (the key's height a tuning key; before
-// that 2026-10-28, the canvas's frame rows one device px, render.h's
-// canvas-frame block, 2026-10-22), AT THE STRIP PAD'S 13 W (a
+// 2026-11-02 rather than adjusted (the flat well; the key's height a tuning
+// key since 2026-10-29), AT THE STRIP PAD'S 13 W (a
 // constant since 2026-10-23, program_spec.h's strip_pad_px) AND AT
 // key_height 33 (the templates' value; a tune moves the band's and row 8's
 // case rows and the well by their difference), the waveform the whole
 // leftover and both gaps 0
 // in every stack (the rule above). Every lane is its own composite of
-// rounded parts (scaled_px's rule), so the device rows below are read off
-// the lane accessors, never off a Windows total times the factor — in
-// particular a lane's line slot is one quantum, program_line_px(), not a share of
-// scaled_px of a total, so a lane can differ from a naive total at a
-// fractional gui_scale. THE PROGRAM'S TOP STACK IS 49 WINDOWS PX, 26 BELOW
-// (render.h's chrome_stack_authored_h): the band's pad 13 and the canvas
-// column 36 above the canvas (the view bar 7, its field the 15 device px
-// at 300 % over 3 since 2026-10-24, the ruler 12, the marker lane 17); row
-// 8's two pads 26 below — AND OVER IT THE LOGO LANE, the band's upper pad,
-// 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px), SCALED WITH
-// gui_scale, THE TWO KEYS' ROWS, THE `key_height` KEY'S DEVICE
-// PX AT 300 % (2026-10-29: icon_case_h_px, skin_px; 23 W each in the sums
-// until then), SCALED WITH gui_scale, AND THE CANVAS'S TWO FRAME ROWS, ONE
-// DEVICE PX EACH AT EVERY SCALE (2026-10-28, hairline_px). THE WELL — THE
-// CANVAS'S INTERIOR — AT THE BASE'S 300 % AND key_height 33 IS 1075 DEVICE
-// ROWS (1003 under the square 69-px case, 2026-10-28 to 2026-10-29; 999
-// under the frame rows' 3-px slots, 2026-10-24 to 2026-10-28; 996 under
-// the 18-px trim field, 989 under the 40-row caption over the strip pad,
-// 2026-10-23 to 2026-10-24; the rule at centered_leftover_h below), AND ITS
+// rounded parts (skin_px's and scaled_px's rule, the faces' metrics each
+// rounded at the element), so the device rows below are read off the lane
+// accessors, never off a total times the factor. THE PROGRAM'S W STACK IS
+// 13 ABOVE AND 26 BELOW (render.h's chrome_stack_authored_h): the band's
+// pad and row 8's two pads — AND OVER IT THE LOGO LANE, the band's upper
+// pad, 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px), THE TWO
+// KEYS' ROWS, THE `key_height` KEY'S DEVICE PX AT 300 % (2026-10-29:
+// icon_case_h_px, skin_px), each SCALED WITH gui_scale, AND THE WELL'S
+// LANES, DERIVED IN DEVICE PX AT THE ELEMENT (render.h's well lanes block,
+// 2026-11-02). THE CANVAS — THE WELL'S INTERIOR — AT THE BASE'S 300 % AND
+// key_height 33 IS 1092 DEVICE ROWS (1075 under the hi-fi well's lanes,
+// 2026-10-29 to 2026-11-02; the rule at centered_leftover_h below), AND ITS
 // WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the left
-// (waveform_area: the margin and the canvas's frame column, 19 px, and half
-// the flooring's leftover, 5). Per scale the canvas column above the canvas
-// is the view bar (line + field + line) + the ruler (ground + line) + the
-// marker lane (its W rows + its five label quanta, the triangle's five
-// device rows at its bottom) + the frame row:
-// 21 (3 + 15 + 3) + 36 (33 + 3) + 51 (36 + 15) + 1 = 109 at 300 %, 14 (2 +
-// 10 + 2) + 24 + 34 + 1 = 73 at 200 %, 12 (2 + 8 + 2) at 150 %, 9 (1 + 7 +
-// 1) + 16 (15 + 1) + 22 (17 + 5) + 1 = 48 at 138 %, 26 (4 + 18 + 4) + 44
-// (40 + 4) + 63 (43 + 20) + 1 = 134 at 360 % and 28 + 48 + 68 + 1 = 145 at
-// 400 % (the trim field skin_px's 15 px at 300 %; the view bar's and the
-// ruler's line slots keep their scaled height, the line painted in each one
-// device px, render.h's hairline_px; the frame row is the hairline itself).
+// (waveform_area: the margin and the well's edge column, 19 px, and half
+// the flooring's leftover, 5). Per scale the well above the canvas is the
+// trim lane (ground + frame + interior + frame) + the ruler lane (air +
+// ascent + descent + major tick, + ground) + the marker lane (outline + pad
+// + band + pad + outline) + the lane's foot line: 19 (1 + 1 + 16 + 1) + 32
+// (6 + 13 + 3 + 9 + 1) + 40 (3 + 6 + 22 + 6 + 3) + 1 = 92 at 300 %, 14 (1 +
+// 1 + 11 + 1) + 21 (4 + 8 + 2 + 6 + 1) + 26 (2 + 4 + 14 + 4 + 2) + 1 = 62 at
+// 200 %.
 //   1920 x H AT 200 % (kept as a worked case; no host runs this geometry
 //   since the laptop GUI's drop, 2026-10-30): the
 //   lanes are 96 band (the logo lane 48, the case 22, the pad 26, rows
-//   0–95, the cases 48–69) + 14 trim + 24 ruler + 34 marker + 1 frame =
-//   169 above (96 the band, 73 the block) and 75 below (the bottom frame
-//   row 1 and row 8's 26 + 22 + 26), leftover H − 244: the waveform H − 244
-//   (its two wells (H − 244 − 3) / 2 rows each, floored, round the
-//   divider's 3, the spare row the canvas's last), both gaps 0 — 96 / 0 /
-//   73 / H − 244 / 0 / 75; the waveform 1888 wide, 16 px in (the margin
-//   and the frame column, 13, and half the flooring's 6), the ring's outer
-//   columns 15 and 1905. (At 138 % under the caption,
-//   2026-10-23 to 2026-10-24: 18 caption + 82 band + 49 above, 68 below, the
-//   waveform 863 of a 1080-row surface.)
+//   0–95, the cases 48–69) + 62 the well's lanes = 158 above and 75 below
+//   (the well's foot 1 and row 8's 26 + 22 + 26), leftover H − 233: the
+//   waveform H − 233 (its two wells (H − 234) / 2 rows each, floored, round
+//   the divider's 1, the spare row the canvas's last), both gaps 0 — 96 / 0
+//   / 62 / H − 233 / 0 / 75; the waveform 1888 wide, 16 px in (the margin
+//   and the edge column, 13, and half the flooring's 6), the well's columns
+//   15 and 1905.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
 //   tablet value since 2026-10-06): the lanes are 144 band (72
-//   + 33 + 39, rows 0–143, the logo lane 0–71, the cases 72–104) + 21 trim
-//   + 36 ruler + 51 marker + 1 frame = 253 above (144 the band, 109 the
-//   block; the frame row 252) and 112 below (the bottom frame row 1328 and
-//   row 8 on 1329–1439, its cases 1368–1400), leftover 1075: the waveform
-//   1075 on rows 253–1327 (its two wells 536 rows each round the divider's
-//   3 on 789–791, no spare row, render.h's waveform_divider), both gaps 0 —
-//   144 / 0 / 109 / 1075 / 0 / 112; the waveform 2256 wide, 24 px in
-//   (columns 24–2279), the ring's outer columns 23 and 2281 (one past
-//   2280).
-//   2304x1440 AT gui_scale 360 (same surface; the key 40 tall where it is
-//   33 at 300, the pad 47, the logo lane 86):
-//   the lanes are 173 band (86 + 40 + 47) + 26 trim + 44 ruler
-//   + 63 marker + 1 frame = 307 above (173 and 134) and 135 below (1 +
-//   134), leftover 998: the waveform 998, both gaps 0 — 173 / 0 / 134 /
-//   998 / 0 / 135; the waveform 2256 wide, 24 px in.
-//   2304x1440 AT gui_scale 400 (same surface): the lanes are
-//   192 band (96 + 44 + 52) + 28 trim + 48 ruler + 68 marker + 1 frame = 337
-//   above (192 and 145) and 149 below (1 + 148), leftover 954: the waveform
-//   954, both gaps 0 — 192 / 0 / 145 / 954 / 0 / 149; the waveform 2240
-//   wide, 32 px in.
+//   + 33 + 39, rows 0–143, the logo lane 0–71, the cases 72–104) + 19 trim
+//   (row 144 ground, the bar 145–162) + 32 ruler (163–193, row 194 ground)
+//   + 40 marker (195–234) + 1 foot line (235) = 236 above (144 the band, 92
+//   the block) and 112 below (the well's foot 1328 and row 8 on 1329–1439,
+//   its cases 1368–1400), leftover 1092: the waveform 1092 on rows
+//   236–1327 (its two wells 545 rows each round the divider's row 781, the
+//   spare row 1327, render.h's waveform_divider), both gaps 0 — 144 / 0 /
+//   92 / 1092 / 0 / 112; the waveform 2256 wide, 24 px in (columns
+//   24–2279), the well's columns 23 and 2281 (one past 2280) — THE RECORD
+//   PICTURE'S ROWS (M13, architect 2026-11-02).
 //   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 356 -> the waveform 356, both
-//   gaps 0 — 96 / 0 / 73 / 356 / 0 / 75.
+//   this geometry): leftover 367 -> the waveform 367, both
+//   gaps 0 — 96 / 0 / 62 / 367 / 0 / 75.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -340,20 +314,19 @@ namespace {
 // label — stands inside the marker lane, and the playhead's head on the
 // ruler's own bottom rows. Every seam — the window top|icon seam,
 // icon|trim (GAP 1's band; where gap 1 is zero the trim lane's
-// own first row is the boundary), trim|ruler, ruler|marker, marker|frame,
-// frame|bottom row, and both outer kFlagBottomLiftPx gaps — is honored
-// structurally by the loop below and by every consumer. (The cues' and the
-// playhead's DOTS are the canvas's, below its top frame row; the program
-// ring runs from the view bar's top row through the canvas's bottom frame
-// row, a ring round each channel's well across the canvas's rows, the
-// stereo divider between them inside the waveform area (render.h's
-// waveform_divider), painted by paint_canvas_column_frame and the lanes'
-// own painters off the lanes' rects, paint_handler.cpp.) ONE shared helper
+// own first row is the boundary), trim|ruler, ruler|marker, marker|foot
+// line, well's foot|bottom row, and both outer kFlagBottomLiftPx gaps — is
+// honored structurally by the loop below and by every consumer. (The cues'
+// and the playhead's DOTS are the canvas's, below the lane's foot line; the
+// stereo divider stands inside the waveform area (render.h's
+// waveform_divider), the canvas's skirts and the rows of ground painted by
+// paint_canvas_column_frame and the lanes' own painters off the lanes'
+// rects, paint_handler.cpp.) ONE shared helper
 // — strip_row_rect — is the single geometry owner; every named accessor
 // delegates to it, so a lane is a pure index from its strip's window edge,
 // and a bottom lane's y is its inset flipped about the window midline (THE
-// BOTTOM ROW rests ON the window's foot as bottom lane 0 and the canvas's
-// bottom frame row above it as lane 1 — gap 2 above both, in
+// BOTTOM ROW rests ON the window's foot as bottom lane 0 and the well's
+// foot above it as lane 1 — gap 2 above both, in
 // bottom_strip_h's total rather than in a lane's inset).
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
@@ -366,29 +339,24 @@ static void clamp_dims(int& w, int& h) {
 
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
-// LANE IN BOTH STRIPS BUT THE CANVAS'S TWO FRAME ROWS is an authored length on
-// the GUI-SCALE axis, a composite of its rounded parts (icon_row_h_px(), the
-// canvas column's first three — trim_lane_h_px(), ruler_lane_h_px(),
-// marker_lane_h_px() — and bottom_row_h_px()); THE TWO FRAME ROWS
-// (canvas_top_frame_h_px(), canvas_bottom_frame_h_px()) are ONE DEVICE PX at
-// every scale, the hairline itself (hairline_px; 2026-10-28, render.h's
-// canvas-frame block — one scaled W until then). The lanes' rulings are at
-// those accessors' declarations in render.h.
+// LANE IN BOTH STRIPS BUT THE WELL'S TWO ROWS OF GROUND is an authored length
+// on the GUI-SCALE axis, a composite of its rounded parts (icon_row_h_px(),
+// the well's first three — trim_lane_h_px(), ruler_lane_h_px(),
+// marker_lane_h_px() — and bottom_row_h_px()); THE TWO ROWS OF GROUND
+// (lane_foot_line_h_px(), well_foot_h_px()) are ONE DEVICE PX at every scale,
+// the hairline itself (hairline_px). The lanes' rulings are at those
+// accessors' declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE TOOLBAR
 // BAND, the logo lane, the case (its height the `key_height` tuning key,
 // 2026-10-29), the
 // strip pad (render.h's program and logo lane blocks, icon_row_h_px), the
-// canvas column's four lanes Cool Edit's view bar,
-// ruler, marker lane and canvas's top frame row — the view bar a line, its
-// field (15 device px at 300 %, 2026-10-24) and a line, the ruler 11 W of
-// ground and its line, the marker lane 12 W and five label quanta, the frame
-// row one device px (render.h's canvas column lanes): 21 + 36 + 51 + 1 = 109
-// device rows at 300 %, 14 + 24 + 34 + 1 = 73 at 200 % — the canvas's
-// BOTTOM FRAME ROW one device px too (canvas_bottom_frame_h_px), and the
-// UNIFIED BOTTOM ROW the strip again (bottom_row_h_px; the simple layout,
-// 2026-10-22).
+// well's four lanes the trim bar, the ruler, the marker lane and the lane's
+// foot line (render.h's well lanes block): 19 + 32 + 40 + 1 = 92 device rows
+// at 300 %, 14 + 21 + 26 + 1 = 62 at 200 % — THE WELL'S FOOT one device px
+// too (well_foot_h_px), and the UNIFIED BOTTOM ROW the strip again
+// (bottom_row_h_px; the simple layout, 2026-10-22).
 constexpr int kTopLaneCount    = 5;
 constexpr int kBottomLaneCount = 2;
 // THE FIRST PROGRAM LANE, the band, AT THE WINDOW'S TOP since 2026-10-24
@@ -402,26 +370,25 @@ constexpr int kTopProgramLane      = 0;
 // the view bar down is the centered block. ONE number, read by
 // strip_row_rect's inset.
 constexpr int kTopFlexGapLane  = 1;
-// THE CANVAS COLUMN'S LANES, top lanes 1 to 4.
+// THE WELL'S LANES, top lanes 1 to 4.
 constexpr int kTopTrimLane        = 1;
 constexpr int kTopRulerLane       = 2;
 constexpr int kTopMarkerLane      = 3;
-constexpr int kTopCanvasFrameLane = 4;
+constexpr int kTopLaneFootLane    = 4;
 static_assert(kTopFlexGapLane == kTopTrimLane);
 int top_lane_height(int lane) {
     switch (lane) {
         // THE TOOLBAR BAND: the logo lane, the case, the strip pad.
         case kTopProgramLane: return icon_row_h_px();
-        // THE CANVAS COLUMN'S THREE (architect 2026-10-09, the program is
-        // Cool Edit; program_spec.h owns every length, render.h's canvas
-        // column lanes the accessors): the view bar (the trim lane), the
-        // flipped ruler and the cues' marker lane.
-        case kTopTrimLane:    return trim_lane_h_px();      // the view bar
+        // THE WELL'S THREE (architect 2026-10-09, the program is Cool Edit;
+        // flat since 2026-11-01 night; render.h's well lanes block the
+        // accessors): the trim bar, the flipped ruler and the cues' marker
+        // lane.
+        case kTopTrimLane:    return trim_lane_h_px();      // the trim bar
         case kTopRulerLane:   return ruler_lane_h_px();     // ruler / placement
         case kTopMarkerLane:  return marker_lane_h_px();    // the cues
-        // THE CANVAS'S DARK TOP FRAME ROW (2026-10-09, the third part);
-        // bottom edge = waveform top.
-        case kTopCanvasFrameLane: return canvas_top_frame_h_px();
+        // THE LANE'S FOOT LINE, a row of ground; bottom edge = waveform top.
+        case kTopLaneFootLane: return lane_foot_line_h_px();
         default: return 0;
     }
 }
@@ -429,21 +396,21 @@ int top_lane_height(int lane) {
 // every lane table here: lane 0 is THE UNIFIED BOTTOM ROW on the window's
 // foot (2026-08-12, rows 8 and 9 merged: the clock left, the buttons flush
 // right; the layout is paint_bottom_row_buttons_and_clock's), lane 1 THE
-// CANVAS'S BOTTOM FRAME ROW (the program ring's light last row, the
-// program's). THE ORDER IS FIXED: no tenant of the row moves a lane — the
+// WELL'S FOOT (a row of ground, the program ring's last row until the flat
+// well). THE ORDER IS FIXED: no tenant of the row moves a lane — the
 // modal family's box and controls row stand over these rows (modal_box.h)
 // and the on-screen keyboard's band over them (onscreen_keyboard.h's
 // placement block). GAP 2 sits ABOVE the two, in bottom_strip_h's total
 // rather than in a lane's inset, so lane 0 is flush with the window edge
 // like the top strip's own lane 0 (and gap 2 being 0, lane 1's top is the
 // waveform's bottom).
-constexpr int kBottomRowLane         = 0;
-constexpr int kBottomCanvasFrameLane = 1;
+constexpr int kBottomRowLane      = 0;
+constexpr int kBottomWellFootLane = 1;
 int bottom_lane_height(int lane) {
     switch (lane) {
-        case kBottomRowLane:         return bottom_row_h_px();
-        // THE CANVAS'S LIGHT BOTTOM FRAME ROW; top edge = waveform bottom.
-        case kBottomCanvasFrameLane: return canvas_bottom_frame_h_px();
+        case kBottomRowLane:      return bottom_row_h_px();
+        // THE WELL'S FOOT, a row of ground; top edge = waveform bottom.
+        case kBottomWellFootLane: return well_foot_h_px();
         default: return 0;
     }
 }
@@ -466,10 +433,8 @@ int strip_total_h(bool top_strip) {
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
 // gui_scale 300, the strip pad's 13 W and key_height 33 the lanes leave
-// 1440 − 253 − 112 = 1075 device rows (no caption, the 72-row logo lane and
-// the 15-px trim field, 2026-10-24, the frame rows one device px,
-// 2026-10-28, the key's 33 rows, 2026-10-29; 1003 under the square 69-px
-// case, 989 under the hi-fi skin's 40-row caption, 2026-10-23). A COLOR
+// 1440 − 236 − 112 = 1092 device rows (the flat well, 2026-11-02; 1075
+// under the hi-fi well, 2026-10-29). A COLOR
 // moves no lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -498,7 +463,7 @@ int top_flex_gap(int win_h) {
     return gap > 0 ? gap : 0;
 }
 // GAP 2 — the flexible blank band between the waveform's bottom edge and the
-// bottom strip's lanes (the canvas's bottom frame row over the UNIFIED
+// bottom strip's lanes (the well's foot over the UNIFIED
 // BOTTOM ROW):
 // the REMAINDER of the leftover, which
 // is what makes the stack add up to the window exactly. Zero, the waveform
@@ -574,23 +539,19 @@ GuiRect waveform_area(const AppState& a) {
     // the logical spp exactly at every rate.
     constexpr int kGridStepPx = 16;
     // THE CANVAS'S INTERIOR ACROSS (architect 2026-10-09, the third part;
-    // program_spec.h's column_margin_px): the column stands
-    // the margin's face and one frame column — one hairline, render.h's
-    // canvas_frame_column_w_px, 2026-10-28 — in from each side of the window
-    // (column_inner_x_px; inside the program frame's columns 2026-10-10 to
-    // 2026-10-21, which are gone), and the interior is what the two sides
+    // program_spec.h's column_margin_px): the well stands
+    // the margin's ground and one edge column — one hairline, render.h's
+    // well_edge_column_w_px — in from each side of the window
+    // (column_inner_x_px), and the interior is what the two sides
     // leave, floored to the grid step. THE LEFTOVER OF FLOORING THE WIDTH TO
     // THE PAINTER GRID STEP IS SPLIT BETWEEN THE TWO MARGINS, THE ODD PIXEL
-    // TO THE RIGHT (architect 2026-10-09, symmetry strict), the frame columns,
-    // the view bar and the ruler following the canvas's x. 24 device px in
-    // and 2256 wide on the tablet's 2304 at 300 % (18 + 1 and half the
-    // flooring's 10), 16 in and 1888 wide on a 1920-px window at 200 % (12 +
-    // 1 and half its 6) and at 138 % (8 + 1 and half its 14), 24 in and 2256
-    // wide at 360 % (22 + 1 and half its 2), 32 in and 2240 wide at 400 %
-    // (24 + 1 and half its 14) — the frame columns' slots going back into the
-    // flooring's leftover (2026-10-28) at every one of those scales but
-    // 360 %, whose leftover crossed a grid step and gave the canvas 16
-    // columns. The working column, the
+    // TO THE RIGHT (architect 2026-10-09, symmetry strict), the edge columns,
+    // the trim bar, the ruler and the marker lane following the canvas's x.
+    // 24 device px in and 2256 wide on the tablet's 2304 at 300 % (18 + 1
+    // and half the flooring's 10), 16 in and 1888 wide on a 1920-px window
+    // at 200 % (12 + 1 and half its 6) and at 138 % (8 + 1 and half its 14),
+    // 24 in and 2256 wide at 360 % (22 + 1 and half its 2), 32 in and 2240
+    // wide at 400 % (24 + 1 and half its 14). The working column, the
     // zoom map, every column mapping and hit test and the damage boxes read
     // this rect (ON SCREEN IS AS PAINTED).
     const int side = column_inner_x_px();
@@ -602,19 +563,13 @@ GuiRect waveform_area(const AppState& a) {
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
-    // the vocabulary reaches it: the program's lanes are 121 Windows px at
-    // the strip pad's 13, the top strip's 72 plus the bottom strip's 49, the
-    // logo lane 72 device px at 300 % scaled and the canvas's two frame rows
-    // one device px each (lane by lane through scaled_px and each lane from
-    // its rounded parts, which is not one multiply of the sum; re-derived
-    // 2026-10-28 with the frame rows' hairlines). At 350 % they take 518
-    // device px (212 band + 26 trim + 42 ruler + 62 marker + 1 frame = 343
-    // above, and 1 frame + 174 row), leaving a 1080-tall window 562; at
-    // 400 %, 582 (385 + 197), leaving the tablet's 1440 rows 858 (the stack
-    // record at the lane table above); and they pass 1440 near 990 %, short
-    // of the 1000 % ceiling (architect 2026-10-05), so the top of the
-    // vocabulary lands on this floor. (The host runs far below it: the
-    // tablet at 300 % on its 1440-tall surface, where they take 437.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // the vocabulary reaches it: the lanes scale with gui_scale (lane by
+    // lane, each from its rounded parts, which is not one multiply of the
+    // sum), the well's rows of ground one device px each, and they pass the
+    // tablet's 1440 rows short of the 1000 % ceiling (architect 2026-10-05),
+    // so the top of the vocabulary lands on this floor. (The host runs far
+    // below it: the tablet at 300 % on its 1440-tall surface, where they take
+    // 348, the stack record at the lane table above.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
@@ -670,8 +625,8 @@ GuiRect waveform_area(const AppState& a) {
 // rect and painter reads its lane here, so the width is one geometry for
 // paint and hit.
 //
-// Paint/hit agreement invariant: the TRIM BAR is TOP lane 2 (the ruler lane
-// 3, the marker lane lane 4 and the canvas's top frame row lane 5), and
+// Paint/hit agreement invariant: the TRIM BAR is TOP lane 1 (the ruler lane
+// 2, the marker lane lane 3 and the lane's foot line lane 4), and
 // hit_test_trim_endcap / the pair-drag y-gate read the band render_trim_flags
 // painted the view bar in (published as AppState::trim_bar_hit's `lane`),
 // because
@@ -718,11 +673,11 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
 // count's authority; twenty-seven stand outside the `h` view and eighteen
 // inside it, re-counted 2026-10-29 with the Restrict lamp), the toolbar band. Lane 1 is the
-// TRIM lane (Cool Edit's view bar: the span and its two ends, every trim
+// TRIM lane (the trim bar: the span and its two ends, every trim
 // gesture and the span-framing double-click), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
 // ladder and the playhead's head; a placement lane); lane 3 is the MARKER
-// lane (the cues); lane 4 is THE CANVAS'S TOP FRAME ROW (2026-10-09), whose
+// lane (the cues); lane 4 is THE LANE'S FOOT LINE, a row of ground, whose
 // bottom edge is
 // flush with the waveform area top. Every lane spans the window
 // (strip_row_rect, 2026-10-21). (top_caption_row_area and the sizing
@@ -753,27 +708,27 @@ GuiRect top_marker_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, kTopMarkerLane);
 }
 
-// THE CANVAS'S TOP FRAME ROW (top lane 4) and ITS BOTTOM FRAME ROW (bottom
-// lane 1), 2026-10-09 — render.h's canvas-frame accessors; their one painter
-// is paint_canvas_column_frame (paint_handler.cpp).
-ProgramRingColumns program_ring_columns(const AppState& a) {
+// THE WELL'S COLUMNS, THE LANE'S FOOT LINE (top lane 4) and THE WELL'S FOOT
+// (bottom lane 1) — render.h's well-edge accessors; the rows' one painter is
+// paint_canvas_column_frame (paint_handler.cpp).
+WellColumns well_columns(const AppState& a) {
     const GuiRect area = waveform_area(a);
-    const int     cw   = canvas_frame_column_w_px();
-    return ProgramRingColumns{area.x - cw, area.x + area.w + cw};
+    const int     cw   = well_edge_column_w_px();
+    return WellColumns{area.x - cw, area.x + area.w + cw};
 }
 
-GuiRect top_canvas_frame_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/true, kTopCanvasFrameLane);
+GuiRect lane_foot_line_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/true, kTopLaneFootLane);
 }
 
-GuiRect bottom_canvas_frame_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false, kBottomCanvasFrameLane);
+GuiRect well_foot_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/false, kBottomWellFootLane);
 }
 
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
 // render.h's bottom-row block) — THE STRIP since the simple layout
 // (2026-10-22): the strip pad, the key, the strip pad on the flat ground,
-// the clock at the left in its ringed dark time field with the active tab's
+// the clock at the left in its flat time field with the active tab's
 // name and THE STATE LINE on the ground right of it, and, packed against the
 // right edge, the skips (Go to Start, Go to End; 2026-10-24), the
 // MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
@@ -782,8 +737,8 @@ GuiRect bottom_canvas_frame_area(const AppState& a) {
 // Stop, the last case; architect 2026-10-18), each a plain run of cases,
 // run_gap_px of bare ground between two. It is BOTTOM LANE 0, on the window's
 // foot
-// under the canvas's bottom frame row (lane 1, bottom_canvas_frame_area
-// above), the window's whole width, whatever stands over it (the modal
+// under the well's foot (lane 1, well_foot_area above), the window's whole
+// width, whatever stands over it (the modal
 // family's controls row on its rows and the on-screen keyboard's band over
 // it are never lanes: modal_box.h, onscreen_keyboard.h's placement block).
 // Gap 2 stands above lane 1 inside bottom_strip_h and is zero since the
@@ -1270,17 +1225,15 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // only the WIDTH, as an emptiness test. Both are the narrow-on-plate shape,
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
-// (2026-10-09, ON SCREEN IS AS PAINTED): the columns the yellow triangle and
-// its shadow cover, centred on the one-px stem (cue_triangle_half_w_px and
+// (2026-10-09, ON SCREEN IS AS PAINTED): the columns the head's triangle
+// covers, centred on the one-px stem (cue_triangle_half_w_px and
 // cue_triangle_reach_right_px, render.h, the painter's own cells) — the
-// rows less one left, the rows and the shadow's offset right: 7 + 11 = 18
-// device px at 300 %, 4 + 7 = 11 at 200 %, 3 + 5 = 8 at 138 % (the cells one
-// device px, the rows and the shadow's offset scaled, 2026-10-26) — its
-// rows the whole band from the window's top below, so the shadow's offset
-// down is inside it too — which also
-// holds the one-px
+// rows less one left, the rows right: 7 + 8 = 15 device px at 300 %, 4 + 5
+// = 9 at 200 %, 3 + 4 = 7 at 138 % (the cells one device px, the rows
+// scaled, 2026-10-26; no shadow since 2026-11-02) — its rows the whole band
+// from the window's top below — which also holds the one-px
 // line of the scanner and the dots, so a move repaints every column the head
-// stood on and no shadow column is left behind.
+// stood on.
 // `px_x` is the waveform's own column (offset from area.x, as every
 // playhead pixel is), so the box is placed at area.x + col — the canvas
 // standing the column's margin in from the window's side since 2026-10-09.
@@ -2228,10 +2181,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     the stereo divider's rows over them (render_canvas,
             //     render_center_lines, render_waveform_divider — on_redraw's
             //     !plate_branch arm; the GL canvas's list the same, its
-            //     build_canvas_list arm), in the column's face and the two
-            //     wells' rings (paint_canvas_column_frame).
-            //   * THE TOP STRIP — the view bar, the ruler, the marker lane —
-            //     BARE: every pass of it (paint_trim's view bar, the ruler
+            //     build_canvas_list arm), in the well's ground and the
+            //     canvas's skirts (paint_canvas_column_frame).
+            //   * THE TOP STRIP — the trim bar, the ruler, the marker lane —
+            //     BARE: every pass of it (paint_trim's trim bar, the ruler
             //     with the marker lane's face and the cursor's head, the
             //     flag blit) is the plate branch's, so the lanes show the
             //     window's ground (render_background).

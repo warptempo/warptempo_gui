@@ -5642,8 +5642,8 @@ struct AppState {
     // THE PLAYHEAD HEAD'S PAINTER STASH (architect 2026-10-09 ~17:40, the
     // head drag — ScrollDragState::head_drag), the trim stash's doctrine
     // carried to the ruler: GuiPaintHandler::paint_ruler_row publishes the
-    // rect it last DREW the head in — the triangle's and its shadow's
-    // columns cut to the waveform's, over the head's device rows of the
+    // rect it last DREW the head in — the triangle's columns cut to the
+    // waveform's, over the head's device rows of the
     // ruler's, in SCREEN pixels, no tolerance — and
     // point_on_playhead_head (input_pointer.cpp) reads this and nothing
     // else, so the press answers the head on screen.

@@ -9,13 +9,15 @@
 // THE MATERIALS — THE FLAT LOOK (architect 2026-11-01, reversing the hi-fi
 // panel of 2026-10-23: "whatever ruling it needs to, we need to reverse to go
 // flat"; Live's grammar, every number measured on his Live 12 shots at
-// 100 %). This header is the one owner of the ground, the key, the lit fill
-// and the text tones, and of the hi-fi panel's constants the well and the
-// overlays still read until their own flat passes land.
+// 100 %). This header is the one owner of the ground, the key, the lit fill,
+// the text tones and the well's tones, and of the hi-fi panel's constants
+// the overlays still read until their own flat pass lands.
 //
-// THE GROUND IS ONE FLAT COLOR, kGround 242424, everywhere outside the well
-// and the keys: the band and its logo lane, row 8, the canvas column's side
-// margins, the on-screen keyboard's band, the modal family's controls row.
+// THE GROUND IS ONE FLAT COLOR, kGround 242424, everywhere outside the well's
+// regions and the keys: the band and its logo lane, row 8, the well's side
+// margins and its rows of ground (the ruler's and the marker lane's foot
+// lines, the stereo divider, the row above the trim bar and the row under
+// the canvas), the on-screen keyboard's band, the modal family's controls row.
 // NO BAKE, NO GRAIN, NO GRADIENT, NO LINE, NO BEVEL, NO SHADOW: every pixel
 // of the ground is a solid fill through the palette's chokepoint
 // (set_palette_source, render.h), which converts it for the window as it
@@ -53,11 +55,24 @@
 // clocks, the tab name and state line, the lists, the cards, the prompts,
 // the editors, the marker labels, the keyboard's caps — and kTextDimInk
 // 757575 for a disabled key's legend, the settings page's inert rows and the
-// tooltip's hint line; kTextOnLit 111111 on a lit face. NO WORD OUTSIDE THE
-// WELL WEARS A SHADOW (2026-11-01, "no shadow anywhere"): the logo lane's
-// brand, legend and drawings, the tab name, the state line and the clock are
-// ink alone. (The well's cue labels, triangles and ticks keep their shadows
-// until the well's part retires them.)
+// tooltip's hint line; kTextOnLit 111111 on a lit face. NOTHING WEARS A
+// SHADOW (2026-11-01, "no shadow anywhere"; the well's cue labels,
+// triangles and ticks with the rest since 2026-11-02): every word, digit,
+// tick and triangle is ink alone.
+//
+// THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h with
+// the final lane-40 / clock-39 rulings; M13's text tones 2026-11-02): FLAT
+// REGIONS ON THE GROUND, no frame, no ring, no bevel, its columns the keys'
+// outer columns (render.h's well_columns, THE EDGE RULE), top to bottom —
+// THE TRIM BAR kTrimBarFace 3C3C3C in a one-device-px kWellFrame 757575
+// frame on all four sides, the span two one-px kWellFrame verticals frame
+// to frame; THE RULER kRulerFace 363636 with the kTextInk digits and the
+// kRulerTick 6B6B6B ticks; one row of ground; THE MARKER LANE kLaneFace
+// 303030; one row of ground; THE CANVAS (the palette's `waveform_canvas`),
+// its stereo divider one row of ground. Every number is Live's, measured on
+// his Live 12 shots (the trim bar the arrangement's overview, the ruler and
+// its ticks the time ruler, the lane the clip view's marker lane).
+// THE TIME FIELDS are flat kKeyFace boxes, no ring (2026-11-01 night, M5m).
 
 // THE GROUND (the head).
 inline constexpr uint32_t kGround = 0x242424;
@@ -73,31 +88,35 @@ inline constexpr uint32_t kKeyFace  = 0x363636;
 inline constexpr uint32_t kLitFill  = 0xFFAD56;
 inline constexpr int      kKeyGapPx = 2;
 
-// -- WHAT THE WELL AND THE OVERLAYS STILL READ --------------------------------
-// The flat constants below are the hi-fi panel's, left standing for the
-// well (the view bar, the ruler, the marker lane, the canvas's frame, the
-// time fields) and the overlays (the modal box, the cards, the tooltip, the
-// lists) until their flat passes land.
+// THE WELL'S TONES (the head's THE WELL).
+inline constexpr uint32_t kTrimBarFace = 0x3C3C3C;
+inline constexpr uint32_t kWellFrame   = 0x757575;
+inline constexpr uint32_t kRulerFace   = 0x363636;
+inline constexpr uint32_t kRulerTick   = 0x6B6B6B;
+inline constexpr uint32_t kLaneFace    = 0x303030;
+
+// THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
+// selection): a flat 637E86 bar under 111111 text — the flag editor's and
+// the dialog editors' selected substring and the lists' lit row (the
+// chrome's `selected_fill` / `selected_text`, chrome_derive.h).
+inline constexpr uint32_t kSelectionFill = 0x637E86;
+inline constexpr uint32_t kSelectionText = kTextOnLit;
+
+// -- WHAT THE OVERLAYS STILL READ ---------------------------------------------
+// The constants below are the hi-fi panel's, left standing for the overlays
+// (the modal box, the cards, the tooltip, the scrub's channel, the lists)
+// until their flat pass lands.
 //
-// THE FLAT GROUNDS (2026-10-23): the ruler's flat dark lane, the field
-// (every field, the modal family's box, the cards and the tooltip), the
-// time fields' black.
-inline constexpr uint32_t kRulerGround     = 0x0E0E10;
+// THE FIELD (2026-10-23): every overlay field, the modal family's box, the
+// cards and the tooltip.
 inline constexpr uint32_t kFieldGround     = 0x0A0A0C;
-inline constexpr uint32_t kTimeFieldGround = 0x000000;
-// THE SELECTION PAIR (2026-10-23, "the grey everywhere"): a flat grey bar
-// under the text — the lists' lit row, the flag editor's and the dialog
-// editors' selected substring; its text the text tone.
-inline constexpr uint32_t kSelectionFill = 0x3E4044;
-inline constexpr uint32_t kSelectionText = kTextInk;
 
 // THE RING TONES OFF A GROUND (2026-10-23): light L + .16 with S × .9, dark
-// L × .40, the hue kept. NO LINE OUTSIDE THE WELL WEARS THEM since the flat
-// look; the program ring round the well, the well's own lines, the time
-// fields' rings, the scrub's channel, the modal box's ring and the cards'
-// and the tooltip's rings do, off the flat ground (kRingLight / kRingDark,
-// the palette's `ce_hilight` / `ce_dark` and the chrome's `hilight` /
-// `shadow`), until their parts land.
+// L × .40, the hue kept. NO LINE OF THE MAIN PAGE WEARS THEM since the flat
+// look (the well's part 2026-11-02); the scrub's channel, the modal box's
+// ring and the cards' and the tooltip's rings do, off the flat ground
+// (kRingLight / kRingDark, the palette's `ce_hilight` / `ce_dark` and the
+// chrome's `hilight` / `shadow`), until their part lands.
 constexpr uint32_t ring_light_of(uint32_t mean) {
     return cool_edit_derive::tone(mean, 1.0, 0.16, 0.9, 0.0);
 }
@@ -106,16 +125,6 @@ constexpr uint32_t ring_dark_of(uint32_t mean) {
 }
 inline constexpr uint32_t kRingLight = ring_light_of(kGround);
 inline constexpr uint32_t kRingDark  = ring_dark_of(kGround);
-// THE VIEW BAR'S SPAN (architect 2026-10-25: "the trim bar should be a
-// neutral gray", "sort of like the button color, maybe a little different so
-// it doesn't blend in"): a raised block of a NEUTRAL GREY, its body
-// kSpanFace, its top row and left column kSpanLight and its bottom row and
-// right column kSpanDark, the ring tones off the body. No palette role
-// touches the trio (render_trim_flags paints it, render.h's view bar block).
-inline constexpr uint32_t kSpanFace  = 0x505053;
-inline constexpr uint32_t kSpanLight = ring_light_of(kSpanFace);
-inline constexpr uint32_t kSpanDark  = ring_dark_of(kSpanFace);
-static_assert(kSpanLight == 0x78787C && kSpanDark == 0x202021);
 
 // -- THE KEY'S PAINTERS ------------------------------------------------------
 

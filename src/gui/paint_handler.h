@@ -49,7 +49,7 @@ struct GuiTargetRender;
 // THE LOGO LANE'S LEGEND RECT for `legend` at this geometry (render.h's
 // logo lane block; paint_handler.cpp's logo_legend_layout, the painter's own
 // layout): the lane's rows from the legend's first ink column through the
-// program ring's outer right edge and one column of slack. The tick's damage for a changed legend
+// well's right edge and one column of slack. The tick's damage for a changed legend
 // (main.cpp's refresh_logo_legend) is this rect united with the one the
 // painter last published (AppState::logo_legend_rect).
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
@@ -68,7 +68,7 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // (THE MODAL ROW'S PAD — icon_row_pad_x, the bottom row's 8-W lead-in and
 // lead-out, the icon row's pad from 2026-08-14 — left with its last reader,
 // row 8's seats, 2026-10-22: the strips' ends and the modal controls row's
-// are the program ring's outer columns, render.h's program_ring_columns,
+// are the well's edge columns, render.h's well_columns,
 // both strips flush with them since 2026-10-23.)
 
 // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14): the Settings editor's
@@ -305,23 +305,21 @@ struct WaveformCache {
 //
 // THE SURFACE HOLDS THE ROWS ITS INK CAN REACH (2026-10-13): the window's
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
-// y, `origin_y`) through the top strip's bottom (the canvas's top frame row's
-// foot) — the ruler lane, the marker lane and the frame row, 36 + 51 + 1 =
-// 88 device rows at 300 % where the whole strip from row 0 is 289
-// (re-derived 2026-10-28, the frame row one device px). Every cue pixel is
+// y, `origin_y`) through the top strip's bottom (the lane's foot line's
+// foot) — the ruler lane, the marker lane and the foot line, 32 + 40 + 1 =
+// 73 device rows at 300 % where the whole strip from row 0 is 236
+// (re-derived 2026-11-02, the flat well). Every cue pixel is
 // inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
-// the font: in paint_cues (render.cpp) every label's face box and its text,
-// shadow and ink alike, are painted under a clip of the label's span
+// the font: in paint_cues (render.cpp) every label's face box and its text
+// are painted under a clip of the label's span
 // rectangles, each the lane's top row and cue_fill_h_px() tall (the marker
 // lane's composite height), so no cached label pixel leaves those rows
 // however far a glyph overshoots; the triangles stand on the lane's own rows
 // under a clip of those rows (paint_ce_cue_triangle's cells,
-// cool_edit_paint.h; paint_cues), so the shadow's offset down, one label
-// quantum since 2026-10-26 ~13:05, is cut at the lane's last row and never
-// lands on the frame row; and the flag editor and its riding cells paint
-// later onto the frame, never into this surface. The ruler lane above is in
-// the band as its clean upper boundary, with margin, not because anything
-// there is inked by a cue; the frame row is the strip's own foot.
+// cool_edit_paint.h; paint_cues); and the flag editor and its riding cells
+// paint later onto the frame, never into this surface. The ruler lane above
+// is in the band as its clean upper boundary, with margin, not because
+// anything there is inked by a cue; the foot line is the strip's own foot.
 // THE PAINTERS STILL WORK IN CLIENT COORDINATES: the rebuild translates its
 // context by -origin_y and hands each pass the band the surface holds as its
 // `top_strip_area`, so every published hit rect and stem is client-coordinate
@@ -379,9 +377,9 @@ struct FlagCache {
     int       fp_gui_scale_percent   = -1;
     // THE PALETTE THESE PIXELS WERE PAINTED IN (palette_generation(),
     // render.h — architect 2026-10-03; the palette's roles since
-    // 2026-10-07): every flag pixel is a palette color (the cue triangle and
-    // its shadow, the faded triangle and shadow of a disabled cue, the label
-    // inks), so an install (a materials bake, install_palette; a True
+    // 2026-10-07): every flag pixel is a palette color (the cue triangle,
+    // the faded triangle of a disabled cue, the label inks; the lane's face
+    // boxes a constant), so an install (a materials bake, install_palette; a True
     // Colors flip, install_true_colors) re-renders the surface BY FIELD, the scale's
     // shape. (No axis or side colors a cue, so no color needs a field beyond
     // this generation: fp_active_markers_view keys the lane's CONTENT — which
@@ -924,9 +922,9 @@ private:
     // Marker, Next Marker) and the nudge and play (Switch Tab, Center, Left,
     // Right and Play / Stop, the last case; architect 2026-10-18) as one
     // block of four runs, the run gap between two (row8_block), its last
-    // case ending one past the PROGRAM RING'S OUTER RIGHT COLUMN — flush
-    // with the ring, never the window's edge (bottom_row_seats,
-    // program_ring_columns) — declared below; in the `h` view Older / Newer stand in
+    // case ending one past the WELL'S RIGHT EDGE COLUMN — flush
+    // with the well, never the window's edge (bottom_row_seats,
+    // well_columns) — declared below; in the `h` view Older / Newer stand in
     // the Left / Right seats, 2026-10-11).
     // Both PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
@@ -960,11 +958,11 @@ private:
     // lane: the tablet's window has none.)
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
     // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
-    // 2026-10-09): the clock in its dark time field (2026-10-05) in a
-    // ring at the left, the active tab's name and THE STATE LINE on the ground
+    // 2026-10-09): the clock in its flat time field (2026-10-05; flat
+    // since 2026-11-01 night) at the left, the active tab's name and THE STATE LINE on the ground
     // past it (architect 2026-10-03: the `h` walk line or the render's
     // progress line at the normal face, clipped short of the right block),
-    // then the right block packed against the program ring's right edge
+    // then the right block packed against the well's right edge
     // (bottom_row_seats) — the two skips, Go to Start and Go to End
     // (2026-10-24), the
     // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp),
@@ -1031,8 +1029,8 @@ private:
     // over the ink like every dot on the canvas.
     void paint_phase_reset_overlay_ring(GuiCanvasSink& sink,
                                         const GuiRect& area);
-    // The LIVE trim pass: paints EVERY trim pixel per frame — the view bar
-    // whole (its lines, its black field and the span; no playhead, architect
+    // The LIVE trim pass: paints EVERY trim pixel per frame — the trim bar
+    // whole (its frame, its flat interior and the span; no playhead, architect
     // 2026-10-09 ~14:30) — in ONE pass, entirely inside its lane. Its slot is in THE AUTHORITATIVE PAINT-ORDER BLOCK IN
     // on_redraw; this states only this pass's own place in it. Invoked
     // whenever the exposed rect intersects the top strip OR the waveform area

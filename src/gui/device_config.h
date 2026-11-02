@@ -249,7 +249,8 @@
 // triangle's rows and antialiasing, the label's size and gap past the
 // triangle) settled ~13:05 at 8 rows authored at 300 %, the staircase, 22
 // and a gap of 8 (render.h's cue_triangle_rows and cue_label_lead_px,
-// paint_ce_cue_triangle, gui_font.h's Program size; an old line is the
+// paint_ce_cue_triangle, gui_font.h's Label size since 2026-11-01 night,
+// the gap 11 since the shadow's retirement 2026-11-02; an old line is the
 // ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together; the level APPENDED after the permanent keys 2026-10-28,
 // and the crossfade after it — the two fade tuning keys after it
@@ -539,15 +540,13 @@ inline constexpr const char* kDefaultProjectsRepo =
 //
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
-// 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
-// pixel the lanes above the waveform — the program's band, its logo lane
-// 72 device px at 300 % over the case and the strip pad, its canvas
-// column's 36 W and the canvas's top frame row, one device px — and below
-// it — the canvas's bottom frame row, one device px, and row 8's 49 W —
-// stand 385 device rows above the waveform and 197 below at 400 %, 582 in
-// all, leaving the tablet's 1440 rows 858 of waveform (re-derived
-// 2026-10-28 with the frame rows' hairlines, main.cpp's stack record);
-// they pass 1440 near 990 %, past which the
+// 2026-08-26 before that). It is a vocabulary, not a fit: the lanes above
+// the waveform — the program's band, its logo lane 72 device px at 300 %
+// over the case and the strip pad, the well's trim bar, ruler and marker
+// lane and its rows of ground, one device px each — and below it — the
+// well's foot and row 8 — scale with gui_scale (main.cpp's stack record,
+// re-derived 2026-11-02 with the flat well); they pass 1440 short of the
+// ceiling, past which the
 // waveform is the zero height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //

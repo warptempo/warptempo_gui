@@ -50,9 +50,9 @@ GuiRect notification_stack_bound(const AppState& a) {
     // which read wider than the air above them). THE TOP IS ONE RULE FOR
     // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
     // "it looks like absolute positioning where it should be relative to the
-    // elements"): THE TRIM LANE'S FIRST ROW, which is the view bar frame's
-    // top row (render_trim_flags paints its sunken ring from the lane's top),
-    // so the frame's top line hides under the first card (architect
+    // elements"): THE TRIM LANE'S FIRST ROW, the row of ground above the
+    // trim bar's frame since the flat well (2026-11-02; the view bar ring's
+    // top row until then, which hid under the first card, architect
     // 2026-10-11, judged on a tablet mock). The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well);

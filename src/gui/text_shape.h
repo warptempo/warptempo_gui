@@ -95,7 +95,7 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 using SharedRun = std::shared_ptr<const ShapedRun>;
 
 // THE LABEL RUNS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
-// pixels), ONE BOUNDED MAP FOR THREE USES: THE CUE LABELS on the Program face
+// pixels), ONE BOUNDED MAP FOR THREE USES: THE CUE LABELS on the Label face
 // (render.cpp: the cue passes and the cell measurer, measure_iter_cells — the
 // tablet's profile of a pinch put 3.5 % of all CPU on shaping the visible
 // labels at every flag-cache rebuild) and THE RULER'S TIMESTAMPS on the Small
@@ -153,7 +153,7 @@ double ink_left_px(const ShapedRun& run);
 // through cairo_scaled_font_glyph_extents: x_bearing + width); an empty run
 // answers 0. ITS ONE CONSUMER is THE LOGO LANE'S LEGEND (architect
 // 2026-10-24, "the clock flush with the right edge of the buttons"): the
-// clock run's last ink on the program ring's outer right column and the
+// clock run's last ink on the well's right edge column and the
 // percent run's last ink one space advance short of the glyph cell
 // (paint_handler.cpp's logo_legend_layout).
 double ink_right_px(const ShapedRun& run);

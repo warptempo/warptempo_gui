@@ -984,10 +984,10 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 // touch road's (touch_point_in_pan_zone reads this owner).
 //
 // The waveform BAND is THE CANVAS'S INTERIOR, waveform_area exactly
-// (2026-10-09, the canvas framed): the column's margins either side — the
-// panel's face, the canvas frame's columns and the grid floor's leftover
+// (2026-10-09, the canvas framed): the well's margins either side — the
+// ground, the canvas's skirt columns and the grid floor's leftover
 // split between them — are the program's panel, not waveform, and answer nothing, as
-// the frame rows above and below do (the right gutter counted as waveform
+// the rows of ground above and below do (the right gutter counted as waveform
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
 // BAR, the lanes and the flexible GAP band are outside it.
 //
@@ -5112,7 +5112,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     // beside the clock (2026-10-22). THE CLOCK'S FIELD IS ON A BUTTON: the
     // PLAY key's second rect (architect 2026-10-27,
     // RedesignButtonFace::field), so a press there is the key's. ABOVE it stand
-    // the canvas's bottom frame row (inert chrome, the program ring's) and
+    // the well's foot (inert chrome, a row of ground) and
     // GAP 2's blank window ground — outside every band here and falling
     // through to the tail's consumed nothing, the ground as window ground by
     // the vertical rule (main.cpp).
@@ -5444,8 +5444,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
             // spot's consumed nothing below (the PLACEMENT LANES block, above point_on_playhead_head).
             // The `h` VIEW never reaches this arm — its own gate armed the same
             // pending with the mode's deferred land far above. A press on the
-            // column's MARGINS (the face and the canvas column's frame columns
-            // beside the ruler's ground, inside the lane, 2026-10-09) still
+            // well's MARGINS (the ground and the well's edge columns beside
+            // the ruler's face, inside the lane, 2026-10-09) still
             // arms; its motionless release's click act deselects and seats no
             // playhead, the placement body's own off-column shape.
             // ON THE PLAYHEAD'S HEAD AS PAINTED the same pending is THE HEAD

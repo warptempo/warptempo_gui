@@ -30,39 +30,30 @@
 // never this header's).
 //
 // THE SIMPLE LAYOUT (architect 2026-10-22, "the bevels are def part of the
-// problem … redesign with dead simple layout", the mocks at 300 %): ONE SUNKEN RING round the
-// canvas column and one round row 8's clock are the program's only strokes
-// on the ground (the flat ground since 2026-11-01, materials.h; every
-// stroke one device px, render.h's line rule). THE PROGRAM'S LANES, top to
+// problem … redesign with dead simple layout", the mocks at 300 %), FLAT
+// SINCE 2026-11-01 (materials.h; the well 2026-11-01 night, "THE MAIN PAGE
+// IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
 // bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (its upper pad since
 // 2026-10-24, render.h's logo lane block), the key, THE STRIP PAD (13 W,
 // settled 2026-10-23: strip_pad_px's field below; the keys' legends in the
 // bottom pad), its keys in plain runs
-// on the ground, the runs `run_gap_px` apart; then THE CANVAS COLUMN inside
-// THE PROGRAM RING — THE VIEW BAR (the trim bar: the ring's dark top row,
-// the black field, the light line: 1 + 5 + 1 = 7 W, 21 rows at 300 % —
-// the field view_bar_field_at300's 15 px), THE
-// RULER FLIPPED (11 rows of ground under the view bar's light line, its
-// ticks standing on its bottom row, then its own light bottom line: 12) and
-// THE MARKER LANE of Cool Edit's cues (17) — the ruler and the lane THE
-// PRODUCT'S ROWS, NOT COOL EDIT'S 17 AND 11 (architect 2026-10-09 ~16:50,
-// the go ~21:00: the ruler's digits the base's six-row small digit with one
-// W of air above them, the rows saved given to the marker lane, whose label
-// box is the whole lane — "right now it's too small to click"; usability
-// over accuracy, render.h's row-6 canvas paragraph) — then THE CANVAS: its dark top
-// frame row under the marker lane, the canvas itself — the waveform
-// area, its grid and its center lines, its two channels' wells with Cool
-// Edit's stereo divider between them (stereo_divider_face_px) — and its
-// light bottom frame row, the ring's last row (each frame row one device
-// px, the hairline itself, since 2026-10-28: render.h's canvas-frame
-// block); then ROW 8, THE STRIP
-// PAD, the case, THE STRIP PAD, on the window's foot. THE COLUMN STANDS 6 W
-// IN FROM EACH SIDE of the window's client area on the ground
-// (column_margin_px): the view bar, the ruler, the marker lane and the
-// canvas share the ring's two columns — dark on the left, light on the
-// right. (The band's head and foot lines and its panes, the tab strip under
-// it, the column's air, the column's foot, the dock bar, row 8's bars and
-// the border under row 8 stood 2026-10-09 to 2026-10-22; git history.)
+// on the ground, the runs `run_gap_px` apart; then THE WELL, flat regions on
+// the ground (render.h's well paragraph and its lanes block, which derive
+// every length at the element) — a row of ground, THE TRIM BAR (its frame
+// and its interior, view_bar_field_at300's 16 px), THE RULER FLIPPED, a row
+// of ground, THE MARKER LANE of Cool Edit's cues (the flag editor's box on
+// its whole rows, "right now it's too small to click"; usability over
+// accuracy, render.h's row-6 canvas paragraph), a row of ground, THE CANVAS
+// — the waveform area, its grid and its center lines, its two channels'
+// wells with the stereo divider's row of ground between them — and a row of
+// ground, the well's foot; then ROW 8, THE STRIP PAD, the case, THE STRIP
+// PAD, on the window's foot. THE WELL STANDS 6 W IN FROM EACH SIDE of the
+// window's client area on the ground (column_margin_px), its regions sharing
+// the well's two edge columns (render.h's well_columns, the keys' outer
+// columns: THE EDGE RULE). (The band's head and foot lines and its panes,
+// the tab strip under it, the column's air, the column's foot, the dock bar,
+// row 8's bars and the border under row 8 stood 2026-10-09 to 2026-10-22;
+// the program ring round the column 2026-10-22 to 2026-11-02; git history.)
 //
 // THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN UNITS, NOT IN ROUNDED W,
 // TWO UNITS WITH ONE OWNER EACH (render.h's cue_triangle_unit_px and
@@ -79,17 +70,17 @@
 // cue_triangle_rows and kCueTriangleRowsAt300, the one owner — 8 rows at
 // 300 %, 5 at 200 %, 4 at 150 % and 138 %), no whole count of W. THE
 // LABEL'S UNIT IS THE SCALED QUANTUM
-// u = scaled_px(1, 1) (render.h's program_line_px), the selected fill's pads,
-// the segment gap and the shadows' offset counted in it — the label's and,
-// since 2026-10-26 ~13:05, the triangle's, one quantum right and down —
+// u = scaled_px(1, 1) (render.h's cue_label_unit_px), the selected fill's
+// pads, the segment gap and the flag editor's outline counted in it,
 // because the text they place is scaled; THE LABEL'S LEAD from the column
-// is THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 8 DEVICE PX AT 300 %, scaled
+// is THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 11 DEVICE PX AT 300 %, scaled
 // (render.h's cue_label_lead_px and kCueLabelGapAt300, architect
-// 2026-10-26 ~12:40: the label follows the rows; settled ~13:05), a skin
+// 2026-10-26 ~12:40: the label follows the rows; settled ~13:05; the
+// triangle's retired shadow's 3 px folded into the gap 2026-11-02), a skin
 // length rather than a field here, being no whole count of W or quanta. The dots down the canvas
-// are device rows (2026-10-09 ~14:25, the dot fields below). The LANES'
-// ROWS and the text's seats are W lengths, each its own rounded part
-// (scaled_px's rule).
+// are device rows (2026-10-09 ~14:25, the dot fields below). THE WELL'S
+// ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
+// the faces' own metrics, each its own rounded part.
 struct ProgramSpec {
     // THE CASE: one highlight row and column on the top and
     // left, the glyph seat, one shadow row and column and one black row and
@@ -128,41 +119,42 @@ struct ProgramSpec {
     // removed, an old `strip_pad=` line the ordinary unknown-key hard fail.
     // render.h's strip_pad_px the one road to device px.
     int  strip_pad_px;
-    // THE STRIPS' ENDS ARE THE PROGRAM RING'S OUTER COLUMNS, NEVER THE
+    // THE STRIPS' ENDS ARE THE WELL'S EDGE COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
-    // to the ring; render.h's program_ring_columns the one owner), so the
-    // strips and the ring coincide at every scale whatever the grid floor's
-    // leftover. BOTH STRIPS ARE FLUSH WITH THE RING at both ends (architect
+    // to the ring, the well's columns since the flat well — THE EDGE RULE;
+    // render.h's well_columns the one owner), so the
+    // strips and the well coincide at every scale whatever the grid floor's
+    // leftover. BOTH STRIPS ARE FLUSH WITH THE WELL at both ends (architect
     // 2026-10-23, "shouldn't row 8 take the same rule as top strip?" — yes):
-    // the band's first case and row 8's clock field start on the ring's
-    // outer left column, the band's right run and row 8's block end one past
-    // its outer right column — the modals' controls row's seat
+    // the band's first case and row 8's clock field start on the well's
+    // left edge column, the band's right run and row 8's block end one past
+    // its right edge column — the modals' controls row's seat
     // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
     // row 8 and the controls row), so neither strip nor the controls row
     // carries a field here.
     // (THE DARK TIME FIELD'S 17-W HEIGHT AND 5-W PAD — Cool Edit's
     // measured field, then the dialog field's pad, 2026-10-09 to
-    // 2026-10-23 — left this spec with the hi-fi skin: the field's 40 and
+    // 2026-10-23 — left this spec with the hi-fi skin: the field's 39 and
     // 12 px at 300 % are paint_handler.cpp's kTimeFieldHeightAt300 /
     // kTimeFieldPadAt300, authored at the tablet's scale. Every time field is
     // still its reserved cell plus the pad each side, no least width —
     // architect 2026-10-10, the 85-W floor round row 8's clock removed.)
     // THE ACTIVE TAB'S NAME (architect 2026-10-22: the tab strip goes, "Tab
     // A" / "Tab B" stands on the bare ground right of the clock): its first
-    // ink this far past the clock ring's light column. THE STATE LINE'S AIR:
+    // ink this far past the clock field's right edge. THE STATE LINE'S AIR:
     // its first ink this far past the name's advance (the pad that stood
     // after the clock group's closing bar, 2026-10-21).
     double tab_name_air_px;
     double state_air_px;
 
-    // -- THE CANVAS COLUMN ----------------------------------------------------
-    // THE COLUMN'S SIDE MARGIN (Cool Edit's x = 202..207 of
+    // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
+    // THE WELL'S SIDE MARGIN (Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much ground from each side of the window's
-    // client area to the program ring's column, the column one device px,
-    // the hairline itself (render.h's canvas_frame_column_w_px, 2026-10-28),
-    // then the column's interior — the view bar's field, the ruler's ground, the
-    // marker lane's flat face and the canvas.
+    // client area to the well's edge column, the column one device px,
+    // the hairline itself (render.h's well_edge_column_w_px, 2026-10-28),
+    // then the well's interior — the trim bar's, the ruler's, the marker
+    // lane's and the canvas's columns.
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each
@@ -170,77 +162,24 @@ struct ProgramSpec {
     // division above and below the zero row (render_canvas, render.h's row-6
     // canvas paragraph).
     int  grid_divisions;
-    // THE STEREO DIVIDER'S FACE (architect 2026-10-16, on his Wine captures
-    // of Cool Edit Pro 2.1 in stereo, rows 521-523 of the capture): Cool Edit draws a stereo file as TWO SUNKEN WELLS, one
-    // per channel, each its own ring, and between the upper well's light
-    // bottom line and the lower well's dark top line THIS MUCH OF THE
-    // PANEL'S FACE — the three rows running through the canvas's side frame
-    // columns to the column's margins, no separation from the panel. The
-    // whole divider is program_stereo_divider_authored_h below; render.h's
-    // waveform_divider owns its rows.
-    int  stereo_divider_face_px;
-    // THE VIEW BAR'S FIELD between its two lines, IN DEVICE PX AT 300 %
-    // (architect 2026-10-24, his pick T15 off a one-step series 18 .. 12 on
-    // the live lane — "I think 15 works well … looking at the Cool Edit
-    // original there is a similar relationship where the timestamp numbers
-    // fit just about inside the view lane"; his T15 mock):
-    // the trim lane is a line, this field and a line. THE
-    // RULING IS THE 300 % NUMBER, read on the hi-fi skin's road
-    // (render.h's view_bar_field_h_px through skin_px, floor 1: 15 at 300 %,
-    // 10 at 200 %, 8 at 150 %); the spec owns it because the authored sums
-    // below read it, as 15 / 3 = 5 W exactly (the static_assert there). The
-    // field was 18 px at 300 % 2026-10-09 to 2026-10-24 (the first mock set's axis,
-    // under Cool Edit's own 30).
+    // THE TRIM BAR'S INTERIOR between its two frame lines, IN DEVICE PX AT
+    // 300 % (architect 2026-11-01 night, M5c / M5h, "good": the bar 145 ..
+    // 162 framed in one-px 757575; the hi-fi field's 15 between its slots,
+    // his T15 of 2026-10-24, before it): THE RULING IS THE 300 % NUMBER, read
+    // on the skin's road (render.h's view_bar_field_h_px through skin_px,
+    // floor 1: 16 at 300 %, 11 at 200 %). (THE RULER'S GROUND, TICKS AND
+    // BASELINE and THE MARKER LANE'S W ROWS, QUANTA AND FILL, the hi-fi
+    // well's fields 2026-10-09 to 2026-11-02, and THE STEREO DIVIDER'S FACE
+    // left with the flat well: render.h's well lanes block derives them at
+    // the element.)
     int  view_bar_field_at300;
-    // THE RULER'S GROUND, its rows 0 .. 10 under the view bar's light line
-    // (architect 2026-10-09 ~16:50 / ~21:00: Cool Edit's 17 rows,
-    // shrunk to 1 + 6 + 4 — "the timestamps should basically be
-    // touching the trim bar — one Windows pixel of empty space above"), then
-    // its own light bottom line: THE DIGITS the ruler face (GuiFace::Small,
-    // gui_font.h's type table: 16 px at 300 % since 2026-10-24, "R16", its
-    // ink from just inside row 3 down to the baseline at 300 %; the base's
-    // six-row digit on rows 1 .. 6 under row 0's air 2026-10-09 to
-    // 2026-10-23), their BASELINE the top of this ground row (7), no shadow
-    // under them (architect 2026-10-25); THE TICKS
-    // stand on the ground's bottom row and rise this far into it (minor and
-    // major: rows 9 .. 10 and 7 .. 10), a major's top row the baseline's,
-    // the tick painted over a digit's overshoot there (paint_ruler_row's
-    // order).
-    int  ruler_ground_px;
-    int  ruler_minor_tick_px;
-    int  ruler_major_tick_px;
-    int  ruler_baseline_px;
-    // THE MARKER LANE (architect 2026-10-09 ~16:50 / ~21:00, 17 rows where
-    // Cool Edit's has 11 — the six the ruler gave): COMPOSED OF
-    // `cue_lane_ground_px` W rows and `cue_lane_quanta` label quanta, each
-    // part rounded on its own (render.h's marker_lane_h_px: 51 device rows
-    // at 300 %, 22 at 138 %, 63 at 360 %), THE LANE KEEPING ITS ROWS AT EVERY
-    // SCALE when the triangle left the quantum (2026-10-26); THE TRIANGLE
-    // its rows in DEVICE ROWS at the lane's bottom (render.h's
-    // cue_triangle_rows: 8 at 300 %, 5 at 200 %, 4 at 138 %), its apex
-    // on the lane's last row, the rows above it the remainder (the unit at
-    // the head); THE LABEL'S BOX — the selected fill, the
-    // resting face box, the press target and the flag editor's field — this
-    // many rows from the lane's top, THE WHOLE LANE (rows 0 .. 16: "the text
-    // box should take up the whole marker lane … right now it's too small to
-    // click"; render.h's cue_fill_h_px reads the lane's own composite, so the
-    // box is the lane at every scale); THE LABEL'S CAP BAND CENTRED IN THAT
-    // BOX (architect 2026-10-26 ~11:30, "check the text vertical alignment —
-    // consider that we only use a narrow range of chars"): no authored
-    // baseline row — render.h's cue_baseline_px derives it from the lane's
-    // height and the program face's cap band, and the flag editor's
-    // selection band, the face's line box, stands from that baseline; at
-    // 300 % the baseline row 33 of the 51, the box on rows 13 .. 37, the
-    // descenders over the triangle's rows beside it.
-    int  cue_lane_ground_px;
-    int  cue_lane_quanta;
-    int  cue_fill_px;
     // THE CUE'S HORIZONTAL LENGTHS, IN LABEL QUANTA (the head): the
     // selected fill's pad either side of the text — the fill's first column
     // one pad before the text, so THE FILL'S LEAD IS THE LABEL'S LEAD LESS
     // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself THE
-    // TRIANGLE'S REACH RIGHT PLUS A GAP OF 8 DEVICE PX AT 300 %, architect
-    // 2026-10-26 ~12:40, settled ~13:05 — 19 device px at 300 %, 12 at
+    // TRIANGLE'S REACH RIGHT PLUS A GAP OF 11 DEVICE PX AT 300 %, architect
+    // 2026-10-26 ~12:40, settled ~13:05, the gap 8 px past the shadow until
+    // the shadow's retirement, 2026-11-02 — 19 device px at 300 %, 12 at
     // 200 %, render.h's cue_label_lead_px) — and the gap
     // between two of a marker's label
     // segments' boxes (the bound cells, the history's two halves — the
@@ -292,15 +231,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .state_air_px       = 5.0,
     .column_margin_px      = 6,
     .grid_divisions        = 4,
-    .stereo_divider_face_px = 1,
-    .view_bar_field_at300  = 15,
-    .ruler_ground_px       = 11,
-    .ruler_minor_tick_px   = 2,
-    .ruler_major_tick_px   = 4,
-    .ruler_baseline_px     = 7,
-    .cue_lane_ground_px    = 12,
-    .cue_lane_quanta       = 5,
-    .cue_fill_px           = 17,
+    .view_bar_field_at300  = 16,
     .cue_fill_pad          = 1,
     .cue_segment_gap       = 4,
     .dot_period            = 4,
@@ -335,30 +266,10 @@ constexpr int program_strip_authored_h(const ProgramSpec& p) {
 constexpr int program_band_authored_h(const ProgramSpec& p) {
     return p.strip_pad_px;
 }
-// The canvas column's lanes above the canvas (the head): the view bar a
-// line, its field (authored at 300 %, its W the device px over 3) and a line; the ruler its ground and its bottom line; the
-// marker lane its W rows and its label quanta (one W each at 100 %). THE
-// CANVAS'S TWO FRAME ROWS ARE NO W TERM since 2026-10-28: each is one
-// device px at every scale (render.h's canvas-frame block), one W each here
-// until then.
-constexpr int program_view_bar_authored_h(const ProgramSpec& p) {
-    return 1 + p.view_bar_field_at300 / 3 + 1;
-}
-constexpr int program_ruler_authored_h(const ProgramSpec& p) {
-    return p.ruler_ground_px + 1;
-}
-constexpr int program_marker_lane_authored_h(const ProgramSpec& p) {
-    return p.cue_lane_ground_px + p.cue_lane_quanta;
-}
-constexpr int program_column_authored_h(const ProgramSpec& p) {
-    return program_view_bar_authored_h(p) + program_ruler_authored_h(p) +
-           program_marker_lane_authored_h(p);
-}
-// The stereo divider inside the canvas: the upper well's light bottom line,
-// the face, the lower well's dark top line, one W each (the field's head).
-constexpr int program_stereo_divider_authored_h(const ProgramSpec& p) {
-    return 1 + p.stereo_divider_face_px + 1;
-}
+// (THE CANVAS COLUMN'S W SUMS — the view bar's 7, the ruler's 12, the marker
+// lane's 17, the stereo divider's 3 — left with the flat well, 2026-11-02:
+// the well's lanes are device px derived at the element, render.h's well
+// lanes block.)
 // THE CASE'S WIDTH 23 W.
 static_assert(program_case_authored_px(kProgramSpec) == 23);
 // THE STRIPS' W PARTS: row 8's two pads 13 + 13; the band's under its
@@ -368,38 +279,9 @@ static_assert(program_band_authored_h(kProgramSpec) == 13);
 // ROW 8'S GROUP GAP IS THE ONE THE BARS LEFT (2026-10-22): a 6-W bar between
 // the 5-W pad after a bar and the 4-W pad before one (run_gap_px's field).
 static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);
-// THE VIEW BAR'S FIELD IS A WHOLE W (2026-10-24): its 300 % number divides
-// by 3, so the W sum is exact and skin_px rounds it as scaled_px rounds 5 W.
-static_assert(kProgramSpec.view_bar_field_at300 % 3 == 0);
-static_assert(program_view_bar_authored_h(kProgramSpec) == 7);
-static_assert(program_ruler_authored_h(kProgramSpec) == 12);
-static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
-static_assert(program_column_authored_h(kProgramSpec) == 36);
-static_assert(program_stereo_divider_authored_h(kProgramSpec) == 3);
-// THE RULER'S ROWS (2026-10-09 ~21:00): the six the ruler gave are the six
-// the marker lane took, so the column and every stack keep their totals.
-static_assert(program_ruler_authored_h(kProgramSpec) +
-                  program_marker_lane_authored_h(kProgramSpec) ==
-              18 + 11);
-// THE MAJOR TICK'S TOP ROW IS THE DIGITS' BASELINE ROW (7), the tick painted
-// over a digit's overshoot below the baseline; the PLAYHEAD'S HEAD, the
-// cue's triangle in its device rows (the head), stands on the ground's last
-// rows (render.h's cue_triangle_rows, 8 device rows at 300 % of the
-// ground's 33; 8/3 W against the ground's 11 W, so the head fits the ground
-// at every scale) over the ticks' feet and covers what stands under it.
-// The digits' own rows — one W of air, then the small
-// face's six — are render.h's assert, where the face is in scope.
-static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
-              kProgramSpec.ruler_baseline_px);
-// THE CUE'S ROWS (the product's lane): the label's box the whole lane, the
-// label's cap band centred in it (render.h's cue_baseline_px), the
-// triangle's device rows at its bottom (8/3 W at every scale against the
-// lane's 17 W, render.h's cue_triangle_rows).
-static_assert(kProgramSpec.cue_fill_px ==
-              program_marker_lane_authored_h(kProgramSpec));
 // (THE LABEL CLEARS THE TRIANGLE BY CONSTRUCTION: render.h's
-// cue_label_lead_px is the triangle's reach right — its rows and its
-// shadow's offset — plus the gap, never negative, at every scale.)
+// cue_label_lead_px is the triangle's reach right plus the gap, never
+// negative, at every scale.)
 // The cue's two phases alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);

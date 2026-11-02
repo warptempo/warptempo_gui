@@ -8,20 +8,12 @@
 #include <cstdint>
 #include <vector>
 
-// The rules are at the declarations (cool_edit_paint.h); the construction is
-// the approved mock's, each W of it a
-// rounded part here.
+// The rules are at the declarations (cool_edit_paint.h).
 
-void paint_ce_time_field(cairo_t* cr, const GuiRect& f, GuiColor dark,
-                         GuiColor light) {
+void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     if (f.w <= 0 || f.h <= 0) return;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE GROUND BLACK (kTimeFieldGround), then the one-device-px sunken
-    // ring, mitred (the head's rule).
-    paint_ink_rect(cr, f, hex(kTimeFieldGround));
-    paint_hairline_frame(cr, f, dark, light);
-    cairo_restore(cr);
+    // THE FLAT KEY FACE, no ring (the declaration's rule).
+    paint_cell_rect(cr, f, hex(kKeyFace));
 }
 
 
@@ -54,21 +46,13 @@ uint32_t cue_fill_pixel(GuiColor c) {
     return 0xff000000u | (ch(d.r) << 16) | (ch(d.g) << 8) | ch(d.b);
 }
 
-// CAIRO'S ROAD, one whole-cell rectangle per row, the shadow's first, `so`
-// right and `so` down: where the target is refused (the identity at
-// CueTrianglePass, cool_edit_paint.h).
-void paint_cue_cells_cairo(cairo_t* cr, int col, int top, int rows, int so,
-                           GuiColor color, GuiColor shadow) {
+// CAIRO'S ROAD, one whole-cell rectangle per row: where the target is
+// refused (the identity at CueTrianglePass, cool_edit_paint.h).
+void paint_cue_cells_cairo(cairo_t* cr, int col, int top, int rows,
+                           GuiColor color) {
     const int u = cue_triangle_unit_px();   // one device px
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_new_path(cr);
-    for (int r = 0; r < rows; ++r) {
-        const CueRowSpan sp = cue_row_span(col, r, rows, u);
-        cairo_rectangle(cr, sp.x0 + so, top + r * u + so, sp.x1 - sp.x0, u);
-    }
-    set_palette_source(cr, shadow);
-    cairo_fill(cr);
     cairo_new_path(cr);
     for (int r = 0; r < rows; ++r) {
         const CueRowSpan sp = cue_row_span(col, r, rows, u);
@@ -86,7 +70,6 @@ void CueTrianglePass::begin(cairo_t* cr) {
     cr_        = cr;
     u_         = cue_triangle_unit_px();
     rows_      = cue_triangle_rows();
-    so_        = cue_label_shadow_offset_px();
     direct_    = direct_pixel_target(cr, target_);
     dirty_     = GuiRect{};
     dirty_any_ = false;
@@ -120,21 +103,14 @@ void CueTrianglePass::stamp_span(int x0, int x1, int y, uint32_t pixel) {
     }
 }
 
-void CueTrianglePass::triangle(int col, int top, GuiColor color,
-                               GuiColor shadow) {
+void CueTrianglePass::triangle(int col, int top, GuiColor color) {
     if (!direct_) {
-        paint_cue_cells_cairo(cr_, col, top, rows_, so_, color, shadow);
+        paint_cue_cells_cairo(cr_, col, top, rows_, color);
         return;
     }
-    // THE STAMP: the shadow's cells `so_` right and `so_` down, then the
-    // color's.
+    // THE STAMP: the color's cells.
     const int  dcol = col + target_.dx, dtop = top + target_.dy;
-    const uint32_t sh = cue_fill_pixel(shadow);
     const uint32_t cp = cue_fill_pixel(color);
-    for (int r = 0; r < rows_; ++r) {
-        const CueRowSpan sp = cue_row_span(dcol, r, rows_, u_);
-        stamp_span(sp.x0 + so_, sp.x1 + so_, dtop + r * u_ + so_, sh);
-    }
     for (int r = 0; r < rows_; ++r) {
         const CueRowSpan sp = cue_row_span(dcol, r, rows_, u_);
         stamp_span(sp.x0, sp.x1, dtop + r * u_, cp);
@@ -148,10 +124,9 @@ void CueTrianglePass::end() {
     dirty_any_ = false;
 }
 
-void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
-                           GuiColor shadow) {
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
     CueTrianglePass pass;
     pass.begin(cr);
-    pass.triangle(col, top, color, shadow);
+    pass.triangle(col, top, color);
     pass.end();
 }

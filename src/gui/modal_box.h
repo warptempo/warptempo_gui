@@ -26,13 +26,14 @@
 // caption over it too, until 2026-10-24) stays as the main window paints
 // it. Across, it runs the window's width,
 // as every program lane does. Top to bottom:
-//   1. ONE SUNKEN BOX WEARING THE PROGRAM RING — it stands where the ring
-//      stands: one hairline, `ce_dark` top and left, `ce_hilight` right
-//      and bottom, mitred, exactly paint_canvas_column_frame's — in the
-//      canvas column's own columns (the column's side margin of the ground
-//      in from each side, the waveform area's x and width one frame column,
-//      one hairline, out: render.h's program_ring_columns), its top row
-//      the view bar's top row, its bottom row the ring's last row;
+//   1. ONE SUNKEN BOX WEARING A RING — it stands where the program ring
+//      stood round the well until the well's flat look (2026-11-02): one
+//      hairline, `ce_dark` top and left, `ce_hilight` right and bottom,
+//      mitred — in the well's own columns (the side margin of the ground in
+//      from each side, the waveform area's x and width one edge column, one
+//      hairline, out: render.h's well_columns), its top row the trim lane's
+//      first row, its bottom row the well's foot (the overlays' part of the
+//      flat arc restyles it);
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
 //      the case (key_height tall, render.h's icon_case_h_px), the strip pad
 //      (strip_h_px) — on the ground,
@@ -49,17 +50,16 @@
 // paint_key_legend) (paint_modal_box). (The earlier word buttons and a
 // prompt's face interior, 2026-10-22 to 2026-10-23, are git history.)
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
-// it lands on the main window's ring: the box IS the ring's rect. At the
-// tablet's 2304 x 1440, 300 %, the strip pad's 13 W and key_height 33
-// (re-derived 2026-10-29, the key's height a tuning key; 2026-10-28 the
-// canvas's frame columns and rows one hairline): the ring's
-// top slot 144–146 (the view bar's, directly under the band's rows 0–143,
-// the logo lane 0–71, with no caption, 2026-10-24), its bottom row 1328 and
-// its columns 23 and 2280 (the canvas's frame row and columns, the hairline
-// itself), the one-device-px ring on rows 144 and 1328 and columns 23 and
-// 2280, the interior x 24..2279 — the main canvas's own columns — and y
-// 145..1327 (THE RING IS THE ONLY MARGIN, below; the main canvas's own rows
-// 253–1327); the controls row 1329–1439, its case rows 1368–1400, its first
+// it lands on the well's rows of ground: the box's ring stands where the
+// program ring stood. At the tablet's 2304 x 1440, 300 %, the strip pad's
+// 13 W and key_height 33 (re-derived 2026-11-02, the flat well): the box's
+// top row 144 (the trim lane's first row, the row of ground directly under
+// the band's rows 0–143, the logo lane 0–71), its bottom row 1328 (the
+// well's foot) and its columns 23 and 2280 (the well's edge columns), the
+// one-device-px ring on rows 144 and 1328 and columns 23 and 2280, the
+// interior x 24..2279 — the main canvas's own columns — and y 145..1327
+// (THE RING IS THE ONLY MARGIN, below; the main canvas's own rows
+// 236–1327); the controls row 1329–1439, its case rows 1368–1400, its first
 // case's columns 23–91 and its last 2212–2280. A DIALOG'S TEXT (THE TEXT
 // INSIDE THE BOX, below) 12 px of plain field inside the ring on both axes:
 // its pen on column 36, its ascender line on row 157, its first baseline at
@@ -141,17 +141,18 @@ inline GuiRect modal_controls_row_rect(const AppState& a, int keyboard_h) {
     return GuiRect{lane.x, lane.y - std::max(0, keyboard_h), lane.w, lane.h};
 }
 
-// THE BOX (item 1), the ring's outer rect: the program ring's outer
-// columns across (render.h's program_ring_columns), the view bar's top row
-// down to the controls row's top (the ring's last row the row above it). A
-// zero rect on a degenerate stack.
+// THE BOX (item 1), the ring's outer rect: the well's columns across
+// (render.h's well_columns, the program ring's outer columns until the flat
+// well), the trim lane's first row down to the controls row's top (the
+// box's last row the well's foot, the row above it). A zero rect on a
+// degenerate stack.
 inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
-    const ProgramRingColumns ring = program_ring_columns(a);
+    const WellColumns well = well_columns(a);
     const GuiRect trim  = top_trim_row_area(a);
     const GuiRect row   = modal_controls_row_rect(a, keyboard_h);
     const int     lw    = hairline_px();   // the ring's line, as the interior's
     const int     y1    = row.y;
-    const GuiRect box{ring.x, trim.y, ring.end - ring.x, y1 - trim.y};
+    const GuiRect box{well.x, trim.y, well.end - well.x, y1 - trim.y};
     if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
     return box;
 }

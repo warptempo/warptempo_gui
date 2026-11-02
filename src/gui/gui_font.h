@@ -22,20 +22,25 @@
 // tuning key read off the tablet's config and settled, "read the current
 // setting and apply"; the roster his of ~11:30, "the bottom left timestamp
 // and tab/github/etc text should take 26 as well", the size since tuned):
-// THE CUES' LABELS, THE LANE'S EDITORS (the flag editor, the iteration
-// bound editor), ROW 8'S CLOCK AND ITS STATE LINE (the tab's name, the
+// ROW 8'S CLOCK AND ITS STATE LINE (the tab's name, the
 // GitHub word, the walk line, the progress line), THE RENDER PLAYER'S TWO
 // TIME FIELDS (architect 2026-10-26 ~12:10, "yes" to symmetry with row 8's
 // clock) and THE TOOLTIP'S NAME LINE ("the tooltips font size should be the
-// same as the flags", 2026-10-23); BODY 22 Regular, THE REST (the lists, the
+// same as the flags", 2026-10-23); LABEL 22 BOLD (architect 2026-11-01 night,
+// M5i: "THE MARKER LABEL IS BOLD"; Liberation Sans Bold's vertical metrics
+// at 22 px equal Regular's, only the run widens): THE CUES' LABELS AND THE
+// LANE'S EDITORS (the flag editor, the iteration bound editor — the editor's
+// text stands at the label's seat), the history lane's labels with them —
+// the size the Program row's, a row of its own because its file is the
+// other one; BODY 22 Regular, THE REST (the lists, the
 // cards, the prompts, the dialog editors, the logo lane's battery + clock
-// legend) — THE TWO ROWS COINCIDE IN NUMBER TODAY AND STAY TWO ROWS: the
-// roster is the distinction (the Program row tunes with the cues, the
+// legend) — THE ROWS COINCIDE IN NUMBER TODAY AND STAY THEIR OWN ROWS: the
+// roster is the distinction (the Label row tunes with the cues, the
 // Body row with the rest); TITLE 24 Bold (the logo lane's brand "Warptempo"
-// alone; architect 2026-10-24, "the caption size 24", off the logo mocks), RULER 16 Regular (the ruler's digits alone; architect
-// 2026-10-24, "R16" off 14 / 15 / 16 / 17 on his type sheet — "we took
-// them both too far": the night's R17, off 15 / 17 / 19 / 21, stood
-// 2026-10-23 to 2026-10-24, the skin's first night 15), LEGEND 14
+// alone; architect 2026-10-24, "the caption size 24", off the logo mocks),
+// RULER 14 BOLD (the ruler's digits alone; architect 2026-11-01 night, M5c:
+// "smaller and bold … 1px larger than icon legend" — the legends' 14, in
+// Bold), LEGEND 14
 // Regular (the keys' printed legends alone; the tooltip wore it the first
 // night of the skin), KEYS 24 Regular (the on-screen keyboard's caps alone —
 // the letters, the symbols page's characters and the word caps, "a separate
@@ -86,12 +91,12 @@
 #include <string_view>
 
 // THE USES (the head's table): the body, the brand's bold, the ruler's
-// digits (`Small`), the cues' labels and their kin (`Program`: the lane's
-// editors, row 8's clock and state line, the player's clocks, the
-// tooltip's name line), the keys' legends, the on-screen keyboard's caps
-// (`Keys`) and the tooltip's hint line (`Hint`).
-enum class GuiFace { Body, Bold, Small, Program, Legend, Keys, Hint };
-inline constexpr std::size_t kGuiFaceCount = 7;
+// digits (`Small`), row 8's clock and state line, the player's clocks and
+// the tooltip's name line (`Program`), the keys' legends, the on-screen
+// keyboard's caps (`Keys`), the tooltip's hint line (`Hint`) and the cues'
+// labels with the lane's editors (`Label`).
+enum class GuiFace { Body, Bold, Small, Program, Legend, Keys, Hint, Label };
+inline constexpr std::size_t kGuiFaceCount = 8;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
 // Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the APK's
@@ -101,8 +106,8 @@ inline constexpr std::size_t kGuiFaceCount = 7;
 // index here. Both are TrueType (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
-    "LiberationSans-Regular.ttf", // 0: the body, the ruler, the cues, the legends, the caps, the hint
-    "LiberationSans-Bold.ttf",    // 1: the brand
+    "LiberationSans-Regular.ttf", // 0: the body, the clocks, the legends, the caps, the hint
+    "LiberationSans-Bold.ttf",    // 1: the brand, the ruler, the cues
 };
 
 // THE PIXEL TABLE (the head; architect 2026-10-23 and the amendment): per
@@ -115,14 +120,14 @@ struct GuiFaceSize {
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 22.0},   // Body (the Program row's number too, a row of its own)
     {1, 24.0},   // Bold: the brand
-    {0, 16.0},   // Small: the ruler's digits
-    {0, 22.0},   // Program: the cues' labels, the lane's editors, row 8's
-                 // clock and state line, the player's clocks, the
-                 // tooltip's name line
+    {1, 14.0},   // Small: the ruler's digits, Bold
+    {0, 22.0},   // Program: row 8's clock and state line, the player's
+                 // clocks, the tooltip's name line
     {0, 14.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
     {0, 18.0},   // Hint: the tooltip's hint line
+    {1, 22.0},   // Label: the cues' labels and the lane's editors, Bold
 };
 
 // THE USE'S TABLE SIZE, its em in device px at 300 % — the one read of the
@@ -143,7 +148,8 @@ struct GuiFontBytes {
 //
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each of the
 // two files selects as an FT-BACKED cairo face, which is what text_shape
-// requires, and carries the "H" the cap band is measured on, the "l" and
+// requires, and carries the "H" the cap band is measured on, the "x" the
+// marker lane's band centers, the "l" and
 // the OS/2 strikeout position the strike is measured on
 // (gui_font_strike_band), and the hyphen, the "0" and the five marks the
 // sign axis is measured on. Its producer is
@@ -198,6 +204,11 @@ double gui_font_cap_px(const GuiFont& f);
 // field inside the ring (modal_box.h's modal_box_text_baseline0, 2026-10-23: the air the eye
 // sees is the ink's, not the line box's).
 double gui_font_ascender_ink_px(const GuiFont& f);
+// THE X-HEIGHT in device px at the font's scale, unrounded: the em times the
+// use's file's own "x" ink per em (Liberation Sans 1082 / 2048 units, 11.6
+// px at 300 %'s 22) — the band the eye centers in the marker lane (render.h's
+// cue band, architect 2026-11-01 night, M5h).
+double gui_font_x_ink_px(const GuiFont& f);
 
 // THE STRIKE'S BAND (architect 2026-10-26 ~15:10, "have coincident markers
 // be shown as a strike through … They become one"; "it's the same thickness
@@ -210,7 +221,9 @@ double gui_font_ascender_ink_px(const GuiFont& f);
 // std::nearbyint, at least one device px. THE HEIGHT IS THE FACE'S OWN
 // STRIKEOUT POSITION (the file's OS/2 yStrikeoutPosition, per em, read at
 // the install): the band centered on it above the baseline, its top edge
-// rounded to a whole row at the element and the thickness below it. For
+// rounded to a whole row at the element and the thickness below it. The cues'
+// labels are the Label face, the Bold file, since 2026-11-01 night, which is
+// measured alike (its own "l" stem and strikeout); for the record, for
 // Liberation Sans Regular (the "l" 180 of 2048 units, the strikeout 530):
 // at 300 %'s 22 px a stroke of 1.93 → 2 rows, centered 5.69 above the
 // baseline → rows baseline − 7 .. − 6; at 200 %'s 15 px 1.32 → 1 row,
