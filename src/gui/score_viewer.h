@@ -131,10 +131,9 @@
 // republishes PLAY's end at the cursor (score_viewer.cpp's range_changed).
 // THE QUESTION STANDS OVER THE VIEWER as the load confirmation stands over the
 // render player (the model for standing), PAUSING a live soundtrack as the
-// render player's Delete question pauses its transport, and it opens with
-// CANCEL FOCUSED as that question does (a destructive act with no undo behind
-// it), so Cancel is the painted lean and only OK's own press resets (the
-// buttons are a prompt's one road, architect 2026-10-30). The three are
+// render player's Delete question pauses its transport, and only OK's own
+// press resets (a destructive act with no undo behind it; the buttons are a
+// prompt's one road, architect 2026-10-30). The three are
 // AUTHORING and grey on a
 // read-only tab and under grid iterations (score_viewer_range_locked);
 // viewing, paging, playing and the position's write are not, and stay live

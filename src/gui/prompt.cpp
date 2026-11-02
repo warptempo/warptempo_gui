@@ -50,37 +50,23 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // put it on the screen (the rule is at PromptState).
     app.prompt.present("Save unsaved changes?",
                        kPromptSaveDiscardCancel,
-                       t,
-                       PromptInitialFocus::LastButton);
+                       t);
     viewport.invalidate_all();
 }
 
 // THE REVERT CONFIRMATION (architect 2026-09-13): a dirty session's Revert
 // (Open Project's long press) asks one question, and it is a discard-only one because a revert
 // never saves — Save / Discard / Cancel would offer an answer the act does not
-// have. OK / Cancel, Cancel LAST as the escape sentinel on every prompt, and
-// THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON (PromptInitialFocus::
-// FirstButton), so OK is the painted lean — the load confirmation's default
-// exactly (architect 2026-09-13: "revert should be just the same as load …
-// both should use the same default, OK"): each of the confirmations — three
-// kinds, the load's, this one and the phase reset paste's (architect
-// 2026-09-16, "align — paste should open on the equivalent of OK") — is
-// already the deliberate second step of an explicit act (Open Project's long
-// press here, the Load in Place button there, Copy Phase Resets' barrel
-// press), so the question itself is the safeguard and its lean is the act
-// the user just asked for; the three-way Save / Discard / Cancel prompts
-// above and below are no such confirmation and keep the last button. The
-// focus is painted and read by nothing else: OK's `o` is its dispatch char
-// alone, its press the answer (no key reaches a prompt, architect
-// 2026-10-30). The stop below is every prompt's own
+// have. OK / Cancel, Cancel LAST as on every prompt; OK's `o` is its
+// dispatch char alone, its press the answer (no key reaches a prompt,
+// architect 2026-10-30). The stop below is every prompt's own
 // opening act, not something this one adds: playback stops and an A/B audition ends, exactly as
 // raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Discard unsaved changes and reload?",
                        kPromptOkCancel,
-                       DialogTrigger::REVERT_CONFIRM,
-                       PromptInitialFocus::FirstButton);
+                       DialogTrigger::REVERT_CONFIRM);
     viewport.invalidate_all();
 }
 
@@ -106,7 +92,7 @@ void GuiPrompt::activate_response(char k) {
     if (!app.prompt.active) return;
     const DialogTrigger trigger = app.prompt.trigger;
     // The chars are the PromptAnswer tables' (app_state.h): a letter, or
-    // '\x1b' for the Esc answer, Cancel.
+    // '\x1b' for Cancel, the answer every prompt shares.
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
         // ONE SUBJECT: the phase reset paste, raised by
@@ -276,8 +262,7 @@ void GuiPrompt::activate_response(char k) {
                 // sentence and asks the one thing only it knows to ask.
                 app.prompt.present("Retry the failed save?",
                                    kPromptRetryDiscardCancel,
-                                   trigger,
-                                   PromptInitialFocus::LastButton);
+                                   trigger);
                 viewport.invalidate_all();
                 return;
             }

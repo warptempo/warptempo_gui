@@ -5065,18 +5065,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   last one's right edge the box's outer right column. Each button wears its
 //   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
 //   "Delete"), no letter underlined (architect 2026-10-30: the buttons are
-//   the prompt's one road, no keyboard standing under it). ONE BUTTON
-//   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13) — the LAST, the
-//   Escape sentinel, on every prompt but THE FOUR CONFIRMATION RAISES — the
-//   load's two, Revert's and, since 2026-09-16, the phase reset paste's —
-//   which are raised on their FIRST (PromptState's PromptInitialFocus owns
-//   the choice); the face is the answer the question leans to and nothing
-//   reads it but this painter (architect 2026-10-30), the assignment site a
-//   few dozen lines into the body below, the rule at PromptState.
+//   the prompt's one road, no keyboard standing under it), and NO BUTTON
+//   IS FOCUSED (architect 2026-11-02: a prompt has no focus, the rule at
+//   PromptState).
 //   THE PROGRESS MODAL (2026-10-14, AppState::BatchProgress) — a prompt's
 //   shape with a sentence for its question: "Rendering X of Y..." on the box's
 //   first row on the pane, and Cancel alone flush right on the controls row,
-//   raised with passive focus on it.
+//   unfocused as a prompt's buttons are.
 //   AN EDITOR — THE BOX IS ITS EDIT CONTROL:
 //   the whole pending line on the box's flat pane in the field's text,
 //   from the box's first row on the text seat, SOFT-WRAPPED at the
@@ -5548,11 +5543,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // open inside one dispatch batch, which is why this
     // reads the session rather than the owner as it did until 2026-08-14.
     // Read before the branches below write anything.
-    // THE RESET IS ALSO THE PROMPT'S FOCUS ASSIGNMENT (2026-08-13): a prompt is
-    // raised with PASSIVE focus on a button, so the frame that resets is
-    // the frame that assigns. The assignment itself waits until the buttons
-    // exist, a few dozen lines down — this only remembers that this frame owes
-    // it.
     const uint64_t live_session = app.modal_dialog_live_session();
     const bool face_state_reset = prev_session != live_session;
     if (face_state_reset) {
@@ -5704,9 +5694,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // bare Down / Up keys' band walk on a button, architect 2026-10-10),
         // the UP A FOLDER button, and the last two FLUSH RIGHT: Load in place ·
         // Close.
-        // Close LAST, the escape sentinel by construction as every prompt has
-        // it. The plan's order is also the ring's, so Tab walks the row left to
-        // right. A STOP BUTTON SAT AFTER PLAY/PAUSE from 2026-08-28
+        // Close LAST, the row's last seat, as Cancel is every prompt's. No
+        // key reaches the player (architect 2026-10-30), so the row has no
+        // ring and no Tab walks it. A STOP BUTTON SAT AFTER PLAY/PAUSE from 2026-08-28
         // (Audacious's own order) until the act retired.
         // THE PAUSE FACE IS TRUTHFUL (architect 2026-08-31): the button
         // prints PAUSE only where its press would PAUSE — the transport live
@@ -5815,7 +5805,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::Up);
         // THE LAST TWO, FLUSH RIGHT: Load in Place (the icon row's history
         // group runs the same act one surface over) and Close. Close stays
-        // LAST, the escape sentinel by construction.
+        // LAST, the row's last seat.
         // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
         // listing is batch folders, where a load has nothing to name, so the
         // sixth button deletes the highlighted folder, and its shift press
@@ -5964,46 +5954,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan[i].x = words.rect[i].x;
             plan[i].w = words.rect[i].w;
         }
-    }
-
-    // A PROMPT IS RAISED WITH PASSIVE FOCUS ON A BUTTON (architect 2026-08-13;
-    // PAINTED AND READ BY NOTHING ELSE since 2026-10-30, the buttons the
-    // prompt's one road — PromptState owns the rule and the two facts behind
-    // it, the first of which is that the last button is always the ESCAPE
-    // SENTINEL). WHICH button is the RAISE'S OWN CHOICE (PromptInitialFocus,
-    // carried on the question since 2026-08-28): the last on every prompt but
-    // THE FOUR CONFIRMATION RAISES — the load's two, Revert's and, since
-    // 2026-09-16, THE PHASE RESET PASTE'S — which ask for
-    // their FIRST, each being already the deliberate second step of an
-    // explicit act, so its face leans to OK.
-    // The load's one prompt body carries both subjects (the player's entry
-    // and the `h` view's walk member), so the two roads lean alike, and the
-    // revert and the phase reset paste lean as they do; the two
-    // three-way Save / Discard / Cancel prompts, which confirm no act already
-    // asked for, the render player's Delete and the pull's confirmation
-    // (PromptInitialFocus owns why) are what keep the last button. This is the
-    // ONE assignment site: it rides the same reset the
-    // focus's other three edges ride, so a fresh prompt and a prompt replacing
-    // a prompt are one case, and it runs HERE rather than at the reset because
-    // the plan's ends are not known until the plan exists. An EDITOR dialog is
-    // deliberately not touched: it opens with focus in its FIELD, which is what
-    // -1 already means there.
-    if (face_state_reset && prompt_up && !plan.empty()) {
-        app.modal_dialog_focus =
-            app.prompt.initial_focus == PromptInitialFocus::FirstButton
-                ? 0
-                : static_cast<int>(plan.size()) - 1;
-        app.modal_dialog_focus_active = false;
-    }
-    // THE PROGRESS MODAL IS RAISED WITH PASSIVE FOCUS ON ITS CANCEL
-    // (2026-10-14), a prompt's LastButton raise on a one-button row: Windows'
-    // progress dialog, whose Cancel is its default button (no key reaches it,
-    // architect 2026-10-30; its press is the road). The same one assignment
-    // edge as the prompt's (a fresh session), so a key arm a previous surface
-    // left cannot carry over.
-    if (face_state_reset && progress_up && !plan.empty()) {
-        app.modal_dialog_focus        = static_cast<int>(plan.size()) - 1;
-        app.modal_dialog_focus_active = false;
     }
 
     // -- THE CONTROLS ROW'S LAYOUT (architect 2026-10-14, modal_box.h) --

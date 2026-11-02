@@ -3725,10 +3725,9 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
 // `Pull refused: this device has moved`, the status taking what the refs now
 // show. THE QUESTION IS ASKED ONLY WHEN THE PULL CHANGES THE OPEN PIECE, and
 // only here, by the key — never by an asynchronous arrival: "Pull GitHub's
-// newer checkpoint and reload this piece?", OK / Cancel with passive focus on
-// Cancel (architect 2026-10-19: one road, OK reloads — a confirmation whose
-// OK discards the session, so its painted lean commits nothing). A pull that
-// leaves
+// newer checkpoint and reload this piece?", OK / Cancel (architect
+// 2026-10-19: one road, OK reloads — a confirmation whose OK discards the
+// session). A pull that leaves
 // the open piece alone runs at once: the face said Pull, and nothing on
 // screen changes.
 void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
@@ -3770,8 +3769,7 @@ void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Pull GitHub's newer checkpoint and reload this piece?",
                        kPromptOkCancel,
-                       DialogTrigger::PULL_CONFIRM,
-                       PromptInitialFocus::LastButton);
+                       DialogTrigger::PULL_CONFIRM);
     viewport.invalidate_all();
 }
 
@@ -7170,15 +7168,13 @@ void GuiInputHandler::trim_presets_save() {
     ov.trim_pending = h;
     // THE QUESTION NAMES THE PRESET, single-quoted and spelled raw as the
     // player's delete names its folder: nothing takes a save into it back.
-    // Save / Cancel, Cancel the Escape sentinel LAST and FOCUSED
-    // (PromptInitialFocus::LastButton).
+    // Save / Cancel, Cancel LAST.
     app.prompt.present(
         "Save the current trim as '" +
             ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
             "'?",
         kPromptSaveCancel,
-        DialogTrigger::TRIM_PRESET_SAVE_CONFIRM,
-        PromptInitialFocus::LastButton);
+        DialogTrigger::TRIM_PRESET_SAVE_CONFIRM);
     viewport.invalidate_all();
 }
 
@@ -7196,15 +7192,13 @@ void GuiInputHandler::trim_presets_delete() {
         return;
     }
     ov.trim_pending = ov.highlight_row;
-    // Delete / Cancel, Cancel LAST and FOCUSED (DELETE_FOLDER_CONFIRM's own
-    // reasoning).
+    // Delete / Cancel, Cancel LAST.
     app.prompt.present(
         "Delete '" +
             ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
             "'?",
         kPromptDeleteCancel,
-        DialogTrigger::TRIM_PRESET_DELETE_CONFIRM,
-        PromptInitialFocus::LastButton);
+        DialogTrigger::TRIM_PRESET_DELETE_CONFIRM);
     viewport.invalidate_all();
 }
 
@@ -7491,8 +7485,7 @@ void GuiInputHandler::revert_project(bool question_asked) {
 // members and the lane already shows the one the walk stands on, so the key
 // raises THE CONFIRMATION straight away — the render player's own prompt body
 // with the walk member as its subject, "Load '<member label>' in place?",
-// OK / Cancel with OK the painted lean, the buttons its one road (architect
-// 2026-10-30).
+// OK / Cancel, the buttons its one road (architect 2026-10-30).
 //
 // THE MODE IS THE CALLER'S GATE rather than a term of this body: the one key
 // caller is on_key's `'` arm under history_mode.active, which is where the
@@ -7521,14 +7514,11 @@ void GuiInputHandler::history_load_in_place() {
     app.history_mode.pending_load_member = member;
     // The member in the ONE spelling both walks share (member_label — the
     // short SHA on the Remote tab, the displayed number on the Local one).
-    // Cancel LAST, the escape sentinel every prompt derives its Esc from; the
-    // FIRST button takes the passive focus on both its subjects, as on the
-    // revert confirmation (PromptInitialFocus).
+    // Cancel LAST, as on every prompt.
     app.prompt.present(
         "Load '" + app.history_mode.member_label(member) + "' in place?",
         kPromptOkCancel,
-        DialogTrigger::LOAD_IN_PLACE_CONFIRM,
-        PromptInitialFocus::FirstButton);
+        DialogTrigger::LOAD_IN_PLACE_CONFIRM);
     viewport.invalidate_all();
 }
 
@@ -8677,24 +8667,15 @@ void GuiInputHandler::render_player_load_in_place() {
     // renders_dir.h) and SINGLE-QUOTED like every other name in a sentence
     // (2026-09-01, the product's one quoting form on cards and prompts alike;
     // both raisers of this prompt body wore backticks until that day),
-    // OK / Cancel — Cancel the Escape sentinel LAST like every
-    // prompt's; `o` is OK's dispatch char.
-    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
-    // raised from its TWO subjects (architect 2026-08-28), and Revert's
-    // confirmation (architect 2026-09-13) and the phase reset paste's
-    // confirmation (architect 2026-09-16) take the same default: OK is the
-    // painted lean here, because the prompt is already the deliberate second
-    // step of an explicit act — the Load in place button — so the question
-    // itself is the safeguard and its lean is the act just asked for (the
-    // load also lands ONE undo entry, which Undo takes back); the buttons are
-    // its one road (architect 2026-10-30). It is this same prompt body that
-    // the `h` view's Load in Place raises on its viewed member, so the two
-    // load roads lean alike by construction. Through
-    // PromptState::present, the one raise route, so the painted gate holds.
+    // OK / Cancel — Cancel LAST like every prompt's; `o` is OK's dispatch
+    // char. The ONE LOAD PROMPT, raised from its TWO subjects (architect
+    // 2026-08-28): it is this same prompt body that the `h` view's Load in
+    // Place raises on its viewed member; the buttons are its one road
+    // (architect 2026-10-30). Through PromptState::present, the one raise
+    // route, so the painted gate holds.
     app.prompt.present("Load '" + render_entry_id(*entry) + "' in place?",
                        kPromptOkCancel,
-                       DialogTrigger::LOAD_IN_PLACE_CONFIRM,
-                       PromptInitialFocus::FirstButton);
+                       DialogTrigger::LOAD_IN_PLACE_CONFIRM);
     viewport.invalidate_all();
 }
 
@@ -8738,9 +8719,8 @@ void GuiInputHandler::render_player_delete(bool all) {
     // permanent, the question is its only safeguard, and the band returns to
     // the top row after a delete, so "this" would read the same over any
     // row; the count is the rows the press parked. Delete / Cancel, Cancel
-    // the Escape sentinel LAST and FOCUSED (PromptInitialFocus::LastButton):
-    // nothing takes a deletion back, so only the Delete answer's own press
-    // confirms. Through PromptState::present, the one raise
+    // LAST: nothing takes a deletion back, so only the Delete answer's own
+    // press confirms. Through PromptState::present, the one raise
     // route, so the painted gate holds. A shifted press over a one-folder
     // root parks that one folder — the highlighted one — and asks the named
     // question, the shift line being absent there for the same reason.
@@ -8750,8 +8730,7 @@ void GuiInputHandler::render_player_delete(bool all) {
             : "Delete '" + folders.front().filename().string() + "'?";
     app.prompt.present(question,
                        kPromptDeleteCancel,
-                       DialogTrigger::DELETE_FOLDER_CONFIRM,
-                       PromptInitialFocus::LastButton);
+                       DialogTrigger::DELETE_FOLDER_CONFIRM);
     viewport.invalidate_all();
 }
 

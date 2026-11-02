@@ -421,8 +421,7 @@ void GuiScoreViewer::raise_reset() {
     if (app.score_viewer.transport == Transport::Live) toggle_play();
     app.prompt.present("Reset the page range to every page?",
                        kPromptOkCancel,
-                       DialogTrigger::SCORE_RESET_CONFIRM,
-                       PromptInitialFocus::LastButton);
+                       DialogTrigger::SCORE_RESET_CONFIRM);
     viewport.invalidate_all();
 }
 

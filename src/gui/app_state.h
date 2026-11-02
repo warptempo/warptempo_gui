@@ -3354,8 +3354,8 @@ enum class DialogTrigger {
     // destination blocks' existing resets.
     PASTE_CONFIRM,
     // THE PULL'S CONFIRMATION (architect 2026-10-19): "Pull GitHub's newer
-    // checkpoint and reload this piece?", OK / Cancel with passive focus on
-    // Cancel (its OK discards the session). Raised by the publish chord,
+    // checkpoint and reload this piece?", OK / Cancel (its OK discards the
+    // session). Raised by the publish chord,
     // Ctrl+Shift+S, in either view, only when the pull
     // changes the open piece; the plan waits at
     // AppState::pending_history_pull.
@@ -3368,10 +3368,9 @@ enum class DialogTrigger {
     // the view's Load in Place button (bare `'`) on the VIEWED walk member
     // (parked at AppState::HistoryMode::pending_load_member, OK running that
     // walk's own load act). The two raises cannot coexist, so the answer
-    // forks on which subject is parked. RAISED WITH ITS FIRST BUTTON FOCUSED,
-    // as the revert confirmation is, so OK is the painted lean on both and
-    // the buttons the one road (architect 2026-10-30; PromptInitialFocus owns
-    // the choice and its reason). The raises and the answers live on
+    // forks on which subject is parked; its buttons are its one road
+    // (architect 2026-10-30, PromptState's head). The raises and the answers
+    // live on
     // GuiInputHandler (render_player_load_in_place / history_load_in_place and
     // confirm_load_in_place / cancel_load_in_place, input_key_dispatch.cpp),
     // which the prompt reaches through its input-handler back-pointer.
@@ -3380,26 +3379,22 @@ enum class DialogTrigger {
     // changes and reload?", OK / Cancel, raised only over a DIRTY session by
     // GuiPrompt::request_close on the Revert target (a clean session reverts
     // with no question). OK completes the close as a reopen of the project
-    // already open; Cancel leaves the session standing. Raised with its FIRST
-    // button focused, the load confirmation's default, so OK is the painted
-    // lean and the buttons the one road (architect 2026-10-30;
-    // PromptInitialFocus owns the choice and its reason).
+    // already open; Cancel leaves the session standing.
     REVERT_CONFIRM,
     // THE RENDER PLAYER'S DELETE (architect 2026-09-29): "Delete '<folder
     // name>'?" or "Delete all N folders?", Delete / Cancel, raised by the
     // root listing's Delete button (its long press for all), the folders
-    // parked at AppState::RenderPlayer::pending_delete. RAISED WITH CANCEL
-    // FOCUSED (PromptInitialFocus::LastButton): the act destroys files and
-    // nothing takes it back, so only the Delete answer's own press confirms.
-    DELETE_FOLDER_CONFIRM,    // THE SCORE VIEWER'S RESET (architect 2026-10-26: "a modal
+    // parked at AppState::RenderPlayer::pending_delete. The act destroys
+    // files and nothing takes it back, so only the Delete answer's own press
+    // confirms.
+    DELETE_FOLDER_CONFIRM,
+    // THE SCORE VIEWER'S RESET (architect 2026-10-26: "a modal
     // confirmation because there's no undo"): "Reset the page range to every
     // page?", OK / Cancel, raised over the standing viewer by its RESET key
     // (GuiScoreViewer::raise_reset). OK writes the range 0 / 0
     // (GuiScoreViewer::confirm_reset); Cancel leaves it as it stood. It
     // STANDS OVER THE VIEWER as the load confirmation stands over the render
-    // player (LOAD_IN_PLACE_CONFIRM, the model for that), and it is RAISED
-    // WITH CANCEL FOCUSED (PromptInitialFocus::LastButton), the destructive
-    // confirmation's shape, DELETE_FOLDER_CONFIRM's own: no undo stands
+    // player (LOAD_IN_PLACE_CONFIRM, the model for that). No undo stands
     // behind it, which is the whole reason it asks, so only OK's own press
     // confirms.
     SCORE_RESET_CONFIRM,
@@ -3411,9 +3406,8 @@ enum class DialogTrigger {
     // glass on 852a28d9, Windows' dialog words: Save writes into the preset
     // chosen, Save As names a new one) — the subject parked at
     // AppState::FolderOverlay::trim_pending. Each STANDS OVER THE
-    // LIST as the player's stands over the player, and each is RAISED WITH
-    // CANCEL FOCUSED (PromptInitialFocus::LastButton): trim has no undo, so
-    // only the answer's own press acts. The answer runs the act and the list
+    // LIST as the player's stands over the player. Trim has no undo, so only
+    // the answer's own press acts. The answer runs the act and the list
     // stays, re-listed
     // (GuiInputHandler::confirm_trim_preset_delete /
     // confirm_trim_preset_save, input_key_dispatch.cpp).
@@ -3439,32 +3433,23 @@ enum class DialogTrigger {
 // "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete"), no letter
 // underlined and never bracketed; the tooltip is the act's name alone.
 // A PROMPT IS ANSWERED BY ITS BUTTONS ALONE (architect 2026-10-30): no Enter,
-// Space or Esc reaches it, so no answer is a key's. Every prompt is still
-// RAISED with PASSIVE focus on a button — its LAST unless the raise asks for
-// its FIRST (PromptInitialFocus below) — and that focus is PAINTED and does
-// nothing else: the face marks the answer the question leans to, the dialog
-// family's one focus model (the ring's own state at
-// AppState::modal_dialog_focus). Two facts shape it:
-//   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
-//        by construction rather than by convention. Every answer table
-//        below puts '\x1b' last (kPromptAnswerTablesValid asserts it): the
-//        unsaved-work prompt (Save / Discard / CANCEL), its save-failed
-//        restatement (Retry / Discard / CANCEL), THE PHASE RESET PASTE'S
-//        CONFIRMATION (Yes / CANCEL), THE LOAD CONFIRMATION (OK / CANCEL —
-//        one prompt body, two subjects: the render player's highlighted entry
-//        and the `h` view's viewed walk member), the revert confirmation (OK
-//        / CANCEL), the pull's (OK / CANCEL), the score viewer's reset (OK /
-//        CANCEL) and the deletes and the trim preset's save (Delete or Save /
-//        CANCEL). So a LastButton raise paints the answer that changes
-//        nothing; the four confirmations that raise on their FIRST button
-//        (the load's two, the revert's and the phase reset paste's) paint OK
-//        — or Yes — by choice, each being the deliberate second step of an
-//        explicit act.
+// Space or Esc reaches it, so no answer is a key's, and A PROMPT HAS NO FOCUS
+// (architect 2026-11-02: "focus is for kbd no? we use pen or fingers only
+// now" — the dialog family's focus, AppState::modal_dialog_focus, is the
+// dialog editors' alone, the on-screen keyboard's). Two facts shape it:
+//   (i)  CANCEL STANDS LAST — the non-destructive answer, in the same seat
+//        on every prompt, the right end of the flush-right row (Windows' OK /
+//        Cancel order). Every answer table below puts Cancel's '\x1b' last
+//        (kPromptAnswerTablesValid asserts it): the unsaved-work prompt
+//        (Save / Discard / CANCEL), its save-failed restatement (Retry /
+//        Discard / CANCEL), THE PHASE RESET PASTE'S CONFIRMATION (Yes /
+//        CANCEL), THE LOAD CONFIRMATION (OK / CANCEL — one prompt body, two
+//        subjects: the render player's highlighted entry and the `h` view's
+//        viewed walk member), the revert confirmation (OK / CANCEL), the
+//        pull's (OK / CANCEL), the score viewer's reset (OK / CANCEL) and the
+//        deletes and the trim preset's save (Delete or Save / CANCEL).
 //   (ii) THE PAINTED GATE below answers no press until the prompt has been on
 //        screen.
-// The two focus STRENGTHS (passive, assigned; active, walked onto) are at
-// AppState::modal_dialog_focus_active, which owns the model; the face ladder
-// is paint_modal_dialog's.
 //
 // A PROMPT ANSWERS ONLY AFTER IT HAS PAINTED (2026-08-13 —
 // the one lag span the in-window modal still had; unchanged in substance by
@@ -3503,49 +3488,10 @@ enum class DialogTrigger {
 // destructive shape is the prompt's ONE-PRESS ANSWERS, which is exactly what
 // this bit guards. A frame deferral (both buffers in flight) simply keeps the
 // bit false longer — presses answer nothing, which is the correct answer.
-// WHICH BUTTON A RAISE FOCUSES (architect 2026-08-28). Every prompt is raised
-// with PASSIVE focus on a button, PAINTED and read by nothing else (architect
-// 2026-10-30: the buttons are a prompt's one road, the block above), and this
-// says which one; the BUTTON ORDER is untouched by either value, so Cancel
-// stays LAST on every prompt and fact (i)'s derivation holds whichever is
-// chosen.
-//   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
-//                 the three-way prompts — the unsaved-work prompt and its
-//                 save-failed rung (Save / Discard / Cancel, Retry / Discard
-//                 / Cancel) — by the render player's Delete (its act destroys
-//                 files, DialogTrigger::DELETE_FOLDER_CONFIRM), by the trim
-//                 presets list's Delete and Save (2026-10-28 night:
-//                 trim has no undo, TRIM_PRESET_DELETE_CONFIRM and
-//                 TRIM_PRESET_SAVE_CONFIRM), by the score viewer's reset (no
-//                 undo, SCORE_RESET_CONFIRM) and by THE
-//                 PULL CONFIRMATION (OK / Cancel since 2026-10-19, whose OK
-//                 discards the session). The three-ways and the pull
-//                 interpose a question the user did not raise — the pull's
-//                 press asked for a pull, not for the session's loss — so
-//                 their painted lean is the answer that commits nothing. A
-//                 DELIBERATE ASYMMETRY
-//                 with Revert's OK / Cancel below, which discards the session
-//                 too: Revert asks for exactly that loss, so its
-//                 question is a confirmation of the act just asked for.
-//   FirstButton — THE CONFIRMATIONS: the LOAD CONFIRMATION on both its
-//                 subjects (the player's render entry and the `h` view's walk
-//                 member), since 2026-09-13 Revert's (architect:
-//                 "revert should be just the same as load … both should use
-//                 the same default, OK") and, since 2026-09-16, THE
-//                 PHASE RESET PASTE CONFIRMATION (architect: "align — paste
-//                 should open on the equivalent of OK"). Each
-//                 prompt is already the deliberate second step of an explicit
-//                 act — the Load in Place button, Open Project's long press
-//                 (Revert), Copy Phase Resets' barrel press (the paste) — so
-//                 the question itself
-//                 is the safeguard and its painted lean is OK, the act just
-//                 asked for; the two load roads lean the same way rather than
-//                 opposite ways, and the revert and the phase reset paste
-//                 lean as they do.
-enum class PromptInitialFocus { LastButton, FirstButton };
 
 // ONE ANSWER OF A PROMPT: `key` the char activate_response forks on (a
-// lowercase letter, or '\x1b' for Cancel, the escape sentinel), and `label`
+// lowercase letter, or '\x1b' for Cancel, the one answer every prompt
+// shares), and `label`
 // the button's plain word. The char is the answer's dispatch identity alone,
 // reached by its button's press, never typed (architect 2026-10-30: no key
 // reaches a prompt).
@@ -3554,8 +3500,8 @@ struct PromptAnswer {
     const char* label;
 };
 // THE ANSWER TABLES, one per answer set, each named for its words; the
-// raises pass one to PromptState::present. Cancel LAST on every one, the
-// escape sentinel (PromptState's fact (i)).
+// raises pass one to PromptState::present. Cancel LAST on every one
+// (PromptState's fact (i)).
 inline constexpr PromptAnswer kPromptSaveDiscardCancel[] = {
     {'s', "Save"}, {'d', "Discard"}, {'\x1b', "Cancel"}};
 inline constexpr PromptAnswer kPromptRetryDiscardCancel[] = {
@@ -3576,8 +3522,8 @@ inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
     kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
     kPromptOkCancel, kPromptDeleteCancel, kPromptSaveCancel};
 // A TABLE IS WELL FORMED when every dispatch char is distinct and the last
-// answer is Cancel's, the '\x1b' sentinel its button carries (the buttons are
-// a prompt's one road, architect 2026-10-30).
+// answer is Cancel's, the '\x1b' its button carries and every activate_response
+// arm forks on (the buttons are a prompt's one road, architect 2026-10-30).
 inline constexpr bool prompt_answers_valid(std::span<const PromptAnswer> t) {
     const std::size_t N = t.size();
     if (N == 0 || t[N - 1].key != '\x1b') return false;
@@ -3611,38 +3557,25 @@ struct PromptState {
     // The answers, in button order: one of the static tables above.
     std::span<const PromptAnswer> answers;
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
-    // WHICH BUTTON THE PAINTER'S RAISE FOCUSES (the enum above owns the
-    // choice). Written only by present, read only by paint_modal_dialog's
-    // one assignment site.
-    PromptInitialFocus       initial_focus = PromptInitialFocus::LastButton;
 
-    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — SIX call sites
-    // (re-grepped 2026-09-23: the unsaved-work prompt, the
-    // paste confirmation, the LOAD CONFIRMATION at BOTH its subjects'
-    // raisers since 2026-08-29 — the render player's entry and the `h`
-    // view's viewed walk member, one prompt body forked at
-    // confirm_load_in_place — and the REVERT CONFIRMATION since 2026-09-13;
-    // the error notice's raise retired with the kind on 2026-08-30) and the
-    // save-failed rung's in-place restatement, which is a raise as far as
-    // this bit is concerned (a new question the user has not seen). Structural
+    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE: every raise of every
+    // DialogTrigger above calls it (grep `prompt.present` for the sites), and
+    // so does the save-failed rung's in-place restatement, which is a raise
+    // as far as this bit is concerned (a new question the user has not seen). Structural
     // rather than disciplinary: `painted` cannot be left true by a site that
     // forgot to clear it, because there is nowhere else to write the question.
     // The callers own their own damage (invalidate_all — the modal's rect
     // does not exist before the first paint, which the painted gate's own
     // reasoning depends on) and the modal playback stop.
-    // `focus` is REQUIRED, not defaulted: a new raise states which button it
-    // paints focused rather than inheriting one silently.
     void present(std::string t,
                  std::span<const PromptAnswer> a,
-                 DialogTrigger trig,
-                 PromptInitialFocus focus) {
+                 DialogTrigger trig) {
         active          = true;
         painted         = false;
         session         = text_editor::next_session_id();
         text            = std::move(t);
         answers         = a;
         trigger         = trig;
-        initial_focus   = focus;
     }
 };
 
@@ -6277,21 +6210,18 @@ struct AppState {
     // THE KEYBOARD FOCUS RING (architect 2026-08-13, part D of the modal
     // button ruling — kdenlive-sampled face, the navigation his own
     // derivation): the index into modal_dialog.buttons the keyboard is on, or
-    // -1, WHOSE MEANING THE OWNER SELECTS — on an EDITOR dialog -1 is THE
-    // FIELD, a real ring stop and where every editor opens (the user is there
-    // to type, which is also what keeps the editors' keyboard contract
-    // byte-identical); on a PROMPT -1 is nothing at all, because a prompt is
-    // RAISED with a button focused (its last, or its first where the raise
-    // asked for that — PromptInitialFocus) and its ring is its buttons alone,
-    // wrapping, its focus painted and read by no key (architect 2026-10-30:
-    // the buttons are a prompt's one road; the rule is at PromptState). -1 on
-    // a prompt is therefore a cold value only — the state
-    // between a raise and the paint that assigns the focus, which the painted
-    // gate makes unreachable by input.)
+    // -1, THE FIELD, a real ring stop and where every editor opens (the user
+    // is there to type, which is also what keeps the editors' keyboard
+    // contract byte-identical). THE DIALOG EDITORS' ALONE: the on-screen
+    // keyboard, the one key producer under a modal since 2026-10-30, stands
+    // only under an editor, so A PROMPT, THE PROGRESS MODAL AND THE OVERLAYS
+    // HAVE NO FOCUS (architect 2026-11-02: "focus is for kbd no? we use pen
+    // or fingers only now"). The pointer press's write
+    // (arm_modal_dialog_press) is the one road shared by every surface's
+    // buttons, and off an editor nothing reads what it wrote.
     //
-    // THE RING (THE DIALOG EDITOR'S ALONE since 2026-10-30, the on-screen
-    // keyboard the one key producer under a modal and standing only under an
-    // editor): bare Tab cycles every stop including the field, and bare
+    // THE RING (architect 2026-10-30): bare Tab cycles every stop including
+    // the field, and bare
     // Enter / bare Space PRESS the focused button down for the act at their
     // release (modal_dialog_key_pressed, below). The one route is
     // route_modal_dialog_focus_key (input_key_dispatch.cpp), read by
@@ -6299,8 +6229,7 @@ struct AppState {
     // whose FIELD has an autocomplete offers that completion first and reaches
     // the ring only when it did not advance the buffer — the one autocomplete
     // model, stated at route_modal_editor_key's Tab arm, which is also what
-    // makes -1 a stop Tab can always leave. On a PROMPT the focus is the
-    // raise's assignment alone, no key walking it.
+    // makes -1 a stop Tab can always leave.
     //
     // IT RESETS STRUCTURALLY, in paint_modal_dialog and nowhere else: with the
     // stash when no dialog stands, and ON ANY CHANGE OF THE STASH'S SESSION —
@@ -6309,10 +6238,7 @@ struct AppState {
     // REPLACING a prompt at the save-failed rung) plus the one they missed,
     // EDITOR AFTER EDITOR: two dialog editors are never live together, but a
     // close and an open fit in one dispatch batch, and an owner tag cannot see
-    // that (the full statement is at ModalDialogOwner). THE PROMPT'S RAISE
-    // FOCUS IS ASSIGNED ON THAT SAME RESET, in the painter's prompt branch
-    // once the buttons exist: reset then assign, one edge, so there is no
-    // frame in which a standing prompt has no focus.
+    // that (the full statement is at ModalDialogOwner).
     //
     // ON AN EDITOR DIALOG THE FIELD TAKES IT BACK (architect 2026-10-02): a
     // press on the field, a finger's caret drag in it and the editor act's
@@ -6337,13 +6263,8 @@ struct AppState {
     // BOTH STRENGTHS ACT — Enter and Space press the focused button whichever
     // it wears. What separates them is HOW THE FOCUS WAS ACQUIRED and what
     // the button then looks like:
-    //   PASSIVE is ASSIGNED, never walked onto. Two producers, and they are
-    //   the whole list: a PROMPT'S RAISE (the painter, onto the button the
-    //   raise named — the last, the Escape sentinel, on every prompt but the
-    //   four confirmation raises: the load's two, the revert's and, since
-    //   2026-09-16, the phase reset paste's; PromptState's
-    //   PromptInitialFocus owns the choice and why each is safe) and a
-    //   POINTER PRESS on a button (architect 2026-10-03, Windows' rule:
+    //   PASSIVE is ASSIGNED, never walked onto. ONE producer: a POINTER
+    //   PRESS on a button (architect 2026-10-03, Windows' rule:
     //   arm_modal_dialog_press, at the press; the rule is at
     //   modal_dialog_pressed). A press's assignment REPLACES whatever focus
     //   the dialog had, of either strength.
@@ -7092,7 +7013,7 @@ struct AppState {
     // "overengineered; I don't really need it" — there is already a way to
     // step backwards and forwards, and the member the walk stands on is the
     // one the lane is showing): the key raises the CONFIRMATION straight away,
-    // "Load '<member label>' in place?" OK / Cancel with OK the painted lean —
+    // "Load '<member label>' in place?" OK / Cancel —
     // the render player's own confirmation body, one prompt with two subjects
     // (DialogTrigger::LOAD_IN_PLACE_CONFIRM; the subject parked here is
     // `pending_load_member` below) — and OK runs the walk's own act.

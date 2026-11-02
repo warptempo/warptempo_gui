@@ -1960,9 +1960,9 @@ struct GuiInputHandler {
     // so a press that opens an editor is judged pre-open and does not arm, while
     // typing inside an already-open editor does. Public because main.cpp's
     // probe lambda calls it. ONE THING REPEATS ON A MODAL SURFACE, the focus
-    // ring's Tab walk (architect 2026-08-13) — on a prompt and under a dialog
-    // editor alike, both surfaces having a ring; every OTHER key a prompt
-    // could answer with stays one-shot, the definition's ring arm saying why.
+    // ring's Tab walk (architect 2026-08-13) — under a dialog editor, the one
+    // surface with a ring (a prompt, the progress modal and the overlays have
+    // none, architect 2026-11-02); the definition's ring arm says why.
     bool repeat_eligible(GuiKey key, GuiInputState mods) const;
 
     // Per-iteration promotion check for the SINGLE archival render's status
@@ -2734,7 +2734,7 @@ private:
     //       buttons): each
     //       raises its CONFIRMATION over the list on the highlighted preset
     //       (TRIM_PRESET_SAVE_CONFIRM, "Save the current trim as '<name>'?",
-    //       and TRIM_PRESET_DELETE_CONFIRM, Cancel focused), the row parked
+    //       and TRIM_PRESET_DELETE_CONFIRM), the row parked
     //       (AppState::FolderOverlay::trim_pending); Save gives the preset
     //       the active tab's trim, its name kept, THE HIGHLIGHT FOLLOWING THE
     //       PRESET to its row in the list's order (found by name), and
@@ -4066,9 +4066,8 @@ private:
     // deliverable left the listings (the reasoning is at the raise) — and
     // otherwise
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
-    // the highlighted entry — raised with its FIRST button focused, so OK is
-    // the painted lean (the reason is at the raise; the buttons are the
-    // prompt's one road, architect 2026-10-30). The
+    // the highlighted entry (the buttons are the prompt's one road, architect
+    // 2026-10-30). The
     // prompt's OK runs confirm_load_in_place's player arm (the shared act
     // load_render_entry_in_place, WHICH SAYS ITS OWN REFUSAL on a card and on
     // stderr since 2026-08-30 — the caller's vague "Load refused" is gone —
@@ -4080,7 +4079,7 @@ private:
     // THE `h` VIEW'S OWN LOAD ROAD (architect 2026-08-29, retiring the one-day
     // history picker): bare `'` there (the view's Load in Place button) raises
     // THE SAME PROMPT on the VIEWED walk member — "Load '<member label>' in
-    // place?", OK the painted lean —
+    // place?", OK / Cancel —
     // and the OK runs that walk's own act (the fork is at
     // confirm_load_in_place, the one site of it). Its guards are the picker's
     // former ones: the mode standing, no prompt or editor, no player and no
@@ -4096,7 +4095,7 @@ private:
     // the root listing shows (`all` true) at
     // AppState::RenderPlayer::pending_delete and raises the
     // DELETE_FOLDER_CONFIRM prompt — "Delete '<folder name>'?" / "Delete all
-    // N folders?", Delete / Cancel, Cancel focused — pausing a live transport
+    // N folders?", Delete / Cancel — pausing a live transport
     // first, the load's own opening step. Inside a batch folder it does
     // nothing (the slot is Load in Place there); at the root with nothing to
     // delete — a face painted live whose act went dead inside the frame — it

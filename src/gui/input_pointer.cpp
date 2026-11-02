@@ -2860,8 +2860,9 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // was cancelled, so nothing has to be re-armed. THE FOCUS IS NOT THIS
 // WALK'S: the press already moved it onto the armed button (architect
 // 2026-10-03, Windows' rule; arm_modal_dialog_press), so leaving the button
-// leaves the focus where it is and the held-away face is the key at rest
-// (the focus unpainted since 2026-10-23, paint_modal_dialog). The
+// leaves the focus where it is (read by a dialog editor's ring alone) and the
+// held-away face is the key at rest (the focus unpainted since 2026-10-23,
+// paint_modal_dialog). The
 // whole rule and the pair's read-as-one-fact contract are at
 // AppState::modal_dialog_pressed.
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
@@ -2995,7 +2996,10 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
     // and the picker's one word (Cancel or Close by content,
     // kModalCancelLabel's rule) or, under the trim presets list, its pair
     // and four words, under the BPM form its two words — so this is the
-    // rule's one site. A refused
+    // rule's one site. ONLY A DIALOG EDITOR READS WHAT IT WRITES (the
+    // on-screen keyboard's ring, AppState::modal_dialog_focus): on every
+    // other surface the write is the shared road's and nothing reads it
+    // (architect 2026-11-02, a prompt has no focus). A refused
     // press (the disabled player button above) arms nothing and moves
     // nothing. A slide off the held button leaves the focus here and fires
     // nothing; a release away leaves the button passively focused.
@@ -3849,9 +3853,9 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y) {
         case Role::Backspace: keysym = GuiKeys::BackSpace; break;
         case Role::Enter:     keysym = GuiKeys::Return;    break;
         case Role::Escape:    keysym = GuiKeys::Escape;    break;
-        // A bare Tab, no modifier: the product's prompts complete on it (the
-        // one autocomplete model, route_modal_editor_key) and the ring walks
-        // on it where there is nothing to complete.
+        // A bare Tab, no modifier: the dialog editors complete on it (the
+        // one autocomplete model, route_modal_editor_key) and the editor's
+        // ring walks on it where there is nothing to complete.
         case Role::Tab:       keysym = GuiKeys::Tab;       break;
         // COPY AND PASTE ARE THE EDITORS' OWN CHORDS (architect 2026-10-29):
         // the letter's keysym with the key's own ctrl riding the event
@@ -5991,9 +5995,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton /*button*/, int x,
     const AppState::ChromePress chrome = take_chrome_press();
     // THE PROMPT DIALOG'S ACT, the press claim's other half (2026-08-13): the
     // lift on the button the press armed activates that response. A lift
-    // ANYWHERE ELSE consumes the arm and dispatches nothing, leaving that
-    // button passively focused — the focus the press gave it (2026-10-03,
-    // arm_modal_dialog_press) — instead of simply cancelling. The gates the act re-asks (the painted bit, the stash's
+    // ANYWHERE ELSE consumes the arm and dispatches nothing (a prompt has no
+    // focus, architect 2026-11-02, so nothing else is left behind). The gates the act re-asks (the painted bit, the stash's
     // identity, and the live response set) all live in the one shared dispatch
     // body, which the keyboard's own release shares; the painter drops the arm
     // on those same edges, so the body is the second wall rather than the only

@@ -348,15 +348,6 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // through PromptState::present, the one raise route — which clears the
     // PAINTED bit, so the confirmation cannot be answered before it is on the
     // screen (the rule is at PromptState).
-    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON (architect 2026-09-16,
-    // "align — paste should open on the equivalent
-    // of OK"): this confirmation is the deliberate second step of an explicit
-    // act — Ctrl+P, the Copy Phase Resets key's barrel press
-    // (2026-10-24) — exactly as the load
-    // confirmation's and Revert's are, so it takes their default
-    // (PromptInitialFocus, app_state.h, where the three-way Save / Discard /
-    // Cancel prompts keep the last button for not being confirmations of an
-    // act already asked for). It opened on Cancel until that ruling.
     // ONE QUESTION AND NOTHING AFTER IT (architect 2026-09-01, the
     // capitalization sweep's sentence shape): the consequence rides inside the
     // question rather than in a period-terminated statement behind it, which
@@ -366,8 +357,7 @@ void PhaseResetPropagate::open_paste_confirmation() {
         "Paste phase resets into matching blocks, "
         "clearing the ones already there?",
         kPromptYesCancel,
-        DialogTrigger::PASTE_CONFIRM,
-        PromptInitialFocus::FirstButton);
+        DialogTrigger::PASTE_CONFIRM);
     viewport.invalidate_all();
 }
 
