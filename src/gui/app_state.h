@@ -6,6 +6,7 @@
 #include "gui_battery.h"
 #include "gui_input.h"
 #include "history_diff.h"
+#include "icons.h"           // the keys' glyphs (redesign_button_icon)
 #include "playback.h"
 #include "render_pipeline.h"
 #include "render.h"
@@ -17700,7 +17701,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // no icons in these consoles … just a little label underneath"; the table
 // of legends, in the painter's roster
 // order): each button's act cut to a hi-fi legend in capitals, printed UNDER
-// its blank key (paint_handler.cpp's key_legend_seat, the one placement). The
+// its key (paint_handler.cpp's key_legend_seat, the one placement), the
+// key's Breeze glyph on its face since 2026-11-02 (redesign_button_icon,
+// below, "the legend kept under the glyph"). The
 // tooltip stays the act's name (above). THE `h` VIEW'S SIX STAND-INS, which
 // the record does not draw, take their acts' own words (SESSION, CUMUL,
 // REVERT, LOAD, OLDER, NEWER). THIS TABLE IS EACH KEY'S RESTING WORD; THE
@@ -17883,6 +17886,115 @@ inline const char* redesign_button_legend(const AppState& a,
     return redesign_button_legend(b);
 }
 
+// THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity:
+// "Breeze is committed", the legend kept under the key; part 5's DRAFT
+// ROSTER, his final picking pending) — the Breeze drawing centered on each
+// roster key's face (paint_handler.cpp's paint_key_glyph, icons.h's head),
+// in the legend's column order. THIS TABLE IS EACH KEY'S RESTING GLYPH; THE
+// PAINTERS READ THE STATEFUL OVERLOAD BELOW, the glyph following the
+// stateful legend. A re-pick is a row here (and, for a drawing not yet
+// imported, a row of tools/icons/import_breeze.py's table and a rerun).
+inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
+    using icons::Icon;
+    switch (b) {
+        case RedesignButton::OpenProject:               return Icon::DocumentOpen;
+        case RedesignButton::Save:                      return Icon::DocumentSave;
+        case RedesignButton::Undo:                      return Icon::EditUndo;
+        case RedesignButton::Redo:                      return Icon::EditRedo;
+        case RedesignButton::Render:                    return Icon::PreviewRenderOn;
+        case RedesignButton::IconZoomIn:                return Icon::ZoomInY;
+        case RedesignButton::IconZoomOut:               return Icon::ZoomOutY;
+        case RedesignButton::IconZoomFitBest:           return Icon::ZoomFitBest;
+        case RedesignButton::IconWaveformMagnification: return Icon::Zoom;
+        case RedesignButton::IconFollow:                return Icon::ChronometerStart;
+        case RedesignButton::IconRestrict:              return Icon::TimelineUseZoneOn;
+        case RedesignButton::IconTrimPresets:           return Icon::TransformCrop;
+        case RedesignButton::IconBpm:                   return Icon::MusicNote16th;
+        case RedesignButton::IconIter:                  return Icon::Mathmode;
+        case RedesignButton::IconFlatten:               return Icon::Merge;
+        case RedesignButton::IconListen:                return Icon::MediaPlaylistPlay;
+        case RedesignButton::IconReadOnly:              return Icon::Lock;
+        case RedesignButton::IconSettings:              return Icon::SettingsConfigure;
+        case RedesignButton::IconTooltips:              return Icon::HelpWhatsthis;
+        case RedesignButton::IconScore:                 return Icon::ViewMediaLyrics;
+        case RedesignButton::IconNoise:                 return Icon::Raindrop;
+        case RedesignButton::IconHistory:               return Icon::ShallowHistory;
+        case RedesignButton::SessionHistory:            return Icon::DeepHistory;
+        case RedesignButton::HistoryCumulative:         return Icon::GnumericAutosum;
+        case RedesignButton::HistoryRevert:             return Icon::DocumentRevert;
+        case RedesignButton::HistoryOlder:              return Icon::ArrowLeft;
+        case RedesignButton::HistoryNewer:              return Icon::ArrowRight;
+        case RedesignButton::IconLoadInPlace:           return Icon::DocumentImport;
+        case RedesignButton::ViewSource:                return Icon::ViewMediaTrack;
+        case RedesignButton::ViewTarget:                return Icon::ViewMediaVisualization;
+        case RedesignButton::ViewWarp:                  return Icon::LabplotXyCurve;
+        case RedesignButton::ViewPhase:                 return Icon::ViewRefresh;
+        case RedesignButton::TransportPlayStop:         return Icon::MediaPlaybackStart;
+        case RedesignButton::TransportSkipBack:         return Icon::MediaSkipBackward;
+        case RedesignButton::TransportSkipForward:      return Icon::MediaSkipForward;
+        case RedesignButton::IconMarkerDrop:            return Icon::ListAdd;
+        case RedesignButton::IconMarkerDelete:          return Icon::EditDelete;
+        case RedesignButton::IconMarkerDisable:         return Icon::ViewHidden;
+        case RedesignButton::IconMarkerInherit:         return Icon::InsertLink;
+        case RedesignButton::IconJumpToDefiningMarker:  return Icon::GoJump;
+        case RedesignButton::IconOpenTextEditor:        return Icon::DocumentEdit;
+        case RedesignButton::IconAddToSelection:        return Icon::EditSelect;
+        case RedesignButton::IconCopyPhaseResets:       return Icon::EditCopy;
+        case RedesignButton::IconValueDrag:             return Icon::TimelineLift;
+        case RedesignButton::TransportWalkPrevious:     return Icon::KeyframePrevious;
+        case RedesignButton::TransportWalk:             return Icon::KeyframeNext;
+        case RedesignButton::IconZoomOriginal:          return Icon::ZoomOriginal;
+        case RedesignButton::TransportSwitchTab:        return Icon::TabDetach;
+        case RedesignButton::TransportDown:             return Icon::GoDown;
+        case RedesignButton::TransportUp:               return Icon::GoUp;
+        case RedesignButton::TransportLeft:             return Icon::GoPrevious;
+        case RedesignButton::TransportRight:            return Icon::GoNext;
+    }
+    return Icon::DocumentOpen;
+}
+
+// THE GLYPH FOLLOWS THE STATEFUL LEGEND (2026-11-02): the drawing of the act
+// the key's next press runs, each arm the stateful legend's own arm above
+// on the SAME predicate — STOP (MediaPlaybackStop), CANCEL (DialogCancel,
+// the dialogs' Cancel), PULL (VcsPull), CHECK (NetworkConnect), COMMIT
+// (VcsCommit), RECALL (ZoomPrevious), TIE (Link) — and every other state
+// the table's. THE REPAINT IS THE LEGEND'S: every arm here forks exactly
+// where the legend's word forks, so main.cpp's per-tick comparator, which
+// holds the stashed legend (and the glyph index) against the live ones,
+// repaints the key on every edge of its glyph with no term of its own.
+inline icons::Icon redesign_button_icon(const AppState& a,
+                                        const GuiAudio& audio,
+                                        RedesignButton b) {
+    using icons::Icon;
+    switch (b) {
+        case RedesignButton::TransportPlayStop:
+            if (redesign_button_glyph_swapped(a, b))
+                return Icon::MediaPlaybackStop;
+            break;
+        case RedesignButton::Render:
+            if (redesign_button_glyph_swapped(a, b) &&
+                !a.batch_progress.active)
+                return Icon::DialogCancel;
+            break;
+        case RedesignButton::Save:
+            if (redesign_button_glyph(a, b) == 2) return Icon::VcsPull;
+            if (redesign_button_glyph(a, b) == 3) return Icon::NetworkConnect;
+            if (a.history_mode.active) return Icon::VcsCommit;
+            break;
+        case RedesignButton::IconZoomFitBest:
+            if (overview_command_target(a, audio).arm ==
+                OverviewCommandTarget::Arm::RestoreView)
+                return Icon::ZoomPrevious;
+            break;
+        case RedesignButton::IconMarkerInherit:
+            if (a.iteration_mode_enabled) return Icon::Link;
+            break;
+        default:
+            break;
+    }
+    return redesign_button_icon(b);
+}
+
 // THE TOOLBAR PAIR'S STATEFUL FACES — Save's and Render's, the two buttons
 // whose MEANING is selected by a mode bit (architect 2026-08-02 for Render,
 // 2026-08-04 for the history face, MOVED ONTO SAVE 2026-08-08). A THIRD
@@ -17902,11 +18014,10 @@ inline const char* redesign_button_legend(const AppState& a,
 // ON THE ROW NOW is the printed LEGEND (architect 2026-10-25: the word names
 // the act the key's next press runs — the stateful redesign_button_legend
 // overload above, Save's COMMIT / PULL / CHECK and Render's CANCEL among
-// it); the keys draw no glyph since the hi-fi skin (2026-10-23), so the GLYPH
-// INDEX (Save's commit / pull / check, Render's cancel —
-// redesign_button_glyph) is the
-// stash's index the press, the tooltip and the legend read, never a painted
-// face. The one hint string that still
+// it), the key's Breeze glyph following it (redesign_button_icon's stateful
+// overload, 2026-11-02); the GLYPH INDEX (Save's commit / pull / check,
+// Render's cancel — redesign_button_glyph) is the stash's index the press,
+// the tooltip, the legend and the glyph read. The one hint string that still
 // carries the words reads "Save and Commit"; "Render
 // Iterations", the capital I the architect spelled
 // 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads

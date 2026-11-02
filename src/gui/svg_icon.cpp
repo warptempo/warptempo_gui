@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -95,12 +96,20 @@ std::string image_wrapper(std::string_view bytes, const char* mime,
 
 } // namespace
 
-std::expected<Document, std::string> parse(std::string_view bytes) {
+std::expected<Document, std::string> parse(
+        std::string_view bytes, std::optional<uint32_t> current_color) {
     // The options are resvg's defaults (96 dpi, no resources directory: a
     // bundled drawing references no file; no font database, the build has no
     // text), made per parse and freed with it: nothing global outlives a
-    // load.
+    // load — plus, for a bound parse, the one-rule stylesheet that sets the
+    // root's `color` (the declaration). resvg copies the string.
     resvg_options* options = resvg_options_create();
+    if (current_color) {
+        char sheet[32];
+        std::snprintf(sheet, sizeof sheet, "svg { color: #%06X; }",
+                      static_cast<unsigned>(*current_color & 0xFFFFFFu));
+        resvg_options_set_stylesheet(options, sheet);
+    }
     resvg_render_tree* tree = nullptr;
     const int32_t code = resvg_parse_tree_from_data(
         bytes.data(), bytes.size(), options, &tree);
@@ -234,6 +243,25 @@ cairo_surface_t* rasterise(const Document& doc, int px) {
                  static_cast<uint32_t>(px), reinterpret_cast<char*>(data));
 
     rgba_bytes_to_argb_words(data, px * px);
+    cairo_surface_mark_dirty(s);
+    return s;
+}
+
+cairo_surface_t* rasterise_zoom(const Document& doc, double zoom) {
+    const resvg_size size = resvg_get_image_size(doc.tree.get());
+    const int w = std::max(1, static_cast<int>(std::ceil(size.width * zoom)));
+    const int h = std::max(1, static_cast<int>(std::ceil(size.height * zoom)));
+    // A new image surface is cleared to transparent; its stride is exactly
+    // 4 * w (rasterise's reason).
+    cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+    assert(cairo_image_surface_get_stride(s) == 4 * w);
+    cairo_surface_flush(s);
+    unsigned char* data = cairo_image_surface_get_data(s);
+    const resvg_transform at{static_cast<float>(zoom), 0.0f, 0.0f,
+                             static_cast<float>(zoom), 0.0f, 0.0f};
+    resvg_render(doc.tree.get(), at, static_cast<uint32_t>(w),
+                 static_cast<uint32_t>(h), reinterpret_cast<char*>(data));
+    rgba_bytes_to_argb_words(data, w * h);
     cairo_surface_mark_dirty(s);
     return s;
 }

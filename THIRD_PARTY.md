@@ -5,10 +5,12 @@ laptop builds the CLI (`CMakeLists.txt`), which links the distribution's fftw al
 cross-builds the APK's libraries into the gitignored `deps/prebuilt/` (`deps/`, each source tarball pinned by sha256
 in `deps/common.sh`, provenance in `docs/engineering/android_notes.md` §6); the APK is installed on one tablet only.
 The licence texts live in each pinned source; this file is the list. The faces and the icons are data, not code:
-`fonts/README.md` and `assets/icons/README.md` (the four icon SVGs, the launcher's drawing among them: `AppIcon.svg`,
+`fonts/README.md` and `assets/icons/README.md` (the icon SVGs, the launcher's drawing among them: `AppIcon.svg`,
 the logo lane's quaver through its symlink) carry their provenance and licence texts. The face is packed into the
 APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1, the text in
-`fonts/LICENSE-Liberation-OFL.txt`).
+`fonts/LICENSE-Liberation-OFL.txt`). The keys' glyphs are packed into the APK too: KDE's breeze-icons (6.31.0;
+LGPL-3.0-or-later, the text in `assets/icons/LICENSE-LGPL-3.txt`), recolored copies of its dark theme's 22-px
+drawings written by `tools/icons/import_breeze.py`, their provenance table in `assets/icons/README.md`.
 
 ## The tablet's APK
 
@@ -22,7 +24,7 @@ APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1,
 | OpenSSL (libcrypto) | 3.6.4 | Apache-2.0 |
 | libssh2 | 1.11.1 | BSD-3-Clause |
 | libgit2 (with its bundled zlib, llhttp, SHA-1 collision detection) | 1.9.7 | GPL-2.0-only with the linking exception (its `COPYING`, which also states each bundled piece's licence) |
-| resvg's C API (`resvg-capi`, `src/gui/svg_icon.cpp`: the renderer of the four icon SVGs and the decoder of the score viewer's page images, the grayscale JPEG pages `tools/score_extract.py` writes), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
+| resvg's C API (`resvg-capi`, `src/gui/svg_icon.cpp`: the renderer of the icon SVGs and the decoder of the score viewer's page images, the grayscale JPEG pages `tools/score_extract.py` writes), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
 | its 37 crates (below) | Cargo.lock at the pin | MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Zlib, 0BSD, Unlicense, each crate's own |
 | the Rust standard library inside `libresvg.a` (core, alloc, std and their crates) | rustc 1.99.0 | MIT OR Apache-2.0 |
 | the NDK's libc++, libc++abi and libunwind (`-static-libstdc++`), and `android_native_app_glue` | NDK r29 | Apache-2.0 WITH LLVM-exception; the glue Apache-2.0 |

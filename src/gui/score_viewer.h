@@ -213,6 +213,7 @@
 
 #include "app_state.h"
 #include "audio.h"
+#include "icons.h"           // the keys' glyphs (score_viewer_button_icon)
 #include "modal_box.h"
 #include "playback.h"
 #include "playback_lifecycle.h"
@@ -449,6 +450,33 @@ inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
         case Act::None:      break;
     }
     return "";
+}
+
+// THE KEYS' GLYPHS (architect 2026-11-01, M9; Breeze's draft roster of
+// 2026-11-02), beside the legends: PREV / NEXT GoPreviousViewPage /
+// GoNextViewPage (the page road), BACK / FWD MediaSeekBackward /
+// MediaSeekForward, RESET EditReset, START ZoneIn, END ZoneOut, CLOSE
+// DialogClose. PLAY / PAUSE's is the render player's Play key's, by its
+// face (render_player_button_icon, paint_handler.cpp, which the painter
+// asks, as for the legend); this table's PlayPause the resting
+// MediaPlaybackStart. No glyph for None.
+inline std::optional<icons::Icon> score_viewer_button_icon(
+        AppState::ScoreButtonAct act) {
+    using Act = AppState::ScoreButtonAct;
+    using icons::Icon;
+    switch (act) {
+        case Act::PrevPage:    return Icon::GoPreviousViewPage;
+        case Act::NextPage:    return Icon::GoNextViewPage;
+        case Act::SkipBack:    return Icon::MediaSeekBackward;
+        case Act::SkipForward: return Icon::MediaSeekForward;
+        case Act::PlayPause:   return Icon::MediaPlaybackStart;
+        case Act::Reset:       return Icon::EditReset;
+        case Act::SetStart:    return Icon::ZoneIn;
+        case Act::SetEnd:      return Icon::ZoneOut;
+        case Act::Close:       return Icon::DialogClose;
+        case Act::None:        break;
+    }
+    return std::nullopt;
 }
 
 // THE TOOLTIPS: the act's name alone, Title Case, no key named, in the

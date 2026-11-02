@@ -36,7 +36,8 @@
 // are retired). A DISABLED key keeps the face its state gives, its legend
 // dims (kTextDimInk), so a checked-but-inert key under an overlay keeps its
 // lit fill with the dim legend (architect 2026-11-01, M6). Anything printed
-// ON a lit face is kTextOnLit 111111 (the on-screen keyboard's caps today).
+// ON a lit face is kTextOnLit 111111 (the keys' Breeze glyphs since
+// 2026-11-02, the on-screen keyboard's caps).
 //
 // THE GROUP GAP (architect 2026-11-01, M5; "two px lines that don't scale",
 // M5b): keys that abut inside a group are parted by kKeyGapPx, TWO DEVICE PX
@@ -52,9 +53,10 @@
 // as possible"): Live's two, kTextInk B5B5B5 on every word, digit and
 // drawing the chrome prints — the legends at rest, the logo lane, the
 // clocks, the tab name and state line, the lists, the cards, the prompts,
-// the editors, the marker labels, the keyboard's caps — and kTextDimInk
-// 757575 for a disabled key's legend, the settings page's inert rows and the
-// tooltip's hint line; kTextOnLit 111111 on a lit face. NOTHING WEARS A
+// the editors, the marker labels, the keyboard's caps, the keys' Breeze
+// glyphs (2026-11-02) — and kTextDimInk 757575 for a disabled key's legend
+// and glyph, the settings page's inert rows and the tooltip's hint line;
+// kTextOnLit 111111 on a lit face. NOTHING WEARS A
 // SHADOW (2026-11-01, "no shadow anywhere"; the well's cue labels,
 // triangles and ticks with the rest since 2026-11-02): every word, digit,
 // tick and triangle is ink alone.
@@ -118,9 +120,11 @@ inline constexpr uint32_t kPaneFace = kKeyFace;
 
 // ONE KEY on `r` (the head's THE KEY): the flat face, the lit fill when
 // `lit` — the caller's answer, its checked state OR a standing press — and
-// nothing else. A key is blank: its legend stands under it on the ground
-// (paint_handler.cpp's paint_key_legend); what a key carries on its face is
-// its caller's, in kTextOnLit on a lit face and kTextInk on a resting one.
+// nothing else. Its legend stands under it on the ground (paint_handler.cpp's
+// paint_key_legend); what a key carries on its face is its caller's — the
+// roster's and the controls rows' Breeze glyph (paint_key_glyph,
+// 2026-11-02), the on-screen keyboard's caps — in kTextOnLit on a lit face
+// and kTextInk on a resting one (a disabled key's glyph kTextDimInk).
 void paint_key(cairo_t* cr, const GuiRect& r, bool lit);
 
 // THE KEY INSIDE ITS CELL (the head's THE GROUP GAP): the cell `cell` less

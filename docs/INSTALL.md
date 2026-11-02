@@ -152,7 +152,7 @@ bash deps/toolchain/bootstrap.sh
 
 ### The prebuilt libraries
 
-The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the renderer of the four icon SVGs and the decoder of the score viewer's page images, built with Rust) statically from `deps/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
+The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the renderer of the icon SVGs and the decoder of the score viewer's page images, built with Rust) statically from `deps/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
 
 ```bash
 ls deps/prebuilt/arm64-v8a/lib/libgit2.a deps/prebuilt/arm64-v8a/lib/libresvg.a
@@ -286,7 +286,7 @@ The program's config is the tablet's, `files/warptempo_gui/config` in the app's 
 
 There are no color files and no color key: the program's one palette (Ableton Live's colors, 2026-11-01) is built in, and nothing is read from folders beside the config (the `chromes/` and `captions/` folders the color picker kept until 2026-10-14 are never read; delete them at will).
 
-The icons ship with the program and are never copied: four small SVG drawings in `assets/icons/` (the quaver, the folder and the cards' i and X; a drawing two uses share is one file and a symlink), packed into the APK, read from its assets at every launch and rendered by resvg. A launch that cannot read them, or that finds a file that is not well-formed SVG, stops at startup with one line in its log naming the file and what is wrong.
+The icons ship with the program and are never copied: the SVG drawings in `assets/icons/` — the keys' glyphs, KDE's Breeze icons recolored by `tools/icons/import_breeze.py` (rerun it to re-pick one; it reads the system's `/usr/share/icons/breeze-dark/`), and the project's own quaver, folder and the cards' i and X (a drawing two of those uses share is one file and a symlink) — packed into the APK, read from its assets at every launch and rendered by resvg. A launch that cannot read them, or that finds a file that is not well-formed SVG, stops at startup with one line in its log naming the file and what is wrong.
 
 The window's panel ships with nothing and reads no picture: its brushed black ground is drawn by the program itself at launch (`src/gui/materials.h`).
 

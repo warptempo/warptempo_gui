@@ -357,7 +357,8 @@ const GuiPalette& palette();
 // surface's recorded text color under the live chrome — "text over a fill
 // is the theme's recorded pair" — read by the words painted there, the one
 // owner of the choice a later vocabulary with roles of its own would fork
-// (no glyph reads it since 2026-10-09: the icons wear their own inks,
+// (no glyph reads it since 2026-10-09: the project's drawings wear their
+// own inks, and the keys' Breeze glyphs the text tone their caller passes,
 // icons.h's head):
 //   ListRow          the list's text pair, resting and lit — the field's
 //   ListRowLit       text and the selection's; the folder overlay's and
@@ -402,7 +403,8 @@ uint64_t palette_generation();
 // CALLER OWES, after the call (GuiInputHandler::apply_true_colors; the
 // launch's call, before the window and every cache exist, owes none): the
 // icon rasters dropped (icons::drop_rasters — they convert at raster time
-// and key on the device px alone), then the waveform
+// and key on the device px and, a key glyph's, its sRGB tone, which the
+// flip does not move), then the waveform
 // plate kicked when its inks moved — the waveform_plate_inks pair read
 // before and after the call; when it moved, the synchronous plate rebuild
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the

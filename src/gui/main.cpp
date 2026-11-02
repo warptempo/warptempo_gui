@@ -2485,10 +2485,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // one. THREE buttons have a second glyph, re-counted 2026-10-25
             // off redesign_button_glyph's nonzero arms — Save, Render and the
             // collapsed play/stop button (the read-only toggle wears one glyph
-            // since 2026-10-21) — and the keys draw no glyph since the hi-fi
-            // skin, so the term now carries the index the LEGEND and the
-            // press read; the LEGEND TERM beside it (2026-10-25) is the printed
-            // word's own. RENDER'S mid-render Cancel face is the one that was quietly
+            // since 2026-10-21) — the term carries the index the LEGEND and
+            // the press read; the LEGEND TERM beside it (2026-10-25) is the
+            // printed word's own, AND THE PAINTED GLYPH'S (2026-11-02): the
+            // key's Breeze glyph follows the stateful legend arm for arm
+            // (redesign_button_icon's stateful overload, app_state.h), so a
+            // glyph edge is always a legend edge and needs no term. RENDER'S mid-render Cancel face is the one that was quietly
             // uncovered before this term: queue_running moves neither
             // enabled nor selected, so its repaint rested on the render
             // routes' own damage alone. This term is now the one repaint of

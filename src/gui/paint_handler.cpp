@@ -31,6 +31,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <limits>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -320,21 +321,21 @@ namespace {
 // buttons, raised at rest, sunken pressed and sunken over the Hilight dither
 // checked — stood from 2026-10-02 until its last two wearers became the
 // roster's keys, 2026-10-22. Its face
-// answer, ButtonBoxFace and the glyph's shift it carried, went 2026-10-23:
-// no roster key carries anything on its face.)
+// answer, ButtonBoxFace and the glyph's shift it carried, went 2026-10-23.)
 
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
-// player's and the dialogs' word buttons: THE FLAT LOOK'S BLANK KEY
-// (architect 2026-11-01; paint_key, materials.h, where its states stand).
+// player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
+// 2026-11-01; paint_key, materials.h, where its states stand).
 // LIT — the FFAD56 fill — for a CHECKED button (the roster's `selected`,
 // `lamp`) and for a PRESSED one (a live press) whatever its checked state,
 // for as long as the press stands, the key back to its own state at the
 // lift (architect 2026-11-02); a DISABLED button keeps the face its state
 // gives, a dead checked button still lit (the roster's rule at
 // paint_icon_row), its legend dimmed by the caller. NO HOT FACE. `r` is the
-// PAINTED key, its cell less the group gap (key_in_cell, materials.h). No
-// roster key carries anything on its face (the legends, the word buttons'
-// words among them, stand under the key on the ground).
+// PAINTED key, its cell less the group gap (key_in_cell, materials.h). ON
+// ITS FACE its caller paints the key's Breeze glyph (paint_key_glyph,
+// 2026-11-02); the legends, the word buttons' words among them, stand under
+// the key on the ground.
 void paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
                        bool pressed) {
     paint_key(cr, r, lamp || pressed);
@@ -404,6 +405,42 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act,
     return render_player_button_legend(act);
 }
 
+// THE RENDER PLAYER'S GLYPHS (architect 2026-11-01, M7, Breeze's draft
+// roster of 2026-11-02), by the act each key runs, beside its legends: the
+// transport triple PREV MediaSkipBackward, PLAY MediaPlaybackStart, NEXT
+// MediaSkipForward; REPEAT MediaRepeatSingle (the row's one lamp); DOWN /
+// UP GoDown / GoUp; FOLDER GoParentFolder; LOAD DocumentImport; DELETE
+// EditDelete; CLOSE DialogClose. THE PLAY KEY'S GLYPH FOLLOWS ITS LEGEND'S
+// FACE (render_player_play_face): PAUSE MediaPlaybackPause, OPEN over a
+// folder row DocumentOpen — the legend's repaint is its (the row's one
+// damage owner, the play face's writers damaging the row whole). No glyph
+// for None.
+std::optional<icons::Icon> render_player_button_icon(
+        AppState::PlayerButtonAct act, PlayerPlayFace face) {
+    using Act = AppState::PlayerButtonAct;
+    using icons::Icon;
+    switch (act) {
+        case Act::Home:          return Icon::MediaSkipBackward;
+        case Act::PlayPause:
+            switch (face) {
+                case PlayerPlayFace::Pause:      return Icon::MediaPlaybackPause;
+                case PlayerPlayFace::OpenFolder: return Icon::DocumentOpen;
+                case PlayerPlayFace::Play:       break;
+            }
+            return Icon::MediaPlaybackStart;
+        case Act::NextTrack:     return Icon::MediaSkipForward;
+        case Act::RepeatOne:     return Icon::MediaRepeatSingle;
+        case Act::HighlightDown: return Icon::GoDown;
+        case Act::HighlightUp:   return Icon::GoUp;
+        case Act::Up:            return Icon::GoParentFolder;
+        case Act::LoadInPlace:   return Icon::DocumentImport;
+        case Act::Delete:        return Icon::EditDelete;
+        case Act::Close:         return Icon::DialogClose;
+        case Act::None:          break;
+    }
+    return std::nullopt;
+}
+
 // THE KEY'S LEGEND, LAID OUT ONCE (2026-10-23) — the one owner of where a
 // key's legend stands and of the pixels the key and its legend paint
 // together, read by the painter (paint_key_legend), by the strips' repaint
@@ -457,6 +494,41 @@ void paint_key_legend(cairo_t* cr, const GuiRect& key, std::string_view word,
     set_palette_source(cr, hex(enabled ? kTextInk : kTextDimInk));
     text_shape::show_shaped_run(cr, *layout.run, layout.seat.x,
                                 layout.seat.baseline);
+}
+
+// THE KEY GLYPH'S INK, device px at 300 % (architect 2026-11-01, "THE MAIN
+// PAGE IS SETTLED": ONE VISUAL SIZE, each drawing scaled by its ink box, the
+// larger side 20), scaled as every chrome length (skin_px).
+inline constexpr double kKeyGlyphInkAt300 = 20.0;
+
+// A KEY'S GLYPH ON ITS FACE (architect 2026-11-01 / 2026-11-02; icons.h's
+// THE INK BOX) — THE ONE PLACE the glyph's seat and tone are decided, every
+// key's (the band's, row 8's, the controls rows', the word buttons): the
+// Breeze drawing's ink box, its larger side skin_px(kKeyGlyphInkAt300),
+// CENTERED in the painted key `key` (the cell less the group gap), the
+// spare split with its odd px below and right (the integer floor, the
+// mock's). ITS TONE IS THE FACE'S TEXT: kTextOnLit 111111 when the key
+// paints LIT (`lit`: checked, pressed, or a dead checked key keeping its
+// fill), else kTextInk B5B5B5, or kTextDimInk 757575 when the key is
+// disabled — the legend's own pair (paint_key_legend). The glyph is
+// clipped to the key: a key smaller than the ink box keeps its glyph
+// centered and lets nothing overhang onto the ground. None is today — the
+// keys 69 wide at 300 % and `key_height` tall, a tuning key no lower than
+// 21 against the glyph's 20, both scaled as the glyph is.
+void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
+                     bool enabled, bool lit) {
+    if (key.w <= 0 || key.h <= 0) return;
+    const int ink = skin_px(kKeyGlyphInkAt300, 1);
+    const icons::InkSize size = icons::glyph_ink_size(icon, ink);
+    if (size.w <= 0 || size.h <= 0) return;
+    const int x = key.x + static_cast<int>(std::floor((key.w - size.w) * 0.5));
+    const int y = key.y + static_cast<int>(std::floor((key.h - size.h) * 0.5));
+    const uint32_t tone = lit ? kTextOnLit : enabled ? kTextInk : kTextDimInk;
+    cairo_save(cr);
+    cairo_rectangle(cr, key.x, key.y, key.w, key.h);
+    cairo_clip(cr);
+    icons::draw_glyph(cr, icon, x, y, ink, tone);
+    cairo_restore(cr);
 }
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
@@ -667,8 +739,9 @@ AppState::RedesignButtonFace& publish_button_face(
 // 2026-10-22).
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id, in painted
-// order; the key prints its legend and draws no glyph (the hi-fi skin,
-// 2026-10-23). The press claim's chord table (input_pointer.cpp) is the
+// order; the key wears its Breeze glyph and prints its legend under it
+// (redesign_button_icon and redesign_button_legend, 2026-11-02 / 2026-10-23).
+// The press claim's chord table (input_pointer.cpp) is the
 // other half; both key off the same ids.
 //
 // WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
@@ -1687,8 +1760,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // `face`; the flat look, 2026-11-01) under every run, between them and
     // between the keys of a run (the group gap), NO LINE (the caption line on
     // its first row went with the caption, 2026-10-24). Its upper pad THE
-    // LOGO LANE (paint_logo_lane, below the ground); its keys blank
-    // (paint_roster_case), their legends under them in the bottom pad.
+    // LOGO LANE (paint_logo_lane, below the ground); its keys flat
+    // (paint_roster_case) with their glyphs on them (paint_key_glyph), their
+    // legends under them in the bottom pad.
     cairo_save(cr);
     {
         cairo_save(cr);
@@ -1698,7 +1772,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     }
     paint_logo_lane(cr, lane);
 
-    // THE KEY AND ITS LEGEND (2026-10-23): the blank key a composite of its
+    // THE KEY AND ITS LEGEND (2026-10-23): the flat key a composite of its
     // rounded parts (render.h's program block) less the group gap
     // (key_in_cell, materials.h: one device px off each side that abuts a
     // neighbor in its run), its legend centered under it in the bottom pad
@@ -1810,14 +1884,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             face.enabled && redesign_button_pressed_face(app, def.id);
         paint_roster_case(cr, key, face.selected, pressed);
 
-        // THE KEY IS BLANK (architect 2026-10-23; the flat look's draft
-        // glyphs are a later part's) — nothing stands on its face — and THE
-        // LEGEND stands UNDER it, the roster's legend column
-        // (redesign_button_legend's stateful overload: the act the next
-        // press runs, a toggle keeping its one print, 2026-10-25), dimmed
-        // when the button is dead (paint_key_legend's one seat). The stashed
-        // glyph bit (redesign_button_glyph) is still published so the
-        // tooltip's drift is caught.
+        // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
+        // draft roster): redesign_button_icon's stateful overload, which
+        // follows the legend's, centered on the face in its tone
+        // (paint_key_glyph's one seat) — and THE LEGEND stands UNDER it, the
+        // roster's legend column (redesign_button_legend's stateful
+        // overload: the act the next press runs, a toggle keeping its one
+        // print, 2026-10-25), dimmed when the button is dead
+        // (paint_key_legend's one seat). The stashed glyph index
+        // (redesign_button_glyph) and legend are what the per-tick
+        // comparator repaints the face on (main.cpp).
+        paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
+                        face.enabled, face.selected || pressed);
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -2563,8 +2641,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     cairo_save(cr);
     // THE FLAT GROUND (materials.h's kGround, 2026-11-01) under the block and
     // between its keys; the clock's flat field (the time field,
-    // paint_ce_time_field); the keys blank (paint_roster_case), their
-    // legends under them.
+    // paint_ce_time_field); the keys flat (paint_roster_case) with their
+    // glyphs on them (paint_key_glyph), their legends under them.
 
     // The row's seats (bottom_row_seats): the band's case at the strip pad
     // under the lane's top.
@@ -2609,8 +2687,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         paint_roster_case(cr, key, face.selected, pressed);
-        // THE KEY IS BLANK, ITS LEGEND UNDER IT (the band's rule, 2026-10-23:
-        // the stateful legend through the one seat, dimmed when dead).
+        // THE GLYPH ON THE KEY, ITS LEGEND UNDER IT (the band's rule,
+        // 2026-11-02 / 2026-10-23: the stateful glyph and the stateful
+        // legend through their one seats, the tones the face's).
+        paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
+                        face.enabled, face.selected || pressed);
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -5180,6 +5261,32 @@ constexpr std::string_view kModalOkLabel     = "OK";
 constexpr std::string_view kModalCancelLabel = "Cancel";
 constexpr std::string_view kModalCloseLabel  = "Close";
 
+// THE WORD BUTTONS' GLYPHS (architect 2026-11-01 / 2026-11-02, Breeze's
+// draft roster: a word button is a key, so it carries a glyph over its
+// printed word) — BY THE WORD, the one vocabulary every word row shares:
+// the prompts' answer tables (kPromptAnswerTables, app_state.h), the
+// editors' and the field-less owners' words above, the trim presets list's
+// four and the BPM form's two. OK and YES DialogOkApply; CANCEL
+// DialogCancel; CLOSE DialogClose; SAVE DocumentSave; SAVE AS
+// DocumentSaveAs; DISCARD EditClear; RETRY ViewRefresh; DELETE EditDelete;
+// RENDER PreviewRenderOn (the band's RENDER key's). A word outside the
+// vocabulary is a program bug (a new answer table's word not added here):
+// no glyph, and the debug build's assert.
+std::optional<icons::Icon> modal_word_icon(std::string_view word) {
+    using icons::Icon;
+    if (word == kModalOkLabel || word == "Yes") return Icon::DialogOkApply;
+    if (word == kModalCancelLabel)              return Icon::DialogCancel;
+    if (word == kModalCloseLabel)               return Icon::DialogClose;
+    if (word == "Save")                         return Icon::DocumentSave;
+    if (word == "Save As")                      return Icon::DocumentSaveAs;
+    if (word == "Discard")                      return Icon::EditClear;
+    if (word == "Retry")                        return Icon::ViewRefresh;
+    if (word == "Delete")                       return Icon::EditDelete;
+    if (word == "Render")                       return Icon::PreviewRenderOn;
+    assert(false && "a word button's word with no glyph");
+    return std::nullopt;
+}
+
 // THE WORD BUTTONS' LAYOUT — ONE FOR THE PAINTER AND THE PRESS: on `seats`
 // (the controls row's, modal_controls_seats) the words `labels`, in painted
 // order. EVERY WORD BUTTON IS A KEY (architect 2026-10-23) — the program's
@@ -5620,8 +5727,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // -- The buttons' words and widths, shaped up front (the layout needs the
     //    row's total before anything can be placed). --
     // A BUTTON IS A WORD OR A KEY (2026-08-28, the render player's row):
-    // `glyph` set means the button is one of the player's keys, a blank key
-    // with its printed legend (render_player_button_legend) — the transport
+    // `glyph` set means the button is one of the player's keys, a key with
+    // its act's glyph (render_player_button_icon) and its printed legend
+    // (render_player_button_legend) — the transport
     // triple, the REPEAT ONE lamp, the HIGHLIGHT PAIR (architect 2026-10-10,
     // Highlight Next and Highlight Previous, the band walk's two keys on
     // glass), UP A FOLDER, LOAD IN PLACE (or DELETE at the root) and CLOSE —
@@ -5763,8 +5871,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.end_shift_differs =
             render_player_last_in_item_folder_actionable(app) &&
             end_plain_index != end_twin_index;
-        // THE PLAYER'S KEYS (`glyph` the key fork: a blank key with its
-        // printed legend, no drawing since the hi-fi skin, 2026-10-23).
+        // THE PLAYER'S KEYS (`glyph` the key fork: a key with its act's
+        // Breeze glyph and its printed legend, 2026-11-02 / 2026-10-23; a
+        // word button's glyph is its word's, modal_word_icon).
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 bool lit = false) {
             DialogButtonPlan b;
@@ -6703,6 +6812,30 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // glyph buttons do (THE DISABLED RUNG above owns the bit and which
         // owners publish it).
         paint_roster_case(cr, key, plan[i].lit, pressed);
+        // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
+        // draft roster; paint_key_glyph's one seat, in the face's tone): by
+        // the act vocabulary's own owner beside its legend's — the player's
+        // keys render_player_button_icon (the Play key's by its face), the
+        // score viewer's score_viewer_button_icon (its PLAY / PAUSE the
+        // player's Play key's by the face, as its legend), the trim presets
+        // list's pair the player's twins', and every word button
+        // modal_word_icon by its word.
+        const std::optional<icons::Icon> icon =
+            !plan[i].glyph
+                ? modal_word_icon(plan[i].label)
+            : plan[i].score_act == AppState::ScoreButtonAct::PlayPause
+                ? render_player_button_icon(
+                      AppState::PlayerButtonAct::PlayPause, plan[i].play_face)
+            : plan[i].score_act != AppState::ScoreButtonAct::None
+                ? score_viewer_button_icon(plan[i].score_act)
+            : plan[i].trim_act != AppState::TrimPresetsButtonAct::None
+                ? render_player_button_icon(
+                      trim_presets_pair_twin(plan[i].trim_act),
+                      PlayerPlayFace::Play)
+                : render_player_button_icon(plan[i].player_act,
+                                            plan[i].play_face);
+        if (icon)
+            paint_key_glyph(cr, key, *icon, enabled, plan[i].lit || pressed);
         std::string legend;
         if (plan[i].glyph) {
             // The score viewer's PLAY / PAUSE prints the render player's Play
