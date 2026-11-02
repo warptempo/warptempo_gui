@@ -1416,19 +1416,17 @@ struct FlagFace {
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
-// diff flags (architect 2026-10-09 ~11:50–12:00, Cool Edit's two cue colors,
-// "red+blue for warp and phase"; 2026-10-26 ~15:10–15:30, THE STRIKE: "It's
+// diff flags (architect 2026-11-01: "one color for all markers", the
+// palette's `cue`; 2026-10-26 ~15:10–15:30, THE STRIKE: "It's
 // very odd having anything but red mean invalid. So I think what we should
 // do is have coincident markers be shown as a strike through, which is
 // actually effective because that's what happens to them. They become
 // one"; "Two, agree" — the history's removed half struck, in the cue
-// colors; the kind-colored marker of 2026-10-29 reversed 2026-10-30:
-// architect, better stem contrast against the thicker waveform; six presets
-// have CueM = RngM). THE TABLE, the ladder read top to bottom, the first
+// color). THE TABLE, the ladder read top to bottom, the first
 // matching row wins:
-//   flag                     triangle  dots (red's phase | blue's phase)   label
-//   DISABLED (any kind)      faded     none                            faded, struck as below
-//   any live cue             cue red   cue red | range blue            bone, struck as below
+//   flag                     triangle  dots (both phases)  label
+//   DISABLED (any kind)      faded     none                faded, struck as below
+//   any live cue             cue       cue | cue           bone, struck as below
 // — warp or phase reset, whatever the side (a live lane's cue or either
 // `h` half).
 // THE STRIKE, whatever the row: a live cue in its column's red set (`red`,
@@ -1441,7 +1439,7 @@ struct FlagFace {
 // it (show_cue_label).
 // THE DISABLED ROW'S FADE (architect 2026-10-10 ~12:20, "the arrow needs to
 // be legible for me, but the text doesn't … since it's disabled, it's inert"):
-// the triangle and its shadow are the `cue` red and `cue_shadow` BLENDED
+// the triangle and its shadow are the `cue` and `cue_shadow` BLENDED
 // 45 % TOWARD THE FACE, the label's rest tone 65 % toward it — derived solid
 // colors, "an opacity look … not actually opaque" (cool_edit_derive.h, the
 // members `ce_off_*`); the selected label stays the chrome's `label` so a
@@ -1450,14 +1448,14 @@ struct FlagFace {
 // (the Windows emboss retired from cues 2026-10-10). A DISABLED COINCIDENT
 // CUE — the red set counts disabled rows (warp_red_flag_set_cached's (3)) —
 // is the faded cue with its faded label struck.
-// THE DOTS' ROWS, counted from the canvas's first row, are the red's phase
-// ≡ 7 and the blue's ≡ 3 (mod 8), the blue's first from the top — the
-// capture's absolute red y ≡ 3 / blue y ≡ 7 re-counted from Cool Edit's
-// canvas top at y = 108 ≡ 4 (mod 8) (program_spec.h's dot fields, the
-// derivation's owner), a point cue's range start and end superimposed;
+// THE DOTS' ROWS, counted from the canvas's first row, are the cue phase
+// ≡ 7 and the range phase ≡ 3 (mod 8), the range's first from the top —
+// Cool Edit's cue and range dots re-counted from its canvas top
+// (program_spec.h's dot fields, the derivation's owner), a point cue's
+// range start and end superimposed;
 // "bone" the bone (materials.h's kBoneInk, the words'
 // and the flags' one ink since 2026-10-22); the selected text the chrome's
-// `label`, the bone F0F0F0 under every preset (chrome_derive.h's role table,
+// `label`, the bone F0F0F0 (chrome_derive.h's role table,
 // 2026-10-22) — every label on the panel's face with no fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
 // SELECTION (Cool Edit's never do): the label carries the selection — ITS
 // TEXT ALONE, the chrome's `label` on the panel's face, no fill (architect
@@ -1469,7 +1467,7 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red) {
     if (disabled)
         return FlagFace{p.ce_off_cue, p.ce_off_cue_shadow, GuiCueDot::None,
                         GuiCueDot::None, struck};
-    return FlagFace{p.cue, p.ce_cue_shadow, GuiCueDot::Cue, GuiCueDot::Range,
+    return FlagFace{p.cue, p.ce_cue_shadow, GuiCueDot::Cue, GuiCueDot::Cue,
                     struck};
 }
 
@@ -2439,10 +2437,6 @@ namespace {
     // before the window exists (the gui_scale shape).
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
-    WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the ten as
-    // the install family last wrote them.
-    GuiPaletteWords   g_program_words{};
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
@@ -2459,40 +2453,29 @@ GuiColor surface_text(GuiSurface surface) {
 uint64_t palette_generation() { return g_palette_generation; }
 WaveformPlateInks waveform_plate_inks() {
     // The window's words (the struct's declaration, render.h).
-    return WaveformPlateInks{display_transform::display_rgb(g_plate_inks.ink_rgb),
-                             display_transform::display_rgb(
-                                 g_plate_inks.outline_rgb)};
+    return WaveformPlateInks{display_transform::display_rgb(kPaletteInk),
+                             display_transform::display_rgb(kPaletteOutline)};
 }
-const GuiPaletteWords& program_palette_words() { return g_program_words; }
 
 namespace {
-// THE PROGRAM'S TEN into the installed struct and the plate's two baked
-// inks off the same words — the install family's first shared half (the
-// chrome's members, derived from the same Face, are the other's; the
-// generation is each member's own bump) — with THE PANEL'S FACE THE
-// GROUND'S MEAN (materials.h's TONE RULE, 2026-10-23: the ring tones and
-// the chrome's roles off it; its estimate before the first bake,
-// construction state no frame paints).
-uint32_t panel_face(const GuiPaletteWords&) {
-    // THE GROUND'S MEAN (materials.h's TONE RULE, 2026-10-23), its estimate
-    // before the first bake; the preset's own `face` is read by the
-    // static_asserts alone.
-    return materials::face();
-}
-void fill_program_palette(const GuiPaletteWords& w) {
-    g_program_words = w;
-    for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
-        g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
+// THE PROGRAM'S EIGHT into the installed struct (palette_file.h's role
+// table) — the install's first half (the chrome's members, derived from the
+// same Face, are the other's) — with THE PANEL'S FACE THE GROUND'S MEAN
+// (materials.h's TONE RULE, 2026-10-23: the ring tones and the chrome's
+// roles off it; its estimate before the first bake, construction state no
+// frame paints), and the Cool Edit block off that face.
+void fill_program_palette() {
+    for (const GuiPaletteRole& r : kGuiPaletteRoles)
+        g_palette.*(r.member) = hex(r.word);
     // THE COOL EDIT BLOCK, derived from the panel's face by Cool Edit's own
     // rule (cool_edit_derive.h); no painted tone derives from the ink (the
     // view bar's span is materials.h's neutral trio since 2026-10-25).
-    const uint32_t face = panel_face(w);
-    static constexpr std::size_t kInk = palette_role_index("waveform_ink");
+    const uint32_t face = materials::face();
     g_palette.face = hex(face);
     for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
         if (t.member != nullptr)
             g_palette.*(t.member) =
-                hex(cool_edit_derive::tone_of(t, face, w[kInk]));
+                hex(cool_edit_derive::tone_of(t, face, kPaletteInk));
     // THE HI-FI SKIN'S TONES OVER THE COOL EDIT BLOCK (materials.h's TONE
     // RULE, 2026-10-23): every ring, line and edge the two ring tones off
     // the ground's mean — the program ring, the clock's ring, the divider,
@@ -2502,10 +2485,6 @@ void fill_program_palette(const GuiPaletteWords& w) {
     g_palette.ce_field_light = hex(ring_light_of(face));
     g_palette.ce_field_dark  = hex(ring_dark_of(face));
     g_palette.ce_mid         = hex(kRulerGround);
-    // THE ACCENT (materials.h's accent_of_ink, architect 2026-10-23): the
-    // live preset's ink's hue under the LED's own lightness and saturation,
-    // the lit lamps' one tone, their glow patches rebuilt with it.
-    materials::set_accent(accent_of_ink(w[kInk]));
     // The panel label's pair, swapping past its own threshold (2026-10-10).
     g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));
@@ -2516,48 +2495,27 @@ void fill_program_palette(const GuiPaletteWords& w) {
     // (materials.h), so the one `face` above.
     {
         using namespace cool_edit_derive;
-        static constexpr std::size_t kCue = palette_role_index("cue");
-        g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], face));
+        g_palette.ce_off_cue = hex(disabled_triangle(kPaletteCue, face));
         g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(face));
         g_palette.ce_off_label = hex(disabled_cue_label(kBoneInk, face));
     }
-    static constexpr std::size_t kOutline =
-        palette_role_index("waveform_outline");
-    static_assert(kInk < kGuiPaletteRoleCount &&
-                  kOutline < kGuiPaletteRoleCount);
-    g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
 }
-// THE CHROME'S MEMBERS off the live words (live_chrome_words,
+// THE CHROME'S MEMBERS off the ground's mean (live_chrome_words,
 // chrome_derive.h: the hi-fi skin's constants and the ring tones off the
-// ground's mean, 2026-10-23) — the install family's other shared half, run
-// after the program's whenever either moves.
+// mean, 2026-10-23) — the install's other half.
 void fill_chrome_palette() {
-    // THE CHROME OFF THE GROUND'S MEAN (materials.h's TONE RULE).
-    GuiPaletteWords words = g_program_words;
-    words[palette_role_index("face")] = panel_face(g_program_words);
-    const GuiThemeWords w = live_chrome_words(words);
+    const GuiThemeWords w = live_chrome_words(materials::face());
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
 }
 } // namespace
 
-void install_palette(const GuiPaletteWords& program) {
-    // The program's fields are filled off `program`, THE LIVE WORDS the
-    // caller resolved (render.h: the launch's palette_record of the
-    // `waveform` key), then the chrome's derived from them
-    // (live_chrome_words, chrome_derive.h, which never misses), the two
-    // tables covering the struct exactly (palette_file.cpp), so a role
-    // cannot be valued and not painted.
-    fill_program_palette(program);
-    fill_chrome_palette();
-    ++g_palette_generation;
-}
-
-void install_program_palette(const GuiPaletteWords& words) {
-    // The contract and the apply shape the caller owes are at the
-    // declaration (palette_file.h): the chrome re-derived from the new
-    // words.
-    fill_program_palette(words);
+void install_palette() {
+    // The program's fields off the palette's constants, then the chrome's
+    // off the ground's mean (live_chrome_words, chrome_derive.h, which never
+    // misses), the tables covering the struct exactly (palette_file.cpp), so
+    // a role cannot be valued and not painted.
+    fill_program_palette();
     fill_chrome_palette();
     ++g_palette_generation;
 }

@@ -6881,7 +6881,7 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // NOTHING (its lift never reaches here and the highlight never stands on
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
 // first `=` (a key carries none). On the row of a key with a value list
-// (settings_key_has_value_list — `waveform`, `true_colors`,
+// (settings_key_has_value_list — `true_colors`,
 // `waveform_grow`, `audio_level`, `noise`, `noise_level`,
 // `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
@@ -6912,17 +6912,17 @@ void GuiInputHandler::settings_page_commit(int index) {
     settings_editor.open(line);
 }
 
-// -- THE VALUE LIST (architect 2026-10-25 for `waveform`, 2026-10-28 night
-//    for four keys more; the contract is at the declaration) -----------------
+// -- THE VALUE LIST (architect 2026-10-25, 2026-10-28 night for its keys;
+//    the contract is at the declaration) -------------------------------------
 //
 // The picker's third content, the settings page's row for a key with a value
 // list: its list and its open act. Its opener is that row
 // (settings_page_commit), and every exit but the opener key's returns to
 // that page (return_to_settings_page).
 
-// THE LIST: the key's values (GuiSettingsEditor::value_choices, the five
-// domains' one owner), one glyph-less Plain row each, its text what the row
-// shows and its `value` what the tap commits; the overlay records THE KEY
+// THE LIST: the key's values (GuiSettingsEditor::value_choices, the
+// domains' one owner), one glyph-less Plain row each, the value both what
+// the row shows and what the tap commits; the overlay records THE KEY
 // (`value_key`), which the commit routes the value to. The band opens on THE
 // LIVE VALUE — the row whose value is the key's current one
 // (GuiSettingsEditor::setting_value, the writer's spelling, which every row
@@ -6938,13 +6938,13 @@ void GuiInputHandler::build_value_list_rows(const std::string& key) {
     ov.value_key = key;
     const std::string live_value = settings_editor.setting_value(key);
     int live = 0;
-    for (GuiSettingValueChoice& choice : settings_editor.value_choices(key)) {
-        if (choice.value == live_value)
+    for (std::string& value : settings_editor.value_choices(key)) {
+        if (value == live_value)
             live = static_cast<int>(ov.rows.size());
         AppState::FolderOverlayRow row;
         row.kind  = AppState::FolderOverlayRow::Kind::Plain;
-        row.name  = std::move(choice.text);
-        row.value = std::move(choice.value);
+        row.name  = value;
+        row.value = std::move(value);
         ov.rows.push_back(std::move(row));
     }
     folder_overlay::clamp_scroll(app);

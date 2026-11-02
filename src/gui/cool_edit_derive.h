@@ -17,12 +17,14 @@
 // of that would be inherited from Cool Edit": every chrome role is one of
 // the tones below, chrome_derive.h the mapping — the caption's six, a
 // scheme's, the exception until they left with the captions 2026-10-21).
-// The program's panel — the toolbar band, the dock
-// bar, row 8 and, in later parts, the canvas column's frames — takes ONE
-// palette role, `face` (Cool Edit's "Dockable Window 3D Color", its scheme
-// key `Face`; palette_file.h's role table, default 626C7B under every
-// chrome), and every other tone the panel puts down is derived from it HERE,
-// the one owner.
+// The program's panel — the toolbar band, row 8 and the canvas column's
+// frames — takes ONE color, GuiPalette's `face` (Cool Edit's "Dockable
+// Window 3D Color", its scheme key `Face`; the brushed ground's mean since
+// 2026-10-23, materials.h's TONE RULE — no palette role, the palette giving
+// no panel color since its presets went, 2026-11-01), and every other tone
+// the panel puts down is derived from it HERE, the one owner. The
+// measurements below were taken off Cool Edit's own presets and stand as
+// the rules' proofs.
 //
 // THE RULE IS THE ONE THE MEASURER PROVED (§2.1 of his Cool Edit
 // metrics, five presets captured at the same pixel positions —
@@ -54,7 +56,7 @@
 // ONE ENUMERATOR PER TONE A PAINTER PUTS DOWN, BY NEED (2026-10-07's rule
 // for a generated block of tones): every measured tone stands in the table below as the record, and
 // those the painters read carry a GuiPalette member (the COOL EDIT BLOCK,
-// render.h's palette struct), filled at every install of the program's words
+// render.h's palette struct), filled at every install of the palette
 // (fill_program_palette, render.cpp) — a new Face moves them all live.
 // Row 8 reads the dark and the hilight (the clock's ring, 2026-10-22) and
 // the panel label's pair (the label's swap below, its two members filled by
@@ -65,8 +67,7 @@
 // cue shadow. THE TWO TONES OFF THE WAVEFORM'S INK, Cool Edit's view bar
 // span bevels (ToneSource::Ink below, their proof over its five presets),
 // are records since 2026-10-25 (the span is materials.h's neutral grey
-// trio): their shadow's lightness is THE WAVEFORM OUTLINE'S RULE
-// (palette_file.cpp's proof, the generator). The band's recess, its panes' mid lines, the dock
+// trio). The band's recess, its panes' mid lines, the dock
 // bar and the tab strip's four Organizer tones are records since the
 // simple layout (2026-10-22): the band and row 8 on the bare ground, the
 // strip gone.
@@ -130,8 +131,8 @@
 
 namespace cool_edit_derive {
 
-// THE DEFAULT FACE, Cool Edit's own default scheme (the palette role's
-// default under every chrome, palette_file.h).
+// THE DEFAULT FACE, Cool Edit's own default scheme's — the measurements'
+// source color, read by the proofs alone.
 inline constexpr uint32_t kDefaultFace = 0x626C7B;
 
 // -- THE HLS ROUND TRIP (Python's colorsys, ported) ----------------------------
@@ -216,8 +217,7 @@ constexpr uint32_t tone(uint32_t face, double a, double b, double c = 1.0,
 // bevels the ink at a FIXED HLS lightness with its hue and saturation kept
 // (L 0.94 and, refit, 0.3157; a = 0 below), the same round trip as the
 // face's tones. The product's span is neutral grey since 2026-10-25
-// (materials.h's trio); the two Ink rows stand as records, the shadow's
-// the waveform outline's rule.
+// (materials.h's trio); the two Ink rows stand as records.
 enum class ToneSource { Face, Ink };
 
 struct Tone {
@@ -292,13 +292,10 @@ inline constexpr Tone kTones[] = {
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
      0.58, 0.32, 0xC1B791},
     // COOL EDIT'S VIEW BAR SPAN, off the INK — RECORDS since 2026-10-25,
-    // the product's span materials.h's neutral grey trio; THE SHADOW'S
-    // (a, b) IS THE WAVEFORM OUTLINE'S RULE, read by palette_file.cpp's
-    // proof and checked by the generator (tools/theme_catalog/
-    // gen_presets.py): its top row and left
+    // the product's span materials.h's neutral grey trio: its top row and left
     // column, and its bottom row and right column — the ink at HLS L 0.94
-    // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7, the
-    // default palette's ink); the ink tones' proof is over Cool Edit's five
+    // and 0.3157. `measured` is Cool Edit's default scheme's (WvFg
+    // 4BF3A7); the ink tones' proof is over Cool Edit's five
     // captured presets (below). THE SHADOW'S LIGHTNESS IS 0.3157, NOT
     // the earlier table's 0.312 (2026-10-09): 0.312 misses the default's shadow by
     // 2 in green (95 for 97), while every one of the five measured shadows
@@ -342,12 +339,8 @@ static_assert(tone(kDefaultFace, 1.0, 0.0) == kDefaultFace);
 // captured presets' waveform inks (WvFg) — Default 4BF3A7, XP Blue 22B893,
 // Fire and Brick FFCE0C, Lipstick and Grapes ED1EC9, Seattle Blues 576AB4 —
 // the fixed-lightness rule reproduces each span's measured highlight and
-// shadow within one per channel. THE SAME SHADOW RULE IS EVERY BUILT-IN
-// PALETTE'S LIT OUTLINE (2026-10-09, palette_file.h's role table: Cool Edit
-// records no outline), run once by the generator and proven exact over the
-// compiled presets by palette_file.cpp — the lightness measured on Cool
-// Edit's span shadows; the product's span itself is neutral grey since
-// 2026-10-25 (materials.h), so this proof is the outline's provenance.
+// shadow within one per channel — the record of a span the product no
+// longer draws (neutral grey since 2026-10-25, materials.h).
 struct SpanPreset {
     uint32_t ink, hilight, shadow;
 };
@@ -613,13 +606,13 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 // THE PANEL'S FACE, "an opacity look … not actually opaque" — three DERIVED
 // SOLID COLORS (the palette composites nothing at paint time; each a
 // precomputed per-channel mix, round(a + t·(b − a)), filled at every install
-// of the program's words so a new Face or `cue` moves
+// of the palette so a new Face moves
 // them live; render.cpp's fill_program_palette). THE FACE HERE IS THE MARKER
 // LANE'S (architect 2026-10-22: truthful to the surface — the cues stand on
 // the marker lane), and the lane is flat in the ground's face since
 // 2026-10-29 (materials.h's head), so it is the one number
 // materials::face(), the baked ground's mean:
-//   the TRIANGLE   the live triangle's color, the `cue` red (every cue's,
+//   the TRIANGLE   the live triangle's color, the `cue` (every cue's,
 //                  warp or phase reset), 45 % toward the Face;
 //   its SHADOW     `cue_shadow` 45 % toward the Face;
 //   the LABEL      the resting label's ink (Cool Edit's cue-label ink

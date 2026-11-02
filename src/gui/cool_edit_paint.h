@@ -46,11 +46,9 @@
 // color and 000000 alternating, is not drawn: architect 2026-10-09 ~14:30.)
 // THE PLAYHEAD'S OWN COLOR — the head and its dots in the canvas — is the
 // palette's `playhead_stem`
-// since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 on every Cool Edit built-in but
-// the CEPro 1.2 pair's FFFF6C, and the `ableton` preset's light blue 8CB4FF
-// (architect 2026-11-01; palette_file.h's role table), as the cues'
-// two colors are the
-// palette's `cue` and `range`; the triangles' shadow is the derived
+// since 2026-10-09 ~11:50, Live's cyan 03C3D5 since 2026-11-01
+// (palette_file.h's role table), as the cues' one color is the
+// palette's `cue`; the triangles' shadow is the derived
 // `ce_cue_shadow`. THE RULER'S INK IS NO TONE OF FACE AND NEVER SWAPS
 // (architect 2026-10-10, "we follow Cool Edit's theming"):
 // its ticks are E0E0E0 byte for byte on
@@ -72,7 +70,7 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 
 // THE LED's STATE on a key: none drawn (the scrub's thumb, the on-screen
 // keyboard's keys — a typing key carries no lamp), a dead lamp, or lit in
-// THE ACCENT (materials::accent_color).
+// THE ACCENT (materials.h's kAccent).
 enum class GuiKeyLed { None, Unlit, Lit };
 
 // THE LED'S RECT on the key `r` (the approved 6 x 3 device px at

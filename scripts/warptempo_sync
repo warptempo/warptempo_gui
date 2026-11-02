@@ -173,13 +173,9 @@ shopt -s nocaseglob
 #      into the app's private folder beside its settings file
 #      (files/warptempo_gui/deploy_key, .pub), reachable only through run-as.
 #   5. the tablet's settings file (files/warptempo_gui/config): the projects_repo
-#      line is made to read github.com/warptempo/warptempo_projects, a chrome=
-#      line RENAMED waveform= with its
-#      value kept (the key renamed 2026-10-21 for what it sets; dropped where a
-#      waveform= line already stands), a waveform= line added with the default
-#      (waveform=default) where the file has neither -- every key is
-#      required since 2026-10-14; a line already there is kept --, the
-#      true_colors=on line (2026-10-21), the noise=rain, noise_level=-9 and
+#      line is made to read github.com/warptempo/warptempo_projects, and --
+#      every key is required since 2026-10-14; a line already there is
+#      kept -- the true_colors=on line (2026-10-21), the noise=rain, noise_level=-9 and
 #      noise_crossfade_s=4 lines (2026-10-28), the key_height=33 line
 #      (2026-10-29, a tuning key), the osk_key_w=48 and osk_key_h=60 lines
 #      (2026-10-29, the keyboard's two tuning keys), the osk_font_px=24
@@ -197,8 +193,10 @@ shopt -s nocaseglob
 #      settled the same day, the noise's two fade keys, settled 2026-10-28
 #      at 200 and 40 ms, rain_level and rain_crossfade_ms, renamed
 #      noise_level and noise_crossfade_ms the same day,
-#      noise_crossfade_ms, made noise_crossfade_s in seconds that night, and
-#      role, which left 2026-10-30 with the laptop GUI (one device, no mirror)
+#      noise_crossfade_ms, made noise_crossfade_s in seconds that night,
+#      role, which left 2026-10-30 with the laptop GUI (one device, no mirror),
+#      waveform_column_px, retired 2026-11-01 night, and waveform and its older name
+#      chrome, which left 2026-11-01 with the color presets (one palette)
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
 #   6. THE NOISE FOLDER (2026-10-28; src/gui/noise.h owns the sound): the
@@ -242,10 +240,6 @@ TABLET_WIRELESS="${WARPTEMPO_TABLET_ADDR:-}"
 GITHUB_CLONE_URL="https://github.com/warptempo/warptempo_projects.git"
 ORIGIN_URL="ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git"
 PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
-# THE DEFAULT WAVEFORM PRESET, Default, spelled (every device key
-# required since 2026-10-14; src/gui/palette_file.h's kGuiDefaultPaletteKey): added only where
-# the tablet's file has neither a waveform= line nor a chrome= line to rename.
-WAVEFORM_LINE="waveform=default"
 # THE ADDED LINES, each added only where the tablet's file has no line of its
 # key (step 5's awk splits them on the spaces): THE sRGB -> DISPLAY-P3 SWITCH, a
 # required key since 2026-10-21 (the Settings menu's True Colors row made a
@@ -267,9 +261,10 @@ ADDED_LINES="true_colors=on waveform_grow=0.5 audio_level=0 noise=rain noise_lev
 # migration; src/gui/device_config.h records each): sync_path, struck; the
 # thirteen colour keys that left 2026-10-04 when every colour became a role of a
 # theme file -- theme_level (the dropped dark level) and the twelve program
-# colour keys; caption, which left 2026-10-21 with the built-in captions
-# (chrome, renamed waveform the same day, is renamed in place by step 5, not
-# removed); bevel_light and bevel_dark, the fortepiano chrome's tuning
+# colour keys; caption, which left 2026-10-21 with the built-in captions;
+# waveform, the color preset's key (chrome until 2026-10-21), which left
+# 2026-11-01 with the presets -- the program has one palette -- and chrome
+# with it; bevel_light and bevel_dark, the fortepiano chrome's tuning
 # keys, which left 2026-10-23 with it; strip_pad, the simple layout's
 # tuning key (2026-10-22), settled at 13 W the same day and made a constant
 # in the program (src/gui/program_spec.h); and the cues' tuning keys of
@@ -288,7 +283,8 @@ ADDED_LINES="true_colors=on waveform_grow=0.5 audio_level=0 noise=rain noise_lev
 # day); noise_crossfade_ms (retired that night for noise_crossfade_s, the
 # crossfade in whole seconds); and role, the device's part in the projects
 # repository (author or mirror), retired 2026-10-30 with the laptop GUI, one
-# device running the program. A TUNED LEVEL DOES NOT TRAVEL THROUGH setup:
+# device running the program; and waveform_column_px, the waveform's
+# column width, a tuning key retired 2026-11-01 night. A TUNED LEVEL DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level=-9 takes its place,
 # so the planner renames the two lines by hand at the install, on both
 # devices, the program not running; a crossfade in ms comes back as
@@ -304,7 +300,7 @@ RETIRED_KEYS=(sync_path theme_level
               rain_fade_in_ms rain_fade_out_ms
               rain_level rain_crossfade_ms
               noise_crossfade_ms role
-              waveform_column_px)
+              waveform_column_px waveform chrome)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE key reads.
@@ -1240,15 +1236,14 @@ apply_setup() {
         put_as_app "$TABLET_KEY.pub" "$APPCFG/deploy_key.pub" 644 || die "the deploy key's .pub did not arrive intact"
     fi
 
-    # 5. THE SETTINGS FILE: projects_repo made right, a chrome line
-    # renamed waveform (its value kept; dropped where a waveform line stands),
-    # waveform given its default where neither stands, true_colors,
+    # 5. THE SETTINGS FILE: projects_repo made right, true_colors,
     # waveform_grow, audio_level, noise, noise_level, noise_crossfade_s,
     # key_height, osk_key_w, osk_key_h and osk_font_px their lines where absent
     # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
     # keys, the LED glow's, the noise's two fades, the level's and the
-    # crossfade's first names, the crossfade's ms key and role, RETIRED_KEYS),
+    # crossfade's first names, the crossfade's ms key, role, the column
+    # width's key and the color preset's waveform and chrome, RETIRED_KEYS),
     # the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
@@ -1264,28 +1259,25 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v waveform="$WAVEFORM_LINE" -v added="$ADDED_LINES" -v retired="${RETIRED_KEYS[*]}" '
+        awk -v repo="$PROJECTS_REPO_LINE" -v added="$ADDED_LINES" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1
                                 nt = split(added, t, " "); for (i = 1; i <= nt; i++) tkey[i] = substr(t[i], 1, index(t[i], "=")) }
                               { for (i = 1; i <= nt; i++) if (substr($0, 1, length(tkey[i])) == tkey[i]) had_t[i] = 1 }
             /^projects_repo=/ { print repo; had = 1; next }
-            /^waveform=/      { had_waveform = 1 }
-            /^chrome=/        { renamed = "waveform=" substr($0, length("chrome=") + 1); had_chrome = 1; next }
             (substr($0, 1, index($0, "=")) in gone) { next }
                               { print }
             END               { if (had == 0) print repo
-                                if (had_waveform == 0) print (had_chrome ? renamed : waveform)
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, true_colors, waveform_grow, audio_level, noise, noise_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px and has no chrome line and no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, waveform_grow, audio_level, noise, noise_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px and has no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, a chrome line renamed waveform (or $WAVEFORM_LINE where neither stands), each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $WAVEFORM_LINE where none stands, each of $ADDED_LINES where its key has no line, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, each of $ADDED_LINES where its key has no line, and no line of a retired key"
     fi
     printf '\n'
 

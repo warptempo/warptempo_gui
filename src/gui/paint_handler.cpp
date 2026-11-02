@@ -4374,20 +4374,20 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // (architect 2026-10-09 ~17:40: the ring is "made of the same stuff the
 // marker looks like"; "they're one unit", 2026-08-01): every cell one device
 // px (waveform_line_px, "on waveform → unscaled"), in the reset's own two dot
-// colors exactly as its stem wears them — live_cue_stem_dots asks the one
+// phases exactly as its stem wears them — live_cue_stem_dots asks the one
 // resolver (resolve_flag_face) for the stem's pair, so the ring and the stem
-// cannot drift: the red `cue` and the blue `range` alternating, a
+// cannot drift: the `cue` on both phases, a
 // coincident reset's too (its struck label the mark, architect 2026-10-26;
 // the invalid color alone 2026-10-11 to 2026-10-26); resting whether the
 // reset is selected or not, as the stem is.
 //   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
 //     the reset's stem already stands there (paint_marker_stems, after this
-//     pass), and a playhead on the reset interleaves its yellow there as on
-//     any stem — "yellow, blue, yellow, red all the way around". A stem off
+//     pass), and a playhead on the reset interleaves its dots there as on
+//     any stem. A stem off
 //     the area's left edge leaves the clipped band with no left side.
 //   THE RIGHT SIDE on the band's last column, the stem's rule exactly
-//     (program_spec.h's dot fields: the blue on the canvas rows ≡
-//     range_dot_phase and the red on ≡ cue_dot_phase, mod cue_dot_period,
+//     (program_spec.h's dot fields: the canvas rows ≡
+//     range_dot_phase and ≡ cue_dot_phase, mod cue_dot_period,
 //     counted from the canvas's first row), down both wells and not across
 //     the stereo divider's rows (2026-10-16) — the dotted line's runs
 //     (dotted_waveform_line_runs, render.h), the stem's own rule. A band
@@ -4396,10 +4396,10 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 //   THE TOP RUN on the canvas's first row and THE BOTTOM RUN on its last:
 //     the same two phases turned through the corners, counted in device
 //     columns from the reset's own column (band.stem_x, unclipped, so the
-//     run stays put on the song as the view pans): the blue on columns
-//     stem + range_dot_phase + k · cue_dot_period, the red on stem +
+//     run stays put on the song as the view pans): the columns
+//     stem + range_dot_phase + k · cue_dot_period and stem +
 //     cue_dot_phase + k · cue_dot_period — one dot every four columns,
-//     alternating, as down the stem. The corners carry whatever
+//     as down the stem, every dot the `cue`. The corners carry whatever
 //     cell the rules give them; a band one column wide is its stem alone.
 // PURE PALETTE BYTES (the palette composites nothing): aliased integer
 // cell rectangles, the stems' own form, no alpha and no half column. The
@@ -4627,13 +4627,12 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // stem_dots, one run per well, waveform_well_rows) — none on the canvas's
 // frame row, none on the stereo divider's rows (2026-10-16) and none in the
 // lane — on
-// rows ≡ cue_dot_phase (the red's phase) and on rows ≡ range_dot_phase (the
-// blue's; mod cue_dot_period, program_spec.h), each phase in the role the
-// stash names for it (GuiCueDot, cue_dot_color; resolve_flag_face's table:
-// every live cue, warp or phase reset, the red `cue` and the blue `range`,
-// alternating one dot every four rows, the history's two halves alike) —
-// the playhead's dots on rows ≡ 1 of 4, so neither color shares a row with
-// them. (The solid stem
+// rows ≡ cue_dot_phase and on rows ≡ range_dot_phase (mod cue_dot_period,
+// program_spec.h), each phase in the role the stash names for it
+// (GuiCueDot, cue_dot_color; resolve_flag_face's table: every live cue,
+// warp or phase reset, the `cue` on both phases, one dot every four rows,
+// the history's two halves alike) — the playhead's dots on rows ≡ 1 of 4,
+// so neither shares a row with them. (The solid stem
 // through the well's top lines between its flanks stood 2026-10-02 to
 // 2026-10-09; git history.)
 //
@@ -4696,8 +4695,8 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 // cues' stems — THE PHASE-RESET LEAD-IN RING'S RUNS' FORM EXACTLY
 // (paint_phase_reset_overlay_ring, the model), IN THE STEM'S OWN PATTERN:
 // one device px a dot (waveform_line_px, "on waveform → unscaled"), the
-// `range` blue on columns left stem + range_dot_phase + k · cue_dot_period
-// and the `cue` red on left stem + cue_dot_phase + k · cue_dot_period (a
+// `cue` on columns left stem + range_dot_phase + k · cue_dot_period
+// and on left stem + cue_dot_phase + k · cue_dot_period (a
 // live cue's stem pair, live_cue_stem_dots — so the runs' density is a
 // stem's, architect 2026-10-26), through the right stem's column,
 // aliased integer cells, clipped to the area. Read as published, before
@@ -4858,7 +4857,7 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 // covers is a per-frame repaint anyway.
 //
 // THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
-// (architect 2026-10-05), WHITE in every built-in palette (architect
+// (architect 2026-10-05), WHITE (architect
 // 2026-10-07: "let's go back to a white scanner") — SOLID, ONE DEVICE PX
 // wide at every scale (architect 2026-10-09 ~14:25, "on waveform →
 // unscaled", waveform_line_px's rule, render.h), the canvas's rows alone
@@ -7352,9 +7351,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // ONE PAINTER FOR EVERY CONTENT —
 // the render player's folders and wavs, the Open project picker's project
 // folders, the settings page's `key=value` lines under its dim group rows
-// (2026-10-28) and the value list's values (2026-10-25 the waveform presets,
-// 2026-10-28 night four keys more; glyph-less rows, a preset by display
-// name, a number as the config spells it). Contract and gate are at the declaration; the geometry, the scroll
+// (2026-10-28) and the value list's values (2026-10-28 night; glyph-less
+// rows, a value as the config spells it). Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay. EVERY ROW IS A LIST ROW in the redesign's SANS
@@ -7517,8 +7515,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // to 2026-10-23, Play swapped in on the item's row, are git
             // history.)
             // A PLAIN, A GROUP AND A DISABLED ROW WEAR NO GLYPH (architect
-            // 2026-10-25, the value list: the row is the preset's display
-            // name or the value as shown; 2026-10-28, the settings page: the row is its
+            // 2026-10-25, the value list: the row is the value as shown;
+            // 2026-10-28, the settings page: the row is its
             // `key=value` line, the group row its heading; 2026-10-29, a
             // disabled row its `key=value` line too); their text
             // starts at the listing's one names' column (text_x_at300,

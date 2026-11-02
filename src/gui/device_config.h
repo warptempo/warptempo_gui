@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Fifteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Fourteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -21,37 +21,6 @@
 //                            projects (project_model.h owns the model)
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
-//   waveform=<name>          THE WAVEFORM PRESET the program's colors are
-//                            painted in — the waveform, its canvas, the
-//                            grid and center lines, the cues and the
-//                            playhead (palette_file.h's head; its Face
-//                            unread under the materials since 2026-10-21):
-//                            a built-in, one of the twenty-one presets'
-//                            keys alone
-//                            (`default`, `xp-blue`, ...; no prefix since
-//                            2026-10-27; is_builtin_palette_name,
-//                            palette_file.h; a
-//                            preset file's name until 2026-10-14), chosen by
-//                            the Settings Waveform row; REQUIRED (architect
-//                            2026-10-14; absent meant the default
-//                            2026-10-07..14), the default SPELLED: both
-//                            first-run templates write
-//                            `waveform=default`, "Default" (architect
-//                            2026-10-26; kGuiDefaultPaletteKey,
-//                            palette_file.h). Named
-//                            `palette` until 2026-10-13 and `chrome` until
-//                            2026-10-21 (the key `chrome` of 2026-10-07 to
-//                            2026-10-10 was another thing, retired); an old
-//                            `palette=` or `chrome=` line is the ordinary
-//                            unknown-key hard fail. (THE `caption` KEY — the
-//                            title bar's preset, `scheme` until 2026-10-13,
-//                            one of 42 built-in Windows and Plus! schemes or
-//                            the product's own `default` — stood before it
-//                            2026-10-08..10-21 and left with the captions:
-//                            the app paints no caption since 2026-10-24,
-//                            render.h's caption note; an old
-//                            `caption=` line is the ordinary unknown-key
-//                            hard fail.)
 //   true_colors=<on|off>     THE sRGB -> DISPLAY-P3 CONVERSION'S SWITCH
 //                            (architect 2026-10-21, the Settings menu's
 //                            "True Colors" command row made a key with the
@@ -193,6 +162,12 @@
 //                            table's constexpr once he rules the number
 //                            (kGuiFaceSizes), its key, grammar and row going
 //                            then; the template spells 24
+//   (waveform=<name>, THE WAVEFORM PRESET, a required key naming one of
+//                            the built-in color presets, RETIRED with the
+//                            presets (architect 2026-11-01: one palette,
+//                            Live's numbers, palette_file.h); an old
+//                            `waveform=` line is the ordinary unknown-key
+//                            hard fail, the sync script's setup removing it)
 //   (role=<author|mirror>, THE DEVICE'S PART IN THE PROJECTS REPOSITORY,
 //                            a required key 2026-10-10 to 2026-10-30,
 //                            RETIRED with the laptop GUI (architect
@@ -288,7 +263,8 @@
 // 2026-10-31, the display keys' end, a permanent key before the noise's
 // three; the project voice's level `audio_level` placed before the noise's
 // three 2026-10-31 night, the two voices' levels read together, audio out
-// then the noise);
+// then the noise; `waveform` gone 2026-11-01, `true_colors` after
+// `last_project` since);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -411,8 +387,8 @@
 // read at launch from a themes folder beside this file (the imported
 // catalog shipped as bundled files, copied in at every launch), absent the
 // chrome's own, with a Settings row; every chrome's colors are compiled in
-// since (theme_file.h), and THE WAVEFORM PRESET (palette_file.h) chooses
-// among compiled-in presets. A config still carrying `theme=` is unknown-key fatal, no
+// since (theme_file.h), and the program's own colors are one compiled-in
+// palette (palette_file.h). A config still carrying `theme=` is unknown-key fatal, no
 // migration (neither install's carried one).
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
@@ -427,16 +403,13 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fifteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fourteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
-// means something's wrong with the config or the setup" — the two color
-// keys were the two that might be absent 2026-10-07..14, the absence
-// spelling the default; the default is SPELLED since, the writer emitting
-// every line and the first-run templates naming
-// `waveform=default`, so an absent line is the shared scanner's
-// missing-required-key refusal like any other, with no migration and no
-// launch-time repair — the planner edited the configs at the install),
+// means something's wrong with the config or the setup" — the writer emits
+// every line and the first-run templates spell every default, so an absent
+// line is the shared scanner's missing-required-key refusal like any other,
+// with no migration and no launch-time repair),
 // one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -463,18 +436,14 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `waveform`, `true_colors`, since 2026-10-31 `waveform_grow` and
+// `true_colors`, since 2026-10-31 `waveform_grow` and
 // `audio_level`, since 2026-10-28 `noise`, `noise_level`
 // and `noise_crossfade_s` and since 2026-10-29 the tuning keys `key_height`,
 // `osk_key_w` and `osk_key_h` and that night `osk_font_px` among them
 // (kSettingsEditorKeys) — then a key's current value, then a closed value's
 // words, and committing each through this file's writer under the key's own
 // grammar below. (The Settings popup's rows opened it prefilled, one per key,
-// 2026-09-02..10-21: `GUI Scale`, `Projects Repository`, `Projects Path`,
-// `Waveform` (`Chrome` 2026-10-14..10-21, beside `Caption`), the tuning rows
-// and the "True Colors" command row; `Chrome` the vocabulary 2026-10-07..10,
-// `Icons` and `Font` 2026-10-09..12, `Theme` 2026-10-03..08; the color
-// picker's preset menu wrote the two color keys 2026-10-07..14.) Until
+// 2026-09-02..10-21.) Until
 // 2026-09-02 the path keys
 // were hand-edited only, and HELP told the user to edit one without
 // telling him to quit first — which mattered, because A HAND EDIT UNDER A
@@ -487,12 +456,9 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for every key: each is required, so a successful read always
-// assigns them. `waveform` is EMPTY as construction state, never a read's
-// (an empty value is refused); the backend's template
-// (GuiPlatform::device_config_defaults) SPELLS THE DEFAULT into it (architect
-// 2026-10-14: every key required) — kGuiDefaultPaletteKey (palette_file.h),
-// `default` — so the first-run file names its
-// waveform preset. EVERY KEY WRITES ITS LINE, so a first run stamps the
+// assigns them; the backend's template (GuiPlatform::device_config_defaults)
+// SPELLS EVERY DEFAULT (architect 2026-10-14: every key required). EVERY KEY
+// WRITES ITS LINE, so a first run stamps the
 // whole file and its read-back loads. (The `icons` and `font` keys left
 // 2026-10-12: the icons and Liberation Sans are hard-coded.)
 //
@@ -503,23 +469,13 @@
 // The key is still REQUIRED in every case: the file admits no absent state,
 // only an empty VALUE.
 //
-// The members are in the writer's order.
-//
-// THE WAVEFORM PRESET IS ITS KEY VERBATIM (2026-10-07); the install
-// resolves it (install_palette, render.h, through palette_record,
-// palette_file.h) and derives the chrome's colors by Cool Edit's tones
-// (live_chrome_words, chrome_derive.h).
+// The members are in the writer's order. (No key names a color: the palette
+// is one, compiled in, palette_file.h, architect 2026-11-01.)
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE WAVEFORM PRESET, the `waveform` key's built-in name (architect
-    // 2026-10-07; `palette` the member's name until 2026-10-21): required
-    // since 2026-10-14, so empty only before a read; the templates spell the
-    // default, `default` (kGuiDefaultPaletteKey). (`scheme`, the
-    // `caption` key's, stood before it 2026-10-08..10-21.)
-    std::string waveform;
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
     // templates' and the construction state's.
     bool        true_colors = true;
@@ -914,10 +870,9 @@ inline std::optional<int> parse_waveform_grow(std::string_view v) {
     return std::nullopt;
 }
 
-// (THE waveform GRAMMAR is palette_file.h's is_builtin_palette_name and
-// kPaletteGrammarReason — a built-in's key alone since 2026-10-14; the
-// `caption` key's, is_builtin_scheme_name, left with the key 2026-10-21. The
-// `theme_level` grammar and the program color grammar of the twelve keys
+// (THE `waveform` KEY'S GRAMMAR, a built-in preset's key, left with the key
+// and the presets 2026-11-01; the `caption` key's, is_builtin_scheme_name,
+// left with the key 2026-10-21. The `theme_level` grammar and the program color grammar of the twelve keys
 // left with those keys 2026-10-04; the `theme` key's own grammar left with
 // the key 2026-10-08.)
 
@@ -1057,9 +1012,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves thirteen keys —
-// `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=` (`chrome=`
-// until 2026-10-21, beside `caption=` until then), since 2026-10-21
+// the settings editor's ONE device-key body, which serves twelve keys —
+// `projects_repo=`, `projects_path=`, since 2026-10-21
 // `true_colors=`, since 2026-10-31 `waveform_grow=` (its live act
 // GuiInputHandler::apply_waveform_grow) and that night `audio_level=` (its
 // live act GuiPlayback::set_audio_level_db), and since 2026-10-28 the noise's three, `noise=`,
@@ -1074,12 +1028,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // `rain_fade_out_ms=` beside them; `bevel_light=` and `bevel_dark=`
 // 2026-10-21 to
 // 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
-// 2026-10-23, the LED glow's 2026-10-23 to 2026-10-26)
+// 2026-10-23, the LED glow's 2026-10-23 to 2026-10-26, `waveform=` until
+// 2026-11-01)
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
-// the path arm joined 2026-09-02;
-// the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
-// 2026-10-07..10-10; the color picker's preset menu wrote the two color
-// keys 2026-10-07..14); and
+// the path arm joined 2026-09-02); and
 // gui_main's `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value
@@ -1091,8 +1043,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
 // a GUI one: 300 % and the external files dir's `projects/`;
-// it stamps `waveform=default` (the default spelled, every key
-// required since 2026-10-14), `true_colors=on` (the struct's own value),
+// it stamps every key, required since 2026-10-14: `true_colors=on` (the
+// struct's own value),
 // `waveform_grow=0.5` (2026-10-31, kWaveformGrowDefaultQuarters),
 // `audio_level=0` (2026-10-31 night, the files as they are), `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=33`, `osk_key_w=48`, `osk_key_h=60` and `osk_font_px=24`

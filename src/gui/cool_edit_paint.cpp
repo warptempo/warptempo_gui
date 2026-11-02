@@ -80,8 +80,7 @@ void paint_key_plain(cairo_t* cr, const GuiRect& r, int depth,
         const GuiRect l = key_led_rect(r, depth);
         if (l.w > 0 && l.h > 0)
             paint_ink_rect(cr, l,
-                           hex(led == GuiKeyLed::Lit ? materials::accent_color()
-                                                     : kLedUnlit));
+                           hex(led == GuiKeyLed::Lit ? kAccent : kLedUnlit));
     }
     cairo_restore(cr);
 }

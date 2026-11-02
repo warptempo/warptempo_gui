@@ -4,7 +4,6 @@
 #include "app_state.h"
 #include "audio.h"
 #include "notifications.h"
-#include "palette_file.h"   // GuiPaletteWords: the Waveform row's install
 #include "playback_lifecycle.h"
 #include "viewport.h"
 
@@ -56,12 +55,12 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the nineteen,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the eighteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
 //      2026-10-21 ~23:40, "no, the unambiguous should stop at the =":
-//      `wave` to `waveform=`; the key, `=` and value in one Tab lived
+//      `true` to `true_colors=`; the key, `=` and value in one Tab lived
 //      one commit that evening, e7fc8d10, and from ~21:05 a prefix took the
 //      key alone). A prefix several keys start with stops at their longest
 //      common prefix (the path completer's rule; `projects_` against
@@ -73,8 +72,8 @@ struct GuiInputHandler;
 //      retyped. The value is what the writer writes, byte for byte
 //      (format_engine_setting_value, recall_gui_setting_value).
 //   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
-//      short closed list — `waveform`'s built-in preset names (2026-10-14) and
-//      `true_colors`'s `on` / `off` (2026-10-21) — the prefix completes
+//      short closed list — `true_colors`'s `on` / `off` (2026-10-21) — the
+//      prefix completes
 //      against those words by the same rule as the keys
 //      (complete_closed_value); `projects_path=<prefix>` completes against the
 //      filesystem (complete_path_value, 2026-09-02), and `noise=<prefix>`
@@ -86,12 +85,11 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FOURTEEN editable ones the per-device config carries — gui_scale and
+// THIRTEEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only, and since 2026-10-14 (architect) the
-// color key waveform (`chrome` until 2026-10-21; the caption key, editable
-// 2026-10-14..10-21, left with its key), the color picker's until that day,
+// which had been hand-edited only (the color key waveform, editable
+// 2026-10-14..11-01, left with its key and the presets, one palette since),
 // since 2026-10-21 true_colors (the popup's command row made a key), since
 // 2026-10-31 (architect) the waveform plate's grow waveform_grow and that
 // night the project voice's level audio_level, and since 2026-10-28 (architect) the noise's folder noise, its noise_level and
@@ -119,19 +117,19 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    waveform, true_colors, waveform_grow, audio_level, noise, noise_level,
+//    true_colors, waveform_grow, audio_level, noise, noise_level,
 //    noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px —
 //    in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
-//    owner in device_config.h (palette_file.h for the waveform key)
+//    owner in device_config.h
 //    decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
 //    that write is the whole persist, Ctrl+S carrying only the sidecar keys.
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; waveform and true_colors at once, applied live
+//    card; true_colors at once, applied live
 //    at the OK, no card (the screen is the answer); waveform_grow the same,
 //    the window repainted (GuiInputHandler::apply_waveform_grow), no card
 //    (the waveform is the answer); the audio level at once, handed to the
@@ -189,10 +187,10 @@ struct GuiInputHandler;
 // stood and its list dropping over the well — stood 2026-10-07 to 2026-10-14
 // and is removed whole; a closed domain's help is Tab (stage 3 above), and
 // the commit is OK's and Enter's — the screen changing at the commit, never
-// before. (SEVEN KEYS HAVE A LIST AGAIN — `waveform` since 2026-10-25, the
-// architect reversing this for it: "we rejected drop downs because it was
-// too much work to make them Windows identical, but now we don't have the
-// responsibility"; `true_colors`, `noise`, `noise_level` and
+// before. (SIX KEYS HAVE A LIST AGAIN — the architect reversing this
+// 2026-10-25: "we rejected drop downs because it was too much work to make
+// them Windows identical, but now we don't have the responsibility";
+// `true_colors`, `noise`, `noise_level` and
 // `noise_crossfade_s` since 2026-10-28 night, the same shape; `waveform_grow`
 // since 2026-10-31 and `audio_level` that night. A list is no
 // choice editor and no drop-down: the VALUE LIST, the folder overlay's
@@ -201,20 +199,21 @@ struct GuiInputHandler;
 // PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
 // nothing, each opening this line editor.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE NINETEEN (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE EIGHTEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
 // keyboard's `osk_key_w` and `osk_key_h` after it that evening, its
 // `osk_font_px` after them that night; the plate's grow `waveform_grow`
 // 2026-10-31, after `true_colors` as the config writes it, and the project
-// voice's `audio_level` that night, after it and before the noise's three):
+// voice's `audio_level` that night, after it and before the noise's three;
+// the color key `waveform` gone 2026-11-01 with the presets):
 // the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's fourteen editable keys in that file's
+// CONFIG's thirteen editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor). The other keys this editor commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
@@ -234,7 +233,7 @@ struct GuiInputHandler;
 // kSettingsPagePieceKeys' order.
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
-    "gui_scale", "projects_repo", "projects_path", "waveform", "true_colors",
+    "gui_scale", "projects_repo", "projects_path", "true_colors",
     "waveform_grow", "audio_level", "noise", "noise_level", "noise_crossfade_s",
     "key_height", "osk_key_w", "osk_key_h", "osk_font_px",
 };
@@ -282,17 +281,17 @@ consteval bool settings_page_piece_keys_pinned() {
 }
 static_assert(settings_page_piece_keys_pinned());
 
-// THE KEYS WITH A VALUE LIST — ONE TABLE, THE SEVEN (architect 2026-10-25 for
-// `waveform`, 2026-10-28 night for four more, 2026-10-31 for
-// `waveform_grow` and that night for `audio_level`): the settings page's row
+// THE KEYS WITH A VALUE LIST — ONE TABLE, THE SIX (architect 2026-10-28
+// night for four, 2026-10-31 for `waveform_grow` and that night for
+// `audio_level`; the first, `waveform`'s presets of 2026-10-25, went with
+// the presets 2026-11-01): the settings page's row
 // for one of these swaps the folder overlay's content to THE KEY'S VALUES
 // (GuiInputHandler::build_value_list_rows, its rows from
 // GuiSettingsEditor::value_choices below), and a row's tap commits that value
 // at once through apply_device_setting, the typed line's own body, then
 // returns to the page on that key's row (the list a sub-page of the page,
 // 2026-10-28 night). Every other page row opens the line editor. Each is a device
-// key with a short domain the list can show whole: the twenty-one presets,
-// the two words, the folders under `noise/`, each level's 31 whole dB (the
+// key with a short domain the list can show whole: the two words, the folders under `noise/`, each level's 31 whole dB (the
 // audio's and the noise's), the crossfade's 30 whole seconds and the grow's
 // 9 quarters. The typed line still names every one of
 // them, its arms and completers unchanged (the list is a second door).
@@ -301,7 +300,7 @@ static_assert(settings_page_piece_keys_pinned());
 // keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its
 // `osk_font_px`, 37.)
 inline constexpr const char* kSettingsValueListKeys[] = {
-    "waveform", "true_colors", "waveform_grow", "audio_level", "noise",
+    "true_colors", "waveform_grow", "audio_level", "noise",
     "noise_level", "noise_crossfade_s",
 };
 inline bool settings_key_has_value_list(std::string_view key) {
@@ -309,17 +308,6 @@ inline bool settings_key_has_value_list(std::string_view key) {
         if (key == k) return true;
     return false;
 }
-
-// ONE ROW OF A VALUE LIST: `value`, the key's own spelling, which the tap
-// commits; `text`, what the row shows — the preset's display name for
-// `waveform` (architect 2026-10-25: memorable names, never the key), and for
-// every other key the value itself, unitless (value_choices's account). The
-// pair stands for `waveform` alone, the one key whose row text is not its
-// value.
-struct GuiSettingValueChoice {
-    std::string value;
-    std::string text;
-};
 
 struct GuiSettingsEditor {
     AppState&             app;
@@ -402,9 +390,9 @@ struct GuiSettingsEditor {
     // setting_line does.
     std::string setting_value(const std::string& key) const;
     // THE VALUE LIST'S ROWS for `key`, one of kSettingsValueListKeys, in the
-    // list's order: `waveform` kGuiBuiltinPalettes in the include's order
-    // (alphabetical by display name, Default among them, architect
-    // 2026-10-27); `true_colors` kTrueColorsWords (`on`, `off`); `noise`
+    // list's order, each row's value in the key's own spelling, which the
+    // row shows, unitless, and its tap commits: `true_colors`
+    // kTrueColorsWords (`on`, `off`); `noise`
     // the folders under `noise/` beside the device config, sorted by byte —
     // the names the noise completer lists for an empty prefix
     // (complete_noise_value's listing, settings_editor.cpp's folder_names:
@@ -417,7 +405,7 @@ struct GuiSettingsEditor {
     // format_noise_crossfade_s, format_waveform_grow),
     // so the seat compares it with setting_value byte for byte. Listed afresh
     // at each call; nothing is cached.
-    std::vector<GuiSettingValueChoice> value_choices(const std::string& key) const;
+    std::vector<std::string> value_choices(const std::string& key) const;
     void exit_no_commit();
     void commit();
     // THE COMPLETION, run on BARE TAB with the focus in the field — the head's
@@ -444,14 +432,13 @@ struct GuiSettingsEditor {
     bool autocomplete_value();
 
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `true_colors=`, `waveform_grow=` (2026-10-31),
+    // `true_colors=`, `waveform_grow=` (2026-10-31),
     // `audio_level=` (2026-10-31 night), `noise=`,
     // `noise_level=`,
     // `noise_crossfade_s=` and the tuning keys `key_height=`, `osk_key_w=`,
     // `osk_key_h=` and `osk_font_px=` (2026-10-29, the line's door alone,
     // having no value list) — ONE BODY, TWO DOORS
-    // (architect 2026-10-25 for
-    // the waveform key, 2026-10-28 night for the value lists' four more): the
+    // (architect 2026-10-25, 2026-10-28 night for the value lists' keys): the
     // typed line's commit (commit_device_setting, below, the editor's door)
     // and a VALUE LIST's pick (GuiInputHandler::value_list_commit) both land
     // here, so the typed commit and the list's commit are one body per key
@@ -483,15 +470,6 @@ private:
     // the routers.
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
-    // THE WAVEFORM ROW'S INSTALL (architect 2026-10-14; the color picker's
-    // install_live_words until that day, its shape kept): the ten
-    // installed (install_program_palette, palette_file.h), then the apply
-    // shape run once, as install_program_palette's declaration states it —
-    // the plate kicked when its inks moved, else the flag cache refreshed,
-    // and the client invalidated. (The caption's keys rode beside, through
-    // install_chrome_pick, with the whole surface's damage when the chrome
-    // moved, 2026-10-14..10-21.)
-    void install_waveform_preset(const GuiPaletteWords& words);
     // THE PATH COMPLETER (2026-09-02), autocomplete_value's arm for the path
     // key — `projects_path` — when the value side is
     // NON-EMPTY: the value side is split at its last `/`, the directory the
@@ -531,13 +509,11 @@ private:
     // prefix — is a Tab that walks. Returns whether the buffer advanced.
     bool complete_key_name(const std::string& prefix);
     // THE CLOSED-VALUE COMPLETER (architect 2026-10-14 afternoon, CONFIRMED:
-    // "ok to add autocomplete", "agree all" — the preset completer for the
-    // color key, `waveform` (`chrome` until 2026-10-21; the `caption` key's
-    // arm, over its 43 schemes, 2026-10-14..10-21); `true_colors`'s two words
-    // since 2026-10-21), the head's stage 3: the path completer's model on a
+    // "ok to add autocomplete", "agree all"; `true_colors`'s two words
+    // since 2026-10-21, its one key since the color presets went
+    // 2026-11-01), the head's stage 3: the path completer's model on a
     // closed list. The value side is a PREFIX (byte compare, the words being
-    // ASCII) of the key's words — the twenty-one built-in preset keys
-    // (kGuiBuiltinPalettes' keys, palette_file.h) for `waveform`, `on` and
+    // ASCII) of the key's words — `on` and
     // `off` (kTrueColorsWords, device_config.h) for `true_colors` — and the
     // buffer advances by the matches' longest common prefix past it: a
     // UNIQUE match completes the word WITH NO TRAILING CHARACTER (a name is

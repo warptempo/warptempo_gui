@@ -80,8 +80,8 @@
 //     meanwhile. PROCESS-LIFETIME
 //     STATE (seeded from the key at launch), FILE-SCOPE HERE AND NOT ON
 //     AppState, which gui_main rebuilds at
-//     every project reopen while the window and its caches stand (the live
-//     palette words' reason, render.h's program_palette_words). Its one
+//     every project reopen while the window and its caches stand (the
+//     installed palette's reason, render.cpp's g_palette). Its one
 //     writer is install_true_colors (render.h), which owes the rebuild of
 //     every cached converted pixel.
 // BOTH ARE PLAIN FLAGS, WRITTEN ON THE GUI THREAD ALONE AND READ THERE OR

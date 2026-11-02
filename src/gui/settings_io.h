@@ -150,10 +150,8 @@ std::string format_settings_text(
 // config file carries, through that file's own serializers
 // (format_gui_scale_percent, device_config.h)
 // or verbatim for the two
-// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`)
-// and the color key (`waveform`, `chrome` 2026-10-14..10-21 beside the
-// retired `caption`; required since 2026-10-14, so the line is always there
-// to recall), or the switch's word (`true_colors`, 2026-10-21), or the
+// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`),
+// or the switch's word (`true_colors`, 2026-10-21), or the
 // plate's grow (`waveform_grow`, 2026-10-31, through format_waveform_grow),
 // or the project voice's level (`audio_level`, 2026-10-31 night, through
 // format_audio_level), or the

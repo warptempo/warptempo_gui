@@ -8,7 +8,6 @@
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
-#include "palette_file.h"      // the waveform key's presets (palette_record, kGuiBuiltinPalettes)
 #include "materials.h"
 #include "playback.h"          // the audio_level arm's live act
 #include "score_pages.h"     // the score_path commit's read
@@ -350,7 +349,7 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
 }
 
 // THE VALUE LISTS' ROWS (the domains at the declaration). Each arm is
-// its key's own domain owner read whole — the presets' table, the switch's
+// its key's own domain owner read whole — the switch's
 // words, the folder listing the noise completer reads, the grow's quarters,
 // the three integer grammars' ranges — with every value in the writer's spelling, so the row
 // the tap commits is a line the typed commit would take byte for byte. A
@@ -358,16 +357,12 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
 // present in the setup main page, so let's remove it from the lists.
 // consistent with linux unitless values (ffmpeg, etc)"): it is the value as
 // the config and the page's own `key=value` row spell it, `-9`, `4`, the unit
-// living in the key's name and its grammar alone; only `waveform` shows a
-// text other than its value, the preset's display name.
-std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
+// living in the key's name and its grammar alone.
+std::vector<std::string> GuiSettingsEditor::value_choices(
         const std::string& key) const {
-    std::vector<GuiSettingValueChoice> out;
-    if (key == "waveform") {
-        for (const GuiBuiltinPalette& preset : kGuiBuiltinPalettes)
-            out.push_back({preset.key, preset.display_name});
-    } else if (key == "true_colors") {
-        for (const char* word : kTrueColorsWords) out.push_back({word, word});
+    std::vector<std::string> out;
+    if (key == "true_colors") {
+        for (const char* word : kTrueColorsWords) out.emplace_back(word);
     } else if (key == "noise") {
         const std::filesystem::path home = noise_home();
         if (!home.empty()) {
@@ -375,29 +370,21 @@ std::vector<GuiSettingValueChoice> GuiSettingsEditor::value_choices(
             std::sort(names.begin(), names.end());
             for (std::string& name : names) {
                 if (!is_noise_folder_name(name)) continue;
-                out.push_back({name, name});
+                out.push_back(std::move(name));
             }
         }
     } else if (key == "waveform_grow") {
-        for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n) {
-            const std::string v = format_waveform_grow(n);
-            out.push_back({v, v});
-        }
+        for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n)
+            out.push_back(format_waveform_grow(n));
     } else if (key == "audio_level") {
-        for (int db = kAudioLevelMaxDb; db >= kAudioLevelMinDb; --db) {
-            const std::string v = format_audio_level(db);
-            out.push_back({v, v});
-        }
+        for (int db = kAudioLevelMaxDb; db >= kAudioLevelMinDb; --db)
+            out.push_back(format_audio_level(db));
     } else if (key == "noise_level") {
-        for (int db = kNoiseLevelMaxDb; db >= kNoiseLevelMinDb; --db) {
-            const std::string v = format_noise_level(db);
-            out.push_back({v, v});
-        }
+        for (int db = kNoiseLevelMaxDb; db >= kNoiseLevelMinDb; --db)
+            out.push_back(format_noise_level(db));
     } else if (key == "noise_crossfade_s") {
-        for (int s = kNoiseCrossfadeMinS; s <= kNoiseCrossfadeMaxS; ++s) {
-            const std::string v = format_noise_crossfade_s(s);
-            out.push_back({v, v});
-        }
+        for (int s = kNoiseCrossfadeMinS; s <= kNoiseCrossfadeMaxS; ++s)
+            out.push_back(format_noise_crossfade_s(s));
     } else {
         assert(false && "a key with no value list");
     }
@@ -461,8 +448,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
     // move. (The other four editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, since 2026-10-14 waveform (`chrome` until
-    // 2026-10-21) and since 2026-10-21 true_colors — take their one
+    // 2026-09-02, projects_path, and since 2026-10-21 true_colors and the
+    // later device keys — take their one
     // direct-set body in
     // commit(),
     // commit_device_setting, ahead of this router.)
@@ -1202,11 +1189,9 @@ void GuiSettingsEditor::commit() {
 // THE ONE RECORDED EDGE: the picker's same-project no-op compares NAMES
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
-// project is opened first — a rename-by-hand case, accepted. `waveform`
-// (architect 2026-10-14; `chrome` until 2026-10-21, `caption` beside it
-// until then): AT ONCE, live, no card — its arm below;
-// `true_colors` (2026-10-21, the popup's command row made a key) the same,
-// its arm after it, `waveform_grow` (2026-10-31) the same, its arm after
+// project is opened first — a rename-by-hand case, accepted.
+// `true_colors` (2026-10-21, the popup's command row made a key): AT ONCE,
+// live, no card — its arm below; `waveform_grow` (2026-10-31) the same, its arm after
 // that, `audio_level` (2026-10-31 night) the same, its arm after that,
 // `noise`, `noise_level` and `noise_crossfade_s`
 // (2026-10-28) the same, at once and no card, their arms after it, and the
@@ -1218,7 +1203,8 @@ void GuiSettingsEditor::commit() {
 // 2026-10-26, the glow settled at a constant, materials.cpp's kLedGlowPx).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
-// with its key.) The commit is the OK's or Enter's, and for the seven keys
+// with its key; `waveform`, the color presets' key, 2026-10-14..11-01.) The
+// commit is the OK's or Enter's, and for the six keys
 // with a value list (kSettingsValueListKeys, settings_editor.h) also a
 // list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
 // the choice rows' list rows of 2026-10-07..10-14, which showed a value and
@@ -1227,7 +1213,7 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. (The keys with a value list
-// are seven since 2026-10-31 night, `waveform_grow` and `audio_level` among
+// are six since 2026-11-01, `waveform_grow` and `audio_level` among
 // them.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
@@ -1279,41 +1265,16 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return DeviceSettingOutcome::Applied;
     };
 
-    // THE COLOR KEY (architect 2026-10-14, "remove picker and preset file
-    // road"; the Settings Waveform row): a built-in's key under its one
-    // grammar owner (is_builtin_palette_name, palette_file.h), THE KEY
-    // WRITTEN WHATEVER THE PICK, the default included (architect 2026-10-14:
-    // every device key required, the default spelled — a pick of the default
-    // wrote no line until then, device_config.h) — and, unlike the path keys
-    // and like the font of 2026-10-09..10-12, APPLIED LIVE AT THE COMMIT,
-    // which in this editor is the OK's (or
-    // Enter's), never a list row's (architect 2026-10-14, "OK alone";
-    // settings_editor.h's head; the value list's row tap, 2026-10-25, is
-    // the key's other door, through this same arm): the
-    // preset is installed and the screen
-    // repainted (install_waveform_preset), so NO CARD — the color is on
-    // screen, the answer; this key and the tuning keys apply at the commit,
-    // every other device key at the next open or launch. A failed write
-    // keeps the live colors for the session, the card saying the persist
-    // failed. A pick that leaves
-    // the file as it stands is the unchanged no-op.
-    if (key == "waveform") {
-        if (!is_builtin_palette_name(value))
-            return reject(kPaletteGrammarReason);
-        if (value == app.device_config->waveform) return unchanged();
-        app.device_config->waveform = value;
-        install_waveform_preset(palette_record(value));
-        (void)persist();
-        return applied();
-    }
-
     // TRUE COLORS (architect 2026-10-21, the Settings popup's "True Colors"
     // command row made a key): one of the two words under its one owner
-    // (parse_true_colors, device_config.h), APPLIED LIVE AT THE COMMIT through
+    // (parse_true_colors, device_config.h), APPLIED LIVE AT THE COMMIT, which
+    // is the OK's (or Enter's) or the value list's row tap, through
     // the toggle's own apply shape (GuiInputHandler::apply_true_colors — the
     // switch's bit, the icon rasters, the materials' bake, the plate or the
     // flag cache, the whole window), so NO CARD: the colors on screen are the
-    // answer.
+    // answer; a failed write keeps the live value for the session, the card
+    // saying the persist failed, and a value that leaves the file as it
+    // stands is the unchanged no-op.
     if (key == "true_colors") {
         const std::optional<bool> on = parse_true_colors(value);
         if (!on) return reject(kTrueColorsGrammarReason);
@@ -1530,21 +1491,6 @@ bool GuiSettingsEditor::persist_device_config() {
     return !failure;
 }
 
-void GuiSettingsEditor::install_waveform_preset(const GuiPaletteWords& words) {
-    // The shape and why it is enough are at install_program_palette's
-    // declaration (palette_file.h).
-    const WaveformPlateInks before = waveform_plate_inks();
-    install_program_palette(words);
-    if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
-    else                                 viewport.refresh_flag_cache();
-    // THE CLIENT ALONE (platform.h's damage pair): a preset moves no chrome
-    // role (the skin's constants and the ring tones off the ground's mean,
-    // chrome_derive.h), only the waveform's and the program's roles and THE
-    // LIT LEDS' ACCENT (its patches rebuilt at the install,
-    // materials::set_accent, 2026-10-23), which paint inside the client.
-    viewport.invalidate_all();
-}
-
 bool GuiSettingsEditor::complete_path_value(const std::string& value) {
     // Split at the last `/`: the HEAD names the directory to list (the
     // separator kept, so `/` alone lists the root), the TAIL is what a name
@@ -1617,13 +1563,8 @@ bool GuiSettingsEditor::complete_key_name(const std::string& prefix) {
 bool GuiSettingsEditor::complete_closed_value(const std::string& key,
                                               const std::string& value) {
     std::string append;
-    if (key == "waveform") {
-        std::vector<std::string_view> names;
-        for (const auto& p : kGuiBuiltinPalettes) names.emplace_back(p.key);
-        append = closed_list_advance(value, names);
-    } else if (key == "true_colors") {
+    if (key == "true_colors")
         append = closed_list_advance(value, kTrueColorsWords);
-    }
     if (append.empty()) return false;
     return append_at_line_end(app, viewport, append);
 }
@@ -1650,7 +1591,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's nineteen and
+        // one key does — any key the recall knows, the table's eighteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");
@@ -1675,7 +1616,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     // folder's name under `noise/` beside the device config
     // (complete_noise_value), its no-advance cases Tabs that walk. THE CLOSED
     // DOMAINS TOO (architect 2026-10-14 and 2026-10-21): a non-empty value
-    // side on `waveform` or `true_colors` is a prefix of the key's words
+    // side on `true_colors` is a prefix of the key's words
     // (complete_closed_value), its no-advance cases Tabs that walk.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {
         // Leading whitespace off, trailing whitespace kept — the reasons are
@@ -1691,7 +1632,7 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, waveform, true_colors and the
+    // gui_scale, projects_repo, projects_path, true_colors and the
     // noise's three — gui_scale and the rest the device config's — per-tab
     // trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical

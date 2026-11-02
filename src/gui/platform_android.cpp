@@ -3,7 +3,6 @@
 #include "canvas_sink.h"   // GuiCanvasDrawList, the GL canvas's frame
 #include "gui_font.h"
 #include "gui_main.h"
-#include "palette_file.h"   // kGuiDefaultPaletteKey: the template's default
 
 #include <android/asset_manager.h>
 #include <android/choreographer.h>
@@ -573,9 +572,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
-    // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
-    // `waveform=default` (palette_file.h owns the name).
-    cfg.waveform      = kGuiDefaultPaletteKey;
     // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key),
     // spelled: half a device px, 2 quarters (device_config.h's head).
     cfg.waveform_grow_quarters = kWaveformGrowDefaultQuarters;

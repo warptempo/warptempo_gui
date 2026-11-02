@@ -254,12 +254,13 @@ struct ProgramSpec {
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
     // dotted_waveform_line_runs): THE PLAYHEAD'S every `dot_period`
-    // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
-    // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
-    // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
-    // 3, so a point cue's two alternate one dot every `dot_period` rows, BLUE
-    // FIRST FROM THE TOP, every live cue's, warp or phase reset
-    // (render.cpp's resolve_flag_face owns which color each phase wears); the
+    // rows on its phase; A CUE'S TWO PHASES each every `cue_dot_period` rows
+    // (architect 2026-10-09 ~11:50, Cool Edit's cue and range dots) — the
+    // cue's on `cue_dot_phase` 7, the range's on `range_dot_phase`
+    // 3, so a point cue's two alternate one dot every `dot_period` rows, the
+    // range's FIRST FROM THE TOP, every live cue's, warp or phase reset, both
+    // in the one `cue` since 2026-11-01 (render.cpp's resolve_flag_face owns
+    // which color each phase wears); the
     // phase-reset lead-in
     // ring's right side takes the same rows and its top and bottom runs the
     // same phases in device columns counted from the reset's own column
@@ -399,7 +400,7 @@ static_assert(kProgramSpec.cue_fill_px ==
 // (THE LABEL CLEARS THE TRIANGLE BY CONSTRUCTION: render.h's
 // cue_label_lead_px is the triangle's reach right — its rows and its
 // shadow's offset — plus the gap, never negative, at every scale.)
-// The cue's two colors alternate one dot every playhead period, and neither
+// The cue's two phases alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
 static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +

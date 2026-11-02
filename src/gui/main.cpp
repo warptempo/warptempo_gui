@@ -23,7 +23,6 @@
 #include "history_prefetch.h"
 #include "audio.h"
 #include "device_config.h"
-#include "palette_file.h"  // palette_record: the `waveform` key's preset at launch
 #include "icons.h"         // the icon set's launch load
 #include "materials.h"     // the pre-paint bake
 #include "waveform_worker.h"
@@ -472,8 +471,7 @@ int strip_total_h(bool top_strip) {
 // the 15-px trim field, 2026-10-24, the frame rows one device px,
 // 2026-10-28, the key's 33 rows, 2026-10-29; 1003 under the square 69-px
 // case, 989 under the hi-fi skin's 40-row caption, 2026-10-23). A COLOR
-// moves no lane: the 1075 rows hold under every waveform preset (the key's
-// height, a tuning key, moves them). May
+// moves no lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -3476,8 +3474,8 @@ int gui_main() {
     // (NO colors.conf LOAD HERE ANY MORE. The colors were 23 mutable globals
     // filled from ~/.config/warptempo_gui/colors.conf by load_color_config()
     // at exactly this point; that system retired 2026-08-02. The palette is
-    // installed below, after the config is read and the chrome chosen
-    // (install_palette); the record is at the palette block, render.h.)
+    // installed below, after the config is read (install_palette); the
+    // record is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
     // Its keys (kDeviceConfigKeys, device_config.cpp) describe the MACHINE,
@@ -3502,8 +3500,8 @@ int gui_main() {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     // (The chromes and captions folders were read ahead of it 2026-10-07..14,
-    // the preset files the color picker wrote; every preset is compiled in
-    // since, palette_file.h's head.)
+    // the preset files the color picker wrote; the one palette is compiled
+    // in, palette_file.h's head.)
     DeviceConfig device_config;
     {
         auto cfg = load_device_config(GuiPlatform::device_config_defaults());
@@ -3553,19 +3551,14 @@ int gui_main() {
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
-    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
-    // preset the config's `waveform` key names (a built-in, one of Cool
-    // Edit's presets; REQUIRED, architect 2026-10-14: the read refuses an
-    // absent line, so there is no default to resolve here) — THE LIVE
-    // WORDS' SEED (2026-10-07: resolved here through palette_record and
-    // handed to the install explicitly — render.h's install_palette), every
-    // chrome color derived by Cool Edit's tones (live_chrome_words,
+    // THE PALETTE, before there is a window: the one palette's constants
+    // (palette_file.h, architect 2026-11-01; no key names a color) and the
+    // chrome derived off the ground's mean (live_chrome_words,
     // chrome_derive.h); installed here and again at the materials' first
     // bake, whose ground's Face, its baked tile's mean, the panel's face
-    // becomes, the chrome's roles derived off it (materials.h's BAKE RULE). (The `caption` key's scheme, a second
-    // argument, 2026-10-08..10-21, left with the captions.)
+    // becomes, the chrome's roles derived off it (materials.h's BAKE RULE).
     // Every painter reads it through palette() (render.h's palette block).
-    install_palette(palette_record(device_config.waveform));
+    install_palette();
     // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
     // display_transform.h's head): the switch's bit seeded here, before the
     // window and every cache that converts exist, so the launch owes none of

@@ -100,11 +100,12 @@ struct TrimRange {
 // split 2026-10-07; the chrome's inheritance 2026-10-10; the hi-fi panel
 // skin 2026-10-23): THE PALETTE holds every color the PROGRAM draws in the
 // well or on a thing that enters it (the waveform's canvas, ink and outline,
-// the canvas's grid and center line, the cues' two colors, the playhead and
-// the scanner, and Cool Edit's panel face as its
-// record; palette_file.h's head owns the rule that parts program from
-// chrome) — the WAVEFORM PRESET, the one choice of color left, its ink's hue
-// also THE ACCENT of the lit LEDs (materials.h's accent_of_ink); THE PANEL'S
+// the canvas's grid and center line, the cues' one color, the playhead and
+// the scanner; palette_file.h's head owns the rule that parts program from
+// chrome) — ONE PALETTE, CONSTANTS, LIVE'S NUMBERS (architect 2026-11-01:
+// the Cool Edit presets and their `waveform` key dropped, the canvas
+// grammar kept), no choice of color left; THE ACCENT of the lit LEDs is the
+// skin's constant (materials.h's kAccent); THE PANEL'S
 // FACE is the brushed ground's mean (materials.h's TONE RULE), and THE
 // CHROME'S ROLES are the skin's constants and the two ring tones off that
 // mean (chrome_derive.h's head, the per-role table; Cool Edit's tones off
@@ -113,19 +114,11 @@ struct TrimRange {
 // since 2026-10-24 (THE CAPTION's note, below): its six roles, the
 // `caption` device key and its 42 built-in schemes left 2026-10-21, its
 // flat skin constants with the caption itself.
-// The palette's roles are kGuiPaletteRoles and the compiled built-in
-// palettes the program's own twenty-one presets, Cool Edit Pro 2.1's twenty
-// as they are and his one exception, Ableton's colors (architect
-// 2026-11-01), kGuiBuiltinPalettes
-// (palette_file.h); the
-// active palette is the device config's `waveform` — a built-in's key,
-// chosen by the Settings Waveform row (architect 2026-10-14 and 2026-10-21;
-// files from a `chromes/` folder were read 2026-10-07..14; the key was
-// `chrome` until 2026-10-21), the first-run default "Default"
-// (2026-10-26). There is NO LEVEL (architect 2026-10-04): a dark look, like
+// The palette's roles and their words are kGuiPaletteRoles (palette_file.h).
+// There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
 // (2026-10-08). The app computes no color but THE SKIN'S RULES: the ring
-// tones and the accent (materials.h) and Cool Edit's tones off the Face for
+// tones (materials.h) and Cool Edit's tones off the Face for
 // what the program still derives (cool_edit_derive.h, the COOL EDIT BLOCK).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
@@ -267,28 +260,26 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's TEN (palette_file.h, 2026-10-07; ten
-//                 since 2026-10-26): the waveform's canvas, ink and outline
-//                 (ROW 6, below; the view bar's span wears none of them,
-//                 materials.h's neutral trio since 2026-10-25); THE
-//                 CANVAS'S TWO LINES, Cool
-//                 Edit's — `grid` under the waveform and `center` on each
-//                 channel's zero, over it (ROW 6); THE CUES' TWO COLORS,
-//                 Cool Edit's —
-//                 `cue` the red, every cue's triangle and one of its dot
-//                 phases, and `range` the blue, the other, warp and phase
-//                 reset alike (the invalid color, a third role 2026-10-09
-//                 to 2026-10-26, retired: the strike is the mark, THE
-//                 MARKER LANE below); the playhead's role
+//   THE PALETTE   the program's EIGHT (palette_file.h, 2026-10-07; one
+//                 palette, Live's numbers, since 2026-11-01): the
+//                 waveform's canvas, ink and outline (ROW 6, below; the view
+//                 bar's span wears none of them, materials.h's neutral trio
+//                 since 2026-10-25); THE CANVAS'S TWO LINES, Cool Edit's
+//                 grammar — `grid` under the waveform and `center` on each
+//                 channel's zero, over it (ROW 6); THE CUES' ONE COLOR,
+//                 `cue` — every cue's triangle and both of its dot phases,
+//                 warp and phase reset alike (architect 2026-11-01: "one
+//                 color for all markers"; the strike is the invalid mark,
+//                 THE MARKER LANE below); the playhead's role
 //                 `playhead_stem` — its head in the ruler and its dots in
-//                 the canvas, nothing else (THE PLAYHEAD, below); the
+//                 the canvas, nothing else (THE PLAYHEAD, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
-//                 (architect 2026-10-09); and THE
-//                 PANEL'S `face` (2026-10-09: the program's band, row 8
-//                 and the canvas column's lanes — Cool Edit's — every
-//                 other panel tone derived from it, the COOL EDIT BLOCK,
-//                 cool_edit_derive.h).
+//                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
+//                 the program's band, row 8 and the canvas column's lanes,
+//                 every other panel tone derived from it, the COOL EDIT
+//                 BLOCK, cool_edit_derive.h) is the ground's mean, no
+//                 palette role.
 // THE CARD FACE (architect 2026-10-04, the period's tooltip; the hi-fi skin
 // 2026-10-23): the tooltip, both of its lines, and every notification card
 // stand on `card_ground` — THE FIELD, kFieldGround — INSIDE A ONE-DEVICE-PX
@@ -360,13 +351,13 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 //
 // The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
 // derived from the panel's Face since 2026-10-10, the selection pair a
-// constant since 2026-10-21 (chrome_derive.h) — and the active palette's program roles, one
-// field each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
-// program's in kGuiPaletteRoles' (palette_file.h), and THE COOL EDIT BLOCK
-// derived from the program's `face` (cool_edit_derive.h's painted tones,
-// 2026-10-09) — the three tables covering the struct exactly
-// (palette_file.cpp's static_asserts); the mapping above says what each
-// paints. Every field is a solid byte triple.
+// constant since 2026-10-21 (chrome_derive.h) — and the palette's program
+// roles, one field each — the chrome's in kGuiThemeRoles' order
+// (theme_file.h), the program's in kGuiPaletteRoles' (palette_file.h), the
+// panel's `face`, and THE COOL EDIT BLOCK derived from that `face`
+// (cool_edit_derive.h's painted tones, 2026-10-09) — the tables covering the
+// struct exactly (palette_file.cpp's static_asserts); the mapping above says
+// what each paints. Every field is a solid byte triple.
 struct GuiPalette {
     // THE CHROME (Windows' element names; the values Cool Edit's tones,
     // chrome_derive.h).
@@ -393,15 +384,14 @@ struct GuiPalette {
     GuiColor grid;
     GuiColor center;
     GuiColor cue;
-    GuiColor range;
     GuiColor playhead_stem;
     GuiColor scanner;
-    // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
-    // Cool Edit's Face, the ground of the toolbar band and row 8 — THE
-    // BRUSHED GROUND'S MEAN since 2026-10-23 (materials.h's TONE RULE; its
-    // estimate before the first bake), whatever the preset: the ring tones
-    // and the chrome's roles derive from it, and painted as a surface it is
-    // the scope's ground as drawn (set_surface_source).
+    // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
+    // grammar): the ground of the toolbar band and row 8 — THE BRUSHED
+    // GROUND'S MEAN since 2026-10-23 (materials.h's TONE RULE; its estimate
+    // before the first bake): the ring tones and the chrome's roles derive
+    // from it, and painted as a surface it is the scope's ground as drawn
+    // (set_surface_source).
     GuiColor face;
     // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
     // the panel's tones, each DERIVED from `face` by Cool Edit's own HLS
@@ -432,7 +422,7 @@ struct GuiPalette {
     // and corner off the Face 2026-10-10..10-21, replaced by materials.h's
     // THE KEY.)
     // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
-    // disabled_* mixes toward the Face): the triangle of the `cue` red, the
+    // disabled_* mixes toward the Face): the triangle of the `cue`, the
     // cue shadow, and the resting label.
     GuiColor ce_off_cue;
     GuiColor ce_off_cue_shadow;
@@ -441,10 +431,10 @@ struct GuiPalette {
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
 // state in render.cpp, written by the install family below alone:
-// install_palette at its ONE application point, gui_main's startup, before
-// the window exists; install_program_palette, the Settings Waveform row's
-// live road; and install_true_colors. Before the first install it is
-// construction state (black), never painted.
+// install_palette at gui_main's startup, before the window exists, and at
+// every bake of the materials (the ground's mean moving); and
+// install_true_colors. Before the first install it is construction state
+// (black), never painted.
 const GuiPalette& palette();
 
 // THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
@@ -465,42 +455,16 @@ enum class GuiSurface {
 };
 GuiColor surface_text(GuiSurface surface);
 
-// Install every color: THE PROGRAM'S off `program`, the waveform preset's
-// ten (2026-10-07; the device config's `waveform` key names the preset
-// at launch — a built-in's key, is_builtin_palette_name, gui_main resolving
-// it with palette_record, palette_file.h) — and THE CHROME'S, DERIVED FROM
-// THE PANEL'S FACE AND THE INK (2026-10-10, the chrome inherits Cool Edit;
-// the Face a material's once the materials are baked, 2026-10-21, the
-// brushed ground's mean since 2026-10-23;
-// live_chrome_words, chrome_derive.h).
-// THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
-// `waveform` key names THE ACTIVE PRESET and gives the words at launch; the
-// Settings Waveform row's commit installs a preset's words live and writes
-// its key (GuiSettingsEditor::apply_device_setting, architect 2026-10-14,
-// the typed line and the value list its two doors).
-// This resolves and never refuses. It bumps palette_generation below, the
-// flag cache's fingerprint term, and the plate's two baked inks
-// (waveform_plate_inks) move with it. The words type is palette_file.h's.
-// (The caption's six were a picked scheme's — a `caption` key, its row and
-// a second argument here, with install_chrome_pick and live_chrome_pick
-// beside — 2026-10-08..10-21.)
-void install_palette(const std::array<uint32_t, 10>& program);
-
-// THE LIVE WORDS AS INSTALLED — the program's ten the install family
-// last wrote (install_palette's `program`, or install_program_palette's
-// `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
-// spelled as its array type here because palette_file.h includes this
-// header, which static_asserts the 10 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
-// AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
-// reopen (gui_main's loop) while the installed palette is not — so a reopen
-// keeps them. ITS READER: the materials' re-install at a bake
-// (materials.cpp's bake_now, the panel's Face moving under the same words).
-const std::array<uint32_t, 10>& program_palette_words();
-
-// (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
-// program's ten alone, the Waveform row's live road — is declared in
-// palette_file.h beside the words it takes and defined in render.cpp beside
-// install_palette.)
+// Install every color: THE PROGRAM'S, the one palette's constants
+// (palette_file.h's role table, architect 2026-11-01) — and THE CHROME'S,
+// DERIVED FROM THE PANEL'S FACE (2026-10-10; the brushed ground's mean since
+// 2026-10-23; live_chrome_words, chrome_derive.h) with the Cool Edit block
+// off the same Face. Its two callers: gui_main's startup, before the window
+// exists, and every bake of the materials (materials.cpp's bake_now — the
+// ground's mean moves under the same constants). It resolves and never
+// refuses, and it bumps palette_generation below, the flag cache's
+// fingerprint term.
+void install_palette();
 
 // THE PALETTE'S GENERATION — a counter the install family bumps, so a
 // cached surface whose pixels carry palette colors keys the palette BY
@@ -527,9 +491,24 @@ uint64_t palette_generation();
 // launch's call, before the window and every cache exist, owes none): the
 // icon rasters dropped (icons::drop_rasters — they convert at raster time
 // and key on the device px alone), the materials baked again
-// (materials::ensure, before the flag cache reads them), the plate kicked when its inks moved and
-// the flag cache refreshed otherwise (install_program_palette's shape,
-// palette_file.h), then the whole window invalidated — every color changes.
+// (materials::ensure, before the flag cache reads them), then the waveform
+// plate kicked when its inks moved — the waveform_plate_inks pair read
+// before and after the call; when it moved, the synchronous plate rebuild
+// (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
+// flag cache rebuilt at its tail, keyed by the generation) — and otherwise
+// the flag cache alone, synchronously (Viewport::refresh_flag_cache, so a
+// frame callback served before the tick cannot blit flags in the old
+// colors), then the whole window invalidated — every color changes. WHY
+// THAT IS ENOUGH: the palette bakes into two cached things alone — the
+// waveform plate, keyed by its two inks (waveform_plate_inks, the worker's
+// job carrying them), and the flag cache, keyed by the generation
+// (FlagCache::fp_palette_generation), whose rebuild also stages the stem
+// stash (AppState::staged_marker_stems, swapped in at the publish; the dots'
+// color read live); every other reader paints live from palette() each
+// frame — the canvas, its grid and its center lines (render_canvas), the
+// cues' dots (paint_marker_stems), the playhead's head and dots, the open
+// flag editor (render_flag_editor_box), the lead-in ring's dots and the `h`
+// view's nudged-pair ring runs, the zoom anchor's stem and the scanner.
 void install_true_colors(bool on);
 
 // -- THE CANVAS COLUMN: THE VIEW BAR, THE RULER, THE PLAYHEAD -------------------
@@ -543,9 +522,8 @@ void install_true_colors(bool on);
 // 2026-10-23), the marker lane inside the ring flat in the ground's face
 // (materials.h's head, 2026-10-29). Its colors are
 // the ring tones and the skin's constants, the waveform's ink,
-// the cues' two colors and the playhead's color
-// (the palette), and the painter constants Cool Edit draws whatever its
-// preset (cool_edit_paint.h).
+// the cues' one color and the playhead's color
+// (the palette), and the painter constants (cool_edit_paint.h).
 //
 // THE TRIM BAR IS COOL EDIT'S VIEW BAR (render_trim_flags
 // owns the drawing, trim_lane_h_px the rows): a BLACK field 15 px tall at
@@ -557,7 +535,7 @@ void install_true_colors(bool on);
 // (Cool Edit's own sunken ring of `ce_mid` and `ce_hilight` 2026-10-09 to
 // 2026-10-22); and in the field THE SPAN, the trim window's columns as
 // a RAISED BLOCK OF NEUTRAL GREY (architect 2026-10-25, "the trim bar should
-// be a neutral gray"; no preset touches it) — its top row and left column
+// be a neutral gray"; no palette role touches it) — its top row and left column
 // kSpanLight, its body kSpanFace, its bottom row and right column kSpanDark
 // (materials.h's trio, the key's face lifted and the TONE RULE off it), the
 // two mitred where they meet, every line one device px since 2026-10-23
@@ -575,7 +553,7 @@ void install_true_colors(bool on);
 // foot, between THE PROGRAM RING's dark LEFT and light RIGHT columns, which
 // run unbroken past the foot — every line one device px (hairline_px);
 // THE TICKS kCeRulerTick (the bone,
-// face-independent in every preset), ONE DEVICE PX wide over a one-px
+// face-independent), ONE DEVICE PX wide over a one-px
 // black shadow at (+1, +1) (2026-10-23), STANDING ON THE
 // GROUND'S BOTTOM ROW and rising into it, painted over the digits where a
 // major's top row meets their baseline; THE DIGITS the ruler face (GuiFace::Small,
@@ -597,9 +575,8 @@ void install_true_colors(bool on);
 // (2026-10-26), the apex the playhead's column (paint_ce_cue_triangle; the
 // triangle's cell one device px, architect 2026-10-26 ~10:10: "All
 // triangles unscaled", cue_triangle_unit_px) — in THE PALETTE'S
-// `playhead_stem` (architect 2026-10-09 ~11:50; Cool Edit's Curs yellow
-// FFFF00 on every Cool Edit built-in but the CEPro 1.2 pair's FFFF6C, and
-// the `ableton` preset's light blue 8CB4FF, architect 2026-11-01) over the same
+// `playhead_stem` (architect 2026-10-09 ~11:50; Live's playhead cyan
+// 03C3D5 since 2026-11-01, palette_file.h) over the same
 // triangle one label quantum right and down (2026-10-26 ~13:05, the head's
 // paint clipped to its own rows, so the shadow's bottom rows are cut)
 // in `ce_cue_shadow`, ON THE RULER'S LAST `rows` DEVICE ROWS, the apex on
@@ -609,7 +586,7 @@ void install_true_colors(bool on);
 // and the move's damage box one extent, cue_triangle_reach_right_px); IN THE
 // CANVAS a DOTTED COLUMN, one device px every four device rows in the same
 // color (2026-10-09 ~14:25, "on waveform → unscaled") on the canvas's rows
-// ≡ 1 (mod 4), the cues' two colors on rows ≡ 3 and
+// ≡ 1 (mod 4), the cues' two dot phases on rows ≡ 3 and
 // ≡ 7 (mod 8), so they interleave on one column (paint_playheads,
 // dotted_waveform_line_runs; the stereo divider's rows carry none). Across the view bar (architect 2026-10-09
 // ~14:30, "no dots on the trim bar"), the marker lane and the canvas's top
@@ -634,18 +611,17 @@ void install_true_colors(bool on);
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
 // stem and the scanner are both white, which unifies them: the non-playhead
 // stems that are related to the controls should be white, and then the
-// playhead is yellow"): THE SCANNER — the moving playback line,
+// playhead is [colored]"): THE SCANNER — the moving playback line,
 // paint_scanner, its own role since 2026-10-05 — a SOLID line one device px
 // wide over the canvas (Cool Edit's playback cursor is a solid 1-px line,
 // measured 2026-10-09; unscaled on the canvas since ~14:25,
 // waveform_line_px's rule), and THE ZOOM ANCHOR'S STEM
 // (render_strip_anchor_stem), the same solid one-px line at the pivot;
-// WHITE in every built-in palette — COOL EDIT'S OWN CONSTANT (architect
-// 2026-10-16, observed in Cool Edit Pro 2.1 under Wine on the laptop: the
-// scanner is white on every preset he tried, so its preset text records no
-// key for it; the zoom anchor's stem is the same design, so both are
-// canonical), his rulings of 2026-10-07 ("let's go back to a white scanner")
-// and 2026-10-09 now its confirmation.
+// WHITE FFFFFF — COOL EDIT'S OWN CONSTANT (architect 2026-10-16, observed
+// in Cool Edit Pro 2.1: the scanner is white on every preset he tried; the
+// zoom anchor's stem is the same design, so both are canonical), his
+// rulings of 2026-10-07 ("let's go back to a white scanner") and 2026-10-09
+// its confirmation, kept with Live's palette 2026-11-01 (tunable later).
 
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
 //
@@ -689,17 +665,13 @@ void install_true_colors(bool on);
 // in the lane or on the frame row; paint_marker_stems). No box, no outline,
 // no stem through the frame row.
 //
-// THE CUES ARE COOL EDIT'S TWO COLORS (architect 2026-10-09 ~11:50–12:00,
-// "red+blue for warp and phase"; every cue since 2026-10-26, the history's
-// halves and a coincident marker's included):
-// THE RED `cue` (Cool Edit's CueM, F34B58 in its default) and THE BLUE
-// `range` (its RngM, 4B82F3) — each built-in's own pair, the two colors
-// returned 2026-10-26 (architect: "the default Cool Edit markers contrast
-// well, with the flag in red and the range in blue"). Every cue's triangle
-// is the red. A point cue's stem is Cool Edit's range start and end
-// superimposed — the blue dots on the canvas's device rows ≡ 3 (mod 8), the
-// red on rows ≡ 7, one dot every four rows in alternating colors
-// (program_spec.h's dot fields). WARP AND PHASE RESET WEAR THE SAME CUE:
+// THE CUES ARE ONE COLOR, THE PALETTE'S `cue` (architect 2026-11-01: "one
+// color for all markers", Live's orange FFAD56, palette_file.h; every cue,
+// the history's halves and a coincident marker's included): every cue's
+// triangle and every dot of its stem. A point cue's stem is Cool Edit's
+// range start and end superimposed — its two dot phases on the canvas's
+// device rows ≡ 3 (mod 8) and ≡ 7, one dot every four rows (program_spec.h's
+// dot fields), both in the `cue`. WARP AND PHASE RESET WEAR THE SAME CUE:
 // the kind reads from the view that lists it — the lane paints the active
 // column's markers alone, the Warp and Phase Reset views — and from its
 // label (his one-label rule). THE STRIKE IS THE INVALID INDICATOR (architect 2026-10-26 ~15:10:
@@ -742,7 +714,7 @@ void install_true_colors(bool on);
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then the live cue; the strike rides either):
-//   THE CUE   the red triangle, the red and blue dots, the label in the
+//   THE CUE   the `cue` triangle and dots, the label in the
 //             bone (materials.h's kBoneInk);
 //   STRUCK    the red-flag class (warp_red_flag_set_cached and its
 //             phase-reset twin — the coincident run, a warp label ref
@@ -754,8 +726,8 @@ void install_true_colors(bool on);
 //             faded label's, the selected text's);
 //   DISABLED  THE FADED LOOK (architect 2026-10-10 ~12:20, "the arrow needs
 //             to be legible for me, but the text doesn't … since it's
-//             disabled, it's inert"): the triangle's live color (the cue
-//             red) and the cue
+//             disabled, it's inert"): the triangle's live color (the
+//             `cue`) and the cue
 //             shadow BLENDED 45 % TOWARD THE FACE and the label's rest tone
 //             65 % toward it — derived solid colors, "an opacity look …
 //             not actually opaque" (cool_edit_derive.h, `ce_off_*`) — and NO
@@ -766,7 +738,7 @@ void install_true_colors(bool on);
 //             flag and it was selected, the text would go white, not navy
 //             blue background"; "clicking on a flag to select it makes the
 //             text turn white. That's it. That's the only thing") — the
-//             bone `label` role under every preset (chrome_derive.h), against
+//             bone `label` role (chrome_derive.h), against
 //             the light tone at rest (the chrome's `selected_text` until
 //             2026-10-10, when it became a text for the ink's fill,
 //             chrome_derive.h); the segment's resting face box (the
@@ -799,7 +771,7 @@ void install_true_colors(bool on);
 // unit; 2026-10-09 ~17:40, "made of the same stuff the marker looks like"):
 // its left side the stem itself, its right side the stem's dots on the
 // band's last column, its top and bottom runs the same two phases along the
-// canvas's first and last rows; the red and the blue, every live reset's — a
+// canvas's first and last rows; the `cue`, every live reset's — a
 // coincident one's too, its struck label the mark (2026-10-26; the invalid
 // color alone 2026-10-11 to 2026-10-26); resting whether selected or not,
 // as the stem is.
@@ -865,7 +837,7 @@ void install_true_colors(bool on);
 //
 // THE HISTORY VIEW'S DIFF FLAGS are cues of their own two kinds (architect
 // 2026-10-04; THE STRIKE 2026-10-26 ~15:30, "Two, agree"): both halves THE
-// PLAIN CUE in the cue colors — the `cue` triangle, the stem's red and blue
+// PLAIN CUE in the cue color — the `cue` triangle and the stem's
 // dots — a REMOVED line's label STRUCK and an ADDED line's plain, the label
 // the line's own text with no sign (history_diff_label, paint_handler.h; the
 // brackets `[+]` / `[-]` of 2026-08-05 retired the same day: "those are
@@ -887,12 +859,10 @@ void install_true_colors(bool on);
 // 2026-10-09 ~14:25, "on waveform → unscaled"; antialiased with its shape on
 // the GPU since 2026-10-30), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
-// magnified and the compressed bars, the ink's hides it. The default
-// palette is "Default" (`default`, kGuiDefaultPaletteKey,
-// palette_presets.inc; architect 2026-10-26):
-// the outline #0A9757 under the #4BF3A7 ink on black — each outline
-// the ink at HLS lightness 0.3157, the generator's outline rule
-// (tools/theme_catalog/gen_presets.py). THE PLATE WEARS THE INK AND THE
+// magnified and the compressed bars, the ink's hides it. The palette's
+// (palette_file.h, architect 2026-11-01): the outline 515151 under the
+// 191919 ink on the 393939 canvas, the outline lighter than the ink. THE
+// PLATE WEARS THE INK AND THE
 // OUTLINE AS PUBLISHED (the sink writes their words, GuiCanvasSink::plate),
 // so the pair rides the cache's fingerprint (waveform_plate_inks) and
 // publishes with the plate; the canvas is laid live under the plate's
@@ -973,7 +943,7 @@ void install_true_colors(bool on);
 
 // THE PLATE'S TWO BAKED INKS, as words: the fingerprint field and the job
 // field that carry the active ink and outline to the worker (the worker reads
-// no live state), set by the install family. THE WORDS ARE THE WINDOW'S
+// no live state), the palette's two constants (palette_file.h). THE WORDS ARE THE WINDOW'S
 // (architect 2026-10-08, display_transform.h's head): waveform_plate_inks
 // hands the two roles through display_transform::display_rgb on the GUI
 // thread, so the plate writes them as they come, and a flip of True Colors
@@ -2169,7 +2139,7 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
 // wells' (waveform_well_rows: the stereo divider's rows carry none, 2026-10-16)
 // counted in DEVICE ROWS from the canvas's first row, a dot one device px square on every row k
 // with k ≡ `phase` (mod `period`) — Cool Edit's own 1-px dot every 4 rows at
-// 1:1, at every gui_scale — the cues' red on 7 and blue on 3 of 8 and the
+// 1:1, at every gui_scale — the cues' two phases on 7 and 3 of 8 and the
 // playhead on 1 of 4 (program_spec.h's dot fields), so they interleave on one
 // column. The column is the item's own painted column, the dot one px on it
 // — the stem the cue's triangle and the playhead's head stand centred on
@@ -3484,25 +3454,25 @@ struct FlagLaneRects {
     int     columns_x = 0;
 };
 
-// WHICH COLOR A CUE'S DOTS WEAR ON ONE OF THE STEM'S TWO PHASES (the red's
-// `cue_dot_phase` and the blue's `range_dot_phase`, program_spec.h), named
-// as a ROLE so the stash keeps no color and the painter reads the palette
-// live (resolve_flag_face, render.cpp, the one table): none, the `cue` red
-// or the `range` blue (the invalid color, a third, 2026-10-11 to
-// 2026-10-26, retired with its role: the strike is the mark).
-enum class GuiCueDot : uint8_t { None, Cue, Range };
+// WHICH COLOR A CUE'S DOTS WEAR ON ONE OF THE STEM'S TWO PHASES
+// (`cue_dot_phase` and `range_dot_phase`, program_spec.h — Cool Edit's cue
+// and range phases), named as a ROLE so the stash keeps no color and the
+// painter reads the palette live (resolve_flag_face, render.cpp, the one
+// table): none, or the `cue` — the one marker color on both phases
+// (architect 2026-11-01: "one color for all markers"; the strike is the
+// invalid mark).
+enum class GuiCueDot : uint8_t { None, Cue };
 // The live palette role a dot color names. Precondition: not None.
-inline GuiColor cue_dot_color(GuiCueDot d) {
-    const GuiPalette& p = palette();
-    return d == GuiCueDot::Range ? p.range : p.cue;
+inline GuiColor cue_dot_color(GuiCueDot) {
+    return palette().cue;
 }
 
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the
 // column the cue's dots stand on (the triangle's apex column) and THE DOTS
 // ITS CLASS RESOLVED TO ON EACH PHASE (resolve_flag_face, render.cpp;
 // architect 2026-10-09 ~11:50, 2026-10-26): every live cue — warp, phase
-// reset, coincident or not, and both of the history's halves — the red
-// `cue` on the red's phase and the blue `range` on the blue's, alternating,
+// reset, coincident or not, and both of the history's halves — the `cue` on
+// both phases (architect 2026-11-01, one marker color),
 // selected or not (Cool Edit's cue never changes when selected). The flag
 // PAINTERS are the only producers — the
 // two live columns', and the `h` view's diff lane, which replaces them
@@ -3539,8 +3509,8 @@ struct MarkerStem {
 // the left stem's window column `x0` to the right stem's `x1`, both ends
 // included. Dotted IN THE STEM'S OWN PATTERN as the phase-reset lead-in
 // ring's runs are (paint_phase_reset_overlay_ring, the model; live_cue_-
-// stem_dots): one device px a dot, the `cue` red on the red's phase and the
-// `range` blue on the blue's, one dot every four columns alternating,
+// stem_dots): one device px a dot, the `cue` on both phases, one dot every
+// four columns,
 // counted from the left stem's own column (unclipped, so the run stays put
 // on the song as the view pans) — A STEM'S DENSITY (architect 2026-10-26:
 // "the horizontal lines in the overlay of history have double the density
@@ -3896,7 +3866,7 @@ void render_phase_reset_flags(cairo_t* cr,
 // nudged-pair ring (MarkerStemRun; paint_marker_stem_runs, architect
 // 2026-10-26: "they should be joined by the overlay ring"). It asks the one
 // resolver (resolve_flag_face's table, render.cpp) rather than restating it:
-// the red `cue` dots and the blue `range` dots, every live cue's, warp or
+// the `cue` dots on both phases, every live cue's, warp or
 // phase reset — a coincident one's too, its struck label the mark
 // (2026-10-26; the invalid color's ring 2026-10-11 to 2026-10-26) —
 // resting, selected or not (the cue never changes when selected), so a ring
@@ -4035,9 +4005,9 @@ struct HistoryDiffFlag {
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
 // THE ANATOMY IS THE LIVE CUE'S (the palette block's marker-lane paragraph):
-// every cue THE PLAIN CUE, the `cue` red triangle over the stem's red and
-// blue dots, both halves alike (architect 2026-10-26 ~15:30, "Two, agree":
-// the history in the cue colors, the invalid color retired) — and the label
+// every cue THE PLAIN CUE, the `cue` triangle over the stem's `cue` dots,
+// both halves alike (architect 2026-10-26 ~15:30, "Two, agree": the history
+// in the cue color, the invalid color retired) — and the label
 // in the program face, its resting text the bone. THE STRIKE TELLS THE
 // HALVES APART: a REMOVED line's label struck (show_cue_label's bar), an
 // ADDED line's plain (resolve_flag_face's table). THE LABEL IS THE LINE'S

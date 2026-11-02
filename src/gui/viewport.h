@@ -192,10 +192,10 @@ struct Viewport {
     //    plate CONTENT change with no geometry behind it, so the reclamp below
     //    is a pure no-op for it. It touches no audio: the gain is the
     //    picture's.
-    //  - THE PLATE'S INKS (2026-10-05): the Settings Waveform row's live
-    //    install (install_program_palette's apply shape, palette_file.h)
-    //    installs words whose waveform ink and outline the plate bakes and
-    //    whose flag faces the flag cache bakes, and kicks so the new plate
+    //  - THE PLATE'S INKS (2026-10-05): a True Colors flip
+    //    (install_true_colors' apply shape, render.h) moves the window's
+    //    words of the waveform ink and outline the plate bakes and of the
+    //    flag faces the flag cache bakes, and kicks so the new plate
     //    and the new flags land in the act's frame rather than a paint ahead
     //    of the next tick — a CONTENT change with no geometry behind it, the
     //    gain's shape.
@@ -351,9 +351,9 @@ struct Viewport {
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
     // THE MARKER DRAG RELEASE'S SEAM (2026-09-14; the rule
-    // is at MarkerDragOps::commit_drag's tail), and the Settings color rows'
-    // for a preset that leaves the plate's inks alone (2026-10-07; the apply
-    // shape at install_program_palette's declaration, palette_file.h).
+    // is at MarkerDragOps::commit_drag's tail), and a True Colors flip's
+    // that leaves the plate's inks alone (the apply shape at
+    // install_true_colors' declaration, render.h).
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the
     // synchronous plate rebuild's tail and the tick run, with no plate render.

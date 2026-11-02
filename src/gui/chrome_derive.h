@@ -1,8 +1,6 @@
 #pragma once
 
 #include "theme_file.h"        // GuiThemeWords, the role table
-#include "palette_file.h"      // GuiPaletteWords, palette_role_index, the
-                               // default palette (the checks)
 #include "cool_edit_derive.h"  // the tones the chrome wears
 #include "materials.h"         // the selection pair's constants
 
@@ -17,12 +15,10 @@
 // SOURCE: every role that was a tone of the panel's Face (Cool Edit's
 // arithmetic, 2026-10-10 to 2026-10-23 — "the chrome inherits Cool Edit")
 // is A CONSTANT OF THE SKIN or ONE OF THE TWO RING TONES OFF THE GROUND'S
-// MEAN (materials.h's TONE RULE; render.cpp's panel_face hands the mean in as
-// the words' `face`), re-derived at every install of the palette
-// (render.cpp's install family). The palette's own `face` (Cool Edit's
-// preset text) is no source; the generated presets keep it for the
-// static_asserts. THE CAPTION HAS NO ROLE: the app paints none since
-// 2026-10-24 (render.h's caption note).
+// MEAN (materials.h's TONE RULE; the install hands the mean in,
+// materials::face), re-derived at every install of the palette
+// (render.cpp's install_palette). THE CAPTION HAS NO ROLE: the app paints
+// none since 2026-10-24 (render.h's caption note).
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 15, each decided
 // once — the build proves every role is listed exactly once):
@@ -95,12 +91,10 @@ constexpr bool every_chrome_role_decided() {
 }
 static_assert(every_chrome_role_decided());
 
-// THE DERIVATION: every role off the words' `face` (the ground's mean) and
+// THE DERIVATION: every role off `mean` (the ground's mean, 0xRRGGBB) and
 // the skin's constants.
-constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
-    constexpr std::size_t kFace = palette_role_index("face");
-    static_assert(kFace < kGuiPaletteRoleCount);
-    const uint32_t face = program[kFace] & 0xFFFFFFu;
+constexpr GuiThemeWords derive_chrome(uint32_t mean) {
+    const uint32_t face = mean & 0xFFFFFFu;
     GuiThemeWords w{};
     for (std::size_t i = 0; i < std::size(kChromeRoles); ++i) {
         uint32_t v = 0;
@@ -124,11 +118,7 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program) {
 // THE SKIN ON THE SHIPPED GROUND'S MEAN (about 212123, materials.h's TONE
 // RULE): the rings 49494D and 0D0D0E (pinned beside ring_light_of), the
 // constants as listed.
-inline constexpr GuiThemeWords kDefaultCheck = [] {
-    GuiPaletteWords p = default_palette_words();
-    p[palette_role_index("face")] = 0x212123;
-    return derive_chrome(p);
-}();
+inline constexpr GuiThemeWords kDefaultCheck = derive_chrome(0x212123);
 static_assert(kDefaultCheck[theme_role_index("ground")] == 0x212123);
 static_assert(kDefaultCheck[theme_role_index("hilight")] == ring_light_of(0x212123));
 static_assert(kDefaultCheck[theme_role_index("shadow")] == ring_dark_of(0x212123));
@@ -146,10 +136,9 @@ static_assert(cool_edit_derive::within_two(ring_light_of(0x212123), 0x48484B));
 static_assert(cool_edit_derive::within_two(ring_dark_of(0x212123), 0x0C0C0D));
 } // namespace chrome_derive
 
-// THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install family reads
-// (install_palette / install_program_palette, render.cpp): the derivation
-// over the words it hands in, their `face` the panel's (render.cpp's
-// panel_face).
-inline GuiThemeWords live_chrome_words(const GuiPaletteWords& program) {
-    return chrome_derive::derive_chrome(program);
+// THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads
+// (install_palette, render.cpp): the derivation over the ground's mean it
+// hands in (materials::face).
+inline GuiThemeWords live_chrome_words(uint32_t mean) {
+    return chrome_derive::derive_chrome(mean);
 }

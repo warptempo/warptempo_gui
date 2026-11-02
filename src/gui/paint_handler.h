@@ -189,9 +189,9 @@ struct WaveformCache {
     int       fp_divider_px  = -1;
     // THE TWO INKS the live plate is published with (the `waveform_ink` and
     // `waveform_outline` roles, waveform_plate_inks, render.h): the sink
-    // writes their words (GuiCanvasSink::plate), so an install that moves
-    // either (the settings page's `waveform` commit, install_program_palette,
-    // palette_file.h) republishes the plate BY FIELD, keyed directly like the
+    // writes their words (GuiCanvasSink::plate), so a change that moves
+    // either (a True Colors flip, install_true_colors, render.h)
+    // republishes the plate BY FIELD, keyed directly like the
     // divider's height (architect 2026-10-03; palette roles since 2026-10-07).
     WaveformPlateInks fp_inks{};
     // THE GAIN FIELD the live pixels were rendered under — the derived
@@ -397,8 +397,8 @@ struct FlagCache {
     // render.h — architect 2026-10-03; the palette's roles since
     // 2026-10-07): every flag pixel is a palette color (the cue triangle and
     // its shadow, the faded triangle and shadow of a disabled cue, the label
-    // inks), so an install (the Settings color rows' commit,
-    // install_program_palette) re-renders the surface BY FIELD, the scale's
+    // inks), so an install (a materials bake, install_palette; a True
+    // Colors flip, install_true_colors) re-renders the surface BY FIELD, the scale's
     // shape. (No axis or side colors a cue, so no color needs a field beyond
     // this generation: fp_active_markers_view keys the lane's CONTENT — which
     // column's markers, and which column's half of the history delta — not a
@@ -627,7 +627,7 @@ struct GuiPaintHandler {
     //   * THE MATERIALS: the process's first bake runs in the hold's one
     //     frame's pre-paint hook (platform.h's head), ahead of the load
     //     (materials.h's BAKE RULE); a bake's palette reinstall moves no
-    //     plate ink (the inks are the preset's words, not the ground's).
+    //     plate ink (the inks are the palette's constants, not the ground's).
     //   * NO WAVEFORM ROWS (2026-10-28, Sol's round): where waveform_area has
     //     no rows or no columns (compute_waveform_render_inputs's empty-area
     //     arm; a schema-legal lane stack past the window, waveform_area's
@@ -1064,10 +1064,9 @@ private:
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
     // of the active column stems, always, as COOL EDIT'S DOTTED COLUMN since
-    // 2026-10-09, in its TWO CUE COLORS since ~11:50: one-device-px dots on
-    // the canvas's device rows (~14:25, "on waveform → unscaled"), the blue
-    // `range` on rows ≡ 3 and the red `cue`
-    // on rows ≡ 7 (mod 8), each where the cue wears it, warp or phase reset,
+    // 2026-10-09, in the ONE `cue` since 2026-11-01: one-device-px dots on
+    // the canvas's device rows (~14:25, "on waveform → unscaled"), on rows
+    // ≡ 3 and ≡ 7 (mod 8), each where the cue wears it, warp or phase reset,
     // the canvas alone (render.h's marker-lane paragraph); a DISABLED marker
     // stems never.
     // Which colors stand is the cue's class whether the marker is selected

@@ -2524,8 +2524,8 @@ private:
     // the trim presets list's row the player's shape instead, the BPM
     // form's RENDER and Cancel in that cluster — and route_picker_key below is its whole
     // key vocabulary, its opener's chord alone. FIVE CONTENTS — the project picker, the settings
-    // page (2026-10-28), the value list (2026-10-25 for `waveform`,
-    // 2026-10-28 night for four keys more), the page's row for a listed key,
+    // page (2026-10-28), the value list (2026-10-25; its keys since
+    // 2026-10-28 night), the page's row for a listed key,
     // the trim presets list (2026-10-28 night) and the BPM form
     // (2026-10-29):
     //
@@ -2638,7 +2638,7 @@ private:
     //       sub-page too (architect 2026-10-28 night,
     //       handle_settings_editor_key). An inert row opens nothing.
     //
-    //   THE VALUE LIST (architect 2026-10-25 for `waveform`: "maybe a drop
+    //   THE VALUE LIST (architect 2026-10-25: "maybe a drop
     //   down would make it quicker, because I don't like having to type it
     //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
     //   night for `true_colors`, `noise`, `noise_level` and
@@ -2654,9 +2654,8 @@ private:
     //   `;`) closes the whole panel, as over the page.
     //     build_value_list_rows: the key's values
     //       (GuiSettingsEditor::value_choices), one glyph-less Plain row each,
-    //       its text what it shows (a preset's DISPLAY NAME, every other
-    //       key's value as written, `-9`, `4`) and its `value` what it
-    //       commits; the key recorded on the overlay (`value_key`); the band
+    //       its text what it shows and its `value` what it commits, both
+    //       the key's value as written, `-9`, `4`; the key recorded on the overlay (`value_key`); the band
     //       opens on the LIVE value's row, centered in the band
     //       (folder_overlay::scroll_row_centered, 2026-10-26).
     //     value_list_commit: THE OPEN ACT on row `index` — a tap, a click
@@ -2843,8 +2842,8 @@ private:
     // (2026-08-28, one afternoon: GLASS NEEDS A ROAD THAT IS NOT TYPING) is
     // SPENT rather than kept — the list is now the only road on both
     // backends, and a row's click and Enter are one act on it. THE VALUE
-    // LIST IS A SECOND ROAD ONTO ITS KEY BY RULING (architect 2026-10-25 for
-    // `waveform`, 2026-10-28 night for four keys more): the typed `key=`
+    // LIST IS A SECOND ROAD ONTO ITS KEY BY RULING (architect 2026-10-25,
+    // 2026-10-28 night for its keys): the typed `key=`
     // line and its Tab completion stand unchanged, and both roads commit
     // through the one body (GuiSettingsEditor::apply_device_setting), so
     // they cannot drift. THE SETTINGS PAGE IS NO SECOND ROAD: its rows open

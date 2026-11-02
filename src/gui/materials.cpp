@@ -4,7 +4,6 @@
 #include "cool_edit_paint.h"    // the key painter the key patches are baked from
 #include "display_transform.h"
 #include "paint_handler.h"      // program_key_seats
-#include "palette_file.h"       // program_palette_words' type
 
 #include <algorithm>
 #include <chrono>
@@ -129,11 +128,9 @@ struct State {
     uint32_t face = kGroundMeanEstimate;
     // THE GROUND'S TILE (materials.h's BAKE RULE), one once baked.
     std::vector<Tile> ground;
-    // THE KEY PATCHES (patch_key), and the key sizes they were baked for
-    // (kept so an accent change rebuilds the lit ones without a layout).
+    // THE KEY PATCHES (patch_key), and the key sizes they were baked for.
     std::unordered_map<uint64_t, Tile> patches;
     std::vector<GuiKeySeat>            key_seats;
-    uint32_t                           accent = kLedLitRecord;
     // THE CLIENT THE PAINTERS PAINT (every pre-paint hook's): while a size
     // change waits on the gate the tiles are the last bake's, and none is
     // ever blitted outside this.
@@ -436,7 +433,7 @@ std::size_t bytes_of_surface(cairo_surface_t* s) {
 void composite_glow(cairo_surface_t* surf, const GuiRect& r, int depth) {
     const GuiRect led = key_led_rect(r, depth);
     if (led.w <= 0 || led.h <= 0) return;
-    const GuiColor accent = display_color(hex(state().accent));
+    const GuiColor accent = display_color(hex(kAccent));
     const double ar = accent.r * 255.0, ag = accent.g * 255.0, ab = accent.b * 255.0;
     constexpr double kGlowPeak = 0.35;
     // The face's first row and column: past the outline and the wall.
@@ -475,19 +472,16 @@ void composite_glow(cairo_surface_t* surf, const GuiRect& r, int depth) {
 // stands at, the key painter's own key at the origin — a lamp key's LED dead
 // at rest and lit down, a lampless key's none — then, lit, THE GLOW. In the
 // window's bytes: the painter converts its own colors (set_palette_source),
-// the glow converted here. `lit_only` (an accent change): the lamp keys'
-// depths 1 and 2 alone, the other patches standing.
-void rebuild_key_patches(bool lit_only) {
+// the glow converted here.
+void rebuild_key_patches() {
     State& s = state();
-    if (!lit_only) s.patches.clear();
+    s.patches.clear();
     for (const GuiKeySeat& seat : s.key_seats) {
         if (seat.w <= 0 || seat.h <= 0) continue;
-        if (lit_only && !seat.lamp) continue;
         const GuiRect r{0, 0, seat.w, seat.h};
         for (int depth = 0; depth <= 2; ++depth) {
             if (!(seat.depths & (1u << depth))) continue;
             const bool lit = seat.lamp && depth > 0;
-            if (lit_only && !lit) continue;
             const GuiKeyLed led = !seat.lamp ? GuiKeyLed::None
                                   : lit      ? GuiKeyLed::Lit
                                              : GuiKeyLed::Unlit;
@@ -520,7 +514,7 @@ void bake(const Geometry& g) {
         const std::jthread ground([&] { bake_ground(g, baked); });
         const auto k0 = std::chrono::steady_clock::now();
         s.key_seats = g.key_seats;
-        rebuild_key_patches(false);
+        rebuild_key_patches();
         keys_ms = std::chrono::duration<double, std::milli>(
                       std::chrono::steady_clock::now() - k0)
                       .count();
@@ -561,7 +555,7 @@ void bake_now(const AppState& app, const Key& k) {
     s.deferred = false;
     s.armed = false;
     s.landed = true;
-    install_palette(program_palette_words());
+    install_palette();
 }
 
 } // namespace
@@ -636,14 +630,6 @@ uint32_t face() { return state().face; }
 
 uint32_t ring_light() { return ring_light_of(face()); }
 uint32_t ring_dark() { return ring_dark_of(face()); }
-
-void set_accent(uint32_t accent) {
-    State& s = state();
-    if (s.accent == accent) return;
-    s.accent = accent;
-    if (s.baked) rebuild_key_patches(true);
-}
-uint32_t accent_color() { return state().accent; }
 
 bool set_source(cairo_t* cr, GuiColor c) {
     State& s = state();

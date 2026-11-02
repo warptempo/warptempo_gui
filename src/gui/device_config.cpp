@@ -4,7 +4,6 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "palette_file.h"      // is_builtin_palette_name and its reason
 
 #include <cstddef>
 #include <cstdio>
@@ -20,7 +19,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (FIFTEEN keys since 2026-10-31 night, the
+// REQUIRED SET, every one of them (FOURTEEN keys since 2026-11-01, the
+// `waveform` key retired with the color presets — one palette,
+// palette_file.h; FIFTEEN 2026-10-31 night, the
 // project voice's level `audio_level` placed before the noise's three;
 // FOURTEEN that day, the
 // plate's grow `waveform_grow` placed after `true_colors`; THIRTEEN
@@ -60,17 +61,10 @@ namespace {
 // place, it means something's wrong with the config or the setup"
 // (architect), and every key follows.
 //
-// THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13; and
-// 2026-10-21): `waveform` (`palette` until 2026-10-13, then `chrome` until
-// 2026-10-21, renamed for what it sets) FOLLOWS last_project, where the
-// `caption` key (formerly `scheme`) stood before it until it left
-// 2026-10-21. (`theme` stood
-// 2026-10-03..10-08, `icons` and `font` 2026-10-09 to 2026-10-12, the
-// header's record.)
-//
 // TRUE COLORS (architect 2026-10-21, the Settings popup's command row made a
-// key): `true_colors` FOLLOWS `waveform`, the two display keys together, and
-// the tuning keys keep the end where they leave from.
+// key): `true_colors` FOLLOWS last_project, the display keys' head (the
+// `waveform` preset key stood before it until 2026-11-01), and the tuning
+// keys keep the end where they leave from.
 //
 // THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
 // `true_colors`, the display keys' end — a permanent key, the canvas's one
@@ -107,7 +101,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_repo",
     "projects_path",
     "last_project",
-    "waveform",
     "true_colors",
     "waveform_grow",
     "audio_level",
@@ -229,9 +222,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "last_project") {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
-        } else if (k == "waveform") {
-            // The built-in's key verbatim (palette_file.h's key grammar).
-            s += cfg.waveform;
         } else if (k == "true_colors") {
             // The switch's word (format_true_colors, the grammar's owner).
             s += format_true_colors(cfg.true_colors);
@@ -335,26 +325,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.last_project = value;
             return {};
         }
-        // THE WAVEFORM PRESET (2026-10-07 as `palette`, `chrome` 2026-10-13,
-        // `waveform` 2026-10-21): A BUILT-IN'S KEY ALONE since 2026-10-14
-        // (architect, "remove picker and preset file road": the preset files
-        // are gone), under its one grammar owner (is_builtin_palette_name,
-        // palette_file.h) — any other word, a former file's name included,
-        // the ordinary bad-value hard fail with no migration. An EMPTY value
-        // is refused like any other non-name, and an ABSENT line is the
-        // scanner's missing-required-key refusal (architect 2026-10-14: every
-        // key required, the default spelled —
-        // `waveform=default`).
-        // An old `palette=`, `chrome=`, `scheme=` or `caption=` line is the
-        // unknown key below (the `caption` key's arm stood here
-        // 2026-10-08..10-21).
-        if (key == "waveform") {
-            if (!is_builtin_palette_name(value)) {
-                return bad_value(ln, key, value, kPaletteGrammarReason);
-            }
-            out.waveform = value;
-            return {};
-        }
+        // An old `waveform=`, `palette=`, `chrome=`, `scheme=` or `caption=`
+        // line is the unknown key below (no key names a color since
+        // 2026-11-01: one palette, palette_file.h).
         // TRUE COLORS (2026-10-21): one of the two words under its one owner
         // (parse_true_colors, device_config.h), required like every key; any
         // other word the launch's hard fail.

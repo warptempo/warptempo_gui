@@ -159,12 +159,8 @@ set(WARPTEMPO_GUI_SOURCES
     # role table and each chrome's compiled theme, no files.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
-    # THE WAVEFORM PRESETS (2026-10-07; compiled in alone since 2026-10-14;
-    # the caption schemes gone since 2026-10-21): the program's role table
-    # (eleven roles since 2026-10-11), the built-in palettes (the program's
-    # own twenty-five, the one default `warptempo-phosphor-cyan-and-sky`),
-    # and the lookups
-    # the device config and the Settings Waveform row read. GUI-ONLY.
+    # THE PALETTE (2026-10-07; one palette, compiled in, since 2026-11-01):
+    # the program's role table's coverage proofs. GUI-ONLY.
     src/gui/palette_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp

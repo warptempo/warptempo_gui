@@ -11,7 +11,6 @@
 #include "render.h"
 #include "settings_file.h"
 #include "text_editor.h"
-#include "palette_file.h"   // the Waveform row's domain (kGuiBuiltinPalettes)
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
 #include "noise.h"           // the background sound (AppState::noise)
@@ -8014,13 +8013,13 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the nineteen keys the
+    // 2026-10-28: the Settings button and bare `;`; the eighteen keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened PREFILLED on the row's line once
     // the page has closed — or, on the row of a key with a value list, that
     // list swapped in under the same session); and the VALUE LIST
-    // (2026-10-25 for `waveform`, 2026-10-28 night for `true_colors`,
+    // (2026-10-28 night for `true_colors`,
     // `noise`, `noise_level` and `noise_crossfade_s`, 2026-10-31 for
     // `waveform_grow` and that night `audio_level`; reached through the
     // page's row for its key alone; the key's values as rows, the open act
@@ -8078,7 +8077,7 @@ struct AppState {
     //   `session`  its modal session id from the one counter
     //              (text_editor::next_session_id), minted at every open.
     // It authors nothing by itself: no undo, no dirty, legal on a read-only
-    // tab (the preset pick writes a device key, never the piece, and the
+    // tab (a value list's pick writes a device key, never the piece, and the
     // page's rows open the editor, whose commit arms carry the lock per key;
     // the trim presets list writes the trim, which is band, and its own
     // device-local file, never the piece; the BPM form writes the owner's
@@ -8581,15 +8580,15 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's nineteen keys as
+    // (architect 2026-10-28), with the settings editor's eighteen keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
-    // disabled lines (2026-10-29); and since 2026-10-25 the
-    // VALUE LIST, one listed key's values — the twenty-one built-in waveform
-    // presets by display name (architect: "maybe a drop down would make it
-    // quicker, because I don't like having to type it in every time" —
-    // "brief it as a scrolling list", "Yes"), and since 2026-10-28 night
-    // `true_colors`'s two words, the folders under `noise/`, the 31 levels
-    // and the 30 crossfades — the page's row for that key's content; and
+    // disabled lines (2026-10-29); and the
+    // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
+    // drop down would make it quicker, because I don't like having to type
+    // it in every time" — "brief it as a scrolling list", "Yes"), since
+    // 2026-10-28 night `true_colors`'s two words, the folders under
+    // `noise/`, the 31 levels and the 30 crossfades, and since 2026-10-31
+    // the grow's nine quarters — the page's row for that key's content; and
     // since 2026-10-28 night THE TRIM PRESETS LIST, the piece's named trim
     // windows (`trim/presets.txt`, trim_presets_file.h), the TRIM key's; and
     // since 2026-10-29 THE BPM FORM, the sweep's three values as `key=value`
@@ -8697,10 +8696,9 @@ struct AppState {
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph, its ink and whether it acts: Folder
     // wears the folder glyph, Wav the wav glyph, PLAIN NONE (architect
-    // 2026-10-25: a preset row is the preset's memorable DISPLAY NAME,
-    // "Midnight Blues", never its key; 2026-10-28: a settings page row is
-    // the line the editor opens with, `waveform=default`, and a value list's
-    // other rows the value as the config spells it, `-9`, `4`; a listing
+    // 2026-10-28: a settings page row is
+    // the line the editor opens with, `true_colors=on`, and a value list's
+    // rows the value as the config spells it, `-9`, `4`; a listing
     // with no glyph row starting its text at the glyph's own column,
     // 2026-10-28 night, paint_folder_overlay's names' column), and GROUP
     // NONE, AND IT IS INERT
@@ -8724,11 +8722,11 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its nineteen editable key lines and the two
+    // rows (its two headings, its eighteen editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows alone (build_value_list_rows), each carrying
-    // in `value` the key's spelling the tap commits beside the `name` it
-    // shows; the trim presets list Plain rows alone
+    // in `value` the key's spelling the tap commits, its `name` the same
+    // words; the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
     // preset's name alone (architect 2026-10-28 night); the BPM form a Group
     // row and three Plain rows (build_bpm_form_rows), row f + 1 the field f

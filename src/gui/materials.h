@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cool_edit_derive.h" // the HLS round trip the ring tones and the accent take
+#include "cool_edit_derive.h" // the HLS round trip the ring tones take
 #include "render.h"           // GuiRect, GuiColor, the chokepoints
 
 #include <cairo/cairo.h>
@@ -38,7 +38,7 @@ struct AppState;
 // mocks in his gallery, reversing the looping strip of 2026-10-22):
 // between the program ring's columns every pixel of the lane is the one
 // FACE, the baked ground's mean (the TONE RULE below; the palette's `face`)
-// — no brushing, no brighter strip, no phase, ON EVERY PRESET ("brushing
+// — no brushing, no brighter strip, no phase ("brushing
 // goes always"; "no tint or canvas color") — and the ring round it stands
 // as it was, its one-device-px columns and rows in the two ring tones, the
 // ruler's foot line above and the canvas's dark top row below. His reasons:
@@ -108,9 +108,7 @@ struct AppState;
 //           key painter draws it at that depth, its face flat (THE KEY
 //           below) — two keys of one size at one depth are the same bytes,
 //           so a size is one patch whichever key stands there — and a key
-//           is one blit at every depth, no blend computed at paint time. An
-//           accent change rebuilds the lit patches alone (set_accent); the
-//           rest stand.
+//           is one blit at every depth, no blend computed at paint time.
 // RESIDENT at 300 % on 2304 x 1440 at key_height 33 and the keyboard's
 // defaults (osk_key_w 48, osk_key_h 60), 13 590 252 bytes (the arithmetic
 // off the geometry, 2026-10-29): the ground's tile 13.3 MB (rows 0 .. 1440
@@ -218,7 +216,7 @@ inline constexpr uint32_t kSelectionText = kBoneInk;
 // THE KEY (architect 2026-10-23): a flat face, a one-device-px black outline, a light top
 // edge two rows deep (the light row, then the mean of it and the face), a
 // two-row foot and a one-column right edge in the dark — the key stands
-// proud — and the LED: unlit a dead lamp, lit THE ACCENT (accent_color).
+// proud — and the LED: unlit a dead lamp, lit THE ACCENT (kAccent below).
 // DOWN — checked one device px, held two (the two depths, 2026-10-23) —
 // the face darker, the edges gone, a wall of the foot tone the depth's
 // device px inside the outline's top row and left column and the LED the
@@ -236,9 +234,11 @@ inline constexpr uint32_t kKeyTopLight    = 0x767678;
 inline constexpr uint32_t kKeyFoot        = 0x0E0E10;
 inline constexpr uint32_t kKeyOutline     = 0x000000;
 inline constexpr uint32_t kLedUnlit       = 0x232325;
-// THE LED'S LIT TONE OF RECORD (the mock's 46DC6E): its HLS saturation and
-// lightness are the accent's, the hue the waveform ink's (accent_of_ink).
-inline constexpr uint32_t kLedLitRecord   = 0x46DC6E;
+// THE ACCENT — THE LIT LED'S TONE AND ITS GLOW'S (architect 2026-11-01, the
+// palette arc): Live's "on" orange FFAD56, the color of its lit buttons, one
+// constant with no device key; worn by the lit LEDs alone (cool_edit_paint.h's
+// paint_key, materials.cpp's composite_glow).
+inline constexpr uint32_t kAccent         = 0xFFAD56;
 
 // THE RING TONES OFF A GROUND'S MEAN (the head's TONE RULE): light L + .16
 // with S × .9, dark L × .40, the hue kept.
@@ -259,9 +259,8 @@ static_assert(ring_light_of(0x212123) == 0x49494D &&
 // and its bottom row and right column kSpanDark, THE TONE RULE's light and
 // dark off the body (ring_light_of / ring_dark_of above). His reason: the
 // span's light bevel was the one place a LIGHT version of the waveform's
-// ink showed; the ink lives on the waveform (and the LEDs' hue) alone. No
-// preset touches the trio (render_trim_flags paints it, render.h's view
-// bar block).
+// ink showed; the ink lives on the waveform alone. No palette role touches
+// the trio (render_trim_flags paints it, render.h's view bar block).
 inline constexpr uint32_t kSpanFace  = 0x505053;
 inline constexpr uint32_t kSpanLight = ring_light_of(kSpanFace);
 inline constexpr uint32_t kSpanDark  = ring_dark_of(kSpanFace);
@@ -270,15 +269,6 @@ static_assert(kSpanLight == 0x78787C && kSpanDark == 0x202021);
 // long): the base under the gradient's mean, 1 − .12 / 3.
 inline constexpr uint32_t kGroundMeanEstimate = 0x212123;
 
-// THE ACCENT OF AN INK (architect 2026-10-23, "agree to all"): the ink's
-// HUE under the LED's fixed HLS saturation and lightness (kLedLitRecord's),
-// so the default's green 4BF3A7 lands at 46DC98, each preset's ink an
-// equally bright lamp of its own hue. Worn by the lit LEDs alone; no device key.
-inline constexpr cool_edit_derive::Hls kLedLitHls =
-    cool_edit_derive::hls_of(kLedLitRecord);
-constexpr uint32_t accent_of_ink(uint32_t ink) {
-    return cool_edit_derive::tone(ink, 0.0, kLedLitHls.l, 0.0, kLedLitHls.s);
-}
 // ONE KEY SIZE THE BAKE MAKES PATCHES FOR (the head's KEYS;
 // program_key_seats, paint_handler.h): its size, whether it carries a lamp
 // (its LED then dead at depth 0 and lit at 1 and 2, cool_edit_paint.h's
@@ -335,14 +325,6 @@ uint32_t face();
 // THE TWO RING TONES OFF THE GROUND'S FACE (the head's TONE RULE), sRGB.
 uint32_t ring_light();
 uint32_t ring_dark();
-
-// THE ACCENT (accent_of_ink), set at every palette install from the live
-// waveform preset's ink (render.cpp's fill_program_palette): where it moved,
-// the lit keys' patches — a lamp key's checked and held, whose LED and glow
-// carry it — are rebuilt, the resting and the lampless patches standing, so
-// a waveform pick relights every lamp at once. accent_color() is its one reader's road.
-void     set_accent(uint32_t accent);
-uint32_t accent_color();
 
 // THE SURFACE CHOKEPOINT'S ROAD (render.h's set_surface_source), called with
 // the fill's PATH ALREADY BUILT: `c` THE FACE (the palette's `face`, the
