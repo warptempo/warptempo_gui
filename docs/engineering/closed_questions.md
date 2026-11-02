@@ -65,7 +65,7 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **The Center on Next Marker lamp (bare `n`)** — deleted, 2026-09-13: framing is each caller's stated `MarkerLandingFrame`, never a default. Owner: `MarkerLandingFrame`.
 - **The walk re-zooming (Tab snapping to the working zoom, the finer-to-working return)** — ruled out, reverted 2026-08-05 and deleted 2026-09-22: the walk writes no zoom. Owner: `Viewport::land_subject`'s Walk kind.
 - **The Keep Centered While Nudging lamp (`y`) and the centred pin** — deleted, 2026-09-14 (the pin 2026-09-13): the nudge's camera is the hold posture's. Owner: `AppState::camera_hold`.
-- **The paired march walking the bound cells under grid iterations** — refused 2026-09-10 (the march's tab switch re-seats the payload, so a per-tab addressed cell could not survive it); MOOT since 2026-11-02, when the walk stepped markers alone (architect, R4: next / prev act "as they do outside grid view"), and the march's refusal under the lamp went with its reason: the march runs in every state. Owner: `GuiInputHandler::iteration_lock_key_blocked`, `cycle_marker_focus`.
+- **The paired march (walk both tabs) under grid iterations** — refused 2026-09-10; re-ruled 2026-11-02 when the walk stepped markers alone and the old reason (the bound cells' walk) went (architect: "walk both not useful under grid b/c grid is for localize troubleshooting of phase or setting or warp"; a one-commit admission, 6139f3b8, stood an hour and was reversed): the march stays refused while the lamp is lit. Owner: `GuiInputHandler::iteration_lock_key_blocked`.
 
 ## The render pipeline
 
