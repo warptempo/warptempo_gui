@@ -360,7 +360,7 @@ inline constexpr Page page_of_key_index(int index) {
 // THE LIVE PAGE OUT FROM UNDER ITS INDEX before the paint, so an index test
 // against the new page's walk finds no held key and the page key paints its
 // armed or rest face under the finger; the pressed face must follow the
-// finger (the flat look's pressed key, materials.h's paint_key), and the
+// finger (the press face, materials.h's paint_key and key_look), and the
 // finger is on the slot.
 // A negative index — `pressed_key`'s "nothing held" — is on no slot.
 inline constexpr bool same_slot(int a, int b) {
@@ -454,7 +454,8 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the lit fill, its cap
 // kTextOnLit (materials.h's paint_key, the flat look 2026-11-01), which this
-// key and the page key (while the symbols page stands) wear off their lamps
+// key and the page key (while the symbols page stands) wear off their lamps,
+// pressed or not (a press on an unarmed key is the press face, 2026-11-02)
 // — and the letter caps
 // themselves, every one of which turns capital while the arm stands.
 inline const char* cap_word(const KeyDef& k, Page page) {

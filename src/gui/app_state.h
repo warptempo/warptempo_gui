@@ -6173,15 +6173,15 @@ struct AppState {
     // feint first had it (arm_modal_dialog_press, the one site).
     // So the arm is one index for the life of the hold and
     // `modal_dialog_press_inside` below is the pointer's answer about it:
-    //   pointer ON the armed button   -> the key LIT (kLitFill, materials.h:
-    //                                    a standing press lights it, 2026-11-02);
+    //   pointer ON the armed button   -> the key's PRESS FACE (kPressFace,
+    //                                    materials.h's key_look, 2026-11-02);
     //                                    the release COMMITS
     //   pointer OFF it                -> the button rests (the passive
     //                                    focus the press gave it, unpainted
     //                                    since 2026-10-23); the release
     //                                    commits NOTHING and leaves the
     //                                    button PASSIVELY FOCUSED
-    // Sliding back on lights the key again and a release there DOES
+    // Sliding back on presses the key again and a release there DOES
     // commit — the arm never died, so there is nothing to re-arm. The reason
     // is in the ruling itself: a button still engaged while held away must
     // be able to light again, and a dead arm could not.
@@ -8626,10 +8626,10 @@ struct AppState {
     // NONE, AND IT IS INERT
     // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
     // highlighted, never opened, stepped over by the walk, its text in the
-    // dead key's print (kTextDimInk); and DISABLED NONE, INERT AS GROUP IS
+    // dim print (kTextDimInk); and DISABLED NONE, INERT AS GROUP IS
     // (architect 2026-10-29, the settings page's `scale` and `bpm`: "bpm and
     // scale should be viewable but disabled. they are useful for notes"):
-    // a key line in the dead key's print, never highlighted, never opened,
+    // a key line in the dim print, never highlighted, never opened,
     // stepped over by the walk. The kind says what a row IS; what its open
     // MEANS is the owner's (folder_overlay_open_row). A KIND EXISTS
     // IFF A CONTENT PRODUCES IT, which is why this enum has lost two:

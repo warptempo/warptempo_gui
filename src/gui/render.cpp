@@ -404,11 +404,11 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
 // render.h's caption note.)
 
 // THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key at
-// rest on its box (materials.h's paint_key) — never lit: it is dragged, not
-// pressed on or off.
+// rest on its box (materials.h's paint_key) — never lit and no press face:
+// it is dragged, not pressed on or off.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
     if (box.w <= 0 || box.h <= 0) return;
-    paint_key(cr, box, false);
+    paint_key(cr, box, KeyLook::Rest);
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):

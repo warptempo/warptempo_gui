@@ -1162,7 +1162,7 @@ private:
     // list panel, Live's browser list on the modal family's pane (M6 A,
     // 2026-11-01 night) — folder
     // and wav rows with their glyphs, the pickers' glyph-less rows, the
-    // settings page's group rows in the dead key's print (2026-10-28), the
+    // settings page's group rows in the dim print (kTextDimInk, 2026-10-28), the
     // highlight band and the pressed face, all under the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
     // and then on its own exposure per row, as the keyboard is. It publishes

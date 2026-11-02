@@ -13,8 +13,8 @@
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
 //   visual size, the legend kept under the key): every key carries one,
 //   centered on its face (paint_key_glyph, paint_handler.cpp), kTextInk
-//   B5B5B5 at rest, kTextDimInk 757575 on a disabled key, kTextOnLit 111111
-//   on a lit one.
+//   B5B5B5 at rest and pressed, kKeyDimInk 5A5A5A on a disabled key,
+//   kTextOnLit 111111 on a lit one (materials.h's key_ink, 2026-11-02).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note
 //   (MusicNote16th, BPM's glyph too) and its battery legend's glyph
 //   (Battery000Charging / Battery000) (paint_logo_lane), the list rows'

@@ -326,20 +326,21 @@ namespace {
 
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
-// 2026-11-01; paint_key, materials.h, where its states stand).
-// LIT — the FFAD56 fill — for a CHECKED button (the roster's `selected`,
-// `lamp`) and for a PRESSED one (a live press) whatever its checked state,
-// for as long as the press stands, the key back to its own state at the
-// lift (architect 2026-11-02); a DISABLED button keeps the face its state
-// gives, a dead checked button still lit (the roster's rule at
-// paint_icon_row), its legend dimmed by the caller. NO HOT FACE. `r` is the
+// 2026-11-01; paint_key, materials.h, where its three faces stand).
+// LIT — the FFAD56 fill — for a CHECKED button alone (the roster's
+// `selected`, `lamp`), pressed or not; THE PRESS FACE 464646 for a PRESSED
+// one (a live press) that is not checked, for as long as the press stands,
+// the key back to its own state at the lift (architect 2026-11-02: the
+// yellow for lamps only; key_look); a DISABLED button keeps the face its
+// state gives, a dead checked button still lit (the roster's rule at
+// paint_icon_row), its glyph and legend dimmed by the caller. NO HOT FACE. `r` is the
 // PAINTED key, its cell less the group gap (key_in_cell, materials.h). ON
 // ITS FACE its caller paints the key's Breeze glyph (paint_key_glyph,
 // 2026-11-02); the legends, the word buttons' words among them, stand under
 // the key on the ground.
 void paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
                        bool pressed) {
-    paint_key(cr, r, lamp || pressed);
+    paint_key(cr, r, key_look(lamp, pressed));
 }
 
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
@@ -485,8 +486,9 @@ KeyLegendLayout key_legend_layout(const GuiRect& key, std::string_view word) {
     return out;
 }
 
-// A KEY'S LEGEND under it (key_legend_layout), in the text tone kTextInk
-// or, `enabled` false, the dim kTextDimInk (Live's B5B5B5 / 757575, M13,
+// A KEY'S LEGEND under it (key_legend_layout), on the ground whatever the
+// key's face, in the text tone kTextInk or, `enabled` false, the disabled
+// key's kKeyDimInk 5A5A5A (Live's B5B5B5, M13; the key's dim tone, architect
 // 2026-11-02; materials.h's text tones). No letter of it is underlined
 // (architect 2026-10-30: no keyboard stands under a dialog, so an access key
 // has no producer; the words are the dialogs' plain words).
@@ -494,7 +496,7 @@ void paint_key_legend(cairo_t* cr, const GuiRect& key, std::string_view word,
                       bool enabled) {
     if (word.empty()) return;
     const KeyLegendLayout layout = key_legend_layout(key, word);
-    set_palette_source(cr, hex(enabled ? kTextInk : kTextDimInk));
+    set_palette_source(cr, hex(enabled ? kTextInk : kKeyDimInk));
     text_shape::show_shaped_run(cr, *layout.run, layout.seat.x,
                                 layout.seat.baseline);
 }
@@ -510,23 +512,24 @@ inline constexpr double kKeyGlyphInkAt300 = 20.0;
 // Breeze drawing's ink box, its larger side skin_px(kKeyGlyphInkAt300),
 // CENTERED in the painted key `key` (the cell less the group gap), the
 // spare split with its odd px below and right (the integer floor, the
-// mock's). ITS TONE IS THE FACE'S TEXT: kTextOnLit 111111 when the key
-// paints LIT (`lit`: checked, pressed, or a dead checked key keeping its
-// fill), else kTextInk B5B5B5, or kTextDimInk 757575 when the key is
-// disabled — the legend's own pair (paint_key_legend). The glyph is
+// mock's). ITS TONE FOLLOWS THE FACE (materials.h's key_ink): kTextOnLit
+// 111111 when the key paints LIT (`look`, key_look's answer: checked, a dead
+// checked key keeping its fill), else kTextInk B5B5B5 on a resting or
+// pressed face, or kKeyDimInk 5A5A5A when the key is disabled — the
+// legend's own pair (paint_key_legend). The glyph is
 // clipped to the key: a key smaller than the ink box keeps its glyph
 // centered and lets nothing overhang onto the ground. None is today — the
 // keys 69 wide at 300 % and `key_height` tall, a tuning key no lower than
 // 21 against the glyph's 20, both scaled as the glyph is.
 void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
-                     bool enabled, bool lit) {
+                     bool enabled, KeyLook look) {
     if (key.w <= 0 || key.h <= 0) return;
     const int ink = skin_px(kKeyGlyphInkAt300, 1);
     const icons::InkSize size = icons::glyph_ink_size(icon, ink);
     if (size.w <= 0 || size.h <= 0) return;
     const int x = key.x + static_cast<int>(std::floor((key.w - size.w) * 0.5));
     const int y = key.y + static_cast<int>(std::floor((key.h - size.h) * 0.5));
-    const uint32_t tone = lit ? kTextOnLit : enabled ? kTextInk : kTextDimInk;
+    const uint32_t tone = key_ink(look, enabled);
     cairo_save(cr);
     cairo_rectangle(cr, key.x, key.y, key.w, key.h);
     cairo_clip(cr);
@@ -1086,7 +1089,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // "building a suction on the other one is the right way to go"; the consumed
 // nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
 // on_key) — never greyed for it — the key staying lit under the hold
-// (paint_roster_case: lit for a checked or a pressed key alike).
+// (paint_roster_case: lit while checked, the press changing nothing on a
+// lit key's face).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -1694,8 +1698,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (render.h's palette says so), and so has the menu row's.
     //
     // THE FACES ARE THE PROGRAM'S CASE (paint_roster_case, above, where the
-    // faces stand): the rest face, the lit fill for a press and
-    // for a CHECKED button — the live fact its chord flips
+    // faces stand): the rest face, the press face for a press on an
+    // unchecked button, the lit fill for a CHECKED one, pressed or not —
+    // the live fact its chord flips
     // (redesign_button_selected), the view pairs' lit members among them —
     // and no hot face. The pointer walk finds the tooltip's button
     // (recompute_redesign_button_hover).
@@ -1846,8 +1851,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // derived, for reasons recorded there. This painter decides none of
         // the three.
         //
-        // THE DEAD FACE IS THE LEGEND'S ALONE (architect 2026-10-02, the AB
-        // set; the flat look 2026-11-01, M6): dimmed (kTextDimInk,
+        // THE DEAD FACE IS THE GLYPH'S AND THE LEGEND'S ALONE (architect
+        // 2026-10-02, the AB set; the flat look 2026-11-01, M6; the key's
+        // dim tone 2026-11-02): dimmed (kKeyDimInk, paint_key_glyph and
         // paint_key_legend), the key the face its state gives
         // (paint_roster_case). A dead CHECKED button (the grid-iterations
         // lamp on a locked tab, say) keeps its lit fill: the mode cannot
@@ -1863,6 +1869,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
+        const KeyLook look = key_look(face.selected, pressed);
         paint_roster_case(cr, key, face.selected, pressed);
 
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
@@ -1876,7 +1883,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // (redesign_button_glyph) and legend are what the per-tick
         // comparator repaints the face on (main.cpp).
         paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
-                        face.enabled, face.selected || pressed);
+                        face.enabled, look);
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -2667,12 +2674,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
+        const KeyLook look = key_look(face.selected, pressed);
         paint_roster_case(cr, key, face.selected, pressed);
         // THE GLYPH ON THE KEY, ITS LEGEND UNDER IT (the band's rule,
         // 2026-11-02 / 2026-10-23: the stateful glyph and the stateful
         // legend through their one seats, the tones the face's).
         paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
-                        face.enabled, face.selected || pressed);
+                        face.enabled, look);
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -2808,8 +2816,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // publishes the key's empty rect after this, which empties the
         // field with it (publish_button_face's empty overload). NOTHING IS
         // PAINTED ON THE CLOCK FOR THE PRESS — no fill, no digit shift: the
-        // press arms the PLAY key, which wears the lit fill while the press
-        // stands, and the digits starting or stopping are the act's own
+        // press arms the PLAY key, which wears its press face while the
+        // press stands, and the digits starting or stopping are the act's own
         // confirmation. The digits are never greyed. ROW 8'S CLOCK
         // ALONE: the render player's and the score viewer's time fields
         // share the field's painter (paint_ce_time_field) and never the
@@ -5180,8 +5188,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE FLAT LOOK'S KEYS (architect 2026-11-01): the
 // program's case, laid out by modal_word_buttons and player_row_layout, each
-// painted by the roster's key painter (paint_roster_case) — at rest, lit
-// under a live press and for the row's one checked button — and its legend
+// painted by the roster's key painter (paint_roster_case) — at rest, the
+// press face under a live press, lit for the row's one checked button
+// alone — and its legend
 // printed under it (paint_key_legend: a word button's word in capitals, a
 // player key its own legend).
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
@@ -6768,10 +6777,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat
-        // One, `lit`) and for a LIVE PRESS — armed with the pointer inside
-        // it, or armed from the keyboard — whatever the checked state, for
-        // as long as the press stands (the flat look's pressed key,
-        // architect 2026-11-02), the legend under the key. (Windows'
+        // One, `lit`) alone, pressed or not; THE PRESS FACE for a LIVE
+        // PRESS on an unchecked one — armed with the pointer inside it, or
+        // armed from the keyboard — for as long as the press stands
+        // (key_look, materials.h; architect 2026-11-02, the yellow for lamps
+        // only), the legend under the key. (Windows'
         // push button 2026-10-02 to 2026-10-22 is git history.) THE FOCUS IS
         // NOT PAINTED (below): the two focus
         // strengths stay in the state (AppState::modal_dialog_focus_active),
@@ -6791,8 +6801,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // LIST's pair and words (trim_presets_button_enabled) and the BPM
         // FORM's two words (bpm_form_button_enabled) — every other
         // owner's buttons are always live while their dialog stands and
-        // publish enabled=true. The legend dimmed (kTextDimInk,
-        // paint_key_legend, 2026-10-23), the key the face its state gives, the roster's rule
+        // publish enabled=true. The glyph and the legend dimmed (kKeyDimInk,
+        // paint_key_glyph and paint_key_legend, 2026-11-02), the key the face its state gives, the roster's rule
         // (architect 2026-10-02 and 2026-10-09). The press face is gated on the bit rather than
         // trusted — a button can go dead UNDER a hold.
         const bool enabled = plan[i].enabled;
@@ -6804,8 +6814,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // NO FOCUS FRAME (architect 2026-10-23: "when I open up the settings
         // and I press cancel, it gets that square drawn around it. Let's get
         // rid of that"): the focused button — Enter's target
-        // (AppState::modal_dialog_focus) — wears nothing; the key's lit
-        // fill under a standing press is the only sign.
+        // (AppState::modal_dialog_focus) — wears nothing; the press face
+        // under a standing press is the only sign.
         // THE KEY (2026-10-23, paint_roster_case), flat, lit for the row's
         // one checked button; THE LEGEND UNDER IT (paint_key_legend's
         // one seat): a glyph button's the player's own legend
@@ -6815,6 +6825,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // button prints its word IN CAPITALS and wears the enabled bit as the
         // glyph buttons do (THE DISABLED RUNG above owns the bit and which
         // owners publish it).
+        const KeyLook look = key_look(plan[i].lit, pressed);
         paint_roster_case(cr, key, plan[i].lit, pressed);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled; paint_key_glyph's one seat, in the face's tone): by
@@ -6839,7 +6850,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 : render_player_button_icon(plan[i].player_act,
                                             plan[i].play_face);
         if (icon)
-            paint_key_glyph(cr, key, *icon, enabled, plan[i].lit || pressed);
+            paint_key_glyph(cr, key, *icon, enabled, look);
         std::string legend;
         if (plan[i].glyph) {
             // The score viewer's PLAY / PAUSE prints the render player's Play
@@ -6961,17 +6972,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // table, GuiFace::Keys; architect 2026-10-24, "C24" — the night's C34 "too
 // far", "a separate face" since that night, the body's 22 before it) — the
 // band painting NO LINE at its own top edge (architect 2026-08-27, on
-// glass). AT REST the cap in the text tone kTextInk on the face; LIT — the
-// FFAD56 fill, its cap kTextOnLit 111111 (architect 2026-11-02, M8 / M12) —
-// for the two lamps and for the key under the finger:
-//   ARMED     — SHIFT while it is armed and THE PAGE KEY while the symbols
-//               page stands — the two lamps. IT IS ALL SHIFT'S ARM HAS TO
-//               SAY ITSELF WITH now that the cap is the word "Shift" in both
-//               states — that, and the letter caps, every one of which turns
-//               capital while the arm stands.
-//   PRESSED   — the key under the finger, whatever its armed state, for as
-//               long as the press stands (the flat look's pressed key,
-//               architect 2026-11-02), its own state back at the lift.
+// glass). AT REST the cap in the text tone kTextInk on the face; the three
+// faces the roster's (key_look, materials.h; architect 2026-11-02, the
+// yellow for lamps only):
+//   ARMED     — LIT, the FFAD56 fill, its cap kTextOnLit 111111 (M8 / M12):
+//               SHIFT while it is armed and THE PAGE KEY while the symbols
+//               page stands — the two lamps — pressed or not. IT IS ALL
+//               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
+//               word "Shift" in both states — that, and the letter caps,
+//               every one of which turns capital while the arm stands.
+//   PRESSED   — THE PRESS FACE 464646, its cap kTextInk: the key under the
+//               finger, not armed, for as long as the press stands, its own
+//               state back at the lift.
 // (Windows' toolbar buttons — SOFT RAISED, SOFT SUNKEN pressed and over the
 // Hilight dither armed, the cap in the theme's label — 2026-10-02 to
 // 2026-10-22 — is git history.)
@@ -7069,10 +7081,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                  page == onscreen_keyboard::Page::Symbols);
 
             // THE KEY (paint_key, materials.h): LIT while armed (Shift, the
-            // page key on the symbols page) or under the finger, the cap
-            // printed ON its face in the lit face's ink.
-            const bool lit = pressed || armed;
-            paint_key(cr, r, lit);
+            // page key on the symbols page), else the press face under the
+            // finger, the cap printed ON its face in the face's ink.
+            const KeyLook look = key_look(armed, pressed);
+            paint_key(cr, r, look);
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
             // the function keys, Space and the page key), or, where it
@@ -7095,8 +7107,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
             // THE CAP in the keys face, no shadow, its cap band centered on
             // the key by redesign_baseline: the text tone on a resting key,
-            // kTextOnLit on a lit one (materials.h's text tones).
-            set_palette_source(cr, hex(lit ? kTextOnLit : kTextInk));
+            // kTextOnLit on a lit one (materials.h's key_ink; no key here is
+            // ever disabled).
+            set_palette_source(cr, hex(key_ink(look, true)));
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
         });
 
@@ -7448,7 +7461,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
             // The row's text pair (surface_text, render.h); AN INERT ROW in
-            // THE DEAD KEY'S PRINT, kTextDimInk (materials.h's text tones,
+            // THE DIM PRINT, kTextDimInk 757575 (materials.h's text tones,
             // architect 2026-10-28: "DEVICE" and "PIECE" dim headings, never
             // lit; 2026-10-29: the disabled `scale` and `bpm` lines the same).
             set_palette_source(

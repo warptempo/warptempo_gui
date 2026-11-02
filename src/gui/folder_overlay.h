@@ -52,7 +52,7 @@
 // icon and a name; glyph-less PLAIN rows, a name alone (the value list's
 // values since 2026-10-25, the settings page's key lines since 2026-10-28,
 // the trim presets since 2026-10-28 night, the BPM form's three lines since
-// 2026-10-29); and the INERT rows in the dead key's print, which the
+// 2026-10-29); and the INERT rows in the dim print (kTextDimInk), which the
 // highlight never stands on (row_is_inert, the walk below): the page's and
 // the BPM form's GROUP rows, a heading each, and the page's DISABLED rows,
 // the `scale` and `bpm` lines (architect 2026-10-29). A LISTING IN WHICH NO ROW WEARS A GLYPH

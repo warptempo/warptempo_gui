@@ -122,17 +122,18 @@ struct TrimRange {
 // COOL EDIT BLOCK).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or THE FLAT LOOK'S CONSTANTS (materials.h,
-// 2026-11-01: the ground, the key's face and lit fill, the text tones, the
+// 2026-11-01: the ground, the key's faces (rest, press, lit), the text tones, the
 // well's tones — the trim bar, its frame, the ruler, its ticks, the marker
 // lane — and the selection pair) — or
 // THE BREEZE GLYPHS (architect 2026-11-01, M7: every drawing a Breeze glyph):
 // each file is recolored to `currentColor` and painted in a TEXT TONE the
-// caller passes (kTextInk, kTextDimInk on a disabled key, kTextOnLit on a lit
+// caller passes (kTextInk, kKeyDimInk on a disabled key, kTextOnLit on a lit
 // one; icons.h's THE BOUND DRAWING) — the one place an antialiased picture is
 // copied whole.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
 // role: the text tone over the ground, the field, the resting keys and the
-// selection's grey, kTextOnLit over a lit key.
+// selection's grey, kTextInk over a resting or pressed key, kTextOnLit over
+// a lit key.
 // STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
 // HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
 // never had one; the lists' lit rows are a selection, not a button face.
@@ -253,11 +254,13 @@ struct TrimRange {
 // the ring of the panel's tones round each well stood 2026-10-09 to
 // 2026-11-02).
 //
-// THE DISABLED FACES (2026-10-23; Live's 757575 since the flat look): a dead
-// key DIMS ITS PRINTED LEGEND (kTextDimInk, paint_key_legend), its key the
-// face its state gives; a CUE'S inert label is the faded tone (the
-// marker-lane paragraph); the settings page's inert GROUP ROWS wear the dead
-// key's print (kTextDimInk, paint_folder_overlay, 2026-10-28). Nothing else dims. (Windows' word emboss —
+// THE DISABLED FACES (2026-10-23; the key's own dim tone 5A5A5A since
+// 2026-11-02): a dead key DIMS ITS GLYPH AND ITS PRINTED LEGEND (kKeyDimInk,
+// paint_key_glyph and paint_key_legend; a glyph on a dead lit key stays
+// kTextOnLit), its key the face its state gives; a CUE'S inert label is the
+// faded tone (the marker-lane paragraph); the settings page's inert GROUP
+// ROWS wear the dim print (kTextDimInk 757575, paint_folder_overlay,
+// 2026-10-28). Nothing else dims. (Windows' word emboss —
 // DrawState DSS_DISABLED, the word in Hilight one Windows px right and down
 // under its Shadow copy, show_embossed_run, 2026-10-03 — retired with no
 // disabled word left, 2026-10-23.)
@@ -2414,7 +2417,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // (THE DISABLED EMBOSS, THE WORD HALF — show_embossed_run, Windows'
 // DrawState DSS_DISABLED: the word in Hilight one Windows px right and down
 // under its Shadow copy, 2026-10-03 — RETIRED 2026-10-23 with no caller
-// left: a disabled key dims its legend (kTextDimInk, paint_key_legend), and
+// left: a disabled key dims its legend (kKeyDimInk, paint_key_legend), and
 // no other word is disabled.)
 
 

@@ -261,7 +261,7 @@ inline constexpr bool is_settings_editor_key(std::string_view key) {
 // DISABLED — "bpm and scale should be viewable but disabled. they are useful
 // for notes". A key here that is not one of kSettingsEditorKeys is a
 // DISABLED row (AppState::FolderOverlayRow::Kind::Disabled): its line as
-// GuiSettingsEditor::setting_line spells it, in the dead key's print, never
+// GuiSettingsEditor::setting_line spells it, in the dim print (kTextDimInk), never
 // seated and taking no press (folder_overlay::row_is_inert). The assert pins
 // the table's editable keys to the editor table's piece keys, in order, so
 // the page and Tab cannot drift apart.

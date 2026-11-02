@@ -27,17 +27,23 @@
 //
 // THE KEY (paint_key below; every key alike — the band's, row 8's, the
 // controls rows', the word buttons, the scrub's thumb, the on-screen
-// keyboard's): A FLAT kKeyFace 363636 BOX, NO OUTLINE, NO LED, NO GLOW, NO
-// DEPTH. LIT — the kLitFill FFAD56 box, Live's "on" — is a CHECKED key, and
-// A KEY UNDER THE FINGER OR PEN for as long as the press stands, whatever
-// its checked state, its own state back at the lift (architect 2026-11-02:
-// Live has no pressed state, "on" and "off" each hovered or not, and we have
-// no hover; the hi-fi panel's two depths and its LED that lit while held
-// are retired). A DISABLED key keeps the face its state gives, its legend
-// dims (kTextDimInk), so a checked-but-inert key under an overlay keeps its
-// lit fill with the dim legend (architect 2026-11-01, M6). Anything printed
-// ON a lit face is kTextOnLit 111111 (the keys' Breeze glyphs since
-// 2026-11-02, the on-screen keyboard's caps).
+// keyboard's): A FLAT BOX, NO OUTLINE, NO LED, NO GLOW, NO DEPTH, in one of
+// THREE FACES (KeyLook): AT REST kKeyFace 363636; PRESSED — a key under the
+// finger or pen for as long as the press stands, NOT CHECKED — kPressFace
+// 464646, Live's hovered item and selected tab, its print kTextInk as at
+// rest; LIT — kLitFill FFAD56, Live's "on" — A CHECKED KEY ALONE, pressed or
+// not, so a press on a lit key changes nothing on its face. THE YELLOW IS
+// FOR LAMPS ONLY (architect 2026-11-02, on mocks a3 / b3: "the yellow flash
+// is jarring, esp since it's so brief on a pen tap. i would prefer a lower
+// contrast key press color, and keep the yellow only for lamps"; Live has
+// no pressed state and we have no hover, so the press borrows Live's hover
+// face). Every key returns to its own state at the lift. A DISABLED key
+// keeps the face its state gives, its glyph and legend in kKeyDimInk, so a
+// checked-but-inert key under an overlay keeps its lit fill (architect
+// 2026-11-01, M6) — its glyph on the lit face kTextOnLit, its legend on the
+// ground kKeyDimInk. Anything printed ON a lit face is kTextOnLit 111111
+// (the keys' Breeze glyphs, the on-screen keyboard's caps); on a resting or
+// pressed face kTextInk (key_ink below).
 //
 // THE GROUP GAP (architect 2026-11-01, M5; "two px lines that don't scale",
 // M5b): keys that abut inside a group are parted by kKeyGapPx, TWO DEVICE PX
@@ -46,7 +52,7 @@
 // (key_in_cell): at 300 % a 69-px case reads 68 at a group's two ends, 67
 // inside, 69 alone. THE GAP IS NOT PRESSABLE (architect 2026-11-02, R5: "2px
 // gap should not be pressable - ground is not a button"): THE PAINTED KEY IS
-// THE HIT BOX (point_on_key below), so a press, a lift, the lit look and the
+// THE HIT BOX (point_on_key below), so a press, a lift, the press face and the
 // tooltip answer on the key alone and the ground between two keys answers
 // nothing — the on-screen keyboard's gaps alike (R11), under its own gap
 // rule (onscreen_keyboard.h).
@@ -56,9 +62,13 @@
 // drawing the chrome prints — the legends at rest, the logo lane, the
 // clocks, the tab name and state line, the lists, the cards, the prompts,
 // the editors, the marker labels, the keyboard's caps, the keys' Breeze
-// glyphs (2026-11-02) — and kTextDimInk 757575 for a disabled key's legend
-// and glyph, the settings page's inert rows and the tooltip's hint line;
-// kTextOnLit 111111 on a lit face. NOTHING WEARS A
+// glyphs (2026-11-02) — and kTextDimInk 757575 for the settings page's
+// inert rows and the tooltip's hint line; kTextOnLit 111111 on a lit face.
+// A DISABLED KEY'S glyph and legend take their own tone, kKeyDimInk 5A5A5A
+// (architect 2026-11-02, on mock b3: "the disabled icons are too similar to
+// enabled ones", 757575 reading too close to B5B5B5 at a key's size;
+// "Legend too"), darker than Live's dim text so a dead key reads dead at a
+// glance; the lists' and the tooltip's dim print keep 757575. NOTHING WEARS A
 // SHADOW (2026-11-01, "no shadow anywhere"; the well's cue labels,
 // triangles and ticks with the rest since 2026-11-02): every word, digit,
 // tick and triangle is ink alone.
@@ -84,12 +94,32 @@ inline constexpr uint32_t kGround = 0x242424;
 inline constexpr uint32_t kTextInk    = 0xB5B5B5;
 inline constexpr uint32_t kTextDimInk = 0x757575;
 inline constexpr uint32_t kTextOnLit  = 0x111111;
+// A disabled key's glyph and legend (the head's THE TEXT TONES, 2026-11-02).
+inline constexpr uint32_t kKeyDimInk  = 0x5A5A5A;
 
-// THE KEY (the head): its face, its lit fill (Live's "on" orange FFAD56,
-// one constant with no device key), and the group gap in device px.
-inline constexpr uint32_t kKeyFace  = 0x363636;
-inline constexpr uint32_t kLitFill  = 0xFFAD56;
-inline constexpr int      kKeyGapPx = 2;
+// THE KEY (the head): its face at rest, its press face (Live's hovered
+// item / selected tab 464646, 2026-11-02), its lit fill (Live's "on" orange
+// FFAD56, one constant with no device key), and the group gap in device px.
+inline constexpr uint32_t kKeyFace   = 0x363636;
+inline constexpr uint32_t kPressFace = 0x464646;
+inline constexpr uint32_t kLitFill   = 0xFFAD56;
+inline constexpr int      kKeyGapPx  = 2;
+
+// THE KEY'S THREE FACES (the head's THE KEY): Lit when checked, whatever the
+// press; else Pressed under a standing press; else Rest. key_look is the one
+// place the order is decided — every key painter asks it.
+enum class KeyLook { Rest, Pressed, Lit };
+inline constexpr KeyLook key_look(bool checked, bool pressed) {
+    return checked ? KeyLook::Lit : pressed ? KeyLook::Pressed : KeyLook::Rest;
+}
+
+// THE INK OF WHAT A KEY CARRIES ON ITS FACE (the head's THE KEY and THE
+// TEXT TONES): kTextOnLit on a lit face (a dead checked key's too), else
+// kTextInk, or kKeyDimInk on a disabled key. A key's legend stands on the
+// ground, never on the face: it is kTextInk or kKeyDimInk alone.
+inline constexpr uint32_t key_ink(KeyLook look, bool enabled) {
+    return look == KeyLook::Lit ? kTextOnLit : enabled ? kTextInk : kKeyDimInk;
+}
 
 // THE WELL'S TONES (the head's THE WELL). kWellFrame is THE GRAMMAR'S ONE
 // FRAME TONE (architect 2026-11-02, M14 "d"): the trim bar's frame and the
@@ -120,14 +150,14 @@ inline constexpr uint32_t kPaneFace = kKeyFace;
 
 // -- THE KEY'S PAINTERS ------------------------------------------------------
 
-// ONE KEY on `r` (the head's THE KEY): the flat face, the lit fill when
-// `lit` — the caller's answer, its checked state OR a standing press — and
-// nothing else. Its legend stands under it on the ground (paint_handler.cpp's
-// paint_key_legend); what a key carries on its face is its caller's — the
-// roster's and the controls rows' Breeze glyph (paint_key_glyph,
-// 2026-11-02), the on-screen keyboard's caps — in kTextOnLit on a lit face
-// and kTextInk on a resting one (a disabled key's glyph kTextDimInk).
-void paint_key(cairo_t* cr, const GuiRect& r, bool lit);
+// ONE KEY on `r` (the head's THE KEY): the flat face `look` gives —
+// kKeyFace at rest, kPressFace pressed, kLitFill lit (key_look, the
+// caller's checked state and standing press) — and nothing else. Its legend
+// stands under it on the ground (paint_handler.cpp's paint_key_legend); what
+// a key carries on its face is its caller's — the roster's and the controls
+// rows' Breeze glyph (paint_key_glyph, 2026-11-02), the on-screen keyboard's
+// caps — in key_ink's tone.
+void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look);
 
 // THE KEY INSIDE ITS CELL (the head's THE GROUP GAP): the cell `cell` less
 // one device px on each side that abuts a neighbor of its group —
