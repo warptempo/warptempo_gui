@@ -5030,10 +5030,9 @@ struct AppState {
     // ENABLED marker of the active column stems, always
     // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash); a
     // disabled marker stems never. A selected marker's stem wears the
-    // playhead's color interspersed with its own dots, and the focus's
-    // triangle the playhead's color (architect 2026-11-02, M10 rule 1;
-    // render.h's SELECTED row), so selection's cue is on the canvas: its
-    // stems and the focus's triangle, the labels unchanged. The successive apparatus this
+    // playhead's color interspersed with its own dots (architect 2026-11-02,
+    // M10 rule 1; render.h's SELECTED row), so selection's cue is on the
+    // canvas: its stems, the triangles and the labels unchanged. The successive apparatus this
     // replaces is worth naming once, because each layer was deleted for the same
     // reason the next one was: the conditional stem's hover/pin arms
     // (harvested 2026-07-25 for always-on-for-a-singleton), then the singleton
@@ -7350,10 +7349,10 @@ struct AppState {
         // stands for both (HistoryDiffFlag::cue_frame). EVERY SETTER OF
         // `focus` WRITES IT BESIDE: the plain click and the ctrl click the
         // half of the rect they hit (FlagHitRect::diff_half), the Tab cycle
-        // its stop's (history_diff_cycle_target). IT IS PAINTED (architect
-        // 2026-11-02, M10 rule 1): both cues of a selected pair take the
-        // selected stem, the focused cue's triangle alone the playhead's
-        // color, so the flag cache keys it (fp_history_focus_half). Cleared with the focus
+        // its stop's (history_diff_cycle_target). It never changes the
+        // flags' picture — both cues of a selected pair take the selected
+        // stem and the triangle marks no focus (architect 2026-11-02) — so no
+        // fingerprint keys it. Cleared with the focus
         // (clear_history_mode_focus) and by the whole-struct reset.
         HistoryDiffHalf focus_half = HistoryDiffHalf::Removed;
         // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into

@@ -784,7 +784,7 @@ void render_playhead(GuiCanvasSink& sink,
     // deepest-zoom floor holding q >= 20 (0.475 px; kDeepestZoomMinFramesPerPx,
     // app_state.h). Reading the bar as [g(c) − spp/2, g(c) + spp/2) is the
     // alternative that was declined.
-    const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
+    const int col = playhead_line_column(playhead_pixel_x);
 
     // The waveform_line_px()-wide line (render.h) paints whenever its column
     // is onscreen (gated on its own column and clipped at the right edge), so
@@ -1357,17 +1357,23 @@ struct FlagFace {
 //   DISABLED (any kind)      faded     none                faded, struck as below
 //   any live cue             cue       cue | cue           bone, struck as below
 // — warp or phase reset, whatever the side (a live lane's cue or either
-// `h` half) — and THE SELECTION over either row (architect 2026-11-02, M10
-// rule 1: the selected look is on the canvas, not in the label):
-//   SELECTED                 —         playhead | cue      unchanged
-//   FOCUSED (and selected)   playhead  —                   unchanged
+// `h` half) — and THE SELECTION over the live row alone (architect
+// 2026-11-02, M10 rule 1: the selected look is on the canvas, not in the
+// label):
+//   SELECTED (live cue)      cue       playhead | cue      unchanged
 // — a selected live cue's RANGE phase (rows ≡ 3, the first from the top)
 // the `playhead_stem`, its cue phase the `cue`, the look a stem shows with
 // the playhead's dots on it (the playhead's first dot, row 1, above the
-// cue's first); the FOCUSED selected cue's triangle the `playhead_stem`,
-// the faded triangle's too (a disabled cue has no dots, so the focus's
-// triangle is its selection's one mark). `focused` implies `selected` at
-// every caller.
+// cue's first). THE TRIANGLE NEVER MARKS FOCUS OR SELECTION (architect
+// 2026-11-02: "playhead coincident on marker should not change marker
+// triangle - that was a misinterpretation"): the `cue`, or the faded one on
+// a disabled cue, whatever the focus — live lanes and the `h` view alike;
+// the ruler's head is the cue for where the playhead stands. So A SELECTED
+// DISABLED CUE SHOWS NO SELECTION (architect 2026-11-02, "3 accept"): no
+// dots and the faded triangle, the playhead standing on it after the
+// arming press its only mark. While the playhead's painted column is a
+// selected stem's, the stem's range phase yields to the playhead's dots
+// (paint_marker_stems, per frame; the resolver never sees the playhead).
 // THE STRIKE, whatever the row: a live cue in its column's red set (`red`,
 // warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
 // coincident run, and on the warp column a label ref the render falls back
@@ -1395,13 +1401,12 @@ struct FlagFace {
 // M13, 2026-11-02, the words' and the flags' one ink) — every label on the
 // lane's face with no fill, selected or not.
 FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
-                           bool selected, bool focused) {
+                           bool selected) {
     const GuiPalette& p = palette();
     const bool struck = red || side == GuiFlagSide::Removed;
     if (disabled)
-        return FlagFace{focused ? p.playhead_stem : p.ce_off_cue,
-                        GuiCueDot::None, GuiCueDot::None, struck};
-    return FlagFace{focused ? p.playhead_stem : p.cue, GuiCueDot::Cue,
+        return FlagFace{p.ce_off_cue, GuiCueDot::None, GuiCueDot::None, struck};
+    return FlagFace{p.cue, GuiCueDot::Cue,
                     selected ? GuiCueDot::Playhead : GuiCueDot::Cue, struck};
 }
 
@@ -1500,8 +1505,8 @@ static CuePassScratch g_cue_pass_scratch;
 // box from its own triangle's left edge to its text's end, so a later cue
 // masks an earlier label only across its own extent, a selected label as at
 // rest (2026-11-02); then
-// the triangles LEFT TO RIGHT, each in its face's color (the focus's the
-// `playhead_stem`); then the
+// the triangles LEFT TO RIGHT, each in its face's color (the `cue`, or the
+// faded one on a disabled cue, 2026-11-02); then the
 // publication — one FlagHitRect per cue (its label box as painted and its
 // triangle, both clipped to the waveform's columns, and the cue's diff half),
 // and one MarkerStem per cue whose dots paint and whose column is a waveform
@@ -1708,8 +1713,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
 GuiStemDots live_cue_stem_dots() {
     const FlagFace f = resolve_flag_face(GuiFlagSide::Live,
                                          /*disabled=*/false, /*red=*/false,
-                                         /*selected=*/false,
-                                         /*focused=*/false);
+                                         /*selected=*/false);
     return GuiStemDots{f.cue_phase_dots, f.range_phase_dots};
 }
 
@@ -1773,10 +1777,7 @@ void render_flag_boxes_impl(
     // Reaches the LEFT CULL only — it widens the width bound by the two bound
     // cells. Which flags paint cells is the cells lambda's business, so this
     // body never asks whether a given marker is eligible.
-    bool iteration_on,
-    // The focus (render_flags' declaration): the selected marker whose
-    // triangle wears the `playhead_stem`, or -1.
-    int focus_marker) {
+    bool iteration_on) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1824,11 +1825,10 @@ void render_flag_boxes_impl(
             const bool red = red_set.count(i) > 0;
             const bool sel = selected_set.count(i) > 0;
             // THE SELECTION IS THE CUE'S, ON THE CANVAS (architect
-            // 2026-11-02, M10 rule 1): every selected marker's stem, and the
-            // focus's triangle (resolve_flag_face's table); no segment of the
-            // label carries it.
-            c.face = resolve_flag_face(GuiFlagSide::Live, dis, red, sel,
-                                       sel && i == focus_marker);
+            // 2026-11-02, M10 rule 1): every selected marker's stem
+            // (resolve_flag_face's table); neither the triangle nor any
+            // segment of the label carries it.
+            c.face = resolve_flag_face(GuiFlagSide::Live, dis, red, sel);
 
             // THE SEGMENTS: the payload label (the column's composer, the cut
             // inside it), then the two bound cells where they paint — each
@@ -1908,7 +1908,6 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
                   bool iteration_on,
-                  int focus_marker,
                   std::vector<FlagHitRect>* out_hit_rects,
                   std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
@@ -1930,8 +1929,7 @@ void render_flags(cairo_t* cr,
         // (warp_iter_cells above), and none outside the mode.
         [&](int i) { return warp_iter_cells(markers, i, iteration_on); },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
-        suppressed, iteration_on,
-        focus_marker);
+        suppressed, iteration_on);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -1945,7 +1943,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
                             bool iteration_on,
-                            int focus_marker,
                             std::vector<FlagHitRect>* out_hit_rects,
                             std::vector<MarkerStem>* out_stems,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
@@ -1982,8 +1979,7 @@ void render_phase_reset_flags(cairo_t* cr,
         // payload is dropped, so a warp target index can never be applied to
         // this store.
         suppressed.cell == MarkerCell::Payload ? SuppressedBox{} : suppressed,
-        iteration_on,
-        focus_marker);
+        iteration_on);
 }
 
 void render_history_diff_flags(
@@ -1995,7 +1991,6 @@ void render_history_diff_flags(
         long long viewport_start_sample,
         long long viewport_end_sample,
         int focus_index,
-        HistoryDiffHalf focus_half,
         const std::set<int>& selected,
         std::vector<FlagHitRect>* out_hit_rects,
         std::vector<MarkerStem>* out_stems,
@@ -2100,17 +2095,14 @@ void render_history_diff_flags(
             // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
             // either SELECTS the flag (the declaration says why), and BOTH
             // HALVES of a changed pair take the selected stem together — a
-            // double flag is one item, so it shows as one. THE FOCUSED CUE
-            // is the focus's own: a single flag's or a same-frame pair's one
-            // cue, a nudged pair's focus_half (architect 2026-11-02, M10
-            // rule 1: "the focused half's triangle").
+            // double flag is one item, so it shows as one. The triangle
+            // marks neither (architect 2026-11-02, resolve_flag_face's
+            // table).
             const bool flag_selected =
                 (i == focus_index) || (selected.count(i) != 0);
-            const bool flag_focused = i == focus_index;
-            const auto face_for = [&](GuiFlagSide side, bool disabled,
-                                      bool cue_focused) {
+            const auto face_for = [&](GuiFlagSide side, bool disabled) {
                 return resolve_flag_face(side, disabled, /*red=*/false,
-                                         flag_selected, cue_focused);
+                                         flag_selected);
             };
             // A flag with neither half is not constructible by the resolver
             // above; the guard keeps a degenerate one from publishing a
@@ -2177,8 +2169,7 @@ void render_history_diff_flags(
                     seg.x1       = col + boxes.x1[s];
                     seg.inert    = halves[s].disabled;
                     seg.struck   = face_for(halves[s].side,
-                                            /*disabled=*/false,
-                                            /*cue_focused=*/false)
+                                            /*disabled=*/false)
                                        .struck;
                 }
                 cues.push_back(std::move(c));
@@ -2190,19 +2181,17 @@ void render_history_diff_flags(
             // label struck on a removed line; THE DOTS READ THE DISABLED
             // AXIS (architect 2026-08-22): a single half whose one side is
             // disabled publishes none and wears the faded triangle, the live
-            // lane's rule (the focus's triangle the `playhead_stem`, its
-            // selection's one mark there, as on the live lane).
+            // lane's rule (its selection shows nothing there, as on the live
+            // lane, 2026-11-02).
             if (!f.added) {
                 push_cue(col_left, HistoryDiffHalf::Removed,
-                         face_for(GuiFlagSide::Removed, removed_disabled,
-                                  flag_focused),
+                         face_for(GuiFlagSide::Removed, removed_disabled),
                          &removed_half, 1);
                 return;
             }
             if (!f.removed) {
                 push_cue(col_left, HistoryDiffHalf::Added,
-                         face_for(GuiFlagSide::Added, added_disabled,
-                                  flag_focused),
+                         face_for(GuiFlagSide::Added, added_disabled),
                          &added_half, 1);
                 return;
             }
@@ -2212,13 +2201,11 @@ void render_history_diff_flags(
             // label's segments carry each half's disabled bit.
             // A SAME-FRAME PAIR IS ONE CUE (architect 2026-10-26, "Three"):
             // its two halves as two segments, the removed (struck) first and
-            // then the added, one triangle, one stem, no ring — focused
-            // whenever the flag is.
+            // then the added, one triangle, one stem, no ring.
             if (!f.nudged()) {
                 const Half both[2] = {removed_half, added_half};
                 push_cue(col_left, HistoryDiffHalf::Removed,
-                         face_for(GuiFlagSide::Added, /*disabled=*/false,
-                                  flag_focused),
+                         face_for(GuiFlagSide::Added, /*disabled=*/false),
                          both, 2);
                 return;
             }
@@ -2232,20 +2219,15 @@ void render_history_diff_flags(
             // iterator's column is the LEFT cue's (time_frame, the smaller
             // frame); the other's is mapped here by the iterator's own two
             // steps (paint_col above), so each stands where a live marker at
-            // its frame would. Both cues' stems take the item's selection;
-            // the triangle the focused half's alone (focus_half).
+            // its frame would. Both cues' stems take the item's selection.
             const bool added_left = f.added_left();
             const int then_col = added_left ? paint_col(f.then_frame) : col_left;
             const int now_col  = added_left ? col_left : paint_col(f.now_frame);
             push_cue(then_col, HistoryDiffHalf::Removed,
-                     face_for(GuiFlagSide::Added, /*disabled=*/false,
-                              flag_focused &&
-                                  focus_half == HistoryDiffHalf::Removed),
+                     face_for(GuiFlagSide::Added, /*disabled=*/false),
                      &removed_half, 1);
             push_cue(now_col, HistoryDiffHalf::Added,
-                     face_for(GuiFlagSide::Added, /*disabled=*/false,
-                              flag_focused &&
-                                  focus_half == HistoryDiffHalf::Added),
+                     face_for(GuiFlagSide::Added, /*disabled=*/false),
                      &added_half, 1);
             // THE RING'S TOP AND BOTTOM between the two stems (MarkerStemRun,
             // render.h): published whenever any of it reaches the waveform's

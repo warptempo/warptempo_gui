@@ -94,8 +94,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads);
 // its rows [top, top + rows·u). `color` is the `cue` for a live cue, the
 // faded `ce_off_cue` for a disabled one (2026-10-10, cool_edit_derive.h's
-// faded look), the `playhead_stem` for the playhead's head and the focused
-// selected cue's (2026-11-02, render.h's SELECTED row). TWO ROADS, ONE
+// faded look), the `playhead_stem` for the playhead's head alone (no cue's
+// triangle marks focus, 2026-11-02, render.h's SELECTED row). TWO ROADS, ONE
 // DRAWING (CueTrianglePass below): the stamp writes the cells' words
 // straight into the target where direct_pixel_target takes it, else cairo
 // fills the same cells as whole-pixel rectangles, antialias NONE. The

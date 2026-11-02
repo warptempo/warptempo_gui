@@ -1177,7 +1177,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const SuppressedBox suppressed = suppressed_flag_box(app);
     const int suppressed_cell = static_cast<int>(suppressed.cell);
 
-    // THE HISTORY MODE'S TEN INPUTS (contract at the FlagCache fields). The
+    // THE HISTORY MODE'S NINE INPUTS (contract at the FlagCache fields). The
     // GENERATION is the one that is not about the shown commit but about WHICH
     // SESSION is showing it: two visits open in the same shape and a close plus
     // a reopen can reach this check as one edge, so without it the new session's
@@ -1192,10 +1192,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const bool               history_active = app.history_mode.active;
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;
-    // THE FOCUSED CUE OF A NUDGED PAIR (2026-11-02): its triangle alone wears
-    // the `playhead_stem`, and the Tab walk between a pair's two cues moves
-    // this and no other field (contract at FlagCache::fp_history_focus_half).
-    const HistoryDiffHalf    history_focus_half = app.history_mode.focus_half;
     const unsigned long long history_generation = app.history_mode.generation;
     // The READING is the session's own bit since 2026-08-08 (it moved off
     // HistoryMode onto AppState so a mode edge cannot reset it); the fingerprint
@@ -1244,7 +1240,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_active          == history_active &&
         flag_cache.fp_history_index           == history_index &&
         flag_cache.fp_history_focus           == history_focus &&
-        flag_cache.fp_history_focus_half      == history_focus_half &&
         flag_cache.fp_history_generation      == history_generation &&
         flag_cache.fp_history_compare         == history_compare &&
         flag_cache.fp_history_selection_hash  == history_sel_hash &&
@@ -1386,7 +1381,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.history_mode.flags,
             vp_start, vp_end,
             history_focus,
-            history_focus_half,
             app.history_mode.selection,
             &app.staged_flag_hit_rects,
             &app.staged_marker_stems,
@@ -1410,9 +1404,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             // CELLS (its hop bracket) exactly as the warp column's are painted
             // when the lamp was lit there instead.
             iter_on,
-            // The focus — its triangle the `playhead_stem` (render_flags'
-            // declaration).
-            app.last_selected_marker,
             &app.staged_flag_hit_rects,
             &app.staged_marker_stems,
             tmap_arg,
@@ -1432,9 +1423,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      app.selected_markers,
                      warp_red,
                      iter_on,
-                     // The focus — its triangle the `playhead_stem`
-                     // (render_flags' declaration).
-                     app.last_selected_marker,
                      &app.staged_flag_hit_rects,
                      &app.staged_marker_stems,
                      tmap_arg,
@@ -1472,7 +1460,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_history_active          = history_active;
     flag_cache.fp_history_index           = history_index;
     flag_cache.fp_history_focus           = history_focus;
-    flag_cache.fp_history_focus_half      = history_focus_half;
     flag_cache.fp_history_generation      = history_generation;
     flag_cache.fp_history_compare         = history_compare;
     flag_cache.fp_history_selection_hash  = history_sel_hash;

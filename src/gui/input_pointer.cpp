@@ -7589,14 +7589,14 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
                 app.history_mode.focus_half));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
-    // (the selected look moves — the stems' playhead dots and the focused
-    // triangle, render.h's SELECTED row; the columns stay put), and none when
-    // it did not — a re-click on the focused flag re-lands a playhead that is
-    // already there, and the land owner is itself idempotent; a press on a
-    // nudged pair's other cue moves focus_half alone, whose triangle the flag
-    // cache's rebuild repaints with its own damage (fp_history_focus_half). A
-    // DROPPED SELECTION is that same stem change over more flags, so it
-    // damages too.
+    // (the selected look moves — the stems' playhead dots, render.h's
+    // SELECTED row; the columns stay put), and none when it did not — a
+    // re-click on the focused flag re-lands a playhead that is already there,
+    // and the land owner is itself idempotent; a press on a nudged pair's
+    // other cue moves focus_half alone, which paints nothing (the triangle
+    // marks no focus, 2026-11-02) — its landing moves the playhead, whose own
+    // damage repaints it. A DROPPED SELECTION is that same stem change over
+    // more flags, so it damages too.
     if (was != app.history_mode.focus || had_selection) viewport.invalidate_all();
 }
 

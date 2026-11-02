@@ -224,8 +224,8 @@ struct TrimRange {
 //                 THE MARKER LANE below); the playhead's role
 //                 `playhead_stem` — its head in the ruler and its dots in
 //                 the canvas, and lent to THE SELECTION (2026-11-02): a
-//                 selected cue's range-phase dots and the focused cue's
-//                 triangle (THE PLAYHEAD and THE MARKER LANE, below); and the
+//                 selected cue's range-phase dots, never a triangle (THE
+//                 PLAYHEAD and THE MARKER LANE, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
@@ -506,9 +506,9 @@ void install_true_colors(bool on);
 // before it; git history.)
 // THE PLAYHEAD WEARS ITS COLOR, AND LENDS IT TO THE SELECTION ALONE:
 // `playhead_stem` is its head and its dots (architect 2026-10-09), and a
-// selected cue's range-phase dots and the focused cue's triangle (architect
-// 2026-11-02, M10 rule 1: the selected stem the look a stem shows with the
-// playhead standing on it; THE MARKER LANE's SELECTED row). THE STEMS THAT BELONG TO THE
+// selected cue's range-phase dots (architect 2026-11-02, M10 rule 1: the
+// selected stem the look a stem shows with the playhead standing on it; THE
+// MARKER LANE's SELECTED row); no triangle wears it (2026-11-02). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
 // stem and the scanner are both white, which unifies them: the non-playhead
 // stems that are related to the controls should be white, and then the
@@ -540,8 +540,8 @@ void install_true_colors(bool on);
 // of 2026-10-25 .. 2026-11-02 retired with the well's flat look), in THE
 // LABEL FACE, BOLD 22 device px at 300 % (gui_font.h's kGuiFaceSizes;
 // architect 2026-11-01 night, M5i), starting the triangle's reach right plus
-// a gap of 11 device px at 300 % right of the column (cue_label_lead_px: 19
-// at 300 %, the seat the label held under its shadow), ON THE LANE'S ONE
+// a gap of 12 device px at 300 % right of the column (cue_label_lead_px: 20
+// at 300 %, architect 2026-11-02), ON THE LANE'S ONE
 // BASELINE at rest and in the editor (cue_baseline_px, THE METRICS RULE at
 // marker_lane_h_px: the x-height band 14 rows from the lane's top and from
 // its bottom at 300 %) — `show_cue_label`, render.cpp, the one painter of
@@ -571,8 +571,8 @@ void install_true_colors(bool on);
 // color of 2026-10-11, its triangle, dots and label, retired with its role.
 // THE SELECTION SHOWS ON THE CANVAS, NOT IN THE LABEL (architect 2026-11-02,
 // M10 rule 1): a selected cue's stem wears the `playhead_stem` on one of its
-// two phases, interspersed with its `cue` dots, and the FOCUSED selected
-// cue's triangle the `playhead_stem` (SELECTED below). THE
+// two phases, interspersed with its `cue` dots (SELECTED below); THE
+// TRIANGLE NEVER MARKS FOCUS OR SELECTION (2026-11-02). THE
 // TABLE — which triangle, which dots, which label, which strike — is
 // resolve_flag_face's head (render.cpp), the one resolver every cue goes
 // through.
@@ -629,10 +629,19 @@ void install_true_colors(bool on);
 //             playhead's own first dot stands above the cue's when it rests
 //             on a stem), the `cue` on the cue phase (rows ≡ 7) — the look a
 //             resting stem shows with the playhead on it, cyan and orange
-//             alternating down one column; THE TRIANGLE IN THE
-//             `playhead_stem` ON THE FOCUSED SELECTED MARKER ALONE (the focus,
-//             AppState::last_selected_marker), every other selected marker's
-//             the `cue`. THE LABEL CHANGES NOTHING: it paints as at rest (the
+//             alternating down one column. THE COINCIDENT STEM IS 1:1
+//             (architect 2026-11-02: "Yes, playhead marker, 1-to-1"): while
+//             the playhead's PAINTED column is a selected stem's, the stem's
+//             range phase yields to the `cue` and the playhead's own dots
+//             (rows ≡ 1 and ≡ 5 mod 8) are the cyan — one cyan, one orange
+//             down the column, the look of any stem under the playhead
+//             (paint_marker_stems decides it per frame; the stash and the
+//             flag cache never see the playhead). THE TRIANGLE NEVER MARKS
+//             FOCUS OR SELECTION (architect 2026-11-02: "playhead coincident
+//             on marker should not change marker triangle - that was a
+//             misinterpretation"): the `cue` on every live cue, focused or
+//             not; the ruler's head is the cue for where the playhead
+//             stands. THE LABEL CHANGES NOTHING: it paints as at rest (the
 //             text tone, or the faded label where inert), no fill, its box
 //             the resting one. The playhead stands on the marker where the
 //             selection landed it; the stem is what persists once it moves,
@@ -645,11 +654,10 @@ void install_true_colors(bool on);
 //             (EDITING, below). The history's changed pair, one item, takes
 //             the selected stem on both halves (render_history_diff_flags);
 //   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
-//             selectable): it has no stem (MarkerStem: no entry), so its
-//             selection shows by the triangle alone, AND ONLY WHEN FOCUSED —
-//             the `playhead_stem` in place of the faded triangle (2026-11-02);
-//             a selected disabled marker that is not the focus paints as at
-//             rest. The label is the faded label as at rest.
+//             selectable): IT SHOWS NO SELECTION (architect 2026-11-02, "3
+//             accept"): no stem (MarkerStem: no entry), the faded triangle
+//             and the faded label as at rest, focused or not — the playhead
+//             standing on it after the arming press its only mark.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29).
 //
 // THE PHASE-RESET LEAD-IN RING on the waveform is DOTTED IN ITS RESET'S STEM
@@ -714,8 +722,8 @@ void install_true_colors(bool on);
 // two segments; a nudged pair two cues joined by the ring
 // (render_history_diff_flags owns the pair). The view's focus or selection
 // gives the whole item the live lane's SELECTED row — both halves' stems the
-// playhead's dots, the focused cue's triangle the `playhead_stem`, the
-// labels as at rest (render_history_diff_flags).
+// playhead's dots, the triangles and the labels as at rest
+// (render_history_diff_flags).
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
 //
@@ -1505,20 +1513,18 @@ inline int cue_label_unit_px() {
 // REACH RIGHT PLUS THE GAP (architect 2026-10-26 ~12:40, on the glass at
 // nine rows: "It seems the lead-in was not scaled — increasing rows seems
 // to not move text, but it should, relative to what I tuned it to"): the
-// reach (cue_triangle_reach_right_px, the triangle's rows), then THE GAP, 11
-// DEVICE PX AT 300 % (kCueLabelGapAt300) through skin_px, rounded at the
-// element — so the label follows the rows and keeps the gap. THE SEAT IS
-// THE ONE HE TUNED (2026-10-26 ~13:05, 8 px past the triangle's shadow,
-// whose offset was one quantum): the shadow's retirement (2026-11-02, the
-// brief's "the label's x seat stays as today") folds its 3 px into the
-// gap. At 300 %: 8 + 11 = 19; at 200 %: 5 + 7 = 12; at 150 %: 4 + 6 = 10;
-// at 138 %: 4 + 5 = 9. The gap is never negative, so the text never stands
+// reach (cue_triangle_reach_right_px, the triangle's rows), then THE GAP, 12
+// DEVICE PX AT 300 % (kCueLabelGapAt300; architect 2026-11-02: "flag text
+// lead in at 12 pixels") through skin_px, rounded at the element — so the
+// label follows the rows and keeps the gap. At 300 %: 8 + 12 = 20; at
+// 200 %: 5 + 8 = 13; at 150 %: 4 + 6 = 10; at 138 %: 4 + 6 = 10 (5.52
+// rounded). The gap is never negative, so the text never stands
 // under the flag. THE FILL'S LEAD IS THE LEAD LESS ONE PAD
 // QUANTUM (cue_fill_lead_px): the text stands one pad inside its fill
 // (program_spec.h's cue horizontal lengths; cue_segment_boxes, render.cpp).
 // Readers: the segment boxes (cue_segment_boxes), the cull bounds
 // (marker_flag_max_width_px below, the history lane's).
-inline constexpr double kCueLabelGapAt300 = 11.0;
+inline constexpr double kCueLabelGapAt300 = 12.0;
 inline int cue_triangle_reach_right_px();   // below, the triangle's extent
 inline int cue_label_lead_px() {
     return cue_triangle_reach_right_px() + skin_px(kCueLabelGapAt300);
@@ -2987,6 +2993,14 @@ struct GuiPlateColumns {
 // Through the canvas sink (2026-10-13, canvas_sink.h), as is the anchor stem
 // below.
 enum class PlayheadForm { Solid, Dotted };
+// THE LINE'S COLUMN, area-local: the nearest lattice point to
+// `playhead_pixel_x` (the rule at render_playhead's body), the one rounding
+// render_playhead paints at and paint_marker_stems compares a stem's column
+// against (the coincident stem, architect 2026-11-02). The line paints there
+// exactly when waveform_line_width admits the column.
+inline int playhead_line_column(double playhead_pixel_x) {
+    return static_cast<int>(std::nearbyint(playhead_pixel_x));
+}
 void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
                      double  playhead_pixel_x,
@@ -3256,7 +3270,10 @@ inline GuiColor cue_dot_color(GuiCueDot d) {
 // pass GuiPaintHandler::paint_marker_stems, which paints each phase's dotted
 // column (dotted_waveform_line_run, program_spec.h's dot fields) in the
 // palette's live role, so the dots and their triangle can never disagree
-// about a column or a class.
+// about a column or a class — save the one per-frame override that reader
+// owns: a selected stem under the playhead's painted column paints its range
+// phase in the `cue` (architect 2026-11-02, the coincident stem 1:1), the
+// entry unchanged.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3370,11 +3387,10 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // numbers and are not this marker's to author; the emboss retired from cue
 // text 2026-10-10).
 //
-// `selected_set` and `focus_marker` (AppState::last_selected_marker, -1 or a
-// member of the set) GIVE THE SELECTED LOOK ON THE CANVAS (architect
+// `selected_set` GIVES THE SELECTED LOOK ON THE CANVAS (architect
 // 2026-11-02, M10 rule 1; resolve_flag_face's table): every selected
-// marker's stem the playhead's dots interspersed with its own, and the
-// focus's triangle in the playhead's color; the label paints as at rest.
+// enabled marker's stem the playhead's dots interspersed with its own; the
+// triangle and the label paint as at rest.
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted cue, left to right (the hit walk follows the paint order:
@@ -3415,7 +3431,6 @@ void render_flags(cairo_t* cr,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
                   bool iteration_on,
-                  int focus_marker,
                   std::vector<FlagHitRect>* out_hit_rects = nullptr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
@@ -3602,7 +3617,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // bound as a SIGNED WHOLE HOP of the analysis lattice
 // (format_phase_iter_bound_cell). The sign is the whole syntax here as it is
 // on the warp column, and the ABSENT DECIMALS are what tell a hop cell from a
-// cent cell. The selection and the focus give the selected look as there.
+// cent cell. The selection gives the selected look as there.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             FlagLaneRects lanes,
@@ -3614,7 +3629,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
                             bool iteration_on,
-                            int focus_marker,
                             std::vector<FlagHitRect>* out_hit_rects = nullptr,
                             std::vector<MarkerStem>* out_stems = nullptr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
@@ -3821,20 +3835,18 @@ struct HistoryDiffFlag {
 // its own bit, so a disable TOGGLE paints one faded half beside one live
 // half and the direction of the toggle is readable off the label itself.
 //
-// `focus_index` is the mode's OWN focus (at most one flag, -1 for none),
-// `focus_half` the cue of it the focus stands on (HistoryMode::focus_half,
-// meaningful on a nudged pair alone) and `selected` the mode's OWN
+// `focus_index` is the mode's OWN focus (at most one flag, -1 for none)
+// and `selected` the mode's OWN
 // multi-selection (ordinals into the same list, 2026-08-05): THE LIVE LANE'S
 // SELECTED LOOK ON THE CANVAS (architect 2026-11-02, M10 rule 1;
 // resolve_flag_face's table). The focus or membership SELECTS the flag — the
 // focus is the selection's singleton when the set is empty, and the revert
 // act reads them the same way — and A PAIR'S HALVES ARE ONE ITEM: both of a
 // nudged pair's stems take the playhead's dots, as a same-frame pair's one
-// stem does. THE TRIANGLE IN THE PLAYHEAD'S COLOR IS THE FOCUSED CUE'S
-// ALONE: a same-frame pair's one triangle, a nudged pair's FOCUSED HALF's
-// (the cue the Tab walk and the press stand on and the playhead landed on,
-// the live lane's one focused marker), the other half's triangle the `cue`.
-// The labels paint as at rest. THE
+// stem does. The triangles and the labels paint as at rest (the triangle
+// never marks focus, architect 2026-11-02; a nudged pair's focused half,
+// HistoryMode::focus_half, is the walk's and the press's, not the paint's).
+// THE
 // DOTS READ THE DISABLED AXIS (architect 2026-08-22): a SINGLE
 // flag — added-only or removed-only — whose one side is EFFECTIVELY disabled
 // publishes NO DOTS AT ALL, the live lane's rule verbatim, while a CHANGED
@@ -3853,7 +3865,6 @@ void render_history_diff_flags(cairo_t* cr,
                                long long viewport_start_sample,
                                long long viewport_end_sample,
                                int focus_index,
-                               HistoryDiffHalf focus_half,
                                const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,
                                std::vector<MarkerStem>* out_stems,

@@ -486,9 +486,9 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 //                  a faded, opaque sort of look", the text legible least of
 //                  the two: 5F5F5F.
 // A selected inert segment keeps the faded label (the selection shows on the
-// canvas, never in the label, architect 2026-11-02; a disabled cue's only
-// selection mark the focus's triangle, render.h's SELECTED DISABLED row); a
-// disabled cue has no dots.
+// canvas, never in the label, architect 2026-11-02; a selected disabled cue
+// shows no selection, render.h's SELECTED DISABLED row); a disabled cue has
+// no dots and keeps the faded triangle, focused or not.
 inline constexpr double kDisabledTriangleMix = 0.45;
 inline constexpr double kDisabledLabelMix    = 0.65;
 

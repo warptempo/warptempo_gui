@@ -260,7 +260,7 @@
 // triangle) settled ~13:05 at 8 rows authored at 300 %, the staircase, 22
 // and a gap of 8 (render.h's cue_triangle_rows and cue_label_lead_px,
 // paint_ce_cue_triangle, gui_font.h's Label size since 2026-11-01 night,
-// the gap 11 since the shadow's retirement 2026-11-02; an old line is the
+// the gap 12 since 2026-11-02; an old line is the
 // ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together; the level APPENDED after the permanent keys 2026-10-28,
 // and the crossfade after it — the two fade tuning keys after it

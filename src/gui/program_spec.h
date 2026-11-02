@@ -74,10 +74,10 @@
 // u = scaled_px(1, 1) (render.h's cue_label_unit_px), the selected fill's
 // pads, the segment gap and the flag editor's outline counted in it,
 // because the text they place is scaled; THE LABEL'S LEAD from the column
-// is THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 11 DEVICE PX AT 300 %, scaled
+// is THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 12 DEVICE PX AT 300 %, scaled
 // (render.h's cue_label_lead_px and kCueLabelGapAt300, architect
-// 2026-10-26 ~12:40: the label follows the rows; settled ~13:05; the
-// triangle's retired shadow's 3 px folded into the gap 2026-11-02), a skin
+// 2026-10-26 ~12:40: the label follows the rows; 12 px, architect
+// 2026-11-02), a skin
 // length rather than a field here, being no whole count of W or quanta. The dots down the canvas
 // are device rows (2026-10-09 ~14:25, the dot fields below). THE WELL'S
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
@@ -178,9 +178,8 @@ struct ProgramSpec {
     // selected fill's pad either side of the text — the fill's first column
     // one pad before the text, so THE FILL'S LEAD IS THE LABEL'S LEAD LESS
     // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself THE
-    // TRIANGLE'S REACH RIGHT PLUS A GAP OF 11 DEVICE PX AT 300 %, architect
-    // 2026-10-26 ~12:40, settled ~13:05, the gap 8 px past the shadow until
-    // the shadow's retirement, 2026-11-02 — 19 device px at 300 %, 12 at
+    // TRIANGLE'S REACH RIGHT PLUS A GAP OF 12 DEVICE PX AT 300 %, architect
+    // 2026-10-26 ~12:40, 12 px 2026-11-02 — 20 device px at 300 %, 13 at
     // 200 %, render.h's cue_label_lead_px) — and the gap
     // between two of a marker's label
     // segments' boxes (the bound cells, the history's two halves — the
