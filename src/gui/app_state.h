@@ -2976,8 +2976,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // roster's order. SINCE THE SIMPLE LAYOUT (2026-10-22) A GROUP PAINTS
 // NOTHING: the band's picture is its RUNS, the keys a key pitch apart
 // inside a run (materials.h's THE GROUP GAP)
-// and run_gap_px of bare ground between two (redesign_button_opens_icon_run
-// below and program_spec.h's run_gap_px, the spacing's owners). What a group
+// and the run gap of bare ground between two (redesign_button_opens_icon_run
+// below and render.h's program_run_gap_px, the spacing's owners). What a group
 // still
 // is, is THE UNIT OF THE `h` VIEW'S STAND-IN SWAP: icon_row_walk
 // (paint_handler.cpp), this predicate's one reader, swaps a group named by
@@ -3029,7 +3029,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // "push all icons together … add a spacing after render, and after
 // flatten"): the left members stand in THREE PLAIN RUNS, the keys a key
 // pitch apart (materials.h's THE GROUP GAP)
-// and run_gap_px of bare ground between two (program_spec.h), each opened by
+// and the run gap of bare ground between two (render.h's
+// program_run_gap_px), each opened by
 // its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
 // Save and Undo / Redo / Render merged, Copy Phase Resets between Redo and

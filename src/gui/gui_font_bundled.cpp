@@ -64,6 +64,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -301,6 +303,54 @@ GuiStrikeBand gui_font_strike_band(const GuiFont& f) {
 
 const GuiSignAxis& gui_sign_axis(GuiFace face) {
     return g_sign_axis[file_of(face)];
+}
+
+GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set) {
+    // The rule is at the declaration (gui_font.h): the union of the set's
+    // unscaled outline boxes, a lifted mark at its lifted seat, kept per
+    // file and set in em and scaled at each call.
+    struct Entry {
+        std::size_t file = 0;
+        std::string set;
+        double      top = 0.0, bottom = 0.0;
+    };
+    // A handful of sets (each a reader's constant), so a walk that
+    // allocates nothing on a hit: the lane table asks on every layout.
+    static std::vector<Entry> memo;
+    const std::size_t file = file_of(f.face);
+    auto it = std::find_if(memo.begin(), memo.end(), [&](const Entry& e) {
+        return e.file == file && e.set == set;
+    });
+    if (it == memo.end()) {
+        const OutlineFace& o = g_outline[file];
+        const GuiSignAxis& axis = g_sign_axis[file];
+        bool any = false;
+        Entry b{file, std::string(set)};
+        for (const char ch : set) {
+            if (o.ft == nullptr) break;
+            const FT_UInt gid =
+                FT_Get_Char_Index(o.ft, static_cast<unsigned char>(ch));
+            if (gid == 0 || FT_Load_Glyph(o.ft, gid, FT_LOAD_NO_SCALE) != 0)
+                continue;
+            const double upem = static_cast<double>(o.ft->units_per_EM);
+            const FT_Glyph_Metrics& m = o.ft->glyph->metrics;
+            double lift = 0.0;
+            for (const GuiSignLift& sign : axis.signs)
+                if (sign.lift_em != 0.0 && sign.glyph == gid)
+                    lift = sign.lift_em;
+            const double top =
+                static_cast<double>(m.horiBearingY) / upem + lift;
+            const double bottom =
+                static_cast<double>(m.horiBearingY - m.height) / upem + lift;
+            b.top    = any ? std::max(b.top, top) : top;
+            b.bottom = any ? std::min(b.bottom, bottom) : bottom;
+            any = true;
+        }
+        memo.push_back(std::move(b));
+        it = memo.end() - 1;
+    }
+    const double em = gui_font_em_px(f);
+    return GuiInkBand{it->top * em, -it->bottom * em};
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {

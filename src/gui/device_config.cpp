@@ -92,7 +92,8 @@ namespace {
 // 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
 // kNoiseFadeOutMs; the LED glow's stood there 2026-10-23 to 2026-10-26,
 // settled at 4 device px (retired with the LED, 2026-11-01); `strip_pad` before it
-// 2026-10-22 to 2026-10-23, settled at 13 W, program_spec.h's strip_pad_px;
+// 2026-10-22 to 2026-10-23, settled at 13 W (half the key since 2026-11-03,
+// render.h's strip_pad_px);
 // `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23, `text_shadow`
 // beside them until 2026-10-22; the cues' seven after it 2026-10-26, settled
 // that day, the header's record.)

@@ -20,7 +20,7 @@
 // metrics, one capture px = one W) is taken at Cool Edit's own W
 // UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM (architect 2026-11-02, on
 // mock sqm_01_66px): the key is square, the `key_height` tuning key's
-// device px at 300 % on both axes (66 its default), a skin length
+// device px at 300 % on both axes (60 its default), a skin length
 // (render.h's case block, icon_case_w_px / icon_case_h_px), not Cool Edit's
 // 23-W case; its Breeze glyph is centered on its face by its own ink-box
 // road, its size following the key (paint_key_glyph). THE SIZE ON THE
@@ -30,11 +30,11 @@
 // problem … redesign with dead simple layout", the mocks at 300 %), FLAT
 // SINCE 2026-11-01 (materials.h; the well 2026-11-01 night, "THE MAIN PAGE
 // IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
-// bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (its upper pad since
-// 2026-10-24, render.h's logo lane block), the key, THE STRIP PAD (13 W,
-// settled 2026-10-23: strip_pad_px's field below; plain ground, the keys
-// printing nothing since 2026-11-02), its keys in plain runs
-// on the ground, the runs `run_gap_px` apart; then THE WELL, flat regions on
+// bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (render.h's
+// logo lane block), THE STRIP PAD, the key, THE STRIP PAD (half the key,
+// architect 2026-11-03: render.h's strip_pad_px; plain ground), its keys in
+// plain runs on the ground, the runs the strip pad apart (render.h's
+// program_run_gap_px); then THE WELL, flat regions on
 // the ground (render.h's well paragraph and its lanes block, which derive
 // every length at the element) — a row of ground, THE TRIM BAR (its frame
 // and its interior, view_bar_field_at300's 16 px), THE RULER FLIPPED, a row
@@ -52,29 +52,27 @@
 // row 8's bars and the border under row 8 stood 2026-10-09 to 2026-10-22;
 // the program ring round the column 2026-10-22 to 2026-11-02; git history.)
 //
-// THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN UNITS, NOT IN ROUNDED W,
-// TWO UNITS WITH ONE OWNER EACH (render.h's cue_triangle_unit_px and
-// cue_label_unit_px): THE TRIANGLE'S UNIT IS ONE DEVICE PX AT EVERY SCALE
+// THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN ONE-DEVICE-PX CELLS AND SKIN
+// LENGTHS, NOT IN ROUNDED W (render.h's cue_triangle_unit_px and the
+// label's lengths beside it): THE TRIANGLE'S UNIT IS ONE DEVICE PX AT EVERY SCALE
 // (architect 2026-10-26: "I think we should make the triangle smaller …
 // Why not simply leave unscaled? That would preserve the stem/flag size
 // relation from CEP" — "on waveform → unscaled" carried to the cue's
 // triangle), so a triangle's whole cells — Cool Edit's aliased staircase,
 // paint_ce_cue_triangle — stand beside the one-device-px stem, the apex the
 // stem's column and every row centred on it with no remainder. ITS ROW
-// COUNT IS NO FIELD HERE: it is a skin length, 8 DEVICE PX AT 300 % through
+// COUNT IS NO FIELD HERE: it is a skin length, 9 DEVICE PX AT 300 % through
 // skin_px, rounded at the element (architect 2026-10-26 ~13:40, "why not
 // just simple scale? tablet is only real surface"; render.h's
-// cue_triangle_rows and kCueTriangleRowsAt300, the one owner — 8 rows at
-// 300 %, 5 at 200 %, 4 at 150 % and 138 %), no whole count of W. THE
-// LABEL'S UNIT IS THE SCALED QUANTUM
-// u = scaled_px(1, 1) (render.h's cue_label_unit_px), the selected fill's
-// pads, the segment gap and the flag editor's outline counted in it,
-// because the text they place is scaled; THE LABEL'S LEAD from the column
-// is THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 12 DEVICE PX AT 300 %, scaled
+// cue_triangle_rows and kCueTriangleRowsAt300, the one owner — 9 rows at
+// 300 %, 6 at 200 %, 4 at 150 % and 138 %), no whole count of W. THE
+// LABEL'S LENGTHS ARE SKIN LENGTHS TOO, scaled with the text they place
+// (the text round, architect 2026-11-03): the fill's pad, the segment gap
+// and the flag editor's outline (render.h's cue_fill_pad_px,
+// cue_segment_gap_px, cue_editor_outline_px), and THE LABEL'S LEAD from the
+// column, THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 13 DEVICE PX AT 300 %
 // (render.h's cue_label_lead_px and kCueLabelGapAt300, architect
-// 2026-10-26 ~12:40: the label follows the rows; 12 px, architect
-// 2026-11-02), a skin
-// length rather than a field here, being no whole count of W or quanta. The dots down the canvas
+// 2026-10-26 ~12:40: the label follows the rows). The dots down the canvas
 // are device rows (2026-10-09 ~14:25, the dot fields below). THE WELL'S
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
@@ -86,28 +84,12 @@ struct ProgramSpec {
     // the roster's and the render player's hot face is never lit, the hover
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
-    // THE STRIPS' RUNS (architect 2026-10-22, the simple layout): the band's
-    // and row 8's keys stand in PLAIN RUNS on the ground, the keys a key
-    // pitch apart inside a run (the group gap's one device px between two,
-    // materials.h) and THIS MUCH PLAIN GROUND BETWEEN TWO RUNS — row 8's group
-    // gap as the bars left it (a 6-W bar between a 5-W and a 4-W pad), the
-    // band's between its three left runs (architect: "add a spacing after
-    // render, and after flatten").
-    int  run_gap_px;
-    // THE STRIP PAD (architect 2026-10-22, the simple layout; SETTLED AT 13
-    // 2026-10-23 — "I never asked for that strip pad number … I don't think
-    // I needed to change that number", the legends' vertical seat "seems to
-    // be perfect"; the mocks ran 8 .. 15, 13 the pick): THIS MUCH
-    // GROUND ABOVE AND BELOW THE KEY on row 8 and the modal controls row
-    // (row 8's own rows), and BELOW THE KEY on the band, whose upper pad is
-    // the logo lane (2026-10-24, render.h's logo lane block). The pad is
-    // plain ground (the keys' printed legends stood in its bottom 2026-10-23
-    // to 2026-11-02; the number stays, architect 2026-11-02: "Only remove
-    // the captions"). A settled design is a constexpr: the `strip_pad`
-    // device key and its Settings row, 2026-10-22 to 2026-10-23, are
-    // removed, an old `strip_pad=` line the ordinary unknown-key hard fail.
-    // render.h's strip_pad_px the one road to device px.
-    int  strip_pad_px;
+    // (THE STRIPS' RUN GAP — 15 W, row 8's group gap as the bars left it —
+    // AND THE STRIP PAD — 13 W, settled 2026-10-23 — left this spec
+    // 2026-11-03: both are half the key, render.h's strip_pad_px and
+    // program_run_gap_px, architect: "pad should be half the icon size";
+    // "the horizontal spacing between icon sections matching the vertical
+    // padding".)
     // THE STRIPS' ENDS ARE THE WELL'S EDGE COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring, the well's columns since the flat well — THE EDGE RULE;
@@ -121,20 +103,11 @@ struct ProgramSpec {
     // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
     // row 8 and the controls row), so neither strip nor the controls row
     // carries a field here.
-    // (THE DARK TIME FIELD'S 17-W HEIGHT AND 5-W PAD — Cool Edit's
-    // measured field, then the dialog field's pad, 2026-10-09 to
-    // 2026-10-23 — left this spec with the hi-fi skin: the field's 39 and
-    // 12 px at 300 % are paint_handler.cpp's kTimeFieldHeightAt300 /
-    // kTimeFieldPadAt300, authored at the tablet's scale. Every time field is
-    // still its reserved cell plus the pad each side, no least width —
-    // architect 2026-10-10, the 85-W floor round row 8's clock removed.)
-    // THE ACTIVE TAB'S NAME (architect 2026-10-22: the tab strip goes, "Tab
-    // A" / "Tab B" stands on the bare ground right of the clock): its first
-    // ink this far past the clock field's right edge. THE STATE LINE'S AIR:
-    // its first ink this far past the name's advance (the pad that stood
-    // after the clock group's closing bar, 2026-10-21).
-    double tab_name_air_px;
-    double state_air_px;
+    // (THE DARK TIME FIELD'S HEIGHT AND PAD are paint_handler.cpp's,
+    // authored at the tablet's scale: kTimeFieldPadAt300 and the height
+    // derived from it and the clock's cap. THE ACTIVE TAB'S NAME AND THE
+    // STATE LINE'S AIR past the clock field are paint_handler.cpp's too,
+    // kTabNameAirAt300 and kStateAirAt300, 2026-11-03.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
     // THE WELL'S SIDE MARGIN (Cool Edit's x = 202..207 of
@@ -162,20 +135,9 @@ struct ProgramSpec {
     // left with the flat well: render.h's well lanes block derives them at
     // the element.)
     int  view_bar_field_at300;
-    // THE CUE'S HORIZONTAL LENGTHS, IN LABEL QUANTA (the head): the
-    // selected fill's pad either side of the text — the fill's first column
-    // one pad before the text, so THE FILL'S LEAD IS THE LABEL'S LEAD LESS
-    // ONE PAD (render.h's cue_fill_lead_px; the label's lead itself THE
-    // TRIANGLE'S REACH RIGHT PLUS A GAP OF 12 DEVICE PX AT 300 %, architect
-    // 2026-10-26 ~12:40, 12 px 2026-11-02 — 20 device px at 300 %, 13 at
-    // 200 %, render.h's cue_label_lead_px) — and the gap
-    // between two of a marker's label
-    // segments' boxes (the bound cells, the history's two halves — the
-    // product's own, a segment's text standing the gap and two pads past
-    // the previous one's end). (A label is never clipped: a later cue's face
-    // box occludes an earlier label, render.h's overlap rule, 2026-10-10.)
-    int  cue_fill_pad;
-    int  cue_segment_gap;
+    // (THE CUE'S HORIZONTAL LENGTHS — the selected fill's pad and the
+    // segment gap, in label quanta until 2026-11-03 — are render.h's skin
+    // lengths since, cue_fill_pad_px and cue_segment_gap_px.)
     // THE CANVAS DOTS, ONE DEVICE PX SQUARE, COUNTED IN
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
     // "on waveform → unscaled": one device px at every gui_scale; render.h's
@@ -209,15 +171,9 @@ struct ProgramSpec {
 
 inline constexpr ProgramSpec kProgramSpec = {
     .case_hot_face      = false,
-    .run_gap_px         = 15,
-    .strip_pad_px       = 13,
-    .tab_name_air_px    = 5.0,
-    .state_air_px       = 5.0,
     .column_margin_px      = 6,
     .grid_divisions        = 4,
     .view_bar_field_at300  = 16,
-    .cue_fill_pad          = 1,
-    .cue_segment_gap       = 4,
     .dot_period            = 2,
     .playhead_dot_phase    = 1,
     .cue_dot_period        = 4,
@@ -225,39 +181,14 @@ inline constexpr ProgramSpec kProgramSpec = {
     .range_dot_phase       = 0,
 };
 
-// THE AUTHORED TOTALS, the lane table's record (render.h's
-// chrome_stack_authored_h sums them under every chrome).
-// THE CASE IS NO W TERM (architect 2026-11-02): the square key's side is the
-// `key_height` tuning key's device px at 300 % on both axes (render.h's
-// icon_case_w_px / icon_case_h_px), on the logo lane's road,
-// so the strip and band sums below hold their pads alone and the key's rows
-// stand outside them as the logo lane's do.
-// ROW 8'S AUTHORED PART (2026-10-22, the simple layout; the case's height
-// out of it since 2026-10-29): the strip pad above the key and the strip
-// pad under it (strip_pad_px's field, 13 since 2026-10-23).
-constexpr int program_strip_authored_h(const ProgramSpec& p) {
-    return p.strip_pad_px + p.strip_pad_px;
-}
-// THE BAND'S AUTHORED PART (architect 2026-10-24; the case's height out of
-// it since 2026-10-29): the strip pad under the key. Its upper pad is THE
-// LOGO LANE, authored in device px at 300 % like the skin's other lengths
-// (render.h's logo lane block, logo_lane_h_px), and its key the square
-// key's `key_height` device px at 300 %, so neither is a Windows-px term
-// here (the band was row 8's strip 2026-10-22 to 2026-10-24).
-constexpr int program_band_authored_h(const ProgramSpec& p) {
-    return p.strip_pad_px;
-}
+// (THE AUTHORED TOTALS — the band's and row 8's strip pads in W, the lane
+// table's record — left with the strip pad, 2026-11-03: every lane of the
+// band and of row 8 is a skin length following the key, render.h's case
+// block.)
 // (THE CANVAS COLUMN'S W SUMS — the view bar's 7, the ruler's 12, the marker
 // lane's 17, the stereo divider's 3 — left with the flat well, 2026-11-02:
 // the well's lanes are device px derived at the element, render.h's well
 // lanes block.)
-// THE STRIPS' W PARTS: row 8's two pads 13 + 13; the band's under its
-// logo lane and its key the pad's 13.
-static_assert(program_strip_authored_h(kProgramSpec) == 26);
-static_assert(program_band_authored_h(kProgramSpec) == 13);
-// ROW 8'S GROUP GAP IS THE ONE THE BARS LEFT (2026-10-22): a 6-W bar between
-// the 5-W pad after a bar and the 4-W pad before one (run_gap_px's field).
-static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);
 // (THE LABEL CLEARS THE TRIANGLE BY CONSTRUCTION: render.h's
 // cue_label_lead_px is the triangle's reach right plus the gap, never
 // negative, at every scale.)
@@ -271,7 +202,7 @@ static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
               kProgramSpec.dot_period);
 static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=
               kProgramSpec.playhead_dot_phase);
-// (The label's text stands one pad quantum inside its fill — the fill's
-// lead and pad are the label's lead: render.h's cue_fill_lead_px.)
+// (The label's text stands one fill pad inside its fill — the fill's lead
+// and pad are the label's lead: render.h's cue_fill_lead_px.)
 
 #endif // WARPTEMPO_GUI_PROGRAM_SPEC_H

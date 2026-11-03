@@ -1289,13 +1289,13 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
     return l;
 }
 
-// THE LABEL'S SEGMENT BOXES (render.h's marker-lane paragraph;
-// program_spec.h's cue lengths), as offsets from the marker's column: the
+// THE LABEL'S SEGMENT BOXES (render.h's marker-lane paragraph and the
+// label's horizontal lengths), as offsets from the marker's column: the
 // first present segment's box opens the fill lead past the column (the
-// label's lead less one pad quantum, render.h's cue_fill_lead_px — the lead
+// label's lead less the fill's pad, render.h's cue_fill_lead_px — the lead
 // the triangle's reach right plus the gap, so the boxes follow the
 // triangle's rows, architect 2026-10-26 ~12:40), each box
-// is its text's whole-column width with a pad quantum either side (the text
+// is its text's whole-column width with the fill's pad either side (the text
 // at its box's start plus the pad — the label's lead), and each next box
 // stands the segment gap past the one before. `w` the three texts' widths,
 // `present` which stand. THE ONE LAYOUT the flag pass, the history lane and
@@ -1306,15 +1306,15 @@ struct CueSegmentBoxes {
 };
 static CueSegmentBoxes cue_segment_boxes(const int (&w)[3],
                                          const bool (&present)[3]) {
-    const int u = cue_label_unit_px();   // the label's quantum, scaled
+    const int pad = cue_fill_pad_px();
     CueSegmentBoxes b;
     int x = cue_fill_lead_px();
     for (int s = 0; s < 3; ++s) {
         b.x0[s] = x;
         b.x1[s] = x;
         if (!present[s]) continue;
-        b.x1[s] = x + 2 * kProgramSpec.cue_fill_pad * u + w[s];
-        x = b.x1[s] + kProgramSpec.cue_segment_gap * u;
+        b.x1[s] = x + 2 * pad + w[s];
+        x = b.x1[s] + cue_segment_gap_px();
     }
     return b;
 }
@@ -1417,7 +1417,7 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
 // memo's shared handle, CueRun — null exactly when the segment is absent),
-// its face box [x0, x1) in window x (the text at x0 plus the pad quantum),
+// its face box [x0, x1) in window x (the text at x0 plus the fill's pad),
 // and its look — the inactive label or the text tone, the selection never
 // reaching it (2026-11-02) — and whether it is STRUCK.
 struct CueSegment {
@@ -1528,7 +1528,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                      [](const CueDraw& a, const CueDraw& b) {
                          return a.col < b.col;
                      });
-    const int u        = cue_label_unit_px();   // the label's pad quantum
+    const int pad      = cue_fill_pad_px();   // the label's fill pad
     const int half     = cue_triangle_half_w_px();
     const int fill_h   = cue_fill_h_px();
     const int tri_top  = lane.y + cue_above_triangle_h_px();
@@ -1618,7 +1618,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
             const double tx = static_cast<double>(
-                s.x0 + kProgramSpec.cue_fill_pad * u);
+                s.x0 + pad);
             // The label's ink (resolve_flag_face's table): the inactive
             // label or the text tone, selected or not; a struck segment's
             // bar in the same ink (show_cue_label).
@@ -1799,7 +1799,7 @@ void render_flag_boxes_impl(
     // cut off there. Released by the pass's closing restore.
     clip_to_waveform_columns(cr, lanes.columns_x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
-    // THE LABEL FACE for the whole pass (gui_font.h: Bold 22 at 300 %),
+    // THE LABEL FACE for the whole pass (gui_font.h: Bold 24 at 300 %),
     // every run carrying it (text_shape.h).
     const GuiFont font = gui_font(GuiFace::Label);
     // The pass's kept scratch (CuePassScratch), emptied for this pass.
@@ -2023,7 +2023,6 @@ void render_history_diff_flags(
     // The label face for the pass, exactly as render_flag_boxes_impl names
     // it (gui_font.h).
     const GuiFont font = gui_font(GuiFace::Label);
-    const int u = cue_label_unit_px();   // the label's quantum, scaled
 
     // THE LEFT CULL'S BOUND, DERIVED FROM THIS COMMIT'S OWN TEXT rather than
     // from the marker lane's own worst case, because THESE LABELS ARE NOT CUT.
@@ -2047,9 +2046,8 @@ void render_history_diff_flags(
         // The label's lead, both segments' pads and the gap between a
         // same-frame pair's halves. A bound must never under-state, and the
         // widest flag in a commit may be a pair.
-        static_cast<double>(cue_fill_lead_px() +
-                            (4 * kProgramSpec.cue_fill_pad +
-                             kProgramSpec.cue_segment_gap) * u);
+        static_cast<double>(cue_fill_lead_px() + 4 * cue_fill_pad_px() +
+                            cue_segment_gap_px());
 
     // THE NUDGED PAIR'S COLUMNS. The iterator maps a flag's time_frame — the
     // LEFT cue's (HistoryDiffFlag) — and the pair's RIGHT cue is mapped
@@ -2470,7 +2468,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // exactly where the resting segment's box does.
     const GuiRect lane = top_marker_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
-    const int u      = cue_label_unit_px();   // the label's quantum, scaled
+    const int u      = cue_editor_outline_px();   // the field's outline
     const int fill_h = cue_fill_h_px();
 
     cairo_save(cr);
@@ -2484,8 +2482,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     std::vector<double> byte_x =
         text_shape::byte_offsets_px(run, ed.pending.size());
 
-    // The segment box's pad quantum either side of the run (cue_segment_boxes).
-    const int pad_l = kProgramSpec.cue_fill_pad * u;
+    // The segment box's fill pad either side of the run (cue_segment_boxes).
+    const int pad_l = cue_fill_pad_px();
     const int pad_r = pad_l;
     // THE CARET'S COLUMN, AND WHERE EVERY FIELD FINDS IT. The caret at
     // end-of-text stands one column past the last glyph, so a field must own a
@@ -2508,10 +2506,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the right of this one ride the edge. There was no fixed-width grammar to
     // pin a bound field to in any case: this face is PROPORTIONAL, so `-3.75`
     // and `+1.00` are not the same width.
-    // The pad is one quantum (2026-10-09, the cue's label: the fill 1 W past
-    // the text's end) and THE CARET ONE DEVICE PX (render.h's line rule, the
-    // sweep of 2026-10-23; one quantum until then, the borrow then taking
-    // the whole pad), so the borrow takes the caret's column out of the
+    // The pad is the fill's (render.h's cue_fill_pad_px, 4 px at 300 %) and
+    // THE CARET ONE DEVICE PX (render.h's line rule, the sweep of
+    // 2026-10-23), so the borrow takes the caret's column out of the
     // right pad: a caret at end-of-text stands in the pad's first column,
     // inside the box — visible ink, not a lost one, so the travel
     // arithmetic below needs no floor of its own. The TEXT VIEWPORT is what
@@ -2707,11 +2704,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // 1. THE FIELD IS A BOX OVER THE WHOLE LANE (cue_fill_h_px, the selected
     //    label's box; architect 2026-10-09 ~21:00; the lane's rows ARE the
     //    box's since 2026-11-01 night, render.h's marker_lane_h_px): the
-    //    segment's box — its run and one quantum of pad either side, the
-    //    text standing exactly where the resting label's does — with A
-    //    ONE-QUANTUM OUTLINE (three device px at 300 %) in kTextInk round it,
-    //    outside the pads on the left and right and on the lane's first and
-    //    last quantum, the ground inside. IT PAINTS OVER THE LANE — the
+    //    segment's box — its run and the fill's pad either side, the text
+    //    standing exactly where the resting label's does — with THE
+    //    EDITOR'S OUTLINE (render.h's cue_editor_outline_px, three device px
+    //    at 300 %) in kTextInk round it, outside the pads on the left and
+    //    right and on the lane's first and last outline rows, the ground
+    //    inside. IT PAINTS OVER THE LANE — the
     //    triangle's right edge and any neighbouring label it reaches
     //    (architect 2026-10-09: "it may overlap with the flag and other
     //    elements, that's fine"). A refused Enter recolors nothing
@@ -2732,8 +2730,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // line's grammar's ink, the x-height band centered in it; render.h's
     // EDITING paragraph): the band's rows are read off the one derivation
     // (cue_band_top_px, cue_band_h_px, render.h), never re-derived here — at
-    // 300 % rows 9 .. 30 of the inner 3 .. 36, six rows of field above and
-    // six below.
+    // 300 % rows 13 .. 35 of the inner 3 .. 45, ten rows of field above and
+    // ten below.
     const int view_y = lane.y + u;
     const int view_h = fill_h - 2 * u;
     const int band_y = lane.y + cue_band_top_px();
@@ -2918,7 +2916,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // rule: a box that is not in the run leaves its boundary standing
         // where the next one begins, so no point can answer a box with no
         // ink. The gap after the field belongs to the first riding box.
-        const int gap    = kProgramSpec.cue_segment_gap * u;
+        const int gap    = cue_segment_gap_px();
         const int run_x0 = bx + box_w;
         // THE RUN IS NOT CLIPPED (architect 2026-10-10 ~19:00): the riding
         // cells paint where the paint order puts them. The editor paints
@@ -2927,8 +2925,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // "it may overlap with the flag and other elements, that's fine").
         int cursor_x = run_x0;
         const int lower_seam = cursor_x;
-        // The field's outline column stands in the first gap's first quantum
-        // (field_box reaches one quantum past the pads), so the riding face
+        // The field's outline columns stand in the first gap's first columns
+        // (field_box reaches one outline past the pads), so the riding face
         // starts after it: the run stays where the resting label's is and the
         // outline is never painted over.
         const int face_x0 = run_x0 + u;

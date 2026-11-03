@@ -222,8 +222,8 @@
 //                            install)
 //   (strip_pad=<W>, THE STRIP PAD, a tuning key with a Settings row
 //                            2026-10-22 to 2026-10-23, SETTLED AT 13 W —
-//                            program_spec.h's strip_pad_px, the ruling
-//                            there; an old `strip_pad=` line is the ordinary
+//                            half the key since 2026-11-03, render.h's
+//                            strip_pad_px; an old `strip_pad=` line is the ordinary
 //                            unknown-key hard fail, the planner editing both
 //                            devices' configs at the install and the sync
 //                            script's setup removing it on the tablet)
@@ -264,7 +264,8 @@
 // triangle) settled ~13:05 at 8 rows authored at 300 %, the staircase, 22
 // and a gap of 8 (render.h's cue_triangle_rows and cue_label_lead_px,
 // paint_ce_cue_triangle, gui_font.h's Label size since 2026-11-01 night,
-// the gap 12 since 2026-11-02; an old line is the
+// the gap 12 since 2026-11-02, the rows 9, the size 24 and the gap 13 since
+// 2026-11-03; an old line is the
 // ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together; the level APPENDED after the permanent keys 2026-10-28,
 // and the crossfade after it — the two fade tuning keys after it
@@ -557,8 +558,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: the lanes above
-// the waveform — the program's band, its logo lane 72 device px at 300 %
-// over the case and the strip pad, the well's trim bar, ruler and marker
+// the waveform — the program's band, its logo lane over the strip pads and
+// the case, the well's trim bar, ruler and marker
 // lane and its rows of ground, one device px each — and below it — the
 // well's foot and row 8 — scale with gui_scale (main.cpp's stack record,
 // re-derived 2026-11-02 with the flat well); they pass 1440 short of the

@@ -218,9 +218,10 @@ inline constexpr double kPanelPadPx = 1.0;
 // button gap re-authored.
 inline constexpr double kRowGapPx = 1.0;
 
-// THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
-// button box until 2026-10-02, then the 22-px toolbar case for that day's
-// first hours), the panel's row gap, the row's glyph (the painter's,
+// THE ROW BOX: 56 DEVICE PX AT 300 % (kRowHeightAt300, skin_px — the 17
+// Windows px, 51 at 300 %, that stood round the 22-px text grown with it, x
+// 24 / 22, the text round, architect 2026-11-03), the panel's row gap, the
+// row's glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then; Breeze's since
 // 2026-11-02). A folder row wears icons::Icon::Folder and a wav row
 // icons::Icon::ViewMediaTrack, the double notes — SOURCE's drawing, a
@@ -233,8 +234,8 @@ inline constexpr double kRowGapPx = 1.0;
 // which wore the folder glyph because it named a folder, with the player's
 // move inside `tmp/` on 2026-09-01.) The accessor keeps the name it had while
 // a row was a wide button.
-inline constexpr double kRowHeightPx = 17.0;
-inline int button_row_height_px() { return scaled_px(kRowHeightPx, 1); }
+inline constexpr double kRowHeightAt300 = 56.0;
+inline int button_row_height_px() { return skin_px(kRowHeightAt300, 1); }
 inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
 // (Its one reader since 2026-10-23 is the notification stack's margin,
 // notifications.cpp: the rows stand at row_inset_px below.)

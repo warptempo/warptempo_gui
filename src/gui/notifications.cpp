@@ -8,7 +8,7 @@
 #include <utility>
 
 int notification_pad_px() {
-    // P18 (the ruling at the declaration): an area, rounded at the element.
+    // The pad (the ruling at the declaration, 24 at 300 %): an area, rounded at the element.
     return skin_px(kNotificationPadAt300, 1);
 }
 
@@ -19,7 +19,7 @@ int notification_cap_px() {
 
 int notification_card_h_px() {
     // border + pad + cap + pad + border, each its own rounded part (the
-    // composite rule, scaled_px's head): 1 + 18 + 15 + 18 + 1 = 53 at 300 %.
+    // composite rule, scaled_px's head): 1 + 24 + 17 + 24 + 1 = 67 at 300 %.
     return 2 * hairline_px() + 2 * notification_pad_px() +
            notification_cap_px();
 }

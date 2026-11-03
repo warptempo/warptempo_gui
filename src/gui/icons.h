@@ -169,8 +169,8 @@ void drop_rasters();
 // keys' skin_px of 20 / 33 of the `key_height` tuning key's side
 // (kKeyGlyphInkPerKeySide, paint_key_glyph, 36 at the default 60,
 // 2026-11-02), the logo lane's
-// note skin_px(21) (kLogoNoteInkAt300) and battery glyph skin_px(19)
-// (kLogoGlyphInkAt300, render.h), the list rows' skin_px(27)
+// note skin_px(23) (kLogoNoteInkAt300) and battery glyph skin_px(21)
+// (kLogoGlyphInkAt300, render.h), the list rows' skin_px(29)
 // (kListGlyphInkAt300, paint_handler.cpp), the cards' .525 of the first
 // line's inside height (kNotificationGlyphRatio, notifications.h). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and

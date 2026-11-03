@@ -81,8 +81,8 @@
 // triangles and ticks with the rest since 2026-11-02): every word, digit,
 // tick and triangle is ink alone.
 //
-// THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h with
-// the final lane-40 / clock-39 rulings; M13's text tones 2026-11-02): FLAT
+// THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h;
+// M13's text tones 2026-11-02; the text round's lengths 2026-11-03): FLAT
 // REGIONS ON THE GROUND, no frame, no ring, no bevel, its columns the keys'
 // outer columns (render.h's well_columns, THE EDGE RULE), top to bottom —
 // THE TRIM BAR kTrimBarFace 3C3C3C in a one-device-px kWellFrame 757575

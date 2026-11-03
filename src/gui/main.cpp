@@ -150,12 +150,11 @@ namespace {
 // THE APP'S CAPTION, the window's own title bar lane 0 from 2026-10-05, is
 // removed: the tablet's window has none; render.h's caption note): THE
 // TOOLBAR BAND
-// (THE LOGO LANE — the band's upper pad, 72
-// device px at 300 % since 2026-10-24, render.h's logo lane block — the
-// key, SQUARE since 2026-11-02, the `key_height` tuning key's device px at
-// 300 % on both axes (60 its default), the strip pad on the flat ground —
-// render.h's
-// program block),
+// (THE LOGO LANE — its top pad and the logo's ink band, render.h's logo
+// lane block — the strip pad, the key, SQUARE since 2026-11-02, the
+// `key_height` tuning key's device px at 300 % on both axes (60 its
+// default), the strip pad, half the key since 2026-11-03, on the flat
+// ground — render.h's program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
 // BLOCK's four, THE WELL — THE PROGRAM'S CANVAS COLUMN, flat regions on the
 // ground (architect 2026-10-09, the program is Cool Edit; 2026-11-01 night,
@@ -163,13 +162,14 @@ namespace {
 // the TRIM lane (trim_lane_h_px(), a row of ground and Live's overview bar,
 // 19 device px at 300 % — the bar's frame, its 16-px interior and the
 // span), the RULER lane (ruler_lane_h_px(), Cool Edit's flipped ruler in
-// Live's tones, 31 rows and a row of ground — the air, the Bold-14
-// timestamps, the ticks and the PLAYHEAD'S HEAD on its foot rows — and a
+// Live's tones, 41 rows and a row of ground — the Bold-18 timestamps' ink
+// centered between two pads, the ticks and the PLAYHEAD'S HEAD on its foot
+// rows — and a
 // PLACEMENT LANE: a motionless click places the playhead
 // and every drag there does nothing but the head's, which drags the playhead
 // (2026-10-09), the navigation surface being the waveform alone
 // (point_on_placement_lanes and point_on_playhead_head, input_pointer.cpp)),
-// the MARKER lane (marker_lane_h_px(), 40 rows at 300 %, Cool Edit's cues,
+// the MARKER lane (marker_lane_h_px(), 49 rows at 300 %, Cool Edit's cues,
 // the label's box and the flag editor's the whole lane) and THE LANE'S FOOT
 // LINE (lane_foot_line_h_px(), one hairline of ground), whose bottom edge is
 // the waveform top. EVERY LANE rides the gui_scale axis but the well's lines,
@@ -234,60 +234,59 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-11-02 rather than adjusted (the flat well; the square key the same
-// day; the key's side a tuning key since 2026-10-29), AT THE STRIP PAD'S
-// 13 W (a constant since 2026-10-23, program_spec.h's strip_pad_px) AND AT
+// 2026-11-03 rather than adjusted (the text round: the 24-px text, the
+// strip pad and the run gap half the key, the logo lane its own lane), AT
 // key_height 60 (the template's value; a tune moves the band's and row 8's
-// case rows and the well by their difference), the waveform the whole
-// leftover and both gaps 0
-// in every stack (the rule above). Every lane is its own composite of
-// rounded parts (skin_px's and scaled_px's rule, the faces' metrics each
-// rounded at the element), so the device rows below are read off the lane
-// accessors, never off a total times the factor. THE PROGRAM'S W STACK IS
-// 13 ABOVE AND 26 BELOW (render.h's chrome_stack_authored_h): the band's
-// pad and row 8's two pads — AND OVER IT THE LOGO LANE, the band's upper
-// pad, 72 DEVICE PX AT 300 % (2026-10-24: logo_lane_h_px, skin_px), THE TWO
-// KEYS' ROWS, THE `key_height` KEY'S DEVICE PX AT 300 % (2026-10-29:
-// icon_case_h_px, skin_px), each SCALED WITH gui_scale, AND THE WELL'S
-// LANES, DERIVED IN DEVICE PX AT THE ELEMENT (render.h's well lanes block,
-// 2026-11-02). THE CANVAS — THE WELL'S INTERIOR — AT THE BASE'S 300 % AND
-// key_height 60 IS 1038 DEVICE ROWS (the rule at centered_leftover_h
-// below), AND ITS
-// WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the left
-// (waveform_area: the margin and the well's edge column, 19 px, and half
-// the flooring's leftover, 5). Per scale the well above the canvas is the
-// trim lane (ground + frame + interior + frame) + the ruler lane (air +
-// ascent + descent + major tick, + ground) + the marker lane (outline + pad
-// + band + pad + outline) + the lane's foot line: 19 (1 + 1 + 16 + 1) + 32
-// (6 + 13 + 3 + 9 + 1) + 40 (3 + 6 + 22 + 6 + 3) + 1 = 92 at 300 %, 14 (1 +
-// 1 + 11 + 1) + 21 (4 + 8 + 2 + 6 + 1) + 26 (2 + 4 + 14 + 4 + 2) + 1 = 62 at
-// 200 %.
+// pads and case rows and the well by their difference), the waveform the
+// whole leftover and both gaps 0 in every stack (the rule above). Every
+// lane is its own composite of rounded parts (skin_px's and scaled_px's
+// rule, the faces' metrics each rounded at the element), so the device rows
+// below are read off the lane accessors, never off a total times the
+// factor. NO LANE ABOVE OR BELOW THE WELL IS A WINDOWS-PX LENGTH: THE BAND
+// IS THE LOGO LANE (its top pad and its ink band, render.h's logo lane
+// block), THE STRIP PAD, THE KEY AND THE STRIP PAD; ROW 8 THE STRIP PAD,
+// THE KEY AND THE STRIP PAD — the key the `key_height` key's device px at
+// 300 % (icon_case_h_px), the pad half of it (strip_pad_px), each SCALED
+// WITH gui_scale — AND THE WELL'S LANES ARE DERIVED IN DEVICE PX AT THE
+// ELEMENT (render.h's well lanes block). THE CANVAS — THE WELL'S INTERIOR
+// — AT THE BASE'S 300 % AND key_height 60 IS 1035 DEVICE ROWS (the rule at
+// centered_leftover_h below), AND ITS WIDTH 2256 OF THE TABLET'S 2304, 24
+// device px in from the left (waveform_area: the margin and the well's
+// edge column, 19 px, and half the flooring's leftover, 5). Per scale the
+// well above the canvas is the trim lane (ground + frame + interior +
+// frame) + the ruler lane (pad + the digits' ink + pad, + ground) + the
+// marker lane (outline + pad + band + pad + outline) + the lane's foot
+// line: 19 (1 + 1 + 16 + 1) + 42 (14 + 13 + 14 + 1) + 49 (3 + 10 + 23 + 10
+// + 3) + 1 = 111 at 300 %, 14 (1 + 1 + 11 + 1) + 27 (9 + 8 + 9 + 1) + 34 (2
+// + 7 + 16 + 7 + 2) + 1 = 76 at 200 %; the band the logo lane (the strip
+// pad + the ink band) + the strip pad + the key + the strip pad, 53 (30 +
+// 23) + 30 + 60 + 30 = 173 at 300 %, 36 (20 + 16) + 20 + 40 + 20 = 116 at
+// 200 %; row 8 30 + 60 + 30 = 120 at 300 %, 80 at 200 %.
 //   1920 x H AT 200 % (kept as a worked case; no host runs this geometry
-//   since the laptop GUI's drop, 2026-10-30): the
-//   lanes are 114 band (the logo lane 48, the case 40, the pad 26, rows
-//   0–113, the cases 48–87) + 62 the well's lanes = 176 above and 93 below
-//   (the well's foot 1 and row 8's 26 + 40 + 26), leftover H − 269: the
-//   waveform H − 269 (its two wells (H − 270) / 2 rows each, floored, round
-//   the divider's 1, the spare row the canvas's last), both gaps 0 — 114 / 0
-//   / 62 / H − 269 / 0 / 93; the waveform 1888 wide, 16 px in (the margin
-//   and the edge column, 13, and half the flooring's 6), the well's columns
-//   15 and 1905.
+//   since the laptop GUI's drop, 2026-10-30): the lanes are 116 band (rows
+//   0–115, the logo lane 0–35, the cases 56–95) + 76 the well's lanes = 192
+//   above and 81 below (the well's foot 1 and row 8's 20 + 40 + 20),
+//   leftover H − 273: the waveform H − 273 (its two wells (H − 274) / 2
+//   rows each, floored, round the divider's 1, an odd spare row the
+//   canvas's last), both gaps 0 — 116 / 0 / 76 / H − 273 / 0 / 81; the
+//   waveform 1888 wide, 16 px in (the margin and the edge column, 13, and
+//   half the flooring's 6), the well's columns 15 and 1905.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
-//   tablet value since 2026-10-06): the lanes are 171 band (72
-//   + 60 + 39, rows 0–170, the logo lane 0–71, the cases 72–131) + 19 trim
-//   (row 171 ground, the bar 172–189) + 32 ruler (190–220, row 221 ground)
-//   + 40 marker (222–261) + 1 foot line (262) = 263 above (171 the band, 92
-//   the block) and 139 below (the well's foot 1301 and row 8 on 1302–1439,
-//   its cases 1341–1400), leftover 1038: the waveform 1038 on rows
-//   263–1300 (its two wells 518 rows each round the divider's row 781, the
-//   spare row 1300, render.h's waveform_divider), both gaps 0 — 171 / 0 /
-//   92 / 1038 / 0 / 139; the waveform 2256 wide, 24 px in (columns
-//   24–2279), the well's columns 23 and 2281 (one past 2280).
+//   tablet value since 2026-10-06): the lanes are 173 band (53 + 30 + 60 +
+//   30, rows 0–172, the logo lane 0–52 with its ink band 30–52, the cases
+//   83–142) + 19 trim (row 173 ground, the bar 174–191) + 42 ruler
+//   (192–232, row 233 ground) + 49 marker (234–282) + 1 foot line (283) =
+//   284 above (173 the band, 111 the block) and 121 below (the well's foot
+//   1319 and row 8 on 1320–1439, its cases 1350–1409), leftover 1035: the
+//   waveform 1035 on rows 284–1318 (its two wells 517 rows each round the
+//   divider's row 801, no spare row, render.h's waveform_divider), both
+//   gaps 0 — 173 / 0 / 111 / 1035 / 0 / 121; the waveform 2256 wide, 24 px
+//   in (columns 24–2279), the well's columns 23 and 2281 (one past 2280).
 //   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 331 -> the waveform 331, both
-//   gaps 0 — 114 / 0 / 62 / 331 / 0 / 93.
+//   this geometry): leftover 327 -> the waveform 327, both
+//   gaps 0 — 116 / 0 / 76 / 327 / 0 / 81.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -350,12 +349,12 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE TOOLBAR
-// BAND, the logo lane, the case (its side the `key_height` tuning key,
-// 2026-10-29, square since 2026-11-02), the
-// strip pad (render.h's program and logo lane blocks, icon_row_h_px), the
+// BAND, the logo lane, the strip pad, the case (its side the `key_height`
+// tuning key, 2026-10-29, square since 2026-11-02) and the strip pad
+// (render.h's program and logo lane blocks, icon_row_h_px), the
 // well's four lanes the trim bar, the ruler, the marker lane and the lane's
-// foot line (render.h's well lanes block): 19 + 32 + 40 + 1 = 92 device rows
-// at 300 %, 14 + 21 + 26 + 1 = 62 at 200 % — THE WELL'S FOOT one device px
+// foot line (render.h's well lanes block): 19 + 42 + 49 + 1 = 111 device
+// rows at 300 %, 14 + 27 + 34 + 1 = 76 at 200 % — THE WELL'S FOOT one device px
 // too (well_foot_h_px), and the UNIFIED BOTTOM ROW the strip again
 // (bottom_row_h_px; the simple layout, 2026-10-22).
 constexpr int kTopLaneCount    = 5;
@@ -379,7 +378,8 @@ constexpr int kTopLaneFootLane    = 4;
 static_assert(kTopFlexGapLane == kTopTrimLane);
 int top_lane_height(int lane) {
     switch (lane) {
-        // THE TOOLBAR BAND: the logo lane, the case, the strip pad.
+        // THE TOOLBAR BAND: the logo lane, the strip pad, the case, the
+        // strip pad.
         case kTopProgramLane: return icon_row_h_px();
         // THE WELL'S THREE (architect 2026-10-09, the program is Cool Edit;
         // flat since 2026-11-01 night; render.h's well lanes block the
@@ -433,8 +433,8 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300, the strip pad's 13 W and key_height 60 the lanes leave
-// 1440 − 263 − 139 = 1038 device rows (the square key, 2026-11-02). No
+// gui_scale 300 and key_height 60 the lanes leave 1440 − 284 − 121 = 1035
+// device rows (the text round, 2026-11-03). No
 // color moves a lane (the key's side, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -735,7 +735,8 @@ GuiRect well_foot_area(const AppState& a) {
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each a plain run of cases,
-// run_gap_px of bare ground between two. It is BOTTOM LANE 0, on the window's
+// the run gap of bare ground between two (render.h's program_run_gap_px, the
+// strip pad). It is BOTTOM LANE 0, on the window's
 // foot
 // under the well's foot (lane 1, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal
