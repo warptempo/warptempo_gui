@@ -333,15 +333,18 @@ DIFF_W, DIFF_H = 480, 270
 #   2281, one past the right edge column 2280) stand one column outside it, and the modal box stands on them
 #   (modal_box_rect: x 23 .. 2280, width 2258, those two columns ground); the interior (the flat pane) one
 #   hairline_px (1 at every scale) in from each side: x 24, WIDTH 2256 — the canvas's own columns.
-#   DOWN (re-derived 2026-11-02, key_height 66, the square key): the box (modal_box_rect) runs from the trim lane's
-#   first row (top_trim_row_area) to the controls row's top (modal_controls_row_rect, the bottom row's lane). The band
-#   above the trim lane is the logo lane's 72, the key's 66 (the `key_height` key) and the strip pad's 39 (13 W), 177
-#   rows, the flexible gap 0 (the waveform takes the whole leftover); the bottom row is the strip, 39 + 66 + 39 = 144
-#   rows on the window's foot from row 1440 - 144 = 1296. So the box is rows 177..1295 (its last row the well's foot),
-#   1119 rows, those outer rows ground, and its interior (modal_box_interior_rect) one hairline in: y 178..1294, HEIGHT
-#   1117 — the viewer's printed box 2256x1117. PAGE_FIT BELOW STILL HOLDS THE 33-ROW KEY'S BOX, 2256x1183 (2026-10-29
-#   to 2026-11-02: the band 144 rows, the bottom row 111), the box the extracted pages on file were fitted to, until
-#   the architect rules a re-extraction. (The 2026-10 box, with the 69-px case and the lanes then, was 2256x1111.)
+#   DOWN (re-derived 2026-11-03, the text round, at key_height's default 60, the square key): the box
+#   (modal_box_rect) runs from the trim lane's first row (top_trim_row_area) to the controls row's top
+#   (modal_controls_row_rect, the bottom row's lane). The band above the trim lane is the logo lane's 53 (the strip
+#   pad, half the key, 30, and the logo's ink band 23), the strip pad's 30, the key's 60 (the `key_height` key) and the
+#   strip pad's 30, 173 rows, the flexible gap 0 (the waveform takes the whole leftover); the bottom row is the strip,
+#   30 + 60 + 30 = 120 rows on the window's foot from row 1440 - 120 = 1320. So the box is rows 173..1319 (its last
+#   row the well's foot), 1147 rows, those outer rows ground, and its interior (modal_box_interior_rect) one hairline
+#   in: y 174..1318, HEIGHT 1145 — the viewer's printed box 2256x1145. At key_height 66 the band is 188 (56 + 33 + 66 +
+#   33) and the bottom row 132, the interior 2256x1118. PAGE_FIT BELOW STILL HOLDS THE 33-ROW KEY'S BOX, 2256x1183
+#   (2026-10-29 to 2026-11-02: the band 144 rows, the bottom row 111), the box the extracted pages on file were fitted
+#   to, until the architect rules a re-extraction. (The 2026-10 box, with the 69-px case and the lanes then, was
+#   2256x1111.)
 PAGE_FIT = (2256, 1183)
 # THE PAGE FILE: GRAYSCALE JPEG at this quality, Huffman-optimized (architect 2026-10-26: "grayscale ok", quality 92).
 # A score page is black ink on paper, so one channel loses nothing a reader sees; ffmpeg's mjpeg encoder writes no

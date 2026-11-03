@@ -562,26 +562,22 @@ inline constexpr const char* kDefaultProjectsRepo =
 // the case, the well's trim bar, ruler and marker
 // lane and its rows of ground, one device px each — and below it — the
 // well's foot and row 8 — scale with gui_scale (main.cpp's stack record,
-// re-derived 2026-11-02 with the flat well); they pass 1440 short of the
-// ceiling, past which the
-// waveform is the zero height waveform_area's floor answers (the arithmetic and the guard at
-// waveform_area, main.cpp).
+// re-derived 2026-11-03 with the text round); whether they pass the
+// tablet's 1440 rows short of the ceiling turns on the key height, and where
+// they do the waveform is the zero height waveform_area's floor answers (the
+// arithmetic, by key height, and the guard at waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below about 621
-// device px of window at 100 % (432 in the `h` view; re-derived 2026-11-02,
-// the square key at key_height's default 60 and its one-px group gap)
-// the icon row — the
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: past a width or a
+// scale the icon row — the
 // toolbar band, its twenty-seven standing members in three left runs and one
 // right run of the program's square key (eighteen in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
 // runs the simple layout's, 2026-10-22) — no longer fits, and its
 // right-anchored run covers the runs to its left (the overflow rule at
-// kIconRowViewPairs, paint_handler.cpp). The tablet's 2304-px panel holds
-// the row whole in both states up to about 370 % — the left runs on device
-// x 23..1451 and the right run on 1977..2280 at 300 % outside the view (the
-// arithmetic is at paint_icon_row, paint_handler.cpp, its one statement,
-// re-derived 2026-11-02 with the square key at the default 60) — and past
-// that ceiling the overflow rule answers. The
+// kIconRowViewPairs, paint_handler.cpp). Where that is — the window widths
+// and the scales the tablet's 2304-px panel holds the row whole at, by key
+// height — is THE FIT at paint_icon_row's width math (paint_handler.cpp),
+// its one statement. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A

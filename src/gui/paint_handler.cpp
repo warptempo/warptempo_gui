@@ -987,14 +987,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the clip
 // covers it whole — so a press, a hover and a tooltip land on exactly the
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
-// band holds every run down to about 679 Windows px of window width outside
-// the `h` view and 472 inside it (the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-29 with the Restrict lamp, plus the
-// well's edge-column inset at each window edge, about 13 W), so the tablet does not reach
-// the rule at its scale: its 2304 device px hold the row in both states
-// up to about 340 % (the W arithmetic
-// over the device width; each element's own rounding moves the edge by a
-// pixel or so).
+// widths and scales at which the band holds every run are THE FIT at
+// paint_icon_row's width math, its one statement; the tablet does not reach
+// the rule at its 300 % and key_height's default.
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource},
      {RedesignButton::ViewTarget}},
@@ -1048,32 +1043,31 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
 // LABEL and every time field (Qt's integer box rule fails the crops).
 //
-// THE CAP BAND IS THE BODY FACE'S RECORDED ONE AT EVERY SCALE (architect
-// 2026-10-05, gui_font.h): the recorded cap times the scale, an unrounded
-// double — Tahoma's 8 rows: 8 device rows at 100 %, 11.04 at 138 %, 24 at
-// 300 %, 32 at 400 % — the face's em being the one that stands its "H"
-// exactly that tall.
+// THE CAP BAND IS THE FACE'S OWN (gui_font.h, gui_font_cap_px): the em
+// times the file's own "H" ink per em (Liberation Sans 1409 / 2048 units),
+// an unrounded double — 16.51 device rows at 300 %'s 24-px em, 11.01 at
+// 200 %'s 16, 7.57 at 138 %'s 11, 22.02 at 400 %'s 32.
 //
-// THE SEATS AT THE TABLET'S 300 %: a 17-W box (a folder overlay row), 51
-// rows, seats at row floor((51 + 24) / 2) = 37; at 138 % its 23
-// rows (17 x 1.38 = 23.46) seat at floor((23 + 11.04) / 2) = 17. The answer is
-// independent of the box's y by construction rather than by a tie rule.
+// THE SEATS AT THE TABLET'S 300 %: a list row (the folder overlay's row box,
+// folder_overlay.h's kRowHeightAt300, 56 rows) seats at row floor((56 +
+// 16.51) / 2) = 36; at 138 % its 26 rows seat at floor((26 + 7.57) / 2) =
+// 16. The answer is independent of the box's y by construction rather than
+// by a tie rule.
 //
-// ONE SEAT FOR EVERY CHROME LABEL (architect 2026-10-22: the cards came
-// back to it — the line box centered in their interior read low under
-// descenders and the one-W lift on it overshot; the hover tooltip seats its
-// own caps under one pad since 2026-10-31, paint_shift_tooltip). THE BOX
-// SEATS: the logo lane's brand, the row-8 clock (in its time field) and the
-// state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
-// is at paint_bottom_row_buttons_and_clock), the notification card's first
-// line (a further line one line height lower),
-// the prompt's question and the
-// dialog editor's line in the modal family's box (each row on the list's
-// row box, 2026-10-14), the render player's
-// two time fields, the modal buttons' own labels, the on-screen
-// keyboard's caps, the folder overlay's rows, the menu row's anchors
-// (the plain menu bar's seat, a capture of the real OS
-// beating ReactOS's band, architect 2026-10-09 ~17:40).
+// ONE SEAT FOR EVERY BOXED CHROME LABEL (architect 2026-10-22). THE BOX
+// SEATS: the row-8 clock (in its time field) and the active tab's name and
+// the state line beside it (on THE FIELD's box since 2026-10-07 — the
+// reasoning is at paint_bottom_row_buttons_and_clock), the render player's
+// two time fields and the score viewer's page cell, the modal box's text
+// rows — a prompt's question, the progress modal's sentence, an editor's
+// line (paint_modal_dialog: the first row's band placed so this solver lands
+// on the text seat's baseline, modal_box_text_baseline0) — the dialog
+// editors' lines on their rows, the on-screen keyboard's caps and the
+// folder overlay's rows. The
+// notification card's first line states the same centering whole on its
+// rounded cap (pad + cap + pad, notification_card_h_px); the hover tooltip
+// seats its own caps under one pad (paint_shift_tooltip); the logo lane's
+// items center their ink in its ink band (logo_ink_band_px).
 //
 // THE WELL'S TEXT TAKES ANOTHER SEAT (2026-10-09, the program is Cool Edit;
 // the flat well 2026-11-01 night): THE RULER'S DIGITS stand on an AUTHORED
@@ -1091,10 +1085,11 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // monospace digits gave row 28 and row 63 — exactly where the old proxy plus
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
-// their own box: the 68-row field at 400 % puts the body's 32-row cap at
-// row 50 (eighteen rows above it, eighteen below — a 4-row line and 14 of
-// face each side), the 51-row field at 300 % its 24-row band at row 37, the
-// 23-row field at 138 % its 11.04-row band at row 17.
+// their own box, its height the pad, the cap's rows and the pad
+// (time_field_h_px): the 49-row field at 300 % (16 + 17 + 16) puts the
+// Program face's 16.51-row cap band at row floor((49 + 16.51) / 2) = 32,
+// the 64-row field at 400 % (21 + 22 + 21) its 22.02 rows at row 43, the
+// 33-row field at 200 % (11 + 11 + 11) its 11.01 at row 22.
 // AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop until the label's removal
 // (2026-10-14).
@@ -1380,15 +1375,14 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // column.
 namespace {
 // A TEXT ITEM'S INK ROWS above and below its baseline: the set's ink band
-// in the face (gui_font_ink_band), each edge rounded at the element.
+// in the face as painted (gui_font_ink_band), its rows as they are.
 struct LogoTextInk {
     int above = 0, below = 0;
     int rows() const { return above + below; }
 };
 LogoTextInk logo_text_ink(GuiFace face, const char* set) {
     const GuiInkBand b = gui_font_ink_band(gui_font(face), set);
-    return LogoTextInk{static_cast<int>(std::nearbyint(b.above)),
-                       static_cast<int>(std::nearbyint(b.below))};
+    return LogoTextInk{b.above, b.below};
 }
 // THE GLYPH CELL: the two battery drawings' common ink box at the one
 // length, the larger of the two on each axis.
@@ -1614,6 +1608,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 23..1421, the right run 1977..2280; at 138 % on a 1920-px window
     // (keys 28, the gap 14, the well 15 .. 1905) the left runs on x 15..677,
     // the right run 1761..1904. A roster move restates these numbers.
+    // THE FIT, the one statement every other site points to: in key and run
+    // gap the band is 28.5 keys and 23 px of group gaps outside the view
+    // (19.5 keys and 14 px inside it) against the well's width, so at
+    // key_height 60 the tablet's 2304 holds it whole up to about 390 % outside
+    // the view and about 560 % inside it (the well 2258 through 390 %, 2242
+    // from 400 %, 2226 from 530 %), and at 100 % a window down to about 606
+    // device px outside the view and 430 inside it; past either the overflow
+    // rule (kIconRowViewPairs) answers. A taller key lowers both ceilings.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -2216,9 +2218,10 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // at 300 % and 24 px, 106.8 device px ceiled to 107, the field 139; at
 // 138 % an 11-px em, 48.9 ceiled to 49, the field 63. THE PLAYER'S ROW
 // HOLDS THEM: its scrub is what the fixed terms leave (player_row_layout),
-// the two fields and their gap 253 device px at 300 % and 118 at 138 %, so
-// on the maximized windows the scrub's channel is 1316 device px at 300 %
-// (2304 wide) and 1460 at 138 % (1920 wide).
+// the two fields and their gap 139 + 9 + 139 = 287 device px at 300 % and
+// 63 + 4 + 63 = 130 at 138 %, so at key_height's default 60 the scrub's
+// channel is 1352 device px at 300 % (2304 wide) and 1468 at 138 % (1920
+// wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -3880,7 +3883,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09; render.h's playhead
-    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 8 at
+    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 9 at
     // 300 %) in whole device cells, Cool Edit's aliased staircase
     // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
     // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
@@ -3889,7 +3892,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // RULER'S LAST `rows` DEVICE ROWS, its apex — the bottom centre of the
     // playhead's one-px column — on the ruler's foot row, over the ticks'
     // feet (2026-10-09 ~21:00; the ruler's foot since the flat well, its
-    // 8 rows inside the major tick's 9 at 300 %). It is OPAQUE over the ticks
+    // 9 rows inside the major tick's 10 at 300 %). It is OPAQUE over the ticks
     // and digits the walk above laid down, covering whatever stands under it
     // (every cell whole, no edge blended over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being

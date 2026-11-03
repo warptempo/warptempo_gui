@@ -257,18 +257,18 @@ namespace {
 // frame) + the ruler lane (pad + the digits' ink + pad, + ground) + the
 // marker lane (outline + pad + band + pad + outline) + the lane's foot
 // line: 19 (1 + 1 + 16 + 1) + 42 (14 + 13 + 14 + 1) + 49 (3 + 10 + 23 + 10
-// + 3) + 1 = 111 at 300 %, 14 (1 + 1 + 11 + 1) + 27 (9 + 8 + 9 + 1) + 34 (2
-// + 7 + 16 + 7 + 2) + 1 = 76 at 200 %; the band the logo lane (the strip
+// + 3) + 1 = 111 at 300 %, 14 (1 + 1 + 11 + 1) + 28 (9 + 9 + 9 + 1) + 34 (2
+// + 7 + 16 + 7 + 2) + 1 = 77 at 200 %; the band the logo lane (the strip
 // pad + the ink band) + the strip pad + the key + the strip pad, 53 (30 +
 // 23) + 30 + 60 + 30 = 173 at 300 %, 36 (20 + 16) + 20 + 40 + 20 = 116 at
 // 200 %; row 8 30 + 60 + 30 = 120 at 300 %, 80 at 200 %.
 //   1920 x H AT 200 % (kept as a worked case; no host runs this geometry
 //   since the laptop GUI's drop, 2026-10-30): the lanes are 116 band (rows
-//   0–115, the logo lane 0–35, the cases 56–95) + 76 the well's lanes = 192
+//   0–115, the logo lane 0–35, the cases 56–95) + 77 the well's lanes = 193
 //   above and 81 below (the well's foot 1 and row 8's 20 + 40 + 20),
-//   leftover H − 273: the waveform H − 273 (its two wells (H − 274) / 2
+//   leftover H − 274: the waveform H − 274 (its two wells (H − 275) / 2
 //   rows each, floored, round the divider's 1, an odd spare row the
-//   canvas's last), both gaps 0 — 116 / 0 / 76 / H − 273 / 0 / 81; the
+//   canvas's last), both gaps 0 — 116 / 0 / 77 / H − 274 / 0 / 81; the
 //   waveform 1888 wide, 16 px in (the margin and the edge column, 13, and
 //   half the flooring's 6), the well's columns 15 and 1905.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
@@ -285,8 +285,8 @@ namespace {
 //   gaps 0 — 173 / 0 / 111 / 1035 / 0 / 121; the waveform 2256 wide, 24 px
 //   in (columns 24–2279), the well's columns 23 and 2281 (one past 2280).
 //   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 327 -> the waveform 327, both
-//   gaps 0 — 116 / 0 / 76 / 327 / 0 / 81.
+//   this geometry): leftover 326 -> the waveform 326, both
+//   gaps 0 — 116 / 0 / 77 / 326 / 0 / 81.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -354,7 +354,7 @@ namespace {
 // (render.h's program and logo lane blocks, icon_row_h_px), the
 // well's four lanes the trim bar, the ruler, the marker lane and the lane's
 // foot line (render.h's well lanes block): 19 + 42 + 49 + 1 = 111 device
-// rows at 300 %, 14 + 27 + 34 + 1 = 76 at 200 % — THE WELL'S FOOT one device px
+// rows at 300 %, 14 + 28 + 34 + 1 = 77 at 200 % — THE WELL'S FOOT one device px
 // too (well_foot_h_px), and the UNIFIED BOTTOM ROW the strip again
 // (bottom_row_h_px; the simple layout, 2026-10-22).
 constexpr int kTopLaneCount    = 5;
@@ -565,11 +565,13 @@ GuiRect waveform_area(const AppState& a) {
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
     // the vocabulary reaches it: the lanes scale with gui_scale (lane by
     // lane, each from its rounded parts, which is not one multiply of the
-    // sum), the well's rows of ground one device px each, and they pass the
-    // tablet's 1440 rows short of the 1000 % ceiling (architect 2026-10-05),
-    // so the top of the vocabulary lands on this floor. (The host runs far
+    // sum), the well's rows of ground one device px each, and at the 1000 %
+    // ceiling (architect 2026-10-05) they leave 104 of the tablet's 1440
+    // rows at key_height's default 60 and pass them from key_height 67, so
+    // the top of the vocabulary can land on this floor. (The host runs far
     // below it: the tablet at 300 % on its 1440-tall surface, where they take
-    // 348, the stack record at the lane table above.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // 405 at the default key and leave the waveform 1035, the stack record at
+    // the lane table above.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.

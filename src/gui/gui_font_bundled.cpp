@@ -35,9 +35,10 @@
 // forced autohint's; the face's instructions are never run on this road),
 // and every x equals the unhinted outline's exactly. The face's blue zones
 // snap the "H" and the "x" to whole rows — the hinter's rounding of the ink,
-// which no seat reads (the unhinted "H" per em, gui_font_cap_px, places
-// every label). The advances stay
-// unhinted (text_shape's come off hb-ft, which loads its own glyphs
+// which the per-em seats do not read (the unhinted "H" per em,
+// gui_font_cap_px, places every label); the one reader of the hinted ink is
+// the ink band (gui_font_ink_band), which counts the rows the paint covers.
+// The advances stay unhinted (text_shape's come off hb-ft, which loads its own glyphs
 // unhinted), so every scale measures one set of widths. The vertical
 // metrics are the file's own hhea per em, read at the install and rounded
 // at the size (gui_font.h, 2026-10-23), so the hinter only decides how the
@@ -55,6 +56,8 @@
 // FT_New_Memory_Face does not copy and the face reads from them for as long
 // as it lives.
 
+#include "text_shape.h"
+
 #include <cairo/cairo-ft.h>
 
 #include <ft2build.h>
@@ -63,6 +66,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <string>
 #include <utility>
@@ -306,51 +310,57 @@ const GuiSignAxis& gui_sign_axis(GuiFace face) {
 }
 
 GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set) {
-    // The rule is at the declaration (gui_font.h): the union of the set's
-    // unscaled outline boxes, a lifted mark at its lifted seat, kept per
-    // file and set in em and scaled at each call.
+    // The rule is at the declaration (gui_font.h): the set shaped and painted
+    // through the chokepoint (text_shape's shape_text_run and
+    // show_shaped_run, the painter's own scaled font and placement, the
+    // lifted marks at their lifted seats) onto a scratch A8 surface at an
+    // integer baseline, and the rows holding any coverage counted. Kept per
+    // file, em and set.
     struct Entry {
         std::size_t file = 0;
+        double      em   = 0.0;
         std::string set;
-        double      top = 0.0, bottom = 0.0;
+        GuiInkBand  band;
     };
-    // A handful of sets (each a reader's constant), so a walk that
-    // allocates nothing on a hit: the lane table asks on every layout.
+    // A handful of sets (each a reader's constant) at the scales visited, so
+    // a walk that allocates nothing on a hit: the lane table asks on every
+    // layout.
     static std::vector<Entry> memo;
     const std::size_t file = file_of(f.face);
-    auto it = std::find_if(memo.begin(), memo.end(), [&](const Entry& e) {
-        return e.file == file && e.set == set;
-    });
-    if (it == memo.end()) {
-        const OutlineFace& o = g_outline[file];
-        const GuiSignAxis& axis = g_sign_axis[file];
-        bool any = false;
-        Entry b{file, std::string(set)};
-        for (const char ch : set) {
-            if (o.ft == nullptr) break;
-            const FT_UInt gid =
-                FT_Get_Char_Index(o.ft, static_cast<unsigned char>(ch));
-            if (gid == 0 || FT_Load_Glyph(o.ft, gid, FT_LOAD_NO_SCALE) != 0)
-                continue;
-            const double upem = static_cast<double>(o.ft->units_per_EM);
-            const FT_Glyph_Metrics& m = o.ft->glyph->metrics;
-            double lift = 0.0;
-            for (const GuiSignLift& sign : axis.signs)
-                if (sign.lift_em != 0.0 && sign.glyph == gid)
-                    lift = sign.lift_em;
-            const double top =
-                static_cast<double>(m.horiBearingY) / upem + lift;
-            const double bottom =
-                static_cast<double>(m.horiBearingY - m.height) / upem + lift;
-            b.top    = any ? std::max(b.top, top) : top;
-            b.bottom = any ? std::min(b.bottom, bottom) : bottom;
-            any = true;
-        }
-        memo.push_back(std::move(b));
-        it = memo.end() - 1;
-    }
     const double em = gui_font_em_px(f);
-    return GuiInkBand{it->top * em, -it->bottom * em};
+    const auto it = std::find_if(memo.begin(), memo.end(), [&](const Entry& e) {
+        return e.file == file && e.em == em && e.set == set;
+    });
+    if (it != memo.end()) return it->band;
+    Entry e{file, em, std::string(set), {}};
+    const text_shape::ShapedRun run = text_shape::shape_text_run(f, set);
+    // The margin holds any ink: no glyph of a set reaches an em past the
+    // baseline either way or an em past its advance, two rows spare.
+    const int margin = static_cast<int>(std::ceil(em)) + 2;
+    const int w = static_cast<int>(std::ceil(run.width_px)) + 2 * margin;
+    const int h = 4 * margin;
+    const int baseline = 2 * margin;
+    cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
+    cairo_t* cr = cairo_create(surface);
+    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+    text_shape::show_shaped_run(cr, run, static_cast<double>(margin),
+                                static_cast<double>(baseline));
+    cairo_destroy(cr);
+    cairo_surface_flush(surface);
+    const int stride = cairo_image_surface_get_stride(surface);
+    const unsigned char* data = cairo_image_surface_get_data(surface);
+    int top = -1, bottom = -1;
+    for (int y = 0; y < h; ++y) {
+        const unsigned char* row = data + static_cast<std::ptrdiff_t>(y) * stride;
+        if (std::any_of(row, row + w, [](unsigned char a) { return a != 0; })) {
+            if (top < 0) top = y;
+            bottom = y;
+        }
+    }
+    cairo_surface_destroy(surface);
+    if (top >= 0) e.band = GuiInkBand{baseline - top, bottom + 1 - baseline};
+    memo.push_back(std::move(e));
+    return memo.back().band;
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {

@@ -685,9 +685,11 @@ inline std::string lowercase_initial(std::string_view s) {
 // at one width; the width rule was not part of either ruling and the floor
 // keeps the number it was measured at. NOR DID THE GLYPH'S RETURN
 // (2026-10-24) NOR THE TEXT ROUND (2026-11-03): the chrome ring + pad +
-// the glyph's seat + the gap + pad + ring is 1 + 24 + 42 + 11 + 24 + 1 =
-// 103 device px at 300 %, and the pair shapes to about 259 and 253 device
-// px in the body face's 24, both near 360 against the floor's 648. NOR DID
+// the glyph's seat + the gap + pad + ring is 1 + 24 + 43 + 11 + 24 + 1 =
+// 104 device px at 300 % (the seat notification_glyph_seat_w_px of the
+// unrounded ink .525 x (24 + 17 + 24) = 34.125, the painted ink 34), and
+// the pair shapes to about 259 and 253 device px in the body face's 24,
+// both near 360 against the floor's 648. NOR DID
 // THE FACES' CHANGES: under
 // the body face at the recorded Windows metrics less the tracking
 // (gui_font.h; 2026-10-06) the pair shapes through the live chokepoint to

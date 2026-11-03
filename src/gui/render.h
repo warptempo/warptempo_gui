@@ -530,8 +530,8 @@ void install_true_colors(bool on);
 // the drawing render_flag_boxes_impl's): on the lane's FLAT kLaneFace 303030
 // (architect 2026-11-01 night, Live's clip-view marker lane; materials.h),
 // THE TRIANGLE — COOL EDIT'S STAIRCASE IN WHOLE DEVICE CELLS, ITS ROWS SCALED
-// (architect 2026-10-26, paint_ce_cue_triangle's head; cue_triangle_rows: 8
-// at 300 %, 5 at 200 %, Cool Edit's 9 by 5) on the lane's last rows, Cool
+// (architect 2026-10-26, paint_ce_cue_triangle's head; cue_triangle_rows: 9
+// at 300 %, 6 at 200 %; Cool Edit's own 9 by 5) on the lane's last rows, Cool
 // Edit's aliased drawing (architect 2026-10-26), its apex the marker's
 // column on the lane's last row, directly above the row of ground under the
 // lane, NO SHADOW (2026-11-02);
@@ -1072,11 +1072,11 @@ constexpr int kMinWindowHeightPx = 480;
 // (logo_lane_h_px): THE INK BAND (logo_ink_band_px, paint_handler.cpp, where
 // the drawings' ink boxes are measured) IS THE TALLEST INK OF THE LANE'S
 // ITEMS — the note's ink box, the brand's ink (the "W"'s top to the "p"'s
-// foot: gui_font_ink_band of kLogoBrand in the Bold face, each edge rounded
-// at the element), the legend's ink (its runs' alphabet, kLogoLegendInkSet,
-// in the Body face, and the battery cell's rows) — 23 rows at 300 % at the
-// defaults (the note 23, the brand 18 + 5, the legend's lifted pipe 20 + 3),
-// the lane 30 + 23 = 53. EVERY ITEM'S INK IS CENTERED IN THE INK BAND, the
+// foot as painted: gui_font_ink_band of kLogoBrand in the Bold face), the
+// legend's ink (its runs' alphabet, kLogoLegendInkSet, in the Body face, as
+// painted, and the battery cell's rows) — 23 rows at 300 % at the defaults
+// (the note 23, the brand 18 + 5, the legend's lifted pipe 19 + 3), the lane
+// 30 + 23 = 53. EVERY ITEM'S INK IS CENTERED IN THE INK BAND, the
 // spare row below (the floor of the half): the note's ink box, the brand's
 // ink rows and the legend's runs' ink rows (each run's baseline its ink's
 // top row plus its rows above the baseline) and the battery cell. THE
@@ -1195,8 +1195,8 @@ int logo_ink_band_px();
 // WELL'S LINES AND ROWS OF GROUND (the flat well, 2026-11-01 night, M5h's
 // "one-px lines": the trim bar's frame and the span's verticals, the row
 // above the bar, the ruler's and the marker lane's foot rows, the stereo
-// divider's row, the well's foot and its edge columns; the ruler's ticks two
-// device px, kRulerTickWidthPx), the group gap between two keys (one device
+// divider's row, the well's foot and its edge columns; the ruler's ticks, one
+// device px wide, kRulerTickWidthPx), the group gap between two keys (one device
 // px since 2026-11-02, materials.h's kKeyGapPx), the modal box's outer
 // rows and columns of ground round its pane (modal_box.h), the cards' and
 // the tooltip's border and the scrub's channel (the overlays' flat pass,
@@ -1410,8 +1410,8 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 //              + 16 + 1), 14 at 200 % (1 + 1 + 11 + 1).
 //   THE RULER  the ruler (ruler_h_px: the pad, the digits' ink, the pad;
 //              the ticks overlay its foot) and a row of ground
-//              (ruler_lane_h_px): 41 + 1 = 42 at 300 % (14 + 13 + 14), 26 +
-//              1 at 200 % (9 + 8 + 9).
+//              (ruler_lane_h_px): 41 + 1 = 42 at 300 % (14 + 13 + 14), 27 +
+//              1 at 200 % (9 + 9 + 9).
 //   THE MARKER the editor's box on the lane's whole rows (marker_lane_h_px:
 //              the outline, the pad, the legal set's band, the pad, the
 //              outline): 49 at 300 % (3 + 10 + 23 + 10 + 3), 34 at 200 % (2
@@ -1456,21 +1456,18 @@ inline int ruler_minor_tick_h_px() {
 // THE RULER IS THE PAD, THE DIGITS' INK AND THE PAD — kRulerPadAt300, 14
 // DEVICE PX AT 300 % (skin_px, rounded at the element; his pick off the
 // ruler sheets), above and below — the ink the rows the ruler face's
-// digits and marks, kRulerInkSet, stand on (gui_font_ink_band, each edge
-// rounded at the element: 13 above the baseline and 0 below at Bold 18, the
-// "0"'s overshoot 12.57 rows up) — so 14 + 13 + 14 = 41 at 300 %, 9 + 8 +
-// 9 = 26 at 200 % (Bold 12). THE BASELINE the pad and the ink's rows above
-// it under the ruler's top (27 at 300 %), the ink's top row the pad under
-// it.
+// digits and marks, kRulerInkSet, stand on as painted (gui_font_ink_band,
+// the rows the slight-hinted paint covers: 13 above the baseline and 0 below
+// at Bold 18, 9 and 0 at Bold 12) — so 14 + 13 + 14 = 41 at 300 %, 9 + 9 +
+// 9 = 27 at 200 %. THE BASELINE the pad and the ink's rows above it under
+// the ruler's top (27 at 300 %), the ink's top row the pad under it.
 inline constexpr double kRulerPadAt300 = 14.0;
 inline constexpr const char* kRulerInkSet = "0123456789:.";
 inline int ruler_ink_above_px() {
-    return static_cast<int>(std::nearbyint(
-        gui_font_ink_band(gui_font(GuiFace::Small), kRulerInkSet).above));
+    return gui_font_ink_band(gui_font(GuiFace::Small), kRulerInkSet).above;
 }
 inline int ruler_ink_below_px() {
-    return static_cast<int>(std::nearbyint(
-        gui_font_ink_band(gui_font(GuiFace::Small), kRulerInkSet).below));
+    return gui_font_ink_band(gui_font(GuiFace::Small), kRulerInkSet).below;
 }
 inline int ruler_baseline_px() {
     return skin_px(kRulerPadAt300, 0) + ruler_ink_above_px();

@@ -206,23 +206,31 @@ double gui_font_x_ink_px(const GuiFont& f);
 
 // THE INK BAND OF A GLYPH SET (architect 2026-11-03, the text round: "the
 // digits' ink centered on the ruler"; "logo should be centered in logo
-// lane"): how far the ink of the ASCII characters in `set` reaches above
-// the baseline (`above`) and below it (`below`, positive downward), in
-// device px at the font's scale, unrounded — the union of each glyph's
-// unscaled, unhinted outline box (the install's road, outline_ink_em's),
-// each lifted mark (kGuiLiftedSigns below) at its lifted seat, as the run
-// paints it, times the em. A reader rounds each edge at the element
-// (std::nearbyint), the rows the set's ink stands on: for "0123456789:." in
-// the ruler's Bold 18 at 300 %, 12.57 above and 0.20 below → 13 rows, the
-// rows the slight-hinted paint covers (the ruler, render.h's ruler block);
-// for the brand "Warptempo" in Bold 26, 17.89 and 5.40 → 18 + 5 = 23; for
-// the legend's alphabet in Regular 24 the lifted pipe's 19.5 and 2.98 → 20
-// + 3 = 23 (the logo lane, render.h's logo lane block). Measured once per
-// file and set and kept (a set is a constant of its reader's), GUI thread
-// only; a character the face lacks adds nothing.
+// lane"): THE ROWS THE PAINT INKS — how many whole rows of the set's painted
+// ink stand above the baseline row's top edge (`above`) and below it
+// (`below`, downward), the set painted as one run through the shaping
+// chokepoint on the painter's own road (text_shape's shape_text_run and
+// show_shaped_run: the use's SLIGHT-hinted scaled font, gui_outline_scaled_font,
+// each lifted mark, kGuiLiftedSigns below, at the fractional seat the
+// shaper gives it) at an INTEGER baseline onto a scratch A8 surface, a row
+// counted when any pixel of it holds coverage; `above + below` is the set's
+// row count. RASTERIZED, NOT READ OFF CAIRO'S GLYPH EXTENTS (2026-11-03):
+// the hinted extents are grid-fitted boxes taken before the lifted pipe's
+// fractional seat and cairo's subpixel placement, so they overstate it (the
+// legend's alphabet in Regular 24: extents 20 + 3, the paint 19 + 3), and
+// the design's unhinted bounds rounded, the first measure, miss the
+// hinter's own rows (Bold 12 at 200 %: 8.38 rounds to 8, the paint 9). At
+// the defaults: "0123456789:." in the ruler's Bold 18 at 300 % 13 + 0 (the
+// ruler, render.h's ruler block), Bold 12 at 200 % 9 + 0; the brand
+// "Warptempo" in Bold 26 18 + 5, Bold 17 12 + 3; the legend's alphabet in
+// Regular 24 19 + 3, Regular 16 14 + 2 (the logo lane, render.h's logo lane
+// block). A reader takes the integers as they are. Measured once per file,
+// em and set and kept (a set is a constant of its reader's), GUI thread
+// only; a character the face lacks paints .notdef, so a set names only
+// characters the face carries; a set with no ink is 0 + 0.
 struct GuiInkBand {
-    double above = 0.0;
-    double below = 0.0;
+    int above = 0;
+    int below = 0;
 };
 GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set);
 

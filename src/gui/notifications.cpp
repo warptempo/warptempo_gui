@@ -58,7 +58,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // first row of ground (render_trim_flags' bar, one hairline down), so the
     // first card's top border and the bar's top frame line are ONE LINE of
     // the one frame tone (architect 2026-11-02, M14 "d": "the card's top
-    // border one line with the trim bar's frame row"; row 172 at 300 % at
+    // border one line with the trim bar's frame row"; row 174 at 300 % at
     // key_height 60).
     // The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
