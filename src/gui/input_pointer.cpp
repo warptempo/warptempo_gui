@@ -90,9 +90,9 @@ struct ToolbarChord {
     // way to go". The lift dispatches the member's own bare digit like every
     // roster button, and the selector's arm in GuiInputHandler::on_key
     // resolves a press on the standing value to its axis's other value, so
-    // the button and its key are one rule with no flag here. The hold leaves
-    // a checked member's lit fill unchanged (a press face only on an
-    // unchecked key, paint_roster_case).)
+    // the button and its key are one rule with no flag here. The hold on a
+    // checked member wears the lit press face FFC281, an unchecked key's 6A6A6A
+    // (key_look, materials.h; paint_roster_case).)
     // (EVERY CASE ROW PAINTS A PRESSED INTERIOR — the icon row's and the
     // bottom row's click face; row 1's anchors carry no chord row at all.
     // The face

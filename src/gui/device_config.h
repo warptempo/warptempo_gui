@@ -123,7 +123,7 @@
 //                            program's key cell's height in DEVICE PX AT
 //                            300 % (skin_px's axis, the logo lane's unit;
 //                            render.h's icon_case_h_px), the key glyph's
-//                            ink following it (20 * key_height / 33,
+//                            ink following it (16 * key_height / 33,
 //                            paint_key_glyph), an integer in [21, 99] in
 //                            canonical spelling (parse_key_height below),
 //                            live at the settings editor's OK, the window

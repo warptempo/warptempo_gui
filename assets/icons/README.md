@@ -47,7 +47,7 @@ and green are the glyph's one color (the two cards, whose marks only a second co
 below).
 
 ONE ROAD, THE INK BOX. A glyph is scaled by its INK BOX, not its viewBox: the drawing's antialiased ink (alpha > 0) is
-fitted so that its larger side is the seat's own length — 20 / 33 of the key's height at 300 % on every key (20 on the
+fitted so that its larger side is the seat's own length — 16 / 33 of the key's height at 300 % on every key (16 on the
 33 key), 21 for the logo lane's note, 19 for the battery glyph, 27 on a list row, .525 of a card's first line inside the
 border — scaled with the
 window as every chrome length (`icons::glyph_ink_size` / `icons::draw_glyph`; each seat's placement at its painter).

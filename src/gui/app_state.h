@@ -9847,9 +9847,10 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // painted; the thumb's box widened to the 14-W handle box, 2026-10-02 to
 // 2026-10-23, retired), its overhanging half at either end of the channel
 // included (the item covers it, 2026-10-25): the thumb's own rows
-// (scrub_thumb_h_px, the key's height since 2026-10-29, centred in the
+// (scrub_thumb_h_px, the key face's height since 2026-11-03, centred in the
 // track's band exactly as the painter centres it — the track's band is the
-// controls row's case rows, so the rows are the track's whole height) by its
+// controls row's case rows, the cell's height, so the thumb's rows are the
+// track's less the face's one-px inset above and below) by its
 // own columns (scrub_thumb_w_px, 8 W, from handle_x − w / 2, the painter's
 // own left edge), HALF-OPEN on both
 // axes like every other

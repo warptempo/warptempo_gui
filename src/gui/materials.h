@@ -171,7 +171,7 @@ inline constexpr uint32_t kTrimSpanFace = 0x6A6A6A;
 // UNDER A STANDING PRESS — the picker's, the render player's list, the
 // settings page and its value list, the trim presets — under the same
 // 111111 text, the highlighted row at rest keeping the pair
-// (paint_handler.cpp's paint_folder_overlay, AppState::list_row_press).
+// (paint_handler.cpp's paint_folder_overlay, AppState::FolderOverlayPress, app.folder_overlay.press).
 inline constexpr uint32_t kSelectionFill      = 0x637E86;
 inline constexpr uint32_t kSelectionPressFill = 0xB0DDEB;
 inline constexpr uint32_t kSelectionText      = kTextOnLit;

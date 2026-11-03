@@ -1130,8 +1130,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // "building a suction on the other one is the right way to go"; the consumed
 // nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
 // on_key) — never greyed for it — the key staying lit under the hold
-// (paint_roster_case: lit while checked, the press changing nothing on a
-// lit key's face).
+// (paint_roster_case: lit while checked, wearing the lit press face FFC281
+// while the press stands, key_look).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -4527,8 +4527,8 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
 
-// The LIVE trim pass: every trim pixel — the bar, its frame and the span
-// (render_trim_flags) — paints here per frame, entirely inside its
+// The LIVE trim pass: every trim pixel — the bar's two flat fills, the
+// outside and the span (render_trim_flags) — paints here per frame, entirely inside its
 // lane,
 // which no later pass paints on; its slot is in the paint-order block in
 // on_redraw (the one authoritative sequence).
@@ -4591,8 +4591,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // THE TRIM LANE'S OWN GROUND (materials.h's kGround, the palette's
     // `face`), under the bar: the lane's first row (the row of ground above
     // the bar) and the well's margins beside it (render_trim_flags spans the
-    // canvas's columns and the well's two edge columns alone); the bar, its
-    // frame and the span render_trim_flags'.
+    // canvas's columns and the well's two edge columns alone); the bar's two
+    // fills render_trim_flags'.
     const GuiRect trim_row = top_trim_row_area(app);
     if (trim_row.w > 0 && trim_row.h > 0)
         paint_cell_rect(cr, trim_row, palette().face);

@@ -1272,8 +1272,8 @@ inline int hairline_px() { return 1; }
 // glyph's seat; the cell is its legend's (below).
 // Every key carries a Breeze glyph centered on its face (paint_key_glyph,
 // paint_handler.cpp; icons.h's THE KEYS), its ink box's larger side
-// FOLLOWING THE KEY'S HEIGHT, 20 * key_height / 33 device px at 300 % — 20
-// at the default 33 (architect 2026-11-02), one size for every key — and
+// FOLLOWING THE KEY'S HEIGHT, 16 * key_height / 33 device px at 300 % — 16
+// at the default 33 (architect 2026-11-03, mocks s0..s4), one size for every key — and
 // UNDER IT, in the strip's bottom pad, ITS PRINTED LEGEND (architect
 // 2026-11-03, the retrofit: the Legend face, 14 Regular, uppercase, the
 // rule at paint_handler.cpp's key_legend_seat).
