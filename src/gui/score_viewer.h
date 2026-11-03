@@ -167,10 +167,11 @@
 // page change costs a frame and nothing more once the range is resident.
 // THE GRAY STORE (AppState::ScoreViewer::gray; architect 2026-10-26 ~22:10:
 // every page of the viewing range "decoded once", held as 8-bit gray —
-// about 2.5 MB a page fit to 2103 x 1183 in the tablet's box, 350 MB for all
-// of K.550, about 90 MB for a delineated movement): each page of the range
-// at the fit box, one byte a pixel, keyed by page and box (the bytes are the
-// authored sRGB page, the window's byte under either conversion bit,
+// about 2.3 MB a page fit to 2036 x 1145 in the tablet's box (2026-11-03),
+// about 330 MB for all of K.550, about 85 MB for a delineated movement):
+// each page of the range at the fit box, one byte a pixel, keyed by page and
+// box (the bytes are the authored sRGB page, the window's byte under either
+// conversion bit,
 // score_page_worker.h's proof). ITS RAM BYTES LIVE ONLY UNTIL THE PAGE'S
 // TEXTURE IS HELD (architect 2026-10-27, the memory fix): once the GL
 // canvas's report lists an entry's serial, the entry lets its bytes go and

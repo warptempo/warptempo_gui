@@ -28,8 +28,8 @@
 # past the new count or misspelled (stale_pages). A refusal (one line, exit 1) writes nothing. Nothing about the pages
 # is the user's to set: what a page is and where its range runs are read off the video (WHAT A PAGE IS).
 #   --fit W:H   THE VIEWER'S BOX in device px (default PAGE_FIT, the tablet's): each page is scaled, down or up, to
-#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2103x1183
-#               from any 16:9 video at the default (k = min(2256/1920, 1183/1080)); a PDF's slice is the box's height and its page's width at THE
+#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2036x1145
+#               from any 16:9 video at the default (k = min(2256/1920, 1145/1080)); a PDF's slice is the box's height and its page's width at THE
 #               DOCUMENT SCALE. The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
 #               laptop's terminal, the tablet's logcat warptempo:I): that pair, as W:H, pre-sizes the pages for
 #               another screen or gui_scale.
@@ -214,7 +214,7 @@
 #   slice's are area-scaled as the video road's frames are.
 #
 # THE PDF ROAD'S INSTANCES (measured 2026-10-27 at the default box then, the 2026-10 box of 1111 rows, so every
-# "x 1111" slice height below is that box's, not today's 1183; PAD 26, the staff test, the extent, the rise and the
+# "x 1111" slice height below is that box's, not today's 1145; PAD 26, the staff test, the extent, the rise and the
 # average rows; "rows" are canonical, "systems" the rule's sure ones, "slices" the pages written; "sure", "average" and
 # "dropped" count the PDF pages by outcome). K.550 is the one the rule was ruled on; the ten others are the test set of
 # tmp/research/mozart_pdfs/, and where their rule's systems are not the printed ones is listed below.
@@ -341,11 +341,11 @@ DIFF_W, DIFF_H = 480, 270
 #   30 + 60 + 30 = 120 rows on the window's foot from row 1440 - 120 = 1320. So the box is rows 173..1319 (its last
 #   row the well's foot), 1147 rows, those outer rows ground, and its interior (modal_box_interior_rect) one hairline
 #   in: y 174..1318, HEIGHT 1145 — the viewer's printed box 2256x1145. At key_height 66 the band is 188 (56 + 33 + 66 +
-#   33) and the bottom row 132, the interior 2256x1118. PAGE_FIT BELOW STILL HOLDS THE 33-ROW KEY'S BOX, 2256x1183
-#   (2026-10-29 to 2026-11-02: the band 144 rows, the bottom row 111), the box the extracted pages on file were fitted
-#   to, until the architect rules a re-extraction. (The 2026-10 box, with the 69-px case and the lanes then, was
-#   2256x1111.)
-PAGE_FIT = (2256, 1183)
+#   33) and the bottom row 132, the interior 2256x1118. PAGE_FIT IS THE 60-ROW KEY'S BOX, 2256x1145, and the pages on file
+#   are re-extracted at it (architect 2026-11-03, key_height settled at 60: "ok to update score assets also, incl
+#   render script and re-render"). (The 33-row key's box, 2026-10-29 to 2026-11-02, the band 144 rows and the bottom
+#   row 111, was 2256x1183; the 2026-10 box, with the 69-px case and the lanes then, 2256x1111.)
+PAGE_FIT = (2256, 1145)
 # THE PAGE FILE: GRAYSCALE JPEG at this quality, Huffman-optimized (architect 2026-10-26: "grayscale ok", quality 92).
 # A score page is black ink on paper, so one channel loses nothing a reader sees; ffmpeg's mjpeg encoder writes no
 # gray JPEG (its pixel formats are yuvj420p, 422p and 444p alone), so the grab pipes ffmpeg's gray rawvideo to Pillow,
