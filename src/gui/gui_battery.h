@@ -43,13 +43,17 @@ struct GuiBattery {
 // render.h's logo lane block.
 enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 
-// THE LEGEND — "92% <glyph> | 2:12 PM" — AS THREE PARTS, laid right to left
-// by the painter (render.h's logo lane block): THE CLOCK RUN with its pipe,
-// the glyph, and the PERCENT RUN.
+// THE LEGEND — "92% <glyph> | 2:12 PM" — AS THREE COMPOSED PARTS, laid right
+// to left by the painter (render.h's logo lane block): THE CLOCK RUN, the
+// glyph, and the PERCENT RUN. THE PIPE between the glyph and the clock is
+// NOT COMPOSED: it never changes, and it is the layout's own seated item
+// (kLogoLegendPipe, render.h; architect 2026-11-03, on mock dec0b: every
+// item of the legend is centered on the logo's band by its own ink, and the
+// pipe's ink is not the clock's).
 struct GuiLogoLegend {
     std::string  percent;   // "92%", or empty: no battery, or no level read
     GuiLogoGlyph glyph = GuiLogoGlyph::Charging;
-    std::string  clock;     // "| 2:12 PM"
+    std::string  clock;     // "2:12 PM"
     bool operator==(const GuiLogoLegend&) const = default;
 };
 
@@ -58,14 +62,14 @@ struct GuiLogoLegend {
 //     leftward, away from the clock — the painter's right-to-left walk); an
 //     unreadable level, or no battery, drops it and keeps the glyph.
 //   * THE GLYPH: GuiLogoGlyph's rule above.
-//   * THE CLOCK: "| " and the wall clock in 12-HOUR LOCAL time with AM / PM
-//     and NO LEADING ZERO on the hour ("2:12 PM", "12:05 AM"), from the C
-//     library (localtime_r). The AM / PM words are spelled
-//     here rather than taken from strftime's %p: the product's text is its
-//     own, and %p is the locale's word. The pipe is the body face's own
-//     glyph, never a drawn one (architect 2026-10-24: "I don't think we
-//     should draw our own pipe"), lifted onto the digits' band like every
-//     pipe the face shows (gui_font.h's kGuiLiftedSigns).
+//   * THE CLOCK: the wall clock in 12-HOUR LOCAL time with AM / PM and NO
+//     LEADING ZERO on the hour ("2:12 PM", "12:05 AM"), from the C library
+//     (localtime_r). The AM / PM words are spelled here rather than taken
+//     from strftime's %p: the product's text is its own, and %p is the
+//     locale's word. ITS ALPHABET IS kLogoLegendInkSet's (render.h: the
+//     digits, "%", ":", the space and "AMP", the percent's too), which seats
+//     the runs, so a character composed here and missing there would ink
+//     off the seat. The pipe before it is the layout's (the struct above).
 // WI-FI IS NOT PART OF THIS (architect 2026-10-01: "maybe later").
 inline GuiLogoLegend compose_logo_legend(const GuiBattery& battery,
                                          std::time_t now) {
@@ -74,7 +78,7 @@ inline GuiLogoLegend compose_logo_legend(const GuiBattery& battery,
     int hour = local.tm_hour % 12;
     if (hour == 0) hour = 12;
     char clock[24];
-    std::snprintf(clock, sizeof(clock), "| %d:%02d %s", hour, local.tm_min,
+    std::snprintf(clock, sizeof(clock), "%d:%02d %s", hour, local.tm_min,
                   local.tm_hour < 12 ? "AM" : "PM");
 
     GuiLogoLegend legend;

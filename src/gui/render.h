@@ -1073,13 +1073,21 @@ constexpr int kMinWindowHeightPx = 480;
 // the drawings' ink boxes are measured) IS THE TALLEST INK OF THE LANE'S
 // ITEMS — the note's ink box, the brand's ink (the "W"'s top to the "p"'s
 // foot as painted: gui_font_ink_band of kLogoBrand in the Bold face), the
-// legend's ink (its runs' alphabet, kLogoLegendInkSet, in the Body face, as
-// painted, and the battery cell's rows) — 23 rows at 300 % at the defaults
-// (the note 23, the brand 18 + 5, the legend's lifted pipe 19 + 3), the lane
-// 30 + 23 = 53. EVERY ITEM'S INK IS CENTERED IN THE INK BAND, the
-// spare row below (the floor of the half): the note's ink box, the brand's
-// ink rows and the legend's runs' ink rows (each run's baseline its ink's
-// top row plus its rows above the baseline) and the battery cell. THE
+// legend's ink (its runs' alphabet, kLogoLegendInkSet, and its pipe,
+// kLogoLegendPipe, each in the Body face as painted, and the battery cell's
+// rows) — 23 rows at 300 % at the defaults (the note 23, the brand 18 + 5;
+// the pipe 19 + 3, the runs 17 + 0, the cell 13), the lane 30 + 23 = 53; 16
+// at 200 % (the pipe 14 + 2 the tallest), the lane 20 + 16 = 36. THE BAND IS
+// THE LOGO'S AND EVERY ITEM'S INK IS CENTERED IN IT BY ITS OWN INK
+// (architect 2026-11-03, on mock dec0b: "everything is set by the logo"),
+// the spare row below (the floor of the half): the note's ink box, the
+// brand's ink rows, the legend's runs' ink rows (the alphabet's: each run's
+// baseline its ink's top row plus its rows above the baseline), THE PIPE'S
+// OWN INK ROWS (its own baseline, so its 22 rows center on the band and the
+// runs' 17 on the band too, rather than the runs riding the pipe's seat)
+// and the battery cell. At 300 % / key 60 the band is lane rows 30–52: the
+// note and the brand 30–52, the pipe 30–51, the runs 33–49, the cell 35–47;
+// at 200 % lane rows 20–35: the pipe 20–35, the runs 22–33. THE
 // LANE'S GROUND IS THE BAND'S FLAT GROUND, nothing else on it — no line, no
 // caption tone — and it is INERT CHROME like the strips' pads: no hit, no
 // tooltip, no gesture (the band's ground falls through to nothing,
@@ -1107,17 +1115,23 @@ constexpr int kMinWindowHeightPx = 480;
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
 //     (24 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S RIGHT
 //     EDGE COLUMN (the last key's outline column: "the clock flush with the
-//     right edge of the buttons"): the clock run "| 2:12 PM" with its LAST
-//     INK on that column; one space advance of the face; THE GLYPH CELL; one
-//     space advance; the percent run "92%" with its last ink there, so
-//     "100%" grows leftward, away from the clock. FLUSH IS THE INK, the
-//     chokepoint's own measure (text_shape::ink_left_px / ink_right_px:
-//     cairo's glyph extents of the run as painted), the space advance
-//     measured from the clock run's first ink to the cell and from the cell
-//     to the percent run's last ink; the cell's edge rounded to a whole
-//     column. THE RUNS' INK ROWS ARE THE ALPHABET'S, kLogoLegendInkSet (the
-//     composer's every character: the digits, "%", "|", ":", the space and
-//     "AMP"), so the seat never moves with what the clock reads.
+//     right edge of the buttons"): the clock run "2:12 PM" with its LAST
+//     INK on that column; THE PIPE (kLogoLegendPipe, the face's own glyph,
+//     never a drawn one, architect 2026-10-24: "I don't think we should draw
+//     our own pipe"; lifted onto the digits' band like every pipe the face
+//     shows, gui_font.h's kGuiLiftedSigns), its pen one space advance and
+//     its own advance before the clock run's pen, so the two stand as one
+//     "| 2:12 PM" run would set them (the face kerns neither pair); one
+//     space advance of the face; THE GLYPH CELL; one space advance; the
+//     percent run "92%" with its last ink there, so "100%" grows leftward,
+//     away from the clock. FLUSH IS THE INK, the chokepoint's own measure
+//     (text_shape::ink_left_px / ink_right_px: cairo's glyph extents of the
+//     run as painted), the space advance measured from the pipe's first ink
+//     to the cell and from the cell to the percent run's last ink; the
+//     cell's edge rounded to a whole column. THE RUNS' INK ROWS ARE THE
+//     ALPHABET'S, kLogoLegendInkSet (the composer's every character: the
+//     digits, "%", ":", the space and "AMP"), so the seat never moves with
+//     what the clock reads; the pipe's are its own.
 //   THE GLYPH CELL, ONE SIZE WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
 //     move"): THE TWO DRAWINGS are Breeze's (2026-11-02, M7: Breeze only) —
@@ -1140,7 +1154,8 @@ inline constexpr double kLogoNoteInkAt300        = 23.0;
 inline constexpr double kLogoBrandGapAt300       = 11.0;
 inline constexpr double kLogoGlyphInkAt300       = 21.0;
 inline constexpr const char* kLogoBrand = "Warptempo";
-inline constexpr const char* kLogoLegendInkSet = "0123456789%|: AMP";
+inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";
+inline constexpr const char* kLogoLegendPipe = "|";
 // THE LOGO'S INK BAND at the live scale and size (the block above; its
 // measure is paint_handler.cpp's, beside the drawings it reads).
 int logo_ink_band_px();
@@ -1460,7 +1475,10 @@ inline int ruler_minor_tick_h_px() {
 // the rows the slight-hinted paint covers: 13 above the baseline and 0 below
 // at Bold 18, 9 and 0 at Bold 12) — so 14 + 13 + 14 = 41 at 300 %, 9 + 9 +
 // 9 = 27 at 200 %. THE BASELINE the pad and the ink's rows above it under
-// the ruler's top (27 at 300 %), the ink's top row the pad under it.
+// the ruler's top (27 at 300 %), the ink's top row the pad under it. THE
+// 41 ROWS STAND (architect 2026-11-03, on mock dec1a): the painted ink's 13
+// rows centered, 14 / 13 / 14 — not 40 off the flat digits' 12, which would
+// sit the painted ink a row off center.
 inline constexpr double kRulerPadAt300 = 14.0;
 inline constexpr const char* kRulerInkSet = "0123456789:.";
 inline int ruler_ink_above_px() {
@@ -1532,7 +1550,8 @@ inline int cue_triangle_rows() {
 // pad) — and THE SEGMENT GAP between two of a marker's segments' boxes (the
 // bound cells, the history's two halves), kCueSegmentGapAt300 = 13 (grown
 // with the text, x 24 / 22), each floored at one device px; the cull bounds sum them
-// (marker_flag_max_width_px, the history lane's).
+// (marker_flag_max_width_px, the history lane's). THE PAIR 4 / 13 STANDS
+// (architect 2026-11-03, on mock dec6a; not 3 / 12).
 inline constexpr double kCueFillPadAt300    = 4.0;
 inline constexpr double kCueSegmentGapAt300 = 13.0;
 inline int cue_fill_pad_px() {

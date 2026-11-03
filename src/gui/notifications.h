@@ -699,7 +699,8 @@ inline std::string lowercase_initial(std::string_view s) {
 // relation holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px. 216 W SINCE THE TEXT ROUND (architect 2026-11-03: every
 // length authored round the text grows with it, x 24 / 22 of the 198 that
-// stood round the 22-px face).
+// stood round the 22-px face; THE PAIR 216 / 507 STANDS, his ruling the
+// same day on mock dec5a, not 198 / 465 at the 24-px text).
 //
 // IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 507 Windows px and
 // notification_card_max_w_px already floors its window safety here, so the

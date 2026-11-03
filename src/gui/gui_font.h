@@ -217,14 +217,15 @@ double gui_font_x_ink_px(const GuiFont& f);
 // row count. RASTERIZED, NOT READ OFF CAIRO'S GLYPH EXTENTS (2026-11-03):
 // the hinted extents are grid-fitted boxes taken before the lifted pipe's
 // fractional seat and cairo's subpixel placement, so they overstate it (the
-// legend's alphabet in Regular 24: extents 20 + 3, the paint 19 + 3), and
+// pipe in Regular 24 among the legend's digits: extents 20 + 3, the paint
+// 19 + 3), and
 // the design's unhinted bounds rounded, the first measure, miss the
 // hinter's own rows (Bold 12 at 200 %: 8.38 rounds to 8, the paint 9). At
 // the defaults: "0123456789:." in the ruler's Bold 18 at 300 % 13 + 0 (the
 // ruler, render.h's ruler block), Bold 12 at 200 % 9 + 0; the brand
-// "Warptempo" in Bold 26 18 + 5, Bold 17 12 + 3; the legend's alphabet in
-// Regular 24 19 + 3, Regular 16 14 + 2 (the logo lane, render.h's logo lane
-// block). A reader takes the integers as they are. Measured once per file,
+// "Warptempo" in Bold 26 18 + 5, Bold 17 12 + 3; the legend's alphabet
+// (the pipe apart) in Regular 24 17 + 0, Regular 16 12 + 0, and the pipe
+// alone 19 + 3, 14 + 2 (the logo lane, render.h's logo lane block). A reader takes the integers as they are. Measured once per file,
 // em and set and kept (a set is a constant of its reader's), GUI thread
 // only; a character the face lacks paints .notdef, so a set names only
 // characters the face carries; a set with no ink is 0 + 0.

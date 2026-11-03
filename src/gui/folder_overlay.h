@@ -220,7 +220,8 @@ inline constexpr double kRowGapPx = 1.0;
 
 // THE ROW BOX: 56 DEVICE PX AT 300 % (kRowHeightAt300, skin_px — the 17
 // Windows px, 51 at 300 %, that stood round the 22-px text grown with it, x
-// 24 / 22, the text round, architect 2026-11-03), the panel's row gap, the
+// 24 / 22, the text round, architect 2026-11-03; THE 56 STANDS, his ruling
+// the same day on mock dec4a, not 65), the panel's row gap, the
 // row's glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then; Breeze's since
 // 2026-11-02). A folder row wears icons::Icon::Folder and a wav row

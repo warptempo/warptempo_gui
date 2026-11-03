@@ -1363,16 +1363,18 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // ONE ROAD for the lane's height (logo_ink_band_px), the painter and the
 // tick's damage (logo_legend_extent), so the three cannot disagree: the
 // lane is the band's first logo_lane_h_px rows, the strip pad on top and
-// THE INK BAND under it, the tallest of the items' ink rows; EVERY ITEM'S
-// INK CENTERED IN THE BAND, the spare row below — the note's ink box, the
+// THE INK BAND under it, the tallest of the items' ink rows, the pipe's
+// included; EVERY ITEM CENTERED IN THE BAND BY ITS OWN INK, the spare row
+// below (architect 2026-11-03, on mock dec0b) — the note's ink box, the
 // brand's ink rows, the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, each run's baseline its ink's top plus the rows above
-// the baseline) and the glyph cell; across, the clock run's last ink on the
-// well's right edge column, the glyph cell one space advance left of the
-// clock run's first ink, its right edge rounded to a whole column, the
-// percent run's last ink one space advance left of the cell; the extent the
-// lane's rows from the first ink column through the well's right edge
-// column.
+// the baseline), the pipe's own ink rows (kLogoLegendPipe, its own baseline
+// the same way) and the glyph cell; across, the clock run's last ink on the
+// well's right edge column, the pipe's pen one space and its own advance
+// before the clock run's pen, the glyph cell one space advance left of the
+// pipe's first ink, its right edge rounded to a whole column, the percent
+// run's last ink one space advance left of the cell; the extent the lane's
+// rows from the first ink column through the well's right edge column.
 namespace {
 // A TEXT ITEM'S INK ROWS above and below its baseline: the set's ink band
 // in the face as painted (gui_font_ink_band), its rows as they are.
@@ -1409,14 +1411,17 @@ int logo_ink_band_px() {
     return std::max({logo_note_ink().h,
                      logo_text_ink(GuiFace::Bold, kLogoBrand).rows(),
                      logo_text_ink(GuiFace::Body, kLogoLegendInkSet).rows(),
+                     logo_text_ink(GuiFace::Body, kLogoLegendPipe).rows(),
                      logo_glyph_cell().h});
 }
 
 namespace {
 struct LogoLegendLayout {
     GuiRect lane{0, 0, 0, 0};
-    text_shape::SharedRun clock, percent;   // percent null when empty
-    double clock_x = 0.0, percent_x = 0.0, baseline = 0.0;
+    text_shape::SharedRun clock, pipe, percent;   // percent null when empty
+    double clock_x = 0.0, pipe_x = 0.0, percent_x = 0.0;
+    double baseline = 0.0;        // the runs' (the clock's and the percent's)
+    double pipe_baseline = 0.0;   // the pipe's, on its own ink
     GuiRect cell{0, 0, 0, 0};
     GuiRect extent{0, 0, 0, 0};
 };
@@ -1438,12 +1443,17 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     const LogoTextInk ink = logo_text_ink(GuiFace::Body, kLogoLegendInkSet);
     l.baseline = static_cast<double>(logo_item_y(band_y, ink.rows()) +
                                      ink.above);
+    const LogoTextInk pipe_ink = logo_text_ink(GuiFace::Body, kLogoLegendPipe);
+    l.pipe_baseline = static_cast<double>(
+        logo_item_y(band_y, pipe_ink.rows()) + pipe_ink.above);
     const double space = text_shape::memoized_run(body, " ")->width_px;
     l.clock = text_shape::memoized_run(body, legend.clock);
     l.clock_x = static_cast<double>(well.end) - text_shape::ink_right_px(*l.clock);
+    l.pipe = text_shape::memoized_run(body, kLogoLegendPipe);
+    l.pipe_x = l.clock_x - space - l.pipe->width_px;
     const icons::InkSize cell = logo_glyph_cell();
     const int cell_right = static_cast<int>(std::nearbyint(
-        l.clock_x + text_shape::ink_left_px(*l.clock) - space));
+        l.pipe_x + text_shape::ink_left_px(*l.pipe) - space));
     l.cell = GuiRect{cell_right - cell.w, logo_item_y(band_y, cell.h), cell.w,
                      cell.h};
     int first = l.cell.x;
@@ -1510,11 +1520,13 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
             static_cast<double>(logo_item_y(band_y, ink.rows()) + ink.above));
     }
 
-    // THE LEGEND (logo_legend_layout): the clock run, the glyph in its cell,
-    // the percent run — published as painted for the tick's damage.
+    // THE LEGEND (logo_legend_layout): the clock run, the pipe on its own
+    // baseline, the glyph in its cell, the percent run — published as
+    // painted for the tick's damage.
     const LogoLegendLayout l = logo_legend_layout(app, app.logo_legend);
     app.logo_legend_rect = l.extent;
     text_shape::show_shaped_run(cr, *l.clock, l.clock_x, l.baseline);
+    text_shape::show_shaped_run(cr, *l.pipe, l.pipe_x, l.pipe_baseline);
     if (l.percent)
         text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
 
@@ -2520,8 +2532,9 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
 // a taller field stands over the strip pads either side, inside row 8's
 // and the controls row's rows from key_height 25 up (a key of 21 .. 24
 // makes a strip of 41 .. 48 rows round the 49-row field, which then
-// overhangs the strip's top and bottom rows: a tuning range's corner, no
-// fit rule).
+// overhangs the strip's top and bottom rows: a tuning range's corner, NO
+// FIT RULE — architect 2026-11-03, on mock dec8: the overhang stands only
+// at keys far below his settled 60).
 static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
     const int h = time_field_h_px();
     const int d = case_h - h;
@@ -5150,11 +5163,14 @@ namespace {
 // keyboard-focused button, Windows' default-button frame, 2026-10-02 to
 // 2026-10-23 — is not painted, architect 2026-10-23: the button walk's NO
 // FOCUS FRAME.)
-// THE PLAYER ROW'S GROUP SPACE — between its items (transport → scrub,
-// scrub → clock, clock → the lamp): 8 Windows px, the roster's group gap it
-// stood at from 2026-10-02 until the roster's groups became Cool Edit's
-// (2026-10-09), kept as the player's own.
-constexpr double kPlayerGroupGapPx    = 8.0;
+// THE PLAYER ROW'S GROUP SPACE IS THE RUN GAP (architect 2026-11-03, on
+// mock dec7b): between its groups (transport → scrub, scrub → the clock's
+// two fields, the fields → the right cluster) stands render.h's
+// program_run_gap_px, the strip pad, half the key (30 at key_height 60 at
+// 300 %), so it follows the key as the band's runs do; the score viewer's
+// two rows, laid in the player's shape, read it alike (score_row_layout,
+// score_media_row_layout). The row's own 8-W space is retired
+// (closed_questions.md).
 
 // THE WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel, and
 // the field-less owners' one button (the picker's, the progress modal's) —
@@ -5252,11 +5268,12 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // touching"): only the group gap's one px of ground stands between two
     // of a run's boxes (2026-11-02; materials.h's key_group_pitch_px), as
     // the band's and row 8's keys stand; THE GROUP SPACE between its items is
-    // kPlayerGroupGapPx, its own since the roster's groups became Cool
-    // Edit's (2026-10-09). The press reads the rects the button walk
-    // publishes from this layout (modal_dialog_button_hit), the painted
-    // keys, so the gap between two answers nothing.
-    const int group    = scaled_px(kPlayerGroupGapPx);
+    // the run gap (program_run_gap_px, architect 2026-11-03, mock dec7b;
+    // the head above the word rows). The press reads the rects the button
+    // walk publishes from this layout (modal_dialog_button_hit), the painted
+    // keys, so the gap between two answers nothing; the scrub's span, its
+    // thumb's seat and its hit rect are this layout's too.
+    const int group    = program_run_gap_px();
     const int pitch    = key_group_pitch_px();
 
     // THE CLOCK'S TWO FIELDS ARE MEASURED BEFORE ANYTHING IS PLACED,
@@ -5336,7 +5353,7 @@ struct ScoreRowLayout {
 static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
                                        int page_count) {
     ScoreRowLayout l;
-    const int group = scaled_px(kPlayerGroupGapPx);
+    const int group = program_run_gap_px();
     const GuiFont cfont = gui_font(GuiFace::Program);
     char widest = '0';
     double widest_w = -1.0;
@@ -5379,7 +5396,7 @@ struct ScoreMediaRowLayout {
 };
 static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     ScoreMediaRowLayout l;
-    const int group = scaled_px(kPlayerGroupGapPx);
+    const int group = program_run_gap_px();
     l.field_pad = time_field_pad_px();
     l.field_w   = time_field_w_px(time_field_metrics().time_w);
     l.field_gap = scaled_px(kTimeFieldGapPx);
@@ -6159,9 +6176,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    another separator, then the repeat button" — and its TWO
         //    SEPARATORS RETIRED (architect 2026-10-02; Sound Recorder and
         //    mplay32 have none, and the roster's etched separators of
-        //    2026-10-06 did not reach this row): the groups stand eight
-        //    Windows px of bare face apart (kPlayerGroupGapPx) — transport →
-        //    scrub, scrub → clock, clock → the lamp. THE CLOCK IS TWO TIME FIELDS since
+        //    2026-10-06 did not reach this row): the groups stand the run
+        //    gap of bare face apart (program_run_gap_px, half the key;
+        //    architect 2026-11-03, mock dec7b) — transport → scrub, scrub →
+        //    clock, clock → the lamp. THE CLOCK IS TWO TIME FIELDS since
         //    2026-10-05 (architect: Sound Recorder's Position and Length
         //    panels, ACID's separate fields), kTimeFieldGapPx apart — the
         //    position, then the length.
@@ -7173,7 +7191,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // drawing, so it stood still when Breeze's drawings came. THE TEXT ROUND
 // (architect 2026-11-03) sized the three with the 24-px text: the glyph's
 // ink 29 (.525 of the 56-px row), the seat 24 (the box's text seat) and the
-// name's x 74 — the seat, the ink and 21 px of glyph-to-name air.
+// name's x 74 — the seat, the ink and 21 px of glyph-to-name air; THE 74
+// STANDS (architect 2026-11-03, on mock dec3a; not 70 or 85).
 static constexpr double kListGlyphInkAt300 = 29.0;
 static constexpr double kListGlyphXAt300   = kModalBoxTextSeatAt300;
 static constexpr double kListNameXAt300    = 74.0;
