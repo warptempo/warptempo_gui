@@ -387,7 +387,7 @@ struct FlagCache {
     // THE PALETTE THESE PIXELS WERE PAINTED IN (palette_generation(),
     // render.h — architect 2026-10-03; the palette's roles since
     // 2026-10-07): every flag pixel is a palette color (the cue triangle,
-    // the faded triangle of a disabled cue, the label inks; the lane's face
+    // the inactive cue of a disabled one, the label inks; the lane's face
     // boxes a constant), so an install (install_palette, at startup alone; a True
     // Colors flip, install_true_colors) re-renders the surface BY FIELD, the scale's
     // shape. (No axis or side colors a cue, so no color needs a field beyond

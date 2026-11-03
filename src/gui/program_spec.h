@@ -12,8 +12,8 @@
 // (windows-2000 today, Windows XP's to come). This header is the one owner of the
 // program's lengths, in Windows px, read by the lane table (main.cpp), the
 // accessors (render.h's program block) and the painters (cool_edit_paint.h);
-// its colors are the palette's Face role and the tones Cool Edit derives
-// from it (cool_edit_derive.h) beside the painter's own constants.
+// it holds no color (the palette's constants, palette_file.h, and the flat
+// look's, materials.h).
 //
 // NO PROPORTIONAL FIT (architect 2026-10-09 ~10:25, "I'd like to see it at
 // 20"): every one of Cool Edit's measurements (his Cool Edit

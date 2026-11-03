@@ -100,9 +100,9 @@ struct TrimRange {
 // split 2026-10-07; the chrome's inheritance 2026-10-10; the hi-fi panel
 // skin 2026-10-23): THE PALETTE holds every color the PROGRAM draws in the
 // well or on a thing that enters it (the waveform's canvas, ink and outline,
-// the canvas's grid and center line, the cues' one color, the playhead and
-// the scanner; palette_file.h's head owns the rule that parts program from
-// chrome) — ONE PALETTE, CONSTANTS, LIVE'S NUMBERS (architect 2026-11-01:
+// the canvas's grid and center line, the cues' one color and the disabled
+// cue's grey, the playhead and the scanner; palette_file.h's head owns the
+// rule that parts program from chrome) — ONE PALETTE, CONSTANTS, LIVE'S NUMBERS (architect 2026-11-01:
 // the Cool Edit presets and their `waveform` key dropped, the canvas
 // grammar kept), no choice of color left; THE LIT KEY'S FILL is the flat
 // look's constant (materials.h's kLitFill); THE PANEL'S
@@ -117,9 +117,7 @@ struct TrimRange {
 // The palette's roles and their words are kGuiPaletteRoles (palette_file.h).
 // There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
-// (2026-10-08). The app computes no panel or chrome color: the only tones it
-// still derives are the two disabled-cue tones (cool_edit_derive.h, the
-// COOL EDIT BLOCK).
+// (2026-10-08). The app computes no color: every one is a constant.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or THE FLAT LOOK'S CONSTANTS (materials.h,
 // 2026-11-01: the ground, the key's faces (rest, press, lit), the text tones, the
@@ -258,7 +256,7 @@ struct TrimRange {
 // 2026-11-02): a dead key DIMS ITS GLYPH AND ITS PRINTED LEGEND (kKeyDimInk,
 // paint_key_glyph and paint_key_legend; a glyph on a dead lit key stays
 // kTextOnLit), its key the face its state gives; a CUE'S inert label is the
-// faded tone (the marker-lane paragraph); the settings page's inert GROUP
+// palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (kTextDimInk 757575, paint_folder_overlay,
 // 2026-10-28). Nothing else dims. (Windows' word emboss —
 // DrawState DSS_DISABLED, the word in Hilight one Windows px right and down
@@ -302,9 +300,8 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // derived from the panel's Face since 2026-10-10, the selection pair a
 // constant since 2026-10-21 (chrome_derive.h) — and the palette's program
 // roles, one field each — the chrome's in kGuiThemeRoles' order
-// (theme_file.h), the program's in kGuiPaletteRoles' (palette_file.h), the
-// panel's `face`, and the disabled cue's two faded colors
-// (cool_edit_derive.h) — the tables covering the struct exactly
+// (theme_file.h), the program's in kGuiPaletteRoles' (palette_file.h), and
+// the panel's `face` — the tables covering the struct exactly
 // (palette_file.cpp's static_asserts); the mapping above says what each
 // paints. Every field is a solid byte triple.
 struct GuiPalette {
@@ -326,26 +323,13 @@ struct GuiPalette {
     GuiColor grid;
     GuiColor center;
     GuiColor cue;
+    GuiColor inactive_cue;
     GuiColor playhead_stem;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of the toolbar band, row 8 and the well's
     // margins — THE FLAT GROUND since 2026-11-01 (materials.h's kGround).
     GuiColor face;
-    // (THE COOL EDIT BLOCK'S PAINTED TONES — cool_edit_derive.h's kTones off
-    // `face` — are gone: the ring's dark and light tones, the overlays'
-    // rings and the scrub's two lines, left with the overlays' flat pass
-    // 2026-11-02; the ruler's ground `ce_mid`, the time fields' two ring
-    // tones, the panel label's pair and the cue shadow with the flat well,
-    // 2026-11-02; THE BAND'S RECESS AND THE TAB STRIP'S FOUR EDGE TONES
-    // 2026-10-22 with the band's void and the strip, the simple layout;
-    // THE BUTTON CASE's twenty-four members 2026-10-21, replaced by
-    // materials.h's THE KEY.)
-    // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
-    // disabled_* mixes toward the marker lane's face): the triangle of the
-    // `cue` and the resting label.
-    GuiColor ce_off_cue;
-    GuiColor ce_off_label;
 };
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
@@ -615,15 +599,14 @@ void install_true_colors(bool on);
 //             two live definitions hold, 2026-10-29) and the history's
 //             REMOVED half:
 //             THE PLAIN CUE, ITS LABEL STRUCK — the bar part of the text,
-//             in its ink, in every look below (the faded label's too);
-//   DISABLED  THE FADED LOOK (architect 2026-10-10 ~12:20, "the arrow needs
-//             to be legible for me, but the text doesn't … since it's
-//             disabled, it's inert"): the triangle's live color (the
-//             `cue`) BLENDED 45 % TOWARD THE LANE'S FACE (A27545) and the
-//             label's rest tone 65 % toward it (5F5F5F) — derived solid colors, "an opacity look …
-//             not actually opaque" (cool_edit_derive.h, `ce_off_*`) — and NO
-//             DOTS; the same faded label on a tie follower's cells (one
-//             look for inert cue text; the Windows emboss retired from cues);
+//             in its ink, in every look below (the inactive label's too);
+//   DISABLED  LIVE'S INACTIVE MARKER (architect 2026-11-02, mock C3; the
+//             inert look's reason 2026-10-10 ~12:20, "the arrow needs to be
+//             legible for me, but the text doesn't … since it's disabled,
+//             it's inert"): the triangle AND the label in the one constant
+//             `inactive_cue` 5D5D5D (palette_file.h) — and NO DOTS; the
+//             same inert label on a tie follower's cells (one look for
+//             inert cue text);
 //   SELECTED  ON THE CANVAS, NOT IN THE LABEL (architect 2026-11-02, M10
 //             rule 1: the band under the label "looks like highlighted text
 //             inside the editor"): THE STEM WEARS THE PLAYHEAD'S COLOR
@@ -645,7 +628,7 @@ void install_true_colors(bool on);
 //             misinterpretation"): the `cue` on every live cue, focused or
 //             not; the ruler's head is the cue for where the playhead
 //             stands. THE LABEL CHANGES NOTHING: it paints as at rest (the
-//             text tone, or the faded label where inert), no fill, its box
+//             text tone, or the inactive label where inert), no fill, its box
 //             the resting one. The playhead stands on the marker where the
 //             selection landed it; the stem is what persists once it moves,
 //             and what marks a multi-selection's other members. THE PRESS
@@ -658,8 +641,8 @@ void install_true_colors(bool on);
 //             the selected stem on both halves (render_history_diff_flags);
 //   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
 //             selectable): IT SHOWS NO SELECTION (architect 2026-11-02, "3
-//             accept"): no stem (MarkerStem: no entry), the faded triangle
-//             and the faded label as at rest, focused or not — the playhead
+//             accept"): no stem (MarkerStem: no entry), the inactive
+//             triangle and label as at rest, focused or not — the playhead
 //             standing on it after the arming press its only mark.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29).
 //
@@ -3386,9 +3369,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // gap past the one before it, carrying the bound in its signed two-decimal
 // form (format_iter_bound_cell). The sign is a cell's whole syntax: a
 // payload never carries one and a cell always does. A TIE FOLLOWER'S CELLS
-// wear the faded inert label (architect 2026-09-19: they show the leader's
-// numbers and are not this marker's to author; the emboss retired from cue
-// text 2026-10-10).
+// wear the inactive label (architect 2026-09-19: they show the leader's
+// numbers and are not this marker's to author).
 //
 // `selected_set` GIVES THE SELECTED LOOK ON THE CANVAS (architect
 // 2026-11-02, M10 rule 1; resolve_flag_face's table): every selected
@@ -3833,9 +3815,9 @@ struct HistoryDiffFlag {
 // participation verdict resolved over that side's full warp set (the
 // effective pair at HistoryDiffFlag above, the own flag since 2026-10-29; the
 // '#' in the TEXT stays the local byte) — paints its segment in the LIVE LANE'S
-// FADED INERT LABEL, and a single disabled half's triangle the faded one
+// INACTIVE LABEL, and a single disabled half's triangle the inactive one
 // (resolve_flag_face). IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes
-// its own bit, so a disable TOGGLE paints one faded half beside one live
+// its own bit, so a disable TOGGLE paints one inactive half beside one live
 // half and the direction of the toggle is readable off the label itself.
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none)

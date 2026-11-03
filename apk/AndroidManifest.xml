@@ -32,8 +32,8 @@
   <!-- android:icon is the launcher and recents icon: Breeze's note,
        assets/icons/AppIcon.svg (a symlink to MusicNote16th.svg, the logo
        lane's note, 2026-11-02), rendered by resvg in the logo's text tone
-       over the caption's flat ground
-       #141415, the adaptive icon's background layer
+       over the app's flat ground
+       #242424, the adaptive icon's background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's
        reason), both layers rendered at every build by build_apk.sh. -->
   <application

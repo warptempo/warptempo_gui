@@ -7,7 +7,6 @@
 #include "text_shape.h"
 #include "theme_file.h"
 #include "palette_file.h"   // kGuiPaletteRoles
-#include "cool_edit_derive.h"  // the disabled cue's faded colors
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "chrome_derive.h"  // live_chrome_words (the chrome's roles)
 #include "materials.h"      // the flat look's ground, key and text tones
@@ -1354,7 +1353,7 @@ struct FlagFace {
 // color). THE TABLE, the ladder read top to bottom, the first
 // matching row wins (dots: range phase | cue phase):
 //   flag                     triangle  dots                label
-//   DISABLED (any kind)      faded     none                faded, struck as below
+//   DISABLED (any kind)      inactive  none                inactive, struck as below
 //   any live cue             cue       cue | cue           bone, struck as below
 // — warp or phase reset, whatever the side (a live lane's cue or either
 // `h` half) — and THE SELECTION over the live row alone (architect
@@ -1366,11 +1365,11 @@ struct FlagFace {
 // the playhead's dots on it (the playhead's first dot, row 1, above the
 // cue's first). THE TRIANGLE NEVER MARKS FOCUS OR SELECTION (architect
 // 2026-11-02: "playhead coincident on marker should not change marker
-// triangle - that was a misinterpretation"): the `cue`, or the faded one on
-// a disabled cue, whatever the focus — live lanes and the `h` view alike;
+// triangle - that was a misinterpretation"): the `cue`, or the
+// `inactive_cue` on a disabled cue, whatever the focus — live lanes and the `h` view alike;
 // the ruler's head is the cue for where the playhead stands. So A SELECTED
 // DISABLED CUE SHOWS NO SELECTION (architect 2026-11-02, "3 accept"): no
-// dots and the faded triangle, the playhead standing on it after the
+// dots and the inactive triangle, the playhead standing on it after the
 // arming press its only mark. While the playhead's painted column is a
 // selected stem's, the stem's range phase yields to the playhead's dots
 // (paint_marker_stems, per frame; the resolver never sees the playhead).
@@ -1379,19 +1378,17 @@ struct FlagFace {
 // coincident run, and on the warp column a label ref the render falls back
 // from and the definitions of a label two live definitions hold, 2026-10-29)
 // and the history's REMOVED half; an ADDED half never. An inert label's
-// text and its bar are the faded label (CueSegment); the bar is part of the
+// text and its bar are the inactive label (CueSegment); the bar is part of the
 // text (show_cue_label).
-// THE DISABLED ROW'S FADE (architect 2026-10-10 ~12:20, "the arrow needs to
-// be legible for me, but the text doesn't … since it's disabled, it's inert"):
-// the triangle is the `cue` BLENDED 45 % TOWARD THE LANE'S FACE, the label's
-// rest tone 65 % toward it — derived solid colors, A27545 and 5F5F5F on the
-// lane's 303030, "an opacity look … not actually opaque" (cool_edit_derive.h,
-// the members `ce_off_*`). Every INERT label — a disabled cue's segments and
-// a tie follower's cells — wears the faded label, one look for inert cue
-// text (the Windows emboss retired from cues 2026-10-10), selected or not. A
-// DISABLED COINCIDENT CUE — the red set counts disabled rows
-// (warp_red_flag_set_cached's (3)) — is the faded cue with its faded label
-// struck.
+// THE DISABLED ROW IS LIVE'S INACTIVE MARKER (architect 2026-11-02, mock
+// C3; the inert look's reason 2026-10-10 ~12:20, "the arrow needs to be
+// legible for me, but the text doesn't … since it's disabled, it's inert"):
+// the triangle AND the label in the one constant `inactive_cue` 5D5D5D
+// (palette_file.h). Every INERT label — a disabled cue's segments and a tie
+// follower's cells — wears it, one look for inert cue text, selected or
+// not. A DISABLED COINCIDENT CUE — the red set counts disabled rows
+// (warp_red_flag_set_cached's (3)) — is the inactive cue with its inactive
+// label struck.
 // THE DOTS' ROWS, counted from the canvas's first row, are the cue phase
 // ≡ 7 and the range phase ≡ 3 (mod 8), the range's first from the top —
 // Cool Edit's cue and range dots re-counted from its canvas top
@@ -1405,7 +1402,7 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
     const GuiPalette& p = palette();
     const bool struck = red || side == GuiFlagSide::Removed;
     if (disabled)
-        return FlagFace{p.ce_off_cue, GuiCueDot::None, GuiCueDot::None, struck};
+        return FlagFace{p.inactive_cue, GuiCueDot::None, GuiCueDot::None, struck};
     return FlagFace{p.cue, GuiCueDot::Cue,
                     selected ? GuiCueDot::Playhead : GuiCueDot::Cue, struck};
 }
@@ -1413,15 +1410,15 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
 // memo's shared handle, CueRun — null exactly when the segment is absent),
 // its face box [x0, x1) in window x (the text at x0 plus the pad quantum),
-// and its look — the faded inert label or the text tone, the selection never
+// and its look — the inactive label or the text tone, the selection never
 // reaching it (2026-11-02) — and whether it is STRUCK.
 struct CueSegment {
     bool   present  = false;
     CueRun run;
     int    x0       = 0;
     int    x1       = 0;
-    // INERT: a disabled marker's segment or a tie follower's cell, the faded
-    // label (ce_off_label) (2026-10-10).
+    // INERT: a disabled marker's segment or a tie follower's cell, the
+    // inactive label (`inactive_cue`, 2026-11-02).
     bool   inert    = false;
     // STRUCK (architect 2026-10-26): its face's `struck` (resolve_flag_face)
     // — every segment of a coincident live marker, the history's removed
@@ -1506,7 +1503,7 @@ static CuePassScratch g_cue_pass_scratch;
 // masks an earlier label only across its own extent, a selected label as at
 // rest (2026-11-02); then
 // the triangles LEFT TO RIGHT, each in its face's color (the `cue`, or the
-// faded one on a disabled cue, 2026-11-02); then the
+// `inactive_cue` on a disabled cue, 2026-11-02); then the
 // publication — one FlagHitRect per cue (its label box as painted and its
 // triangle, both clipped to the waveform's columns, and the cue's diff half),
 // and one MarkerStem per cue whose dots paint and whose column is a waveform
@@ -1614,11 +1611,11 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             if (!s.present) continue;
             const double tx = static_cast<double>(
                 s.x0 + kProgramSpec.cue_fill_pad * u);
-            // The label's ink (resolve_flag_face's table): the faded inert
+            // The label's ink (resolve_flag_face's table): the inactive
             // label or the text tone, selected or not; a struck segment's
             // bar in the same ink (show_cue_label).
             show_cue_label(cr, *s.run, tx, base,
-                           s.inert ? pal.ce_off_label : hex(kTextInk),
+                           s.inert ? pal.inactive_cue : hex(kTextInk),
                            s.struck);
         }
         cairo_restore(cr);
@@ -1833,10 +1830,9 @@ void render_flag_boxes_impl(
             // THE SEGMENTS: the payload label (the column's composer, the cut
             // inside it), then the two bound cells where they paint — each
             // shaped on the label face and boxed by the one layout
-            // (cue_segment_boxes). A TIE FOLLOWER'S CELLS wear the faded inert
+            // (cue_segment_boxes). A TIE FOLLOWER'S CELLS wear the inactive
             // label (architect 2026-09-19: the leader's numbers, not this
-            // marker's to author; the Windows emboss retired from cue text
-            // 2026-10-10); a disabled marker's every segment does.
+            // marker's to author); a disabled marker's every segment does.
             const CueRun payload = text_shape::memoized_run(font, label_of(i));
             const IterCellLayout cl = measure_iter_cells(font, cells);
             const bool present[3] = {pass_paints(MarkerCell::Payload),
@@ -2118,7 +2114,7 @@ void render_history_diff_flags(
             // verbatim) — so the DIM is the live lane's truth per commit,
             // while the '#' in the LABEL text stays the line's verbatim local
             // byte (the text/face split at HistoryDiffFlag). A disable TOGGLE paints
-            // one faded half beside one live one and the direction of the
+            // one inactive half beside one live one and the direction of the
             // toggle reads straight off the label. Each bit is meaningful
             // exactly when its half is painted, so a bit resting at false on
             // a half that does not exist is never consulted.
@@ -2180,7 +2176,7 @@ void render_history_diff_flags(
             // (resolve_flag_face) by its half's side — the plain cue, its
             // label struck on a removed line; THE DOTS READ THE DISABLED
             // AXIS (architect 2026-08-22): a single half whose one side is
-            // disabled publishes none and wears the faded triangle, the live
+            // disabled publishes none and wears the inactive triangle, the live
             // lane's rule (its selection shows nothing there, as on the live
             // lane, 2026-11-02).
             if (!f.added) {
@@ -2342,24 +2338,14 @@ WaveformPlateInks waveform_plate_inks() {
 }
 
 namespace {
-// THE PROGRAM'S EIGHT into the installed struct (palette_file.h's role
+// THE PROGRAM'S NINE into the installed struct (palette_file.h's role
 // table) — the install's first half (the chrome's members are the other's)
 // — with THE PANEL'S FACE THE FLAT GROUND (materials.h's kGround, the flat
-// look, 2026-11-01), and the disabled cue's two faded colors.
+// look, 2026-11-01).
 void fill_program_palette() {
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
         g_palette.*(r.member) = hex(r.word);
     g_palette.face = hex(kGround);
-    // The disabled cue's faded triangle and label (2026-10-10): the label
-    // from the text tone, BOTH MIXED TOWARD THE MARKER LANE'S FACE, the
-    // ground the cues stand on (architect 2026-10-22, truthful to the
-    // surface) — materials.h's kLaneFace since the flat well (2026-11-01
-    // night): A27545 and 5F5F5F (cool_edit_derive.h's asserts).
-    {
-        using namespace cool_edit_derive;
-        g_palette.ce_off_cue = hex(disabled_triangle(kPaletteCue, kLaneFace));
-        g_palette.ce_off_label = hex(disabled_cue_label(kTextInk, kLaneFace));
-    }
 }
 // THE CHROME'S MEMBERS (live_chrome_words, chrome_derive.h: the flat look's
 // constants) — the install's other half.
@@ -2664,8 +2650,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const double baseline = static_cast<double>(lane.y + cue_baseline_px());
 
     // THE MARKER'S OWN STATE for the segments riding the field's right edge,
-    // which keep their resting look: the faded inert label, a tie follower's
-    // cells faded (2026-09-19), else the text tone — struck on a coincident
+    // which keep their resting look: the inactive label on a disabled
+    // marker and a tie follower's cells (2026-09-19), else the text tone — struck on a coincident
     // marker (below).
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
@@ -2722,7 +2708,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    (text_editor::refuse selects the whole text; the owner's card says
     //    why). Since the editor opens on any store index
     //    (enter_top_flag_edit), disabled included, a disabled marker's field
-    //    is this same box, never faded.
+    //    is this same box, never the inactive grey.
     const GuiRect field_box{bx - u, lane.y, box_w + 2 * u, fill_h};
     paint_cell_rect(cr, field_box, field_outline);
     paint_cell_rect(cr, GuiRect{field_box.x + u, field_box.y + u,
@@ -2870,7 +2856,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //
     // Each segment wears its resting look — its box in the lane's flat face
     // through the well's columns, the ground past them, the text
-    // in the text tone or the faded inert label, struck on a coincident marker —
+    // in the text tone or the inactive label, struck on a coincident marker —
     // and none takes
     // the selected look while the field stands, each open having seated the
     // selection axis on the cell it edits.
@@ -2954,11 +2940,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 paint_cell_rect(cr, GuiRect{lane1, lane.y, fx1 - lane1, fill_h},
                                 pal.face);
             const double tx = static_cast<double>(x0 + pad_l);
-            // The resting label's ink: the faded inert label, else the text
+            // The resting label's ink: the inactive label, else the text
             // tone (resolve_flag_face's table; materials.h's text tones),
             // struck on a coincident marker.
             show_cue_label(cr, seg_run, tx, baseline,
-                           cell_dis ? pal.ce_off_label : hex(kTextInk),
+                           cell_dis ? pal.inactive_cue : hex(kTextInk),
                            struck);
             cursor_x = x0 + w;
         };

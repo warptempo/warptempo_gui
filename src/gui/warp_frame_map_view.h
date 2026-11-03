@@ -86,7 +86,7 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
 // cues paint STRUCK (the plain cue with its label struck through, in every
-// look — resting, faded, selected — resolve_flag_face's table, render.cpp;
+// look — resting, inactive, selected — resolve_flag_face's table, render.cpp;
 // architect 2026-10-26 ~15:10, the invalid color retired), so
 // the mark is never masked by a selection. `red` is a PAINT cue with two
 // meanings: the

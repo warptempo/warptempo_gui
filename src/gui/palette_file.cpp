@@ -1,7 +1,6 @@
 #include "palette_file.h"
 
 #include "theme_file.h"        // kGuiThemeRoles (the chrome's members)
-#include "cool_edit_derive.h"  // the disabled cue's member count: the coverage check
 
 #include <iterator>
 
@@ -23,12 +22,10 @@ constexpr bool palette_members_disjoint() {
     return true;
 }
 static_assert(palette_members_disjoint());
-// The struct's members: the chrome's roles, the program's roles, the
-// panel's `face` (the flat ground, one member of its own), and the disabled
-// cue's two faded colors (cool_edit_derive.h's kDisabledCueMemberCount).
+// The struct's members: the chrome's roles, the program's roles, and the
+// panel's `face` (the flat ground, one member of its own).
 static_assert(sizeof(GuiPalette) ==
-              (kGuiThemeRoleCount + kGuiPaletteRoleCount + 1 +
-               cool_edit_derive::kDisabledCueMemberCount) *
+              (kGuiThemeRoleCount + kGuiPaletteRoleCount + 1) *
                   sizeof(GuiColor));
 
 } // namespace

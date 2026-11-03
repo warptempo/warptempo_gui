@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cool_edit_derive.h"   // the case ramp's Default bytes, the HLS rule
 #include "materials.h"   // the skin's inks and the key's constants
 #include "render.h"   // GuiRect, GuiColor, palette(), the program's accessors
 
@@ -93,8 +92,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // [col − (rows − 1)u, col + rows·u) (cue_triangle_half_w_px and
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads);
 // its rows [top, top + rows·u). `color` is the `cue` for a live cue, the
-// faded `ce_off_cue` for a disabled one (2026-10-10, cool_edit_derive.h's
-// faded look), the `playhead_stem` for the playhead's head alone (no cue's
+// `inactive_cue` for a disabled one (2026-11-02, palette_file.h), the
+// `playhead_stem` for the playhead's head alone (no cue's
 // triangle marks focus, 2026-11-02, render.h's SELECTED row). TWO ROADS, ONE
 // DRAWING (CueTrianglePass below): the stamp writes the cells' words
 // straight into the target where direct_pixel_target takes it, else cairo

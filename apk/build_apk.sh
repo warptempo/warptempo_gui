@@ -190,13 +190,10 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # viewBox's (the note's 22 x 22: a 52 dp square), never rasterised small and
 # upscaled (magick's own delegate renders the SVG at its user size and
 # blurs at -resize) -- centered on the transparent 108 dp canvas; the
-# BACKGROUND that canvas FLAT IN THE LAUNCHER'S OWN GROUND #141415 (the color
-# the caption wore when the icon was framed, architect 2026-10-23; owned by
-# LAUNCHER_GROUND below alone), one color over the whole square,
-# which the launcher's mask cuts to its shape (#FFFFFF from 2026-10-17,
-# Windows Storm's caption start #800080 from 2026-10-16, the Cool Edit
-# case's 20 face-ramp bands under Midnight's Face from 2026-10-12 before
-# it). Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
+# BACKGROUND that canvas FLAT IN THE APP'S GROUND #242424 (materials.h's
+# kGround, Live's, architect 2026-11-02: the icon wears the window's own
+# ground; owned by LAUNCHER_GROUND below alone), one color over the whole
+# square, which the launcher's mask cuts to its shape. Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
 # Byte-stable: -strip drops the date chunks. Cairo paints the
 # chrome and the glyphs onto the backbuffer (assets/icons/'s SVGs rasterised
@@ -205,7 +202,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
-LAUNCHER_GROUND="#141415"   # the launcher's own ground; the one owner of the color
+LAUNCHER_GROUND="#242424"   # the app's ground (materials.h's kGround); the one owner of the color here
 LAUNCHER_INK="#B5B5B5"      # the note's ink, the logo lane's text tone (materials.h's kTextInk)
 # THE INK IS GIVEN AS resvg's USER STYLESHEET, the app's own road
 # (svg_icon::parse): the drawing paints in `currentColor` and the one-rule

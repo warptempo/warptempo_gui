@@ -18031,7 +18031,7 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 //   hint — the TOOLTIP alone forks the two idle meanings. The
 //   history mode gives Render NO face of its own any more: in
 //   the view both render chords are consumed, so the button wears its ordinary
-//   icon over the derived disabled face — visibly, the icon row hiding
+//   icon over a disabled key's face — visibly, the icon row hiding
 //   nothing at all since 2026-08-14 (the 2026-08-12 relayout hid it in there,
 //   and the 2026-08-13 revision already painted it again).
 //

@@ -1345,8 +1345,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
     // STRUCK — the plain cue with its label struck through (resolve_flag_face's
     // table, render.cpp; architect 2026-10-26 ~15:10, "have coincident
-    // markers be shown as a strike through"); a disabled one is the faded cue
-    // with its faded label struck.
+    // markers be shown as a strike through"); a disabled one is the inactive
+    // cue with its inactive label struck.
     // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag

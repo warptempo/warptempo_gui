@@ -6,9 +6,10 @@
      MusicNote16th.svg, the logo lane's note, a `currentColor` drawing on a
      22 x 22 viewBox), rendered by resvg at the art's height in the logo's
      text tone #B5B5B5 (apk/build_apk.sh's LAUNCHER_INK, given as resvg's
-     user stylesheet) and centered over THE LAUNCHER'S OWN GROUND, FLAT:
-     #141415 (the color the caption wore when the icon was framed; owned by
-     apk/build_apk.sh's LAUNCHER_GROUND alone), one color over the whole
+     user stylesheet) and centered over THE APP'S GROUND, FLAT: #242424
+     (materials.h's kGround, architect 2026-11-02: the icon wears the
+     window's own ground; owned by apk/build_apk.sh's LAUNCHER_GROUND
+     alone), one color over the whole
      canvas, so the mask shows a dark shape carrying the note. An
      ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
@@ -16,7 +17,7 @@
      Two layers per density under res/mipmap-<density>/, BOTH RENDERED AT
      EVERY BUILD by apk/build_apk.sh's launcher step into its staged
      copy of res/:
-       ic_launcher_background.png  the full 108 dp canvas flat in #141415;
+       ic_launcher_background.png  the full 108 dp canvas flat in #242424;
        ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
                                    the viewBox's (52 dp: the note's viewBox
                                    is square), centred on a transparent
