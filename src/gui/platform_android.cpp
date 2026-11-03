@@ -527,15 +527,15 @@ GuiPlatform::~GuiPlatform() {
 // at this backend's own). 300 % AT THE WINDOWS PIXEL (architect 2026-10-10,
 // "sure, that can be updated later": the template follows the scale the
 // tablet has run at since 2026-10-06): 3 device px per Windows px, every
-// Windows px a whole number of device px, so a 16-px glyph paints 48 device
-// px, the program's 20-W glyph seat 60 and a relief line 3. (The template
+// Windows px a whole number of device px, so a 16-W length paints 48 device
+// px. (The template
 // stood at 275 from 2026-10-02 — the tablet's glyph at its 200 % before the
 // unit's change, 44 device px — and its earlier values are git history and
 // a closed question.) The icon row fits this panel whole (the arithmetic is
-// at paint_icon_row, paint_handler.cpp: the left runs' 1470, the run gap's
-// 45 and the right run's 345 of the well's 2258 device px outside the `h`
-// view at 300, re-derived 2026-10-28 with the well's edge columns one
-// hairline each and again with the NOISE lamp), clearing it by 398.
+// at paint_icon_row, paint_handler.cpp: the left runs' 1561, the run gap's
+// 45 and the right run's 334 of the well's 2258 device px outside the `h`
+// view at 300, re-derived 2026-11-02 with the square key), clearing it by
+// 318.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -584,8 +584,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.noise             = "rain";
     cfg.noise_level       = -9;
     cfg.noise_crossfade_s = 4;
-    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: his
-    // "around 33" device px at 300 % (device_config.h's head).
+    // THE KEY'S SIDE (architect 2026-10-29, a tuning key; the key square
+    // since 2026-11-02), spelled: mock sqm_01_66px's 66 device px at 300 %
+    // (device_config.h's head).
     cfg.key_height        = kKeyHeightDefaultAt300;
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
     // keys), spelled: the FLAGS sheet's 48 x 60 device px at 300 %

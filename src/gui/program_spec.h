@@ -18,17 +18,13 @@
 // NO PROPORTIONAL FIT (architect 2026-10-09 ~10:25, "I'd like to see it at
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
-// UNSCALED, THE BUTTON CASE INCLUDED — its 20-W glyph seat, the case 23 (1
-// highlight + 20 + 1 shadow + 1 black) wide, the cases' pitch 23 (its
-// height the `key_height` tuning key since 2026-10-29). THE REASON: the
-// program is Cool Edit, not a chrome — the 24-W seat is ReactOS's large
-// toolbar glyph, the base's seat for a chrome vocabulary (chrome_spec.h's
-// head, where it stays the chrome's rule), and the program takes no
-// chrome's toolbar. (The seat is a WIDTH term of the case alone; the key's
-// Breeze glyph is centered on its face by its own ink-box road, paint_key_glyph,
-// 2026-11-02, whatever this seat.) THE SIZE ON THE GLASS is gui_scale's (300 x 24 / 20 = 360 puts the
-// glyph at the 72 device px the 24-W seat drew at 300; the device's choice,
-// never this header's).
+// UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM (architect 2026-11-02, on
+// mock sqm_01_66px): the key is square, the `key_height` tuning key's
+// device px at 300 % on both axes (66 its default), a skin length
+// (render.h's case block, icon_case_w_px / icon_case_h_px), not Cool Edit's
+// 23-W case; its Breeze glyph is centered on its face by its own ink-box
+// road, its size following the key (paint_key_glyph). THE SIZE ON THE
+// GLASS is gui_scale's (the device's choice, never this header's).
 //
 // THE SIMPLE LAYOUT (architect 2026-10-22, "the bevels are def part of the
 // problem … redesign with dead simple layout", the mocks at 300 %), FLAT
@@ -83,26 +79,17 @@
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
 struct ProgramSpec {
-    // THE CASE: one highlight row and column on the top and
-    // left, the glyph seat, one shadow row and column and one black row and
-    // column on the right and bottom; cases abut, so the case is the pitch.
-    // The glyph's seat is (+1, +1) at rest and (+2, +2) pressed or checked
-    // (the shift is one line, cool_edit_paint.h). THE FOUR SUM THE CASE'S
-    // WIDTH ALONE since 2026-10-29 (architect): its height is the
-    // `key_height` tuning key's device px at 300 % (render.h's
-    // icon_case_h_px).
-    int  case_light_px;
-    int  glyph_px;
-    int  case_shadow_px;
-    int  case_outer_px;
+    // (THE CASE HAS NO W TERM HERE: the square key's side is the
+    // `key_height` tuning key's, render.h's case block, 2026-11-02.)
     // COOL EDIT'S TOOLBAR HAS NO HOVER FACE (a capture with the
     // pointer on a button differs from one without only by Wine's tooltip):
     // the roster's and the render player's hot face is never lit, the hover
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
     // THE STRIPS' RUNS (architect 2026-10-22, the simple layout): the band's
-    // and row 8's keys stand in PLAIN RUNS on the ground, the keys abutting
-    // inside a run and THIS MUCH PLAIN GROUND BETWEEN TWO RUNS — row 8's group
+    // and row 8's keys stand in PLAIN RUNS on the ground, the keys a key
+    // pitch apart inside a run (the group gap's one device px between two,
+    // materials.h) and THIS MUCH PLAIN GROUND BETWEEN TWO RUNS — row 8's group
     // gap as the bars left it (a 6-W bar between a 5-W and a 4-W pad), the
     // band's between its three left runs (architect: "add a spacing after
     // render, and after flatten").
@@ -220,10 +207,6 @@ struct ProgramSpec {
 };
 
 inline constexpr ProgramSpec kProgramSpec = {
-    .case_light_px      = 1,
-    .glyph_px           = 20,
-    .case_shadow_px     = 1,
-    .case_outer_px      = 1,
     .case_hot_face      = false,
     .run_gap_px         = 15,
     .strip_pad_px       = 13,
@@ -243,14 +226,11 @@ inline constexpr ProgramSpec kProgramSpec = {
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
 // chrome_stack_authored_h sums them under every chrome).
-// THE CASE'S WIDTH, A WIDTH (render.h's icon_case_w_px): the W sum. THE
-// CASE'S HEIGHT IS NO W TERM since 2026-10-29 (architect): it is the
-// `key_height` tuning key's device px at 300 % (render.h's icon_case_h_px),
-// on the logo lane's road, so the strip and band sums below hold their pads
-// alone and the key's rows stand outside them as the logo lane's do.
-constexpr int program_case_authored_px(const ProgramSpec& p) {
-    return p.case_light_px + p.glyph_px + p.case_shadow_px + p.case_outer_px;
-}
+// THE CASE IS NO W TERM (architect 2026-11-02): the square key's side is the
+// `key_height` tuning key's device px at 300 % on both axes (render.h's
+// icon_case_w_px / icon_case_h_px), on the logo lane's road,
+// so the strip and band sums below hold their pads alone and the key's rows
+// stand outside them as the logo lane's do.
 // ROW 8'S AUTHORED PART (2026-10-22, the simple layout; the case's height
 // out of it since 2026-10-29): the strip pad above the key and the strip
 // pad under it (strip_pad_px's field, 13 since 2026-10-23).
@@ -260,8 +240,8 @@ constexpr int program_strip_authored_h(const ProgramSpec& p) {
 // THE BAND'S AUTHORED PART (architect 2026-10-24; the case's height out of
 // it since 2026-10-29): the strip pad under the key. Its upper pad is THE
 // LOGO LANE, authored in device px at 300 % like the skin's other lengths
-// (render.h's logo lane block, logo_lane_h_px), and its key the
-// `key_height` key's device px at 300 %, so neither is a Windows-px term
+// (render.h's logo lane block, logo_lane_h_px), and its key the square
+// key's `key_height` device px at 300 %, so neither is a Windows-px term
 // here (the band was row 8's strip 2026-10-22 to 2026-10-24).
 constexpr int program_band_authored_h(const ProgramSpec& p) {
     return p.strip_pad_px;
@@ -270,8 +250,6 @@ constexpr int program_band_authored_h(const ProgramSpec& p) {
 // lane's 17, the stereo divider's 3 — left with the flat well, 2026-11-02:
 // the well's lanes are device px derived at the element, render.h's well
 // lanes block.)
-// THE CASE'S WIDTH 23 W.
-static_assert(program_case_authored_px(kProgramSpec) == 23);
 // THE STRIPS' W PARTS: row 8's two pads 13 + 13; the band's under its
 // logo lane and its key the pad's 13.
 static_assert(program_strip_authored_h(kProgramSpec) == 26);

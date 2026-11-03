@@ -494,8 +494,9 @@ inline constexpr Page page_after(Role role, Page page) {
 // (300 %): the key 48 x 60, the gap 6, the pitch 54, so 1u 48, 1.5u 75, 2u
 // 102, 2.5u 129 and 4u 210 device px; at 200 % 32 x 40, the gap 4, the
 // pitch 36. THE KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S
-// `key_height` (architect 2026-10-29; render.h's icon_case_h_px): their
-// height is `osk_key_h` alone. (The window-derived pitch — Plasma's ten keys
+// `key_height` (architect 2026-10-29; the square key's side since
+// 2026-11-02, render.h's icon_case_w_px / icon_case_h_px): their box is
+// `osk_key_w` x `osk_key_h` alone. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is
 // retired 2026-10-29, git history.)
 inline int key_w_px()     { return skin_px(osk_key_w_at300(), 1); }
@@ -614,9 +615,9 @@ inline bool stands(const AppState& a) {
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
 //     arithmetic at modal_box.h's head; at 300 %, the strip pad's 13 W,
-//     key_height 33 and the keyboard's defaults the controls row 977–1087,
-//     its cases 1016–1048, the box 144–976, its top under the band's rows
-//     0–143 with the 72-row logo lane, 2026-10-24).
+//     key_height 66 and the keyboard's defaults the controls row
+//     944–1087, its cases 983–1048, the box 177–943, its top under the
+//     band's rows 0–176 with the 72-row logo lane, 2026-10-24).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press or the
 // touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),

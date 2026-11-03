@@ -78,7 +78,8 @@ namespace {
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
 // the authored gui_scale row heights (icon_row_h_px() — its key's rows, and
-// row 8's, the `key_height` tuning key's since 2026-10-29 —
+// row 8's, the `key_height` tuning key's since 2026-10-29, the square
+// key's side since 2026-11-02 —
 // the well's four, its foot, plus bottom_row_h_px() —
 // the unified bottom row), kRowGapPx and kFlagBottomLiftPx (see the
 // geometry helpers below); nothing is window-proportional, and since row 7
@@ -151,8 +152,9 @@ namespace {
 // TOOLBAR BAND
 // (THE LOGO LANE — the band's upper pad, 72
 // device px at 300 % since 2026-10-24, render.h's logo lane block — the
-// key, 23 W wide and the `key_height` tuning key's device px at 300 % tall
-// since 2026-10-29, the strip pad on the flat ground — render.h's
+// key, SQUARE since 2026-11-02, the `key_height` tuning key's device px at
+// 300 % on both axes (66 its default), the strip pad on the flat ground —
+// render.h's
 // program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
 // BLOCK's four, THE WELL — THE PROGRAM'S CANVAS COLUMN, flat regions on the
@@ -232,10 +234,10 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-11-02 rather than adjusted (the flat well; the key's height a tuning
-// key since 2026-10-29), AT THE STRIP PAD'S 13 W (a
-// constant since 2026-10-23, program_spec.h's strip_pad_px) AND AT
-// key_height 33 (the templates' value; a tune moves the band's and row 8's
+// 2026-11-02 rather than adjusted (the flat well; the square key the same
+// day; the key's side a tuning key since 2026-10-29), AT THE STRIP PAD'S
+// 13 W (a constant since 2026-10-23, program_spec.h's strip_pad_px) AND AT
+// key_height 66 (the template's value; a tune moves the band's and row 8's
 // case rows and the well by their difference), the waveform the whole
 // leftover and both gaps 0
 // in every stack (the rule above). Every lane is its own composite of
@@ -249,8 +251,8 @@ namespace {
 // icon_case_h_px, skin_px), each SCALED WITH gui_scale, AND THE WELL'S
 // LANES, DERIVED IN DEVICE PX AT THE ELEMENT (render.h's well lanes block,
 // 2026-11-02). THE CANVAS — THE WELL'S INTERIOR — AT THE BASE'S 300 % AND
-// key_height 33 IS 1092 DEVICE ROWS (1075 under the hi-fi well's lanes,
-// 2026-10-29 to 2026-11-02; the rule at centered_leftover_h below), AND ITS
+// key_height 66 IS 1026 DEVICE ROWS (the rule at centered_leftover_h
+// below), AND ITS
 // WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the left
 // (waveform_area: the margin and the well's edge column, 19 px, and half
 // the flooring's leftover, 5). Per scale the well above the canvas is the
@@ -262,31 +264,30 @@ namespace {
 // 200 %.
 //   1920 x H AT 200 % (kept as a worked case; no host runs this geometry
 //   since the laptop GUI's drop, 2026-10-30): the
-//   lanes are 96 band (the logo lane 48, the case 22, the pad 26, rows
-//   0–95, the cases 48–69) + 62 the well's lanes = 158 above and 75 below
-//   (the well's foot 1 and row 8's 26 + 22 + 26), leftover H − 233: the
-//   waveform H − 233 (its two wells (H − 234) / 2 rows each, floored, round
-//   the divider's 1, the spare row the canvas's last), both gaps 0 — 96 / 0
-//   / 62 / H − 233 / 0 / 75; the waveform 1888 wide, 16 px in (the margin
+//   lanes are 118 band (the logo lane 48, the case 44, the pad 26, rows
+//   0–117, the cases 48–91) + 62 the well's lanes = 180 above and 97 below
+//   (the well's foot 1 and row 8's 26 + 44 + 26), leftover H − 277: the
+//   waveform H − 277 (its two wells (H − 278) / 2 rows each, floored, round
+//   the divider's 1, the spare row the canvas's last), both gaps 0 — 118 / 0
+//   / 62 / H − 277 / 0 / 97; the waveform 1888 wide, 16 px in (the margin
 //   and the edge column, 13, and half the flooring's 6), the well's columns
 //   15 and 1905.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
-//   tablet value since 2026-10-06): the lanes are 144 band (72
-//   + 33 + 39, rows 0–143, the logo lane 0–71, the cases 72–104) + 19 trim
-//   (row 144 ground, the bar 145–162) + 32 ruler (163–193, row 194 ground)
-//   + 40 marker (195–234) + 1 foot line (235) = 236 above (144 the band, 92
-//   the block) and 112 below (the well's foot 1328 and row 8 on 1329–1439,
-//   its cases 1368–1400), leftover 1092: the waveform 1092 on rows
-//   236–1327 (its two wells 545 rows each round the divider's row 781, the
-//   spare row 1327, render.h's waveform_divider), both gaps 0 — 144 / 0 /
-//   92 / 1092 / 0 / 112; the waveform 2256 wide, 24 px in (columns
-//   24–2279), the well's columns 23 and 2281 (one past 2280) — THE RECORD
-//   PICTURE'S ROWS (M13, architect 2026-11-02).
+//   tablet value since 2026-10-06): the lanes are 177 band (72
+//   + 66 + 39, rows 0–176, the logo lane 0–71, the cases 72–137) + 19 trim
+//   (row 177 ground, the bar 178–195) + 32 ruler (196–226, row 227 ground)
+//   + 40 marker (228–267) + 1 foot line (268) = 269 above (177 the band, 92
+//   the block) and 145 below (the well's foot 1295 and row 8 on 1296–1439,
+//   its cases 1335–1400), leftover 1026: the waveform 1026 on rows
+//   269–1294 (its two wells 512 rows each round the divider's row 781, the
+//   spare row 1294, render.h's waveform_divider), both gaps 0 — 177 / 0 /
+//   92 / 1026 / 0 / 145; the waveform 2256 wide, 24 px in (columns
+//   24–2279), the well's columns 23 and 2281 (one past 2280).
 //   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 367 -> the waveform 367, both
-//   gaps 0 — 96 / 0 / 62 / 367 / 0 / 75.
+//   this geometry): leftover 323 -> the waveform 323, both
+//   gaps 0 — 118 / 0 / 62 / 323 / 0 / 97.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -349,8 +350,8 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE TOOLBAR
-// BAND, the logo lane, the case (its height the `key_height` tuning key,
-// 2026-10-29), the
+// BAND, the logo lane, the case (its side the `key_height` tuning key,
+// 2026-10-29, square since 2026-11-02), the
 // strip pad (render.h's program and logo lane blocks, icon_row_h_px), the
 // well's four lanes the trim bar, the ruler, the marker lane and the lane's
 // foot line (render.h's well lanes block): 19 + 32 + 40 + 1 = 92 device rows
@@ -432,10 +433,9 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300, the strip pad's 13 W and key_height 33 the lanes leave
-// 1440 − 236 − 112 = 1092 device rows (the flat well, 2026-11-02; 1075
-// under the hi-fi well, 2026-10-29). No color
-// moves a lane (the key's height, a tuning key, moves them). May
+// gui_scale 300, the strip pad's 13 W and key_height 66 the lanes leave
+// 1440 − 269 − 145 = 1026 device rows (the square key, 2026-11-02). No
+// color moves a lane (the key's side, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -3461,11 +3461,13 @@ int gui_main() {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE KEY'S HEIGHT RIDES THE SCALE'S ROAD (the `key_height` tuning key,
-    // architect 2026-10-29; render.h's seat): seeded here, before gui.init()
-    // and so before the first layout, the case's height in every lane and
-    // seat the first frame lays out; the other road is the settings editor's
-    // `key_height=` commit (GuiInputHandler::apply_key_height).
+    // THE KEY'S SIDE RIDES THE SCALE'S ROAD (the `key_height` tuning key,
+    // architect 2026-10-29, the key square since 2026-11-02; render.h's
+    // seat): seeded here, before gui.init() and so before the first layout,
+    // the key's height and width in every lane and seat, and the key
+    // glyph's ink (paint_key_glyph), the first frame lays out; the other
+    // road is the settings editor's `key_height=` commit
+    // (GuiInputHandler::apply_key_height).
     set_key_height_at300(device_config.key_height);
     // THE KEYBOARD'S KEY BOX RIDES THE SAME ROAD (the `osk_key_w` and
     // `osk_key_h` tuning keys, architect 2026-10-29; render.h's seat): seeded

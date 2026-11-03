@@ -31,7 +31,8 @@
 //      hairline, out: render.h's well_columns, the keys' outer columns), its
 //      top row the trim lane's first row, its bottom row the well's foot;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
-//      the case (key_height tall, render.h's icon_case_h_px), the strip pad
+//      the case (the square key, key_height tall, render.h's
+//      icon_case_h_px), the strip pad
 //      (strip_h_px) — on the ground,
 //      no line, bar or border, its outermost cases or buttons FLUSH WITH THE
 //      BOX'S OUTER COLUMNS; on the window's foot.
@@ -50,17 +51,17 @@
 // (paint_modal_box).
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the well's rows of ground. At the tablet's 2304 x 1440, 300 %,
-// the strip pad's 13 W and key_height 33: the box's top row 144 (the trim
-// lane's first row, the row of ground directly under the band's rows 0–143,
-// the logo lane 0–71), its bottom row 1328 (the well's foot) and its columns
-// 23 and 2280 (the well's edge columns), those rows and columns ground, the
-// PANE x 24..2279 — the main canvas's own columns — and y 145..1327 (the
-// main canvas's own rows 236–1327); the controls row 1329–1439, its case
-// rows 1368–1400, its first case's columns 23–91 and its last 2212–2280. A
-// DIALOG'S TEXT (THE TEXT SEAT, below) on the list rows' seat, 18 px in
-// from the box's outer edges: its pen on column 41, its ascender line on
-// row 162, its wrap ending one past column 2262, its foot clip one past row
-// 1310.
+// the strip pad's 13 W and key_height 66 (the square key, 2026-11-02): the box's top
+// row 177 (the trim lane's first row, the row of ground directly under the
+// band's rows 0–176, the logo lane 0–71), its bottom row 1295 (the well's
+// foot) and its columns 23 and 2280 (the well's edge columns), those rows
+// and columns ground, the PANE x 24..2279 — the main canvas's own columns —
+// and y 178..1294 (the main canvas's own rows 269–1294); the controls row
+// 1296–1439, its case rows 1335–1400, its first case's columns 23–88 and
+// its last 2215–2280. A DIALOG'S TEXT (THE TEXT SEAT, below) on the list
+// rows' seat, 18 px in from the box's outer edges: its pen on column 41,
+// its ascender line on row 195, its wrap ending one past column 2262, its
+// foot clip one past row 1277.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -79,12 +80,12 @@
 // the row standing directly on the band with nothing between. At 300 %: 39
 // + 14 = 53 device rows (at the defaults below the row's cases end on 1048
 // and the first key row starts on 1102), where the dock bar's border under
-// the row made it 15 + 18 + 14 = 47 until then. THE ROWS, at key_height 33
-// and the keyboard's defaults, osk_key_w 48 and osk_key_h 60 (2026-10-29,
-// the compact keyboard's band 352 rows where the full-width one's was 403,
-// so the box 51 rows taller): the keyboard's band 1088–1439 (its first key
-// row's top 1102), the controls row 977–1087 (its case rows 1016–1048), the
-// box's bottom row 976 (ground), the pane y 145..975.
+// the row made it 15 + 18 + 14 = 47 until then. THE ROWS, at key_height 66
+// and the keyboard's defaults, osk_key_w 48 and osk_key_h 60
+// (2026-10-29, the compact keyboard's band 352 rows where the full-width
+// one's was 403, so the box 51 rows taller): the keyboard's band 1088–1439
+// (its first key row's top 1102), the controls row 944–1087 (its case rows
+// 983–1048), the box's bottom row 943 (ground), the pane y 178..942.
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);

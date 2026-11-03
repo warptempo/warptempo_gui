@@ -45,17 +45,22 @@
 // (the keys' Breeze glyphs, the on-screen keyboard's caps); on a resting or
 // pressed face kTextInk (key_ink below).
 //
-// THE GROUP GAP (architect 2026-11-01, M5; "two px lines that don't scale",
-// M5b): keys that abut inside a group are parted by kKeyGapPx, TWO DEVICE PX
-// OF GROUND at every gui_scale — the group's outer extents stay, each key
-// giving up one device px on every side that abuts a neighbor
-// (key_in_cell): at 300 % a 69-px case reads 68 at a group's two ends, 67
-// inside, 69 alone. THE GAP IS NOT PRESSABLE (architect 2026-11-02, R5: "2px
-// gap should not be pressable - ground is not a button"): THE PAINTED KEY IS
-// THE HIT BOX (point_on_key below), so a press, a lift, the press face and the
-// tooltip answer on the key alone and the ground between two keys answers
-// nothing — the on-screen keyboard's gaps alike (R11), under its own gap
-// rule (onscreen_keyboard.h).
+// THE GROUP GAP (architect 2026-11-01, M5, a line that does not scale;
+// ONE DEVICE PX since 2026-11-02, on mock sqm_01_66px): keys inside a group
+// are parted by kKeyGapPx, ONE DEVICE PX OF GROUND at every gui_scale. THE
+// CELL IS THE KEY (2026-11-02): every key is the whole square case, the
+// `key_height` tuning key's side on both axes (render.h's icon_case_w_px /
+// icon_case_h_px), identical at a group's ends and inside it, and a group's
+// walk lays its keys a key pitch apart (key_group_pitch_px below), the gap
+// between them, so a run of n keys is n keys and n − 1 gaps wide
+// (key_group_w_px). One px of gap cannot split evenly between two
+// neighbors, so no key gives up a column to it: the keys stay equal and
+// the walk carries the gap. THE GAP IS NOT
+// PRESSABLE (architect 2026-11-02, R5: "2px gap should not be pressable -
+// ground is not a button"): THE PAINTED KEY IS THE HIT BOX (point_on_key
+// below), so a press, a lift, the press face and the tooltip answer on the
+// key alone and the ground between two keys answers nothing — the on-screen
+// keyboard's gaps alike (R11), under its own gap rule (onscreen_keyboard.h).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two, kTextInk B5B5B5 on every word, digit and
@@ -103,7 +108,7 @@ inline constexpr uint32_t kKeyDimInk  = 0x5A5A5A;
 inline constexpr uint32_t kKeyFace   = 0x363636;
 inline constexpr uint32_t kPressFace = 0x464646;
 inline constexpr uint32_t kLitFill   = 0xFFAD56;
-inline constexpr int      kKeyGapPx  = 2;
+inline constexpr int      kKeyGapPx  = 1;
 
 // THE KEY'S THREE FACES (the head's THE KEY): Lit when checked, whatever the
 // press; else Pressed under a standing press; else Rest. key_look is the one
@@ -159,16 +164,24 @@ inline constexpr uint32_t kPaneFace = kKeyFace;
 // caps — in key_ink's tone.
 void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look);
 
-// THE KEY INSIDE ITS CELL (the head's THE GROUP GAP): the cell `cell` less
-// one device px on each side that abuts a neighbor of its group —
-// `joined_left` / `joined_right` — so two abutting keys stand kKeyGapPx
-// apart. The painted key, its legend's seat and its hit box are this.
-GuiRect key_in_cell(const GuiRect& cell, bool joined_left, bool joined_right);
+// THE GROUP'S PITCH (the head's THE GROUP GAP): one key and the gap — the
+// step from a key's left column to the next key's in its group, every
+// group walk's (the band's icon_row_seats, row 8's row8_block_walk, the
+// modal family's controls-row layouts, paint_handler.cpp). The ground
+// between two GROUPS is the run gap (render.h's program_run_gap_px), not
+// this.
+inline int key_group_pitch_px() {
+    return icon_case_w_px() + kKeyGapPx;
+}
+// A GROUP'S WIDTH: `n` keys and the n − 1 gaps between them (0 for none).
+inline int key_group_w_px(int n) {
+    return n > 0 ? n * icon_case_w_px() + (n - 1) * kKeyGapPx : 0;
+}
 
 // A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
-// GROUP GAP; architect 2026-11-02, R5 / R11): `key` the PAINTED key —
-// key_in_cell's answer for every grouped key (the band, row 8, the modal
-// family's controls rows), the on-screen keyboard's walk rect for its own
+// GROUP GAP; architect 2026-11-02, R5 / R11): `key` the PAINTED key — the
+// whole case for every grouped key (the band, row 8, the modal family's
+// controls rows), the on-screen keyboard's walk rect for its own
 // (onscreen_keyboard::for_each_key, its gap already outside it). THE ONE
 // PREDICATE every key hit test asks: the roster's face
 // (AppState::RedesignButtonFace::contains — the press, the lift, the band's

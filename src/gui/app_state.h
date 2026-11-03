@@ -1844,7 +1844,8 @@ enum class RedesignButton {
     // arm). No lamp: an act, not a mode.
     //
     // SAVE, UNDO, REDO, COPY (2026-10-25) AND RENDER STAND BEHIND IT IN THE
-    // SAME RUN, the six cases abutting with nothing between them (architect
+    // SAME RUN, the six keys with only the group gap's one px of ground
+    // between them (materials.h, 2026-11-02; architect
     // 2026-10-22, the
     // simple layout: "push all icons together … add a spacing after render",
     // the run gap after Render the run's end; redesign_button_opens_icon_run).
@@ -2974,7 +2975,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 
 // THE BAND'S GROUPS — true for the button that OPENS each group of the
 // roster's order. SINCE THE SIMPLE LAYOUT (2026-10-22) A GROUP PAINTS
-// NOTHING: the band's picture is its RUNS, the cases abutting inside a run
+// NOTHING: the band's picture is its RUNS, the keys a key pitch apart
+// inside a run (materials.h's THE GROUP GAP)
 // and run_gap_px of bare ground between two (redesign_button_opens_icon_run
 // below and program_spec.h's run_gap_px, the spacing's owners). What a group
 // still
@@ -3026,7 +3028,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 
 // THE BAND'S RUNS (architect 2026-10-22, the simple layout, on his layout mocks:
 // "push all icons together … add a spacing after render, and after
-// flatten"): the left members stand in THREE PLAIN RUNS, the cases abutting
+// flatten"): the left members stand in THREE PLAIN RUNS, the keys a key
+// pitch apart (materials.h's THE GROUP GAP)
 // and run_gap_px of bare ground between two (program_spec.h), each opened by
 // its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
@@ -5456,7 +5459,7 @@ struct AppState {
         // key shows the act; the clock paints nothing).
         GuiRect field{0, 0, 0, 0};
         // `rect` IS THE PAINTED KEY (architect 2026-11-02, R5: the group
-        // gap is not pressable; key_in_cell, materials.h), asked through the
+        // gap is not pressable; materials.h's THE GROUP GAP), asked through the
         // keys' one predicate, point_on_key; the clock's field is no key.
         bool contains(int x, int y) const {
             return point_on_key(rect, x, y) || rect_contains(field, x, y);
@@ -17670,27 +17673,30 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // (architect 2026-10-25). PLAY RENDERS READS PLAYER since 2026-10-24 (architect: "the
 // media player could be called the player instead of play"; PLAY until
 // then, the record's word), so the transport's PLAY names one key; PLAYER
-// fits its key at 300 / 200 / 150 % (54 of 69, 35 of 46, 27 of 36 device
-// px — the 150 % key the sum of its separately rounded parts, 2 + 30 + 2 +
-// 2, icon_case_w_px).
+// fits its key at 300 / 200 / 150 % (54 of 66, 35 of 44, 27 of 33 device
+// px — the square key at key_height 66, icon_case_w_px).
+// THE FIT IS STATED AT key_height 66 (the default, 2026-11-02): a smaller
+// tune narrows the key and its pitch, and neighbors' legends may then touch
+// — the tuning's own business, no fix here.
 // ZOOM TO FIT READS FIT since 2026-10-24 (architect; ZOOM 0 until then), and
 // the three keys of that day print their own words: START and END (the two
 // skips, back on row 8) and COPY (Copy Phase Resets, the band's first run's
 // since 2026-10-25). THE TWO HISTORY TOGGLES, back 2026-10-26, print SESSION
 // (the walk lamp's lit state) and CUMUL (Toggle Cumulative cut as ADD SEL
 // is): the planner's words, named to the architect for renaming. SESSION
-// fits at about 62 of 69, 42 of 46, 31 of 36 device px (MAGNIFY, the
+// fits at about 62 of 66, 42 of 44, 31 of 33 device px (MAGNIFY, the
 // widest, 64 / 43 / 32); CUMUL about 50 / 33 / 25.
 // ZOOM IN AND ZOOM OUT READ IN AND OUT (architect 2026-10-27: "Zoom In /
 // Zoom Out, or In / Out if too long"): ZOOM OUT does not fit its key —
-// about 75 of 69, 50 of 46, 38 of 36 device px — and the pair is one shape,
+// about 75 of 66, 50 of 44, 38 of 33 device px — and the pair is one shape,
 // so both take the short form though ZOOM IN would fit (about 60 / 40 / 30);
 // IN prints about 14 / 9 / 7, OUT 30 / 20 / 15.
 // RESTRICT READS RESTR (architect 2026-10-29, "defer to your measurement"):
 // at the legend face's 14 px em (kGuiFaceSizes, gui_font.h) RESTRICT runs
-// 70.0 px against the 69 px case and would leave about 4.5 px to FOLLOW's
-// legend beside it (59.1 px), under a word space, where today's tightest
-// pair, MAGNIFY (63.8) beside FOLLOW, keeps 7.5 px; RESTR runs 47.5 px.
+// 70.0 px against the 66 px key and would leave about 2.5 px to FOLLOW's
+// legend beside it (59.1 px) at the 67-px key pitch (the square key and the
+// one-px group gap, 2026-11-02), under a word space, where today's tightest
+// pair, MAGNIFY (63.8) beside FOLLOW, keeps about 5.5 px; RESTR runs 47.5 px.
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";
@@ -17804,8 +17810,8 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 //   view, a checkpoint publishing there included (the press is the plain
 //   save).
 // Every word fits its key at 300 / 200 / 150 % (CANCEL and COMMIT about 57
-// of 69, 37 of 46, 28 of 36 device px in the 14-px legend face, the keys
-// icon_case_w_px's sums of separately rounded parts; RECALL about 54 / 35 /
+// of 66, 37 of 44, 28 of 33 device px in the 14-px legend face, the square
+// key, icon_case_w_px; RECALL about 54 / 35 /
 // 27; CHECK about 49 / 33 / 25; PAUSE on the player's key about 46 / 30 /
 // 23), so none is shortened.
 // THE REPAINT: the word rides the face's stash (RedesignButtonFace::legend,

@@ -334,7 +334,7 @@ namespace {
 // yellow for lamps only; key_look); a DISABLED button keeps the face its
 // state gives, a dead checked button still lit (the roster's rule at
 // paint_icon_row), its glyph and legend dimmed by the caller. NO HOT FACE. `r` is the
-// PAINTED key, its cell less the group gap (key_in_cell, materials.h). ON
+// PAINTED key, the whole case (materials.h's THE GROUP GAP). ON
 // ITS FACE its caller paints the key's Breeze glyph (paint_key_glyph,
 // 2026-11-02); the legends, the word buttons' words among them, stand under
 // the key on the ground.
@@ -501,30 +501,37 @@ void paint_key_legend(cairo_t* cr, const GuiRect& key, std::string_view word,
                                 layout.seat.baseline);
 }
 
-// THE KEY GLYPH'S INK, device px at 300 % (architect 2026-11-01, "THE MAIN
-// PAGE IS SETTLED": ONE VISUAL SIZE, each drawing scaled by its ink box, the
-// larger side 20), scaled as every chrome length (skin_px).
-inline constexpr double kKeyGlyphInkAt300 = 20.0;
-
 // A KEY'S GLYPH ON ITS FACE (architect 2026-11-01 / 2026-11-02; icons.h's
 // THE INK BOX) — THE ONE PLACE the glyph's seat and tone are decided, every
 // key's (the band's, row 8's, the controls rows', the word buttons): the
-// Breeze drawing's ink box, its larger side skin_px(kKeyGlyphInkAt300),
-// CENTERED in the painted key `key` (the cell less the group gap), the
-// spare split with its odd px below and right (the integer floor, the
-// mock's). ITS TONE FOLLOWS THE FACE (materials.h's key_ink): kTextOnLit
-// 111111 when the key paints LIT (`look`, key_look's answer: checked, a dead
-// checked key keeping its fill), else kTextInk B5B5B5 on a resting or
-// pressed face, or kKeyDimInk 5A5A5A when the key is disabled — the
-// legend's own pair (paint_key_legend). The glyph is
-// clipped to the key: a key smaller than the ink box keeps its glyph
-// centered and lets nothing overhang onto the ground. None is today — the
-// keys 69 wide at 300 % and `key_height` tall, a tuning key no lower than
-// 21 against the glyph's 20, both scaled as the glyph is.
+// Breeze drawing's ink box, ONE VISUAL SIZE for every key (2026-11-01, "THE
+// MAIN PAGE IS SETTLED"), ITS LARGER SIDE FOLLOWING THE KEY (architect
+// 2026-11-02, mock sqm_01_66px): kKeyGlyphInkPerKeySide, 20 / 33, of the
+// `key_height` tuning key's device px at 300 % (render.h's seat) — 40 at the
+// default 66, 20 at 33 (the ratio the 20-px glyph stood at on the 33-row
+// key) — the product taken as one device length at 300 % and ROUNDED ONCE,
+// AT THE ELEMENT, by skin_px (its scaled_px's nearbyint; floored at one
+// px), never the side rounded first: 40 at 300 %, 27 at 200 %. A key_height
+// commit reaches it on the relayout road (GuiInputHandler::apply_key_height),
+// the icon caches keyed on the ink px. CENTERED in the painted key `key`
+// (the whole case), the spare split with its odd px below and right (the
+// integer floor, the mock's). THE ODD HALF PX IS ACCEPTED (architect
+// 2026-11-02: "I'd prefer slight misalignment over uneven sizing"): a
+// drawing whose ink side's parity differs from the key's stands half a px
+// off center rather than taking a size of its own, every key glyph keeping
+// the one ink size. ITS TONE FOLLOWS THE FACE (materials.h's key_ink):
+// kTextOnLit 111111 when the key paints LIT (`look`, key_look's answer:
+// checked, a dead checked key keeping its fill), else kTextInk B5B5B5 on a
+// resting or pressed face, or kKeyDimInk 5A5A5A when the key is disabled —
+// the legend's own pair (paint_key_legend). The glyph is clipped to the
+// key: a key smaller than the ink box keeps its glyph centered and lets
+// nothing overhang onto the ground. None is — the ink is 20 / 33 of the
+// key's own side, both rounded from the same device length at 300 %.
+constexpr double kKeyGlyphInkPerKeySide = 20.0 / 33.0;
 void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
                      bool enabled, KeyLook look) {
     if (key.w <= 0 || key.h <= 0) return;
-    const int ink = skin_px(kKeyGlyphInkAt300, 1);
+    const int ink = skin_px(kKeyGlyphInkPerKeySide * key_height_at300(), 1);
     const icons::InkSize size = icons::glyph_ink_size(icon, ink);
     if (size.w <= 0 || size.h <= 0) return;
     const int x = key.x + static_cast<int>(std::floor((key.w - size.w) * 0.5));
@@ -736,7 +743,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // together … add a spacing after render, and after flatten"): the roster's
 // left members in THREE PLAIN RUNS on the ground — Open Project .. Render,
 // Zoom to Fit .. Flatten, Play Renders .. Score — the keys
-// abutting inside a run and run_gap_px of ground between two
+// a key pitch apart inside a run (the group gap's one px between two,
+// materials.h) and run_gap_px of ground between two
 // (redesign_button_opens_icon_run, app_state.h, the runs' leaders); the
 // right five — the history opener and the two view pairs — ONE RUN ending
 // at the well's right edge column, the left walk starting at its left
@@ -1117,7 +1125,7 @@ constexpr IconRowDef kIconRowViewPairs[2][2] = {
 };
 
 // THE BAND'S RIGHT RUN (architect 2026-10-22, the simple layout): the
-// history opener and the two view pairs, five cases abutting in painted
+// history opener and the two view pairs, five keys a key pitch apart in painted
 // order, right-anchored (icon_row_seats), never hidden.
 constexpr IconRowDef kIconRowRightRun[] = {
     kIconRowHistoryOpener,
@@ -1446,9 +1454,9 @@ static void icon_row_walk(bool history,
 // stands one run gap left of its first case — they paint under a clip
 // ending there and publish only the columns they painted, so a window too
 // narrow for the band covers them and never the right run. THE LEFT WALK
-// starts AT THE WELL'S LEFT EDGE COLUMN, each run's cells abutting from
-// its x (each key its cell less the group gap, key_in_cell, materials.h),
-// the next run a run gap after its last cell. The band is flush with
+// starts AT THE WELL'S LEFT EDGE COLUMN, each run's keys a key pitch apart
+// from its x (key_group_pitch_px, materials.h: the key and the group gap's
+// one px of ground), the next run a run gap after its last key. The band is flush with
 // the well's edge columns at both ends, no inset of its own (program_spec.h's strip-ends
 // block).
 struct IconRowSeats {
@@ -1456,8 +1464,12 @@ struct IconRowSeats {
     int left_x = 0;      // the left walk's first case
     int right_x = 0;     // the right run's first case (the history opener)
     int left_limit = 0;  // the left runs' clip, a run gap short of it
-    int case_x(int run_x, int i) const { return run_x + i * btn_w; }
-    int next_run_x(int run_x, int n) const { return run_x + n * btn_w + gap; }
+    int case_x(int run_x, int i) const {
+        return run_x + i * key_group_pitch_px();
+    }
+    int next_run_x(int run_x, int n) const {
+        return run_x + key_group_w_px(n) + gap;
+    }
 };
 static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
     const WellColumns well = well_columns(app);
@@ -1468,8 +1480,8 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
     s.btn_y = lane.y + band_case_top_offset_px();
     s.left_x = well.x;
     const int right_end = well.end;
-    s.right_x =
-        right_end - static_cast<int>(std::size(kIconRowRightRun)) * s.btn_w;
+    s.right_x = right_end - key_group_w_px(
+                                static_cast<int>(std::size(kIconRowRightRun)));
     s.left_limit = s.right_x - s.gap;
     return s;
 }
@@ -1665,34 +1677,31 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // too narrow for the row covers members otherwise, under the view pairs'
     // overflow rule — a width, never a state.
     //
-    // THE WIDTH MATH, RE-DERIVED for the simple layout (2026-10-22; the case
-    // Cool Edit's own 23 round its 20-W seat; the ends the well's edge
-    // columns since 2026-10-23): in Windows px, from the well's left edge column,
-    // the runs, each 23n with 15 between two; the right run 5 · 23 = 115
-    // ending at the well's right edge column. Outside the `h` view the LEFT WALK is
-    // twenty-two members in three runs (re-derived 2026-10-29, the Restrict
-    // lamp behind Follow in the second),
-    //   22·23 + 2·15 = 536,
+    // THE WIDTH MATH, RE-DERIVED for the square key at key_height 66
+    // (2026-11-02; the ends the well's edge columns since 2026-10-23; a tune
+    // of key_height moves every number but the run gap): in device px at 300 %, from
+    // the well's left edge column, the runs, each n keys of 66 and the n − 1
+    // one-px group gaps between them (key_group_w_px: 66n + n − 1), 45 of
+    // ground (the run gap) between two; the right run 5 · 66 + 4 = 334
+    // ending at the well's right edge column. Outside the `h` view the LEFT
+    // WALK is twenty-two members in three runs of 6, 10 and 6,
+    //   401 + 45 + 669 + 45 + 401 = 1561,
     // and inside it thirteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
     // Renders, Enable Tooltips, Noise — Restrict and the Trim Presets key
     // hidden there with Follow),
-    // 13·23 + 2·15 = 329;
+    //   267 + 45 + 401 + 45 + 200 = 958;
     // with one run gap of bare ground before the right run the band holds every
     // run at
-    //   536 + 15 + 115 = 666
-    // Windows px outside the view (459 inside it) — the well's 2258 device
-    // px on the tablet at 300 % (752⅔ W) with 260 px (86⅔ W) of ground
-    // between the left runs and the right run beyond the run gap. IN DEVICE
-    // PX, off the painted
-    // walk (each case its rounded parts, the gap its own scaled_px, the ends
-    // well_columns'; re-derived 2026-10-28, the columns the
-    // well's edge hairlines, and again 2026-10-29 with the Restrict
-    // lamp): at
-    // the tablet's 300 % (cases 69, the gap 45, the well 23 .. 2281) the left
-    // runs on x 23..1630, the right run 1936..2280; at 138 % on a 1920-px
-    // window (cases 31, the gap 21, the well 15 .. 1905) the left runs on x 15..738,
-    // the right run 1750..1904. A roster move restates these numbers.
+    //   1561 + 45 + 334 = 1940
+    // device px outside the view (1337 inside it) — the well's 2258 on the
+    // tablet with 318 px of ground between the left runs and the right run
+    // beyond the run gap. Off the painted walk (the key skin_px(key_height), the
+    // gap its own scaled_px, the ends well_columns'): at the tablet's 300 %
+    // (keys 66, the gap 45, the well 23 .. 2281) the left runs on x
+    // 23..1583, the right run 1947..2280; at 138 % on a 1920-px window
+    // (keys 30, the gap 21, the well 15 .. 1905) the left runs on x 15..735,
+    // the right run 1751..1904. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -1752,10 +1761,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     }
     paint_logo_lane(cr, lane);
 
-    // THE KEY AND ITS LEGEND (2026-10-23): the flat key a composite of its
-    // rounded parts (render.h's program block) less the group gap
-    // (key_in_cell, materials.h: one device px off each side that abuts a
-    // neighbor in its run), its legend centered under it in the bottom pad
+    // THE KEY AND ITS LEGEND (2026-10-23): the flat key the whole square
+    // case (render.h's program block; materials.h's THE GROUP GAP, its
+    // neighbors in its run a key pitch away), its legend centered under it in the bottom pad
     // (key_legend_layout, which names the legend's face; this row selects
     // none of its own) — THE BAND'S SEATS the one layout (icon_row_seats,
     // above, where the right run's place and the left runs' limit are
@@ -1777,10 +1785,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // what the publication's coverage test and the repaint gate read, cut
     // by `clip_x2` — the left runs' limit, the column the overflow clip
     // ends at (the right run paints whole: INT_MAX).
-    const auto paint_member = [&](const IconRowDef& def, int bx, int i, int n,
+    const auto paint_member = [&](const IconRowDef& def, int bx,
                                   int clip_x2) {
-        const GuiRect key = key_in_cell(GuiRect{bx, btn_y, btn_w, btn_h},
-                                        i > 0, i < n - 1);
+        const GuiRect key{bx, btn_y, btn_w, btn_h};
         // THE PUBLISHED HIT BOX: the key, its columns past the clip cut.
         const GuiRect published{
             key.x, key.y,
@@ -1915,8 +1922,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const int n = static_cast<int>(run.size());
         for (int i = 0; i < n; ++i) {
             const int bx = seats.case_x(x, i);
-            paint_member(run[static_cast<std::size_t>(i)], bx, i, n,
-                         left_limit);
+            paint_member(run[static_cast<std::size_t>(i)], bx, left_limit);
         }
         x = seats.next_run_x(x, n);
     }
@@ -1931,8 +1937,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const int right_n = static_cast<int>(std::size(kIconRowRightRun));
     for (int i = 0; i < right_n; ++i) {
         const int bx = seats.case_x(seats.right_x, i);
-        paint_member(kIconRowRightRun[static_cast<std::size_t>(i)], bx, i,
-                     right_n, std::numeric_limits<int>::max());
+        paint_member(kIconRowRightRun[static_cast<std::size_t>(i)], bx,
+                     std::numeric_limits<int>::max());
     }
 
     cairo_restore(cr);
@@ -2016,7 +2022,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE BAND'S (the unification's point — "the same size as
 // the other icon buttons", bigger finger targets without stealing waveform
-// height): the program's 23-W case round Cool Edit's 20-W seat — read from
+// height): the program's square key (2026-11-02) — read from
 // the band's own accessors (render.h's program block) so the rows cannot
 // drift apart — on THE ROW'S OWN GROUND, the strip pad above the case and
 // below it (the simple layout, 2026-10-22; Cool Edit's row 8 under its dock
@@ -2219,8 +2225,8 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
 // (Until 2026-10-18 Switch Tab and Center closed the marker-walk group and
 // this group was the four arrows with Play.)
 //
-// PLAY / STOP IS THE GROUP'S LAST MEMBER, abutting the right nudge with no
-// bar or gap between them, and so closes the row at the far
+// PLAY / STOP IS THE GROUP'S LAST MEMBER, beside the right nudge with no
+// bar or run gap between them (the group gap alone), and so closes the row at the far
 // right outside the `h` view (architect 2026-10-12, revising his own ruling
 // of the same morning that seated Play at the marker group's head, and
 // correcting the one-member group of the hours after it: "no division
@@ -2290,9 +2296,9 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // color should not be this yellowish color") — 39 DEVICE PX TALL at
 // 300 % (time_field_h_px, scaled with gui_scale; it does not follow the
 // key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a half-row tie
-// toward the top, the cap rule's own; taller than the case at key_height
-// 33, it stands three rows over the strip pads either side,
-// time_field_rect: row 8's 1365 .. 1403 round the case's 1368 .. 1400), its
+// toward the top, the cap rule's own; inside the square 66-row case at
+// key_height 66, time_field_rect: row 8's 1348 .. 1386 on the case's
+// 1335 .. 1400), its
 // run in THE
 // PROGRAM FACE, 22 px at 300 %, in every time field (row 8's clock,
 // architect 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to
@@ -2393,8 +2399,9 @@ static std::string clock_time_text(const AppState& app,
 // (17 W tall with a 5-W pad, scaled_px, 2026-10-09 to 2026-10-23: Cool
 // Edit's field, then the dialog field's pad; git history.)
 // THE FIELD STANDS AT 39 WHATEVER THE KEY'S HEIGHT (architect 2026-10-29):
-// it does not shrink with the `key_height` tuning key, so at 33 it is the
-// taller of the two, centred on the case's rows over the pads
+// it is no key and does not take the key's side, so at key_height's default
+// 66 (the square key, 2026-11-02) it is the shorter of the two, and under a
+// key_height below 39 the taller, centred on the case's rows either way
 // (time_field_rect).
 constexpr double kTimeFieldHeightAt300 = 39.0;
 constexpr double kTimeFieldPadAt300    = 12.0;
@@ -2521,8 +2528,9 @@ static Row8Lengths row8_lengths() {
 // input_pointer.cpp), so the count is of the members that stand, and a
 // group stands only while it keeps a member. Outside the view nothing is
 // hidden and this is every table's whole length. THE STANDING GROUPS ARE
-// PLAIN RUNS (2026-10-22), the run gap between two, the last case ending at
-// the row's cases_right.
+// PLAIN RUNS (2026-10-22), each its keys a key pitch apart
+// (key_group_w_px, materials.h), the run gap between two, the last case
+// ending at the row's cases_right.
 struct Row8Block {
     int x = 0;                               // the block's left edge
     int standing[kRow8GroupCount] = {};
@@ -2541,7 +2549,7 @@ static Row8Block row8_block(const AppState& app, bool history,
         for (const TransportRowDef& def : kRow8Groups[gi])
             if (!row8_hides(history, def)) ++b.standing[gi];
         if (b.standing[gi] > 0) {
-            block_w += b.standing[gi] * l.btn_w;
+            block_w += key_group_w_px(b.standing[gi]);
             ++groups;
         }
     }
@@ -2550,10 +2558,10 @@ static Row8Block row8_block(const AppState& app, bool history,
     return b;
 }
 // THE BLOCK'S ONE WALK, left to right from its left edge: per standing
-// group its standing members' cells abutting (`member(def, x, i, n)`, `def`
-// the seated member, `i` its place among the group's `n` standing members —
-// the group gap's question, key_in_cell), the run gap before every group but
-// the first; each hidden member (`hidden(def)`) wherever it falls.
+// group its standing members' keys a key pitch apart (`member(def, x)`,
+// `def` the seated member, `x` its key's left column; the group gap between
+// two, materials.h), the run gap before every group but the first; each
+// hidden member (`hidden(def)`) wherever it falls.
 template <class Member, class Hidden>
 static void row8_block_walk(bool history, const Row8Block& b,
                             const Row8Lengths& l, Member&& member,
@@ -2562,7 +2570,6 @@ static void row8_block_walk(bool history, const Row8Block& b,
     bool any_open = false;
     for (int gi = 0; gi < kRow8GroupCount; ++gi) {
         bool group_open = false;
-        int  i = 0;
         for (const TransportRowDef& seat : kRow8Groups[gi]) {
             const TransportRowDef& def = transport_row_seated(seat, history);
             if (row8_hides(history, seat)) {
@@ -2573,8 +2580,10 @@ static void row8_block_walk(bool history, const Row8Block& b,
                 if (any_open) ax += l.gap;
                 group_open = true;
                 any_open   = true;
+            } else {
+                ax += kKeyGapPx;
             }
-            member(def, ax, i++, b.standing[gi]);
+            member(def, ax);
             ax += l.btn_w;
         }
     }
@@ -2600,14 +2609,14 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
 
 // ONE TIME FIELD'S RECT: its left line at `x`, `w` wide, centred on the
 // case's rows [case_y, case_y + case_h), A HALF-ROW TIE TOWARD THE TOP
-// either way (the offset FLOORED: since 2026-10-29 the field, 39 at 300 %
-// (kTimeFieldHeightAt300, 2026-11-01), stands TALLER than the case at
-// key_height 33, the offset negative, and
-// truncation would have sent the tie down). Taller, it stands over the
-// strip pads either side of the case — 3 rows above and 3 below at 300 %,
-// 2 and 2 at 200 % (the 26-row field round the 22-row case) — and inside
-// row 8's and the controls row's rows at every key height in the key's
-// range, the overhang at most 9 rows where the pads are 39 at 300 %.
+// either way (the offset FLOORED, so a field TALLER than the case — as it
+// stands under a key_height below 39 — takes the tie upward too, where
+// truncation would send it down). At key_height 66 the field, 39 at 300 %
+// (kTimeFieldHeightAt300, 2026-11-01), is the shorter: 13 rows of the case
+// above it and 14 below at 300 %, 9 and 9 at 200 % (the 26-row field in
+// the 44-row case); a taller field stands over the strip pads either side,
+// inside row 8's and the controls row's rows at every key_height in the
+// key's range.
 static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
     const int h = time_field_h_px();
     const int d = case_h - h;
@@ -2637,11 +2646,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_w     = seats.case_w;
     const int btn_h     = seats.case_h;
     const int btn_y     = seats.case_y;
-    // THE GROUPS ARE PLAIN RUNS (the simple layout, 2026-10-22): the cells
-    // abutting inside a group, each key its cell less the group gap
-    // (key_in_cell, materials.h: two device px of ground between two keys,
-    // the painted key the hit box, architect 2026-11-02, R5), the run gap
-    // of bare ground between two groups
+    // THE GROUPS ARE PLAIN RUNS (the simple layout, 2026-10-22): the keys a
+    // key pitch apart inside a group (materials.h's THE GROUP GAP: one
+    // device px of ground between two keys, the painted key the hit box,
+    // architect 2026-11-02, R5), the run gap of bare ground between two groups
     // (row8_block;
     // the bars between groups 2026-10-21 to 2026-10-22, Cool Edit's grippers
     // and end bars before).
@@ -2653,10 +2661,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // checked face while the mode stands, which is the roster's standing rule
     // for a mode. A checked button a mode greys keeps its checked face and
     // dims its legend, the band's own composition.
-    const auto paint_button = [&](const TransportRowDef& def, int x, int i,
-                                  int n) {
-        const GuiRect cell{x, btn_y, btn_w, btn_h};
-        const GuiRect key = key_in_cell(cell, i > 0, i < n - 1);
+    const auto paint_button = [&](const TransportRowDef& def, int x) {
+        const GuiRect key{x, btn_y, btn_w, btn_h};
         // The legend names the next press's act (2026-10-25, the band's
         // rule: redesign_button_legend's stateful overload).
         const char* legend = redesign_button_legend(app, audio, def.id);
@@ -3051,8 +3057,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // (row8_block_walk, the one walk).
         row8_block_walk(
             history, block, lengths,
-            [&](const TransportRowDef& def, int bx, int i, int n) {
-                paint_button(def, bx, i, n);
+            [&](const TransportRowDef& def, int bx) {
+                paint_button(def, bx);
             },
             [&](const TransportRowDef& def) {
                 (void)publish_button_face(cr, app, audio, playback,
@@ -5203,11 +5209,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // at the field's declaration).
 //
 // METRICS. The seats are the controls row's (modal_controls_seats: the box's
-// outer columns, no row-8 pad, no tail): every key the program's case
-// at the case's seat, the cells abutting (modal_word_buttons, the player's
-// player_row_layout), each key its cell less the group gap (the button
-// walk, key_in_cell). (The 6-W inter-button gap, the old popup's 8 laptop
-// px, stood until 2026-10-23.) The text in the box stands on the list rows'
+// outer columns, no row-8 pad, no tail): every key the program's square
+// case at the case's seat, a group's keys a key pitch apart, the group gap's
+// one px of ground between two (modal_word_buttons, the player's
+// player_row_layout; materials.h's key_group_pitch_px). (The 6-W
+// inter-button gap, the old popup's 8 laptop px, stood until 2026-10-23.)
+// The text in the box stands on the list rows'
 // text seat, 18 px in from the box's outer edges at 300 % on all four sides
 // (modal_box.h's THE TEXT SEAT), one list row pitch a row.
 // (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
@@ -5299,9 +5306,9 @@ std::optional<icons::Icon> modal_word_icon(std::string_view word) {
 // (the controls row's, modal_controls_seats) the words `labels`, in painted
 // order. EVERY WORD BUTTON IS A KEY (architect 2026-10-23) — the program's
 // case at the case's seat (seats.case_*), its word printed under it in
-// capitals as a legend (paint_key_legend's one seat) — the cells ABUTTING
-// as the player's and the band's do (each key its cell less the group gap,
-// the button walk's key_in_cell), THE CLUSTER
+// capitals as a legend (paint_key_legend's one seat) — the keys a key pitch
+// apart as the player's and the band's are (materials.h's THE GROUP GAP),
+// THE CLUSTER
 // FLUSH RIGHT, its last key's right edge the row's right seat (the box's
 // outer right column); wider than the row it starts at the row's left seat.
 // A legend never widens its key, so the layout reads the words' count alone.
@@ -5316,11 +5323,11 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
     const int w = seats.case_w;
     for (std::size_t i = 0; i < labels.size(); ++i)
         out.rect.push_back(GuiRect{0, seats.case_y, w, seats.case_h});
-    const int total = w * static_cast<int>(labels.size());
+    const int total = key_group_w_px(static_cast<int>(labels.size()));
     int x = std::max(seats.left_x, seats.cases_right - total);
     for (GuiRect& r : out.rect) {
         r.x = x;
-        x += r.w;
+        x += key_group_pitch_px();
     }
     return out;
 }
@@ -5339,14 +5346,16 @@ struct PlayerRowLayout {
 };
 static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     PlayerRowLayout l;
-    // THE CASES ABUT (architect 2026-10-22, "the buttons should be
-    // touching"): nothing stands between two of the row's boxes, as the
-    // band's and row 8's cases abut; THE GROUP SPACE between its items is
+    // THE CASES TOUCH (architect 2026-10-22, "the buttons should be
+    // touching"): only the group gap's one px of ground stands between two
+    // of a run's boxes (2026-11-02; materials.h's key_group_pitch_px), as
+    // the band's and row 8's keys stand; THE GROUP SPACE between its items is
     // kPlayerGroupGapPx, its own since the roster's groups became Cool
     // Edit's (2026-10-09). The press reads the rects the button walk
-    // publishes from this layout (modal_dialog_button_hit), half-open, so
-    // two abutting cases share no pixel.
+    // publishes from this layout (modal_dialog_button_hit), the painted
+    // keys, so the gap between two answers nothing.
     const int group    = scaled_px(kPlayerGroupGapPx);
+    const int pitch    = key_group_pitch_px();
 
     // THE CLOCK'S TWO FIELDS ARE MEASURED BEFORE ANYTHING IS PLACED,
     // their width being one of the fixed terms the scrub's own is what is
@@ -5366,30 +5375,29 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // -- The walk: the fixed left run, the right-flushed PAIR (word
     //    buttons until 2026-09-01, glyph boxes since), and the scrub
     //    taking what is between them. --
-    const int bw  = seats.case_w;
     const int cx0 = seats.left_x;
-    int px = cx0;
-    l.x[0] = px; px += bw;                 // Home (skip back)
-    l.x[1] = px; px += bw;                 // Play / Pause
-    l.x[2] = px; px += bw;                 // End (skip forward)
-    l.scrub_x0 = px + group;
+    l.x[0] = cx0;                          // Home (skip back)
+    l.x[1] = cx0 + pitch;                  // Play / Pause
+    l.x[2] = cx0 + 2 * pitch;              // End (skip forward)
+    l.scrub_x0 = cx0 + key_group_w_px(3) + group;
 
     // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
     // was Load in place · Close as WORDS, measured runs in label boxes):
-    // both are the program's key now, so the cluster is two abutting
-    // boxes — right-flushed where THE CONTROLS ROW'S
+    // both are the program's key now, so the cluster is two boxes a key
+    // pitch apart — right-flushed where THE CONTROLS ROW'S
     // CASES END, the last box's right edge the box's outer right column
     // (architect 2026-10-14, modal_controls_seats' cases_right; row 8's
     // last case's from 2026-10-05).
-    const int words_w  = bw + bw;
+    const int words_w  = key_group_w_px(2);
     const int words_x0 = std::max(cx0, seats.cases_right - words_w);
     // What the row owes AFTER the scrub: the group space, the clock
     // cell, the group space, the lamp, THE HIGHLIGHT PAIR AND THE UP A
-    // FOLDER BUTTON, the four boxes abutting, and the right-flushed pair
-    // directly after them (the 2026-08-29 spacing ruling, the word buttons'
-    // own gap there, spent with the words on 2026-09-01).
+    // FOLDER BUTTON, the four boxes a key pitch apart, and the
+    // right-flushed pair one group gap after them, the six one run (the
+    // 2026-08-29 spacing ruling, the word buttons' own gap there, spent with
+    // the words on 2026-09-01).
     const int after_scrub =
-        group + clock_w + group + 4 * bw;
+        group + clock_w + group + key_group_w_px(4) + kKeyGapPx;
     // THE FLOOR IS TWO THUMBS (2026-10-25; two 14-W handle boxes until
     // then) — a channel shorter than two of the thumbs that ride it is not a
     // channel. `scrub_w` is the CHANNEL's width; the thumb's center runs its
@@ -5401,11 +5409,11 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
     l.x[3] = l.clock_end + group;          // Repeat one
-    l.x[4] = l.x[3] + bw;                  // Highlight Next (Down)
-    l.x[5] = l.x[4] + bw;                  // Highlight Previous (Up)
-    l.x[6] = l.x[5] + bw;                  // Up a Folder
+    l.x[4] = l.x[3] + pitch;               // Highlight Next (Down)
+    l.x[5] = l.x[4] + pitch;               // Highlight Previous (Up)
+    l.x[6] = l.x[5] + pitch;               // Up a Folder
     l.x[7] = words_x0;                     // Load in place
-    l.x[8] = words_x0 + bw;                // Close
+    l.x[8] = words_x0 + pitch;             // Close
     return l;
 }
 
@@ -5440,16 +5448,17 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
     l.cell_pad = time_field_pad_px();
     l.cell_w   = time_field_w_px(
         text_shape::memoized_run(cfont, digits + " / " + digits)->width_px);
-    const int bw  = seats.case_w;
+    const int pitch = key_group_pitch_px();
     const int cx0 = seats.left_x;
     l.x[0] = cx0;                          // PREV
-    l.x[1] = cx0 + bw;                     // NEXT
-    l.scrub_x0 = cx0 + 2 * bw + group;
-    const int words_x0 = std::max(cx0, seats.cases_right - 4 * bw);
+    l.x[1] = cx0 + pitch;                  // NEXT
+    l.scrub_x0 = cx0 + key_group_w_px(2) + group;
+    const int words_x0 =
+        std::max(cx0, seats.cases_right - key_group_w_px(4));
     l.scrub_w = words_x0 - (group + l.cell_w + group) - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.cell_x0 = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
-    for (int i = 0; i < 4; ++i) l.x[2 + i] = words_x0 + i * bw;  // RESET .. CLOSE
+    for (int i = 0; i < 4; ++i) l.x[2 + i] = words_x0 + i * pitch;  // RESET .. CLOSE
     return l;
 }
 
@@ -5473,18 +5482,19 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     l.field_w   = time_field_w_px(time_field_metrics().time_w);
     l.field_gap = scaled_px(kTimeFieldGapPx);
     const int clock_w = l.field_w + l.field_gap + l.field_w;
-    const int bw  = seats.case_w;
+    const int pitch = key_group_pitch_px();
     const int cx0 = seats.left_x;
     l.x[0] = cx0;                          // BACK
-    l.x[1] = cx0 + bw;                     // PLAY / PAUSE
-    l.x[2] = cx0 + 2 * bw;                 // FWD
-    l.scrub_x0 = cx0 + 3 * bw + group;
-    const int words_x0 = std::max(cx0, seats.cases_right - 4 * bw);
+    l.x[1] = cx0 + pitch;                  // PLAY / PAUSE
+    l.x[2] = cx0 + 2 * pitch;              // FWD
+    l.scrub_x0 = cx0 + key_group_w_px(3) + group;
+    const int words_x0 =
+        std::max(cx0, seats.cases_right - key_group_w_px(4));
     l.scrub_w = words_x0 - (group + clock_w + group) - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
-    for (int i = 0; i < 4; ++i) l.x[3 + i] = words_x0 + i * bw;  // RESET .. CLOSE
+    for (int i = 0; i < 4; ++i) l.x[3 + i] = words_x0 + i * pitch;  // RESET .. CLOSE
     return l;
 }
 
@@ -5495,7 +5505,8 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
 // key's right edge the row's (every word row's alignment rule), nothing at
 // the row's left, as the player seats its pair in its right cluster. Every
-// key the row's case (seats.case_w); on a row too narrow for the keys,
+// key the row's case (seats.case_w), a key pitch apart
+// (key_group_pitch_px, materials.h); on a row too narrow for the keys,
 // the cluster starts at the row's left seat, the buttons whole (THE BUTTONS
 // STAY WHOLE).
 // THE BPM FORM'S ROW (architect 2026-10-29) is the same cluster of two,
@@ -5504,9 +5515,9 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 static std::vector<int> key_cluster_row_layout(const BottomRowSeats& seats,
                                                int n) {
     std::vector<int> x(static_cast<std::size_t>(n));
-    const int bw = seats.case_w;
-    const int x0 = std::max(seats.left_x, seats.cases_right - n * bw);
-    for (int i = 0; i < n; ++i) x[static_cast<std::size_t>(i)] = x0 + i * bw;
+    const int pitch = key_group_pitch_px();
+    const int x0 = std::max(seats.left_x, seats.cases_right - key_group_w_px(n));
+    for (int i = 0; i < n; ++i) x[static_cast<std::size_t>(i)] = x0 + i * pitch;
     return x;
 }
 
@@ -6096,8 +6107,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     const int cx1 = seats.right_x;                      // one past the row's right seat
     // EVERY BUTTON IS CENTRED ON THE CASE ROWS (architect 2026-10-14, the
-    // family's controls row): the push button on the rows the player's cases
-    // take, 23 W on 23 W under win2000, so the rows coincide
+    // family's controls row): every button the square key on the rows the
+    // player's cases take, so the rows coincide
     // (modal_word_buttons). (Centered in the bottom row's content band, the
     // taskbar dialog's centered band before it, until that day.)
     const int btn_y = seats.case_y;
@@ -6270,8 +6281,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    except the scrub. THE BOXES ARE ROW 8'S CASES (architect
         //    2026-10-05, bottom_row_seats; the program's since 2026-10-09):
         //    each box wears the roster's face (paint_roster_case; the walk
-        //    below) on the program's 23-W case at row 8's seat, the roster's
-        //    glyph at its (+1, +1) lines, the row on the panel's face (the
+        //    below) on the program's square key at row 8's seat, the
+        //    roster's glyph centered on it, the row on the panel's face (the
         //    player is the program's tenant of the row, paint_bottom_strip).
         //    Sound Recorder stays the model for the scrub's channel, the
         //    scrub's thumb Windows' trackbar thumb (render.h's scrub block,
@@ -6295,7 +6306,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    ordering of convenience. --
         dlg.owner  = AppState::ModalDialogOwner::Player;
 
-        // THE ROW'S LAYOUT is player_row_layout's (the abutting cases, the
+        // THE ROW'S LAYOUT is player_row_layout's (the runs of keys, the
         // group space, the clock's two fields measured first, the fixed left run,
         // the right-flushed pair and the scrub taking what is between them —
         // the rules stated there). THE CLOCK'S FACE IS ROW 8'S CLOCK'S, THE
@@ -6756,20 +6767,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //    second painter. --
     for (size_t i = 0; i < plan.size(); ++i) {
         const int x = plan[i].x;
-        // THE CELL and THE KEY painted in it, the published hit box
+        // THE KEY, the whole case at the plan's x, the published hit box
         // (out.rect below; architect 2026-11-02, R5: the group gap is not
-        // pressable, point_on_key, materials.h): the cell less the group gap
-        // on each side that abuts a neighbor's cell (key_in_cell; architect
-        // 2026-11-01, M5 / M7: two device px of ground between two abutting
-        // keys) — the gap read off the plan's own x's, so every owner's
-        // arrangement (the player's runs, the word clusters) takes it with
-        // no table of its own.
-        const GuiRect r{x, btn_y, plan[i].w, btn_h};
-        const bool joined_left =
-            i > 0 && plan[i - 1].x + plan[i - 1].w == x;
-        const bool joined_right =
-            i + 1 < plan.size() && x + plan[i].w == plan[i + 1].x;
-        const GuiRect key = key_in_cell(r, joined_left, joined_right);
+        // pressable, point_on_key, materials.h) — the group gap standing in
+        // the plan's own x's, every owner's layout laying its keys a key
+        // pitch apart (key_group_pitch_px).
+        const GuiRect key{x, btn_y, plan[i].w, btn_h};
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat

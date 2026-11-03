@@ -307,8 +307,8 @@ struct WaveformCache {
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
 // foot) — the ruler lane, the marker lane and the foot line, 32 + 40 + 1 =
-// 73 device rows at 300 % where the whole strip from row 0 is 236
-// (re-derived 2026-11-02, the flat well). Every cue pixel is
+// 73 device rows at 300 % where the whole strip from row 0 is 269 at
+// key_height 66 (re-derived 2026-11-02, the square key). Every cue pixel is
 // inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
 // the font: in paint_cues (render.cpp) every label's face box and its text
 // are painted under a clip of the label's span
