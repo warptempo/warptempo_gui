@@ -64,7 +64,7 @@ public:
     // app_state.h). Nothing reads it before a load: the no-audio state greys
     // every face, and the one fork that reaches the map
     // (overview_command_target — Zoom to Fit's tooltip and, since
-    // 2026-10-25, its legend) answers its no-op first there; the assert is
+    // 2026-11-02, its glyph) answers its no-op first there; the assert is
     // that claim.
     int64_t working_column()  const {
         assert(working_column_ > 0);

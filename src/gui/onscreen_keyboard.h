@@ -615,9 +615,9 @@ inline bool stands(const AppState& a) {
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
 //     arithmetic at modal_box.h's head; at 300 %, the strip pad's 13 W,
-//     key_height 66 and the keyboard's defaults the controls row
-//     944–1087, its cases 983–1048, the box 177–943, its top under the
-//     band's rows 0–176 with the 72-row logo lane, 2026-10-24).
+//     key_height 60 and the keyboard's defaults the controls row
+//     950–1087, its cases 989–1048, the box 171–949, its top under the
+//     band's rows 0–170 with the 72-row logo lane, 2026-10-24).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press or the
 // touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),

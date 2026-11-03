@@ -3056,8 +3056,8 @@ private:
     // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
     // along the pen's axis as the tip rises — NOT THE HAND. 12 W sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
-    // the neighboring button, a key pitch (67 px at 300 % and 80 at 360 %
-    // at key_height 66, the square key and its one-px group gap since
+    // the neighboring button, a key pitch (61 px at 300 % and 73 at 360 %
+    // at key_height 60, the square key and its one-px group gap since
     // 2026-11-02), and below a move to
     // the next lit row, a popup row (17 W under Windows 2000 —
     // ChromeSpec::popup_item_height_px), so one row's

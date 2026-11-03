@@ -39,10 +39,9 @@
 // Body row with the rest); TITLE 24 Bold (the logo lane's brand "Warptempo"
 // alone; architect 2026-10-24, "the caption size 24", off the logo mocks),
 // RULER 14 BOLD (the ruler's digits alone; architect 2026-11-01 night, M5c:
-// "smaller and bold … 1px larger than icon legend" — the legends' 14, in
-// Bold), LEGEND 14
-// Regular (the keys' printed legends alone; the tooltip wore it the first
-// night of the skin), KEYS 24 Regular (the on-screen keyboard's caps alone —
+// "smaller and bold … 1px larger than icon legend" — the keys' printed
+// legends' 14, in Bold; the legends and their LEGEND 14 Regular row
+// retired 2026-11-02, the keys printing no word), KEYS 24 Regular (the on-screen keyboard's caps alone —
 // the letters, the symbols page's characters and the word caps, "a separate
 // face"; architect 2026-10-24, "C24" off 22 / 24 / 26 / 28 on
 // his type sheet — the night's C34, off 22 / 28 / 34 / 40, stood
@@ -92,11 +91,11 @@
 
 // THE USES (the head's table): the body, the brand's bold, the ruler's
 // digits (`Small`), row 8's clock and state line, the player's clocks and
-// the tooltip's name line (`Program`), the keys' legends, the on-screen
-// keyboard's caps (`Keys`), the tooltip's hint line (`Hint`) and the cues'
-// labels with the lane's editors (`Label`).
-enum class GuiFace { Body, Bold, Small, Program, Legend, Keys, Hint, Label };
-inline constexpr std::size_t kGuiFaceCount = 8;
+// the tooltip's name line (`Program`), the on-screen keyboard's caps
+// (`Keys`), the tooltip's hint line (`Hint`) and the cues' labels with the
+// lane's editors (`Label`).
+enum class GuiFace { Body, Bold, Small, Program, Keys, Hint, Label };
+inline constexpr std::size_t kGuiFaceCount = 7;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
 // Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the APK's
@@ -106,7 +105,7 @@ inline constexpr std::size_t kGuiFaceCount = 8;
 // index here. Both are TrueType (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
-    "LiberationSans-Regular.ttf", // 0: the body, the clocks, the legends, the caps, the hint
+    "LiberationSans-Regular.ttf", // 0: the body, the clocks, the caps, the hint
     "LiberationSans-Bold.ttf",    // 1: the brand, the ruler, the cues
 };
 
@@ -123,7 +122,6 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {1, 14.0},   // Small: the ruler's digits, Bold
     {0, 22.0},   // Program: row 8's clock and state line, the player's
                  // clocks, the tooltip's name line
-    {0, 14.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
     {0, 18.0},   // Hint: the tooltip's hint line

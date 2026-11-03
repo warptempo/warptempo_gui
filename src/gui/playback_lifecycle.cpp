@@ -99,7 +99,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // ENGINE'S CURSOR, read through the one position face before the fence
     // (the resting cursor is the active tab's remembered position, whose
     // write-through is the viewer's act), the controls row damaged for the
-    // play key's legend. Every viewer stop — the pause, the natural end, the
+    // play key's glyph. Every viewer stop — the pause, the natural end, the
     // dead device, the close — comes here, which keeps the fence-before-
     // rebind ordering one body for the soundtrack too; the natural end
     // rewrites the rest after it.

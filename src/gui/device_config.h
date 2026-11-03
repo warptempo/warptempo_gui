@@ -117,8 +117,9 @@
 //                            value; both templates spell 4
 //   key_height=<px>          THE KEY'S SIDE (architect 2026-10-29, a tuning
 //                            key; since 2026-11-02, on mock sqm_01_66px, THE
-//                            KEY IS SQUARE, its width this same length, and
-//                            the default 66): the program's key's height AND
+//                            KEY IS SQUARE, its width this same length; the
+//                            default 60, architect 2026-11-02, "move the
+//                            default to 60"): the program's key's height AND
 //                            width in DEVICE PX AT 300 % (skin_px's axis,
 //                            the logo lane's unit; render.h's
 //                            icon_case_w_px / icon_case_h_px), the key
@@ -132,7 +133,7 @@
 //                            key while it stands, which settles into a
 //                            constexpr once he rules the number (render.h's
 //                            case block), its key, grammar and row going
-//                            then; the template spells 66
+//                            then; the template spells 60
 //   osk_key_w=<px>           THE ON-SCREEN KEYBOARD'S KEY BOX (architect
 //   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
 //                            centered, like a phone … chiclets, taller than
@@ -511,9 +512,9 @@ struct DeviceConfig {
     int         noise_crossfade_s = 4;
     // THE KEY'S SIDE in device px at 300 % (2026-10-29, the head's list; a
     // tuning key, the key square since 2026-11-02): required; the
-    // construction state is the template's 66 (kKeyHeightDefaultAt300
+    // construction state is the template's 60 (kKeyHeightDefaultAt300
     // below).
-    int         key_height        = 66;
+    int         key_height        = 60;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in device px at 300 % (2026-10-29,
     // the head's list; two tuning keys): required; the construction state is
     // the templates' 48 x 60 (kOskKeyWDefaultAt300, kOskKeyHDefaultAt300
@@ -565,9 +566,9 @@ inline constexpr const char* kDefaultProjectsRepo =
 // waveform is the zero height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below about 675
-// device px of window at 100 % (468 in the `h` view; re-derived 2026-11-02,
-// the square key at key_height's default 66 and its one-px group gap)
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below about 621
+// device px of window at 100 % (432 in the `h` view; re-derived 2026-11-02,
+// the square key at key_height's default 60 and its one-px group gap)
 // the icon row — the
 // toolbar band, its twenty-seven standing members in three left runs and one
 // right run of the program's square key (eighteen in the view, its history
@@ -575,10 +576,10 @@ inline constexpr const char* kDefaultProjectsRepo =
 // runs the simple layout's, 2026-10-22) — no longer fits, and its
 // right-anchored run covers the runs to its left (the overflow rule at
 // kIconRowViewPairs, paint_handler.cpp). The tablet's 2304-px panel holds
-// the row whole in both states up to about 350 % — the left runs on device
-// x 23..1583 and the right run on 1947..2280 at 300 % outside the view (the
+// the row whole in both states up to about 370 % — the left runs on device
+// x 23..1451 and the right run on 1977..2280 at 300 % outside the view (the
 // arithmetic is at paint_icon_row, paint_handler.cpp, its one statement,
-// re-derived 2026-11-02 with the square key at the default 66) — and past
+// re-derived 2026-11-02 with the square key at the default 60) — and past
 // that ceiling the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
@@ -778,15 +779,16 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
 // writer, the settings editor's commit and its recall read
 // (format_key_height, parse_key_height). The range brackets the 2026-10-29
 // mocks' series round his "around 33" with room both ways, 21 to 99; the
-// square key's default 66 (architect 2026-11-02, mock sqm_01_66px) sits
-// inside it, so the range stood unchanged. The settings page opens the LINE EDITOR on
+// square key's default 60 (architect 2026-11-02, "move the default to 60",
+// after mock sqm_01_66px's 66) sits inside it, so the range stood
+// unchanged. The settings page opens the LINE EDITOR on
 // it, not a value list (79 values is no short domain, kSettingsValueListKeys'
 // rule). A TUNING KEY: when he rules the number, the key, these functions
 // and its Settings row go, and the value becomes a constexpr behind
 // render.h's icon_case_h_px.
 inline constexpr int kKeyHeightMinAt300     = 21;
 inline constexpr int kKeyHeightMaxAt300     = 99;
-inline constexpr int kKeyHeightDefaultAt300 = 66;
+inline constexpr int kKeyHeightDefaultAt300 = 60;
 inline constexpr const char* kKeyHeightGrammarReason =
     "must be an integer in [21, 99] in canonical spelling";
 std::string format_key_height(int px);
@@ -1064,7 +1066,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // struct's own value),
 // `waveform_grow=0.5` (2026-10-31, kWaveformGrowDefaultQuarters),
 // `audio_level=0` (2026-10-31 night, the files as they are), `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
-// `key_height=66` (2026-10-29, 66 since 2026-11-02), `osk_key_w=48`,
+// `key_height=60` (2026-10-29, 60 since 2026-11-02), `osk_key_w=48`,
 // `osk_key_h=60` and `osk_font_px=24` (2026-10-29,
 // kKeyHeightDefaultAt300, kOskKeyWDefaultAt300,
 // kOskKeyHDefaultAt300, kOskFontPxDefaultAt300), kDefaultProjectsRepo and

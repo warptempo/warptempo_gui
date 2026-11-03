@@ -9,11 +9,11 @@ here (this README, the licence text, the launcher's `AppIcon.svg`) are not read.
 ## Breeze, recolored
 
 EVERY DRAWING HERE IS KDE'S BREEZE (architect 2026-11-01, his rulings on M4, M5 and M7: "Breeze is committed", one
-visual size, the legend kept under the glyph; "we should use breeze glyphs only. ok to modify eg to make them
+visual size; "we should use breeze glyphs only. ok to modify eg to make them
 monochrome"). The drawings are breeze-icons 6.31.0's (KDE Frameworks, https://invent.kde.org/frameworks/breeze-icons),
 as Arch Linux installs them under `/usr/share/icons/breeze-dark/`, the 22-px folders. The roster is AS RULED
-(architect 2026-11-02, R12 / R14 / R15). Every key carries a glyph centered on its face, the act's name printed under the
-key; which key wears which drawing is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
+(architect 2026-11-02, R12 / R14 / R15). Every key carries a glyph centered on its face and nothing printed under it (architect
+2026-11-02: the legends retired, the tooltips naming the act); which key wears which drawing is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
 `render_player_button_icon` and `modal_word_icon` in `src/gui/paint_handler.cpp`, `score_viewer_button_icon` in
 `src/gui/score_viewer.h`). OFF THE KEYS (`src/gui/icons.h`'s head): the logo lane's note is MusicNote16th (the BPM
 key's drawing too) and its battery legend's glyph Battery000Charging while on power, Battery000 otherwise; the list

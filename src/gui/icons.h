@@ -11,12 +11,13 @@
 // the enumerator -> source list) and PAINTED IN THE TEXT TONES (materials.h)
 // at ONE ROAD, THE INK BOX (below), each seat naming its own ink length:
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
-//   visual size, the legend kept under the key): every key carries one,
+//   visual size; the key's one mark since the printed legends retired,
+//   2026-11-02, paint_key_glyph): every key carries one,
 //   centered on its face (paint_key_glyph, paint_handler.cpp), kTextInk
 //   B5B5B5 at rest and pressed, kKeyDimInk 5A5A5A on a disabled key,
 //   kTextOnLit 111111 on a lit one (materials.h's key_ink, 2026-11-02).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note
-//   (MusicNote16th, BPM's glyph too) and its battery legend's glyph
+//   (MusicNote16th, BPM's glyph too) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_logo_lane), the list rows'
 //   folder and double note (Folder / ViewMediaTrack, SOURCE's glyph too,
 //   paint_folder_overlay), the cards' class glyphs (DialogInformation /
@@ -166,7 +167,7 @@ void drop_rasters();
 // over its larger side, and the zoom steps down by 1 % while the rim's
 // extra row makes it overrun. THE SEATS' LENGTHS, each its owner's: the
 // keys' skin_px of 20 / 33 of the `key_height` tuning key's side
-// (kKeyGlyphInkPerKeySide, paint_key_glyph, 40 at the default 66,
+// (kKeyGlyphInkPerKeySide, paint_key_glyph, 36 at the default 60,
 // 2026-11-02), the logo lane's
 // note skin_px(21) (kLogoNoteInkAt300) and battery glyph skin_px(19)
 // (kLogoGlyphInkAt300, render.h), the list rows' skin_px(27)

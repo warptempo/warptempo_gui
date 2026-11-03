@@ -46,22 +46,23 @@
 // the progress modal's sentence, a dialog editor's line ("the user
 // shouldn't be typing on a non-flat color", 2026-10-23). THE ONE EXCEPTION
 // IS THE SCORE VIEWER'S PANE, kScorePaneFace 191919 (below). EVERY BUTTON
-// THE FLAT KEY with its legend under it, the word buttons' words in
-// capitals (paint_handler.cpp's modal_word_buttons and paint_key_legend)
-// (paint_modal_box).
+// THE FLAT KEY with its glyph on it and no word under it (2026-11-02), a
+// word button's word its glyph's key and its tooltip (paint_handler.cpp's
+// modal_word_buttons and modal_word_icon) (paint_modal_box).
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the well's rows of ground. At the tablet's 2304 x 1440, 300 %,
-// the strip pad's 13 W and key_height 66 (the square key, 2026-11-02): the box's top
-// row 177 (the trim lane's first row, the row of ground directly under the
-// band's rows 0–176, the logo lane 0–71), its bottom row 1295 (the well's
+// the strip pad's 13 W and key_height 60 (the square key's default,
+// 2026-11-02): the box's top
+// row 171 (the trim lane's first row, the row of ground directly under the
+// band's rows 0–170, the logo lane 0–71), its bottom row 1301 (the well's
 // foot) and its columns 23 and 2280 (the well's edge columns), those rows
 // and columns ground, the PANE x 24..2279 — the main canvas's own columns —
-// and y 178..1294 (the main canvas's own rows 269–1294); the controls row
-// 1296–1439, its case rows 1335–1400, its first case's columns 23–88 and
-// its last 2215–2280. A DIALOG'S TEXT (THE TEXT SEAT, below) on the list
+// and y 172..1300 (the main canvas's own rows 263–1300); the controls row
+// 1302–1439, its case rows 1341–1400, its first case's columns 23–82 and
+// its last 2221–2280. A DIALOG'S TEXT (THE TEXT SEAT, below) on the list
 // rows' seat, 18 px in from the box's outer edges: its pen on column 41,
-// its ascender line on row 195, its wrap ending one past column 2262, its
-// foot clip one past row 1277.
+// its ascender line on row 189, its wrap ending one past column 2262, its
+// foot clip one past row 1283.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -80,12 +81,12 @@
 // the row standing directly on the band with nothing between. At 300 %: 39
 // + 14 = 53 device rows (at the defaults below the row's cases end on 1048
 // and the first key row starts on 1102), where the dock bar's border under
-// the row made it 15 + 18 + 14 = 47 until then. THE ROWS, at key_height 66
+// the row made it 15 + 18 + 14 = 47 until then. THE ROWS, at key_height 60
 // and the keyboard's defaults, osk_key_w 48 and osk_key_h 60
 // (2026-10-29, the compact keyboard's band 352 rows where the full-width
 // one's was 403, so the box 51 rows taller): the keyboard's band 1088–1439
-// (its first key row's top 1102), the controls row 944–1087 (its case rows
-// 983–1048), the box's bottom row 943 (ground), the pane y 178..942.
+// (its first key row's top 1102), the controls row 950–1087 (its case rows
+// 989–1048), the box's bottom row 949 (ground), the pane y 172..948.
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);

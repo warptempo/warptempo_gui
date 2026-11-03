@@ -153,7 +153,7 @@ namespace {
 // (THE LOGO LANE — the band's upper pad, 72
 // device px at 300 % since 2026-10-24, render.h's logo lane block — the
 // key, SQUARE since 2026-11-02, the `key_height` tuning key's device px at
-// 300 % on both axes (66 its default), the strip pad on the flat ground —
+// 300 % on both axes (60 its default), the strip pad on the flat ground —
 // render.h's
 // program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
@@ -237,7 +237,7 @@ namespace {
 // 2026-11-02 rather than adjusted (the flat well; the square key the same
 // day; the key's side a tuning key since 2026-10-29), AT THE STRIP PAD'S
 // 13 W (a constant since 2026-10-23, program_spec.h's strip_pad_px) AND AT
-// key_height 66 (the template's value; a tune moves the band's and row 8's
+// key_height 60 (the template's value; a tune moves the band's and row 8's
 // case rows and the well by their difference), the waveform the whole
 // leftover and both gaps 0
 // in every stack (the rule above). Every lane is its own composite of
@@ -251,7 +251,7 @@ namespace {
 // icon_case_h_px, skin_px), each SCALED WITH gui_scale, AND THE WELL'S
 // LANES, DERIVED IN DEVICE PX AT THE ELEMENT (render.h's well lanes block,
 // 2026-11-02). THE CANVAS — THE WELL'S INTERIOR — AT THE BASE'S 300 % AND
-// key_height 66 IS 1026 DEVICE ROWS (the rule at centered_leftover_h
+// key_height 60 IS 1038 DEVICE ROWS (the rule at centered_leftover_h
 // below), AND ITS
 // WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the left
 // (waveform_area: the margin and the well's edge column, 19 px, and half
@@ -264,30 +264,30 @@ namespace {
 // 200 %.
 //   1920 x H AT 200 % (kept as a worked case; no host runs this geometry
 //   since the laptop GUI's drop, 2026-10-30): the
-//   lanes are 118 band (the logo lane 48, the case 44, the pad 26, rows
-//   0–117, the cases 48–91) + 62 the well's lanes = 180 above and 97 below
-//   (the well's foot 1 and row 8's 26 + 44 + 26), leftover H − 277: the
-//   waveform H − 277 (its two wells (H − 278) / 2 rows each, floored, round
-//   the divider's 1, the spare row the canvas's last), both gaps 0 — 118 / 0
-//   / 62 / H − 277 / 0 / 97; the waveform 1888 wide, 16 px in (the margin
+//   lanes are 114 band (the logo lane 48, the case 40, the pad 26, rows
+//   0–113, the cases 48–87) + 62 the well's lanes = 176 above and 93 below
+//   (the well's foot 1 and row 8's 26 + 40 + 26), leftover H − 269: the
+//   waveform H − 269 (its two wells (H − 270) / 2 rows each, floored, round
+//   the divider's 1, the spare row the canvas's last), both gaps 0 — 114 / 0
+//   / 62 / H − 269 / 0 / 93; the waveform 1888 wide, 16 px in (the margin
 //   and the edge column, 13, and half the flooring's 6), the well's columns
 //   15 and 1905.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
-//   tablet value since 2026-10-06): the lanes are 177 band (72
-//   + 66 + 39, rows 0–176, the logo lane 0–71, the cases 72–137) + 19 trim
-//   (row 177 ground, the bar 178–195) + 32 ruler (196–226, row 227 ground)
-//   + 40 marker (228–267) + 1 foot line (268) = 269 above (177 the band, 92
-//   the block) and 145 below (the well's foot 1295 and row 8 on 1296–1439,
-//   its cases 1335–1400), leftover 1026: the waveform 1026 on rows
-//   269–1294 (its two wells 512 rows each round the divider's row 781, the
-//   spare row 1294, render.h's waveform_divider), both gaps 0 — 177 / 0 /
-//   92 / 1026 / 0 / 145; the waveform 2256 wide, 24 px in (columns
+//   tablet value since 2026-10-06): the lanes are 171 band (72
+//   + 60 + 39, rows 0–170, the logo lane 0–71, the cases 72–131) + 19 trim
+//   (row 171 ground, the bar 172–189) + 32 ruler (190–220, row 221 ground)
+//   + 40 marker (222–261) + 1 foot line (262) = 263 above (171 the band, 92
+//   the block) and 139 below (the well's foot 1301 and row 8 on 1302–1439,
+//   its cases 1341–1400), leftover 1038: the waveform 1038 on rows
+//   263–1300 (its two wells 518 rows each round the divider's row 781, the
+//   spare row 1300, render.h's waveform_divider), both gaps 0 — 171 / 0 /
+//   92 / 1038 / 0 / 139; the waveform 2256 wide, 24 px in (columns
 //   24–2279), the well's columns 23 and 2281 (one past 2280).
 //   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 323 -> the waveform 323, both
-//   gaps 0 — 118 / 0 / 62 / 323 / 0 / 97.
+//   this geometry): leftover 331 -> the waveform 331, both
+//   gaps 0 — 114 / 0 / 62 / 331 / 0 / 93.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -433,8 +433,8 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300, the strip pad's 13 W and key_height 66 the lanes leave
-// 1440 − 269 − 145 = 1026 device rows (the square key, 2026-11-02). No
+// gui_scale 300, the strip pad's 13 W and key_height 60 the lanes leave
+// 1440 − 263 − 139 = 1038 device rows (the square key, 2026-11-02). No
 // color moves a lane (the key's side, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -2197,8 +2197,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     no-piece arms), the state line empty (no progress text, no
             //     `h` view).
             //   * THE KEYS grey and dark: redesign_button_enabled's and
-            //     redesign_button_selected's no-piece terms; the legends as
-            //     the roster prints them.
+            //     redesign_button_selected's no-piece terms; the glyphs as
+            //     the roster draws them.
             //   * THE LOGO LANE as always (refresh_logo_legend above).
             //   * NO CARD, NO TOOLTIP, NO OVERLAY: none can stand in a fresh
             //     set before its load (every press is dropped, and nothing
@@ -2433,12 +2433,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // answer. `f` and `i` are the pure cases (a bare flag flip and nothing
         // else); `t` and `p` happen to damage anyway and still go through here
         // rather than being trusted to. WHAT IT WATCHES, per roster button:
-        // the enabled bit, the selected bit, the glyph and THE LEGEND
-        // (2026-10-25: the word names the next press's act — FIT / RECALL
-        // and INHERIT / TIE move with no damage of their own; the
-        // publication's coverage is the union of the old and new extents,
-        // publish_button_face, and the damage below is the whole strip, so a
-        // word's change repaints both).
+        // the enabled bit, the selected bit, the glyph index and THE DRAWING
+        // (2026-11-02; the printed word's from 2026-10-25: the key's glyph
+        // names the next press's act — FIT / RECALL and INHERIT / TIE move
+        // with no damage of their own; the damage below is the whole strip).
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
@@ -2485,12 +2483,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // one. THREE buttons have a second glyph, re-counted 2026-10-25
             // off redesign_button_glyph's nonzero arms — Save, Render and the
             // collapsed play/stop button (the read-only toggle wears one glyph
-            // since 2026-10-21) — the term carries the index the LEGEND and
-            // the press read; the LEGEND TERM beside it (2026-10-25) is the
-            // printed word's own, AND THE PAINTED GLYPH'S (2026-11-02): the
-            // key's Breeze glyph follows the stateful legend arm for arm
-            // (redesign_button_icon's stateful overload, app_state.h), so a
-            // glyph edge is always a legend edge and needs no term. RENDER'S mid-render Cancel face is the one that was quietly
+            // since 2026-10-21) — the term carries the index the press reads;
+            // THE DRAWING TERM beside it (2026-11-02; the printed legend's
+            // word held that seat from 2026-10-25 until the legends retired)
+            // is the painted Breeze glyph's own (redesign_button_icon's
+            // stateful overload, app_state.h): FIT / RECALL and INHERIT / TIE
+            // move the drawing with no index, and Render's Cancel drawing
+            // reads the progress modal besides, so the index alone would miss
+            // those edges. RENDER'S mid-render Cancel face is the one that was quietly
             // uncovered before this term: queue_running moves neither
             // enabled nor selected, so its repaint rested on the render
             // routes' own damage alone. This term is now the one repaint of
@@ -2511,8 +2511,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                     f.selected != redesign_button_selected(
                                       app, audio.total_frames(), id) ||
                     f.glyph != redesign_button_glyph(app, id) ||
-                    std::string_view(f.legend) !=
-                        redesign_button_legend(app, audio, id);
+                    f.icon != redesign_button_icon(app, audio, id);
                 if (!drifted) continue;
                 if (redesign_button_in_transport_row(id))
                     drift_transport = true;

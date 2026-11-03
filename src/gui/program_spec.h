@@ -32,8 +32,8 @@
 // IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
 // bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (its upper pad since
 // 2026-10-24, render.h's logo lane block), the key, THE STRIP PAD (13 W,
-// settled 2026-10-23: strip_pad_px's field below; the keys' legends in the
-// bottom pad), its keys in plain runs
+// settled 2026-10-23: strip_pad_px's field below; plain ground, the keys
+// printing nothing since 2026-11-02), its keys in plain runs
 // on the ground, the runs `run_gap_px` apart; then THE WELL, flat regions on
 // the ground (render.h's well paragraph and its lanes block, which derive
 // every length at the element) — a row of ground, THE TRIM BAR (its frame
@@ -100,9 +100,10 @@ struct ProgramSpec {
     // be perfect"; the mocks ran 8 .. 15, 13 the pick): THIS MUCH
     // GROUND ABOVE AND BELOW THE KEY on row 8 and the modal controls row
     // (row 8's own rows), and BELOW THE KEY on the band, whose upper pad is
-    // the logo lane (2026-10-24, render.h's logo lane block); the keys'
-    // printed legends stand in the bottom pad (paint_handler.cpp's
-    // key_legend_seat). A settled design is a constexpr: the `strip_pad`
+    // the logo lane (2026-10-24, render.h's logo lane block). The pad is
+    // plain ground (the keys' printed legends stood in its bottom 2026-10-23
+    // to 2026-11-02; the number stays, architect 2026-11-02: "Only remove
+    // the captions"). A settled design is a constexpr: the `strip_pad`
     // device key and its Settings row, 2026-10-22 to 2026-10-23, are
     // removed, an old `strip_pad=` line the ordinary unknown-key hard fail.
     // render.h's strip_pad_px the one road to device px.

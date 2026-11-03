@@ -1856,7 +1856,7 @@ enum class RedesignButton {
     // RENDER since 2026-10-25, the run six cases (below).
     OpenProject, Save, Undo, Redo,
     // COPY PHASE RESETS (architect 2026-10-24) — the phase-reset propagate's
-    // own key, its legend COPY, IN THE BAND'S FIRST RUN BETWEEN REDO AND
+    // own key, COPY, IN THE BAND'S FIRST RUN BETWEEN REDO AND
     // RENDER since 2026-10-25 (architect: "copy should be moved to the left
     // of render, that's usually where copy action would go, between redo
     // [and render], and it's where it goes in kdenlive … copy is very rarely
@@ -1906,7 +1906,7 @@ enum class RedesignButton {
     // wanted. Its shift
     // admission was Reset Trim's pointer road, which is Zoom to Fit's
     // ctrl+shift press now (its shift press 2026-09-22 to 2026-10-24).)
-    // ZOOM IN AND ZOOM OUT, legends IN and OUT (architect 2026-10-27 late,
+    // ZOOM IN AND ZOOM OUT, IN and OUT (architect 2026-10-27 late,
     // re-opening his 2026-09-25 removal: "resurrect what was in the code
     // earlier, the zoom in and out to the left of FIT ... basically as they
     // used to be, including the position in the toolbar, and then add the
@@ -1931,8 +1931,7 @@ enum class RedesignButton {
     // arms), and with no piece both grey on the roster's no-piece head term.
     // No lamp: an act.
     IconZoomIn, IconZoomOut,
-    // ZOOM TO FIT, legend FIT (architect 2026-10-24; FULL ZOOM OUT, legend
-    // ZOOM 0, from 2026-08-12, the grand relayout's roster commit, until
+    // ZOOM TO FIT, FIT (architect 2026-10-24; FULL ZOOM OUT, ZOOM 0, from 2026-08-12, the grand relayout's roster commit, until
     // then): bare `0`, whose second press restores the view the first left.
     // ITS LONG PRESS IS SHIFT+0, FRAME THE TRIM — the trim
     // bar's double-click exactly (run_span_framing_command) — and ITS
@@ -2248,8 +2247,8 @@ enum class RedesignButton {
     // carry the locks themselves. No modifier, no repeat.
     IconScore,
     // THE NOISE (architect 2026-10-28), the band's third run's LAST, directly
-    // after the Score key: BARE `w`, A LAMP LIKE FOLLOW — the fixed legend
-    // NOISE, the key lit while the bed plays (GuiNoise::lit, noise.h, the one
+    // after the Score key: BARE `w`, A LAMP LIKE FOLLOW — NOISE, one drawing
+    // in both states, the key lit while the bed plays (GuiNoise::lit, noise.h, the one
     // owner of the sound: a continuous second voice under everything the
     // engine plays, at one level, never ducked). Its press is
     // GuiNoise::toggle, the chokepoint bare `w` reaches too. It GREYS WITH NO
@@ -2295,8 +2294,8 @@ enum class RedesignButton {
     // (kIconRowHistoryOpener, paint_handler.cpp). This enum keeps the
     // group's order; the painted order is the painter's.
     IconHistory,
-    // THE WALK LAMP (2026-08-18), TOGGLE SESSION HISTORY, the legend
-    // SESSION. It selects WHICH WALK the lane reads: the committed
+    // THE WALK LAMP (2026-08-18), TOGGLE SESSION HISTORY, SESSION.
+    // It selects WHICH WALK the lane reads: the committed
     // checkpoints (the default at every entry) or this session's own
     // undo/redo timeline read as states (GuiHistoryWalkSource, Commit |
     // Local, history_diff.h owns the model). REINSTATED BY THE ARCHITECT
@@ -2322,7 +2321,7 @@ enum class RedesignButton {
     // THE FOUR COMPANIONS, behind the walk lamp in the order they have always
     // held — how the delta READS, what you can DO from inside the view, then
     // where you can STEP: the cumulative toggle (bare `u`, TOGGLE CUMULATIVE,
-    // the legend CUMUL; reinstated with the walk lamp 2026-10-26), the revert
+    // CUMUL; reinstated with the walk lamp 2026-10-26), the revert
     // act (bare `v`) and the walk's older / newer steps (bare `,` and `.`).
     // THE TWO STEPS ARE ROW 8'S SINCE 2026-10-11 (architect ~02:40): in the
     // `h` view they stand in the Left / Right arrows' seats, inside the row's
@@ -2450,7 +2449,7 @@ enum class RedesignButton {
     //
     // PLAY AND STOP ARE ONE BUTTON WITH TWO FACES (architect 2026-08-15, at his
     // live look at the row): bare Space is ONE TOGGLE, so the roster carries
-    // ONE member for it and the LEGEND and the TOOLTIP swap on whether the
+    // ONE member for it and the GLYPH and the TOOLTIP swap on whether the
     // transport is LIVE — PLAY while stopped, STOP while a session runs. That
     // fact is playhead_scanner_active (the GUI-side playback mirror) OR a
     // standing A/B audition sequence, whose rests are silent frames INSIDE
@@ -2464,7 +2463,7 @@ enum class RedesignButton {
     // a sub-tick natural-end window, an accepted cost recorded at the fork. It
     // is RENDER-IS-CANCEL's own shape (one button, one chord, a
     // stateful face driven by one bit), and the resolvers are
-    // redesign_button_glyph_swapped for the legend's fork and
+    // redesign_button_glyph_swapped for the glyph's fork and
     // redesign_button_tooltip's stateful overload for the words.
     //
     // THIS IS SIMPLER THAN WHAT IT REPLACES AND THAT IS THE POINT. The button
@@ -2530,7 +2529,7 @@ enum class RedesignButton {
     // GO TO START / GO TO END (architect 2026-10-24, back on row 8 after
     // their removal of 2026-10-12): bare Home / End, the trim bounds' jump
     // (run_playhead_end_jump), THEIR OWN RUN AT THE ROW'S LEFT, ahead of the
-    // marker verbs (kTransportSkipGroup, paint_handler.cpp), legends START
+    // marker verbs (kTransportSkipGroup, paint_handler.cpp), START
     // and END. THEIR MODIFIER IS SHIFT since the same day: Shift+Home /
     // Shift+End are the WHOLE PIECE's 0 and EOF (Ctrl+Home / Ctrl+End from
     // 2026-09-26 until then, now unbound), so the glass long press reaches
@@ -3496,13 +3495,14 @@ enum class DialogTrigger {
 
 // ONE ANSWER OF A PROMPT: `key` the char activate_response forks on (a
 // lowercase letter, or '\x1b' for Cancel, the one answer every prompt
-// shares), and `label`
-// the button's plain word. The char is the answer's dispatch identity alone,
+// shares), and `word`
+// the button's plain word, in Title Case — its glyph's key
+// (modal_word_icon) and its tooltip, printed nowhere since 2026-11-02. The char is the answer's dispatch identity alone,
 // reached by its button's press, never typed (architect 2026-10-30: no key
 // reaches a prompt).
 struct PromptAnswer {
     char        key;
-    const char* label;
+    const char* word;
 };
 // THE ANSWER TABLES, one per answer set, each named for its words; the
 // raises pass one to PromptState::present. Cancel LAST on every one
@@ -4118,8 +4118,9 @@ struct GuiChromeGlobalsFingerprint {
 // the Maximize glyph and each box's face — with the caption, 2026-10-24.)
 // The toolbar band (paint_icon_row): its lane, the `h` view (the stand-ins
 // and the hide), and each STANDING member in the walk's order with its run,
-// its four face terms and its glyph index (redesign_button_glyph, the
-// stateful legend's fork).
+// its face terms, its glyph index (redesign_button_glyph) and the drawing
+// it wears (redesign_button_icon's stateful overload, 2026-11-02: FIT /
+// RECALL and INHERIT / TIE move the drawing with no index of their own).
 struct GuiIconRowMember {
     RedesignButton id{};
     int  run      = 0;
@@ -4127,6 +4128,7 @@ struct GuiIconRowMember {
     bool selected = false;
     bool pressed  = false;
     int  glyph    = 0;
+    icons::Icon icon = icons::Icon::DocumentOpen;
     bool operator==(const GuiIconRowMember&) const = default;
 };
 struct GuiIconRowFingerprint {
@@ -5432,16 +5434,14 @@ struct AppState {
         // glyph, 1 the second, 2 and 3 Save's Pull and Check) — the third
         // stashed term.
         int     glyph         = 0;
-        // THE PAINTED LEGEND AND ITS EXTENT (2026-10-25: the legend names
-        // the key's next press, redesign_button_legend's stateful overload)
-        // — the fourth stashed term, the word the comparator holds against
-        // the live overload, and the extent it was painted over
-        // (key_legend_layout's, the key and its legend), whose union with
-        // the next paint's extent is the publication's coverage test, so a
-        // word that narrows is never stamped over its own wider ends.
-        // Empty until the button's first paint.
-        const char* legend    = "";
-        GuiRect painted{0, 0, 0, 0};
+        // THE PAINTED GLYPH (2026-11-02: the key's Breeze drawing names the
+        // act its next press runs, redesign_button_icon's stateful
+        // overload) — the fourth stashed term, the drawing the comparator
+        // holds against the live overload. The index above does not carry
+        // it: FIT / RECALL and INHERIT / TIE change the drawing with no
+        // index of their own, and Render's Cancel drawing reads a term the
+        // index does not (no progress modal standing).
+        icons::Icon icon      = icons::Icon::DocumentOpen;
         // THE SECOND RECT — ROW 8'S CLOCK, THE PLAY KEY'S ALONE (architect
         // 2026-10-27: a press on the clock's field is a press on Play /
         // Stop): the field as painted, published by the clock's painter
@@ -5893,8 +5893,8 @@ struct AppState {
     // score viewer's, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT
     // (his glass on 852a28d9: "up/down are in the bottom right for the
     // player, so they should be there for the trim presets also"): THE
-    // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their legends and
-    // words the player's (render_player_button_legend,
+    // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their glyphs and
+    // words the player's (render_player_button_icon,
     // render_player_button_hint) and their act the band walk alone, no apply
     // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE. THE WORDS
     // ARE WINDOWS' DIALOG
@@ -12418,7 +12418,7 @@ inline bool authoring_locked(const AppState& a) {
 //     architect, that morning, while they were the row-1 view bar; the
 //     fourth, S+P, since 2026-10-12): bare
 //     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
-//     disabled face (2026-10-01) — the legend dimmed, the selected view's
+//     disabled face (2026-10-01) — the glyph dimmed, the selected view's
 //     checked face still saying where you stand — and the KEY's card
 //     carries the sentence.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
@@ -13582,7 +13582,7 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // acts on it (Behind puts the Pull face up). The face is live on these terms
 // (a face that advertises an act dispatches it) and greys under Checking like
 // every other status in flight, and it names the act (2026-10-28): Save's
-// fourth glyph (redesign_button_glyph), so the key's legend reads CHECK and
+// fourth glyph (redesign_button_glyph), so the key wears CHECK's drawing and
 // its hint "Check GitHub" on exactly these terms. Read by
 // Save's face and its glyph; the act answers the same status at its own fork
 // (run_publish_chord), below the no-clone and in-flight refusals this
@@ -15519,7 +15519,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
         // view selectors having come down from row 1 to the icon row, two
         // radio pairs since 2026-10-14):
-        // the legend dimmed, as on every dead button of that row
+        // the glyph dimmed, as on every dead button of that row
         // (paint_icon_row), the selected view's checked
         // faces still saying where you stand; the hint names the act and the
         // grey is the message. The repaint is the roster's per-tick
@@ -15995,8 +15995,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // GRID ITERATIONS, LIT (architect 2026-10-11 ~01:45: the lamp is
         // permanent there, value_drag_armed): the press could change nothing,
         // so the face is the view selectors' under the same mode — the
-        // checked face still saying the drag is armed with the glyph and
-        // legend dimmed (iteration_lock_greys' account) — and bare `[`, which the
+        // checked face still saying the drag is armed with the glyph
+        // dimmed (iteration_lock_greys' account) — and bare `[`, which the
         // iteration gate admits (its delta (b)), cards the reason at its own
         // arm (kValueDragIterationsCard). THE `h` VIEW greys and
         // hides it through the derived partition above (its allowlist does
@@ -16081,7 +16081,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // scoped this way: the reading is a session preference
         // (AppState::history_cumulative) that outlives every visit, so the lamp
         // reports it wherever the button is painted — inside the view only,
-        // since 2026-10-05 (a dead checked key would stay lit with its legend
+        // since 2026-10-05 (a dead checked key would stay lit with its glyph
         // dimmed, materials.h's disabled composition).
         //
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
@@ -16395,7 +16395,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
         // shared key painter already handles: a disabled checked key keeps
-        // its lit fill with the dim legend and glyph (materials.h).
+        // its lit fill, its glyph kTextOnLit (materials.h).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the
@@ -16576,7 +16576,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
 // WHICH BUTTONS WEAR A SECOND FACE, and the LIVE FACT that decides it — the
 // roster's ONE owner of the stateful-face CONDITIONS (2026-08-15; the name
 // from the glyphs the keys wore until the hi-fi skin, 2026-10-23). The
-// stateful legend reads this rather than restating any of these bits, so the
+// stateful glyph reads this rather than restating any of these bits, so the
 // condition and the swap cannot drift.
 //
 // IT EXISTS FOR THE STALENESS COMPARATOR, and that is the whole reason it is a
@@ -17658,210 +17658,21 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     return {nullptr, nullptr};
 }
 
-// THE ROSTER'S LEGEND COLUMN (architect 2026-10-23, the hi-fi skin: "there's
-// no icons in these consoles … just a little label underneath"; the table
-// of legends, in the painter's roster
-// order): each button's act cut to a legend in capitals, printed UNDER
-// its key (paint_handler.cpp's key_legend_seat, the one placement), the
-// key's Breeze glyph on its face since 2026-11-02 (redesign_button_icon,
-// below, "the legend kept under the glyph"). The
-// tooltip stays the act's name (above). THE `h` VIEW'S SIX STAND-INS, which
-// the record does not draw, take their acts' own words (SESSION, CUMUL,
-// REVERT, LOAD, OLDER, NEWER). THIS TABLE IS EACH KEY'S RESTING WORD; THE
-// PAINTERS READ THE
-// STATEFUL OVERLOAD BELOW, which names the act the key's next press runs
-// (architect 2026-10-25). PLAY RENDERS READS PLAYER since 2026-10-24 (architect: "the
-// media player could be called the player instead of play"; PLAY until
-// then, the record's word), so the transport's PLAY names one key; PLAYER
-// fits its key at 300 / 200 / 150 % (54 of 66, 35 of 44, 27 of 33 device
-// px — the square key at key_height 66, icon_case_w_px).
-// THE FIT IS STATED AT key_height 66 (the default, 2026-11-02): a smaller
-// tune narrows the key and its pitch, and neighbors' legends may then touch
-// — the tuning's own business, no fix here.
-// ZOOM TO FIT READS FIT since 2026-10-24 (architect; ZOOM 0 until then), and
-// the three keys of that day print their own words: START and END (the two
-// skips, back on row 8) and COPY (Copy Phase Resets, the band's first run's
-// since 2026-10-25). THE TWO HISTORY TOGGLES, back 2026-10-26, print SESSION
-// (the walk lamp's lit state) and CUMUL (Toggle Cumulative cut as ADD SEL
-// is): the planner's words, named to the architect for renaming. SESSION
-// fits at about 62 of 66, 42 of 44, 31 of 33 device px (MAGNIFY, the
-// widest, 64 / 43 / 32); CUMUL about 50 / 33 / 25.
-// ZOOM IN AND ZOOM OUT READ IN AND OUT (architect 2026-10-27: "Zoom In /
-// Zoom Out, or In / Out if too long"): ZOOM OUT does not fit its key —
-// about 75 of 66, 50 of 44, 38 of 33 device px — and the pair is one shape,
-// so both take the short form though ZOOM IN would fit (about 60 / 40 / 30);
-// IN prints about 14 / 9 / 7, OUT 30 / 20 / 15.
-// RESTRICT READS RESTR (architect 2026-10-29, "defer to your measurement"):
-// at the legend face's 14 px em (kGuiFaceSizes, gui_font.h) RESTRICT runs
-// 70.0 px against the 66 px key and would leave about 2.5 px to FOLLOW's
-// legend beside it (59.1 px) at the 67-px key pitch (the square key and the
-// one-px group gap, 2026-11-02), under a word space, where today's tightest
-// pair, MAGNIFY (63.8) beside FOLLOW, keeps about 5.5 px; RESTR runs 47.5 px.
-inline constexpr const char* redesign_button_legend(RedesignButton b) {
-    switch (b) {
-        case RedesignButton::OpenProject:               return "OPEN";
-        case RedesignButton::Save:                      return "SAVE";
-        case RedesignButton::Undo:                      return "UNDO";
-        case RedesignButton::Redo:                      return "REDO";
-        case RedesignButton::Render:                    return "RENDER";
-        case RedesignButton::IconZoomIn:                return "IN";
-        case RedesignButton::IconZoomOut:               return "OUT";
-        case RedesignButton::IconZoomFitBest:           return "FIT";
-        case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
-        case RedesignButton::IconFollow:                return "FOLLOW";
-        case RedesignButton::IconRestrict:              return "RESTR";
-        case RedesignButton::IconTrimPresets:           return "TRIM";
-        case RedesignButton::IconBpm:                   return "BPM";
-        case RedesignButton::IconIter:                  return "GRID";
-        case RedesignButton::IconFlatten:               return "FLATTEN";
-        case RedesignButton::IconListen:                return "PLAYER";
-        case RedesignButton::IconReadOnly:              return "LOCK";
-        case RedesignButton::IconSettings:              return "SETUP";
-        case RedesignButton::IconTooltips:              return "TIPS";
-        case RedesignButton::IconScore:                 return "SCORE";
-        case RedesignButton::IconNoise:                 return "NOISE";
-        case RedesignButton::IconHistory:               return "HISTORY";
-        case RedesignButton::SessionHistory:            return "SESSION";
-        case RedesignButton::HistoryCumulative:         return "CUMUL";
-        case RedesignButton::HistoryRevert:             return "REVERT";
-        case RedesignButton::HistoryOlder:              return "OLDER";
-        case RedesignButton::HistoryNewer:              return "NEWER";
-        case RedesignButton::IconLoadInPlace:           return "LOAD";
-        case RedesignButton::ViewSource:                return "SOURCE";
-        case RedesignButton::ViewTarget:                return "TARGET";
-        case RedesignButton::ViewWarp:                  return "WARP";
-        case RedesignButton::ViewPhase:                 return "PHASE";
-        case RedesignButton::TransportPlayStop:         return "PLAY";
-        case RedesignButton::TransportSkipBack:         return "START";
-        case RedesignButton::TransportSkipForward:      return "END";
-        case RedesignButton::IconMarkerDrop:            return "DROP";
-        case RedesignButton::IconMarkerDelete:          return "DELETE";
-        case RedesignButton::IconMarkerDisable:         return "DISABLE";
-        case RedesignButton::IconMarkerInherit:         return "INHERIT";
-        case RedesignButton::IconJumpToDefiningMarker:  return "JUMP";
-        case RedesignButton::IconOpenTextEditor:        return "EDIT";
-        case RedesignButton::IconAddToSelection:        return "ADD SEL";
-        case RedesignButton::IconCopyPhaseResets:       return "COPY";
-        case RedesignButton::IconValueDrag:             return "DRAG";
-        case RedesignButton::TransportWalkPrevious:     return "PREV";
-        case RedesignButton::TransportWalk:             return "NEXT";
-        case RedesignButton::IconZoomOriginal:          return "CENTER";
-        case RedesignButton::TransportSwitchTab:        return "TAB";
-        case RedesignButton::TransportDown:             return "DOWN";
-        case RedesignButton::TransportUp:               return "UP";
-        case RedesignButton::TransportLeft:             return "LEFT";
-        case RedesignButton::TransportRight:            return "RIGHT";
-    }
-    return "";
-}
-
-// THE LEGEND NAMES THE ACT THE KEY'S NEXT PRESS RUNS (architect 2026-10-25)
-// — the stateful overload every painter and every extent reader takes
-// (paint_handler.cpp's two strips, through key_legend_layout), the constant
-// table above its first line and every arm's forward, as the tooltip's
-// stateful overload forwards from its table. A TOGGLE KEEPS ITS PRINT IN
-// BOTH STATES, because its press is the toggle whatever the state — "the
-// toggle acts keep their caption because they still are toggling": every
-// Toggle-named key (MAGNIFY, FOLLOW, TIPS, LOCK, DRAG, ADD SEL, DISABLE,
-// INHERIT outside the grid lamp, SESSION and CUMUL in the `h` view since
-// 2026-10-26), the lamps (NOISE among them, 2026-10-28) and the two radio pairs keep
-// their words, the lit fill being the state. DISABLE KEEPS ITS
-// SHORTHAND (architect 2026-10-25: "we already use shorthand, like ADD SEL
-// … a lot of these stereo interfaces didn't use the exact English"). A key
-// whose next press is a different act than its last prints that act, each
-// arm reading the predicate the face or the tooltip already reads, never a
-// second derivation:
-//   PLAY reads STOP while the transport is live (a plain audition or an A/B
-//   audition, its silent rests included) — redesign_button_glyph_swapped,
-//   the glyph's and the tooltip's own fork, so the glyph stash and the
-//   legend change in one frame;
-//   FIT reads RECALL where the press restores the view the zoom-out left
-//   (overview_command_target's RestoreView arm, the act's own fork, which
-//   the tooltip names "Back to Previous View") — FIT otherwise, its no-op
-//   included (the grey is redesign_button_enabled's);
-//   INHERIT reads TIE under the lit grid-iterations lamp, where the plain
-//   chord is dead and the key is the tie (the tooltip's own fork on
-//   iteration_mode_enabled). Never UNTIE: the act is toggle-shaped there,
-//   and a toggle keeps one print, though the tooltip names the half the
-//   verdict admits ("Untie Markers") as the act's name;
-//   RENDER reads CANCEL where its next press cancels (architect
-//   2026-10-25, "agree"): redesign_button_glyph's Render arm, queue_running
-//   — the glyph the key's lift runs the cancel on
-//   (finish_chrome_press_release's Render arm) and the tooltip's "Cancel"
-//   reads — AND NO PROGRESS MODAL STANDING. queue_running is a batch's bit
-//   too (start_render_batch sets it and opens the progress modal in the
-//   same call), and a batch's run stands behind that modal, where the key
-//   is dead behind the veil and keeps RENDER: nothing behind a modal
-//   changes face (the classes' record at redesign_button_enabled's head),
-//   and the modal's own Cancel is the batch's. THE SINGLE Ctrl+Alt+R
-//   RENDER, which opens no modal, is the one state that prints CANCEL. No
-//   single owner answers "a single render runs with the key live": the
-//   press road reads the painted glyph behind the veil's early return, so
-//   the arm is the glyph predicate under the veil's own term, the shape
-//   Play Renders' enabled arm takes for the same modal;
-//   SAVE reads PULL where its press is the pull (redesign_button_glyph's
-//   Save arm at its third glyph — history_save_is_pull, the `h` view with
-//   GitHub behind and no checkpoint publishing), CHECK where its press asks
-//   GitHub again (the arm's fourth glyph, 2026-10-28 —
-//   history_github_recheck_actionable, Offline) and COMMIT elsewhere in the
-//   `h` view, where its press
-//   is the save-and-commit (the tooltip's own fork on history_mode.active,
-//   "Save and Commit") (architect 2026-10-25, "agree"); SAVE outside the
-//   view, a checkpoint publishing there included (the press is the plain
-//   save).
-// Every word fits its key at 300 / 200 / 150 % (CANCEL and COMMIT about 57
-// of 66, 37 of 44, 28 of 33 device px in the 14-px legend face, the square
-// key, icon_case_w_px; RECALL about 54 / 35 /
-// 27; CHECK about 49 / 33 / 25; PAUSE on the player's key about 46 / 30 /
-// 23), so none is shortened.
-// THE REPAINT: the word rides the face's stash (RedesignButtonFace::legend,
-// held by main.cpp's per-tick comparator beside the glyph) and the painted
-// extent with it (RedesignButtonFace::painted, whose union with the new one
-// is the publication's coverage test), so a word that narrows never leaves
-// the old word's ends on the ground.
-inline const char* redesign_button_legend(const AppState& a,
-                                          const GuiAudio& audio,
-                                          RedesignButton b) {
-    switch (b) {
-        case RedesignButton::TransportPlayStop:
-            if (redesign_button_glyph_swapped(a, b)) return "STOP";
-            break;
-        case RedesignButton::Render:
-            if (redesign_button_glyph_swapped(a, b) &&
-                !a.batch_progress.active)
-                return "CANCEL";
-            break;
-        case RedesignButton::Save:
-            if (redesign_button_glyph(a, b) == 2) return "PULL";
-            if (redesign_button_glyph(a, b) == 3) return "CHECK";
-            if (a.history_mode.active) return "COMMIT";
-            break;
-        case RedesignButton::IconZoomFitBest:
-            if (overview_command_target(a, audio).arm ==
-                OverviewCommandTarget::Arm::RestoreView)
-                return "RECALL";
-            break;
-        case RedesignButton::IconMarkerInherit:
-            if (a.iteration_mode_enabled) return "TIE";
-            break;
-        default:
-            break;
-    }
-    return redesign_button_legend(b);
-}
-
 // THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity:
-// "Breeze is committed", the legend kept under the key; THE ROSTER AS
-// RULED, architect 2026-11-02, R12 / R14 / R15: the draft won on EDIT,
-// HISTORY, SOURCE, TARGET, SESSION and LOCK — one glyph, no state swap —
-// the last Breeze drawing elsewhere, PLAYER the headphones; BPM shares the
-// logo's single note and SOURCE the wav rows' double notes, both
-// deliberate) — the Breeze drawing centered on each
-// roster key's face (paint_handler.cpp's paint_key_glyph, icons.h's head),
-// in the legend's column order. THIS TABLE IS EACH KEY'S RESTING GLYPH; THE
-// PAINTERS READ THE STATEFUL OVERLOAD BELOW, the glyph following the
-// stateful legend. A re-pick is a row here (and, for a drawing not yet
-// imported, a row of tools/icons/import_breeze.py's table and a rerun).
+// "Breeze is committed"; THE ROSTER AS RULED, architect 2026-11-02, R12 /
+// R14 / R15: the draft won on EDIT, HISTORY, SOURCE, TARGET, SESSION and
+// LOCK — one glyph, no state swap — the last Breeze drawing elsewhere,
+// PLAYER the headphones; BPM shares the logo's single note and SOURCE the
+// wav rows' double notes, both deliberate) — the Breeze drawing centered on
+// each roster key's face (paint_handler.cpp's paint_key_glyph, icons.h's
+// head), THE KEY'S ONE MARK: no word is printed under it (architect
+// 2026-11-02, the reason at paint_key_glyph), the act's name the tooltip's
+// (redesign_button_tooltip, above). THIS TABLE IS EACH KEY'S RESTING GLYPH;
+// THE PAINTERS READ THE STATEFUL OVERLOAD BELOW. A re-pick is a row here
+// (and, for a drawing not yet imported, a row of
+// tools/icons/import_breeze.py's table and a rerun). (The rows' comments
+// name a key by its act's short name, OPEN, SAVE …: the printed legends of
+// 2026-10-23 to 2026-11-02, kept as the code's names for the keys.)
 inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
     using icons::Icon;
     switch (b) {
@@ -17921,15 +17732,61 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
     return Icon::DocumentOpen;
 }
 
-// THE GLYPH FOLLOWS THE STATEFUL LEGEND (2026-11-02): the drawing of the act
-// the key's next press runs, each arm the stateful legend's own arm above
-// on the SAME predicate — STOP (MediaPlaybackStop), CANCEL (DialogCancel,
-// the dialogs' Cancel), PULL (VcsPull), CHECK (NetworkConnect), COMMIT
-// (VcsCommit), RECALL (ZoomPrevious), TIE (Link) — and every other state
-// the table's. THE REPAINT IS THE LEGEND'S: every arm here forks exactly
-// where the legend's word forks, so main.cpp's per-tick comparator, which
-// holds the stashed legend (and the glyph index) against the live ones,
-// repaints the key on every edge of its glyph with no term of its own.
+// THE GLYPH NAMES THE ACT THE KEY'S NEXT PRESS RUNS (architect 2026-10-25
+// for the word printed under the key until 2026-11-02; the drawing's since)
+// — the stateful overload every painter takes, the table above its first
+// line and every arm's forward, as the tooltip's stateful overload forwards
+// from its table. A TOGGLE KEEPS ITS DRAWING IN BOTH STATES, because its
+// press is the toggle whatever the state ("the toggle acts keep their
+// caption because they still are toggling"): every Toggle-named key
+// (MAGNIFY, FOLLOW, TIPS, LOCK, DRAG, ADD SEL, DISABLE, INHERIT outside the
+// grid lamp, SESSION and CUMUL in the `h` view), the lamps (NOISE among
+// them) and the two radio pairs keep their drawing, the lit fill being the
+// state. A key whose next press is a different act than its last wears
+// that act's drawing, each arm reading the predicate the face or the
+// tooltip already reads, never a second derivation:
+//   PLAY wears STOP (MediaPlaybackStop) while the transport is live (a
+//   plain audition or an A/B audition, its silent rests included) —
+//   redesign_button_glyph_swapped, the glyph index's and the tooltip's own
+//   fork;
+//   FIT wears RECALL (ZoomPrevious) where the press restores the view the
+//   zoom-out left (overview_command_target's RestoreView arm, the act's own
+//   fork, which the tooltip names "Back to Previous View") — FIT otherwise,
+//   its no-op included (the grey is redesign_button_enabled's);
+//   INHERIT wears TIE (Link) under the lit grid-iterations lamp, where the
+//   plain chord is dead and the key is the tie (the tooltip's own fork on
+//   iteration_mode_enabled). Never an untie drawing: the act is
+//   toggle-shaped there, though the tooltip names the half the verdict
+//   admits ("Untie Markers") as the act's name;
+//   RENDER wears CANCEL (DialogCancel, the dialogs' Cancel) where its next
+//   press cancels (architect 2026-10-25, "agree"): redesign_button_glyph's
+//   Render arm, queue_running — the glyph index the key's lift runs the
+//   cancel on (finish_chrome_press_release's Render arm) and the tooltip's
+//   "Cancel" reads — AND NO PROGRESS MODAL STANDING. queue_running is a
+//   batch's bit too (start_render_batch sets it and opens the progress
+//   modal in the same call), and a batch's run stands behind that modal,
+//   where the key is dead behind the veil and keeps RENDER: nothing behind
+//   a modal changes face (the classes' record at redesign_button_enabled's
+//   head), and the modal's own Cancel is the batch's. THE SINGLE
+//   Ctrl+Alt+R RENDER, which opens no modal, is the one state that wears
+//   CANCEL. No single owner answers "a single render runs with the key
+//   live": the press road reads the painted glyph index behind the veil's
+//   early return, so the arm is the index's predicate under the veil's own
+//   term, the shape Play Renders' enabled arm takes for the same modal;
+//   SAVE wears PULL (VcsPull) where its press is the pull
+//   (redesign_button_glyph's Save arm at its third index —
+//   history_save_is_pull, the `h` view with GitHub behind and no checkpoint
+//   publishing), CHECK (NetworkConnect) where its press asks GitHub again
+//   (the arm's fourth index, 2026-10-28 — history_github_recheck_actionable,
+//   Offline) and COMMIT (VcsCommit) elsewhere in the `h` view, where its
+//   press is the save-and-commit (the tooltip's own fork on
+//   history_mode.active, "Save and Commit") (architect 2026-10-25,
+//   "agree"); SAVE outside the view, a checkpoint publishing there included
+//   (the press is the plain save).
+// THE REPAINT: the drawing rides the face's stash (RedesignButtonFace::icon,
+// held by main.cpp's per-tick comparator beside the glyph index), so an
+// edge of any arm — FIT / RECALL and INHERIT / TIE among them, which move
+// no index and damage nothing of their own — repaints the key.
 inline icons::Icon redesign_button_icon(const AppState& a,
                                         const GuiAudio& audio,
                                         RedesignButton b) {
@@ -17979,13 +17836,12 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // kRenderCancelLabel "Cancel" — are DELETED producer-less with the row's
 // painter; the architect's same-day ruling kept media-record for BOTH of
 // Render's idle meanings, "the context makes it clear"). WHAT SAYS STATE
-// ON THE ROW NOW is the printed LEGEND (architect 2026-10-25: the word names
-// the act the key's next press runs — the stateful redesign_button_legend
-// overload above, Save's COMMIT / PULL / CHECK and Render's CANCEL among
-// it), the key's Breeze glyph following it (redesign_button_icon's stateful
-// overload, 2026-11-02); the GLYPH INDEX (Save's commit / pull / check,
-// Render's cancel — redesign_button_glyph) is the stash's index the press,
-// the tooltip, the legend and the glyph read. The one hint string that still
+// ON THE ROW NOW is the key's Breeze glyph (architect 2026-10-25 for the
+// printed word, 2026-11-02 for the drawing: it names the act the key's next
+// press runs — redesign_button_icon's stateful overload above, Save's
+// COMMIT / PULL / CHECK and Render's CANCEL among it); the GLYPH INDEX
+// (Save's commit / pull / check, Render's cancel — redesign_button_glyph)
+// is the stash's index the press, the tooltip and the glyph read. The one hint string that still
 // carries the words reads "Save and Commit"; "Render
 // Iterations", the capital I the architect spelled
 // 2026-08-03, RETIRED WITH THE 2026-08-31 REBRAND — the hint reads
@@ -18496,7 +18352,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // label arms had already
 // gone with row 2's labeled painter, 2026-08-12 — Save's and Render's stateful
 // WORDS live on the tooltip overload above and their stateful faces are the
-// legend's, redesign_button_legend.)
+// glyph's, redesign_button_icon's stateful overload.)
 
 // THE MODIFIER LINE EXISTS EXACTLY WHERE A MODIFIED PRESS DOES SOMETHING.
 // Checked at compile time so the tables cannot drift: a button that gains a

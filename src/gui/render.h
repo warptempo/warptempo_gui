@@ -256,9 +256,9 @@ struct TrimRange {
 // 2026-11-02).
 //
 // THE DISABLED FACES (2026-10-23; the key's own dim tone 5A5A5A since
-// 2026-11-02): a dead key DIMS ITS GLYPH AND ITS PRINTED LEGEND (kKeyDimInk,
-// paint_key_glyph and paint_key_legend; a glyph on a dead lit key stays
-// kTextOnLit), its key the face its state gives; a CUE'S inert label is the
+// 2026-11-02): a dead key DIMS ITS GLYPH (kKeyDimInk, paint_key_glyph; a
+// glyph on a dead lit key stays kTextOnLit; no key prints a word since
+// 2026-11-02), its key the face its state gives; a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (kTextDimInk 757575, paint_folder_overlay,
 // 2026-10-28). Nothing else dims. (Windows' word emboss —
@@ -435,9 +435,10 @@ void install_true_colors(bool on);
 // center lines run through them (paint_canvas_skirt). Every line in the
 // well is ONE DEVICE PX at every scale (hairline_px, the line rule; "two px
 // lines that don't scale" ruled one px in M5h). THE ROWS AT 300 % (main.cpp's
-// lane table the record; at key_height 66, the square key, 2026-11-02): row 177 ground,
-// the trim bar 178 .. 195, the ruler 196 .. 226, row 227 ground, the marker
-// lane 228 .. 267, row 268 ground, the canvas 269 .. 1294, row 1295 ground.
+// lane table the record; at key_height 60, the square key's default,
+// 2026-11-02): row 171 ground,
+// the trim bar 172 .. 189, the ruler 190 .. 220, row 221 ground, the marker
+// lane 222 .. 261, row 262 ground, the canvas 263 .. 1300, row 1301 ground.
 //
 // THE TRIM BAR IS LIVE'S OVERVIEW BAR (render_trim_flags owns the drawing,
 // trim_lane_h_px the rows): one row of ground under the band (the row the
@@ -878,7 +879,8 @@ double gui_scale_factor();
 
 // THE KEY'S SIDE, THE `key_height` TUNING KEY'S SEAT (architect
 // 2026-10-29, on five mock sheets varying only the keys' height; SQUARE
-// since 2026-11-02, on mock sqm_01_66px, its default 66): the live value in
+// since 2026-11-02, on mock sqm_01_66px; its default 60, architect
+// 2026-11-02, "move the default to 60"): the live value in
 // DEVICE PX AT 300 % (skin_px's axis), read by icon_case_w_px and
 // icon_case_h_px (the case paragraph below) and by paint_key_glyph's ink
 // size (paint_handler.cpp), nothing else. It is the scale's shape —
@@ -888,9 +890,9 @@ double gui_scale_factor();
 // the window exists and so before the first layout, and the settings
 // editor's `key_height=` commit (GuiInputHandler::apply_key_height, which
 // re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_key_height); the construction state is the template's 66
-// (kKeyHeightDefaultAt300). It settles into a constexpr once he rules the
-// number, and this pair goes.
+// (parse_key_height); the construction state is the template's 60
+// (kKeyHeightDefaultAt300, 2026-11-02). It settles into a constexpr once he
+// rules the number, and this pair goes.
 void set_key_height_at300(int device_px_at_300);
 int  key_height_at300();
 
@@ -1237,27 +1239,29 @@ inline int hairline_px() { return 1; }
 // EQUALS its height, both THE `key_height` TUNING KEY'S device px at 300 %
 // through skin_px (key_height_at300, its seat above; the width's 23-W Cool
 // Edit sum went with the ruling), so a tune keeps it square — at the
-// default 66, 66 device px at 300 %, 44 at 200 %, 33 at 150 %, 30 at
-// 138 %, 79 at 360 % — AN AREA, and THE CASE IS THE KEY: the painted key,
-// its hit box and its legend's seat are the whole case, every key of every
-// row identical (materials.h's paint_key; the group's keys stand a key
+// default 60, 60 device px at 300 %, 40 at 200 %, 30 at 150 %, 28 at
+// 138 %, 72 at 360 % — AN AREA, and THE CASE IS THE KEY: the painted key
+// and its hit box are the whole case, every key of every row identical (materials.h's paint_key; the group's keys stand a key
 // pitch apart, materials.h's key_group_pitch_px, the group gap's one device
 // px of ground between two).
 // Every key carries a Breeze glyph centered on its face (paint_key_glyph,
 // paint_handler.cpp; icons.h's THE KEYS), its ink box's larger side
-// FOLLOWING THE KEY, 20 * key_height / 33 device px at 300 % — 40 at the
-// default 66 (architect 2026-11-02), one size for every key.
+// FOLLOWING THE KEY, 20 * key_height / 33 device px at 300 % — 36 at the
+// default 60 (architect 2026-11-02), one size for every key — and NOTHING
+// UNDER IT: the printed legends retired 2026-11-02, the tooltips naming the
+// act (the rule at paint_key_glyph).
 //
 // THE BAND (architect 2026-10-22, the simple layout; its upper pad the
 // logo lane since 2026-10-24): THE LOGO LANE (logo_lane_h_px, its block
 // above), the case, THE STRIP PAD on the flat ground — no line on its
 // first row (the laptop's caption line went with the caption, 2026-10-24),
-// the keys' legends in its bottom pad (2026-10-23) — at key_height 66,
-// 72 + 66 + 39 = 177 device rows at 300 %. Its runs are paint_icon_row's walk
+// plain ground (the keys' legends stood in it 2026-10-23 to 2026-11-02, its
+// height kept when they retired) — at key_height 60,
+// 72 + 60 + 39 = 171 device rows at 300 %. Its runs are paint_icon_row's walk
 // (icon_row_seats: the keys a key pitch apart inside a run, the group gap's
 // one device px of ground between two, run_gap_px of ground between runs).
 // The hit target is the painted key (point_on_key, materials.h); the
-// ground between keys and between runs, the legends' included, is inert
+// ground between keys and between runs and the pad under them is inert
 // for input.
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because the
@@ -1284,8 +1288,8 @@ inline int icon_case_h_px() {
 // 8's and the modal controls row's ground above and below the case, and the
 // band's ground below it (its upper pad is the logo lane, band_case_top_
 // offset_px), one number: 39 device px at 300 %, 18 at 138 %. FLOORED AT ONE DEVICE PX so
-// a row stands there at a scale that would round the pad to nothing (the
-// legends' row since 2026-10-23).
+// a row of ground stands there at a scale that would round the pad to
+// nothing (the legends' row 2026-10-23 to 2026-11-02, plain ground since).
 inline int strip_pad_px() {
     return scaled_px(kProgramSpec.strip_pad_px, 1);
 }
@@ -1328,15 +1332,15 @@ inline int program_run_gap_px() {
 //     scaled) of materials.h's kWellFrame 757575, the trim bar's frame tone,
 //     on THE CASE'S CENTER ROW — the centered elements' tie rule, (case rows
 //     − 1) / 2 below the case's top, rounded down (scrub_channel_above_px):
-//     row 1367 at 300 % on the square key's case rows 1335..1400 at
-//     key_height 66 —
+//     row 1370 at 300 % on the square key's case rows 1341..1400 at
+//     key_height 60 —
 //     across the channel's own columns, from the thumb's center at frame 0
-//     to its center at the last frame (at 300 % x 247..1578 in the player),
+//     to its center at the last frame (at 300 % x 229..1614 in the player),
 //     nothing else: no fill, no played extent, nothing that reads the
 //     window's focus.
 //   THE THUMB — A BLANK FLAT KEY BLOCK (paint_scrub_thumb: the key painter
 //     at rest, never lit — it is dragged, not turned on or off, the flat
-//     look's ruling, materials.h — with no legend) kScrubThumbWidthPx = 8 W
+//     look's ruling, materials.h — with no glyph) kScrubThumbWidthPx = 8 W
 //     wide, 24 device px at 300 % (architect 2026-10-23, on the installed
 //     player: "too tiny … the thumb itself should be larger"), by THE KEY'S
 //     HEIGHT (architect 2026-10-29: "Shrink it to the height of the key.";
@@ -1717,7 +1721,7 @@ WellColumns well_columns(const AppState& a);
 // THE ROW IS THE STRIP (architect 2026-10-22, the simple layout): THE STRIP
 // PAD, the program's case (the band's own, read from its accessors above so
 // the rows cannot drift apart), THE STRIP PAD — strip_h_px, at key_height
-// 66 144 device rows at 300 % (39 + 66 + 39, the square key since
+// 60 138 device rows at 300 % (39 + 60 + 39, the square key since
 // 2026-11-02) and the pad's
 // 13 W (the band's own height until
 // 2026-10-24, when
@@ -1770,10 +1774,10 @@ constexpr int chrome_stack_authored_h() {
 }
 // THE STACK AT THE STRIP PAD'S 13 W: the band's pad 13 above and row 8's
 // two pads' 26 below, 39 W, 117 device rows at 300 % — with the logo lane's
-// 72, the two square keys' 66 each at key_height 66, the well's lanes
+// 72, the two square keys' 60 each at key_height 60, the well's lanes
 // (19 + 32 + 40 + 1 above the canvas and the foot's 1 below) and no caption
-// the tablet's canvas 1026 rows of the surface's 1440 (2026-11-02, the
-// square key) — main.cpp's lane table the record of each scale.
+// the tablet's canvas 1038 rows of the surface's 1440 (2026-11-02, the
+// square key at its default) — main.cpp's lane table the record of each scale.
 static_assert(chrome_stack_authored_h() == 39);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
@@ -1797,8 +1801,8 @@ inline int scrub_thumb_h_px() {
 }
 // The channel's rows below the case's top: THE CASE'S CENTER ROW, the
 // centered elements' tie rule (the remainder rounded down, the upper row
-// winning a tie) — 32 at 300 % on the 66-row case at key_height 66, row
-// 1367.
+// winning a tie) — 29 at 300 % on the 60-row case at key_height 60, row
+// 1370.
 inline int scrub_channel_above_px() {
     return (scrub_thumb_h_px() - scrub_channel_h_px()) / 2;
 }
@@ -2411,8 +2415,8 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // (THE DISABLED EMBOSS, THE WORD HALF — show_embossed_run, Windows'
 // DrawState DSS_DISABLED: the word in Hilight one Windows px right and down
 // under its Shadow copy, 2026-10-03 — RETIRED 2026-10-23 with no caller
-// left: a disabled key dims its legend (kKeyDimInk, paint_key_legend), and
-// no other word is disabled.)
+// left: a disabled key dimmed its legend, and no other word is disabled;
+// no key prints a word since 2026-11-02.)
 
 
 // THE WAVEFORM AREA IS THE CANVAS: the plate, the canvas's lines, the
@@ -2449,13 +2453,13 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // area's whole height, painted after the divider (build_canvas_list's
 // order), the dots counted from the canvas's first row with no re-phasing,
 // so the divider's row carries a dot exactly where the phase lands one (at
-// the geometry below, area-local row 512: a cue stem's even rows land
+// the geometry below, area-local row 518: a cue stem's even rows land
 // there, the cursor's odd rows do not). At 300 % on the tablet at
-// key_height 66 (the square key) the canvas is 1026 rows, 269-1294 (main.cpp's lane
-// table, re-derived 2026-11-02 for the square key): the upper well's band
-// 512 rows (269-780), the divider row 781 and the lower well's band 512
-// rows (782-1293), the spare row 1294 the canvas's last (1026 less the
-// divider's 1 is odd).
+// key_height 60 (the square key's default) the canvas is 1038 rows,
+// 263-1300 (main.cpp's lane table, re-derived 2026-11-02 for the square
+// key): the upper well's band 518 rows (263-780), the divider row 781 and
+// the lower well's band 518 rows (782-1299), the spare row 1300 the
+// canvas's last (1038 less the divider's 1 is odd).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot
