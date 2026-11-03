@@ -531,13 +531,14 @@ std::string key_legend_word(std::string_view word) {
 // paint_shift_tooltip's Dialog arm), a word button's its word.
 // THE INK BOX: the Breeze drawing's, ONE VISUAL SIZE for every key
 // (2026-11-01, "THE MAIN PAGE IS SETTLED"), ITS LARGER SIDE FOLLOWING THE
-// KEY'S HEIGHT (architect 2026-11-02): kKeyGlyphInkPerKeySide, 20 / 33, of
-// the `key_height` tuning key's device px at 300 % (render.h's seat) — 20
-// at the default 33 — the product taken as one device length at 300 % and
-// ROUNDED ONCE, AT THE ELEMENT, by skin_px (its scaled_px's nearbyint;
-// floored at one px), never the side rounded first: 20 at 300 %, 13 at
-// 200 % (13.33). A key_height commit reaches it on the relayout road
-// (GuiInputHandler::apply_key_height), the icon caches keyed on the ink px.
+// KEY'S HEIGHT (architect 2026-11-02; the ratio 2026-11-03, mock s2):
+// kKeyGlyphInkPerKeySide, 16 / 33, of the `key_height` tuning key's device
+// px at 300 % (render.h's seat) — 16 at the default 33 — the product taken
+// as one device length at 300 % and ROUNDED ONCE, AT THE ELEMENT, by
+// skin_px (its scaled_px's nearbyint; floored at one px), never the side
+// rounded first: 16 at 300 %, 11 at 200 % (10.67). A key_height commit
+// reaches it on the relayout road (GuiInputHandler::apply_key_height), the
+// icon caches keyed on the ink px.
 // CENTERED in the painted face `face` (architect 2026-11-03, the retrofit:
 // the glyph centered on the 67 x 31 face; the left-square seat of the
 // earlier mocks rejected), the spare split with its odd px below and right
@@ -551,8 +552,8 @@ std::string key_legend_word(std::string_view word) {
 // kTextInk B5B5B5 on a resting or pressed face, or kKeyDimInk 5A5A5A when
 // the key is disabled. The glyph is clipped to the face: a face smaller
 // than the ink box keeps its glyph centered and lets nothing overhang onto
-// the ground. None is at the defaults — the ink 20 rows on the 31-row face.
-constexpr double kKeyGlyphInkPerKeySide = 20.0 / 33.0;
+// the ground. None is at the defaults — the ink 16 rows on the 31-row face.
+constexpr double kKeyGlyphInkPerKeySide = 16.0 / 33.0;
 void paint_key_glyph(cairo_t* cr, const GuiRect& cell, icons::Icon icon,
                      bool enabled, KeyLook look) {
     const GuiRect key = key_face_rect(cell);
@@ -1240,10 +1241,10 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
 // their own box, its height the pad, the cap's rows and the pad
-// (time_field_h_px): the 47-row field at 300 % (16 + 15 + 16) puts the
-// Program face's 15.14-row cap band at row floor((47 + 15.14) / 2) = 31,
-// the 62-row field at 400 % (21 + 20 + 21) its 19.95 rows at row 40, the
-// 32-row field at 200 % (11 + 10 + 11) its 10.32 at row 21.
+// (time_field_h_px, render.h): the 41-row field at 300 % (13 + 15 + 13)
+// puts the Program face's 15.14-row cap band at row floor((41 + 15.14) / 2)
+// = 28, the 54-row field at 400 % (17 + 20 + 17) its 19.95 rows at row 36,
+// the 28-row field at 200 % (9 + 10 + 9) its 10.32 at row 19.
 // AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop until the label's removal
 // (2026-10-14).
@@ -2355,17 +2356,18 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // FLAT since 2026-11-01 night, M5m, paint_ce_time_field): A FLAT kKeyFace
 // 363636 BOX, NO RING (Live's numeric fields), the digits THE
 // TEXT TONE kTextInk (M13, 2026-11-02; architect 2026-10-23: "the font
-// color should not be this yellowish color") — 47 DEVICE PX TALL at
-// 300 %, THE PAD, THE CAP AND THE PAD (time_field_h_px, 2026-11-03; it does
-// not follow the key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a
-// half-row tie toward the top, the cap rule's own; round the 33-row cell
-// at key_height 33, time_field_rect: row 8's 1361 .. 1407 round the
-// cell's 1368 .. 1400, the field the taller), its run in THE PROGRAM FACE,
+// color should not be this yellowish color") — 41 DEVICE PX TALL at
+// 300 %, THE PAD, THE CAP AND THE PAD (time_field_h_px, render.h, the
+// owner of the pad and the height; 2026-11-03; it does not follow the
+// key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a half-row tie
+// toward the top, the cap rule's own; round the 33-row cell at key_height
+// 33, time_field_rect: row 8's 1364 .. 1404 round the cell's 1368 ..
+// 1400, the field the taller), its run in THE PROGRAM FACE,
 // 22 px at 300 %, in every time field (row 8's clock, architect 2026-10-26
 // ~11:30; the render player's two, ~12:10, "yes" to symmetry; gui_font.h's
 // table), its cap band centred in the field by redesign_baseline — at 300 %
-// the 15.1-row cap band in the 47-row field, sixteen rows of field above it
-// and sixteen below (the pad's rule, 2026-11-03). The digits are
+// the 15.1-row cap band in the 41-row field, thirteen rows of field above
+// it and thirteen below (the pad's rule, 2026-11-03). The digits are
 // TABULAR — Liberation Sans's every digit 0.556 em — with no kerning between
 // the digits, the colon and the point — so the colon and the point stand
 // still as the time runs.
@@ -2376,19 +2378,19 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // field can ever show in this face — the widest digit in every digit slot of
 // "DD:DD.DDD" (kTimeShape) — shaped through the one chokepoint at the
 // live scale, so nothing is trusted to the face. The field is that cell plus
-// THE PAD either side — 16 DEVICE PX at 300 % (time_field_pad_px; architect
-// 2026-10-23, "symmetrical and much tighter"; 16 the 2026-11-03 text
-// round's) — its width ceiled,
+// THE PAD either side — 13 DEVICE PX at 300 % (time_field_pad_px, render.h;
+// architect 2026-10-23, "symmetrical and much tighter"; 13 his pick of
+// 2026-11-03, mock u3) — its width ceiled,
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
 // the one face, so the three fields are one width. The cell is 4.448 em
 // (seven tabular digits at 0.556 em and the colon and the point at 0.278):
-// at 300 % and 22 px, 97.9 device px ceiled to 98, the field 130; at
-// 138 % a 10-px em, 44.5 ceiled to 45, the field 59. THE PLAYER'S ROW
+// at 300 % and 22 px, 97.9 device px ceiled to 98, the field 124; at
+// 138 % a 10-px em, 44.5 ceiled to 45, the field 57. THE PLAYER'S ROW
 // HOLDS THEM: its scrub is what the fixed terms leave (player_row_layout),
-// the two fields and their gap 130 + 9 + 130 = 269 device px at 300 % and
-// 59 + 4 + 59 = 122 at 138 %, so with the 69-px cell and the 45-px run gap
-// (2026-11-03) the scrub's channel is 1235 device px at 300 % (2304 wide)
-// and 1419 at 138 % (1920 wide).
+// the two fields and their gap 124 + 9 + 124 = 257 device px at 300 % and
+// 57 + 4 + 57 = 118 at 138 %, so with the 69-px cell and the 45-px run gap
+// (2026-11-03) the scrub's channel is 1247 device px at 300 % (2304 wide)
+// and 1423 at 138 % (1920 wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2445,34 +2447,6 @@ static std::string clock_time_text(const AppState& app,
     return format_timestamp(seconds);
 }
 
-// THE FIELD'S PAD AND ITS HEIGHT (architect 2026-10-23, "symmetrical and
-// much tighter"; the rule 2026-11-03, the text round): THE PAD IS EQUAL ON
-// ALL FOUR SIDES OF THE DIGITS' CAP BAND — kTimeFieldPadAt300, 16 DEVICE PX
-// AT 300 % (skin_px, rounded at the element; his pick 2026-11-03, which
-// the retrofit kept round the 22-px digits) — and THE HEIGHT IS DERIVED,
-// the pad, the Program face's cap rows (gui_font_cap_px, rounded at the
-// element) and the pad: 16 + 15 + 16 = 47 at 300 %, 11 + 10 + 11 = 32 at
-// 200 % (the 15-px face's cap 10.3). One pad at every time field —
-// row 8's clock and the render player's two — each side of the digits'
-// cell across and round the cap band down.
-// THE PAD IS ONE NUMBER WITH TWO WEARERS: the time fields and the hover
-// tooltip, whose box pads every side with it (architect 2026-10-31, row 8's
-// clock "has a nice padding for the font size and resolution";
-// paint_shift_tooltip).
-// THE FIELD IS NO KEY (architect 2026-10-29): it does not take the key's
-// side, so at key_height's default 33 it is the taller of the two, and
-// under a key_height above 47 the shorter, centred on the case's rows either
-// way (time_field_rect).
-constexpr double kTimeFieldPadAt300 = 16.0;
-static int time_field_pad_px() {
-    return skin_px(kTimeFieldPadAt300, 1);
-}
-static int time_field_h_px() {
-    return time_field_pad_px() +
-           static_cast<int>(std::nearbyint(
-               gui_font_cap_px(gui_font(GuiFace::Program)))) +
-           time_field_pad_px();
-}
 // THE ACTIVE TAB'S NAME AND THE STATE LINE'S AIR (architect 2026-10-22, the
 // tab strip's retirement; 16 since the text round of 2026-11-03, the 5 W =
 // 15 px before it, and as the approved retrofit mock g1 seats the name the
@@ -2683,11 +2657,11 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
 // ONE TIME FIELD'S RECT: its left line at `x`, `w` wide, centred on the
 // case's rows [case_y, case_y + case_h), A HALF-ROW TIE TOWARD THE TOP
 // either way (the offset FLOORED, so a field TALLER than the case — as it
-// stands under a key_height below 47 — takes the tie upward too, where
-// truncation would send it down). At key_height 33 the field, 47 at 300 %
-// (time_field_h_px), is the taller: 7 rows over the cell above it and 7
-// below at 300 % (row 8's 1361 .. 1407 round the cell's 1368 .. 1400), 5
-// and 5 at 200 % (the 32-row field round the 22-row cell), standing over the
+// stands under a key_height below 41 — takes the tie upward too, where
+// truncation would send it down). At key_height 33 the field, 41 at 300 %
+// (time_field_h_px), is the taller: 4 rows over the cell above it and 4
+// below at 300 % (row 8's 1364 .. 1404 round the cell's 1368 .. 1400), 3
+// and 3 at 200 % (the 28-row field round the 22-row cell), standing over the
 // strip pads either side — inside row 8's and the controls row's rows at
 // every key_height in the key's range, the strip pad 39 at 300 % whatever
 // the key (2026-11-03, the retrofit), so no field overhangs its strip.
@@ -2803,12 +2777,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2213..2281, its face 2214..2280); the clock's field on the well's left
     // edge column, from x 23 — the cell (4.45 em of Liberation Sans
     // advances, seven digits, the colon and the point, in the program face's
-    // 22 px at 300 %, 98 px ceiled) and its two 16-px pads, a 130-px field,
-    // x 23..152 — then the name's first ink 16 px past it (x 169), the state
+    // 22 px at 300 %, 98 px ceiled) and its two 13-px pads, a 124-px field,
+    // x 23..146 — then the name's first ink 16 px past it (x 163), the state
     // line's 16 px past the name's advance, clipped one run gap short of the
     // block (x 791). On a 1920-px window at 138 % (cells 32, the gap 21, the
     // program face 10 px) the block is 671 px of cells from x 1235, the
-    // clock's field 59 px on x 15..73, the name from x 81.
+    // clock's field 57 px on x 15..71, the name from x 79.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and
     // Toggle Value Drag hidden there with the verbs, Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
@@ -3269,14 +3243,14 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // nothing authored but the pad: the frame (hairline_px), the pad, the
     // name's cap band [, the pad, the hint's cap band], the pad, the frame
     // down; the frame and the pad each side of the wider run across. THE PAD
-    // IS THE TIME FIELD'S (time_field_pad_px, 16 at 300 %: the architect's
+    // IS THE TIME FIELD'S (time_field_pad_px, 13 at 300 %: the architect's
     // row-8 clock, "a nice padding for the font size and resolution"; "the
     // tooltips should also increase padding", 2026-11-03), on both axes and
     // between the two lines. Each cap is the face's own (gui_font_cap_px)
     // rounded at the element; each baseline stands on its cap's bottom row,
     // so a descender hangs into the pad below it. At 300 % a one-line box is
-    // 1 + 16 + 15 + 16 + 1 = 49 device rows, a two-line one
-    // 1 + 16 + 15 + 16 + 12 + 16 + 1 = 77.
+    // 1 + 13 + 15 + 13 + 1 = 43 device rows, a two-line one
+    // 1 + 13 + 15 + 13 + 12 + 13 + 1 = 68.
     const GuiFont name_font = gui_font(GuiFace::Program);
     const GuiFont hint_font = gui_font(GuiFace::Hint);
     const bool two_line = (line2 != nullptr);
@@ -3440,7 +3414,7 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // STACK — AppState::Notifications::cards, newest first, every one of them on
 // screen since the queue retired 2026-08-30 — painted top-right, right-aligned
 // on the keys' outer column, its first card's top border on the trim bar's
-// frame row, read off the live lane table (architect 2026-10-08: "it looks
+// first row, read off the live lane table (architect 2026-10-08: "it looks
 // like absolute positioning where it should be relative to the elements";
 // 2026-11-02, M14; the rule and the margins at
 // notification_stack_bound) — growing
@@ -3908,14 +3882,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int major_top = ruler_bottom - ruler_major_tick_h_px();
     const int minor_top = ruler_bottom - ruler_minor_tick_h_px();
 
-    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: BOLD 18
-    // at 300 %, scaled with gui_scale — architect 2026-11-01 night, M5c; 18
-    // 2026-11-03) in the text tone kTextInk (2026-11-02, the font audit:
-    // Live's own ruler digits), BARE, THEIR INK CENTERED ON THE RULER — the
-    // BASELINE the ruler's pad and the digits' ink above the baseline under
-    // the lane's top (render.h's ruler_baseline_px: 27 rows at 300 %, the
-    // digits' ink on rows 14 .. 26 of the ruler, 14 rows of pad above and
-    // below) — a derived row of the lane, neither solver asked
+    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: BOLD 16
+    // at 300 %, scaled with gui_scale — architect 2026-11-01 night, M5c; 16
+    // since the retrofit, 2026-11-03) in the text tone kTextInk (2026-11-02,
+    // the font audit: Live's own ruler digits), BARE, THEIR INK CENTERED ON
+    // THE RULER — the BASELINE the ruler's pad and the digits' ink above the
+    // baseline under the lane's top (render.h's ruler_baseline_px: 23 rows at
+    // 300 %, the digits' ink on rows 11 .. 22 of the ruler, 11 rows of pad
+    // above and below) — a derived row of the lane, neither solver asked
     // (redesign_baseline's block).
     const GuiFont font = gui_font(GuiFace::Small);
     const double baseline =

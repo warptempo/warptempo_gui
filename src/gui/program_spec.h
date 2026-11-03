@@ -40,8 +40,9 @@
 // program_run_gap_px; the hi-fi's lengths again since 2026-11-03, the
 // retrofit); then THE WELL, flat regions on
 // the ground (render.h's well paragraph and its lanes block, which derive
-// every length at the element) — a row of ground, THE TRIM BAR (its frame
-// and its interior, view_bar_field_at300's 16 px), THE RULER FLIPPED, a row
+// every length at the element) — a row of ground, THE TRIM BAR (its two
+// flat fills on view_bar_field_at300's 16 px and one hairline, a row of
+// ground under them), THE RULER FLIPPED, a row
 // of ground, THE MARKER LANE of Cool Edit's cues (the flag editor's box on
 // its whole rows, "right now it's too small to click"; usability over
 // accuracy, render.h's row-6 canvas paragraph), a row of ground, THE CANVAS
@@ -107,10 +108,10 @@ struct ProgramSpec {
     // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
     // row 8 and the controls row), so neither strip nor the controls row
     // carries a field here.
-    // (THE DARK TIME FIELD'S HEIGHT AND PAD are paint_handler.cpp's,
-    // authored at the tablet's scale: kTimeFieldPadAt300 and the height
-    // derived from it and the clock's cap. THE ACTIVE TAB'S NAME AND THE
-    // STATE LINE'S AIR past the clock field are paint_handler.cpp's too,
+    // (THE DARK TIME FIELD'S HEIGHT AND PAD are render.h's, authored at the
+    // tablet's scale: kTimeFieldPadAt300 and the height derived from it and
+    // the clock's cap, the marker lane's height too. THE ACTIVE TAB'S NAME
+    // AND THE STATE LINE'S AIR past the clock field are paint_handler.cpp's,
     // kTabNameAirAt300 and kStateAirAt300, 2026-11-03.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
@@ -128,12 +129,12 @@ struct ProgramSpec {
     // division above and below the zero row (render_canvas, render.h's row-6
     // canvas paragraph).
     int  grid_divisions;
-    // THE TRIM BAR'S INTERIOR between its two frame lines, IN DEVICE PX AT
-    // 300 % (architect 2026-11-01 night, M5c / M5h, "good": the bar 145 ..
-    // 162 framed in one-px 757575; the hi-fi field's 15 between its slots,
-    // his T15 of 2026-10-24, before it): THE RULING IS THE 300 % NUMBER, read
-    // on the skin's road (render.h's view_bar_field_h_px through skin_px,
-    // floor 1: 16 at 300 %, 11 at 200 %). (THE RULER'S GROUND, TICKS AND
+    // THE TRIM BAR'S FIELD, IN DEVICE PX AT 300 % (architect 2026-11-01
+    // night, M5c / M5h, "good": the bar 145 .. 162; the two fills on it and
+    // one hairline, the ground line under them, mock z2, 2026-11-03): THE
+    // RULING IS THE 300 % NUMBER, read on the skin's road (render.h's
+    // view_bar_field_h_px through skin_px, floor 1: 16 at 300 %, 11 at
+    // 200 %; the bar's rows trim_bar_h_px). (THE RULER'S GROUND, TICKS AND
     // BASELINE and THE MARKER LANE'S W ROWS, QUANTA AND FILL, the hi-fi
     // well's fields 2026-10-09 to 2026-11-02, and THE STEREO DIVIDER'S FACE
     // left with the flat well: render.h's well lanes block derives them at

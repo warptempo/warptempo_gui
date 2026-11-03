@@ -54,12 +54,12 @@ GuiRect notification_stack_bound(const AppState& a) {
     // panel's own kPanelPadPx (architect 2026-08-30). THE TOP IS ONE RULE FOR
     // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
     // "it looks like absolute positioning where it should be relative to the
-    // elements"): THE TRIM BAR'S FRAME ROW, the row under the trim lane's
+    // elements"): THE TRIM BAR'S FIRST ROW, the row under the trim lane's
     // first row of ground (render_trim_flags' bar, one hairline down), so the
-    // first card's top border and the bar's top frame line are ONE LINE of
-    // the one frame tone (architect 2026-11-02, M14 "d": "the card's top
-    // border one line with the trim bar's frame row"; row 145 at 300 % at
-    // key_height 33).
+    // first card's top border stands on the bar's top row (architect
+    // 2026-11-02, M14 "d": "the card's top border one line with the trim
+    // bar's frame row", the frame the bar wore until its two fills,
+    // 2026-11-03; row 145 at 300 % at key_height 33).
     // The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well).

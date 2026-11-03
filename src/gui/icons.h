@@ -166,8 +166,8 @@ void drop_rasters();
 // it: a probe at zoom 8 measures the ink in user units, the zoom is `ink_px`
 // over its larger side, and the zoom steps down by 1 % while the rim's
 // extra row makes it overrun. THE SEATS' LENGTHS, each its owner's: the
-// keys' skin_px of 20 / 33 of the `key_height` tuning key's height
-// (kKeyGlyphInkPerKeySide, paint_key_glyph, 20 at the default 33,
+// keys' skin_px of 16 / 33 of the `key_height` tuning key's height
+// (kKeyGlyphInkPerKeySide, paint_key_glyph, 16 at the default 33,
 // 2026-11-03), the logo lane's
 // note skin_px(21) (kLogoNoteInkAt300) and battery glyph skin_px(19)
 // (kLogoGlyphInkAt300, render.h), the list rows' skin_px(27)

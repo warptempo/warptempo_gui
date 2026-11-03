@@ -91,16 +91,17 @@
 // THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h;
 // M13's text tones 2026-11-02; the text round's lengths 2026-11-03): FLAT
 // REGIONS ON THE GROUND, no frame, no ring, no bevel, its columns the keys'
-// faces' outer columns (render.h's well_columns, THE EDGE RULE), top to bottom —
-// THE TRIM BAR kTrimBarFace 3C3C3C in a one-device-px kWellFrame 757575
-// frame on all four sides, the span two one-px kWellFrame verticals frame
-// to frame; THE RULER kRulerFace 363636 with the kTextInk digits and the
-// kRulerTick 6B6B6B ticks; one row of ground; THE MARKER LANE kLaneFace
-// 2A2A2A (architect 2026-11-03, the retrofit: Live's next real fill above
-// the 242424 ground); one row of ground; THE CANVAS (the palette's
-// `waveform_canvas`), its stereo divider one row of ground. Every number is Live's, measured on
-// his Live 12 shots (the trim bar the arrangement's overview, the ruler and
-// its ticks the time ruler, the lane the clip view's marker lane).
+// faces' outer columns (render.h's well_columns, THE EDGE RULE), top to
+// bottom — THE TRIM BAR two flat fills, no frame (architect 2026-11-03,
+// mock z2): kTrimBarFace 2A2A2A outside the trim, kTrimSpanFace 6A6A6A on
+// the span, one row of ground under them; THE RULER kRulerFace 363636 with
+// the kTextInk digits and the kRulerTick 6B6B6B ticks; one row of ground;
+// THE MARKER LANE kLaneFace 2A2A2A (architect 2026-11-03, the retrofit:
+// Live's next real fill above the 242424 ground); one row of ground; THE
+// CANVAS (the palette's `waveform_canvas`), its stereo divider one row of
+// ground. Every number is Live's, measured on his Live 12 shots (the trim
+// bar the arrangement's overview, the ruler and its ticks the time ruler,
+// the lane the clip view's marker lane).
 // THE TIME FIELDS are flat kKeyFace boxes, no ring (2026-11-01 night, M5m).
 
 // THE GROUND (the head).
@@ -145,14 +146,21 @@ inline constexpr uint32_t key_ink(KeyLook look, bool enabled) {
 }
 
 // THE WELL'S TONES (the head's THE WELL). kWellFrame is THE GRAMMAR'S ONE
-// FRAME TONE (architect 2026-11-02, M14 "d"): the trim bar's frame and the
-// span's verticals, the scrub's one-px channel (render.h's scrub block) and
-// the cards' and the tooltip's one-px border (the chrome's `card_frame`).
-inline constexpr uint32_t kTrimBarFace = 0x3C3C3C;
-inline constexpr uint32_t kWellFrame   = 0x757575;
-inline constexpr uint32_t kRulerFace   = 0x363636;
-inline constexpr uint32_t kRulerTick   = 0x6B6B6B;
-inline constexpr uint32_t kLaneFace    = 0x2A2A2A;
+// FRAME TONE (architect 2026-11-02, M14 "d"): the scrub's one-px channel
+// (render.h's scrub block) and the cards' and the tooltip's one-px border
+// (the chrome's `card_frame`). THE TRIM BAR'S TWO FILLS (architect
+// 2026-11-03, mock z2; render_trim_flags): kTrimBarFace, the bar outside
+// the trim, IS THE LANE'S TONE — ONE CONSTANT, kLaneFace's own value (Live's
+// next fill above the ground), named for what it paints as kPaneFace is
+// kKeyFace's; kTrimSpanFace 6A6A6A, the span, Live's off-button hover — the
+// press face's value, kept its own constant because it is another role (a
+// span, not a press), so a retuned press leaves the bar alone.
+inline constexpr uint32_t kWellFrame    = 0x757575;
+inline constexpr uint32_t kRulerFace    = 0x363636;
+inline constexpr uint32_t kRulerTick    = 0x6B6B6B;
+inline constexpr uint32_t kLaneFace     = 0x2A2A2A;
+inline constexpr uint32_t kTrimBarFace  = kLaneFace;
+inline constexpr uint32_t kTrimSpanFace = 0x6A6A6A;
 
 // THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
 // selection): a flat 637E86 bar under 111111 text — the flag editor's and
@@ -175,7 +183,7 @@ inline constexpr uint32_t kSelectionText      = kTextOnLit;
 // viewer's darker pane, the one exception, is recorded there), and the
 // cards' and the tooltip's face (the chrome's `card_ground`,
 // chrome_derive.h) inside their one-px kWellFrame border (`card_frame`, the
-// trim bar's frame tone, paint_popup_chrome).
+// grammar's one frame tone, paint_popup_chrome).
 inline constexpr uint32_t kPaneFace = kKeyFace;
 
 // -- THE KEY'S PAINTERS ------------------------------------------------------

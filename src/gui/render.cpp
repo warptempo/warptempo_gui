@@ -951,49 +951,40 @@ void render_trim_flags(cairo_t* cr,
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
-    // THE BAR (render.h's well paragraph): under the lane's first row of
-    // ground (the caller's), a FLAT kTrimBarFace BAR in a ONE-DEVICE-PX
-    // kWellFrame FRAME ON ALL FOUR SIDES across the well's columns, its
-    // interior view_bar_field_h_px rows.
+    // THE BAR (render.h's well paragraph; architect 2026-11-03, mock z2):
+    // under the lane's first row of ground (the caller's), THE FILL'S ROWS
+    // (trim_bar_fill_h_px) a FLAT kTrimBarFace across the well's columns,
+    // the edge columns included, NO FRAME; the bar's last row the caller's
+    // ground too (paint_trim erases the whole lane first), the one-px line
+    // between the bar and the ruler, nothing painted over it here.
     const int cw = well_edge_column_w_px();
     const int px = hairline_px();
     const int bar_y = lane_y + px;
-    const int bar_h = std::min(trim_bar_h_px(), lane_h - px);
+    const int fill_h = std::min(trim_bar_fill_h_px(), lane_h - px);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (bar_h > 0) {
-        paint_cell_rect(cr, GuiRect{lane_x - cw, bar_y, lane_w + 2 * cw, bar_h},
-                        hex(kWellFrame));
-        if (bar_h > 2 * px)
-            paint_cell_rect(cr, GuiRect{lane_x - cw + px, bar_y + px,
-                                        lane_w + 2 * cw - 2 * px,
-                                        bar_h - 2 * px},
-                            hex(kTrimBarFace));
-    }
+    if (fill_h > 0)
+        paint_cell_rect(cr, GuiRect{lane_x - cw, bar_y, lane_w + 2 * cw, fill_h},
+                        hex(kTrimBarFace));
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
-    const int field_y = bar_y + px;
-    const int field_h = bar_h - 2 * px;
 
     // THE SPAN — the trim window's columns, the begin column through the end
     // column inclusive, sliding off an edge like any content (the clip cuts
-    // it; a side lying farther off than one px is held there, outside the
-    // clip, so the rect stays in cairo's range at any zoom): TWO ONE-PX
-    // kWellFrame VERTICALS frame to frame on its first and last columns, its
-    // interior the bar's own face (architect 2026-11-01 night, M5b / M5h:
-    // one color, no outline of its own). NO PLAYHEAD IN THE BAR (architect
+    // it to the waveform's columns, so the edge columns always wear the
+    // outside fill; a side lying farther off than one px is held there,
+    // outside the clip, so the rect stays in cairo's range at any zoom): A
+    // FLAT kTrimSpanFace FILL on the fill's rows, no outline of its own
+    // (architect 2026-11-03, mock z2). NO PLAYHEAD IN THE BAR (architect
     // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
     const int span_lo = std::max(bc.col, -px);
     const int span_hi = std::min(ec.col + 1, lane_w + px);
-    if (span_hi > span_lo && field_h > 0) {
-        const int sx = lane_x + span_lo;
-        const int sw = span_hi - span_lo;
-        paint_cell_rect(cr, GuiRect{sx, field_y, px, field_h}, hex(kWellFrame));
-        paint_cell_rect(cr, GuiRect{sx + sw - px, field_y, px, field_h},
-                        hex(kWellFrame));
-    }
+    if (span_hi > span_lo && fill_h > 0)
+        paint_cell_rect(cr, GuiRect{lane_x + span_lo, bar_y,
+                                    span_hi - span_lo, fill_h},
+                        hex(kTrimSpanFace));
 
     // THE GRABS, as painted: the span's two end zones and the body between
     // them (render.h's view_bar_grab_w_px, trim_endcap_rect,
@@ -2730,8 +2721,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // line's grammar's ink, the x-height band centered in it; render.h's
     // EDITING paragraph): the band's rows are read off the one derivation
     // (cue_band_top_px, cue_band_h_px, render.h), never re-derived here — at
-    // 300 % rows 13 .. 35 of the inner 3 .. 45, ten rows of field above and
-    // ten below.
+    // 300 % rows 9 .. 30 of the inner 3 .. 37, six rows of field above and
+    // seven below.
     const int view_y = lane.y + u;
     const int view_h = fill_h - 2 * u;
     const int band_y = lane.y + cue_band_top_px();

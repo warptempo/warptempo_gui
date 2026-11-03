@@ -59,7 +59,7 @@
 // logo lane 0–71), its bottom row 1328 (the well's foot) and its columns 23
 // and 2280 (the well's edge columns), those rows and columns ground, the
 // PANE x 24..2279 — the main canvas's own columns — and y 145..1327 (the
-// main canvas's own rows 253–1327); the controls row 1329–1439, its cell
+// main canvas's own rows 240–1327); the controls row 1329–1439, its cell
 // rows 1368–1400 (the faces 1369–1399), its first cell's columns 22–90 (the
 // face 23–89) and its last 2213–2281 (the face 2214–2280). A DIALOG'S TEXT
 // (THE TEXT SEAT, below) on the list rows' seat, 18 px in from the box's

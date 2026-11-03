@@ -171,9 +171,8 @@ struct TrimRange {
 // Windows 95's DrawEdge grammar, its one-device-px mitred hairline ring of
 // 2026-10-23 and the ring tones it wore are git history. THE CHROME'S LINES
 // are flat ONE-DEVICE-PX lines (hairline_px, below) of ONE TONE,
-// materials.h's kWellFrame 757575: the trim bar's frame and the span's
-// verticals, the scrub's channel (the scrub block) and the cards' and the
-// tooltip's border (THE CARD FACE, below, the `card_frame` role); the modal
+// materials.h's kWellFrame 757575: the scrub's channel (the scrub block)
+// and the cards' and the tooltip's border (THE CARD FACE, below, the `card_frame` role); the modal
 // family's box has none (modal_box.h's head).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
@@ -240,7 +239,7 @@ struct TrimRange {
 // kPaneFace 363636 — INSIDE A ONE-DEVICE-PX `card_frame` BORDER on all four
 // sides, kWellFrame 757575, the grammar's one frame tone (paint_popup_chrome),
 // the border standing on the box's own outer rows and columns, so the card is
-// 53 rows and the one-line tooltip 49 at 300 %; NO RING TONES, NO SHADOW. The
+// 53 rows and the one-line tooltip 43 at 300 %; NO RING TONES, NO SHADOW. The
 // cards' words the text tone (`card_text`) at the body size, THE TOOLTIP'S
 // NAME LINE the flags' own program face (2026-10-23, "the same as the
 // flags", 22 px at 300 %) in the text tone
@@ -438,30 +437,35 @@ void install_true_colors(bool on);
 // lines that don't scale" ruled one px in M5h; the ruler's ticks one px
 // since 2026-11-03). THE ROWS AT 300 % (main.cpp's lane table the record;
 // at key_height 33, its default, 2026-11-03): row 144 ground, the trim bar
-// 145 .. 162, the ruler 163 .. 202, row 203 ground, the marker lane 204 ..
-// 251, row 252 ground, the canvas 253 .. 1327, row 1328 ground.
+// 145 .. 162 (its fill 145 .. 161, row 162 ground), the ruler 163 .. 196,
+// row 197 ground, the marker lane 198 .. 238, row 239 ground, the canvas
+// 240 .. 1327, row 1328 ground.
 //
 // THE TRIM BAR IS LIVE'S OVERVIEW BAR (render_trim_flags owns the drawing,
-// trim_lane_h_px the rows): one row of ground under the band (the row the
-// retired program ring stood on), then a FLAT kTrimBarFace 3C3C3C BAR in a
-// ONE-DEVICE-PX kWellFrame 757575 FRAME ON ALL FOUR SIDES across the well's
-// columns, its interior 16 device px at 300 % (view_bar_field_h_px); and THE
-// SPAN, the trim window's columns, TWO ONE-PX kWellFrame VERTICALS frame to
-// frame on the span's first and last columns, its interior the bar's own
-// face (architect 2026-11-01 night, M5b / M5c / M5h: "solid 757575", one
-// color). NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought we
-// agreed no dots on the trim bar"). No track, no caps, no pressed face: the
-// lane's grabs are the span's two ends and its body (TrimBarHit, below).
+// trim_lane_h_px the rows; architect 2026-11-03, mock z2): one row of ground
+// under the band (the row the retired program ring stood on), then THE
+// BAR'S FILL ROWS (trim_bar_fill_h_px, 17 device px at 300 %) across the
+// well's columns, the edge columns included, NO FRAME — OUTSIDE THE TRIM a
+// flat kTrimBarFace 2A2A2A (the marker lane's tone), INSIDE IT, THE SPAN,
+// the trim window's columns from the begin column through the end column
+// clipped to the waveform's columns (so the edge columns always wear the
+// outside fill), a flat kTrimSpanFace 6A6A6A — and the bar's last row ONE
+// DEVICE PX OF GROUND across the well's columns, the span included, the
+// line between the bar and the ruler (no line above: the row above the bar
+// is the lane's ground). NO PLAYHEAD IN THE BAR (architect 2026-10-09
+// ~14:30, "I thought we agreed no dots on the trim bar"). No track, no caps,
+// no pressed face: the lane's grabs are the span's two ends and its body
+// (TrimBarHit, below), and they paint nothing of their own.
 //
 // THE RULER IS COOL EDIT'S, FLIPPED, IN LIVE'S TONES (paint_ruler_row):
-// FLAT kRulerFace 363636 directly under the bar's bottom frame row, NO LINE
-// ON ITS TOP; THE TICKS kRulerTick 6B6B6B, ONE DEVICE PX WIDE AT EVERY
+// FLAT kRulerFace 363636 directly under the bar's ground line, NO LINE ON
+// ITS TOP; THE TICKS kRulerTick 6B6B6B, ONE DEVICE PX WIDE AT EVERY
 // SCALE (kRulerTickWidthPx, 2026-11-03), STANDING ON THE RULER'S FOOT, the
 // major 10 rows and the minor 3 at 300 % (skin_px), overlaying its bottom
-// pad, NO SHADOW; THE DIGITS the ruler face (GuiFace::Small, BOLD 18 at
+// pad, NO SHADOW; THE DIGITS the ruler face (GuiFace::Small, BOLD 16 at
 // 300 %) in the text tone kTextInk B5B5B5 (architect 2026-11-02, the font
 // audit: Live's own ruler digits), bare, THEIR INK CENTERED ON THE RULER
-// between two 14-px pads (ruler_baseline_px, the ruler block below; HIS
+// between two 11-px pads (ruler_baseline_px, the ruler block below; HIS
 // RULE, 2026-11-03); then ONE ROW OF GROUND, the ruler lane's last
 // (ruler_lane_h_px).
 
@@ -545,8 +549,9 @@ void install_true_colors(bool on);
 // starting the triangle's reach right plus a gap of 13 device px at 300 %
 // right of the column (cue_label_lead_px: 22 at 300 %), ON THE LANE'S ONE
 // BASELINE at rest and in the editor (cue_baseline_px, THE METRICS RULE at
-// marker_lane_h_px: the x-height band 18 rows from the lane's top and from
-// its bottom at 300 %) — `show_cue_label`, render.cpp, the one painter of
+// marker_lane_h_px: the x-height band centered in the lane, 14 rows from
+// its top and 15 from its bottom at 300 %) — `show_cue_label`, render.cpp,
+// the one painter of
 // every label look on the face; and THE STEM —
 // DOTS ONE DEVICE PX SQUARE on the canvas's device rows (2026-10-09 ~14:25,
 // "on waveform → unscaled"), the canvas alone (no dot in the lane or on the
@@ -687,8 +692,8 @@ void install_true_colors(bool on);
 // clip the field's inner rows), THE CARET AND THE SELECTION BAND THE LEGAL
 // SET'S BAND (cue_band_top_px, cue_band_h_px: the warp line's grammar's ink
 // with the x-height band centered in it, THE METRICS RULE at
-// marker_lane_h_px) — at 300 % lane rows 13 .. 35 of the 49, ten rows of
-// field above it and ten below inside the outline. A selected glyph's ink past the band takes the
+// marker_lane_h_px) — at 300 % lane rows 9 .. 30 of the 41, six rows of
+// field above it and seven below inside the outline. A selected glyph's ink past the band takes the
 // field text, the field ink's clip the band's complement in both its columns
 // and its rows. The field grows and shrinks with what is typed, the
 // segments to its right riding its edge in their resting look; and THE
@@ -1201,8 +1206,8 @@ inline int logo_lane_h_px() {
 // area, not the borders and the line"): the chokepoint beside scaled_px for
 // every chrome LINE the skin draws, ONE DEVICE PX at every gui_scale — THE
 // WELL'S LINES AND ROWS OF GROUND (the flat well, 2026-11-01 night, M5h's
-// "one-px lines": the trim bar's frame and the span's verticals, the row
-// above the bar, the ruler's and the marker lane's foot rows, the stereo
+// "one-px lines": the trim bar's ground line and the row above the bar,
+// the ruler's and the marker lane's foot rows, the stereo
 // divider's row, the well's foot and its edge columns; the ruler's ticks, one
 // device px wide, kRulerTickWidthPx), the group gap between two keys (one device
 // px each side of a key's face, kKeyFaceInsetPx, 2026-11-03), the modal box's outer
@@ -1371,12 +1376,12 @@ inline int program_run_gap_px() {
 // and its page road's face alike) carry ONE SCRUB, Live's flat slider
 // (architect 2026-11-01 night, M7, "agree both"; M9 A2 for the score viewer):
 //   THE CHANNEL — ONE DEVICE PX (scrub_channel_h_px, hairline_px: never
-//     scaled) of materials.h's kWellFrame 757575, the trim bar's frame tone,
+//     scaled) of materials.h's kWellFrame 757575, the grammar's frame tone,
 //     on THE FACE'S CENTER ROW — the centered elements' tie rule, (face rows
 //     − 1) / 2 below the face's top, rounded down (scrub_channel_above_px):
 //     row 1384 at 300 % on the keys' face rows 1369..1399 at key_height 33 —
 //     across the channel's own columns, from the thumb's center at frame 0
-//     to its center at the last frame (at 300 % x 274..1508 in the player),
+//     to its center at the last frame (at 300 % x 274..1520 in the player),
 //     nothing else: no fill, no played extent, nothing that reads the
 //     window's focus.
 //   THE THUMB — A BLANK FLAT KEY BLOCK (paint_scrub_thumb: the key painter
@@ -1429,33 +1434,40 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 // derived here at the element: skin_px for a chrome length authored in
 // device px at 300 %, hairline_px for a line, which does not scale, the
 // faces' own metrics for the text's bands).
-//   THE TRIM   a row of ground, the bar's frame line, its interior, the
-//              frame line (trim_lane_h_px): 19 device rows at 300 % (1 + 1
-//              + 16 + 1), 14 at 200 % (1 + 1 + 11 + 1).
+//   THE TRIM   a row of ground, the bar's fill (one hairline and the
+//              field), the bar's ground line (trim_lane_h_px): 19 device
+//              rows at 300 % (1 + 1 + 16 + 1), 14 at 200 % (1 + 1 + 11 + 1).
 //   THE RULER  the ruler (ruler_h_px: the pad, the digits' ink, the pad;
 //              the ticks overlay its foot) and a row of ground
-//              (ruler_lane_h_px): 40 + 1 = 41 at 300 % (14 + 12 + 14), 26 +
-//              1 at 200 % (9 + 8 + 9).
-//   THE MARKER the editor's box on the lane's whole rows (marker_lane_h_px:
-//              the outline, the pad, the legal set's band, the pad, the
-//              outline): 48 at 300 % (3 + 10 + 22 + 10 + 3), 32 at 200 % (2
-//              + 7 + 14 + 7 + 2); the cue's triangle its last rows
-//              (cue_triangle_rows, 9 / 6).
+//              (ruler_lane_h_px): 34 + 1 = 35 at 300 % (11 + 12 + 11), 22 +
+//              1 at 200 % (7 + 8 + 7).
+//   THE MARKER the time field's height, the editor's box on its whole rows
+//              (marker_lane_h_px: the outline, the pad above, the legal
+//              set's band, the pad below, the outline, the x band centered):
+//              41 at 300 % (3 + 6 + 22 + 7 + 3), 28 at 200 % (2 + 5 + 14 +
+//              5 + 2); the cue's triangle its last rows (cue_triangle_rows,
+//              9 / 6).
 //   THE LINE   the row of ground between the lane and the canvas, one
 //              hairline (lane_foot_line_h_px, below).
-// THE TRIM BAR'S INTERIOR, 16 DEVICE PX AT 300 % between its frame lines on
-// the skin's road (architect 2026-11-01 night, M5c / M5h: the bar 145 .. 162
-// framed; program_spec.h's view_bar_field_at300 the owner of the number): 11
-// at 200 %, floor 1.
+// THE TRIM BAR'S FIELD, 16 DEVICE PX AT 300 % on the skin's road (architect
+// 2026-11-01 night, M5c / M5h: the bar 145 .. 162; program_spec.h's
+// view_bar_field_at300 the owner of the number): 11 at 200 %, floor 1.
 inline int view_bar_field_h_px() {
     return skin_px(kProgramSpec.view_bar_field_at300, 1);
 }
-// THE TRIM BAR, frame to frame, and THE TRIM LANE: the row of ground above
-// it (the row the retired program ring stood on, so the modal family's box
-// and the cards keep their seat on the lane's first row, modal_box.h,
-// notification_stack_bound) and the bar.
+// THE TRIM BAR'S FILL (architect 2026-11-03, mock z2: the two fills,
+// render_trim_flags): one hairline and the field, 17 rows at 300 %, 12 at
+// 200 % — the bar's rows less its ground line, the bar held at its 18 rows
+// so nothing under it moves. THE TRIM BAR, the fill and its ground line,
+// and THE TRIM LANE: the row of ground above it (the row the retired
+// program ring stood on, so the modal family's box and the cards keep their
+// seat on the lane's first row, modal_box.h, notification_stack_bound) and
+// the bar.
+inline int trim_bar_fill_h_px() {
+    return hairline_px() + view_bar_field_h_px();
+}
 inline int trim_bar_h_px() {
-    return hairline_px() + view_bar_field_h_px() + hairline_px();
+    return trim_bar_fill_h_px() + hairline_px();
 }
 inline int trim_lane_h_px() {
     return hairline_px() + trim_bar_h_px();
@@ -1467,7 +1479,10 @@ inline int trim_lane_h_px() {
 // retrofit's mock g1 carries it under the Bold-16 digits, 2026-11-03). THEY
 // OVERLAY THE RULER'S FOOT AND ADD NO HEIGHT (architect 2026-11-03: "the
 // ticks can be adjusted later — they don't change height of anything
-// else"): they stand in the ruler's bottom pad, under the digits' ink.
+// else"): they stand in the ruler's bottom pad, under the digits' ink —
+// the major's 10 rows in the pad's 11 at 300 %, ONE ROW OF RULER CLEAR
+// BETWEEN ITS TOP AND THE INK'S FOOT (7 in 7 at 200 % and 5 in 5 at 138 %,
+// meeting the ink with no row between, never over it).
 inline constexpr int    kRulerTickWidthPx        = 1;
 inline constexpr double kRulerMajorTickRowsAt300 = 10.0;
 inline constexpr double kRulerMinorTickRowsAt300 = 3.0;
@@ -1478,18 +1493,18 @@ inline int ruler_minor_tick_h_px() {
     return skin_px(kRulerMinorTickRowsAt300, 1);
 }
 // THE DIGITS' INK IS CENTERED ON THE RULER (architect 2026-11-03, HIS RULE):
-// THE RULER IS THE PAD, THE DIGITS' INK AND THE PAD — kRulerPadAt300, 14
-// DEVICE PX AT 300 % (skin_px, rounded at the element; his pick off the
-// ruler sheets), above and below — the ink the rows the ruler face's
+// THE RULER IS THE PAD, THE DIGITS' INK AND THE PAD — kRulerPadAt300, 11
+// DEVICE PX AT 300 % (skin_px, rounded at the element; his pick of
+// 2026-11-03, mock v3), above and below — the ink the rows the ruler face's
 // digits and marks, kRulerInkSet, stand on as painted (gui_font_ink_band,
 // the rows the slight-hinted paint covers: 12 above the baseline and 0 below
 // at Bold 16, 8 and 0 at Bold 11; the ruler face 16 since the retrofit,
-// 2026-11-03) — so 14 + 12 + 14 = 40 at 300 %, 9 + 8 + 9 = 26 at 200 %.
+// 2026-11-03) — so 11 + 12 + 11 = 34 at 300 %, 7 + 8 + 7 = 22 at 200 %.
 // THE BASELINE the pad and the ink's rows above it under the ruler's top
-// (26 at 300 %), the ink's top row the pad under it: the painted ink's rows
-// centered, 14 / 12 / 14 (the rule of mock dec1a, 2026-11-03: the measured
+// (23 at 300 %), the ink's top row the pad under it: the painted ink's rows
+// centered, 11 / 12 / 11 (the rule of mock dec1a, 2026-11-03: the measured
 // ink, never the flat digits' cap, between the two pads).
-inline constexpr double kRulerPadAt300 = 14.0;
+inline constexpr double kRulerPadAt300 = 11.0;
 inline constexpr const char* kRulerInkSet = "0123456789:.";
 inline int ruler_ink_above_px() {
     return gui_font_ink_band(gui_font(GuiFace::Small), kRulerInkSet).above;
@@ -1542,8 +1557,8 @@ inline int cue_triangle_unit_px() {
 // 4 at 150 % (4.5 rounded to even) and at 138 % (4.14), 11 at 360 %; at the
 // scale's floor of 50 % (is_gui_scale_percent, device_config.h) 1.5 rounds
 // to 2 — and the drawing holds: no floor, no clamp. The rows fit the
-// ruler's bottom pad (14 at 300 %, under the digits' ink) and the marker
-// lane's pad and outline under the band (13) at every scale. READERS: the
+// ruler's bottom pad (11 at 300 %, under the digits' ink) and the marker
+// lane's pad and outline under the band (7 + 3 = 10) at every scale. READERS: the
 // triangle's rows (cue_triangle_h_px, cue_above_triangle_h_px), its widths
 // (cue_triangle_half_w_px, cue_triangle_reach_right_px — every cull, hit and
 // damage box and the label's lead, cue_label_lead_px) and the painter
@@ -1598,15 +1613,43 @@ inline int cue_fill_lead_px() {
 inline int cue_triangle_h_px() {
     return cue_triangle_rows() * cue_triangle_unit_px();
 }
+// THE TIME FIELD'S PAD AND ITS HEIGHT (architect 2026-10-23, "symmetrical
+// and much tighter"; the rule 2026-11-03, the text round; the number
+// 2026-11-03, mock u3) — ONE OWNER, read by the time fields
+// (paint_handler.cpp's THE TIME FIELDS block: row 8's clock, the render
+// player's two, the score viewer's rows), the hover tooltip, whose box
+// pads every side with it (paint_shift_tooltip; architect 2026-10-31, row
+// 8's clock "has a nice padding for the font size and resolution"), and
+// THE MARKER LANE below: THE PAD IS EQUAL ON ALL
+// FOUR SIDES OF THE DIGITS' CAP BAND — kTimeFieldPadAt300, 13 DEVICE PX AT
+// 300 % (skin_px, rounded at the element, floored at one px) — and THE
+// HEIGHT IS DERIVED, the pad, the Program face's cap rows (gui_font_cap_px,
+// rounded at the element) and the pad: 13 + 15 + 13 = 41 at 300 %, 9 + 10 +
+// 9 = 28 at 200 % (the 15-px face's cap 10.3), 17 + 20 + 17 = 54 at 400 %.
+// THE FIELD IS NO KEY (architect 2026-10-29): it does not take the key's
+// height, so at key_height's default 33 it is the taller of the two, and
+// under a key_height above 41 the shorter, centred on the case's rows
+// either way (paint_handler.cpp's time_field_rect).
+inline constexpr double kTimeFieldPadAt300 = 13.0;
+inline int time_field_pad_px() {
+    return skin_px(kTimeFieldPadAt300, 1);
+}
+inline int time_field_h_px() {
+    return time_field_pad_px() +
+           static_cast<int>(std::nearbyint(
+               gui_font_cap_px(gui_font(GuiFace::Program)))) +
+           time_field_pad_px();
+}
 // THE MARKER LANE BY THE METRICS RULE (architect 2026-11-01 night, M5g /
-// M5h / M5j and the final ruling, "THE MARKER LANE AT 14": "calc based on
-// legal chars for the warp input"; "space above/below text should be
-// identical"): THE LANE'S WHOLE ROWS ARE THE FLAG EDITOR'S BOX — its outline
-// (kCueEditorOutlineAt300, three device px at 300 %, "as today"), its inner
-// pad (kCueEditorPadAt300, 10 at 300 %, his pick of 2026-11-03 with the
-// text round), THE LEGAL SET'S BAND, the pad and the outline — so the lane
-// holds the open editor exactly and the label rides ONE BASELINE at rest
-// and in the editor.
+// M5h / M5j, "calc based on legal chars for the warp input"; "space
+// above/below text should be identical"; THE LANE AT THE TIME FIELD'S
+// HEIGHT 2026-11-03, mock u3: "identical at least vertically"):
+// THE LANE IS THE TIME FIELD'S HEIGHT (time_field_h_px above: 41 at 300 %,
+// 28 at 200 %), and ITS WHOLE ROWS ARE THE FLAG EDITOR'S BOX — its outline
+// (kCueEditorOutlineAt300, three device px at 300 %, "as today") on the
+// lane's first and last rows, THE LEGAL SET'S BAND inside it, and THE PADS
+// BETWEEN THEM DERIVED, NOT AUTHORED — so the lane holds the open editor
+// exactly and the label rides ONE BASELINE at rest and in the editor.
 // THE BAND (cue_band_above_px / cue_band_below_px): the ink of the warp
 // line's legal set (is_valid_label_format, warpmarkers_parse.cpp —
 // lowercase, digits, `.`, `+`, `-`, `:`) with THE X-HEIGHT BAND CENTERED IN
@@ -1616,20 +1659,24 @@ inline int cue_triangle_h_px() {
 // the x band — the label face's "l" ink, its "x" ink and its descent, each
 // rounded at the element (gui_font_ascender_ink_px, gui_font_x_ink_px,
 // gui_font_descent_px) — so the band is x + k above the baseline and k
-// below it. AT 300 % (Bold 22: ascender 16, x 12, descent 5): k 5, the band
-// 17 above the baseline and 5 below (22), the lane 3 + 10 + 22 + 10 + 3 =
-// 48, the baseline 30 rows under the lane's top, THE X BAND 18 ROWS FROM
-// THE LANE'S TOP AND FROM ITS BOTTOM; at 200 % (Bold 15: 11, 8, 3): k 3,
-// the band 8 + 3 + 3 = 14, the lane 2 + 7 + 14 + 7 + 2 = 32. The triangle's
-// device rows are the lane's bottom rows (cue_above_triangle_h_px the
-// remainder: 48 − 9 = 39 at 300 %), under the band's descenders.
+// below it.
+// THE BAND'S SEAT: THE X BAND CENTERED IN THE LANE, A HALF-ROW TIE UP —
+// its top x_top = floor((H − x) / 2) rows under the lane's top (H the
+// lane, x the x band's rows; cue_x_top_px), the pad above the band x_top −
+// outline − k (cue_editor_pad_above_px), the pad below it the rest, H −
+// x_top − x − k − outline (cue_editor_pad_below_px). AT 300 % (Bold 22:
+// ascender 16, x 12, descent 5): k 5, the band 17 above the baseline and 5
+// below (22), the lane 41 = 3 + 6 + 22 + 7 + 3, THE X BAND ROWS 14 .. 25
+// (14 rows above it, 15 below), the band rows 9 .. 30, the baseline 26 rows
+// under the lane's top; at 200 % (Bold 15: 11, 8, 3): k 3, the band 8 + 3 +
+// 3 = 14, the lane 28 = 2 + 5 + 14 + 5 + 2, the x band from row 10, the
+// baseline 18. A scale whose field is shorter than the box's minimum (2 ·
+// outline + the band) takes that minimum, both pads 0. The triangle's device
+// rows are the lane's bottom rows (cue_above_triangle_h_px the remainder:
+// 41 − 9 = 32 at 300 %), under the band's descenders.
 inline constexpr double kCueEditorOutlineAt300 = 3.0;
-inline constexpr double kCueEditorPadAt300     = 10.0;
 inline int cue_editor_outline_px() {
     return skin_px(kCueEditorOutlineAt300, 1);
-}
-inline int cue_editor_pad_px() {
-    return skin_px(kCueEditorPadAt300, 0);
 }
 inline int cue_band_k_px() {
     const GuiFont f = gui_font(GuiFace::Label);
@@ -1638,17 +1685,30 @@ inline int cue_band_k_px() {
     const int dsc = static_cast<int>(gui_font_descent_px(f));
     return std::max(asc - x, dsc);
 }
-inline int cue_band_above_px() {
+inline int cue_band_x_px() {
     return static_cast<int>(std::nearbyint(
-               gui_font_x_ink_px(gui_font(GuiFace::Label)))) +
-           cue_band_k_px();
+        gui_font_x_ink_px(gui_font(GuiFace::Label))));
+}
+inline int cue_band_above_px() {
+    return cue_band_x_px() + cue_band_k_px();
 }
 inline int cue_band_below_px() {
     return cue_band_k_px();
 }
 inline int marker_lane_h_px() {
-    return 2 * cue_editor_outline_px() + 2 * cue_editor_pad_px() +
-           cue_band_above_px() + cue_band_below_px();
+    return std::max(time_field_h_px(),
+                    2 * cue_editor_outline_px() + cue_band_above_px() +
+                        cue_band_below_px());
+}
+inline int cue_x_top_px() {
+    return (marker_lane_h_px() - cue_band_x_px()) / 2;
+}
+inline int cue_editor_pad_above_px() {
+    return cue_x_top_px() - cue_editor_outline_px() - cue_band_k_px();
+}
+inline int cue_editor_pad_below_px() {
+    return marker_lane_h_px() - cue_x_top_px() - cue_band_x_px() -
+           cue_band_k_px() - cue_editor_outline_px();
 }
 inline int cue_above_triangle_h_px() {
     return marker_lane_h_px() - cue_triangle_h_px();
@@ -1666,16 +1726,16 @@ inline int cue_fill_h_px() {
 // [box_y, box_y + box_h), a half-row tie toward the top.
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // THE CUE LABEL'S BASELINE AND THE EDITOR'S BAND under the marker lane's top
-// (the metrics rule above): THE BASELINE the outline, the pad and the band's
-// rows above it (31 at 300 %, 21 at 200 %); THE BAND — the flag editor's
-// caret and selection band (render_flag_editor_box reads cue_band_top_px and
-// cue_band_h_px, never a second derivation) — from the pad's foot, the
-// band's two parts tall (rows 13 .. 35 at 300 %). Every label segment — the
-// resting label, the bound cells, the history's two halves — and the flag
-// editor's text ride the baseline (the editor's text sits at the label's
-// seat).
+// (the metrics rule above): THE BAND — the flag editor's caret and selection
+// band (render_flag_editor_box reads cue_band_top_px and cue_band_h_px,
+// never a second derivation) — from the pad above's foot, the band's two
+// parts tall (rows 9 .. 30 at 300 %, 7 .. 20 at 200 %); THE BASELINE the
+// band's top and its rows above the baseline (26 at 300 %, 18 at 200 %).
+// Every label segment — the resting label, the bound cells, the history's
+// two halves — and the flag editor's text ride the baseline (the editor's
+// text sits at the label's seat).
 inline int cue_band_top_px() {
-    return cue_editor_outline_px() + cue_editor_pad_px();
+    return cue_editor_outline_px() + cue_editor_pad_above_px();
 }
 inline int cue_band_h_px() {
     return cue_band_above_px() + cue_band_below_px();
@@ -1714,8 +1774,9 @@ inline int cue_triangle_reach_right_px() {
 // until the flat well; the modal family's box keeps its last row on it,
 // modal_box.h). Across, the well stands column_margin_w_px of the ground in
 // from each side of the window, then ITS EDGE COLUMN, one hairline
-// (well_edge_column_w_px: the trim bar's frame, the ruler's, the lane's and
-// the canvas's skirt — the program ring's column until the flat well), then
+// (well_edge_column_w_px: the trim bar's outside fill, the ruler's, the
+// lane's and the canvas's skirt — the program ring's column until the flat
+// well), then
 // THE WAVEFORM AREA, its width floored to the grid step and the floor's
 // leftover (under 16 device px) split between the two margins, the odd pixel
 // to the right (main.cpp's waveform_area owns the split; column_inner_x_px
@@ -1822,9 +1883,9 @@ inline int bottom_row_h_px() {
 // derived at the element — the logo lane, the strip pads and the keys
 // following `key_height` (the case block above), the well's lanes (the
 // well's lanes block above). At the tablet's 300 % and key_height 33 the
-// band 144 (72 + 33 + 39), the well's lanes above the canvas 108 (19 + 41
-// + 48) and its foot line 1, the well's foot 1 and row 8 111 (39 + 33 +
-// 39): the canvas 1075 rows of the surface's 1440 — main.cpp's lane table
+// band 144 (72 + 33 + 39), the well's lanes above the canvas 95 (19 + 35
+// + 41) and its foot line 1, the well's foot 1 and row 8 111 (39 + 33 +
+// 39): the canvas 1088 rows of the surface's 1440 — main.cpp's lane table
 // the record of each scale.)
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
@@ -2497,12 +2558,13 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // area's whole height, painted after the divider (build_canvas_list's
 // order), the dots counted from the canvas's first row with no re-phasing,
 // so the divider's row carries a dot exactly where the phase lands one (at
-// the geometry below, area-local row 537: the cursor's odd rows land
+// the geometry below, area-local row 543: the cursor's odd rows land
 // there, a cue stem's even rows do not). At 300 % on the tablet at
-// key_height 33 (its default) the canvas is 1075 rows, 253-1327 (main.cpp's
-// lane table, re-derived 2026-11-03 for the retrofit): the upper well's
-// band 537 rows (253-789), the divider row 790 and the lower well's band
-// 537 rows (791-1327), no spare row (1075 less the divider's 1 is even).
+// key_height 33 (its default) the canvas is 1088 rows, 240-1327 (main.cpp's
+// lane table, re-derived 2026-11-03): the upper well's band 543 rows
+// (240-782), the divider row 783, the lower well's band 543 rows
+// (784-1326) and THE SPARE ROW 1327, the canvas's last (1088 less the
+// divider's 1 is odd; ONE CHANNEL'S BAND below).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot
