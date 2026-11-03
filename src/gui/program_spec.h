@@ -190,29 +190,26 @@ struct ProgramSpec {
     int  cue_segment_gap;
     // THE CANVAS DOTS, ONE DEVICE PX SQUARE, COUNTED IN
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
-    // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
-    // every gui_scale; render.h's waveform_line_px and
-    // dotted_waveform_line_run, the stereo divider's row crossed with no
-    // re-phasing, 2026-11-02): THE PLAYHEAD'S every `dot_period`
-    // rows on its phase; A CUE'S TWO PHASES each every `cue_dot_period` rows
-    // (architect 2026-10-09 ~11:50, Cool Edit's cue and range dots) — the
-    // cue's on `cue_dot_phase` 7, the range's on `range_dot_phase`
-    // 3, so a point cue's two alternate one dot every `dot_period` rows, the
-    // range's FIRST FROM THE TOP, every live cue's, warp or phase reset, both
-    // in the one `cue` since 2026-11-01 (render.cpp's resolve_flag_face owns
-    // which color each phase wears); the
-    // phase-reset lead-in
-    // ring's right side takes the same rows and its top and bottom runs the
-    // same phases in device columns counted from the reset's own column
-    // (paint_phase_reset_overlay_ring, 2026-10-09 ~17:40). THE PHASES ARE THE
-    // CAPTURE'S, RE-COUNTED FROM THE CANVAS'S TOP (the captures are the law,
-    // 2026-10-09): the capture gives the red at y ≡ 3 and the blue at
-    // y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at y = 108
-    // ≡ 4 (mod 8), so from its own first row the red stands on rows ≡ 7 and
-    // the blue on rows ≡ 3 (its first dot, y = 111, canvas row 3, is blue);
-    // the playhead's y ≡ 1 (mod 4) is canvas row ≡ 1 either way, 108 being
-    // ≡ 0 (mod 4). Every cue row is the playhead's period off the playhead's
-    // phase, so the two never share a row on one column.
+    // "on waveform → unscaled": one device px at every gui_scale; render.h's
+    // waveform_line_px and dotted_waveform_line_run, the stereo divider's
+    // row crossed with no re-phasing, 2026-11-02). ONE ON, ONE OFF
+    // (architect 2026-11-02, mock t1): THE PLAYHEAD'S dots every
+    // `dot_period` 2 rows on `playhead_dot_phase` 1, the odd rows; A CUE'S
+    // TWO PHASES (Cool Edit's cue and range dots) each every
+    // `cue_dot_period` 4 rows — the range's on `range_dot_phase` 0, the
+    // FIRST FROM THE TOP, the cue's on `cue_dot_phase` 2 — so a point cue's
+    // stem stands on the even rows, its two phases alternating; and a
+    // playhead standing on a stem fills the odd rows between them, so the
+    // two close into ONE SOLID LINE, the playhead's line color on the odd
+    // rows and the stem's on the even (the reason for the rule: mock t1s;
+    // render.cpp's resolve_flag_face owns which color each phase wears, the
+    // coincident stem's override paint_marker_stems). The phase-reset
+    // lead-in ring's right side takes the same rows, and its top and bottom
+    // runs — and the `h` view's nudged pairs' — the same two phases in
+    // device columns counted from the reset's (the left stem's) own column,
+    // one dot every two columns (paint_phase_reset_overlay_ring,
+    // paint_marker_stem_runs). Every cue row is the playhead's period off
+    // the playhead's phase, so the two never share a row on one column.
     int  dot_period;
     int  playhead_dot_phase;
     int  cue_dot_period;
@@ -235,11 +232,11 @@ inline constexpr ProgramSpec kProgramSpec = {
     .view_bar_field_at300  = 16,
     .cue_fill_pad          = 1,
     .cue_segment_gap       = 4,
-    .dot_period            = 4,
+    .dot_period            = 2,
     .playhead_dot_phase    = 1,
-    .cue_dot_period        = 8,
-    .cue_dot_phase         = 7,
-    .range_dot_phase       = 3,
+    .cue_dot_period        = 4,
+    .cue_dot_phase         = 2,
+    .range_dot_phase       = 0,
 };
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
@@ -284,7 +281,8 @@ static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);
 // cue_label_lead_px is the triangle's reach right plus the gap, never
 // negative, at every scale.)
 // The cue's two phases alternate one dot every playhead period, and neither
-// shares a row with the playhead's dots.
+// shares a row with the playhead's dots (one on, one off: the playhead the
+// odd rows, the stem the even, 2026-11-02).
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
 static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
                kProgramSpec.cue_dot_period) % kProgramSpec.cue_dot_period ==

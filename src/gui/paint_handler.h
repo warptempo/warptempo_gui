@@ -912,7 +912,7 @@ private:
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
     // THE RULER LANE (top lane 5): Cool Edit's flipped ruler — its ground and
     // bottom line, the timestamp ladder's ticks and digits and the playhead's
-    // head (the `playhead_stem` role) — and the MARKER LANE'S panel face under the cues the flag
+    // head (the `playhead_head` role) — and the MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
     // every pan/zoom along with the strip content it is painted beside.
     // PUBLISHES the head's hit as painted (AppState::playhead_head_hit, the
@@ -1050,18 +1050,20 @@ private:
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
     // of the active column stems, always, as COOL EDIT'S DOTTED COLUMN since
-    // 2026-10-09, in the ONE `cue` since 2026-11-01: one-device-px dots on
-    // the canvas's device rows (~14:25, "on waveform → unscaled"), on rows
-    // ≡ 3 and ≡ 7 (mod 8), each where the cue wears it, warp or phase reset,
+    // 2026-10-09, in the ONE `cue_stem` since 2026-11-02 (mock t1): one-
+    // device-px dots on the canvas's device rows (~14:25, "on waveform →
+    // unscaled"), on rows ≡ 0 and ≡ 2 (mod 4), the even rows, each where
+    // the cue wears it, warp or phase reset,
     // the canvas alone (render.h's marker-lane paragraph); a DISABLED marker
     // stems never.
     // Which colors stand is resolved in the painter (resolve_flag_face) and
-    // published in the stash: the `cue` orange on both dot phases at rest,
-    // and on a SELECTED cue the range phase in the playhead's cyan
-    // (architect 2026-11-02, M10 rule 1) — save under the playhead (THE
-    // COINCIDENT STEM 1:1, below). The stems paint
-    // under the playhead's dots (architect 2026-09-23), which stand on rows
-    // ≡ 1 (mod 4), so a playhead on a marker's column interleaves with it.
+    // published in the stash: the `cue_stem` gray on both dot phases at
+    // rest, and on a SELECTED cue the range phase in the playhead line's
+    // white (architect 2026-11-02, M10 rule 1) — save under the playhead
+    // (THE COINCIDENT STEM 1:1, below). The stems paint under the
+    // playhead's dots (architect 2026-09-23), which stand on the odd rows,
+    // so a playhead on a marker's column closes with it into one solid line
+    // (one on, one off, 2026-11-02).
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its cue's apex column, and
@@ -1078,7 +1080,7 @@ private:
     // selected stem whose column is the resting cursor's PAINTED column
     // (resting_cursor_pixel_x, playhead_line_column, on screen is as painted)
     // paints its range phase in the `cue`, so the column alternates the
-    // playhead's cyan dots and the stem's own orange ones, one to one — the
+    // playhead's white dots and the stem's own gray ones, one to one — the
     // look of any stem under the playhead. Decided here, per frame, because
     // the playhead moves every frame and the flag cache must not key on it;
     // a cursor whose line paints nothing (its column off the canvas) makes
@@ -1092,8 +1094,8 @@ private:
     void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's; nothing
     // over the view bar, architect 2026-10-09 ~14:30): Cool Edit's dotted
-    // column in the palette's `playhead_stem` (its Curs yellow by default),
-    // one-device-px dots on the canvas's device rows ≡ 1 (mod 4), painted
+    // column in the palette's `playhead_line` (white, 2026-11-02, mock t1),
+    // one-device-px dots on the canvas's odd device rows, painted
     // after the marker stems, whose dots stand between its own.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR'S x, area-local, on the displayed plate's basis

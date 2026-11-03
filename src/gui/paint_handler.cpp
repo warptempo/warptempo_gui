@@ -3980,7 +3980,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // 300 %) in whole device cells, Cool Edit's aliased staircase
     // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
     // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
-    // cue_triangle_unit_px, render.h), in the palette's `playhead_stem`
+    // cue_triangle_unit_px, render.h), in the palette's `playhead_head`
     // (Live's cyan 03C3D5 since 2026-11-01), NO SHADOW (2026-11-02), ON THE
     // RULER'S LAST `rows` DEVICE ROWS, its apex — the bottom centre of the
     // playhead's one-px column — on the ruler's foot row, over the ticks'
@@ -4025,7 +4025,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             cairo_rectangle(cr, cx, head_top, wave_w, rows);
             cairo_clip(cr);
             paint_ce_cue_triangle(cr, cx + col, head_top,
-                                  palette().playhead_stem);
+                                  palette().playhead_head);
             cairo_restore(cr);
             // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
             // point_on_playhead_head, input_pointer.cpp): EXACTLY THE PAINTED
@@ -4385,12 +4385,12 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // px (waveform_line_px, "on waveform → unscaled"), in the reset's own two dot
 // phases exactly as its stem wears them — live_cue_stem_dots asks the one
 // resolver (resolve_flag_face) for the stem's pair, so the ring and the stem
-// cannot drift: the `cue` on both phases, a
-// coincident reset's too (its struck label the mark, architect 2026-10-26;
-// the invalid color alone 2026-10-11 to 2026-10-26); THE RESTING PAIR
-// WHETHER THE RESET IS SELECTED OR NOT (architect 2026-11-02, M10 rule 1:
-// a selected reset's stem takes the playhead's dots, its ring keeps the
-// `cue`).
+// cannot drift: the `cue_stem` on both phases (architect 2026-11-02, mock
+// t1), a coincident reset's too (its struck label the mark, architect
+// 2026-10-26; the invalid color alone 2026-10-11 to 2026-10-26); THE
+// RESTING PAIR WHETHER THE RESET IS SELECTED OR NOT (architect 2026-11-02,
+// M10 rule 1: a selected reset's stem takes the playhead's dots, its ring
+// keeps the `cue_stem`).
 //   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
 //     the reset's stem already stands there (paint_marker_stems, after this
 //     pass), and a playhead on the reset interleaves its dots there as on
@@ -4409,8 +4409,9 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 //     columns from the reset's own column (band.stem_x, unclipped, so the
 //     run stays put on the song as the view pans): the columns
 //     stem + range_dot_phase + k · cue_dot_period and stem +
-//     cue_dot_phase + k · cue_dot_period — one dot every four columns,
-//     as down the stem, every dot the `cue`. The corners carry whatever
+//     cue_dot_phase + k · cue_dot_period — one dot every two columns,
+//     as down the stem (one on, one off, 2026-11-02), every dot the
+//     `cue_stem`. The corners carry whatever
 //     cell the rules give them; a band one column wide is its stem alone.
 // PURE PALETTE BYTES (the palette composites nothing): aliased integer
 // cell rectangles, the stems' own form, no alpha and no half column. The
@@ -4609,8 +4610,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
-// what stems and in which colors (the cue's orange, the playhead's cyan on a
-// selected cue's range phase) — is at the declaration.
+// what stems and in which colors (the `cue_stem` gray, the playhead line's
+// white on a selected cue's range phase) — is at the declaration.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its cue's APEX COLUMN, and that column was
@@ -4629,10 +4630,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // rows ≡ cue_dot_phase and on rows ≡ range_dot_phase (mod cue_dot_period,
 // program_spec.h), each phase in the role the stash names for it
 // (GuiCueDot, cue_dot_color; resolve_flag_face's table: every live cue,
-// warp or phase reset, the `cue` on both phases, one dot every four rows,
-// the history's two halves alike; A SELECTED CUE the `playhead_stem` on its
-// range phase, architect 2026-11-02, M10 rule 1) — the playhead's dots on
-// rows ≡ 1 of 4, so neither shares a row with them. (The solid stem
+// warp or phase reset, the `cue_stem` on both phases, one dot every two
+// rows — the even rows — the history's two halves alike, architect
+// 2026-11-02, mock t1; A SELECTED CUE the `playhead_line` on its range
+// phase, architect 2026-11-02, M10 rule 1) — the playhead's dots on the odd
+// rows, so neither shares a row with them. (The solid stem
 // through the well's top lines between its flanks stood 2026-10-02 to
 // 2026-10-09; git history.)
 //
@@ -4686,8 +4688,8 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
         if (stem.cue_phase_dots != GuiCueDot::None)
             dotted_stem(col, ps.cue_dot_phase,
                         cue_dot_color(stem.cue_phase_dots));
-        // A selected stem under the cursor yields its range phase's cyan to
-        // the playhead's own dots, its two phases the `cue`.
+        // A selected stem under the cursor yields its range phase's white
+        // to the playhead's own dots, its two phases the `cue_stem`.
         const GuiCueDot range =
             (col == cursor_col && stem.range_phase_dots == GuiCueDot::Playhead)
                 ? GuiCueDot::Cue
@@ -4703,14 +4705,17 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 // cues' stems — THE PHASE-RESET LEAD-IN RING'S RUNS' FORM EXACTLY
 // (paint_phase_reset_overlay_ring, the model), IN THE STEM'S OWN PATTERN:
 // one device px a dot (waveform_line_px, "on waveform → unscaled"), the
-// `cue` on columns left stem + range_dot_phase + k · cue_dot_period
+// `cue_stem` on columns left stem + range_dot_phase + k · cue_dot_period
 // and on left stem + cue_dot_phase + k · cue_dot_period (a
 // live cue's RESTING stem pair, live_cue_stem_dots — so the runs' density is
-// a stem's, architect 2026-10-26; the `cue` on both phases whether the pair
-// is selected or not, 2026-11-02), through the right stem's column,
+// a stem's, architect 2026-10-26, one dot every two columns since one on,
+// one off, 2026-11-02; the `cue_stem` on both phases whether the pair is
+// selected or not, 2026-11-02), through the right stem's column,
 // aliased integer cells, clipped to the area. Read as published, before
-// the stems paint their sides (paint_marker_stems), whose dots never share
-// a row with these (the stems' phases are rows 3 and 7 of 8).
+// the stems paint their sides (paint_marker_stems): the stems' range phase
+// stands on the canvas's first row (one on, one off, 2026-11-02), so the
+// top run's cell on the left stem's column is the stem's own dot too, the
+// stem painting it last.
 // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): each color's runs,
 // every pair's top and bottom, one dots call, the columns from the left
 // stem's own (the phase's origin) through the right stem's, cut to the
@@ -4754,8 +4759,8 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
 // Paints the anchor stem (the Ableton pivot affordance) at the zoom anchor's
 // current column, full waveform height — a live zoom gesture's, or the S
 // Pen's retained one between strokes — WHITE, in the scanner's role: the
-// stems that belong to the controls are white and the playhead alone wears
-// `playhead_stem` (architect 2026-10-09; render_strip_anchor_stem). ONE
+// stems that belong to the controls are white and the playhead wears its
+// own two roles (architect 2026-10-09; render_strip_anchor_stem). ONE
 // PRODUCER, THE TOUCH ZOOM (touch_nav_zoom.seated — the contract is at
 // TouchNavZoomState, app_state.h; architect 2026-08-14, from the rig, asking
 // to SEE the glass gesture: "add a zoom stem to the zoom on the touchpad just
@@ -4832,7 +4837,7 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
                                       const GuiRect& area) {
     const double px_x = resting_cursor_pixel_x();
     // THIS PASS IS THE CURSOR'S CANVAS RUN, nothing else: its HEAD is the
-    // yellow triangle in the ruler (paint_ruler_row); across the view bar
+    // triangle in the ruler (paint_ruler_row); across the view bar
     // (architect 2026-10-09 ~14:30), the marker lane and the canvas's top
     // frame row the playhead draws nothing (Cool Edit puts no dot on its
     // frame row).
@@ -4840,16 +4845,17 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form at the resting cursor column whatever the selection is doing —
     // since 2026-10-09 COOL EDIT'S DOTTED COLUMN (render.h's playhead
-    // paragraph): one-device-px dots in the palette's `playhead_stem` (Cool
-    // Edit's Curs yellow by default) on the canvas's device rows ≡ 1
-    // (mod 4), the cues' dots on rows ≡ 3, so a playhead on a marker's
-    // column interleaves with its dots and neither yields. It paints AFTER
+    // paragraph): one-device-px dots in the palette's `playhead_line`
+    // (white, architect 2026-11-02, mock t1) on the canvas's odd device
+    // rows, the cues' dots on the even rows — one on, one off — so a
+    // playhead on a marker's column closes with its dots into one solid
+    // line and neither yields. It paints AFTER
     // paint_marker_stems (architect 2026-09-23) and before the scanner.
     //
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
-    render_playhead(sink, area, px_x, palette().playhead_stem,
+    render_playhead(sink, area, px_x, palette().playhead_line,
                     PlayheadForm::Dotted);
 }
 
@@ -8198,12 +8204,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
         //      Edit's view bar and its span (2026-10-09; no cursor mark in
         //      the bar, ~14:30).
-        //   6. the MARKER STEMS (waveform): the cues' dots, rows ≡ 3 of 4.
-        //   7. the CURSOR's CANVAS DOTS (paint_playheads, rows ≡ 1 of 4 —
+        //   6. the MARKER STEMS (waveform): the cues' dots, the even rows.
+        //   7. the CURSOR's CANVAS DOTS (paint_playheads, the odd rows —
         //      the head is the ruler pass's, step 9).
         //   8. the SCANNER (waveform), solid.
         //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
-        //      digits — AND, in the same pass, the cursor's HEAD (the yellow
+        //      digits — AND, in the same pass, the cursor's HEAD (the cyan
         //      triangle on the ruler's bottom rows, opaque over the ticks and
         //      digits) and the MARKER LANE'S panel face under the cues.
         //  10. the FLAG BLIT — the cues.
@@ -8262,9 +8268,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     2026-11-02, M10 rule 1; no triangle marks it), with the landed
         //     cursor on the focus; the cursor's dots paint over the marker
         //     stems' (2026-09-23) and the two phases interleave, so a
-        //     playhead resting on a marker's column shows both, one to one —
-        //     a selected stem there yielding its range phase's cyan to the
-        //     `cue` (the coincident stem 1:1, architect 2026-11-02,
+        //     playhead resting on a marker's column shows both, one to one,
+        //     one solid line (one on, one off, 2026-11-02) —
+        //     a selected stem there yielding its range phase's white to the
+        //     `cue_stem` (the coincident stem 1:1, architect 2026-11-02,
         //     paint_marker_stems); its head in the ruler and the cue's triangle in the
         //     marker lane never meet. (2026-08-01 lifted the SCANNER above the
         //     stems, so the moving line does not blink out at every marker it

@@ -817,8 +817,8 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
     // non-playhead stems that are related to the controls should be white,
     // and then the playhead is yellow"): a control's line during a gesture,
     // as the scanner is playback's, in the one `scanner` role — the playhead
-    // wears `playhead_stem`, lending it to the selection alone (render.h's
-    // playhead paragraph). It is
+    // wears its own two roles, lending its line's to the selection alone
+    // (render.h's playhead paragraph). It is
     // deliberately as loud as a marker stem, a solid line where the cues'
     // and the cursor's are dotted.
     // The canvas's whole height (2026-10-09: no line crosses the row of
@@ -1354,16 +1354,17 @@ struct FlagFace {
 // matching row wins (dots: range phase | cue phase):
 //   flag                     triangle  dots                label
 //   DISABLED (any kind)      inactive  none                inactive, struck as below
-//   any live cue             cue       cue | cue           bone, struck as below
+//   any live cue             cue       stem | stem         bone, struck as below
 // — warp or phase reset, whatever the side (a live lane's cue or either
 // `h` half) — and THE SELECTION over the live row alone (architect
 // 2026-11-02, M10 rule 1: the selected look is on the canvas, not in the
 // label):
-//   SELECTED (live cue)      cue       playhead | cue      unchanged
-// — a selected live cue's RANGE phase (rows ≡ 3, the first from the top)
-// the `playhead_stem`, its cue phase the `cue`, the look a stem shows with
-// the playhead's dots on it (the playhead's first dot, row 1, above the
-// cue's first). THE TRIANGLE NEVER MARKS FOCUS OR SELECTION (architect
+//   SELECTED (live cue)      cue       playhead | stem     unchanged
+// — "stem" the `cue_stem` (architect 2026-11-02, mock t1: every stem Live's
+// gray 919191, the triangle the `cue`); a selected live cue's RANGE phase
+// (rows ≡ 0 mod 4, the first from the top) the `playhead_line`, its cue
+// phase (rows ≡ 2) the `cue_stem`, the playhead's color interspersed with
+// the stem's. THE TRIANGLE NEVER MARKS FOCUS OR SELECTION (architect
 // 2026-11-02: "playhead coincident on marker should not change marker
 // triangle - that was a misinterpretation"): the `cue`, or the
 // `inactive_cue` on a disabled cue, whatever the focus — live lanes and the `h` view alike;
@@ -1390,10 +1391,10 @@ struct FlagFace {
 // (warp_red_flag_set_cached's (3)) — is the inactive cue with its inactive
 // label struck.
 // THE DOTS' ROWS, counted from the canvas's first row, are the cue phase
-// ≡ 7 and the range phase ≡ 3 (mod 8), the range's first from the top —
-// Cool Edit's cue and range dots re-counted from its canvas top
-// (program_spec.h's dot fields, the derivation's owner), a point cue's
-// range start and end superimposed;
+// ≡ 2 and the range phase ≡ 0 (mod 4), the range's first from the top, the
+// playhead's on the odd rows between — one on, one off (architect
+// 2026-11-02, mock t1; program_spec.h's dot fields, the rule's owner), a
+// point cue's range start and end superimposed;
 // "bone" the text tone (materials.h's kTextInk B5B5B5 since the flat look's
 // M13, 2026-11-02, the words' and the flags' one ink) — every label on the
 // lane's face with no fill, selected or not.
@@ -1508,7 +1509,7 @@ static CuePassScratch g_cue_pass_scratch;
 // triangle, both clipped to the waveform's columns, and the cue's diff half),
 // and one MarkerStem per cue whose dots paint and whose column is a waveform
 // column (a nudged history pair's two cues each their own), its two phases
-// the face's (a selected cue's range phase the `playhead_stem`). `lane` is the
+// the face's (a selected cue's range phase the `playhead_line`). `lane` is the
 // marker lane, `x0` / `w` the waveform's columns the pass is clipped to (the
 // caller set the clip). Cues arrive in store order and are ordered here by
 // column (stable).

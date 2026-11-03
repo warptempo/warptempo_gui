@@ -13,11 +13,12 @@
 // lane — are painted by render_trim_flags, paint_ruler_row and the flag
 // pass). The lengths are program_spec.h's and render.h's (each a rounded
 // part); the colors the flat look's constants (materials.h's THE WELL) and
-// the palette's. THE PLAYHEAD'S OWN COLOR — the head in the ruler and its
-// dots in the canvas — is the palette's `playhead_stem` (Live's cyan 03C3D5
-// since 2026-11-01, palette_file.h's role table), lent to the selection
-// alone (2026-11-02, render.h's SELECTED row), as the cues' one color is
-// the palette's `cue`.
+// the palette's. THE PLAYHEAD'S OWN COLORS are the palette's
+// `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
+// 2026-11-01 — and `playhead_line` — its dots in the canvas, white since
+// 2026-11-02 (mock t1), lent to the selection alone (render.h's SELECTED
+// row) — palette_file.h's role table, as the cues' triangle is the
+// palette's `cue` and their stems its `cue_stem`.
 // THE TRIANGLES ARE ALIASED AT 1:1 (architect 2026-10-26, "agree": "at this
 // size the staircase is the truthful drawing and the antialiasing only
 // blurs it"): the cue's and the playhead head's rows, their cells one device
@@ -93,7 +94,7 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads);
 // its rows [top, top + rows·u). `color` is the `cue` for a live cue, the
 // `inactive_cue` for a disabled one (2026-11-02, palette_file.h), the
-// `playhead_stem` for the playhead's head alone (no cue's
+// `playhead_head` for the playhead's head alone (no cue's
 // triangle marks focus, 2026-11-02, render.h's SELECTED row). TWO ROADS, ONE
 // DRAWING (CueTrianglePass below): the stamp writes the cells' words
 // straight into the target where direct_pixel_target takes it, else cairo

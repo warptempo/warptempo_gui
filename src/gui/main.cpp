@@ -1249,7 +1249,7 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's dots inside the waveform AND
-    // its top-strip pixels above — the yellow head on the ruler's bottom rows
+    // its top-strip pixels above — the head on the ruler's bottom rows
     // (paint_ruler_row, 2026-10-09; the view bar carries no mark since
     // ~14:30). The top strip is where the cursor's
     // non-waveform pixels live, and the envelope

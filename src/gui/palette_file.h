@@ -16,9 +16,10 @@
 // The numbers are MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme
 // (2026-11-01) — the canvas, the ink, the zero line, the grid's one-px
 // equivalent, the playhead's triangle, the orange of Live's markers and
-// lit buttons, and (2026-11-02) the grey of its inactive marker — but the
-// lit outline, the product's own, and the scanner, the controls' white;
-// each ruled on his mocks.
+// lit buttons, and (2026-11-02) the grey of its inactive marker and the
+// gray of its selected warp marker's tip (the stems) — but the lit outline,
+// the product's own, and the scanner and the playhead's line, the controls'
+// white; each ruled on his mocks.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the well, and THE MATERIALS
 // every chrome role — the flat look's constants (chrome_derive.h,
@@ -36,7 +37,7 @@
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
 // chrome's selected pair). So the palette's program roles are exactly the
-// NINE below:
+// ELEVEN below:
 //   waveform_canvas  393939  the canvas, Live's darker band
 //   waveform_ink     191919  the waveform, Live's
 //   waveform_outline 515151  THE LIT OUTLINE, the magnified picture's
@@ -48,12 +49,18 @@
 //   center           191919  each channel's zero line over the waveform
 //                            (render_center_lines) — Live's zero line IS the
 //                            ink
-//   cue              FFAD56  EVERY MARKER, ONE COLOR (architect 2026-11-01:
-//                            "one color for all markers") — warp and phase
-//                            reset alike, the coincident marker's, the `h`
-//                            view's halves: the triangle and both of the
-//                            stem's dot phases at rest (render.h's
-//                            GuiCueDot), the orange of Live's start marker
+//   cue              FFAD56  EVERY MARKER'S TRIANGLE, ONE COLOR (architect
+//                            2026-11-01: "one color for all markers") —
+//                            warp and phase reset alike, the coincident
+//                            marker's, the `h` view's halves
+//                            (resolve_flag_face), the orange of Live's
+//                            start marker
+//   cue_stem         919191  EVERY MARKER'S STEM (architect 2026-11-02, mock
+//                            t1): both of a live cue's dot phases at rest
+//                            (render.h's GuiCueDot), the phase-reset
+//                            lead-in ring and the nudged pairs' ring runs
+//                            with them — LIVE'S GRAY, the selected warp
+//                            marker's tip in his Live video
 //   inactive_cue     5D5D5D  THE DISABLED MARKER (architect 2026-11-02, the
 //                            color sweep, mock C3): LIVE'S INACTIVE WARP
 //                            MARKER'S TRIANGLE, measured on its own 303030
@@ -66,16 +73,21 @@
 //                            disabled, it's inert" (architect 2026-10-10):
 //                            Live's grey shows the marker exists and reads
 //                            as off, the label with it
-//   playhead_stem    03C3D5  THE PLAYHEAD'S HEAD AND DOTS, Live's playhead
-//                            triangle (render.h's playhead paragraph), LENT
-//                            TO THE SELECTION alone (architect 2026-11-02,
-//                            M10 rule 1): a selected cue's range-phase dots,
-//                            never a triangle (2026-11-02)
+//   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
+//                            Live's playhead triangle (render.h's playhead
+//                            paragraph)
+//   playhead_line    FFFFFF  THE PLAYHEAD'S DOTTED LINE IN THE CANVAS
+//                            (architect 2026-11-02, mock t1), LENT TO THE
+//                            SELECTION alone (architect 2026-11-02, M10
+//                            rule 1): a selected cue's range-phase dots,
+//                            never a triangle
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems
 //                            that are related to the controls should be
-//                            white"; kept 2026-11-01, tunable later)
+//                            white"; kept 2026-11-01, tunable later) — the
+//                            playhead line's value in a role of its own,
+//                            SOLID where the resting playhead is dotted
 // The stereo divider between the channels wears the panel's tones; nothing
 // else in the well has a role. THE LIT KEY'S FILL is the flat look's, not
 // the palette's (materials.h's kLitFill).
@@ -89,8 +101,10 @@ inline constexpr uint32_t kPaletteOutline  = 0x515151;
 inline constexpr uint32_t kPaletteGrid     = 0x313131;
 inline constexpr uint32_t kPaletteCenter   = 0x191919;
 inline constexpr uint32_t kPaletteCue      = 0xFFAD56;
+inline constexpr uint32_t kPaletteCueStem  = 0x919191;
 inline constexpr uint32_t kPaletteInactiveCue = 0x5D5D5D;
-inline constexpr uint32_t kPalettePlayhead = 0x03C3D5;
+inline constexpr uint32_t kPalettePlayheadHead = 0x03C3D5;
+inline constexpr uint32_t kPalettePlayheadLine = 0xFFFFFF;
 inline constexpr uint32_t kPaletteScanner  = 0xFFFFFF;
 
 // THE ROLE TABLE — THE ONE ENUMERATION of the program's roles, in
@@ -108,8 +122,10 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::grid,             kPaletteGrid},
     {&GuiPalette::center,           kPaletteCenter},
     {&GuiPalette::cue,              kPaletteCue},
+    {&GuiPalette::cue_stem,         kPaletteCueStem},
     {&GuiPalette::inactive_cue,     kPaletteInactiveCue},
-    {&GuiPalette::playhead_stem,    kPalettePlayhead},
+    {&GuiPalette::playhead_head,    kPalettePlayheadHead},
+    {&GuiPalette::playhead_line,    kPalettePlayheadLine},
     {&GuiPalette::scanner,          kPaletteScanner},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);

@@ -210,20 +210,23 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's EIGHT (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and outline (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
 //                 since 2026-10-25); THE CANVAS'S TWO LINES, Cool Edit's
 //                 grammar — `grid` under the waveform and `center` on each
 //                 channel's zero, over it (ROW 6); THE CUES' ONE COLOR,
-//                 `cue` — every cue's triangle and both of its dot phases at
-//                 rest, warp and phase reset alike (architect 2026-11-01: "one
-//                 color for all markers"; the strike is the invalid mark,
-//                 THE MARKER LANE below); the playhead's role
-//                 `playhead_stem` — its head in the ruler and its dots in
-//                 the canvas, and lent to THE SELECTION (2026-11-02): a
-//                 selected cue's range-phase dots, never a triangle (THE
+//                 `cue` — every cue's triangle, warp and phase reset alike
+//                 (architect 2026-11-01: "one color for all markers"; the
+//                 strike is the invalid mark, THE MARKER LANE below) — and
+//                 THEIR STEMS' ONE COLOR, `cue_stem` — both of a cue's dot
+//                 phases at rest (architect 2026-11-02, mock t1); the
+//                 disabled cue's `inactive_cue`; the playhead's two roles,
+//                 `playhead_head` — its triangle in the ruler — and
+//                 `playhead_line` — its dots in the canvas (architect
+//                 2026-11-02, mock t1), lent to THE SELECTION (2026-11-02):
+//                 a selected cue's range-phase dots, never a triangle (THE
 //                 PLAYHEAD and THE MARKER LANE, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
@@ -323,8 +326,10 @@ struct GuiPalette {
     GuiColor grid;
     GuiColor center;
     GuiColor cue;
+    GuiColor cue_stem;
     GuiColor inactive_cue;
-    GuiColor playhead_stem;
+    GuiColor playhead_head;
+    GuiColor playhead_line;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of the toolbar band, row 8 and the well's
@@ -463,21 +468,23 @@ void install_true_colors(bool on);
 // (2026-10-26), the apex the playhead's column (paint_ce_cue_triangle; the
 // triangle's cell one device px, architect 2026-10-26 ~10:10: "All
 // triangles unscaled", cue_triangle_unit_px) — in THE PALETTE'S
-// `playhead_stem` (architect 2026-10-09 ~11:50; Live's playhead cyan
+// `playhead_head` (architect 2026-10-09 ~11:50; Live's playhead cyan
 // 03C3D5 since 2026-11-01, palette_file.h), NO SHADOW (2026-11-02), ON THE
 // RULER'S LAST `rows` DEVICE ROWS, the apex on the ruler's foot row over the
 // ticks' feet — it covers what stands under it (2026-10-09 ~21:00)
 // (paint_ruler_row; cue_triangle_h_px's rows; its painted columns, the cull
 // and the move's damage box one extent, cue_triangle_reach_right_px); IN THE
-// CANVAS a DOTTED COLUMN, one device px every four device rows in the same
-// color (2026-10-09 ~14:25, "on waveform → unscaled") on the canvas's rows
-// ≡ 1 (mod 4), the cues' two dot phases on rows ≡ 3 and
-// ≡ 7 (mod 8), so they interleave on one column (paint_playheads,
+// CANVAS a DOTTED COLUMN, ONE ON, ONE OFF — one device px on every other
+// device row (2026-10-09 ~14:25, "on waveform → unscaled"; architect
+// 2026-11-02, mock t1) — in THE PALETTE'S `playhead_line`, WHITE FFFFFF
+// (architect 2026-11-02, mock t1), on the canvas's odd rows, the cues' two
+// dot phases on the even rows (program_spec.h's dot fields), so on a
+// marker's column the two close into one solid line (paint_playheads,
 // dotted_waveform_line_run, down the area's whole height, the stereo divider's row included, architect 2026-11-02). Across the trim bar (architect 2026-10-09
 // ~14:30, "no dots on the trim bar"), the marker lane and the row of ground
 // under it it draws nothing. IT MAY STAND ON A MARKER'S COLUMN — NO SNAP, NO AVOIDANCE (architect
 // 2026-10-09): the head and a cue's triangle stand in different lanes and
-// the dots interleave, so the coincident-stem suppression of 2026-08-01 to
+// the dots fill each other's gaps, so the coincident-stem suppression of 2026-08-01 to
 // 2026-10-09 (the playhead's stem yielding whole to a marker's) is retired.
 // THE HEAD IS GRABBED AND DRAGGED, as Cool Edit's is (architect 2026-10-09
 // ~17:40): its HIT is the head as painted, its columns (the triangle, cut
@@ -489,13 +496,16 @@ void install_true_colors(bool on);
 // placement act at the pointer's column (ScrollDragState::head_drag).
 // NO HOLD LAMP (architect 2026-10-05): the head paints the same whether or
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
-// four roles stood 2026-10-05 to 2026-10-09; the solid `playhead_stem` line
-// before it; git history.)
-// THE PLAYHEAD WEARS ITS COLOR, AND LENDS IT TO THE SELECTION ALONE:
-// `playhead_stem` is its head and its dots (architect 2026-10-09), and a
-// selected cue's range-phase dots (architect 2026-11-02, M10 rule 1: the
-// selected stem the look a stem shows with the playhead standing on it; THE
-// MARKER LANE's SELECTED row); no triangle wears it (2026-11-02). THE STEMS THAT BELONG TO THE
+// four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
+// history.)
+// THE PLAYHEAD WEARS ITS TWO COLORS, AND LENDS ITS LINE'S TO THE SELECTION
+// ALONE: `playhead_head` is its head, `playhead_line` its dots (architect
+// 2026-11-02, mock t1: the head Live's cyan, the line white), the line's
+// color a selected cue's range-phase dots too (architect 2026-11-02, M10 rule 1:
+// the selected stem wears the playhead's color interspersed with its own;
+// THE MARKER LANE's SELECTED row); no triangle wears it (2026-11-02). THE
+// LINE AND THE SCANNER SHARE A VALUE, NOT A ROLE OR A FORM: the resting
+// playhead dotted, the scanner solid. THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
 // stem and the scanner are both white, which unifies them: the non-playhead
 // stems that are related to the controls should be white, and then the
@@ -540,11 +550,13 @@ void install_true_colors(bool on);
 // THE CUES ARE ONE COLOR, THE PALETTE'S `cue` (architect 2026-11-01: "one
 // color for all markers", Live's orange FFAD56, palette_file.h; every cue,
 // the history's halves and a coincident marker's included): every cue's
-// triangle and every dot of its stem at rest. A point cue's stem is Cool
-// Edit's range start and end superimposed — its two dot phases on the
-// canvas's device rows ≡ 3 (mod 8) and ≡ 7, one dot every four rows
-// (program_spec.h's dot fields), both in the `cue` (the range phase the
-// `playhead_stem` when selected, below). WARP AND PHASE RESET WEAR THE SAME CUE:
+// triangle; AND THEIR STEMS ONE COLOR, THE PALETTE'S `cue_stem` (architect
+// 2026-11-02, mock t1: Live's gray 919191): every dot of a stem at rest. A
+// point cue's stem is Cool Edit's range start and end superimposed — its
+// two dot phases on the canvas's device rows ≡ 0 (mod 4) and ≡ 2, one dot
+// every two rows, the even rows (program_spec.h's dot fields), both in the
+// `cue_stem` (the range phase the `playhead_line` when selected, below).
+// WARP AND PHASE RESET WEAR THE SAME CUE:
 // the kind reads from the view that lists it — the lane paints the active
 // column's markers alone, the Warp and Phase Reset views — and from its
 // label (his one-label rule). THE STRIKE IS THE INVALID INDICATOR (architect 2026-10-26 ~15:10:
@@ -557,8 +569,8 @@ void install_true_colors(bool on);
 // stroke on its own strikeout rows, gui_font_strike_band) — the invalid
 // color of 2026-10-11, its triangle, dots and label, retired with its role.
 // THE SELECTION SHOWS ON THE CANVAS, NOT IN THE LABEL (architect 2026-11-02,
-// M10 rule 1): a selected cue's stem wears the `playhead_stem` on one of its
-// two phases, interspersed with its `cue` dots (SELECTED below); THE
+// M10 rule 1): a selected cue's stem wears the `playhead_line` on one of its
+// two phases, interspersed with its `cue_stem` dots (SELECTED below); THE
 // TRIANGLE NEVER MARKS FOCUS OR SELECTION (2026-11-02). THE
 // TABLE — which triangle, which dots, which label, which strike — is
 // resolve_flag_face's head (render.cpp), the one resolver every cue goes
@@ -591,7 +603,7 @@ void install_true_colors(bool on);
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then the live cue; the strike and the selection ride either):
-//   THE CUE   the `cue` triangle and dots, the label in the
+//   THE CUE   the `cue` triangle and the `cue_stem` dots, the label in the
 //             text tone (materials.h's kTextInk);
 //   STRUCK    the red-flag class (warp_red_flag_set_cached and its
 //             phase-reset twin — the coincident run, a warp label ref
@@ -610,17 +622,17 @@ void install_true_colors(bool on);
 //   SELECTED  ON THE CANVAS, NOT IN THE LABEL (architect 2026-11-02, M10
 //             rule 1: the band under the label "looks like highlighted text
 //             inside the editor"): THE STEM WEARS THE PLAYHEAD'S COLOR
-//             INTERSPERSED WITH THE MARKER'S DOTS — the `playhead_stem` on
-//             the range phase (rows ≡ 3 mod 8, the first from the top, as the
-//             playhead's own first dot stands above the cue's when it rests
-//             on a stem), the `cue` on the cue phase (rows ≡ 7) — the look a
-//             resting stem shows with the playhead on it, cyan and orange
-//             alternating down one column. THE COINCIDENT STEM IS 1:1
-//             (architect 2026-11-02: "Yes, playhead marker, 1-to-1"): while
-//             the playhead's PAINTED column is a selected stem's, the stem's
-//             range phase yields to the `cue` and the playhead's own dots
-//             (rows ≡ 1 and ≡ 5 mod 8) are the cyan — one cyan, one orange
-//             down the column, the look of any stem under the playhead
+//             INTERSPERSED WITH THE MARKER'S DOTS — the `playhead_line` on
+//             the range phase (rows ≡ 0 mod 4, the first from the top), the
+//             `cue_stem` on the cue phase (rows ≡ 2) — white and gray
+//             alternating down the even rows of one column, the odd rows
+//             empty. THE COINCIDENT STEM IS 1:1 (architect 2026-11-02:
+//             "Yes, playhead marker, 1-to-1"; one on, one off, mock t1s):
+//             while the playhead's PAINTED column is a selected stem's, the
+//             stem's range phase yields to the `cue_stem` and the
+//             playhead's own dots (the odd rows) are the white — one white,
+//             one gray down the column, ONE SOLID LINE, the look of any stem
+//             under the playhead
 //             (paint_marker_stems decides it per frame; the stash and the
 //             flag cache never see the playhead). THE TRIANGLE NEVER MARKS
 //             FOCUS OR SELECTION (architect 2026-11-02: "playhead coincident
@@ -699,7 +711,7 @@ void install_true_colors(bool on);
 //
 // THE HISTORY VIEW'S DIFF FLAGS are cues of their own two kinds (architect
 // 2026-10-04; THE STRIKE 2026-10-26 ~15:30, "Two, agree"): both halves THE
-// PLAIN CUE in the cue color — the `cue` triangle and the stem's
+// PLAIN CUE — the `cue` triangle and the stem's `cue_stem`
 // dots — a REMOVED line's label STRUCK and an ADDED line's plain, the label
 // the line's own text with no sign (history_diff_label, paint_handler.h; the
 // brackets `[+]` / `[-]` of 2026-08-05 retired the same day: "those are
@@ -1914,10 +1926,11 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
 // line's own column and edge rules (fill_waveform_line), its rows the
 // canvas's whole height (the stereo divider's row included, architect
 // 2026-11-02, waveform_divider's rule) counted in DEVICE ROWS from the canvas's first row, a dot one device px square on every row k
-// with k ≡ `phase` (mod `period`) — Cool Edit's own 1-px dot every 4 rows at
-// 1:1, at every gui_scale — the cues' two phases on 7 and 3 of 8 and the
-// playhead on 1 of 4 (program_spec.h's dot fields), so they interleave on one
-// column. The column is the item's own painted column, the dot one px on it
+// with k ≡ `phase` (mod `period`) — one device px at every gui_scale, ONE
+// ON, ONE OFF (architect 2026-11-02, mock t1) — the cues' two phases on 0
+// and 2 of 4, the even rows, and the playhead on 1 of 2, the odd
+// (program_spec.h's dot fields), so they interleave on one column into one
+// solid line. The column is the item's own painted column, the dot one px on it
 // — the stem the cue's triangle and the playhead's head stand centred on
 // (paint_ce_cue_triangle, ~14:35). Painted through the canvas sink
 // (2026-10-13): dotted_waveform_line_run (after waveform_divider) makes
@@ -2077,7 +2090,7 @@ inline int view_bar_grab_w_px() {
 
 // (THE PLAYHEAD HEAD WAS WORDPAD'S RULER INDENT MARKER — a 9 x 8 W glyph in
 // the chrome's label, hilight, shadow and ground, drawn as nested rings and
-// checked against its bitmap — from 2026-10-05 to 2026-10-09; it is Cool Edit's yellow triangle since, the
+// checked against its bitmap — from 2026-10-05 to 2026-10-09; it is Cool Edit's triangle since, the
 // cue's own (the palette block's playhead paragraph). Git history.)
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
@@ -2438,8 +2451,8 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // area's whole height, painted after the divider (build_canvas_list's
 // order), the dots counted from the canvas's first row with no re-phasing,
 // so the divider's row carries a dot exactly where the phase lands one (at
-// the geometry below, area-local row 545: the cursor's phase 1 of 4 lands
-// there, the cues' 3 and 7 of 8 do not). At 300 % on the tablet at key_height 33 the canvas is
+// the geometry below, area-local row 545: the cursor's phase, the odd rows,
+// lands there, the cues' even rows do not). At 300 % on the tablet at key_height 33 the canvas is
 // 1092 rows, 236-1327 (main.cpp's lane table, re-derived 2026-11-02 for the
 // flat well): the upper well's band 545 rows (236-780), the divider row 781
 // and the lower well's band 545 rows (782-1326), the spare row 1327 the
@@ -2967,7 +2980,7 @@ struct GuiPlateColumns {
 // edge, so it never leaks into an adjacent region.
 //
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02): the cursor's head is
-// paint_ruler_row's (the `playhead_stem` triangle in the ruler since
+// paint_ruler_row's (the `playhead_head` triangle in the ruler since
 // 2026-10-09), and
 // no strip lane is reachable from here.
 //
@@ -2997,8 +3010,8 @@ void render_playhead(GuiCanvasSink& sink,
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
 // spanning the canvas's whole height (the stereo divider's row crossed,
 // architect 2026-11-02), solid, in the `scanner` role — the
-// white of the stems that belong to the controls, the playhead alone
-// wearing `playhead_stem` (architect 2026-10-09; the palette block's
+// white of the stems that belong to the controls, the playhead wearing its
+// own two roles (architect 2026-10-09; the palette block's
 // playhead paragraph owns
 // the rule).
 // The anchor is
@@ -3231,26 +3244,27 @@ struct FlagLaneRects {
 // (`cue_dot_phase` and `range_dot_phase`, program_spec.h — Cool Edit's cue
 // and range phases), named as a ROLE so the stash keeps no color and the
 // painter reads the palette live (resolve_flag_face, render.cpp, the one
-// table): none; the `cue` — the one marker color (architect 2026-11-01: "one
-// color for all markers"; the strike is the invalid mark); or the
-// `playhead_stem` — A SELECTED CUE'S RANGE PHASE (architect 2026-11-02, M10
-// rule 1: the selected stem wears the playhead's color interspersed with the
-// marker's dots).
+// table): none; `Cue`, the `cue_stem` — every stem's one color (architect
+// 2026-11-02, mock t1: Live's gray 919191; the triangle keeps the `cue`);
+// or `Playhead`, the `playhead_line` — A SELECTED CUE'S RANGE PHASE
+// (architect 2026-11-02, M10 rule 1: the selected stem wears the playhead's
+// color interspersed with the marker's dots).
 enum class GuiCueDot : uint8_t { None, Cue, Playhead };
 // The live palette role a dot color names. Precondition: not None.
 inline GuiColor cue_dot_color(GuiCueDot d) {
-    return d == GuiCueDot::Playhead ? palette().playhead_stem : palette().cue;
+    return d == GuiCueDot::Playhead ? palette().playhead_line
+                                    : palette().cue_stem;
 }
 
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the
 // column the cue's dots stand on (the triangle's apex column) and THE DOTS
 // ITS CLASS RESOLVED TO ON EACH PHASE (resolve_flag_face, render.cpp;
 // architect 2026-10-09 ~11:50, 2026-10-26): every live cue — warp, phase
-// reset, coincident or not, and both of the history's halves — the `cue` on
-// both phases (architect 2026-11-01, one marker color), and A SELECTED CUE
-// the `playhead_stem` on its range phase, the `cue` on its cue phase
-// (architect 2026-11-02, M10 rule 1: the playhead's color interspersed with
-// the marker's dots). The flag PAINTERS are the only producers — the
+// reset, coincident or not, and both of the history's halves — the
+// `cue_stem` on both phases (architect 2026-11-02, mock t1), and A SELECTED
+// CUE the `playhead_line` on its range phase, the `cue_stem` on its cue
+// phase (architect 2026-11-02, M10 rule 1: the playhead's color
+// interspersed with the marker's dots). The flag PAINTERS are the only producers — the
 // two live columns', and the `h` view's diff lane, which replaces them
 // wholesale while the mode stands; the one reader is the per-frame waveform
 // pass GuiPaintHandler::paint_marker_stems, which paints each phase's dotted
@@ -3258,8 +3272,8 @@ inline GuiColor cue_dot_color(GuiCueDot d) {
 // palette's live role, so the dots and their triangle can never disagree
 // about a column or a class — save the one per-frame override that reader
 // owns: a selected stem under the playhead's painted column paints its range
-// phase in the `cue` (architect 2026-11-02, the coincident stem 1:1), the
-// entry unchanged.
+// phase in the `cue_stem` (architect 2026-11-02, the coincident stem 1:1),
+// the entry unchanged.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3288,9 +3302,9 @@ struct MarkerStem {
 // the left stem's window column `x0` to the right stem's `x1`, both ends
 // included. Dotted IN THE STEM'S OWN PATTERN as the phase-reset lead-in
 // ring's runs are (paint_phase_reset_overlay_ring, the model; live_cue_-
-// stem_dots, the resting stem's pair): one device px a dot, the `cue` on
-// both phases whatever the selection (a selected pair's playhead dots are its
-// stems' own), one dot every four columns,
+// stem_dots, the resting stem's pair): one device px a dot, the `cue_stem`
+// on both phases whatever the selection (a selected pair's playhead dots are
+// its stems' own), one dot every two columns (one on, one off, 2026-11-02),
 // counted from the left stem's own column (unclipped, so the run stays put
 // on the song as the view pans) — A STEM'S DENSITY (architect 2026-10-26:
 // "the horizontal lines in the overlay of history have double the density
@@ -3634,13 +3648,13 @@ void render_phase_reset_flags(cairo_t* cr,
 // nudged-pair ring (MarkerStemRun; paint_marker_stem_runs, architect
 // 2026-10-26: "they should be joined by the overlay ring"). It asks the one
 // resolver (resolve_flag_face's table, render.cpp) rather than restating it:
-// the `cue` dots on both phases, every live cue's, warp or
+// the `cue_stem` dots on both phases, every live cue's, warp or
 // phase reset — a coincident one's too, its struck label the mark
 // (2026-10-26; the invalid color's ring 2026-10-11 to 2026-10-26) — THE
 // RESTING STEM'S PAIR WHATEVER THE SELECTION (architect 2026-11-02, M10
 // rule 1, the selected look the stem's and the triangle's alone): a selected
 // reset's or pair's stems take the playhead's dots, the rings stay in the
-// `cue`, so a ring keeps its stems' pattern. The colors are the palette's live roles
+// `cue_stem`, so a ring keeps its stems' pattern. The colors are the palette's live roles
 // (cue_dot_color), read by the painter as the stems read them. No disabled
 // arm, a disabled reset painting neither dots nor ring.
 struct GuiStemDots {
@@ -3775,7 +3789,7 @@ struct HistoryDiffFlag {
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
 // THE ANATOMY IS THE LIVE CUE'S (the palette block's marker-lane paragraph):
-// every cue THE PLAIN CUE, the `cue` triangle over the stem's `cue` dots,
+// every cue THE PLAIN CUE, the `cue` triangle over the stem's `cue_stem` dots,
 // both halves alike (architect 2026-10-26 ~15:30, "Two, agree": the history
 // in the cue color, the invalid color retired) — and the label
 // in the label face, its resting text the text tone. THE STRIKE TELLS THE
