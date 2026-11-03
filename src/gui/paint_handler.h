@@ -68,7 +68,7 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // (THE MODAL ROW'S PAD — icon_row_pad_x, the bottom row's 8-W lead-in and
 // lead-out, the icon row's pad from 2026-08-14 — left with its last reader,
 // row 8's seats, 2026-10-22: the strips' ends and the modal controls row's
-// are the well's edge columns, render.h's well_columns,
+// are the well's first and last columns, render.h's well_columns,
 // both strips flush with them since 2026-10-23.)
 
 // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14): the Settings editor's
@@ -932,7 +932,7 @@ private:
     // Marker, Next Marker) and the nudge and play (Switch Tab, Center, Left,
     // Right and Play / Stop, the last case; architect 2026-10-18) as one
     // block of four runs, the run gap between two (row8_block), its last
-    // case ending one past the WELL'S RIGHT EDGE COLUMN — flush
+    // case's face ending on the WELL'S LAST COLUMN — flush
     // with the well, never the window's edge (bottom_row_seats,
     // well_columns) — declared below; in the `h` view Older / Newer stand in
     // the Left / Right seats, 2026-10-11).

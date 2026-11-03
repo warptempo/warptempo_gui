@@ -50,9 +50,10 @@
 // wells with the stereo divider's row of ground between them — and a row of
 // ground, the well's foot; then ROW 8, THE STRIP PAD, the case, THE STRIP
 // PAD, on the window's foot. THE WELL STANDS 6 W IN FROM EACH SIDE of the
-// window's client area on the ground (column_margin_px), its regions sharing
-// the well's two edge columns (render.h's well_columns, the outermost keys'
-// faces' outer columns: THE EDGE RULE). (The band's head and foot lines and its panes,
+// window's client area on the ground (column_margin_px) and half the grid
+// floor's leftover, THE WELL THE WAVEFORM AREA (architect 2026-11-03), its
+// regions sharing the area's columns (render.h's well_columns, the outermost
+// keys' faces' outer columns: THE EDGE RULE). (The band's head and foot lines and its panes,
 // the tab strip under it, the column's air, the column's foot, the dock bar,
 // row 8's bars and the border under row 8 stood 2026-10-09 to 2026-10-22;
 // the program ring round the column 2026-10-22 to 2026-11-02; git history.)
@@ -94,7 +95,7 @@ struct ProgramSpec {
     // AND THE STRIP PAD — 13 W, settled 2026-10-23 — are render.h's device-px
     // constexprs since 2026-11-03, kRunGapAt300 45 and kStripPadAt300 39, the
     // same lengths: the retrofit reversed that morning's "half the key".)
-    // THE STRIPS' ENDS ARE THE WELL'S EDGE COLUMNS, NEVER THE
+    // THE STRIPS' ENDS ARE THE WELL'S FIRST AND LAST COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring, the well's columns since the flat well — THE EDGE RULE;
     // render.h's well_columns the one owner), so the
@@ -102,8 +103,8 @@ struct ProgramSpec {
     // leftover. BOTH STRIPS ARE FLUSH WITH THE WELL at both ends (architect
     // 2026-10-23, "shouldn't row 8 take the same rule as top strip?" — yes):
     // the band's first face and row 8's clock field start on the well's
-    // left edge column, the band's right run's and row 8's block's last face
-    // end one past its right edge column, their cells one inset px past
+    // first column, the band's right run's and row 8's block's last face
+    // end on its last column, their cells one inset px past
     // (2026-11-03) — the modals' controls row's seat
     // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
     // row 8 and the controls row), so neither strip nor the controls row
@@ -118,10 +119,10 @@ struct ProgramSpec {
     // THE WELL'S SIDE MARGIN (Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much ground from each side of the window's
-    // client area to the well's edge column, the column one device px,
-    // the hairline itself (render.h's well_edge_column_w_px, 2026-10-28),
-    // then the well's interior — the trim bar's, the ruler's, the marker
-    // lane's and the canvas's columns.
+    // client area, then half the grid floor's leftover (main.cpp's
+    // waveform_area), then the well, which is the waveform area (architect
+    // 2026-11-03) — the trim bar's, the ruler's, the marker lane's and the
+    // canvas's columns.
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each

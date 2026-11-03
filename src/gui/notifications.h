@@ -821,9 +821,10 @@ int notification_card_max_w_px(const AppState& a);
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
 // right-aligned on the keys' outer column (well_columns, THE EDGE RULE;
 // architect 2026-11-02, M11 / M14), from THE CARD SEAT — the trim bar's
-// first row, read off the live lane table, so the first card's top border
-// stands on the bar's top row (architect 2026-10-08, 2026-11-02; the
-// reasoning at the definition) — DOWN TO kPanelPadPx OF AIR ABOVE THE
+// first fill row, read off the live lane table, so the first card's top
+// border stands on the bar's first fill row (architect 2026-10-08,
+// 2026-11-02; RULED KEPT 2026-11-03; the reasoning at the definition) — DOWN
+// TO kPanelPadPx OF AIR ABOVE THE
 // BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it

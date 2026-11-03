@@ -201,8 +201,8 @@ namespace {
 //   THE ICON ROW, at the window's top, at its natural height;
 //   GAP 1 — flexible band of blank window ground;
 //   THE CENTERED BLOCK — the trim lane, the ruler, the marker lane, the
-//     lane's foot line, then THE WAVEFORM, the canvas's interior (its
-//     skirt columns and the margins beside it, waveform_area's x);
+//     lane's foot line, then THE WAVEFORM, the canvas's interior (the
+//     margins' ground beside it, waveform_area's x);
 //   GAP 2 — flexible blank window ground;
 //   THE WELL'S FOOT and THE UNIFIED BOTTOM ROW at the window's foot.
 //
@@ -250,8 +250,8 @@ namespace {
 // PX AT THE ELEMENT (render.h's well lanes block). THE CANVAS — THE WELL'S
 // INTERIOR — AT THE BASE'S 300 % AND key_height 33 IS 1088 DEVICE ROWS (the
 // rule at centered_leftover_h below), AND ITS WIDTH 2256 OF THE TABLET'S
-// 2304, 24 device px in from the left (waveform_area: the margin and the
-// well's edge column, 19 px, and half the flooring's leftover, 5). Per
+// 2304, 24 device px in from the left (waveform_area: the margin, 18 px,
+// and half the flooring's leftover, 6). Per
 // scale the well above the canvas is the trim lane (ground + the fill, a
 // hairline and the field, + the ground line) + the ruler lane (pad + the
 // digits' ink + pad, + ground) + the marker lane (the time field's height:
@@ -268,8 +268,8 @@ namespace {
 //   leftover H − 237: the waveform H − 237 (its two wells (H − 238) / 2
 //   rows each, floored, round the divider's 1, an odd spare row the
 //   canvas's last), both gaps 0 — 96 / 0 / 66 / H − 237 / 0 / 75; the
-//   waveform 1888 wide, 16 px in (the margin and the edge column, 13, and
-//   half the flooring's 6), the well's columns 15 and 1905.
+//   waveform 1888 wide, 16 px in (the margin, 12, and half the flooring's
+//   8), the well's columns 16 and 1904 (one past 1903).
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
@@ -283,7 +283,7 @@ namespace {
 //   (its two wells 543 rows each round the divider's row 783, the spare row
 //   1327 the canvas's last, render.h's waveform_divider), both gaps 0 —
 //   144 / 0 / 96 / 1088 / 0 / 112; the waveform 2256 wide, 24 px
-//   in (columns 24–2279), the well's columns 23 and 2281 (one past 2280).
+//   in (columns 24–2279), the well's columns 24 and 2280 (one past 2279).
 //   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
 //   this geometry): leftover 363 -> the waveform 363, both
 //   gaps 0 — 96 / 0 / 66 / 363 / 0 / 75.
@@ -319,7 +319,7 @@ namespace {
 // honored structurally by the loop below and by every consumer. (The cues'
 // and the playhead's DOTS are the canvas's, below the lane's foot line; the
 // stereo divider stands inside the waveform area (render.h's
-// waveform_divider), the canvas's skirts and the rows of ground painted by
+// waveform_divider), the ground round it painted by
 // paint_canvas_column_frame and the lanes' own painters off the lanes'
 // rects, paint_handler.cpp.) ONE shared helper
 // — strip_row_rect — is the single geometry owner; every named accessor
@@ -538,22 +538,22 @@ GuiRect waveform_area(const AppState& a) {
     // the logical spp exactly at every rate.
     constexpr int kGridStepPx = 16;
     // THE CANVAS'S INTERIOR ACROSS (architect 2026-10-09, the third part;
-    // program_spec.h's column_margin_px): the well stands
-    // the margin's ground and one edge column — one hairline, render.h's
-    // well_edge_column_w_px — in from each side of the window
-    // (column_inner_x_px), and the interior is what the two sides
-    // leave, floored to the grid step. THE LEFTOVER OF FLOORING THE WIDTH TO
-    // THE PAINTER GRID STEP IS SPLIT BETWEEN THE TWO MARGINS, THE ODD PIXEL
-    // TO THE RIGHT (architect 2026-10-09, symmetry strict), the edge columns,
-    // the trim bar, the ruler and the marker lane following the canvas's x.
-    // 24 device px in and 2256 wide on the tablet's 2304 at 300 % (18 + 1
-    // and half the flooring's 10), 16 in and 1888 wide on a 1920-px window
-    // at 200 % (12 + 1 and half its 6) and at 138 % (8 + 1 and half its 14),
-    // 24 in and 2256 wide at 360 % (22 + 1 and half its 2), 32 in and 2240
-    // wide at 400 % (24 + 1 and half its 14). The working column, the
-    // zoom map, every column mapping and hit test and the damage boxes read
-    // this rect (ON SCREEN IS AS PAINTED).
-    const int side = column_inner_x_px();
+    // program_spec.h's column_margin_px): the margin's ground stands in from
+    // each side of the window (column_margin_w_px), and the interior is what
+    // the two sides leave, floored to the grid step — THE WELL IS THIS AREA
+    // (architect 2026-11-03: render.h's well_columns reads its x and x + w).
+    // THE LEFTOVER OF FLOORING THE WIDTH TO THE PAINTER GRID STEP IS SPLIT
+    // BETWEEN THE TWO MARGINS, THE ODD PIXEL TO THE RIGHT (architect
+    // 2026-10-09, symmetry strict), all ground, the trim bar, the ruler and
+    // the marker lane following the canvas's columns. On the tablet's 2304:
+    // 24 device px in and 2256 wide at 300 % (18 and half the flooring's 12),
+    // 16 in and 2272 wide at 200 % (12 and half its 8), 24 in and 2256 wide
+    // at 360 % (22 and half its 4), 24 in and 2256 wide at 400 % (24 and no
+    // leftover). On a 1920-px window: 16 in and 1888 wide at 200 % (12 and
+    // half its 8), 8 in and 1904 wide at 138 % (8 and no leftover). The
+    // working column, the zoom map, every column mapping and hit test and
+    // the damage boxes read this rect (ON SCREEN IS AS PAINTED).
+    const int side = column_margin_w_px();
     const int inner_room = std::max(0, w - 2 * side);
     const int slack = inner_room % kGridStepPx;
     const int effective_w = inner_room - slack;
@@ -711,11 +711,11 @@ GuiRect top_marker_row_area(const AppState& a) {
 
 // THE WELL'S COLUMNS, THE LANE'S FOOT LINE (top lane 4) and THE WELL'S FOOT
 // (bottom lane 1) — render.h's well-edge accessors; the rows' one painter is
-// paint_canvas_column_frame (paint_handler.cpp).
+// paint_canvas_column_frame (paint_handler.cpp). THE WELL IS THE WAVEFORM
+// AREA (architect 2026-11-03): its columns are the area's, nothing more.
 WellColumns well_columns(const AppState& a) {
     const GuiRect area = waveform_area(a);
-    const int     cw   = well_edge_column_w_px();
-    return WellColumns{area.x - cw, area.x + area.w + cw};
+    return WellColumns{area.x, area.x + area.w};
 }
 
 GuiRect lane_foot_line_area(const AppState& a) {
@@ -2187,8 +2187,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     the stereo divider's rows over them (render_canvas,
             //     render_center_lines, render_waveform_divider — on_redraw's
             //     !plate_branch arm; the GL canvas's list the same, its
-            //     build_canvas_list arm), in the well's ground and the
-            //     canvas's skirts (paint_canvas_column_frame).
+            //     build_canvas_list arm), in the well's ground
+            //     (paint_canvas_column_frame).
             //   * THE TOP STRIP — the trim bar, the ruler, the marker lane —
             //     BARE: every pass of it (paint_trim's trim bar, the ruler
             //     with the marker lane's face and the cursor's head, the

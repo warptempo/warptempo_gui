@@ -985,7 +985,7 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 //
 // The waveform BAND is THE CANVAS'S INTERIOR, waveform_area exactly
 // (2026-10-09, the canvas framed): the well's margins either side — the
-// ground, the canvas's skirt columns and the grid floor's leftover
+// ground and the grid floor's leftover
 // split between them — are the program's panel, not waveform, and answer nothing, as
 // the rows of ground above and below do (the right gutter counted as waveform
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
@@ -5444,7 +5444,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
             // spot's consumed nothing below (the PLACEMENT LANES block, above point_on_playhead_head).
             // The `h` VIEW never reaches this arm — its own gate armed the same
             // pending with the mode's deferred land far above. A press on the
-            // well's MARGINS (the ground and the well's edge columns beside
+            // well's MARGINS (the ground beside
             // the ruler's face, inside the lane, 2026-10-09) still
             // arms; its motionless release's click act deselects and seats no
             // playhead, the placement body's own off-column shape.

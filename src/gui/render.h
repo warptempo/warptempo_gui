@@ -428,11 +428,11 @@ void install_true_colors(bool on);
 // rightmost button's right edge lines up with the trim/time/marker/canvas
 // region, and the same for the left"): every region spans the well's
 // columns (well_columns below), the outermost keys' faces' outer columns
-// (their cells one px past, 2026-11-03), 23 .. 2280 on the
-// tablet's 2304 at 300 %, the ground beside them; the canvas's interior —
-// the waveform area every painter and hit test reads — one column in from
-// each, its two side columns the canvas's own color with its grid and
-// center lines run through them (paint_canvas_skirt). Every line in the
+// (their cells one px past, 2026-11-03), 24 .. 2279 on the
+// tablet's 2304 at 300 %, the ground beside them. THE WELL IS THE WAVEFORM
+// AREA (architect 2026-11-03): its columns are the canvas's interior — the
+// waveform area every painter and hit test reads — and nothing more, so no
+// column of canvas without ink frames it. Every line in the
 // well is ONE DEVICE PX at every scale (hairline_px, the line rule; "two px
 // lines that don't scale" ruled one px in M5h; the ruler's ticks one px
 // since 2026-11-03). THE ROWS AT 300 % (main.cpp's lane table the record;
@@ -445,11 +445,11 @@ void install_true_colors(bool on);
 // trim_lane_h_px the rows; architect 2026-11-03, mock z2): one row of ground
 // under the band (the row the retired program ring stood on), then THE
 // BAR'S FILL ROWS (trim_bar_fill_h_px, 17 device px at 300 %) across the
-// well's columns, the edge columns included, NO FRAME — OUTSIDE THE TRIM a
+// well's columns, NO FRAME — OUTSIDE THE TRIM a
 // flat kTrimBarFace 2A2A2A (the marker lane's tone), INSIDE IT, THE SPAN,
 // the trim window's columns from the begin column through the end column
-// clipped to the waveform's columns (so the edge columns always wear the
-// outside fill), a flat kTrimSpanFace 6A6A6A — and the bar's last row ONE
+// clipped to the waveform's columns (so a trim spanning the view fills the
+// bar end to end), a flat kTrimSpanFace 6A6A6A — and the bar's last row ONE
 // DEVICE PX OF GROUND across the well's columns, the span included, the
 // line between the bar and the ruler (no line above: the row above the bar
 // is the lane's ground). NO PLAYHEAD IN THE BAR (architect 2026-10-09
@@ -752,13 +752,11 @@ void install_true_colors(bool on);
 // transparent gaps (render_canvas).
 //
 // THE CANVAS IS COOL EDIT'S (architect 2026-10-09, the third part):
-// THE WAVEFORM AREA IS THE CANVAS'S INTERIOR, one column in from each of
-// the well's edge columns (the well's paragraph above; waveform_area,
-// main.cpp), so every column mapping, hit test and damage box reads the
-// interior; the two edge columns are the canvas's own skirts, its color with
-// its grid and center lines and the divider's row run through them
-// (paint_canvas_skirt, on the CPU beside the GPU's hole), so the canvas
-// reads the well's whole width. THE ORDER, bottom to top: UNDER THE WAVEFORM, in render_canvas's
+// THE WAVEFORM AREA IS THE CANVAS'S INTERIOR AND THE WELL'S COLUMNS (the
+// well's paragraph above; waveform_area, main.cpp; architect 2026-11-03), so
+// every column mapping, hit test and damage box reads the interior and the
+// canvas reads the well's whole width with the ground directly beside it.
+// THE ORDER, bottom to top: UNDER THE WAVEFORM, in render_canvas's
 // one pass, the `waveform_canvas` fill and THE HORIZONTAL GRID — per
 // channel, a `grid` line one device px tall ("on waveform → unscaled",
 // architect 2026-10-09 ~14:25, waveform_line_px's rule) at the channel's
@@ -1099,8 +1097,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     M7: Breeze only — the BPM key's own drawing) on the ink-box road
 //     (icons.h's THE INK BOX), the ink box's larger side kLogoNoteInkAt300 =
 //     21 px, ITS FIRST INK
-//     COLUMN ON THE WELL'S LEFT EDGE COLUMN (well_columns — the first key's
-//     column: "the glyph flush with the icons"). THEN THE BRAND, "Warptempo"
+//     COLUMN ON THE WELL'S FIRST COLUMN (well_columns — the first key's
+//     face's first column: "the glyph flush with the icons"). THEN THE BRAND, "Warptempo"
 //     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
 //     equipment … just had a stylized brand name") — in Liberation Sans
 //     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the text
@@ -1110,8 +1108,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     notifications.h.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
-//     (22 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S RIGHT
-//     EDGE COLUMN (the last key's outline column: "the clock flush with the
+//     (22 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S LAST
+//     COLUMN (the last key's face's last column: "the clock flush with the
 //     right edge of the buttons"): the clock run "2:12 PM" with its LAST
 //     INK on that column; THE PIPE (kLogoLegendPipe, the face's own glyph,
 //     never a drawn one, architect 2026-10-24: "I don't think we should draw
@@ -1208,7 +1206,7 @@ inline int logo_lane_h_px() {
 // WELL'S LINES AND ROWS OF GROUND (the flat well, 2026-11-01 night, M5h's
 // "one-px lines": the trim bar's ground line and the row above the bar,
 // the ruler's and the marker lane's foot rows, the stereo
-// divider's row, the well's foot and its edge columns; the ruler's ticks, one
+// divider's row and the well's foot; the ruler's ticks, one
 // device px wide, kRulerTickWidthPx), the group gap between two keys (one device
 // px each side of a key's face, kKeyFaceInsetPx, 2026-11-03), the modal box's outer
 // rows and columns of ground round its pane (modal_box.h), the cards' and
@@ -1773,23 +1771,16 @@ inline int cue_triangle_reach_right_px() {
 // (well_foot_h_px), between the canvas and row 8 (the program ring's last row
 // until the flat well; the modal family's box keeps its last row on it,
 // modal_box.h). Across, the well stands column_margin_w_px of the ground in
-// from each side of the window, then ITS EDGE COLUMN, one hairline
-// (well_edge_column_w_px: the trim bar's outside fill, the ruler's, the
-// lane's and the canvas's skirt — the program ring's column until the flat
-// well), then
-// THE WAVEFORM AREA, its width floored to the grid step and the floor's
+// from each side of the window, then THE WAVEFORM AREA, which is the well
+// (architect 2026-11-03), its width floored to the grid step and the floor's
 // leftover (under 16 device px) split between the two margins, the odd pixel
-// to the right (main.cpp's waveform_area owns the split; column_inner_x_px
-// is the side before it): the side 18 + 1 = 19 device px at 300 %, 12 + 1 =
-// 13 at 200 %, 8 + 1 = 9 at 138 %, 22 + 1 = 23 at 360 %. THE EDGE COLUMN
-// AND THE ROWS OF GROUND ARE ONE DEVICE PX at every scale (hairline_px, the
-// line rule), so the waveform area, which every canvas painter and hit test
-// reads, is the canvas's whole interior with one skirt column each side
-// (2026-10-28: the frame's slot the hairline, so nothing stands between the
-// edge and the canvas).
-inline int well_edge_column_w_px() {
-    return hairline_px();
-}
+// to the right (main.cpp's waveform_area owns the split; column_margin_w_px
+// is the side before it): the side 18 device px at 300 %, 12 at 200 %, 8 at
+// 138 %, 22 at 360 %. THE ROWS OF GROUND ARE ONE DEVICE PX at every scale
+// (hairline_px, the line rule), and the ground beside the area across is the
+// margin and half the flooring's leftover, so the waveform area, which every
+// canvas painter and hit test reads, is the canvas's whole interior with
+// nothing between it and the ground.
 inline int lane_foot_line_h_px() {
     return hairline_px();
 }
@@ -1799,31 +1790,30 @@ inline int well_foot_h_px() {
 inline int column_margin_w_px() {
     return scaled_px(kProgramSpec.column_margin_px);
 }
-inline int column_inner_x_px() {
-    return column_margin_w_px() + well_edge_column_w_px();
-}
 // The two lanes (main.cpp, beside the other lane accessors).
 GuiRect lane_foot_line_area(const AppState& a);
 GuiRect well_foot_area(const AppState& a);
-// THE WELL'S COLUMNS (2026-10-23, the one owner; the program ring's outer
-// columns until the flat well, THE EDGE RULE of 2026-11-01 night): its left
-// edge column, directly left of the canvas interior, and one past its right
-// edge column, directly right of it — waveform_area's x and width, so the
-// grid floor's leftover decides them and no inset does: 23 and 2281 on the
-// tablet's 2304 at 300 % (the area 24 .. 2279), 15 and 1905 on a 1920-px
-// window at 200 % and at 138 %. EVERY REGION, STRIP AND BOX STANDING ON THEM
-// READS THEM HERE (architect 2026-10-23, "yes" to tying both strips' ends to
-// the well; 2026-11-01 night, "the rightmost button's right edge lines up
-// with the trim/time/marker/canvas region, and the same for the left"): the
-// well's regions (render_trim_flags, paint_ruler_row, paint_canvas_skirt),
-// the modal family's box and its controls row (modal_box_rect,
+// THE WELL'S COLUMNS (2026-10-23, the one owner; THE EDGE RULE of 2026-11-01
+// night; THE WELL IS THE WAVEFORM AREA, architect 2026-11-03): its first
+// column and one past its last — waveform_area's x and x + w, so the grid
+// floor's leftover decides them and no inset does: 24 and 2280 on the
+// tablet's 2304 at 300 % (the area 24 .. 2279) and 16 and 2288 at 200 %;
+// 16 and 1904 on a 1920-px window at 200 %, 8 and 1912 at 138 %. EVERY
+// REGION, STRIP AND BOX STANDING ON THEM READS THEM HERE (architect
+// 2026-10-23, "yes" to tying both strips' ends to the well; 2026-11-01
+// night, "the rightmost button's right edge lines up with the
+// trim/time/marker/canvas region, and the same for the left"): the well's
+// regions (render_trim_flags, paint_ruler_row, the marker lane's face), the
+// modal family's box and its controls row (modal_box_rect,
 // modal_controls_seats), the band's ends (icon_row_seats) and row 8's
-// (bottom_row_seats, the controls row's seats too), so they coincide at
-// every scale; both strips and the controls row stand flush with them at
-// both ends, no inset.
+// (bottom_row_seats, the controls row's seats too), the logo lane's items,
+// the cards' stack and the tooltip's clamp, so they coincide at every
+// scale; both strips and the controls row stand flush with them at both
+// ends, no inset — the outermost keys' FACES on the well's first and last
+// columns, their cells one inset px past.
 struct WellColumns {
-    int x   = 0;   // the well's left edge column
-    int end = 0;   // one past its right edge column
+    int x   = 0;   // the well's first column (the waveform area's x)
+    int end = 0;   // one past its last column (the area's x + w)
 };
 WellColumns well_columns(const AppState& a);
 
@@ -1915,7 +1905,7 @@ inline int scrub_channel_above_px() {
     return (scrub_thumb_h_px() - scrub_channel_h_px()) / 2;
 }
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas has none (row 6's canvas
-// paragraph), its skirts and the rows of ground stand outside the area.
+// paragraph), the rows and columns of ground stand outside the area.
 // THE WAVEFORM'S LINE WIDTH — ONE DEVICE PX AT EVERY SCALE (architect
 // 2026-10-09 ~14:25, "ON WAVEFORM → UNSCALED. OTHERWISE, SCALED."; his
 // ~14:20 on the laptop at 200 %: "the marker stems are gui scaled; I thought
@@ -2460,7 +2450,7 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // channel's zero row, one device px in `center`, painted live after the
 // plate and before the dots (build_canvas_list's order) — the canvas's
 // lines stay these two painters' and the plate wears its two inks alone
-// (WaveformPlateInks). The ground and the canvas's skirts round the area are
+// (WaveformPlateInks). The ground round the area is
 // paint_canvas_column_frame's (paint_handler.cpp).
 // THE THREE CANVAS PAINTERS PAINT THROUGH THE CANVAS SINK (2026-10-13,
 // canvas_sink.h): the frame's draw list, the backbuffer's interior cleared
@@ -2469,15 +2459,6 @@ void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(GuiCanvasSink& sink, const GuiRect& area);
 void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
 void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
-// THE CANVAS'S SKIRT (the flat well's EDGE RULE, 2026-11-01 night: the canvas
-// spans the well's columns, row 6's canvas paragraph): the column `column`
-// beside the waveform area `area` (its x and width, the area's rows) on the
-// CPU, outside the GPU's hole — the canvas's color, its grid and center
-// lines on the rows render_canvas and render_center_lines put them, and the
-// stereo divider's row in the ground, so the canvas reads the well's whole
-// width with every line run through.
-void paint_canvas_skirt(cairo_t* cr, const GuiRect& area, int column_x,
-                        int column_w);
 
 // (THE RELIEF HELPERS — the Windows-95 edge family of 2026-10-02 and the
 // one-device-px mitred ring that replaced it 2026-10-23 — are retired: the
@@ -2538,9 +2519,9 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // GROUND, kGround 242424, ONE DEVICE PX (hairline_px; architect 2026-11-01
 // night, "THE MAIN PAGE IS SETTLED": "the stereo divider one 242424 row" —
 // the hi-fi skin's light line, ground row and dark line, 2026-10-23 to
-// 2026-11-02, retired), across the waveform area and through its two skirt
-// columns to the well's edges (paint_canvas_skirt), so it meets the ground
-// of the margins on both sides with no separation. CHROME, NOT WAVEFORM:
+// 2026-11-02, retired), across the waveform area, which is the well
+// (architect 2026-11-03), so it meets the ground of the margins on both
+// sides with no separation. CHROME, NOT WAVEFORM:
 // inert to every input (point_on_waveform_divider below). THE ROW STANDS
 // INSIDE THE WAVEFORM AREA (every column mapping, hit test and damage box
 // reads it as before) and comes out of the two channels' rows: the area's
@@ -2548,7 +2529,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // (below). Across the area's columns it is painted through the canvas sink
 // (render_waveform_divider, after the plate and the center lines,
 // build_canvas_list's order), so the GL canvas draws it from its list
-// (canvas_sink.h's head); across the skirts it is paint_canvas_skirt's.
+// (canvas_sink.h's head).
 // THE PLATE'S BANDS, THE GRID AND THE CENTER LINES stand inside the two
 // bands and paint nothing on it; EVERY VERTICAL LINE CROSSES IT, THE DIVIDER
 // BEING JUST ANOTHER GRID LINE (architect 2026-11-02: "the divider is just
@@ -3300,8 +3281,9 @@ struct TrimBarHit {
 // trim hits read, so paint and hit take the band as one value;
 // `waveform_area` is read for its `.x` and `.w` — the canvas's columns, the
 // interior's and the span's (2026-10-09: the column's margins), `.w` also
-// the column-mapping denominator — and the well's two edge columns stand one
-// line outside them; the lane's ground beyond is paint_trim's.
+// the column-mapping denominator — which are the well's columns (THE WELL IS
+// THE WAVEFORM AREA, architect 2026-11-03); the lane's ground beyond is
+// paint_trim's.
 // `top_strip_area` is a validity guard only. Column placement is on the displayed viewport basis — `trim.begin` /
 // `trim.end` are already in the displayed domain. The span has NO editable
 // payload; it is a plain-press grab target only (trim is outside the

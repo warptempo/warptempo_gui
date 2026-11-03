@@ -187,7 +187,7 @@ void canvas_hline(CanvasLines& lines, const GuiRect& area, int row, int t) {
 
 namespace {
 // THE GRID'S RECTS across `area` (its columns; its rows the canvas's): the
-// one row rule render_canvas and the skirt read (paint_canvas_skirt).
+// one row rule render_canvas reads.
 void canvas_grid_lines(CanvasLines& lines, const GuiRect& area) {
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
     // horizontal grid — t = waveform_line_px() thick, ONE DEVICE PX ("on
@@ -274,33 +274,12 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
     sink.rects(lines.span(), palette().center);
 }
 
-// THE CANVAS'S SKIRT (the contract at the declaration, render.h): the
-// column over the area's rows in the canvas's color, the grid's and the
-// center lines' rects across it, the divider's row in the ground — the
-// GPU's own records' colors and rows, painted by cairo outside the hole.
-void paint_canvas_skirt(cairo_t* cr, const GuiRect& area, int column_x,
-                        int column_w) {
-    if (column_w <= 0 || area.h <= 0) return;
-    const GuiPalette& pal = palette();
-    const GuiRect col{column_x, area.y, column_w, area.h};
-    paint_cell_rect(cr, col, pal.waveform_canvas);
-    CanvasLines grid;
-    canvas_grid_lines(grid, col);
-    for (const GuiRect& r : grid.span()) paint_cell_rect(cr, r, pal.grid);
-    CanvasLines center;
-    canvas_center_lines(center, col);
-    for (const GuiRect& r : center.span()) paint_cell_rect(cr, r, pal.center);
-    const GuiRect div = canvas_divider_rect(col);
-    if (div.w > 0 && div.h > 0) paint_cell_rect(cr, div, pal.face);
-}
-
 // THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; flat
 // since 2026-11-01 night; the rule and its row at render.h's
 // waveform_divider, the one geometry owner): across the area's columns, ONE
 // ROW OF THE GROUND (the palette's `face`, kGround) cut to the area's rows —
 // CHROME ON THE CANVAS, painted through the sink so the GL canvas draws it
-// from its list (canvas_sink.h's head), the skirts' share being
-// paint_canvas_skirt's. ITS OWN PASS, AFTER THE PLATE AND THE CENTER
+// from its list (canvas_sink.h's head). ITS OWN PASS, AFTER THE PLATE AND THE CENTER
 // LINES and BEFORE EVERY VERTICAL LINE (build_canvas_list's order): the
 // plate's bands and the horizontal lines stand inside the wells and every
 // input leaves the row alone (point_on_waveform_divider: chrome, inert), so
@@ -943,9 +922,8 @@ void render_trim_flags(cairo_t* cr,
         viewport_end_sample, waveform_area.w);
 
     // THE BAR'S COLUMNS ARE THE WELL'S (THE EDGE RULE, 2026-11-01 night):
-    // waveform_area's x and its effective width, the well's edge columns
-    // directly outside them (one hairline each, render.h's
-    // well_edge_column_w_px).
+    // waveform_area's x and its effective width, which are the well's
+    // columns (THE WELL IS THE WAVEFORM AREA, architect 2026-11-03).
     const int lane_x   = waveform_area.x;
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
@@ -954,17 +932,16 @@ void render_trim_flags(cairo_t* cr,
     // THE BAR (render.h's well paragraph; architect 2026-11-03, mock z2):
     // under the lane's first row of ground (the caller's), THE FILL'S ROWS
     // (trim_bar_fill_h_px) a FLAT kTrimBarFace across the well's columns,
-    // the edge columns included, NO FRAME; the bar's last row the caller's
+    // NO FRAME; the bar's last row the caller's
     // ground too (paint_trim erases the whole lane first), the one-px line
     // between the bar and the ruler, nothing painted over it here.
-    const int cw = well_edge_column_w_px();
     const int px = hairline_px();
     const int bar_y = lane_y + px;
     const int fill_h = std::min(trim_bar_fill_h_px(), lane_h - px);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     if (fill_h > 0)
-        paint_cell_rect(cr, GuiRect{lane_x - cw, bar_y, lane_w + 2 * cw, fill_h},
+        paint_cell_rect(cr, GuiRect{lane_x, bar_y, lane_w, fill_h},
                         hex(kTrimBarFace));
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
@@ -973,9 +950,12 @@ void render_trim_flags(cairo_t* cr,
 
     // THE SPAN — the trim window's columns, the begin column through the end
     // column inclusive, sliding off an edge like any content (the clip cuts
-    // it to the waveform's columns, so the edge columns always wear the
-    // outside fill; a side lying farther off than one px is held there,
-    // outside the clip, so the rect stays in cairo's range at any zoom): A
+    // it to the waveform's columns: THE TRIM REFLECTS THE WAVEFORM'S
+    // COLUMNS, even where the waveform is wrong (architect 2026-11-03) — the
+    // bar's columns are the waveform area's, nothing more, so a trim
+    // spanning the view fills the bar end to end; a side lying farther off
+    // than one px is held there, outside the clip, so the rect stays in
+    // cairo's range at any zoom): A
     // FLAT kTrimSpanFace FILL on the fill's rows, no outline of its own
     // (architect 2026-11-03, mock z2). NO PLAYHEAD IN THE BAR (architect
     // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").

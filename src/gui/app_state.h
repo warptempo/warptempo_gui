@@ -2384,8 +2384,8 @@ enum class RedesignButton {
     // detection. NINETEEN buttons in four groups (2 + 8 + 4 + 5, kRow8Groups,
     // since 2026-10-25 — 2 + 9 + 4 + 5 on 2026-10-24, Copy Phase Resets
     // gone up to the band's first run; the clock at the row's left with the
-    // tab name and the state line after it), the block ending at the well's
-    // right edge column (architect 2026-09-29, the right-handed tablet's
+    // tab name and the state line after it), the block's last face ending
+    // on the well's last column (architect 2026-09-29, the right-handed tablet's
     // layout). The enum lists the
     // marker group, the old walk group and the arrows (the painted order
     // until 2026-10-18), and THE ONE PLAY/STOP BUTTON (bare Space) before
@@ -10059,7 +10059,8 @@ inline DialogEditorStop dialog_editor_byte_at(
 // cross the window's foot, ABOVE `btn` (the owner's painted button) with
 // tooltip_flip_gap_px() between them; then held between THE KEYS' OUTER
 // COLUMNS (render.h's well_columns, THE EDGE RULE; architect 2026-11-02,
-// M11 ruling 4: x 23 .. 2280 at 300 %, where the window's own edges stood
+// M11 ruling 4: x 24 .. 2279 at 300 %, the well the waveform area since
+// architect 2026-11-03, where the window's own edges stood
 // until then) — shifted left to end on the right one, never past the left
 // one (a box wider than the span pins its left edge there), never above the
 // window's top. The box never shrinks.

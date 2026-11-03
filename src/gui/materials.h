@@ -61,8 +61,9 @@
 // (key_face_rect): 67 x 31 at 300 % at key_height 33, so two
 // keys of a group stand TWO DEVICE PX OF GROUND apart and every face is the
 // same, a group's ends included. THE EDGE RULE IS THE FACES': the band's,
-// row 8's and the controls rows' outermost FACES stand on the well's edge
-// columns (render.h's well_columns), their cells one px past them
+// row 8's and the controls rows' outermost FACES stand on the well's first
+// and last columns (render.h's well_columns, the waveform area's, architect
+// 2026-11-03), their cells one px past them
 // (the seats' walks, paint_handler.cpp). THE GROUND IS NOT PRESSABLE
 // (architect 2026-11-02, R5: "ground is not a button"): THE PAINTED FACE IS
 // THE HIT BOX (point_on_key below), so a press, a lift, the press face and

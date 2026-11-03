@@ -27,9 +27,8 @@
 // it. Across, it runs the window's width,
 // as every program lane does. Top to bottom:
 //   1. THE BOX — in the well's own columns (the side margin of the ground in
-//      from each side, the waveform area's x and width one edge column, one
-//      hairline, out: render.h's well_columns, the keys' faces' outer
-//      columns), its
+//      from each side, the waveform area's x and width: render.h's
+//      well_columns, the keys' faces' outer columns), its
 //      top row the trim lane's first row, its bottom row the well's foot;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
 //      the cell (key_height tall, render.h's icon_case_h_px), the strip pad
@@ -56,15 +55,15 @@
 // and key_height 33 (its default; the 69-px cell, the strip pad 39 and the
 // 72-row logo lane, 2026-11-03): the box's top row 144 (the trim lane's
 // first row, the row of ground directly under the band's rows 0–143, the
-// logo lane 0–71), its bottom row 1328 (the well's foot) and its columns 23
-// and 2280 (the well's edge columns), those rows and columns ground, the
-// PANE x 24..2279 — the main canvas's own columns — and y 145..1327 (the
+// logo lane 0–71), its bottom row 1328 (the well's foot) and its columns 24
+// and 2279 (the well's first and last, the main canvas's own columns),
+// those rows and columns ground, the PANE x 25..2278 and y 145..1327 (the
 // main canvas's own rows 240–1327); the controls row 1329–1439, its cell
-// rows 1368–1400 (the faces 1369–1399), its first cell's columns 22–90 (the
-// face 23–89) and its last 2213–2281 (the face 2214–2280). A DIALOG'S TEXT
+// rows 1368–1400 (the faces 1369–1399), its first cell's columns 23–91 (the
+// face 24–90) and its last 2212–2280 (the face 2213–2279). A DIALOG'S TEXT
 // (THE TEXT SEAT, below) on the list rows' seat, 18 px in from the box's
-// outer edges: its pen on column 41, its ascender line on row 162, its wrap
-// ending one past column 2262, its foot clip one past row 1310.
+// outer edges: its pen on column 42, its ascender line on row 162, its wrap
+// ending one past column 2261, its foot clip one past row 1310.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -225,8 +224,8 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 // Its readers, which cannot drift apart:
 //   THE BOX'S TEXT — a prompt's question, the progress modal's sentence and
 //     the dialog editors' line, symmetric on all four sides: THE PEN the
-//     seat in from the box's left column (column 41 at 300 %), THE WRAP
-//     ending the seat short of its right column (one past 2262), THE FIRST
+//     seat in from the box's left column (column 42 at 300 %), THE WRAP
+//     ending the seat short of its right column (one past 2261), THE FIRST
 //     ROW'S ASCENDER LINE — the face's own "l" ink top,
 //     gui_font_ascender_ink_px, never the line box's top: the air he sees is
 //     the ink's — the seat under its top row (row 162; modal_box_text_
