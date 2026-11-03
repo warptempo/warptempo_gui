@@ -53,10 +53,10 @@
 // gui_font.h): row 8's clock, its tab name and its state line are THE
 // PROGRAM FACE, the cues' size (architect 2026-10-26 ~11:30: "the bottom
 // left timestamp and tab/github/etc text should take 26 as well", the size
-// tuned with the cues since, 24 px since 2026-11-03, gui_font.h), and the
+// tuned with the cues since, 22 px at 300 %, gui_font.h), and the
 // render player's two time fields with them (architect 2026-10-26 ~12:10,
 // "yes" to symmetry with row 8's clock); every modal string the body face,
-// 24 too, a row of its own (gui_font.h's table). The no-wiggle guarantee is the fields' own
+// 22 too, a row of its own (gui_font.h's table). The no-wiggle guarantee is the fields' own
 // fixed widths.
 //
 // EVERY STRING THE STATE LINE CARRIES — the queue/render status and the
@@ -326,21 +326,90 @@ namespace {
 
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
-// 2026-11-01; paint_key, materials.h, where its three faces stand).
-// LIT — the FFAD56 fill — for a CHECKED button alone (the roster's
-// `selected`, `lamp`), pressed or not; THE PRESS FACE 464646 for a PRESSED
-// one (a live press) that is not checked, for as long as the press stands,
-// the key back to its own state at the lift (architect 2026-11-02: the
-// yellow for lamps only; key_look); a DISABLED button keeps the face its
-// state gives, a dead checked button still lit (the roster's rule at
-// paint_icon_row), its glyph dimmed by the caller. NO HOT FACE. `r` is the
-// PAINTED key, the whole case (materials.h's THE GROUP GAP). ON
-// ITS FACE its caller paints the key's Breeze glyph (paint_key_glyph,
-// 2026-11-02), the key's one mark: no word stands under it (the reason at
-// paint_key_glyph).
-void paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
+// 2026-11-01; paint_key, materials.h, where its four faces stand).
+// LIT — the FFAD56 fill — for a CHECKED button (the roster's `selected`,
+// `lamp`), FFC281 while a press stands on it; THE PRESS FACE 6A6A6A for a
+// PRESSED one (a live press) that is not checked, for as long as the press
+// stands, the key back to its own state at the lift (architect 2026-11-03,
+// the retrofit: Live's hover colors as the press; the yellow for lamps
+// only, 2026-11-02; key_look); a DISABLED button keeps the face its state
+// gives, a dead checked button still lit (the roster's rule at
+// paint_icon_row), its glyph and legend dimmed by the caller. NO HOT FACE,
+// NO PRESS MOVEMENT. `cell` is the key's CELL; the face painted is its
+// inset (materials.h's key_face_rect). ON ITS FACE its caller paints the
+// key's Breeze glyph (paint_key_glyph) and UNDER THE CELL its legend
+// (paint_key_legend, 2026-11-03).
+void paint_roster_case(cairo_t* cr, const GuiRect& cell, bool lamp,
                        bool pressed) {
-    paint_key(cr, r, key_look(lamp, pressed));
+    paint_key(cr, key_face_rect(cell), key_look(lamp, pressed));
+}
+
+// THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
+// act's name printed UNDER the key on the ground, "just a little label
+// underneath"; back 2026-11-03, the retrofit, under every key of every
+// surface — the band, row 8, the render player, the score viewer, the trim
+// presets' row, every modal controls row and the dialogs' word buttons) —
+// THE ONE PLACE the legend's placement is decided: the legend face
+// (GuiFace::Legend, 14 Regular at 300 %, uppercase) CENTERED on the cell's x
+// extent (the face's center too), its cap band centered in the strip's
+// bottom pad (redesign_baseline on the pad's rows, the pad strip_pad_px
+// under the cell). A legend never widens a key; one wider than its face
+// overhangs onto the ground beside it. It stands on the ground whatever the
+// key's face, so a lit key's legend stays kTextInk (paint_key_legend).
+struct KeyLegendSeat {
+    double x        = 0.0;   // the run's pen
+    double baseline = 0.0;
+};
+KeyLegendSeat key_legend_seat(const GuiRect& cell, double run_w) {
+    const GuiFont font = gui_font(GuiFace::Legend);
+    const double pad_y = static_cast<double>(cell.y + cell.h);
+    const double pad_h = static_cast<double>(strip_pad_px());
+    return KeyLegendSeat{
+        static_cast<double>(cell.x) + (static_cast<double>(cell.w) - run_w) * 0.5,
+        redesign_baseline(font, pad_y, pad_h)};
+}
+
+// THE RENDER PLAYER'S LEGENDS (architect 2026-10-23, on the approved
+// player frame: PREV PLAY NEXT … REFRESH DOWN UP
+// FOLDER LOAD CANCEL; back 2026-11-03), by the act each key runs; the
+// root's sixth slot, Delete, its own word. THE REPEAT KEY READS REPEAT
+// (architect 2026-10-23, "player repeat btn is mislabeled refresh"): its
+// act is Toggle Repeat One, the mock's REFRESH a misprint. THE LAST KEY
+// READS CLOSE (architect 2026-10-28 night, "agree all"): the player asks
+// nothing, and a button's word says what leaving does (the rule at
+// kModalCancelLabel); its tooltip, "Close", says the same.
+const char* render_player_button_legend(AppState::PlayerButtonAct act) {
+    using Act = AppState::PlayerButtonAct;
+    switch (act) {
+        case Act::Home:          return "PREV";
+        case Act::PlayPause:     return "PLAY";
+        case Act::NextTrack:     return "NEXT";
+        case Act::RepeatOne:     return "REPEAT";
+        case Act::HighlightDown: return "DOWN";
+        case Act::HighlightUp:   return "UP";
+        case Act::Up:            return "FOLDER";
+        case Act::LoadInPlace:   return "LOAD";
+        case Act::Delete:        return "DELETE";
+        case Act::Close:         return "CLOSE";
+        case Act::None:          return "";
+    }
+    return "";
+}
+// THE PLAY KEY'S PRINT NAMES ITS NEXT PRESS (architect 2026-10-25, the
+// roster's legend rule at redesign_button_legend's stateful overload):
+// render_player_play_face, the owner the tooltip and the glyph read — PLAY,
+// PAUSE, or OPEN over a folder row. Every other act forwards to the
+// table above (REPEAT a toggle, one print in both states).
+const char* render_player_button_legend(AppState::PlayerButtonAct act,
+                                        PlayerPlayFace face) {
+    if (act == AppState::PlayerButtonAct::PlayPause) {
+        switch (face) {
+            case PlayerPlayFace::Pause:      return "PAUSE";
+            case PlayerPlayFace::OpenFolder: return "OPEN";
+            case PlayerPlayFace::Play:       break;
+        }
+    }
+    return render_player_button_legend(act);
 }
 
 // THE RENDER PLAYER'S GLYPHS (architect 2026-11-01, M7, Breeze's
@@ -386,46 +455,107 @@ std::optional<icons::Icon> render_player_button_icon(
     return std::nullopt;
 }
 
+// THE KEY'S LEGEND, LAID OUT ONCE (2026-10-23; back 2026-11-03) — the one
+// owner of where a key's legend stands and of the pixels the key and its
+// legend paint together, read by the painter (paint_key_legend), by the
+// strips' repaint gates (clip_meets on `extent`) and by the as-painted
+// publications (publish_button_face's and the modal row's coverage tests),
+// so a coverage test and the paint cannot part. THE EXTENT IS THE KEY'S
+// FACE (key_face_rect of `cell`) UNITED WITH THE LEGEND'S LINE BOX — the
+// run's advance across, the face's ascent above the baseline to its descent
+// below, each edge rounded outward to whole px — because the legend stands
+// OUTSIDE the key, in the strip's bottom pad and overhanging the face's
+// sides when wider: a damage rect confined to the pad (a tooltip closing
+// over a bottom-row legend) has the strip's ground erased under it, and a
+// gate on the face alone would skip the legend and leave it erased. The run
+// is the shaping memo's (text_shape::memoized_run), so the gate's layout
+// and the paint's are one shaping.
+struct KeyLegendLayout {
+    text_shape::SharedRun run;      // null for an empty word
+    KeyLegendSeat         seat;
+    GuiRect               extent;   // the face united with the legend's box
+};
+KeyLegendLayout key_legend_layout(const GuiRect& cell, std::string_view word) {
+    KeyLegendLayout out;
+    const GuiRect face = key_face_rect(cell);
+    out.extent = face;
+    if (word.empty()) return out;
+    const GuiFont font = gui_font(GuiFace::Legend);
+    out.run  = text_shape::memoized_run(font, word);
+    out.seat = key_legend_seat(cell, out.run->width_px);
+    const double base = out.seat.baseline;
+    const int lx1 = static_cast<int>(std::floor(out.seat.x));
+    const int lx2 =
+        static_cast<int>(std::ceil(out.seat.x + out.run->width_px));
+    const int ly1 = static_cast<int>(std::floor(base - gui_font_ascent_px(font)));
+    const int ly2 =
+        static_cast<int>(std::ceil(base + gui_font_descent_px(font)));
+    const int x1 = std::min(face.x, lx1);
+    const int y1 = std::min(face.y, ly1);
+    const int x2 = std::max(face.x + face.w, lx2);
+    const int y2 = std::max(face.y + face.h, ly2);
+    out.extent = GuiRect{x1, y1, x2 - x1, y2 - y1};
+    return out;
+}
+
+// A KEY'S LEGEND under its cell (key_legend_layout), on the ground whatever
+// the key's face, in the text tone kTextInk or, `enabled` false, the
+// disabled key's kKeyDimInk 5A5A5A (materials.h's text tones; architect
+// 2026-11-03: a lit key's legend stays B5B5B5, the legend being on the
+// ground). No letter of it is underlined (architect 2026-10-30: no keyboard
+// stands under a dialog, so an access key has no producer).
+void paint_key_legend(cairo_t* cr, const GuiRect& cell, std::string_view word,
+                      bool enabled) {
+    if (word.empty()) return;
+    const KeyLegendLayout layout = key_legend_layout(cell, word);
+    set_palette_source(cr, hex(enabled ? kTextInk : kKeyDimInk));
+    text_shape::show_shaped_run(cr, *layout.run, layout.seat.x,
+                                layout.seat.baseline);
+}
+
+// A WORD BUTTON'S LEGEND: its word in capitals (ASCII; every dialog word
+// is), the prompts', the editors' and the controls rows' word buttons alike.
+std::string key_legend_word(std::string_view word) {
+    std::string out(word);
+    for (char& ch : out)
+        if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
+    return out;
+}
+
 // A KEY'S GLYPH ON ITS FACE (architect 2026-11-01 / 2026-11-02; icons.h's
 // THE INK BOX) — THE ONE PLACE the glyph's seat and tone are decided, every
-// key's (the band's, row 8's, the controls rows', the word buttons).
-// THE GLYPH IS THE KEY'S ONE MARK: NO WORD IS PRINTED UNDER A KEY
-// (architect 2026-11-02, "simpler would be to just remove it, because we do
-// have tooltips … Remove the legend", and on the scope, "everywhere"; the
-// printed legends of 2026-10-23 are git history). THE TOOLTIP NAMES THE
-// ACT: the roster's redesign_button_tooltip (app_state.h), the controls
-// rows' hints (update_modal_dialog_hover, paint_shift_tooltip's Dialog
-// arm), a word button's its word. Every length the legends stood in stays
-// (the strip pad under the case is plain ground). The on-screen keyboards'
-// caps, the logo lane's battery + clock legend, the list rows and the
-// cards are text, not legends, and stand.
+// key's (the band's, row 8's, the controls rows', the word buttons); ITS
+// LEGEND UNDER THE CELL (paint_key_legend above, back 2026-11-03) names the
+// act in print, the tooltip in words: the roster's redesign_button_tooltip
+// (app_state.h), the controls rows' hints (update_modal_dialog_hover,
+// paint_shift_tooltip's Dialog arm), a word button's its word.
 // THE INK BOX: the Breeze drawing's, ONE VISUAL SIZE for every key
 // (2026-11-01, "THE MAIN PAGE IS SETTLED"), ITS LARGER SIDE FOLLOWING THE
-// KEY (architect 2026-11-02, mock sqm_01_66px): kKeyGlyphInkPerKeySide,
-// 20 / 33, of the `key_height` tuning key's device px at 300 % (render.h's
-// seat) — 36 at the default 60, 20 at 33 (the ratio the 20-px glyph stood
-// at on the 33-row key) — the product taken as one device length at 300 %
-// and ROUNDED ONCE, AT THE ELEMENT, by skin_px (its scaled_px's nearbyint;
-// floored at one px), never the side rounded first: at the default 60,
-// 36.36 → 36 at 300 %, 24.24 → 24 at 200 %. A key_height
-// commit reaches it on the relayout road (GuiInputHandler::apply_key_height),
-// the icon caches keyed on the ink px. CENTERED in the painted key `key`
-// (the whole case), the spare split with its odd px below and right (the
-// integer floor, the mock's). THE ODD HALF PX IS ACCEPTED (architect
+// KEY'S HEIGHT (architect 2026-11-02): kKeyGlyphInkPerKeySide, 20 / 33, of
+// the `key_height` tuning key's device px at 300 % (render.h's seat) — 20
+// at the default 33 — the product taken as one device length at 300 % and
+// ROUNDED ONCE, AT THE ELEMENT, by skin_px (its scaled_px's nearbyint;
+// floored at one px), never the side rounded first: 20 at 300 %, 13 at
+// 200 % (13.33). A key_height commit reaches it on the relayout road
+// (GuiInputHandler::apply_key_height), the icon caches keyed on the ink px.
+// CENTERED in the painted face `face` (architect 2026-11-03, the retrofit:
+// the glyph centered on the 67 x 31 face; the left-square seat of the
+// earlier mocks rejected), the spare split with its odd px below and right
+// (the integer floor, the mock's). THE ODD HALF PX IS ACCEPTED (architect
 // 2026-11-02: "I'd prefer slight misalignment over uneven sizing"): a
-// drawing whose ink side's parity differs from the key's stands half a px
+// drawing whose ink side's parity differs from the face's stands half a px
 // off center rather than taking a size of its own, every key glyph keeping
 // the one ink size. ITS TONE FOLLOWS THE FACE (materials.h's key_ink):
 // kTextOnLit 111111 when the key paints LIT (`look`, key_look's answer:
-// checked, a dead checked key keeping its fill), else kTextInk B5B5B5 on a
-// resting or pressed face, or kKeyDimInk 5A5A5A when the key is disabled.
-// The glyph is clipped to the
-// key: a key smaller than the ink box keeps its glyph centered and lets
-// nothing overhang onto the ground. None is — the ink is 20 / 33 of the
-// key's own side, both rounded from the same device length at 300 %.
+// checked, pressed or not, a dead checked key keeping its fill), else
+// kTextInk B5B5B5 on a resting or pressed face, or kKeyDimInk 5A5A5A when
+// the key is disabled. The glyph is clipped to the face: a face smaller
+// than the ink box keeps its glyph centered and lets nothing overhang onto
+// the ground. None is at the defaults — the ink 20 rows on the 31-row face.
 constexpr double kKeyGlyphInkPerKeySide = 20.0 / 33.0;
-void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
+void paint_key_glyph(cairo_t* cr, const GuiRect& cell, icons::Icon icon,
                      bool enabled, KeyLook look) {
+    const GuiRect key = key_face_rect(cell);
     if (key.w <= 0 || key.h <= 0) return;
     const int ink = skin_px(kKeyGlyphInkPerKeySide * key_height_at300(), 1);
     const icons::InkSize size = icons::glyph_ink_size(icon, ink);
@@ -562,45 +692,69 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // preview's readiness (the painter's own member since that day). `cr` stays
 // because the clip test is the survivor of every move.
 //
-// THE COVERAGE IS THE KEY (2026-11-02, the legends retired: the key and
-// its glyph are everything a member paints, the strip pad under it plain
-// ground): `rect` — the key as painted, cut by whatever clip the row paints
-// under (the band's overflow column) — is both the rect the clip must cover
-// and what the face publishes for the press, the hover and the tooltip.
-// (The legend's extent and its union with the last one stood beside it
-// 2026-10-23 to 2026-11-02.)
+// THE COVERAGE IS WHAT THE BUTTON PAINTS, THE RECT WHAT IT ANSWERS
+// (2026-10-23; back 2026-11-03 with the legends): `painted` — the face
+// united with its legend (key_legend_layout's extent), cut by whatever clip
+// the row paints under (the band's overflow column) — is the rect the clip
+// must cover, because the legend under the key wears the enabled bit
+// (dimmed when dead) and a refresh over a clip that missed it would stamp a
+// bit its pixels never took; `rect`, the face alone, is what the face
+// publishes for the press, the hover and the tooltip (a legend is print on
+// the ground, never a target).
 //
 // THE GLYPH IS THE FOURTH TERM (2026-11-02; the printed word's from
 // 2026-10-25): `icon` is the drawing the key wears
 // (redesign_button_icon's stateful overload — the act its next press runs),
 // stashed beside the index so the comparator sees FIT / RECALL and INHERIT
-// / TIE, which move no index.
+// / TIE, which move no index; the legend's word forks arm for arm with it
+// (redesign_button_legend's stateful overload), so the drawing's edge is the
+// word's. THE COVERAGE IS THE UNION OF THE PAINTED EXTENT AND THE ONE LAST
+// STASHED (RedesignButtonFace::painted): a word that narrows (RECALL to FIT)
+// must have its old ends erased by the same clip before the stash may say
+// the new drawing, or the comparator would go blind over the stale ends.
 //
 // A MEMBER THAT DOES NOT STAND publishes the EMPTY rect and paints nothing
-// (the modal yield, the overflow, the `h` view's stand-ins and hide, above);
-// its stash refreshes unconditionally (the empty rect has no pixel to be
-// stale) and ITS SECOND RECT GOES WITH IT (RedesignButtonFace::field,
-// 2026-10-27): the PLAY key hidden in the `h` view or yielded under a modal
-// takes row 8's clock out of the roster with it, the clock answering where
-// the key does.
+// (the modal yield, the overflow, the `h` view's stand-ins and hide, above;
+// the overload below); its stash refreshes unconditionally (the empty rect
+// has no pixel to be stale), its painted extent empties (the walk's own
+// damage having erased what stood there) and ITS SECOND RECT GOES WITH IT
+// (RedesignButtonFace::field, 2026-10-27): the PLAY key hidden in the `h`
+// view or yielded under a modal takes row 8's clock out of the roster with
+// it, the clock answering where the key does.
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
     const GuiTargetRender& target_render,
-    RedesignButton id, const GuiRect& rect) {
+    RedesignButton id, const GuiRect& rect, const GuiRect& painted) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
-    if (rect.w <= 0 || rect.h <= 0) face.field = GuiRect{0, 0, 0, 0};
-    if (clip_covers_drawable(cr, app, rect)) {
+    if (rect.w <= 0 || rect.h <= 0) {
+        face.field   = GuiRect{0, 0, 0, 0};
+        face.painted = GuiRect{0, 0, 0, 0};
+    }
+    const GuiRect covered =
+        face.painted.w <= 0 || face.painted.h <= 0 ? painted
+        : painted.w <= 0 || painted.h <= 0         ? face.painted
+                                    : union_rect(face.painted, painted);
+    if (clip_covers_drawable(cr, app, covered)) {
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                                 playback, target_render, id);
         face.selected =
             redesign_button_selected(app, audio.total_frames(), id);
         face.glyph = redesign_button_glyph(app, id);
         face.icon  = redesign_button_icon(app, audio, id);
+        face.painted = painted;
     }
     return face;
+}
+AppState::RedesignButtonFace& publish_button_face(
+    cairo_t* cr, AppState& app,
+    const GuiAudio& audio, const GuiPlayback& playback,
+    const GuiTargetRender& target_render,
+    RedesignButton id, const GuiRect& rect) {
+    return publish_button_face(cr, app, audio, playback, target_render, id,
+                               rect, rect);
 }
 
 // ROW 4 — THE ICON ROW: THE TOOLBAR BAND (architect 2026-10-09, the program
@@ -611,18 +765,18 @@ AppState::RedesignButtonFace& publish_button_face(
 // (render.h's well_columns, 2026-10-23); this row spells none of
 // them.
 //
-// THE VERTICAL STORY (symmetric since 2026-11-03): the logo lane
-// (render.h's logo lane block), the strip pad, the case
-// (band_case_top_offset_px), the strip pad — row 8's own strip under the
-// logo lane; row 8 the strip pad, its case, the strip pad.
+// THE VERTICAL STORY (the hi-fi's again since 2026-11-03, the retrofit):
+// the logo lane (render.h's logo lane block), the cell
+// (band_case_top_offset_px), the strip pad with the legends in it; row 8
+// the strip pad, its cell, the strip pad with its legends.
 //
 // THE HORIZONTAL WALK (architect 2026-10-22: "push all icons
 // together … add a spacing after render, and after flatten"): the roster's
 // left members in THREE PLAIN RUNS on the ground — Open Project .. Render,
-// Zoom to Fit .. Flatten, Play Renders .. Score — the keys
-// a key pitch apart inside a run (the group gap's one px between two,
-// materials.h) and the run gap of ground between two (render.h's
-// program_run_gap_px, the strip pad; redesign_button_opens_icon_run,
+// Zoom to Fit .. Flatten, Play Renders .. Score — the keys' cells abutting
+// inside a run (two px of ground between two faces, materials.h's THE CELL
+// AND ITS FACE) and the run gap of ground between two (render.h's
+// program_run_gap_px, 45 at 300 %; redesign_button_opens_icon_run,
 // app_state.h, the runs' leaders); the
 // right five — the history opener and the two view pairs — ONE RUN ending
 // at the well's right edge column, the left walk starting at its left
@@ -631,8 +785,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // 2026-10-22).
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id, in painted
-// order; the key wears its Breeze glyph (redesign_button_icon, 2026-11-02),
-// no word under it.
+// order; the key wears its Breeze glyph (redesign_button_icon, 2026-11-02)
+// and its legend under it (redesign_button_legend, back 2026-11-03).
 // The press claim's chord table (input_pointer.cpp) is the
 // other half; both key off the same ids.
 //
@@ -1045,13 +1199,13 @@ constexpr IconRowDef kIconRowRightRun[] = {
 //
 // THE CAP BAND IS THE FACE'S OWN (gui_font.h, gui_font_cap_px): the em
 // times the file's own "H" ink per em (Liberation Sans 1409 / 2048 units),
-// an unrounded double — 16.51 device rows at 300 %'s 24-px em, 11.01 at
-// 200 %'s 16, 7.57 at 138 %'s 11, 22.02 at 400 %'s 32.
+// an unrounded double — 15.14 device rows at 300 %'s 22-px em, 10.32 at
+// 200 %'s 15, 6.88 at 138 %'s 10, 19.95 at 400 %'s 29.
 //
 // THE SEATS AT THE TABLET'S 300 %: a list row (the folder overlay's row box,
-// folder_overlay.h's kRowHeightAt300, 56 rows) seats at row floor((56 +
-// 16.51) / 2) = 36; at 138 % its 26 rows seat at floor((26 + 7.57) / 2) =
-// 16. The answer is independent of the box's y by construction rather than
+// folder_overlay.h's kRowHeightPx, 51 rows) seats at row floor((51 +
+// 15.14) / 2) = 33; at 138 % its 23 rows seat at floor((23 + 6.88) / 2) =
+// 14. The answer is independent of the box's y by construction rather than
 // by a tie rule.
 //
 // ONE SEAT FOR EVERY BOXED CHROME LABEL (architect 2026-10-22). THE BOX
@@ -1067,7 +1221,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // notification card's first line states the same centering whole on its
 // rounded cap (pad + cap + pad, notification_card_h_px); the hover tooltip
 // seats its own caps under one pad (paint_shift_tooltip); the logo lane's
-// items center their ink in its ink band (logo_ink_band_px).
+// items center their ink on the lane (logo_item_y).
 //
 // THE WELL'S TEXT TAKES ANOTHER SEAT (2026-10-09, the program is Cool Edit;
 // the flat well 2026-11-01 night): THE RULER'S DIGITS stand on an AUTHORED
@@ -1086,10 +1240,10 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
 // their own box, its height the pad, the cap's rows and the pad
-// (time_field_h_px): the 49-row field at 300 % (16 + 17 + 16) puts the
-// Program face's 16.51-row cap band at row floor((49 + 16.51) / 2) = 32,
-// the 64-row field at 400 % (21 + 22 + 21) its 22.02 rows at row 43, the
-// 33-row field at 200 % (11 + 11 + 11) its 11.01 at row 22.
+// (time_field_h_px): the 47-row field at 300 % (16 + 15 + 16) puts the
+// Program face's 15.14-row cap band at row floor((47 + 15.14) / 2) = 31,
+// the 62-row field at 400 % (21 + 20 + 21) its 19.95 rows at row 40, the
+// 32-row field at 200 % (11 + 10 + 11) its 10.32 at row 21.
 // AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop until the label's removal
 // (2026-10-14).
@@ -1316,26 +1470,26 @@ static void icon_row_walk(bool history,
 }
 
 // THE BAND'S SEATS (2026-10-21: lifted out of paint_icon_row; the simple
-// layout's runs 2026-10-22): the case's lengths, each a
-// composite of its rounded parts (render.h's program block); THE CASE the
-// logo lane and the strip pad under the band's top
-// (band_case_top_offset_px, 2026-11-03). THE RIGHT RUN IS
-// RESOLVED FIRST, because it decides where every run to its left may paint
-// (the overflow rule at kIconRowViewPairs): its last case ends AT THE
-// WELL'S RIGHT EDGE (one past its right edge column; render.h's
-// well_columns, architect 2026-10-23), and THE LEFT RUNS' LIMIT
-// stands one run gap left of its first case — they paint under a clip
-// ending there and publish only the columns they painted, so a window too
-// narrow for the band covers them and never the right run. THE LEFT WALK
-// starts AT THE WELL'S LEFT EDGE COLUMN, each run's keys a key pitch apart
-// from its x (key_group_pitch_px, materials.h: the key and the group gap's
-// one px of ground), the next run a run gap after its last key. The band is flush with
-// the well's edge columns at both ends, no inset of its own (program_spec.h's strip-ends
+// layout's runs 2026-10-22): the cell's lengths (render.h's program block);
+// THE CELL the logo lane under the band's top (band_case_top_offset_px,
+// 2026-11-03). THE RIGHT RUN IS RESOLVED FIRST, because it decides where
+// every run to its left may paint (the overflow rule at kIconRowViewPairs):
+// its last FACE ends AT THE WELL'S RIGHT EDGE (one past its right edge
+// column; render.h's well_columns, architect 2026-10-23), so its last cell
+// one face inset past it (materials.h's THE CELL AND ITS FACE, 2026-11-03),
+// and THE LEFT RUNS' LIMIT stands one run gap left of its first cell — they
+// paint under a clip ending there and publish only the columns they
+// painted, so a window too narrow for the band covers them and never the
+// right run. THE LEFT WALK's first FACE starts ON THE WELL'S LEFT EDGE
+// COLUMN (its cell one inset left of it), each run's cells abutting from
+// its x (key_group_pitch_px, materials.h: the cell), the next run a run gap
+// after its last cell. The band's faces are flush with the well's edge
+// columns at both ends, no inset of their own (program_spec.h's strip-ends
 // block).
 struct IconRowSeats {
     int btn_w = 0, btn_h = 0, gap = 0, btn_y = 0;
-    int left_x = 0;      // the left walk's first case
-    int right_x = 0;     // the right run's first case (the history opener)
+    int left_x = 0;      // the left walk's first cell
+    int right_x = 0;     // the right run's first cell (the history opener)
     int left_limit = 0;  // the left runs' clip, a run gap short of it
     int case_x(int run_x, int i) const {
         return run_x + i * key_group_pitch_px();
@@ -1351,8 +1505,8 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
     s.btn_h = icon_case_h_px();
     s.gap   = program_run_gap_px();
     s.btn_y = lane.y + band_case_top_offset_px();
-    s.left_x = well.x;
-    const int right_end = well.end;
+    s.left_x = well.x - kKeyFaceInsetPx;
+    const int right_end = well.end + kKeyFaceInsetPx;
     s.right_x = right_end - key_group_w_px(
                                 static_cast<int>(std::size(kIconRowRightRun)));
     s.left_limit = s.right_x - s.gap;
@@ -1360,12 +1514,11 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 }
 
 // THE LOGO LANE'S LAYOUT (render.h's logo lane block, every rule there) —
-// ONE ROAD for the lane's height (logo_ink_band_px), the painter and the
-// tick's damage (logo_legend_extent), so the three cannot disagree: the
-// lane is the band's first logo_lane_h_px rows, the strip pad on top and
-// THE INK BAND under it, the tallest of the items' ink rows, the pipe's
-// included; EVERY ITEM CENTERED IN THE BAND BY ITS OWN INK, the spare row
-// below (architect 2026-11-03, on mock dec0b) — the note's ink box, the
+// ONE ROAD for the painter and the tick's damage (logo_legend_extent), so
+// the two cannot disagree: the lane is the band's first logo_lane_h_px rows
+// (72 at 300 %, 2026-11-03); EVERY ITEM CENTERED ON THE LANE BY ITS OWN
+// INK, the spare row below (architect 2026-11-03, on mock dec0b) — the
+// note's ink box, the
 // brand's ink rows, the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, each run's baseline its ink's top plus the rows above
 // the baseline), the pipe's own ink rows (kLogoLegendPipe, its own baseline
@@ -1400,22 +1553,11 @@ icons::InkSize logo_note_ink() {
     return icons::glyph_ink_size(icons::Icon::MusicNote16th,
                                  skin_px(kLogoNoteInkAt300, 1));
 }
-// THE ROW an item `rows` tall starts on in the band whose top row is
-// `band_y`: centered, the spare row below (the floor of the half).
-int logo_item_y(int band_y, int rows) {
-    return band_y + (logo_ink_band_px() - rows) / 2;
+// THE ROW an item `rows` tall starts on in the lane `lane`: centered, the
+// spare row below (the floor of the half).
+int logo_item_y(const GuiRect& lane, int rows) {
+    return lane.y + (lane.h - rows) / 2;
 }
-} // namespace
-
-int logo_ink_band_px() {
-    return std::max({logo_note_ink().h,
-                     logo_text_ink(GuiFace::Bold, kLogoBrand).rows(),
-                     logo_text_ink(GuiFace::Body, kLogoLegendInkSet).rows(),
-                     logo_text_ink(GuiFace::Body, kLogoLegendPipe).rows(),
-                     logo_glyph_cell().h});
-}
-
-namespace {
 struct LogoLegendLayout {
     GuiRect lane{0, 0, 0, 0};
     text_shape::SharedRun clock, pipe, percent;   // percent null when empty
@@ -1429,23 +1571,18 @@ GuiRect logo_lane_rect(const AppState& app) {
     const GuiRect band = top_icon_row_area(app);
     return GuiRect{band.x, band.y, band.w, std::min(band.h, logo_lane_h_px())};
 }
-// THE INK BAND'S TOP ROW in the lane `lane`: the strip pad under its top.
-int logo_band_y(const GuiRect& lane) {
-    return lane.y + strip_pad_px();
-}
 LogoLegendLayout logo_legend_layout(const AppState& app,
                                     const GuiLogoLegend& legend) {
     LogoLegendLayout l;
     l.lane = logo_lane_rect(app);
-    const int band_y = logo_band_y(l.lane);
     const WellColumns well = well_columns(app);
     const GuiFont body = gui_font(GuiFace::Body);
     const LogoTextInk ink = logo_text_ink(GuiFace::Body, kLogoLegendInkSet);
-    l.baseline = static_cast<double>(logo_item_y(band_y, ink.rows()) +
+    l.baseline = static_cast<double>(logo_item_y(l.lane, ink.rows()) +
                                      ink.above);
     const LogoTextInk pipe_ink = logo_text_ink(GuiFace::Body, kLogoLegendPipe);
     l.pipe_baseline = static_cast<double>(
-        logo_item_y(band_y, pipe_ink.rows()) + pipe_ink.above);
+        logo_item_y(l.lane, pipe_ink.rows()) + pipe_ink.above);
     const double space = text_shape::memoized_run(body, " ")->width_px;
     l.clock = text_shape::memoized_run(body, legend.clock);
     l.clock_x = static_cast<double>(well.end) - text_shape::ink_right_px(*l.clock);
@@ -1454,7 +1591,7 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     const icons::InkSize cell = logo_glyph_cell();
     const int cell_right = static_cast<int>(std::nearbyint(
         l.pipe_x + text_shape::ink_left_px(*l.pipe) - space));
-    l.cell = GuiRect{cell_right - cell.w, logo_item_y(band_y, cell.h), cell.w,
+    l.cell = GuiRect{cell_right - cell.w, logo_item_y(l.lane, cell.h), cell.w,
                      cell.h};
     int first = l.cell.x;
     if (!legend.percent.empty()) {
@@ -1467,8 +1604,7 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     // THE EXTENT: the columns from the first ink through the well's right
     // edge column (the clock's last ink stands on it) and one column of slack past
     // it for that ink's antialiased fraction, the lane's rows, no clamp:
-    // every ink stands inside the ink band, the lane's last rows, by
-    // construction.
+    // every ink stands inside the lane, centered on it, by construction.
     l.extent = GuiRect{first, l.lane.y, std::max(0, well.end + 1 - first),
                        l.lane.h};
     return l;
@@ -1490,22 +1626,21 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     if (lane.w <= 0 || lane.h <= 0) return;
     const WellColumns well = well_columns(app);
     const GuiColor text = hex(kTextInk);
-    const int band_y = logo_band_y(lane);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
     // THE NOTE (MusicNote16th on the ink-box road — the launcher's and the
     // BPM key's drawing too, a deliberate share, architect 2026-11-02, R14
     // (4): "the logo, the launcher and BPM keep the single note"): its ink box's first
-    // column on the well's left edge column and its rows centered in the
-    // ink band.
+    // column on the well's left edge column and its rows centered on the
+    // lane.
     const int note_ink = skin_px(kLogoNoteInkAt300, 1);
     const icons::InkSize note = logo_note_ink();
     icons::draw_glyph(cr, icons::Icon::MusicNote16th, well.x,
-                      logo_item_y(band_y, note.h), note_ink, kTextInk);
+                      logo_item_y(lane, note.h), note_ink, kTextInk);
 
     // THE BRAND, a constant: its first ink the gap past the note's last
-    // ink column, its ink rows centered in the ink band.
+    // ink column, its ink rows centered on the lane.
     set_palette_source(cr, text);
     {
         const GuiFont bold = gui_font(GuiFace::Bold);
@@ -1517,7 +1652,7 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
                          text_shape::ink_left_px(*brand);
         text_shape::show_shaped_run(
             cr, *brand, x,
-            static_cast<double>(logo_item_y(band_y, ink.rows()) + ink.above));
+            static_cast<double>(logo_item_y(lane, ink.rows()) + ink.above));
     }
 
     // THE LEGEND (logo_legend_layout): the clock run, the pipe on its own
@@ -1594,40 +1729,39 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // too narrow for the row covers members otherwise, under the view pairs'
     // overflow rule — a width, never a state.
     //
-    // THE WIDTH MATH, RE-DERIVED for the square key at key_height 60, its
-    // default, and the run gap half the key (2026-11-03; the ends the well's
-    // edge columns since 2026-10-23; a tune of key_height moves every
-    // number): in device px at 300 %, from the well's left edge column, the
-    // runs, each n keys of 60 and the n − 1 one-px group gaps between them
-    // (key_group_w_px: 60n + n − 1), 30 of ground (the run gap, the strip
-    // pad) between two; the right run 5 · 60 + 4 = 304 ending at the well's
-    // right edge column. Outside the `h` view the LEFT WALK is twenty-two
-    // members in three runs of 6, 10 and 6,
-    //   365 + 30 + 609 + 30 + 365 = 1399,
+    // THE WIDTH MATH, RE-DERIVED for the 69-px cell (2026-11-03, the
+    // retrofit; the ends the well's edge columns since 2026-10-23, the
+    // faces' since 2026-11-03; key_height moves none of it): in device px at
+    // 300 %, the runs, each n abutting cells of 69 (key_group_w_px: 69n), 45
+    // of ground (the run gap) between two runs' cells; the right run 5 · 69
+    // = 345, its last FACE ending on the well's right edge column. Outside
+    // the `h` view the LEFT WALK is twenty-two members in three runs of 6, 10
+    // and 6,
+    //   414 + 45 + 690 + 45 + 414 = 1608,
     // and inside it thirteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
     // Renders, Enable Tooltips, Noise — Restrict and the Trim Presets key
     // hidden there with Follow),
-    //   243 + 30 + 365 + 30 + 182 = 850;
+    //   276 + 45 + 414 + 45 + 207 = 987;
     // with one run gap of bare ground before the right run the band holds every
     // run at
-    //   1399 + 30 + 304 = 1733
-    // device px outside the view (1184 inside it) — the well's 2258 on the
-    // tablet with 525 px of ground between the left runs and the right run
-    // beyond the run gap. Off the painted walk (the key skin_px(key_height), the
-    // gap the strip pad, the ends well_columns'): at the tablet's 300 %
-    // (keys 60, the gap 30, the well 23 .. 2281) the left runs on x
-    // 23..1421, the right run 1977..2280; at 138 % on a 1920-px window
-    // (keys 28, the gap 14, the well 15 .. 1905) the left runs on x 15..677,
-    // the right run 1761..1904. A roster move restates these numbers.
-    // THE FIT, the one statement every other site points to: in key and run
-    // gap the band is 28.5 keys and 23 px of group gaps outside the view
-    // (19.5 keys and 14 px inside it) against the well's width, so at
-    // key_height 60 the tablet's 2304 holds it whole up to about 390 % outside
-    // the view and about 560 % inside it (the well 2258 through 390 %, 2242
-    // from 400 %, 2226 from 530 %), and at 100 % a window down to about 606
-    // device px outside the view and 430 inside it; past either the overflow
-    // rule (kIconRowViewPairs) answers. A taller key lowers both ceilings.
+    //   1608 + 45 + 345 = 1998
+    // device px outside the view (1377 inside it) — the cells' span 2260 on
+    // the tablet (the well's 2258 and the two faces' insets) with 262 px of
+    // ground between the left runs and the right run beyond the run gap. Off
+    // the painted walk (the cell skin_px(69), the gap skin_px(45), the ends
+    // well_columns' less and plus the inset): at the tablet's 300 % (cells
+    // 69, the gap 45, the well 23 .. 2281) the left runs' cells on x
+    // 22..1629 (their faces from 23), the right run's 1937..2281 (its last
+    // face ending on 2280); at 138 % on a 1920-px window (cells 32, the gap
+    // 21, the well 15 .. 1905) the left runs' cells on x 14..759, the right
+    // run's 1746..1905. A roster move restates these numbers.
+    // THE FIT, the one statement every other site points to: the band is 27
+    // cells and three run gaps outside the view (18 and three inside it)
+    // against the cells' span, so the tablet's 2304 holds it whole up to
+    // about 340 % outside the view and about 490 % inside it, and at 100 % a
+    // window down to about 686 device px outside the view and 478 inside it;
+    // past either the overflow rule (kIconRowViewPairs) answers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -1673,11 +1807,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
     // THE LANE IS THE FLAT GROUND (materials.h's kGround, the palette's
     // `face`; the flat look, 2026-11-01) under every run, between them and
-    // between the keys of a run (the group gap), NO LINE (the caption line on
-    // its first row went with the caption, 2026-10-24). Its upper pad THE
+    // round the faces of a run (the cells' insets), NO LINE (the caption line
+    // on its first row went with the caption, 2026-10-24). Its upper pad THE
     // LOGO LANE (paint_logo_lane, below the ground); its keys flat
-    // (paint_roster_case) with their glyphs on them (paint_key_glyph), the
-    // bottom pad plain ground (2026-11-02: no legend under a key).
+    // (paint_roster_case) with their glyphs on them (paint_key_glyph), their
+    // legends under them in the bottom pad (paint_key_legend, 2026-11-03).
     cairo_save(cr);
     {
         cairo_save(cr);
@@ -1687,13 +1821,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     }
     paint_logo_lane(cr, lane);
 
-    // THE KEY (2026-10-23): the flat key the whole square case (render.h's
-    // program block; materials.h's THE GROUP GAP, its neighbors in its run
-    // a key pitch away) — THE BAND'S SEATS the one layout (icon_row_seats,
+    // THE KEY AND ITS LEGEND (2026-10-23; the cell and its face 2026-11-03):
+    // the flat face its cell inset one px (render.h's program block;
+    // materials.h's THE CELL AND ITS FACE, its neighbors' cells abutting),
+    // its legend centered under the cell in the bottom pad
+    // (key_legend_layout, which names the legend's face; this row selects
+    // none of its own) — THE BAND'S SEATS the one layout (icon_row_seats,
     // above, where the right run's place and the left runs' limit are
-    // stated). THE PAINTED KEY IS THE HIT BOX (the published rect, cut at
-    // the clip's column; architect 2026-11-02, R5: the group gap is not
-    // pressable, point_on_key, materials.h) and the painted extent.
+    // stated). THE PAINTED FACE IS THE HIT BOX (the published rect, cut at
+    // the clip's column; architect 2026-11-02, R5: the ground is not
+    // pressable, point_on_key, materials.h), the face and its legend the
+    // painted extent.
     const IconRowSeats seats = icon_row_seats(app, lane);
     const int btn_w    = seats.btn_w;
     const int btn_h    = seats.btn_h;
@@ -1704,19 +1842,29 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the face and the glyph at the member's full box — the clip, when
     // the overflow rule has set one, cuts the pixels and the published rect
     // says exactly which survived.
-    // THE PUBLISHED KEY is what the publication's coverage test and the
-    // repaint gate read, cut by `clip_x2` — the left runs' limit, the
-    // column the overflow clip ends at (the right run paints whole:
-    // INT_MAX).
+    // THE PAINTED EXTENT (key_legend_layout: the face and its legend) is
+    // what the publication's coverage test and the repaint gate read, cut
+    // by `clip_x2` — the left runs' limit, the column the overflow clip
+    // ends at (the right run paints whole: INT_MAX).
     const auto paint_member = [&](const IconRowDef& def, int bx,
                                   int clip_x2) {
-        const GuiRect key{bx, btn_y, btn_w, btn_h};
-        // THE PUBLISHED HIT BOX: the key, its columns past the clip cut.
+        const GuiRect key{bx, btn_y, btn_w, btn_h};   // the cell
+        const GuiRect face_rect = key_face_rect(key);
+        // THE PUBLISHED HIT BOX: the face, its columns past the clip cut.
         const GuiRect published{
-            key.x, key.y,
-            std::clamp(clip_x2 - key.x, 0, key.w), key.h};
+            face_rect.x, face_rect.y,
+            std::clamp(clip_x2 - face_rect.x, 0, face_rect.w), face_rect.h};
+        // THE LEGEND NAMES THE NEXT PRESS'S ACT (2026-10-25,
+        // redesign_button_legend's stateful overload), stashed with the
+        // extent it paints over (publish_button_face).
+        const char* legend = redesign_button_legend(app, audio, def.id);
+        const GuiRect extent = key_legend_layout(key, legend).extent;
+        const int painted_x2 = std::min(extent.x + extent.w, clip_x2);
+        const GuiRect painted{extent.x, extent.y,
+                              std::max(0, painted_x2 - extent.x), extent.h};
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id, published);
+            cr, app, audio, playback, target_render, def.id, published,
+            painted);
 
         // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
         // 2026-08-04) and, since 2026-08-15, the per-tab READ-ONLY LOCK. Both
@@ -1772,19 +1920,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // derived, for reasons recorded there. This painter decides none of
         // the three.
         //
-        // THE DEAD FACE IS THE GLYPH'S ALONE (architect 2026-10-02, the AB
-        // set; the flat look 2026-11-01, M6; the key's dim tone 2026-11-02):
-        // dimmed (kKeyDimInk, paint_key_glyph), the key the face its state
-        // gives (paint_roster_case). A dead CHECKED button (the
-        // grid-iterations lamp on a locked tab, say) keeps its lit fill: the
-        // mode cannot change that state, so hiding it would be a lie, and
-        // the inert key says "true, but not yours right now".
+        // THE DEAD FACE IS THE GLYPH'S AND THE LEGEND'S ALONE (architect
+        // 2026-10-02, the AB set; the flat look 2026-11-01, M6; the key's
+        // dim tone 2026-11-02): dimmed (kKeyDimInk, paint_key_glyph and
+        // paint_key_legend), the key the face its state gives
+        // (paint_roster_case). A dead CHECKED button (the grid-iterations
+        // lamp on a locked tab, say) keeps its lit fill: the mode cannot
+        // change that state, so hiding it would be a lie, and the dimmed
+        // legend says "true, but not yours right now".
         // The press face is gated on the live bit rather than trusted: the
         // claim never records a press on a disabled button, but a button can
         // go dead UNDER a held press with no pointer event to refresh it.
         // A case the clip does not reach is skipped, its face published
-        // above (clip_meets on the published key).
-        if (!clip_meets(cr, published)) return;
+        // above (clip_meets) — THE FACE AND ITS LEGEND (2026-10-23): the
+        // gate reads the painted extent, so a damage confined to the bottom
+        // pad, which the ground erases, still reprints the legend.
+        if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const KeyLook look = key_look(face.selected, pressed);
@@ -1794,11 +1945,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // roster as ruled): redesign_button_icon's stateful overload — the
         // act the next press runs, a toggle keeping its one drawing —
         // centered on the face in its tone, dimmed when the button is dead
-        // (paint_key_glyph's one seat). The stashed glyph index
+        // (paint_key_glyph's one seat) — and THE LEGEND stands UNDER it, the
+        // roster's legend column (redesign_button_legend's stateful
+        // overload, the glyph's arms; 2026-11-03), dimmed when the button is
+        // dead (paint_key_legend's one seat). The stashed glyph index
         // (redesign_button_glyph) and drawing are what the per-tick
-        // comparator repaints the face on (main.cpp).
+        // comparator repaints the key on (main.cpp).
         paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
                         face.enabled, look);
+        paint_key_legend(cr, key, legend, face.enabled);
     };
 
     // THE LEFT RUNS, IN TWO PASSES: the walk (icon_row_walk, above) lays
@@ -1929,7 +2084,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE BAND'S (the unification's point — "the same size as
 // the other icon buttons", bigger finger targets without stealing waveform
-// height): the program's square key (2026-11-02) — read from
+// height): the program's key cell (69 x key_height, 2026-11-03) — read from
 // the band's own accessors (render.h's program block) so the rows cannot
 // drift apart — on THE ROW'S OWN GROUND, the strip pad above the case and
 // below it (the simple layout, 2026-10-22; Cool Edit's row 8 under its dock
@@ -2133,7 +2288,7 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
 // this group was the four arrows with Play.)
 //
 // PLAY / STOP IS THE GROUP'S LAST MEMBER, beside the right nudge with no
-// bar or run gap between them (the group gap alone), and so closes the row at the far
+// bar or run gap between them (the cells abutting), and so closes the row at the far
 // right outside the `h` view (architect 2026-10-12, revising his own ruling
 // of the same morning that seated Play at the marker group's head, and
 // correcting the one-member group of the hours after it: "no division
@@ -2200,16 +2355,16 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // FLAT since 2026-11-01 night, M5m, paint_ce_time_field): A FLAT kKeyFace
 // 363636 BOX, NO RING (Live's numeric fields), the digits THE
 // TEXT TONE kTextInk (M13, 2026-11-02; architect 2026-10-23: "the font
-// color should not be this yellowish color") — 49 DEVICE PX TALL at
+// color should not be this yellowish color") — 47 DEVICE PX TALL at
 // 300 %, THE PAD, THE CAP AND THE PAD (time_field_h_px, 2026-11-03; it does
 // not follow the key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a
-// half-row tie toward the top, the cap rule's own; inside the square
-// 60-row case at key_height 60, time_field_rect: row 8's 1355 .. 1403 on
-// the case's 1350 .. 1409), its run in THE PROGRAM FACE, 24 px at 300 %,
-// in every time field (row 8's clock, architect 2026-10-26 ~11:30; the
-// render player's two, ~12:10, "yes" to symmetry; gui_font.h's table), its
-// cap band centred in the field by redesign_baseline — at 300 % the
-// 16.5-row cap band in the 49-row field, sixteen rows of field above it
+// half-row tie toward the top, the cap rule's own; round the 33-row cell
+// at key_height 33, time_field_rect: row 8's 1361 .. 1407 round the
+// cell's 1368 .. 1400, the field the taller), its run in THE PROGRAM FACE,
+// 22 px at 300 %, in every time field (row 8's clock, architect 2026-10-26
+// ~11:30; the render player's two, ~12:10, "yes" to symmetry; gui_font.h's
+// table), its cap band centred in the field by redesign_baseline — at 300 %
+// the 15.1-row cap band in the 47-row field, sixteen rows of field above it
 // and sixteen below (the pad's rule, 2026-11-03). The digits are
 // TABULAR — Liberation Sans's every digit 0.556 em — with no kerning between
 // the digits, the colon and the point — so the colon and the point stand
@@ -2227,13 +2382,13 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
 // the one face, so the three fields are one width. The cell is 4.448 em
 // (seven tabular digits at 0.556 em and the colon and the point at 0.278):
-// at 300 % and 24 px, 106.8 device px ceiled to 107, the field 139; at
-// 138 % an 11-px em, 48.9 ceiled to 49, the field 63. THE PLAYER'S ROW
+// at 300 % and 22 px, 97.9 device px ceiled to 98, the field 130; at
+// 138 % a 10-px em, 44.5 ceiled to 45, the field 59. THE PLAYER'S ROW
 // HOLDS THEM: its scrub is what the fixed terms leave (player_row_layout),
-// the two fields and their gap 139 + 9 + 139 = 287 device px at 300 % and
-// 63 + 4 + 63 = 130 at 138 %, so at key_height's default 60 the scrub's
-// channel is 1352 device px at 300 % (2304 wide) and 1468 at 138 % (1920
-// wide).
+// the two fields and their gap 130 + 9 + 130 = 269 device px at 300 % and
+// 59 + 4 + 59 = 122 at 138 %, so with the 69-px cell and the 45-px run gap
+// (2026-11-03) the scrub's channel is 1235 device px at 300 % (2304 wide)
+// and 1419 at 138 % (1920 wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2293,11 +2448,11 @@ static std::string clock_time_text(const AppState& app,
 // THE FIELD'S PAD AND ITS HEIGHT (architect 2026-10-23, "symmetrical and
 // much tighter"; the rule 2026-11-03, the text round): THE PAD IS EQUAL ON
 // ALL FOUR SIDES OF THE DIGITS' CAP BAND — kTimeFieldPadAt300, 16 DEVICE PX
-// AT 300 % (skin_px, rounded at the element; the 12 that stood round the
-// 22-px digits grown with them, his pick 2026-11-03) — and THE HEIGHT IS
-// DERIVED, the pad, the Program face's cap rows (gui_font_cap_px, rounded
-// at the element) and the pad: 16 + 17 + 16 = 49 at 300 %, 11 + 11 + 11 =
-// 33 at 200 % (the 16-px face's cap 11.0). One pad at every time field —
+// AT 300 % (skin_px, rounded at the element; his pick 2026-11-03, which
+// the retrofit kept round the 22-px digits) — and THE HEIGHT IS DERIVED,
+// the pad, the Program face's cap rows (gui_font_cap_px, rounded at the
+// element) and the pad: 16 + 15 + 16 = 47 at 300 %, 11 + 10 + 11 = 32 at
+// 200 % (the 15-px face's cap 10.3). One pad at every time field —
 // row 8's clock and the render player's two — each side of the digits'
 // cell across and round the cap band down.
 // THE PAD IS ONE NUMBER WITH TWO WEARERS: the time fields and the hover
@@ -2305,8 +2460,8 @@ static std::string clock_time_text(const AppState& app,
 // clock "has a nice padding for the font size and resolution";
 // paint_shift_tooltip).
 // THE FIELD IS NO KEY (architect 2026-10-29): it does not take the key's
-// side, so at key_height's default 60 it is the shorter of the two, and
-// under a key_height below 49 the taller, centred on the case's rows either
+// side, so at key_height's default 33 it is the taller of the two, and
+// under a key_height above 47 the shorter, centred on the case's rows either
 // way (time_field_rect).
 constexpr double kTimeFieldPadAt300 = 16.0;
 static int time_field_pad_px() {
@@ -2319,8 +2474,9 @@ static int time_field_h_px() {
            time_field_pad_px();
 }
 // THE ACTIVE TAB'S NAME AND THE STATE LINE'S AIR (architect 2026-10-22, the
-// tab strip's retirement; grown with the text 2026-11-03, x 24 / 22 of the 5
-// W = 15 px that stood): the name's first ink kTabNameAirAt300 = 16 DEVICE
+// tab strip's retirement; 16 since the text round of 2026-11-03, the 5 W =
+// 15 px before it, and as the approved retrofit mock g1 seats the name the
+// same day at the 22-px text): the name's first ink kTabNameAirAt300 = 16 DEVICE
 // PX AT 300 % past the clock field's right edge, the state line's first ink
 // kStateAirAt300 = 16 past the name's advance (paint_bottom_row_buttons_
 // and_clock), skin_px, rounded at the element.
@@ -2374,15 +2530,18 @@ static const TimeFieldMetrics& time_field_metrics() {
 // THE BOTTOM ROW'S SEATS — row 8's and the modal controls row's, ONE OWNER
 // (architect 2026-10-23, "shouldn't row 8 take the same rule as top
 // strip?" — yes): the LEFT SEAT where a row's content starts and the RIGHT
-// SEAT where its right-aligned cluster ends; CASES_RIGHT is where the row's
-// last case ends; THE CASE the strip pad under the row's top
-// (icon_case_top_offset_px, the band's own seat). ALL THREE ARE THE WELL'S
-// EDGE COLUMNS (render.h's well_columns): the left seat its
-// left edge column, the right seat and the cases' end one past its right
-// edge column — the band's ends (icon_row_seats) and the modal box's
-// (modal_box_rect), so both strips and the controls row stand flush with
-// the well at every scale; 23 and 2281 at 300 %, 15 and 1905 at 200 % and
-// at 138 % (re-derived 2026-10-28, the edge columns the hairlines). The
+// SEAT where its right-aligned cluster ends — THE WELL'S EDGE COLUMNS
+// (render.h's well_columns): the left seat its left edge column, the right
+// seat one past its right edge column, 23 and 2281 at 300 %, 15 and 1905 at
+// 200 % and at 138 % (re-derived 2026-10-28, the edge columns the
+// hairlines) — and THE CELLS' ENDS, CASES_LEFT and CASES_RIGHT, where a
+// row's first key's cell starts and its last key's cell ends: one face
+// inset past the seats (materials.h's THE CELL AND ITS FACE, 2026-11-03), so
+// THE OUTERMOST FACES stand on the well's edge columns — the band's ends
+// (icon_row_seats) and the modal box's (modal_box_rect), both strips and the
+// controls row flush with the well at every scale (22 and 2282 at 300 %);
+// THE CASE the strip pad under the row's top (icon_case_top_offset_px, the
+// band's own seat). Text and fields (the clocks) start on the left seat. The
 // two rows differ only in `row`: row 8's lane (bottom_row_area), or the
 // controls row's, the same rows lifted onto the keyboard's band
 // (modal_controls_row_rect; modal_controls_seats below reads this). Every
@@ -2391,15 +2550,17 @@ static const TimeFieldMetrics& time_field_metrics() {
 struct BottomRowSeats {
     int left_x      = 0;   // the row's first column
     int right_x     = 0;   // one past the row's right-aligned cluster
-    int cases_right = 0;   // one past the row's last case
-    int case_y      = 0;   // the case's top: the row's top plus the strip pad
-    int case_w      = 0;   // the program's case, both rows' every button
+    int cases_left  = 0;   // the row's first cell (its face on left_x)
+    int cases_right = 0;   // one past the row's last cell (its face ending on right_x)
+    int case_y      = 0;   // the cell's top: the row's top plus the strip pad
+    int case_w      = 0;   // the program's cell, both rows' every button
     int case_h      = 0;
 };
 static BottomRowSeats bottom_row_seats(const AppState& app,
                                        const GuiRect& row) {
     const WellColumns well = well_columns(app);
-    return BottomRowSeats{well.x, well.end, well.end,
+    return BottomRowSeats{well.x, well.end, well.x - kKeyFaceInsetPx,
+                          well.end + kKeyFaceInsetPx,
                           row.y + icon_case_top_offset_px(), icon_case_w_px(),
                           icon_case_h_px()};
 }
@@ -2427,8 +2588,7 @@ constexpr std::span<const TransportRowDef> kRow8Groups[kRow8GroupCount] = {
     kTransportSkipGroup, kMarkerVerbGroup, kTransportStepWalkGroup,
     kTransportNudgePlayGroup};
 // THE ROW'S LENGTHS (the simple layout, 2026-10-22): the run gap between
-// two groups (render.h's program_run_gap_px, the strip pad, 2026-11-03), the
-// case.
+// two groups' cells (render.h's program_run_gap_px, 45 at 300 %), the cell.
 struct Row8Lengths {
     int gap = 0, btn_w = 0;
 };
@@ -2443,9 +2603,9 @@ static Row8Lengths row8_lengths() {
 // input_pointer.cpp), so the count is of the members that stand, and a
 // group stands only while it keeps a member. Outside the view nothing is
 // hidden and this is every table's whole length. THE STANDING GROUPS ARE
-// PLAIN RUNS (2026-10-22), each its keys a key pitch apart
-// (key_group_w_px, materials.h), the run gap between two, the last case
-// ending at the row's cases_right.
+// PLAIN RUNS (2026-10-22), each its cells abutting (key_group_w_px,
+// materials.h), the run gap between two, the last cell ending at the row's
+// cases_right (its face on the well's right edge column).
 struct Row8Block {
     int x = 0;                               // the block's left edge
     int standing[kRow8GroupCount] = {};
@@ -2473,10 +2633,10 @@ static Row8Block row8_block(const AppState& app, bool history,
     return b;
 }
 // THE BLOCK'S ONE WALK, left to right from its left edge: per standing
-// group its standing members' keys a key pitch apart (`member(def, x)`,
-// `def` the seated member, `x` its key's left column; the group gap between
-// two, materials.h), the run gap before every group but the first; each
-// hidden member (`hidden(def)`) wherever it falls.
+// group its standing members' cells abutting (`member(def, x)`, `def` the
+// seated member, `x` its cell's left column; materials.h's THE CELL AND ITS
+// FACE), the run gap before every group but the first; each hidden member
+// (`hidden(def)`) wherever it falls.
 template <class Member, class Hidden>
 static void row8_block_walk(bool history, const Row8Block& b,
                             const Row8Lengths& l, Member&& member,
@@ -2495,8 +2655,6 @@ static void row8_block_walk(bool history, const Row8Block& b,
                 if (any_open) ax += l.gap;
                 group_open = true;
                 any_open   = true;
-            } else {
-                ax += kKeyGapPx;
             }
             member(def, ax);
             ax += l.btn_w;
@@ -2525,16 +2683,14 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
 // ONE TIME FIELD'S RECT: its left line at `x`, `w` wide, centred on the
 // case's rows [case_y, case_y + case_h), A HALF-ROW TIE TOWARD THE TOP
 // either way (the offset FLOORED, so a field TALLER than the case — as it
-// stands under a key_height below 49 — takes the tie upward too, where
-// truncation would send it down). At key_height 60 the field, 49 at 300 %
-// (time_field_h_px), is the shorter: 5 rows of the case above it and 6
-// below at 300 %, 3 and 4 at 200 % (the 33-row field in the 40-row case);
-// a taller field stands over the strip pads either side, inside row 8's
-// and the controls row's rows from key_height 25 up (a key of 21 .. 24
-// makes a strip of 41 .. 48 rows round the 49-row field, which then
-// overhangs the strip's top and bottom rows: a tuning range's corner, NO
-// FIT RULE — architect 2026-11-03, on mock dec8: the overhang stands only
-// at keys far below his settled 60).
+// stands under a key_height below 47 — takes the tie upward too, where
+// truncation would send it down). At key_height 33 the field, 47 at 300 %
+// (time_field_h_px), is the taller: 7 rows over the cell above it and 7
+// below at 300 % (row 8's 1361 .. 1407 round the cell's 1368 .. 1400), 5
+// and 5 at 200 % (the 32-row field round the 22-row cell), standing over the
+// strip pads either side — inside row 8's and the controls row's rows at
+// every key_height in the key's range, the strip pad 39 at 300 % whatever
+// the key (2026-11-03, the retrofit), so no field overhangs its strip.
 static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
     const int h = time_field_h_px();
     const int d = case_h - h;
@@ -2556,7 +2712,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE FLAT GROUND (materials.h's kGround, 2026-11-01) under the block and
     // between its keys; the clock's flat field (the time field,
     // paint_ce_time_field); the keys flat (paint_roster_case) with their
-    // glyphs on them (paint_key_glyph), no word under them (2026-11-02).
+    // glyphs on them (paint_key_glyph), their legends under them
+    // (paint_key_legend, 2026-11-03).
 
     // The row's seats (bottom_row_seats): the band's case at the strip pad
     // under the lane's top.
@@ -2564,9 +2721,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_w     = seats.case_w;
     const int btn_h     = seats.case_h;
     const int btn_y     = seats.case_y;
-    // THE GROUPS ARE PLAIN RUNS (the simple layout, 2026-10-22): the keys a
-    // key pitch apart inside a group (materials.h's THE GROUP GAP: one
-    // device px of ground between two keys, the painted key the hit box,
+    // THE GROUPS ARE PLAIN RUNS (the simple layout, 2026-10-22): the cells
+    // abutting inside a group (materials.h's THE CELL AND ITS FACE: two
+    // device px of ground between two faces, the painted face the hit box,
     // architect 2026-11-02, R5), the run gap of bare ground between two groups
     // (row8_block;
     // the bars between groups 2026-10-21 to 2026-10-22, Cool Edit's grippers
@@ -2578,25 +2735,35 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // the sticky-ctrl mode that closes the marker-verb group: it wears the
     // checked face while the mode stands, which is the roster's standing rule
     // for a mode. A checked button a mode greys keeps its checked face, its
-    // glyph kTextOnLit, the band's own composition.
+    // glyph kTextOnLit and its legend dimmed, the band's own composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
-        const GuiRect key{x, btn_y, btn_w, btn_h};
-        // THE KEY, the publication's coverage and the gate below, the
-        // published hit box (2026-11-02, R5).
+        const GuiRect key{x, btn_y, btn_w, btn_h};   // the cell
+        // The legend names the next press's act (2026-10-25, the band's
+        // rule: redesign_button_legend's stateful overload).
+        const char* legend = redesign_button_legend(app, audio, def.id);
+        // THE PAINTED EXTENT, the face and its legend (key_legend_layout,
+        // 2026-10-23): the publication's coverage and the gate below; the
+        // painted face the published hit box (2026-11-02, R5).
+        const GuiRect painted = key_legend_layout(key, legend).extent;
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id, key);
+            cr, app, audio, playback, target_render, def.id,
+            key_face_rect(key), painted);
 
         // A case the clip does not reach is skipped, its face published
-        // above (clip_meets), the band's gate.
-        if (!clip_meets(cr, key)) return;
+        // above (clip_meets) — the face AND its legend, the band's gate: a
+        // damage confined to the bottom pad still reprints the legend.
+        if (!clip_meets(cr, painted)) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const KeyLook look = key_look(face.selected, pressed);
         paint_roster_case(cr, key, face.selected, pressed);
-        // THE GLYPH ON THE KEY (the band's rule, 2026-11-02: the stateful
-        // glyph through its one seat, the tone the face's).
+        // THE GLYPH ON THE KEY, ITS LEGEND UNDER IT (the band's rule,
+        // 2026-11-02 / 2026-11-03: the stateful glyph and the stateful
+        // legend through their one seats, the tones the face's and the
+        // ground's).
         paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
                         face.enabled, look);
+        paint_key_legend(cr, key, legend, face.enabled);
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
@@ -2624,33 +2791,30 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
-    // THE NUMBERS (device px at 300 %, re-derived 2026-11-03 for the text
-    // round — the run gap half the key, the 24-px clock — at key_height's
-    // default 60 and the one-px group gap; the skips two, the verbs eight,
-    // the step-and-walk group four and the nudge-and-play group five): the
-    // block is 19 keys in four runs and three run gaps, 121 + 487 + 243 +
-    // 304 + 3·30 = 1245 px, its last case ending one past the well's right
-    // edge column (bottom_row_seats; the well's edge columns 23 device px in
-    // from each window edge on the tablet at 300 %) — on the tablet's 2304
-    // the block on x 1036..2280 (the skips 1036..1156, the verbs
-    // 1187..1673, the walk 1704..1946, the nudge 1977..2280, Play
-    // 2221..2280); the clock's field on the well's left edge column, from x
-    // 23 — the cell (4.45 em of Liberation Sans advances, seven digits, the
-    // colon and the point, in the program face's 24 px at 300 %, 107 px
-    // ceiled) and its two 16-px pads, a 139-px field, x 23..161 — then the
-    // name's first ink 16 px past it (x 178, Tab A's advance ~64 px), the
-    // state line's 16 px past the name's advance (x ~258), clipped one run
-    // gap short of the block (x 1006): about 748 px of state line at
-    // 300 %. On a 1920-px window at 138 % (cases 28, the gap 14, the program
-    // face 11 px) the block is 589 px, from x 1316 to the well's right edge
-    // column, the clock's field 63 px on x 15..77, the name from x 85, and
-    // the state line from x ~121 to its clip at x 1302, about 1181 px.
+    // THE NUMBERS (device px at 300 %, re-derived 2026-11-03 for the
+    // retrofit — the 69-px cell, the 45-px run gap, the 22-px clock; the
+    // skips two, the verbs eight, the step-and-walk group four and the
+    // nudge-and-play group five): the block is 19 cells in four runs and
+    // three run gaps, 138 + 552 + 276 + 345 + 3·45 = 1446 px, its last cell
+    // ending one past the cells' right end (bottom_row_seats' cases_right,
+    // 2282: its face's last column the well's right edge column 2280) — on
+    // the tablet's 2304 the cells on x 836..2281 (the skips 836..973, the
+    // verbs 1019..1570, the walk 1616..1891, the nudge 1937..2281, Play
+    // 2213..2281, its face 2214..2280); the clock's field on the well's left
+    // edge column, from x 23 — the cell (4.45 em of Liberation Sans
+    // advances, seven digits, the colon and the point, in the program face's
+    // 22 px at 300 %, 98 px ceiled) and its two 16-px pads, a 130-px field,
+    // x 23..152 — then the name's first ink 16 px past it (x 169), the state
+    // line's 16 px past the name's advance, clipped one run gap short of the
+    // block (x 791). On a 1920-px window at 138 % (cells 32, the gap 21, the
+    // program face 10 px) the block is 671 px of cells from x 1235, the
+    // clock's field 59 px on x 15..73, the name from x 81.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and
     // Toggle Value Drag hidden there with the verbs, Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
-    // not standing, 121 + 60 + 121 + 243 + 3·30 = 635 px at 300 %, from x
-    // 1646. THE ROW CARRIES NO
+    // not standing, 138 + 69 + 138 + 276 + 3·45 = 756 px at 300 %, from x
+    // 1526. THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
     // STATE LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so
@@ -2697,7 +2861,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                   GuiRect{});
 
     // THE CLOCK — the first TIME FIELD (the shape and the fixed-width rule
-    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' 24 px
+    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' 22 px
     // (architect 2026-10-26 ~11:30, settled ~13:05; gui_font.h's table),
     // named
     // through the one face owner (gui_font.h), inside the save/restore this
@@ -3093,10 +3257,10 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     cairo_save(cr);
     // KDENLIVE'S TOOLTIP (architect 2026-10-31, on the hint-ink mock: the
     // name, and under it a smaller, dimmer hint; "think 90s Japanese
-    // hi-fi"). THE NAME LINE wears the flags' face, GuiFace::Program (24 px
+    // hi-fi"). THE NAME LINE wears the flags' face, GuiFace::Program (22 px
     // at 300 %, "the tooltips font size should be the same as the flags",
     // 2026-10-23) in the text tone kTextInk; THE HINT LINE its own face,
-    // GuiFace::Hint (20 px at 300 %, grown with the name, 2026-11-03), in the
+    // GuiFace::Hint (18 px at 300 %), in the
     // dim tone kTextDimInk (Live's 757575, architect 2026-11-02, M11's
     // ruling 3; materials.h's text tones).
     // Neither wears a shadow.
@@ -3111,8 +3275,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // between the two lines. Each cap is the face's own (gui_font_cap_px)
     // rounded at the element; each baseline stands on its cap's bottom row,
     // so a descender hangs into the pad below it. At 300 % a one-line box is
-    // 1 + 16 + 17 + 16 + 1 = 51 device rows, a two-line one
-    // 1 + 16 + 17 + 16 + 14 + 16 + 1 = 81.
+    // 1 + 16 + 15 + 16 + 1 = 49 device rows, a two-line one
+    // 1 + 16 + 15 + 16 + 12 + 16 + 1 = 77.
     const GuiFont name_font = gui_font(GuiFace::Program);
     const GuiFont hint_font = gui_font(GuiFace::Hint);
     const bool two_line = (line2 != nullptr);
@@ -5106,9 +5270,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // program's case, laid out by modal_word_buttons and player_row_layout, each
 // painted by the roster's key painter (paint_roster_case) — at rest, the
 // press face under a live press, lit for the row's one checked button
-// alone — its glyph on it (paint_key_glyph) and no word under it
-// (2026-11-02: a word button's word is its tooltip and its glyph's key,
-// modal_word_icon; the reason at paint_key_glyph).
+// alone — its glyph on it (paint_key_glyph) and its legend under it
+// (paint_key_legend, back 2026-11-03: a word button's word in capitals, its
+// tooltip the word and its glyph the word's, modal_word_icon).
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
 // architect 2026-10-23). No hover face. (Windows' push buttons, 2026-10-02 to
 // 2026-10-22, are git history.)
@@ -5123,13 +5287,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // at the field's declaration).
 //
 // METRICS. The seats are the controls row's (modal_controls_seats: the box's
-// outer columns, no row-8 pad, no tail): every key the program's square
-// case at the case's seat, a group's keys a key pitch apart, the group gap's
-// one px of ground between two (modal_word_buttons, the player's
-// player_row_layout; materials.h's key_group_pitch_px). (The 6-W
+// outer columns, no row-8 pad, no tail): every key the program's cell at
+// the case's seat, a group's cells abutting, two px of ground between two
+// faces (modal_word_buttons, the player's player_row_layout; materials.h's
+// key_group_pitch_px), every key's legend in the row's bottom pad. (The 6-W
 // inter-button gap, the old popup's 8 laptop px, stood until 2026-10-23.)
 // The text in the box stands on the list rows'
-// text seat, 24 px in from the box's outer edges at 300 % on all four sides
+// text seat, 18 px in from the box's outer edges at 300 % on all four sides
 // (modal_box.h's THE TEXT SEAT), one list row pitch a row.
 // (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
 // at 29 W, kModalFieldHeightPx 23 W tall with its text kModalFieldPadXPx 5 W
@@ -5166,9 +5330,9 @@ namespace {
 // THE PLAYER ROW'S GROUP SPACE IS THE RUN GAP (architect 2026-11-03, on
 // mock dec7b): between its groups (transport → scrub, scrub → the clock's
 // two fields, the fields → the right cluster) stands render.h's
-// program_run_gap_px, the strip pad, half the key (30 at key_height 60 at
-// 300 %), so it follows the key as the band's runs do; the score viewer's
-// two rows, laid in the player's shape, read it alike (score_row_layout,
+// program_run_gap_px, the band's run gap (45 at 300 %, the hi-fi's 15 W
+// again since the retrofit, 2026-11-03); the score viewer's two rows, laid
+// in the player's shape, read it alike (score_row_layout,
 // score_media_row_layout). The row's own 8-W space is retired
 // (closed_questions.md).
 
@@ -5222,14 +5386,14 @@ std::optional<icons::Icon> modal_word_icon(std::string_view word) {
 // THE WORD BUTTONS' LAYOUT — ONE FOR THE PAINTER AND THE PRESS: on `seats`
 // (the controls row's, modal_controls_seats) the words `words`, in painted
 // order. EVERY WORD BUTTON IS A KEY (architect 2026-10-23) — the program's
-// case at the case's seat (seats.case_*), its word's glyph on it
-// (modal_word_icon) and the word its tooltip, printed nowhere (2026-11-02)
-// — the keys a key pitch
-// apart as the player's and the band's are (materials.h's THE GROUP GAP),
-// THE CLUSTER
-// FLUSH RIGHT, its last key's right edge the row's right seat (the box's
-// outer right column); wider than the row it starts at the row's left seat.
-// The layout reads the words' count alone.
+// cell at the case's seat (seats.case_*), its word's glyph on its face
+// (modal_word_icon), the word printed under it in capitals as its legend
+// (paint_key_legend's one seat, back 2026-11-03) and the word its tooltip —
+// the cells abutting as the player's and the band's are (materials.h's THE
+// CELL AND ITS FACE), THE CLUSTER FLUSH RIGHT, its last face's right edge
+// the row's right seat (the box's outer right column); wider than the row
+// it starts at the row's first cell. A legend never widens its key, so the
+// layout reads the words' count alone.
 // (Windows' push button — the label's run between the spec's pads, floored
 // at 75 W, the button gap between — 2026-10-02 to 2026-10-23.)
 struct ModalWordButtons {
@@ -5242,7 +5406,7 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
     for (std::size_t i = 0; i < words.size(); ++i)
         out.rect.push_back(GuiRect{0, seats.case_y, w, seats.case_h});
     const int total = key_group_w_px(static_cast<int>(words.size()));
-    int x = std::max(seats.left_x, seats.cases_right - total);
+    int x = std::max(seats.cases_left, seats.cases_right - total);
     for (GuiRect& r : out.rect) {
         r.x = x;
         x += key_group_pitch_px();
@@ -5265,14 +5429,15 @@ struct PlayerRowLayout {
 static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     PlayerRowLayout l;
     // THE CASES TOUCH (architect 2026-10-22, "the buttons should be
-    // touching"): only the group gap's one px of ground stands between two
-    // of a run's boxes (2026-11-02; materials.h's key_group_pitch_px), as
-    // the band's and row 8's keys stand; THE GROUP SPACE between its items is
-    // the run gap (program_run_gap_px, architect 2026-11-03, mock dec7b;
-    // the head above the word rows). The press reads the rects the button
-    // walk publishes from this layout (modal_dialog_button_hit), the painted
-    // keys, so the gap between two answers nothing; the scrub's span, its
-    // thumb's seat and its hit rect are this layout's too.
+    // touching"): a run's cells abut, two px of ground between their faces
+    // (2026-11-03; materials.h's key_group_pitch_px), as the band's and row
+    // 8's keys stand; THE GROUP SPACE between its items is the run gap
+    // (program_run_gap_px, 45 at 300 %; architect 2026-11-03, mock dec7b,
+    // and the retrofit's number; the head above the word rows). The press
+    // reads the rects the button walk publishes from this layout
+    // (modal_dialog_button_hit), the painted faces, so the ground between
+    // two answers nothing; the scrub's span, its thumb's seat and its hit
+    // rect are this layout's too.
     const int group    = program_run_gap_px();
     const int pitch    = key_group_pitch_px();
 
@@ -5294,7 +5459,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // -- The walk: the fixed left run, the right-flushed PAIR (word
     //    buttons until 2026-09-01, glyph boxes since), and the scrub
     //    taking what is between them. --
-    const int cx0 = seats.left_x;
+    const int cx0 = seats.cases_left;
     l.x[0] = cx0;                          // Home (skip back)
     l.x[1] = cx0 + pitch;                  // Play / Pause
     l.x[2] = cx0 + 2 * pitch;              // End (skip forward)
@@ -5302,21 +5467,20 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 
     // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
     // was Load in place · Close as WORDS, measured runs in label boxes):
-    // both are the program's key now, so the cluster is two boxes a key
-    // pitch apart — right-flushed where THE CONTROLS ROW'S
-    // CASES END, the last box's right edge the box's outer right column
-    // (architect 2026-10-14, modal_controls_seats' cases_right; row 8's
-    // last case's from 2026-10-05).
+    // both are the program's key now, so the cluster is two abutting cells —
+    // right-flushed where THE CONTROLS ROW'S CELLS END, the last face's
+    // right edge the box's outer right column (architect 2026-10-14,
+    // modal_controls_seats' cases_right; row 8's last case's from
+    // 2026-10-05; the faces' since 2026-11-03).
     const int words_w  = key_group_w_px(2);
     const int words_x0 = std::max(cx0, seats.cases_right - words_w);
     // What the row owes AFTER the scrub: the group space, the clock
     // cell, the group space, the lamp, THE HIGHLIGHT PAIR AND THE UP A
-    // FOLDER BUTTON, the four boxes a key pitch apart, and the
-    // right-flushed pair one group gap after them, the six one run (the
-    // 2026-08-29 spacing ruling, the word buttons' own gap there, spent with
-    // the words on 2026-09-01).
+    // FOLDER BUTTON, the four cells abutting, and the right-flushed pair
+    // directly after them, the six one run (the 2026-08-29 spacing ruling,
+    // the word buttons' own gap there, spent with the words on 2026-09-01).
     const int after_scrub =
-        group + clock_w + group + key_group_w_px(4) + kKeyGapPx;
+        group + clock_w + group + key_group_w_px(4);
     // THE FLOOR IS TWO THUMBS (2026-10-25; two 14-W handle boxes until
     // then) — a channel shorter than two of the thumbs that ride it is not a
     // channel. `scrub_w` is the CHANNEL's width; the thumb's center runs its
@@ -5368,7 +5532,7 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
     l.cell_w   = time_field_w_px(
         text_shape::memoized_run(cfont, digits + " / " + digits)->width_px);
     const int pitch = key_group_pitch_px();
-    const int cx0 = seats.left_x;
+    const int cx0 = seats.cases_left;
     l.x[0] = cx0;                          // PREV
     l.x[1] = cx0 + pitch;                  // NEXT
     l.scrub_x0 = cx0 + key_group_w_px(2) + group;
@@ -5402,7 +5566,7 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     l.field_gap = scaled_px(kTimeFieldGapPx);
     const int clock_w = l.field_w + l.field_gap + l.field_w;
     const int pitch = key_group_pitch_px();
-    const int cx0 = seats.left_x;
+    const int cx0 = seats.cases_left;
     l.x[0] = cx0;                          // BACK
     l.x[1] = cx0 + pitch;                  // PLAY / PAUSE
     l.x[2] = cx0 + 2 * pitch;              // FWD
@@ -5424,9 +5588,9 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
 // key's right edge the row's (every word row's alignment rule), nothing at
 // the row's left, as the player seats its pair in its right cluster. Every
-// key the row's case (seats.case_w), a key pitch apart
+// key the row's cell (seats.case_w), the cells abutting
 // (key_group_pitch_px, materials.h); on a row too narrow for the keys,
-// the cluster starts at the row's left seat, the buttons whole (THE BUTTONS
+// the cluster starts at the row's first cell, the buttons whole (THE BUTTONS
 // STAY WHOLE).
 // THE BPM FORM'S ROW (architect 2026-10-29) is the same cluster of two,
 // RENDER and CANCEL — one layout for both rows, `n` keys abutting flush
@@ -5435,15 +5599,16 @@ static std::vector<int> key_cluster_row_layout(const BottomRowSeats& seats,
                                                int n) {
     std::vector<int> x(static_cast<std::size_t>(n));
     const int pitch = key_group_pitch_px();
-    const int x0 = std::max(seats.left_x, seats.cases_right - key_group_w_px(n));
+    const int x0 = std::max(seats.cases_left, seats.cases_right - key_group_w_px(n));
     for (int i = 0; i < n; ++i) x[static_cast<std::size_t>(i)] = x0 + i * pitch;
     return x;
 }
 
 // THE TRIM PRESETS LIST'S HIGHLIGHT PAIR IS THE PLAYER'S (2026-10-28 night):
 // each key's twin in the player's vocabulary, whose glyph
-// (render_player_button_icon) and word (render_player_button_hint) it
-// wears, so the pair reads the same on both rows.
+// (render_player_button_icon), legend (render_player_button_legend) and
+// word (render_player_button_hint) it wears, so the pair reads the same on
+// both rows.
 static AppState::PlayerButtonAct trim_presets_pair_twin(
         AppState::TrimPresetsButtonAct act) {
     return act == AppState::TrimPresetsButtonAct::HighlightDown
@@ -5666,13 +5831,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //    row's total before anything can be placed). --
     // A BUTTON IS A WORD OR A KEY (2026-08-28, the render player's row):
     // `glyph` set means the button is one of the player's keys, a key with
-    // its act's glyph (render_player_button_icon) and its tooltip
+    // its act's glyph (render_player_button_icon), its legend
+    // (render_player_button_legend) and its tooltip
     // (render_player_button_hint) — the transport
     // triple, the REPEAT ONE lamp, the HIGHLIGHT PAIR (architect 2026-10-10,
     // Highlight Next and Highlight Previous, the band walk's two keys on
     // glass), UP A FOLDER, LOAD IN PLACE (or DELETE at the root) and CLOSE —
     // while a word button is a key whose glyph is its word's
-    // (modal_word_icon) and whose tooltip is the word. The word kind is the other three owners' alone: a
+    // (modal_word_icon), whose legend is the word in capitals
+    // (key_legend_word) and whose tooltip is the word. The word kind is the other three owners' alone: a
     // prompt's answers, the dialog editors' OK / Cancel and the picker's one
     // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
     // the trim presets list, its four words SAVE, SAVE AS, DELETE and
@@ -5682,15 +5849,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // player's dispatch vocabulary; the other two stay zero/false on its
     // buttons.
     struct DialogButtonPlan {
-        std::string word;   // a word button's word: its glyph's key and its tooltip
+        std::string word;   // a word button's word: its glyph's key, its legend and its tooltip
         char        response_key = 0;
         bool        editor_ok    = false;
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
         // The score viewer's dispatch vocabulary (2026-10-26); its keys are
-        // `glyph` keys too, their glyphs score_viewer_button_icon's.
+        // `glyph` keys too, their glyphs score_viewer_button_icon's and their
+        // legends score_viewer_button_legend's.
         AppState::ScoreButtonAct  score_act  = AppState::ScoreButtonAct::None;
         // The trim presets list's (2026-10-28 night): its highlight pair are
-        // `glyph` keys wearing the player's glyphs, its other four word
+        // `glyph` keys wearing the player's glyphs and legends, its other four word
         // buttons.
         AppState::TrimPresetsButtonAct trim_act =
             AppState::TrimPresetsButtonAct::None;
@@ -5875,7 +6043,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // glyph and its word the render player's Play key's by the face
         // (score_viewer_play_face) — then (the scrub and the page cell or the
         // clock between, laid out in the branch below) RESET, START, END and
-        // CLOSE — each a key with its glyph, its face the act's own
+        // CLOSE — each a key with its glyph and its legend, its face the act's own
         // truthful answer.
         using Act = AppState::ScoreButtonAct;
         const PlayerPlayFace face = score_viewer_play_face(app);
@@ -5904,7 +6072,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28 night, THE
         // PLAYER'S SHAPE), in painted order, one cluster flush right
         // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
-        // and UP, its glyphs and its words, the band walk without applying
+        // and UP, its glyphs, legends and words, the band walk without applying
         // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE (the
         // Close word kModalCloseLabel's rule), CLOSE LAST. No Apply: the
         // row's tap is the act. Each face is the act's own truthful answer
@@ -6026,14 +6194,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     const int cx1 = seats.right_x;                      // one past the row's right seat
     // EVERY BUTTON IS CENTRED ON THE CASE ROWS (architect 2026-10-14, the
-    // family's controls row): every button the square key on the rows the
-    // player's cases take, so the rows coincide
+    // family's controls row): every button the program's cell on the rows
+    // the player's cases take, so the rows coincide
     // (modal_word_buttons). (Centered in the bottom row's content band, the
     // taskbar dialog's centered band before it, until that day.)
     const int btn_y = seats.case_y;
 
     // THE TEXT IN THE BOX — a prompt's question, the progress modal's
-    // sentence, an editor's line — ON THE LIST ROWS' TEXT SEAT, 24 px in
+    // sentence, an editor's line — ON THE LIST ROWS' TEXT SEAT, 18 px in
     // from the box's outer edges at 300 % on all four sides (modal_box.h's
     // THE TEXT SEAT, M8b): the pen at the text room's x, the wrap its width,
     // the foot its clip's bottom, the first row's baseline
@@ -6177,8 +6345,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    SEPARATORS RETIRED (architect 2026-10-02; Sound Recorder and
         //    mplay32 have none, and the roster's etched separators of
         //    2026-10-06 did not reach this row): the groups stand the run
-        //    gap of bare face apart (program_run_gap_px, half the key;
-        //    architect 2026-11-03, mock dec7b) — transport → scrub, scrub →
+        //    gap of bare face apart (program_run_gap_px, 45 at 300 %;
+        //    architect 2026-11-03, mock dec7b, and the retrofit) — transport → scrub, scrub →
         //    clock, clock → the lamp. THE CLOCK IS TWO TIME FIELDS since
         //    2026-10-05 (architect: Sound Recorder's Position and Length
         //    panels, ACID's separate fields), kTimeFieldGapPx apart — the
@@ -6201,8 +6369,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    except the scrub. THE BOXES ARE ROW 8'S CASES (architect
         //    2026-10-05, bottom_row_seats; the program's since 2026-10-09):
         //    each box wears the roster's face (paint_roster_case; the walk
-        //    below) on the program's square key at row 8's seat, the
-        //    roster's glyph centered on it, the row on the panel's face (the
+        //    below) on the program's key cell at row 8's seat, the
+        //    roster's glyph centered on its face, its legend under it, the row on the panel's face (the
         //    player is the program's tenant of the row, paint_bottom_strip).
         //    Sound Recorder stays the model for the scrub's channel, the
         //    scrub's thumb Windows' trackbar thumb (render.h's scrub block,
@@ -6687,20 +6855,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //    second painter. --
     for (size_t i = 0; i < plan.size(); ++i) {
         const int x = plan[i].x;
-        // THE KEY, the whole case at the plan's x, the published hit box
-        // (out.rect below; architect 2026-11-02, R5: the group gap is not
-        // pressable, point_on_key, materials.h) — the group gap standing in
-        // the plan's own x's, every owner's layout laying its keys a key
-        // pitch apart (key_group_pitch_px).
+        // THE KEY'S CELL at the plan's x, its face (key_face_rect) the
+        // published hit box (out.rect below; architect 2026-11-02, R5: the
+        // ground is not pressable, point_on_key, materials.h) — every owner's
+        // layout laying its cells abutting (key_group_pitch_px), two px of
+        // ground between two faces.
         const GuiRect key{x, btn_y, plan[i].w, btn_h};
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat
         // One, `lit`) alone, pressed or not; THE PRESS FACE for a LIVE
-        // PRESS on an unchecked one — armed with the pointer inside it, or
-        // armed from the keyboard — for as long as the press stands
-        // (key_look, materials.h; architect 2026-11-02, the yellow for lamps
-        // only), the glyph on the key. (Windows'
+        // PRESS on an unchecked one, FFC281 under a press on the lit one —
+        // armed with the pointer inside it, or armed from the keyboard — for
+        // as long as the press stands (key_look, materials.h; architect
+        // 2026-11-03, Live's hover colors as the press; the yellow for lamps
+        // only, 2026-11-02), the glyph on the key, the legend under it.
+        // (Windows'
         // push button 2026-10-02 to 2026-10-22 is git history.) THE FOCUS IS
         // NOT PAINTED (below): the two focus
         // strengths stay in the state (AppState::modal_dialog_focus_active),
@@ -6720,8 +6890,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // LIST's pair and words (trim_presets_button_enabled) and the BPM
         // FORM's two words (bpm_form_button_enabled) — every other
         // owner's buttons are always live while their dialog stands and
-        // publish enabled=true. The glyph dimmed (kKeyDimInk,
-        // paint_key_glyph, 2026-11-02), the key the face its state gives, the roster's rule
+        // publish enabled=true. The glyph and the legend dimmed (kKeyDimInk,
+        // paint_key_glyph and paint_key_legend), the key the face its state
+        // gives, the roster's rule
         // (architect 2026-10-02 and 2026-10-09). The press face is gated on the bit rather than
         // trusted — a button can go dead UNDER a hold.
         const bool enabled = plan[i].enabled;
@@ -6736,11 +6907,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (AppState::modal_dialog_focus) — wears nothing; the press face
         // under a standing press is the only sign.
         // THE KEY (2026-10-23, paint_roster_case), flat, lit for the row's
-        // one checked button, and NO WORD UNDER IT (2026-11-02, the rule at
-        // paint_key_glyph): a word button's word is its tooltip (out.tooltip
-        // below) and its glyph's key, and every button wears the enabled bit
-        // on its glyph (THE DISABLED RUNG above owns the bit and which
-        // owners publish it).
+        // one checked button; THE LEGEND UNDER IT (paint_key_legend's one
+        // seat, back 2026-11-03): a glyph button's the player's own legend
+        // (render_player_button_legend, the Play key's naming its next press,
+        // 2026-10-25 — its repaint the row's one damage owner, the play
+        // face's writers damaging the row whole), the score viewer's
+        // (score_viewer_button_legend), the trim presets pair's the player's
+        // twins'; a word button prints its word IN CAPITALS
+        // (key_legend_word), the word its tooltip (out.tooltip below) and its
+        // glyph's key; every button wears the enabled bit on its glyph and
+        // its legend (THE DISABLED RUNG above owns the bit and which owners
+        // publish it).
         const KeyLook look = key_look(plan[i].lit, pressed);
         paint_roster_case(cr, key, plan[i].lit, pressed);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
@@ -6768,8 +6945,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                             plan[i].play_face);
         if (icon)
             paint_key_glyph(cr, key, *icon, enabled, look);
+        const std::string legend =
+            !plan[i].glyph
+                ? key_legend_word(plan[i].word)
+            : plan[i].score_act == AppState::ScoreButtonAct::PlayPause
+                ? std::string(render_player_button_legend(
+                      AppState::PlayerButtonAct::PlayPause, plan[i].play_face))
+            : plan[i].score_act != AppState::ScoreButtonAct::None
+                ? std::string(score_viewer_button_legend(plan[i].score_act))
+            : plan[i].trim_act != AppState::TrimPresetsButtonAct::None
+                ? std::string(render_player_button_legend(
+                      trim_presets_pair_twin(plan[i].trim_act)))
+                : std::string(render_player_button_legend(plan[i].player_act,
+                                                          plan[i].play_face));
+        paint_key_legend(cr, key, legend, enabled);
         AppState::ModalDialogButton out;
-        out.rect         = key;
+        out.rect         = key_face_rect(key);
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;
@@ -6797,11 +6988,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // highlight and the trim, whose acts damage the row, but a frame
         // whose clip missed a key must still not publish a bit it did not
         // paint. THE BPM FORM'S ROW TAKES IT TOO (2026-10-29), its RENDER
-        // face moving with the fields. THE COVERAGE IS THE KEY (2026-11-02,
-        // the legends retired): its glyph wears the bit (dimmed when dead),
-        // so a clip that missed the key must keep the bit.
+        // face moving with the fields. THE COVERAGE IS THE FACE AND ITS
+        // LEGEND (key_legend_layout's extent, 2026-10-23; back 2026-11-03):
+        // the legend wears the bit (dimmed when dead), so a clip that missed
+        // it must keep the bit.
         if ((player_up || score_up || trim_up || bpm_up) &&
-            !clip_covers_drawable(cr, app, key)) {
+            !clip_covers_drawable(cr, app,
+                                  key_legend_layout(key, legend).extent)) {
             const bool carry = !face_state_reset &&
                                i < prev_enabled.size() &&
                                prev_enabled[i].player_act == out.player_act &&
@@ -6860,16 +7053,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // table, GuiFace::Keys; architect 2026-10-24, "C24" — the night's C34 "too
 // far", "a separate face" since that night, the body's 22 before it) — the
 // band painting NO LINE at its own top edge (architect 2026-08-27, on
-// glass). AT REST the cap in the text tone kTextInk on the face; the three
+// glass). AT REST the cap in the text tone kTextInk on the face; the four
 // faces the roster's (key_look, materials.h; architect 2026-11-02, the
-// yellow for lamps only):
+// yellow for lamps only; the press Live's hover colors, 2026-11-03):
 //   ARMED     — LIT, the FFAD56 fill, its cap kTextOnLit 111111 (M8 / M12):
 //               SHIFT while it is armed and THE PAGE KEY while the symbols
-//               page stands — the two lamps — pressed or not. IT IS ALL
+//               page stands — the two lamps — FFC281 while a press stands
+//               on it, the cap 111111 still. IT IS ALL
 //               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
 //               word "Shift" in both states — that, and the letter caps,
 //               every one of which turns capital while the arm stands.
-//   PRESSED   — THE PRESS FACE 464646, its cap kTextInk: the key under the
+//   PRESSED   — THE PRESS FACE 6A6A6A, its cap kTextInk: the key under the
 //               finger, not armed, for as long as the press stands, its own
 //               state back at the lift.
 // (Windows' toolbar buttons — SOFT RAISED, SOFT SUNKEN pressed and over the
@@ -7188,14 +7382,14 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // SEAT (modal_box.h's kModalBoxTextSeatAt300, the one owner, M8b), so a
 // glyph-less list's names, a dialog's text and a glyph's first ink stand on
 // one column. The name's x is its own constant, never derived from the
-// drawing, so it stood still when Breeze's drawings came. THE TEXT ROUND
-// (architect 2026-11-03) sized the three with the 24-px text: the glyph's
-// ink 29 (.525 of the 56-px row), the seat 24 (the box's text seat) and the
-// name's x 74 — the seat, the ink and 21 px of glyph-to-name air; THE 74
-// STANDS (architect 2026-11-03, on mock dec3a; not 70 or 85).
-static constexpr double kListGlyphInkAt300 = 29.0;
+// drawing, so it stood still when Breeze's drawings came. THE THREE STAND
+// ROUND THE 22-px TEXT (back 2026-11-03, the retrofit, after the text
+// round's 29 / 24 / 74 of that morning): the glyph's ink 27 (.525 of the
+// 51-px row), the seat 18 (the box's text seat) and the name's x 64 — the
+// seat, the ink and 19 px of glyph-to-name air.
+static constexpr double kListGlyphInkAt300 = 27.0;
 static constexpr double kListGlyphXAt300   = kModalBoxTextSeatAt300;
-static constexpr double kListNameXAt300    = 74.0;
+static constexpr double kListNameXAt300    = 64.0;
 
 void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
     if (!folder_overlay::stands(app)) return;
@@ -7281,10 +7475,21 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                                  ov.press.row == index &&
                                  ov.press.inside && !ov.press.scrolling;
             // THE FACE (the block above): LIT — the highlight, or a live
-            // press arm promising it — is the flat selected fill; a row that
-            // is neither takes NO FILL and the pane shows through it.
+            // press arm promising it — takes the selection pair's 111111
+            // print; its fill is the pair's 637E86 at rest
+            // (pal.selected_fill) and ITS LIGHTER TWIN B0DDEB UNDER A
+            // STANDING PRESS (materials.h's kSelectionPressFill; architect
+            // 2026-11-03, the retrofit: Live's focused selection, the key
+            // press rule's twin for rows) — the press read off the overlay's
+            // own press arm (AppState::FolderOverlayPress: armed on the row,
+            // the pointer inside, no scroll drag), whose writers damage the
+            // row already for the lit face; a row that is neither takes NO
+            // FILL and the pane shows through it.
             const bool lit = pressed || highlighted;
-            if (lit) paint_cell_rect(cr, r, pal.selected_fill);
+            if (pressed)
+                paint_cell_rect(cr, r, hex(kSelectionPressFill));
+            else if (lit)
+                paint_cell_rect(cr, r, pal.selected_fill);
             // NO FOCUS FRAME (architect 2026-10-23: "a highlight around the
             // button, which is more of a usability thing for the laptop, but
             // the laptop is deprecated as an authoring surface"): the lit row
@@ -7298,12 +7503,12 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // drawing, architect 2026-11-02, R14 (4) / R15 (Q4); the logo's
             // single note no longer), Folder on a folder or
             // project row — on the ink-box road (icons.h): its ink box's
-            // larger side kListGlyphInkAt300 = 29 px, .525 of the 56-px row,
+            // larger side kListGlyphInkAt300 = 27 px, .525 of the 51-px row,
             // its rows centered on the row (the floor of the spare), its
-            // first ink column kListGlyphXAt300 = 24 px past the box's outer
+            // first ink column kListGlyphXAt300 = 18 px past the box's outer
             // left edge (the text seat), in the row text's tone — kTextInk
             // at rest, kSelectionText 111111 on the lit row (the selection
-            // pair, materials.h); the name at kListNameXAt300 = 74 (the
+            // pair, materials.h); the name at kListNameXAt300 = 64 (the
             // names' column above). THE PLAYING
             // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain
             // renders row looks good now" — the clock and the scrub say

@@ -532,10 +532,10 @@ GuiPlatform::~GuiPlatform() {
 // stood at 275 from 2026-10-02 — the tablet's glyph at its 200 % before the
 // unit's change, 44 device px — and its earlier values are git history and
 // a closed question.) The icon row fits this panel whole (the arithmetic is
-// at paint_icon_row, paint_handler.cpp: the left runs' 1399, the run gap's
-// 30 and the right run's 304 of the well's 2258 device px outside the `h`
-// view at 300, re-derived 2026-11-03 with the run gap half the key at
-// key_height's default 60), clearing it by 525.
+// at paint_icon_row, paint_handler.cpp: the left runs' 1608, the run gap's
+// 45 and the right run's 345 of the cells' 2260 device px outside the `h`
+// view at 300, re-derived 2026-11-03 with the 69-px cell and the 45-px run
+// gap), clearing it by 262.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -584,9 +584,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.noise             = "rain";
     cfg.noise_level       = -9;
     cfg.noise_crossfade_s = 4;
-    // THE KEY'S SIDE (architect 2026-10-29, a tuning key; the key square
-    // since 2026-11-02), spelled: 60 device px at 300 % (architect
-    // 2026-11-02, "move the default to 60"; device_config.h's head).
+    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: 33
+    // device px at 300 % (architect 2026-11-03, the retrofit's hi-fi key
+    // metrics; device_config.h's head).
     cfg.key_height        = kKeyHeightDefaultAt300;
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
     // keys), spelled: the FLAGS sheet's 48 x 60 device px at 300 %

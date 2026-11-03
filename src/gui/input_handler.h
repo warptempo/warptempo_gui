@@ -3056,9 +3056,8 @@ private:
     // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
     // along the pen's axis as the tip rises — NOT THE HAND. 12 W sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
-    // the neighboring button, a key pitch (61 px at 300 % and 73 at 360 %
-    // at key_height 60, the square key and its one-px group gap since
-    // 2026-11-02), and below a move to
+    // the neighboring button, a key pitch (the 69-px cell at 300 % and 83
+    // at 360 %, 2026-11-03), and below a move to
     // the next lit row, a popup row (17 W under Windows 2000 —
     // ChromeSpec::popup_item_height_px), so one row's
     // deliberate step rearms. Authored in Windows px as every chrome length,
@@ -3591,13 +3590,12 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
-    // THE KEY'S SIDE'S ONE LIVE ACT (the `key_height` tuning key, architect
-    // 2026-10-29, the key square since 2026-11-02; render.h's seat): push
-    // the side to the renderer (set_key_height_at300) and run the scale's
-    // RELAYOUT TAIL (relayout_window below) — the key's height moves every
-    // strip boundary and the waveform area as a scale does, and its width
-    // every walk's pitch, so the commit re-lays the whole window out at
-    // once. The key glyph's ink follows the side (paint_key_glyph); the icon
+    // THE KEY'S HEIGHT'S ONE LIVE ACT (the `key_height` tuning key,
+    // architect 2026-10-29; render.h's seat): push the height to the
+    // renderer (set_key_height_at300) and run the scale's RELAYOUT TAIL
+    // (relayout_window below) — the key's height moves every strip boundary
+    // and the waveform area as a scale does, so the commit re-lays the whole
+    // window out at once. The key glyph's ink follows the height (paint_key_glyph); the icon
     // caches key on the drawing and its ink px (icons.h's THE INK BOX), so
     // a new size rasters fresh and nothing stale is shown. The touch slop is
     // the scale's alone and does not move. The settings editor's

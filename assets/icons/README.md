@@ -12,8 +12,8 @@ EVERY DRAWING HERE IS KDE'S BREEZE (architect 2026-11-01, his rulings on M4, M5 
 visual size; "we should use breeze glyphs only. ok to modify eg to make them
 monochrome"). The drawings are breeze-icons 6.31.0's (KDE Frameworks, https://invent.kde.org/frameworks/breeze-icons),
 as Arch Linux installs them under `/usr/share/icons/breeze-dark/`, the 22-px folders. The roster is AS RULED
-(architect 2026-11-02, R12 / R14 / R15). Every key carries a glyph centered on its face and nothing printed under it (architect
-2026-11-02: the legends retired, the tooltips naming the act); which key wears which drawing is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
+(architect 2026-11-02, R12 / R14 / R15). Every key carries a glyph centered on its face and its printed legend under it
+(architect 2026-11-03, the retrofit: the legends back, the tooltips naming the act); which key wears which drawing is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
 `render_player_button_icon` and `modal_word_icon` in `src/gui/paint_handler.cpp`, `score_viewer_button_icon` in
 `src/gui/score_viewer.h`). OFF THE KEYS (`src/gui/icons.h`'s head): the logo lane's note is MusicNote16th (the BPM
 key's drawing too) and its battery legend's glyph Battery000Charging while on power, Battery000 otherwise; the list
@@ -47,8 +47,8 @@ and green are the glyph's one color (the two cards, whose marks only a second co
 below).
 
 ONE ROAD, THE INK BOX. A glyph is scaled by its INK BOX, not its viewBox: the drawing's antialiased ink (alpha > 0) is
-fitted so that its larger side is the seat's own length — 20 / 33 of the key's side at 300 % on every key (36 on the
-60 key), 23 for the logo lane's note, 21 for the battery glyph, 29 on a list row, .525 of a card's first line inside the
+fitted so that its larger side is the seat's own length — 20 / 33 of the key's height at 300 % on every key (20 on the
+33 key), 21 for the logo lane's note, 19 for the battery glyph, 27 on a list row, .525 of a card's first line inside the
 border — scaled with the
 window as every chrome length (`icons::glyph_ink_size` / `icons::draw_glyph`; each seat's placement at its painter).
 

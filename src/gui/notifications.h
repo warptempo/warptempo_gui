@@ -15,8 +15,8 @@
 // dialog-information and dialog-error as the 10-10 cut-out transcriptions,
 // the mark showing the card's face through one color — on the ink-box road
 // (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
-// content on all four sides (notification_pad_px below; architect
-// 2026-10-24, 24 px since 2026-11-03), ON THE CARD FACE — the tooltip's look, a flat
+// content on all four sides (notification_pad_px below; P18, architect
+// 2026-10-24), ON THE CARD FACE — the tooltip's look, a flat
 // `card_ground` box under `card_text` inside a one-device-px `card_frame`
 // border (architect 2026-10-04, the sides 2026-10-06; flat since 2026-11-02,
 // M11 with M14 "d"; render.h's palette block, THE CARD FACE): the
@@ -684,25 +684,19 @@ inline std::string lowercase_initial(std::string_view s) {
 // 272, so the clamp still answers the floor for both and they still paint
 // at one width; the width rule was not part of either ruling and the floor
 // keeps the number it was measured at. NOR DID THE GLYPH'S RETURN
-// (2026-10-24) NOR THE TEXT ROUND (2026-11-03): the chrome ring + pad +
-// the glyph's seat + the gap + pad + ring is 1 + 24 + 43 + 11 + 24 + 1 =
-// 104 device px at 300 % (the seat notification_glyph_seat_w_px of the
-// unrounded ink .525 x (24 + 17 + 24) = 34.125, the painted ink 34), and
-// the pair shapes to about 259 and 253 device px in the body face's 24,
-// both near 360 against the floor's 648. NOR DID
-// THE FACES' CHANGES: under
+// (2026-10-24): the chrome ring + pad + the glyph's seat + the gap + pad +
+// ring is 1 + 18 + 34 + 10 + 18 + 1 = 82 device px at 300 %, and the pair
+// shapes to about 237 and 232 device px in the body face's 22, both near
+// 320 against the floor's 594. NOR DID THE FACES' CHANGES: under
 // the body face at the recorded Windows metrics less the tracking
 // (gui_font.h; 2026-10-06) the pair shapes through the live chokepoint to
 // 118.7 and 116.1 Windows px in Tahoma at every gui_scale, which with the
 // 40 px of chrome below is 159 and 156, both under the floor, which still
 // answers for both (measured 2026-10-06). AUTHORED (WINDOWS) PX, so the
 // relation holds at every gui_scale — the sentence and the floor scale together
-// through scaled_px. 216 W SINCE THE TEXT ROUND (architect 2026-11-03: every
-// length authored round the text grows with it, x 24 / 22 of the 198 that
-// stood round the 22-px face; THE PAIR 216 / 507 STANDS, his ruling the
-// same day on mock dec5a, not 198 / 465 at the 24-px text).
+// through scaled_px.
 //
-// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 507 Windows px and
+// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 465 Windows px and
 // notification_card_max_w_px already floors its window safety here, so the
 // clamp's own precondition (floor <= ceiling) is untouched by the rise and a
 // window too narrow for the floor keeps overhanging exactly as before.
@@ -712,7 +706,7 @@ inline std::string lowercase_initial(std::string_view s) {
 // and 137 px at that day's 13-px face, and the chrome — three 5-px pads, the
 // 3-px inset and the 22-px box, 40 px — put them near 180, the floor
 // answering for both.
-inline constexpr double kNotificationMinWidthPx = 216.0;
+inline constexpr double kNotificationMinWidthPx = 198.0;
 
 // THE CARD'S CEILING, THE LAPTOP'S CARD WIDTH (its source), AUTHORED AND SCALED (architect
 // 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
@@ -725,11 +719,9 @@ inline constexpr double kNotificationMinWidthPx = 216.0;
 // TABLET and that is accepted in his own words — "it's okay if it covers up
 // some buttons": a card is a sentence to read and it leaves on its own.
 // A length, so it scales; the life beside it (kNotificationMs) is a duration
-// and does not. 507 WINDOWS PX since the text round (architect 2026-11-03:
-// x 24 / 22 of the 465 — the laptop pixel's 640 re-authored at the unit's
-// change, 2026-10-02 — so a card holds the words a line it held at the
-// 22-px face).
-inline constexpr double kNotificationMaxWidthPx = 507.0;
+// and does not. 465 WINDOWS PX since the unit's change (architect
+// 2026-10-02), the laptop pixel's 640 re-authored.
+inline constexpr double kNotificationMaxWidthPx = 465.0;
 
 // THE GAP BETWEEN TWO CARDS IN THE STACK (architect 2026-10-01, ruled on the
 // S4 mock: "reduce the distance between the cards to one pixel at a hundred
@@ -751,24 +743,22 @@ inline constexpr int kNotificationMaxLines = 3;
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
 // THE CARD'S ONE PAD (architect 2026-10-24, "P18" off the 16 / 17 / 18
-// series round the 22-px text; 24 since the text round, 2026-11-03 — "the
-// tooltips should also increase padding, same for cards" — the clock
-// field's pad's growth, x 16 / 12): 24 px OF PLAIN FIELD AT 300 % between the
+// series): 18 px OF PLAIN FIELD AT 300 % between the
 // card's one-device-px ring (hairline_px) and its content on ALL FOUR SIDES
 // — ring -> glyph box at the left, the text's last pen -> ring at the right,
 // ring -> the first line's cap top above, the last line -> ring below. AN
 // AREA, so it scales through skin_px, rounded at the element and floored at
-// one px (8 at 100 %, 12 at 150 %, 16 at 200 %); the ring is a line and stays
+// one px (6 at 100 %, 9 at 150 %, 12 at 200 %); the ring is a line and stays
 // one device px at every scale. (The Windows-era pad — the 28-W card's
 // vertical margin round the small toolbar case's 22-W box, 3 W, 2026-08-30
 // to 2026-10-23 — and the box's 16-W glyph and 3-W leads are git history.)
-inline constexpr double kNotificationPadAt300 = 24.0;
+inline constexpr double kNotificationPadAt300 = 18.0;
 int notification_pad_px();
 
 // THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
 // 2026-10-24): the inside height pad + cap + pad,
 // and the ratio the retired caption's (21 of its 40-px lane) and the list rows'
-// (29 of their 56-px row) — the one proportion every off-key glyph keeps to
+// (27 of their 51-px row) — the one proportion every off-key glyph keeps to
 // its line. Since 2026-11-02 (Breeze's cut-out DialogInformation and
 // DialogError, M7 / R14) it is
 // the ink box's LARGER SIDE on the ink-box road (icons.h), rounded at the
@@ -790,7 +780,7 @@ inline int notification_glyph_seat_w_px(double ink_px) {
 }
 
 // THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN is the logo lane's brand
-// gap, kLogoBrandGapAt300 (render.h: 11 px at 300 %, skin_px; the retired
+// gap, kLogoBrandGapAt300 (render.h: 10 px at 300 %, skin_px; the retired
 // caption's title gap, which it was until the caption went the same day) —
 // the same seat, a glyph then words, so one number (architect
 // 2026-10-24).
@@ -804,7 +794,7 @@ int notification_cap_px();
 // (architect 2026-10-24): border + pad + THE BODY FACE'S CAP + pad + border
 // — the text's CAP BAND, not its ascender, between the two pads (the clock
 // field's and the mock's rule; the modal box's ascender rule is not the
-// card's), so the first line's cap top stands at border + pad; 67 rows at
+// card's), so the first line's cap top stands at border + pad; 53 rows at
 // 300 % (architect 2026-11-02, M11: the border where the ring stood). AT THE FIRST
 // LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30: the text
 // grows downward under the glyph, nothing reflows beside it). A card of
@@ -875,10 +865,9 @@ GuiRect notification_stack_bound(const AppState& a);
 // 38 + 1, the card's own gap, kNotificationGapPx); on the tablet at 300 % it
 // is 12 (1107 over 84 + 3), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are
-// recorded at main.cpp's vertical-stack owner). The card stands 67 px at
-// 300 % since (the 24-px pad round the 24-px text, 2026-11-03), so every
-// count is higher than then: every window this product runs in holds more
-// cards than the architect will ever stack.
+// recorded at main.cpp's vertical-stack owner). The card shrank since (53
+// px at 300 % with P18, 2026-10-24), so every count is higher: every window
+// this product runs in holds more cards than the architect will ever stack.
 int notification_capacity(const AppState& a);
 
 // Whether `id` names a card that is IN THE LIVE STACK — which is the same as

@@ -1605,8 +1605,8 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         // THE OPAQUE FACE BOX, the overlap rule's, under every segment
         // whatever its state: A SELECTED SEGMENT TAKES NO FILL and no ink of
         // its own (architect 2026-11-02, render.h's SELECTED row).
-        // THE BOX IS THE LANE'S FLAT FACE (2026-10-29; Live's 303030 since
-        // 2026-11-01 night, materials.h's kLaneFace), the one color of every
+        // THE BOX IS THE LANE'S FLAT FACE (2026-10-29; Live's 2A2A2A since
+        // 2026-11-03, materials.h's kLaneFace), the one color of every
         // pixel of the lane, so the box masks earlier text exactly.
         {
             for (const auto& sp : spans)

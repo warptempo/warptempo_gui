@@ -2836,7 +2836,7 @@ void GuiInputHandler::end_touch_caret_drag() {
 int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
     if (!app.modal_dialog.valid) return -1;
     for (size_t i = 0; i < app.modal_dialog.buttons.size(); ++i) {
-        // The published rect is the PAINTED key (the group gap is not
+        // The published rect is the PAINTED face (the ground round it is not
         // pressable, architect 2026-11-02, R5; point_on_key, materials.h).
         if (point_on_key(app.modal_dialog.buttons[i].rect, x, y))
             return static_cast<int>(i);

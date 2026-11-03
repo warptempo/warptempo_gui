@@ -95,15 +95,17 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 using SharedRun = std::shared_ptr<const ShapedRun>;
 
 // THE LABEL RUNS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
-// pixels), ONE BOUNDED MAP, ITS FIRST TWO USES: THE CUE LABELS on the Label face
+// pixels), ONE BOUNDED MAP FOR THREE USES: THE CUE LABELS on the Label face
 // (render.cpp: the cue passes and the cell measurer, measure_iter_cells — the
 // tablet's profile of a pinch put 3.5 % of all CPU on shaping the visible
 // labels at every flag-cache rebuild) and THE RULER'S TIMESTAMPS on the Small
 // face (paint_handler.cpp's paint_ruler_row, whose majors re-shaped the same
-// strings at every repaint a pan's damage reached the ruler); the logo
+// strings at every repaint a pan's damage reached the ruler), and THE
+// KEYS' LEGENDS on the Legend face (paint_handler.cpp's key_legend_layout,
+// laid out once for a strip's repaint gate and again for its paint, a fixed
+// vocabulary of a few dozen words; 2026-10-23, back 2026-11-03); the logo
 // lane's brand and battery + clock runs and the score row's page-cell
-// measure shape through it too. (The keys' printed legends, a use from
-// 2026-10-23, retired 2026-11-02.) A run is a pure
+// measure shape through it too. A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
 // and a GuiFont is its face, percent and size alone (gui_font.h) — so a run

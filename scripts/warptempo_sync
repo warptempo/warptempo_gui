@@ -176,8 +176,9 @@ shopt -s nocaseglob
 #      line is made to read github.com/warptempo/warptempo_projects, and --
 #      every key is required since 2026-10-14; a line already there is
 #      kept -- the true_colors=on line (2026-10-21), the noise=rain, noise_level=-9 and
-#      noise_crossfade_s=4 lines (2026-10-28), the key_height=60 line
-#      (2026-10-29, a tuning key; the square key's side, 60 since 2026-11-02), the osk_key_w=48 and osk_key_h=60 lines
+#      noise_crossfade_s=4 lines (2026-10-28), the key_height=33 line
+#      (2026-10-29, a tuning key; the key's height, 33 again since
+#      2026-11-03), the osk_key_w=48 and osk_key_h=60 lines
 #      (2026-10-29, the keyboard's two tuning keys), the osk_font_px=24
 #      line (2026-10-29 night, the keyboard's cap size, a tuning key) and
 #      the waveform_grow=0.5 line (2026-10-31, the waveform's antialiasing
@@ -246,8 +247,9 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # key), on on both devices; and THE NOISE'S THREE, required since 2026-10-28 —
 # the sound's folder, rain, the level, -9 dB, and the crossfade, 4 s; and
 # THE KEY'S SIDE, a tuning key required while it stands since 2026-10-29,
-# 60 device px at 300 % since 2026-11-02 (the key square) -- a key_height
-# line already on the tablet, a tuned 33 included, is kept as it is; and THE ON-SCREEN KEYBOARD'S KEY BOX, two tuning
+# 33 device px at 300 % (the hi-fi key metrics, again since 2026-11-03) -- a
+# key_height line already on the tablet, a tuned 60 included, is kept as it
+# is; and THE ON-SCREEN KEYBOARD'S KEY BOX, two tuning
 # keys required while they stand since 2026-10-29 evening, 48 x 60 device px
 # at 300 %; and THE ON-SCREEN KEYBOARD'S CAP SIZE, a tuning key required
 # while it stands since 2026-10-29 night, 24 device px at 300 %; and THE
@@ -256,7 +258,7 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # permanent key required since 2026-10-31 night, 0 dB, the files as they are
 # (src/gui/device_config.h records each). A value tuned on the
 # tablet is kept: a line already there is never touched.
-ADDED_LINES="true_colors=on waveform_grow=0.5 audio_level=0 noise=rain noise_level=-9 noise_crossfade_s=4 key_height=60 osk_key_w=48 osk_key_h=60 osk_font_px=24"
+ADDED_LINES="true_colors=on waveform_grow=0.5 audio_level=0 noise=rain noise_level=-9 noise_crossfade_s=4 key_height=33 osk_key_w=48 osk_key_h=60 osk_font_px=24"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the

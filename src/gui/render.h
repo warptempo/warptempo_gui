@@ -240,11 +240,11 @@ struct TrimRange {
 // kPaneFace 363636 — INSIDE A ONE-DEVICE-PX `card_frame` BORDER on all four
 // sides, kWellFrame 757575, the grammar's one frame tone (paint_popup_chrome),
 // the border standing on the box's own outer rows and columns, so the card is
-// 67 rows and the one-line tooltip 51 at 300 %; NO RING TONES, NO SHADOW. The
+// 53 rows and the one-line tooltip 49 at 300 %; NO RING TONES, NO SHADOW. The
 // cards' words the text tone (`card_text`) at the body size, THE TOOLTIP'S
 // NAME LINE the flags' own program face (2026-10-23, "the same as the
-// flags", 24 px since the text round, 2026-11-03) in the text tone
-// kTextInk like the cards' words, ITS HINT LINE the hint face (20 px) in the
+// flags", 22 px at 300 %) in the text tone
+// kTextInk like the cards' words, ITS HINT LINE the hint face (18 px) in the
 // dim tone kTextDimInk (architect 2026-10-31; Live's 757575 since M11,
 // 2026-11-02, paint_shift_tooltip). THIS PARAGRAPH IS THE RULE'S ONE
 // STATEMENT.
@@ -428,7 +428,8 @@ void install_true_colors(bool on);
 // WELL, every tone's owner). THE EDGE RULE (architect 2026-11-01 night, "the
 // rightmost button's right edge lines up with the trim/time/marker/canvas
 // region, and the same for the left"): every region spans the well's
-// columns (well_columns below), the keys' outer columns, 23 .. 2280 on the
+// columns (well_columns below), the outermost keys' faces' outer columns
+// (their cells one px past, 2026-11-03), 23 .. 2280 on the
 // tablet's 2304 at 300 %, the ground beside them; the canvas's interior —
 // the waveform area every painter and hit test reads — one column in from
 // each, its two side columns the canvas's own color with its grid and
@@ -436,9 +437,9 @@ void install_true_colors(bool on);
 // well is ONE DEVICE PX at every scale (hairline_px, the line rule; "two px
 // lines that don't scale" ruled one px in M5h; the ruler's ticks one px
 // since 2026-11-03). THE ROWS AT 300 % (main.cpp's lane table the record;
-// at key_height 60, the square key's default): row 173 ground, the trim bar
-// 174 .. 191, the ruler 192 .. 232, row 233 ground, the marker lane 234 ..
-// 282, row 283 ground, the canvas 284 .. 1318, row 1319 ground.
+// at key_height 33, its default, 2026-11-03): row 144 ground, the trim bar
+// 145 .. 162, the ruler 163 .. 202, row 203 ground, the marker lane 204 ..
+// 251, row 252 ground, the canvas 253 .. 1327, row 1328 ground.
 //
 // THE TRIM BAR IS LIVE'S OVERVIEW BAR (render_trim_flags owns the drawing,
 // trim_lane_h_px the rows): one row of ground under the band (the row the
@@ -527,8 +528,9 @@ void install_true_colors(bool on);
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
 //
 // THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09; the lengths program_spec.h's,
-// the drawing render_flag_boxes_impl's): on the lane's FLAT kLaneFace 303030
-// (architect 2026-11-01 night, Live's clip-view marker lane; materials.h),
+// the drawing render_flag_boxes_impl's): on the lane's FLAT kLaneFace 2A2A2A
+// (architect 2026-11-01 night, Live's clip-view marker lane; Live's next
+// fill above the ground since 2026-11-03, the retrofit; materials.h),
 // THE TRIANGLE — COOL EDIT'S STAIRCASE IN WHOLE DEVICE CELLS, ITS ROWS SCALED
 // (architect 2026-10-26, paint_ce_cue_triangle's head; cue_triangle_rows: 9
 // at 300 %, 6 at 200 %; Cool Edit's own 9 by 5) on the lane's last rows, Cool
@@ -538,8 +540,8 @@ void install_true_colors(bool on);
 // THE LABEL — the marker's one label, at rest in the text tone kTextInk
 // B5B5B5 (materials.h; M13, 2026-11-02), NO SHADOW (2026-11-02; its shadow
 // of 2026-10-25 .. 2026-11-02 retired with the well's flat look), in THE
-// LABEL FACE, BOLD 24 device px at 300 % (gui_font.h's kGuiFaceSizes;
-// architect 2026-11-01 night, M5i; 24 the text round's, 2026-11-03),
+// LABEL FACE, BOLD 22 device px at 300 % (gui_font.h's kGuiFaceSizes;
+// architect 2026-11-01 night, M5i; 22 again since the retrofit, 2026-11-03),
 // starting the triangle's reach right plus a gap of 13 device px at 300 %
 // right of the column (cue_label_lead_px: 22 at 300 %), ON THE LANE'S ONE
 // BASELINE at rest and in the editor (cue_baseline_px, THE METRICS RULE at
@@ -878,12 +880,12 @@ int    gui_scale_percent();
 // since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();
 
-// THE KEY'S SIDE, THE `key_height` TUNING KEY'S SEAT (architect
-// 2026-10-29, on five mock sheets varying only the keys' height; SQUARE
-// since 2026-11-02, on mock sqm_01_66px; its default 60, architect
-// 2026-11-02, "move the default to 60"): the live value in
-// DEVICE PX AT 300 % (skin_px's axis), read by icon_case_w_px and
-// icon_case_h_px (the case paragraph below) and by paint_key_glyph's ink
+// THE KEY'S HEIGHT, THE `key_height` TUNING KEY'S SEAT (architect
+// 2026-10-29, on five mock sheets varying only the keys' height: "around
+// 33"; its default 33 again since 2026-11-03, the retrofit, the square key
+// of 2026-11-02 reversed): the live value in DEVICE PX AT 300 % (skin_px's
+// axis), read by icon_case_h_px (the case paragraph below; the cell's width
+// is the constexpr kKeyCellWAt300) and by paint_key_glyph's ink
 // size (paint_handler.cpp), nothing else. It is the scale's shape —
 // render.h's accessors are free functions with no AppState, so the value
 // lives as file-scope state in render.cpp, pushed by the same TWO
@@ -891,8 +893,8 @@ double gui_scale_factor();
 // the window exists and so before the first layout, and the settings
 // editor's `key_height=` commit (GuiInputHandler::apply_key_height, which
 // re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_key_height); the construction state is the template's 60
-// (kKeyHeightDefaultAt300, 2026-11-02). It settles into a constexpr once he
+// (parse_key_height); the construction state is the template's 33
+// (kKeyHeightDefaultAt300, 2026-11-03). It settles into a constexpr once he
 // rules the number, and this pair goes.
 void set_key_height_at300(int device_px_at_300);
 int  key_height_at300();
@@ -1060,60 +1062,50 @@ constexpr int kMinWindowHeightPx = 480;
 // lane and the cards read are the logo lane's own below. Git history.)
 
 // THE LOGO LANE — ITS OWN LANE ON TOP OF THE BAND (architect 2026-10-24,
-// the approved logo frame; its height and its seats 2026-11-03, the text
-// round: "pad should be half the icon size"; "should be variable based on
-// icon size"; "logo should be centered in logo lane"; "all other elements
-// centered vertically"): with the tablet's caption gone, THE LOGO STANDS IN
-// A LANE AT THE SURFACE'S TOP, OVER THE BAND'S KEYS, which keep the strip
-// pad above and below them like row 8's ("totally symmetrical vertically to
-// the bottom strip"; the band, the case block below). THE LANE IS A TOP PAD
-// OF HALF THE KEY — the strip pad's own rule and accessor (strip_pad_px,
-// below: 30 at key_height 60) — AND THE LOGO'S INK BAND, NOTHING UNDER IT
-// (logo_lane_h_px): THE INK BAND (logo_ink_band_px, paint_handler.cpp, where
-// the drawings' ink boxes are measured) IS THE TALLEST INK OF THE LANE'S
-// ITEMS — the note's ink box, the brand's ink (the "W"'s top to the "p"'s
-// foot as painted: gui_font_ink_band of kLogoBrand in the Bold face), the
-// legend's ink (its runs' alphabet, kLogoLegendInkSet, and its pipe,
-// kLogoLegendPipe, each in the Body face as painted, and the battery cell's
-// rows) — 23 rows at 300 % at the defaults (the note 23, the brand 18 + 5;
-// the pipe 19 + 3, the runs 17 + 0, the cell 13), the lane 30 + 23 = 53; 16
-// at 200 % (the pipe 14 + 2 the tallest), the lane 20 + 16 = 36. THE BAND IS
-// THE LOGO'S AND EVERY ITEM'S INK IS CENTERED IN IT BY ITS OWN INK
-// (architect 2026-11-03, on mock dec0b: "everything is set by the logo"),
-// the spare row below (the floor of the half): the note's ink box, the
-// brand's ink rows, the legend's runs' ink rows (the alphabet's: each run's
-// baseline its ink's top row plus its rows above the baseline), THE PIPE'S
-// OWN INK ROWS (its own baseline, so its 22 rows center on the band and the
-// runs' 17 on the band too, rather than the runs riding the pipe's seat)
-// and the battery cell. At 300 % / key 60 the band is lane rows 30–52: the
-// note and the brand 30–52, the pipe 30–51, the runs 33–49, the cell 35–47;
-// at 200 % lane rows 20–35: the pipe 20–35, the runs 22–33. THE
-// LANE'S GROUND IS THE BAND'S FLAT GROUND, nothing else on it — no line, no
-// caption tone — and it is INERT CHROME like the strips' pads: no hit, no
-// tooltip, no gesture (the band's ground falls through to nothing,
-// input_pointer.cpp). paint_handler.cpp's paint_logo_lane paints it, every
-// length below skin_px, rounded at the element, EVERYTHING ON IT IN THE TEXT
-// TONE kTextInk WITH NO SHADOW (the flat look, architect 2026-11-01 "no
-// shadow anywhere", M13's tone 2026-11-02; materials.h's head) — the brand
-// and the legend's runs, the note, the glyph (logo_legend_extent,
-// paint_handler.cpp, the legend's damage rect):
+// the approved logo frame; its height the hi-fi's again 2026-11-03, the
+// retrofit, and its seats the text round's of that morning: "logo should be
+// centered in logo lane"; "all other elements centered vertically"): with
+// the tablet's caption gone, THE LOGO STANDS IN A LANE AT THE SURFACE'S TOP,
+// OVER THE BAND'S KEYS. THE LANE IS kLogoLaneAt300, 72 DEVICE PX AT 300 %
+// through skin_px (his P72 of 2026-10-24; 48 at 200 %, 36 at 150 %, 33 at
+// 138 %), whatever the key's height (logo_lane_h_px). EVERY ITEM'S INK IS
+// CENTERED ON THE LANE BY ITS OWN INK (architect 2026-11-03, on mock dec0b:
+// "everything is set by the logo"; the lane's spare split with its odd row
+// below, the floor of the half): the note's ink box, the brand's ink rows
+// (the "W"'s top to the "p"'s foot as painted: gui_font_ink_band of
+// kLogoBrand in the Bold face), the legend's runs' ink rows (the alphabet's,
+// kLogoLegendInkSet, in the Body face as painted: each run's baseline its
+// ink's top row plus its rows above the baseline), THE PIPE'S OWN INK ROWS
+// (kLogoLegendPipe, its own baseline, so its rows center on the lane and the
+// runs' on the lane too, rather than the runs riding the pipe's seat) and
+// the battery cell. At 300 % (the brand 17 + 5 rows, the runs 15 + 0, the
+// pipe 18 + 3): the brand on lane rows 25–46, the runs 28–42, the pipe
+// 25–45. THE LANE'S GROUND
+// IS THE BAND'S FLAT GROUND, nothing else on it — no line, no caption tone —
+// and it is INERT CHROME like the strips' pads: no hit, no tooltip, no
+// gesture (the band's ground falls through to nothing, input_pointer.cpp).
+// paint_handler.cpp's paint_logo_lane paints it, every length below
+// skin_px, rounded at the element, EVERYTHING ON IT IN THE TEXT TONE
+// kTextInk WITH NO SHADOW (the flat look, architect 2026-11-01 "no shadow
+// anywhere", M13's tone 2026-11-02; materials.h's head) — the brand and the
+// legend's runs, the note, the glyph (logo_legend_extent, paint_handler.cpp,
+// the legend's damage rect):
 //   ON THE LEFT, THE NOTE: Breeze's MusicNote16th (architect 2026-11-01,
 //     M7: Breeze only — the BPM key's own drawing) on the ink-box road
 //     (icons.h's THE INK BOX), the ink box's larger side kLogoNoteInkAt300 =
-//     23 px (grown with the text, x 24 / 22, 2026-11-03), ITS FIRST INK
+//     21 px, ITS FIRST INK
 //     COLUMN ON THE WELL'S LEFT EDGE COLUMN (well_columns — the first key's
 //     column: "the glyph flush with the icons"). THEN THE BRAND, "Warptempo"
 //     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
 //     equipment … just had a stylized brand name") — in Liberation Sans
-//     Bold at the TITLE size (gui_font.h's table, 26 px at 300 %, the text
-//     + 2), the text tone kTextInk, its first ink kLogoBrandGapAt300 = 11 px
-//     after the note's last ink column (text_shape::ink_left_px; x 24 / 22,
-//     2026-11-03). (The gap is the retired caption's title gap; the cards'
+//     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the text
+//     tone kTextInk, its first ink kLogoBrandGapAt300 = 10 px after the
+//     note's last ink column (text_shape::ink_left_px). (The gap is the retired caption's title gap; the cards'
 //     glyph-seat-to-text gap reads it too, a glyph then words,
 //     notifications.h.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
-//     (24 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S RIGHT
+//     (22 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S RIGHT
 //     EDGE COLUMN (the last key's outline column: "the clock flush with the
 //     right edge of the buttons"): the clock run "2:12 PM" with its LAST
 //     INK on that column; THE PIPE (kLogoLegendPipe, the face's own glyph,
@@ -1141,24 +1133,25 @@ constexpr int kMinWindowHeightPx = 480;
 //     horizontal battery with its nub to the right, the charging one
 //     carrying a plug inside it, so their ink boxes are one box. THE CELL IS
 //     THAT BOX on the ink-box road (icons.h's THE INK BOX) at ONE LENGTH for
-//     both, kLogoGlyphInkAt300 = 21 px its larger side (x 24 / 22,
-//     2026-11-03; the outline is wider than tall, so the cell is 21 wide and
-//     shorter than the band), the larger of the two drawings' ink boxes on
+//     both, kLogoGlyphInkAt300 = 19 px its larger side (the outline is
+//     wider than tall, so the cell is 19 wide and shorter than the text),
+//     the larger of the two drawings' ink boxes on
 //     each axis so no state can move it, each drawing centered in it (the
-//     floor of the spare); ITS ROWS CENTERED IN THE INK BAND like every
+//     floor of the spare); ITS ROWS CENTERED ON THE LANE like every
 //     item's. Painted in the text tone.
 //   (Liberation's own arrows ↑ / ↓ as the glyphs, a drawn pipe and
 //   "nothing" as the discharging glyph were judged on the same sheets and
 //   not taken, docs/engineering/closed_questions.md.)
-inline constexpr double kLogoNoteInkAt300        = 23.0;
-inline constexpr double kLogoBrandGapAt300       = 11.0;
-inline constexpr double kLogoGlyphInkAt300       = 21.0;
+inline constexpr double kLogoLaneAt300           = 72.0;
+inline constexpr double kLogoNoteInkAt300        = 21.0;
+inline constexpr double kLogoBrandGapAt300       = 10.0;
+inline constexpr double kLogoGlyphInkAt300       = 19.0;
 inline constexpr const char* kLogoBrand = "Warptempo";
 inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";
 inline constexpr const char* kLogoLegendPipe = "|";
-// THE LOGO'S INK BAND at the live scale and size (the block above; its
-// measure is paint_handler.cpp's, beside the drawings it reads).
-int logo_ink_band_px();
+inline int logo_lane_h_px() {
+    return skin_px(kLogoLaneAt300, 1);
+}
 
 // (THE WINDOW BORDER — THE SIZING FRAME'S BAND round a restored laptop
 // window, window_frame_px / paint_window_sizing_frame, Windows 95's raised
@@ -1212,7 +1205,7 @@ int logo_ink_band_px();
 // above the bar, the ruler's and the marker lane's foot rows, the stereo
 // divider's row, the well's foot and its edge columns; the ruler's ticks, one
 // device px wide, kRulerTickWidthPx), the group gap between two keys (one device
-// px since 2026-11-02, materials.h's kKeyGapPx), the modal box's outer
+// px each side of a key's face, kKeyFaceInsetPx, 2026-11-03), the modal box's outer
 // rows and columns of ground round its pane (modal_box.h), the cards' and
 // the tooltip's border and the scrub's channel (the overlays' flat pass,
 // 2026-11-02) — and, since the sweep of 2026-10-23 (architect: "let's do a
@@ -1259,34 +1252,37 @@ inline int hairline_px() { return 1; }
 // THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader
 // takes the accessors below, so the three rows cannot drift apart.
 //
-// THE KEY IS SQUARE (architect 2026-11-02, on mock sqm_01_66px): its width
-// EQUALS its height, both THE `key_height` TUNING KEY'S device px at 300 %
-// through skin_px (key_height_at300, its seat above; the width's 23-W Cool
-// Edit sum went with the ruling), so a tune keeps it square — at the
-// default 60, 60 device px at 300 %, 40 at 200 %, 30 at 150 %, 28 at
-// 138 %, 72 at 360 % — AN AREA, and THE CASE IS THE KEY: the painted key
-// and its hit box are the whole case, every key of every row identical (materials.h's paint_key; the group's keys stand a key
-// pitch apart, materials.h's key_group_pitch_px, the group gap's one device
-// px of ground between two).
+// THE KEY'S CELL (architect 2026-11-03, the retrofit: the hi-fi key
+// metrics back, the square key of 2026-11-02 reversed): kKeyCellWAt300, 69
+// DEVICE PX AT 300 % WIDE — the hi-fi's 23-W case, a constexpr — by THE
+// `key_height` TUNING KEY'S device px at 300 % TALL (key_height_at300, its
+// seat above; 33 its default), both through skin_px, rounded at the element:
+// at key_height 33, 69 x 33 at 300 %, 46 x 22 at 200 %, 34 x 16 at 150 %
+// (34.5 and 16.5 rounded to even), 32 x 15 at 138 %, 83 x 40 at 360 %. THE
+// KEY IS NO LONGER SQUARE. AN AREA: THE PAINTED FACE IS THE CELL INSET ONE
+// DEVICE PX ON EVERY SIDE (materials.h's key_face_rect and its THE CELL AND
+// ITS FACE): 67 x 31 at the defaults, the cells of a group abutting so two
+// faces stand two device px of ground apart (materials.h's
+// key_group_pitch_px, the cell). The face is the key's hit box and its
+// glyph's seat; the cell is its legend's (below).
 // Every key carries a Breeze glyph centered on its face (paint_key_glyph,
 // paint_handler.cpp; icons.h's THE KEYS), its ink box's larger side
-// FOLLOWING THE KEY, 20 * key_height / 33 device px at 300 % — 36 at the
-// default 60 (architect 2026-11-02), one size for every key — and NOTHING
-// UNDER IT: the printed legends retired 2026-11-02, the tooltips naming the
-// act (the rule at paint_key_glyph).
+// FOLLOWING THE KEY'S HEIGHT, 20 * key_height / 33 device px at 300 % — 20
+// at the default 33 (architect 2026-11-02), one size for every key — and
+// UNDER IT, in the strip's bottom pad, ITS PRINTED LEGEND (architect
+// 2026-11-03, the retrofit: the Legend face, 14 Regular, uppercase, the
+// rule at paint_handler.cpp's key_legend_seat).
 //
-// THE BAND (architect 2026-10-22, the simple layout; symmetric since
-// 2026-11-03): THE LOGO LANE (logo_lane_h_px, its block above), THE STRIP
-// PAD, the case, THE STRIP PAD, on the flat ground — so the band's keys
-// stand the same pad above and below as row 8's ("totally symmetrical
-// vertically to the bottom strip", architect 2026-11-03) — no line on any
-// row, plain ground: at key_height 60, 53 + 30 + 60 + 30 = 173 device rows
-// at 300 %. Its runs are paint_icon_row's walk (icon_row_seats: the keys a
-// key pitch apart inside a run, the group gap's one device px of ground
-// between two, the run gap of ground between runs, program_run_gap_px).
-// The hit target is the painted key (point_on_key, materials.h); the
-// ground between keys and between runs and the pad under them is inert
-// for input.
+// THE BAND (architect 2026-10-22, the simple layout; the hi-fi's again
+// since 2026-11-03, the retrofit): THE LOGO LANE (logo_lane_h_px, its block
+// above), the case, THE STRIP PAD, on the flat ground — no line on any row,
+// the keys' legends in the bottom pad: at key_height 33, 72 + 33 + 39 = 144
+// device rows at 300 % (the cells on rows 72 .. 104, the faces 73 .. 103).
+// Its runs are paint_icon_row's walk (icon_row_seats: the cells abutting
+// inside a run, the run gap of ground between two runs' cells,
+// program_run_gap_px). The hit target is the painted face (point_on_key,
+// materials.h); the ground round the faces, between runs and in the pad
+// under them, the legends' included, is inert for input.
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because the
 // case is not one row's: paint_handler.cpp's three rows read it. THE CARD AND THE FOLDER OVERLAY'S LIST
@@ -1298,31 +1294,37 @@ inline int hairline_px() { return 1; }
 // bar's and the ruler's lines stood on, 2026-10-23 — RETIRED with the flat
 // well, 2026-11-02: the well's lines and rows of ground are the hairline
 // itself, the well's lanes block below.)
-// THE CASE'S WIDTH AND ITS HEIGHT, ONE SIDE, the `key_height` tuning key's
-// live value (its seat above; the case paragraph): skin_px, floored at one
-// device px.
+// THE CELL'S WIDTH, kKeyCellWAt300, and ITS HEIGHT, the `key_height` tuning
+// key's live value (its seat above; the case paragraph): skin_px, floored
+// at three device px so a face stands inside the inset at every scale.
+inline constexpr double kKeyCellWAt300 = 69.0;
 inline int icon_case_w_px() {
-    return skin_px(key_height_at300(), 1);
+    return skin_px(kKeyCellWAt300, 3);
 }
 inline int icon_case_h_px() {
-    return skin_px(key_height_at300(), 1);
+    return skin_px(key_height_at300(), 3);
 }
-// THE STRIP PAD IS HALF THE KEY (architect 2026-11-03: "pad should be half
-// the icon size, so 30"): skin_px of half the `key_height` tuning key's
-// device px at 300 %, rounded at the element, so it FOLLOWS THE KEY — 30
-// at the default 60, 20 at 200 %, 14 at 138 % (13.8 rounded). Row 8's and
-// the modal controls row's ground above and below the case (the
-// case block's: those rows share these accessors), the band's above and
-// below its case, and the logo lane's top pad (logo_lane_h_px, its block
-// above). FLOORED AT ONE DEVICE PX so a row of ground stands there at a
-// scale that would round the pad to nothing.
+// THE FACE'S INSET IN ITS CELL (the case paragraph; materials.h's THE CELL
+// AND ITS FACE and key_face_rect): ONE DEVICE PX on every side at every
+// gui_scale — a line, not an area (the hi-fi's shadow and black lines
+// become ground, 2026-11-03) — and the face's height, the cell's less the
+// inset on both sides (31 at 300 % at key_height 33), the scrub thumb's.
+inline constexpr int kKeyFaceInsetPx = 1;
+inline int key_face_h_px() {
+    return icon_case_h_px() - 2 * kKeyFaceInsetPx;
+}
+// THE STRIP PAD (architect 2026-10-22, the simple layout; the hi-fi's 13 W
+// again since 2026-11-03, the retrofit, reversing that morning's "half the
+// key"): kStripPadAt300, 39 DEVICE PX AT 300 % through skin_px — 26 at
+// 200 %, 20 at 150 % (19.5 rounded to even), 18 at 138 % — whatever the
+// key's height. Row 8's and the modal controls row's ground above and below
+// the case, and the band's ground below it (its upper pad is the logo lane,
+// band_case_top_offset_px); the keys' legends stand in its bottom pad
+// (paint_handler.cpp's key_legend_seat). FLOORED AT ONE DEVICE PX so a row
+// of ground stands there at a scale that would round the pad to nothing.
+inline constexpr double kStripPadAt300 = 39.0;
 inline int strip_pad_px() {
-    return skin_px(key_height_at300() / 2.0, 1);
-}
-// THE LOGO LANE: its top pad, the strip pad, and THE LOGO'S INK BAND, nothing
-// under it (its block above; 2026-11-03).
-inline int logo_lane_h_px() {
-    return strip_pad_px() + logo_ink_band_px();
+    return skin_px(kStripPadAt300, 1);
 }
 // THE CASE'S TOP, AS AN OFFSET FROM ROW 8's TOP and the modal controls
 // row's: the strip pad, the one expression every reader of those strips'
@@ -1331,25 +1333,32 @@ inline int icon_case_top_offset_px() {
     return strip_pad_px();
 }
 // THE BAND'S CASE TOP, AS AN OFFSET FROM THE BAND'S OWN TOP: the logo lane
-// and the strip pad (2026-11-03), read by the band's seats alone
+// (2026-10-24; the hi-fi's again 2026-11-03), read by the band's seats alone
 // (icon_row_seats, paint_handler.cpp, which every band reader takes).
 inline int band_case_top_offset_px() {
-    return logo_lane_h_px() + strip_pad_px();
+    return logo_lane_h_px();
 }
-// THE STRIP — row 8's: the pad, the case, the pad.
+// THE STRIP — row 8's: the pad, the case, the pad (39 + 33 + 39 = 111 at
+// 300 % at key_height 33).
 inline int strip_h_px() {
     return strip_pad_px() + icon_case_h_px() + strip_pad_px();
 }
-// THE BAND: the logo lane, then the strip (2026-11-03).
+// THE BAND: the logo lane, the case, the strip pad (2026-10-24; again
+// 2026-11-03).
 inline int icon_row_h_px() {
-    return logo_lane_h_px() + strip_h_px();
+    return logo_lane_h_px() + icon_case_h_px() + strip_pad_px();
 }
-// THE GROUND BETWEEN TWO RUNS IS THE STRIP PAD (architect 2026-11-03: "the
-// horizontal spacing between icon sections matching the vertical
-// padding"): 30 device px at key_height 60 at 300 %, following the key —
-// the band's runs, row 8's runs packed right and the controls rows' read it.
+// THE GROUND BETWEEN TWO RUNS (architect 2026-10-22, the simple layout; the
+// hi-fi's 15 W again since 2026-11-03, the retrofit, reversing that
+// morning's "the strip pad"): kRunGapAt300, 45 DEVICE PX AT 300 % through
+// skin_px — 30 at 200 %, 21 at 138 % — between two runs' CELLS (so 47
+// between their faces), whatever the key's height: the band's runs, row 8's
+// runs packed right, and the controls rows' groups, the render player's and
+// the score viewer's group spaces included (paint_handler.cpp's
+// player_row_layout and the score rows).
+inline constexpr double kRunGapAt300 = 45.0;
 inline int program_run_gap_px() {
-    return strip_pad_px();
+    return skin_px(kRunGapAt300);
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
@@ -1363,12 +1372,11 @@ inline int program_run_gap_px() {
 // (architect 2026-11-01 night, M7, "agree both"; M9 A2 for the score viewer):
 //   THE CHANNEL — ONE DEVICE PX (scrub_channel_h_px, hairline_px: never
 //     scaled) of materials.h's kWellFrame 757575, the trim bar's frame tone,
-//     on THE CASE'S CENTER ROW — the centered elements' tie rule, (case rows
-//     − 1) / 2 below the case's top, rounded down (scrub_channel_above_px):
-//     row 1379 at 300 % on the square key's case rows 1350..1409 at
-//     key_height 60 —
+//     on THE FACE'S CENTER ROW — the centered elements' tie rule, (face rows
+//     − 1) / 2 below the face's top, rounded down (scrub_channel_above_px):
+//     row 1384 at 300 % on the keys' face rows 1369..1399 at key_height 33 —
 //     across the channel's own columns, from the thumb's center at frame 0
-//     to its center at the last frame (at 300 % x 229..1580 in the player),
+//     to its center at the last frame (at 300 % x 274..1508 in the player),
 //     nothing else: no fill, no played extent, nothing that reads the
 //     window's focus.
 //   THE THUMB — A BLANK FLAT KEY BLOCK (paint_scrub_thumb: the key painter
@@ -1377,9 +1385,10 @@ inline int program_run_gap_px() {
 //     wide, 24 device px at 300 % (architect 2026-10-23, on the installed
 //     player: "too tiny … the thumb itself should be larger"), by THE KEY'S
 //     HEIGHT (architect 2026-10-29: "Shrink it to the height of the key.";
-//     scrub_thumb_h_px is icon_case_h_px, following the `key_height` tuning
-//     key live, the square key's side since 2026-11-02), so it stands on the case's rows; ITS HIT ZONE ITS PAINTED
-//     RECT (render_player_scrub_handle_hit: on screen is as painted).
+//     scrub_thumb_h_px is the face's height, key_face_h_px, following the
+//     `key_height` tuning key live; the face's since 2026-11-03), so it
+//     stands on the faces' rows beside it; ITS HIT ZONE ITS PAINTED RECT
+//     (render_player_scrub_handle_hit: on screen is as painted).
 // The painter is paint_modal_dialog's paint_scrub_item; the press is
 // claim_player_scrub_press (the score viewer's its own claim).
 // THE THUMB ALWAYS STANDS (architect 2026-10-25, "agreed"): whenever the
@@ -1401,8 +1410,8 @@ inline int program_run_gap_px() {
 // grab box the mapping inset the channel by — half of it at each end, a
 // leftover of the pointed Windows thumb — stood 2026-10-02 to 2026-10-25.)
 inline constexpr double kScrubThumbWidthPx  = 8.0;
-// The thumb's width floors at three device px; its height is the case's,
-// floored there (scrub_thumb_h_px).
+// The thumb's width floors at three device px; its height is the face's,
+// one row at least (scrub_thumb_h_px).
 inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
 // THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px): the
 // flat key, at rest.
@@ -1425,12 +1434,12 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 //              + 16 + 1), 14 at 200 % (1 + 1 + 11 + 1).
 //   THE RULER  the ruler (ruler_h_px: the pad, the digits' ink, the pad;
 //              the ticks overlay its foot) and a row of ground
-//              (ruler_lane_h_px): 41 + 1 = 42 at 300 % (14 + 13 + 14), 27 +
-//              1 at 200 % (9 + 9 + 9).
+//              (ruler_lane_h_px): 40 + 1 = 41 at 300 % (14 + 12 + 14), 26 +
+//              1 at 200 % (9 + 8 + 9).
 //   THE MARKER the editor's box on the lane's whole rows (marker_lane_h_px:
 //              the outline, the pad, the legal set's band, the pad, the
-//              outline): 49 at 300 % (3 + 10 + 23 + 10 + 3), 34 at 200 % (2
-//              + 7 + 16 + 7 + 2); the cue's triangle its last rows
+//              outline): 48 at 300 % (3 + 10 + 22 + 10 + 3), 32 at 200 % (2
+//              + 7 + 14 + 7 + 2); the cue's triangle its last rows
 //              (cue_triangle_rows, 9 / 6).
 //   THE LINE   the row of ground between the lane and the canvas, one
 //              hairline (lane_foot_line_h_px, below).
@@ -1454,7 +1463,8 @@ inline int trim_lane_h_px() {
 // THE RULER'S TICKS (architect 2026-11-01 night, M5b / M5c / M5h; the
 // width and the major 2026-11-03): ONE DEVICE PX WIDE AT EVERY SCALE, the
 // major 10 rows and the minor 3 at 300 % (skin_px, each floored at one row;
-// the major grown with the text, x 24 / 22, the picture he approved). THEY
+// the major 10 since the text round, the picture he approved, and as the
+// retrofit's mock g1 carries it under the Bold-16 digits, 2026-11-03). THEY
 // OVERLAY THE RULER'S FOOT AND ADD NO HEIGHT (architect 2026-11-03: "the
 // ticks can be adjusted later — they don't change height of anything
 // else"): they stand in the ruler's bottom pad, under the digits' ink.
@@ -1472,13 +1482,13 @@ inline int ruler_minor_tick_h_px() {
 // DEVICE PX AT 300 % (skin_px, rounded at the element; his pick off the
 // ruler sheets), above and below — the ink the rows the ruler face's
 // digits and marks, kRulerInkSet, stand on as painted (gui_font_ink_band,
-// the rows the slight-hinted paint covers: 13 above the baseline and 0 below
-// at Bold 18, 9 and 0 at Bold 12) — so 14 + 13 + 14 = 41 at 300 %, 9 + 9 +
-// 9 = 27 at 200 %. THE BASELINE the pad and the ink's rows above it under
-// the ruler's top (27 at 300 %), the ink's top row the pad under it. THE
-// 41 ROWS STAND (architect 2026-11-03, on mock dec1a): the painted ink's 13
-// rows centered, 14 / 13 / 14 — not 40 off the flat digits' 12, which would
-// sit the painted ink a row off center.
+// the rows the slight-hinted paint covers: 12 above the baseline and 0 below
+// at Bold 16, 8 and 0 at Bold 11; the ruler face 16 since the retrofit,
+// 2026-11-03) — so 14 + 12 + 14 = 40 at 300 %, 9 + 8 + 9 = 26 at 200 %.
+// THE BASELINE the pad and the ink's rows above it under the ruler's top
+// (26 at 300 %), the ink's top row the pad under it: the painted ink's rows
+// centered, 14 / 12 / 14 (the rule of mock dec1a, 2026-11-03: the measured
+// ink, never the flat digits' cap, between the two pads).
 inline constexpr double kRulerPadAt300 = 14.0;
 inline constexpr const char* kRulerInkSet = "0123456789:.";
 inline int ruler_ink_above_px() {
@@ -1524,8 +1534,9 @@ inline int cue_triangle_unit_px() {
 // canvas (architect 2026-10-26 ~13:40, on the row count as a per-device
 // number: "why density? why not just simple scale? tablet is only real
 // surface. later tablets may have higher dpi, but not lower" — "yes" to the
-// planner's proposal; 9 the 8 he tuned on the glass grown with the text, x
-// 24 / 22, architect 2026-11-03: the triangles grow with the text). THE
+// planner's proposal; 9 the 8 he tuned on the glass grown with the text
+// round's 24, architect 2026-11-03, and kept by the retrofit the same day
+// at the 22-px text, its brief: "the triangles' rows" stand). THE
 // CELL STAYS ONE DEVICE PX (cue_triangle_unit_px above) and the staircase
 // whole cells; only the count rides the scale: 9 rows at 300 %, 6 at 200 %,
 // 4 at 150 % (4.5 rounded to even) and at 138 % (4.14), 11 at 360 %; at the
@@ -1542,14 +1553,13 @@ inline int cue_triangle_rows() {
     return skin_px(kCueTriangleRowsAt300);
 }
 // THE LABEL'S HORIZONTAL LENGTHS, DEVICE PX AT 300 % through skin_px (the
-// text round, architect 2026-11-03: every length authored round the text
-// grows with it): THE FILL'S PAD either side of a segment's text,
-// kCueFillPadAt300 = 4 (a pad inside a box, grown as the clock field's
-// pad, x 16 / 12) — the resting segment's box, the press target, the flag
+// text round, architect 2026-11-03; kept by the retrofit the same day at the
+// 22-px text): THE FILL'S PAD either side of a segment's text,
+// kCueFillPadAt300 = 4 (a pad inside a box) — the resting segment's box, the press target, the flag
 // editor's field round its run (the caret's column borrowed from its right
 // pad) — and THE SEGMENT GAP between two of a marker's segments' boxes (the
-// bound cells, the history's two halves), kCueSegmentGapAt300 = 13 (grown
-// with the text, x 24 / 22), each floored at one device px; the cull bounds sum them
+// bound cells, the history's two halves), kCueSegmentGapAt300 = 13, each
+// floored at one device px; the cull bounds sum them
 // (marker_flag_max_width_px, the history lane's). THE PAIR 4 / 13 STANDS
 // (architect 2026-11-03, on mock dec6a; not 3 / 12).
 inline constexpr double kCueFillPadAt300    = 4.0;
@@ -1566,7 +1576,8 @@ inline int cue_segment_gap_px() {
 // to not move text, but it should, relative to what I tuned it to"): the
 // reach (cue_triangle_reach_right_px, the triangle's rows), then THE GAP, 13
 // DEVICE PX AT 300 % (kCueLabelGapAt300; architect 2026-11-02, "flag text
-// lead in at 12 pixels", grown with the text x 24 / 22 2026-11-03) through
+// lead in at 12 pixels"; 13 since the text round, 2026-11-03, and as the
+// approved retrofit mock g1 carries it at the 22-px label) through
 // skin_px, rounded at the element — so the label follows the rows and keeps
 // the gap. At 300 %: 9 + 13 = 22; at 200 %: 6 + 9 = 15; at 150 %: 4 + 6 =
 // 10 (6.5 rounded to even); at 138 %: 4 + 6 = 10 (5.98 rounded). The gap is
@@ -1605,13 +1616,13 @@ inline int cue_triangle_h_px() {
 // the x band — the label face's "l" ink, its "x" ink and its descent, each
 // rounded at the element (gui_font_ascender_ink_px, gui_font_x_ink_px,
 // gui_font_descent_px) — so the band is x + k above the baseline and k
-// below it. AT 300 % (Bold 24: ascender 17, x 13, descent 5): k 5, the band
-// 18 above the baseline and 5 below (23), the lane 3 + 10 + 23 + 10 + 3 =
-// 49, the baseline 31 rows under the lane's top, THE X BAND 18 ROWS FROM
-// THE LANE'S TOP AND FROM ITS BOTTOM; at 200 % (Bold 16: 12, 8, 3): k 4,
-// the band 12 + 4 = 16, the lane 2 + 7 + 16 + 7 + 2 = 34. The triangle's
+// below it. AT 300 % (Bold 22: ascender 16, x 12, descent 5): k 5, the band
+// 17 above the baseline and 5 below (22), the lane 3 + 10 + 22 + 10 + 3 =
+// 48, the baseline 30 rows under the lane's top, THE X BAND 18 ROWS FROM
+// THE LANE'S TOP AND FROM ITS BOTTOM; at 200 % (Bold 15: 11, 8, 3): k 3,
+// the band 8 + 3 + 3 = 14, the lane 2 + 7 + 14 + 7 + 2 = 32. The triangle's
 // device rows are the lane's bottom rows (cue_above_triangle_h_px the
-// remainder: 49 − 9 = 40 at 300 %), under the band's descenders.
+// remainder: 48 − 9 = 39 at 300 %), under the band's descenders.
 inline constexpr double kCueEditorOutlineAt300 = 3.0;
 inline constexpr double kCueEditorPadAt300     = 10.0;
 inline int cue_editor_outline_px() {
@@ -1774,11 +1785,10 @@ WellColumns well_columns(const AppState& a);
 // membership), all one lane ON THE WINDOW'S FOOT.
 //
 // THE ROW IS THE STRIP (architect 2026-10-22, the simple layout): THE STRIP
-// PAD, the program's case (the band's own, read from its accessors above so
-// the rows cannot drift apart), THE STRIP PAD — strip_h_px, at key_height
-// 60 120 device rows at 300 % (30 + 60 + 30, the pad half the key since
-// 2026-11-03; the band's own strip under its logo lane) — on the bare
-// ground, no
+// PAD, the program's cell (the band's own, read from its accessors above so
+// the rows cannot drift apart), THE STRIP PAD, the keys' legends in it —
+// strip_h_px, at key_height 33 111 device rows at 300 % (39 + 33 + 39, the
+// hi-fi's again since 2026-11-03) — on the bare ground, no
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
 // and then barred groups and the border under it stood 2026-10-09 to
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
@@ -1811,10 +1821,10 @@ inline int bottom_row_h_px() {
 // every lane above and below the well is a skin length or a hairline,
 // derived at the element — the logo lane, the strip pads and the keys
 // following `key_height` (the case block above), the well's lanes (the
-// well's lanes block above). At the tablet's 300 % and key_height 60 the
-// band 173 (53 + 30 + 60 + 30), the well's lanes above the canvas 110 (19 +
-// 42 + 49) and its foot line 1, the well's foot 1 and row 8 120 (30 + 60 +
-// 30): the canvas 1035 rows of the surface's 1440 — main.cpp's lane table
+// well's lanes block above). At the tablet's 300 % and key_height 33 the
+// band 144 (72 + 33 + 39), the well's lanes above the canvas 108 (19 + 41
+// + 48) and its foot line 1, the well's foot 1 and row 8 111 (39 + 33 +
+// 39): the canvas 1075 rows of the surface's 1440 — main.cpp's lane table
 // the record of each scale.)
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
@@ -1834,12 +1844,12 @@ inline int scrub_channel_h_px() {
     return hairline_px();
 }
 inline int scrub_thumb_h_px() {
-    return icon_case_h_px();
+    return key_face_h_px();
 }
-// The channel's rows below the case's top: THE CASE'S CENTER ROW, the
+// The channel's rows below the thumb's top: THE FACE'S CENTER ROW, the
 // centered elements' tie rule (the remainder rounded down, the upper row
-// winning a tie) — 29 at 300 % on the 60-row case at key_height 60, row
-// 1379.
+// winning a tie) — 15 at 300 % on the 31-row face at key_height 33, row
+// 1384.
 inline int scrub_channel_above_px() {
     return (scrub_thumb_h_px() - scrub_channel_h_px()) / 2;
 }
@@ -2487,13 +2497,12 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // area's whole height, painted after the divider (build_canvas_list's
 // order), the dots counted from the canvas's first row with no re-phasing,
 // so the divider's row carries a dot exactly where the phase lands one (at
-// the geometry below, area-local row 517: the cursor's odd rows land
+// the geometry below, area-local row 537: the cursor's odd rows land
 // there, a cue stem's even rows do not). At 300 % on the tablet at
-// key_height 60 (the square key's default) the canvas is 1035 rows,
-// 284-1318 (main.cpp's lane table, re-derived 2026-11-03 for the text
-// round): the upper well's band 517 rows (284-800), the divider row 801 and
-// the lower well's band 517 rows (802-1318), no spare row (1035 less the
-// divider's 1 is even).
+// key_height 33 (its default) the canvas is 1075 rows, 253-1327 (main.cpp's
+// lane table, re-derived 2026-11-03 for the retrofit): the upper well's
+// band 537 rows (253-789), the divider row 790 and the lower well's band
+// 537 rows (791-1327), no spare row (1075 less the divider's 1 is even).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot

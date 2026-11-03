@@ -8,7 +8,7 @@
 #include <utility>
 
 int notification_pad_px() {
-    // The pad (the ruling at the declaration, 24 at 300 %): an area, rounded at the element.
+    // P18 (the ruling at the declaration): an area, rounded at the element.
     return skin_px(kNotificationPadAt300, 1);
 }
 
@@ -19,7 +19,7 @@ int notification_cap_px() {
 
 int notification_card_h_px() {
     // border + pad + cap + pad + border, each its own rounded part (the
-    // composite rule, scaled_px's head): 1 + 24 + 17 + 24 + 1 = 67 at 300 %.
+    // composite rule, scaled_px's head): 1 + 18 + 15 + 18 + 1 = 53 at 300 %.
     return 2 * hairline_px() + 2 * notification_pad_px() +
            notification_cap_px();
 }
@@ -58,8 +58,8 @@ GuiRect notification_stack_bound(const AppState& a) {
     // first row of ground (render_trim_flags' bar, one hairline down), so the
     // first card's top border and the bar's top frame line are ONE LINE of
     // the one frame tone (architect 2026-11-02, M14 "d": "the card's top
-    // border one line with the trim bar's frame row"; row 174 at 300 % at
-    // key_height 60).
+    // border one line with the trim bar's frame row"; row 145 at 300 % at
+    // key_height 33).
     // The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well).

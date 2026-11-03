@@ -18,23 +18,27 @@
 // NO PROPORTIONAL FIT (architect 2026-10-09 ~10:25, "I'd like to see it at
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
-// UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM (architect 2026-11-02, on
-// mock sqm_01_66px): the key is square, the `key_height` tuning key's
-// device px at 300 % on both axes (60 its default), a skin length
-// (render.h's case block, icon_case_w_px / icon_case_h_px), not Cool Edit's
-// 23-W case; its Breeze glyph is centered on its face by its own ink-box
-// road, its size following the key (paint_key_glyph). THE SIZE ON THE
-// GLASS is gui_scale's (the device's choice, never this header's).
+// UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM: the key's cell is a skin
+// length, 69 device px at 300 % wide — Cool Edit's 23-W case, back as a
+// device-px constexpr since 2026-11-03 (the retrofit, reversing the square
+// key of 2026-11-02) — by the `key_height` tuning key's device px at 300 %
+// tall (33 its default; render.h's case block, icon_case_w_px /
+// icon_case_h_px), its face the cell inset one device px; its Breeze glyph
+// is centered on its face by its own ink-box road, its size following the
+// key's height (paint_key_glyph), its legend under it (paint_key_legend).
+// THE SIZE ON THE GLASS is gui_scale's (the device's choice, never this
+// header's).
 //
 // THE SIMPLE LAYOUT (architect 2026-10-22, "the bevels are def part of the
 // problem … redesign with dead simple layout", the mocks at 300 %), FLAT
 // SINCE 2026-11-01 (materials.h; the well 2026-11-01 night, "THE MAIN PAGE
 // IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
 // bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (render.h's
-// logo lane block), THE STRIP PAD, the key, THE STRIP PAD (half the key,
-// architect 2026-11-03: render.h's strip_pad_px; plain ground), its keys in
-// plain runs on the ground, the runs the strip pad apart (render.h's
-// program_run_gap_px); then THE WELL, flat regions on
+// logo lane block, 72 device px at 300 %), the key's cell, THE STRIP PAD
+// (39 at 300 %, render.h's strip_pad_px; the keys' legends in it), its keys
+// in plain runs on the ground, the runs 45 apart at 300 % (render.h's
+// program_run_gap_px; the hi-fi's lengths again since 2026-11-03, the
+// retrofit); then THE WELL, flat regions on
 // the ground (render.h's well paragraph and its lanes block, which derive
 // every length at the element) — a row of ground, THE TRIM BAR (its frame
 // and its interior, view_bar_field_at300's 16 px), THE RULER FLIPPED, a row
@@ -46,8 +50,8 @@
 // ground, the well's foot; then ROW 8, THE STRIP PAD, the case, THE STRIP
 // PAD, on the window's foot. THE WELL STANDS 6 W IN FROM EACH SIDE of the
 // window's client area on the ground (column_margin_px), its regions sharing
-// the well's two edge columns (render.h's well_columns, the keys' outer
-// columns: THE EDGE RULE). (The band's head and foot lines and its panes,
+// the well's two edge columns (render.h's well_columns, the outermost keys'
+// faces' outer columns: THE EDGE RULE). (The band's head and foot lines and its panes,
 // the tab strip under it, the column's air, the column's foot, the dock bar,
 // row 8's bars and the border under row 8 stood 2026-10-09 to 2026-10-22;
 // the program ring round the column 2026-10-22 to 2026-11-02; git history.)
@@ -77,19 +81,18 @@
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
 struct ProgramSpec {
-    // (THE CASE HAS NO W TERM HERE: the square key's side is the
-    // `key_height` tuning key's, render.h's case block, 2026-11-02.)
+    // (THE CASE HAS NO W TERM HERE: the cell is render.h's case block, its
+    // width the device-px constexpr kKeyCellWAt300 and its height the
+    // `key_height` tuning key's, 2026-11-03.)
     // COOL EDIT'S TOOLBAR HAS NO HOVER FACE (a capture with the
     // pointer on a button differs from one without only by Wine's tooltip):
     // the roster's and the render player's hot face is never lit, the hover
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
     // (THE STRIPS' RUN GAP — 15 W, row 8's group gap as the bars left it —
-    // AND THE STRIP PAD — 13 W, settled 2026-10-23 — left this spec
-    // 2026-11-03: both are half the key, render.h's strip_pad_px and
-    // program_run_gap_px, architect: "pad should be half the icon size";
-    // "the horizontal spacing between icon sections matching the vertical
-    // padding".)
+    // AND THE STRIP PAD — 13 W, settled 2026-10-23 — are render.h's device-px
+    // constexprs since 2026-11-03, kRunGapAt300 45 and kStripPadAt300 39, the
+    // same lengths: the retrofit reversed that morning's "half the key".)
     // THE STRIPS' ENDS ARE THE WELL'S EDGE COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring, the well's columns since the flat well — THE EDGE RULE;
@@ -97,9 +100,10 @@ struct ProgramSpec {
     // strips and the well coincide at every scale whatever the grid floor's
     // leftover. BOTH STRIPS ARE FLUSH WITH THE WELL at both ends (architect
     // 2026-10-23, "shouldn't row 8 take the same rule as top strip?" — yes):
-    // the band's first case and row 8's clock field start on the well's
-    // left edge column, the band's right run and row 8's block end one past
-    // its right edge column — the modals' controls row's seat
+    // the band's first face and row 8's clock field start on the well's
+    // left edge column, the band's right run's and row 8's block's last face
+    // end one past its right edge column, their cells one inset px past
+    // (2026-11-03) — the modals' controls row's seat
     // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
     // row 8 and the controls row), so neither strip nor the controls row
     // carries a field here.
@@ -182,9 +186,8 @@ inline constexpr ProgramSpec kProgramSpec = {
 };
 
 // (THE AUTHORED TOTALS — the band's and row 8's strip pads in W, the lane
-// table's record — left with the strip pad, 2026-11-03: every lane of the
-// band and of row 8 is a skin length following the key, render.h's case
-// block.)
+// table's record — left 2026-11-03: every lane of the band and of row 8 is
+// a skin length in device px at 300 %, render.h's case block.)
 // (THE CANVAS COLUMN'S W SUMS — the view bar's 7, the ruler's 12, the marker
 // lane's 17, the stereo divider's 3 — left with the flat well, 2026-11-02:
 // the well's lanes are device px derived at the element, render.h's well

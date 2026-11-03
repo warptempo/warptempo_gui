@@ -454,8 +454,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the lit fill, its cap
 // kTextOnLit (materials.h's paint_key, the flat look 2026-11-01), which this
-// key and the page key (while the symbols page stands) wear off their lamps,
-// pressed or not (a press on an unarmed key is the press face, 2026-11-02)
+// key and the page key (while the symbols page stands) wear off their lamps
+// — FFC281 under a press, FFAD56 at rest (2026-11-03) — and a press on an
+// unarmed key the press face, 6A6A6A (2026-11-03)
 // — and the letter caps
 // themselves, every one of which turns capital while the arm stands.
 inline const char* cap_word(const KeyDef& k, Page page) {
@@ -494,8 +495,8 @@ inline constexpr Page page_after(Role role, Page page) {
 // (300 %): the key 48 x 60, the gap 6, the pitch 54, so 1u 48, 1.5u 75, 2u
 // 102, 2.5u 129 and 4u 210 device px; at 200 % 32 x 40, the gap 4, the
 // pitch 36. THE KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S
-// `key_height` (architect 2026-10-29; the square key's side since
-// 2026-11-02, render.h's icon_case_w_px / icon_case_h_px): their box is
+// cell (architect 2026-10-29; render.h's icon_case_w_px / icon_case_h_px,
+// the 69 x key_height cell since 2026-11-03): their box is
 // `osk_key_w` x `osk_key_h` alone. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is
 // retired 2026-10-29, git history.)
@@ -614,10 +615,10 @@ inline bool stands(const AppState& a) {
 //     and unreachable: the keyboard's press claim takes the band, the ground
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
-//     arithmetic at modal_box.h's head; at 300 %, key_height 60 and the
-//     keyboard's defaults the controls row 968–1087, its cases 998–1057,
-//     the box 173–967, its top under the band's rows 0–172 with the
-//     53-row logo lane, 2026-11-03).
+//     arithmetic at modal_box.h's head; at 300 %, key_height 33 and the
+//     keyboard's defaults the controls row 977–1087, its cells 1016–1048,
+//     the box 144–976, its top under the band's rows 0–143 with the
+//     72-row logo lane, 2026-11-03).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press or the
 // touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),
@@ -880,7 +881,8 @@ inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
 // THE KEY UNDER A POINT, or -1, asked of the PAINTED key through the keys'
 // one predicate (point_on_key, materials.h). A press inside the surface but
 // off every key — the gaps, the margins — answers -1 (architect 2026-11-02,
-// R11: the keyboard's gap is dead like the group gap) and is still CONSUMED
+// R11: the keyboard's gap is dead like the ground round a program key's
+// face) and is still CONSUMED
 // by the surface's own claim (the press router owns that rule); this
 // function answers only "which key", never "whose press".
 //

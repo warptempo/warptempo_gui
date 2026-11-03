@@ -46,7 +46,7 @@
 // and/or time based. No pages. Pages are only kept in the background"):
 //   * THE MEDIA PLAYER'S, with the soundtrack: BACK, PLAY / PAUSE and FWD
 //     at the left, a deck's order (the render player's transport seats, PLAY
-//     its key and its glyph — score_viewer_play_face — in the second as the
+//     its key, its glyph and its legend — score_viewer_play_face — in the second as the
 //     player's stands between its two skips), THE SKIPS (architect
 //     2026-10-27): BACK and FWD skip the soundtrack 3 s back / forward at its
 //     own rate, their Shift-press or long press 10 s (score_viewer_skip_
@@ -431,10 +431,32 @@ inline bool score_viewer_button_enabled(const AppState& a,
     return false;
 }
 
+// THE KEYS' PRINTED LEGENDS (in capitals under the key, since 2026-10-23;
+// back 2026-11-03, the retrofit; the seat paint_handler.cpp's
+// key_legend_seat). PLAY / PAUSE's is the render player's Play key's, by its
+// face (render_player_button_legend, paint_handler.cpp, which the painter
+// asks). The skips print BACK and FWD (architect 2026-10-27), one print for
+// both forms, as the roster's START / END do.
+inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
+    using Act = AppState::ScoreButtonAct;
+    switch (act) {
+        case Act::PrevPage:    return "PREV";
+        case Act::NextPage:    return "NEXT";
+        case Act::SkipBack:    return "BACK";
+        case Act::SkipForward: return "FWD";
+        case Act::PlayPause:   return "PLAY";
+        case Act::Reset:       return "RESET";
+        case Act::SetStart:    return "START";
+        case Act::SetEnd:      return "END";
+        case Act::Close:       return "CLOSE";
+        case Act::None:        break;
+    }
+    return "";
+}
+
 // THE KEYS' GLYPHS (architect 2026-11-01, M9; Breeze's roster as ruled
-// 2026-11-02), each key's one mark (no word under it since 2026-11-02, the
-// rule at paint_handler.cpp's paint_key_glyph; the act's name the tooltip's,
-// score_viewer_button_hint below): PREV / NEXT GoPreviousViewPage /
+// 2026-11-02), on each key's face, its legend (above) under it and the act's
+// name the tooltip's (score_viewer_button_hint below): PREV / NEXT GoPreviousViewPage /
 // GoNextViewPage (the page road), BACK / FWD MediaSeekBackward /
 // MediaSeekForward, RESET EditReset, START ZoneIn, END ZoneOut, CLOSE
 // WindowClose (architect 2026-11-02, R15: the viewer's icons stay as they

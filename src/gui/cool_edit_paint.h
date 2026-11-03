@@ -40,11 +40,11 @@
 // clock and other related fields to make the spacing even"; Live's numeric
 // fields, the transport's position and tempo boxes): A FLAT kKeyFace 363636
 // BOX, NO RING. Its digits are the caller's, the text tone kTextInk, no
-// shadow — every time field in the program face's 24 px, row 8's clock
+// shadow — every time field in the program face's 22 px, row 8's clock
 // (architect 2026-10-26 ~11:30), the render player's two (~12:10, "yes" to
 // symmetry; gui_font.h's table) and the score viewer's — centred on both
 // axes (paint_handler.cpp's time_field_* accessors own the 16-px pads and
-// the 49-px height derived from them, 2026-11-03).
+// the 47-px height derived from them, 2026-11-03).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 
 // (THE TAB STRIP — paint_ce_tab_strip, ce_tab_strip_layout, kCeTabCount and
@@ -78,7 +78,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // later tablets may have higher dpi, but not lower" — and "yes" to the
 // planner's proposal): authored 9 device px at 300 %, the 8 rows the
 // tuning key left on the tablet (~13:05, "read the current setting and
-// apply") grown with the text (architect 2026-11-03), rounded at the
+// apply") grown with the text round (architect 2026-11-03; kept by the
+// retrofit the same day), rounded at the
 // element like every length off the canvas (render.h's cue_triangle_rows,
 // the one accessor) — 9 rows at 300 %, 6 at 200 %, 4 at 150 % and 138 %,
 // 2 at the scale's floor of 50 %.
