@@ -783,7 +783,7 @@ void render_playhead(GuiCanvasSink& sink,
     // deepest-zoom floor holding q >= 20 (0.475 px; kDeepestZoomMinFramesPerPx,
     // app_state.h). Reading the bar as [g(c) − spp/2, g(c) + spp/2) is the
     // alternative that was declined.
-    const int col = playhead_line_column(playhead_pixel_x);
+    const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
     // The waveform_line_px()-wide line (render.h) paints whenever its column
     // is onscreen (gated on its own column and clipped at the right edge), so
@@ -1332,7 +1332,8 @@ enum class GuiFlagSide { Live, Added, Removed };
 
 // The resolved paint of ONE cue (the palette block's marker-lane paragraph,
 // render.h, owns the look): the triangle's color, the dots
-// on each of the stem's two phases (none at all on a disabled cue), and
+// on each of the stem's two phases and on the playhead's odd rows (none at
+// all on a disabled cue; the odd rows a selected cue's alone), and
 // whether its label is STRUCK (show_cue_label's bar). The label's other
 // look is the segment's own (inert, or the text tone, materials.h's
 // kTextInk); the selection never reaches it.
@@ -1340,6 +1341,7 @@ struct FlagFace {
     GuiColor  triangle;
     GuiCueDot cue_phase_dots;
     GuiCueDot range_phase_dots;
+    GuiCueDot playhead_phase_dots;
     bool      struck;
 };
 
@@ -1351,29 +1353,32 @@ struct FlagFace {
 // actually effective because that's what happens to them. They become
 // one"; "Two, agree" — the history's removed half struck, in the cue
 // color). THE TABLE, the ladder read top to bottom, the first
-// matching row wins (dots: range phase | cue phase):
-//   flag                     triangle  dots                label
-//   DISABLED (any kind)      inactive  none                inactive, struck as below
-//   any live cue             cue       stem | stem         bone, struck as below
+// matching row wins (dots: range phase | cue phase | odd rows):
+//   flag                     triangle  dots                     label
+//   DISABLED (any kind)      inactive  none                     inactive, struck as below
+//   any live cue             cue       stem | stem | none       bone, struck as below
 // — warp or phase reset, whatever the side (a live lane's cue or either
 // `h` half) — and THE SELECTION over the live row alone (architect
 // 2026-11-02, M10 rule 1: the selected look is on the canvas, not in the
 // label):
-//   SELECTED (live cue)      cue       playhead | stem     unchanged
+//   SELECTED (live cue)      cue       stem | stem | playhead   unchanged
 // — "stem" the `cue_stem` (architect 2026-11-02, mock t1: every stem Live's
-// gray 919191, the triangle the `cue`); a selected live cue's RANGE phase
-// (rows ≡ 0 mod 4, the first from the top) the `playhead_line`, its cue
-// phase (rows ≡ 2) the `cue_stem`, the playhead's color interspersed with
-// the stem's. THE TRIANGLE NEVER MARKS FOCUS OR SELECTION (architect
+// gray 919191, the triangle the `cue`); A SELECTED LIVE CUE'S STEM IS ONE
+// SOLID LINE (architect 2026-11-02: "selected and focused should look the
+// same as selected and unfocused, because the former has the playhead above
+// it to indicate the focus"): its two phases (the even rows) the `cue_stem`
+// and the playhead's rows (`dot_period` / `playhead_dot_phase`, the odd
+// rows) the `playhead_line`, painted by the stem itself — the look a stem
+// has with the playhead standing on it, whether the playhead is there or
+// not; under the playhead its dots land on the rows the stem already paints
+// white, so nothing changes. THE TRIANGLE NEVER MARKS FOCUS OR SELECTION (architect
 // 2026-11-02: "playhead coincident on marker should not change marker
 // triangle - that was a misinterpretation"): the `cue`, or the
 // `inactive_cue` on a disabled cue, whatever the focus — live lanes and the `h` view alike;
 // the ruler's head is the cue for where the playhead stands. So A SELECTED
 // DISABLED CUE SHOWS NO SELECTION (architect 2026-11-02, "3 accept"): no
 // dots and the inactive triangle, the playhead standing on it after the
-// arming press its only mark. While the playhead's painted column is a
-// selected stem's, the stem's range phase yields to the playhead's dots
-// (paint_marker_stems, per frame; the resolver never sees the playhead).
+// arming press its only mark. The resolver never sees the playhead.
 // THE STRIKE, whatever the row: a live cue in its column's red set (`red`,
 // warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
 // coincident run, and on the warp column a label ref the render falls back
@@ -1392,8 +1397,9 @@ struct FlagFace {
 // label struck.
 // THE DOTS' ROWS, counted from the canvas's first row, are the cue phase
 // ≡ 2 and the range phase ≡ 0 (mod 4), the range's first from the top, the
-// playhead's on the odd rows between — one on, one off (architect
-// 2026-11-02, mock t1; program_spec.h's dot fields, the rule's owner), a
+// playhead's (and a selected stem's own white) on the odd rows between —
+// one on, one off (architect 2026-11-02, mock t1; program_spec.h's dot
+// fields, the rule's owner), a
 // point cue's range start and end superimposed;
 // "bone" the text tone (materials.h's kTextInk B5B5B5 since the flat look's
 // M13, 2026-11-02, the words' and the flags' one ink) — every label on the
@@ -1403,9 +1409,10 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
     const GuiPalette& p = palette();
     const bool struck = red || side == GuiFlagSide::Removed;
     if (disabled)
-        return FlagFace{p.inactive_cue, GuiCueDot::None, GuiCueDot::None, struck};
-    return FlagFace{p.cue, GuiCueDot::Cue,
-                    selected ? GuiCueDot::Playhead : GuiCueDot::Cue, struck};
+        return FlagFace{p.inactive_cue, GuiCueDot::None, GuiCueDot::None,
+                        GuiCueDot::None, struck};
+    return FlagFace{p.cue, GuiCueDot::Cue, GuiCueDot::Cue,
+                    selected ? GuiCueDot::Playhead : GuiCueDot::None, struck};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
@@ -1508,8 +1515,8 @@ static CuePassScratch g_cue_pass_scratch;
 // publication — one FlagHitRect per cue (its label box as painted and its
 // triangle, both clipped to the waveform's columns, and the cue's diff half),
 // and one MarkerStem per cue whose dots paint and whose column is a waveform
-// column (a nudged history pair's two cues each their own), its two phases
-// the face's (a selected cue's range phase the `playhead_line`). `lane` is the
+// column (a nudged history pair's two cues each their own), its dots the
+// face's (a selected cue's odd rows the `playhead_line`). `lane` is the
 // marker lane, `x0` / `w` the waveform's columns the pass is clipped to (the
 // caller set the clip). Cues arrive in store order and are ordered here by
 // column (stable).
@@ -1692,11 +1699,13 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         }
         if (out_stems &&
             (c.face.cue_phase_dots != GuiCueDot::None ||
-             c.face.range_phase_dots != GuiCueDot::None) &&
+             c.face.range_phase_dots != GuiCueDot::None ||
+             c.face.playhead_phase_dots != GuiCueDot::None) &&
             stem_column_on_waveform(c.col - x0, w))
             out_stems->push_back(MarkerStem{c.index, static_cast<double>(c.col),
                                             c.face.cue_phase_dots,
-                                            c.face.range_phase_dots});
+                                            c.face.range_phase_dots,
+                                            c.face.playhead_phase_dots});
     }
 }
 

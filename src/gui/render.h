@@ -226,7 +226,7 @@ struct TrimRange {
 //                 `playhead_head` — its triangle in the ruler — and
 //                 `playhead_line` — its dots in the canvas (architect
 //                 2026-11-02, mock t1), lent to THE SELECTION (2026-11-02):
-//                 a selected cue's range-phase dots, never a triangle (THE
+//                 a selected cue's odd-row dots, never a triangle (THE
 //                 PLAYHEAD and THE MARKER LANE, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
@@ -501,9 +501,10 @@ void install_true_colors(bool on);
 // THE PLAYHEAD WEARS ITS TWO COLORS, AND LENDS ITS LINE'S TO THE SELECTION
 // ALONE: `playhead_head` is its head, `playhead_line` its dots (architect
 // 2026-11-02, mock t1: the head Live's cyan, the line white), the line's
-// color a selected cue's range-phase dots too (architect 2026-11-02, M10 rule 1:
-// the selected stem wears the playhead's color interspersed with its own;
-// THE MARKER LANE's SELECTED row); no triangle wears it (2026-11-02). THE
+// color a selected cue's odd-row dots too (architect 2026-11-02, M10 rule 1:
+// the selected stem is one solid line, the look of a stem with the
+// playhead on it; THE MARKER LANE's SELECTED row); no triangle wears it
+// (2026-11-02). THE
 // LINE AND THE SCANNER SHARE A VALUE, NOT A ROLE OR A FORM: the resting
 // playhead dotted, the scanner solid. THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
@@ -555,7 +556,7 @@ void install_true_colors(bool on);
 // point cue's stem is Cool Edit's range start and end superimposed — its
 // two dot phases on the canvas's device rows ≡ 0 (mod 4) and ≡ 2, one dot
 // every two rows, the even rows (program_spec.h's dot fields), both in the
-// `cue_stem` (the range phase the `playhead_line` when selected, below).
+// `cue_stem` (and the odd rows the `playhead_line` when selected, below).
 // WARP AND PHASE RESET WEAR THE SAME CUE:
 // the kind reads from the view that lists it — the lane paints the active
 // column's markers alone, the Warp and Phase Reset views — and from its
@@ -569,8 +570,8 @@ void install_true_colors(bool on);
 // stroke on its own strikeout rows, gui_font_strike_band) — the invalid
 // color of 2026-10-11, its triangle, dots and label, retired with its role.
 // THE SELECTION SHOWS ON THE CANVAS, NOT IN THE LABEL (architect 2026-11-02,
-// M10 rule 1): a selected cue's stem wears the `playhead_line` on one of its
-// two phases, interspersed with its `cue_stem` dots (SELECTED below); THE
+// M10 rule 1): a selected cue's stem is ONE SOLID LINE, its `cue_stem` dots
+// on the even rows and the `playhead_line` on the odd (SELECTED below); THE
 // TRIANGLE NEVER MARKS FOCUS OR SELECTION (2026-11-02). THE
 // TABLE — which triangle, which dots, which label, which strike — is
 // resolve_flag_face's head (render.cpp), the one resolver every cue goes
@@ -621,20 +622,18 @@ void install_true_colors(bool on);
 //             inert cue text);
 //   SELECTED  ON THE CANVAS, NOT IN THE LABEL (architect 2026-11-02, M10
 //             rule 1: the band under the label "looks like highlighted text
-//             inside the editor"): THE STEM WEARS THE PLAYHEAD'S COLOR
-//             INTERSPERSED WITH THE MARKER'S DOTS — the `playhead_line` on
-//             the range phase (rows ≡ 0 mod 4, the first from the top), the
-//             `cue_stem` on the cue phase (rows ≡ 2) — white and gray
-//             alternating down the even rows of one column, the odd rows
-//             empty. THE COINCIDENT STEM IS 1:1 (architect 2026-11-02:
-//             "Yes, playhead marker, 1-to-1"; one on, one off, mock t1s):
-//             while the playhead's PAINTED column is a selected stem's, the
-//             stem's range phase yields to the `cue_stem` and the
-//             playhead's own dots (the odd rows) are the white — one white,
-//             one gray down the column, ONE SOLID LINE, the look of any stem
-//             under the playhead
-//             (paint_marker_stems decides it per frame; the stash and the
-//             flag cache never see the playhead). THE TRIANGLE NEVER MARKS
+//             inside the editor"): THE STEM IS ONE SOLID LINE (architect
+//             2026-11-02: "selected and focused should look the same as
+//             selected and unfocused, because the former has the playhead
+//             above it to indicate the focus") — its two phases (the even
+//             rows) the `cue_stem` and the playhead's rows (the odd rows,
+//             `dot_period` / `playhead_dot_phase`) the `playhead_line`,
+//             painted by the stem itself: one gray, one white down the
+//             column, the look of any stem with the playhead standing on it,
+//             whether the playhead is there or not. Under the playhead
+//             nothing changes: its dots land on the rows the stem already
+//             paints white (the stash and the flag cache never see the
+//             playhead). THE TRIANGLE NEVER MARKS
 //             FOCUS OR SELECTION (architect 2026-11-02: "playhead coincident
 //             on marker should not change marker triangle - that was a
 //             misinterpretation"): the `cue` on every live cue, focused or
@@ -667,8 +666,8 @@ void install_true_colors(bool on);
 // canvas's first and last rows; the `cue`, every live reset's — a
 // coincident one's too, its struck label the mark (2026-10-26; the invalid
 // color alone 2026-10-11 to 2026-10-26); THE RESTING PAIR WHETHER SELECTED
-// OR NOT (2026-11-02: a selected reset's stem takes the playhead's dots, its
-// ring keeps the `cue`).
+// OR NOT (2026-11-02: a selected reset's stem is the solid line, its ring
+// keeps the `cue_stem` on both phases).
 //
 // EDITING: THE FIELD IS AN EDIT FIELD ON THE LANE'S WHOLE ROWS (architect
 // 2026-10-09, reversing 2026-10-07 ~09:45's flag-in-its-selected-face; its
@@ -720,7 +719,7 @@ void install_true_colors(bool on);
 // two segments; a nudged pair two cues joined by the ring
 // (render_history_diff_flags owns the pair). The view's focus or selection
 // gives the whole item the live lane's SELECTED row — both halves' stems the
-// playhead's dots, the triangles and the labels as at rest
+// solid line, the triangles and the labels as at rest
 // (render_history_diff_flags).
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
@@ -2992,14 +2991,6 @@ struct GuiPlateColumns {
 // Through the canvas sink (2026-10-13, canvas_sink.h), as is the anchor stem
 // below.
 enum class PlayheadForm { Solid, Dotted };
-// THE LINE'S COLUMN, area-local: the nearest lattice point to
-// `playhead_pixel_x` (the rule at render_playhead's body), the one rounding
-// render_playhead paints at and paint_marker_stems compares a stem's column
-// against (the coincident stem, architect 2026-11-02). The line paints there
-// exactly when waveform_line_width admits the column.
-inline int playhead_line_column(double playhead_pixel_x) {
-    return static_cast<int>(std::nearbyint(playhead_pixel_x));
-}
 void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
                      double  playhead_pixel_x,
@@ -3240,15 +3231,17 @@ struct FlagLaneRects {
     int     columns_x = 0;
 };
 
-// WHICH COLOR A CUE'S DOTS WEAR ON ONE OF THE STEM'S TWO PHASES
-// (`cue_dot_phase` and `range_dot_phase`, program_spec.h — Cool Edit's cue
-// and range phases), named as a ROLE so the stash keeps no color and the
-// painter reads the palette live (resolve_flag_face, render.cpp, the one
-// table): none; `Cue`, the `cue_stem` — every stem's one color (architect
-// 2026-11-02, mock t1: Live's gray 919191; the triangle keeps the `cue`);
-// or `Playhead`, the `playhead_line` — A SELECTED CUE'S RANGE PHASE
-// (architect 2026-11-02, M10 rule 1: the selected stem wears the playhead's
-// color interspersed with the marker's dots).
+// WHICH COLOR A CUE'S DOTS WEAR ON ONE OF THE STEM'S ROW SETS — its two
+// phases (`cue_dot_phase` and `range_dot_phase`, program_spec.h — Cool
+// Edit's cue and range phases) and the playhead's rows (`dot_period` /
+// `playhead_dot_phase`, the odd rows) — named as a ROLE so the stash keeps
+// no color and the painter reads the palette live (resolve_flag_face,
+// render.cpp, the one table): none; `Cue`, the `cue_stem` — every stem's
+// one color on its two phases (architect 2026-11-02, mock t1: Live's gray
+// 919191; the triangle keeps the `cue`); or `Playhead`, the `playhead_line`
+// — A SELECTED CUE'S ODD ROWS (architect 2026-11-02, M10 rule 1: the
+// selected stem is one solid line, the look of a stem with the playhead on
+// it).
 enum class GuiCueDot : uint8_t { None, Cue, Playhead };
 // The live palette role a dot color names. Precondition: not None.
 inline GuiColor cue_dot_color(GuiCueDot d) {
@@ -3261,19 +3254,17 @@ inline GuiColor cue_dot_color(GuiCueDot d) {
 // ITS CLASS RESOLVED TO ON EACH PHASE (resolve_flag_face, render.cpp;
 // architect 2026-10-09 ~11:50, 2026-10-26): every live cue — warp, phase
 // reset, coincident or not, and both of the history's halves — the
-// `cue_stem` on both phases (architect 2026-11-02, mock t1), and A SELECTED
-// CUE the `playhead_line` on its range phase, the `cue_stem` on its cue
-// phase (architect 2026-11-02, M10 rule 1: the playhead's color
-// interspersed with the marker's dots). The flag PAINTERS are the only producers — the
+// `cue_stem` on both phases (architect 2026-11-02, mock t1) and nothing on
+// the odd rows, and A SELECTED CUE the same two phases and the
+// `playhead_line` on the playhead's odd rows (architect 2026-11-02, M10
+// rule 1: one solid line, playhead or not). The flag PAINTERS are the only producers — the
 // two live columns', and the `h` view's diff lane, which replaces them
 // wholesale while the mode stands; the one reader is the per-frame waveform
 // pass GuiPaintHandler::paint_marker_stems, which paints each phase's dotted
 // column (dotted_waveform_line_run, program_spec.h's dot fields) in the
 // palette's live role, so the dots and their triangle can never disagree
-// about a column or a class — save the one per-frame override that reader
-// owns: a selected stem under the playhead's painted column paints its range
-// phase in the `cue_stem` (architect 2026-11-02, the coincident stem 1:1),
-// the entry unchanged.
+// about a column or a class; the reader overrides nothing (the playhead's
+// dots, painted after, land on the rows a selected stem paints white).
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3289,8 +3280,9 @@ inline GuiColor cue_dot_color(GuiCueDot d) {
 struct MarkerStem {
     int       marker_index;
     double    x;
-    GuiCueDot cue_phase_dots;     // on cue_dot_phase
-    GuiCueDot range_phase_dots;   // on range_dot_phase
+    GuiCueDot cue_phase_dots;       // on cue_dot_phase
+    GuiCueDot range_phase_dots;     // on range_dot_phase
+    GuiCueDot playhead_phase_dots;  // on playhead_dot_phase (dot_period)
 };
 
 // THE NUDGED PAIR'S RING RUNS (architect 2026-10-10 ~18:55 → 2026-10-26):
@@ -3388,8 +3380,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //
 // `selected_set` GIVES THE SELECTED LOOK ON THE CANVAS (architect
 // 2026-11-02, M10 rule 1; resolve_flag_face's table): every selected
-// enabled marker's stem the playhead's dots interspersed with its own; the
-// triangle and the label paint as at rest.
+// enabled marker's stem one solid line, its own dots on the even rows and
+// the `playhead_line` on the odd; the triangle and the label paint as at
+// rest.
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted cue, left to right (the hit walk follows the paint order:
@@ -3652,9 +3645,9 @@ void render_phase_reset_flags(cairo_t* cr,
 // phase reset — a coincident one's too, its struck label the mark
 // (2026-10-26; the invalid color's ring 2026-10-11 to 2026-10-26) — THE
 // RESTING STEM'S PAIR WHATEVER THE SELECTION (architect 2026-11-02, M10
-// rule 1, the selected look the stem's and the triangle's alone): a selected
-// reset's or pair's stems take the playhead's dots, the rings stay in the
-// `cue_stem`, so a ring keeps its stems' pattern. The colors are the palette's live roles
+// rule 1, the selected look the stem's alone): a selected reset's or pair's
+// stems are the solid line, the rings stay in the `cue_stem` on both phases,
+// so a ring keeps its stems' resting pattern. The colors are the palette's live roles
 // (cue_dot_color), read by the painter as the stems read them. No disabled
 // arm, a disabled reset painting neither dots nor ring.
 struct GuiStemDots {
@@ -3841,8 +3834,8 @@ struct HistoryDiffFlag {
 // resolve_flag_face's table). The focus or membership SELECTS the flag — the
 // focus is the selection's singleton when the set is empty, and the revert
 // act reads them the same way — and A PAIR'S HALVES ARE ONE ITEM: both of a
-// nudged pair's stems take the playhead's dots, as a same-frame pair's one
-// stem does. The triangles and the labels paint as at rest (the triangle
+// nudged pair's stems are the solid line, as a same-frame pair's one stem
+// is. The triangles and the labels paint as at rest (the triangle
 // never marks focus, architect 2026-11-02; a nudged pair's focused half,
 // HistoryMode::focus_half, is the walk's and the press's, not the paint's).
 // THE

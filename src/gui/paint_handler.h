@@ -1057,13 +1057,13 @@ private:
     // the canvas alone (render.h's marker-lane paragraph); a DISABLED marker
     // stems never.
     // Which colors stand is resolved in the painter (resolve_flag_face) and
-    // published in the stash: the `cue_stem` gray on both dot phases at
-    // rest, and on a SELECTED cue the range phase in the playhead line's
-    // white (architect 2026-11-02, M10 rule 1) — save under the playhead
-    // (THE COINCIDENT STEM 1:1, below). The stems paint under the
-    // playhead's dots (architect 2026-09-23), which stand on the odd rows,
-    // so a playhead on a marker's column closes with it into one solid line
-    // (one on, one off, 2026-11-02).
+    // published in the stash: the `cue_stem` gray on both dot phases, and
+    // on a SELECTED cue the playhead line's white on the odd rows too, one
+    // solid line, playhead or not (architect 2026-11-02, M10 rule 1). The
+    // stems paint under the playhead's dots (architect 2026-09-23), which
+    // stand on the odd rows, so a playhead on a marker's column closes with
+    // it into one solid line (one on, one off, 2026-11-02) — on a selected
+    // stem the rows it already paints white.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its cue's apex column, and
@@ -1074,17 +1074,10 @@ private:
     //
     // NO PAINT-TIME COLOR OVERRIDE FROM AN EDITOR (architect 2026-10-03):
     // the stem paints the stash's face — its class and its selection
-    // (2026-11-02, the playhead's dots on a selected stem); the open flag
-    // editor's refusal recolors nothing. THE ONE PAINT-TIME DECISION IS THE
-    // PLAYHEAD'S (architect 2026-11-02, "Yes, playhead marker, 1-to-1"): a
-    // selected stem whose column is the resting cursor's PAINTED column
-    // (resting_cursor_pixel_x, playhead_line_column, on screen is as painted)
-    // paints its range phase in the `cue`, so the column alternates the
-    // playhead's white dots and the stem's own gray ones, one to one — the
-    // look of any stem under the playhead. Decided here, per frame, because
-    // the playhead moves every frame and the flag cache must not key on it;
-    // a cursor whose line paints nothing (its column off the canvas) makes
-    // no stem yield.
+    // (2026-11-02, a selected stem's solid line); the open flag editor's
+    // refusal recolors nothing, and NOTHING IS DECIDED AT PAINT TIME: the
+    // playhead never reaches the stems (architect 2026-11-02: a selected
+    // stem looks the same with the playhead on it or not).
     // It paints the `h` view's nudged pairs' ring runs first
     // (paint_marker_stem_runs, AppState::marker_stem_runs), the stems their
     // sides.
@@ -1098,10 +1091,6 @@ private:
     // one-device-px dots on the canvas's odd device rows, painted
     // after the marker stems, whose dots stand between its own.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
-    // THE RESTING CURSOR'S x, area-local, on the displayed plate's basis
-    // (wf_cache.fp_vp_start and its spp, the definition's reason): the one
-    // read paint_playheads paints at and paint_marker_stems compares with.
-    double resting_cursor_pixel_x() const;
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_marker_stems and paint_playheads: the scanner draws OVER the stems
     // (and over the cursor where they meet) instead of being erased by every

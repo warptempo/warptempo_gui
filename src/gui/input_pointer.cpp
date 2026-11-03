@@ -5221,8 +5221,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
         // lane in easy reach on every display, which is what the removal was
         // waiting for — marker work happens in the flag lane, and the
         // waveform is purely trim / playhead / pan / zoom. The stems still PAINT:
-        // always on, disabled-no-stem, a selected one's dots interspersed with
-        // the playhead's color (2026-11-02).
+        // always on, disabled-no-stem, a selected one a solid line, the
+        // playhead's white on its odd rows (2026-11-02).
         // The plain DRAG never selects markers either
         // (SELECTION FLOWS DOWNWARD ONLY, architect 2026-07-23 — the region no
         // longer selects its contents; it leaves the selection empty).

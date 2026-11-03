@@ -79,8 +79,9 @@
 //   playhead_line    FFFFFF  THE PLAYHEAD'S DOTTED LINE IN THE CANVAS
 //                            (architect 2026-11-02, mock t1), LENT TO THE
 //                            SELECTION alone (architect 2026-11-02, M10
-//                            rule 1): a selected cue's range-phase dots,
-//                            never a triangle
+//                            rule 1): a selected cue's odd-row dots,
+//                            painted by its stem whether the playhead
+//                            stands there or not, never a triangle
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems

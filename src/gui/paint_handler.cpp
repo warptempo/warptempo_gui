@@ -4389,8 +4389,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // t1), a coincident reset's too (its struck label the mark, architect
 // 2026-10-26; the invalid color alone 2026-10-11 to 2026-10-26); THE
 // RESTING PAIR WHETHER THE RESET IS SELECTED OR NOT (architect 2026-11-02,
-// M10 rule 1: a selected reset's stem takes the playhead's dots, its ring
-// keeps the `cue_stem`).
+// M10 rule 1: a selected reset's stem is the solid line, its ring keeps
+// the `cue_stem` on both phases).
 //   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
 //     the reset's stem already stands there (paint_marker_stems, after this
 //     pass), and a playhead on the reset interleaves its dots there as on
@@ -4611,7 +4611,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
 // what stems and in which colors (the `cue_stem` gray, the playhead line's
-// white on a selected cue's range phase) — is at the declaration.
+// white on a selected cue's odd rows) — is at the declaration.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its cue's APEX COLUMN, and that column was
@@ -4628,24 +4628,26 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // one run down the canvas's whole height, the stereo divider's row crossed
 // as any grid line, architect 2026-11-02) — none in the lane — on
 // rows ≡ cue_dot_phase and on rows ≡ range_dot_phase (mod cue_dot_period,
-// program_spec.h), each phase in the role the stash names for it
-// (GuiCueDot, cue_dot_color; resolve_flag_face's table: every live cue,
-// warp or phase reset, the `cue_stem` on both phases, one dot every two
-// rows — the even rows — the history's two halves alike, architect
-// 2026-11-02, mock t1; A SELECTED CUE the `playhead_line` on its range
-// phase, architect 2026-11-02, M10 rule 1) — the playhead's dots on the odd
-// rows, so neither shares a row with them. (The solid stem
-// through the well's top lines between its flanks stood 2026-10-02 to
-// 2026-10-09; git history.)
+// program_spec.h), and on a selected cue the playhead's own rows too (≡
+// playhead_dot_phase mod dot_period, the odd rows), each in the role the
+// stash names for it (GuiCueDot, cue_dot_color; resolve_flag_face's table:
+// every live cue, warp or phase reset, the `cue_stem` on both phases, one
+// dot every two rows — the even rows — the history's two halves alike,
+// architect 2026-11-02, mock t1; A SELECTED CUE the `playhead_line` on the
+// odd rows as well, ONE SOLID LINE, the look of a stem with the playhead on
+// it whether the playhead is there or not, architect 2026-11-02, M10 rule
+// 1). (The solid stem through the well's top lines between its flanks stood
+// 2026-10-02 to 2026-10-09; git history.)
 //
 // Z-ORDER (architect 2026-09-23): the stems paint UNDER the playhead's dots,
-// which follow this pass; on a shared column the phases never touch, and a
-// SELECTED stem there paints its range phase in the `cue`, the coincident
-// stem 1:1 (architect 2026-11-02; the declaration owns the rule).
+// which follow this pass; on a shared column an unselected stem's phases
+// never touch them, and a SELECTED stem's odd rows are the rows the
+// playhead's dots land on, the same white — nothing here reads the
+// playhead (architect 2026-11-02; the declaration owns the rule).
 // The full sequence is the paint-order block in on_redraw.
 //
 // THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): the list takes
-// each stem's phase as a dotted column, one run.
+// each stem's row set as a dotted column, one run.
 void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
                                          const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
@@ -4664,17 +4666,10 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
     // dotted_waveform_line_run, the one road) — rows ≡ phase (mod period)
     // from the canvas's top, one device px, at the stem's column.
     const ProgramSpec& ps = kProgramSpec;
-    // THE COINCIDENT STEM IS 1:1 (architect 2026-11-02, "Yes, playhead
-    // marker, 1-to-1"; the declaration owns the rule): the resting cursor's
-    // painted column, or -1 where its line paints nothing.
-    const int cursor_col = [&] {
-        const int c = playhead_line_column(resting_cursor_pixel_x());
-        return waveform_line_width(area.w, c) > 0 ? c : -1;
-    }();
-    const auto dotted_stem = [&](int col, int phase, GuiColor color) {
+    const auto dotted_stem = [&](int col, int period, int phase,
+                                 GuiColor color) {
         GuiCanvasDotRun run;
-        if (dotted_waveform_line_run(area, col, ps.cue_dot_period, phase,
-                                     run))
+        if (dotted_waveform_line_run(area, col, period, phase, run))
             sink.dots(std::span<const GuiCanvasDotRun>(&run, 1), color);
     };
     for (const MarkerStem& stem : app.marker_stems) {
@@ -4686,16 +4681,15 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
         if (stem.cue_phase_dots != GuiCueDot::None)
-            dotted_stem(col, ps.cue_dot_phase,
+            dotted_stem(col, ps.cue_dot_period, ps.cue_dot_phase,
                         cue_dot_color(stem.cue_phase_dots));
-        // A selected stem under the cursor yields its range phase's white
-        // to the playhead's own dots, its two phases the `cue_stem`.
-        const GuiCueDot range =
-            (col == cursor_col && stem.range_phase_dots == GuiCueDot::Playhead)
-                ? GuiCueDot::Cue
-                : stem.range_phase_dots;
-        if (range != GuiCueDot::None)
-            dotted_stem(col, ps.range_dot_phase, cue_dot_color(range));
+        if (stem.range_phase_dots != GuiCueDot::None)
+            dotted_stem(col, ps.cue_dot_period, ps.range_dot_phase,
+                        cue_dot_color(stem.range_phase_dots));
+        // A SELECTED stem's odd rows: the playhead's own period and phase.
+        if (stem.playhead_phase_dots != GuiCueDot::None)
+            dotted_stem(col, ps.dot_period, ps.playhead_dot_phase,
+                        cue_dot_color(stem.playhead_phase_dots));
     }
 }
 
@@ -4823,19 +4817,15 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 
 // -- GuiPaintHandler::paint_playheads ------------------------------------
 
-double GuiPaintHandler::resting_cursor_pixel_x() const {
+void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
+                                      const GuiRect& area) {
     // Use the displayed viewport AND its samples-per-pixel
     // (wf_cache.fp_vp_start, derived spp) so the cursor stays in
     // lockstep with the cached waveform / stem / flag layers during
     // the 1-2 paint frames while the worker rebuilds against a
     // viewport change. See declaration comment in app_state.h.
     const PlateViewportBasis basis = plate_viewport_basis();
-    return playhead_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-}
-
-void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
-                                      const GuiRect& area) {
-    const double px_x = resting_cursor_pixel_x();
+    const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
     // THIS PASS IS THE CURSOR'S CANVAS RUN, nothing else: its HEAD is the
     // triangle in the ruler (paint_ruler_row); across the view bar
     // (architect 2026-10-09 ~14:30), the marker lane and the canvas's top
@@ -8264,15 +8254,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     over the ink like the stems' dots, and before them.
         //   THE COLUMN IS SHARED, NOT CONTESTED (architect 2026-10-09, the
         //     program is Cool Edit): a SELECTION's cue is its members' stems,
-        //     the playhead's color interspersed with their dots (architect
-        //     2026-11-02, M10 rule 1; no triangle marks it), with the landed
-        //     cursor on the focus; the cursor's dots paint over the marker
-        //     stems' (2026-09-23) and the two phases interleave, so a
-        //     playhead resting on a marker's column shows both, one to one,
-        //     one solid line (one on, one off, 2026-11-02) —
-        //     a selected stem there yielding its range phase's white to the
-        //     `cue_stem` (the coincident stem 1:1, architect 2026-11-02,
-        //     paint_marker_stems); its head in the ruler and the cue's triangle in the
+        //     each one solid line, gray on the even rows and the playhead's
+        //     white on the odd (architect 2026-11-02, M10 rule 1; no
+        //     triangle marks it), with the landed cursor on the focus; the
+        //     cursor's dots paint over the marker stems' (2026-09-23) on
+        //     the odd rows, so a playhead resting on a marker's column
+        //     closes with it into one solid line (one on, one off,
+        //     2026-11-02) — on a selected stem the very rows it already
+        //     paints white, so the focus looks as the rest of the selection
+        //     (architect 2026-11-02); its head in the ruler and the cue's triangle in the
         //     marker lane never meet. (2026-08-01 lifted the SCANNER above the
         //     stems, so the moving line does not blink out at every marker it
         //     crosses.)

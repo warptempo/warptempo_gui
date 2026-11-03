@@ -5030,9 +5030,10 @@ struct AppState {
     // STEMS NEVER APPEAR OR VANISH WITH THE SELECTION (row 5, architect). Every
     // ENABLED marker of the active column stems, always
     // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash); a
-    // disabled marker stems never. A selected marker's stem wears the
-    // playhead's color interspersed with its own dots (architect 2026-11-02,
-    // M10 rule 1; render.h's SELECTED row), so selection's cue is on the
+    // disabled marker stems never. A selected marker's stem is one solid
+    // line, the playhead's white on the odd rows between its own dots
+    // (architect 2026-11-02, M10 rule 1; render.h's SELECTED row), so
+    // selection's cue is on the
     // canvas: its stems, the triangles and the labels unchanged. The successive apparatus this
     // replaces is worth naming once, because each layer was deleted for the same
     // reason the next one was: the conditional stem's hover/pin arms

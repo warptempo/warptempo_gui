@@ -201,9 +201,11 @@ struct ProgramSpec {
     // stem stands on the even rows, its two phases alternating; and a
     // playhead standing on a stem fills the odd rows between them, so the
     // two close into ONE SOLID LINE, the playhead's line color on the odd
-    // rows and the stem's on the even (the reason for the rule: mock t1s;
-    // render.cpp's resolve_flag_face owns which color each phase wears, the
-    // coincident stem's override paint_marker_stems). The phase-reset
+    // rows and the stem's on the even (the reason for the rule: mock t1s) —
+    // and A SELECTED STEM PAINTS THAT LINE ITSELF, the `playhead_line` on
+    // the playhead's own rows (`dot_period` / `playhead_dot_phase`),
+    // playhead or not (architect 2026-11-02; render.cpp's resolve_flag_face
+    // owns which color each row set wears). The phase-reset
     // lead-in ring's right side takes the same rows, and its top and bottom
     // runs — and the `h` view's nudged pairs' — the same two phases in
     // device columns counted from the reset's (the left stem's) own column,
@@ -281,8 +283,9 @@ static_assert(kProgramSpec.run_gap_px == 6 + 5 + 4);
 // cue_label_lead_px is the triangle's reach right plus the gap, never
 // negative, at every scale.)
 // The cue's two phases alternate one dot every playhead period, and neither
-// shares a row with the playhead's dots (one on, one off: the playhead the
-// odd rows, the stem the even, 2026-11-02).
+// shares a row with the playhead's dots (one on, one off: the playhead — and
+// a selected stem's white — the odd rows, the stem's two phases the even,
+// 2026-11-02).
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
 static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
                kProgramSpec.cue_dot_period) % kProgramSpec.cue_dot_period ==
