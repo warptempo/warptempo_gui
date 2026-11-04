@@ -2168,20 +2168,30 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (playhead_pixel_x's damage rule, a narrow-on-plate site). Ahead of
         // every return below, as the legend is: a mode that hides the canvas
         // keeps the color current, and its damage lands under that mode's
-        // own surface harmlessly.
+        // own surface harmlessly. THE DAMAGE WAITS FOR A LIVE WAVEFORM: with
+        // no piece to dispatch on (a load in flight, or no audio yet — the
+        // open's hold included; no_audio_to_dispatch_on, app_state.h, the
+        // painter's own `plate_branch` condition, on_redraw) the line paints
+        // nothing, and the plate basis must not be asked there — its spp
+        // falls back to painter_samples_per_pixel, which needs the audio's
+        // working column (GuiAudio::working_column's assert). The color is
+        // STILL STORED there, so the first paint after the load paints the
+        // live tone.
         {
             const uint32_t rgb = playhead_fade_color_at(
                 monotonic_ms() - g_playhead_fade_origin_ms);
             if (rgb != app.playhead_line_rgb) {
                 app.playhead_line_rgb = rgb;
-                const GuiPaintHandler::PlateViewportBasis pb =
-                    paint_handler.plate_viewport_basis();
-                const GuiRect r = playhead_line_rect(
-                    waveform_area(app),
-                    playhead_pixel_x(app, static_cast<int64_t>(pb.vp_start),
-                                     pb.spp));
-                if (r.w > 0 && r.h > 0)
-                    gui.invalidate_region(r.x, r.y, r.w, r.h);
+                if (!no_audio_to_dispatch_on(app, audio.total_frames())) {
+                    const GuiPaintHandler::PlateViewportBasis pb =
+                        paint_handler.plate_viewport_basis();
+                    const GuiRect r = playhead_line_rect(
+                        waveform_area(app),
+                        playhead_pixel_x(
+                            app, static_cast<int64_t>(pb.vp_start), pb.spp));
+                    if (r.w > 0 && r.h > 0)
+                        gui.invalidate_region(r.x, r.y, r.w, r.h);
+                }
             }
         }
 
