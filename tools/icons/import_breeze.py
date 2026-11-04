@@ -120,7 +120,6 @@ ROSTER = [
     ('ZoneIn', 'actions/22/zone-in'),
     ('ZoneOut', 'actions/22/zone-out'),
     ('WindowClose', 'actions/22/window-close'),
-    ('TaskComplete', 'status/22/task-complete'),
     ('EditClear', 'actions/22/edit-clear'),
     ('ViewRefresh', 'actions/22/view-refresh'),
     ('Folder', 'places/22/folder'),

@@ -17819,9 +17819,11 @@ inline const char* redesign_button_legend(const AppState& a,
 // "Breeze is committed"; THE ROSTER AS RULED, architect 2026-11-02, R12 /
 // R14 / R15: the draft won on EDIT, HISTORY, SOURCE, TARGET, SESSION and
 // LOCK — one glyph, no state swap — the last Breeze drawing elsewhere,
-// PLAYER the headphones; BPM shares the logo's single note and SOURCE the
-// wav rows' double notes, both deliberate) — the Breeze drawing centered on
-// each roster key's face (paint_handler.cpp's paint_key_glyph, icons.h's
+// PLAYER the headphones; BPM shares the logo's single note, SOURCE the
+// wav rows' double notes and LOAD the word buttons' OK / YES checkmark
+// (the same act, architect 2026-11-03, modal_word_icon), all deliberate) —
+// the Breeze drawing centered on each roster key's face
+// (paint_handler.cpp's paint_key_glyph, icons.h's
 // head), the key's legend under it (redesign_button_legend, above; back
 // 2026-11-03), the act's name the tooltip's (redesign_button_tooltip,
 // above). THIS TABLE IS EACH KEY'S RESTING GLYPH; THE PAINTERS READ THE

@@ -419,8 +419,8 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act,
 // MediaPlaybackStart, NEXT MediaSkipForward (the band's START / END's two,
 // R14's transport rule: "two arrows with a bar" on every to-the-end step);
 // REPEAT MediaRepeatSingle (the row's one lamp); DOWN / UP GoDown / GoUp;
-// FOLDER GoParentFolder; LOAD DialogOkApply (the band's LOAD key's, the
-// same act); DELETE EditDelete; CLOSE WindowClose (the last key's act is
+// FOLDER GoParentFolder; LOAD DialogOkApply (the band's LOAD key's and the
+// word buttons' OK / YES, the same act, modal_word_icon); DELETE EditDelete; CLOSE WindowClose (the last key's act is
 // Close since 2026-10-28 night: the player asks nothing, and a button's
 // word says what leaving does, the rule at kModalCancelLabel). THE PLAY
 // KEY'S GLYPH NAMES ITS NEXT PRESS (architect 2026-10-25; the roster's rule
@@ -5341,15 +5341,18 @@ constexpr std::string_view kModalCloseLabel  = "Close";
 // the prompts' answer tables (kPromptAnswerTables, app_state.h), the
 // editors' and the field-less owners' words above, the trim presets list's
 // four and the BPM form's two (the roster as ruled, architect 2026-11-02,
-// R12 / R14). OK and YES TaskComplete; CANCEL DialogCancel; CLOSE
-// WindowClose; SAVE DocumentSave; SAVE AS DocumentSaveAs; DISCARD
+// R12 / R14). OK and YES DialogOkApply, LOAD's plain checkmark (architect
+// 2026-11-03: the affirmative answer is the same act as LOAD, and the
+// notebook-with-check read too small and awkward for a basic command; a
+// deliberate share, the band's LOAD, the player's LOAD, OK and YES one
+// drawing); CANCEL DialogCancel; CLOSE WindowClose; SAVE DocumentSave; SAVE AS DocumentSaveAs; DISCARD
 // EditClear; RETRY ViewRefresh; DELETE EditDelete; RENDER MediaRecord (the
 // band's RENDER key's: the word follows the key). A word outside the
 // vocabulary is a program bug (a new answer table's word not added here):
 // no glyph, and the debug build's assert.
 std::optional<icons::Icon> modal_word_icon(std::string_view word) {
     using icons::Icon;
-    if (word == kModalOkLabel || word == "Yes") return Icon::TaskComplete;
+    if (word == kModalOkLabel || word == "Yes") return Icon::DialogOkApply;
     if (word == kModalCancelLabel)              return Icon::DialogCancel;
     if (word == kModalCloseLabel)               return Icon::WindowClose;
     if (word == "Save")                         return Icon::DocumentSave;

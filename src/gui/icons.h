@@ -99,7 +99,7 @@ namespace icons {
     X(TransformMoveVertical) X(GoDown) X(GoUp) X(BboxPrev) X(BboxNext)   \
     X(TabDetach) X(ZoomOriginal) X(GoPrevious) X(GoNext)                 \
     X(GoParentFolder) X(GoPreviousViewPage) X(GoNextViewPage)            \
-    X(EditReset) X(ZoneIn) X(ZoneOut) X(WindowClose) X(TaskComplete)     \
+    X(EditReset) X(ZoneIn) X(ZoneOut) X(WindowClose)                     \
     X(EditClear) X(ViewRefresh) X(Folder) X(DialogInformation)           \
     X(DialogError) X(Battery000) X(Battery000Charging)
 

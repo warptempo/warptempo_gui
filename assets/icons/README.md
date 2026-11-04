@@ -132,7 +132,6 @@ transcriptions, with no path data changed.
 | `ZoneIn` | `actions/22/zone-in.svg` | `f01ba4487f5446696ce9f464cc1b15ee65c114bd4b814bf8f67d3e12911a325d` |
 | `ZoneOut` | `actions/22/zone-out.svg` | `d8c9c2015cc0a1ff90e10d94d6a5ab4672cb04e3fb8005cbee490891e2843288` |
 | `WindowClose` | `actions/22/window-close.svg` | `f3ddbc5dcf93bd63715dc5d23081e7f94285d7cdfec4c45dc5bca5abb2e8f8bf` |
-| `TaskComplete` | `status/22/task-complete.svg` | `f5ac2ac923bb59f764fa1b3ba0365906b7694b2aa6d1b9497d4cfdc4406ffa93` |
 | `EditClear` | `actions/22/edit-clear.svg` | `f663b81cc2e9343f9c8b1e9cc973078e3b855a480fcec2f72894d0347a93c27f` |
 | `ViewRefresh` | `actions/22/view-refresh.svg` | `e7fa6cf32858c91bf392f5b483ae2611b05817b32b826254166b56bea247e914` |
 | `Folder` | `places/22/folder.svg` | `2bda082b65bc5265eadce09310c8e180f99d535803cf2380e5c40addc7a61344` |
