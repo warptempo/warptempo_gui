@@ -5030,15 +5030,14 @@ struct AppState {
     // nothing else.
     bool          value_drag_lamp = false;
 
-    // THE STEM IS THE FOCUS'S ALONE (architect 2026-11-04: no stem at rest,
-    // Live paints none): the selection's focus member — last_selected_marker
-    // above — stands a solid one-W `cue_outline` stem down the canvas
-    // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash);
-    // every other marker none, a disabled one never. The chip carries the
-    // selection (render.h's THE STATES), so the stem appears and moves with
-    // the focus: its presence rides the flag cache's selection fingerprint
-    // (hash_selection over the set and the focus), whose rebuild damages
-    // the waveform.
+    // THE STEM IS THE PLAYHEAD'S COINCIDENCE, NOT THE SELECTION'S (architect
+    // 2026-11-04: "we have no hover so we should #11 on coincident"): every
+    // enabled marker the resting playhead's frame stands on wears a solid
+    // one-W `cue_outline` stem down the canvas over the playhead's line
+    // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash,
+    // the coincidence decided at paint); a disabled one never. The chip
+    // carries the selection (render.h's THE STATES); a landing puts the
+    // playhead on the clicked marker's frame, so the stem follows it there.
 
     // Active markers view — THE COLUMN AXIS, two letters: 'W' = warp markers,
     // 'P' = phase reset markers (a third, M, left with the magnification
@@ -5519,13 +5518,14 @@ struct AppState {
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
-    // carries one entry per DRAWN stem, which on the two LIVE columns means at
-    // most one, the FOCUSED ENABLED marker's where its column is a waveform
+    // carries one entry per ENABLED cue with its paint frame, which on the two
+    // LIVE columns means every enabled marker whose column is a waveform
     // column in [0, w) (the producers' gate, stem_column_on_waveform in
     // render.cpp; a flag hanging into view from past either edge publishes no
-    // stem) — a disabled marker has no stem ever, expressed as an absent
-    // entry (MarkerStem, render.h) — and in the history mode the focused
-    // flag's cues on waveform columns, a nudged pair two (2026-11-04). Since
+    // entry) — a disabled marker has no stem ever, expressed as an absent
+    // entry (MarkerStem, render.h) — and in the history mode every live diff
+    // cue on a waveform column, a nudged pair two; the painter lights the
+    // entries the resting playhead's frame coincides with (2026-11-04). Since
     // the stems-inert ruling (architect 2026-08-12) `marker_stems` is
     // PAINT-ONLY: its one reader is the per-frame stem painter
     // (GuiPaintHandler::paint_marker_stems), the pointer never reads it
@@ -5591,15 +5591,16 @@ struct AppState {
     // nothing painted yet — nothing to grab.
     GuiRect                  playhead_head_hit{0, 0, 0, 0};
 
-    // THE PLAYHEAD BLINK'S PAINTED PHASE (architect 2026-11-04; the rule at
-    // render_playhead's THE BLINK, render.h): true while the resting
-    // cursor's canvas line shows. ON SCREEN IS AS PAINTED: written only by
-    // the tick, on a flip of playhead_blink_on_at, which damages the line's
-    // columns in the same breath (playhead_line_rect, main.cpp), and read
-    // by paint_playheads alone — the painter never asks the clock, so the
-    // phase painted and the damage owed are one. Lit at construction: a
-    // project opens with the line shown until the tick's first read.
-    bool                     playhead_blink_on = true;
+    // THE PLAYHEAD FADE'S PAINTED COLOR (architect 2026-11-04; the rule at
+    // render_playhead's THE FADE, render.h), a 0xRRGGBB sRGB word between
+    // the palette's `playhead_line_low` and `playhead_line`. ON SCREEN IS AS
+    // PAINTED: written only by the tick, on a change of the byte triple
+    // playhead_fade_color_at answers, which damages the line's columns in
+    // the same breath (playhead_line_rect, main.cpp), and read by
+    // paint_playheads alone — the painter never asks the clock, so the color
+    // painted and the damage owed are one. The peak at construction (the
+    // fade's phase at its origin) until the tick's first read.
+    uint32_t                 playhead_line_rgb = 0xFFFFFF;
 
     // THE OPEN FLAG EDITOR'S BOX, published by the same painter-owns-derived-
     // geometry rule the two stashes above follow, and for the same reason: the
@@ -7346,7 +7347,7 @@ struct AppState {
         // half of the rect they hit (FlagHitRect::diff_half), the Tab cycle
         // its stop's (history_diff_cycle_target). It never changes the
         // flags' picture — both cues of a selected pair take the selected
-        // chip, and of a focused pair the stem (architect 2026-11-04) — so
+        // chip, each its own coincidence stem (architect 2026-11-04) — so
         // no fingerprint keys it. Cleared with the focus
         // (clear_history_mode_focus) and by the whole-struct reset.
         HistoryDiffHalf focus_half = HistoryDiffHalf::Removed;
@@ -8390,8 +8391,8 @@ struct AppState {
 
     // THE ADDRESSED CELL: which cell of the FOCUSED marker
     // the vertical arrows step and Enter opens — NOT PAINTED since
-    // 2026-11-02 (the selected look is the cue's chip and the focus's stem,
-    // never a segment's: render.h's THE STATES) (MarkerCell,
+    // 2026-11-02 (the selected look is the cue's chip, never a segment's:
+    // render.h's THE STATES) (MarkerCell,
     // warpmarkers.h; architect 2026-09-04 for the axis, 2026-09-05 for its
     // reach over every cell and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
@@ -11838,7 +11839,7 @@ void remap_marker_indices_after_reorder(AppState& app,
 // millisecond time bases — the press-driven double-click detection (strip-row /
 // marker, input_pointer.cpp), the tooltip's clock (tick_tooltip,
 // input_pointer.cpp), the A/B
-// audition's rests (GuiAbAudition::fire_if_due) and the playhead's blink
+// audition's rests (GuiAbAudition::fire_if_due) and the playhead's fade
 // (the tick's flip, main.cpp, 2026-11-04) — the same CLOCK_MONOTONIC the
 // platform's own deadlines (key repeat, the touch window's region-hold beat —
 // the pan zone's window, the one touch window with a deadline since
@@ -11936,8 +11937,9 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 //  - NARROW ON PLATE, reserved for the PER-FRAME sites, which cannot afford a
 //    full repaint and can see a GuiPaintHandler to compute plate columns: the
 //    two 60 Hz SCANNER sites in main.cpp — the tick heartbeat and the pre-paint
-//    advance — and THE BLINK'S FLIP (the tick's, 2026-11-04: periodic, under
-//    two a second, and owing the line's columns alone, playhead_line_rect),
+//    advance — and THE FADE'S STEP (the tick's, 2026-11-04: periodic, once
+//    a tick while the line is on screen, and owing the line's columns
+//    alone, playhead_line_rect),
 //    and nothing else. Each passes plate_viewport_basis() through the
 //    explicit-basis overloads.
 //  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:

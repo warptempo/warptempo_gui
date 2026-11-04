@@ -16,8 +16,9 @@
 // part); the colors the flat look's constants (materials.h's THE WELL) and
 // the palette's. THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
-// 2026-11-01 — and `playhead_line` — its blinking line in the canvas,
-// Live's DBF6F9 since 2026-11-04 — palette_file.h's role table, as the
+// 2026-11-01 — and `playhead_line` / `playhead_line_low` — the two ends of
+// its fading line in the canvas, Live's FFFFFF / 6BA5AA since 2026-11-04 —
+// palette_file.h's role table, as the
 // marker's chip is the palette's `cue` / `cue_unselected` in its
 // `cue_outline` (2026-11-04).
 // THE TRIANGLES ARE ALIASED AT 1:1 (architect 2026-10-26, "agree": "at this

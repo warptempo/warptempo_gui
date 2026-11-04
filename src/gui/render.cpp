@@ -1031,7 +1031,7 @@ bool stem_column_on_waveform(int col, int w) {
 }
 
 // Shared flag iteration used by render_flags, its phase-reset analogue and
-// the `h` view's diff lane. Invokes `emit(i, left_x)` for EVERY visible
+// the `h` view's diff lane. Invokes `emit(i, left_x, frame)` for EVERY visible
 // marker IN STORE ORDER; the cue painter collects them and orders them by
 // column itself (the overlap rule paints the labels left to right and the
 // triangles left to right, render.h's marker-lane paragraph).
@@ -1040,7 +1040,9 @@ bool stem_column_on_waveform(int col, int w) {
 // computed ONCE here: the chip's apex column, the label's anchor and the
 // stem's column. The painter draws from it, the hit rects are published from
 // it, and the stem is published at it, so all three are one number by
-// construction.
+// construction. `frame` is the PAINT FRAME it was mapped from
+// (frame_to_paint_sample: the integer displayed frame the playhead cursor
+// stores), the coincidence stem's key (MarkerStem, render.h).
 template <typename MarkerVec, typename Emit>
 void iterate_visible_flags_impl(
     // The waveform's first column in the surface's x (FlagLaneRects'
@@ -1125,7 +1127,7 @@ void iterate_visible_flags_impl(
         const double left_x =
             static_cast<double>(columns_x) + static_cast<double>(col);
 
-        emit(static_cast<int>(i), left_x);
+        emit(static_cast<int>(i), left_x, static_cast<int64_t>(ms));
     }
 }
 
@@ -1295,8 +1297,10 @@ enum class GuiFlagSide { Live, Added, Removed };
 
 // The resolved paint of ONE cue (the palette block's marker-lane paragraph,
 // render.h, owns the look): THE CHIP'S fill and outline (CueTrianglePass,
-// the outline's staircase under the fill's), whether the cue CARRIES THE
-// FOCUSED STEM, and whether its label is STRUCK (show_cue_label's bar). The
+// the outline's staircase under the fill's), whether the cue PUBLISHES ITS
+// STEM ENTRY (every enabled cue: the coincidence with the playhead is
+// decided at paint, MarkerStem), and whether its label is STRUCK
+// (show_cue_label's bar). The
 // label's other look is the segment's own (inert, or the text tone,
 // materials.h's kTextInk); the selection never reaches it.
 struct FlagFace {
@@ -1307,7 +1311,7 @@ struct FlagFace {
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
-// diff flags (architect 2026-11-04, THE CHIP CARRIES SELECTION AND FOCUS,
+// diff flags (architect 2026-11-04, THE CHIP CARRIES THE SELECTION,
 // reversing 2026-11-02's "the triangle never marks focus or selection" — his
 // reason: "we don't use ableton's rect above a marker and could therefore
 // allow the triangle chip to stand for selection/focus"; 2026-10-26
@@ -1316,12 +1320,12 @@ struct FlagFace {
 // as a strike through, which is actually effective because that's what
 // happens to them. They become one"; "Two, agree" — the history's removed
 // half struck). THE TABLE, the ladder read top to bottom, the first
-// matching row wins:
+// matching row wins ("stem" the publication of the cue's coincidence stem
+// entry, MarkerStem — painted only while the playhead stands on its frame):
 //   flag                     fill            outline       stem  label
 //   DISABLED (any kind)      lane face       inactive      no    inactive
-//   SELECTED AND FOCUSED     cue             cue_outline   yes   text tone
-//   SELECTED                 cue             cue_outline   no    text tone
-//   UNSELECTED               cue_unselected  cue_outline   no    text tone
+//   SELECTED                 cue             cue_outline   yes   text tone
+//   UNSELECTED               cue_unselected  cue_outline   yes   text tone
 // — warp or phase reset, whatever the side (a live lane's cue or either
 // `h` half), the label struck as below in every row. A DISABLED CHIP IS
 // HOLLOW (architect 2026-11-04): its outline in the `inactive_cue`
@@ -1331,13 +1335,12 @@ struct FlagFace {
 // (architect 2026-11-02, "3 accept"), focused or not, the playhead standing
 // on it after the arming press its only mark. THE UNSELECTED FILL is Live's
 // own unselected marker, 5D5D5D (mock g1), the SELECTED the `cue` FFAD56;
-// THE OUTLINE Live's dark line, 111111. `focused` IS THE SELECTION'S FOCUS
-// MEMBER (selection.h's focus, AppState::last_selected_marker — the one the
-// playhead landed on — or the `h` view's own focus), NEVER THE PLAYHEAD: the
-// resolver never sees the playhead, and a focused cue is always a selected
-// one (the caller passes `focused` only for a member). THE FOCUSED STEM is a
-// solid one-W `cue_outline` line down the canvas's whole height on the
-// cue's column (paint_marker_stems); NO OTHER STEM EXISTS (Live paints
+// THE OUTLINE Live's dark line, 111111. THE RESOLVER NEVER SEES THE
+// PLAYHEAD: THE COINCIDENCE STEM (architect 2026-11-04: "we have no hover
+// so we should #11 on coincident") — a solid one-W `cue_outline` line down
+// the canvas's whole height on the cue's column, over the playhead's line —
+// stands on every published cue whose frame the resting playhead stands on,
+// decided at paint (paint_marker_stems); no other stem exists (Live paints
 // none at rest).
 // THE STRIKE, whatever the row: a live cue in its column's red set (`red`,
 // warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
@@ -1357,13 +1360,13 @@ struct FlagFace {
 // the words' and the flags' one ink — every label on the lane's face with
 // no fill, selected or not.
 FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
-                           bool selected, bool focused) {
+                           bool selected) {
     const GuiPalette& p = palette();
     const bool struck = red || side == GuiFlagSide::Removed;
     if (disabled)
         return FlagFace{hex(kLaneFace), p.inactive_cue, false, struck};
-    return FlagFace{selected ? p.cue : p.cue_unselected, p.cue_outline,
-                    selected && focused, struck};
+    return FlagFace{selected ? p.cue : p.cue_unselected, p.cue_outline, true,
+                    struck};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
@@ -1418,11 +1421,13 @@ static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
 }
 
 // ONE CUE, laid out: its marker (or diff flag) index, its column in window
-// x, its resolved face (the chip's colors and whether it carries the focused
-// stem), and its label's up-to-three segments in their left-to-right order.
+// x, its paint frame (the coincidence stem's key), its resolved face (the
+// chip's colors and whether it publishes a stem entry), and its label's
+// up-to-three segments in their left-to-right order.
 struct CueDraw {
     int                       index = -1;
     int                       col   = 0;
+    int64_t                   frame = 0;
     FlagFace                  face{};
     std::array<CueSegment, 3> seg{};
     // Whether segments 1 and 2 are the marker's bound cells (the live lanes)
@@ -1465,9 +1470,9 @@ static CuePassScratch g_cue_pass_scratch;
 // (resolve_flag_face, 2026-11-04); then the
 // publication — one FlagHitRect per cue (its label box as painted and its
 // chip, both clipped to the waveform's columns, and the cue's diff half),
-// and one MarkerStem per cue that carries the focused stem and whose column
-// is a waveform column (the `h` view's focused nudged pair's two cues each
-// their own). `lane` is the
+// and one MarkerStem per ENABLED cue whose column is a waveform column,
+// carrying its paint frame (a nudged `h` pair's two cues each their own;
+// paint_marker_stems lights the ones the playhead stands on). `lane` is the
 // marker lane, `x0` / `w` the waveform's columns the pass is clipped to (the
 // caller set the clip). Cues arrive in store order and are ordered here by
 // column (stable).
@@ -1657,7 +1662,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         if (out_stems && c.face.stem &&
             stem_column_on_waveform(c.col - x0, w))
             out_stems->push_back(
-                MarkerStem{c.index, static_cast<double>(c.col)});
+                MarkerStem{c.index, static_cast<double>(c.col), c.frame});
     }
 }
 
@@ -1696,7 +1701,6 @@ void render_flag_boxes_impl(
     long long viewport_end_sample,
     int sample_rate,
     const std::set<int>& selected_set,
-    int focus_index,
     const std::set<int>& red_set,
     LabelFn&& label_of,
     DisabledFn&& disabled_of,
@@ -1748,10 +1752,11 @@ void render_flag_boxes_impl(
                                // `iteration_on` widens the bound by the two
                                // cells; the reasoning is at the bound.
                                marker_flag_max_width_px(iteration_on),
-        [&](int i, double left_x) {
+        [&](int i, double left_x, int64_t frame) {
             CueDraw c;
             c.index = i;
             c.col   = static_cast<int>(std::nearbyint(left_x));
+            c.frame = frame;
             // WHICH OF THIS MARKER'S SEGMENTS THIS PASS PAINTS: everything
             // LEFT of the edited segment stands at rest, and nothing from it
             // rightward — those ride the field's right edge under
@@ -1768,11 +1773,10 @@ void render_flag_boxes_impl(
             const bool red = red_set.count(i) > 0;
             const bool sel = selected_set.count(i) > 0;
             // THE SELECTION IS THE CHIP'S (architect 2026-11-04,
-            // resolve_flag_face's table): every selected marker's fill, and
-            // the selection's focus member's stem; no segment of the label
-            // carries it.
-            c.face = resolve_flag_face(GuiFlagSide::Live, dis, red, sel,
-                                       i == focus_index);
+            // resolve_flag_face's table): every selected marker's fill; no
+            // segment of the label carries it, and the stem is the
+            // playhead's (MarkerStem).
+            c.face = resolve_flag_face(GuiFlagSide::Live, dis, red, sel);
 
             // THE SEGMENTS: the payload label (the column's composer, the cut
             // inside it), then the two bound cells where they paint — each
@@ -1849,7 +1853,6 @@ void render_flags(cairo_t* cr,
                   long long viewport_end_sample,
                   int sample_rate,
                   const std::set<int>& selected_set,
-                  int focus_index,
                   const std::set<int>& red_set,
                   bool iteration_on,
                   std::vector<FlagHitRect>* out_hit_rects,
@@ -1860,7 +1863,7 @@ void render_flags(cairo_t* cr,
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample, sample_rate,
-        selected_set, focus_index, red_set,
+        selected_set, red_set,
         // THE PAINTED COMPOSER (flag_display_text, render.h): the tempo's
         // base and its whole chain, the scale capped to `*N.NN`, and the
         // bounds are the two cells beside it. The editor seeds from the UNCUT
@@ -1885,7 +1888,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             long long viewport_end_sample,
                             int sample_rate,
                             const std::set<int>& selected_set,
-                            int focus_index,
                             const std::set<int>& red_set,
                             bool iteration_on,
                             std::vector<FlagHitRect>* out_hit_rects,
@@ -1897,7 +1899,7 @@ void render_phase_reset_flags(cairo_t* cr,
         cr, top_strip_area, lanes, waveform_width,
         phase_resets,
         viewport_start_sample, viewport_end_sample, sample_rate,
-        selected_set, focus_index, red_set,
+        selected_set, red_set,
         // A phase reset authors no payload, so its flag carries the display-only
         // token (render.h owns it and what it reads). It reaches the pass
         // whole: the shared byte cap is gone (2026-09-19) and this column has
@@ -2033,19 +2035,20 @@ void render_history_diff_flags(
         // not a marker in any store, so nothing could index it anyway.
         /*drag_overlay=*/nullptr,
         cull_width_px + widest_pair_px,
-        [&](int i, double left_x) {
+        [&](int i, double left_x, int64_t frame_left) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
             // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
             // either SELECTS the flag (the declaration says why), and BOTH
             // HALVES of a changed pair take the selected chip together — a
-            // double flag is one item, so it shows as one — the FOCUSED item
-            // its stem too, on each of its cues' columns (architect
-            // 2026-11-04, resolve_flag_face's table).
-            const bool flag_focused  = i == focus_index;
-            const bool flag_selected = flag_focused || (selected.count(i) != 0);
+            // double flag is one item, so it shows as one (architect
+            // 2026-11-04, resolve_flag_face's table). Each cue publishes its
+            // stem entry at its own paint frame, lit where the playhead
+            // stands on it (MarkerStem).
+            const bool flag_selected =
+                (i == focus_index) || (selected.count(i) != 0);
             const auto face_for = [&](GuiFlagSide side, bool disabled) {
                 return resolve_flag_face(side, disabled, /*red=*/false,
-                                         flag_selected, flag_focused);
+                                         flag_selected);
             };
             // A flag with neither half is not constructible by the resolver
             // above; the guard keeps a degenerate one from publishing a
@@ -2085,12 +2088,14 @@ void render_history_diff_flags(
             // row), inert on its own half's bit, STRUCK on its own half's
             // side (resolve_flag_face's table: the removed half's label
             // alone).
-            const auto push_cue = [&](int col, HistoryDiffHalf half,
+            const auto push_cue = [&](int col, int64_t frame,
+                                      HistoryDiffHalf half,
                                       const FlagFace& face, const Half* halves,
                                       int count) {
                 CueDraw c;
                 c.index = i;
                 c.col   = col;
+                c.frame = frame;
                 c.face  = face;
                 c.half  = half;
                 c.segments_are_cells = false;
@@ -2123,17 +2128,17 @@ void render_history_diff_flags(
             // (resolve_flag_face) by its half's side — the plain cue, its
             // label struck on a removed line; THE CHIP READS THE DISABLED
             // AXIS (architect 2026-08-22): a single half whose one side is
-            // disabled wears the hollow chip and publishes no stem, the live
+            // disabled wears the hollow chip and publishes no stem entry, the live
             // lane's rule (its selection shows nothing there, as on the live
             // lane, 2026-11-02).
             if (!f.added) {
-                push_cue(col_left, HistoryDiffHalf::Removed,
+                push_cue(col_left, frame_left, HistoryDiffHalf::Removed,
                          face_for(GuiFlagSide::Removed, removed_disabled),
                          &removed_half, 1);
                 return;
             }
             if (!f.removed) {
-                push_cue(col_left, HistoryDiffHalf::Added,
+                push_cue(col_left, frame_left, HistoryDiffHalf::Added,
                          face_for(GuiFlagSide::Added, added_disabled),
                          &added_half, 1);
                 return;
@@ -2144,10 +2149,10 @@ void render_history_diff_flags(
             // each half's disabled bit.
             // A SAME-FRAME PAIR IS ONE CUE (architect 2026-10-26, "Three"):
             // its two halves as two segments, the removed (struck) first and
-            // then the added, one chip, one stem where focused, no ring.
+            // then the added, one chip, one stem entry, no ring.
             if (!f.nudged()) {
                 const Half both[2] = {removed_half, added_half};
-                push_cue(col_left, HistoryDiffHalf::Removed,
+                push_cue(col_left, frame_left, HistoryDiffHalf::Removed,
                          face_for(GuiFlagSide::Added, /*disabled=*/false),
                          both, 2);
                 return;
@@ -2163,14 +2168,21 @@ void render_history_diff_flags(
             // frame); the other's is mapped here by the iterator's own two
             // steps (paint_col above), so each stands where a live marker at
             // its frame would. Both cues' chips take the item's selection,
-            // and both carry a stem where the item is focused (2026-11-04).
+            // and each its own coincidence stem (2026-11-04).
             const bool added_left = f.added_left();
             const int then_col = added_left ? paint_col(f.then_frame) : col_left;
             const int now_col  = added_left ? col_left : paint_col(f.now_frame);
-            push_cue(then_col, HistoryDiffHalf::Removed,
+            // Each cue's paint frame by the iterator's own mapping
+            // (frame_to_paint_sample), the coincidence stem's key.
+            const auto paint_frame = [&](int64_t fr) {
+                return static_cast<int64_t>(frame_to_paint_sample(
+                    static_cast<double>(fr), warp_frame_map));
+            };
+            push_cue(then_col, paint_frame(f.then_frame),
+                     HistoryDiffHalf::Removed,
                      face_for(GuiFlagSide::Added, /*disabled=*/false),
                      &removed_half, 1);
-            push_cue(now_col, HistoryDiffHalf::Added,
+            push_cue(now_col, paint_frame(f.now_frame), HistoryDiffHalf::Added,
                      face_for(GuiFlagSide::Added, /*disabled=*/false),
                      &added_half, 1);
             // THE RING between the two cues' columns, its four sides
@@ -2286,7 +2298,7 @@ WaveformPlateInks waveform_plate_inks() {
 }
 
 namespace {
-// THE PROGRAM'S TWELVE into the installed struct (palette_file.h's role
+// THE PROGRAM'S THIRTEEN into the installed struct (palette_file.h's role
 // table) — the install's first half (the chrome's members are the other's)
 // — with THE PANEL'S FACE THE FLAT GROUND (materials.h's kGround, the flat
 // look, 2026-11-01).

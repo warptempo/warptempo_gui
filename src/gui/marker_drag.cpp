@@ -70,8 +70,8 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // crossing, which is what keeps the drag subject exactly the grabbed
     // marker.
     // The selection is not read by any arithmetic here; it is what gives the
-    // dragged marker its selected look (its chip and its focused stem,
-    // render.h's THE STATES), which is why the press owes it.
+    // dragged marker its selected look (its chip, render.h's THE STATES),
+    // which is why the press owes it.
     // The one-element vectors below are the DragOverlay's storage contract
     // (paint matches a store index against dragging_markers), not a group: slot 0
     // is the dragged marker everywhere in this file.

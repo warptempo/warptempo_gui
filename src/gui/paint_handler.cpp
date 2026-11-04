@@ -4635,12 +4635,17 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
-// THE FOCUSED MARKER'S STEM (architect 2026-11-04: no stem at rest, Live
-// paints none; the full contract at the declaration): the selection's focus
-// member's column, a SOLID ONE-W line in the `cue_outline` down the canvas's
-// whole height, the stereo divider's row crossed (architect 2026-11-02:
-// "the divider is just another grid line now"; canvas_line_rect's form, the
-// line's column gate and edge clip, waveform_line_cols).
+// THE COINCIDENCE STEM (architect 2026-11-04: "in ableton playhead
+// coincident with marker = no stem, stem #11 on hover. we have no hover so
+// we should #11 on coincident"; the full contract at the declaration): on
+// EVERY published entry whose paint frame equals the resting playhead's
+// frame (AppState::playhead_cursor_sample — the frame playhead_pixel_x maps
+// to the cursor's column; a FRAME compare, never a column compare, so two
+// markers a frame apart at a coarse zoom never both light), a SOLID ONE-W
+// line in the `cue_outline` down the canvas's whole height, the stereo
+// divider's row crossed (architect 2026-11-02: "the divider is just another
+// grid line now"; canvas_line_rect's form, the line's column gate and edge
+// clip, waveform_line_cols).
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its cue's APEX COLUMN, and that column was
@@ -4648,22 +4653,32 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // those pixels were laid out against. So the DragOverlay substitution, the
 // source->target map walk, the per-marker cull and the resolver all happen
 // exactly once, in the painter, and a stem can never land a pixel away from
-// its own chip. An entry's presence is the stem (MarkerStem, render.h).
+// its own chip (MarkerStem, render.h).
 //
-// Z-ORDER (architect 2026-09-23): the stem paints UNDER the playhead's
-// line, which follows this pass; on the focused marker the line lies over
-// the stem, which shows through in the blink's off phase. The full
-// sequence is the paint-order block in on_redraw.
+// Z-ORDER (architect 2026-11-04): THE STEM PAINTS OVER THE PLAYHEAD'S LINE,
+// which precedes this pass: both are one W on one column, so a stem under
+// the opaque fading line would never be seen; while the playhead rests on a
+// marker the dark stem is what shows and the ruler's head marks the
+// playhead. The scanner follows. The full sequence is the paint-order
+// block in on_redraw (build_canvas_list).
+// DAMAGE: no site of its own. The stem's cells are the line's own columns
+// on the canvas's rows, and every write of the resting cursor damages them
+// at both positions — the narrow moves through playhead_invalidate_rect
+// (the head's columns from the window's top through the canvas's foot), the
+// discrete ones the whole waveform area (playhead_pixel_x's damage rule;
+// the landing's seat, seat_playhead_on_domain_frame, among them) — and the
+// GL canvas's list is rebuilt whole at every frame that meets the canvas
+// paint area; a stash change rides the flag cache rebuild's waveform damage.
 //
 // THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): one rects call.
 void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
                                          const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    paint_marker_stem_runs(sink, area);
     if (app.marker_stems.empty()) return;
+    const int64_t playhead_frame = app.playhead_cursor_sample;
     std::vector<GuiRect> rs;
-    rs.reserve(app.marker_stems.size());
     for (const MarkerStem& stem : app.marker_stems) {
+        if (stem.frame != playhead_frame) continue;
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
         // render.cpp); the gate restates that against the area this painter
@@ -4685,9 +4700,9 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 // whole height, and its top and bottom runs on the canvas's first and last
 // t rows from the left side's line's first column through the right side's
 // line's last, aliased integer rects clipped to the area (a side off the
-// area paints nothing there). Painted before the focused stems
-// (paint_marker_stems), which on a focused pair stand on the sides in the
-// same color.
+// area paints nothing there). Painted before the playhead's line and the
+// coincidence stems (paint_marker_stems), a stem on either cue standing on
+// its side in the same color.
 // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): every pair's sides
 // and runs, one rects call.
 void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
@@ -4792,11 +4807,11 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 
 void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
                                       const GuiRect& area) {
-    // THE BLINK'S OFF PHASE PAINTS NO LINE (architect 2026-11-04; the rule
-    // at render_playhead's THE BLINK): the bit the tick stored at its last
-    // flip, read as painted (ON SCREEN IS AS PAINTED), so the picture and the
-    // damage the flip owed are one phase. The head in the ruler stays lit.
-    if (!app.playhead_blink_on) return;
+    // THE FADE'S COLOR IS THE STORED ONE (architect 2026-11-04; the rule at
+    // render_playhead's THE FADE): the byte triple the tick stored at its
+    // last change, read as painted (ON SCREEN IS AS PAINTED), so the picture
+    // and the damage the change owed are one color; this pass never reads
+    // the clock. The head in the ruler is unchanged.
     // Use the displayed viewport AND its samples-per-pixel
     // (wf_cache.fp_vp_start, derived spp) so the cursor stays in
     // lockstep with the cached waveform / stem / flag layers during
@@ -4809,17 +4824,18 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     // (architect 2026-10-09 ~14:30) and the marker lane the playhead draws
     // nothing.
     //
-    // THE CURSOR PLAYHEAD ALWAYS PAINTS in its on phase (architect
-    // 2026-07-30): ONE playhead form at the resting cursor column whatever
-    // the selection is doing — a SOLID ONE-W LINE in the palette's
-    // `playhead_line` (Live's DBF6F9, architect 2026-11-04; render.h's
-    // playhead paragraph). It paints AFTER paint_marker_stems (architect
-    // 2026-09-23), over the focused marker's stem, and before the scanner.
+    // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
+    // form at the resting cursor column whatever the selection is doing — a
+    // SOLID ONE-W OPAQUE LINE in the fade's color between the palette's
+    // `playhead_line` FFFFFF and `playhead_line_low` 6BA5AA (architect
+    // 2026-11-04; render.h's playhead paragraph). It paints BEFORE
+    // paint_marker_stems, whose coincidence stem stands over it (architect
+    // 2026-11-04), and before the scanner.
     //
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
-    render_playhead(sink, area, px_x, palette().playhead_line);
+    render_playhead(sink, area, px_x, hex(app.playhead_line_rgb));
 }
 
 // -- GuiPaintHandler::paint_scanner --------------------------------------
@@ -4843,7 +4859,7 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 // centered on its column (architect 2026-11-04, the unit,
 // waveform_line_px's rule, render.h), the canvas's rows alone (Cool Edit's
 // playback cursor is a solid line, measured 2026-10-09), and NEVER BLINKING
-// (the blink is the resting cursor's, 2026-11-04).
+// (the fade is the resting cursor's, 2026-11-04).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (render_playhead is shared with the cursor and cannot reach a strip lane at
@@ -8152,9 +8168,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
         //      Edit's view bar and its span (2026-10-09; no cursor mark in
         //      the bar, ~14:30).
-        //   6. the MARKER STEMS (waveform): the focused cue's solid stem.
-        //   7. the CURSOR's CANVAS LINE (paint_playheads, solid, in the
-        //      blink's on phase — the head is the ruler pass's, step 9).
+        //   6. the CURSOR's CANVAS LINE (paint_playheads, solid, in the
+        //      fade's stored color — the head is the ruler pass's, step 9),
+        //      the `h` view's nudged-pair rings under it.
+        //   7. the MARKER STEMS (waveform): the coincidence stems, over the
+        //      cursor's line (2026-11-04).
         //   8. the SCANNER (waveform), solid.
         //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
         //      digits — AND, in the same pass, the cursor's HEAD (the cyan
@@ -8212,18 +8230,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     ink like the stems, and before them.
         //   THE COLUMN IS SHARED, NOT CONTESTED (architect 2026-10-09, the
         //     program is Cool Edit): a SELECTION's cue is its members' chips
-        //     and its focus's solid stem (architect 2026-11-04), with the
-        //     landed cursor on the focus; the cursor's line paints over the
-        //     stem (2026-09-23), which shows through in the blink's off
-        //     phase; its head in the ruler and the cue's chip in the
-        //     marker lane never meet. (2026-08-01 lifted the SCANNER above the
+        //     (architect 2026-11-04), with the landed cursor on the focus; a
+        //     marker the cursor stands on wears the solid coincidence stem,
+        //     painted over the cursor's line (2026-11-04), the ruler's head
+        //     marking the playhead; its head in the ruler and the cue's chip
+        //     in the marker lane never meet. (2026-08-01 lifted the SCANNER above the
         //     stems, so the moving line does not blink out at every marker it
         //     crosses.)
 
         // THE CANVAS PASSES ARE NOT PAINTED HERE: the frame's list carries
         // them, built once, whole, in this order (build_canvas_list) — the
         // plate, the center lines, the stereo divider, the lead-in ring, the
-        // focused stem, the cursor's line, the scanner, the zoom anchor.
+        // nudged-pair rings, the cursor's line, the coincidence stems, the
+        // scanner, the zoom anchor.
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
         // pixels (the view bar whole).
@@ -8353,8 +8372,9 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
     render_center_lines(sink, area);
     render_waveform_divider(sink, area);
     paint_phase_reset_overlay_ring(sink, area);
-    paint_marker_stems(sink, area);
+    paint_marker_stem_runs(sink, area);
     paint_playheads(sink, area);
+    paint_marker_stems(sink, area);
     paint_scanner(sink, area);
     paint_strip_drag_anchor(sink, area);
 }

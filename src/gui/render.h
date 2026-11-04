@@ -209,7 +209,7 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's THIRTEEN (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
@@ -218,13 +218,14 @@ struct TrimRange {
 //                 channel's zero, over it (ROW 6); THE MARKER'S CHIP
 //                 (architect 2026-11-04) — `cue` the selected fill,
 //                 `cue_unselected` the unselected, `cue_outline` its one-W
-//                 outline, the focused member's stem and the two rings —
+//                 outline, the coincidence stem and the two rings —
 //                 warp and phase reset alike (the strike is the invalid
 //                 mark, THE MARKER LANE below); the disabled cue's
 //                 `inactive_cue`; the playhead's two roles,
 //                 `playhead_head` — its triangle in the ruler — and
-//                 `playhead_line` — its blinking line in the canvas
-//                 (architect 2026-11-04; THE PLAYHEAD, below); and the
+//                 `playhead_line` / `playhead_line_low` — the two ends of
+//                 its fading line in the canvas (architect 2026-11-04; THE
+//                 PLAYHEAD, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
@@ -329,6 +330,7 @@ struct GuiPalette {
     GuiColor inactive_cue;
     GuiColor playhead_head;
     GuiColor playhead_line;
+    GuiColor playhead_line_low;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of the toolbar band, row 8 and the well's
@@ -410,7 +412,7 @@ uint64_t palette_generation();
 // stem's color read live); every other reader paints live from palette()
 // each frame — the chrome's flat ground, keys and words, the canvas, its
 // grid and its center lines (render_canvas), the
-// focused marker's stem (paint_marker_stems), the playhead's head and line,
+// coincidence stems (paint_marker_stems), the playhead's head and line,
 // the open flag editor (render_flag_editor_box), the lead-in ring and the
 // `h` view's nudged-pair rings, the zoom anchor's stem and the scanner.
 void install_true_colors(bool on);
@@ -486,17 +488,19 @@ void install_true_colors(bool on);
 // and the move's damage box one extent, cue_bare_reach_right_px); IN THE
 // CANVAS A SOLID LINE, ONE W, centered on the column (architect 2026-11-04:
 // Live's playhead line, measured; canvas_line_rect, the scanner's form) in
-// THE PALETTE'S `playhead_line`, Live's DBF6F9, down the area's whole
-// height, the stereo divider's row included (architect 2026-11-02) — AND IT
-// BLINKS, on Live's timing, ON 450 ms and OFF 750 ms, stopped or playing,
-// the head lit through the off phase (render_playhead's THE BLINK;
+// THE PALETTE'S `playhead_line` (FFFFFF), down the area's whole height,
+// the stereo divider's row included (architect 2026-11-02) — AND IT FADES,
+// on Live's timing, measured per pixel: an opaque line whose color runs
+// linearly in bytes to `playhead_line_low` 6BA5AA and back, 600 ms each
+// way, stopped or playing, the head unchanged (render_playhead's THE FADE;
 // paint_playheads). Across the trim bar (architect 2026-10-09 ~14:30, "no
 // dots on the trim bar"), the marker lane and the row of ground under it it
-// draws nothing. IT MAY STAND ON A MARKER'S COLUMN — NO SNAP, NO AVOIDANCE
+// draws nothing. IT MAY STAND ON A MARKER — NO SNAP, NO AVOIDANCE
 // (architect 2026-10-09): the head and a cue's chip stand in different
-// lanes, and on the focused marker the line lies over the marker's
-// `cue_outline` stem, which shows through in the off phase (the paint order
-// stems, playhead, scanner).
+// lanes, and ON A MARKER WHOSE FRAME IT STANDS ON the marker's
+// `cue_outline` stem paints OVER the line (the paint order playhead, stems,
+// scanner; THE MARKER LANE's coincidence stem, below), so the dark stem is
+// what shows there and the ruler's head marks the playhead.
 // THE HEAD IS GRABBED AND DRAGGED, as Cool Edit's is (architect 2026-10-09
 // ~17:40): its HIT is the head as painted, its columns (the bare triangle,
 // cut to the waveform's) over its device rows of the ruler's,
@@ -510,8 +514,9 @@ void install_true_colors(bool on);
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
 // history.)
 // THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head,
-// `playhead_line` its line (architect 2026-11-04: the head Live's cyan, the
-// line Live's DBF6F9); neither is lent to a marker (the selection is the
+// `playhead_line` / `playhead_line_low` its line's two ends (architect
+// 2026-11-04: the head Live's cyan, the line Live's fade); neither is lent
+// to a marker (the selection is the
 // chip's, THE MARKER LANE below). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
 // stem and the scanner are both white, which unifies them: the non-playhead
@@ -520,7 +525,7 @@ void install_true_colors(bool on);
 // paint_scanner, its own role since 2026-10-05 — a SOLID line one W wide
 // over the canvas, centered on its column (Cool Edit's playback cursor is a
 // solid line, measured 2026-10-09; one W since 2026-11-04,
-// waveform_line_px's rule), never blinking, and THE ZOOM ANCHOR'S STEM
+// waveform_line_px's rule), never fading, and THE ZOOM ANCHOR'S STEM
 // (render_strip_anchor_stem), the same solid line at the pivot;
 // WHITE FFFFFF — COOL EDIT'S OWN CONSTANT (architect 2026-10-16, observed
 // in Cool Edit Pro 2.1: the scanner is white on every preset he tried; the
@@ -554,14 +559,17 @@ void install_true_colors(bool on);
 // at rest and in the editor (cue_baseline_px, THE METRICS RULE at
 // marker_lane_h_px: the x-height band centered in the lane, 13 rows from
 // its top and 14 from its bottom at 300 %) — `show_cue_label`, render.cpp,
-// the one painter of every label look on the face; and ON THE FOCUSED
-// MARKER ALONE, THE STEM — a SOLID ONE-W LINE in the `cue_outline`,
-// centered on the column, down the canvas's whole height (waveform_line_px,
-// canvas_line_rect's form; paint_marker_stems), the canvas alone (none in
-// the lane or on the row of ground under it). NO STEM AT REST (architect
-// 2026-11-04: Live paints none). No box round the label.
+// the one painter of every label look on the face; and THE STEM, ON EVERY
+// ENABLED MARKER THE PLAYHEAD STANDS ON — a SOLID ONE-W LINE in the
+// `cue_outline`, centered on the column, down the canvas's whole height
+// (waveform_line_px, canvas_line_rect's form; paint_marker_stems), the
+// canvas alone (none in the lane or on the row of ground under it): THE
+// COINCIDENCE STEM (architect 2026-11-04: "in ableton playhead coincident
+// with marker = no stem, stem #11 on hover. we have no hover so we should
+// #11 on coincident"). NO OTHER STEM (Live paints none at rest). No box
+// round the label.
 //
-// THE CHIP CARRIES SELECTION AND FOCUS (architect 2026-11-04, reversing
+// THE CHIP CARRIES THE SELECTION (architect 2026-11-04, reversing
 // 2026-11-02's "the triangle never marks focus or selection": "we don't use
 // ableton's rect above a marker and could therefore allow the triangle chip
 // to stand for selection/focus"): THE UNSELECTED FILL the palette's
@@ -569,7 +577,8 @@ void install_true_colors(bool on);
 // FILL its `cue` (Live's orange FFAD56; architect 2026-11-01: "one color
 // for all markers" — every cue, the history's halves and a coincident
 // marker's included), the OUTLINE its `cue_outline` (Live's dark line,
-// 111111), and the focused member's stem the same `cue_outline`.
+// 111111) — and the coincidence stem the same `cue_outline`, which is the
+// playhead's, not the selection's.
 // WARP AND PHASE RESET WEAR THE SAME CUE:
 // the kind reads from the view that lists it — the lane paints the active
 // column's markers alone, the Warp and Phase Reset views — and from its
@@ -616,15 +625,7 @@ void install_true_colors(bool on);
 //             111111 outline, the label in the text tone (materials.h's
 //             kTextInk); no stem;
 //   SELECTED  a member of the selection set: the `cue` FFAD56 fill in the
-//             `cue_outline`; the label unchanged; no stem;
-//   SELECTED AND FOCUSED  the selection's focus member (selection.h's
-//             focus, AppState::last_selected_marker — the one the
-//             playhead landed on; THE RESOLVER TAKES IT FROM THE
-//             SELECTION, never from the playhead): the same chip PLUS A
-//             SOLID ONE-W `cue_outline` STEM down the canvas's whole height
-//             on its column (MarkerStem; paint_marker_stems, painted before
-//             the playhead and the scanner). NO OTHER STEM EXISTS. THE
-//             LABEL CHANGES NOTHING in any selected state: it paints as at
+//             `cue_outline`; THE LABEL CHANGES NOTHING: it paints as at
 //             rest, no fill, its box the resting one. THE PRESS TARGET STAYS
 //             THE WHOLE LANE (architect 2026-10-09 ~21:00, "the text box
 //             should take up the whole marker lane … right now it's too
@@ -633,6 +634,24 @@ void install_true_colors(bool on);
 //             whole text selected in the selection pair inside its field
 //             (EDITING, below). The history's changed pair, one item, takes
 //             the selected chip on both halves (render_history_diff_flags);
+//   COINCIDENT  ANY ENABLED cue, selected or not, whose frame THE RESTING
+//             PLAYHEAD STANDS ON — THE SAME FRAME, the cursor's displayed
+//             frame equal to the cue's paint frame (frame_to_paint_sample,
+//             the integer the cursor stores; a selection landing puts it
+//             there exactly), never a column compare, so two markers a frame
+//             apart at a coarse zoom never both light — wears A SOLID ONE-W
+//             `cue_outline` STEM down the canvas's whole height on its column
+//             (architect 2026-11-04; MarkerStem carries the frame,
+//             paint_marker_stems does the coincidence at paint — THE
+//             RESOLVER NEVER SEES THE PLAYHEAD). THE STEM PAINTS OVER THE
+//             PLAYHEAD'S LINE (the paint order playhead, stems, scanner):
+//             both are one W on one column, so a stem under the opaque
+//             fading line would never show; while the playhead rests on a
+//             marker the dark stem is what shows and the ruler's head marks
+//             the playhead. (The alternative, no stem while coincident, is
+//             Live's own hover-less picture and would make the ruling
+//             invisible — the planner holds it for him.) The history view's
+//             diff flags the same, each cue at its own frame;
 //   STRUCK    the red-flag class (warp_red_flag_set_cached and its
 //             phase-reset twin — the coincident run, a warp label ref
 //             the render falls back from, and the definitions of a label
@@ -646,13 +665,14 @@ void install_true_colors(bool on);
 //             the `inactive_cue` 5D5D5D, the fill THE LANE'S FACE
 //             (materials.h's kLaneFace, painted so the chip occludes an
 //             earlier label's text as every chip does), the label in the
-//             `inactive_cue`, NO STEM; the same inert label on a tie
+//             `inactive_cue`, NO STEM, the playhead on it or not; the same
+//             inert label on a tie
 //             follower's cells (one look for inert cue text);
 //   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
 //             selectable): IT SHOWS NOTHING OF THE SELECTION (architect
 //             2026-11-02, "3 accept"): the hollow chip and the inactive
-//             label as at rest, focused or not — the playhead standing on
-//             it after the arming press its only mark.
+//             label as at rest — the playhead standing on it after the
+//             arming press (the ruler's head) its only mark.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE (the
 // press look is retired everywhere, 2026-11-04, materials.h's head).
 //
@@ -715,8 +735,9 @@ void install_true_colors(bool on);
 // two segments; a nudged pair two cues joined by the ring
 // (render_history_diff_flags owns the pair). The view's focus or selection
 // gives the whole item the live lane's SELECTED row — both halves' chips
-// the `cue` fill, the labels as at rest — and its focus the stem, on each
-// of its cues' columns (render_history_diff_flags).
+// the `cue` fill, the labels as at rest — and the coincidence stem stands
+// on any of its cues whose frame the playhead stands on
+// (render_history_diff_flags).
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
 //
@@ -758,9 +779,9 @@ void install_true_colors(bool on);
 // two inks alone); then THE STEREO DIVIDER'S ROW between the two
 // wells (architect 2026-10-16, chrome on the canvas, waveform_divider;
 // render_waveform_divider, over the plate so a plate from before a resize
-// never crosses them); then the lead-in ring, the focused marker's stem,
-// the playhead's line, the scanner and the zoom anchor (build_canvas_list's
-// order). THE PICTURE IS ONE THING — the
+// never crosses them); then the lead-in ring, the nudged pairs' rings, the
+// playhead's line, the coincidence stems over it, the scanner and the zoom
+// anchor (build_canvas_list's order). THE PICTURE IS ONE THING — the
 // canvas, the grid, the ink if any, the center lines — SO THE CENTER LINES
 // PAINT WHENEVER THE GRID DOES: over the plate while audio is loaded (a
 // frame before the first plate included, its plate record absent), and with
@@ -804,7 +825,7 @@ void install_true_colors(bool on);
 // grid line now") and every input leaves alone (point_on_waveform_divider). The chrome's
 // two-line sunken well that stood round the area (the theme's quartet,
 // 2026-10-02 to 2026-10-09) is gone with the content band it carved out of
-// the area. THE FOCUSED MARKER'S STEM, THE PLAYHEAD'S LINE and the scanner
+// the area. THE COINCIDENCE STEMS, THE PLAYHEAD'S LINE and the scanner
 // span the canvas's whole height, the divider's row included; THE ZOOM
 // ANCHOR'S STEM spans it too.
 
@@ -1987,7 +2008,7 @@ inline int scrub_channel_above_px() {
 // EVERY LINE PAINTED ON THE CANVAS is this width: THE READERS — the one
 // inventory of the class, each an ALIASED INTEGER RECT, SOLID (no dotted
 // line since 2026-11-04) — the scanner and the resting cursor
-// (render_playhead), the focused marker's stem (paint_marker_stems), the
+// (render_playhead), the coincidence stems (paint_marker_stems), the
 // zoom anchor's stem (render_strip_anchor_stem), the phase-reset lead-in
 // ring's four sides (paint_phase_reset_overlay_ring), the nudged pairs'
 // rings (paint_marker_stem_runs), the canvas's GRID
@@ -2583,7 +2604,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // bands and paint nothing on it; EVERY VERTICAL LINE CROSSES IT, THE DIVIDER
 // BEING JUST ANOTHER GRID LINE (architect 2026-11-02: "the divider is just
 // another grid line now"; "going below was a bevel metaphor - the line is
-// now just a line") — the focused marker's stem, the cursor, the lead-in
+// now just a line") — the coincidence stems, the cursor, the lead-in
 // ring's and the nudged pairs' sides, the scanner and the zoom anchor's
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). At 300 % on the
@@ -3078,24 +3099,33 @@ struct GuiPlateColumns {
 // from area.x), centered on it, [col − t / 2, col − t / 2 + t), in `color`,
 // SOLID — the scanner (Cool Edit's playback cursor a solid line, measured
 // 2026-10-09) and the resting cursor alike (architect 2026-11-04, Live's
-// playhead line; THE BLINK below is the caller's, paint_playheads) — painted
+// playhead line; THE FADE below is the caller's, paint_playheads) — painted
 // straight over whatever it crosses — waveform ink included. No-op if
 // outside; the line is gated on its own column and clipped at both edges,
 // so it never leaks into an adjacent region.
 //
-// THE RESTING CURSOR BLINKS (architect 2026-11-04, measured at 120 fps on
-// his Live recording): ON kPlayheadBlinkOnMs 450, OFF the rest of
-// kPlayheadBlinkPeriodMs 1200, free-running on CLOCK_MONOTONIC from the
-// process's start (no reseat at a seek or a play), WHETHER STOPPED OR
-// PLAYING; the ruler's head stays lit through the off phase, and the
-// scanner never blinks. ON SCREEN IS AS PAINTED: the tick computes the
-// phase (playhead_blink_on_at) and, on a flip alone, stores it in
-// AppState::playhead_blink_on and damages the line's columns on the
-// canvas's rows (playhead_line_rect, main.cpp); paint_playheads reads the
-// stored bit and skips this call in the off phase. PROOF HYGIENE: a
-// screencap comparison of two builds excepts the line's phase as it
-// excepts the clock legend — two captures of one state may differ by the
-// line alone.
+// THE RESTING CURSOR FADES (architect 2026-11-04, MEASURED per pixel at
+// 120 fps on his Live recording, tmp/keep/screenshots/ableton/zoom/): an
+// OPAQUE line — its own pixel the same tone over the ink and over the
+// canvas — whose COLOR runs a TRIANGLE WAVE, LINEAR IN sRGB BYTES, between
+// the palette's `playhead_line` FFFFFF at the peak and its
+// `playhead_line_low` 6BA5AA at the trough, kPlayheadFadeHalfMs 600 down
+// and 600 up, period kPlayheadFadePeriodMs 1200, no hold at either end,
+// free-running on CLOCK_MONOTONIC from the process's start (no reseat at a
+// seek or a play), WHETHER STOPPED OR PLAYING (playhead_fade_color_at
+// below); the ruler's head is unchanged (`playhead_head`, lit), and the
+// scanner never fades (FFFFFF solid). ON SCREEN IS AS PAINTED: the tick
+// computes the color and, on a change of its byte triple alone, stores it
+// in AppState::playhead_line_rgb and damages the line's columns on the
+// canvas's rows (playhead_line_rect, main.cpp); paint_playheads paints the
+// stored color and never reads the clock. THE COST: the triple moves on
+// nearly every tick while the line is on screen (148 levels of red each
+// way in 600 ms), so one small damage per tick and one rect in the draw
+// list at the refresh cadence — measurable with dumpsys SurfaceFlinger
+// --timestats; a cursor off the canvas damages nothing. PROOF HYGIENE: a
+// screencap comparison of two builds excepts the line's TONE as it excepts
+// the clock legend — two captures of one state may differ by the line
+// alone.
 //
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02): the cursor's head is
 // paint_ruler_row's (the `playhead_head` triangle in the ruler since
@@ -3113,16 +3143,27 @@ void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color);
-inline constexpr int64_t kPlayheadBlinkOnMs     = 450;
-inline constexpr int64_t kPlayheadBlinkPeriodMs = 1200;
-static_assert(kPlayheadBlinkOnMs > 0 &&
-              kPlayheadBlinkOnMs < kPlayheadBlinkPeriodMs);
-// THE BLINK'S PHASE at `elapsed_ms` past the origin (the paragraph above):
-// on for the period's first kPlayheadBlinkOnMs.
-inline bool playhead_blink_on_at(int64_t elapsed_ms) {
-    int64_t m = elapsed_ms % kPlayheadBlinkPeriodMs;
-    if (m < 0) m += kPlayheadBlinkPeriodMs;
-    return m < kPlayheadBlinkOnMs;
+inline constexpr int64_t kPlayheadFadeHalfMs   = 600;
+inline constexpr int64_t kPlayheadFadePeriodMs = 2 * kPlayheadFadeHalfMs;
+// THE FADE'S COLOR at `elapsed_ms` past the origin (the paragraph above), as
+// a 0xRRGGBB sRGB word: u = (elapsed mod period) / half, t = 1 − u on the
+// way down and u − 1 on the way up (1 at the peak, 0 at the trough), each
+// channel lerp(low, peak, t) of the two roles' bytes, rounded to a whole
+// byte (nearbyint).
+inline uint32_t playhead_fade_color_at(int64_t elapsed_ms) {
+    int64_t m = elapsed_ms % kPlayheadFadePeriodMs;
+    if (m < 0) m += kPlayheadFadePeriodMs;
+    const double u = static_cast<double>(m) /
+                     static_cast<double>(kPlayheadFadeHalfMs);
+    const double t = u <= 1.0 ? 1.0 - u : u - 1.0;
+    const GuiColor hi = palette().playhead_line;
+    const GuiColor lo = palette().playhead_line_low;
+    const auto ch = [t](double l, double h) {
+        const double lb = std::nearbyint(l * 255.0);
+        const double hb = std::nearbyint(h * 255.0);
+        return static_cast<uint32_t>(std::nearbyint(lb + (hb - lb) * t));
+    };
+    return (ch(lo.r, hi.r) << 16) | (ch(lo.g, hi.g) << 8) | ch(lo.b, hi.b);
 }
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
@@ -3361,26 +3402,29 @@ struct FlagLaneRects {
     int     columns_x = 0;
 };
 
-// THE FOCUSED MARKER'S STEM, as the flag painter publishes it: the window x
-// of the column it stands on (the chip's apex column). ITS PRESENCE IS THE
-// STEM (architect 2026-11-04: Live paints no stem at rest): the painters
-// publish an entry for THE SELECTION'S FOCUS MEMBER alone — resolve_flag_face's
-// `stem`, a live (not disabled) cue that is selected and focused, in the live
-// lanes AppState::last_selected_marker, in the `h` view its own focus (both
-// cues of a focused nudged pair) — and the one reader, the per-frame
-// waveform pass GuiPaintHandler::paint_marker_stems, paints a solid one-W
-// `cue_outline` line down the canvas's whole height on it, so the stem and
-// its chip can never disagree about a column. The flag PAINTERS are the only
-// producers — the two live columns', and the `h` view's diff lane, which
-// replaces them wholesale while the mode stands. A DISABLED marker publishes
-// NO ENTRY AT ALL (a disabled chip is hollow and shows no selection); a
-// changed `h` pair is a live edit and publishes as a live cue (the ruling at
-// render_history_diff_flags). Stems are pointer-inert (the seventh glass
-// ruling), so the stash is paint-only and `marker_index` serves the
-// painter's identity bookkeeping alone.
+// ONE MARKER'S STEM ENTRY, as the flag painter publishes it: the window x of
+// the column it stands on (the chip's apex column) and THE PAINT FRAME the
+// cue was mapped from (frame_to_paint_sample, the integer displayed frame
+// the playhead cursor stores; a drag's moving frame included). The painters
+// publish one for EVERY ENABLED LIVE CUE AND DIFF FLAG they walk whose
+// column is a waveform column (resolve_flag_face's `stem`; a nudged `h`
+// pair's two cues each at its own frame), and THE ONE READER,
+// GuiPaintHandler::paint_marker_stems, paints the COINCIDENCE STEM — a solid
+// one-W `cue_outline` line down the canvas's whole height — on the entries
+// whose frame equals the resting playhead's (AppState::playhead_cursor_sample,
+// the frame playhead_pixel_x maps; a frame compare, never a column compare,
+// architect 2026-11-04), so the stem and its chip can never disagree about a
+// column. The flag PAINTERS are the only producers — the two live columns',
+// and the `h` view's diff lane, which replaces them wholesale while the mode
+// stands. A DISABLED marker publishes NO ENTRY AT ALL (no stem, the playhead
+// on it or not); a changed `h` pair is a live edit and publishes as a live
+// cue (the ruling at render_history_diff_flags). Stems are pointer-inert (the
+// seventh glass ruling), so the stash is paint-only and `marker_index`
+// serves the painter's identity bookkeeping alone.
 struct MarkerStem {
-    int    marker_index;
-    double x;
+    int     marker_index;
+    double  x;
+    int64_t frame;
 };
 
 // THE NUDGED PAIR'S RING (architect 2026-10-10 ~18:55 → 2026-10-26; solid
@@ -3392,8 +3436,8 @@ struct MarkerStem {
 // first and last W of rows from the left side's line's first column through
 // the right side's line's last (paint_marker_stem_runs; the phase-reset
 // lead-in ring's form, paint_phase_reset_overlay_ring). Always shown,
-// selected or not; the focused pair's two stems stand on its sides in the
-// same color. The history lane's painter is the one producer
+// selected or not; a coincidence stem on either cue stands on its side in
+// the same color. The history lane's painter is the one producer
 // (render_history_diff_flags; the live lanes publish none),
 // paint_marker_stem_runs the one reader; a ring reaching past either edge of
 // the waveform's columns is published and clipped at paint, its sides
@@ -3470,18 +3514,17 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // wear the inactive label (architect 2026-09-19: they show the leader's
 // numbers and are not this marker's to author).
 //
-// `selected_set` AND `focus_index` GIVE THE SELECTED LOOK ON THE CHIP
-// (architect 2026-11-04; resolve_flag_face's table): every selected enabled
-// marker's chip the `cue` fill, and the focus member's (the caller passes
-// AppState::last_selected_marker, -1 or a member) the stem down the
-// canvas too; the label paints as at rest.
+// `selected_set` GIVES THE SELECTED LOOK ON THE CHIP (architect 2026-11-04;
+// resolve_flag_face's table): every selected enabled marker's chip the
+// `cue` fill; the label paints as at rest. (The stem is the playhead's
+// coincidence, decided at paint: MarkerStem.)
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted cue, left to right (the hit walk follows the paint order:
 // triangles first, read backwards — the right one on top — then labels,
 // read backwards likewise — the right one on top, the labels painting left
-// to right; topmost_flag_rect, app_state.cpp), and `out_stems` one entry for
-// the FOCUSED enabled cue where its column is a waveform column. A derived width cannot be recomputed
+// to right; topmost_flag_rect, app_state.cpp), and `out_stems` one entry per
+// ENABLED cue whose column is a waveform column, with its paint frame. A derived width cannot be recomputed
 // without shaping, so the pixels' own pass is the single owner of both.
 // Either pointer may be null.
 //
@@ -3513,7 +3556,6 @@ void render_flags(cairo_t* cr,
                   long long viewport_end_sample,
                   int sample_rate,
                   const std::set<int>& selected_set,
-                  int focus_index,
                   const std::set<int>& red_set,
                   bool iteration_on,
                   std::vector<FlagHitRect>* out_hit_rects = nullptr,
@@ -3712,7 +3754,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             long long viewport_end_sample,
                             int sample_rate,
                             const std::set<int>& selected_set,
-                            int focus_index,
                             const std::set<int>& red_set,
                             bool iteration_on,
                             std::vector<FlagHitRect>* out_hit_rects = nullptr,
@@ -3869,7 +3910,7 @@ struct HistoryDiffFlag {
 // history_diff.h): one HistoryDiffFlag, one selection, one revert. A
 // SAME-FRAME pair is ONE CUE — its label the two halves as two segments, the
 // removed (struck) first, then the added, the segment gap between them; one
-// chip, one stem where focused, no ring. A NUDGED pair (the halves apart) is TWO CUES
+// chip, one stem entry, no ring. A NUDGED pair (the halves apart) is TWO CUES
 // JOINED BY THE RING (architect 2026-10-26 ~15:30: "both markers represented
 // with their stems, because one of them will have the strike through and
 // that'll be obvious which one is removed, and they should be joined by the
@@ -3906,13 +3947,14 @@ struct HistoryDiffFlag {
 // table). The focus or membership SELECTS the flag — the focus is the
 // selection's singleton when the set is empty, and the revert act reads them
 // the same way — and A PAIR'S HALVES ARE ONE ITEM: a selected item wears the
-// SELECTED chip on BOTH halves, and the FOCUSED item its stem too — a
-// same-frame pair's one cue's column, a nudged pair's two cues' columns. The
+// SELECTED chip on BOTH halves; the coincidence stem stands on any cue whose
+// frame the playhead stands on (a nudged pair's two cues each at its own;
+// MarkerStem). The
 // labels paint as at rest (a nudged pair's focused half,
 // HistoryMode::focus_half, is the walk's and the press's, not the paint's).
 // THE CHIP READS THE DISABLED AXIS (architect 2026-08-22): a SINGLE
 // flag — added-only or removed-only — whose one side is EFFECTIVELY disabled
-// wears the hollow chip and publishes NO STEM, the live lane's rule
+// wears the hollow chip and publishes NO STEM ENTRY, the live lane's rule
 // verbatim, while a CHANGED PAIR KEEPS ITS LIVE CHIP whichever halves are
 // disabled, because the pair as a whole is a live EDIT being displayed
 // rather than a line in a switched-off state.

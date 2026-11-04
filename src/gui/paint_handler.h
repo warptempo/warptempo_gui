@@ -421,9 +421,8 @@ struct FlagCache {
     // switch being locked while the lamp is on — and the other paints no
     // cells, so this field says what this surface shows.
     bool      fp_iteration_mode           = false;
-    // (NO ADDRESSED CELL: the selected look is the cue's chip and the
-    // focus's stem, not a segment's (architect 2026-11-04, render.h's THE
-    // STATES), so the
+    // (NO ADDRESSED CELL: the selected look is the cue's chip, not a
+    // segment's (architect 2026-11-04, render.h's THE STATES), so the
     // axis paints nothing here; the focus it belongs to is keyed by
     // fp_selection_hash.)
     // THE STANDING MARKER-LANE EDITOR'S SUPPRESSION — WHICH MARKER and WHICH
@@ -681,7 +680,7 @@ struct GuiPaintHandler {
     //     history_diff.h — whose positions are two different fields),
     //     the selection hash what distinguishes two membership states of one
     //     shown delta (the mode's multi-selection, whose members wear the
-    //     focus's own selected stem).
+    //     selected chip).
     // The measured-font field left the list with row 7's monospace deletion; the
     // flag editor's TEXT was never one of these — it renders live as an overlay
     // after this cache's blit, and only the identity of the suppressed box is a
@@ -1046,14 +1045,17 @@ private:
     // bar too; the outer Cairo damage clip bounds the actual work. See the
     // definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
-    // THE FOCUSED MARKER'S STEM (architect 2026-11-04: no stem at rest, Live
-    // paints none) — the per-frame waveform overlay: the selection's focus
-    // member's column, a SOLID ONE-W `cue_outline` line down the canvas's
-    // whole height (render.h's marker-lane paragraph; the `h` view's focused
-    // item on each of its cues' columns); a DISABLED marker stems never.
-    // Which cue stems is resolved in the painter (resolve_flag_face's `stem`)
-    // and published in the stash; the stem paints under the playhead's line
-    // (architect 2026-09-23), so in the blink's off phase the stem shows.
+    // THE COINCIDENCE STEM (architect 2026-11-04: "we have no hover so we
+    // should #11 on coincident") — the per-frame waveform overlay: on every
+    // published enabled cue whose paint frame the resting playhead stands on
+    // (a frame compare against AppState::playhead_cursor_sample, never a
+    // column compare), a SOLID ONE-W `cue_outline` line down the canvas's
+    // whole height (render.h's marker-lane paragraph; the `h` view's cues
+    // alike, each at its own frame); a DISABLED marker stems never. The
+    // painter publishes every enabled cue's entry (resolve_flag_face's
+    // `stem`), and the coincidence is decided here, at paint; the stem
+    // paints OVER the playhead's line (architect 2026-11-04), so the dark
+    // stem is what shows on a coincident marker.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its cue's apex column, and
@@ -1064,22 +1066,20 @@ private:
     //
     // NO PAINT-TIME OVERRIDE FROM AN EDITOR (architect 2026-10-03): the
     // stash is the whole answer; the open flag editor's refusal recolors
-    // nothing, and the playhead never reaches the stems.
-    // It paints the `h` view's nudged pairs' rings first
-    // (paint_marker_stem_runs, AppState::marker_stem_runs).
+    // nothing.
     void paint_marker_stems(GuiCanvasSink& sink, const GuiRect& area);
     // The nudged pairs' rings (MarkerStemRun, render.h; the body owns the
-    // form), paint_marker_stems' first act.
+    // form), painted before the playhead's line (build_canvas_list).
     void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
     // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W
-    // line in the palette's `playhead_line` (Live's DBF6F9, 2026-11-04),
-    // BLINKING — painted in the blink's on phase alone
-    // (AppState::playhead_blink_on, render_playhead's THE BLINK) — after the
-    // marker stems.
+    // opaque line in the fade's stored color (AppState::playhead_line_rgb,
+    // between the palette's `playhead_line` FFFFFF and `playhead_line_low`
+    // 6BA5AA, render_playhead's THE FADE, 2026-11-04) — before the
+    // coincidence stems, which stand over it.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
-    // paint_marker_stems and paint_playheads: the scanner draws OVER the stems
+    // paint_playheads and paint_marker_stems: the scanner draws OVER the stems
     // (and over the cursor where they meet) instead of being erased by every
     // marker it sweeps past. Waveform-only, gated on playhead_scanner_active —
     // see the definition for the ruling.

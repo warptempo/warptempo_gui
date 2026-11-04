@@ -18,8 +18,9 @@
 // equivalent, the playhead's triangle, the orange of Live's markers and
 // lit buttons, (2026-11-02) the grey of its inactive marker, and
 // (2026-11-04) its unselected marker's grey, its dark line and its
-// playhead's line — but the core, the product's own, and the scanner, the
-// controls' white; each ruled on his mocks.
+// playhead's line's fade, measured per pixel at 120 fps — but the core,
+// the product's own, and the scanner, the controls' white; each ruled on
+// his mocks.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the well, and THE MATERIALS
 // every chrome role — the flat look's constants (chrome_derive.h,
@@ -36,10 +37,10 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // flag editor's field and selection band, the chrome's selected pair). So
-// the palette's program roles are exactly the TWELVE below (TWO ROLES MAY
+// the palette's program roles are exactly the THIRTEEN below (TWO ROLES MAY
 // SHARE A NUMBER — `cue_unselected` and `inactive_cue` are both Live's
-// 5D5D5D, as the ink and `center` share 191919: a role is what it paints,
-// not its value):
+// 5D5D5D, as the ink and `center` share 191919, and `playhead_line` and
+// `scanner` FFFFFF: a role is what it paints, not its value):
 //   waveform_canvas  393939  the canvas, Live's darker band
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
 //                            the lit lamp's outer bar
@@ -68,7 +69,8 @@
 //                            cue outside the selection
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
 //                            one-W outline round every live chip, THE
-//                            FOCUSED MEMBER'S STEM down the canvas, the
+//                            COINCIDENCE STEM down the canvas (every
+//                            enabled marker the playhead stands on), the
 //                            phase-reset lead-in ring and the nudged pairs'
 //                            ring runs (render.h's THE STATES)
 //   inactive_cue     5D5D5D  THE DISABLED MARKER (architect 2026-11-02, the
@@ -87,9 +89,13 @@
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
 //                            paragraph)
-//   playhead_line    DBF6F9  THE PLAYHEAD'S LINE IN THE CANVAS (architect
-//                            2026-11-04, Live's, measured): solid, one W,
-//                            BLINKING on Live's timing (render_playhead)
+//   playhead_line    FFFFFF  THE PLAYHEAD'S LINE IN THE CANVAS AT ITS PEAK
+//                            (architect 2026-11-04, Live's, measured per
+//                            pixel): solid, one W, opaque, its color FADING
+//                            linearly in bytes to the trough below and back,
+//                            600 ms each way (render_playhead's THE FADE)
+//   playhead_line_low 6BA5AA THE PLAYHEAD LINE'S TROUGH, Live's, measured
+//                            (the fade's other end; playhead_fade_color_at)
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems
@@ -113,7 +119,8 @@ inline constexpr uint32_t kPaletteCueUnselected = 0x5D5D5D;
 inline constexpr uint32_t kPaletteCueOutline    = 0x111111;
 inline constexpr uint32_t kPaletteInactiveCue = 0x5D5D5D;
 inline constexpr uint32_t kPalettePlayheadHead = 0x03C3D5;
-inline constexpr uint32_t kPalettePlayheadLine = 0xDBF6F9;
+inline constexpr uint32_t kPalettePlayheadLine = 0xFFFFFF;
+inline constexpr uint32_t kPalettePlayheadLineLow = 0x6BA5AA;
 inline constexpr uint32_t kPaletteScanner  = 0xFFFFFF;
 
 // THE ROLE TABLE — THE ONE ENUMERATION of the program's roles, in
@@ -136,6 +143,7 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::inactive_cue,     kPaletteInactiveCue},
     {&GuiPalette::playhead_head,    kPalettePlayheadHead},
     {&GuiPalette::playhead_line,    kPalettePlayheadLine},
+    {&GuiPalette::playhead_line_low, kPalettePlayheadLineLow},
     {&GuiPalette::scanner,          kPaletteScanner},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);

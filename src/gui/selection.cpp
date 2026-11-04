@@ -225,8 +225,8 @@ void Selection::collapse_to_focused() {
     // which the 2+ -> 1 case here triggers. (A collapse used to owe the
     // selected-marker stem's APPEAR a damage as well — the fine-tuning callers
     // can collapse then REFUSE and full-invalidate nothing — but the chips
-    // and the focus's stem ride the flag cache rebuild's waveform damage,
-    // keyed by the selection and its focus.)
+    // ride the flag cache rebuild's waveform damage, keyed by the selection,
+    // and the coincidence stem the playhead's own damage.)
     damage_overlay_on_subject_change(old_subject);
 }
 

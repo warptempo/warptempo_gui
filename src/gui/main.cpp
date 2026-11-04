@@ -1274,13 +1274,13 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// THE BLINK'S DAMAGE BOX (architect 2026-11-04; the rule at render_playhead's
-// THE BLINK, render.h): EXACTLY THE LINE'S COLUMNS ON THE CANVAS'S ROWS —
+// THE FADE'S DAMAGE BOX (architect 2026-11-04; the rule at render_playhead's
+// THE FADE, render.h): EXACTLY THE LINE'S COLUMNS ON THE CANVAS'S ROWS —
 // the one-W line centered on the cursor's column (waveform_line_cols, the
 // painter's own gate and clip) over the area's rows, NOT THE RULER'S HEAD,
-// which stays lit through the off phase. `px_x` as playhead_invalidate_rect's.
+// which the fade leaves alone. `px_x` as playhead_invalidate_rect's.
 // An empty rect where the column is off the area. Its one caller is the
-// tick's blink flip, a narrow-on-plate site (playhead_pixel_x's table).
+// tick's fade step, a narrow-on-plate site (playhead_pixel_x's table).
 GuiRect playhead_line_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::nearbyint(px_x));
     const WaveformLineCols c = waveform_line_cols(area.w, col);
@@ -1288,11 +1288,11 @@ GuiRect playhead_line_rect(const GuiRect& area, double px_x) {
     return GuiRect{area.x + c.x0, area.y, c.w, area.h};
 }
 
-// THE BLINK'S ORIGIN, THE PROCESS'S START (architect 2026-11-04: the blink
+// THE FADE'S ORIGIN, THE PROCESS'S START (architect 2026-11-04: the fade
 // free-runs on CLOCK_MONOTONIC, no reseat at a seek or a play): stamped
 // once by gui_main before the first project opens, read by every project's
-// tick (run_project's blink flip).
-static int64_t g_playhead_blink_origin_ms = 0;
+// tick (run_project's fade step).
+static int64_t g_playhead_fade_origin_ms = 0;
 
 // (THE STATUS CELL'S RECT IS DELETED — 2026-08-13, when the architect moved
 // the whole status chain into the TAB ROW: "just put that text in the tab row,
@@ -2156,23 +2156,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (refresh_logo_legend, its rule and its damage).
         refresh_logo_legend(app, gui);
 
-        // THE PLAYHEAD'S BLINK, ON EVERY TICK (architect 2026-11-04; the rule
-        // at render_playhead's THE BLINK, render.h): the phase on
+        // THE PLAYHEAD'S FADE, ON EVERY TICK (architect 2026-11-04; the rule
+        // at render_playhead's THE FADE, render.h): the color on
         // CLOCK_MONOTONIC from the process's start, stopped or playing,
-        // whatever mode stands — and ON A FLIP ALONE the painted phase
-        // stored (AppState::playhead_blink_on, which paint_playheads reads)
-        // and the line's columns on the canvas's rows damaged
-        // (playhead_line_rect), under two flips a second. The column is the
+        // whatever mode stands — and ON A CHANGE OF THE BYTE TRIPLE ALONE
+        // the painted color stored (AppState::playhead_line_rgb, which
+        // paint_playheads paints) and the line's columns on the canvas's
+        // rows damaged (playhead_line_rect), about once a tick while the
+        // line is on screen (the cost at the rule). The column is the
         // resting cursor's on the PLATE basis, the pixels' own
         // (playhead_pixel_x's damage rule, a narrow-on-plate site). Ahead of
         // every return below, as the legend is: a mode that hides the canvas
-        // keeps the phase current, and its damage lands under that mode's
+        // keeps the color current, and its damage lands under that mode's
         // own surface harmlessly.
         {
-            const bool on = playhead_blink_on_at(
-                monotonic_ms() - g_playhead_blink_origin_ms);
-            if (on != app.playhead_blink_on) {
-                app.playhead_blink_on = on;
+            const uint32_t rgb = playhead_fade_color_at(
+                monotonic_ms() - g_playhead_fade_origin_ms);
+            if (rgb != app.playhead_line_rgb) {
+                app.playhead_line_rgb = rgb;
                 const GuiPaintHandler::PlateViewportBasis pb =
                     paint_handler.plate_viewport_basis();
                 const GuiRect r = playhead_line_rect(
@@ -3441,8 +3442,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
 int gui_main() {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
-    // THE PLAYHEAD BLINK'S ORIGIN, the process's start (its declaration).
-    g_playhead_blink_origin_ms = monotonic_ms();
+    // THE PLAYHEAD FADE'S ORIGIN, the process's start (its declaration).
+    g_playhead_fade_origin_ms = monotonic_ms();
 
     // (NO SIGCHLD DISPOSITION HERE, AND NO CHILD: the GUI spawns nothing
     // since 2026-09-29, when the load in place's `gio trash` gave way to a

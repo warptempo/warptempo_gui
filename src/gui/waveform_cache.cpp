@@ -1158,9 +1158,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // names this column reads as "off" here, and fp_active_markers_view above
     // is what keeps the two readings apart across a switch.
     // See fp_iteration_mode. (The addressed cell is no input: the selected
-    // look is the cue's chip and the focus's stem, never a segment's —
-    // architect 2026-11-04, render.h's THE STATES — and the focus they read
-    // is keyed by sel_hash above.)
+    // look is the cue's chip, never a segment's — architect 2026-11-04,
+    // render.h's THE STATES — keyed by sel_hash above, whose focus term is
+    // harmless; the coincidence stem is decided at paint, no input here.)
     const bool      iter_on    = iteration_column_lit(app, mv);
     // THE STANDING EDITOR'S SUPPRESSION — which marker, and which of its boxes
     // the pass below does not paint — off THE ONE DERIVATION
@@ -1397,7 +1397,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.phaseresetmarkers.markers(),
             vp_start, vp_end, sr,
             app.selected_markers,
-            app.last_selected_marker,
             pr_red,
             // The mode's verdict FOR THIS COLUMN, which paints its two BOUND
             // CELLS (its hop bracket) exactly as the warp column's are painted
@@ -1420,7 +1419,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      app.warpmarkers.markers(),
                      vp_start, vp_end, sr,
                      app.selected_markers,
-                     app.last_selected_marker,
                      warp_red,
                      iter_on,
                      &app.staged_flag_hit_rects,

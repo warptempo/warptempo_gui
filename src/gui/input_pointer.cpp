@@ -3389,8 +3389,9 @@ void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
     // doctrine is at the head of position_nudge.h): a click on a member of a
     // 2+ selection single-selects and lands like a click on any other marker,
     // and the drag it may become is an ordinary singleton drag. The clicked
-    // marker takes THE SELECTED LOOK here (its chip and, the focus, its stem,
-    // render.h's THE STATES) — set_single_selection damages the top strip,
+    // marker takes THE SELECTED LOOK here (its chip, render.h's THE STATES;
+    // the land below puts the playhead on its frame, the coincidence stem's)
+    // — set_single_selection damages the top strip,
     // and the flag cache's rebuild on the selection's fingerprint damages
     // the waveform with it, so no stem work is owed.
     selection.set_single_selection(hit);
@@ -5158,9 +5159,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
         // the waveform-height clamp (main.cpp's layout owner) keeps the flag
         // lane in easy reach on every display, which is what the removal was
         // waiting for — marker work happens in the flag lane, and the
-        // waveform is purely trim / playhead / pan / zoom. The focused
-        // marker's stem still PAINTS (2026-11-04: no stem at rest),
-        // disabled-no-stem.
+        // waveform is purely trim / playhead / pan / zoom. The stem still
+        // PAINTS on a marker the playhead stands on (2026-11-04: no stem at
+        // rest), disabled-no-stem.
         // The plain DRAG never selects markers either
         // (SELECTION FLOWS DOWNWARD ONLY, architect 2026-07-23 — the region no
         // longer selects its contents; it leaves the selection empty).
@@ -7480,8 +7481,8 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
                 app.history_mode.focus_half));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
-    // (the selected look moves — the chips' fill and the focused item's
-    // stem, render.h's THE STATES; the columns stay put), and none when it
+    // (the selected look moves — the chips' fill, render.h's THE STATES; the
+    // columns stay put), and none when it
     // did not — a re-click on the focused flag re-lands a playhead that is
     // already there, and the land owner is itself idempotent; a press on a
     // nudged pair's other cue moves focus_half alone, which paints nothing
