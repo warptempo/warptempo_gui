@@ -283,6 +283,14 @@ void finish_position_nudge(
     // rule and body are at Viewport::hold_subject_column_after_nudge.
     if (camera == NudgeCamera::HoldColumn)
         viewport.hold_subject_column_after_nudge(prior_subject_column);
+    // THE FLAG CACHE REBUILT IN THE SAME EVENT (architect 2026-11-04,
+    // paint_marker_stems' ONE-STATE RULE): (e) moved the cursor onto the
+    // nudged marker's new frame, so the chip and the stem stash it is
+    // compared against are laid out from the committed store before any
+    // frame paints — else a frame served before the tick's rebuild lifts the
+    // coincidence stem for a frame at every press and every held repeat.
+    // Fingerprint-guarded (the store's generation moved), no plate render.
+    viewport.refresh_flag_cache();
     // (g) A POSITION NUDGE ENDS AN A/B AUDITION, needing no call of its own:
     // the follow at (e) and the prologue's collapse land both go through a
     // movement owner (the rule at Viewport::move_playhead_to, viewport.cpp).

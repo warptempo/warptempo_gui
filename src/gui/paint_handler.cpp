@@ -4661,6 +4661,20 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // marker the dark stem is what shows and the ruler's head marks the
 // playhead. The scanner follows. The full sequence is the paint-order
 // block in on_redraw (build_canvas_list).
+// THE ONE-STATE RULE (architect 2026-11-04, after the drag's stutter on his
+// glass): THE STEM AND THE LINE ALWAYS AGREE WITHIN ONE PAINTED FRAME. The
+// stem's coincidence is decided against the marker position THE FRAME
+// PAINTS THE CHIP AT — the stash is the flag cache's, staged by the rebuild
+// that drew the blitted surface and promoted with it at the frame's top
+// (on_redraw), so stem and chip are one state by construction — and the
+// line's position is the live cursor's. So EVERY WRITE THAT MOVES A MARKER
+// AND THE CURSOR TOGETHER REBUILDS THE FLAG CACHE IN THE SAME EVENT, before
+// any frame can paint (Viewport::refresh_flag_cache, fingerprint-guarded):
+// the drag's per-motion ride (marker_drag.cpp's apply), its release
+// (commit_drag), the position nudge's tail (position_nudge.cpp), and every
+// write that kicks the synchronous plate rebuild, whose tail rebuilds the
+// flags (kick_waveform_sync). A cursor move alone needs nothing: the stash
+// already holds every marker's frame. Nothing is debounced or deferred.
 // DAMAGE: no site of its own. The stem's cells are the line's own columns
 // on the canvas's rows, and every write of the resting cursor damages them
 // at both positions — the narrow moves through playhead_invalidate_rect

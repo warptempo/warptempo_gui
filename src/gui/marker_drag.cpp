@@ -376,6 +376,17 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
     viewport.translate_playhead_to(sample);
+    // THE FLAG CACHE REBUILT IN THE SAME EVENT (architect 2026-11-04, the
+    // drag's stutter on his glass: the coincidence stem flickering dark /
+    // light over the fading line): the cursor above rides the drag NOW, so
+    // the chip and the stem stash it is compared against must be laid out
+    // from this same proposal before any frame paints — else a frame served
+    // before the tick's rebuild paints the cursor at the new frame over a
+    // stash still holding the old one, and the stem lifts for that frame
+    // (paint_marker_stems' ONE-STATE RULE). Fingerprint-guarded (the drag
+    // overlay's hash moved), no plate render; the tick's own rebuild then
+    // finds nothing to do.
+    viewport.refresh_flag_cache();
     // NO REGION WORK OWED HERE: the region is the trim, which a marker drag
     // never writes. The group live-track
     // that used to re-derive an extent span per
