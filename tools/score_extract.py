@@ -329,17 +329,17 @@ DIFF_W, DIFF_H = 480, 270
 #   ACROSS (re-derived 2026-11-03, the well the waveform area): the canvas interior (waveform_area,
 #   src/gui/main.cpp) stands column_margin_w_px in from each side, the column margin's 6 W, 18 px; the room
 #   2304 - 36 = 2268 floors to the 16-px grid step, 2256, its slack of 12 split, so the canvas is x 24 .. 2279; the
-#   well's columns are the canvas's (well_columns, render.h: x = 24 and end = 2280, one past 2279), and the modal box
-#   stands on them (modal_box_rect: x 24 .. 2279, width 2256, those two columns ground); the interior (the flat pane)
-#   one hairline_px (1 at every scale) in from each side: x 25, WIDTH 2254 — the viewer's live box 2254x1183 under
-#   this layout.
+#   well's columns are the canvas's (well_columns, render.h: x = 24 and end = 2280, one past 2279), and THE PANE
+#   stands on them (architect 2026-11-03, THE EDGE RULE: the modal box one hairline_px wider each side, x 23 .. 2280,
+#   those two columns ground; its interior, the flat pane, one hairline in): x 24, WIDTH 2256 — the viewer's live box
+#   2256x1183 under this layout, PAGE_FIT's width.
 #   DOWN (re-derived 2026-11-03, the retrofit, at key_height's default 33, the 69-px key cell): the box
 #   (modal_box_rect) runs from the trim lane's first row (top_trim_row_area) to the controls row's top
 #   (modal_controls_row_rect, the bottom row's lane). The band above the trim lane is the logo lane's 72, the key's
 #   cell 33 (the `key_height` key) and the strip pad's 39, 144 rows, the flexible gap 0 (the waveform takes the whole
 #   leftover); the bottom row is the strip, 39 + 33 + 39 = 111 rows on the window's foot from row 1440 - 111 = 1329.
 #   So the box is rows 144..1328 (its last row the well's foot), 1185 rows, those outer rows ground, and its interior
-#   (modal_box_interior_rect) one hairline in: y 145..1327, HEIGHT 1183 — the viewer's printed box 2254x1183 under
+#   (modal_box_interior_rect) one hairline in: y 145..1327, HEIGHT 1183 — the viewer's printed box 2256x1183 under
 #   the retrofit's layout. PAGE_FIT KEEPS THE PAGES-ON-FILE BOX, 2256x1145 (the text round's layout at the 60-row
 #   key, 2026-11-03 morning: the band 173, the bottom row 120, the interior y 174..1318), the box the pages on file
 #   were fitted to, UNTIL THE RETROFIT'S LAYOUT SETTLES ON HIS GLASS AND THE PAGES ARE RE-EXTRACTED (architect

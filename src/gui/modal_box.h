@@ -26,16 +26,19 @@
 // caption over it too, until 2026-10-24) stays as the main window paints
 // it. Across, it runs the window's width,
 // as every program lane does. Top to bottom:
-//   1. THE BOX — in the well's own columns (the side margin of the ground in
-//      from each side, the waveform area's x and width: render.h's
-//      well_columns, the keys' faces' outer columns), its
+//   1. THE BOX — ITS PANE ON THE WELL'S OWN COLUMNS (the waveform area's x
+//      and width: render.h's well_columns and THE EDGE RULE's statement
+//      there, architect 2026-11-03; the keys' faces' outer columns), so the
+//      box's outer ground columns stand one hairline outside them, the key
+//      cell / key face grammar (materials.h's THE CELL AND ITS FACE); its
 //      top row the trim lane's first row, its bottom row the well's foot;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
 //      the cell (key_height tall, render.h's icon_case_h_px), the strip pad
 //      (strip_h_px) — on the ground, no line, bar or border, the keys'
-//      legends in its bottom pad, its outermost FACES FLUSH WITH THE BOX'S
-//      OUTER COLUMNS (their cells one px past; materials.h's THE CELL AND
-//      ITS FACE); on the window's foot.
+//      legends in its bottom pad, its outermost FACES FLUSH WITH THE PANE'S
+//      OUTER COLUMNS, the well's (their cells one px past, on the box's
+//      outer columns; materials.h's THE CELL AND ITS FACE); on the window's
+//      foot.
 // ONE GROUND, ONE PANE (architect 2026-11-01 night, M6 A — "the list pane
 // with no frame" — for every member, M7 / M8 / M11 after it): THE PANEL'S
 // MARGINS, THE CONTROLS ROW AND THE BOX'S OWN OUTER ROWS AND COLUMNS are the
@@ -55,15 +58,17 @@
 // and key_height 33 (its default; the 69-px cell, the strip pad 39 and the
 // 72-row logo lane, 2026-11-03): the box's top row 144 (the trim lane's
 // first row, the row of ground directly under the band's rows 0–143, the
-// logo lane 0–71), its bottom row 1328 (the well's foot) and its columns 24
-// and 2279 (the well's first and last, the main canvas's own columns),
-// those rows and columns ground, the PANE x 25..2278 and y 145..1327 (the
-// main canvas's own rows 240–1327); the controls row 1329–1439, its cell
-// rows 1368–1400 (the faces 1369–1399), its first cell's columns 23–91 (the
-// face 24–90) and its last 2212–2280 (the face 2213–2279). A DIALOG'S TEXT
-// (THE TEXT SEAT, below) on the list rows' seat, 18 px in from the box's
-// outer edges: its pen on column 42, its ascender line on row 162, its wrap
-// ending one past column 2261, its foot clip one past row 1310.
+// logo lane 0–71), its bottom row 1328 (the well's foot) and its columns 23
+// and 2280 (one hairline outside the well), those rows and columns ground,
+// the PANE x 24..2279 (the well's first and last columns, the main canvas's
+// own, 2256 wide) and y 145..1327 (the main canvas's own rows 240–1327);
+// the controls row 1329–1439, its cell rows 1368–1400 (the faces
+// 1369–1399), its first cell's columns 23–91 (the face 24–90) and its last
+// 2212–2280 (the face 2213–2279) — the cells on the box's outer columns,
+// the faces on the pane's. A DIALOG'S TEXT (THE TEXT SEAT, below) on the
+// list rows' seat, 18 px in from the box's outer edges: its pen on column
+// 41, its ascender line on row 162, its wrap ending one past column 2262,
+// its foot clip one past row 1310.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -129,25 +134,29 @@ inline bool modal_box_stands(const AppState& a) {
 // THE CONTROLS ROW (item 2): row 8's own rows — the lane itself
 // (bottom_row_area) on the window's foot, or, with the keyboard under the
 // stack, the same rows lifted onto the keyboard's band. Its seats are row
-// 8's (paint_handler.cpp's bottom_row_seats, the one owner): the box's
-// outer columns, its x and right edge (modal_box_rect's).
+// 8's (paint_handler.cpp's bottom_row_seats, the one owner): the well's
+// columns, the faces on the pane's outer columns and the cells on the box's
+// (modal_box_rect's x and right edge).
 inline GuiRect modal_controls_row_rect(const AppState& a, int keyboard_h) {
     const GuiRect lane = bottom_row_area(a);
     if (lane.w <= 0 || lane.h <= 0) return GuiRect{0, 0, 0, 0};
     return GuiRect{lane.x, lane.y - std::max(0, keyboard_h), lane.w, lane.h};
 }
 
-// THE BOX (item 1), its outer rect: the well's columns across (render.h's
-// well_columns), the trim lane's first row down to the controls row's top
-// (the box's last row the well's foot, the row above it). A zero rect on a
-// degenerate stack.
+// THE BOX (item 1), its outer rect: across, the well's columns (render.h's
+// well_columns) widened by one hairline each side — the ground column round
+// the pane, so THE PANE stands on the well's columns (THE EDGE RULE,
+// architect 2026-11-03), as a key's cell stands one px past its face; down,
+// the trim lane's first row to the controls row's top (the box's last row
+// the well's foot, the row above it). A zero rect on a degenerate stack.
 inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
     const WellColumns well = well_columns(a);
     const GuiRect trim  = top_trim_row_area(a);
     const GuiRect row   = modal_controls_row_rect(a, keyboard_h);
     const int     lw    = hairline_px();   // the ground round the pane
     const int     y1    = row.y;
-    const GuiRect box{well.x, trim.y, well.end - well.x, y1 - trim.y};
+    const GuiRect box{well.x - lw, trim.y, well.end - well.x + 2 * lw,
+                      y1 - trim.y};
     if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
     return box;
 }
@@ -157,7 +166,8 @@ inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
 // frame itself … at most one device pixel"; the frame's ring retired
 // 2026-11-01 night, M6 A, its rows and columns become ground): THE INTERIOR
 // is the box less ONE DEVICE PX on each side (hairline_px; the box's outer
-// rows and columns the ground), the pane every member stands on, and the
+// rows and columns the ground), the pane every member stands on — across,
+// the well's own columns (modal_box_rect), 24 .. 2279 at 300 % — and the
 // lists' rows stand ONE DEVICE PX OF AIR inside it
 // (modal_box_content_pad_px) on the left, the top and the right, so the lit
 // row's bar reaches to one px from the pane's edges and the first row
@@ -220,12 +230,18 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 // ground's column and row round the pane; the seat that stands round the
 // 22-px text, back with it 2026-11-03, the retrofit, after the text round's
 // 24 of that morning), an AREA scaled with gui_scale through skin_px at the
-// element (18 at 300 %, 12 at 200 %, 9 at 150 %).
+// element (18 at 300 %, 12 at 200 %, 9 at 150 %). MEASURED FROM THE BOX, NOT
+// THE PANE (architect 2026-11-03, the pane on the well's columns): the box
+// is the pane plus its one ground px on every side, so the air the eye sees
+// between the pane's edge and the text is the seat less one hairline (17 at
+// 300 %) on all four sides alike, the composition he approved inside the
+// pane (M8b, M14) — the pane widened by its one px each side, its contents
+// riding with its edges.
 // Its readers, which cannot drift apart:
 //   THE BOX'S TEXT — a prompt's question, the progress modal's sentence and
 //     the dialog editors' line, symmetric on all four sides: THE PEN the
-//     seat in from the box's left column (column 42 at 300 %), THE WRAP
-//     ending the seat short of its right column (one past 2261), THE FIRST
+//     seat in from the box's left column (column 41 at 300 %), THE WRAP
+//     ending the seat short of its right column (one past 2262), THE FIRST
 //     ROW'S ASCENDER LINE — the face's own "l" ink top,
 //     gui_font_ascender_ink_px, never the line box's top: the air he sees is
 //     the ink's — the seat under its top row (row 162; modal_box_text_

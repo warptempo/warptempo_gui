@@ -2513,9 +2513,10 @@ static const TimeFieldMetrics& time_field_metrics() {
 // CASES_RIGHT, where a row's first key's cell starts and its last key's cell
 // ends: one face inset past the seats (materials.h's THE CELL AND ITS FACE,
 // 2026-11-03), so THE OUTERMOST FACES stand on the well's first and last
-// columns — the band's ends (icon_row_seats) and the modal box's
-// (modal_box_rect), both strips and the controls row flush with the well at
-// every scale (the cells 23 and 2281 at 300 %, the faces 24 .. 2279);
+// columns — the band's ends (icon_row_seats) and the modal pane's
+// (modal_box_interior_rect; the box's outer columns the cells'), both strips
+// and the controls row flush with the well at every scale (the cells 23 and
+// one past 2280 at 300 %, the faces 24 .. 2279);
 // THE CASE the strip pad under the row's top (icon_case_top_offset_px, the
 // band's own seat). Text and fields (the clocks) start on the left seat. The
 // two rows differ only in `row`: row 8's lane (bottom_row_area), or the
@@ -2543,8 +2544,9 @@ static BottomRowSeats bottom_row_seats(const AppState& app,
 
 // THE MODAL FAMILY'S CONTROLS ROW'S SEATS (architect 2026-10-14,
 // modal_box.h): every modal's controls stand on the controls row at row 8's
-// case seat, their OUTERMOST CASES AND BUTTONS FLUSH WITH THE BOX'S
-// OUTER EDGES — row 8's own seats (bottom_row_seats, the one owner) on the
+// case seat, their OUTERMOST FACES FLUSH WITH THE PANE'S OUTER COLUMNS (the
+// well's; their cells on the box's, THE EDGE RULE, architect 2026-11-03) —
+// row 8's own seats (bottom_row_seats, the one owner) on the
 // controls row's rows, `keyboard_h` the stack's lift (modal_box.h's head).
 static BottomRowSeats modal_controls_seats(const AppState& app,
                                            int keyboard_h) {
@@ -5204,13 +5206,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // over the window's foot, 2026-10-10 to 2026-10-14): the controls on the
 // controls row (row 8's rows on the ground, or the same row lifted onto
 // the on-screen keyboard under a dialog editor on the glass), their outermost
-// cases or buttons flush with the box's outer columns
+// faces on the pane's outer columns, the well's, their cells on the box's
 // (modal_controls_seats). CONTENT PER KIND:
 //   A PROMPT — its question on the box's FIRST ROW on the text seat
 //   (modal_box.h's THE TEXT SEAT), on the box's one flat pane,
 //   the chrome's text color, and
 //   the answer buttons FLUSH RIGHT on the controls row in painted order, the
-//   last one's right edge the box's outer right column. Each button wears its
+//   last one's face ending on the pane's last column. Each button wears its
 //   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
 //   "Delete"), no letter underlined (architect 2026-10-30: the buttons are
 //   the prompt's one road, no keyboard standing under it), and NO BUTTON
@@ -5225,8 +5227,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   from the box's first row on the text seat, SOFT-WRAPPED at the
 //   box's width and never scrolling (text_editor::soft_wrap_rows), NO LABEL
 //   (every kind on the settings editor's buffer shares one shape);
-//   then OK and Cancel flush right on the controls row, Cancel's right edge
-//   the box's outer right column and OK one button gap before it. The line is the
+//   then OK and Cancel flush right on the controls row, Cancel's face ending
+//   on the pane's last column and OK one button gap before it. The line is the
 //   existing text_editor machinery — selection, caret, click-to-caret,
 //   byte-identical editing — on the wrapped rows, and a refused Enter selects
 //   the whole text, nothing recolored, its owner's card saying why (architect
@@ -5368,7 +5370,8 @@ std::optional<icons::Icon> modal_word_icon(std::string_view word) {
 // (paint_key_legend's one seat, back 2026-11-03) and the word its tooltip —
 // the cells abutting as the player's and the band's are (materials.h's THE
 // CELL AND ITS FACE), THE CLUSTER FLUSH RIGHT, its last face's right edge
-// the row's right seat (the box's outer right column); wider than the row
+// the row's right seat (the pane's last column, the well's; its cell on the
+// box's outer column); wider than the row
 // it starts at the row's first cell. A legend never widens its key, so the
 // layout reads the words' count alone.
 // (Windows' push button — the label's run between the spec's pads, floored
@@ -5446,7 +5449,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // was Load in place · Close as WORDS, measured runs in label boxes):
     // both are the program's key now, so the cluster is two abutting cells —
     // right-flushed where THE CONTROLS ROW'S CELLS END, the last face's
-    // right edge the box's outer right column (architect 2026-10-14,
+    // right edge the pane's last column (the well's; architect 2026-10-14,
     // modal_controls_seats' cases_right; row 8's last case's from
     // 2026-10-05; the faces' since 2026-11-03).
     const int words_w  = key_group_w_px(2);
@@ -5795,8 +5798,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // owner's row but THE PLAYER'S, whose buttons are row 8's case, the
     // program's, at row 8's seat (architect 2026-10-05). EVERY OWNER'S SEATS
     // ARE THE FAMILY'S CONTROLS ROW'S (modal_controls_seats, architect
-    // 2026-10-14: the outermost cases and buttons flush with the box's outer
-    // columns;
+    // 2026-10-14: the outermost faces flush with the pane's outer columns,
+    // the well's, their cells on the box's;
     // the prompts and the editors took row 8's pads until that afternoon).
     // `btn_y` and `btn_h` are the one band the walk and the scrub read.
     const BottomRowSeats seats = modal_controls_seats(app, kb_h);
@@ -6155,8 +6158,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // word (Cancel or Close by content, kModalCancelLabel's rule) and the
     // trim presets list's four (its highlight pair, the player's, directly
     // before them in the one cluster) and the BPM form's two — the last
-    // one's right edge the box's outer right column (its face ending on x
-    // 2279 at 300 %, the well's last column), today's button gap between them; the render player's row
+    // one's face ending on the pane's last column (x 2279 at 300 %, the
+    // well's last; its cell on the box's outer column, 2280), today's button
+    // gap between them; the render player's row
     // reads from the left, its transport first and its right pair flush
     // right (its branch below). (From 2026-08-13 a prompt's message and an
     // editor's label and field sat FLUSH LEFT on the bottom row with their
@@ -6181,7 +6185,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // THE TEXT IN THE BOX — a prompt's question, the progress modal's
     // sentence, an editor's line — ON THE LIST ROWS' TEXT SEAT, 18 px in
     // from the box's outer edges at 300 % on all four sides (modal_box.h's
-    // THE TEXT SEAT, M8b): the pen at the text room's x, the wrap its width,
+    // THE TEXT SEAT, M8b; the pen on column 41, the wrap ending one past
+    // 2262): the pen at the text room's x, the wrap its width,
     // the foot its clip's bottom, the first row's baseline
     // modal_box_text_baseline0 (the "l"'s ink top the seat under the box's
     // top row), each further row one list row pitch below.
@@ -6359,8 +6364,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    2026-10-14, modal_box.h; row 8's own from 2026-10-05): the
         //    buttons stand at row 8's case seat on row 8's rows, the
         //    transport's
-        //    first case at the box's outer left column and the
-        //    right-flushed pair's last ending at its right outer edge (no
+        //    first face on the pane's first column (the well's, its cell on
+        //    the box's outer column) and the right-flushed pair's last
+        //    face ending on the pane's last (no
         //    focus-frame reserve inside it; modal_controls_seats), today's
         //    gaps between the groups, and the scrub fills whatever lies
         //    between.
@@ -6595,9 +6601,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    block above). With nothing to its left the row is that one
         //    button, ON THE MODAL FAMILY'S CONTROLS ROW (architect,
         //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
-        //    ALONE, FLUSH RIGHT, ITS RIGHT EDGE THE BOX'S OUTER RIGHT COLUMN
-        //    (its face ending on x 2279 at 300 %), as the player's Close
-        //    ends there.
+        //    ALONE, FLUSH RIGHT, ITS FACE ENDING ON THE PANE'S LAST COLUMN
+        //    (x 2279 at 300 %, the well's last; its cell on the box's outer
+        //    column), as the player's Close ends there.
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
         //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above

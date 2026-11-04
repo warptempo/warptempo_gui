@@ -1187,7 +1187,7 @@ inline int logo_lane_h_px() {
 // editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
 // re-authored) — IS GONE with the field, architect 2026-10-14: a dialog
 // editor's line stands in the modal family's box, its text on the box's own
-// text seat (modal_box.h's modal_box_text_seat_px, M8b: 24 px in from the
+// text seat (modal_box.h's modal_box_text_seat_px, M8b: 18 px in from the
 // box's outer edges at 300 %).
 // THE TIME FIELDS were never this field: row 8's clock and the render
 // player's position and length are Cool Edit's dark field, its height and
@@ -1811,6 +1811,14 @@ GuiRect well_foot_area(const AppState& a);
 // scale; both strips and the controls row stand flush with them at both
 // ends, no inset — the outermost keys' FACES on the well's first and last
 // columns, their cells one inset px past.
+// THE EDGE RULE'S STATEMENT (architect 2026-11-03: "everything that sits
+// closest to the window edge on all screens should align to the waveform
+// canvas — icons, modal, etc."): THE OUTERMOST PAINTED THING ON EVERY
+// SURFACE STANDS ON THESE COLUMNS — the keys' faces, the logo lane's ink,
+// row 8, the cards' and the tooltip's boxes and THE MODAL PANE (modal_box.h:
+// the box's outer ground columns one hairline outside them, the key cell /
+// key face grammar). The on-screen keyboard is exempt, a small centered
+// block by his ruling (onscreen_keyboard.h).
 struct WellColumns {
     int x   = 0;   // the well's first column (the waveform area's x)
     int end = 0;   // one past its last column (the area's x + w)
