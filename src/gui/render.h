@@ -1458,9 +1458,10 @@ inline int view_bar_field_h_px() {
 // 200 % — the bar's rows less its ground line, the bar held at its 18 rows
 // so nothing under it moves. THE TRIM BAR, the fill and its ground line,
 // and THE TRIM LANE: the row of ground above it (the row the retired
-// program ring stood on, so the modal family's box and the cards keep their
-// seat on the lane's first row, modal_box.h, notification_stack_bound) and
-// the bar.
+// program ring stood on, so the modal family's box keeps its seat on the
+// lane's first row, modal_box.h, and the cards theirs one hairline below,
+// on the bar's first fill row, notification_stack_bound, ruled kept
+// 2026-11-03) and the bar.
 inline int trim_bar_fill_h_px() {
     return hairline_px() + view_bar_field_h_px();
 }
