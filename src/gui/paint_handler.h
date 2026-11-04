@@ -788,6 +788,13 @@ struct GuiPaintHandler {
         double spp      = 0.0;
     };
     PlateViewportBasis plate_viewport_basis() const;
+    // THE STANDING STEM COVERS THE LINE (2026-11-04, session 33): whether
+    // one of standing_stem_rects' canvas rects stands on `line`'s own
+    // columns (the same x and w) — the opaque stem painted over the
+    // playhead's line, so no change of the line's color can show. PUBLIC for
+    // its one reader, the tick's fade damage (main.cpp, THE PLAYHEAD'S
+    // FADE).
+    bool standing_stem_covers(const GuiRect& area, const GuiRect& line) const;
 
 private:
     // THE DEBT (2026-10-13): set by owe_waveform_rebuild, cleared at the head
@@ -1078,6 +1085,7 @@ private:
     // paint_marker_stems).
     std::vector<GuiRect> standing_stem_rects(const GuiRect& area, int y0,
                                              int y1) const;
+
     // The nudged pairs' rings (MarkerStemRun, render.h; the body owns the
     // form), painted before the playhead's line (build_canvas_list).
     void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);

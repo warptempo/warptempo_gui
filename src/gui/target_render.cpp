@@ -240,11 +240,16 @@ void GuiTargetRender::trigger() {
         // the tick's catch-up branch early-returns once BOTH flags are
         // false, which this write has just made true. Every other stop edge
         // reaches the clock through stop_playback_if_playing; this freeze is
-        // its own stop and owes the same repaint. No waveform damage is
-        // added: the scanner line's teardown rides the completion's own
-        // full repaint moments later, but nothing later repaints the clock.
-        // Caller inventory at Viewport::invalidate_clock_area (viewport.h).
+        // its own stop and owes the same repaint. Caller inventory at
+        // Viewport::invalidate_clock_area (viewport.h).
         viewport.invalidate_clock_area();
+        // THE SCANNER'S TEARDOWN OWES ITS OWN DAMAGE (2026-11-04, session
+        // 33: the GPU draws only the repair region since, canvas_sink.h's
+        // damage contract): the scanner's last line goes with this write,
+        // so the canvas is damaged here, not left to whatever else the
+        // triggering mutator damaged (the completion damages the status
+        // cell alone).
+        viewport.invalidate_waveform_area();
     }
 
     // A render dispatch kills the running render. Any running archival

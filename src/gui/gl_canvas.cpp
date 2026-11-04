@@ -797,8 +797,79 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // byte-space blend ruled); inside the clip it is the list's words, each a
 // chrome pixel's bytes for its color by the sink's construction, and on the
 // plate's fringe their coverage blend (kListFragmentShader).
+//
+// THE REPAIR (2026-11-04, session 33; the Astra consult's (b),
+// tmp/codex_review.md; the platform's half at GuiPlatform::present): THE
+// FRAME IS DRAWN WHOLE OR ONLY ITS REPAIR REGION. `repair` empty is the
+// whole frame, as above. Otherwise `repair` is the region the platform's
+// buffer-age history says the acquired buffer is missing (this frame's
+// damage and the damage of the frames since the buffer was last drawn), in
+// surface px, top-left, and each of its rects is RECOMPOSED from its own
+// clear through the whole pass order — the clear, the list under the rect
+// ∩ the clip, the texture — under a scissor to the rect, one rect whole
+// before the next; every pixel outside the region is the buffer's own,
+// drawn by an earlier frame on the same passes. THE BYTES ARE THE WHOLE
+// DRAW'S: every pass is deterministic from the clear at the same absolute
+// coordinates on the same state, the plate's shader reads its column data
+// and never the framebuffer, and a scissor changes no fetch, coverage or
+// blend; an overlap of two rects is cleared again before it is drawn again,
+// so nothing blends twice. The texture's upload is still THIS frame's
+// damage alone (the texture is persistent, so every older repaired pixel is
+// already its own). IT STANDS ON THE DAMAGE CONTRACT: a canvas pixel the
+// list changes outside every declared damage rect is not redrawn, so every
+// GPU-visible change of the list owes damage on its old and new pixels
+// (the audit of 2026-11-04 in tmp/s33/done2.md; the owners' damage at each
+// pass's comment). A change the damage cannot describe is drawn whole by
+// repair_must_be_full's verdict.
+// THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
+// 2026-10-24): an empty clip — no list yet, or a paint area the folder
+// overlay emptied — leaves nothing out of any upload and draws no list.
+// present_frame's and repair_must_be_full's one reading.
+void GuiGlCanvas::frame_clip(const GuiCanvasDrawList* list, int clip[4],
+                             bool& floater) {
+    clip[0] = clip[1] = clip[2] = clip[3] = 0;
+    floater = false;
+    if (list && list->clip.w > 0 && list->clip.h > 0) {
+        clip[0] = list->clip.x;
+        clip[1] = list->clip.y;
+        clip[2] = list->clip.w;
+        clip[3] = list->clip.h;
+        floater = list->floater;
+    }
+}
+
+bool GuiGlCanvas::ready(cairo_surface_t* back) const {
+    return texture_ != 0 && back != nullptr &&
+           cairo_image_surface_get_data(back) != nullptr;
+}
+
+// THE REPAIR'S OWN VERDICT (2026-11-04, session 33; the rule at
+// present_frame's THE REPAIR): the frame must be drawn whole when the
+// change it shows is not described by the damage — the texture has had no
+// walk since it was made (a remade texture, the first frame), the canvas
+// clip differs from the last walk's (a keyboard, a folder overlay, a modal
+// box or the score viewer came or went: every pixel the clip gained or lost
+// changes its pass), the score viewer's page stands or stood at the last
+// frame (its textures arrive across presents with no damage of their own),
+// or the list's grow differs from the standing program's (the plate is
+// recompiled, so every fringe moves).
+bool GuiGlCanvas::repair_must_be_full(const GuiCanvasDrawList* list) const {
+    if (!upload_seeded_) return true;
+    int  clip[4];
+    bool floater = false;
+    frame_clip(list, clip, floater);
+    for (int i = 0; i < 4; ++i)
+        if (clip[i] != upload_clip_[i]) return true;
+    if (page_stood_) return true;
+    if (list && clip[2] > 0 && list->page.stands) return true;
+    if (list && clip[2] > 0 && list->plate_grow != list_program_grow_)
+        return true;
+    return false;
+}
+
 bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> damage,
+                                std::span<const GuiGlRect> repair,
                                 GuiCanvasDrawList* list,
                                 int surface_w, int surface_h) {
     if (!texture_) return false;
@@ -807,19 +878,9 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         cairo_image_surface_get_data(back));
     if (!src) return false;
 
-    // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
-    // 2026-10-24): an empty clip — no list yet, or a paint area
-    // the folder overlay emptied — leaves nothing out of any upload and
-    // draws no list.
-    int  clip[4] = {0, 0, 0, 0};
+    int  clip[4];
     bool floater = false;
-    if (list && list->clip.w > 0 && list->clip.h > 0) {
-        clip[0] = list->clip.x;
-        clip[1] = list->clip.y;
-        clip[2] = list->clip.w;
-        clip[3] = list->clip.h;
-        floater = list->floater;
-    }
+    frame_clip(list, clip, floater);
     const bool clip_moved = !upload_seeded_ ||
                             clip[0] != upload_clip_[0] ||
                             clip[1] != upload_clip_[1] ||
@@ -867,50 +928,92 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     glViewport(0, 0, surface_w, surface_h);
     // THE CLEAR IS OPAQUE BLACK.
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
 
-    if (list && clip[2] > 0 && list->page.stands) {
-        draw_page(list->page, clip);
-    } else if (list && clip[2] > 0) {
+    const bool page_stands = list && clip[2] > 0 && list->page.stands;
+    const bool list_draws  = list && clip[2] > 0 && !page_stands;
+    if (list_draws) {
         if (!list_uploaded_ || list->generation != list_generation_)
             upload_list(*list);
-        if (list_instances_ > 0) {
-            // THE GROW RIDES THE LIST (GuiCanvasDrawList::plate_grow, the
-            // `waveform_grow` key in subcells) AND IS A CONSTANT OF THE
-            // PROGRAM (kListFragmentShader's specialization rule): a list
-            // at a grow the standing program was not compiled for has the
-            // program rebuilt here, once — the sink stamps the key's seat
-            // on every list, so the grow moves only at a commit of the key
-            // and the compare is false at every other frame — and a commit
-            // of the key is then the next frame's picture with no upload
-            // (the tips do not move).
-            if (list->plate_grow != list_program_grow_) {
-                glDeleteProgram(list_program_);
-                build_list_program(list->plate_grow);
+        // THE GROW RIDES THE LIST (GuiCanvasDrawList::plate_grow, the
+        // `waveform_grow` key in subcells) AND IS A CONSTANT OF THE
+        // PROGRAM (kListFragmentShader's specialization rule): a list at
+        // a grow the standing program was not compiled for has the
+        // program rebuilt here, once — the sink stamps the key's seat on
+        // every list, so the grow moves only at a commit of the key and
+        // the compare is false at every other frame — and a commit of the
+        // key is then the next frame's picture with no upload (the tips
+        // do not move), drawn whole (repair_must_be_full).
+        if (list_instances_ > 0 && list->plate_grow != list_program_grow_) {
+            glDeleteProgram(list_program_);
+            build_list_program(list->plate_grow);
+        }
+    }
+    // THE LIST'S DRAW under the scissor (x, y, w, h) in surface px, top-left
+    // — the canvas clip, or a repair rect's part of it.
+    const auto draw_list = [&](int x, int y, int w, int h) {
+        if (w <= 0 || h <= 0 || list_instances_ <= 0) return;
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(x, texture_h_ - (y + h), w, h);
+        glUseProgram(list_program_);
+        glUniform2f(list_size_uniform_, static_cast<float>(surface_w),
+                    static_cast<float>(surface_h));
+        glUniform1i(list_height_uniform_, texture_h_);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, columns_texture_);
+        glBindVertexArray(list_vao_);
+        glEnable(GL_BLEND);
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, list_instances_);
+        glDisable(GL_BLEND);
+        glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE0);
+        glDisable(GL_SCISSOR_TEST);
+    };
+    const auto draw_texture = [&]() {
+        glUseProgram(program_);
+        glUniform1i(height_uniform_, texture_h_);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    };
+
+    if (repair.empty()) {
+        // THE FULL REPAIR: the clear, the list or the page under the clip's
+        // scissor, the texture over the whole surface.
+        glClear(GL_COLOR_BUFFER_BIT);
+        if (page_stands)
+            draw_page(list->page, clip);
+        else if (list_draws)
+            draw_list(clip[0], clip[1], clip[2], clip[3]);
+        draw_texture();
+    } else {
+        // THE PARTIAL REPAIR (the rule at THE REPAIR above): every repair
+        // rect recomposed from its own clear through the same passes in the
+        // same order — the clear, the list under the rect ∩ the clip, the
+        // texture — each rect whole before the next, so a pixel two rects
+        // share is cleared again before it is drawn again and never blends
+        // twice. Never with the page standing (repair_must_be_full).
+        for (const GuiGlRect& r : repair) {
+            const int rx0 = std::max(r.x, 0);
+            const int ry0 = std::max(r.y, 0);
+            const int rx1 = std::min(r.x + r.w, surface_w);
+            const int ry1 = std::min(r.y + r.h, surface_h);
+            if (rx1 <= rx0 || ry1 <= ry0) continue;
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(rx0, texture_h_ - ry1, rx1 - rx0, ry1 - ry0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glDisable(GL_SCISSOR_TEST);
+            if (list_draws) {
+                const int cx0 = std::max(rx0, clip[0]);
+                const int cy0 = std::max(ry0, clip[1]);
+                const int cx1 = std::min(rx1, clip[0] + clip[2]);
+                const int cy1 = std::min(ry1, clip[1] + clip[3]);
+                draw_list(cx0, cy0, cx1 - cx0, cy1 - cy0);
             }
             glEnable(GL_SCISSOR_TEST);
-            glScissor(clip[0], texture_h_ - (clip[1] + clip[3]),
-                      clip[2], clip[3]);
-            glUseProgram(list_program_);
-            glUniform2f(list_size_uniform_, static_cast<float>(surface_w),
-                        static_cast<float>(surface_h));
-            glUniform1i(list_height_uniform_, texture_h_);
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, columns_texture_);
-            glBindVertexArray(list_vao_);
-            glEnable(GL_BLEND);
-            glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4,
-                                  list_instances_);
-            glDisable(GL_BLEND);
-            glBindVertexArray(0);
-            glActiveTexture(GL_TEXTURE0);
+            glScissor(rx0, texture_h_ - ry1, rx1 - rx0, ry1 - ry0);
+            draw_texture();
             glDisable(GL_SCISSOR_TEST);
         }
     }
-
-    glUseProgram(program_);
-    glUniform1i(height_uniform_, texture_h_);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    page_stood_ = page_stands;
     return true;
 }
 

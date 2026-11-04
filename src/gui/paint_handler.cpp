@@ -4734,6 +4734,16 @@ std::vector<GuiRect> GuiPaintHandler::standing_stem_rects(const GuiRect& area,
     return rs;
 }
 
+// THE COVER (the declaration's rule): the same vector the canvas's stem
+// painter takes, on the canvas's rows, each rect compared by its columns.
+bool GuiPaintHandler::standing_stem_covers(const GuiRect& area,
+                                           const GuiRect& line) const {
+    if (line.w <= 0) return false;
+    for (const GuiRect& s : standing_stem_rects(area, area.y, area.y + area.h))
+        if (s.x == line.x && s.w == line.w) return true;
+    return false;
+}
+
 void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
                                          const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
@@ -8429,8 +8439,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 // The frame's draw list, built by on_redraw's first damage rect that meets
 // the canvas's paint area: the canvas passes in on_redraw's paint order
 // (its authoritative block), each through the sink, WHOLE — no damage
-// rect cuts it and no exposure gates a pass — so the GPU redraws the
-// canvas entire at every swap from one coherent state.
+// rect cuts it and no exposure gates a pass — so whatever part of the
+// canvas the GPU redraws (the whole, or the frame's repair region since
+// 2026-11-04: GuiGlCanvas::present_frame's THE REPAIR) is drawn from one
+// coherent state. The pixels a record changes owe damage of their own
+// (canvas_sink.h's head, the damage contract).
 void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
                                         bool plate_branch) {
     GuiCanvasSink sink(frame);

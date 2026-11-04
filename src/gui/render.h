@@ -755,10 +755,9 @@ void install_true_colors(bool on);
 // rule is at render_waveform_columns' declaration), THE OUTER IN THE INK AND
 // THE INNER A SOLID FILL OVER IT in the `waveform_core` role (architect
 // 2026-11-04, mock f1, THE CORE below; antialiased with its shape on the GPU
-// since 2026-10-30) — 1A1A1A over the 191919 ink on the 393939 canvas, ONE
-// LEVEL OVER THE INK (his word: "1e is already quite bright … just a tiny
-// amt of brightness is all that's needed"; "1a … the absence of it would
-// indicate a quiet section"; palette_file.h). THE PLATE WEARS THE INK AND THE
+// since 2026-10-30) — 1C1C1C over the 191919 ink on the 393939 canvas, THREE
+// LEVELS OVER THE INK (architect 2026-11-04, session 33: "1c works"; the
+// tone's record at THE CORE below; palette_file.h). THE PLATE WEARS THE INK AND THE
 // CORE AS PUBLISHED (the sink writes their words, GuiCanvasSink::plate),
 // so the pair rides the cache's fingerprint (waveform_plate_inks) and
 // publishes with the plate; the canvas is laid live under the plate's
@@ -2908,7 +2907,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // that edge's last subrow, grown to a line). The composite
 // puts the inner over the outer, so where the two overlap the inner wins: the
 // reading is the source's bar, set off from the levelled bar behind it by
-// the core's one level over the ink (THE CORE, below), the core's relative
+// the core's three levels over the ink (THE CORE, below), the core's relative
 // thickness the loudness — at or under the
 // compressor's threshold the core is half the raw bar (x E), over it thinner
 // by its ratio.
@@ -2918,9 +2917,17 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE CORE (architect 2026-11-04, mock f1, reversing the lit outline of
 // 2026-09-27) — THE GROWN INNER SHAPE (the inner bars of all columns with
 // their contour, dilated by the `waveform_grow` key) FILLED SOLID in the
-// `waveform_core` role, 1A1A1A, ONE LEVEL OVER THE 191919 INK (his word:
-// "1e is already quite bright … just a tiny amt of brightness is all that's
-// needed"; "1a … the absence of it would indicate a quiet section"), over
+// `waveform_core` role, 1C1C1C, THREE LEVELS OVER THE 191919 INK (architect
+// 2026-11-04, session 33, on mocks m1..m7 of tmp/s33 — core_tones.py: the
+// REAL capture of the lit inner, the core's own pixels recolored one tone
+// each — "1c works"; mock f1's word stands: "the absence of it would
+// indicate a quiet section"). THE TONE'S RECORD: 1A1A1A, one level over the
+// ink, picked the same morning on mock f1 ("1e is already quite bright …
+// just a tiny amt of brightness is all that's needed"), read nearly
+// invisible on the real compressed bar, because f1's dummy inner was a
+// smooth band a third of the plate's height and one level over the ink
+// needs a large contiguous area to register; 1D1D1D was offered and
+// declined for not being a Live tone. The core lies over
 // the outer bar's ink: the composite is the core at the grown inner's
 // coverage over the ink at the shape's (kListFragmentShader's head), so the
 // inner keeps its shape and its antialiased fringe and draws no line. No

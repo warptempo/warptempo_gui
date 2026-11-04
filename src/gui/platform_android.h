@@ -543,7 +543,9 @@ private:
     // -- THE GL CANVAS (2026-10-13; the one canvas road since the laptop
     // GUI's drop, architect 2026-10-30; the road at present) --
     // The window goes through EGL / GLES 3.0: the backbuffer above is
-    // uploaded into ONE texture by damage rect and drawn whole every swap.
+    // uploaded into ONE texture by damage rect and drawn at every swap, whole
+    // or only the buffer's repair region (present's THE PARTIAL REPAIR,
+    // 2026-11-04).
     // The EGL handles are spelled void* (each EGL type is one on this
     // platform) so no EGL header reaches this file. THE DISPLAY, CONFIG,
     // CONTEXT AND PROGRAMS ARE THE PROCESS'S, made at the first adoption and
@@ -561,6 +563,24 @@ private:
     struct ANativeWindow* egl_window_  = nullptr;
     // The one-time line naming the driver (adopt_window's road).
     bool                  gl_identity_logged_ = false;
+    // THE PARTIAL REPAIR'S EGL (2026-11-04, session 33; the road at
+    // present): the three extensions it stands on, read at the capability
+    // line, and the two entry points resolved there by eglGetProcAddress
+    // (spelled void* for this header's no-EGL rule; present casts them to
+    // eglext.h's PFNEGLSETDAMAGEREGIONKHRPROC and
+    // PFNEGLSWAPBUFFERSWITHDAMAGEKHRPROC). THE HISTORY: the last frames'
+    // changes, newest first, at most kRepairHistoryDepth — each a
+    // successful present's damage on the surface (or the whole surface for
+    // a change its damage does not describe) — emptied at a new surface, a
+    // new backbuffer size and a failed swap, so the next frame is drawn
+    // whole.
+    bool                  egl_buffer_age_ext_     = false;
+    bool                  egl_partial_update_ext_ = false;
+    bool                  egl_swap_damage_ext_    = false;
+    void*                 egl_set_damage_region_  = nullptr;
+    void*                 egl_swap_with_damage_   = nullptr;
+    static constexpr std::size_t kRepairHistoryDepth = 8;
+    std::vector<std::vector<GuiGlRect>> repair_history_;
     // THE FIRST SURFACE'S DISPLAY-P3 ANSWER, the one gui_main read; a later
     // surface answering otherwise is fatal (ensure_gl_surface, 2026-10-13).
     std::optional<bool>   gl_first_display_p3_;

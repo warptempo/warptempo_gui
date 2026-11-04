@@ -44,11 +44,13 @@
 //   waveform_canvas  393939  the canvas, Live's darker band
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
 //                            the lit lamp's outer bar
-//   waveform_core    1A1A1A  THE CORE (architect 2026-11-04, mock f1): the
-//                            magnified picture's inner bar, a solid fill
-//                            one level over the ink ("1a … the absence of
-//                            it would indicate a quiet section"; render.h's
-//                            THE CORE)
+//   waveform_core    1C1C1C  THE CORE (architect 2026-11-04, mock f1; its
+//                            tone ruled 1C1C1C in session 33, mocks m1..m7
+//                            of tmp/s33: "1c works"): the magnified
+//                            picture's inner bar, a solid fill three levels
+//                            over the ink ("the absence of it would
+//                            indicate a quiet section"; render.h's THE
+//                            CORE, where the 1A1A1A record is)
 //   grid             313131  the quarter lines of each channel's half, the
 //                            horizontals alone (render_canvas) — Live's
 //                            antialiased beat line as one solid px on the
@@ -114,7 +116,7 @@
 
 inline constexpr uint32_t kPaletteCanvas   = 0x393939;
 inline constexpr uint32_t kPaletteInk      = 0x191919;
-inline constexpr uint32_t kPaletteCore     = 0x1A1A1A;
+inline constexpr uint32_t kPaletteCore     = 0x1C1C1C;
 inline constexpr uint32_t kPaletteGrid     = 0x313131;
 inline constexpr uint32_t kPaletteCenter   = 0x191919;
 inline constexpr uint32_t kPaletteCue      = 0xFFAD56;

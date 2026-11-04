@@ -227,7 +227,13 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    GL frame is redrawn WHOLE every swap (a textured triangle and the canvas
    list are trivial for the GPU), so EGL buffer age and partial-update are
    NOT depended on; `eglSwapBuffersWithDamageKHR` may pass the damage union
-   as a hint and nothing else.
+   as a hint and nothing else. *(REVERSED 2026-11-04, session 33: the fading
+   playhead made a damaged frame 90 a second, each a whole redraw, ~50 % of
+   a core in the app and ~50 % in SurfaceFlinger; the frame now draws only
+   its repair region — EGL buffer age, `eglSetDamageRegionKHR`,
+   `eglSwapBuffersWithDamageKHR` carrying the frame's own damage — and every
+   GPU-visible canvas change owes damage. `GuiPlatform::present`'s THE
+   PARTIAL REPAIR and `GuiGlCanvas::present_frame`'s THE REPAIR.)*
 10. **P4 — one rebuild per frame.** `Viewport::kick_waveform_sync` marks the
     rebuild OWED instead of running it; the pre-paint hook runs it once, at
     its tail after the scanner advance and Follow's page (which may kick)

@@ -2167,8 +2167,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // resting cursor's on the PLATE basis, the pixels' own
         // (playhead_pixel_x's damage rule, a narrow-on-plate site). Ahead of
         // every return below, as the legend is: a mode that hides the canvas
-        // keeps the color current, and its damage lands under that mode's
-        // own surface harmlessly. THE DAMAGE WAITS FOR A LIVE WAVEFORM: with
+        // keeps the color current and damages nothing (THE DAMAGE IS ONLY
+        // WHAT IS SEEN, below). THE DAMAGE WAITS FOR A LIVE WAVEFORM: with
         // no piece to dispatch on (a load in flight, or no audio yet — the
         // open's hold included; no_audio_to_dispatch_on, app_state.h, the
         // painter's own `plate_branch` condition, on_redraw) the line paints
@@ -2177,6 +2177,41 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // working column (GuiAudio::working_column's assert). The color is
         // STILL STORED there, so the first paint after the load paints the
         // live tone.
+        //
+        // THE DAMAGE IS ONLY WHAT IS SEEN (2026-11-04, session 33; the
+        // Astra consult's (e), tmp/codex_review.md; the planner's measurement
+        // on the tablet: under an overlay or on a covering stem the app
+        // presents nothing at rest — 15 % app, SurfaceFlinger 0, 0 frames —
+        // where it presented 90 a second): the color is stored on
+        // every change whatever covers the line — so the first paint that
+        // exposes it shows the live phase — but the line's rect is damaged
+        // only where a change of its color can show:
+        //   * CUT TO THE EXPOSED CANVAS, onscreen_keyboard::
+        //     waveform_paint_area (the painter's own `canvas_paint`: nothing
+        //     under the modal family's box — the settings page, the picker,
+        //     the render player, the score viewer, a prompt — and the rows
+        //     above the keyboard's slice); an empty cut damages nothing. The
+        //     surface's close damages the canvas whole by its own owner.
+        //   * NOTHING UNDER A STANDING STEM: the coincidence stem is the
+        //     opaque `cue_outline` painted over the line (build_canvas_list's
+        //     order), so while one of its rects stands on the line's own
+        //     columns no color change can show
+        //     (GuiPaintHandler::standing_stem_covers — the one coincidence
+        //     owner's rects, compared as RECTS, never frames: the cursor's
+        //     column is the plate basis's and the stem's the flag stash's,
+        //     and only the painted rects prove the cover). The stem's own
+        //     arrival and departure are damaged by the writes that move the
+        //     cursor or the marker.
+        //   * THE EDGE COLUMNS AGREE WITH THE PAINTER: playhead_line_rect
+        //     and render_playhead both take waveform_line_cols on the same
+        //     plate basis, so a cursor on column 0 damages exactly the two
+        //     columns its clipped line paints (24..25 at 300 %), and a cursor
+        //     whose column is off the area damages nothing. The case seen on
+        //     the tablet 2026-11-04 (START, a 2-px rect on the area's left
+        //     edge at 200 a second, "no line in the capture") was this one
+        //     under a marker at frame 0: its coincidence stem stood on those
+        //     two columns (the capture's 111111 at x 24..25), so the stem
+        //     rule skips it.
         {
             const uint32_t rgb = playhead_fade_color_at(
                 monotonic_ms() - g_playhead_fade_origin_ms);
@@ -2185,11 +2220,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 if (!no_audio_to_dispatch_on(app, audio.total_frames())) {
                     const GuiPaintHandler::PlateViewportBasis pb =
                         paint_handler.plate_viewport_basis();
-                    const GuiRect r = playhead_line_rect(
-                        waveform_area(app),
+                    const GuiRect area = waveform_area(app);
+                    const GuiRect line = playhead_line_rect(
+                        area,
                         playhead_pixel_x(
                             app, static_cast<int64_t>(pb.vp_start), pb.spp));
-                    if (r.w > 0 && r.h > 0)
+                    const GuiRect seen =
+                        onscreen_keyboard::waveform_paint_area(app);
+                    const int x0 = std::max(line.x, seen.x);
+                    const int y0 = std::max(line.y, seen.y);
+                    const int x1 = std::min(line.x + line.w, seen.x + seen.w);
+                    const int y1 = std::min(line.y + line.h, seen.y + seen.h);
+                    const GuiRect r{x0, y0, x1 - x0, y1 - y0};
+                    if (r.w > 0 && r.h > 0 &&
+                        !paint_handler.standing_stem_covers(area, line))
                         gui.invalidate_region(r.x, r.y, r.w, r.h);
                 }
             }

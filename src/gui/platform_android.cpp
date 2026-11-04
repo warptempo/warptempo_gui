@@ -963,6 +963,9 @@ void GuiPlatform::ensure_backbuffer(int w, int h) {
         }
         back_w_ = w;
         back_h_ = h;
+        // A NEW SIZE FORGETS THE REPAIR'S HISTORY (present's rule): no
+        // buffer of the old size holds a frame of this one.
+        repair_history_.clear();
     }
     // The texture follows the backbuffer (GuiGlCanvas::ensure_texture's
     // rule), asked with the context current on a surface.
@@ -1094,7 +1097,83 @@ void GuiPlatform::ensure_gl_surface() {
                      reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
                      reinterpret_cast<const char*>(glGetString(GL_VERSION)),
                      p3 ? "accepted" : "refused");
+        // THE EGL CAPABILITY LINE, PERMANENT (2026-11-04), beside the
+        // identity: the four extensions a cheaper present could stand on,
+        // the chosen config's samples and red / alpha depths, and the first
+        // surface's swap behavior. The frame cost arc of 2026-11-04 reads it
+        // to choose between a buffer-age partial repair and a persistent
+        // composite (the Astra consult's (b) / (c), tmp/codex_review.md); a
+        // present advertising an extension is necessary for that road, not
+        // proof of its savings downstream.
+        const char* ext = eglQueryString(dpy, EGL_EXTENSIONS);
+        const auto has = [ext](std::string_view name) {
+            if (!ext) return false;
+            std::string_view list(ext);
+            while (!list.empty()) {
+                const std::size_t sp = list.find(' ');
+                const std::string_view tok = list.substr(0, sp);
+                if (tok == name) return true;
+                if (sp == std::string_view::npos) break;
+                list.remove_prefix(sp + 1);
+            }
+            return false;
+        };
+        const bool age     = has("EGL_EXT_buffer_age");
+        const bool partial = has("EGL_KHR_partial_update");
+        const bool damage  = has("EGL_KHR_swap_buffers_with_damage");
+        const bool ptime   = has("EGL_ANDROID_presentation_time");
+        EGLint samples = -1, red = -1, alpha = -1, swap = -1;
+        eglGetConfigAttrib(dpy, static_cast<EGLConfig>(egl_config_),
+                           EGL_SAMPLES, &samples);
+        eglGetConfigAttrib(dpy, static_cast<EGLConfig>(egl_config_),
+                           EGL_RED_SIZE, &red);
+        eglGetConfigAttrib(dpy, static_cast<EGLConfig>(egl_config_),
+                           EGL_ALPHA_SIZE, &alpha);
+        eglQuerySurface(dpy, surf, EGL_SWAP_BEHAVIOR, &swap);
+        std::fprintf(stderr,
+                     "warptempo_gui: EGL capabilities: EGL_EXT_buffer_age "
+                     "%s, EGL_KHR_partial_update %s, "
+                     "EGL_KHR_swap_buffers_with_damage %s, "
+                     "EGL_ANDROID_presentation_time %s; config samples %d, "
+                     "red %d, alpha %d; swap behavior %s (0x%x)\n",
+                     age ? "present" : "absent",
+                     partial ? "present" : "absent",
+                     damage ? "present" : "absent",
+                     ptime ? "present" : "absent",
+                     static_cast<int>(samples), static_cast<int>(red),
+                     static_cast<int>(alpha),
+                     swap == EGL_BUFFER_PRESERVED   ? "preserved"
+                     : swap == EGL_BUFFER_DESTROYED ? "destroyed"
+                                                    : "unknown",
+                     static_cast<unsigned>(swap));
+        // THE PARTIAL REPAIR'S EGL (2026-11-04, session 33; the road at
+        // present): the three extensions, and the two entry points resolved
+        // here, once for the process's display. A missing one is one line:
+        // without the buffer age every frame is drawn whole, without the
+        // swap with damage the swap is the plain one.
+        egl_buffer_age_ext_     = age;
+        egl_partial_update_ext_ = partial;
+        egl_swap_damage_ext_    = damage;
+        if (partial)
+            egl_set_damage_region_ = reinterpret_cast<void*>(
+                eglGetProcAddress("eglSetDamageRegionKHR"));
+        if (damage)
+            egl_swap_with_damage_ = reinterpret_cast<void*>(
+                eglGetProcAddress("eglSwapBuffersWithDamageKHR"));
+        if (partial && !egl_set_damage_region_) egl_partial_update_ext_ = false;
+        if (damage && !egl_swap_with_damage_) egl_swap_damage_ext_ = false;
+        if (!egl_buffer_age_ext_)
+            std::fprintf(stderr,
+                         "warptempo_gui: no EGL_EXT_buffer_age; every frame "
+                         "is drawn whole\n");
+        if (!egl_swap_damage_ext_)
+            std::fprintf(stderr,
+                         "warptempo_gui: no eglSwapBuffersWithDamageKHR; the "
+                         "swap is the plain one\n");
     }
+    // A NEW SURFACE FORGETS THE REPAIR'S HISTORY (present's rule): its
+    // buffers hold no frame of ours.
+    repair_history_.clear();
 }
 
 // THE WINDOW'S LOSS (APP_CMD_TERM_WINDOW) and a new window's adoption: the
@@ -1377,40 +1456,159 @@ bool GuiPlatform::present() {
     // rects paint_one_frame just painted, goes to the GL canvas's frame —
     // the upload walk less the canvas clip, the clear, the list's draw and
     // the texture's (GuiGlCanvas::present_frame, gl_canvas.cpp, where the
-    // upload and draw rules are) — and the frame swaps. A false from it (no
-    // texture yet, a backbuffer without data) swaps nothing and keeps the
-    // damage.
+    // upload and draw rules are) — and the frame swaps. A frame that would
+    // draw nothing (no texture yet, a backbuffer without data;
+    // GuiGlCanvas::ready) swaps nothing and keeps the damage.
     //
     // THE SWAP WOULD BLOCK with the queue full (swap interval 1), and the
     // paint's gate keeps the queue from filling: since 2026-10-14 a gated
     // paint runs only at the vsync callback, one per display period (pump's
     // tail, where the reversal of the 2026-08-27 "one wakeup, no
     // Choreographer" ruling and its measurement are), so the unbuffered
-    // pen's ~500 events a second cost drains and never an extra swap. THE
-    // FRAME IS REDRAWN WHOLE at every swap, so neither EGL's buffer age nor a
-    // partial update is depended on. No glFinish, no glFlush beyond the
-    // swap's own, no readback.
+    // pen's ~500 events a second cost drains and never an extra swap. No
+    // glFinish, no glFlush beyond the swap's own, no readback.
+    //
+    // THE PARTIAL REPAIR (2026-11-04, session 33; the Astra consult's (b),
+    // tmp/codex_review.md). MEASURED (2026-11-04, the planner's measurement
+    // on the tablet, a free fading line at rest): before, 90 presents a
+    // second, each the whole surface, per second of wall time the swap
+    // 160 ms, the present 30, cairo 15, the upload 3, the list 1.7, top ~50 %
+    // app / ~50 % SurfaceFlinger; after, 3240 px repaired a frame and no
+    // whole frame at rest, top ~46 % / ~53 % — THE PRESENT IS THE COST (the
+    // swap ~1.7 ms of the loop thread a frame), the pixels were not, and the
+    // draw list's rebuild never was. The tablet's EGL (the capability line, 2026-11-04):
+    // EGL_EXT_buffer_age, EGL_KHR_partial_update and
+    // EGL_KHR_swap_buffers_with_damage present, swap behavior DESTROYED, the
+    // age 3 steady (a triple-buffered swapchain). THE ROAD, three mechanisms
+    // kept apart:
+    //   * THE BUFFER'S AGE, asked of EGL before anything draws: the acquired
+    //     buffer holds the frame `age` presents back (0: unknown contents).
+    //     THE REPAIR REGION is this frame's damage united with the changes
+    //     of the age − 1 frames before it (repair_history_, newest first).
+    //     The frame is drawn WHOLE at age 0, at an age the history cannot
+    //     cover (a new surface, a new size or a failed swap empties it), and
+    //     at GuiGlCanvas::repair_must_be_full's verdict (the clip moved, the
+    //     score viewer's page, the grow's program, no walk yet on the
+    //     texture), whose change the damage does not describe — that frame's
+    //     history entry is then the whole surface, so the older buffers are
+    //     redrawn whole too.
+    //   * THE DAMAGE REGION (EGL_KHR_partial_update): the repair region named
+    //     to EGL once, after the age's query and before the first draw, in
+    //     EGL's bottom-left rects (y' = height − y − h); never called for a
+    //     whole frame (zero rects would mean the whole surface anyway).
+    //   * THE SWAP WITH DAMAGE (EGL_KHR_swap_buffers_with_damage): the swap
+    //     carries THIS FRAME'S CHANGE alone (not the repair region): its
+    //     damage, or the whole surface for an undescribed change; the plain
+    //     swap only where the extension is absent (one line at the
+    //     capability line).
+    // present_frame recomposes each repair rect through the whole pass order,
+    // so the picture's bytes are the whole draw's (its THE REPAIR). IT
+    // STANDS ON THE DAMAGE CONTRACT: every GPU-visible change of the canvas
+    // owes damage on its pixels, the CPU road's rule, now the GPU's too.
     //
     // A FAILED SWAP: a lost context is a rare non-silent fault and is fatal
     // (no recovery code); any other failure is one line and false, the
-    // damage kept and re-posted (paint_one_frame's tail).
+    // damage kept and re-posted (paint_one_frame's tail), the history
+    // emptied so the retry is drawn whole.
     EGLDisplay dpy  = egl_display_;
     EGLSurface surf = egl_surface_;
     if (!surf) return false;
+    if (!gl_canvas_.ready(back_)) return false;
     // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size the
     // frame was painted at and the texture follows), never eglQuerySurface's
     // answer, which a driver may latch stale; the two are equal at every
     // adoption (the window's own size).
-    if (!gl_canvas_.present_frame(back_, damage_, canvas_frame_, back_w_,
-                                  back_h_))
+    const int sw = back_w_;
+    const int sh = back_h_;
+    const DamageRect whole_surface{0, 0, sw, sh};
+
+    // THIS FRAME'S DAMAGE on the surface, coalesced by containment.
+    std::vector<DamageRect> frame;
+    for (const DamageRect& d : damage_) {
+        const int x0 = std::max(d.x, 0);
+        const int y0 = std::max(d.y, 0);
+        const int x1 = std::min(d.x + d.w, sw);
+        const int y1 = std::min(d.y + d.h, sh);
+        if (x1 > x0 && y1 > y0)
+            append_coalesced_rect(frame, DamageRect{x0, y0, x1 - x0, y1 - y0});
+    }
+
+    EGLint age = 0;
+    if (egl_buffer_age_ext_ &&
+        !eglQuerySurface(dpy, surf, EGL_BUFFER_AGE_EXT, &age))
+        age = -2;  // the query failed: drawn whole
+
+    const bool undescribed = gl_canvas_.repair_must_be_full(canvas_frame_);
+    std::vector<DamageRect> change;
+    if (undescribed || frame.empty())
+        change.push_back(whole_surface);
+    else
+        change = frame;
+    const bool full = undescribed || frame.empty() || age <= 0 ||
+                      static_cast<std::size_t>(age - 1) >
+                          repair_history_.size();
+    std::vector<DamageRect> repair;
+    if (!full) {
+        repair = change;
+        for (int i = 0; i < age - 1; ++i)
+            for (const DamageRect& r : repair_history_[static_cast<std::size_t>(i)])
+                append_coalesced_rect(repair, r);
+        // MANY RECTS BECOME THEIR BOUNDING RECT: a few scissored passes
+        // each, never dozens.
+        if (repair.size() > 8) {
+            int x0 = sw, y0 = sh, x1 = 0, y1 = 0;
+            for (const DamageRect& r : repair) {
+                x0 = std::min(x0, r.x);
+                y0 = std::min(y0, r.y);
+                x1 = std::max(x1, r.x + r.w);
+                y1 = std::max(y1, r.y + r.h);
+            }
+            repair.assign(1, DamageRect{x0, y0, x1 - x0, y1 - y0});
+        }
+        if (repair.size() == 1 && contains_rect(repair[0], whole_surface))
+            repair.clear();
+    }
+    // EGL's rects, bottom-left (x, y', w, h).
+    const auto egl_rects = [sh](const std::vector<DamageRect>& rs) {
+        std::vector<EGLint> v;
+        v.reserve(rs.size() * 4);
+        for (const DamageRect& r : rs) {
+            v.push_back(r.x);
+            v.push_back(sh - (r.y + r.h));
+            v.push_back(r.w);
+            v.push_back(r.h);
+        }
+        return v;
+    };
+    if (!repair.empty() && egl_partial_update_ext_) {
+        std::vector<EGLint> v = egl_rects(repair);
+        reinterpret_cast<PFNEGLSETDAMAGEREGIONKHRPROC>(egl_set_damage_region_)(
+            dpy, surf, v.data(), static_cast<EGLint>(repair.size()));
+    }
+    if (!gl_canvas_.present_frame(back_, damage_, repair, canvas_frame_, sw,
+                                  sh))
         return false;
-    if (!eglSwapBuffers(dpy, surf)) {
+    bool swapped = false;
+    if (egl_swap_damage_ext_) {
+        std::vector<EGLint> v = egl_rects(change);
+        swapped = reinterpret_cast<PFNEGLSWAPBUFFERSWITHDAMAGEKHRPROC>(
+                      egl_swap_with_damage_)(
+            dpy, surf, v.data(), static_cast<EGLint>(change.size()));
+    } else {
+        swapped = eglSwapBuffers(dpy, surf);
+    }
+    if (!swapped) {
         const EGLint err = eglGetError();
         if (err == EGL_CONTEXT_LOST) gl_fatal("the context was lost", err);
         std::fprintf(stderr, "warptempo_gui: eglSwapBuffers failed (0x%x)\n",
                      static_cast<unsigned>(err));
+        repair_history_.clear();
         return false;
     }
+    // THE HISTORY: this frame's change, newest first.
+    repair_history_.insert(repair_history_.begin(), std::move(change));
+    if (repair_history_.size() > kRepairHistoryDepth)
+        repair_history_.resize(kRepairHistoryDepth);
     return true;
 }
 
