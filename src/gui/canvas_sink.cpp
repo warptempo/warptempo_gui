@@ -6,16 +6,6 @@
 // The canvas sink (the rule, the invariant and what each record writes are
 // at canvas_sink.h's head).
 
-namespace {
-
-// The non-negative remainder, the dotted runs' one modulo.
-int floor_mod(int a, int m) {
-    const int r = a % m;
-    return r < 0 ? r + m : r;
-}
-
-} // namespace
-
 GuiCanvasDrawList& gui_canvas_frame() {
     static GuiCanvasDrawList frame;
     return frame;
@@ -47,35 +37,6 @@ void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
     }
 }
 
-// THE RECORD IS THE RUN'S WHOLE t-THICK EXTENT (render.h's GuiCanvasDotRun,
-// 2026-11-04): its thickness is the cell the GPU divides by, so it is never
-// cut here — the list's scissor cuts a line's columns past the area's edge.
-// THE ORIGIN MOVED BACK BY WHOLE PERIODS OF CELLS (period · t coordinates)
-// to at or before the run's first coordinate: the same cells (the cell
-// index's modulo is periodic in the origin by period · t), and every offset
-// the GPU computes is non-negative, so its integer division is the floor —
-// GLSL ES 3.00 leaves % on a negative operand undefined.
-void GuiCanvasSink::dots(std::span<const GuiCanvasDotRun> runs,
-                         GuiColor color) {
-    const uint32_t word = argb32_opaque_word(display_color(color));
-    for (const GuiCanvasDotRun& run : runs) {
-        if (run.len <= 0 || run.period <= 0) continue;
-        assert(run.phase >= 0 && run.phase < run.period);
-        assert(run.t > 0);
-        const int start = run.vertical ? run.y : run.x;
-        GuiCanvasPrimitive p;
-        p.kind   = run.vertical ? GuiCanvasKind::DotsColumn
-                                : GuiCanvasKind::DotsRow;
-        p.r      = run.vertical ? GuiRect{run.x, run.y, run.t, run.len}
-                                : GuiRect{run.x, run.y, run.len, run.t};
-        p.period = run.period;
-        p.origin = start - floor_mod(start - run.origin, run.period * run.t);
-        p.phase  = run.phase;
-        p.word   = word;
-        list_.prims.push_back(p);
-    }
-}
-
 // THE PLATE'S RECORDS: one per STORED band (GuiPlateColumns::Band: the
 // bands whose bounds are whole; the plate is transparent elsewhere), each
 // placed at the band's own columns and rows off the area's origin — at the
@@ -94,7 +55,7 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
     const bool copy = columns.revision != list_.plate_revision;
     if (copy) list_.columns.clear();
     const uint32_t ink     = argb32_opaque_word(hex(inks.ink_rgb));
-    const uint32_t outline = argb32_opaque_word(hex(inks.outline_rgb));
+    const uint32_t core    = argb32_opaque_word(hex(inks.core_rgb));
     std::size_t offset = 0;
     for (const GuiPlateColumns::Band& b : columns.band) {
         if (!b.stored) continue;
@@ -109,7 +70,7 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
         p.period = static_cast<int>(offset);
         p.origin = area.y;
         p.word   = ink;
-        p.word2  = outline;
+        p.word2  = core;
         if (copy)
             list_.columns.insert(list_.columns.end(), c.cols.begin(),
                                  c.cols.end());

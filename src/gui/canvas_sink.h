@@ -1,5 +1,5 @@
 #pragma once
-#include "render.h"   // GuiRect, GuiColor, GuiCanvasDotRun, GuiPlateColumns
+#include "render.h"   // GuiRect, GuiColor, GuiPlateColumns
 
 #include <cstdint>
 #include <memory>
@@ -17,23 +17,24 @@
 // plate, so a plate from before a resize never crosses it, and under every
 // vertical line after it, each crossing it, 2026-11-02), the
 // phase-reset lead-in ring, the nudged pairs' runs,
-// the marker stems, the cursor's dots, the scanner and the zoom anchor's
-// stem, in that order (build_canvas_list, paint_handler.cpp, after
+// the focused marker's stem, the cursor's line, the scanner and the zoom
+// anchor's stem, in that order (build_canvas_list, paint_handler.cpp, after
 // on_redraw's paint-order block). Each but the plate is a solid converted
 // color on whole device pixels (every line one W, waveform_line_px, the
 // unit of 2026-11-04; the divider's row chrome, a solid integral rect),
 // and the plate is the antialiased waveform (architect 2026-10-30,
-// render_waveform_columns' head), so the sink's vocabulary is three
-// records: a RECT, a DOTTED RUN (GuiCanvasDotRun,
-// render.h: a column or a row of t x t cells on a period's phase, counted
-// from an origin, t the canvas's line) and THE PLATE (the per-column quarter-row tips,
-// GuiPlateColumns, with its two inks and the grow). EVERY RECORD BUT THE PLATE PAINTS
-// ITS OWN COLOR straight over whatever lies under it, and THE PLATE'S
-// FRINGE BLENDS SOURCE-OVER with the ground and the grid beneath it — the
-// GL blend's work (kListFragmentShader, gl_canvas.cpp); no record reads the
-// canvas on the CPU. The dots over the plate keep their own color
-// (architect 2026-10-26, on the glass, closed_questions.md): opaque records
-// drawn over it.
+// render_waveform_columns' head), so the sink's vocabulary is two
+// records: a RECT and THE PLATE (the per-column quarter-row tips,
+// GuiPlateColumns, with its two inks and the grow) — EVERY LINE ON THE
+// CANVAS IS SOLID since 2026-11-04 (the dotted stems and cursor retired,
+// render.h's marker-lane and playhead paragraphs), so the dotted run left
+// the vocabulary with them. A RECT PAINTS ITS OWN COLOR straight over
+// whatever lies under it, and THE PLATE'S FRINGE BLENDS SOURCE-OVER with
+// the ground and the grid beneath it — the GL blend's work
+// (kListFragmentShader, gl_canvas.cpp); no record reads the canvas on the
+// CPU. The lines over the plate keep their own color (architect
+// 2026-10-26, on the glass, closed_questions.md): opaque records drawn
+// over it.
 //
 // ONE SINK, ONE ROAD (architect 2026-10-30: the GL canvas the one road): the
 // sink appends each primitive to the frame's GuiCanvasDrawList in paint
@@ -72,14 +73,9 @@
 // whole-walk rule are one rule for both.
 //
 // WHAT EACH RECORD WRITES, the rules the GPU's draw keeps: a rect writes its
-// word on its cells; a dotted run writes the word where ((c − origin) / cell)
-// mod period = phase, the pixels the run names, `cell` the record's
-// thickness (the line's t, 2026-11-04: r.w for a column run, r.h for a row
-// run; the sink moves `origin` back by whole periods of cells to at or
-// before the run's first coordinate, so the GPU's division and modulo never
-// meet a negative operand); the plate writes, per cell, the
+// word on its cells; the plate writes, per cell, the
 // premultiplied source of its two coverages — the ink's where the grown
-// shape covers, the outline's where the grown inner's border does —
+// shape covers, the core's where the grown inner does (2026-11-04) —
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
 // producer; the algorithm kListFragmentShader's) and blended source-over
 // under the GL blend, exactly the word in the core and nothing where no bar
@@ -92,23 +88,19 @@
 // cut to a damage rect.
 
 // ONE LIST RECORD. `r` the cells it may write, device px of the
-// full-screen surface. A RECT writes `word` on r; a
-// DOTTED RUN (a column, DotsColumn: r t columns wide; or a row, DotsRow:
-// r t rows tall — t the line's width, the run's cell, 2026-11-04) writes
-// `word` on the pixels whose coordinate c along the run satisfies
-// ((c − origin) / t) mod period = phase, origin at or before the run's
-// first coordinate; THE PLATE blends, per cell of r, the exact coverage of
-// its columns' tips (the waveform's antialiasing, render_waveform_columns'
-// head) — `period` the index of r's first column in the
-// list's `columns`, `origin` the plate's row 0 (the canvas's first row) —
-// `word` the ink and `word2` the outline, nothing where no bar covers.
-enum class GuiCanvasKind : int { Rect = 0, DotsColumn = 1, DotsRow = 2, Plate = 3 };
+// full-screen surface. A RECT writes `word` on r; THE PLATE blends, per
+// cell of r, the exact coverage of its columns' tips (the waveform's
+// antialiasing, render_waveform_columns' head) — `period` the index of r's
+// first column in the list's `columns`, `origin` the plate's row 0 (the
+// canvas's first row) — `word` the ink and `word2` the core, nothing where
+// no bar covers. The kinds' numbers are the list shader's (`kind == 1`,
+// kListFragmentShader).
+enum class GuiCanvasKind : int { Rect = 0, Plate = 1 };
 struct GuiCanvasPrimitive {
     GuiCanvasKind kind = GuiCanvasKind::Rect;
     GuiRect  r{};
     int      period = 0;
     int      origin = 0;
-    int      phase  = 0;
     uint32_t word   = 0;
     uint32_t word2  = 0;
 };
@@ -238,7 +230,7 @@ GuiCanvasDrawList& gui_canvas_frame();
 // it rebuilds the list's records from empty (the clip and the floater bit
 // are the caller's), the generation moved at construction; the plate's
 // columns are kept while their revision holds (GuiCanvasDrawList's plate
-// payload). rects and dots append in `color` (an authored color,
+// payload). rects append in `color` (an authored color,
 // display_color applied here); plate the cache's
 // published plate at `area` from its `columns` (not rendered: nothing),
 // `inks` the published inks, the grow the seat's (plate_grow).
@@ -246,7 +238,6 @@ class GuiCanvasSink {
 public:
     explicit GuiCanvasSink(GuiCanvasDrawList& list);
     void rects(std::span<const GuiRect> rs, GuiColor color);
-    void dots(std::span<const GuiCanvasDotRun> runs, GuiColor color);
     void plate(const GuiRect& area, const GuiPlateColumns& columns,
                WaveformPlateInks inks);
 

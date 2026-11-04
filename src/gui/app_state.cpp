@@ -179,10 +179,11 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
 // walk with the same boundary idiom.
 //
 // A CUE IS TWO RECTS (FlagHitRect, render.h, 2026-10-09): its label's box and
-// its triangle, and the walk follows the cue painter's own order
-// (render.cpp's paint_cues, render.h's marker-lane paragraph): THE TRIANGLES
-// paint last, left to right, so a press on any triangle answers the
-// rightmost triangle under it; THE LABELS paint left to right under them (a
+// its triangle — the outlined chip's box since 2026-11-04 (cue_chip_rows) —
+// and the walk follows the cue painter's own order
+// (render.cpp's paint_cues, render.h's marker-lane paragraph): THE CHIPS
+// paint last, left to right, so a press on any chip answers the
+// rightmost chip under it; THE LABELS paint left to right under them (a
 // later label's box masks an earlier one's text), so among labels the
 // RIGHTMOST under the point is on top. `on_triangle` says
 // which of the two answered (a triangle is the payload's, never a cell).
@@ -288,14 +289,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // which is the honest answer: a flag with no pixels has no box to grab.
     //
     // THE SHAPE IS TWO RECTS (2026-10-09, architect: "the union of the
-    // triangle and the label's box as painted"): the cue's triangle's box —
-    // its widest row and the shadow's offset right over its rows — and its
-    // label's box. No slope test: the triangle's box is its hit.
+    // triangle and the label's box as painted"): the cue's chip's box — the
+    // outlined staircase's widest row over its rows (2026-11-04) — and its
+    // label's box. No slope test: the chip's box is its hit.
     //
-    // Z-ORDER is the cue painter's (topmost_flag_rect above): triangles over
-    // labels, the rightmost triangle on top, the rightmost label on top.
-    // Selection lifts nothing (it is the label's selected pair, not a
-    // z-rule), so this is the whole arbitration.
+    // Z-ORDER is the cue painter's (topmost_flag_rect above): chips over
+    // labels, the rightmost chip on top, the rightmost label on top.
+    // Selection lifts nothing (it is the chip's fill, not a z-rule), so this
+    // is the whole arbitration.
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     return r ? r->marker_index : -1;
 }

@@ -326,22 +326,18 @@ namespace {
 
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
-// 2026-11-01; paint_key, materials.h, where its four faces stand).
+// 2026-11-01; paint_key, materials.h, where its two faces stand).
 // LIT — the FFAD56 fill — for a CHECKED button (the roster's `selected`,
-// `lamp`), FFC281 while a press stands on it; THE PRESS FACE 6A6A6A for a
-// PRESSED one (a live press) that is not checked, for as long as the press
-// stands, the key back to its own state at the lift (architect 2026-11-03,
-// the retrofit: Live's hover colors as the press; the yellow for lamps
-// only, 2026-11-02; key_look); a DISABLED button keeps the face its state
-// gives, a dead checked button still lit (the roster's rule at
-// paint_icon_row), its glyph and legend dimmed by the caller. NO HOT FACE,
-// NO PRESS MOVEMENT. `face` is the key's FACE, the key itself (materials.h's
+// `lamp`; the yellow for lamps only, 2026-11-02; key_look), else at rest;
+// A PRESS PAINTS NOTHING (architect 2026-11-04, materials.h's head); a
+// DISABLED button keeps the face its state gives, a dead checked button
+// still lit (the roster's rule at paint_icon_row), its glyph and legend
+// dimmed by the caller. NO HOT FACE, NO PRESS FACE. `face` is the key's FACE, the key itself (materials.h's
 // THE FACE AND ITS GAP, 2026-11-04). ON IT its caller paints the key's
 // Breeze glyph (paint_key_glyph) and UNDER IT its legend (paint_key_legend,
 // 2026-11-03).
-void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
-                       bool pressed) {
-    paint_key(cr, face, key_look(lamp, pressed));
+void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp) {
+    paint_key(cr, face, key_look(lamp));
 }
 
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
@@ -549,9 +545,9 @@ std::string key_legend_word(std::string_view word) {
 // differs from the face's stands half a px off center rather than taking a
 // size of its own, every key glyph keeping the one ink size. ITS TONE
 // FOLLOWS THE FACE (materials.h's key_ink): kTextOnLit 111111 when the key
-// paints LIT (`look`, key_look's answer: checked, pressed or not, a dead
-// checked key keeping its fill), else kTextInk B5B5B5 on a resting or
-// pressed face, or kKeyDimInk 5A5A5A when the key is disabled. The glyph is
+// paints LIT (`look`, key_look's answer: checked, a dead checked key keeping
+// its fill), else kTextInk B5B5B5 on a resting face, or kKeyDimInk 5A5A5A
+// when the key is disabled. The glyph is
 // clipped to the face: a face smaller than the ink box keeps its glyph
 // centered and lets nothing overhang onto the ground. None is at the
 // defaults — the ink 15 rows on the 33-row face.
@@ -1132,8 +1128,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // "building a suction on the other one is the right way to go"; the consumed
 // nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
 // on_key) — never greyed for it — the key staying lit under the hold
-// (paint_roster_case: lit while checked, wearing the lit press face FFC281
-// while the press stands, key_look).
+// (paint_roster_case: lit while checked, key_look; a press paints nothing).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -1768,9 +1763,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (render.h's palette says so), and so has the menu row's.
     //
     // THE FACES ARE THE PROGRAM'S CASE (paint_roster_case, above, where the
-    // faces stand): the rest face, the press face for a press on an
-    // unchecked button, the lit fill for a CHECKED one, pressed or not —
-    // the live fact its chord flips
+    // faces stand): the rest face, the lit fill for a CHECKED one — no press
+    // face (2026-11-04) — the live fact its chord flips
     // (redesign_button_selected), the view pairs' lit members among them —
     // and no hot face. The pointer walk finds the tooltip's button
     // (recompute_redesign_button_hover).
@@ -1928,19 +1922,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // (paint_roster_case). A dead CHECKED button (the grid-iterations
         // lamp on a locked tab, say) keeps its lit fill: the mode cannot
         // change that state, so hiding it would be a lie, and the dimmed
-        // legend says "true, but not yours right now".
-        // The press face is gated on the live bit rather than trusted: the
-        // claim never records a press on a disabled button, but a button can
-        // go dead UNDER a held press with no pointer event to refresh it.
+        // legend says "true, but not yours right now". A press paints
+        // nothing (no press look, 2026-11-04, materials.h's head).
         // A case the clip does not reach is skipped, its face published
         // above (clip_meets) — THE FACE AND ITS LEGEND (2026-10-23): the
         // gate reads the painted extent, so a damage confined to the bottom
         // pad, which the ground erases, still reprints the legend.
         if (!clip_meets(cr, painted)) return;
-        const bool pressed =
-            face.enabled && redesign_button_pressed_face(app, def.id);
-        const KeyLook look = key_look(face.selected, pressed);
-        paint_roster_case(cr, key, face.selected, pressed);
+        const KeyLook look = key_look(face.selected);
+        paint_roster_case(cr, key, face.selected);
 
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled): redesign_button_icon's stateful overload — the
@@ -2733,10 +2723,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // above (clip_meets) — the face AND its legend, the band's gate: a
         // damage confined to the bottom pad still reprints the legend.
         if (!clip_meets(cr, painted)) return;
-        const bool pressed =
-            face.enabled && redesign_button_pressed_face(app, def.id);
-        const KeyLook look = key_look(face.selected, pressed);
-        paint_roster_case(cr, key, face.selected, pressed);
+        const KeyLook look = key_look(face.selected);
+        paint_roster_case(cr, key, face.selected);
         // THE GLYPH ON THE KEY, ITS LEGEND UNDER IT (the band's rule,
         // 2026-11-02 / 2026-11-03: the stateful glyph and the stateful
         // legend through their one seats, the tones the face's and the
@@ -2876,9 +2864,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // publishes the key's empty rect after this, which empties the
         // field with it (publish_button_face's empty overload). NOTHING IS
         // PAINTED ON THE CLOCK FOR THE PRESS — no fill, no digit shift: the
-        // press arms the PLAY key, which wears its press face while the
-        // press stands, and the digits starting or stopping are the act's own
-        // confirmation. The digits are never greyed. ROW 8'S CLOCK
+        // press arms the PLAY key (which paints nothing for it either, no
+        // press look, 2026-11-04), and the digits starting or stopping are
+        // the act's own confirmation. The digits are never greyed. ROW 8'S CLOCK
         // ALONE: the render player's and the score viewer's time fields
         // share the field's painter (paint_ce_time_field) and never the
         // press.
@@ -4046,19 +4034,20 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // 300 %) in whole device cells, Cool Edit's aliased staircase
     // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
     // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
-    // cue_triangle_unit_px, render.h), in the palette's `playhead_head`
-    // (Live's cyan 03C3D5 since 2026-11-01), NO SHADOW (2026-11-02), ON THE
+    // cue_triangle_unit_px, render.h), BARE — the marker's chip alone wears
+    // the one-W outline (architect 2026-11-04) — in the palette's
+    // `playhead_head` (Live's cyan 03C3D5 since 2026-11-01), NO SHADOW
+    // (2026-11-02), LIT THROUGH THE LINE'S BLINK (render_playhead), ON THE
     // RULER'S LAST `rows` DEVICE ROWS, its apex — the bottom centre of the
     // playhead's column — on the ruler's foot row, over the ticks'
     // feet (2026-10-09 ~21:00; the ruler's foot since the flat well, its
     // 9 rows the major tick's 9 at 300 %). It is OPAQUE over the ticks
     // and digits the walk above laid down, covering whatever stands under it
     // (every cell whole, no edge blended over them). NO SNAP, NO
-    // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
+    // AVOIDANCE: it may stand on a marker's column, the cue's chip being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
     // playhead paragraph). It draws NOTHING across the trim bar, the marker
-    // lane and the rows of ground; its canvas dots are
-    // paint_playheads'. CENTRED ON THE PLAYHEAD'S COLUMN, its line's
+    // lane and the rows of ground; its canvas line is paint_playheads'. CENTRED ON THE PLAYHEAD'S COLUMN, its line's
     // centre (architect 2026-10-09 ~14:35; paint_ce_cue_triangle).
     //
     // The whole head is the RESTING CURSOR'S: the `h` view, the render player
@@ -4078,9 +4067,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int col   = static_cast<int>(std::nearbyint(cursor_px));
         const int rows  = cue_triangle_h_px();
         // The head's painted columns [col − left, col + right) (render.h's
-        // one extent, the damage box's too).
-        const int left  = cue_triangle_half_w_px();
-        const int right = cue_triangle_reach_right_px();
+        // bare extent, the damage box's too).
+        const int left  = cue_bare_half_w_px();
+        const int right = cue_bare_reach_right_px();
         GuiRect head_hit{0, 0, 0, 0};
         if (col + right - 1 >= 0 && col - left <= wave_w - 1) {
             const int head_top = ruler_bottom - rows;
@@ -4419,9 +4408,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // on the same column — paint nothing at all: no sliver, no clamped minimum.
     if (right_col <= left_col) return out;
 
-    // The band spans columns [left_col, right_col): the stem's own column
-    // (left_col) is its left side, which the ring leaves to the stem
-    // (paint_phase_reset_overlay_ring).
+    // The band spans columns [left_col, right_col): the reset's own column
+    // (left_col) is its left side (paint_phase_reset_overlay_ring).
     double x0 = static_cast<double>(area.x + left_col);
     double x1 = static_cast<double>(area.x + right_col);
     const double stem_x = x0;
@@ -4445,106 +4433,65 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // READS as the edges of a span rather than as a tinted region, painted
 // AFTER the plate and over the ink.
 //
-// THE RING IS DOTTED IN THE STEM'S OWN PATTERN, NEVER A SOLID LINE
-// (architect 2026-10-09 ~17:40: the ring is "made of the same stuff the
-// marker looks like"; "they're one unit", 2026-08-01): every cell one line
-// px square, t x t (waveform_line_px, one W since 2026-11-04, the unit), in
-// the reset's own two dot
-// phases exactly as its stem wears them — live_cue_stem_dots asks the one
-// resolver (resolve_flag_face) for the stem's pair, so the ring and the stem
-// cannot drift: the `cue_stem` on both phases (architect 2026-11-02, mock
-// t1), a coincident reset's too (its struck label the mark, architect
-// 2026-10-26; the invalid color alone 2026-10-11 to 2026-10-26); THE
-// RESTING PAIR WHETHER THE RESET IS SELECTED OR NOT (architect 2026-11-02,
-// M10 rule 1: a selected reset's stem is the solid line, its ring keeps
-// the `cue_stem` on both phases).
-//   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
-//     the reset's stem already stands there (paint_marker_stems, after this
-//     pass), and a playhead on the reset interleaves its dots there as on
-//     any stem. A stem off
-//     the area's left edge leaves the clipped band with no left side.
-//   THE RIGHT SIDE on the band's last column, the stem's rule exactly
-//     (the line centered on the column; program_spec.h's dot fields: the
-//     canvas's cells of t rows ≡ range_dot_phase and ≡ cue_dot_phase, mod
-//     cue_dot_period, counted from the canvas's first row), down the
-//     canvas's whole height,
-//     the stereo divider's row crossed (architect 2026-11-02) — the dotted
-//     line's run (dotted_waveform_line_run, render.h), the stem's own rule. A band
-//     clipped at the area's right edge draws it there, flush, as the trim
-//     bridge's clipped fill reads.
+// THE RING IS FOUR SOLID ONE-W LINES IN THE `cue_outline` (architect
+// 2026-11-04: the dotted stems at rest retired, and the ring with them —
+// the ring and the cue one unit, 2026-09-17, so it wears the chip's dark
+// line, 111111), WHATEVER THE SELECTION, a coincident reset's too (its
+// struck label the mark, architect 2026-10-26):
+//   THE LEFT SIDE on the reset's own column (band.stem_x) and THE RIGHT
+//     SIDE on the band's last column, each a t-wide line centered on its
+//     column (waveform_line_px, one W) down the canvas's whole height, the
+//     stereo divider's row crossed (architect 2026-11-02; canvas_line_rect's
+//     form). The left side's column is the reset's own, unclipped, so a
+//     reset off the area's left edge paints no left side (the column gate);
+//     the right side's is the CLIPPED band's last column, so a band clipped
+//     at the area's right edge draws it there, flush, as the trim bar's
+//     clipped span reads.
 //   THE TOP RUN on the canvas's first t rows and THE BOTTOM RUN on its
-//     last t: the same two phases turned through the corners, counted in
-//     cells of t columns from the reset's line's first column (band.stem_x
-//     less t / 2, unclipped, so the run stays put on the song as the view
-//     pans): the cells range_dot_phase + k · cue_dot_period and
-//     cue_dot_phase + k · cue_dot_period — one dot every two cells, as down
-//     the stem (one on, one off, 2026-11-02), every dot the `cue_stem` —
-//     across the two sides' lines' outer columns (the left line's first
-//     through the right line's last), so the corners close at every t. The
-//     corners carry whatever cell the rules give them; a band one column
-//     wide is its stem alone.
+//     last t, from the left line's first column through the right line's
+//     last (each centered on its column), so the corners close at every t;
+//     the list's scissor cuts what passes the area's edges.
 // PURE PALETTE BYTES (the palette composites nothing): aliased integer
-// cell rectangles, the stems' own form, no alpha and no half column. The
-// band's edges are whole columns by construction (displayed_column_at's
-// integers off the area's x).
-// THE CANVAS'S ROWS (architect 2026-10-06; the area whole since
-// 2026-10-09): the runs land on the canvas's first and last t rows — the upper
-// well's first and the lower well's last — and the right side crosses the
-// stereo divider's row as any vertical line (architect 2026-11-02). No
-// other reader takes the ring's cells: it is no hit target, and its damage
-// is the whole waveform area's (the flag cache's rebuild and
+// rects, no alpha and no half column. The band's edges are whole columns by
+// construction (displayed_column_at's integers off the area's x). No other
+// reader takes the ring's cells: it is no hit target, and its damage is the
+// whole waveform area's (the flag cache's rebuild and
 // Selection::damage_overlay_on_subject_change), which holds it whole.
 // DAMAGE: this pass paints live in on_redraw from app state, never from a
-// cached surface, and every change to its dots' inputs misses the flag
-// cache's fingerprint, whose rebuild damages the waveform with the strip
-// (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own repaint;
-// a palette install damages the whole window.
-// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): the top and bottom
-// runs one dots call, the right side another.
+// cached surface, and every change to its inputs misses the flag cache's
+// fingerprint, whose rebuild damages the waveform with the strip
+// (maybe_rebuild_flag_cache, waveform_cache.cpp); a palette install damages
+// the whole window. A disabled reset paints no ring (the band's gate).
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): one rects call.
 void GuiPaintHandler::paint_phase_reset_overlay_ring(
     GuiCanvasSink& sink, const GuiRect& area) {
     const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
     if (!band.valid) return;
 
-    const GuiStemDots dots = live_cue_stem_dots();
-    const ProgramSpec& ps = kProgramSpec;
     const int t      = waveform_line_px();
-    const int x0     = static_cast<int>(std::nearbyint(band.x0));
     const int x1     = static_cast<int>(std::nearbyint(band.x1));
     const int stem   = static_cast<int>(std::nearbyint(band.stem_x));
-    const int period = ps.cue_dot_period;
     const int y_top  = area.y;
     const int y_bot  = area.y + area.h - t;
     // THE RUNS' COLUMNS, the two sides' lines' outer columns: from the left
-    // line's first column (x0's line, centered on it) through the right
-    // line's last (x1 − 1's), so the corners close at every t; at t = 1 the
-    // band's own columns [x0, x1). Their cells count from the stem's line's
-    // first column. The scissor cuts what passes the area's edges.
-    const int run_lo = x0 - t / 2;
-    const int run_hi = x1 - 1 - t / 2 + t;
-
-    const auto paint_dots = [&](const GuiColor& color, int phase) {
-        // The top and bottom runs: the cells of [run_lo, run_hi), t columns
-        // each from the stem's line's first column, whose index is ≡ phase
-        // (mod period).
-        const GuiCanvasDotRun runs[2] = {
-            GuiCanvasDotRun{false, run_lo, y_top, run_hi - run_lo, period,
-                            stem - t / 2, phase, t},
-            GuiCanvasDotRun{false, run_lo, y_bot, run_hi - run_lo, period,
-                            stem - t / 2, phase, t},
-        };
-        sink.dots(runs, color);
-        // The right side on the band's last column, one run down the
-        // canvas's whole height (the divider's row crossed, 2026-11-02).
-        GuiCanvasDotRun side;
-        if (dotted_waveform_line_run(area, x1 - 1 - area.x, period, phase,
-                                     side))
-            sink.dots(std::span<const GuiCanvasDotRun>(&side, 1), color);
-    };
-    if (dots.range_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
-    if (dots.cue_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.cue_phase_dots), ps.cue_dot_phase);
+    // line's first column (the reset's column, unclipped, centered) through
+    // the right line's last (x1 − 1's), cut to the area's columns.
+    const int run_lo = std::max(stem - t / 2, area.x);
+    const int run_hi = std::min(x1 - 1 - t / 2 + t, area.x + area.w);
+    GuiRect rs[4];
+    int n = 0;
+    if (run_hi > run_lo) {
+        rs[n++] = GuiRect{run_lo, y_top, run_hi - run_lo, t};
+        rs[n++] = GuiRect{run_lo, y_bot, run_hi - run_lo, t};
+    }
+    // The two sides, the line's column gate and edge clip
+    // (waveform_line_cols).
+    for (const int col : {stem - area.x, x1 - 1 - area.x}) {
+        const WaveformLineCols c = waveform_line_cols(area.w, col);
+        if (c.w > 0) rs[n++] = GuiRect{area.x + c.x0, area.y, c.w, area.h};
+    }
+    sink.rects(std::span<const GuiRect>(rs, static_cast<std::size_t>(n)),
+               palette().cue_outline);
 }
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
@@ -4688,72 +4635,34 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
-// EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
-// overlay that replaced the singleton selected-marker stem. The full contract —
-// what stems and in which colors (the `cue_stem` gray, the playhead line's
-// white on a selected cue's odd rows) — is at the declaration.
+// THE FOCUSED MARKER'S STEM (architect 2026-11-04: no stem at rest, Live
+// paints none; the full contract at the declaration): the selection's focus
+// member's column, a SOLID ONE-W line in the `cue_outline` down the canvas's
+// whole height, the stereo divider's row crossed (architect 2026-11-02:
+// "the divider is just another grid line now"; canvas_line_rect's form, the
+// line's column gate and edge clip, waveform_line_cols).
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its cue's APEX COLUMN, and that column was
 // already resolved by the pass that painted the cue, on the displayed basis
 // those pixels were laid out against. So the DragOverlay substitution, the
-// source->target map walk, the per-marker cull and the color resolver all happen
-// exactly once, in the painter, and a stem can never land a pixel away from its
-// own triangle. Disabled markers are simply absent from the stash.
+// source->target map walk, the per-marker cull and the resolver all happen
+// exactly once, in the painter, and a stem can never land a pixel away from
+// its own chip. An entry's presence is the stem (MarkerStem, render.h).
 //
-// THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
-// 2026-10-09; the two colors ~11:50; every cue's since 2026-10-26;
-// render.h's marker-lane paragraph): t x t dots, t the line's one W
-// (waveform_line_px, the unit, 2026-11-04), centered on the stem's column,
-// on the CANVAS'S cells of t rows counted from its top row (dotted_waveform_line_run,
-// one run down the canvas's whole height, the stereo divider's row crossed
-// as any grid line, architect 2026-11-02) — none in the lane — on
-// cells ≡ cue_dot_phase and on cells ≡ range_dot_phase (mod cue_dot_period,
-// program_spec.h), and on a selected cue the playhead's own cells too (≡
-// playhead_dot_phase mod dot_period, the odd cells), each in the role the
-// stash names for it (GuiCueDot, cue_dot_color; resolve_flag_face's table:
-// every live cue, warp or phase reset, the `cue_stem` on both phases, one
-// dot every two cells — the even cells — the history's two halves alike,
-// architect 2026-11-02, mock t1; A SELECTED CUE the `playhead_line` on the
-// odd cells as well, ONE SOLID LINE, the look of a stem with the playhead on
-// it whether the playhead is there or not, architect 2026-11-02, M10 rule
-// 1). (The solid stem through the well's top lines between its flanks stood
-// 2026-10-02 to 2026-10-09; git history.)
+// Z-ORDER (architect 2026-09-23): the stem paints UNDER the playhead's
+// line, which follows this pass; on the focused marker the line lies over
+// the stem, which shows through in the blink's off phase. The full
+// sequence is the paint-order block in on_redraw.
 //
-// Z-ORDER (architect 2026-09-23): the stems paint UNDER the playhead's dots,
-// which follow this pass; on a shared column an unselected stem's phases
-// never touch them, and a SELECTED stem's odd rows are the rows the
-// playhead's dots land on, the same white — nothing here reads the
-// playhead (architect 2026-11-02; the declaration owns the rule).
-// The full sequence is the paint-order block in on_redraw.
-//
-// THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): the list takes
-// each stem's row set as a dotted column, one run.
+// THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): one rects call.
 void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
                                          const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     paint_marker_stem_runs(sink, area);
     if (app.marker_stems.empty()) return;
-
-    // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
-    // refused commit recolors nothing, so no paint-time override stands
-    // here — the stash's two phases are the marker's resolved face (its
-    // class and its selection), the whole answer, and the colors the
-    // palette's live roles.
-    // THE CANVAS'S WHOLE HEIGHT (architect 2026-11-02: "the divider is just
-    // another grid line now"): each stem one run, the stereo divider's row
-    // crossed, its phase counted from the canvas's first row with no
-    // re-phasing. The dots are the dotted line's rule (render.h's
-    // dotted_waveform_line_run, the one road) — cells of t rows ≡ phase
-    // (mod period) from the canvas's top, t x t, centered on the stem's
-    // column.
-    const ProgramSpec& ps = kProgramSpec;
-    const auto dotted_stem = [&](int col, int period, int phase,
-                                 GuiColor color) {
-        GuiCanvasDotRun run;
-        if (dotted_waveform_line_run(area, col, period, phase, run))
-            sink.dots(std::span<const GuiCanvasDotRun>(&run, 1), color);
-    };
+    std::vector<GuiRect> rs;
+    rs.reserve(app.marker_stems.size());
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
@@ -4762,77 +4671,54 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
         // the waveform.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        if (stem.cue_phase_dots != GuiCueDot::None)
-            dotted_stem(col, ps.cue_dot_period, ps.cue_dot_phase,
-                        cue_dot_color(stem.cue_phase_dots));
-        if (stem.range_phase_dots != GuiCueDot::None)
-            dotted_stem(col, ps.cue_dot_period, ps.range_dot_phase,
-                        cue_dot_color(stem.range_phase_dots));
-        // A SELECTED stem's odd rows: the playhead's own period and phase.
-        if (stem.playhead_phase_dots != GuiCueDot::None)
-            dotted_stem(col, ps.dot_period, ps.playhead_dot_phase,
-                        cue_dot_color(stem.playhead_phase_dots));
+        const WaveformLineCols c = waveform_line_cols(area.w, col);
+        if (c.w > 0) rs.push_back(GuiRect{area.x + c.x0, area.y, c.w, area.h});
     }
+    sink.rects(rs, palette().cue_outline);
 }
 
-// THE NUDGED PAIRS' RING RUNS (MarkerStemRun, render.h, owns the look;
-// architect 2026-10-10 → 2026-10-26): the top and bottom of each `h`-view
-// nudged pair's ring, on the canvas's first and last rows, between its two
-// cues' stems — THE PHASE-RESET LEAD-IN RING'S RUNS' FORM EXACTLY
-// (paint_phase_reset_overlay_ring, the model), IN THE STEM'S OWN PATTERN:
-// one line px square a dot, t x t (waveform_line_px, one W since
-// 2026-11-04), the `cue_stem` on the cells of t columns, counted from the
-// left stem's line's first column, range_dot_phase + k · cue_dot_period
-// and cue_dot_phase + k · cue_dot_period (a
-// live cue's RESTING stem pair, live_cue_stem_dots — so the runs' density is
-// a stem's, architect 2026-10-26, one dot every two columns since one on,
-// one off, 2026-11-02; the `cue_stem` on both phases whether the pair is
-// selected or not, 2026-11-02), from the left stem's line's first column
-// through the right stem's line's last, aliased integer cells, clipped to
-// the area. Read as published, before the stems paint their sides
-// (paint_marker_stems): the stems' range phase stands on the canvas's first
-// cell (one on, one off, 2026-11-02), so the top run's cell on the left
-// stem's line is the stem's own dot too, the stem painting it last.
-// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): each color's runs,
-// every pair's top and bottom, one dots call, the columns from the left
-// stem's line's first (the phase's origin) through the right stem's line's
-// last, cut to the area's columns.
+// THE NUDGED PAIRS' RINGS (MarkerStemRun, render.h, owns the look;
+// architect 2026-10-10 → 2026-10-26, solid 2026-11-04): each `h`-view
+// nudged pair's ring, FOUR SOLID ONE-W `cue_outline` LINES — THE
+// PHASE-RESET LEAD-IN RING'S FORM EXACTLY (paint_phase_reset_overlay_ring,
+// the model): its two sides on the pair's two columns down the canvas's
+// whole height, and its top and bottom runs on the canvas's first and last
+// t rows from the left side's line's first column through the right side's
+// line's last, aliased integer rects clipped to the area (a side off the
+// area paints nothing there). Painted before the focused stems
+// (paint_marker_stems), which on a focused pair stand on the sides in the
+// same color.
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): every pair's sides
+// and runs, one rects call.
 void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
                                              const GuiRect& area) {
     if (app.marker_stem_runs.empty()) return;
-    const ProgramSpec& ps = kProgramSpec;
     const int t      = waveform_line_px();
-    const int period = ps.cue_dot_period;
     const int y_top  = area.y;
     const int y_bot  = area.y + area.h - t;
     const int clip_lo = area.x;
     const int clip_hi = area.x + area.w;   // one past the area's last column
-    std::vector<GuiCanvasDotRun> runs;
-    runs.reserve(2 * app.marker_stem_runs.size());
-    const auto paint_dots = [&](const GuiColor& color, int phase) {
-        runs.clear();
-        for (const MarkerStemRun& run : app.marker_stem_runs) {
-            const int x0 = static_cast<int>(std::nearbyint(run.x0));
-            const int x1 = static_cast<int>(std::nearbyint(run.x1));
-            // From the left stem's line's first column through the right
-            // stem's line's last (each t wide, centered on its column), cut
-            // to the area's columns; the cells count from the left line's
-            // first column.
-            const int lo = std::max(x0 - t / 2, clip_lo);
-            const int hi = std::min(x1 - t / 2 + t, clip_hi);   // exclusive
-            if (hi <= lo) continue;
-            runs.push_back(GuiCanvasDotRun{false, lo, y_top, hi - lo, period,
-                                           x0 - t / 2, phase, t});
-            runs.push_back(GuiCanvasDotRun{false, lo, y_bot, hi - lo, period,
-                                           x0 - t / 2, phase, t});
+    std::vector<GuiRect> rs;
+    rs.reserve(4 * app.marker_stem_runs.size());
+    for (const MarkerStemRun& run : app.marker_stem_runs) {
+        const int x0 = static_cast<int>(std::nearbyint(run.x0));
+        const int x1 = static_cast<int>(std::nearbyint(run.x1));
+        // From the left side's line's first column through the right side's
+        // line's last (each t wide, centered on its column), cut to the
+        // area's columns.
+        const int lo = std::max(x0 - t / 2, clip_lo);
+        const int hi = std::min(x1 - t / 2 + t, clip_hi);   // exclusive
+        if (hi > lo) {
+            rs.push_back(GuiRect{lo, y_top, hi - lo, t});
+            rs.push_back(GuiRect{lo, y_bot, hi - lo, t});
         }
-        sink.dots(runs, color);
-    };
-    const GuiStemDots dots = live_cue_stem_dots();
-    if (dots.range_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
-    if (dots.cue_phase_dots != GuiCueDot::None)
-        paint_dots(cue_dot_color(dots.cue_phase_dots), ps.cue_dot_phase);
+        for (const int col : {x0 - area.x, x1 - area.x}) {
+            const WaveformLineCols c = waveform_line_cols(area.w, col);
+            if (c.w > 0)
+                rs.push_back(GuiRect{area.x + c.x0, area.y, c.w, area.h});
+        }
+    }
+    sink.rects(rs, palette().cue_outline);
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -4906,6 +4792,11 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 
 void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
                                       const GuiRect& area) {
+    // THE BLINK'S OFF PHASE PAINTS NO LINE (architect 2026-11-04; the rule
+    // at render_playhead's THE BLINK): the bit the tick stored at its last
+    // flip, read as painted (ON SCREEN IS AS PAINTED), so the picture and the
+    // damage the flip owed are one phase. The head in the ruler stays lit.
+    if (!app.playhead_blink_on) return;
     // Use the displayed viewport AND its samples-per-pixel
     // (wf_cache.fp_vp_start, derived spp) so the cursor stays in
     // lockstep with the cached waveform / stem / flag layers during
@@ -4913,27 +4804,22 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     // viewport change. See declaration comment in app_state.h.
     const PlateViewportBasis basis = plate_viewport_basis();
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-    // THIS PASS IS THE CURSOR'S CANVAS RUN, nothing else: its HEAD is the
+    // THIS PASS IS THE CURSOR'S CANVAS LINE, nothing else: its HEAD is the
     // triangle in the ruler (paint_ruler_row); across the view bar
-    // (architect 2026-10-09 ~14:30), the marker lane and the canvas's top
-    // frame row the playhead draws nothing (Cool Edit puts no dot on its
-    // frame row).
+    // (architect 2026-10-09 ~14:30) and the marker lane the playhead draws
+    // nothing.
     //
-    // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
-    // form at the resting cursor column whatever the selection is doing —
-    // since 2026-10-09 COOL EDIT'S DOTTED COLUMN (render.h's playhead
-    // paragraph): t x t dots, t one W (2026-11-04), in the palette's
-    // `playhead_line` (white, architect 2026-11-02, mock t1) on the canvas's
-    // odd cells, the cues' dots on the even cells — one on, one off — so a
-    // playhead on a marker's column closes with its dots into one solid
-    // line and neither yields. It paints AFTER
-    // paint_marker_stems (architect 2026-09-23) and before the scanner.
+    // THE CURSOR PLAYHEAD ALWAYS PAINTS in its on phase (architect
+    // 2026-07-30): ONE playhead form at the resting cursor column whatever
+    // the selection is doing — a SOLID ONE-W LINE in the palette's
+    // `playhead_line` (Live's DBF6F9, architect 2026-11-04; render.h's
+    // playhead paragraph). It paints AFTER paint_marker_stems (architect
+    // 2026-09-23), over the focused marker's stem, and before the scanner.
     //
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
-    render_playhead(sink, area, px_x, palette().playhead_line,
-                    PlayheadForm::Dotted);
+    render_playhead(sink, area, px_x, palette().playhead_line);
 }
 
 // -- GuiPaintHandler::paint_scanner --------------------------------------
@@ -4955,9 +4841,9 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 // (architect 2026-10-05), WHITE (architect
 // 2026-10-07: "let's go back to a white scanner") — SOLID, ONE W wide,
 // centered on its column (architect 2026-11-04, the unit,
-// waveform_line_px's rule, render.h), the canvas's rows alone
-// (PlayheadForm::Solid; Cool Edit's playback cursor is a solid line,
-// measured 2026-10-09).
+// waveform_line_px's rule, render.h), the canvas's rows alone (Cool Edit's
+// playback cursor is a solid line, measured 2026-10-09), and NEVER BLINKING
+// (the blink is the resting cursor's, 2026-11-04).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (render_playhead is shared with the cursor and cannot reach a strip lane at
@@ -4971,8 +4857,7 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-    render_playhead(sink, area, scan_px, palette().scanner,
-                    PlayheadForm::Solid);
+    render_playhead(sink, area, scan_px, palette().scanner);
 }
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
@@ -5271,9 +5156,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE FLAT LOOK'S KEYS (architect 2026-11-01): the
 // program's case, laid out by modal_word_buttons and player_row_layout, each
-// painted by the roster's key painter (paint_roster_case) — at rest, the
-// press face under a live press, lit for the row's one checked button
-// alone — its glyph on it (paint_key_glyph) and its legend under it
+// painted by the roster's key painter (paint_roster_case) — at rest, lit
+// for the row's one checked button alone, a press painting nothing (no
+// press look, 2026-11-04) — its glyph on it (paint_key_glyph) and its legend under it
 // (paint_key_legend, back 2026-11-03: a word button's word in capitals, its
 // tooltip the word and its glyph the word's, modal_word_icon).
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
@@ -5639,7 +5524,7 @@ namespace {
 // all go stale on exactly the same edges — and this painter owns every one of
 // those edges (the full rule and the edge list are at
 // AppState::modal_dialog_focus). The two companion bits ride their own index:
-// the press's inside flag and the focus's strength are meaningless without
+// the press's clock and the focus's strength are meaningless without
 // one, so they reset with it rather than on rules of their own. THE KEYBOARD
 // PRESS ARM IS IN HERE FOR A SHARPER REASON than a stale face, the pointer
 // arm's own: it is an act that has not happened yet, and a dialog that changed
@@ -5648,7 +5533,6 @@ namespace {
 // repaint.
 void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_pressed         = -1;
-    app.modal_dialog_press_inside    = false;
     app.modal_dialog_press_ms        = 0;
     app.modal_dialog_focus           = -1;
     app.modal_dialog_focus_active    = false;
@@ -6875,12 +6759,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat
-        // One, `lit`) alone, pressed or not; THE PRESS FACE for a LIVE
-        // PRESS on an unchecked one, FFC281 under a press on the lit one —
-        // armed with the pointer inside it, or armed from the keyboard — for
-        // as long as the press stands (key_look, materials.h; architect
-        // 2026-11-03, Live's hover colors as the press; the yellow for lamps
-        // only, 2026-11-02), the glyph on the key, the legend under it.
+        // One, `lit`) alone (key_look, materials.h; the yellow for lamps
+        // only, 2026-11-02); A PRESS PAINTS NOTHING — the pointer's arm and
+        // the keyboard's alike (no press look, architect 2026-11-04,
+        // materials.h's head) — the glyph on the key, the legend under it.
         // (Windows'
         // push button 2026-10-02 to 2026-10-22 is git history.) THE FOCUS IS
         // NOT PAINTED (below): the two focus
@@ -6904,19 +6786,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // publish enabled=true. The glyph and the legend dimmed (kKeyDimInk,
         // paint_key_glyph and paint_key_legend), the key the face its state
         // gives, the roster's rule
-        // (architect 2026-10-02 and 2026-10-09). The press face is gated on the bit rather than
-        // trusted — a button can go dead UNDER a hold.
+        // (architect 2026-10-02 and 2026-10-09).
         const bool enabled = plan[i].enabled;
-        const bool armed   = enabled &&
-                             static_cast<int>(i) == app.modal_dialog_pressed;
-        const bool pressed = enabled &&
-            ((armed && app.modal_dialog_press_inside) ||
-             static_cast<int>(i) == app.modal_dialog_key_pressed);
         // NO FOCUS FRAME (architect 2026-10-23: "when I open up the settings
         // and I press cancel, it gets that square drawn around it. Let's get
         // rid of that"): the focused button — Enter's target
-        // (AppState::modal_dialog_focus) — wears nothing; the press face
-        // under a standing press is the only sign.
+        // (AppState::modal_dialog_focus) — wears nothing.
         // THE KEY (2026-10-23, paint_roster_case), flat, lit for the row's
         // one checked button; THE LEGEND UNDER IT (paint_key_legend's one
         // seat, back 2026-11-03): a glyph button's the player's own legend
@@ -6929,8 +6804,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // glyph's key; every button wears the enabled bit on its glyph and
         // its legend (THE DISABLED RUNG above owns the bit and which owners
         // publish it).
-        const KeyLook look = key_look(plan[i].lit, pressed);
-        paint_roster_case(cr, key, plan[i].lit, pressed);
+        const KeyLook look = key_look(plan[i].lit);
+        paint_roster_case(cr, key, plan[i].lit);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled; paint_key_glyph's one seat, in the face's tone): by
         // the act vocabulary's own owner — the player's keys
@@ -7064,19 +6939,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // table, GuiFace::Keys; architect 2026-10-24, "C24" — the night's C34 "too
 // far", "a separate face" since that night, the body's 22 before it) — the
 // band painting NO LINE at its own top edge (architect 2026-08-27, on
-// glass). AT REST the cap in the text tone kTextInk on the face; the four
+// glass). AT REST the cap in the text tone kTextInk on the face; the two
 // faces the roster's (key_look, materials.h; architect 2026-11-02, the
-// yellow for lamps only; the press Live's hover colors, 2026-11-03):
+// yellow for lamps only):
 //   ARMED     — LIT, the FFAD56 fill, its cap kTextOnLit 111111 (M8 / M12):
 //               SHIFT while it is armed and THE PAGE KEY while the symbols
-//               page stands — the two lamps — FFC281 while a press stands
-//               on it, the cap 111111 still. IT IS ALL
+//               page stands — the two lamps. IT IS ALL
 //               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
 //               word "Shift" in both states — that, and the letter caps,
 //               every one of which turns capital while the arm stands.
-//   PRESSED   — THE PRESS FACE 6A6A6A, its cap kTextInk: the key under the
-//               finger, not armed, for as long as the press stands, its own
-//               state back at the lift.
+// A PRESS PAINTS NOTHING (architect 2026-11-04, materials.h's head: no
+// press look anywhere): the feedback is the typed character, the lamp's
+// fill, the page's caps.
 // (Windows' toolbar buttons — SOFT RAISED, SOFT SUNKEN pressed and over the
 // Hilight dither armed, the cap in the theme's label — 2026-10-02 to
 // 2026-10-22 — is git history.)
@@ -7090,12 +6964,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // text_editor::encode_utf8, the editors' own encoder), all on the one sans
 // face through the one shaping chokepoint. This surface draws no icon.
 //
-// STATE-AXIS: every one of the three faces is decided ONCE per key, from the
-// two lamps and the one held index this body reads at its head — compared as
-// a SLOT, not an index, so the page key's held face survives its own page
-// change (onscreen_keyboard::same_slot, architect 2026-10-29 night) — and the cap
-// comes from the layout table's own derivations (cap_word, shifted_char). There
-// is no second list of what a key looks like anywhere.
+// STATE-AXIS: every one of the two faces is decided ONCE per key, from the
+// two lamps this body reads at its head, and the cap comes from the layout
+// table's own derivations (cap_word, shifted_char). There is no second list
+// of what a key looks like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                                               const GuiRect& exposed) {
     // (The slot's as-painted bit is written by paint_keyboard_slot, the
@@ -7119,7 +6991,6 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
     const onscreen_keyboard::Page page        = kb.page;
     const bool                    shift_armed = kb.shift_armed;
-    const int                     held        = kb.pressed_key;
 
     cairo_save(cr);
 
@@ -7151,7 +7022,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
     onscreen_keyboard::for_each_key(
         app, page,
-        [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
+        [&](uint32_t, const onscreen_keyboard::KeyDef& k,
             const GuiRect& r) {
             using Role = onscreen_keyboard::Role;
             // PER-KEY EXPOSURE. The band's ground is laid across the whole
@@ -7164,19 +7035,15 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // page (fifty-one).
             if (!rects_intersect(exposed, r)) return;
 
-            // HELD BY SLOT, not by index (onscreen_keyboard::same_slot): the
-            // page key's own press has moved the page this walk is on.
-            const bool pressed =
-                onscreen_keyboard::same_slot(static_cast<int>(index), held);
             const bool armed   =
                 (k.role == Role::Shift      && shift_armed) ||
                 (k.role == Role::SymbolMode &&
                  page == onscreen_keyboard::Page::Symbols);
 
             // THE KEY (paint_key, materials.h): LIT while armed (Shift, the
-            // page key on the symbols page), else the press face under the
-            // finger, the cap printed ON its face in the face's ink.
-            const KeyLook look = key_look(armed, pressed);
+            // page key on the symbols page), else at rest, the cap printed ON
+            // its face in the face's ink.
+            const KeyLook look = key_look(armed);
             paint_key(cr, r, look);
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
@@ -7484,24 +7351,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // arms the scroll drag alone and promises no highlight, and the
             // highlight never stands on it.
             const bool inert   = folder_overlay::row_is_inert(app, index);
-            const bool pressed = !inert && ov.press.armed &&
-                                 ov.press.row == index &&
-                                 ov.press.inside && !ov.press.scrolling;
-            // THE FACE (the block above): LIT — the highlight, or a live
-            // press arm promising it — takes the selection pair's 111111
-            // print; its fill is the pair's 637E86 at rest
-            // (pal.selected_fill) and ITS LIGHTER TWIN B0DDEB UNDER A
-            // STANDING PRESS (materials.h's kSelectionPressFill; architect
-            // 2026-11-03, the retrofit: Live's focused selection, the key
-            // press rule's twin for rows) — the press read off the overlay's
-            // own press arm (AppState::FolderOverlayPress: armed on the row,
-            // the pointer inside, no scroll drag), whose writers damage the
-            // row already for the lit face; a row that is neither takes NO
-            // FILL and the pane shows through it.
-            const bool lit = pressed || highlighted;
-            if (pressed)
-                paint_cell_rect(cr, r, hex(kSelectionPressFill));
-            else if (lit)
+            // THE FACE (the block above): THE HIGHLIGHTED ROW takes the
+            // selection pair — its fill 637E86 (pal.selected_fill) under the
+            // 111111 print — at rest and under a press alike: A PRESS PAINTS
+            // NOTHING (no press look, architect 2026-11-04, materials.h's
+            // head), the row lighting at the lift when the act moves the
+            // highlight; every other row takes NO FILL and the pane shows
+            // through it.
+            const bool lit = highlighted;
+            if (lit)
                 paint_cell_rect(cr, r, pal.selected_fill);
             // NO FOCUS FRAME (architect 2026-10-23: "a highlight around the
             // button, which is more of a usability thing for the laptop, but
@@ -7676,8 +7534,8 @@ static bool floating_surface_stands(const AppState& app) {
 //     members in the walk's order and their runs (icon_row_walk, the right
 //     run after them); per member the enabled and
 //     selected bits (publish_button_face's stash, refreshed by a covering
-//     clip), the pressed face (redesign_button_pressed_face, worn only
-//     enabled), the glyph index (redesign_button_glyph) and the drawing
+//     clip; a press paints nothing, 2026-11-04), the glyph index
+//     (redesign_button_glyph) and the drawing
 //     (redesign_button_icon's stateful overload, 2026-11-02 — FIT / RECALL
 //     and INHERIT / TIE move it with no index of their own); the cases'
 //     tones are the palette's.
@@ -7704,7 +7562,6 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
         m.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                              playback, target_render, id);
         m.selected = redesign_button_selected(app, audio.total_frames(), id);
-        m.pressed  = m.enabled && redesign_button_pressed_face(app, id);
         m.glyph    = redesign_button_glyph(app, id);
         m.icon     = redesign_button_icon(app, audio, id);
     };
@@ -7749,8 +7606,7 @@ GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
 // than the record's leaves a mix of states, which only a repaint settles
 // (the record goes invalid). Under the record's own inputs a partial repaint
 // changes no pixel: every face's stash equals the record (a valid record's
-// invariant, kept by this rule), and the live glyph and pressed face are the
-// record's.
+// invariant, kept by this rule), and the live glyph is the record's.
 void GuiPaintHandler::note_upper_rows_painted(const GuiRect& exposed) {
     const std::size_t t = static_cast<std::size_t>(gui.painting_target());
     GuiUpperRowsRecord& rec = app.upper_rows_painted[t];
@@ -8296,9 +8152,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
         //      Edit's view bar and its span (2026-10-09; no cursor mark in
         //      the bar, ~14:30).
-        //   6. the MARKER STEMS (waveform): the cues' dots, the even rows.
-        //   7. the CURSOR's CANVAS DOTS (paint_playheads, the odd rows —
-        //      the head is the ruler pass's, step 9).
+        //   6. the MARKER STEMS (waveform): the focused cue's solid stem.
+        //   7. the CURSOR's CANVAS LINE (paint_playheads, solid, in the
+        //      blink's on phase — the head is the ruler pass's, step 9).
         //   8. the SCANNER (waveform), solid.
         //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
         //      digits — AND, in the same pass, the cursor's HEAD (the cyan
@@ -8351,20 +8207,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     highlight retired (architect 2026-10-03, "the trim bar is
         //     enough") NO pass recolours the waveform at all. The phase-reset
         //     overlay contributes no ground (architect 2026-07-27): its
-        //     RING is its whole visual — t x t dots (one W) in its reset's
-        //     stem pattern (2026-10-09 ~17:40) — painted AFTER the plate,
-        //     over the ink like the stems' dots, and before them.
+        //     RING is its whole visual — four solid one-W lines in the
+        //     `cue_outline` (2026-11-04) — painted AFTER the plate, over the
+        //     ink like the stems, and before them.
         //   THE COLUMN IS SHARED, NOT CONTESTED (architect 2026-10-09, the
-        //     program is Cool Edit): a SELECTION's cue is its members' stems,
-        //     each one solid line, gray on the even rows and the playhead's
-        //     white on the odd (architect 2026-11-02, M10 rule 1; no
-        //     triangle marks it), with the landed cursor on the focus; the
-        //     cursor's dots paint over the marker stems' (2026-09-23) on
-        //     the odd rows, so a playhead resting on a marker's column
-        //     closes with it into one solid line (one on, one off,
-        //     2026-11-02) — on a selected stem the very rows it already
-        //     paints white, so the focus looks as the rest of the selection
-        //     (architect 2026-11-02); its head in the ruler and the cue's triangle in the
+        //     program is Cool Edit): a SELECTION's cue is its members' chips
+        //     and its focus's solid stem (architect 2026-11-04), with the
+        //     landed cursor on the focus; the cursor's line paints over the
+        //     stem (2026-09-23), which shows through in the blink's off
+        //     phase; its head in the ruler and the cue's chip in the
         //     marker lane never meet. (2026-08-01 lifted the SCANNER above the
         //     stems, so the moving line does not blink out at every marker it
         //     crosses.)
@@ -8372,7 +8223,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // THE CANVAS PASSES ARE NOT PAINTED HERE: the frame's list carries
         // them, built once, whole, in this order (build_canvas_list) — the
         // plate, the center lines, the stereo divider, the lead-in ring, the
-        // marker stems, the cursor's dots, the scanner, the zoom anchor.
+        // focused stem, the cursor's line, the scanner, the zoom anchor.
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
         // pixels (the view bar whole).

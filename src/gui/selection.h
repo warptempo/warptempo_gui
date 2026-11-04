@@ -116,11 +116,9 @@ struct Selection {
     // THE STEM'S SUBJECT PAIR IS DELETED (row 5, 2026-08-01). stem_subject() /
     // damage_stem_on_subject_change() were the phase-overlay owner's twin for the
     // selected-marker stem, because that stem was a SELECTION visual that could
-    // appear, move or vanish with no other repaint. Every enabled marker stems,
-    // always, so no stem appears or vanishes with the selection; a selected
-    // marker's stem is one solid line (architect 2026-11-02, render.h's
-    // SELECTED row), and that
-    // color change needs no owner here: the flag cache's selection fingerprint
+    // appear, move or vanish with no other repaint. The stem is the focus's
+    // since 2026-11-04 (render.h's THE STATES), and its moves need no owner
+    // here: the flag cache's selection fingerprint, the focus a term of it,
     // rebuilds the stash and its rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp). The overlay owner above
     // stands.

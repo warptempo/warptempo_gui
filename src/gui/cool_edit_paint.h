@@ -6,6 +6,7 @@
 #include <array>
 #include <cairo/cairo.h>
 #include <cstdint>
+#include <optional>
 
 // THE PROGRAM'S PAINTERS (architect 2026-10-09, "chrome means chrome, the
 // program is Cool Edit"; program_spec.h's head): the time field and the
@@ -15,15 +16,15 @@
 // part); the colors the flat look's constants (materials.h's THE WELL) and
 // the palette's. THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
-// 2026-11-01 — and `playhead_line` — its dots in the canvas, white since
-// 2026-11-02 (mock t1), lent to the selection alone (render.h's SELECTED
-// row) — palette_file.h's role table, as the cues' triangle is the
-// palette's `cue` and their stems its `cue_stem`.
+// 2026-11-01 — and `playhead_line` — its blinking line in the canvas,
+// Live's DBF6F9 since 2026-11-04 — palette_file.h's role table, as the
+// marker's chip is the palette's `cue` / `cue_unselected` in its
+// `cue_outline` (2026-11-04).
 // THE TRIANGLES ARE ALIASED AT 1:1 (architect 2026-10-26, "agree": "at this
 // size the staircase is the truthful drawing and the antialiasing only
-// blurs it"): the cue's and the playhead head's rows, their cells one device
-// px, are Cool Edit's staircase in whole cells (paint_ce_cue_triangle). The
-// dots are cells (a dot is not a line).
+// blurs it"): the cue's chip and the playhead head's rows, their cells one
+// device px, are Cool Edit's staircase in whole cells
+// (paint_ce_cue_triangle).
 
 // (THE KEY — every case of the band, row 8, the controls rows, the word
 // buttons, the scrub's thumb and the on-screen keyboard — is the flat
@@ -54,15 +55,21 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // -- THE CUE'S TRIANGLE ---------------------------------------------------------
 
 // COOL EDIT'S POINT-CUE MASK, THE CUES' AND THE PLAYHEAD HEAD'S ONE
-// PAINTER: a staircase of `rows` rows of whole cells of one unit u
+// PAINTER: THE FILL, a staircase of `rows` rows of whole cells of one unit u
 // (cue_triangle_unit_px, render.h) from `top` — 2·rows − 1 cells on the top
 // row down to one, the apex row one cell and each row above it two cells
 // wider (17, 15, … 1 at 300 %'s nine rows; 11, 9, … 1 at 200 %'s six) —
 // CENTRED ON THE STEM'S COLUMN `col` (architect 2026-10-09 ~14:35: "at every
 // scale, the marker triangle must be fully centered on the stem"; the stem
 // one W centered on that column since 2026-11-04, render.h's
-// waveform_line_px), in `color` alone: NO SHADOW (architect 2026-11-02, the
-// well's part of the flat look, "no shadow anywhere").
+// waveform_line_px), in `fill` — AND, given an `outline`, THE CHIP: a second,
+// larger staircase of the same construction in the outline's color painted
+// first, from cue_chip_top_rows() rows above the fill's top through
+// cue_chip_apex_rows() rows below its apex (architect 2026-11-04, mock g1,
+// "a one-W 111111 outline"; render.h's cue_chip_rows owns the
+// construction: 31 x 16 round the fill's 17 x 9 at 300 %). NO SHADOW
+// (architect 2026-11-02, the well's part of the flat look, "no shadow
+// anywhere").
 //
 // THE CELL IS ONE DEVICE PX AT EVERY SCALE (architect 2026-10-26, on the
 // glass: "I think part of the problem is our flags are so much larger than
@@ -91,20 +98,25 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // antialiasing only blurs it"; ~13:05 the antialiased envelope's tuning
 // key settled "off" on the glass and retired with its arm,
 // closed_questions.md): a bitmap in effect,
-// every pixel the color whole, no coverage anywhere. Its painted columns are
-// [col − (rows − 1)u, col + rows·u) (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the one owner every extent reads);
-// its rows [top, top + rows·u). `color` is the `cue` for a live cue, the
-// `inactive_cue` for a disabled one (2026-11-02, palette_file.h), the
-// `playhead_head` for the playhead's head alone (no cue's
-// triangle marks focus, 2026-11-02, render.h's SELECTED row). TWO ROADS, ONE
+// every pixel the color whole, no coverage anywhere. `top` is THE FILL'S top
+// row. Its painted columns are the bare fill's [col − (rows − 1)u, col +
+// rows·u) (cue_bare_half_w_px, cue_bare_reach_right_px) and its rows [top,
+// top + rows·u); an outlined chip's the chip's (cue_triangle_half_w_px,
+// cue_triangle_reach_right_px, render.h, the one owner every extent reads)
+// over [top − t·u, top + (rows + s)·u). The colors are resolve_flag_face's
+// for a cue (render.cpp, the one table: the fill `cue` selected or
+// `cue_unselected` in the `cue_outline`, a disabled chip hollow, the lane's
+// face in the `inactive_cue`) and the `playhead_head` with no outline for
+// the playhead's head alone (the ruler's head stays bare, 2026-11-04). TWO
+// ROADS, ONE
 // DRAWING (CueTrianglePass below): the stamp writes the cells' words
 // straight into the target where direct_pixel_target takes it, else cairo
 // fills the same cells as whole-pixel rectangles, antialias NONE. The
 // triangles paint on the CPU — into the flag cache's surface and the
 // ruler's cairo context — never through the canvas sink.
 // One triangle alone (the playhead's head): a one-triangle CueTrianglePass.
-void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color);
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor fill,
+                           std::optional<GuiColor> outline = std::nullopt);
 
 // THE TRIANGLE PASS (2026-10-13, a cost cut that paints the same pixels): the
 // cues' triangles, one consecutive run on one context (paint_cues, render.cpp,
@@ -128,15 +140,17 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color);
 // color_to_uint32). The stamp writes that word into exactly the cells cairo's
 // fill covers, the cells intersected with each clip box (a cut cell is cut
 // alike on both roads, a whole pixel being in a box or not), as the fill
-// does.
+// does. AN OUTLINED CHIP IS TWO STAIRCASES ON ONE ROAD: the outline's cells,
+// then the fill's over them, each an opaque OVER fill on cairo's road and a
+// word overwrite on the stamp's, so the later cells win alike.
 class CueTrianglePass {
 public:
     void begin(cairo_t* cr);
-    // The triangle: the stamp where the target was taken, else cairo's
-    // fill. (The `h` view's split triangle, two colors about the apex
-    // column, 2026-10-10 to 2026-10-26, left when a nudged pair became two
-    // cues.)
-    void triangle(int col, int top, GuiColor color);
+    // The triangle — the fill from `top`, and the outline's staircase under
+    // it where `outline` is given: the stamp where the target was taken,
+    // else cairo's fill.
+    void triangle(int col, int top, GuiColor fill,
+                  std::optional<GuiColor> outline);
     void end();
 
 private:
@@ -146,6 +160,8 @@ private:
     bool              direct_    = false;
     int               u_         = 0;
     int               rows_      = 0;
+    int               top_rows_  = 0;
+    int               chip_rows_ = 0;
     GuiRect           dirty_{};
     bool              dirty_any_ = false;
 };

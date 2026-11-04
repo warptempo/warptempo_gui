@@ -224,9 +224,9 @@ void Selection::collapse_to_focused() {
     // The phase-reset overlay's own P+target repaint rides its subject owner,
     // which the 2+ -> 1 case here triggers. (A collapse used to owe the
     // selected-marker stem's APPEAR a damage as well — the fine-tuning callers
-    // can collapse then REFUSE and full-invalidate nothing — but no stem appears
-    // or vanishes with the selection any more, and the selected stem's
-    // playhead dots ride the flag cache rebuild's waveform damage.)
+    // can collapse then REFUSE and full-invalidate nothing — but the chips
+    // and the focus's stem ride the flag cache rebuild's waveform damage,
+    // keyed by the selection and its focus.)
     damage_overlay_on_subject_change(old_subject);
 }
 

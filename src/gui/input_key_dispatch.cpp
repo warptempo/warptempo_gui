@@ -6268,7 +6268,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         if (at < 0) return false;
         // A GREYED BUTTON'S KEYBOARD PRESS IS A CONSUMED NOTHING (architect
         // 2026-08-30) — the roster's rule on this surface: no arm, no
-        // pressed face, no card (the grey is the message). Reachable only
+        // card (the grey is the message). Reachable only
         // when the face changed under a parked focus — the walk below skips
         // greyed stops. The bit is the painted one, the claim (architect
         // 2026-09-24, strictly as-painted); a face painted live dispatches
@@ -6282,12 +6282,9 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         // armed, and "fires once" should be true by construction rather than
         // by that argument.
         if (mods.synthesized_repeat) return true;
-        if (app.modal_dialog_key_pressed != at ||
-            app.modal_dialog_key_pressed_key != key) {
-            app.modal_dialog_key_pressed     = at;
-            app.modal_dialog_key_pressed_key = key;
-            viewport.invalidate_rect(dlg.box);
-        }
+        // THE ARM paints nothing (no press look, architect 2026-11-04).
+        app.modal_dialog_key_pressed     = at;
+        app.modal_dialog_key_pressed_key = key;
         return true;
     } else {
         return false;
@@ -6312,8 +6309,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // rule's first site and the reason it exists: the arm names the button the
     // focus was on, and the user has visibly left it. Without this the release
     // still committed the OLD button — focus OK, hold Space, Tab onto Cancel,
-    // release, and OK fired — and the pressed face and the ring pointed at
-    // different buttons for the rest of the hold. The rule, the resulting
+    // release, and OK fired. The rule, the resulting
     // armed == focused invariant and how it differs from the pointer's FEINT
     // are at AppState::modal_dialog_key_pressed. It reads the INDEX alone: a
     // one-button ring whose walk lands back where it started has left nothing,
@@ -6353,8 +6349,6 @@ void GuiInputHandler::on_key_release(GuiKey key) {
     if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
-    if (app.modal_dialog.valid)
-        viewport.invalidate_rect(app.modal_dialog.box);
     dispatch_modal_dialog_button(armed);
 }
 

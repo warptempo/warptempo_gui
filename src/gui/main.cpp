@@ -319,8 +319,9 @@ namespace {
 // icon|trim (GAP 1's band; where gap 1 is zero the trim lane's
 // own first row is the boundary), trim|ruler, ruler|marker, marker|foot
 // line, well's foot|bottom row, and both outer kFlagBottomLiftPx gaps — is
-// honored structurally by the loop below and by every consumer. (The cues'
-// and the playhead's DOTS are the canvas's, below the lane's foot line; the
+// honored structurally by the loop below and by every consumer. (The focused
+// cue's stem and the playhead's line are the canvas's, below the lane's foot
+// line; the
 // stereo divider stands inside the waveform area (render.h's
 // waveform_divider), the ground round it painted by
 // paint_canvas_column_frame and the lanes' own painters off the lanes'
@@ -1236,26 +1237,27 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
 // (2026-10-09, ON SCREEN IS AS PAINTED): the columns the head's triangle
-// covers, centred on the stem's column (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the painter's own cells) — the
-// rows less one left, the rows right: 8 + 9 = 17 device px at 300 %, 5 + 6
-// = 11 at 200 %, 3 + 4 = 7 at 138 % (the cells one device px, the rows
-// scaled, 2026-10-26; no shadow since 2026-11-02) — its rows the whole band
-// from the window's top below — which also holds the one-W line of the
-// scanner and the dots, centered on the column (col − t / 2 .. col − t / 2
-// + t − 1, waveform_line_px: one column each side at 300 %), so a move
-// repaints every column the head and the line stood on.
+// covers, centred on the stem's column (cue_bare_half_w_px and
+// cue_bare_reach_right_px, render.h, the painter's own cells: the head is
+// the bare triangle, 2026-11-04) — the rows less one left, the rows right:
+// 8 + 9 = 17 device px at 300 %, 5 + 6 = 11 at 200 %, 3 + 4 = 7 at 138 %
+// (the cells one device px, the rows scaled, 2026-10-26; no shadow since
+// 2026-11-02) — its rows the whole band from the window's top below — which
+// also holds the one-W line of the scanner and the cursor, centered on the
+// column (col − t / 2 .. col − t / 2 + t − 1, waveform_line_px: one column
+// each side at 300 %), so a move repaints every column the head and the
+// line stood on.
 // `px_x` is the waveform's own column (offset from area.x, as every
 // playhead pixel is), so the box is placed at area.x + col — the canvas
 // standing the column's margin in from the window's side since 2026-10-09.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = area.x + static_cast<int>(std::nearbyint(px_x));
-    const int x0 = std::max(area.x, col - cue_triangle_half_w_px());
+    const int x0 = std::max(area.x, col - cue_bare_half_w_px());
     const int x1 = std::min(area.x + area.w,
-                            col + cue_triangle_reach_right_px());
+                            col + cue_bare_reach_right_px());
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
-    // waveform area so it covers the playhead's dots inside the waveform AND
+    // waveform area so it covers the playhead's line inside the waveform AND
     // its top-strip pixels above — the head on the ruler's bottom rows
     // (paint_ruler_row, 2026-10-09; the view bar carries no mark since
     // ~14:30). The top strip is where the cursor's
@@ -1271,6 +1273,26 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
+
+// THE BLINK'S DAMAGE BOX (architect 2026-11-04; the rule at render_playhead's
+// THE BLINK, render.h): EXACTLY THE LINE'S COLUMNS ON THE CANVAS'S ROWS —
+// the one-W line centered on the cursor's column (waveform_line_cols, the
+// painter's own gate and clip) over the area's rows, NOT THE RULER'S HEAD,
+// which stays lit through the off phase. `px_x` as playhead_invalidate_rect's.
+// An empty rect where the column is off the area. Its one caller is the
+// tick's blink flip, a narrow-on-plate site (playhead_pixel_x's table).
+GuiRect playhead_line_rect(const GuiRect& area, double px_x) {
+    const int col = static_cast<int>(std::nearbyint(px_x));
+    const WaveformLineCols c = waveform_line_cols(area.w, col);
+    if (c.w <= 0 || area.h <= 0) return GuiRect{area.x, area.y, 0, 0};
+    return GuiRect{area.x + c.x0, area.y, c.w, area.h};
+}
+
+// THE BLINK'S ORIGIN, THE PROCESS'S START (architect 2026-11-04: the blink
+// free-runs on CLOCK_MONOTONIC, no reseat at a seek or a play): stamped
+// once by gui_main before the first project opens, read by every project's
+// tick (run_project's blink flip).
+static int64_t g_playhead_blink_origin_ms = 0;
 
 // (THE STATUS CELL'S RECT IS DELETED — 2026-08-13, when the architect moved
 // the whole status chain into the TAB ROW: "just put that text in the tab row,
@@ -2134,6 +2156,34 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (refresh_logo_legend, its rule and its damage).
         refresh_logo_legend(app, gui);
 
+        // THE PLAYHEAD'S BLINK, ON EVERY TICK (architect 2026-11-04; the rule
+        // at render_playhead's THE BLINK, render.h): the phase on
+        // CLOCK_MONOTONIC from the process's start, stopped or playing,
+        // whatever mode stands — and ON A FLIP ALONE the painted phase
+        // stored (AppState::playhead_blink_on, which paint_playheads reads)
+        // and the line's columns on the canvas's rows damaged
+        // (playhead_line_rect), under two flips a second. The column is the
+        // resting cursor's on the PLATE basis, the pixels' own
+        // (playhead_pixel_x's damage rule, a narrow-on-plate site). Ahead of
+        // every return below, as the legend is: a mode that hides the canvas
+        // keeps the phase current, and its damage lands under that mode's
+        // own surface harmlessly.
+        {
+            const bool on = playhead_blink_on_at(
+                monotonic_ms() - g_playhead_blink_origin_ms);
+            if (on != app.playhead_blink_on) {
+                app.playhead_blink_on = on;
+                const GuiPaintHandler::PlateViewportBasis pb =
+                    paint_handler.plate_viewport_basis();
+                const GuiRect r = playhead_line_rect(
+                    waveform_area(app),
+                    playhead_pixel_x(app, static_cast<int64_t>(pb.vp_start),
+                                     pb.spp));
+                if (r.w > 0 && r.h > 0)
+                    gui.invalidate_region(r.x, r.y, r.w, r.h);
+            }
+        }
+
         // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,
         // noise.h): the bed plays under every mode a return below stands for,
         // so its two per-tick questions are asked ahead of all of them — a
@@ -2729,8 +2779,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         onscreen_keyboard::reconcile_slot_standing(app, viewport);
 
         // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
-        // and the armed press's inside bit (recompute_redesign_button_hover;
-        // and the hot toolbar button) from the
+        // (recompute_redesign_button_hover; and the hot toolbar button) from
+        // the
         // pointer's last position against the painter's rects — and those
         // rects move without any pointer event: a live gui_scale commit
         // relays out every rect under a pointer that never moved, and a
@@ -2738,8 +2788,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // owner wrong until the next motion.
         //
         // The fix is to run the ONE walk here as well: a handful of rect
-        // compares, damaging only when the pressed face's inside bit or the
-        // hot button changes.
+        // compares, damaging only when the hot button changes.
         // It runs AFTER the comparator so it reads the freshest published
         // stash.
         //
@@ -3392,6 +3441,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
 int gui_main() {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
+    // THE PLAYHEAD BLINK'S ORIGIN, the process's start (its declaration).
+    g_playhead_blink_origin_ms = monotonic_ms();
 
     // (NO SIGCHLD DISPOSITION HERE, AND NO CHILD: the GUI spawns nothing
     // since 2026-09-29, when the load in place's `gio trash` gave way to a

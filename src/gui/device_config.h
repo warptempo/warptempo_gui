@@ -53,7 +53,7 @@
 //                            REQUIRED: the plate is the one thing on the
 //                            canvas not scaled with gui_scale — its columns
 //                            and quarter-row tips are device px, while its
-//                            lines and dots are one W since 2026-11-04 (the
+//                            lines are one W since 2026-11-04 (the
 //                            unit, render.h's waveform_line_px) — so the
 //                            waveform needs one tuning key of its own, and the grow
 //                            is the appropriate one, kept for good because a

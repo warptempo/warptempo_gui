@@ -168,11 +168,10 @@ struct WaveformCache {
     // (waveform_divider_px(), render.h): channel 1's band starts under it, so
     // a scale that moves it re-renders the plate BY FIELD, keyed directly. A
     // fingerprint field exists iff it is a render input (the type rule's
-    // shape): the lit outline's erosion distance, the GPU shader's constant,
-    // is neither.
+    // shape).
     int       fp_divider_px  = -1;
     // THE TWO INKS the live plate is published with (the `waveform_ink` and
-    // `waveform_outline` roles, waveform_plate_inks, render.h): the sink
+    // `waveform_core` roles, waveform_plate_inks, render.h): the sink
     // writes their words (GuiCanvasSink::plate), so a change that moves
     // either (a True Colors flip, install_true_colors, render.h)
     // republishes the plate BY FIELD, keyed directly like the
@@ -314,7 +313,7 @@ struct WaveformCache {
 // are painted under a clip of the label's span
 // rectangles, each the lane's top row and cue_fill_h_px() tall (the marker
 // lane's composite height), so no cached label pixel leaves those rows
-// however far a glyph overshoots; the triangles stand on the lane's own rows
+// however far a glyph overshoots; the chips stand on the lane's own rows
 // under a clip of those rows (paint_ce_cue_triangle's cells,
 // cool_edit_paint.h; paint_cues); and the flag editor and its riding cells
 // paint later onto the frame, never into this surface. The ruler lane above
@@ -422,8 +421,9 @@ struct FlagCache {
     // switch being locked while the lamp is on — and the other paints no
     // cells, so this field says what this surface shows.
     bool      fp_iteration_mode           = false;
-    // (NO ADDRESSED CELL: the selected look is the cue's, on the canvas, not
-    // a segment's (architect 2026-11-02, render.h's SELECTED row), so the
+    // (NO ADDRESSED CELL: the selected look is the cue's chip and the
+    // focus's stem, not a segment's (architect 2026-11-04, render.h's THE
+    // STATES), so the
     // axis paints nothing here; the focus it belongs to is keyed by
     // fp_selection_hash.)
     // THE STANDING MARKER-LANE EDITOR'S SUPPRESSION — WHICH MARKER and WHICH
@@ -498,8 +498,9 @@ struct FlagCache {
     // stacks' sizes, captured at entry and frozen for the visit, unlike the
     // commit walk's streaming one.
     // (NO FOCUSED HALF: a nudged pair's two cues paint alike whichever the
-    // focus stands on, the triangle marking no focus, architect 2026-11-02;
-    // HistoryMode::focus_half is the walk's and the press's alone.)
+    // focus stands on — both chips selected, both stems where the item is
+    // focused, architect 2026-11-04; HistoryMode::focus_half is the walk's
+    // and the press's alone.)
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
@@ -649,7 +650,7 @@ struct GuiPaintHandler {
     //   - THE SCALE, one field read live off render.h: fp_gui_scale_percent —
     //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
     //     rather than left to ride whichever strip dimension happens to move
-    //     with it (2026-08-29) — the cue triangle's rows and the Program
+    //     with it (2026-08-29) — the cue chip's rows and the Program
     //     face's size among them, constants of the scale since 2026-10-26
     //     ~13:05 (render.h's cue_triangle_rows, gui_font.h's table), so the
     //     cues' tuning field of that day left with its keys;
@@ -900,9 +901,8 @@ private:
         double x0     = 0.0;   // left screen x, clipped to the area
         double x1     = 0.0;   // right screen x, exclusive, clipped
         // The reset's own column in screen x, UNCLIPPED (left of x0 when the
-        // stem stands off the area's left edge): the origin the ring's top
-        // and bottom dot runs are phased from, so the pattern stays put on
-        // the song as the view pans.
+        // reset stands off the area's left edge): the ring's left side,
+        // painted only where it stands on the area.
         double stem_x = 0.0;
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
@@ -1030,11 +1030,10 @@ private:
     // cursor, the scanner and the anchor below — into the frame's draw list
     // (build_canvas_list).
     void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
-    // The overlay band's DOTTED ring — the phase-reset overlay's whole
-    // visual, its right side and its top and bottom runs t x t dots (one W)
-    // in the reset's own stem pattern (its left side is the stem itself;
-    // architect 2026-10-09) — painted AFTER the plate and before the stems,
-    // over the ink like every dot on the canvas.
+    // The overlay band's RING — the phase-reset overlay's whole visual, four
+    // solid one-W lines in the `cue_outline` (architect 2026-11-04), its
+    // left side on the reset's column — painted AFTER the plate and before
+    // the stems, over the ink like every line on the canvas.
     void paint_phase_reset_overlay_ring(GuiCanvasSink& sink,
                                         const GuiRect& area);
     // The LIVE trim pass: paints EVERY trim pixel per frame — the trim bar
@@ -1047,23 +1046,14 @@ private:
     // bar too; the outer Cairo damage clip bounds the actual work. See the
     // definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
-    // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
-    // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
-    // of the active column stems, always, as COOL EDIT'S DOTTED COLUMN since
-    // 2026-10-09, in the ONE `cue_stem` since 2026-11-02 (mock t1): one-
-    // device-px dots on the canvas's device rows (~14:25, "on waveform →
-    // unscaled"), on rows ≡ 0 and ≡ 2 (mod 4), the even rows, each where
-    // the cue wears it, warp or phase reset,
-    // the canvas alone (render.h's marker-lane paragraph); a DISABLED marker
-    // stems never.
-    // Which colors stand is resolved in the painter (resolve_flag_face) and
-    // published in the stash: the `cue_stem` gray on both dot phases, and
-    // on a SELECTED cue the playhead line's white on the odd rows too, one
-    // solid line, playhead or not (architect 2026-11-02, M10 rule 1). The
-    // stems paint under the playhead's dots (architect 2026-09-23), which
-    // stand on the odd rows, so a playhead on a marker's column closes with
-    // it into one solid line (one on, one off, 2026-11-02) — on a selected
-    // stem the rows it already paints white.
+    // THE FOCUSED MARKER'S STEM (architect 2026-11-04: no stem at rest, Live
+    // paints none) — the per-frame waveform overlay: the selection's focus
+    // member's column, a SOLID ONE-W `cue_outline` line down the canvas's
+    // whole height (render.h's marker-lane paragraph; the `h` view's focused
+    // item on each of its cues' columns); a DISABLED marker stems never.
+    // Which cue stems is resolved in the painter (resolve_flag_face's `stem`)
+    // and published in the stash; the stem paints under the playhead's line
+    // (architect 2026-09-23), so in the blink's off phase the stem shows.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its cue's apex column, and
@@ -1072,24 +1062,21 @@ private:
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
-    // NO PAINT-TIME COLOR OVERRIDE FROM AN EDITOR (architect 2026-10-03):
-    // the stem paints the stash's face — its class and its selection
-    // (2026-11-02, a selected stem's solid line); the open flag editor's
-    // refusal recolors nothing, and NOTHING IS DECIDED AT PAINT TIME: the
-    // playhead never reaches the stems (architect 2026-11-02: a selected
-    // stem looks the same with the playhead on it or not).
-    // It paints the `h` view's nudged pairs' ring runs first
-    // (paint_marker_stem_runs, AppState::marker_stem_runs), the stems their
-    // sides.
+    // NO PAINT-TIME OVERRIDE FROM AN EDITOR (architect 2026-10-03): the
+    // stash is the whole answer; the open flag editor's refusal recolors
+    // nothing, and the playhead never reaches the stems.
+    // It paints the `h` view's nudged pairs' rings first
+    // (paint_marker_stem_runs, AppState::marker_stem_runs).
     void paint_marker_stems(GuiCanvasSink& sink, const GuiRect& area);
-    // The nudged pairs' ring runs (MarkerStemRun, render.h; the body
-    // owns the form), paint_marker_stems' first act.
+    // The nudged pairs' rings (MarkerStemRun, render.h; the body owns the
+    // form), paint_marker_stems' first act.
     void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
-    // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's; nothing
-    // over the view bar, architect 2026-10-09 ~14:30): Cool Edit's dotted
-    // column in the palette's `playhead_line` (white, 2026-11-02, mock t1),
-    // t x t dots (one W, centered on the column) on the canvas's odd cells, painted
-    // after the marker stems, whose dots stand between its own.
+    // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
+    // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W
+    // line in the palette's `playhead_line` (Live's DBF6F9, 2026-11-04),
+    // BLINKING — painted in the blink's on phase alone
+    // (AppState::playhead_blink_on, render_playhead's THE BLINK) — after the
+    // marker stems.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_marker_stems and paint_playheads: the scanner draws OVER the stems
@@ -1154,7 +1141,8 @@ private:
     // 2026-11-01 night) — folder
     // and wav rows with their glyphs, the pickers' glyph-less rows, the
     // settings page's group rows in the dim print (kTextDimInk, 2026-10-28), the
-    // highlight band and the pressed face, all under the band's
+    // highlight band (no pressed face: no press look, 2026-11-04), all under
+    // the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
     // and then on its own exposure per row, as the keyboard is. It publishes
     // no geometry: the press router walks the same row table through the same

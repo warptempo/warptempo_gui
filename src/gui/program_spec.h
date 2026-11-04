@@ -69,7 +69,11 @@
 // triangle's whole cells — Cool Edit's aliased staircase,
 // paint_ce_cue_triangle — stand beside the one-W stem, CENTERED ON IT, the
 // apex the stem's column (the line's center, fill_waveform_line's rule) and
-// every row centred on it with no remainder. ITS ROW
+// every row centred on it with no remainder; THE MARKER'S CHIP is that
+// staircase in a one-W outline, a second, larger staircase of the same
+// cells (architect 2026-11-04, mock g1; render.h's cue_chip_rows: 31 x 16
+// round 17 x 9 at 300 %, 21 x 11 round 11 x 6 at 200 %), the ruler's head
+// the bare staircase. ITS ROW
 // COUNT IS NO FIELD HERE: it is a skin length, 9 DEVICE PX AT 300 % through
 // skin_px, rounded at the element (architect 2026-10-26 ~13:40, "why not
 // just simple scale? tablet is only real surface"; render.h's
@@ -79,10 +83,11 @@
 // (the text round, architect 2026-11-03): the fill's pad, the segment gap
 // and the flag editor's outline (render.h's cue_fill_pad_px,
 // cue_segment_gap_px, cue_editor_outline_px), and THE LABEL'S LEAD from the
-// column, THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 12 DEVICE PX AT 300 %
-// (render.h's cue_label_lead_px and kCueLabelGapAt300, architect
-// 2026-10-26 ~12:40: the label follows the rows). The dots down the canvas
-// are cells of one line, t x t (2026-11-04, the dot fields below). THE WELL'S
+// column, THE BARE TRIANGLE'S REACH RIGHT, THE OUTLINE'S W AND A GAP OF 12
+// DEVICE PX AT 300 % (render.h's cue_label_lead_px and kCueLabelGapAt300,
+// architect 2026-10-26 ~12:40: the label follows the rows; the W
+// 2026-11-04: 9 + 3 + 12 = 24 at 300 %). Every line down the canvas is
+// solid, one W (no dotted line since 2026-11-04). THE WELL'S
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
 struct ProgramSpec {
@@ -149,37 +154,10 @@ struct ProgramSpec {
     // (THE CUE'S HORIZONTAL LENGTHS — the selected fill's pad and the
     // segment gap, in label quanta until 2026-11-03 — are render.h's skin
     // lengths since, cue_fill_pad_px and cue_segment_gap_px.)
-    // THE CANVAS DOTS, ONE LINE PX SQUARE — t x t device px, t the canvas's
-    // line, one W (architect 2026-11-04, the unit; one device px from
-    // 2026-10-09 ~14:25 until then) — COUNTED IN CELLS OF t ROWS from the
-    // canvas's first row (render.h's waveform_line_px and
-    // dotted_waveform_line_run, the stereo divider's row crossed with no
-    // re-phasing, 2026-11-02); the periods and phases below are in cells,
-    // unchanged by the unit. ONE ON, ONE OFF (architect 2026-11-02, mock
-    // t1): THE PLAYHEAD'S dots every `dot_period` 2 cells on
-    // `playhead_dot_phase` 1, the odd cells; A CUE'S TWO PHASES (Cool Edit's
-    // cue and range dots) each every `cue_dot_period` 4 cells — the range's
-    // on `range_dot_phase` 0, the FIRST FROM THE TOP, the cue's on
-    // `cue_dot_phase` 2 — so a point cue's stem stands on the even cells, its
-    // two phases alternating; and a playhead standing on a stem fills the odd
-    // cells between them, so the two close into ONE SOLID LINE, the
-    // playhead's line color on the odd cells and the stem's on the even (the
-    // reason for the rule: mock t1s) — and A SELECTED STEM PAINTS THAT LINE
-    // ITSELF, the `playhead_line` on the playhead's own cells (`dot_period` /
-    // `playhead_dot_phase`), playhead or not (architect 2026-11-02;
-    // render.cpp's resolve_flag_face owns which color each cell set wears).
-    // The phase-reset lead-in ring's right side takes the same cells, and its
-    // top and bottom runs — and the `h` view's nudged pairs' — the same two
-    // phases in cells of t columns counted from the reset's (the left
-    // stem's) line's first column, one dot every two cells
-    // (paint_phase_reset_overlay_ring, paint_marker_stem_runs). Every cue
-    // cell is the playhead's period off the playhead's phase, so the two
-    // never share a cell on one column.
-    int  dot_period;
-    int  playhead_dot_phase;
-    int  cue_dot_period;
-    int  cue_dot_phase;
-    int  range_dot_phase;
+    // (THE CANVAS DOTS — the playhead's period and phase and a cue's two
+    // phases, Cool Edit's cue and range dots — left 2026-11-04 with the
+    // dotted stems and cursor: every line on the canvas is solid, render.h's
+    // marker-lane and playhead paragraphs.)
 };
 
 inline constexpr ProgramSpec kProgramSpec = {
@@ -187,11 +165,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .column_margin_px      = 6,
     .grid_divisions        = 4,
     .view_bar_field_at300  = 15,
-    .dot_period            = 2,
-    .playhead_dot_phase    = 1,
-    .cue_dot_period        = 4,
-    .cue_dot_phase         = 2,
-    .range_dot_phase       = 0,
 };
 
 // (THE AUTHORED TOTALS — the band's and row 8's strip pads in W, the lane
@@ -201,19 +174,9 @@ inline constexpr ProgramSpec kProgramSpec = {
 // lane's 17, the stereo divider's 3 — left with the flat well, 2026-11-02:
 // the well's lanes are device px derived at the element, render.h's well
 // lanes block.)
-// (THE LABEL CLEARS THE TRIANGLE BY CONSTRUCTION: render.h's
-// cue_label_lead_px is the triangle's reach right plus the gap, never
-// negative, at every scale.)
-// The cue's two phases alternate one dot every playhead period, and neither
-// shares a row with the playhead's dots (one on, one off: the playhead — and
-// a selected stem's white — the odd rows, the stem's two phases the even,
-// 2026-11-02).
-static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
-static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
-               kProgramSpec.cue_dot_period) % kProgramSpec.cue_dot_period ==
-              kProgramSpec.dot_period);
-static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=
-              kProgramSpec.playhead_dot_phase);
+// (THE LABEL CLEARS THE CHIP BY CONSTRUCTION: render.h's
+// cue_label_lead_px is the bare triangle's reach right, the outline's W and
+// the gap, never negative, at every scale.)
 // (The label's text stands one fill pad inside its fill — the fill's lead
 // and pad are the label's lead: render.h's cue_fill_lead_px.)
 

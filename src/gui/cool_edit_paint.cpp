@@ -22,7 +22,8 @@ namespace {
 // THE STAIRCASE'S ROW `r` (0 the top, rows − 1 the apex) as its half-open
 // span of columns round the stem column `col`, in units of u: the apex row
 // the stem's own cell, each row above it one cell wider on each side
-// (paint_ce_cue_triangle's head). The one construction both roads read.
+// (paint_ce_cue_triangle's head). The one construction both roads read, for
+// the fill's staircase and the outline's larger one alike.
 struct CueRowSpan {
     int x0 = 0, x1 = 0;
 };
@@ -47,7 +48,9 @@ uint32_t cue_fill_pixel(GuiColor c) {
 }
 
 // CAIRO'S ROAD, one whole-cell rectangle per row: where the target is
-// refused (the identity at CueTrianglePass, cool_edit_paint.h).
+// refused (the identity at CueTrianglePass, cool_edit_paint.h). One
+// staircase of `rows` rows from `top`; an outlined chip is two calls, the
+// outline's staircase first.
 void paint_cue_cells_cairo(cairo_t* cr, int col, int top, int rows,
                            GuiColor color) {
     const int u = cue_triangle_unit_px();   // one device px
@@ -70,6 +73,8 @@ void CueTrianglePass::begin(cairo_t* cr) {
     cr_        = cr;
     u_         = cue_triangle_unit_px();
     rows_      = cue_triangle_rows();
+    top_rows_  = cue_chip_top_rows();
+    chip_rows_ = cue_chip_rows();
     direct_    = direct_pixel_target(cr, target_);
     dirty_     = GuiRect{};
     dirty_any_ = false;
@@ -103,14 +108,30 @@ void CueTrianglePass::stamp_span(int x0, int x1, int y, uint32_t pixel) {
     }
 }
 
-void CueTrianglePass::triangle(int col, int top, GuiColor color) {
+void CueTrianglePass::triangle(int col, int top, GuiColor fill,
+                               std::optional<GuiColor> outline) {
+    // THE OUTLINE'S STAIRCASE FIRST, from t rows above the fill's top, then
+    // the fill's over it (the chip's construction, render.h's
+    // cue_chip_rows): on both roads the later cells overwrite the earlier.
+    const int otop = top - top_rows_ * u_;
     if (!direct_) {
-        paint_cue_cells_cairo(cr_, col, top, rows_, color);
+        if (outline)
+            paint_cue_cells_cairo(cr_, col, otop, chip_rows_, *outline);
+        paint_cue_cells_cairo(cr_, col, top, rows_, fill);
         return;
     }
-    // THE STAMP: the color's cells.
-    const int  dcol = col + target_.dx, dtop = top + target_.dy;
-    const uint32_t cp = cue_fill_pixel(color);
+    // THE STAMP: the outline's cells, then the fill's.
+    const int dcol = col + target_.dx;
+    if (outline) {
+        const int dtop = otop + target_.dy;
+        const uint32_t op = cue_fill_pixel(*outline);
+        for (int r = 0; r < chip_rows_; ++r) {
+            const CueRowSpan sp = cue_row_span(dcol, r, chip_rows_, u_);
+            stamp_span(sp.x0, sp.x1, dtop + r * u_, op);
+        }
+    }
+    const int dtop = top + target_.dy;
+    const uint32_t cp = cue_fill_pixel(fill);
     for (int r = 0; r < rows_; ++r) {
         const CueRowSpan sp = cue_row_span(dcol, r, rows_, u_);
         stamp_span(sp.x0, sp.x1, dtop + r * u_, cp);
@@ -124,9 +145,10 @@ void CueTrianglePass::end() {
     dirty_any_ = false;
 }
 
-void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor fill,
+                           std::optional<GuiColor> outline) {
     CueTrianglePass pass;
     pass.begin(cr);
-    pass.triangle(col, top, color);
+    pass.triangle(col, top, fill, outline);
     pass.end();
 }

@@ -53,10 +53,10 @@
 //   lamp paints
 //   THE INNER BAR, the source's own bar through the same expander, THE
 //   COMPRESSOR and THE FOREGROUND GAIN below instead of the gain, raw x c x
-//   1/2 x E, in the same ink with a one-pixel
-//   outline in the `waveform_outline` role — both bars from ONE peak read
-//   (architect 2026-09-25), the inks render.h's row-6 block's (settled by
-//   eye 2026-09-27, a theme's roles since 2026-10-04). The gain decides
+//   1/2 x E, a solid fill in the `waveform_core` role over the outer's ink
+//   (architect 2026-11-04, render.h's THE CORE) — both bars from ONE peak
+//   read (architect 2026-09-25), the inks render.h's row-6 block's. The
+//   gain decides
 //   the outer's height and
 //   never a colour.
 //   The clamp is a sample-peak clip, which is right for a
@@ -121,7 +121,12 @@
 // and fighting it, and THE CORE SHADE BY THE BAR GAP (2026-09-25, one
 // commit: the inner's ink a per-hop blend toward kdenlive's teal, linear in
 // dB of g / c between 6 and 20 dB, a third per-hop array) IS STRUCK — "it
-// doesn't work" (architect 2026-09-26). Both lit inks are flat.
+// doesn't work" (architect 2026-09-26). Both lit inks are flat. A
+// SUGGESTED-MARKER FINDER on the magnification (troughs of the leveled peak
+// as Live's transient-style gray triangles) is PARKED (architect 2026-11-04,
+// closed_questions.md): his warp markers sit on envelope minima but the dips
+// are too shallow for any prominence rule, 7–20 suggestions per marker of
+// his at every setting.
 //
 // A centred window's loudness rises as a loud entry's energy fills it, so the
 // quiet before a loud entry ramps down over roughly the last half-window

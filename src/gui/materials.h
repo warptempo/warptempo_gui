@@ -28,25 +28,27 @@
 //
 // THE KEY (paint_key below; every key alike — the band's, row 8's, the
 // controls rows', the word buttons, the scrub's thumb, the on-screen
-// keyboard's): A FLAT BOX, NO OUTLINE, NO LED, NO GLOW, NO DEPTH, NO PRESS
-// MOVEMENT (architect 2026-11-03: the keys stay flat, no offset, no inset
-// under a press), in one of FOUR FACES (KeyLook): AT REST kKeyFace 363636;
-// PRESSED — a key under the finger or pen for as long as the press stands,
-// NOT CHECKED — kPressFace 6A6A6A, its print kTextInk as at rest; LIT —
-// kLitFill FFAD56, Live's "on" — A CHECKED KEY, its whole face; LIT AND
-// PRESSED — a checked key under a standing press — kLitPressFill FFC281.
-// THE PRESS WEARS LIVE'S HOVER (architect 2026-11-03, the retrofit: a pen
-// cannot hover, so Live's hover colors are the press — 6A6A6A its off
-// button's hover, FFC281 its hover of FFAD56; Live's transport keys' grow
-// under hover is not taken). THE YELLOW IS FOR LAMPS ONLY (architect
-// 2026-11-02, on mocks a3 / b3: "the yellow flash is jarring … keep the
-// yellow only for lamps"): a press never lights an unchecked key. Every key
-// returns to its own state at the lift. A DISABLED key keeps the face its
+// keyboard's): A FLAT BOX, NO OUTLINE, NO LED, NO GLOW, NO DEPTH, in one of
+// TWO FACES (KeyLook): AT REST kKeyFace 363636; LIT — kLitFill FFAD56,
+// Live's "on" — A CHECKED KEY, its whole face. THE YELLOW IS FOR LAMPS ONLY
+// (architect 2026-11-02, on mocks a3 / b3: "the yellow flash is jarring …
+// keep the yellow only for lamps").
+// NO PRESS LOOK ANYWHERE (architect 2026-11-04, reversing the retrofit's
+// press faces of 2026-11-03: "the pen is very fast to go off so the press
+// look looks like a blink"): A PRESS CHANGES NO PAINT on any surface — the
+// band, row 8, the controls rows, the render player, the score viewer, the
+// trim presets, the dialogs' word buttons, the lists' rows (the highlighted
+// row keeps the selection pair at rest and under a press) and the on-screen
+// keyboards' keys. THE FEEDBACK IS THE TAP'S RESULT: the act itself, a
+// stateful key's glyph showing the act its next press runs, the typed
+// character, the selection pair landing on a row. The press arms stay —
+// the slide-off feint, the hold-repeat, the long press and the barrel —
+// their paint alone retired. A DISABLED key keeps the face its
 // state gives, its glyph and its legend in kKeyDimInk, so a checked-but-inert
 // key under an overlay keeps its lit fill (architect 2026-11-01, M6) — its
 // glyph on the lit face kTextOnLit. Anything printed ON a lit face is
 // kTextOnLit 111111 (the keys' Breeze glyphs, the on-screen keyboard's
-// caps); on a resting or pressed face kTextInk (key_ink below). UNDER EVERY
+// caps); on a resting face kTextInk (key_ink below). UNDER EVERY
 // KEY ITS PRINTED LEGEND (architect 2026-11-03, the retrofit, reversing the
 // legends' retirement of 2026-11-02): on the ground in the strip's bottom
 // pad, never on the face, so a lit key's legend stays kTextInk (the rule at
@@ -66,7 +68,7 @@
 // area's, architect 2026-11-03; the seats' walks, paint_handler.cpp). THE
 // GROUND IS NOT PRESSABLE (architect 2026-11-02, R5: "ground is not a
 // button"): THE PAINTED FACE IS THE HIT BOX (point_on_key below), so a
-// press, a lift, the press face and the tooltip answer on the face alone and
+// press, a lift and the tooltip answer on the face alone and
 // the ground round it — the gaps, the run gaps, the legends' pad — answers
 // nothing; the on-screen keyboard's gaps alike (R11), the same gap
 // (onscreen_keyboard.h's key_gap_px, 2026-11-04).
@@ -114,33 +116,26 @@ inline constexpr uint32_t kTextOnLit  = 0x111111;
 // A disabled key's glyph (the head's THE TEXT TONES, 2026-11-02).
 inline constexpr uint32_t kKeyDimInk  = 0x5A5A5A;
 
-// THE KEY (the head): its face at rest, its press face (Live's off-button
-// hover 6A6A6A, 2026-11-03), its lit fill (Live's "on" orange FFAD56, one
-// constant with no device key), the lit fill under a press (Live's hover of
-// FFAD56, FFC281, 2026-11-03). (The face's lengths and the gap between two
-// faces, key_gap_px, are render.h's case block.)
+// THE KEY (the head): its face at rest and its lit fill (Live's "on" orange
+// FFAD56, one constant with no device key). (The face's lengths and the gap
+// between two faces, key_gap_px, are render.h's case block.)
 inline constexpr uint32_t kKeyFace      = 0x363636;
-inline constexpr uint32_t kPressFace    = 0x6A6A6A;
 inline constexpr uint32_t kLitFill      = 0xFFAD56;
-inline constexpr uint32_t kLitPressFill = 0xFFC281;
 
-// THE KEY'S FOUR FACES (the head's THE KEY): LitPressed when checked under a
-// standing press, Lit when checked, Pressed under a standing press, else
-// Rest. key_look is the one place the order is decided — every key painter
-// asks it.
-enum class KeyLook { Rest, Pressed, Lit, LitPressed };
-inline constexpr KeyLook key_look(bool checked, bool pressed) {
-    return checked ? (pressed ? KeyLook::LitPressed : KeyLook::Lit)
-         : pressed ? KeyLook::Pressed
-                   : KeyLook::Rest;
+// THE KEY'S TWO FACES (the head's THE KEY): Lit when checked, else Rest — no
+// press face (2026-11-04). key_look is the one place the face is decided —
+// every key painter asks it.
+enum class KeyLook { Rest, Lit };
+inline constexpr KeyLook key_look(bool checked) {
+    return checked ? KeyLook::Lit : KeyLook::Rest;
 }
 inline constexpr bool key_look_lit(KeyLook look) {
-    return look == KeyLook::Lit || look == KeyLook::LitPressed;
+    return look == KeyLook::Lit;
 }
 
 // THE INK OF WHAT A KEY CARRIES ON ITS FACE (the head's THE KEY and THE
-// TEXT TONES): kTextOnLit on a lit face, pressed or not (a dead checked
-// key's too), else kTextInk, or kKeyDimInk on a disabled key.
+// TEXT TONES): kTextOnLit on a lit face (a dead checked key's too), else
+// kTextInk, or kKeyDimInk on a disabled key.
 inline constexpr uint32_t key_ink(KeyLook look, bool enabled) {
     return key_look_lit(look) ? kTextOnLit : enabled ? kTextInk : kKeyDimInk;
 }
@@ -152,9 +147,7 @@ inline constexpr uint32_t key_ink(KeyLook look, bool enabled) {
 // 2026-11-03, mock z2; render_trim_flags): kTrimBarFace, the bar outside
 // the trim, IS THE LANE'S TONE — ONE CONSTANT, kLaneFace's own value (Live's
 // next fill above the ground), named for what it paints as kPaneFace is
-// kKeyFace's; kTrimSpanFace 6A6A6A, the span, Live's off-button hover — the
-// press face's value, kept its own constant because it is another role (a
-// span, not a press), so a retuned press leaves the bar alone.
+// kKeyFace's; kTrimSpanFace 6A6A6A, the span, Live's off-button hover.
 inline constexpr uint32_t kWellFrame    = 0x757575;
 inline constexpr uint32_t kRulerFace    = 0x363636;
 inline constexpr uint32_t kRulerTick    = 0x6B6B6B;
@@ -165,15 +158,10 @@ inline constexpr uint32_t kTrimSpanFace = 0x6A6A6A;
 // THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
 // selection): a flat 637E86 bar under 111111 text — the flag editor's and
 // the dialog editors' selected substring and the lists' lit row (the
-// chrome's `selected_fill` / `selected_text`, chrome_derive.h). ITS LIGHTER
-// TWIN, kSelectionPressFill B0DDEB (Live's focused selection; architect
-// 2026-11-03, the retrofit: the press rule's twin for rows), is A LIST ROW
-// UNDER A STANDING PRESS — the picker's, the render player's list, the
-// settings page and its value list, the trim presets — under the same
-// 111111 text, the highlighted row at rest keeping the pair
-// (paint_handler.cpp's paint_folder_overlay, AppState::FolderOverlayPress, app.folder_overlay.press).
+// chrome's `selected_fill` / `selected_text`, chrome_derive.h), at rest and
+// under a press alike — a list row under a standing press changes no paint
+// (no press look, 2026-11-04; paint_handler.cpp's paint_folder_overlay).
 inline constexpr uint32_t kSelectionFill      = 0x637E86;
-inline constexpr uint32_t kSelectionPressFill = 0xB0DDEB;
 inline constexpr uint32_t kSelectionText      = kTextOnLit;
 
 // THE PANE (architect 2026-11-01 night, M6 A; 2026-11-02, M11 / M14): Live's
@@ -190,8 +178,7 @@ inline constexpr uint32_t kPaneFace = kKeyFace;
 
 // ONE KEY on `r`, ITS PAINTED FACE — the key itself (the head's THE KEY and
 // THE FACE AND ITS GAP): the flat face `look` gives — kKeyFace at rest,
-// kPressFace pressed, kLitFill lit, kLitPressFill lit under a press
-// (key_look, the caller's checked state and standing press) — and nothing
+// kLitFill lit (key_look, the caller's checked state) — and nothing
 // else. What a key carries is its caller's — the roster's and the controls
 // rows' Breeze glyph on the face and its legend under it (paint_key_glyph
 // and paint_key_legend, paint_handler.cpp), the on-screen keyboard's caps —
@@ -220,9 +207,9 @@ inline int key_group_w_px(int n) {
 // own (onscreen_keyboard::for_each_key, its gap already outside it). THE
 // ONE PREDICATE every key hit test asks: the roster's face
 // (AppState::RedesignButtonFace::contains — the press, the lift, the band's
-// modifier gate, the armed press's inside bit, the tooltip's owner), the
+// modifier gate, the tooltip's owner), the
 // modal family's buttons (GuiInputHandler::modal_dialog_button_hit — the
-// press, the walk's inside bit, the lift) and the keyboard's
+// press and the lift) and the keyboard's
 // (onscreen_keyboard::key_at). Each painter PUBLISHES the face it paints, so
 // a reader re-shapes nothing. A gesture already begun keeps its rules: a
 // press that slides off its key reads "outside" as ever, the face being what

@@ -107,11 +107,9 @@ void render_waveform_to_plate_columns(
     // was lit, which requires the curve to be ready). Both channels take the
     // one curve. It scales the PICTURE only. With the lamp dark each column is
     // the raw bar alone, lit its OUTER bar (the levelled, expanded one) and its
-    // INNER bar (the compressed, expanded one) over it, the inner outlined
-    // one device px thick — the rule is at render_waveform_columns'
-    // declaration. (The outline's distance is the GPU shader's constant,
-    // one device px, since 2026-10-30: no render input and no fingerprint
-    // field carries it.)
+    // INNER bar (the compressed, expanded one) over it, a solid fill in the
+    // core — the rule is at render_waveform_columns' declaration. (The
+    // core's color rides the inks, waveform_plate_inks: no render input.)
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
     const GuiRect ch[2] = {GuiRect{0, b0.y, area_w, b0.h},
                            GuiRect{0, b1.y, area_w, b1.h}};
@@ -1160,9 +1158,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // names this column reads as "off" here, and fp_active_markers_view above
     // is what keeps the two readings apart across a switch.
     // See fp_iteration_mode. (The addressed cell is no input: the selected
-    // look is the cue's, on the canvas, never a segment's — architect
-    // 2026-11-02, render.h's SELECTED row — and the focus it belongs to is
-    // keyed by sel_hash above.)
+    // look is the cue's chip and the focus's stem, never a segment's —
+    // architect 2026-11-04, render.h's THE STATES — and the focus they read
+    // is keyed by sel_hash above.)
     const bool      iter_on    = iteration_column_lit(app, mv);
     // THE STANDING EDITOR'S SUPPRESSION — which marker, and which of its boxes
     // the pass below does not paint — off THE ONE DERIVATION
@@ -1399,6 +1397,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.phaseresetmarkers.markers(),
             vp_start, vp_end, sr,
             app.selected_markers,
+            app.last_selected_marker,
             pr_red,
             // The mode's verdict FOR THIS COLUMN, which paints its two BOUND
             // CELLS (its hop bracket) exactly as the warp column's are painted
@@ -1421,6 +1420,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      app.warpmarkers.markers(),
                      vp_start, vp_end, sr,
                      app.selected_markers,
+                     app.last_selected_marker,
                      warp_red,
                      iter_on,
                      &app.staged_flag_hit_rects,

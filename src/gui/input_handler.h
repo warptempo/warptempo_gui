@@ -1351,16 +1351,15 @@ struct GuiInputHandler {
     // history companions' move on 2026-08-18; definitions beside on_motion
     // in input_pointer.cpp.)
     // It re-resolves the cursor's last position against the painter's stashed
-    // rects for its three readers — the tooltip's wait, the armed chrome
-    // press's inside bit and the roster's hot button (AppState::roster_hot,
+    // rects for its two readers — the tooltip's wait and the roster's hot
+    // button (AppState::roster_hot,
     // which stores none since the cases became the program's, 2026-10-09:
     // Cool Edit's toolbar has no hover face, program_spec.h's
     // case_hot_face) — and is called from
     // on_motion's no-gesture tail, its modal branches and the run loop's
     // TICK; it REFUSES OUTRIGHT while the pointer is outside the window (its
     // own first lines), which is what keeps the tick's call inert out there.
-    // It damages only when the pressed face's inside bit flips or the hot
-    // button changes.
+    // It damages only when the hot button changes.
     void recompute_redesign_button_hover();
     // THE HOT TOOLBAR BUTTON'S ONE SETTER (AppState::roster_hot): stores the
     // index (-1 for none) and damages the old and the new button's rect on a
@@ -1465,8 +1464,8 @@ struct GuiInputHandler {
     // the menu row's three anchors — the press-time exception, each a
     // dropdown toggle — left with the row, 2026-10-21.
     // take_chrome_press consumes the arm whole (armed or not) at the top of
-    // on_button_release, damaging the un-pressed face — and, for the
-    // notification card's arm (2026-10-01), resuming the held card's clock.
+    // on_button_release — and, for the notification card's arm
+    // (2026-10-01), resuming the held card's clock.
     // finish_chrome_press_release is the release half: re-hit the armed
     // target at the release's own coordinates and re-ask the press-time
     // gates — the modal veil FIRST, for every kind alike, then the roster's own
@@ -3973,8 +3972,7 @@ private:
     // release (A MOTIONLESS LIFT HIGHLIGHTS THE ROW AND OPENS IT — a click
     // activates, architect 2026-08-29; a scroll drag ends), the motion
     // (past the drag gate — the sweeps' and pans' Chebyshev crossing, on
-    // EITHER axis — the arm is the band's scroll drag; inside
-    // it the feint's inside bit), and the hard end (the
+    // EITHER axis — the arm is the band's scroll drag), and the hard end (the
     // pointer-leave hook, the button-lost edge and the force-end finalizer —
     // the arm dropped, nothing committed). The claim is RANKED under the
     // prompt gate and ABOVE the TWO mode veils (the player's and the picker's), each of which
@@ -4102,8 +4100,8 @@ private:
     // input_pointer.cpp — the painter's stash is AppState::modal_dialog and
     // the veil contract lives at on_button_press's two dialog gates):
     // the button hit test over the stash, the pointer walk the motion
-    // branches call (the armed button's inside bit — the feint — and the
-    // dialog's tooltip wait — no hover face), and the editor dialog's
+    // branches call (the player's hot button and the dialog's tooltip wait —
+    // no hover face), and the editor dialog's
     // OK/Cancel dispatch — the
     // session's own Enter/Esc through the per-editor key routes,
     // button-is-its-chord.
