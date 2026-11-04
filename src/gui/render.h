@@ -209,7 +209,7 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's THIRTEEN (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
@@ -223,8 +223,8 @@ struct TrimRange {
 //                 mark, THE MARKER LANE below); the disabled cue's
 //                 `inactive_cue`; the playhead's two roles,
 //                 `playhead_head` — its triangle in the ruler — and
-//                 `playhead_line` / `playhead_line_low` — the two ends of
-//                 its fading line in the canvas (architect 2026-11-04; THE
+//                 `playhead_line` — its fading line's white in the canvas,
+//                 the head's cyan its other end (architect 2026-11-04; THE
 //                 PLAYHEAD, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
@@ -330,7 +330,6 @@ struct GuiPalette {
     GuiColor inactive_cue;
     GuiColor playhead_head;
     GuiColor playhead_line;
-    GuiColor playhead_line_low;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of the toolbar band, row 8 and the well's
@@ -474,25 +473,29 @@ void install_true_colors(bool on);
 // W, the ruler lane's last (ruler_lane_h_px).
 
 // THE PLAYHEAD IS COOL EDIT'S CURSOR (architect 2026-10-09) IN LIVE'S TONES:
-// ITS HEAD the cue's triangle, THE SAME DRAWING BARE — its rows (cue_triangle_rows,
-// 9 at 300 %) in whole device cells, Cool Edit's aliased drawing
-// (2026-10-26), the apex the playhead's column (paint_ce_cue_triangle; the
-// triangle's cell one device px, architect 2026-10-26 ~10:10: "All
-// triangles unscaled", cue_triangle_unit_px), NO OUTLINE (the marker's
-// chip alone wears one, 2026-11-04) — in THE PALETTE'S
-// `playhead_head` (architect 2026-10-09 ~11:50; Live's playhead cyan
-// 03C3D5 since 2026-11-01, palette_file.h), NO SHADOW (2026-11-02), ON THE
-// RULER'S LAST `rows` DEVICE ROWS, the apex on the ruler's foot row over the
-// ticks' feet — it covers what stands under it (2026-10-09 ~21:00)
-// (paint_ruler_row; cue_triangle_h_px's rows; its painted columns, the cull
-// and the move's damage box one extent, cue_bare_reach_right_px); IN THE
+// ITS HEAD the cue's chip, THE SAME DRAWING (architect 2026-11-04, mock k1,
+// "4 accept overlap") — its rows (cue_triangle_rows, 9 at 300 %) in whole
+// device cells, Cool Edit's aliased drawing (2026-10-26), the apex the
+// playhead's column (paint_ce_cue_triangle; the triangle's cell one device
+// px, architect 2026-10-26 ~10:10: "All triangles unscaled",
+// cue_triangle_unit_px), IN THE CHIP'S ONE-W `cue_outline` 111111 (the
+// outer 31 x 16 at 300 %) — its fill THE PALETTE'S `playhead_head`
+// (architect 2026-10-09 ~11:50; Live's playhead cyan 03C3D5 since
+// 2026-11-01, palette_file.h), NO SHADOW (2026-11-02), THE OUTLINED SHAPE
+// ON THE RULER'S LAST cue_chip_rows DEVICE ROWS, its apex on the ruler's
+// foot row over the ticks' feet — it covers what stands under it
+// (2026-10-09 ~21:00), the digits included where it stands under a label
+// (ACCEPTED, architect 2026-11-04: "timestamp not really important for fine
+// tune, just ballpark") (paint_ruler_row; cue_chip_h_px's rows; its painted
+// columns, the cull and the move's damage box one extent, the chip's,
+// cue_triangle_reach_right_px); IN THE
 // CANVAS A SOLID LINE, ONE W, centered on the column (architect 2026-11-04:
 // Live's playhead line, measured; canvas_line_rect, the scanner's form) in
 // THE PALETTE'S `playhead_line` (FFFFFF), down the area's whole height,
 // the stereo divider's row included (architect 2026-11-02) — AND IT FADES,
 // on Live's timing, measured per pixel: an opaque line whose color runs
-// linearly in bytes to `playhead_line_low` 6BA5AA and back, 600 ms each
-// way, stopped or playing, the head unchanged (render_playhead's THE FADE;
+// linearly in bytes to the head's own `playhead_head` 03C3D5 and back,
+// 600 ms each way, stopped or playing, the head unchanged (render_playhead's THE FADE;
 // paint_playheads). Across the trim bar (architect 2026-10-09 ~14:30, "no
 // dots on the trim bar"), the marker lane and the row of ground under it it
 // draws nothing. IT MAY STAND ON A MARKER — NO SNAP, NO AVOIDANCE
@@ -502,7 +505,7 @@ void install_true_colors(bool on);
 // scanner; THE MARKER LANE's coincidence stem, below), so the dark stem is
 // what shows there and the ruler's head marks the playhead.
 // THE HEAD IS GRABBED AND DRAGGED, as Cool Edit's is (architect 2026-10-09
-// ~17:40): its HIT is the head as painted, its columns (the bare triangle,
+// ~17:40): its HIT is the head as painted, its columns (the outlined chip,
 // cut to the waveform's) over its device rows of the ruler's,
 // no box beyond them — published by paint_ruler_row
 // (AppState::playhead_head_hit) and read by point_on_playhead_head
@@ -514,8 +517,9 @@ void install_true_colors(bool on);
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
 // history.)
 // THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head,
-// `playhead_line` / `playhead_line_low` its line's two ends (architect
-// 2026-11-04: the head Live's cyan, the line Live's fade); neither is lent
+// `playhead_line` its line's peak, the head's cyan its trough (architect
+// 2026-11-04: the head Live's cyan, the line Live's fade between white and
+// that cyan, the playhead's two tones); neither is lent
 // to a marker (the selection is the
 // chip's, THE MARKER LANE below). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
@@ -553,7 +557,7 @@ void install_true_colors(bool on);
 // of 2026-10-25 .. 2026-11-02 retired with the well's flat look), in THE
 // LABEL FACE, BOLD 21 device px at 300 % (gui_font.h's kGuiFaceSizes;
 // architect 2026-11-01 night, M5i; the retrofit's 22 of 2026-11-03 the
-// nearest whole W since 2026-11-04, the unit), starting the bare triangle's
+// nearest whole W since 2026-11-04, the unit), starting the fill's
 // reach right, the outline's W and a gap of 12 device px at 300 % right of
 // the column (cue_label_lead_px: 24 at 300 %), ON THE LANE'S ONE BASELINE
 // at rest and in the editor (cue_baseline_px, THE METRICS RULE at
@@ -561,9 +565,11 @@ void install_true_colors(bool on);
 // its top and 14 from its bottom at 300 %) — `show_cue_label`, render.cpp,
 // the one painter of every label look on the face; and THE STEM, ON EVERY
 // ENABLED MARKER THE PLAYHEAD STANDS ON — a SOLID ONE-W LINE in the
-// `cue_outline`, centered on the column, down the canvas's whole height
-// (waveform_line_px, canvas_line_rect's form; paint_marker_stems), the
-// canvas alone (none in the lane or on the row of ground under it): THE
+// `cue_outline`, centered on the column, FROM THE CHIP'S APEX ROW (the
+// lane's last) through the row of ground under the lane down the canvas's
+// whole height (waveform_line_px, canvas_line_rect's form;
+// paint_marker_stems and its head segment, paint_marker_stem_heads;
+// architect 2026-11-04, mock j1, "3 yes"): THE
 // COINCIDENCE STEM (architect 2026-11-04: "in ableton playhead coincident
 // with marker = no stem, stem #11 on hover. we have no hover so we should
 // #11 on coincident"). NO OTHER STEM (Live paints none at rest). No box
@@ -640,7 +646,9 @@ void install_true_colors(bool on);
 //             the integer the cursor stores; a selection landing puts it
 //             there exactly), never a column compare, so two markers a frame
 //             apart at a coarse zoom never both light — wears A SOLID ONE-W
-//             `cue_outline` STEM down the canvas's whole height on its column
+//             `cue_outline` STEM on its column FROM THE CHIP'S APEX ROW (the
+//             lane's last) THROUGH THE ROW OF GROUND UNDER THE LANE TO THE
+//             CANVAS'S LAST ROW (mock j1, 2026-11-04: no gap under the apex)
 //             (architect 2026-11-04; MarkerStem carries the frame,
 //             paint_marker_stems does the coincidence at paint — THE
 //             RESOLVER NEVER SEES THE PLAYHEAD). THE STEM PAINTS OVER THE
@@ -1558,8 +1566,7 @@ inline int ruler_lane_h_px() {
 // (paint_ce_cue_triangle, the stamp — whole device
 // cells since 2026-10-26, Cool Edit's aliased staircase), the extents every
 // cull, hit and damage box reads (cue_triangle_half_w_px,
-// cue_triangle_reach_right_px, cue_bare_half_w_px, cue_bare_reach_right_px,
-// below) — and THE PLAYHEAD'S HEAD, the same
+// cue_triangle_reach_right_px, below) — and THE PLAYHEAD'S HEAD, the same
 // painter in the ruler, its cell one device px with it (architect
 // 2026-10-26 ~10:10: "All triangles unscaled"). THE LABEL'S LENGTHS — its
 // lead's gap, its fill's pad, the segment gap and the editor's outline —
@@ -1580,11 +1587,10 @@ inline int cue_triangle_unit_px() {
 // whole cells; only the count rides the scale: 9 rows at 300 %, 6 at 200 %,
 // 4 at 150 % (4.5 rounded to even) and at 138 % (4.14), 11 at 360 %; at the
 // scale's floor of 50 % (is_gui_scale_percent, device_config.h) 1.5 rounds
-// to 2 — and the drawing holds: no floor, no clamp. The bare rows fit the
-// ruler's bottom pad (12 at 300 %, under the digits' ink). READERS: the
-// fill's rows (cue_triangle_h_px), the chip's (cue_chip_rows below), the
-// widths (cue_bare_* and cue_triangle_* below — every cull, hit and damage
-// box and the label's lead, cue_label_lead_px) and the painter
+// to 2 — and the drawing holds: no floor, no clamp. READERS: the fill's
+// rows (cue_triangle_h_px), the chip's (cue_chip_rows below), the label's
+// lead (cue_label_lead_px, the fill's reach), the chip's widths
+// (cue_triangle_* below — every cull, hit and damage box) and the painter
 // (CueTrianglePass).
 inline constexpr double kCueTriangleRowsAt300 = 9.0;
 inline int cue_triangle_rows() {
@@ -1607,8 +1613,13 @@ inline int cue_triangle_rows() {
 // at 100 %: rows 3, t 1, s 1. THE CHIP'S APEX STANDS ON THE LANE'S LAST ROW
 // (cue_above_chip_h_px below), so the fill's top row is the lane's last row
 // less rows + s (at 300 %, lane rows 205 .. 242: the outer on 227 .. 242,
-// the fill on 230 .. 238). THE RULER'S HEAD IS THE BARE FILL, no outline
-// (the ruling names the marker's chip alone; paint_ruler_row).
+// the fill on 230 .. 238). THE RULER'S HEAD IS THE SAME CHIP (architect
+// 2026-11-04, mock k1, "4 accept overlap"): its outlined shape's apex on
+// the ruler's last row (300 %: ruler rows 168 .. 201, the outer on 186 ..
+// 201, the fill on 189 .. 197), so its top reaches into the ruler's digits
+// where it stands under a label — ACCEPTED ("timestamp not really
+// important for fine tune, just ballpark"): it paints over them as a chip
+// paints over a label (paint_ruler_row).
 inline int cue_chip_top_rows() {
     return hairline_px();
 }
@@ -1645,8 +1656,9 @@ inline int cue_segment_gap_px() {
 // the glass at nine rows: "It seems the lead-in was not scaled — increasing
 // rows seems to not move text, but it should, relative to what I tuned it
 // to"; the outline's W 2026-11-04, mock g1 shifting every label one W
-// right): the bare fill's reach (cue_bare_reach_right_px, the triangle's
-// rows), one W (hairline_px, the chip's outline), then THE GAP, 12 DEVICE
+// right): the fill's reach (its rows · u, cue_triangle_h_px's own number,
+// the one spelling), one W (hairline_px, the chip's outline), then THE GAP,
+// 12 DEVICE
 // PX AT 300 % (kCueLabelGapAt300; architect 2026-11-02, "flag text lead in
 // at 12 pixels"; 13 from the text round, 2026-11-03, back to 12, the whole
 // W, with the unit, 2026-11-04) through skin_px, rounded at the element —
@@ -1661,10 +1673,9 @@ inline int cue_segment_gap_px() {
 // boxes (cue_segment_boxes), the cull bounds (marker_flag_max_width_px
 // below, the history lane's).
 inline constexpr double kCueLabelGapAt300 = 12.0;
-inline int cue_bare_reach_right_px();   // below, the bare triangle's extent
+inline int cue_triangle_h_px();   // below, the fill's rows · u
 inline int cue_label_lead_px() {
-    return cue_bare_reach_right_px() + hairline_px() +
-           skin_px(kCueLabelGapAt300);
+    return cue_triangle_h_px() + hairline_px() + skin_px(kCueLabelGapAt300);
 }
 inline int cue_fill_lead_px() {
     return cue_label_lead_px() - cue_fill_pad_px();
@@ -1817,33 +1828,23 @@ inline int cue_baseline_px() {
 // col − (R − 1)u to col + (R − 1)u, u the triangle's cell, one device px):
 // [col − half, col + reach), (R − 1)·u left and R·u right, which holds the
 // one-W stem's own columns centered on `col` (col − t / 2 .. col − t / 2 +
-// t − 1, t waveform_line_px) at every scale. TWO EXTENTS, ONE CONSTRUCTION:
-//   THE CHIP'S (cue_triangle_half_w_px, cue_triangle_reach_right_px; R the
-//     chip's rows, cue_chip_rows): 15 and 16 device px at 300 %, 10 and 11
-//     at 200 % — the marker's outlined chip (architect 2026-11-04), its
-//     rows [top, top + cue_chip_h_px()). THE ONE ROAD for every marker
-//     reader: the cue's published triangle box (paint_cues), the label's
-//     face box from its own chip's left edge (paint_cues; no label is
-//     clipped) and the flag iterator's cull.
-//   THE BARE TRIANGLE'S (cue_bare_half_w_px, cue_bare_reach_right_px; R the
-//     fill's rows, cue_triangle_rows): 8 and 9 at 300 %, 5 and 6 at 200 % —
-//     the chip's fill and THE RULER'S HEAD, which wears no outline: the
-//     head's cull and its published hit (paint_ruler_row,
-//     AppState::playhead_head_hit), the playhead's cull and its damage box
-//     (render_playhead, playhead_invalidate_rect, main.cpp), so no repaint
-//     can be narrower than what the head painted; and the label's lead
-//     (cue_label_lead_px).
+// t − 1, t waveform_line_px) at every scale. ONE EXTENT, THE CHIP'S
+// (cue_triangle_half_w_px, cue_triangle_reach_right_px; R the chip's rows,
+// cue_chip_rows): 15 and 16 device px at 300 %, 10 and 11 at 200 % — the
+// outlined chip (architect 2026-11-04), the marker's and THE RULER'S HEAD'S
+// alike since the head wears the outline too (mock k1, the same evening),
+// its rows [top, top + cue_chip_h_px()). THE ONE ROAD for every reader: the
+// cue's published triangle box (paint_cues), the label's face box from its
+// own chip's left edge (paint_cues; no label is clipped), the flag
+// iterator's cull, the head's cull and its published hit (paint_ruler_row,
+// AppState::playhead_head_hit), and the playhead's cull and its damage box
+// (render_playhead, playhead_invalidate_rect, main.cpp), so no repaint can
+// be narrower than what the head painted.
 inline int cue_triangle_half_w_px() {
     return (cue_chip_rows() - 1) * cue_triangle_unit_px();
 }
 inline int cue_triangle_reach_right_px() {
     return cue_chip_rows() * cue_triangle_unit_px();
-}
-inline int cue_bare_half_w_px() {
-    return (cue_triangle_rows() - 1) * cue_triangle_unit_px();
-}
-inline int cue_bare_reach_right_px() {
-    return cue_triangle_rows() * cue_triangle_unit_px();
 }
 // THE WELL'S EDGES AND MARGINS (architect 2026-10-09, the third part;
 // program_spec.h's column_margin_px; flat since 2026-11-01 night, THE EDGE
@@ -2392,8 +2393,8 @@ inline int tooltip_hover_slop_px() {
 // its narrow damage box until 2026-10-09, when Cool Edit's head made it
 // narrower than the pixels it guarded (the head's then ten quanta against ± 15 at
 // 275 %, so a slow move left the head's shadow column behind). Both now read
-// the head's own painted columns, cue_bare_half_w_px and
-// cue_bare_reach_right_px above, which also cover the scanner's and the
+// the head's own painted columns, cue_triangle_half_w_px and
+// cue_triangle_reach_right_px above, which also cover the scanner's and the
 // cursor's one-W line centered on c. Git history.)
 
 // (THE MONOSPACE EDITOR TIER IS GONE — row 7, 2026-08-01. EditorTextBox,
@@ -3108,8 +3109,11 @@ struct GuiPlateColumns {
 // 120 fps on his Live recording, tmp/keep/screenshots/ableton/zoom/): an
 // OPAQUE line — its own pixel the same tone over the ink and over the
 // canvas — whose COLOR runs a TRIANGLE WAVE, LINEAR IN sRGB BYTES, between
-// the palette's `playhead_line` FFFFFF at the peak and its
-// `playhead_line_low` 6BA5AA at the trough, kPlayheadFadeHalfMs 600 down
+// the palette's `playhead_line` FFFFFF at the peak and THE HEAD'S OWN
+// `playhead_head` 03C3D5 at the trough (architect 2026-11-04, "1 good":
+// four lossless one-px samples of Live's line, 4AD3E0, 59D7E3, 85E2EA and
+// DBF6F9, lie on the byte line from FFFFFF toward 03C3D5; the recording's
+// 6BA5AA was its 4:2:0 chroma smear of a one-px line), kPlayheadFadeHalfMs 600 down
 // and 600 up, period kPlayheadFadePeriodMs 1200, no hold at either end,
 // free-running on CLOCK_MONOTONIC from the process's start (no reseat at a
 // seek or a play), WHETHER STOPPED OR PLAYING (playhead_fade_color_at
@@ -3119,7 +3123,7 @@ struct GuiPlateColumns {
 // in AppState::playhead_line_rgb and damages the line's columns on the
 // canvas's rows (playhead_line_rect, main.cpp); paint_playheads paints the
 // stored color and never reads the clock. THE COST: the triple moves on
-// nearly every tick while the line is on screen (148 levels of red each
+// nearly every tick while the line is on screen (252 levels of red each
 // way in 600 ms), so one small damage per tick and one rect in the draw
 // list at the refresh cadence — measurable with dumpsys SurfaceFlinger
 // --timestats; a cursor off the canvas damages nothing. PROOF HYGIENE: a
@@ -3157,7 +3161,7 @@ inline uint32_t playhead_fade_color_at(int64_t elapsed_ms) {
                      static_cast<double>(kPlayheadFadeHalfMs);
     const double t = u <= 1.0 ? 1.0 - u : u - 1.0;
     const GuiColor hi = palette().playhead_line;
-    const GuiColor lo = palette().playhead_line_low;
+    const GuiColor lo = palette().playhead_head;
     const auto ch = [t](double l, double h) {
         const double lb = std::nearbyint(l * 255.0);
         const double hb = std::nearbyint(h * 255.0);

@@ -5593,7 +5593,8 @@ struct AppState {
 
     // THE PLAYHEAD FADE'S PAINTED COLOR (architect 2026-11-04; the rule at
     // render_playhead's THE FADE, render.h), a 0xRRGGBB sRGB word between
-    // the palette's `playhead_line_low` and `playhead_line`. ON SCREEN IS AS
+    // the palette's `playhead_head` (the trough) and `playhead_line` (the
+    // peak). ON SCREEN IS AS
     // PAINTED: written only by the tick, on a change of the byte triple
     // playhead_fade_color_at answers, which damages the line's columns in
     // the same breath (playhead_line_rect, main.cpp), and read by

@@ -16,8 +16,8 @@
 // part); the colors the flat look's constants (materials.h's THE WELL) and
 // the palette's. THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
-// 2026-11-01 — and `playhead_line` / `playhead_line_low` — the two ends of
-// its fading line in the canvas, Live's FFFFFF / 6BA5AA since 2026-11-04 —
+// 2026-11-01, and the trough of the line's fade — and `playhead_line` —
+// the fading line's white peak in the canvas since 2026-11-04 —
 // palette_file.h's role table, as the
 // marker's chip is the palette's `cue` / `cue_unselected` in its
 // `cue_outline` (2026-11-04).
@@ -100,15 +100,15 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // key settled "off" on the glass and retired with its arm,
 // closed_questions.md): a bitmap in effect,
 // every pixel the color whole, no coverage anywhere. `top` is THE FILL'S top
-// row. Its painted columns are the bare fill's [col − (rows − 1)u, col +
-// rows·u) (cue_bare_half_w_px, cue_bare_reach_right_px) and its rows [top,
-// top + rows·u); an outlined chip's the chip's (cue_triangle_half_w_px,
+// row. A bare staircase's painted columns are [col − (rows − 1)u, col +
+// rows·u) and its rows [top, top + rows·u); an outlined chip's the chip's
+// (cue_triangle_half_w_px,
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads)
 // over [top − t·u, top + (rows + s)·u). The colors are resolve_flag_face's
 // for a cue (render.cpp, the one table: the fill `cue` selected or
 // `cue_unselected` in the `cue_outline`, a disabled chip hollow, the lane's
-// face in the `inactive_cue`) and the `playhead_head` with no outline for
-// the playhead's head alone (the ruler's head stays bare, 2026-11-04). TWO
+// face in the `inactive_cue`) and the `playhead_head` in the `cue_outline`
+// for the playhead's head (the same chip, mock k1, 2026-11-04). TWO
 // ROADS, ONE
 // DRAWING (CueTrianglePass below): the stamp writes the cells' words
 // straight into the target where direct_pixel_target takes it, else cairo

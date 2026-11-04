@@ -1237,12 +1237,12 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
 // (2026-10-09, ON SCREEN IS AS PAINTED): the columns the head's triangle
-// covers, centred on the stem's column (cue_bare_half_w_px and
-// cue_bare_reach_right_px, render.h, the painter's own cells: the head is
-// the bare triangle, 2026-11-04) — the rows less one left, the rows right:
-// 8 + 9 = 17 device px at 300 %, 5 + 6 = 11 at 200 %, 3 + 4 = 7 at 138 %
-// (the cells one device px, the rows scaled, 2026-10-26; no shadow since
-// 2026-11-02) — its rows the whole band from the window's top below — which
+// covers, centred on the stem's column (cue_triangle_half_w_px and
+// cue_triangle_reach_right_px, render.h, the painter's own cells: the head
+// wears the chip's outline since 2026-11-04) — the chip's rows less one
+// left, its rows right: 15 + 16 = 31 device px at 300 %, 10 + 11 = 21 at
+// 200 % (the cells one device px, the rows scaled, 2026-10-26; no shadow
+// since 2026-11-02) — its rows the whole band from the window's top below — which
 // also holds the one-W line of the scanner and the cursor, centered on the
 // column (col − t / 2 .. col − t / 2 + t − 1, waveform_line_px: one column
 // each side at 300 %), so a move repaints every column the head and the
@@ -1252,9 +1252,9 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // standing the column's margin in from the window's side since 2026-10-09.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = area.x + static_cast<int>(std::nearbyint(px_x));
-    const int x0 = std::max(area.x, col - cue_bare_half_w_px());
+    const int x0 = std::max(area.x, col - cue_triangle_half_w_px());
     const int x1 = std::min(area.x + area.w,
-                            col + cue_bare_reach_right_px());
+                            col + cue_triangle_reach_right_px());
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's line inside the waveform AND

@@ -37,7 +37,7 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // flag editor's field and selection band, the chrome's selected pair). So
-// the palette's program roles are exactly the THIRTEEN below (TWO ROLES MAY
+// the palette's program roles are exactly the TWELVE below (TWO ROLES MAY
 // SHARE A NUMBER — `cue_unselected` and `inactive_cue` are both Live's
 // 5D5D5D, as the ink and `center` share 191919, and `playhead_line` and
 // `scanner` FFFFFF: a role is what it paints, not its value):
@@ -88,14 +88,17 @@
 //                            it
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
-//                            paragraph)
+//                            paragraph) — AND THE LINE'S FADE TROUGH
+//                            (architect 2026-11-04, "1 good": four lossless
+//                            one-px samples of Live's line lie on the byte
+//                            line from FFFFFF toward 03C3D5)
 //   playhead_line    FFFFFF  THE PLAYHEAD'S LINE IN THE CANVAS AT ITS PEAK
 //                            (architect 2026-11-04, Live's, measured per
 //                            pixel): solid, one W, opaque, its color FADING
-//                            linearly in bytes to the trough below and back,
-//                            600 ms each way (render_playhead's THE FADE)
-//   playhead_line_low 6BA5AA THE PLAYHEAD LINE'S TROUGH, Live's, measured
-//                            (the fade's other end; playhead_fade_color_at)
+//                            linearly in bytes to the head's 03C3D5 and
+//                            back, 600 ms each way (render_playhead's THE
+//                            FADE) — the line's two ends the playhead's two
+//                            tones
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems
@@ -120,7 +123,6 @@ inline constexpr uint32_t kPaletteCueOutline    = 0x111111;
 inline constexpr uint32_t kPaletteInactiveCue = 0x5D5D5D;
 inline constexpr uint32_t kPalettePlayheadHead = 0x03C3D5;
 inline constexpr uint32_t kPalettePlayheadLine = 0xFFFFFF;
-inline constexpr uint32_t kPalettePlayheadLineLow = 0x6BA5AA;
 inline constexpr uint32_t kPaletteScanner  = 0xFFFFFF;
 
 // THE ROLE TABLE — THE ONE ENUMERATION of the program's roles, in
@@ -143,7 +145,6 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::inactive_cue,     kPaletteInactiveCue},
     {&GuiPalette::playhead_head,    kPalettePlayheadHead},
     {&GuiPalette::playhead_line,    kPalettePlayheadLine},
-    {&GuiPalette::playhead_line_low, kPalettePlayheadLineLow},
     {&GuiPalette::scanner,          kPaletteScanner},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);

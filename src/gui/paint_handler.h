@@ -1068,14 +1068,24 @@ private:
     // stash is the whole answer; the open flag editor's refusal recolors
     // nothing.
     void paint_marker_stems(GuiCanvasSink& sink, const GuiRect& area);
+    // THE STEM'S HEAD SEGMENT (2026-11-04, mock j1): the marker lane's last
+    // row and the ground line under it on the standing stems' columns, the
+    // chrome's half of the same stem, painted after the flag blit.
+    void paint_marker_stem_heads(cairo_t* cr);
+    // THE ONE COINCIDENCE DECISION both stem painters read: one rect per
+    // stash entry whose frame the resting playhead stands on, over rows
+    // [y0, y1) on its one-W columns gated to `area`'s (the rule at
+    // paint_marker_stems).
+    std::vector<GuiRect> standing_stem_rects(const GuiRect& area, int y0,
+                                             int y1) const;
     // The nudged pairs' rings (MarkerStemRun, render.h; the body owns the
     // form), painted before the playhead's line (build_canvas_list).
     void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
     // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W
     // opaque line in the fade's stored color (AppState::playhead_line_rgb,
-    // between the palette's `playhead_line` FFFFFF and `playhead_line_low`
-    // 6BA5AA, render_playhead's THE FADE, 2026-11-04) — before the
+    // between the palette's `playhead_line` FFFFFF and the head's
+    // `playhead_head` 03C3D5, render_playhead's THE FADE, 2026-11-04) — before the
     // coincidence stems, which stand over it.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER

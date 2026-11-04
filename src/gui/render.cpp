@@ -31,8 +31,9 @@
 // main.cpp and the stem blit in paint_handler.cpp reference the same value.
 
 // The playhead's reach — its cull here and main.cpp's damage box — is the
-// head's painted columns, cue_bare_half_w_px and cue_bare_reach_right_px
-// (render.h), the one extent both read.
+// head's painted columns, cue_triangle_half_w_px and
+// cue_triangle_reach_right_px (render.h, the chip's), the one extent both
+// read.
 
 // THE NUMERIC RUN — the derived base and its whole deviation chain — is
 // warp_tempo_run (warpmarkers.h), which both flag composers below and the
@@ -731,14 +732,14 @@ void render_playhead(GuiCanvasSink& sink,
     // below decides whether any pixel lands. This keeps the playhead's visual
     // center aligned with its true frame position rather than snapping it
     // inward at the rightmost samples. The bound is the head's painted reach
-    // (cue_bare_half_w_px / cue_bare_reach_right_px, render.h) — the
+    // (cue_triangle_half_w_px / cue_triangle_reach_right_px, render.h) — the
     // cull is stated in the same columns the damage box takes
     // (playhead_invalidate_rect, main.cpp).
     if (playhead_pixel_x <
-        -static_cast<double>(cue_bare_reach_right_px()))
+        -static_cast<double>(cue_triangle_reach_right_px()))
         return;
     if (playhead_pixel_x >
-        static_cast<double>(area.w - 1 + cue_bare_half_w_px()))
+        static_cast<double>(area.w - 1 + cue_triangle_half_w_px()))
         return;
 
     // THE COLUMN IS THE NEAREST LATTICE POINT WHILE THE PLATE'S BAR IN IT IS A
@@ -1257,7 +1258,7 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 // label's horizontal lengths), as offsets from the marker's column: the
 // first present segment's box opens the fill lead past the column (the
 // label's lead less the fill's pad, render.h's cue_fill_lead_px — the lead
-// the bare triangle's reach right, the chip's outline W and the gap, so the
+// the fill's reach right, the chip's outline W and the gap, so the
 // boxes follow the triangle's rows, architect 2026-10-26 ~12:40; the W
 // 2026-11-04), each box
 // is its text's whole-column width with the fill's pad either side (the text
@@ -2298,7 +2299,7 @@ WaveformPlateInks waveform_plate_inks() {
 }
 
 namespace {
-// THE PROGRAM'S THIRTEEN into the installed struct (palette_file.h's role
+// THE PROGRAM'S TWELVE into the installed struct (palette_file.h's role
 // table) — the install's first half (the chrome's members are the other's)
 // — with THE PANEL'S FACE THE FLAT GROUND (materials.h's kGround, the flat
 // look, 2026-11-01).
