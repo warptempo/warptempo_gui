@@ -20,13 +20,13 @@
 // the marker stems, the cursor's dots, the scanner and the zoom anchor's
 // stem, in that order (build_canvas_list, paint_handler.cpp, after
 // on_redraw's paint-order block). Each but the plate is a solid converted
-// color on whole device pixels (ON WAVEFORM → UNSCALED, waveform_line_px;
-// the divider's row scaled chrome, but a solid integral rect all the same),
+// color on whole device pixels (every line one W, waveform_line_px, the
+// unit of 2026-11-04; the divider's row chrome, a solid integral rect),
 // and the plate is the antialiased waveform (architect 2026-10-30,
 // render_waveform_columns' head), so the sink's vocabulary is three
 // records: a RECT, a DOTTED RUN (GuiCanvasDotRun,
-// render.h: a column or a row of one-px cells on a period's phase, counted
-// from an origin) and THE PLATE (the per-column quarter-row tips,
+// render.h: a column or a row of t x t cells on a period's phase, counted
+// from an origin, t the canvas's line) and THE PLATE (the per-column quarter-row tips,
 // GuiPlateColumns, with its two inks and the grow). EVERY RECORD BUT THE PLATE PAINTS
 // ITS OWN COLOR straight over whatever lies under it, and THE PLATE'S
 // FRINGE BLENDS SOURCE-OVER with the ground and the grid beneath it — the
@@ -72,10 +72,12 @@
 // whole-walk rule are one rule for both.
 //
 // WHAT EACH RECORD WRITES, the rules the GPU's draw keeps: a rect writes its
-// word on its cells; a dotted run writes the word where (c − origin) mod
-// period = phase, the cells the run names (the sink moves `origin` back by
-// whole periods to at or before the run's first cell, so the GPU's modulo
-// never meets a negative operand); the plate writes, per cell, the
+// word on its cells; a dotted run writes the word where ((c − origin) / cell)
+// mod period = phase, the pixels the run names, `cell` the record's
+// thickness (the line's t, 2026-11-04: r.w for a column run, r.h for a row
+// run; the sink moves `origin` back by whole periods of cells to at or
+// before the run's first coordinate, so the GPU's division and modulo never
+// meet a negative operand); the plate writes, per cell, the
 // premultiplied source of its two coverages — the ink's where the grown
 // shape covers, the outline's where the grown inner's border does —
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
@@ -91,10 +93,11 @@
 
 // ONE LIST RECORD. `r` the cells it may write, device px of the
 // full-screen surface. A RECT writes `word` on r; a
-// DOTTED RUN (a column, DotsColumn: r one column wide; or a row, DotsRow:
-// r one row tall) writes `word` on the cells whose coordinate c along the
-// run satisfies (c − origin) mod period = phase, origin at or before the
-// run's first cell; THE PLATE blends, per cell of r, the exact coverage of
+// DOTTED RUN (a column, DotsColumn: r t columns wide; or a row, DotsRow:
+// r t rows tall — t the line's width, the run's cell, 2026-11-04) writes
+// `word` on the pixels whose coordinate c along the run satisfies
+// ((c − origin) / t) mod period = phase, origin at or before the run's
+// first coordinate; THE PLATE blends, per cell of r, the exact coverage of
 // its columns' tips (the waveform's antialiasing, render_waveform_columns'
 // head) — `period` the index of r's first column in the
 // list's `columns`, `origin` the plate's row 0 (the canvas's first row) —

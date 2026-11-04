@@ -18,12 +18,13 @@
 // NO PROPORTIONAL FIT (architect 2026-10-09 ~10:25, "I'd like to see it at
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
-// UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM: the key's cell is a skin
+// UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM: the key's face is a skin
 // length, 69 device px at 300 % wide — Cool Edit's 23-W case, back as a
 // device-px constexpr since 2026-11-03 (the retrofit, reversing the square
 // key of 2026-11-02) — by the `key_height` tuning key's device px at 300 %
 // tall (33 its default; render.h's case block, icon_case_w_px /
-// icon_case_h_px), its face the cell inset one device px; its Breeze glyph
+// icon_case_h_px), the face the whole key, its neighbors one W of ground
+// away (key_gap_px, architect 2026-11-04, the unit); its Breeze glyph
 // is centered on its face by its own ink-box road, its size following the
 // key's height (paint_key_glyph), its legend under it (paint_key_legend).
 // THE SIZE ON THE GLASS is gui_scale's (the device's choice, never this
@@ -34,14 +35,14 @@
 // SINCE 2026-11-01 (materials.h; the well 2026-11-01 night, "THE MAIN PAGE
 // IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
 // bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (render.h's
-// logo lane block, 72 device px at 300 %), the key's cell, THE STRIP PAD
+// logo lane block, 72 device px at 300 %), the key, THE STRIP PAD
 // (39 at 300 %, render.h's strip_pad_px; the keys' legends in it), its keys
 // in plain runs on the ground, the runs 45 apart at 300 % (render.h's
 // program_run_gap_px; the hi-fi's lengths again since 2026-11-03, the
 // retrofit); then THE WELL, flat regions on
 // the ground (render.h's well paragraph and its lanes block, which derive
 // every length at the element) — a row of ground, THE TRIM BAR (its two
-// flat fills on view_bar_field_at300's 16 px and one hairline, a row of
+// flat fills on view_bar_field_at300's 15 px and one hairline, a row of
 // ground under them), THE RULER FLIPPED, a row
 // of ground, THE MARKER LANE of Cool Edit's cues (the flag editor's box on
 // its whole rows, "right now it's too small to click"; usability over
@@ -63,10 +64,12 @@
 // label's lengths beside it): THE TRIANGLE'S UNIT IS ONE DEVICE PX AT EVERY SCALE
 // (architect 2026-10-26: "I think we should make the triangle smaller …
 // Why not simply leave unscaled? That would preserve the stem/flag size
-// relation from CEP" — "on waveform → unscaled" carried to the cue's
-// triangle), so a triangle's whole cells — Cool Edit's aliased staircase,
-// paint_ce_cue_triangle — stand beside the one-device-px stem, the apex the
-// stem's column and every row centred on it with no remainder. ITS ROW
+// relation from CEP"; its own number since the stems became one W,
+// 2026-11-04, "untouched: the triangle's cell and the ruler's head"), so a
+// triangle's whole cells — Cool Edit's aliased staircase,
+// paint_ce_cue_triangle — stand beside the one-W stem, CENTERED ON IT, the
+// apex the stem's column (the line's center, fill_waveform_line's rule) and
+// every row centred on it with no remainder. ITS ROW
 // COUNT IS NO FIELD HERE: it is a skin length, 9 DEVICE PX AT 300 % through
 // skin_px, rounded at the element (architect 2026-10-26 ~13:40, "why not
 // just simple scale? tablet is only real surface"; render.h's
@@ -76,16 +79,17 @@
 // (the text round, architect 2026-11-03): the fill's pad, the segment gap
 // and the flag editor's outline (render.h's cue_fill_pad_px,
 // cue_segment_gap_px, cue_editor_outline_px), and THE LABEL'S LEAD from the
-// column, THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 13 DEVICE PX AT 300 %
+// column, THE TRIANGLE'S REACH RIGHT PLUS A GAP OF 12 DEVICE PX AT 300 %
 // (render.h's cue_label_lead_px and kCueLabelGapAt300, architect
 // 2026-10-26 ~12:40: the label follows the rows). The dots down the canvas
-// are device rows (2026-10-09 ~14:25, the dot fields below). THE WELL'S
+// are cells of one line, t x t (2026-11-04, the dot fields below). THE WELL'S
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
 struct ProgramSpec {
-    // (THE CASE HAS NO W TERM HERE: the cell is render.h's case block, its
-    // width the device-px constexpr kKeyCellWAt300 and its height the
-    // `key_height` tuning key's, 2026-11-03.)
+    // (THE CASE HAS NO W TERM HERE: the key is render.h's case block, its
+    // width the device-px constexpr kKeyFaceWAt300 and its height the
+    // `key_height` tuning key's, 2026-11-03, its gap kKeyGapAt300,
+    // 2026-11-04.)
     // COOL EDIT'S TOOLBAR HAS NO HOVER FACE (a capture with the
     // pointer on a button differs from one without only by Wine's tooltip):
     // the roster's and the render player's hot face is never lit, the hover
@@ -104,8 +108,8 @@ struct ProgramSpec {
     // 2026-10-23, "shouldn't row 8 take the same rule as top strip?" — yes):
     // the band's first face and row 8's clock field start on the well's
     // first column, the band's right run's and row 8's block's last face
-    // end on its last column, their cells one inset px past
-    // (2026-11-03) — the modals' controls row's seat
+    // end on its last column (the face the key, 2026-11-04) — the modals'
+    // controls row's seat
     // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
     // row 8 and the controls row), so neither strip nor the controls row
     // carries a field here.
@@ -113,7 +117,7 @@ struct ProgramSpec {
     // tablet's scale: kTimeFieldPadAt300 and the height derived from it and
     // the clock's cap, the marker lane's height too. THE ACTIVE TAB'S NAME
     // AND THE STATE LINE'S AIR past the clock field are paint_handler.cpp's,
-    // kTabNameAirAt300 and kStateAirAt300, 2026-11-03.)
+    // kTabNameAirAt300 and kStateAirAt300, 2026-11-03, 15 since 2026-11-04.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
     // THE WELL'S SIDE MARGIN (Cool Edit's x = 202..207 of
@@ -131,11 +135,12 @@ struct ProgramSpec {
     // canvas paragraph).
     int  grid_divisions;
     // THE TRIM BAR'S FIELD, IN DEVICE PX AT 300 % (architect 2026-11-01
-    // night, M5c / M5h, "good": the bar 145 .. 162; the two fills on it and
-    // one hairline, the ground line under them, mock z2, 2026-11-03): THE
-    // RULING IS THE 300 % NUMBER, read on the skin's road (render.h's
-    // view_bar_field_h_px through skin_px, floor 1: 16 at 300 %, 11 at
-    // 200 %; the bar's rows trim_bar_h_px). (THE RULER'S GROUND, TICKS AND
+    // night, M5c / M5h, "good"; the two fills on it and one hairline, the
+    // ground line under them, mock z2, 2026-11-03; 15, the nearest whole W,
+    // since 2026-11-04, the unit, so the fill is 18, 6 W, and the bar 147 ..
+    // 167 at 300 %): THE RULING IS THE 300 % NUMBER, read on the skin's road
+    // (render.h's view_bar_field_h_px through skin_px, floor 1: 15 at 300 %,
+    // 10 at 200 %; the bar's rows trim_bar_h_px). (THE RULER'S GROUND, TICKS AND
     // BASELINE and THE MARKER LANE'S W ROWS, QUANTA AND FILL, the hi-fi
     // well's fields 2026-10-09 to 2026-11-02, and THE STEREO DIVIDER'S FACE
     // left with the flat well: render.h's well lanes block derives them at
@@ -144,30 +149,32 @@ struct ProgramSpec {
     // (THE CUE'S HORIZONTAL LENGTHS — the selected fill's pad and the
     // segment gap, in label quanta until 2026-11-03 — are render.h's skin
     // lengths since, cue_fill_pad_px and cue_segment_gap_px.)
-    // THE CANVAS DOTS, ONE DEVICE PX SQUARE, COUNTED IN
-    // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
-    // "on waveform → unscaled": one device px at every gui_scale; render.h's
-    // waveform_line_px and dotted_waveform_line_run, the stereo divider's
-    // row crossed with no re-phasing, 2026-11-02). ONE ON, ONE OFF
-    // (architect 2026-11-02, mock t1): THE PLAYHEAD'S dots every
-    // `dot_period` 2 rows on `playhead_dot_phase` 1, the odd rows; A CUE'S
-    // TWO PHASES (Cool Edit's cue and range dots) each every
-    // `cue_dot_period` 4 rows — the range's on `range_dot_phase` 0, the
-    // FIRST FROM THE TOP, the cue's on `cue_dot_phase` 2 — so a point cue's
-    // stem stands on the even rows, its two phases alternating; and a
-    // playhead standing on a stem fills the odd rows between them, so the
-    // two close into ONE SOLID LINE, the playhead's line color on the odd
-    // rows and the stem's on the even (the reason for the rule: mock t1s) —
-    // and A SELECTED STEM PAINTS THAT LINE ITSELF, the `playhead_line` on
-    // the playhead's own rows (`dot_period` / `playhead_dot_phase`),
-    // playhead or not (architect 2026-11-02; render.cpp's resolve_flag_face
-    // owns which color each row set wears). The phase-reset
-    // lead-in ring's right side takes the same rows, and its top and bottom
-    // runs — and the `h` view's nudged pairs' — the same two phases in
-    // device columns counted from the reset's (the left stem's) own column,
-    // one dot every two columns (paint_phase_reset_overlay_ring,
-    // paint_marker_stem_runs). Every cue row is the playhead's period off
-    // the playhead's phase, so the two never share a row on one column.
+    // THE CANVAS DOTS, ONE LINE PX SQUARE — t x t device px, t the canvas's
+    // line, one W (architect 2026-11-04, the unit; one device px from
+    // 2026-10-09 ~14:25 until then) — COUNTED IN CELLS OF t ROWS from the
+    // canvas's first row (render.h's waveform_line_px and
+    // dotted_waveform_line_run, the stereo divider's row crossed with no
+    // re-phasing, 2026-11-02); the periods and phases below are in cells,
+    // unchanged by the unit. ONE ON, ONE OFF (architect 2026-11-02, mock
+    // t1): THE PLAYHEAD'S dots every `dot_period` 2 cells on
+    // `playhead_dot_phase` 1, the odd cells; A CUE'S TWO PHASES (Cool Edit's
+    // cue and range dots) each every `cue_dot_period` 4 cells — the range's
+    // on `range_dot_phase` 0, the FIRST FROM THE TOP, the cue's on
+    // `cue_dot_phase` 2 — so a point cue's stem stands on the even cells, its
+    // two phases alternating; and a playhead standing on a stem fills the odd
+    // cells between them, so the two close into ONE SOLID LINE, the
+    // playhead's line color on the odd cells and the stem's on the even (the
+    // reason for the rule: mock t1s) — and A SELECTED STEM PAINTS THAT LINE
+    // ITSELF, the `playhead_line` on the playhead's own cells (`dot_period` /
+    // `playhead_dot_phase`), playhead or not (architect 2026-11-02;
+    // render.cpp's resolve_flag_face owns which color each cell set wears).
+    // The phase-reset lead-in ring's right side takes the same cells, and its
+    // top and bottom runs — and the `h` view's nudged pairs' — the same two
+    // phases in cells of t columns counted from the reset's (the left
+    // stem's) line's first column, one dot every two cells
+    // (paint_phase_reset_overlay_ring, paint_marker_stem_runs). Every cue
+    // cell is the playhead's period off the playhead's phase, so the two
+    // never share a cell on one column.
     int  dot_period;
     int  playhead_dot_phase;
     int  cue_dot_period;
@@ -179,7 +186,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_hot_face      = false,
     .column_margin_px      = 6,
     .grid_divisions        = 4,
-    .view_bar_field_at300  = 16,
+    .view_bar_field_at300  = 15,
     .dot_period            = 2,
     .playhead_dot_phase    = 1,
     .cue_dot_period        = 4,

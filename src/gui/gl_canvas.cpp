@@ -85,9 +85,12 @@ constexpr const char* kCanvasFragmentShader =
 // (u_height the surface's height, H) — every comparison and the modulo in highp
 // int. A pixel outside the instance's rect is discarded (the quad's float edges
 // never decide coverage); a RECT writes its word; a DOTTED RUN (kind 1 a
-// column, 2 a row) writes it where (c − origin) % period = phase, c the row or
-// the column, never negative (the sink moved the origin back to the run's
-// first cell or before; GLSL ES 3.00 leaves % on a negative operand undefined);
+// column, 2 a row) writes it where ((c − origin) / cell) % period = phase, c
+// the row or the column, cell the record's thickness (the line's t, one W
+// since 2026-11-04: v_rect.z for a column run, v_rect.w for a row run), the
+// offset never negative so the division is the floor (the sink moved the
+// origin back by whole periods of cells to the run's first coordinate or
+// before; GLSL ES 3.00 leaves % on a negative operand undefined);
 // THE PLATE (kind 3) is THE WAVEFORM'S ANTIALIASING (architect 2026-10-30;
 // the rule at render_waveform_columns' head, render.h; the grow's key
 // 2026-10-31, the 4x grid ruled for good that afternoon at render.h's
@@ -176,8 +179,8 @@ constexpr const char* kCanvasFragmentShader =
 //     r1) | l2 | r2, the 2026-10-30 shader's dilate. mo the outer's over the
 //     pixel's four subcolumns (folded into the count at once, never kept),
 //     mi the inner's over twelve (the erosion reads four either side).
-//   * THE EROSION (the outline's distance kWaveformSubcells ·
-//     waveform_line_px() = 4 subcells, erode): the inner's interior at a
+//   * THE EROSION (the outline's distance kWaveformSubcells · 1 = 4
+//     subcells, one device px, erode): the inner's interior at a
 //     subcell holds iff the nine mi within four subcolumns, each shrunk
 //     vertically by e(|dx|) = floor(sqrt(16 − dx²)) = 4, 3, 3, 2, 0 rows at
 //     |dx| = 0..4, are all set — the same Horner scheme by the level with ∩
@@ -432,7 +435,8 @@ constexpr const char* kListFragmentShader =
     "        py < v_rect.y || py >= v_rect.y + v_rect.w) discard;\n"
     "    int kind = v_param.x;\n"
     "    if (kind == 1 || kind == 2) {\n"
-    "        int c = ((kind == 1) ? py : px) - v_param.z;\n"
+    "        int cell = (kind == 1) ? v_rect.z : v_rect.w;\n"
+    "        int c = (((kind == 1) ? py : px) - v_param.z) / cell;\n"
     "        if (c % v_param.y != v_param.w) discard;\n"
     "    } else if (kind == 3) {\n"
     "        int W = v_rect.z;\n"
@@ -584,8 +588,13 @@ std::string list_fragment_source(int grow) {
 // THE SHADER'S LITERALS ARE render.h's CONSTANTS: the shader is a string, so
 // this is the binding. kWaveformSubcells is the 4 of `4 * y`, the eighths'
 // 3:5 / 1:7 weights (two subcells to the half), the pixel's nibble and the
-// 16 of the coverage; the erosion's disc is kWaveformSubcells ·
-// waveform_line_px() = erode's 4 and the 4, 3, 3, 2, 0 rows its levels
+// 16 of the coverage; the erosion's disc is kWaveformSubcells · 1 — THE
+// LIT OUTLINE ONE DEVICE PX, THE ONE CANVAS LINE NOT YET AT ONE W (the unit,
+// architect 2026-11-04, deferred to its own measured arc: the one 32-bit
+// window below holds the grow's 2 px and one px of erosion and no more — a
+// 3-px erosion needs 12 subrows each side, which no grow fits, so a W wants
+// a two-word window; render.h's THE LIT OUTLINE) — = erode's 4 and the 4,
+// 3, 3, 2, 0 rows its levels
 // select at |dx| = 0..4 (disc_rows: the largest g with g² + dx² <= r²);
 // the grow's disc is GROW's, selected the same way, its top
 // kWaveformGrowMaxQuarters = 8 what the one 32-bit window and the pixel's
@@ -597,7 +606,7 @@ constexpr int disc_rows(int r, int dx) {
     while ((g + 1) * (g + 1) + dx * dx <= r * r) ++g;
     return g;
 }
-constexpr int kWaveformErodeSubcells = kWaveformSubcells * waveform_line_px();
+constexpr int kWaveformErodeSubcells = kWaveformSubcells * 1;
 constexpr int kPlatePixelBit = 14;
 static_assert(kWaveformSubcells == 4,
               "kListFragmentShader spells the 4x grid as literals");

@@ -47,24 +47,29 @@ void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
     }
 }
 
-// THE ORIGIN MOVED BACK BY WHOLE PERIODS to at or before the run's first
-// cell: the same cells (the modulo is periodic in the origin), and every
-// offset the GPU computes is non-negative — GLSL ES 3.00 leaves % on a
-// negative operand undefined.
+// THE RECORD IS THE RUN'S WHOLE t-THICK EXTENT (render.h's GuiCanvasDotRun,
+// 2026-11-04): its thickness is the cell the GPU divides by, so it is never
+// cut here — the list's scissor cuts a line's columns past the area's edge.
+// THE ORIGIN MOVED BACK BY WHOLE PERIODS OF CELLS (period · t coordinates)
+// to at or before the run's first coordinate: the same cells (the cell
+// index's modulo is periodic in the origin by period · t), and every offset
+// the GPU computes is non-negative, so its integer division is the floor —
+// GLSL ES 3.00 leaves % on a negative operand undefined.
 void GuiCanvasSink::dots(std::span<const GuiCanvasDotRun> runs,
                          GuiColor color) {
     const uint32_t word = argb32_opaque_word(display_color(color));
     for (const GuiCanvasDotRun& run : runs) {
         if (run.len <= 0 || run.period <= 0) continue;
         assert(run.phase >= 0 && run.phase < run.period);
+        assert(run.t > 0);
         const int start = run.vertical ? run.y : run.x;
         GuiCanvasPrimitive p;
         p.kind   = run.vertical ? GuiCanvasKind::DotsColumn
                                 : GuiCanvasKind::DotsRow;
-        p.r      = run.vertical ? GuiRect{run.x, run.y, 1, run.len}
-                                : GuiRect{run.x, run.y, run.len, 1};
+        p.r      = run.vertical ? GuiRect{run.x, run.y, run.t, run.len}
+                                : GuiRect{run.x, run.y, run.len, run.t};
         p.period = run.period;
-        p.origin = start - floor_mod(start - run.origin, run.period);
+        p.origin = start - floor_mod(start - run.origin, run.period * run.t);
         p.phase  = run.phase;
         p.word   = word;
         list_.prims.push_back(p);

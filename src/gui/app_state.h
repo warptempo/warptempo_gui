@@ -4640,10 +4640,9 @@ struct AppState {
     // compressor) — is two flat bars per column, in both audio views: the
     // levelled, expanded OUTER and the compressed, expanded INNER over it,
     // both in the plate's ink, the inner outlined in an erosion at distance
-    // waveform_line_px() of its own (one device px at every scale since
-    // 2026-10-09, "on waveform → unscaled"; the GPU shader's constant,
-    // antialiased with its shape since 2026-10-30, kListFragmentShader,
-    // gl_canvas.cpp) (architect
+    // one device px of its own (the GPU shader's constant, antialiased with
+    // its shape since 2026-10-30, kListFragmentShader, gl_canvas.cpp; the
+    // one canvas line not yet at one W, render.h's THE LIT OUTLINE) (architect
     // 2026-09-25/27, the inks the palette's `waveform_ink` and
     // `waveform_outline` roles — the rule is at render_waveform_columns'
     // declaration); DARK,
@@ -17691,20 +17690,23 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE TWO HISTORY TOGGLES print SESSION (the walk lamp's lit state) and
 // CUMUL (Toggle Cumulative cut as ADD SEL is). ZOOM IN AND ZOOM OUT READ IN
 // AND OUT (architect 2026-10-27: "Zoom In / Zoom Out, or In / Out if too
-// long"): ZOOM OUT runs about 75 px at 300 %, past its key, and the pair is
+// long"): ZOOM OUT runs about 81 px at 300 % at the 15-px legend, past its key, and the pair is
 // one shape, so both take the short form. RESTRICT READS RESTR (architect
-// 2026-10-29, "defer to your measurement"): RESTRICT runs 70.0 px at 300 %
-// and would crowd FOLLOW's legend beside it; RESTR runs 47.5.
-// THE FIT, AT THE LEGEND FACE'S 14 px EM (kGuiFaceSizes, gui_font.h) AGAINST
-// THE 67-px FACE (the 69-px cell inset one px each side; materials.h's
-// key_face_rect), measured 2026-11-03: the widest words MAGNIFY 63.8,
-// DISCARD 63.0, SESSION 62.3, HISTORY 61.7 and FLATTEN 61.2 px at 300 %
-// (41.0 / 40.5 / 40.0 / 39.7 / 39.3 at 200 % against the 44-px face, 31.9 /
-// 31.5 / 31.1 / 30.9 / 30.6 at 150 % against the 32-px face), so every word
-// stands inside its own face's columns; the tightest neighbors, MAGNIFY
-// beside FOLLOW (59.1), keep about 7.5 px between their inks at the 69-px
-// pitch. A smaller key_height leaves the widths alone (the legend reads the
-// cell's width, never its height).
+// 2026-10-29, "defer to your measurement"): RESTRICT runs 75.0 px at 300 %
+// and would crowd FOLLOW's legend beside it; RESTR runs 50.8 (the 15-px legend, 2026-11-04).
+// THE FIT, AT THE LEGEND FACE'S 15 px EM (kGuiFaceSizes, gui_font.h; 15
+// since the unit, 2026-11-04) AGAINST THE 69-px FACE (the key itself,
+// materials.h's THE FACE AND ITS GAP), measured 2026-11-04: the widest words
+// MAGNIFY 68.3, DISCARD 67.5, SESSION 66.7, HISTORY 66.1 and FLATTEN 65.5 px
+// at 300 % (45.6 / 45.0 / 44.5 / 44.1 / 43.7 at 200 % against the 46-px
+// face), so every word stands inside its own face's columns at both; the
+// tightest neighbors, MAGNIFY beside FOLLOW (63.3), keep about 6 px between
+// their inks at the 72-px pitch (4 at 200 %'s 48). AT 150 % (36.5 / 36.0 /
+// 35.6 / 35.3 / 35.0 against the 34-px face) the five overhang their faces
+// by about a px each side onto the gap, MAGNIFY and FOLLOW under a px apart
+// at the 36-px pitch — a scale the tablet does not run. A smaller key_height
+// leaves the widths alone (the legend reads the face's width, never its
+// height).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";

@@ -40,11 +40,11 @@
 // clock and other related fields to make the spacing even"; Live's numeric
 // fields, the transport's position and tempo boxes): A FLAT kKeyFace 363636
 // BOX, NO RING. Its digits are the caller's, the text tone kTextInk, no
-// shadow — every time field in the program face's 22 px, row 8's clock
+// shadow — every time field in the program face's 21 px, row 8's clock
 // (architect 2026-10-26 ~11:30), the render player's two (~12:10, "yes" to
 // symmetry; gui_font.h's table) and the score viewer's — centred on both
-// axes (render.h's time_field_pad_px / time_field_h_px own the 13-px pads
-// and the 41-px height derived from them, 2026-11-03).
+// axes (render.h's time_field_pad_px / time_field_h_px own the 12-px pads
+// and the 38-px height derived from them, 2026-11-04, the unit).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 
 // (THE TAB STRIP — paint_ce_tab_strip, ce_tab_strip_layout, kCeTabCount and
@@ -57,10 +57,10 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // PAINTER: a staircase of `rows` rows of whole cells of one unit u
 // (cue_triangle_unit_px, render.h) from `top` — 2·rows − 1 cells on the top
 // row down to one, the apex row one cell and each row above it two cells
-// wider (15, 13, … 1 at 300 %'s eight rows; 9, 7, 5, 3, 1 at 200 %'s five,
-// Cool Edit's own flag) — CENTRED ON THE STEM'S COLUMN `col` (architect
-// 2026-10-09 ~14:35: "at every scale, the marker triangle must be fully
-// centered on the stem"; the stem one device px there, render.h's
+// wider (17, 15, … 1 at 300 %'s nine rows; 11, 9, … 1 at 200 %'s six) —
+// CENTRED ON THE STEM'S COLUMN `col` (architect 2026-10-09 ~14:35: "at every
+// scale, the marker triangle must be fully centered on the stem"; the stem
+// one W centered on that column since 2026-11-04, render.h's
 // waveform_line_px), in `color` alone: NO SHADOW (architect 2026-11-02, the
 // well's part of the flat look, "no shadow anywhere").
 //
@@ -70,9 +70,11 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // make colors like the red from Cool Edit less problematic. I think that is
 // a large reason why no colors really look right on the GUI." — then "Why
 // not simply leave unscaled? That would preserve the stem/flag size
-// relation from CEP"): the staircase stands in whole device cells beside
-// the one-device-px stem, the playhead's head with them (render.h's
-// cue_triangle_unit_px, which names every reader). THE ROW COUNT IS SCALED
+// relation from CEP"; its own number since the stem became one W,
+// 2026-11-04: "untouched: the triangle's cell and the ruler's head"): the
+// staircase stands in whole device cells beside the stem, centered on it,
+// the playhead's head with them (render.h's cue_triangle_unit_px, which
+// names every reader). THE ROW COUNT IS SCALED
 // (architect 2026-10-26 ~13:40, on the row count as a per-device number:
 // "why density? why not just simple scale? tablet is only real surface.
 // later tablets may have higher dpi, but not lower" — and "yes" to the

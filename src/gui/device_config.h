@@ -50,12 +50,12 @@
 //                            OK and at the settings page's value list's tap
 //                            (GuiInputHandler::apply_waveform_grow, a
 //                            repaint: the tips do not move). PERMANENT and
-//                            REQUIRED, THE CANVAS'S ONE SCALING CONCESSION:
-//                            on the waveform nothing is scaled — its lines
-//                            and dots stay one device px at every scale
-//                            while the rest of the GUI scales with gui_scale
-//                            as one tied set of lengths — so the waveform
-//                            needs one tuning key of its own, and the grow
+//                            REQUIRED: the plate is the one thing on the
+//                            canvas not scaled with gui_scale — its columns
+//                            and quarter-row tips are device px, while its
+//                            lines and dots are one W since 2026-11-04 (the
+//                            unit, render.h's waveform_line_px) — so the
+//                            waveform needs one tuning key of its own, and the grow
 //                            is the appropriate one, kept for good because a
 //                            replacement panel may not come at this density
 //                            (the grow is the device-px number whose right
@@ -118,12 +118,12 @@
 //   key_height=<px>          THE KEY'S HEIGHT (architect 2026-10-29, a tuning
 //                            key, "around 33"; the square key of 2026-11-02
 //                            reversed 2026-11-03, the retrofit: the key's
-//                            cell 69 device px wide at 300 %, a constexpr,
+//                            face 69 device px wide at 300 %, a constexpr,
 //                            and this key its height, default 33): the
-//                            program's key cell's height in DEVICE PX AT
+//                            program's key's height in DEVICE PX AT
 //                            300 % (skin_px's axis, the logo lane's unit;
 //                            render.h's icon_case_h_px), the key glyph's
-//                            ink following it (16 * key_height / 33,
+//                            ink following it (15 * key_height / 33,
 //                            paint_key_glyph), an integer in [21, 99] in
 //                            canonical spelling (parse_key_height below),
 //                            live at the settings editor's OK, the window
@@ -176,9 +176,10 @@
 //                            [1, 4] with a Settings row, required for part
 //                            of 2026-11-01, RETIRED that night (architect
 //                            2026-11-01 night: "Ableton uses grow instead
-//                            of column pixels"): every column and stem of
-//                            the waveform is one device px at every scale,
-//                            the grow (`waveform_grow`) its one length of
+//                            of column pixels"): every column of the
+//                            waveform is one device px at every scale (its
+//                            stems one W since 2026-11-04), the grow
+//                            (`waveform_grow`) its one length of
 //                            its own; an old line is the ordinary
 //                            unknown-key hard fail, the sync script's setup
 //                            removing it on the tablet)
@@ -560,9 +561,9 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 2026-08-26 before that). It is a vocabulary, not a fit: the lanes above
 // the waveform — the program's band, its logo lane over the strip pads and
 // the case, the well's trim bar, ruler and marker
-// lane and its rows of ground, one device px each — and below it — the
+// lane and its rows of ground, one W each — and below it — the
 // well's foot and row 8 — scale with gui_scale (main.cpp's stack record,
-// re-derived 2026-11-03 with the retrofit); whether they pass the
+// re-derived 2026-11-04 with the unit); whether they pass the
 // tablet's 1440 rows short of the ceiling turns on the key height, and where
 // they do the waveform is the zero height waveform_area's floor answers (the
 // arithmetic, by key height, and the guard at waveform_area, main.cpp).
@@ -570,7 +571,7 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: past a width or a
 // scale the icon row — the
 // toolbar band, its twenty-seven standing members in three left runs and one
-// right run of the program's 69-px key cell (eighteen in the view, its history
+// right run of the program's 69-px key (eighteen in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
 // runs the simple layout's, 2026-10-22) — no longer fits, and its
 // right-anchored run covers the runs to its left (the overflow rule at
@@ -803,8 +804,8 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // the FLAGS sheet's key box, 48 wide and 60 tall (tmp/kbmock's generator);
 // the range runs from half the default width to well past the height, wide
 // enough for him to try a key wider than tall, and its top keeps the widest
-// row (thirteen units) inside the tablet's 2304 (13 x (160 + 16) - 16 =
-// 2272). The settings page opens the LINE EDITOR on each, not a value list
+// row (thirteen units) inside the tablet's 2304 (13 x (160 + 3) - 3 =
+// 2116, the gap the program keys' one W since 2026-11-04). The settings page opens the LINE EDITOR on each, not a value list
 // (137 values is no short domain, kSettingsValueListKeys' rule). TWO TUNING
 // KEYS: when he rules the numbers, the keys, these functions and their
 // Settings rows go, and the values become constexprs behind

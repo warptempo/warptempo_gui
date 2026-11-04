@@ -17,7 +17,7 @@
 // (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
 // content on all four sides (notification_pad_px below; P18, architect
 // 2026-10-24), ON THE CARD FACE — the tooltip's look, a flat
-// `card_ground` box under `card_text` inside a one-device-px `card_frame`
+// `card_ground` box under `card_text` inside a one-W `card_frame`
 // border (architect 2026-10-04, the sides 2026-10-06; flat since 2026-11-02,
 // M11 with M14 "d"; render.h's palette block, THE CARD FACE): the
 // tooltip's own box (paint_popup_chrome), square, with no drop shadow
@@ -744,12 +744,12 @@ inline constexpr int kNotificationMaxLines = 3;
 
 // THE CARD'S ONE PAD (architect 2026-10-24, "P18" off the 16 / 17 / 18
 // series): 18 px OF PLAIN FIELD AT 300 % between the
-// card's one-device-px ring (hairline_px) and its content on ALL FOUR SIDES
+// card's one-W ring (hairline_px) and its content on ALL FOUR SIDES
 // — ring -> glyph box at the left, the text's last pen -> ring at the right,
 // ring -> the first line's cap top above, the last line -> ring below. AN
 // AREA, so it scales through skin_px, rounded at the element and floored at
-// one px (6 at 100 %, 9 at 150 %, 12 at 200 %); the ring is a line and stays
-// one device px at every scale. (The Windows-era pad — the 28-W card's
+// one px (6 at 100 %, 9 at 150 %, 12 at 200 %); the ring is a line, one W,
+// rounded at the element (the line rule, render.h's hairline_px, 2026-11-04). (The Windows-era pad — the 28-W card's
 // vertical margin round the small toolbar case's 22-W box, 3 W, 2026-08-30
 // to 2026-10-23 — and the box's 16-W glyph and 3-W leads are git history.)
 inline constexpr double kNotificationPadAt300 = 18.0;
@@ -780,7 +780,7 @@ inline int notification_glyph_seat_w_px(double ink_px) {
 }
 
 // THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN is the logo lane's brand
-// gap, kLogoBrandGapAt300 (render.h: 10 px at 300 %, skin_px; the retired
+// gap, kLogoBrandGapAt300 (render.h: 9 px at 300 %, skin_px; the retired
 // caption's title gap, which it was until the caption went the same day) —
 // the same seat, a glyph then words, so one number (architect
 // 2026-10-24).
@@ -794,8 +794,9 @@ int notification_cap_px();
 // (architect 2026-10-24): border + pad + THE BODY FACE'S CAP + pad + border
 // — the text's CAP BAND, not its ascender, between the two pads (the clock
 // field's and the mock's rule; the modal box's ascender rule is not the
-// card's), so the first line's cap top stands at border + pad; 53 rows at
-// 300 % (architect 2026-11-02, M11: the border where the ring stood). AT THE FIRST
+// card's), so the first line's cap top stands at border + pad; 56 rows at
+// 300 % (architect 2026-11-02, M11: the border where the ring stood; the
+// border one W and the cap 14 since the unit, 2026-11-04). AT THE FIRST
 // LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30: the text
 // grows downward under the glyph, nothing reflows beside it). A card of
 // `lines` lines is this plus (lines - 1) line spacings, which only the
@@ -866,8 +867,8 @@ GuiRect notification_stack_bound(const AppState& a);
 // 38 + 1, the card's own gap, kNotificationGapPx); on the tablet at 300 % it
 // is 12 (1107 over 84 + 3), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are
-// recorded at main.cpp's vertical-stack owner). The card shrank since (53
-// px at 300 % with P18, 2026-10-24), so every count is higher: every window
+// recorded at main.cpp's vertical-stack owner). The card shrank since (56
+// px at 300 % with P18 and the unit, 2026-11-04), so every count is higher: every window
 // this product runs in holds more cards than the architect will ever stack.
 int notification_capacity(const AppState& a);
 

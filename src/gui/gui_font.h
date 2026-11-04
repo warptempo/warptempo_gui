@@ -17,28 +17,34 @@
 // kGuiFaceSizes below, each use's EM IN DEVICE PX AT THE TABLET'S 300 %,
 // SCALED WITH gui_scale and rounded at the element (the amendment the same
 // night: size_px = nearbyint(authored · gui_scale / 300), the scaled_px
-// road). THE TEXT SIZES ARE THE HI-FI'S (architect 2026-11-03, the
-// retrofit, reversing that morning's text round of 24): PROGRAM 22 Regular
+// road). THE SIZES ARE WHOLE W (architect 2026-11-04, the unit: every
+// authored length a multiple of 3 device px at 300 %, the faces' ems
+// included — the hi-fi's 22 / 16 / 14 of 2026-11-03's retrofit rounded to the
+// nearest whole W; pt was considered and not taken, gui_scale being the
+// density knob). THE TEXT SIZES (architect 2026-11-03, the retrofit,
+// reversing that morning's text round of 24; the unit's W since
+// 2026-11-04): PROGRAM 21 Regular
 // (architect 2026-10-26 ~13:05, the size's tuning key read off the tablet's
 // config and settled): ROW 8'S CLOCK AND ITS STATE LINE (the tab's name, the
 // GitHub word, the walk line, the progress line), THE RENDER PLAYER'S TWO
 // TIME FIELDS (architect 2026-10-26 ~12:10, "yes" to symmetry with row 8's
 // clock) and THE TOOLTIP'S NAME LINE ("the tooltips font size should be the
-// same as the flags", 2026-10-23); LABEL 22 BOLD (architect 2026-11-01
+// same as the flags", 2026-10-23); LABEL 21 BOLD (architect 2026-11-01
 // night, M5i: "THE MARKER LABEL IS BOLD"; Liberation Sans Bold's vertical
 // metrics equal Regular's, only the run widens): THE CUES' LABELS AND THE
 // LANE'S EDITORS (the flag editor, the iteration bound editor — the
 // editor's text stands at the label's seat), the history lane's labels with
 // them — the size the Program row's, a row of its own because its file is
-// the other one; BODY 22 Regular, THE REST (the lists, the cards, the
+// the other one; BODY 21 Regular, THE REST (the lists, the cards, the
 // prompts, the dialog editors, the logo lane's battery + clock legend) —
 // THE ROWS COINCIDE IN NUMBER AND STAY THEIR OWN ROWS: the roster is the
 // distinction (the Label row tunes with the cues, the Body row with the
 // rest); TITLE 24 Bold (the logo lane's brand "Warptempo" alone; architect
-// 2026-10-24, "the caption size 24", off the logo mocks); RULER 16 BOLD (the
-// ruler's digits alone; Bold since 2026-11-01 night, M5c; 16 the retrofit's,
-// 2026-11-03, on mock g1); LEGEND 14 Regular (the keys' printed legends
-// alone, uppercase, under every key; back 2026-11-03 with the legends,
+// 2026-10-24, "the caption size 24", off the logo mocks); RULER 15 BOLD (the
+// ruler's digits alone; Bold since 2026-11-01 night, M5c; the retrofit's 16
+// of mock g1, 2026-11-03, the nearest whole W since 2026-11-04); LEGEND 15
+// Regular (the keys' printed legends alone, uppercase, under every key;
+// back 2026-11-03 with the legends at 14, 15 since 2026-11-04,
 // paint_handler.cpp's key_legend_seat); KEYS 24 Regular (the on-screen
 // keyboard's caps alone — the letters, the symbols page's characters and
 // the word caps, "a separate face"; architect 2026-10-24, "C24" off his type
@@ -115,16 +121,16 @@ struct GuiFaceSize {
     double      px_at_300 = 0.0;
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
-    {0, 22.0},   // Body (the Program row's number too, a row of its own)
+    {0, 21.0},   // Body (the Program row's number too, a row of its own)
     {1, 24.0},   // Bold: the brand
-    {1, 16.0},   // Small: the ruler's digits, Bold
-    {0, 22.0},   // Program: row 8's clock and state line, the player's
+    {1, 15.0},   // Small: the ruler's digits, Bold
+    {0, 21.0},   // Program: row 8's clock and state line, the player's
                  // clocks, the tooltip's name line
-    {0, 14.0},   // Legend: the keys' legends
+    {0, 15.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
     {0, 18.0},   // Hint: the tooltip's hint line
-    {1, 22.0},   // Label: the cues' labels and the lane's editors, Bold
+    {1, 21.0},   // Label: the cues' labels and the lane's editors, Bold
 };
 
 // THE USE'S TABLE SIZE, its em in device px at 300 % — the one read of the
@@ -196,15 +202,15 @@ double gui_font_line_px(const GuiFont& f);
 double gui_font_cap_px(const GuiFont& f);
 // THE ASCENDER LINE in device px above the baseline at the font's scale,
 // unrounded: the em times the use's file's own "l" ink per em (Liberation
-// Sans 1484 / 2048 units, 15.9 px at 300 %'s 22) — the top of the
+// Sans 1484 / 2048 units, 15.2 px at 300 %'s 21) — the top of the
 // lowercase ink, which the modal box's text seats on the list rows' text
-// seat, 18 px under the box's top row at 300 % (modal_box.h's
+// seat, 18 px under the pane's top row at 300 % (modal_box.h's
 // modal_box_text_baseline0, 2026-10-23 / M8b 2026-11-01: the air the eye
-// sees is the ink's, not the line box's).
+// sees is the ink's, not the line box's; from the pane since 2026-11-04).
 double gui_font_ascender_ink_px(const GuiFont& f);
 // THE X-HEIGHT in device px at the font's scale, unrounded: the em times the
-// use's file's own "x" ink per em (Liberation Sans 1082 / 2048 units, 11.6
-// px at 300 %'s 22) — the band the eye centers in the marker lane (render.h's
+// use's file's own "x" ink per em (Liberation Sans 1082 / 2048 units, 11.1
+// px at 300 %'s 21) — the band the eye centers in the marker lane (render.h's
 // cue band, architect 2026-11-01 night, M5h).
 double gui_font_x_ink_px(const GuiFont& f);
 
@@ -225,12 +231,12 @@ double gui_font_x_ink_px(const GuiFont& f);
 // 19 + 3), and
 // the design's unhinted bounds rounded, the first measure, miss the
 // hinter's own rows (Bold 12 at 200 %: 8.38 rounds to 8, the paint 9). At
-// the defaults (2026-11-03, the retrofit's sizes): "0123456789:." in the
-// ruler's Bold 16 at 300 % 12 + 0 (the ruler, render.h's ruler block), Bold
-// 11 at 200 % 8 + 0; the brand "Warptempo" in Bold 24 17 + 5, Bold 16 12 +
-// 3; the legend's alphabet (the pipe apart) in Regular 22 15 + 0, Regular 15
-// 10 + 0, and the pipe alone 18 + 3, 13 + 2 (the logo lane, render.h's logo
-// lane block). A reader takes the integers as they are. Measured once per file,
+// the defaults (2026-11-04, the unit's sizes): "0123456789:." in the ruler's
+// Bold 15 at 300 % 10 + 0 (the ruler, render.h's ruler block), Bold 10 at
+// 200 % 8 + 0; the brand "Warptempo" in Bold 24 17 + 5, Bold 16 12 + 3; the
+// legend's alphabet (the pipe apart) in Regular 21 14 + 0, Regular 14 10 +
+// 0, and the pipe alone 17 + 3, 13 + 2 (the logo lane, render.h's logo lane
+// block). A reader takes the integers as they are. Measured once per file,
 // em and set and kept (a set is a constant of its reader's), GUI thread
 // only; a character the face lacks paints .notdef, so a set names only
 // characters the face carries; a set with no ink is 0 + 0.
@@ -255,9 +261,9 @@ GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set);
 // labels are the Label face, the Bold file, since 2026-11-01 night, which is
 // measured alike (its own "l" stem and strikeout); for the record, for
 // Liberation Sans Regular (the "l" 180 of 2048 units, the strikeout 530):
-// at 300 %'s 22 px a stroke of 1.93 → 2 rows, centered 5.69 above the
-// baseline → rows baseline − 7 .. − 6; at 200 %'s 15 px 1.32 → 1 row,
-// 3.88 above → baseline − 4; at 138 %'s 10 px 0.88 → 1 row, 2.59 above →
+// at 300 %'s 21 px a stroke of 1.85 → 2 rows, centered 5.43 above the
+// baseline → rows baseline − 6 .. − 5; at 200 %'s 14 px 1.23 → 1 row,
+// 3.62 above → baseline − 4; at 138 %'s 10 px 0.88 → 1 row, 2.59 above →
 // baseline − 3.
 struct GuiStrikeBand {
     int dy = 0;   // the band's top row less the baseline row (negative: up)

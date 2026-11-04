@@ -306,9 +306,9 @@ struct WaveformCache {
 // THE SURFACE HOLDS THE ROWS ITS INK CAN REACH (2026-10-13): the window's
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
-// foot) — the ruler lane, the marker lane and the foot line, 35 + 41 + 1 =
-// 77 device rows at 300 % where the whole strip from row 0 is 240 at
-// key_height 33 (re-derived 2026-11-03). Every cue pixel is
+// foot) — the ruler lane, the marker lane and the foot line, 37 + 38 + 3 =
+// 78 device rows at 300 % where the whole strip from row 0 is 246 at
+// key_height 33 (re-derived 2026-11-04, the unit). Every cue pixel is
 // inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
 // the font: in paint_cues (render.cpp) every label's face box and its text
 // are painted under a clip of the label's span
@@ -1007,7 +1007,7 @@ private:
     // 2026-10-21 with paint_dropdown.)
     void paint_shift_tooltip(cairo_t* cr);
     // THE CARD FACE every floating surface draws (the tooltip and the
-    // notification cards): a flat `card_ground` box inside a one-device-px
+    // notification cards): a flat `card_ground` box inside a one-W
     // `card_frame` border on all four sides (architect 2026-11-02, M11 with
     // M14 "d"; render.h's palette block, THE CARD FACE).
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r);
@@ -1031,7 +1031,7 @@ private:
     // (build_canvas_list).
     void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
     // The overlay band's DOTTED ring — the phase-reset overlay's whole
-    // visual, its right side and its top and bottom runs one-device-px dots
+    // visual, its right side and its top and bottom runs t x t dots (one W)
     // in the reset's own stem pattern (its left side is the stem itself;
     // architect 2026-10-09) — painted AFTER the plate and before the stems,
     // over the ink like every dot on the canvas.
@@ -1088,7 +1088,7 @@ private:
     // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's; nothing
     // over the view bar, architect 2026-10-09 ~14:30): Cool Edit's dotted
     // column in the palette's `playhead_line` (white, 2026-11-02, mock t1),
-    // one-device-px dots on the canvas's odd device rows, painted
+    // t x t dots (one W, centered on the column) on the canvas's odd cells, painted
     // after the marker stems, whose dots stand between its own.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER

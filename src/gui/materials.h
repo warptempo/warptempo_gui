@@ -15,7 +15,8 @@
 // regions and the keys: the band and its logo lane, row 8, the well's side
 // margins and its rows of ground (the ruler's and the marker lane's foot
 // lines, the stereo divider, the row above the trim bar and the row under
-// the canvas), the on-screen keyboard's band, the modal family's controls row.
+// the canvas, each one W, render.h's hairline_px), the gaps between keys, the
+// on-screen keyboard's band, the modal family's controls row.
 // NO BAKE, NO GRAIN, NO GRADIENT, NO LINE, NO BEVEL, NO SHADOW: every pixel
 // of the ground is a solid fill through the palette's chokepoint
 // (set_palette_source, render.h), which converts it for the window as it
@@ -51,26 +52,24 @@
 // pad, never on the face, so a lit key's legend stays kTextInk (the rule at
 // paint_handler.cpp's key_legend_seat).
 //
-// THE CELL AND ITS FACE (architect 2026-11-03, the retrofit: the hi-fi key
-// metrics back, the hi-fi's shadow and black lines become ground): a key's
-// CELL is render.h's case — 69 device px wide at 300 % by the `key_height`
-// tuning key (icon_case_w_px / icon_case_h_px) — and THE CELLS OF A GROUP
-// ABUT, the walk stepping one cell (key_group_pitch_px below). THE PAINTED
-// FACE IS THE CELL INSET kKeyFaceInsetPx (render.h's case block, beside the
-// cell's lengths), ONE DEVICE PX ON EVERY SIDE, at every gui_scale
-// (key_face_rect): 67 x 31 at 300 % at key_height 33, so two
-// keys of a group stand TWO DEVICE PX OF GROUND apart and every face is the
-// same, a group's ends included. THE EDGE RULE IS THE FACES': the band's,
-// row 8's and the controls rows' outermost FACES stand on the well's first
-// and last columns (render.h's well_columns, the waveform area's, architect
-// 2026-11-03), their cells one px past them
-// (the seats' walks, paint_handler.cpp). THE GROUND IS NOT PRESSABLE
-// (architect 2026-11-02, R5: "ground is not a button"): THE PAINTED FACE IS
-// THE HIT BOX (point_on_key below), so a press, a lift, the press face and
-// the tooltip answer on the face alone and the ground round it — the cell's
-// inset ring, the run gaps, the legends' pad — answers nothing; the
-// on-screen keyboard's gaps alike (R11), under its own gap rule
-// (onscreen_keyboard.h).
+// THE FACE AND ITS GAP (architect 2026-11-04, the unit: his "1 agree" to
+// 69 x 33 and "spacing 3 dpx"; "grow the box instead of adding a border";
+// the hi-fi key metrics of 2026-11-03's retrofit): THE KEY IS ITS PAINTED
+// FACE, render.h's case — 69 device px wide at 300 % by the `key_height`
+// tuning key (icon_case_w_px / icon_case_h_px), 69 x 33 at the default — NO
+// OUTLINE, NO INSET, and TWO KEYS OF A GROUP STAND ONE W OF GROUND APART
+// (render.h's key_gap_px: 3 device px at 300 %, 2 at 200 %, 1 at 138 %), the
+// walk stepping the face and the gap (key_group_pitch_px below), so every
+// face is the same, a group's ends included. THE EDGE RULE IS THE FACES':
+// the band's, row 8's and the controls rows' outermost FACES stand on the
+// well's first and last columns (render.h's well_columns, the waveform
+// area's, architect 2026-11-03; the seats' walks, paint_handler.cpp). THE
+// GROUND IS NOT PRESSABLE (architect 2026-11-02, R5: "ground is not a
+// button"): THE PAINTED FACE IS THE HIT BOX (point_on_key below), so a
+// press, a lift, the press face and the tooltip answer on the face alone and
+// the ground round it — the gaps, the run gaps, the legends' pad — answers
+// nothing; the on-screen keyboard's gaps alike (R11), the same gap
+// (onscreen_keyboard.h's key_gap_px, 2026-11-04).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two, kTextInk B5B5B5 on every word, digit and
@@ -118,8 +117,8 @@ inline constexpr uint32_t kKeyDimInk  = 0x5A5A5A;
 // THE KEY (the head): its face at rest, its press face (Live's off-button
 // hover 6A6A6A, 2026-11-03), its lit fill (Live's "on" orange FFAD56, one
 // constant with no device key), the lit fill under a press (Live's hover of
-// FFAD56, FFC281, 2026-11-03). (The face's inset in its cell,
-// kKeyFaceInsetPx, is render.h's, with the cell.)
+// FFAD56, FFC281, 2026-11-03). (The face's lengths and the gap between two
+// faces, key_gap_px, are render.h's case block.)
 inline constexpr uint32_t kKeyFace      = 0x363636;
 inline constexpr uint32_t kPressFace    = 0x6A6A6A;
 inline constexpr uint32_t kLitFill      = 0xFFAD56;
@@ -147,8 +146,8 @@ inline constexpr uint32_t key_ink(KeyLook look, bool enabled) {
 }
 
 // THE WELL'S TONES (the head's THE WELL). kWellFrame is THE GRAMMAR'S ONE
-// FRAME TONE (architect 2026-11-02, M14 "d"): the scrub's one-px channel
-// (render.h's scrub block) and the cards' and the tooltip's one-px border
+// FRAME TONE (architect 2026-11-02, M14 "d"): the scrub's one-W channel
+// (render.h's scrub block) and the cards' and the tooltip's one-W border
 // (the chrome's `card_frame`). THE TRIM BAR'S TWO FILLS (architect
 // 2026-11-03, mock z2; render_trim_flags): kTrimBarFace, the bar outside
 // the trim, IS THE LANE'S TONE — ONE CONSTANT, kLaneFace's own value (Live's
@@ -183,51 +182,42 @@ inline constexpr uint32_t kSelectionText      = kTextOnLit;
 // frame, ring, shadow or row separator (modal_box.h's head; the score
 // viewer's darker pane, the one exception, is recorded there), and the
 // cards' and the tooltip's face (the chrome's `card_ground`,
-// chrome_derive.h) inside their one-px kWellFrame border (`card_frame`, the
+// chrome_derive.h) inside their one-W kWellFrame border (`card_frame`, the
 // grammar's one frame tone, paint_popup_chrome).
 inline constexpr uint32_t kPaneFace = kKeyFace;
 
 // -- THE KEY'S PAINTERS ------------------------------------------------------
 
-// ONE KEY on `r`, ITS PAINTED FACE (the head's THE KEY; key_face_rect of
-// its cell): the flat face `look` gives — kKeyFace at rest, kPressFace
-// pressed, kLitFill lit, kLitPressFill lit under a press (key_look, the
-// caller's checked state and standing press) — and nothing else. What a
-// key carries is its caller's — the roster's and the controls rows' Breeze
-// glyph on the face and its legend under the cell (paint_key_glyph and
-// paint_key_legend, paint_handler.cpp), the on-screen keyboard's caps — in
-// key_ink's tone.
+// ONE KEY on `r`, ITS PAINTED FACE — the key itself (the head's THE KEY and
+// THE FACE AND ITS GAP): the flat face `look` gives — kKeyFace at rest,
+// kPressFace pressed, kLitFill lit, kLitPressFill lit under a press
+// (key_look, the caller's checked state and standing press) — and nothing
+// else. What a key carries is its caller's — the roster's and the controls
+// rows' Breeze glyph on the face and its legend under it (paint_key_glyph
+// and paint_key_legend, paint_handler.cpp), the on-screen keyboard's caps —
+// in key_ink's tone.
 void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look);
 
-// THE PAINTED FACE OF A KEY'S CELL (the head's THE CELL AND ITS FACE): the
-// cell inset kKeyFaceInsetPx on every side, never negative. The key's face,
-// its hit box and its glyph's seat are this; its legend's seat is the cell's
-// (paint_handler.cpp's key_legend_seat).
-inline GuiRect key_face_rect(const GuiRect& cell) {
-    const int i = kKeyFaceInsetPx;
-    return GuiRect{cell.x + i, cell.y + i, cell.w > 2 * i ? cell.w - 2 * i : 0,
-                   cell.h > 2 * i ? cell.h - 2 * i : 0};
-}
-
-// THE GROUP'S PITCH (the head's THE CELL AND ITS FACE): one cell — the step
-// from a key's cell to the next one's in its group, every group walk's (the
-// band's icon_row_seats, row 8's row8_block_walk, the modal family's
-// controls-row layouts, paint_handler.cpp); the cells abut, the two px of
-// ground between two faces their insets. The ground between two GROUPS is
-// the run gap (render.h's program_run_gap_px), between their cells.
+// THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key
+// gap — the step from a key's face to the next one's in its group, every
+// group walk's (the band's icon_row_seats, row 8's row8_block_walk, the
+// modal family's controls-row layouts, paint_handler.cpp): 72 at 300 % (69
+// + 3), 48 at 200 % (46 + 2). The ground between two GROUPS is the run gap
+// (render.h's program_run_gap_px), between their faces.
 inline int key_group_pitch_px() {
-    return icon_case_w_px();
+    return icon_case_w_px() + key_gap_px();
 }
-// A GROUP'S WIDTH: `n` abutting cells (0 for none).
+// A GROUP'S WIDTH: `n` faces and the n − 1 gaps between them (0 for none),
+// from its first face's first column to one past its last face's last.
 inline int key_group_w_px(int n) {
-    return n > 0 ? n * icon_case_w_px() : 0;
+    return n > 0 ? n * icon_case_w_px() + (n - 1) * key_gap_px() : 0;
 }
 
 // A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
-// CELL AND ITS FACE; architect 2026-11-02, R5 / R11): `key` the PAINTED
-// face — key_face_rect of the cell for every grouped key (the band, row 8,
-// the modal family's controls rows), the on-screen keyboard's walk rect for
-// its own (onscreen_keyboard::for_each_key, its gap already outside it). THE
+// FACE AND ITS GAP; architect 2026-11-02, R5 / R11): `key` the PAINTED
+// face — the walk's own rect for every grouped key (the band, row 8, the
+// modal family's controls rows), the on-screen keyboard's walk rect for its
+// own (onscreen_keyboard::for_each_key, its gap already outside it). THE
 // ONE PREDICATE every key hit test asks: the roster's face
 // (AppState::RedesignButtonFace::contains — the press, the lift, the band's
 // modifier gate, the armed press's inside bit, the tooltip's owner), the

@@ -220,8 +220,9 @@ inline constexpr double kRowGapPx = 1.0;
 
 // THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
-// first hours; 51 device px at 300 %, round the 22-px text, again since
-// 2026-11-03, the retrofit, after the text round's 56), the panel's row gap, the row's glyph (the painter's,
+// first hours; 51 device px at 300 %, round the text, again since
+// 2026-11-03, the retrofit, after the text round's 56; a whole W, 17 W,
+// kept by the unit, 2026-11-04), the panel's row gap, the row's glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then; Breeze's since
 // 2026-11-02). A folder row wears icons::Icon::Folder and a wav row
 // icons::Icon::ViewMediaTrack, the double notes — SOURCE's drawing, a
@@ -241,10 +242,10 @@ inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
 // notifications.cpp: the rows stand at row_inset_px below.)
 inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
 // THE ROWS' INSET INSIDE THE BOX'S INTERIOR — left, top and right, and the
-// listing's foot: THE CONTENT'S ONE DEVICE PX OF AIR (modal_box.h's THE
-// PANE, architect 2026-10-23: "at most one device pixel"), so the lit row's
-// bar stands one px from the pane's edges and the first row one px under its
-// top row.
+// listing's foot: THE CONTENT'S ONE HAIRLINE OF AIR (modal_box.h's THE
+// PANE, architect 2026-10-23: "at most one device pixel"; one W since
+// 2026-11-04, the unit), so the lit row's bar stands one W from the pane's
+// edges and the first row one W under its top row.
 inline int row_inset_px()         { return modal_box_content_pad_px(); }
 // (THE ROW'S GLYPH AT WINDOWS' SMALL 16-W ICON, its 3-W lead and its 6-W
 // gap to the name stood 2026-10-02 to 2026-10-23; the glyph's geometry is
@@ -318,7 +319,7 @@ inline GuiRect surface_rect(const AppState& a) {
 // the scroll ceiling, the keep-visible walk, the painter's row-walk clip and
 // row_at's containment — so a row can never paint onto the ground round the
 // pane or be pressed through it. THE FIRST ROW STANDS AT THE PANE'S TOP, one
-// device px under it (row_inset_px).
+// hairline under it (row_inset_px).
 // (THE FOLDER NAME ABOVE THE PLAYLIST — the viewed folder's name in one list
 // row and an etched pair under it, the render player's alone, 2026-10-10 to
 // 2026-10-14 — IS REMOVED, architect 2026-10-14: "it was icon padding but no

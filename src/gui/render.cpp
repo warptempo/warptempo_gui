@@ -190,16 +190,17 @@ namespace {
 // one row rule render_canvas reads.
 void canvas_grid_lines(CanvasLines& lines, const GuiRect& area) {
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // horizontal grid — t = waveform_line_px() thick, ONE DEVICE PX ("on
-    // waveform → unscaled", the class's one inventory), each an aliased
-    // integer rect inside its band. THE CENTER LINES STAND OVER THE WAVEFORM
+    // horizontal grid — t = waveform_line_px() thick, ONE W (3 device px at
+    // 300 %, the unit, architect 2026-11-04; the class's one inventory at
+    // render.h's waveform_line_px), each an aliased integer rect inside its
+    // band. THE CENTER LINES STAND OVER THE WAVEFORM
     // (architect 2026-10-09 evening), render_center_lines below, a pass after
     // the plate. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the
     // rule and its reason at render.h's row-6 canvas paragraph).
     const int t = waveform_line_px();
     // THE HORIZONTAL GRID per channel, on the plate's own bands
     // (waveform_channel_band): a line on a row r covers rows
-    // [r − t / 2, r − t / 2 + t) — the row r itself at one device px — the
+    // [r − t / 2, r − t / 2 + t) — the row r and one each side at 300 % — the
     // zero row being the row the plate's bars straddle; the k-th grid line
     // stands t · nearbyint(k · (H / t) / 4) = nearbyint(k · H / 4) device rows
     // from the zero row, H the channel's half height in device rows — k = 1 ..
@@ -230,8 +231,8 @@ void canvas_center_lines(CanvasLines& lines, const GuiRect& area) {
     // (architect 2026-10-09 evening: "it's supposed to be visible over the
     // waveform. Otherwise, in a project like this with tape hiss, there's
     // never enough zero that the red line would become visible ever"; the
-    // order at render.h's row-6 canvas paragraph): one device px, the grid's
-    // row rule (canvas_hline), in the palette's `center`, the channels'
+    // order at render.h's row-6 canvas paragraph): one W, the grid's row
+    // rule (canvas_hline), in the palette's `center`, the channels'
     // bands the plate's own (waveform_channel_band), so it stands on the row
     // the plate's bars straddle. Through the canvas sink (2026-10-13).
     const int t = waveform_line_px();
@@ -484,7 +485,7 @@ bool render_waveform_columns(GuiRect area,
     // GPU fills in full ink as the shape's core, joins to its neighbors by
     // the contour through the column centers, grows by the `waveform_grow`
     // key and rasterizes at exact coverage (with the lamp lit, the inner bar stands
-    // over the outer, both in the ink, the inner's one-px outline — the
+    // over the outer, both in the ink, the inner's one-device-px outline — the
     // erosion of the grown inner, on the GPU — in the outline). This
     // function reads no neighbor and holds no interior: every column is its
     // own tips, so a column's tips are a pure function of its own span and
@@ -706,16 +707,16 @@ bool render_waveform_columns(GuiRect area,
 }
 
 namespace {
-// ONE SOLID CANVAS LINE DOWN THE AREA: the waveform_line_px()-wide line at
-// column `col` (its column gate and right-edge clip, waveform_line_width) as
-// one rect over the area's whole height, the stereo divider's row crossed
-// (architect 2026-11-02, render.h's waveform_divider) — the scanner's and
-// the zoom anchor's one form, one sink fill.
+// ONE SOLID CANVAS LINE DOWN THE AREA: the waveform_line_px()-wide line
+// centered on column `col` (its column gate and its clip at both edges,
+// waveform_line_cols) as one rect over the area's whole height, the stereo
+// divider's row crossed (architect 2026-11-02, render.h's waveform_divider)
+// — the scanner's and the zoom anchor's one form, one sink fill.
 void canvas_line_rect(GuiCanvasSink& sink, const GuiRect& area, int col,
                       GuiColor color) {
-    const int width = waveform_line_width(area.w, col);
-    if (width <= 0 || area.h <= 0) return;
-    const GuiRect r{area.x + col, area.y, width, area.h};
+    const WaveformLineCols c = waveform_line_cols(area.w, col);
+    if (c.w <= 0 || area.h <= 0) return;
+    const GuiRect r{area.x + c.x0, area.y, c.w, area.h};
     sink.rects(std::span<const GuiRect>(&r, 1), color);
 }
 } // namespace
@@ -764,8 +765,9 @@ void render_playhead(GuiCanvasSink& sink,
     // alternative that was declined.
     const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
-    // The waveform_line_px()-wide line (render.h) paints whenever its column
-    // is onscreen (gated on its own column and clipped at the right edge), so
+    // The waveform_line_px()-wide line (render.h), centered on its column,
+    // paints whenever its column is onscreen (gated on its own column and
+    // clipped at both edges), so
     // it never leaks into an adjacent region, straight over whatever it
     // crosses — waveform ink included. THE CANVAS'S WHOLE HEIGHT, the stereo
     // divider's row crossed (architect 2026-11-02, render.h's
@@ -785,9 +787,9 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
     if (area.w <= 0 || area.h <= 0) return;
     // The clamp is where the affordance lives: an anchor pushed to (or past) a
     // song edge pins to the edge column, so the stem draws exactly there.
-    // The line is waveform_line_px() wide (render.h), its left edge on the
-    // column, clipped at the right edge (fill_waveform_line), so an anchor
-    // pinned to the last column paints that one column.
+    // The line is waveform_line_px() wide (render.h), centered on the
+    // column, clipped at both edges (waveform_line_cols), so an anchor
+    // pinned to the first or the last column paints its columns inside.
     if (col < 0)          col = 0;
     if (col >= area.w)    col = area.w - 1;
 
@@ -933,7 +935,7 @@ void render_trim_flags(cairo_t* cr,
     // under the lane's first row of ground (the caller's), THE FILL'S ROWS
     // (trim_bar_fill_h_px) a FLAT kTrimBarFace across the well's columns,
     // NO FRAME; the bar's last row the caller's
-    // ground too (paint_trim erases the whole lane first), the one-px line
+    // ground too (paint_trim erases the whole lane first), the one-W line
     // between the bar and the ruler, nothing painted over it here.
     const int px = hairline_px();
     const int bar_y = lane_y + px;
@@ -954,7 +956,7 @@ void render_trim_flags(cairo_t* cr,
     // COLUMNS, even where the waveform is wrong (architect 2026-11-03) — the
     // bar's columns are the waveform area's, nothing more, so a trim
     // spanning the view fills the bar end to end; a side lying farther off
-    // than one px is held there, outside the clip, so the rect stays in
+    // than one hairline is held there, outside the clip, so the rect stays in
     // cairo's range at any zoom): A
     // FLAT kTrimSpanFace FILL on the fill's rows, no outline of its own
     // (architect 2026-11-03, mock z2). NO PLAYHEAD IN THE BAR (architect
@@ -2477,11 +2479,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the right of this one ride the edge. There was no fixed-width grammar to
     // pin a bound field to in any case: this face is PROPORTIONAL, so `-3.75`
     // and `+1.00` are not the same width.
-    // The pad is the fill's (render.h's cue_fill_pad_px, 4 px at 300 %) and
-    // THE CARET ONE DEVICE PX (render.h's line rule, the sweep of
-    // 2026-10-23), so the borrow takes the caret's column out of the
-    // right pad: a caret at end-of-text stands in the pad's first column,
-    // inside the box — visible ink, not a lost one, so the travel
+    // The pad is the fill's (render.h's cue_fill_pad_px, 3 px at 300 %, one
+    // W) and THE CARET ONE W (render.h's line rule, hairline_px, 2026-11-04;
+    // held to the pad, so at the defaults the whole pad), so the borrow takes
+    // the caret's columns out of the right pad: a caret at end-of-text stands
+    // in the pad, inside the box — visible ink, not a lost one, so the travel
     // arithmetic below needs no floor of its own. The TEXT VIEWPORT is what
     // widens by the borrowed column; the box never does.
     const int caret_px = std::min(hairline_px(), pad_r);
@@ -2579,9 +2581,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // WHERE THE BORROW IS SPENT, on every kind: the viewport reaches one column
     // INTO the right pad — the column the box above deliberately does not buy —
     // so a caret at end-of-text is inside the clip with the run standing
-    // exactly where the committed text stands. The caret one device px, the
-    // borrow takes that one column of the pad and the viewport ends the
-    // rest of the pad short of the box's right edge.
+    // exactly where the committed text stands. The caret one W (held to the
+    // pad), the borrow takes those columns of the pad and the viewport ends
+    // the rest of the pad short of the box's right edge.
     const double view_x0 = static_cast<double>(bx + pad_l);
     const int view_pad_r = std::max(pad_r - caret_px, 0);
     const double view_x1 = static_cast<double>(bx + box_w - view_pad_r);

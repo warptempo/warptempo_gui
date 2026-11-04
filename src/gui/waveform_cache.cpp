@@ -110,8 +110,8 @@ void render_waveform_to_plate_columns(
     // INNER bar (the compressed, expanded one) over it, the inner outlined
     // one device px thick — the rule is at render_waveform_columns'
     // declaration. (The outline's distance is the GPU shader's constant,
-    // waveform_line_px(), since 2026-10-30: no render input and no
-    // fingerprint field carries it.)
+    // one device px, since 2026-10-30: no render input and no fingerprint
+    // field carries it.)
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
     const GuiRect ch[2] = {GuiRect{0, b0.y, area_w, b0.h},
                            GuiRect{0, b1.y, area_w, b1.h}};
