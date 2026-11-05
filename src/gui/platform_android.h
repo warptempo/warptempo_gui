@@ -93,9 +93,10 @@ public:
     // that reason: the scale a panel wants and where on this device the
     // projects live are answers only the backend has. STATIC because it is
     // asked before any window exists — gui_main resolves the config ahead of
-    // init(). This backend answers 300 % and `<externalDataPath>/projects` as
-    // the projects path. 300 is the scale the tablet runs at (architect
-    // 2026-10-10; a 16-px glyph at 48 device px), the whole icon row fitting
+    // init(). This backend answers 200 % and `<externalDataPath>/projects` as
+    // the projects path. 200 is the scale the tablet runs at (architect
+    // 2026-11-05, the rebase: one W = 2 device px, a 16-W glyph 32 device
+    // px; 300 from 2026-10-10 to 2026-11-05), the whole icon row fitting
     // (rationale at the definition, platform_android.cpp). The projects path is the
     // activity's own absolute path stamped literally — the `projects/` of the
     // tablet's projects clone, whose root is the external files dir — and it

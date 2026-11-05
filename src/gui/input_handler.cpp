@@ -3394,25 +3394,25 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     relayout_window();
 }
 
-void GuiInputHandler::apply_key_height(int device_px_at_300) {
+void GuiInputHandler::apply_key_height(int w) {
     // The contract is at the declaration (input_handler.h): the push, then
     // the scale's relayout tail; the commit's arm owns the persist.
-    set_key_height_at300(device_px_at_300);
+    set_key_height_w(w);
     relayout_window();
 }
 
-void GuiInputHandler::apply_osk_key_size(int w_at300, int h_at300) {
+void GuiInputHandler::apply_osk_key_size(int w_w, int h_w) {
     // The contract is at the declaration (input_handler.h): the push, then
     // the relayout tail; the commit's arm owns the persist.
-    set_osk_key_size_at300(w_at300, h_at300);
+    set_osk_key_size_w(w_w, h_w);
     relayout_window();
 }
 
-void GuiInputHandler::apply_osk_font_px(int px_at300) {
+void GuiInputHandler::apply_osk_font_px(int em_w) {
     // The contract is at the declaration (input_handler.h): the push, then
     // the whole window's damage, no relayout; the commit's arm owns the
     // persist.
-    set_osk_font_px_at300(px_at300);
+    set_osk_font_em_w(em_w);
     viewport.invalidate_all();
 }
 

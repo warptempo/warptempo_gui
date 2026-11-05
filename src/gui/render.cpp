@@ -194,8 +194,8 @@ namespace {
 // one row rule render_canvas reads.
 void canvas_grid_lines(CanvasLines& lines, const GuiRect& area) {
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // horizontal grid — t = waveform_line_px() thick, ONE W (2 device px at
-    // 300 %, the unit, architect 2026-11-04 night; the class's one inventory
+    // horizontal grid — t = waveform_line_px() thick, ONE W (2 device px on
+    // the tablet at 200 %, the unit, architect 2026-11-04; the class's one inventory
     // at render.h's waveform_line_px), each an aliased integer rect inside
     // its band. THE CENTER LINES STAND OVER THE WAVEFORM
     // (architect 2026-10-09 evening), render_center_lines below, a pass after
@@ -205,7 +205,7 @@ void canvas_grid_lines(CanvasLines& lines, const GuiRect& area) {
     // THE HORIZONTAL GRID per channel, on the plate's own bands
     // (waveform_channel_band): a line on a row r covers rows
     // [r − (t − 1) / 2, r − (t − 1) / 2 + t) — the row r and the one under it
-    // at 300 % (t = 2, the line rule's top-row frame) — the zero row being
+    // on the tablet (t = 2, the line rule's top-row frame) — the zero row being
     // the row the plate's bars straddle; the k-th grid line stands t ·
     // nearbyint(k · (H / t) / 4) device rows from the zero row (at t = 2, 2 ·
     // nearbyint(k · H / 8), an even number of rows), H the channel's half
@@ -1745,7 +1745,8 @@ void render_flag_boxes_impl(
     // cut off there. Released by the pass's closing restore.
     clip_to_waveform_columns(cr, lanes.columns_x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
-    // THE LABEL FACE for the whole pass (gui_font.h: Bold 24 at 300 %),
+    // THE LABEL FACE for the whole pass (gui_font.h: Bold Label 11 W, 22
+    // device px on the tablet),
     // every run carrying it (text_shape.h).
     const GuiFont font = gui_font(GuiFace::Label);
     // The pass's kept scratch (CuePassScratch), emptied for this pass.
@@ -2216,20 +2217,20 @@ namespace {
     // settings editor's gui_scale commit). EVERY painted pixel quantity in the product reads it
     // through gui_scale_factor().
     int    g_gui_scale_percent = 100;
-    // THE KEY'S HEIGHT in device px at 300 % (render.h's `key_height`
-    // seat), set by set_key_height_at300 from the same two application
+    // THE KEY'S HEIGHT in W (render.h's `key_height`
+    // seat), set by set_key_height_w from the same two application
     // points; the templates' value as construction state.
-    int    g_key_height_at300 = kKeyHeightDefaultAt300;
-    // THE ON-SCREEN KEYBOARD'S KEY BOX in device px at 300 % (render.h's
-    // `osk_key_w` / `osk_key_h` seat), set by set_osk_key_size_at300 from the
+    int    g_key_height_w = kKeyHeightDefaultW;
+    // THE ON-SCREEN KEYBOARD'S KEY BOX in W (render.h's
+    // `osk_key_w` / `osk_key_h` seat), set by set_osk_key_size_w from the
     // same two application points; the templates' values as construction
     // state.
-    int    g_osk_key_w_at300 = kOskKeyWDefaultAt300;
-    int    g_osk_key_h_at300 = kOskKeyHDefaultAt300;
-    // THE ON-SCREEN KEYBOARD'S CAP SIZE in device px at 300 % (render.h's
-    // `osk_font_px` seat), set by set_osk_font_px_at300 from the same two
+    int    g_osk_key_width_w = kOskKeyWDefaultW;
+    int    g_osk_key_height_w = kOskKeyHDefaultW;
+    // THE ON-SCREEN KEYBOARD'S CAP SIZE, its em in W (render.h's
+    // `osk_font_px` seat), set by set_osk_font_em_w from the same two
     // application points; the templates' value as construction state.
-    int    g_osk_font_px_at300 = kOskFontPxDefaultAt300;
+    int    g_osk_font_em_w = kOskFontPxDefaultW;
     // THE WAVEFORM PLATE'S GROW in quarters of a device px (render.h's
     // `waveform_grow` seat, a permanent key), set by
     // set_waveform_grow_quarters from the same two application points; the
@@ -2242,18 +2243,18 @@ static_assert(kWaveformGrowQuartersPerPx == kWaveformSubcells,
               "the waveform_grow key counts the plate's subcells");
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
-void   set_key_height_at300(int device_px_at_300) {
-    g_key_height_at300 = device_px_at_300;
+void   set_key_height_w(int w) {
+    g_key_height_w = w;
 }
-int    key_height_at300() { return g_key_height_at300; }
-void   set_osk_key_size_at300(int w_at300, int h_at300) {
-    g_osk_key_w_at300 = w_at300;
-    g_osk_key_h_at300 = h_at300;
+int    key_height_w() { return g_key_height_w; }
+void   set_osk_key_size_w(int w_w, int h_w) {
+    g_osk_key_width_w = w_w;
+    g_osk_key_height_w = h_w;
 }
-int    osk_key_w_at300() { return g_osk_key_w_at300; }
-int    osk_key_h_at300() { return g_osk_key_h_at300; }
-void   set_osk_font_px_at300(int px_at300) { g_osk_font_px_at300 = px_at300; }
-int    osk_font_px_at300() { return g_osk_font_px_at300; }
+int    osk_key_width_w() { return g_osk_key_width_w; }
+int    osk_key_height_w() { return g_osk_key_height_w; }
+void   set_osk_font_em_w(int em_w) { g_osk_font_em_w = em_w; }
+int    osk_font_em_w() { return g_osk_font_em_w; }
 void   set_waveform_grow_quarters(int quarters) {
     g_waveform_grow_quarters = quarters;
 }
@@ -2464,8 +2465,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the right of this one ride the edge. There was no fixed-width grammar to
     // pin a bound field to in any case: this face is PROPORTIONAL, so `-3.75`
     // and `+1.00` are not the same width.
-    // The pad is the fill's (render.h's cue_fill_pad_px, 2 px at 300 %, one
-    // W) and THE CARET ONE W (render.h's line rule, hairline_px, 2026-11-04;
+    // The pad is the fill's (render.h's cue_fill_pad_px, one W, 2 device px
+    // on the tablet) and THE CARET ONE W (render.h's line rule, hairline_px, 2026-11-04;
     // held to the pad, so at the defaults the whole pad), so the borrow takes
     // the caret's columns out of the right pad: a caret at end-of-text stands
     // in the pad, inside the box — visible ink, not a lost one, so the travel
@@ -2664,8 +2665,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    box's since 2026-11-01 night, render.h's marker_lane_h_px): the
     //    segment's box — its run and the fill's pad either side, the text
     //    standing exactly where the resting label's does — with THE
-    //    EDITOR'S OUTLINE (render.h's cue_editor_outline_px, three device px
-    //    at 300 %) in kTextInk round it, outside the pads on the left and
+    //    EDITOR'S OUTLINE (render.h's cue_editor_outline_px, one W, 2 device
+    //    px on the tablet) in kTextInk round it, outside the pads on the left and
     //    right and on the lane's first and last outline rows, the ground
     //    inside. IT PAINTS OVER THE LANE — the
     //    triangle's right edge and any neighbouring label it reaches
@@ -2687,9 +2688,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // LEGAL SET'S BAND (architect 2026-11-01 night, M5g / M5h: the warp
     // line's grammar's ink, the x-height band centered in it; render.h's
     // EDITING paragraph): the band's rows are read off the one derivation
-    // (cue_band_top_px, cue_band_h_px, render.h), never re-derived here — at
-    // 300 % rows 8 .. 29 of the inner 2 .. 36, six rows of field above and
-    // seven below.
+    // (cue_band_top_px, cue_band_h_px, render.h), never re-derived here — on
+    // the tablet rows 8 .. 29 of the inner 2 .. 36, six rows of field above
+    // and seven below.
     const int view_y = lane.y + u;
     const int view_h = fill_h - 2 * u;
     const int band_y = lane.y + cue_band_top_px();

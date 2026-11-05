@@ -3041,9 +3041,10 @@ private:
     // THE ONE PREDICATE (the rule and the inventory of its readers above):
     // the pen has lifted and not yet rearmed.
     bool pen_hot_latch_holds() const { return pen_hot_latch_.armed; }
-    // THE RE-ARM DISTANCE, 12 WINDOWS PX (architect 2026-10-08, retuned on
-    // measured data from 3): 36 device px at 300, 17 at 138, converted
-    // through scaled_px at the compare and MEASURED FROM THE ANCHOR, the
+    // THE RE-ARM DISTANCE, 18 W (architect 2026-10-08, retuned on measured
+    // data from 3; the W since 2026-11-05): 36 device px on the tablet at
+    // 200 %, 18 at 100 %, converted through scaled_px at the compare and
+    // MEASURED FROM THE ANCHOR, the
     // pen's first hover report after the lift (the rule at pen_hot_latch_).
     // THE MEASUREMENT (his four deliberate taps, traced off logcat,
     // 2026-10-08): the first hover report lands on the lift point, and then,
@@ -3053,17 +3054,19 @@ private:
     // settling ~15 px off the tap point as d levels at ~30-40. Every tap
     // crossed the old 9 px ~200 ms after the lift and the hot face came back:
     // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
-    // along the pen's axis as the tip rises — NOT THE HAND. 12 W sits above
+    // along the pen's axis as the tip rises — NOT THE HAND. 36 device px sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
-    // the neighboring button, a key pitch (the 70-px face and the one-W gap,
-    // 72 at 300 % and 87 at 360 %, 2026-11-04), and below a move to
-    // the next lit row, a list row (52 device px at 300 %, 17.33 W —
-    // folder_overlay.h's kListRowAt300, 2026-11-04 night), so one row's
-    // deliberate step rearms. Authored in Windows px as every chrome length,
-    // though the drift is physical: the tablet is the one pen device. The
-    // blink was measured on the roster's hot face (gone since 2026-10-09);
-    // on a menu or a list it is the lit row itself moving.
-    static constexpr double kPenHotRearmPx = 12.0;
+    // the neighboring button, a key pitch (the 35-W face and the one-W gap,
+    // 36 W, 72 device px on the tablet, 2026-11-04), and below a move to
+    // the next lit row, a list row (26 W, 52 device px — folder_overlay.h's
+    // kListRowW, 2026-11-04 night), so one row's deliberate step rearms.
+    // Authored in W as every chrome length, though the drift is physical:
+    // the tablet is the one pen device. 18 W SINCE THE REBASE TO 200 %
+    // (architect 2026-11-05): the 12 Windows px of 2026-10-02 times 1.5, so
+    // the tablet's 36 device px stand (the drift numbers above are device
+    // px). The blink was measured on the roster's hot face (gone since
+    // 2026-10-09); on a menu or a list it is the lit row itself moving.
+    static constexpr double kPenHotRearmPx = 18.0;
 
     // THE PUBLISH CHORD'S ACT (architect 2026-10-10) — Ctrl+Shift+S in the
     // main window and in the `h` view alike, and the `h` view's Save button's
@@ -3591,7 +3594,7 @@ private:
 
     // THE KEY'S HEIGHT'S ONE LIVE ACT (the `key_height` tuning key,
     // architect 2026-10-29; render.h's seat): push the height to the
-    // renderer (set_key_height_at300) and run the scale's RELAYOUT TAIL
+    // renderer (set_key_height_w) and run the scale's RELAYOUT TAIL
     // (relayout_window below) — the key's height moves every strip boundary
     // and the waveform area as a scale does, so the commit re-lays the whole
     // window out at once. The key glyph's ink follows the height (paint_key_glyph); the icon
@@ -3601,11 +3604,11 @@ private:
     // `key_height=` commit is the sole caller; it gates the no-op, assigns
     // the live config and persists it (apply_device_setting); the launch
     // seeds the height before the window exists (main.cpp).
-    void apply_key_height(int device_px_at_300);
+    void apply_key_height(int w);
 
     // THE KEYBOARD'S KEY BOX'S ONE LIVE ACT (the `osk_key_w` and `osk_key_h`
     // tuning keys, architect 2026-10-29; render.h's seat): push the box to
-    // the renderer (set_osk_key_size_at300) and run the RELAYOUT TAIL
+    // the renderer (set_osk_key_size_w) and run the RELAYOUT TAIL
     // (relayout_window below) — the box moves the keyboard's band, and with
     // it the modal stack standing on the band and the waveform's painted
     // rect, so the commit re-lays the window out at once, the key_height
@@ -3614,11 +3617,11 @@ private:
     // the no-op, assigns the live config and persists it
     // (apply_device_setting); the launch seeds the box before the window
     // exists (main.cpp).
-    void apply_osk_key_size(int w_at300, int h_at300);
+    void apply_osk_key_size(int w_w, int h_w);
 
     // THE KEYBOARD'S CAP SIZE'S ONE LIVE ACT (the `osk_font_px` tuning key,
     // architect 2026-10-29 night; render.h's seat): push the em to the
-    // renderer (set_osk_font_px_at300), then invalidate the whole window —
+    // renderer (set_osk_font_em_w), then invalidate the whole window —
     // the caps are the keyboard band's alone (paint_onscreen_keyboard, the
     // Keys face's one reader), but the full invalidate is the live acts'
     // shared first step and the cheapest truthful one. NO RELAYOUT: the
@@ -3628,7 +3631,7 @@ private:
     // commit is the sole caller; it gates the no-op, assigns the live config
     // and persists it (apply_device_setting); the launch seeds the size
     // before the window exists (main.cpp).
-    void apply_osk_font_px(int px_at300);
+    void apply_osk_font_px(int em_w);
 
     // THE WAVEFORM PLATE'S GROW'S ONE LIVE ACT (the `waveform_grow` device
     // key, architect 2026-10-31; render.h's seat): push the quarters to the

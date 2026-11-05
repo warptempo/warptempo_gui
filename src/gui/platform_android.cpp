@@ -524,21 +524,20 @@ GuiPlatform::~GuiPlatform() {
 // ---------------------------------------------------------------------------
 
 // The tablet's device-config template (contract at the declaration, rationale
-// at this backend's own). 300 % AT THE WINDOWS PIXEL (architect 2026-10-10,
-// "sure, that can be updated later": the template follows the scale the
-// tablet has run at since 2026-10-06): 3 device px per Windows px on the
-// scaled_px road, every Windows px a whole number of device px, so a
-// 16-Windows-px length paints 48 device px (the skin's own unit, one W = 2
-// device px at 300 % since 2026-11-04 night, is render.h's hairline_px:
-// 300 is the density, not the unit). (The template
-// stood at 275 from 2026-10-02 — the tablet's glyph at its 200 % before the
-// unit's change, 44 device px — and its earlier values are git history and
-// a closed question.) The icon row fits this panel whole (the arithmetic is
-// at paint_icon_row, paint_handler.cpp: the left runs' 1666, the run gap's
-// 44 and the right run's 358 of the well's 2256 device px outside the `h`
-// view at 300, re-derived 2026-11-04 night with the 70-px face, the one-W
-// key gap of 2, the 44-px run gap and the well the waveform area), clearing
-// it by 188.
+// at this backend's own). 200 % AT THE W (architect 2026-11-05, THE REBASE
+// TO 200 %, byte-identical on the glass: the template follows the scale the
+// tablet runs at): 2 device px per W on the scaled_px road, every W a whole
+// number of device px, so a 16-W length paints 32 device px and a line (one
+// W, render.h's hairline_px) 2 — the unit's one statement at render.h's
+// scaled_px. (The template stood at 300 from 2026-10-10 to 2026-11-05, the
+// same picture authored in device px at 300 % on a second road, and at 275
+// from 2026-10-02; its earlier values are git history and a closed
+// question.) The icon row fits this panel whole (the arithmetic is at
+// paint_icon_row, paint_handler.cpp: the left runs' 1666, the run gap's 44
+// and the right run's 358 of the well's 2256 device px outside the `h`
+// view, re-derived 2026-11-04 night with the 70-px face, the one-W key gap
+// of 2, the 44-px run gap and the well the waveform area), clearing it by
+// 188.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -559,7 +558,7 @@ GuiPlatform::~GuiPlatform() {
 // this device, so a template pointing anywhere else could never be right.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
-    cfg.gui_scale     = 300;
+    cfg.gui_scale     = 200;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;
@@ -587,19 +586,19 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.noise             = "rain";
     cfg.noise_level       = -9;
     cfg.noise_crossfade_s = 4;
-    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: 33
-    // device px at 300 % (architect 2026-11-03, the retrofit's hi-fi key
-    // metrics; device_config.h's head).
-    cfg.key_height        = kKeyHeightDefaultAt300;
+    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: 17 W,
+    // 34 device px on the tablet (architect 2026-11-03, the retrofit's hi-fi
+    // key metrics; device_config.h's head).
+    cfg.key_height        = kKeyHeightDefaultW;
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
-    // keys), spelled: the FLAGS sheet's 48 x 60 device px at 300 %
-    // (device_config.h's head).
-    cfg.osk_key_w         = kOskKeyWDefaultAt300;
-    cfg.osk_key_h         = kOskKeyHDefaultAt300;
+    // keys), spelled: 24 x 30 W, the FLAGS sheet's 48 x 60 device px on the
+    // tablet (device_config.h's head).
+    cfg.osk_key_w         = kOskKeyWDefaultW;
+    cfg.osk_key_h         = kOskKeyHDefaultW;
     // THE ON-SCREEN KEYBOARD'S CAP SIZE (architect 2026-10-29 night, a
-    // tuning key), spelled: the face table's 24 device px at 300 %
-    // (device_config.h's head).
-    cfg.osk_font_px       = kOskFontPxDefaultAt300;
+    // tuning key), spelled: the face table's Keys 12 W, 24 device px on the
+    // tablet (device_config.h's head).
+    cfg.osk_font_px       = kOskFontPxDefaultW;
     return cfg;
 }
 

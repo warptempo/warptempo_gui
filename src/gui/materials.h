@@ -58,11 +58,11 @@
 // the hi-fi's face and "grow the box instead of adding a border"; the hi-fi
 // key metrics of 2026-11-03's retrofit; the unit of 2 that night, mock v4:
 // the face 70 x 34 and the gap 2, the pitch 72 kept): THE KEY IS ITS
-// PAINTED FACE, render.h's case — 70 device px wide at 300 % by the
-// `key_height` tuning key (icon_case_w_px / icon_case_h_px), 70 x 34 at the
-// default — NO OUTLINE, NO INSET, and TWO KEYS OF A GROUP STAND ONE W OF
-// GROUND APART (render.h's key_gap_px: 2 device px at 300 %, 1 at 200 %, 1
-// at 138 %), the
+// PAINTED FACE, render.h's case — 35 W wide by the `key_height` tuning key
+// (icon_case_w_px / icon_case_h_px), 35 x 17 W at the default, 70 x 34
+// device px on the tablet at 200 % — NO OUTLINE, NO INSET, and TWO KEYS OF
+// A GROUP STAND ONE W OF GROUND APART (render.h's key_gap_px: 2 device px
+// on the tablet, 1 at 100 %), the
 // walk stepping the face and the gap (key_group_pitch_px below), so every
 // face is the same, a group's ends included. THE EDGE RULE IS THE FACES':
 // the band's, row 8's and the controls rows' outermost FACES stand on the
@@ -206,8 +206,9 @@ void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look);
 // THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key
 // gap — the step from a key's face to the next one's in its group, every
 // group walk's (the band's icon_row_seats, row 8's row8_block_walk, the
-// modal family's controls-row layouts, paint_handler.cpp): 72 at 300 % (70
-// + 2), 48 at 200 % (47 + 1). The ground between two GROUPS is the run gap
+// modal family's controls-row layouts, paint_handler.cpp): 36 W, 72 device
+// px on the tablet at 200 % (70 + 2), 36 at 100 % (35 + 1). The ground
+// between two GROUPS is the run gap
 // (render.h's program_run_gap_px), between their faces.
 inline int key_group_pitch_px() {
     return icon_case_w_px() + key_gap_px();

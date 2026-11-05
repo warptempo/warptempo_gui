@@ -42,7 +42,7 @@ namespace {
 // natural dwell, which crosses the slop into the pan within the first
 // frames. A DELIBERATE SLOW START DOES NOT (measured 2026-10-22 on the
 // tablet: a press creeping under the slop for the whole beat — 18 device px
-// in 300 ms at 300 %, under ~60 px/s — reached the expiry and swept a trim
+// in 300 ms on the tablet, under ~60 px/s — reached the expiry and swept a trim
 // region where a pan was meant), so since that day THE EXPIRY IS THE HOLD
 // ONLY FOR A MOTIONLESS PRESS: a contact that left the stillness radius
 // (kDefaultTouchStillnessPx, 2 W, input_core.h) inside the beat keeps its
@@ -348,14 +348,14 @@ void GuiInputCore::maybe_resolve_touch_window() {
     // THE REGION HOLD IS A MOTIONLESS PRESS (architect 2026-10-22, "2 yes"):
     // the expiry is the hold ONLY WHILE THE CONTACT HAS NEVER LEFT THE
     // STILLNESS RADIUS round its down point (touch_window_left_still_,
-    // kDefaultTouchStillnessPx — 2 Windows px, a third of the slop). A
+    // kDefaultTouchStillnessPx — 3 W, a third of the slop). A
     // contact that has left it and not crossed the slop is a pan starting
     // slowly: its window stays Pending with no deadline to the slop crossing
     // (the nav) or the lift (the tap — a sub-slop lift is a tap already),
     // and no hold can form again before that lift — the latch is a latch,
     // cleared only at the next down. MEASURED THAT DAY on the tablet: a press creeping
-    // slower than the slop over the 300 ms beat (6 Windows px on the
-    // scaled_px road, 18 device px at 300 %: under ~60 px/s) reached the
+    // slower than the slop over the 300 ms beat (9 W on the scaled_px road,
+    // 18 device px on the tablet: under ~60 px/s) reached the
     // expiry first and became the hold,
     // so every slow-starting pan swept a trim region and seated the playhead
     // at the press point — what his test swipes left behind. A latch read

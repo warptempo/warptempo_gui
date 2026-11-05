@@ -657,7 +657,7 @@ struct Viewport {
     // (modal_box_interior_rect at the live keyboard height), never the
     // family's whole area. WHY: under a box the GL canvas's clip is empty and
     // every damage rect uploads whole (GuiGlCanvas::present_frame), so the
-    // family's area on every keystroke was ~11.8 MB at 300 %, sustained under
+    // family's area on every keystroke was ~11.8 MB on the tablet, sustained under
     // key repeat. WHAT AN EDIT CAN CHANGE, re-derived from the painters: the
     // line's text, its soft-wrapped rows, the selection and the caret, all
     // painted clipped to the interior (paint_modal_dialog's editor arm); the

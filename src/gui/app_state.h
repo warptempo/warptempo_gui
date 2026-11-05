@@ -233,10 +233,13 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // nav_zoom_px_per_level() below and the one reader divides by that accessor,
 // never by this constant. The scaling rule and its rationale are stated there.
 //
-// Architect-tunable on the rig, exactly as the vertical one is. 145 WINDOWS
-// PX since the unit's change (architect 2026-10-02): the laptop pixel's 200
-// re-authored to the rate that keeps its device travel on the tablet.
-constexpr double kNavZoomPxPerLevel = 145.0;
+// Architect-tunable on the rig, exactly as the vertical one is. 217.5 W
+// SINCE THE REBASE TO 200 % (architect 2026-11-05): the 145 Windows px of
+// 2026-10-02 (the laptop pixel's 200 re-authored) times 1.5, so the rate's
+// device travel on the tablet is what it was — NOT A PAINTED LENGTH, a rate,
+// so it is KEPT EXACT rather than rounded to a whole W: every zoom gesture
+// lands where it did.
+constexpr double kNavZoomPxPerLevel = 217.5;
 
 // The rate in DEVICE pixels per zoom level at the live gui_scale — the ONE
 // READER's divisor (nav_drag_zoom_level, input_pointer.cpp).
@@ -248,8 +251,8 @@ constexpr double kNavZoomPxPerLevel = 145.0;
 // the panel on every host, not the same count of device pixels: 200 device px
 // is ~43 mm on the retired road rig and only ~20 mm on the tablet's 249 PPI
 // panel, which is exactly the "too fast" the architect drove. At the tablet's
-// own 300 % a level costs 435 device px (145 Windows px, kNavZoomPxPerLevel's
-// unit since 2026-10-02; a double, never rounded — below) — ~44 mm on that
+// own 200 % a level costs 435 device px (217.5 W, kNavZoomPxPerLevel, kept
+// exact at the rebase of 2026-11-05; a double, never rounded — below) — ~44 mm on that
 // panel, back on the rig's ~43 mm order of hand travel instead of half it. Durations never scale;
 // lengths do — the same split the
 // press road's four pixel thresholds take (drag_moved_threshold_px,
@@ -268,11 +271,10 @@ constexpr double kNavZoomPxPerLevel = 145.0;
 // divisor rather than a painted dimension, and rounding it to an int would
 // quantize the feel for no gain (render.h's conversion pair states that the
 // double-domain readers deliberately stay out of it). At gui_scale 100 the
-// rate is the authored 145 Windows px exactly; 138 % gives 200.1 device px,
-// the old unit's 200 it had before the unit's change.
+// rate is the authored 217.5 W exactly; the tablet's 200 % gives 435.
 // The floor keeps the divisor away from zero at any factor the schema could
 // ever admit; inside the live [50, 1000] bracket the value rests in
-// [72.5, 1450] and the floor cannot fire.
+// [108.75, 2175] and the floor cannot fire.
 inline double nav_zoom_px_per_level() {
     const double rate = kNavZoomPxPerLevel * gui_scale_factor();
     return rate < 1.0 ? 1.0 : rate;
@@ -647,8 +649,8 @@ struct ValueDragState {
 // number, and a retune is this line (architect 2026-09-10). It is a LENGTH and
 // so it SCALES: the drag reads it through scaled_px, exactly as every other
 // authored press-road distance does (the drag gate, the double-click slack,
-// the touch slop), because a hand's six Windows px at 300 % (18 device px) is
-// not the same gesture as at 138 % (8). Durations never scale; this is not one. The same
+// the touch slop), because a hand's 9 W at 200 % (18 device px) is not the
+// same gesture as at 100 % (9). Durations never scale; this is not one. The same
 // travel buys a cent, a bound cent and a hop alike — the
 // step is one step whatever the cell's domain is, which is what makes the
 // gesture read the same on every cell of every flag.
@@ -660,10 +662,11 @@ struct ValueDragState {
 // shapes the first step: the travel is counted from the CROSSING (2026-09-29,
 // ValueDragState::origin_y), so the gate's own travel buys nothing and the
 // first step always lands one full step past it, where a press-measured
-// count would have landed the grab gate's two steps at once. 6 WINDOWS PX
-// since the unit's change (architect 2026-10-02), the laptop pixel's 8
-// re-authored to the travel it had on the tablet, as the drag gate was.
-inline constexpr double kValueDragPxPerStep = 6.0;
+// count would have landed the grab gate's two steps at once. 9 W SINCE THE
+// REBASE TO 200 % (architect 2026-11-05): the 6 Windows px of 2026-10-02
+// (the laptop pixel's 8 re-authored) times 1.5, the travel it had on the
+// tablet, 18 device px, as the drag gate was.
+inline constexpr double kValueDragPxPerStep = 9.0;
 
 // Drag-time position overlay. Paint sites consult this when a marker
 // index appears in `indices` to read the proposed new time from
@@ -3103,9 +3106,9 @@ inline constexpr bool redesign_button_opens_icon_run(RedesignButton b) {
 // not a number per surface. The beat's declaration lists the two of them
 // apart from the holds, neither being one, and both stay on the constant.
 constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
-// 6 WINDOWS PX (8 of the old unit until the unit's change, architect
-// 2026-10-02: 18 device px at the tablet's 300 %).
-constexpr int     kDoubleClickSlackPx = 6;
+// 9 W (the 6 Windows px of 2026-10-02 times 1.5 at the rebase to 200 %,
+// architect 2026-11-05: 18 device px on the tablet as before).
+constexpr int     kDoubleClickSlackPx = 9;
 
 // The slack in DEVICE pixels at the live gui_scale — the compare sites' one
 // reader (input_pointer.cpp, all of them `<=` against a Chebyshev distance
@@ -3117,7 +3120,7 @@ constexpr int     kDoubleClickSlackPx = 6;
 // drag" and "never left the slack" one answer on the SWEEP AND PAN surfaces.
 // ON THE TWO GRAB SURFACES THEY ARE TWO ANSWERS since 2026-09-29: a flag and
 // the trim bar become drags at grab_moved_threshold_px(), twice this, so a
-// press there can leave the slack at 6 Windows px and still be a click at
+// press there can leave the slack at 9 W and still be a click at
 // its release. That is fine because the seed is the motionless release's
 // alone and a release between the two distances IS a click, not a drag: the
 // flag's seed is written by any release whose pending never crossed (at the
@@ -3265,11 +3268,11 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // roll crossed the smaller one during a relaxed double tap (the flag drag that
 // ate the second tap). The RESOLVED value is drag_moved_threshold_px() below;
 // every gate reads that accessor and never this constant, and at gui_scale 100
-// it is this number exactly. 6 WINDOWS PX since the unit's change (architect
-// 2026-10-02): the laptop pixel's 8 re-authored to the device length it had
-// on the tablet then; at the tablet's 300 % it is 18 device px — 9dp under
-// its 320 density.
-constexpr int     kDragMovedThresholdPx = 6;
+// it is this number exactly. 9 W SINCE THE REBASE TO 200 % (architect
+// 2026-11-05): the 6 Windows px of 2026-10-02 (the laptop pixel's 8
+// re-authored) times 1.5, the device length it had on the tablet; at the
+// tablet's 200 % it is 18 device px — 9dp under its 320 density.
+constexpr int     kDragMovedThresholdPx = 9;
 
 // The gate in DEVICE pixels at the live gui_scale — THE ONE READER FOR EVERY
 // SURFACE in the list above (three compares in input_pointer.cpp: the nav
@@ -3282,8 +3285,8 @@ inline int drag_moved_threshold_px() {
 
 // THE GRAB GATE (architect 2026-09-29): the Chebyshev distance a press that
 // GRABS A THING must travel before it becomes that thing's drag — TWICE the
-// drag gate above, derived from it so the two stay one authored number (12
-// Windows px; twice the drag gate's rounded 18 device px, 36, at 300 %). A
+// drag gate above, derived from it so the two stay one authored number (18
+// W; twice the drag gate's rounded 18 device px, 36, on the tablet at 200 %). A
 // grab is a press on an object whose
 // drag MOVES it — a click that rolls a few pixels on a flag or a trim endcap
 // must stay the click it meant to be, because the drag it would otherwise
@@ -3316,11 +3319,10 @@ inline int drag_moved_threshold_px() {
 // click, never a drag, whichever the seed then does with it.
 // TWICE THE ROUNDED DRAG GATE, NOT THE ROUNDED DOUBLE (architect 2026-10-02,
 // scaled_px's composite rule): the grab gate is built from its rounded part,
-// 2 × drag_moved_threshold_px() — 16 device px at 138 % (2 × 8) and 36 at
-// 300 % (2 × 18) — where scaled_px(12) would round once to 17 at 138 %
-// (16.56); at 300 % the two agree, 36, every Windows px of the scaled_px
-// road being 3 device px there (the skin's own W is 2, render.h's
-// hairline_px; a gesture gate is no painted length).
+// 2 × drag_moved_threshold_px() — 36 device px on the tablet at 200 % (2 ×
+// 18), 18 at 100 % — where scaled_px(18) would round once; at every whole
+// factor the two agree (a gesture gate is no painted length, but it rides
+// the one road).
 constexpr int     kGrabMovedThresholdPx = 2 * kDragMovedThresholdPx;
 
 inline int grab_moved_threshold_px() {
@@ -10024,7 +10026,7 @@ inline DialogEditorStop dialog_editor_byte_at(
 // cross the window's foot, ABOVE `btn` (the owner's painted button) with
 // tooltip_flip_gap_px() between them; then held between THE KEYS' OUTER
 // COLUMNS (render.h's well_columns, THE EDGE RULE; architect 2026-11-02,
-// M11 ruling 4: x 24 .. 2279 at 300 %, the well the waveform area since
+// M11 ruling 4: x 24 .. 2279 on the tablet, the well the waveform area since
 // architect 2026-11-03, where the window's own edges stood
 // until then) — shifted left to end on the right one, never past the left
 // one (a box wider than the span pins its left edge there), never above the
@@ -17647,27 +17649,24 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE TWO HISTORY TOGGLES print SESSION (the walk lamp's lit state) and
 // CUMUL (Toggle Cumulative cut as ADD SEL is). ZOOM IN AND ZOOM OUT READ IN
 // AND OUT (architect 2026-10-27: "Zoom In / Zoom Out, or In / Out if too
-// long"): ZOOM OUT runs 75.4 px at 300 % at the 14-px legend, past its key, and the pair is
-// one shape, so both take the short form. RESTRICT READS RESTR (architect
-// 2026-10-29, "defer to your measurement"): RESTRICT runs 70.0 px at 300 %
-// and would crowd FOLLOW's legend beside it; RESTR runs 47.5 (the 14-px
-// legend, 2026-11-04 night).
-// THE FIT, AT THE LEGEND FACE'S 14 px EM (kGuiFaceSizes, gui_font.h; 14
-// since 2026-11-04 night, his pick over the unit's 16, "it does seem too
-// large now") AGAINST THE 70-px FACE (the key itself, materials.h's THE
-// FACE AND ITS GAP), measured 2026-11-04 night on the product's own
-// shaping road (the runs' advances): the widest words MAGNIFY 63.8,
-// DISCARD 63.0, SESSION 62.3, HISTORY 61.7, FLATTEN 61.2, ADD SEL and
-// SOURCE 59.9 px at 300 % (41.0 / 40.5 / 40.0 / 39.7 / 39.3 / 38.5 at
-// 200 %, em 9, against the 47-px face), so EVERY LEGEND OF A 70-px KEY
-// FITS ITS FACE, the widest with about 3 px each side; the tightest
-// neighbors, MAGNIFY beside FOLLOW (59.1), keep about 10 px between their
-// runs at the 72-px pitch (about 8 at 200 %'s 48). The rule stands for any
-// word to come (it never widens a key; one wider than its face overhangs
-// onto the ground). AT 150 % (31.9 .. 30.0 against the 35-px face) and
-// 138 % (27.3 .. 25.7 against the 32-px face) the same words fit too. A
-// smaller key_height leaves the widths alone (the legend reads the face's
-// width, never its height).
+// long"): ZOOM OUT runs 75.4 device px on the tablet at the 14-px legend,
+// past its key, and the pair is one shape, so both take the short form.
+// RESTRICT READS RESTR (architect 2026-10-29, "defer to your measurement"):
+// RESTRICT runs 70.0 device px and would crowd FOLLOW's legend beside it;
+// RESTR runs 47.5 (the 14-px legend, 2026-11-04 night).
+// THE FIT, AT THE LEGEND FACE'S 7 W EM, 14 device px on the tablet at 200 %
+// (kGuiFaceSizes, gui_font.h; 7 W since 2026-11-04 night, his pick over
+// the 8 W before it, "it does seem too large now") AGAINST THE 70-px FACE
+// (35 W, the key itself, materials.h's THE FACE AND ITS GAP), measured
+// 2026-11-04 night on the product's own shaping road (the runs' advances):
+// the widest words MAGNIFY 63.8, DISCARD 63.0, SESSION 62.3, HISTORY 61.7,
+// FLATTEN 61.2, ADD SEL and SOURCE 59.9 device px, so EVERY LEGEND OF A
+// 70-px KEY FITS ITS FACE, the widest with about 3 px each side; the
+// tightest neighbors, MAGNIFY beside FOLLOW (59.1), keep about 10 px
+// between their runs at the 72-px pitch. The rule stands for any word to
+// come (it never widens a key; one wider than its face overhangs onto the
+// ground). A smaller key_height leaves the widths alone (the legend reads
+// the face's width, never its height).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";
@@ -17739,7 +17738,7 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
 // grid-iterations lamp. A TOGGLE KEEPS ITS PRINT IN BOTH STATES ("the toggle
 // acts keep their caption because they still are toggling"); DISABLE KEEPS
 // ITS SHORTHAND (architect 2026-10-25: "we already use shorthand, like ADD
-// SEL"). Every word fits its face (CANCEL and COMMIT about 57 px at 300 %,
+// SEL"). Every word fits its face (CANCEL and COMMIT about 57 device px on the tablet,
 // RECALL 54, CHECK 49, the player's PAUSE 46). THE REPAINT: the arms fork
 // exactly where the glyph's do, so main.cpp's per-tick comparator, holding
 // the painted drawing (RedesignButtonFace::icon), repaints the key on every

@@ -9,7 +9,7 @@
 
 int notification_pad_px() {
     // P18 (the ruling at the declaration): an area, rounded at the element.
-    return skin_px(kNotificationPadAt300, 1);
+    return scaled_px(kNotificationPadW, 1);
 }
 
 int notification_gap_px() {
@@ -24,9 +24,9 @@ int notification_cap_px() {
 
 int notification_card_h_px() {
     // border + pad + cap + pad + border, each its own rounded part (the
-    // composite rule, scaled_px's head): 2 + 18 + 15 + 18 + 2 = 55 at 300 %
-    // (the border one W, 2 device px, and the Body face 22 since the unit
-    // of 2, 2026-11-04 night).
+    // composite rule, scaled_px's head): 2 + 18 + 15 + 18 + 2 = 55 device
+    // rows on the tablet at 200 % (the border one W, 2 device px, the pad 9
+    // W and the Body face 11 W, 22 device px).
     return 2 * hairline_px() + 2 * notification_pad_px() +
            notification_cap_px();
 }
@@ -56,12 +56,12 @@ GuiRect notification_stack_bound(const AppState& a) {
     // OUTER COLUMN AT THE RIGHT, THE PANEL'S PAD AT THE FOOT. THE RIGHT EDGE IS
     // THE KEYS' OUTER COLUMN (THE EDGE RULE, as the tooltip's clamp,
     // tooltip_box_rect; architect 2026-11-02, M11's and M14's record
-    // pictures): the card's right edge on the well's last column, 2279 at
-    // 300 % (well_columns' end, 2280, one past it; the well the waveform
+    // pictures): the card's right edge on the well's last column, 2279 on
+    // the tablet (well_columns' end, 2280, one past it; the well the waveform
     // area, architect 2026-11-03; the panel's pad from the window's
     // edge until 2026-11-02). The foot is the
     // panel's own pad, folder_overlay::pad_px (architect 2026-08-30; one W,
-    // 2 at 300 %, since 2026-11-04 night). THE TOP IS ONE RULE FOR
+    // 2 device px on the tablet, since 2026-11-04 night). THE TOP IS ONE RULE FOR
     // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
     // "it looks like absolute positioning where it should be relative to the
     // elements"): THE TRIM BAR'S FIRST FILL ROW, the row under the trim
@@ -69,7 +69,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // THE FIRST CARD'S TOP BORDER ON THE BAR'S FIRST FILL ROW — RULED KEPT
     // (architect 2026-11-03, over the bar's two fills; first ruled 2026-11-02,
     // M14 "d": "the card's top border one line with the trim bar's frame
-    // row"; row 146 at 300 % at key_height 34, the trim lane's ground one W).
+    // row"; row 146 on the tablet at key_height 17, the trim lane's ground one W).
     // The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well).

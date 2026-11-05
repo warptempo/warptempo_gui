@@ -60,7 +60,7 @@
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU (nor svg_icon's, nor resvg).
 
-#include "render.h"        // skin_px
+#include "render.h"        // scaled_px
 
 #include <cairo/cairo.h>
 
@@ -166,12 +166,12 @@ void drop_rasters();
 // it: a probe at zoom 8 measures the ink in user units, the zoom is `ink_px`
 // over its larger side, and the zoom steps down by 1 % while the rim's
 // extra row makes it overrun. THE SEATS' LENGTHS, each its owner's: the
-// keys' skin_px of 18 / 34 of the `key_height` tuning key's height
-// (kKeyGlyphInkPerKeySide, paint_key_glyph, 18 at the default 34,
-// 2026-11-04 night, his pick d1, one W over the unit's 16), the logo lane's
-// note skin_px(18) (kLogoNoteInkAt300) and battery glyph skin_px(22)
-// (kLogoGlyphInkAt300, render.h), the list rows' skin_px(26)
-// (kListGlyphInkAt300, paint_handler.cpp), the cards' .525 of the first
+// keys' scaled_px of 9 / 17 of the `key_height` tuning key's W
+// (kKeyGlyphInkPerKeySide, paint_key_glyph, 9 W at the default 17, 18
+// device px on the tablet, 2026-11-04 night, his pick d1, one W over the 8
+// W before it), the logo lane's note scaled_px(9) (kLogoNoteInkW) and
+// battery glyph scaled_px(11) (kLogoGlyphInkW, render.h), the list rows'
+// scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' .525 of the first
 // line's inside height (kNotificationGlyphRatio, notifications.h). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and
 // shared by the colors; the cropped raster per (drawing, ink px, color),

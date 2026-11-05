@@ -169,8 +169,8 @@ SharedRun memoized_run(const GuiFont& font, std::string_view utf8) {
     key.append(reinterpret_cast<const char*>(&face), sizeof face);
     key.append(reinterpret_cast<const char*>(&font.percent),
                sizeof font.percent);
-    key.append(reinterpret_cast<const char*>(&font.px_at_300),
-               sizeof font.px_at_300);
+    key.append(reinterpret_cast<const char*>(&font.em_w),
+               sizeof font.em_w);
     key.append(utf8);
     const auto it = memo.find(key);
     if (it != memo.end()) return it->second;

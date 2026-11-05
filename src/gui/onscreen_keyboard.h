@@ -14,7 +14,7 @@
 // centered, like a phone … chiclets, taller than wide"): five rows of keys
 // on TWO PAGES built for the product's own grammars — FLAGS, the letters, the
 // digits and the flag grammar's operators, and SYMBOLS, the rest of printable
-// ASCII (the layout table below) — its key box authored at 300 % and scaled,
+// ASCII (the layout table below) — its key box authored in W and scaled,
 // under tuning (the `osk_key_w` and `osk_key_h` device keys, the geometry
 // below; its caps' size the `osk_font_px` key since 2026-10-29 night,
 // cap_word's paragraph), the block of keys CENTERED in a band that runs the
@@ -380,7 +380,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // glass; "no glyphs", 2026-10-29, reaffirmed 2026-10-29 night over mocks of
 // a Tab glyph and its kin, declined): every cap is a WORD or a character on the
 // ONE sans face in the keys' own size (gui_font.h's GuiFace::Keys, the
-// `osk_font_px` tuning key's px at 300 %, 24 by default, architect
+// `osk_font_px` tuning key's em in W, 12 by default, architect
 // 2026-10-29 night; "C24", architect 2026-10-24; "the glyph size is good",
 // 2026-10-29), shaped through the one chokepoint like every other label.
 //
@@ -406,20 +406,21 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // face. Measured (Liberation Sans Bold, the Keys face's file since
 // 2026-11-04 night, gui_font.h's table; HarfBuzz's unhinted
 // advances through FreeType, text_shape's road) against the key's face —
-// the whole key, no outline (2026-11-04) — at 300 %, the key widths the
-// slots' at the one-W gap (2026-11-04): at the defaults (osk_key_w 48,
-// osk_key_h 60, osk_font_px 24) "Bksp" 59 px in the 2.5u key's 123, "Enter"
+// the whole key, no outline (2026-11-04) — in the tablet's device px at
+// 200 %, the key widths the slots' at the one-W gap (2026-11-04): at the
+// defaults (osk_key_w 24, osk_key_h 30, osk_font_px 12 — 48 x 60 and 24
+// device px) "Bksp" 59 px in the 2.5u key's 123, "Enter"
 // 61 in the 2u key's 98, "Space" 71 in the 4u key's 198, "Paste" 64,
 // "Copy" 60, "&123" 57, "Shift" 53, "ABC" 52 and "Esc" 43 in the 1.5u key's
 // 73, "Tb" 29 in the 1u key's 48, and the widest character cap, "@", 23 in
-// the 1u key's 48 (the capital "W" 23); at his box (osk_key_w 50, the
-// default height, osk_font_px 26) "Bksp" 64 in 128, "Enter" 66 in 102,
-// "Space" 77 in 206, "Paste" 69, "Copy" 65 and "&123" 62 in 76, "Tb" 32
-// and "@" 25 in 50. At 200 % and 150 % the key and the face scale together
-// and every word fits as well. A WORD THAT FAILS ITS
+// the 1u key's 48 (the capital "W" 23); at his box (osk_key_w 25, the
+// default height, osk_font_px 13 — 50 and 26 device px) "Bksp" 64 in 128,
+// "Enter" 66 in 102, "Space" 77 in 206, "Paste" 69, "Copy" 65 and "&123"
+// 62 in 76, "Tb" 32 and "@" 25 in 50. At 100 % the key and the face scale
+// together and every word fits as well. A WORD THAT FAILS ITS
 // KEY UNDER AN EXTREME TUNING SIMPLY OVERHANGS IT — a tuning key's own
 // consequence, centered on its key like every cap: at the default box "Paste"
-// is the first to overhang, from osk_font_px 28 ("Copy" from 30, "&123" from
+// is the first to overhang, from osk_font_px 14 ("Copy" from 15, "&123" from
 // 31, "Shift" from 33, "ABC" from 34, "Enter" from 39, "Tb" from 40, "Esc"
 // from 42; "Bksp" not until 51, past osk_font_px's ceiling of 48,
 // device_config.h's grammar), and at osk_font_px 24 "Paste" overhangs at
@@ -456,29 +457,29 @@ inline constexpr Page page_after(Role role, Page page) {
 
 // -- The authored geometry --------------------------------------------------
 //
-// THE KEY BOX IS AUTHORED AT 300 % AND SCALED (architect 2026-10-29, the
-// compact keyboard), like every other skin length (skin_px, rounded at the
+// THE KEY BOX IS AUTHORED IN W AND SCALED (architect 2026-10-29, the
+// compact keyboard), like every other skin length (scaled_px, rounded at the
 // element): its WIDTH, one unit's key, and its HEIGHT, every row's, the two
 // TUNING DEVICE KEYS `osk_key_w` and `osk_key_h` (render.h's seat;
-// device_config.h's grammar, [24, 160] each), defaults 48 and 60, the FLAGS
-// sheet's numbers. THE GAP between adjacent keys, both axes, IS THE PROGRAM
-// KEYS' GAP, ONE W (render.h's key_gap_px: 2 device px at 300 %, 1 at 200 %,
-// 1 at 138 %; architect 2026-11-04, the unit: "the same face and gap on
-// every key surface", the tenth of the height of 2026-10-29 retired; the W
-// of 2 that night); THE
-// PITCH is the key plus the gap; a key of n units is n pitches less one gap,
-// each slot's edge rounded at the element (quarter_offset_px). At the
-// defaults on the tablet (300 %): the key 48 x 60, the gap 2, the pitch 50,
-// so 1u 48, 1.5u 73, 2u 98, 2.5u 123 and 4u 198 device px from a slot at
-// the block's edge; at 200 % 32 x 40, the gap 1, the pitch 33. THE
+// device_config.h's grammar, [12, 80] each), defaults 24 and 30 W, the
+// FLAGS sheet's 48 x 60 device px on the tablet. THE GAP between adjacent
+// keys, both axes, IS THE PROGRAM KEYS' GAP, ONE W (render.h's key_gap_px:
+// 2 device px on the tablet at 200 %, 1 at 100 %; architect 2026-11-04, the
+// unit: "the same face and gap on every key surface", the tenth of the
+// height of 2026-10-29 retired); THE PITCH is the key plus the gap; a key
+// of n units is n pitches less one gap, each slot's edge rounded at the
+// element (quarter_offset_px). At the defaults on the tablet (200 %): the
+// key 48 x 60, the gap 2, the pitch 50, so 1u 48, 1.5u 73, 2u 98, 2.5u 123
+// and 4u 198 device px from a slot at the block's edge; at 100 % 24 x 30,
+// the gap 1, the pitch 25. THE
 // KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S face (architect
 // 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the 70 x
 // key_height face): their box is `osk_key_w` x `osk_key_h` alone, their gap
 // the program's. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is
 // retired 2026-10-29, git history.)
-inline int key_w_px()     { return skin_px(osk_key_w_at300(), 1); }
-inline int key_h_px()     { return skin_px(osk_key_h_at300(), 1); }
+inline int key_w_px()     { return scaled_px(osk_key_width_w(), 1); }
+inline int key_h_px()     { return scaled_px(osk_key_height_w(), 1); }
 inline int key_gap_px()   { return ::key_gap_px(); }
 inline int key_pitch_px() { return key_w_px() + key_gap_px(); }
 
@@ -498,19 +499,19 @@ inline int block_w_px() {
 
 // THE EDGE PAD — THE SAME ON ALL FOUR SIDES (architect 2026-10-10, the
 // overlay's mocks: "the pad the same on all four sides"; kept 2026-10-29):
-// 14 device px at 300 % (7 W; the 14 it measured when it was the full-width
-// walk's leftover read back, a whole W again with the unit of 2, architect
-// 2026-11-04 night), 9 at 200 % (9.33) and 6 at 138 % (6.44), the band's
+// 7 W (14 device px on the tablet at 200 %, the 14 it measured when it was
+// the full-width walk's leftover read back, a whole W again with the unit,
+// architect 2026-11-04 night; 7 at 100 %), the band's
 // top to the first key row and the last key row to the window's foot
 // (across, the block is centered and the ground beside it is what the
 // window's width leaves).
-inline constexpr double kEdgePadAt300 = 14.0;
-inline int edge_pad_px() { return skin_px(kEdgePadAt300, 1); }
+inline constexpr double kEdgePadW = 7.0;
+inline int edge_pad_px() { return scaled_px(kEdgePadW, 1); }
 
 // The band's whole height: the edge pad, five key rows and the four gaps
 // between them, and the edge pad — at the defaults 14 + 308 + 14 = 336
-// device rows at 300 %, 9 + 204 + 9 = 222 at 200 % (the key 40, the gap 1),
-// 6 + 144 + 6 = 156 at 138 % (the key 28, the gap 1).
+// device rows on the tablet at 200 %, 7 + 154 + 7 = 168 at 100 % (the key
+// 30, the gap 1).
 // THE BAND CARRIES NO LINE (architect 2026-10-14: the raised
 // Hilight line the taskbar overlay laid on its top, 2026-10-10 to 2026-10-14,
 // is gone with the overlay; the placement block below).
@@ -588,13 +589,13 @@ inline bool stands(const AppState& a) {
 // stop doing that". The dialog's surface is the modal family's box and
 // controls row; its band, its pad and its line went with the overlay.)
 //   ALONE (the flag editor), AT THE DEFAULTS (osk_key_w 48, osk_key_h 60):
-//     at 300 % on 2304 x 1440 the band 1104–1439 (14 + 308 + 14) across x
+//     on the tablet (200 %, 2304 x 1440) the band 1104–1439 (14 + 308 + 14) across x
 //     0..2303, its first key row's top 1118, the block of keys x 828..1475
 //     (648 wide, 828 clear each side). Row 8 is under it
 //     and unreachable: the keyboard's press claim takes the band, the ground
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
-//     arithmetic at modal_box.h's head; at 300 %, key_height 34 and the
+//     arithmetic at modal_box.h's head; on the tablet, key_height 17 and the
 //     keyboard's defaults the controls row 994–1103, its faces 1032–1065,
 //     the box 144–993, its top under the band's rows 0–143 with the
 //     72-row logo lane, 2026-11-04 night).

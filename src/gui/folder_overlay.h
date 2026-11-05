@@ -126,7 +126,7 @@
 //   * THE ROW IS WINDOWS' LIST ROW (architect 2026-10-02): 17 Windows px
 //     tall at the normal face, as Windows' list boxes with 16-px icons, one
 //     Windows px between rows — ON THE UNIT SINCE 2026-11-04 night, the row
-//     52 device px at 300 % and one W between rows (kListRowAt300 and
+//     26 W (52 device px on the tablet) and one W between rows (kListRowW and
 //     button_row_gap_px below), the glyph centred in the row's height. It was the icon row's BUTTON, the toolbar case's
 //     height, from 2026-08-28 ("we've gone for the button analogy"; "the
 //     buttons are good enough size for my finger"). A
@@ -135,7 +135,7 @@
 //     the row. (The AV Sync Stats panel's text rows stood at a monospace
 //     line's pitch, the row geometry's one fork, from 2026-09-03 until the
 //     panel's deletion on 2026-09-30.)
-// The panel's own authored number is the row below (kListRowAt300); its
+// The panel's own authored number is the row below (kListRowW); its
 // pad and its row gap are one W, the line rule's (2026-11-04 night).
 //
 // THE FACES ARE LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; the
@@ -204,35 +204,34 @@ namespace folder_overlay {
 //
 // THE ROW IS WINDOWS' LIST ROW (the ruling above): the panel owns its row
 // height, its pad and its row gap; the row's glyph and its name stand
-// at the painter's own constants (paint_handler.cpp's kListGlyphInkAt300,
-// kListGlyphXAt300, kListNameXAt300, 2026-10-23).
+// at the painter's own constants (paint_handler.cpp's kListGlyphInkW,
+// kListGlyphXW, kListNameXW, 2026-10-23).
 
 // THE PANEL'S OUTER INSET — the margin between the band's edge and the rows,
 // at the top, the bottom and both sides: ONE W, the line rule's hairline_px
-// (render.h: 2 device px at 300 %, 1 at 200 % and below; architect
-// 2026-11-04 night, the unit of 2 — the 1-Windows-px pad of 2026-10-02, 3
-// device px at 300 %, re-authored on the unit as every former one-px gap
-// was). pcmanfm-qt's compact view keeps 1 px between an item and the frame
+// (render.h: 2 device px on the tablet at 200 %, 1 at 100 % and below;
+// architect 2026-11-04 night, the unit — the 1-Windows-px pad of 2026-10-02
+// re-authored on the unit as every former one-px gap was). pcmanfm-qt's
+// compact view keeps 1 px between an item and the frame
 // and the architect's ruling lets it "grow proportionally with the taller
 // rows" (2026-10-02). (Its one reader since 2026-10-23 is the notification
 // stack's foot margin, notifications.cpp: the rows stand at row_inset_px
 // below.)
 inline int pad_px()               { return hairline_px(); }
 // THE GAP BETWEEN TWO ROWS, the panel's own since the roster's buttons
-// began to touch (architect 2026-10-02): ONE W, hairline_px (2 device px at
-// 300 %, 1 at 200 % and below; the unit of 2, 2026-11-04 night, the
-// 1-Windows-px gap's 3 re-authored).
+// began to touch (architect 2026-10-02): ONE W, hairline_px (2 device px on
+// the tablet at 200 %, 1 at 100 % and below; the unit, 2026-11-04 night).
 inline int button_row_gap_px()    { return hairline_px(); }
 
-// THE ROW BOX: kListRowAt300 = 52 DEVICE PX AT 300 % (26 W; architect
-// 2026-11-04 night, the unit of 2, "yes, put on todo": the hi-fi's 51 — 17
-// Windows px on the scaled_px road from 2026-11-03, the retrofit, after the
-// text round's 56 — re-authored as an even length and rounded up), through
-// skin_px, rounded at the element: 52 at 300 %, 35 at 200 % (34.67), 24 at
-// 138 % (23.92), floored at one. EVERY LIST STANDS ON IT — the render
+// THE ROW BOX: kListRowW = 26 W (52 device px on the tablet at 200 %;
+// architect 2026-11-04 night, the unit, "yes, put on todo": the hi-fi's 51
+// device px — 17 Windows px of the 2026-10-02 unit from 2026-11-03, the
+// retrofit, after the text round's 56 — re-authored as a whole W and
+// rounded up), through scaled_px, rounded at the element: 52 at 200 %, 26
+// at 100 %, floored at one. EVERY LIST STANDS ON IT — the render
 // player's folders and wavs, the project picker, the settings page, its
 // value list, the trim presets — and the modal box's text rows pitch on it
-// (row + gap, 54 at 300 %; paint_modal_dialog), the panel's row gap under
+// (row + gap, 27 W, 54 device rows on the tablet; paint_modal_dialog), the panel's row gap under
 // it; the row's glyph is the painter's (2026-10-23; Windows' small 16-px
 // icon until then; Breeze's since 2026-11-02). A folder row wears
 // icons::Icon::Folder and a wav row icons::Icon::ViewMediaTrack, the double
@@ -244,8 +243,8 @@ inline int button_row_gap_px()    { return hairline_px(); }
 // the UP kind, which wore the folder glyph because it named a folder, with
 // the player's move inside `tmp/` on 2026-09-01.) The accessor keeps the
 // name it had while a row was a wide button.
-inline constexpr double kListRowAt300 = 52.0;
-inline int button_row_height_px() { return skin_px(kListRowAt300, 1); }
+inline constexpr double kListRowW = 26.0;
+inline int button_row_height_px() { return scaled_px(kListRowW, 1); }
 // THE ROWS' INSET INSIDE THE BOX'S INTERIOR — left, top and right, and the
 // listing's foot: THE CONTENT'S ONE HAIRLINE OF AIR (modal_box.h's THE
 // PANE, architect 2026-10-23: "at most one device pixel"; one W since

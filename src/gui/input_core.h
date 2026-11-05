@@ -126,18 +126,19 @@ inline int containing_pixel(double v) {
 
 // THE TOUCH SLOP AT gui_scale 100, in device pixels — the value a freshly
 // built core carries until the GUI pushes its own (set_touch_slop_px). It is
-// the AUTHORED length (6 Windows px, the drag gate's, kDragMovedThresholdPx
-// in app_state.h); this layer never resolves it, because this layer never
+// the AUTHORED length (9 W, the drag gate's, kDragMovedThresholdPx in
+// app_state.h); this layer never resolves it, because this layer never
 // learns the scale.
-inline constexpr double kDefaultTouchSlopPx = 6.0;
+inline constexpr double kDefaultTouchSlopPx = 9.0;
 
 // THE TOUCH STILLNESS RADIUS AT gui_scale 100, in device pixels (2026-10-22):
 // the Chebyshev distance from the down point a pan-zone contact must stay
 // within for the whole hold beat if the window's expiry is to be the REGION
 // HOLD (the rule and its measured reason at maybe_resolve_touch_window,
-// input_core.cpp). 2 Windows px, a third of the slop; pushed down scaled by
-// the slop's own road (set_touch_stillness_px).
-inline constexpr double kDefaultTouchStillnessPx = 2.0;
+// input_core.cpp). 3 W, a third of the slop (the 2 Windows px of 2026-10-22
+// times 1.5 at the rebase to 200 %, 2026-11-05: 6 device px on the tablet as
+// before); pushed down scaled by the slop's own road (set_touch_stillness_px).
+inline constexpr double kDefaultTouchStillnessPx = 3.0;
 
 // THE MONOTONIC CLOCK EVERY DEADLINE IN THIS LAYER IS MEASURED AGAINST, in
 // microseconds. One owner for the whole GUI: the key-repeat deadline, the touch
@@ -556,8 +557,9 @@ public:
     // live pointer translation is ignored whatever the first has done.)
     //
     // IT IS A LENGTH, SO IT RIDES gui_scale — AND THE CORE NEVER LEARNS THE
-    // SCALE. The authored length (8 laptop px then, 6 Windows px since
-    // 2026-10-02) was 1.7 mm on the retired road rig's 1024x600 panel at 100 %
+    // SCALE. The authored length (8 laptop px then, 6 Windows px from
+    // 2026-10-02, 9 W since the rebase of 2026-11-05) was 1.7 mm on the
+    // retired road rig's 1024x600 panel at 100 %
     // and 0.8 mm on the tablet's 249 PPI one, which a fingertip's roll crosses
     // during a relaxed double tap; the GUI resolves it and pushes it here,
     // so this layer keeps measuring raw device pixels and knows nothing about

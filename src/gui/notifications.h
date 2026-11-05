@@ -688,7 +688,7 @@ inline std::string lowercase_initial(std::string_view s) {
 // at one width; the width rule was not part of either ruling and the floor
 // keeps the number it was measured at. NOR DID THE GLYPH'S RETURN
 // (2026-10-24): the chrome ring + pad + the glyph's seat + the gap + pad +
-// ring is 1 + 18 + 34 + 10 + 18 + 1 = 82 device px at 300 %, and the pair
+// ring is 1 + 18 + 34 + 10 + 18 + 1 = 82 device px on the tablet, and the pair
 // shapes to about 237 and 232 device px in the body face's 22, both near
 // 320 against the floor's 594. NOR DID THE FACES' CHANGES: under
 // the body face at the recorded Windows metrics less the tracking
@@ -699,17 +699,17 @@ inline std::string lowercase_initial(std::string_view s) {
 // relation holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px.
 //
-// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 465 Windows px and
+// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 698 W and
 // notification_card_max_w_px already floors its window safety here, so the
 // clamp's own precondition (floor <= ceiling) is untouched by the rise and a
 // window too narrow for the floor keeps overhanging exactly as before.
-// 198 WINDOWS PX SINCE THE UNIT'S CHANGE (architect 2026-10-02): the laptop
-// pixel's 272 re-authored to the width it had on the tablet; the figures
-// above are that unit's. At the Windows pixel the pair shaped to about 140
-// and 137 px at that day's 13-px face, and the chrome — three 5-px pads, the
-// 3-px inset and the 22-px box, 40 px — put them near 180, the floor
-// answering for both.
-inline constexpr double kNotificationMinWidthPx = 198.0;
+// 297 W SINCE THE REBASE TO 200 % (architect 2026-11-05: the 198 Windows px
+// of 2026-10-02 times 1.5, so the tablet's 594 device px stand; the figures
+// above are the device numbers). At the Windows pixel the pair shaped to
+// about 140 and 137 px at that day's 13-px face, and the chrome — three 5-px
+// pads, the 3-px inset and the 22-px box, 40 px — put them near 180, the
+// floor answering for both.
+inline constexpr double kNotificationMinWidthPx = 297.0;
 
 // THE CARD'S CEILING, THE LAPTOP'S CARD WIDTH (its source), AUTHORED AND SCALED (architect
 // 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
@@ -717,21 +717,24 @@ inline constexpr double kNotificationMinWidthPx = 198.0;
 // card at every window and, through `scaled_px`, the same card in millimetres
 // at every gui_scale. The window fraction was DEVICE PIXELS and so starved the
 // tablet: at its 225 % of that day its 1440 px panel gave a 480 px card for
-// text shaped half again as large, three words to a line. (465 Windows px
-// since the unit's change, 2026-10-02.) IT MAY NOW COVER BUTTONS ON THE
-// TABLET and that is accepted in his own words — "it's okay if it covers up
-// some buttons": a card is a sentence to read and it leaves on its own.
-// A length, so it scales; the life beside it (kNotificationMs) is a duration
-// and does not. 465 WINDOWS PX since the unit's change (architect
-// 2026-10-02), the laptop pixel's 640 re-authored.
-inline constexpr double kNotificationMaxWidthPx = 465.0;
+// text shaped half again as large, three words to a line. IT MAY NOW COVER
+// BUTTONS ON THE TABLET and that is accepted in his own words — "it's okay
+// if it covers up some buttons": a card is a sentence to read and it leaves
+// on its own. A length, so it scales; the life beside it (kNotificationMs)
+// is a duration and does not. 698 W SINCE THE REBASE TO 200 % (architect
+// 2026-11-05): the 465 Windows px of 2026-10-02 times 1.5 is 697.5, RULED TO
+// 698 — a painted length is a whole W — so the card's ceiling is 1396 device
+// px on the tablet against the 1395 before the rebase, THE ONE KNOWINGLY
+// NON-IDENTICAL LENGTH of the rebase (a card one device px wider only when
+// its sentence reaches the ceiling).
+inline constexpr double kNotificationMaxWidthPx = 698.0;
 
 // THE GAP BETWEEN TWO CARDS IN THE STACK (architect 2026-10-01, ruled on the
 // S4 mock: "reduce the distance between the cards to one pixel at a hundred
-// percent"): ONE W, the line rule's hairline_px (render.h: 2 device px at
-// 300 %, 1 at 200 % and below, floored at one so the cards never touch;
-// architect 2026-11-04 night, the unit of 2 — the 1-Windows-px gap of
-// 2026-10-02, 3 device px at 300 %, re-authored on the unit). It was the
+// percent"): ONE W, the line rule's hairline_px (render.h: 2 device px on
+// the tablet at 200 %, 1 at 100 % and below, floored at one so the cards
+// never touch; architect 2026-11-04 night, the unit — the 1-Windows-px gap
+// of 2026-10-02 re-authored on the unit). It was the
 // icon row's button gap (2) read by the card, a borrowing; the card owns its
 // own gap since that night, read by the painter (paint_notifications) and
 // the room's count (notification_capacity) and by nothing else.
@@ -747,16 +750,16 @@ inline constexpr int kNotificationMaxLines = 3;
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
 // THE CARD'S ONE PAD (architect 2026-10-24, "P18" off the 16 / 17 / 18
-// series): 18 px OF PLAIN FIELD AT 300 % between the
-// card's one-W ring (hairline_px) and its content on ALL FOUR SIDES
+// series): 9 W OF PLAIN FIELD (18 device px on the tablet at 200 %) between
+// the card's one-W ring (hairline_px) and its content on ALL FOUR SIDES
 // — ring -> glyph box at the left, the text's last pen -> ring at the right,
 // ring -> the first line's cap top above, the last line -> ring below. AN
-// AREA, so it scales through skin_px, rounded at the element and floored at
-// one px (6 at 100 %, 9 at 150 %, 12 at 200 %); the ring is a line, one W,
+// AREA, so it scales through scaled_px, rounded at the element and floored at
+// one px (9 at 100 %); the ring is a line, one W,
 // rounded at the element (the line rule, render.h's hairline_px, 2026-11-04). (The Windows-era pad — the 28-W card's
 // vertical margin round the small toolbar case's 22-W box, 3 W, 2026-08-30
 // to 2026-10-23 — and the box's 16-W glyph and 3-W leads are git history.)
-inline constexpr double kNotificationPadAt300 = 18.0;
+inline constexpr double kNotificationPadW = 9.0;
 int notification_pad_px();
 
 // THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
@@ -784,14 +787,15 @@ inline int notification_glyph_seat_w_px(double ink_px) {
     return static_cast<int>(std::nearbyint(box_h * 34.0 / 40.0));
 }
 
-// THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN: kNotificationGlyphGapAt300
-// = 8 DEVICE PX AT 300 % (4 W), skin_px, rounded at the element. A number of
-// the cards' own, parted from the logo lane's brand gap, kLogoBrandGapAt300
-// (14): the two were one number (the retired caption's title gap, a glyph then
-// words, architect 2026-10-24) until the brand gap left 8 on the logo lane's
-// mocks (e1 / e2, render.h's LOGO LANE block), and the architect kept the
-// cards' 8 the same night (2026-11-04: "keep the cards spacing").
-inline constexpr double kNotificationGlyphGapAt300 = 8.0;
+// THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN: kNotificationGlyphGapW
+// = 4 W (8 device px on the tablet at 200 %), scaled_px, rounded at the
+// element. A number of the cards' own, parted from the logo lane's brand
+// gap, kLogoBrandGapW (7 W): the two were one number (the retired
+// caption's title gap, a glyph then words, architect 2026-10-24) until the
+// brand gap left 8 device px on the logo lane's mocks (e1 / e2, render.h's
+// LOGO LANE block), and the architect kept the cards' 8 the same night
+// (2026-11-04: "keep the cards spacing").
+inline constexpr double kNotificationGlyphGapW = 4.0;
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
 // own "H" ink (gui_font_cap_px, the one cap measure redesign_baseline
@@ -802,9 +806,9 @@ int notification_cap_px();
 // (architect 2026-10-24): border + pad + THE BODY FACE'S CAP + pad + border
 // — the text's CAP BAND, not its ascender, between the two pads (the clock
 // field's and the mock's rule; the modal box's ascender rule is not the
-// card's), so the first line's cap top stands at border + pad; 56 rows at
-// 300 % (architect 2026-11-02, M11: the border where the ring stood; the
-// border one W and the cap 14 since the unit, 2026-11-04). AT THE FIRST
+// card's), so the first line's cap top stands at border + pad; 56 rows on
+// the tablet (architect 2026-11-02, M11: the border where the ring stood;
+// the border one W and the cap 14 since the unit, 2026-11-04). AT THE FIRST
 // LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30: the text
 // grows downward under the glyph, nothing reflows beside it). A card of
 // `lines` lines is this plus (lines - 1) line spacings, which only the
@@ -871,13 +875,12 @@ GuiRect notification_stack_bound(const AppState& a);
 //
 // A pure function of the window and the scale, like the room. Re-derived
 // 2026-10-08 under win2000, the stack seated one line above the trim lane:
-// in a 1920 x 1080 window at 138 % it is 23 (a 929 px room over
-// 38 + 1, the card's own gap, notification_gap_px); on the tablet at 300 % it
-// is 12 (1107 over 84 + 3), its window being the whole 2304 x 1440
-// panel since the activity went full screen (2026-10-01; the stacks are
-// recorded at main.cpp's vertical-stack owner). The card shrank since (56
-// px at 300 % with P18 and the unit, 2026-11-04; the gap one W, 2 at 300 %,
-// since 2026-11-04 night), so every count is higher: every window
+// on the tablet at its scale of that day it was 12 (1107 over 84 + 3), its
+// window being the whole 2304 x 1440 panel since the activity went full
+// screen (2026-10-01; the stacks are recorded at main.cpp's vertical-stack
+// owner). The card shrank since (56 device px on the tablet with P18 and
+// the unit, 2026-11-04; the gap one W, 2 device px, since 2026-11-04
+// night), so every count is higher: every window
 // this product runs in holds more cards than the architect will ever stack.
 int notification_capacity(const AppState& a);
 
