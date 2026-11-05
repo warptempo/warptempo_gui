@@ -160,16 +160,16 @@ namespace {
 // ground (architect 2026-10-09, the program is Cool Edit; 2026-11-01 night,
 // "THE MAIN PAGE IS SETTLED"; render.h's well paragraph and its lanes block):
 // the TRIM lane (trim_lane_h_px(), a row of ground and Live's overview bar,
-// 24 device px at 300 % — the bar's two fills and its ground line), the
+// 20 device px at 300 % — the bar's two fills and its ground line), the
 // RULER lane (ruler_lane_h_px(), Cool Edit's flipped ruler in
-// Live's tones, 34 rows and a row of ground — the Bold-15 timestamps' ink
+// Live's tones, 36 rows and a row of ground (38 at 300 %) — the Bold 16 timestamps' ink
 // centered between two pads, the ticks and the PLAYHEAD'S HEAD on its foot
 // rows — and a
 // PLACEMENT LANE: a motionless click places the playhead
 // and every drag there does nothing but the head's, which drags the playhead
 // (2026-10-09), the navigation surface being the waveform alone
 // (point_on_placement_lanes and point_on_playhead_head, input_pointer.cpp)),
-// the MARKER lane (marker_lane_h_px(), the time field's 38 rows at 300 %,
+// the MARKER lane (marker_lane_h_px(), the time field's 39 rows at 300 %,
 // Cool Edit's cues, the label's box and the flag editor's the whole lane)
 // and THE LANE'S FOOT
 // LINE (lane_foot_line_h_px(), one hairline of ground), whose bottom edge is
@@ -349,8 +349,8 @@ namespace {
 // the well's first three — trim_lane_h_px(), ruler_lane_h_px(),
 // marker_lane_h_px() — and bottom_row_h_px()); THE TWO ROWS OF GROUND
 // (lane_foot_line_h_px(), well_foot_h_px()) are ONE W, the hairline itself
-// (hairline_px: 3 device rows at 300 %, 2 at 200 %, the unit of
-// 2026-11-04). The lanes' rulings are at those
+// (hairline_px: 2 device rows at 300 %, 1 at 200 % and below, the
+// unit of 2026-11-04 night). The lanes' rulings are at those
 // accessors' declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,

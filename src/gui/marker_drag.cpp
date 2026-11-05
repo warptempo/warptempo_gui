@@ -378,7 +378,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     viewport.translate_playhead_to(sample);
     // THE FLAG CACHE REBUILT IN THE SAME EVENT (architect 2026-11-04, the
     // drag's stutter on his glass: the coincidence stem flickering dark /
-    // light over the fading line): the cursor above rides the drag NOW, so
+    // light over the playhead's line): the cursor above rides the drag NOW, so
     // the chip and the stem stash it is compared against must be laid out
     // from this same proposal before any frame paints — else a frame served
     // before the tick's rebuild paints the cursor at the new frame over a

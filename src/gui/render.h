@@ -225,9 +225,9 @@ struct TrimRange {
 //                 mark, THE MARKER LANE below); the disabled cue's
 //                 `inactive_cue`; the playhead's two roles,
 //                 `playhead_head` — its triangle in the ruler — and
-//                 `playhead_line` — its fading line's white in the canvas,
-//                 the head's cyan its other end (architect 2026-11-04; THE
-//                 PLAYHEAD, below); and the
+//                 `playhead_line` — its static light cyan 85E2EB in the
+//                 canvas, the mid tone of Live's fade (architect 2026-11-04
+//                 night; THE PLAYHEAD, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
@@ -661,7 +661,7 @@ void install_true_colors(bool on);
 //             RESOLVER NEVER SEES THE PLAYHEAD). THE STEM PAINTS OVER THE
 //             PLAYHEAD'S LINE (the paint order playhead, stems, scanner):
 //             both are one W on one column, so a stem under the opaque
-//             fading line would never show; while the playhead rests on a
+//             line would never show; while the playhead rests on a
 //             marker the dark stem is what shows and the ruler's head marks
 //             the playhead. (The alternative, no stem while coincident, is
 //             Live's own hover-less picture and would make the ruling
@@ -714,7 +714,7 @@ void install_true_colors(bool on);
 // clip the field's inner rows), THE CARET AND THE SELECTION BAND THE LEGAL
 // SET'S BAND (cue_band_top_px, cue_band_h_px: the warp line's grammar's ink
 // with the x-height band centered in it, THE METRICS RULE at
-// marker_lane_h_px) — at 300 % lane rows 9 .. 30 of the 41, six rows of
+// marker_lane_h_px) — at 300 % lane rows 8 .. 29 of the 39, six rows of
 // field above it and seven below inside the outline. A selected glyph's ink past the band takes the
 // field text, the field ink's clip the band's complement in both its columns
 // and its rows. The field grows and shrinks with what is typed, the
@@ -1748,9 +1748,9 @@ inline int cue_label_lead_px() {
 inline int cue_fill_lead_px() {
     return cue_label_lead_px() - cue_fill_pad_px();
 }
-// THE BARE TRIANGLE'S HEIGHT — the fill's, and the ruler's head's whole —
+// THE BARE TRIANGLE'S HEIGHT — the fill's alone —
 // cue_triangle_rows() cells of one device px; THE CHIP'S HEIGHT, the
-// outlined shape's, cue_chip_rows() cells.
+// outlined shape's and the ruler's head's whole, cue_chip_rows() cells.
 inline int cue_triangle_h_px() {
     return cue_triangle_rows() * cue_triangle_unit_px();
 }
@@ -2048,7 +2048,8 @@ inline int bottom_row_h_px() {
 // (clip_to_waveform_columns, render.cpp), the columns standing at the
 // canvas's own x since 2026-10-09 (waveform_area, the column's margin) — and
 // the flag iterator admits a marker whose triangle reaches into them (its
-// left edge four device px left of its column), so a marker just past the last
+// left edge cue_triangle_half_w_px left of its column, 14 device px at
+// 300 %), so a marker just past the last
 // column shows the left half of its chip there, and no stem (the stem
 // stash is gated to [0, w)).
 // THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because the channel is a

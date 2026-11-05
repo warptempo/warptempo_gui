@@ -53,10 +53,10 @@
 // gui_font.h): row 8's clock, its tab name and its state line are THE
 // PROGRAM FACE, the cues' size (architect 2026-10-26 ~11:30: "the bottom
 // left timestamp and tab/github/etc text should take 26 as well", the size
-// tuned with the cues since, 21 px at 300 % since the unit, gui_font.h), and
+// tuned with the cues since, 22 px at 300 % since the unit of 2, gui_font.h), and
 // the render player's two time fields with them (architect 2026-10-26
 // ~12:10, "yes" to symmetry with row 8's clock); every modal string the body
-// face, 21 too, a row of its own (gui_font.h's table). The no-wiggle guarantee is the fields' own
+// face, 22 too, a row of its own (gui_font.h's table). The no-wiggle guarantee is the fields' own
 // fixed widths.
 //
 // EVERY STRING THE STATE LINE CARRIES — the queue/render status and the
@@ -2676,7 +2676,7 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
 // ONE TIME FIELD'S RECT: its left line at `x`, `w` wide, centred on the
 // case's rows [case_y, case_y + case_h), A HALF-ROW TIE TOWARD THE TOP
 // either way (the offset FLOORED, so a field TALLER than the case — as it
-// stands under a key_height below 38 — takes the tie upward too, where
+// stands under a key_height below 39 — takes the tie upward too, where
 // truncation would send it down). At key_height 34 the field, 39 at 300 %
 // (time_field_h_px), is the taller: 3 rows over the face above it and 2
 // below at 300 % (row 8's 1365 .. 1403 round the face's 1368 .. 1401), 2
@@ -3920,8 +3920,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // since the unit of 2, 2026-11-04 night) in the text tone kTextInk (2026-11-02, the
     // font audit: Live's own ruler digits), BARE, THEIR INK CENTERED ON THE
     // RULER — the BASELINE the ruler's pad and the digits' ink above the
-    // baseline under the lane's top (render.h's ruler_baseline_px: 22 rows at
-    // 300 %, the digits' ink on rows 12 .. 21 of the ruler, 12 rows of pad
+    // baseline under the lane's top (render.h's ruler_baseline_px: 24 rows at
+    // 300 %, the digits' ink on rows 12 .. 23 of the ruler, 12 rows of pad
     // above and below) — a derived row of the lane, neither solver asked
     // (redesign_baseline's block).
     const GuiFont font = gui_font(GuiFace::Small);
@@ -4046,9 +4046,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             if (!tick_on_lane && !major) continue;
             // A MAJOR'S LABEL PAINTS BEFORE ITS TICK, so the tick stands whole
             // over whatever of a label's ink could reach its rows (the pad
-            // keeps them apart today: the ink ends 12 rows over the foot, the
-            // major rises 9). Only the label's own major can meet it: a
-            // minor rises a third as far, and the next major stands a whole
+            // keeps them apart today: at 300 % the ink ends 12 rows over the foot,
+            // the major rises 8). Only the label's own major can meet it: a
+            // minor rises a quarter as far, and the next major stands a whole
             // step — at least eight minimum minor pitches — away.
             if (major) paint_major_label(col, step_ms);
             // ONE W wide (`t`), centered on the tick's own column, clipped at
@@ -4706,7 +4706,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 //
 // Z-ORDER (architect 2026-11-04): THE STEM PAINTS OVER THE PLAYHEAD'S LINE,
 // which precedes this pass: both are one W on one column, so a stem under
-// the opaque fading line would never be seen; while the playhead rests on a
+// the opaque line would never be seen; while the playhead rests on a
 // marker the dark stem is what shows and the ruler's head marks the
 // playhead. The scanner follows. The full sequence is the paint-order
 // block in on_redraw (build_canvas_list).

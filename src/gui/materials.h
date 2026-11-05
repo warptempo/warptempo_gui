@@ -206,8 +206,8 @@ void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look);
 // THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key
 // gap — the step from a key's face to the next one's in its group, every
 // group walk's (the band's icon_row_seats, row 8's row8_block_walk, the
-// modal family's controls-row layouts, paint_handler.cpp): 72 at 300 % (69
-// + 3), 48 at 200 % (46 + 2). The ground between two GROUPS is the run gap
+// modal family's controls-row layouts, paint_handler.cpp): 72 at 300 % (70
+// + 2), 48 at 200 % (47 + 1). The ground between two GROUPS is the run gap
 // (render.h's program_run_gap_px), between their faces.
 inline int key_group_pitch_px() {
     return icon_case_w_px() + key_gap_px();

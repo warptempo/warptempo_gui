@@ -2464,7 +2464,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the right of this one ride the edge. There was no fixed-width grammar to
     // pin a bound field to in any case: this face is PROPORTIONAL, so `-3.75`
     // and `+1.00` are not the same width.
-    // The pad is the fill's (render.h's cue_fill_pad_px, 3 px at 300 %, one
+    // The pad is the fill's (render.h's cue_fill_pad_px, 2 px at 300 %, one
     // W) and THE CARET ONE W (render.h's line rule, hairline_px, 2026-11-04;
     // held to the pad, so at the defaults the whole pad), so the borrow takes
     // the caret's columns out of the right pad: a caret at end-of-text stands
@@ -2688,7 +2688,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // line's grammar's ink, the x-height band centered in it; render.h's
     // EDITING paragraph): the band's rows are read off the one derivation
     // (cue_band_top_px, cue_band_h_px, render.h), never re-derived here — at
-    // 300 % rows 9 .. 30 of the inner 3 .. 37, six rows of field above and
+    // 300 % rows 8 .. 29 of the inner 2 .. 36, six rows of field above and
     // seven below.
     const int view_y = lane.y + u;
     const int view_h = fill_h - 2 * u;
