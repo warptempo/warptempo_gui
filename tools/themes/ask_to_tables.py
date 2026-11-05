@@ -80,10 +80,10 @@ header's head. Our Default tone = Live's role, the planner having verified
                                     face, and "clip indicator is not a button"
     level audio fill       007383 = RangeEditField (Live's volume mini-slider,
                                     "green") — the AUDIO level case's fill,
-                                    the next brief's painter (2026-11-05)
+                                    read by paint_level_case (2026-11-05)
     level noise fill       3C6AB6 = ChosenPreListen (Live's cue mini-slider,
-                                    "blue") — the NOISE level case's fill, the
-                                    next brief's painter (2026-11-05)
+                                    "blue") — the NOISE level case's fill,
+                                    read by paint_level_case (2026-11-05)
   COMPOSITED (Live's alpha role over the clip view's ground, straight alpha
   aa/255, a 6-digit word opaque; Python's round() on the float, clamped):
     ink                    191919 = WaveformColor over DetailViewBackground
@@ -210,8 +210,8 @@ MEMBERS = [
     ('card_face',       'the cards\' box and their ring; `card_ground` / `card_frame` (Alert)'),
     ('card_ink',        'the cards\' words and class glyph; `card_text` (Desktop)'),
     ('clip_lamp',       'the logo lane\'s clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face'),
-    ('level_audio_fill', 'the AUDIO level case\'s fill (RangeEditField) — no reader yet, the next brief\'s painter'),
-    ('level_noise_fill', 'the NOISE level case\'s fill (ChosenPreListen) — no reader yet, the next brief\'s painter'),
+    ('level_audio_fill', 'the AUDIO level case\'s fill (RangeEditField), read by paint_level_case'),
+    ('level_noise_fill', 'the NOISE level case\'s fill (ChosenPreListen), read by paint_level_case'),
     ('waveform_canvas', 'the canvas (DetailGridTiles over DetailViewBackground)'),
     ('waveform_ink',    'the waveform, the plate\'s outer bar (WaveformColor over DetailViewBackground)'),
     ('waveform_core',   'the magnified inner bar\'s solid fill (ink + 5/32 toward canvas)'),

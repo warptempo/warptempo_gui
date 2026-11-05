@@ -46,11 +46,9 @@
 // fills), members since the theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
-// clock pair retired 2026-11-02 with the overlays' flat pass) — WITH ONE
-// STATED EXCEPTION: the two level fills stand one brief ahead of their
-// painter (architect 2026-11-05, the level cases ruled with the lamps, the
-// tables regenerated once; render.h's palette block names them NO READER
-// YET). TWO ROLES MAY SHARE A TONE — a
+// clock pair retired 2026-11-02 with the overlays' flat pass; the two level
+// fills are read by `paint_level_case`, paint_handler.cpp). TWO ROLES MAY
+// SHARE A TONE — a
 // role is what it paints, not its value: `label`, `field_text` and `text`
 // all read the theme's text; `card_ground` and `card_frame` its card face.
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15), as the

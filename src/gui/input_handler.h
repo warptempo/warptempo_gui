@@ -1297,16 +1297,16 @@ struct GuiInputHandler {
 
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the icon
-    // row's thirty-one and row 8's twenty-one (row 1's three menu anchors
+    // row's thirty-two and row 8's twenty-one (row 1's three menu anchors
     // until 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
     // counts re-derived from them 2026-11-05, the two level cases in the
-    // NOISE lamp's seat):
-    //   THE ICON ROW, 22 + 4 + 1 + 4 = 31 — the left walk's twenty-two
+    // NOISE lamp's seat, Restrict counted):
+    //   THE ICON ROW, 23 + 4 + 1 + 4 = 32 — the left walk's twenty-three
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Phase
     //   Resets and Render;
-    //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow and
-    //   Trim Presets;
+    //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow,
+    //   Restrict and Trim Presets;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings, Enable
     //   Tooltips, the Score key and the two level cases, AUDIO and NOISE —
     //   sliders with no chord, pressed by their own arm, arm_level_case_press),
@@ -1315,7 +1315,7 @@ struct GuiInputHandler {
     //   group's — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right behind it in one run (kIconRowViewPairs, Source /
-    //   Target and Warp / Phase Reset since 2026-10-14) — 27
+    //   Target and Warp / Phase Reset since 2026-10-14) — 28
     //   standing outside the `h` view (the four stand-ins publishing empty
     //   rects) and 19 inside it (the stand-ins in, Undo's group and the
     //   iteration group out, and the view's hide leaving Open Project and
