@@ -1522,6 +1522,10 @@ struct GuiInputHandler {
     // standing fork). The RELEASE does not come here — it consumes the arm
     // through take_chrome_press.
     void clear_redesign_button_press();
+    // THE PRESS FACE'S DAMAGE for one roster button — the key's home strip,
+    // the lit flip's own (the press arc, 2026-11-05; the body's comment,
+    // input_pointer.cpp): the arm's, the lift's and the walk's crossing's.
+    void invalidate_roster_press_face(int index);
 
     // THE MODAL DIALOG'S ARMED BUTTON, dropped on that same edge (2026-08-13):
     // the dialog buttons act at the RELEASE, so a pointer that has left the

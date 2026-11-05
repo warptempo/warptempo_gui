@@ -388,12 +388,13 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
 // hi-fi skin's caption and border that replaced them went 2026-10-24,
 // render.h's caption note.)
 
-// THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key at
-// rest on its box (materials.h's paint_key) — never lit and no press face:
-// it is dragged, not pressed on or off.
-void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
+// THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key on
+// its box (materials.h's paint_key) — never lit (it is dragged, not turned
+// on or off), the press face while `pressed`, the owner's grab on the thumb
+// (the press arc, architect 2026-11-05; the rule at the declaration).
+void paint_scrub_thumb(cairo_t* cr, const GuiRect& box, bool pressed) {
     if (box.w <= 0 || box.h <= 0) return;
-    paint_key(cr, box, KeyLook::Rest);
+    paint_key(cr, box, key_look(/*checked=*/false, pressed));
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
@@ -2298,7 +2299,7 @@ WaveformPlateInks waveform_plate_inks() {
 void install_palette(const GuiTheme& theme) {
     // The contract and the apply shape the live caller owes are at the
     // declaration (render.h). THE PROGRAM'S ELEVEN off the palette's role
-    // table (palette_file.h), THE CHROME'S TWENTY-TWO off the chrome's
+    // table (palette_file.h), THE CHROME'S TWENTY-FIVE off the chrome's
     // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
     // theme's ground (the flat look, materials.h's head) — the tables
     // covering the struct exactly (palette_file.cpp), so a role cannot be

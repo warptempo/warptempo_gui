@@ -126,7 +126,7 @@ struct TrimRange {
 // computes no color at paint time: every one is a theme row's word, the
 // derived tones computed once by the generator (theme_tables.h's head).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
-// one accessor palette() — the chrome's fourteen flat-look tones among them
+// one accessor palette() — the chrome's seventeen flat-look tones among them
 // (materials.h, 2026-11-01: the ground, the key's faces (rest, lit), the
 // text tones, the well's tones — the trim bar, its frame, the ruler, its
 // ticks, the marker lane — the panes and the selection pair; members of the
@@ -336,15 +336,17 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S FOURTEEN (materials.h's head owns each rule; members
+    // THE FLAT LOOK'S SEVENTEEN (materials.h's head owns each rule; members
     // since the theme arc, 2026-11-05, their numbers the installed theme's
-    // — Default's quoted at materials.h).
+    // — Default's quoted at materials.h; the three press tones the press
+    // arc's, the same day).
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor text_on_lit;     // anything printed on a lit face
     GuiColor key_dim_ink;     // a disabled key's glyph and legend
     GuiColor key_face;        // the key at rest, the time fields
     GuiColor lit_fill;        // a checked key's whole face, Live's "on"
+    GuiColor key_press_face;  // an unchecked key's face under a standing press
     GuiColor well_frame;      // the scrub's channel, the tooltip's border
     GuiColor ruler_face;      // the ruler
     GuiColor ruler_tick;      // the ruler's ticks
@@ -353,6 +355,8 @@ struct GuiPalette {
     GuiColor trim_span_face;  // the trim bar inside the trim
     GuiColor pane_face;       // the modal family's box interior, the tooltip's face
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
+    GuiColor list_press_fill; // a list row's fill under a standing press
+    GuiColor list_press_text; // that row's text and glyph
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -737,8 +741,9 @@ void install_true_colors(bool on);
 //             2026-11-02, "3 accept"): the grey chip and the inactive
 //             label as at rest, no stem — the playhead standing on it after
 //             the arming press (the ruler's head) its only mark.
-// A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE (the
-// press look is retired everywhere, 2026-11-04, materials.h's head).
+// A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE: the
+// press look of 2026-11-05 is the keys' and the lists' rows' alone
+// (materials.h's head), never a marker's.
 //
 // THE PHASE-RESET LEAD-IN RING on the waveform is FOUR SOLID ONE-W LINES in
 // the `cue_outline` (architect 2026-11-04, the stems at rest retired;
@@ -1534,9 +1539,11 @@ inline int program_run_gap_px() {
 //     to its center at the last frame (at 200 % x 282..1515 in the player),
 //     nothing else: no fill, no played extent, nothing that reads the
 //     window's focus.
-//   THE THUMB — A BLANK FLAT KEY BLOCK (paint_scrub_thumb: the key painter
-//     at rest, never lit — it is dragged, not turned on or off, the flat
-//     look's ruling, materials.h — with no glyph) kScrubThumbWidthPx = 12 W
+//   THE THUMB — A BLANK FLAT KEY BLOCK (paint_scrub_thumb: the key painter,
+//     never lit — it is dragged, not turned on or off, the flat look's
+//     ruling, materials.h — wearing the key's press face while the owner's
+//     drag holds it by the thumb (the press arc, 2026-11-05), with no
+//     glyph) kScrubThumbWidthPx = 12 W
 //     wide, 24 device px on the tablet at 200 % (architect 2026-10-23, on the
 //     installed player: "too tiny … the thumb itself should be larger"; the
 //     8 Windows px of that day times 1.5 at the rebase of 2026-11-05), by THE KEY'S
@@ -1570,8 +1577,13 @@ inline constexpr double kScrubThumbWidthPx  = 12.0;
 // one row at least (scrub_thumb_h_px).
 inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
 // THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px): the
-// flat key, at rest.
-void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
+// flat key, at rest or — `pressed`, the owner's ScrubDrag armed ON THE
+// THUMB (RenderPlayer::ScrubDrag::on_thumb, ScoreViewer::ScrubDrag's; a
+// press on the track beside it carries the thumb but presses no key) — in
+// the key's press face from the grab to the lift (the press arc, architect
+// 2026-11-05; materials.h's key_look). The grab and the lift damage the
+// track (the scrub claims and releases, input_pointer.cpp).
+void paint_scrub_thumb(cairo_t* cr, const GuiRect& box, bool pressed);
 
 // (THE TAB STRIP — Cool Edit's Organizer tabs, "Tab A" and "Tab B", a 21-W
 // lane under the band 2026-10-18 to 2026-10-22 — IS REMOVED, architect

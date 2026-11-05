@@ -39,28 +39,46 @@
 // THE KEY (paint_key below; every key alike — the band's, row 8's, the
 // controls rows', the word buttons, the scrub's thumb, the on-screen
 // keyboard's): A FLAT BOX, NO OUTLINE, NO LED, NO GLOW, NO DEPTH, in one of
-// TWO FACES (KeyLook): AT REST `key_face`, Default's 363636
-// (SurfaceBackground); LIT — `lit_fill`, Default's FFAD56
-// (ViewCheckControlEnabledOn), Live's "on" — A CHECKED KEY, its whole face.
+// THREE FACES (KeyLook): AT REST `key_face`, Default's 363636
+// (SurfaceBackground); UNDER PRESS `key_press_face`, Default's 2A2A2A
+// (Desktop) — DARKER THAN THE FACE, the push in; LIT — `lit_fill`,
+// Default's FFAD56 (ViewCheckControlEnabledOn), Live's "on" — A CHECKED
+// KEY, its whole face, pressed or not.
 // THE YELLOW IS FOR LAMPS ONLY (architect 2026-11-02, on mocks a3 / b3: "the
 // yellow flash is jarring … keep the yellow only for lamps").
-// NO PRESS LOOK ANYWHERE (architect 2026-11-04, reversing the retrofit's
-// press faces of 2026-11-03: "the pen is very fast to go off so the press
-// look looks like a blink"): A PRESS CHANGES NO PAINT on any surface — the
-// band, row 8, the controls rows, the render player, the score viewer, the
-// trim presets, the dialogs' word buttons, the lists' rows (the highlighted
-// row keeps the selection pair at rest and under a press) and the on-screen
-// keyboards' keys. THE FEEDBACK IS THE TAP'S RESULT: the act itself, a
-// stateful key's glyph showing the act its next press runs, the typed
-// character, the selection pair landing on a row. The press arms stay —
-// the slide-off feint, the hold-repeat, the long press and the barrel —
-// their paint alone retired. A DISABLED key keeps the face its
-// state gives, its glyph and its legend in `key_dim_ink`, so a
-// checked-but-inert key under an overlay keeps its lit fill (architect
-// 2026-11-01, M6) — its glyph on the lit face `text_on_lit`. Anything
-// printed ON a lit face is `text_on_lit`, Default's 111111
-// (ControlContrastFrame; the keys' Breeze glyphs, the on-screen keyboard's
-// caps); on a resting face `text` (key_ink below). UNDER EVERY KEY ITS
+// THE PRESS IS DARKER (architect 2026-11-05, the press arc, his pick p2 of
+// tmp/s45 over p1's ControlBackground 1E1E1E, reversing 2026-11-04's "no
+// press look anywhere" — that look was Live's HOVER tones, 6A6A6A / FFC281,
+// lighter than the face, and it read as a blink under the pen; his reason:
+// "hover is not press - press in skeumorphic is darker. but a list is not a
+// button so going lighter seems ok - darker for button (push in) lighter
+// for list (highlight)"): AN UNCHECKED KEY UNDER A STANDING PRESS wears the
+// press face on EVERY key surface — the band, row 8, the controls rows,
+// the render player, the score viewer, the trim presets, the dialogs' word
+// buttons, the scrub's thumb and the on-screen keyboards' keys — from the
+// press on the face to the lift or the slide-off, exactly the press arm's
+// own "on" (point_on_key below: the feint's inside bit, the face returning
+// to rest while the pointer is off it and pressing again when it slides
+// back; the on-screen keyboard's key and the scrub's thumb, which act at
+// the press or carry the finger, from the press to the lift). A LIT KEY
+// UNDER PRESS IS UNCHANGED — the yellow is the lamp's state, not a press —
+// and A DISABLED KEY UNDER PRESS IS UNCHANGED: a dead key arms nothing
+// (every press arm refuses a painted-dead face), so no press stands on it.
+// What a key carries keeps its ink on the press face: the glyph, the cap
+// and the legend `text` (key_ink below), the legend being on the ground.
+// THE LISTS' ROWS go the other way, lighter (THE SELECTION PAIR, below).
+// NO TIMING, NO HOLD, NO ANIMATION: the face follows the press bit as
+// painted; the press arms — the slide-off feint, the hold-repeat, the long
+// press and the barrel — are unchanged. THE OTHER FEEDBACK STAYS: the act
+// itself, a stateful key's glyph showing the act its next press runs, the
+// typed character, the selection pair landing on a row. A DISABLED key
+// keeps the face its state gives, its glyph and its legend in
+// `key_dim_ink`, so a checked-but-inert key under an overlay keeps its lit
+// fill (architect 2026-11-01, M6) — its glyph on the lit face
+// `text_on_lit`. Anything printed ON a lit face is `text_on_lit`, Default's
+// 111111 (ControlContrastFrame; the keys' Breeze glyphs, the on-screen
+// keyboard's caps); on a resting or pressed face `text` (key_ink below).
+// UNDER EVERY KEY ITS
 // PRINTED LEGEND (architect 2026-11-03, the retrofit, reversing the legends'
 // retirement of 2026-11-02): on the ground in the strip's bottom pad, never
 // on the face, so a lit key's legend stays `text` (the rule at
@@ -143,10 +161,20 @@
 // selection): a flat bar in `selection_fill`, Default's 637E86
 // (StandbySelectionBackground), under `selection_text`, Default's 111111
 // (ControlContrastFrame) — the flag editor's and the dialog editors'
-// selected substring and the lists' lit row (the chrome's `selected_fill` /
-// `selected_text`, theme_file.h), at rest and under a press alike — a list
-// row under a standing press changes no paint (no press look, 2026-11-04;
-// paint_handler.cpp's paint_folder_overlay).
+// selected substring and the lists' highlighted row (the chrome's
+// `selected_fill` / `selected_text`, theme_file.h). THE LIST ROW UNDER A
+// PRESS IS LIGHTER (architect 2026-11-05, the press arc: "a list is not a
+// button so going lighter seems ok … lighter for list (highlight)"): the
+// row a press stands on — the feint's inside bit, FolderOverlayPress's —
+// wears `list_press_fill`, Default's B0DDEB (SelectionBackground, Live's
+// focused selection), under `list_press_text`, Default's 070707
+// (SelectionForeground), its glyph in that text too, in every list of the
+// folder overlay (the picker, the settings page and its value lists, the
+// trim presets, the render player's list); the highlighted row keeps the
+// standby pair at rest and shows the press pair while a press stands on
+// it; an inert row (Group, Disabled) shows no press — its press arms the
+// scroll drag alone; a press that has become the scroll drag presses no
+// row (paint_handler.cpp's paint_folder_overlay).
 //
 // THE PANE (architect 2026-11-01 night, M6 A; 2026-11-02, M11 / M14): Live's
 // panel face, which is the keys' face — `pane_face`, THE SAME LIVE ROLE as
@@ -171,12 +199,15 @@
 // (2026-11-02) stands — this is Live's status-bar orange, a different tone
 // with a different job, a message rather than a state.
 
-// THE KEY'S TWO FACES (the head's THE KEY): Lit when checked, else Rest — no
-// press face (2026-11-04). key_look is the one place the face is decided —
-// every key painter asks it.
-enum class KeyLook { Rest, Lit };
-inline constexpr KeyLook key_look(bool checked) {
-    return checked ? KeyLook::Lit : KeyLook::Rest;
+// THE KEY'S THREE FACES (the head's THE KEY): Lit when checked, pressed or
+// not; else Press while a press stands on the key (the press arc, architect
+// 2026-11-05); else Rest. key_look is the one place the face is decided —
+// every key painter asks it with its own pressed bit (paint_roster_case and
+// the modal row, paint_onscreen_keyboard, paint_handler.cpp;
+// paint_scrub_thumb, render.cpp).
+enum class KeyLook { Rest, Press, Lit };
+inline constexpr KeyLook key_look(bool checked, bool pressed) {
+    return checked ? KeyLook::Lit : pressed ? KeyLook::Press : KeyLook::Rest;
 }
 inline constexpr bool key_look_lit(KeyLook look) {
     return look == KeyLook::Lit;
@@ -185,7 +216,8 @@ inline constexpr bool key_look_lit(KeyLook look) {
 // THE INK OF WHAT A KEY CARRIES ON ITS FACE (the head's THE KEY and THE
 // TEXT TONES), as the installed theme's sRGB word (the Breeze glyph road
 // takes the word, icons::draw_glyph): `text_on_lit` on a lit face (a dead
-// checked key's too), else `text`, or `key_dim_ink` on a disabled key.
+// checked key's too), else `text` — on the press face as on the resting
+// one — or `key_dim_ink` on a disabled key.
 inline uint32_t key_ink(KeyLook look, bool enabled) {
     const GuiThemeTones& t = installed_theme().tones;
     return key_look_lit(look) ? t.text_on_lit
@@ -196,8 +228,8 @@ inline uint32_t key_ink(KeyLook look, bool enabled) {
 
 // ONE KEY on `r`, ITS PAINTED FACE — the key itself (the head's THE KEY and
 // THE FACE AND ITS GAP): the flat face `look` gives — palette().key_face at
-// rest, palette().lit_fill lit (key_look, the caller's checked state) — and
-// nothing else. What a key carries is its caller's — the roster's and the
+// rest, palette().key_press_face under a press, palette().lit_fill lit
+// (key_look, the caller's checked and pressed bits) — and nothing else. What a key carries is its caller's — the roster's and the
 // controls rows' Breeze glyph on the face and its legend under it
 // (paint_key_glyph and paint_key_legend, paint_handler.cpp), the on-screen
 // keyboard's caps — in key_ink's tone.

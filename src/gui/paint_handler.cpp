@@ -326,18 +326,22 @@ namespace {
 
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
-// 2026-11-01; paint_key, materials.h, where its two faces stand).
+// 2026-11-01; paint_key, materials.h, where its three faces stand).
 // LIT — the FFAD56 fill — for a CHECKED button (the roster's `selected`,
-// `lamp`; the yellow for lamps only, 2026-11-02; key_look), else at rest;
-// A PRESS PAINTS NOTHING (architect 2026-11-04, materials.h's head); a
+// `lamp`; the yellow for lamps only, 2026-11-02; key_look), pressed or not;
+// THE PRESS FACE, Default's 2A2A2A, for a `pressed` unchecked one — a live
+// press standing on it — for as long as the press stands, the key back to
+// its own state at the lift or the slide-off (the press arc, architect
+// 2026-11-05: "press in skeumorphic is darker"; materials.h's head); a
 // DISABLED button keeps the face its state gives, a dead checked button
 // still lit (the roster's rule at paint_icon_row), its glyph and legend
-// dimmed by the caller. NO HOT FACE, NO PRESS FACE. `face` is the key's FACE, the key itself (materials.h's
+// dimmed by the caller. NO HOT FACE. `face` is the key's FACE, the key itself (materials.h's
 // THE FACE AND ITS GAP, 2026-11-04). ON IT its caller paints the key's
 // Breeze glyph (paint_key_glyph) and UNDER IT its legend (paint_key_legend,
 // 2026-11-03).
-void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp) {
-    paint_key(cr, face, key_look(lamp));
+void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
+                       bool pressed) {
+    paint_key(cr, face, key_look(lamp, pressed));
 }
 
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
@@ -1134,7 +1138,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // "building a suction on the other one is the right way to go"; the consumed
 // nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
 // on_key) — never greyed for it — the key staying lit under the hold
-// (paint_roster_case: lit while checked, key_look; a press paints nothing).
+// (paint_roster_case: lit while checked, pressed or not, key_look; the
+// press face is the unchecked key's alone, 2026-11-05).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -1938,15 +1943,20 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // (paint_roster_case). A dead CHECKED button (the grid-iterations
         // lamp on a locked tab, say) keeps its lit fill: the mode cannot
         // change that state, so hiding it would be a lie, and the dimmed
-        // legend says "true, but not yours right now". A press paints
-        // nothing (no press look, 2026-11-04, materials.h's head).
+        // legend says "true, but not yours right now". THE PRESS FACE
+        // (2026-11-05, the press arc) is gated on the painted enabled bit
+        // rather than trusted: the claim never records a press on a disabled
+        // button, but a button can go dead UNDER a held press with no
+        // pointer event to refresh it.
         // A case the clip does not reach is skipped, its face published
         // above (clip_meets) — THE FACE AND ITS LEGEND (2026-10-23): the
         // gate reads the painted extent, so a damage confined to the bottom
         // pad, which the ground erases, still reprints the legend.
         if (!clip_meets(cr, painted)) return;
-        const KeyLook look = key_look(face.selected);
-        paint_roster_case(cr, key, face.selected);
+        const bool pressed =
+            face.enabled && redesign_button_pressed_face(app, def.id);
+        const KeyLook look = key_look(face.selected, pressed);
+        paint_roster_case(cr, key, face.selected, pressed);
 
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled): redesign_button_icon's stateful overload — the
@@ -2800,9 +2810,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // A case the clip does not reach is skipped, its face published
         // above (clip_meets) — the face AND its legend, the band's gate: a
         // damage confined to the bottom pad still reprints the legend.
+        // The press face gated on the painted enabled bit, the band's rule.
         if (!clip_meets(cr, painted)) return;
-        const KeyLook look = key_look(face.selected);
-        paint_roster_case(cr, key, face.selected);
+        const bool pressed =
+            face.enabled && redesign_button_pressed_face(app, def.id);
+        const KeyLook look = key_look(face.selected, pressed);
+        paint_roster_case(cr, key, face.selected, pressed);
         // THE GLYPH ON THE KEY, ITS LEGEND UNDER IT (the band's rule,
         // 2026-11-02 / 2026-11-03: the stateful glyph and the stateful
         // legend through their one seats, the tones the face's and the
@@ -2943,8 +2956,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // publishes the key's empty rect after this, which empties the
         // field with it (publish_button_face's empty overload). NOTHING IS
         // PAINTED ON THE CLOCK FOR THE PRESS — no fill, no digit shift: the
-        // press arms the PLAY key (which paints nothing for it either, no
-        // press look, 2026-11-04), and the digits starting or stopping are
+        // press arms the PLAY key (which wears its press face while the
+        // pointer stays on either rect, the press arc 2026-11-05), and the
+        // digits starting or stopping are
         // the act's own confirmation. The digits are never greyed. ROW 8'S CLOCK
         // ALONE: the render player's and the score viewer's time fields
         // share the field's painter (paint_ce_time_field) and never the
@@ -5351,8 +5365,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // THE BUTTONS ARE THE FLAT LOOK'S KEYS (architect 2026-11-01): the
 // program's case, laid out by modal_word_buttons and player_row_layout, each
 // painted by the roster's key painter (paint_roster_case) — at rest, lit
-// for the row's one checked button alone, a press painting nothing (no
-// press look, 2026-11-04) — its glyph on it (paint_key_glyph) and its legend under it
+// for the row's one checked button alone, the press face under a standing
+// press (the press arc, 2026-11-05) — its glyph on it (paint_key_glyph) and its legend under it
 // (paint_key_legend, back 2026-11-03: a word button's word in capitals, its
 // tooltip the word and its glyph the word's, modal_word_icon).
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
@@ -5729,6 +5743,7 @@ namespace {
 // repaint.
 void reset_modal_dialog_face_state(AppState& app) {
     app.modal_dialog_pressed         = -1;
+    app.modal_dialog_press_inside    = false;
     app.modal_dialog_press_ms        = 0;
     app.modal_dialog_focus           = -1;
     app.modal_dialog_focus_active    = false;
@@ -6335,7 +6350,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // (2026-10-26, lifted out of the player's branch): the channel at
     // `scrub_x0` and `scrub_w` columns on the controls row's case band, the
     // thumb at the column `thumb_x_of()` answers once the item is published.
+    // `thumb_pressed`: the owner's drag holds the thumb (its ScrubDrag armed
+    // on_thumb), the thumb's press face from the grab to the lift
+    // (paint_scrub_thumb's rule, render.h; the press arc, 2026-11-05).
     const auto paint_scrub_item = [&](int scrub_x0, int scrub_w,
+                                      bool thumb_pressed,
                                       const auto& thumb_x_of) {
             // THE CHANNEL, the layout's span, and THE ITEM round it: the
             // channel widened by the thumb's left half before its first
@@ -6377,7 +6396,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // and the cursor its cue.
                 const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
                                     thumb_h};
-                paint_scrub_thumb(cr, thumb);
+                paint_scrub_thumb(cr, thumb, thumb_pressed);
                 // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
                 // AppState::ModalDialogGeometry::scrub_thumb_x), with no item
                 // too: a clip that covers the item — the channel and the
@@ -6515,7 +6534,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const AppState::RenderPlayer& rp = app.render_player;
         const int64_t pos = render_player_position(app, playback);
         if (scrub_w > 0) {
-            paint_scrub_item(scrub_x0, scrub_w, [&] {
+            paint_scrub_item(scrub_x0, scrub_w,
+                             app.render_player.scrub.armed &&
+                                 app.render_player.scrub.on_thumb,
+                             [&] {
                 // The drag's carried x while the thumb is being dragged (the
                 // sound paused under the hold and the seek committing at the
                 // release), the item position's own otherwise — the
@@ -6594,7 +6616,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const int64_t pos = score_viewer_position(app, playback);
             const ScoreFrameRange fr = score_viewer_frame_range(app);
             if (ml.scrub_w > 0) {
-                paint_scrub_item(ml.scrub_x0, ml.scrub_w, [&] {
+                paint_scrub_item(ml.scrub_x0, ml.scrub_w,
+                                 app.score_viewer.scrub.armed &&
+                                     app.score_viewer.scrub.on_thumb,
+                                 [&] {
                     // The drag's carried column while the thumb is dragged,
                     // the cursor's own otherwise.
                     return app.score_viewer.scrub.armed
@@ -6654,7 +6679,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // under it changes in steps"), the shown page's column otherwise
             // (score_scrub_x_of) — the step.
             if (sl.scrub_w > 0) {
-                paint_scrub_item(sl.scrub_x0, sl.scrub_w, [&] {
+                paint_scrub_item(sl.scrub_x0, sl.scrub_w,
+                                 app.score_viewer.scrub.armed &&
+                                     app.score_viewer.scrub.on_thumb,
+                                 [&] {
                     return app.score_viewer.scrub.armed
                                ? app.score_viewer.scrub.marker_x
                                : score_scrub_x_of(app, app.score_viewer.page);
@@ -6959,10 +6987,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat
-        // One, `lit`) alone (key_look, materials.h; the yellow for lamps
-        // only, 2026-11-02); A PRESS PAINTS NOTHING — the pointer's arm and
-        // the keyboard's alike (no press look, architect 2026-11-04,
-        // materials.h's head) — the glyph on the key, the legend under it.
+        // One, `lit`) alone, pressed or not; THE PRESS FACE for a LIVE
+        // PRESS on an unchecked one — armed with the pointer inside it, or
+        // armed from the on-screen keyboard's Enter / Space — for as long
+        // as the press stands (key_look, materials.h; the press arc,
+        // architect 2026-11-05; the yellow for lamps only, 2026-11-02) —
+        // the glyph on the key, the legend under it.
         // (Windows'
         // push button 2026-10-02 to 2026-10-22 is git history.) THE FOCUS IS
         // NOT PAINTED (below): the two focus
@@ -6986,12 +7016,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // publish enabled=true. The glyph and the legend dimmed (`key_dim_ink`,
         // paint_key_glyph and paint_key_legend), the key the face its state
         // gives, the roster's rule
-        // (architect 2026-10-02 and 2026-10-09).
+        // (architect 2026-10-02 and 2026-10-09). The press face is gated on
+        // the bit rather than trusted — a button can go dead UNDER a hold.
         const bool enabled = plan[i].enabled;
+        const bool armed   = enabled &&
+                             static_cast<int>(i) == app.modal_dialog_pressed;
+        const bool pressed = enabled &&
+            ((armed && app.modal_dialog_press_inside) ||
+             static_cast<int>(i) == app.modal_dialog_key_pressed);
         // NO FOCUS FRAME (architect 2026-10-23: "when I open up the settings
         // and I press cancel, it gets that square drawn around it. Let's get
         // rid of that"): the focused button — Enter's target
-        // (AppState::modal_dialog_focus) — wears nothing.
+        // (AppState::modal_dialog_focus) — wears nothing; the press face
+        // under a standing press is the only sign.
         // THE KEY (2026-10-23, paint_roster_case), flat, lit for the row's
         // one checked button; THE LEGEND UNDER IT (paint_key_legend's one
         // seat, back 2026-11-03): a glyph button's the player's own legend
@@ -7004,8 +7041,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // glyph's key; every button wears the enabled bit on its glyph and
         // its legend (THE DISABLED RUNG above owns the bit and which owners
         // publish it).
-        const KeyLook look = key_look(plan[i].lit);
-        paint_roster_case(cr, key, plan[i].lit);
+        const KeyLook look = key_look(plan[i].lit, pressed);
+        paint_roster_case(cr, key, plan[i].lit, pressed);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled; paint_key_glyph's one seat, in the face's tone): by
         // the act vocabulary's own owner — the player's keys
@@ -7148,9 +7185,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
 //               word "Shift" in both states — that, and the letter caps,
 //               every one of which turns capital while the arm stands.
-// A PRESS PAINTS NOTHING (architect 2026-11-04, materials.h's head: no
-// press look anywhere): the feedback is the typed character, the lamp's
-// fill, the page's caps.
+//   PRESSED   — THE PRESS FACE, Default's 2A2A2A, under the finger from the
+//               press to the lift on an unarmed key (the press arc, architect
+//               2026-11-05, his "yes" for the keyboards; materials.h's head),
+//               held BY SLOT so the page key's own page change keeps the
+//               face under the finger (same_slot, below).
+// The other feedback stays: the typed character, the lamp's fill, the
+// page's caps.
 // (Windows' toolbar buttons — SOFT RAISED, SOFT SUNKEN pressed and over the
 // Hilight dither armed, the cap in the theme's label — 2026-10-02 to
 // 2026-10-22 — is git history.)
@@ -7164,10 +7205,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // text_editor::encode_utf8, the editors' own encoder), all on the one sans
 // face through the one shaping chokepoint. This surface draws no icon.
 //
-// STATE-AXIS: every one of the two faces is decided ONCE per key, from the
-// two lamps this body reads at its head, and the cap comes from the layout
-// table's own derivations (cap_word, shifted_char). There is no second list
-// of what a key looks like anywhere.
+// STATE-AXIS: every one of the three faces is decided ONCE per key, from the
+// two lamps and the one held index this body reads at its head — compared as
+// a SLOT, not an index, so the page key's held face survives its own page
+// change (onscreen_keyboard::same_slot, architect 2026-10-29 night; back
+// 2026-11-05) — and the cap comes from the layout table's own derivations
+// (cap_word, shifted_char). There is no second list of what a key looks
+// like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                                               const GuiRect& exposed) {
     // (The slot's as-painted bit is written by paint_keyboard_slot, the
@@ -7191,6 +7235,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
     const onscreen_keyboard::Page page        = kb.page;
     const bool                    shift_armed = kb.shift_armed;
+    const int                     held        = kb.pressed_key;
 
     cairo_save(cr);
 
@@ -7222,7 +7267,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
     onscreen_keyboard::for_each_key(
         app, page,
-        [&](uint32_t, const onscreen_keyboard::KeyDef& k,
+        [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
             const GuiRect& r) {
             using Role = onscreen_keyboard::Role;
             // PER-KEY EXPOSURE. The band's ground is laid across the whole
@@ -7235,15 +7280,20 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // page (fifty-one).
             if (!rects_intersect(exposed, r)) return;
 
+            // HELD BY SLOT, not by index (onscreen_keyboard::same_slot): the
+            // page key's own press has moved the page this walk is on.
+            const bool pressed =
+                onscreen_keyboard::same_slot(static_cast<int>(index), held);
             const bool armed   =
                 (k.role == Role::Shift      && shift_armed) ||
                 (k.role == Role::SymbolMode &&
                  page == onscreen_keyboard::Page::Symbols);
 
             // THE KEY (paint_key, materials.h): LIT while armed (Shift, the
-            // page key on the symbols page), else at rest, the cap printed ON
-            // its face in the face's ink.
-            const KeyLook look = key_look(armed);
+            // page key on the symbols page), else the press face under the
+            // finger, else at rest, the cap printed ON its face in the
+            // face's ink.
+            const KeyLook look = key_look(armed, pressed);
             paint_key(cr, r, look);
 
             // THE CAP: the word the table's one cap owner answers (cap_word —
@@ -7555,15 +7605,27 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // arms the scroll drag alone and promises no highlight, and the
             // highlight never stands on it.
             const bool inert   = folder_overlay::row_is_inert(app, index);
-            // THE FACE (the block above): THE HIGHLIGHTED ROW takes the
-            // selection pair — its fill 637E86 (pal.selected_fill) under the
-            // 111111 print — at rest and under a press alike: A PRESS PAINTS
-            // NOTHING (no press look, architect 2026-11-04, materials.h's
-            // head), the row lighting at the lift when the act moves the
-            // highlight; every other row takes NO FILL and the pane shows
-            // through it.
+            // THE ROW UNDER A STANDING PRESS (the press arc, architect
+            // 2026-11-05: "lighter for list (highlight)"; materials.h's THE
+            // SELECTION PAIR): the arm's row while the pointer is inside it
+            // and the arm has not become the scroll drag
+            // (AppState::FolderOverlayPress's inside bit), never an inert
+            // row — its press arms the scroll drag alone.
+            const AppState::FolderOverlayPress& press = ov.press;
+            const bool pressed = press.armed && press.inside &&
+                                 !press.scrolling && press.row == index &&
+                                 !inert;
+            // THE FACE (the block above): THE PRESSED ROW takes the lists'
+            // press pair — `list_press_fill` (Default's B0DDEB, Live's
+            // focused selection) under `list_press_text` (070707) — the
+            // highlighted row too while a press stands on it; THE
+            // HIGHLIGHTED ROW at rest takes the selection pair — its fill
+            // 637E86 (pal.selected_fill) under the 111111 print; every
+            // other row takes NO FILL and the pane shows through it.
             const bool lit = highlighted;
-            if (lit)
+            if (pressed)
+                paint_cell_rect(cr, r, pal.list_press_fill);
+            else if (lit)
                 paint_cell_rect(cr, r, pal.selected_fill);
             // NO FOCUS FRAME (architect 2026-10-23: "a highlight around the
             // button, which is more of a usability thing for the laptop, but
@@ -7611,13 +7673,16 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 const GuiThemeTones& t = installed_theme().tones;
                 icons::draw_glyph(cr, glyph, x0 + scaled_px(kListGlyphXW),
                                   r.y + (r.h - s.h) / 2, ink,
-                                  lit ? t.selection_text : t.text);
+                                  pressed ? t.list_press_text
+                                  : lit   ? t.selection_text
+                                          : t.text);
             }
             const int text_x = x0 + scaled_px(text_x_w);
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
             // the field text on a resting row (architect 2026-10-06, the
-            // field pair) and the selected text on a lit one.
+            // field pair), the selected text on a lit one and the press
+            // pair's text on the pressed one (2026-11-05).
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, row.name);
             // THE SEAT: a row is a box, so its label takes the box solver's
@@ -7638,9 +7703,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // architect 2026-10-28: "DEVICE" and "PIECE" dim headings, never
             // lit; 2026-10-29: the disabled `scale` and `bpm` lines the same).
             set_palette_source(
-                cr, inert ? palette().text_dim
-                          : surface_text(lit ? GuiSurface::ListRowLit
-                                             : GuiSurface::ListRow));
+                cr, inert   ? palette().text_dim
+                  : pressed ? pal.list_press_text
+                            : surface_text(lit ? GuiSurface::ListRowLit
+                                               : GuiSurface::ListRow));
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);
@@ -7739,7 +7805,8 @@ static bool floating_surface_stands(const AppState& app) {
 //     members in the walk's order and their runs (icon_row_walk, the right
 //     run after them); per member the enabled and
 //     selected bits (publish_button_face's stash, refreshed by a covering
-//     clip; a press paints nothing, 2026-11-04), the glyph index
+//     clip; the press face is the arm's inside bit, damaged by its own
+//     edges, 2026-11-05), the glyph index
 //     (redesign_button_glyph) and the drawing
 //     (redesign_button_icon's stateful overload, 2026-11-02 — FIT / RECALL
 //     and INHERIT / TIE move it with no index of their own); the cases'

@@ -22,6 +22,9 @@
 //                                     Medium Light over the panels' DADADA)
 //     lane, trim bar outside 2A2A2A = Desktop
 //     card ink               2A2A2A = Desktop
+//     key press face         2A2A2A = Desktop (the press arc, 2026-11-05: his
+//                                     pick p2 over ControlBackground 1E1E1E —
+//                                     "press in skeumorphic is darker")
 //     key face, ruler face, pane, time field  363636 = SurfaceBackground
 //     cue outline, text on lit, selection text  111111 = ControlContrastFrame
 //     text                   B5B5B5 = ControlForeground
@@ -31,6 +34,10 @@
 //     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
+//     list press fill        B0DDEB = SelectionBackground (the press arc,
+//                                     2026-11-05: "lighter for list
+//                                     (highlight)")
+//     list press text        070707 = SelectionForeground
 //     card face              E76942 = Alert
 //   COMPOSITED (Live's alpha role over the clip view's ground, straight alpha
 //   aa/255, a 6-digit word opaque; Python's round() on the float, clamped):
@@ -68,6 +75,7 @@ struct GuiThemeTones {
     uint32_t key_dim_ink;     // a disabled key's glyph and legend (face + 36/63 toward text_dim)
     uint32_t key_face;        // the key at rest, the time fields (SurfaceBackground)
     uint32_t lit_fill;        // a checked key's whole face, Live's "on" (ViewCheckControlEnabledOn)
+    uint32_t key_press_face;  // an unchecked key's face while a press stands on it (Desktop)
     uint32_t well_frame;      // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;      // the ruler (SurfaceBackground)
     uint32_t ruler_tick;      // the ruler's ticks (face + 53/127 toward text)
@@ -76,6 +84,8 @@ struct GuiThemeTones {
     uint32_t trim_span_face;  // the trim bar inside the trim (face + 52/127 toward text)
     uint32_t selection_fill;  // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
     uint32_t selection_text;  // the selection pair's text; `selected_text` (ControlContrastFrame)
+    uint32_t list_press_fill; // a list row's fill while a press stands on it (SelectionBackground)
+    uint32_t list_press_text; // a list row's text and glyph under that press (SelectionForeground)
     uint32_t pane_face;       // the modal family's box interior and the tooltip's face (SurfaceBackground)
     uint32_t score_pane_face; // the score viewer's pane, the page's mat (= the ink)
     uint32_t card_face;       // the cards' box and their ring; `card_ground` / `card_frame` (Alert)
@@ -117,6 +127,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5A5A5A, // key_dim_ink
          0x363636, // key_face
          0xFFAD56, // lit_fill
+         0x2A2A2A, // key_press_face
          0x757575, // well_frame
          0x363636, // ruler_face
          0x6B6B6B, // ruler_tick
@@ -125,6 +136,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6A6A6A, // trim_span_face
          0x637E86, // selection_fill
          0x111111, // selection_text
+         0xB0DDEB, // list_press_fill
+         0x070707, // list_press_text
          0x363636, // pane_face
          0x191919, // score_pane_face
          0xE76942, // card_face
@@ -150,6 +163,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7A7DA7, // key_dim_ink
          0x372C6D, // key_face
          0xB5FF63, // lit_fill
+         0x2A1E54, // key_press_face
          0xACBAD3, // well_frame
          0x372C6D, // ruler_face
          0x807AA0, // ruler_tick
@@ -158,6 +172,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7E789F, // trim_span_face
          0x3C7296, // selection_fill
          0x060313, // selection_text
+         0x79C9FF, // list_press_fill
+         0x000001, // list_press_text
          0x372C6D, // pane_face
          0x130A2B, // score_pane_face
          0xFF0B0A, // card_face
@@ -183,6 +199,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x818181, // key_dim_ink
          0x4F4F4F, // key_face
          0xFF9C39, // lit_fill
+         0x393939, // key_press_face
          0xA7A7A7, // well_frame
          0x4F4F4F, // ruler_face
          0x8C8C8C, // ruler_tick
@@ -191,6 +208,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x8A8A8A, // trim_span_face
          0x547984, // selection_fill
          0x151515, // selection_text
+         0x96D4E8, // list_press_fill
+         0x080808, // list_press_text
          0x4F4F4F, // pane_face
          0x141414, // score_pane_face
          0xE76942, // card_face
@@ -216,6 +235,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x707070, // key_dim_ink
          0x929292, // key_face
          0xFFB901, // lit_fill
+         0x565656, // key_press_face
          0x565656, // well_frame
          0x929292, // ruler_face
          0x555555, // ruler_tick
@@ -224,6 +244,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x565656, // trim_span_face
          0xABC6CB, // selection_fill
          0x383838, // selection_text
+         0xCDF8FF, // list_press_fill
+         0x000000, // list_press_text
          0x929292, // pane_face
          0x222222, // score_pane_face
          0xFF7D43, // card_face
@@ -249,6 +271,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5C5E66, // key_dim_ink
          0x2F3138, // key_face
          0xFF91C3, // lit_fill
+         0x22242A, // key_press_face
          0x7D8088, // well_frame
          0x2F3138, // ruler_face
          0x707176, // ruler_tick
@@ -257,6 +280,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6F7075, // trim_span_face
          0x6A7C82, // selection_fill
          0x0C0D10, // selection_text
+         0xBBDBE3, // list_press_fill
+         0x040506, // list_press_text
          0x2F3138, // pane_face
          0x14161A, // score_pane_face
          0xE76942, // card_face
@@ -282,6 +307,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5B6B6D, // key_dim_ink
          0x26383F, // key_face
          0xFFC658, // lit_fill
+         0x16282E, // key_press_face
          0x82918F, // well_frame
          0x26383F, // ruler_face
          0x6F766B, // ruler_tick
@@ -290,6 +316,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6E756A, // trim_span_face
          0x698676, // selection_fill
          0x000A0F, // selection_text
+         0xB4ECCD, // list_press_fill
+         0x000102, // list_press_text
          0x26383F, // pane_face
          0x06141A, // score_pane_face
          0xE76942, // card_face
@@ -315,6 +343,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x665F54, // key_dim_ink
          0x343434, // key_face
          0xFFAD56, // lit_fill
+         0x282828, // key_press_face
          0x8C7F6C, // well_frame
          0x343434, // ruler_face
          0x7C715F, // ruler_tick
@@ -323,6 +352,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7B705F, // trim_span_face
          0x927E58, // selection_fill
          0x0D0D0D, // selection_text
+         0xFFDD9F, // list_press_fill
+         0x040404, // list_press_text
          0x343434, // pane_face
          0x171717, // score_pane_face
          0xE76942, // card_face
@@ -348,6 +379,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x979489, // key_dim_ink
          0xCECBC1, // key_face
          0xA50000, // lit_fill
+         0xDDDBD2, // key_press_face
          0x6D6B5F, // well_frame
          0xCECBC1, // ruler_face
          0x89877D, // ruler_tick
@@ -356,6 +388,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x8A887E, // trim_span_face
          0xAA9A80, // selection_fill
          0xF8F6F1, // selection_text
+         0xD2992D, // list_press_fill
+         0xFDFCFA, // list_press_text
          0xCECBC1, // pane_face
          0x191919, // score_pane_face
          0xBF0000, // card_face
@@ -381,6 +415,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x857B6D, // key_dim_ink
          0x8C8477, // key_face
          0xFF8F3F, // lit_fill
+         0x304C4C, // key_press_face
          0x7F7566, // well_frame
          0x8C8477, // ruler_face
          0x545048, // ruler_tick
@@ -389,6 +424,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x565149, // trim_span_face
          0x727F7F, // selection_fill
          0x4F4A43, // selection_text
+         0x72A8A8, // list_press_fill
+         0x191919, // list_press_text
          0x8C8477, // pane_face
          0x191815, // score_pane_face
          0x6B1907, // card_face
@@ -414,6 +451,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x615D51, // key_dim_ink
          0x333333, // key_face
          0xAD583C, // lit_fill
+         0x1E1E1E, // key_press_face
          0x847D68, // well_frame
          0x333333, // ruler_face
          0x797568, // ruler_tick
@@ -422,6 +460,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x787367, // trim_span_face
          0x8C7E56, // selection_fill
          0x0D0D0D, // selection_text
+         0xFFE7A0, // list_press_fill
+         0x040404, // list_press_text
          0x333333, // pane_face
          0x161616, // score_pane_face
          0xE76942, // card_face
@@ -447,6 +487,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7C7C7C, // key_dim_ink
          0x414141, // key_face
          0xA63D40, // lit_fill
+         0x1B1718, // key_press_face
          0xA8A8A8, // well_frame
          0x414141, // ruler_face
          0x808080, // ruler_tick
@@ -455,6 +496,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7F7F7F, // trim_span_face
          0x46768C, // selection_fill
          0x1E1E1E, // selection_text
+         0x869DA8, // list_press_fill
+         0x111111, // list_press_text
          0x414141, // pane_face
          0x090909, // score_pane_face
          0xFF6446, // card_face
@@ -480,6 +523,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x695D44, // key_dim_ink
          0x28241F, // key_face
          0xFFD9AA, // lit_fill
+         0x070707, // key_press_face
          0x998860, // well_frame
          0x28241F, // ruler_face
          0x776D58, // ruler_tick
@@ -488,6 +532,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x756C57, // trim_span_face
          0x544D3F, // selection_fill
          0x544F43, // selection_text
+         0x75633A, // list_press_fill
+         0xE5D3A8, // list_press_text
          0x28241F, // pane_face
          0xE5D3A8, // score_pane_face
          0xCF3E26, // card_face
@@ -513,6 +559,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x787979, // key_dim_ink
          0x191B1C, // key_face
          0x328462, // lit_fill
+         0x232323, // key_press_face
          0xBFBFBF, // well_frame
          0x191B1C, // ruler_face
          0x797872, // ruler_tick
@@ -521,6 +568,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777670, // trim_span_face
          0x4B5154, // selection_fill
          0x070707, // selection_text
+         0x328764, // list_press_fill
+         0xFFFFFF, // list_press_text
          0x191B1C, // pane_face
          0xFFFFFF, // score_pane_face
          0xA81E00, // card_face
@@ -546,6 +595,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6D6D6D, // key_dim_ink
          0x3D3D3D, // key_face
          0xFF6100, // lit_fill
+         0x070707, // key_press_face
          0x919191, // well_frame
          0x3D3D3D, // ruler_face
          0x7D7D7D, // ruler_tick
@@ -554,6 +604,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7C7C7C, // trim_span_face
          0x282828, // selection_fill
          0x111111, // selection_text
+         0xAA9F96, // list_press_fill
+         0x191919, // list_press_text
          0x3D3D3D, // pane_face
          0xFFFFFF, // score_pane_face
          0xFF0741, // card_face
@@ -579,6 +631,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x83807A, // key_dim_ink
          0x333333, // key_face
          0xFFD87F, // lit_fill
+         0x474747, // key_press_face
          0xBFBAAF, // well_frame
          0x333333, // ruler_face
          0x88867F, // ruler_tick
@@ -587,6 +640,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x87847E, // trim_span_face
          0x4B5454, // selection_fill
          0x070707, // selection_text
+         0x496868, // list_press_fill
+         0xFFF9EA, // list_press_text
          0x333333, // pane_face
          0x191816, // score_pane_face
          0xCC3507, // card_face
@@ -612,6 +667,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x615850, // key_dim_ink
          0x3A332E, // key_face
          0xBF601C, // lit_fill
+         0x2F2925, // key_press_face
          0x7E7469, // well_frame
          0x3A332E, // ruler_face
          0x716860, // ruler_tick
@@ -620,6 +676,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x70675F, // trim_span_face
          0x6A8462, // selection_fill
          0x14100D, // selection_text
+         0xAEDBA0, // list_press_fill
+         0x080605, // list_press_text
          0x3A332E, // pane_face
          0x110E0C, // score_pane_face
          0xFF8026, // card_face
@@ -645,6 +703,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x75695C, // key_dim_ink
          0x3B332B, // key_face
          0xC6ECAE, // lit_fill
+         0x2A231D, // key_press_face
          0xA09281, // well_frame
          0x3B332B, // ruler_face
          0x81776C, // ruler_tick
@@ -653,6 +712,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7F766B, // trim_span_face
          0x6F8462, // selection_fill
          0x0C0806, // selection_text
+         0xA7BF99, // list_press_fill
+         0x040202, // list_press_text
          0x3B332B, // pane_face
          0xD5EAC7, // score_pane_face
          0xD5573B, // card_face
@@ -678,6 +739,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5C5755, // key_dim_ink
          0x2E313A, // key_face
          0x71A2B6, // lit_fill
+         0x24262D, // key_press_face
          0x7E7469, // well_frame
          0x2E313A, // ruler_face
          0x6A6767, // ruler_tick
@@ -686,6 +748,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x696666, // trim_span_face
          0x637E86, // selection_fill
          0x0B0D11, // selection_text
+         0xB0DDEB, // list_press_fill
+         0x040507, // list_press_text
          0x2E313A, // pane_face
          0x090A0C, // score_pane_face
          0xF68E5F, // card_face
@@ -711,6 +775,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5E5E5E, // key_dim_ink
          0x333333, // key_face
          0x5500AA, // lit_fill
+         0x070707, // key_press_face
          0x7F7F7F, // well_frame
          0x333333, // ruler_face
          0x767676, // ruler_tick
@@ -719,6 +784,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x757575, // trim_span_face
          0x615C66, // selection_fill
          0x141414, // selection_text
+         0x7D708C, // list_press_fill
+         0xD6D6D6, // list_press_text
          0x333333, // pane_face
          0xFFF0D6, // score_pane_face
          0xCC002F, // card_face
@@ -744,6 +811,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x605C4F, // key_dim_ink
          0x3A372E, // key_face
          0xAAA338, // lit_fill
+         0x2D2B24, // key_press_face
          0x7C7768, // well_frame
          0x3A372E, // ruler_face
          0x706C5F, // ruler_tick
@@ -752,6 +820,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6F6B5E, // trim_span_face
          0x788462, // selection_fill
          0x11100B, // selection_text
+         0xD6EAAF, // list_press_fill
+         0x070604, // list_press_text
          0x3A372E, // pane_face
          0x090806, // score_pane_face
          0xE57642, // card_face
@@ -777,6 +847,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5D5D5D, // key_dim_ink
          0x383838, // key_face
          0x82204A, // lit_fill
+         0x2D3333, // key_press_face
          0x787878, // well_frame
          0x383838, // ruler_face
          0x787878, // ruler_tick
@@ -785,6 +856,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777777, // trim_span_face
          0x7B8989, // selection_fill
          0x1E1E1E, // selection_text
+         0x478E8E, // list_press_fill
+         0x141414, // list_press_text
          0x383838, // pane_face
          0x080808, // score_pane_face
          0xFF856D, // card_face
@@ -810,6 +883,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x635C52, // key_dim_ink
          0x333333, // key_face
          0xAF893D, // lit_fill
+         0x1E1E1E, // key_press_face
          0x877A6A, // well_frame
          0x333333, // ruler_face
          0x7A7268, // ruler_tick
@@ -818,6 +892,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x797067, // trim_span_face
          0x8E7557, // selection_fill
          0x0D0D0D, // selection_text
+         0xFFD4A0, // list_press_fill
+         0x040404, // list_press_text
          0x333333, // pane_face
          0x161616, // score_pane_face
          0xE76942, // card_face
@@ -843,6 +919,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x636464, // key_dim_ink
          0x3E3F3F, // key_face
          0x0D5566, // lit_fill
+         0x060B0C, // key_press_face
          0x7F7F7F, // well_frame
          0x3E3F3F, // ruler_face
          0x7C7C7C, // ruler_tick
@@ -851,6 +928,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7B7B7B, // trim_span_face
          0x7C7C7C, // selection_fill
          0x1E1E1E, // selection_text
+         0x677B7F, // list_press_fill
+         0x2D2D2D, // list_press_text
          0x3E3F3F, // pane_face
          0x090909, // score_pane_face
          0xBF442B, // card_face
@@ -876,6 +955,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777777, // key_dim_ink
          0x3A3A3A, // key_face
          0xA30000, // lit_fill
+         0x070707, // key_press_face
          0xA5A5A5, // well_frame
          0x3A3A3A, // ruler_face
          0x8C8C8C, // ruler_tick
@@ -884,6 +964,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x8B8B8B, // trim_span_face
          0x595656, // selection_fill
          0x0C0C0C, // selection_text
+         0x7F1F1F, // list_press_fill
+         0xFFFFFF, // list_press_text
          0x3A3A3A, // pane_face
          0x0C0C0C, // score_pane_face
          0x540000, // card_face
@@ -909,6 +991,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x8D847D, // key_dim_ink
          0xAAA6A2, // key_face
          0x80BFAD, // lit_fill
+         0x8B7F76, // key_press_face
          0x776B61, // well_frame
          0xAAA6A2, // ruler_face
          0x6D6863, // ruler_tick
@@ -917,6 +1000,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6E6964, // trim_span_face
          0x91AAA3, // selection_fill
          0x594D42, // selection_text
+         0xB8D8CF, // list_press_fill
+         0x18110A, // list_press_text
          0xAAA6A2, // pane_face
          0x332A21, // score_pane_face
          0xCC434D, // card_face
@@ -942,6 +1027,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7A705C, // key_dim_ink
          0xADA18A, // key_face
          0xF2C14F, // lit_fill
+         0x383838, // key_press_face
          0x544B3A, // well_frame
          0xADA18A, // ruler_face
          0x655E50, // ruler_tick
@@ -950,6 +1036,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x665F51, // trim_span_face
          0xCCBEA3, // selection_fill
          0x56544F, // selection_text
+         0xE5D3AE, // list_press_fill
+         0x000000, // list_press_text
          0xADA18A, // pane_face
          0x000000, // score_pane_face
          0xCF3E26, // card_face
@@ -975,6 +1063,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777777, // key_dim_ink
          0x353535, // key_face
          0x9B6896, // lit_fill
+         0x111111, // key_press_face
          0xA8A8A8, // well_frame
          0x353535, // ruler_face
          0x898781, // ruler_tick
@@ -983,6 +1072,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x88857F, // trim_span_face
          0x444047, // selection_fill
          0x070707, // selection_text
+         0x554C5E, // list_press_fill
+         0xE5E5E5, // list_press_text
          0x353535, // pane_face
          0x0F0A14, // score_pane_face
          0x7F0072, // card_face
@@ -1008,6 +1099,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7C6F65, // key_dim_ink
          0x554D48, // key_face
          0x7C3A3A, // lit_fill
+         0x353433, // key_press_face
          0x99897A, // well_frame
          0x554D48, // ruler_face
          0x9C958C, // ruler_tick
@@ -1016,6 +1108,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x9B948B, // trim_span_face
          0x543A3A, // selection_fill
          0x635F58, // selection_text
+         0x7F5959, // list_press_fill
+         0xFFFFFF, // list_press_text
          0x554D48, // pane_face
          0x000000, // score_pane_face
          0x7A0000, // card_face
@@ -1041,6 +1135,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x685339, // key_dim_ink
          0x9E9386, // key_face
          0xFF8C00, // lit_fill
+         0x544A3E, // key_press_face
          0x3F2300, // well_frame
          0x9E9386, // ruler_face
          0x5C564E, // ruler_tick
@@ -1049,6 +1144,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5D574F, // trim_span_face
          0x7F7260, // selection_fill
          0x3F2300, // selection_text
+         0xA1AA72, // list_press_fill
+         0x000000, // list_press_text
          0x9E9386, // pane_face
          0x261D13, // score_pane_face
          0xFF9719, // card_face
@@ -1074,6 +1171,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x4B442F, // key_dim_ink
          0x0C0B09, // key_face
          0xFF8F07, // lit_fill
+         0x23201D, // key_press_face
          0x7A6F4B, // well_frame
          0x0C0B09, // ruler_face
          0x716A5A, // ruler_tick
@@ -1082,6 +1180,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6F6858, // trim_span_face
          0x4C4630, // selection_fill
          0x332F28, // selection_text
+         0x8C7E46, // list_press_fill
+         0xFFEFCB, // list_press_text
          0x0C0B09, // pane_face
          0xEDDBC0, // score_pane_face
          0x943607, // card_face
@@ -1107,6 +1207,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777777, // key_dim_ink
          0x333333, // key_face
          0xFF7B07, // lit_fill
+         0x070707, // key_press_face
          0xAAAAAA, // well_frame
          0x333333, // ruler_face
          0x828282, // ruler_tick
@@ -1115,6 +1216,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x808080, // trim_span_face
          0x3B4C3E, // selection_fill
          0x000000, // selection_text
+         0x637F68, // list_press_fill
+         0xE5E5E5, // list_press_text
          0x333333, // pane_face
          0x000000, // score_pane_face
          0xA30606, // card_face

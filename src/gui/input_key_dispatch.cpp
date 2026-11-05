@@ -6291,9 +6291,15 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         // armed, and "fires once" should be true by construction rather than
         // by that argument.
         if (mods.synthesized_repeat) return true;
-        // THE ARM paints nothing (no press look, architect 2026-11-04).
-        app.modal_dialog_key_pressed     = at;
-        app.modal_dialog_key_pressed_key = key;
+        // THE ARM: the focused key wears its press face while it stands
+        // (paint_modal_dialog's row; the press arc, architect 2026-11-05),
+        // so an edge damages the box.
+        if (app.modal_dialog_key_pressed != at ||
+            app.modal_dialog_key_pressed_key != key) {
+            app.modal_dialog_key_pressed     = at;
+            app.modal_dialog_key_pressed_key = key;
+            viewport.invalidate_rect(dlg.box);
+        }
         return true;
     } else {
         return false;
@@ -6358,6 +6364,9 @@ void GuiInputHandler::on_key_release(GuiKey key) {
     if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
+    // The press face's un-press (2026-11-05).
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
     dispatch_modal_dialog_button(armed);
 }
 

@@ -339,6 +339,37 @@ inline constexpr uint32_t key_index(Page page, int row, int col) {
         ((detail::page_number(page) * kRowCount) + row) * kMaxRowKeys + col);
 }
 
+// THE PAGE A KEY INDEX BELONGS TO — the inverse of the page term above, and
+// the one place that reads it back. Its consumer is the RELEASE, which must
+// damage the key the finger pressed even when that key's own act (the page
+// key) has moved the live page out from under it; asking the live page
+// there would look the key up on a page it is not on and damage nothing
+// (finish_onscreen_keyboard_release; back 2026-11-05 with the press face).
+inline constexpr Page page_of_key_index(int index) {
+    return static_cast<Page>(
+        (static_cast<uint32_t>(index) - kStableCodeBase) /
+        static_cast<uint32_t>(kRowCount * kMaxRowKeys));
+}
+
+// THE HELD FACE IS A SLOT, NOT AN INDEX (architect 2026-10-29 night, on the
+// glass: the page key never sank to its second depth; back 2026-11-05 with
+// the press face, the press arc). Two key indices name the same SLOT when
+// they differ in the page term alone — the same row and column, which on
+// these pages is the same rect, role and width, since nothing moves between
+// them (pages_are_well_formed pins it). The painter's held test is this one:
+// THE PAGE KEY IS THE ONE KEY WHOSE OWN PRESS MOVES THE LIVE PAGE OUT FROM
+// UNDER ITS INDEX before the paint, so an index test against the new page's
+// walk finds no held key and the page key paints its armed or rest face
+// under the finger; the press face must follow the finger (materials.h's
+// paint_key and key_look), and the finger is on the slot.
+// A negative index — `pressed_key`'s "nothing held" — is on no slot.
+inline constexpr bool same_slot(int a, int b) {
+    constexpr int base  = static_cast<int>(kStableCodeBase);
+    constexpr int slots = kRowCount * kMaxRowKeys;
+    if (a < base || b < base) return false;
+    return (a - base) % slots == (b - base) % slots;
+}
+
 // -- The derivations off the table ------------------------------------------
 //
 // THE CASE IS A DERIVATION AND NOT A SECOND TABLE (the state-axis rule for a
@@ -430,8 +461,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the lit fill FFAD56, its cap
 // `text_on_lit` (materials.h's paint_key, the flat look 2026-11-01), which this
-// key and the page key (while the symbols page stands) wear off their lamps,
-// a press changing no face (no press look, 2026-11-04) — and the letter
+// key and the page key (while the symbols page stands) wear off their lamps
+// — a press on an unarmed key the press face, Default's 2A2A2A, from the
+// press to the lift (the press arc, 2026-11-05) — and the letter
 // caps themselves, every one of which turns capital while the arm stands.
 inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {

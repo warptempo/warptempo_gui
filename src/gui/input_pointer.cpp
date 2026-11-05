@@ -90,8 +90,9 @@ struct ToolbarChord {
     // way to go". The lift dispatches the member's own bare digit like every
     // roster button, and the selector's arm in GuiInputHandler::on_key
     // resolves a press on the standing value to its axis's other value, so
-    // the button and its key are one rule with no flag here. A hold paints
-    // nothing (no press look, architect 2026-11-04, materials.h's head).)
+    // the button and its key are one rule with no flag here. A hold on the
+    // lit member keeps it lit (the press face is the unchecked key's alone,
+    // materials.h's key_look).)
     // REPEATS: a held press on this button synthesizes its own chord over and
     // over — the hold-repeat.
     //
@@ -2841,10 +2842,12 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // AN ARMED BUTTON — THE FEINT (architect 2026-08-13): "if the user feints —
 // clicks a button and then drags away before the mouse goes up — then that
 // button receives the passive focus as well." So THE ARM STAYS LIVE FOR THE
-// WHOLE HOLD, and this walk tracks nothing about it: the release re-hits the
-// armed button at its own coordinates (take_modal_dialog_release), and a
-// press paints nothing (no press look, architect 2026-11-04, materials.h's
-// head). THE FOCUS IS NOT THIS WALK'S: the press already moved it onto the
+// WHOLE HOLD, and this walk only answers whether the pointer is inside it —
+// the armed button's inside bit (AppState::modal_dialog_press_inside), which
+// the press face reads (paint_modal_dialog's row; the press arc, 2026-11-05),
+// damaging the box on every crossing; the release re-hits the armed button
+// at its own coordinates (take_modal_dialog_release), reading no bit. THE
+// FOCUS IS NOT THIS WALK'S: the press already moved it onto the
 // armed button (architect 2026-10-03, Windows' rule;
 // arm_modal_dialog_press), so leaving the button leaves the focus where it
 // is (read by a dialog editor's ring alone). The whole rule is at
@@ -2852,6 +2855,12 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const int hit = modal_dialog_button_hit(x, y);
     const int  armed  = app.modal_dialog_pressed;
+    const bool inside = armed >= 0 && armed == hit;
+    if (app.modal_dialog_press_inside != inside) {
+        app.modal_dialog_press_inside  = inside;
+        if (app.modal_dialog.valid)
+            viewport.invalidate_rect(app.modal_dialog.box);
+    }
     // THE PLAYER'S HOT BUTTON: the hit on the player's row while the
     // program's case has a hot face (program_spec.h's case_hot_face — none
     // since 2026-10-09, Cool Edit's) and no dialog press is armed (comctl32
@@ -2908,23 +2917,28 @@ void GuiInputHandler::set_player_hot(int index) {
 // THE ARM'S HARD END — the pointer-leave hook (main.cpp), beside the roster's
 // own clear_redesign_button_press and for its reason: a pointer that has left
 // the window is on no button, and an act that has not happened yet must not
-// be left waiting for a release that may never come. No damage: the arm
-// paints nothing (no press look, 2026-11-04).
+// be left waiting for a release that may never come. The press face's
+// un-press damages the box (2026-11-05).
 void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
     app.modal_dialog_pressed      = -1;
+    app.modal_dialog_press_inside = false;
     app.modal_dialog_press_ms     = 0;
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
 }
 
 // THE KEYBOARD ARM'S HARD END, the twin of the one above: an act that has not
 // happened yet must not be left waiting for a release that will commit
-// nothing (the focus moving off the held button, below). No damage: the
-// arm paints nothing (2026-11-04); the contract is at
+// nothing (the focus moving off the held button, below). The press face's
+// un-press damages the box (2026-11-05); the contract is at
 // AppState::modal_dialog_key_pressed.
 void GuiInputHandler::clear_modal_dialog_key_press() {
     if (app.modal_dialog_key_pressed < 0) return;
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
 }
 
 // A dialog button's PRESS: arm the index, painting and dispatching nothing.
@@ -2952,7 +2966,13 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
     const AppState::ModalDialogButton& hb =
         app.modal_dialog.buttons[static_cast<size_t>(hit)];
     if (!hb.enabled) return true;
-    app.modal_dialog_pressed = hit;
+    // THE ARM, and its press face's damage (2026-11-05): a press is inside
+    // what it hit, by construction — the feint's bit starts true.
+    if (app.modal_dialog_pressed != hit || !app.modal_dialog_press_inside) {
+        app.modal_dialog_pressed      = hit;
+        app.modal_dialog_press_inside = true;
+        viewport.invalidate_rect(app.modal_dialog.box);
+    }
     // THE PRESS TAKES THE KEYBOARD FOCUS (architect 2026-10-03, "as few
     // exceptions as possible to the Windows 95 rule"): Windows moves the
     // focus to the button the mouse presses, AT THE PRESS. It REPLACES
@@ -3014,9 +3034,13 @@ int GuiInputHandler::take_modal_dialog_release(int x, int y) {
     const int armed = app.modal_dialog_pressed;
     if (armed < 0) return -1;
     app.modal_dialog_pressed      = -1;
+    app.modal_dialog_press_inside = false;
     // The arm's shifted-twin stamp dies with it (the verdict is read BEFORE
     // this call, modal_dialog_press_shifted).
     app.modal_dialog_press_ms     = 0;
+    // The press face's un-press (2026-11-05).
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
     return modal_dialog_button_hit(x, y) == armed ? armed : -1;
 }
 
@@ -3842,10 +3866,13 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y) {
         case Role::SymbolMode: return true;   // handled above; unreachable
     }
 
-    // THE HELD KEY paints nothing (no press look, architect 2026-11-04,
-    // materials.h's head): the index is the release's subject alone.
+    // THE HELD KEY wears the press face until the lift (the press arc,
+    // architect 2026-11-05, paint_onscreen_keyboard): the index is the
+    // release's subject and the painter's held slot; its own rect damaged
+    // here (the lamp keys above damage the whole band).
     app.onscreen_keyboard.pressed_key    = hit;
     app.onscreen_keyboard.pressed_keysym = keysym;
+    viewport.invalidate_rect(onscreen_keyboard::key_rect(app, page, hit));
 
     // A SHIFT ARM IS SPENT BY THE LETTER IT CAPITALIZED AND BY NOTHING ELSE.
     // ONE-SHOT SHIFT MEANS THE NEXT LETTER (planner ruling 2026-08-27), so a
@@ -3889,8 +3916,15 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     const GuiKey keysym = app.onscreen_keyboard.pressed_keysym;
     app.onscreen_keyboard.pressed_key    = -1;
     app.onscreen_keyboard.pressed_keysym = 0;
-    // NO UN-PRESS DAMAGE: the held key painted nothing (no press look,
-    // 2026-11-04).
+    // THE UN-PRESS DAMAGE (2026-11-05): the held key's own rect, looked up
+    // on the page its index belongs to — the page key's own act has moved
+    // the live page (onscreen_keyboard::page_of_key_index) — while the
+    // keyboard still stands (a press whose act closed the editor leaves no
+    // key to repaint; the band's teardown repaints the slot).
+    if (onscreen_keyboard::stands(app)) {
+        viewport.invalidate_rect(onscreen_keyboard::key_rect(
+            app, onscreen_keyboard::page_of_key_index(held), held));
+    }
 
     // The owed key-up. A lamp key synthesized nothing and owes nothing; every
     // other key owes exactly this, and the core's repeat cancel is the reason
@@ -4023,10 +4057,14 @@ bool GuiInputHandler::claim_folder_overlay_press(
     press.press_x         = x;
     press.press_y         = y;
     press.scroll_at_press = app.folder_overlay.scroll_px;
+    press.inside          = true;
     press.scrolling       = false;
-    // THE ARM paints nothing (no press look, architect 2026-11-04,
-    // materials.h's head): the row lights at the lift, when the act moves
-    // the highlight.
+    // THE ARM: the row wears the lists' press pair while the press stands
+    // on it (paint_folder_overlay; the press arc, architect 2026-11-05) —
+    // the row damaged here, at every inside crossing (the motion below) and
+    // at the lift (finish_folder_overlay_release); an inert row's arm paints
+    // nothing, the painter's own gate.
+    viewport.invalidate_rect(folder_overlay::row_rect(app, hit));
     return true;
 }
 
@@ -4056,8 +4094,21 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
         if (std::max(std::abs(x - press.press_x),
                      std::abs(y - press.press_y)) >=
                 drag_moved_threshold_px()) {
+            // The arm IS the scroll drag now: no row is pressed (the press
+            // pair leaves it), the surface repainted whole.
             press.scrolling = true;
+            press.inside    = false;
+            viewport.invalidate_rect(folder_overlay::surface_rect(app));
         } else {
+            // THE FEINT'S BIT (2026-11-05): the row under the press wears
+            // the press pair while the pointer is on it, each crossing
+            // damaging the row.
+            const bool inside = folder_overlay::row_at(app, x, y) == press.row;
+            if (inside != press.inside) {
+                press.inside = inside;
+                viewport.invalidate_rect(
+                    folder_overlay::row_rect(app, press.row));
+            }
             return;
         }
     }
@@ -6490,10 +6541,27 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                            !pen_hot_latch_holds()
                        ? hot
                        : -1);
-    // (NO INSIDE BIT IS WALKED: a press paints nothing — no press look,
-    // architect 2026-11-04 — and the RELEASE re-hits the armed target's rect
-    // at its own coordinates, so a slide off the key runs nothing at the lift
-    // without this walk's help.)
+    // THE ARMED ROSTER PRESS'S INSIDE BIT (AppState::ChromePress::inside,
+    // the press face's gate, redesign_button_pressed_face; back 2026-11-05
+    // with the press look), maintained here because this walk is the one
+    // body that runs on every motion AND every tick under a standing arm: is
+    // the pointer inside the armed target's published face? Both of the
+    // face's rects (`contains`): a press on row 8's clock holds the PLAY
+    // key down while the pointer stays on the clock. The bit serves the
+    // paint alone — the RELEASE re-hits the armed target's rect at its own
+    // coordinates, so a slide off the key runs nothing at the lift without
+    // this walk's help — and a crossing damages the key's home strip, the
+    // lit flip's own damage (main.cpp's comparator; row 8's fork). A CARD
+    // ARM IS NOT WALKED: the card paints no pressed face.
+    if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster) {
+        const bool inside =
+            app.redesign_buttons[static_cast<size_t>(app.chrome_press.index)]
+                .contains(mx, my);
+        if (inside != app.chrome_press.inside) {
+            app.chrome_press.inside = inside;
+            invalidate_roster_press_face(app.chrome_press.index);
+        }
+    }
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
     // knows a hover STARTED. EVERY roster button but ROW 1'S carries a tooltip,
@@ -6617,7 +6685,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // press-time — the disabled consume — and then ARMS: the index, the
 // PRESS-TIME CTRL (the release deliberately does not re-read modifiers, the
 // modal release's own rule) and the press stamp the long press is measured
-// against — painting nothing (no press look, 2026-11-04). The lift runs the
+// against — and damages the key's home strip for its press face (the press
+// arc, 2026-11-05; invalidate_roster_press_face). The lift runs the
 // act through
 // finish_chrome_press_release below, which re-asks every gate, the face's
 // bits as painted (architect 2026-09-24).
@@ -6690,8 +6759,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // dispatches like any other since 2026-10-23 night (the pop: its key
         // selects the pair's other member); it repeats nothing (no view pair
         // row carries `repeats`).
-        // THE ARM, which paints nothing (no press look, architect
-        // 2026-11-04, materials.h's head). A CTRL press arms too, which the
+        // THE ARM, whose press face the band's and row 8's painters read
+        // through redesign_button_pressed_face (the inside bit starts true:
+        // a press is inside what it hit; materials.h's head, 2026-11-05).
+        // A CTRL press arms too, which the
         // band's modifier
         // gate has already narrowed to the buttons redesign_button_ctrl_admits
         // or redesign_button_ctrl_shift_admits names, so no second admission
@@ -6709,6 +6780,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
             .index    = redesign_button_index(tc.id),
             .ctrl     = mods.ctrl,
             .press_ms = now};
+        invalidate_roster_press_face(app.chrome_press.index);
         // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
@@ -6769,15 +6841,29 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
         notifications.press_hold_edge(arm.card_id);
         return arm;
     }
-    // A ROSTER ARM OWES NO ERASE: it painted nothing (no press look,
-    // 2026-11-04).
+    // A ROSTER ARM'S ERASE (2026-11-05): a face painted pressed — the arm
+    // inside its key — is un-pressed by the same damage the arm paid.
+    if (arm.kind == AppState::ChromePress::Kind::Roster && arm.inside)
+        invalidate_roster_press_face(arm.index);
     return arm;
+}
+
+// THE PRESS FACE'S DAMAGE for the roster button at `index` — the arm, the
+// lift and the walk's inside crossing (the press arc, architect 2026-11-05):
+// the key's HOME STRIP, the damage the lit flip's comparator pays for the
+// same pixels (main.cpp) — row 8's fork, a transport-row face damaging its
+// own bottom-strip lane, every other face the top strip.
+void GuiInputHandler::invalidate_roster_press_face(int index) {
+    if (redesign_button_in_transport_row(static_cast<RedesignButton>(index)))
+        viewport.invalidate_rect(bottom_row_area(app));
+    else
+        viewport.invalidate_top_strip();
 }
 
 // THE CHROME ACT, AT THE LIFT — the release half of act-at-release (architect
 // 2026-08-13). The lift runs the act iff it lands ON the armed target — the
 // published rect re-hit at the release's own coordinates, the derive doctrine
-// (the arm keeps no inside bit: there is no press look, 2026-11-04) — and iff
+// (the arm's inside bit serves the paint alone, AppState::ChromePress) — and iff
 // every press-time gate still holds, re-asked here exactly as the modal
 // dialog's release
 // re-asks its own: the surface may have changed under the hold (a dialog
@@ -7118,8 +7204,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
     arm.repeat_due_ms = now + gui.key_repeat_period_ms();
     const RedesignButton id = static_cast<RedesignButton>(arm.index);
     // PAUSED OFF THE BUTTON. The published rect re-hit at the pointer's
-    // remembered position — the lift's own derive doctrine (the arm keeps no
-    // inside bit: there is no press look, 2026-11-04).
+    // remembered position — the lift's own derive doctrine (the arm's inside
+    // bit serves the paint alone, AppState::ChromePress).
     if (!app.pointer_in_window ||
         !redesign_button_hit(app, id, app.last_mouse_x, app.last_mouse_y))
         return;
@@ -7796,8 +7882,8 @@ bool GuiInputHandler::tooltip_dwell_suppressed() const {
 // and dispatches nothing, which is the intended answer (the pointer was
 // outside the window; the modal arm's clear beside this one carries the
 // same). The RELEASE itself never comes here — it consumes
-// the arm through take_chrome_press at on_button_release's top. No damage is
-// owed: the arm painted nothing (no press look, 2026-11-04).
+// the arm through take_chrome_press at on_button_release's top. The press
+// face's erase is take_chrome_press's own (2026-11-05).
 // THE ARROWS' HOLD-REPEAT ENDS HERE TOO, and needs no line of its own: the
 // schedule and its fired bit live ON the arm, so taking the arm takes the burst
 // with it. That is the point of homing them there — one hold, one lifetime, no

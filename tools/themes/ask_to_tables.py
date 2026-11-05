@@ -45,6 +45,9 @@ header's head. Our Default tone = Live's role, the planner having verified
                                     Medium Light over the panels' DADADA)
     lane, trim bar outside 2A2A2A = Desktop
     card ink               2A2A2A = Desktop
+    key press face         2A2A2A = Desktop (the press arc, 2026-11-05: his
+                                    pick p2 over ControlBackground 1E1E1E —
+                                    "press in skeumorphic is darker")
     key face, ruler face, pane, time field  363636 = SurfaceBackground
     cue outline, text on lit, selection text  111111 = ControlContrastFrame
     text                   B5B5B5 = ControlForeground
@@ -54,6 +57,10 @@ header's head. Our Default tone = Live's role, the planner having verified
     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
     playhead head          03C3D5 = RangeDefault
     selection fill         637E86 = StandbySelectionBackground
+    list press fill        B0DDEB = SelectionBackground (the press arc,
+                                    2026-11-05: "lighter for list
+                                    (highlight)")
+    list press text        070707 = SelectionForeground
     card face              E76942 = Alert
   COMPOSITED (Live's alpha role over the clip view's ground, straight alpha
   aa/255, a 6-digit word opaque; Python's round() on the float, clamped):
@@ -110,11 +117,14 @@ AUTHORS = {
 }
 
 # THE ROLES READ from every file (the head's DERIVATION), each present in
-# every stock and Sonic Bloom file (checked over all 45, 2026-11-05).
+# every stock and Sonic Bloom file (checked over all 45, 2026-11-05; the
+# press arc's two, SelectionBackground and SelectionForeground, over the same
+# files the same day).
 ROLES = [
     'SurfaceArea', 'Desktop', 'SurfaceBackground', 'ControlContrastFrame',
     'ControlForeground', 'TextDisabled', 'BackgroundClip',
     'ViewCheckControlEnabledOn', 'RangeDefault', 'StandbySelectionBackground',
+    'SelectionBackground', 'SelectionForeground',
     'Alert', 'WaveformColor', 'DetailViewBackground', 'DetailGridTiles',
 ]
 
@@ -128,6 +138,7 @@ MEMBERS = [
     ('key_dim_ink',     'a disabled key\'s glyph and legend (face + 36/63 toward text_dim)'),
     ('key_face',        'the key at rest, the time fields (SurfaceBackground)'),
     ('lit_fill',        'a checked key\'s whole face, Live\'s "on" (ViewCheckControlEnabledOn)'),
+    ('key_press_face',  'an unchecked key\'s face while a press stands on it (Desktop)'),
     ('well_frame',      'the scrub\'s channel and the tooltip\'s border (TextDisabled)'),
     ('ruler_face',      'the ruler (SurfaceBackground)'),
     ('ruler_tick',      'the ruler\'s ticks (face + 53/127 toward text)'),
@@ -136,6 +147,8 @@ MEMBERS = [
     ('trim_span_face',  'the trim bar inside the trim (face + 52/127 toward text)'),
     ('selection_fill',  'the selection pair\'s bar: the lists\' lit row, the editors\' selected substring; `selected_fill` (StandbySelectionBackground)'),
     ('selection_text',  'the selection pair\'s text; `selected_text` (ControlContrastFrame)'),
+    ('list_press_fill',  'a list row\'s fill while a press stands on it (SelectionBackground)'),
+    ('list_press_text',  'a list row\'s text and glyph under that press (SelectionForeground)'),
     ('pane_face',       'the modal family\'s box interior and the tooltip\'s face (SurfaceBackground)'),
     ('score_pane_face', 'the score viewer\'s pane, the page\'s mat (= the ink)'),
     ('card_face',       'the cards\' box and their ring; `card_ground` / `card_frame` (Alert)'),
@@ -229,6 +242,8 @@ def derive(roles):
     on       = opaque(roles['ViewCheckControlEnabledOn'])
     range_   = opaque(roles['RangeDefault'])
     standby  = opaque(roles['StandbySelectionBackground'])
+    sel_bg   = opaque(roles['SelectionBackground'])
+    sel_fg   = opaque(roles['SelectionForeground'])
     alert    = opaque(roles['Alert'])
     detail   = rgb(roles['DetailViewBackground'])
     ink      = over(rgb(roles['WaveformColor']), detail)
@@ -242,6 +257,7 @@ def derive(roles):
         'key_dim_ink':     mix(face, dim, 36.0 / 63.0),
         'key_face':        face,
         'lit_fill':        on,
+        'key_press_face':  desktop,
         'well_frame':      dim,
         'ruler_face':      face,
         'ruler_tick':      mix(face, text, 53.0 / 127.0),
@@ -250,6 +266,8 @@ def derive(roles):
         'trim_span_face':  mix(face, text, 52.0 / 127.0),
         'selection_fill':  standby,
         'selection_text':  contrast,
+        'list_press_fill': sel_bg,
+        'list_press_text': sel_fg,
         'pane_face':       face,
         'score_pane_face': ink,
         'card_face':       alert,

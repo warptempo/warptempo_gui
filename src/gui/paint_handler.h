@@ -1152,7 +1152,7 @@ private:
     // 2026-11-01 night) — folder
     // and wav rows with their glyphs, the pickers' glyph-less rows, the
     // settings page's group rows in the dim print (`text_dim`, 2026-10-28), the
-    // highlight band (no pressed face: no press look, 2026-11-04), all under
+    // highlight band and the pressed row's lighter pair (2026-11-05), all under
     // the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
     // and then on its own exposure per row, as the keyboard is. It publishes
