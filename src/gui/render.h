@@ -1157,7 +1157,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     notifications.h.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
-//     (22 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S LAST
+//     (22, the Bold), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S LAST
 //     COLUMN (the last key's face's last column: "the clock flush with the
 //     right edge of the buttons"): the clock run "2:12 PM" with its LAST
 //     INK on that column; THE PIPE (kLogoLegendPipe, the face's own glyph,

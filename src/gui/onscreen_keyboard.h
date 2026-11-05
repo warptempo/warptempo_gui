@@ -403,23 +403,27 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 //
 // EVERY WORD FITS ITS KEY WITH AIR, at the defaults and at his tuning, and
 // there is NO FALLBACK: no second form, no measure at paint, no second
-// face. Measured (Liberation Sans Regular, HarfBuzz's unhinted
+// face. Measured (Liberation Sans Bold, the Keys face's file since
+// 2026-11-04 night, gui_font.h's table; HarfBuzz's unhinted
 // advances through FreeType, text_shape's road) against the key's face —
 // the whole key, no outline (2026-11-04) — at 300 %, the key widths the
 // slots' at the one-W gap (2026-11-04): at the defaults (osk_key_w 48,
-// osk_key_h 60, osk_font_px 24) "Bksp" 53 px in the 2.5u key's 125, "Enter"
-// 57 in the 2u key's 99, "Space" 68 in the 4u key's 201, "Paste" 61,
-// "&123" and "Copy" 56, "ABC" 49, "Shift" 48 and "Esc" 40 in the 1.5u key's
-// 73, and "Tb" 28 in the 1u key's 48; at his box (osk_key_w 50, the default
-// height, osk_font_px 26) "Bksp" 58 in 129, "Enter" 62 in 103, "Paste" 66,
-// "&123" and "Copy" 61 in 77, "Tb" 30 in 50. At 200 % and 150 % the key and
-// the face scale together and every word fits as well. A WORD THAT FAILS ITS
+// osk_key_h 60, osk_font_px 24) "Bksp" 59 px in the 2.5u key's 123, "Enter"
+// 61 in the 2u key's 98, "Space" 71 in the 4u key's 198, "Paste" 64,
+// "Copy" 60, "&123" 57, "Shift" 53, "ABC" 52 and "Esc" 43 in the 1.5u key's
+// 73, "Tb" 29 in the 1u key's 48, and the widest character cap, "@", 23 in
+// the 1u key's 48 (the capital "W" 23); at his box (osk_key_w 50, the
+// default height, osk_font_px 26) "Bksp" 64 in 128, "Enter" 66 in 102,
+// "Space" 77 in 206, "Paste" 69, "Copy" 65 and "&123" 62 in 76, "Tb" 32
+// and "@" 25 in 50. At 200 % and 150 % the key and the face scale together
+// and every word fits as well. A WORD THAT FAILS ITS
 // KEY UNDER AN EXTREME TUNING SIMPLY OVERHANGS IT — a tuning key's own
 // consequence, centered on its key like every cap: at the default box "Paste"
-// is the first to overhang, from osk_font_px 29 ("&123" and "Copy" from 32,
-// "Tb" from 42, "Enter" from 42, "Esc" from 44; "Bksp" not until 57, past
-// osk_font_px's ceiling of 48, device_config.h's grammar), and at osk_font_px 24
-// "Paste" overhangs below osk_key_w 40.
+// is the first to overhang, from osk_font_px 28 ("Copy" from 30, "&123" from
+// 31, "Shift" from 33, "ABC" from 34, "Enter" from 39, "Tb" from 40, "Esc"
+// from 42; "Bksp" not until 51, past osk_font_px's ceiling of 48,
+// device_config.h's grammar), and at osk_font_px 24 "Paste" overhangs at
+// osk_key_w 42 and below.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the lit fill FFAD56, its cap

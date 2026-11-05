@@ -5,7 +5,9 @@
 // (architect 2026-10-30) — become two FT faces, and the pixel table
 // (gui_font.h's kGuiFaceSizes) picks its uses among them.
 //
-// THE FACES (Liberation Sans and its Bold, TrueType, FT_New_Memory_Face) are
+// THE FACES (Liberation Sans and its Bold — the Regular the keys' legends'
+// alone, the Bold every other use's, gui_font.h's table — TrueType,
+// FT_New_Memory_Face) are
 // FT faces wrapped as
 // cairo font faces — the FT-backed
 // shape text_shape requires, since it shapes on the scaled font's own FT

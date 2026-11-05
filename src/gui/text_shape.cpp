@@ -23,9 +23,9 @@ constexpr double k26Dot6 = 64.0;
 // the end could be trusted to run, and the buffer (declared after it) goes
 // before the unlock, which is what cairo requires.
 //
-// THE LOCK STAYS AROUND EVERY SHAPE, cached hb font or not: the body and the
-// small share one FT face (the live set's regular file) at two sizes,
-// cairo's lock sets this
+// THE LOCK STAYS AROUND EVERY SHAPE, cached hb font or not: the uses share
+// one FT face per file at several sizes (the Bold file every use's but the
+// keys' legends, gui_font.h's table), cairo's lock sets this
 // scaled font's size on it, and hb-ft reads the face's live size for every
 // advance at shape time.
 class ScaledFontFace {

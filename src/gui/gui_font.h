@@ -23,24 +23,24 @@
 // whole W again; pt was considered and not taken, gui_scale being the
 // density knob; the Legend parted from the Small at 14 the same night). THE TEXT SIZES (architect
 // 2026-11-03, the retrofit, reversing that morning's text round of 24; the
-// unit of 2 since 2026-11-04 night): PROGRAM 22 Regular
+// unit of 2 since 2026-11-04 night): PROGRAM 22
 // (architect 2026-10-26 ~13:05, the size's tuning key read off the tablet's
 // config and settled): ROW 8'S CLOCK AND ITS STATE LINE (the tab's name, the
 // GitHub word, the walk line, the progress line), THE RENDER PLAYER'S TWO
 // TIME FIELDS (architect 2026-10-26 ~12:10, "yes" to symmetry with row 8's
 // clock) and THE TOOLTIP'S NAME LINE ("the tooltips font size should be the
-// same as the flags", 2026-10-23); LABEL 22 BOLD (architect 2026-11-01
-// night, M5i: "THE MARKER LABEL IS BOLD"; Liberation Sans Bold's vertical
-// metrics equal Regular's, only the run widens): THE CUES' LABELS AND THE
-// LANE'S EDITORS (the flag editor, the iteration bound editor — the
-// editor's text stands at the label's seat), the history lane's labels with
-// them — the size the Program row's, a row of its own because its file is
-// the other one; BODY 22 Regular, THE REST (the lists, the cards, the
+// same as the flags", 2026-10-23); LABEL 22 (architect 2026-11-01
+// night, M5i: "THE MARKER LABEL IS BOLD", the first Bold use; Liberation
+// Sans Bold's vertical metrics equal Regular's, only the run widens): THE
+// CUES' LABELS AND THE LANE'S EDITORS (the flag editor, the iteration bound
+// editor — the editor's text stands at the label's seat), the history
+// lane's labels with them — the size and the file the Program row's, a row
+// of its own; BODY 22, THE REST (the lists, the cards, the
 // prompts, the dialog editors, the logo lane's battery + clock legend) —
 // THE ROWS COINCIDE IN NUMBER AND STAY THEIR OWN ROWS: the roster is the
 // distinction (the Label row tunes with the cues, the Body row with the
-// rest); TITLE 24 Bold (the logo lane's brand "Warptempo" alone; architect
-// 2026-10-24, "the caption size 24", off the logo mocks); RULER 16 BOLD (the
+// rest); TITLE 24 (the logo lane's brand "Warptempo" alone; architect
+// 2026-10-24, "the caption size 24", off the logo mocks); RULER 16 (the
 // ruler's digits alone; Bold since 2026-11-01 night, M5c; the retrofit's 16
 // of mock g1, 2026-11-03, a whole W again since 2026-11-04 night); LEGEND
 // 14 Regular (7 W; the keys' printed legends alone, uppercase, under every
@@ -48,13 +48,22 @@
 // since 2026-11-04 night, his pick b2 on the mocks of tmp/s36 — "it does
 // seem too large now" at the unit's 16, 15 mocked and not taken, off the
 // unit; paint_handler.cpp's key_legend_seat, app_state.h's
-// redesign_button_legend for the fit); KEYS 24 Regular (the on-screen
+// redesign_button_legend for the fit); KEYS 24 (the on-screen
 // keyboard's caps alone — the letters, the symbols page's characters and
 // the word caps, "a separate face"; architect 2026-10-24, "C24" off his type
 // sheet) BY DEFAULT, THE ONE LIVE SIZE — the `osk_font_px` tuning key's
-// (architect 2026-10-29 night, GuiFont below); HINT 18 Regular (the
+// (architect 2026-10-29 night, GuiFont below); HINT 18 (the
 // tooltip's hint line alone, under its name line — kdenlive's tooltip, a
 // smaller hint under the name, architect 2026-10-31, paint_shift_tooltip).
+// EVERY USE IS BOLD BUT THE LEGEND (architect 2026-11-04 night: "make it
+// bold everywhere but the icon legend"): Live 12 sets its every text in one
+// weight, Ableton Sans's medium, which Liberation Sans lacks, so its Bold is
+// the one weight here — the clocks and the tab's name read small in the Regular beside
+// the Bold labels and ruler ("the two clocks and tab feel small without it
+// next to markers"); an Adwaita Sans / Inter build lost to Liberation on
+// kerning and a Light cut was declined (condensed) the same night. The
+// keys' printed legends alone stay in the Regular, the pixel table's one
+// file-0 row.
 // Every length authored round the text follows these sizes (each length's
 // own comment records its class; the retrofit's set at modal_box.h's text
 // seat, folder_overlay.h's row, notifications.h's card and the list glyphs).
@@ -96,7 +105,9 @@
 #include <iterator>
 #include <string_view>
 
-// THE USES (the head's table): the body, the brand's bold, the ruler's
+// THE USES (the head's table), every one drawn from the Bold file but the
+// keys' legends (`Legend`, the Regular; architect 2026-11-04 night): the
+// body, the brand (`Bold`, the name older than the ruling), the ruler's
 // digits (`Small`), row 8's clock and state line, the player's clocks and
 // the tooltip's name line (`Program`), the keys' legends (`Legend`), the
 // on-screen keyboard's caps (`Keys`), the tooltip's hint line (`Hint`) and
@@ -109,31 +120,35 @@ inline constexpr std::size_t kGuiFaceCount = 8;
 // asset step (apk/build_apk.sh) reads the quoted names out of this
 // initializer, so a file added here is packed with no second list; the
 // backend hands the bytes in in this order, and a use names its file by its
-// index here. Both are TrueType (FT_New_Memory_Face).
+// index here — the Regular read by the keys' legends alone, the Bold by
+// every other use (the head, 2026-11-04 night). Both are TrueType
+// (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
-    "LiberationSans-Regular.ttf", // 0: the body, the clocks, the legends, the caps, the hint
-    "LiberationSans-Bold.ttf",    // 1: the brand, the ruler, the cues
+    "LiberationSans-Regular.ttf", // 0: the keys' printed legends alone
+    "LiberationSans-Bold.ttf",    // 1: every other use
 };
 
 // THE PIXEL TABLE (the head; architect 2026-10-23 and the amendment): per
 // use, in GuiFace's order, the file it is drawn from and its em in device
-// px at gui_scale 300 %.
+// px at gui_scale 300 %. Every row reads file 1, the Bold, but the Legend's
+// (architect 2026-11-04 night, "bold everywhere but the icon legend": one
+// weight for the text, as Live sets it, the head).
 struct GuiFaceSize {
     std::size_t file      = 0;
     double      px_at_300 = 0.0;
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
-    {0, 22.0},   // Body (the Program row's number too, a row of its own)
+    {1, 22.0},   // Body (the Program row's number too, a row of its own)
     {1, 24.0},   // Bold: the brand
-    {1, 16.0},   // Small: the ruler's digits, Bold
-    {0, 22.0},   // Program: row 8's clock and state line, the player's
+    {1, 16.0},   // Small: the ruler's digits
+    {1, 22.0},   // Program: row 8's clock and state line, the player's
                  // clocks, the tooltip's name line
-    {0, 14.0},   // Legend: the keys' legends
-    {0, 24.0},   // Keys: the on-screen keyboard's caps (the default of
+    {0, 14.0},   // Legend: the keys' legends, THE ONE REGULAR USE
+    {1, 24.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
-    {0, 18.0},   // Hint: the tooltip's hint line
-    {1, 22.0},   // Label: the cues' labels and the lane's editors, Bold
+    {1, 18.0},   // Hint: the tooltip's hint line
+    {1, 22.0},   // Label: the cues' labels and the lane's editors
 };
 
 // THE USE'S TABLE SIZE, its em in device px at 300 % — the one read of the
@@ -237,8 +252,9 @@ double gui_font_x_ink_px(const GuiFont& f);
 // the defaults (2026-11-04 night, the unit of 2's sizes): "0123456789:." in
 // the ruler's Bold 16 at 300 % 12 + 0 (the ruler, render.h's ruler block),
 // Bold 11 at 200 % 8 + 0; the brand "Warptempo" in Bold 24 17 + 5, Bold 16
-// 12 + 3; the legend's alphabet (the pipe apart) in Regular 22 15 + 0,
-// Regular 15 10 + 0, and the pipe alone 18 + 3, 13 + 2 (the logo lane,
+// 12 + 3; the legend's alphabet (the pipe apart) in Bold 22 15 + 0,
+// Bold 15 10 + 0, and the pipe alone 18 + 3, 13 + 2, the Regular's rows to
+// the row (the logo lane,
 // render.h's logo lane block). A reader takes the integers as they are.
 // Measured once per file,
 // em and set and kept (a set is a constant of its reader's), GUI thread

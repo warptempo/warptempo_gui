@@ -2389,15 +2389,17 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // 2026-11-03, mock u3, rounded to the unit 2026-11-04) — its width
 // ceiled,
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
-// the one face, so the three fields are one width. The cell is 4.448 em
-// (seven tabular digits at 0.556 em and the colon and the point at 0.278):
-// at 300 % and 22 px, 97.9 device px ceiled to 98, the field 122; at
-// 138 % a 10-px em, 44.5 ceiled to 45, the field 57. THE PLAYER'S ROW
+// the one face, so the three fields are one width. The cell is 4.504 em
+// in the Program face's Bold (gui_font.h, every use Bold but the legends
+// since 2026-11-04 night: seven tabular digits at 0.556 em, the colon at
+// 0.333 and the point at 0.278): at 300 % and 22 px, 99.1 device px ceiled
+// to 100, the field 124; at 138 % a 10-px em, 45.0 ceiled to 46, the field
+// 58. THE PLAYER'S ROW
 // HOLDS THEM: its scrub is what the fixed terms leave (player_row_layout),
-// the two fields and their gap 122 + 8 + 122 = 252 device px at 300 % and
-// 57 + 4 + 57 = 118 at 138 %, so with the 70-px face, the one-W key gap and
-// the 44-px run gap (2026-11-04 night) the scrub's channel is 1228 device
-// px at 300 % (2304 wide, x 282 .. 1509) and 1431 at 138 % (1920 wide).
+// the two fields and their gap 124 + 8 + 124 = 256 device px at 300 % and
+// 58 + 4 + 58 = 120 at 138 %, so with the 70-px face, the one-W key gap and
+// the 44-px run gap (2026-11-04 night) the scrub's channel is 1224 device
+// px at 300 % (2304 wide, x 282 .. 1505) and 1429 at 138 % (1920 wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2790,14 +2792,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2279) — on the tablet's 2304 the faces on x 788..2279 (the skips
     // 788..929, the verbs 974..1547, the walk 1592..1877, the nudge
     // 1922..2279, Play 2210..2279); the clock's field on the well's first
-    // column, from x 24 — the cell (4.45 em of Liberation Sans advances,
-    // seven digits, the colon and the point, in the program face's 22 px at
-    // 300 %, 98 px ceiled) and its two 12-px pads, a 122-px field, x
-    // 24..145 — then the name's first ink 14 px past it (x 160), the state
+    // column, from x 24 — the cell (4.50 em of Liberation Sans Bold
+    // advances, seven digits, the colon and the point, in the program face's
+    // 22 px at 300 %, 100 px ceiled) and its two 12-px pads, a 124-px field,
+    // x 24..147 — then the name's first ink 14 px past it (x 162), the state
     // line's 14 px past the name's advance, clipped one run gap short of the
     // block (x 744). On a 1920-px window at 138 % (faces 32, the key gap 1,
     // the run gap 20, the program face 10 px) the block is 683 px of faces
-    // from x 1229, the clock's field 57 px on x 8..64, the name from x 71.
+    // from x 1229, the clock's field 58 px on x 8..65, the name from x 72.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and
     // Toggle Value Drag hidden there with the verbs, Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
@@ -2850,7 +2852,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                   GuiRect{});
 
     // THE CLOCK — the first TIME FIELD (the shape and the fixed-width rule
-    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' 21 px
+    // at kTimeShape's block above), in THE PROGRAM FACE, the cues' 22 px
     // (architect 2026-10-26 ~11:30, settled ~13:05; gui_font.h's table),
     // named
     // through the one face owner (gui_font.h), inside the save/restore this
