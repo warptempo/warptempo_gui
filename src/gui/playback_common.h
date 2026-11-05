@@ -126,6 +126,18 @@ struct GuiPlaybackState {
     // the noise: it is the engine's level, not the binding's.
     std::atomic<float> audio_gain{1.0f};
 
+    // THE CLIP LAMP'S COUNTER (architect 2026-11-05; render.h's THE TWO
+    // LAMPS): the number of callback blocks the clip clamped at least one
+    // sample of (playback_clip_block's answer), bumped by the callback with
+    // release after the clip, read by the GUI tick with acquire
+    // (GuiPlayback::clipped_blocks) and compared with the count it last saw —
+    // the lamp lights iff the count moved. Monotonic for THE ENGINE'S LIFE:
+    // like the noise and the level it is the engine's, not the binding's and
+    // not the stream's — bind, clear and a stream reopen leave it alone — so
+    // the tick's last-seen word (AppState::clip_lamp_seen_blocks, built with
+    // the same project) never meets a counter that went backward.
+    std::atomic<uint64_t> clipped_blocks{0};
+
     // Borrowed source buffer, IN ONE OF TWO FORMATS (GuiBoundAudio,
     // playback.h): `samples` for float32, `samples_i16` for PCM16, exactly
     // one non-null while a buffer is bound (the render body's hoisted fork
@@ -448,7 +460,10 @@ void playback_write_silence(float* const* channel_buffers, int channel_count,
 // in-range sample, and a target over full scale clips here in the app instead
 // of at the converter: in his words, the same sound. The stride is
 // playback_write_silence's. No allocation, no I/O, no locks — audio thread.
-void playback_clip_block(float* const* channel_buffers, int64_t stride,
+// ANSWERS WHETHER IT CLAMPED ANY SAMPLE OF THE BLOCK (2026-11-05, the clip
+// lamp's event; the same two compares, one bit folded in): the callback
+// counts the clamped blocks (GuiPlaybackState::clipped_blocks).
+bool playback_clip_block(float* const* channel_buffers, int64_t stride,
                          int64_t frame_count, int channel_count);
 
 // THE RENDER BODY. Copy `frame_count` output frames at the current output rate,

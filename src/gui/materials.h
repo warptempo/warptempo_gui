@@ -49,6 +49,24 @@
 // head) — a checked key while a press stands on it.
 // THE YELLOW IS FOR LAMPS ONLY (architect 2026-11-02, on mocks a3 / b3: "the
 // yellow flash is jarring … keep the yellow only for lamps").
+// THE DOORS WEAR LAVENDER (architect 2026-11-05, his "yes" on mock s46_m2 of
+// tmp/s46): THE SEVEN OVERLAY OPENERS — HISTORY, OPEN PROJECT, PLAY RENDERS,
+// SETTINGS, TRIM PRESETS, BPM and SCORE (redesign_button_is_door,
+// app_state.h, the class's one owner) — are a CLASS OF THEIR OWN among the
+// checked keys: a lit door says A SURFACE STANDS (its overlay, which the same
+// key closes), a lit lamp says A MODE IS ON, and the two facts wear two
+// fills. A checked door wears `door_lit_fill`, Default's B595FC
+// (ScaleAwareness), and under a press `door_lit_press_fill`, Default's
+// 8D74C4 — the door fill by THE SAME RATIO the lamps' lit press takes
+// (theme_tables.h's head). Every other checked key — the state lamps
+// (FOLLOW, RESTRICT, MAGNIFY, NOISE, Read Only, Tooltips, the walk lamp,
+// Cumulative, the iteration lamp, Value Drag, Add to Selection), the view
+// pairs' lit members, the on-screen keyboard's latched Shift and symbols key
+// — keeps `lit_fill` / `lit_press_fill`. What is printed on a door-lit face
+// is `text_on_lit` still (key_ink: lit is lit). THE PAINTER LEARNS THE CLASS
+// AT ONE SITE: paint_key's `KeyLitClass` (below), read for the two lit looks
+// alone, the roster's painter passing the predicate's answer
+// (paint_roster_case, paint_handler.cpp); key_look stays four-valued.
 // THE PRESS IS DARKER (architect 2026-11-05, the press arc, his pick p2 of
 // tmp/s45 over p1's ControlBackground 1E1E1E, reversing 2026-11-04's "no
 // press look anywhere" — that look was Live's HOVER tones, 6A6A6A / FFC281,
@@ -229,6 +247,15 @@ inline constexpr KeyLook key_look(bool checked, bool pressed) {
 inline constexpr bool key_look_lit(KeyLook look) {
     return look == KeyLook::Lit || look == KeyLook::LitPress;
 }
+// WHICH LIT FILL A CHECKED KEY WEARS (the head's THE DOORS WEAR LAVENDER,
+// architect 2026-11-05): Lamp — `lit_fill` / `lit_press_fill`, every checked
+// key but the seven; Door — `door_lit_fill` / `door_lit_press_fill`, the
+// seven overlay openers (redesign_button_is_door, app_state.h, the one
+// owner of the roster). Read by paint_key for KeyLook::Lit and LitPress
+// alone; Rest and Press ignore it. Lamp is the default, so every key
+// surface that paints no door — the modal rows, the on-screen keyboard, the
+// scrub's thumb — asks nothing.
+enum class KeyLitClass { Lamp, Door };
 
 // THE INK OF WHAT A KEY CARRIES ON ITS FACE (the head's THE KEY and THE
 // TEXT TONES), as the installed theme's sRGB word (the Breeze glyph road
@@ -245,13 +272,15 @@ inline uint32_t key_ink(KeyLook look, bool enabled) {
 
 // ONE KEY on `r`, ITS PAINTED FACE — the key itself (the head's THE KEY and
 // THE FACE AND ITS GAP): the flat face `look` gives — palette().key_face at
-// rest, palette().key_press_face under a press, palette().lit_fill lit,
-// palette().lit_press_fill lit under a press (key_look, the caller's
-// checked and pressed bits) — and nothing else. What a key carries is its caller's — the roster's and the
+// rest, palette().key_press_face under a press, lit and lit under a press
+// the fill `cls` names (KeyLitClass above: the lamps' lit_fill /
+// lit_press_fill, the doors' door_lit_fill / door_lit_press_fill; key_look,
+// the caller's checked and pressed bits) — and nothing else. What a key carries is its caller's — the roster's and the
 // controls rows' Breeze glyph on the face and its legend under it
 // (paint_key_glyph and paint_key_legend, paint_handler.cpp), the on-screen
 // keyboard's caps — in key_ink's tone.
-void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look);
+void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look,
+               KeyLitClass cls = KeyLitClass::Lamp);
 
 // THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key
 // gap — the step from a key's face to the next one's in its group, every

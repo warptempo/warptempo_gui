@@ -6389,6 +6389,61 @@ struct AppState {
     int64_t       logo_legend_minute = -1;
     GuiBattery    logo_legend_battery{};
 
+    // THE TWO LAMPS BY THE BATTERY (architect 2026-11-05; render.h's THE
+    // TWO LAMPS, the one owner of every number and reason): WHAT EACH LAMP
+    // SHOWS — STATE THE TICK WROTE, never a paint derivation
+    // (refresh_logo_lamps, main.cpp, the ONE WRITER of all four fields: on
+    // every tick, ahead of the tick's early returns, as the legend's
+    // refresh is) — lit on the tick that saw the lamp's event, dark on the
+    // next tick that did not, NO HOLD; each edge damages its own square
+    // (logo_lamp_rects, paint_handler.h), nothing is damaged while a bit
+    // holds. paint_logo_lane reads the two bits.
+    //   clip_lamp_lit          THE CLIP LAMP: the device clamped a sample
+    //                          since the tick before — any view, anything
+    //                          the engine plays, the noise summed in.
+    //   clip_lamp_seen_blocks  the engine's clamped-block count the tick
+    //                          last saw (GuiPlayback::clipped_blocks, the
+    //                          audio thread's counter), the compare's other
+    //                          word. BOTH LIVE THE ENGINE'S LIFE: the
+    //                          counter is GuiPlaybackState's, built with the
+    //                          project's engine and never reset by a stream
+    //                          reopen, and this set is built with the same
+    //                          project (run_project) — so a project switch
+    //                          starts both at zero together and no stale
+    //                          compare can blink the lamp once.
+    //   limiter_lamp_lit       THE LIMITER LAMP: the playhead passed one of
+    //                          the limiter's engaged frames since the tick
+    //                          before, target playback alone.
+    //   limiter_lamp_prev_frame the buffer-local cursor the tick last saw
+    //                          while the limiter test ran, or -1 — no span
+    //                          yet: the first tick of a play seeds it and
+    //                          tests nothing, and every tick that does not
+    //                          test (not playing, the source view, no target
+    //                          bind) voids it back to -1.
+    bool     clip_lamp_lit           = false;
+    uint64_t clip_lamp_seen_blocks   = 0;
+    bool     limiter_lamp_lit        = false;
+    int64_t  limiter_lamp_prev_frame = -1;
+    // THE BIND'S OWN COPY OF THE LIMITER'S ENGAGED FRAMES (2026-11-05, the
+    // limiter lamp's read road): target_limiter_frames below is the RENDER
+    // WORKER'S while a target render is in flight (do_render move-assigns
+    // it at its last gate, as it owns target_buffer then), so the tick never
+    // reads it. This vector is MAIN-THREAD STATE: a snapshot of
+    // target_limiter_frames taken at the moment playback is bound to the
+    // target buffer — GuiTargetRender::complete_successful_buffer's rebind
+    // (the fresh render's and both reuse rungs', which reach that rebind)
+    // and ensure_ready's clean rebind of the same buffer — and CLEARED
+    // wherever the bind leaves the target buffer or the buffer goes:
+    // rebind_to_source (the T→S leg), the render player's item bind and its
+    // close's source bind (render_player.cpp), the score viewer's
+    // soundtrack bind and its close's source bind (score_viewer.cpp), and
+    // every road that empties target_buffer (the superseded, cancelled and
+    // failed completions). Sorted ascending, buffer-local frames, like its
+    // source. Empty means "no target bind or nothing engaged": the lamp
+    // stays dark either way, which is why the tick needs no second
+    // "bound to target" predicate beside it.
+    std::vector<int64_t> bound_limiter_frames;
+
     // THE AS-PAINTED RECORDS OF THE ROWS ABOVE THE VIEWPORT'S LANES AND OF THE
     // CLOCK CELL, one per paint target, with what each target is owed
     // (2026-10-13; the contract at GuiUpperRowsFingerprint, above AppState).
@@ -7886,9 +7941,11 @@ struct AppState {
     // RenderCache::lookup_limiter_frames (a cache hit replays the list the
     // render left beside its blob; an archival-artifact load the cache never
     // saw rendered answers nothing and the list is EMPTY — the lamp dark
-    // there); and cleared wherever target_buffer is cleared. No reader yet:
-    // the lamp that lights during target playback where the playhead passes
-    // one of these frames is the next arc's.
+    // there); and cleared wherever target_buffer is cleared. ITS ONE READER
+    // IS THE BIND (2026-11-05, the limiter lamp): the roads that bind
+    // playback to target_buffer copy it into bound_limiter_frames (above,
+    // main-thread state), and the tick's lamp test runs over that copy
+    // alone — never over this member, which the worker owns in flight.
     std::vector<int64_t> target_limiter_frames;
     // The buffer's domain anchor — the full-target-frame coordinate that
     // target_buffer[0] represents — is NOT app state: it travels with the
@@ -16384,6 +16441,35 @@ inline std::string view_pair_label(char audio, char column) {
     s += '+';
     s += column;
     return s;
+}
+
+// THE DOORS — THE SEVEN OVERLAY OPENERS, THE ONE OWNER OF THE CLASS
+// (architect 2026-11-05, his "yes" on mock s46_m2 of tmp/s46; materials.h's
+// THE DOORS WEAR LAVENDER): the keys whose checked face says A SURFACE
+// STANDS rather than A MODE IS ON — each sits lit while its overlay stands
+// and closes it (redesign_button_selected's overlay arms below) — so their
+// lit face is the theme's `door_lit_fill` (Default B595FC, lavender) and
+// not the lamps' orange, the lamps' orange staying the state lamps' and the
+// view pairs'. Exactly the seven: the history opener (the `h` view), Open
+// Project (the picker), Play Renders (the render player), Settings (the
+// settings page and its value list), Trim Presets (the presets list), BPM
+// (the BPM form) and Score (the score viewer). The roster's painter passes
+// this answer to paint_key as its KeyLitClass (paint_roster_case,
+// paint_handler.cpp); nothing else reads it. The `h` view's stand-ins
+// (kIconRowHistoryStandIns, paint_handler.cpp) hold none of the seven.
+inline constexpr bool redesign_button_is_door(RedesignButton b) {
+    switch (b) {
+        case RedesignButton::IconHistory:
+        case RedesignButton::OpenProject:
+        case RedesignButton::IconListen:
+        case RedesignButton::IconSettings:
+        case RedesignButton::IconTrimPresets:
+        case RedesignButton::IconBpm:
+        case RedesignButton::IconScore:
+            return true;
+        default:
+            return false;
+    }
 }
 
 inline bool redesign_button_selected(const AppState& a, int64_t total_frames,

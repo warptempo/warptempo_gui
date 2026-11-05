@@ -61,7 +61,29 @@ header's head. Our Default tone = Live's role, the planner having verified
                                     2026-11-05: "lighter for list
                                     (highlight)")
     list press text        070707 = SelectionForeground
-    card face              E76942 = Alert
+    card face              E76942 = Alert (the cards; THE LIMITER LAMP too,
+                                    architect 2026-11-05: "orange for limiter
+                                    and red for clipper" — a warning)
+    door lit fill          B595FC = ScaleAwareness (architect 2026-11-05, his
+                                    "yes" on mock s46_m2: the SEVEN OVERLAY
+                                    OPENERS' lit face, the "doors" class,
+                                    lavender — a lit door says a surface
+                                    stands, a lit lamp says a mode is on;
+                                    materials.h's THE KEY)
+    clip lamp              FF0A0A = StandardVuMeter / Maximum, the one NESTED
+                                    role the tool reads (<StandardVuMeter>
+                                    <Maximum Value=.../>): Live's own meter
+                                    clip box — THE CLIP LAMP's lit face
+                                    (architect 2026-11-05, his d6 "yes": a
+                                    fault). FFAD56 REFUSED for a lamp: it is
+                                    ViewCheckControlEnabledOn, the lit KEY's
+                                    face, and "clip indicator is not a button"
+    level audio fill       007383 = RangeEditField (Live's volume mini-slider,
+                                    "green") — the AUDIO level case's fill,
+                                    the next brief's painter (2026-11-05)
+    level noise fill       3C6AB6 = ChosenPreListen (Live's cue mini-slider,
+                                    "blue") — the NOISE level case's fill, the
+                                    next brief's painter (2026-11-05)
   COMPOSITED (Live's alpha role over the clip view's ground, straight alpha
   aa/255, a 6-digit word opaque; Python's round() on the float, clamped):
     ink                    191919 = WaveformColor over DetailViewBackground
@@ -96,6 +118,11 @@ header's head. Our Default tone = Live's role, the planner having verified
                                     is 60 levels, the difference would nearly
                                     black its FFB901, the ratio scales it by
                                     86 / 146 = 0.589.
+    door lit press fill    8D74C4 = door lit fill · the same ratio per channel
+                                    (B595FC · 0.778 on Default) — a checked
+                                    door under a standing press, exactly as
+                                    the lamps' lit press fill is derived
+                                    (architect 2026-11-05, the doors)
     scanner                FFFFFF (the controls' white, every theme)
 
 Where a theme makes the lane, the trim's outside or the dim text coincide with
@@ -134,14 +161,25 @@ AUTHORS = {
 # THE ROLES READ from every file (the head's DERIVATION), each present in
 # every stock and Sonic Bloom file (checked over all 45, 2026-11-05; the
 # press arc's two, SelectionBackground and SelectionForeground, over the same
-# files the same day).
+# files the same day; the lamp arc's three, ScaleAwareness, RangeEditField
+# and ChosenPreListen, the same night).
 ROLES = [
     'SurfaceArea', 'Desktop', 'SurfaceBackground', 'ControlContrastFrame',
     'ControlForeground', 'TextDisabled', 'BackgroundClip',
     'ViewCheckControlEnabledOn', 'RangeDefault', 'StandbySelectionBackground',
     'SelectionBackground', 'SelectionForeground',
     'Alert', 'WaveformColor', 'DetailViewBackground', 'DetailGridTiles',
+    'ScaleAwareness', 'RangeEditField', 'ChosenPreListen',
 ]
+
+# THE ONE NESTED ROLE (the lamp arc, 2026-11-05): the clip lamp's red is the
+# `Maximum` of the `<StandardVuMeter>` block — a `Maximum` stands in every VU
+# meter block of the file (Overload, Disabled, Headphones, Sends …), so it is
+# read INSIDE that one element and never by the flat walk above. Present in
+# every one of the files (the planner's grep, 2026-11-05); a file without it
+# fails the run.
+NESTED_ELEMENT = 'StandardVuMeter'
+NESTED_ROLE    = 'Maximum'
 
 # GuiThemeTones' members, in the struct's order (the generated header), each
 # with the painters that read it — the comment the header prints beside it.
@@ -154,6 +192,8 @@ MEMBERS = [
     ('key_face',        'the key at rest, the time fields (SurfaceBackground)'),
     ('lit_fill',        'a checked key\'s whole face, Live\'s "on" (ViewCheckControlEnabledOn)'),
     ('lit_press_fill',  'a checked key\'s face while a press stands on it (lit_fill scaled by the press face\'s ratio to the face)'),
+    ('door_lit_fill',   'a checked OVERLAY OPENER\'s face, the seven doors (ScaleAwareness)'),
+    ('door_lit_press_fill', 'a checked door\'s face while a press stands on it (door_lit_fill scaled by the same ratio)'),
     ('key_press_face',  'an unchecked key\'s face while a press stands on it (Desktop)'),
     ('well_frame',      'the scrub\'s channel and the tooltip\'s border (TextDisabled)'),
     ('ruler_face',      'the ruler (SurfaceBackground)'),
@@ -169,6 +209,9 @@ MEMBERS = [
     ('score_pane_face', 'the score viewer\'s pane, the page\'s mat (= the ink)'),
     ('card_face',       'the cards\' box and their ring; `card_ground` / `card_frame` (Alert)'),
     ('card_ink',        'the cards\' words and class glyph; `card_text` (Desktop)'),
+    ('clip_lamp',       'the logo lane\'s clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face'),
+    ('level_audio_fill', 'the AUDIO level case\'s fill (RangeEditField) — no reader yet, the next brief\'s painter'),
+    ('level_noise_fill', 'the NOISE level case\'s fill (ChosenPreListen) — no reader yet, the next brief\'s painter'),
     ('waveform_canvas', 'the canvas (DetailGridTiles over DetailViewBackground)'),
     ('waveform_ink',    'the waveform, the plate\'s outer bar (WaveformColor over DetailViewBackground)'),
     ('waveform_core',   'the magnified inner bar\'s solid fill (ink + 5/32 toward canvas)'),
@@ -183,6 +226,7 @@ MEMBERS = [
 ]
 
 ROLE_RE = re.compile(r'<([A-Za-z0-9_]+)\s+Value="#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})"\s*/>')
+NESTED_RE = re.compile(r'<%s>(.*?)</%s>' % (NESTED_ELEMENT, NESTED_ELEMENT), re.S)
 
 
 def fail(msg):
@@ -196,8 +240,10 @@ def slugify(stem):
 
 
 def read_roles(path):
-    """The sixteen roles (ROLES) of one .ask file, each an uppercase hex word of 6 or
-    8 digits, the file's first occurrence of each role."""
+    """The flat roles (ROLES) of one .ask file, each an uppercase hex word of 6
+    or 8 digits, the file's first occurrence of each role, plus the one nested
+    role under the key 'StandardVuMeter/Maximum' (NESTED_ELEMENT /
+    NESTED_ROLE: the first `Maximum` inside the first `<StandardVuMeter>`)."""
     with open(path, 'r', encoding='utf-8') as f:
         text = f.read()
     found = {}
@@ -207,6 +253,15 @@ def read_roles(path):
     missing = [r for r in ROLES if r not in found]
     if missing:
         fail('%s: missing role(s) %s' % (path, ', '.join(missing)))
+    nested = NESTED_RE.search(text)
+    nested_key = NESTED_ELEMENT + '/' + NESTED_ROLE
+    if nested:
+        for name, word in ROLE_RE.findall(nested.group(1)):
+            if name == NESTED_ROLE:
+                found[nested_key] = word.upper()
+                break
+    if nested_key not in found:
+        fail('%s: missing nested role %s' % (path, nested_key))
     return found
 
 
@@ -270,6 +325,10 @@ def derive(roles):
     sel_bg   = opaque(roles['SelectionBackground'])
     sel_fg   = opaque(roles['SelectionForeground'])
     alert    = opaque(roles['Alert'])
+    door     = opaque(roles['ScaleAwareness'])
+    vu_max   = opaque(roles[NESTED_ELEMENT + '/' + NESTED_ROLE])
+    lvl_aud  = opaque(roles['RangeEditField'])
+    lvl_noi  = opaque(roles['ChosenPreListen'])
     detail   = rgb(roles['DetailViewBackground'])
     ink      = over(rgb(roles['WaveformColor']), detail)
     canvas   = over(rgb(roles['DetailGridTiles']), detail)
@@ -286,6 +345,8 @@ def derive(roles):
         'key_face':        face,
         'lit_fill':        on,
         'lit_press_fill':  scale(on, press_ratio),
+        'door_lit_fill':   door,
+        'door_lit_press_fill': scale(door, press_ratio),
         'key_press_face':  desktop,
         'well_frame':      dim,
         'ruler_face':      face,
@@ -301,6 +362,9 @@ def derive(roles):
         'score_pane_face': ink,
         'card_face':       alert,
         'card_ink':        desktop,
+        'clip_lamp':       vu_max,
+        'level_audio_fill': lvl_aud,
+        'level_noise_fill': lvl_noi,
         'waveform_canvas': canvas,
         'waveform_ink':    ink,
         'waveform_core':   mix(ink, canvas, 5.0 / 32.0),

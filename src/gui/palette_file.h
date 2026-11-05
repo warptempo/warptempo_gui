@@ -29,8 +29,10 @@
 // his own picks (the core, 2026-11-04 night, and the playhead line's static
 // tone, 2026-11-04 night: white 0.483 toward the head, every other theme
 // derived at the same ratio, ruling 4 of 2026-11-05) — the static_asserts
-// at the foot are that proof in the build, every one of the thirty-four
-// words with its literal (the press arc's four, 2026-11-05, among them).
+// at the foot are that proof in the build, every one of the thirty-nine
+// words with its literal (the press arc's four, 2026-11-05, among them, and
+// the lamp arc's five the same night: the doors' lit pair, the clip lamp,
+// the two level fills).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -148,13 +150,18 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the generated `default` row reproduces the
 // measured palette of 2026-11-01..05 to the byte — every one of the
-// thirty-four words with its literal, so a change to the tool's derivation that moved
+// thirty-nine words with its literal, so a change to the tool's derivation that moved
 // one of them is a build failure here. (The literals are the record; the
-// generated header holds the same numbers and is never hand-edited.)
+// generated header holds the same numbers and is never hand-edited.) The
+// lamp arc's five (2026-11-05 night) are Live's own words read off the
+// Default file and the one derivation the tool printed: the doors' lit fill
+// B595FC (ScaleAwareness) and its press 8D74C4 (B595FC × 42 / 54), the
+// clip lamp FF0A0A (StandardVuMeter / Maximum), the level fills 007383
+// (RangeEditField) and 3C6AB6 (ChosenPreListen).
 namespace gui_default_theme_proof {
 inline constexpr GuiThemeTones kDefault = kGuiThemes[kGuiDefaultTheme].tones;
 // THE CHROME (materials.h's head: the ground, the text tones, the key, the
-// well's tones, the selection pair, the panes, the cards).
+// well's tones, the selection pair, the panes, the cards, the lamps).
 static_assert(kDefault.ground          == 0x242424);
 static_assert(kDefault.text            == 0xB5B5B5);
 static_assert(kDefault.text_dim        == 0x757575);
@@ -163,6 +170,8 @@ static_assert(kDefault.key_dim_ink     == 0x5A5A5A);
 static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.lit_fill        == 0xFFAD56);
 static_assert(kDefault.lit_press_fill  == 0xC68743);
+static_assert(kDefault.door_lit_fill   == 0xB595FC);
+static_assert(kDefault.door_lit_press_fill == 0x8D74C4);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x363636);
@@ -178,6 +187,9 @@ static_assert(kDefault.list_press_fill == 0xB0DDEB);
 static_assert(kDefault.list_press_text == 0x070707);
 static_assert(kDefault.card_face       == 0xE76942);
 static_assert(kDefault.card_ink        == 0x2A2A2A);
+static_assert(kDefault.clip_lamp       == 0xFF0A0A);
+static_assert(kDefault.level_audio_fill == 0x007383);
+static_assert(kDefault.level_noise_fill == 0x3C6AB6);
 // THE PALETTE (the head's eleven).
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);

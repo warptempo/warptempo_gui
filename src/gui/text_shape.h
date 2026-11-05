@@ -182,8 +182,9 @@ double ink_left_px(const ShapedRun& run);
 // 2026-10-24, "the clock flush with the right edge of the buttons"): the
 // clock run's last ink on the well's last column and the
 // percent run's last ink one space advance and the battery's one W of air
-// short of the glyph cell
-// (paint_handler.cpp's logo_legend_layout); and THE TIME FIELDS' CELL
+// short of the glyph cell (paint_handler.cpp's logo_legend_layout, which
+// reads ink_left_px for the clock's and the percent's first ink columns —
+// the drawn pipe's and the lamps' seats, 2026-11-05); and THE TIME FIELDS' CELL
 // (architect 2026-11-05, kTimeShape's block): the widest-digit specimen's
 // last ink, ceiled, is one past the cell's last column, so the cell is the
 // specimen's ink box in whole px and its pads read equal on both sides.

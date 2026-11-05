@@ -53,6 +53,14 @@ struct GuiTargetRender;
 // (main.cpp's refresh_logo_legend) is this rect united with the one the
 // painter last published (AppState::logo_legend_rect).
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
+// THE TWO LAMPS' SQUARES for `legend` at this geometry (render.h's THE TWO
+// LAMPS; the same layout as the extent's, so the two cannot disagree): the
+// tick damages one when its bit flips (main.cpp's refresh_logo_lamps).
+struct LogoLampRects {
+    GuiRect limiter;
+    GuiRect clip;
+};
+LogoLampRects logo_lamp_rects(const AppState& app, const GuiLogoLegend& legend);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, went with the
 // caption, 2026-10-24.)
 

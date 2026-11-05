@@ -196,6 +196,9 @@ void GuiScoreViewer::close() {
                 audio.samples_ptr(), audio.total_frames(), audio.sample_rate(),
                 0));
         }
+        // The source is bound: the limiter lamp's snapshot goes with the
+        // bind (AppState::bound_limiter_frames); ensure_ready re-takes it.
+        app.bound_limiter_frames.clear();
         if (app.active_audio_view == 'T') {
             target_render.ensure_ready();
         } else {
@@ -250,6 +253,9 @@ bool GuiScoreViewer::bind_soundtrack() {
     playback.rebind_buffer(GuiBoundAudio::pcm16(app.score_audio.samples(),
                                                 app.score_audio.frames(),
                                                 app.score_audio.rate()));
+    // The bind has left the target buffer: the limiter lamp's snapshot goes
+    // (AppState::bound_limiter_frames; the soundtrack carries no sidecar).
+    app.bound_limiter_frames.clear();
     sv.transport = Transport::Paused;
     return true;
 }

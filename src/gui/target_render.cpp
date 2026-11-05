@@ -652,10 +652,13 @@ void GuiTargetRender::dispatch_render_now() {
     // into it via std::vector::insert. The buffer's domain anchor is stamped
     // below from the request's trim values and travels to the completion rebind
     // through dispatched_buffer_start_frame_. The engaged-frames list goes
-    // with the buffer (the contract at AppState::target_limiter_frames).
+    // with the buffer (the contract at AppState::target_limiter_frames), and
+    // the bind's snapshot of it (AppState::bound_limiter_frames): the engine
+    // is frozen here and the completion's rebind re-takes it.
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
     app.target_limiter_frames.clear();
+    app.bound_limiter_frames.clear();
 
     RenderRequest req = build_render_request(
         app.source_audio_path, app.warpmarkers.markers(),
@@ -726,10 +729,11 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         std::fprintf(stderr, "warptempo_gui: Target render cancelled\n");
         // Leave the target buffer's frames count at 0 — playback
         // gating checks this to refuse Space. The engaged-frames list goes
-        // with the buffer.
+        // with the buffer, the bind's snapshot of it too.
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
         app.target_limiter_frames.clear();
+        app.bound_limiter_frames.clear();
         // THE RE-PUMP BELOW IS WHAT MAKES ensure_ready'S GENERATION GUARD SAFE
         // (architect 2026-09-02): a cancelled render whose successor is
         // parked in pending_ for the current generation dispatches from
@@ -802,6 +806,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
         app.target_limiter_frames.clear();
+        app.bound_limiter_frames.clear();
     }
 
     if (outcome != RenderOutcome::Success && !run_active_ &&
@@ -865,6 +870,7 @@ void GuiTargetRender::complete_successful_buffer(
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
         app.target_limiter_frames.clear();
+        app.bound_limiter_frames.clear();   // the buffer is gone (its contract)
         // THE "Updating..." LABEL DELIBERATELY STAYS UP, unlike every other
         // road out of a completion: the update is not over. pending_ stands by
         // construction here (the mutation that superseded this render was a
@@ -922,6 +928,11 @@ void GuiTargetRender::complete_successful_buffer(
             playback.rebind_buffer(GuiBoundAudio::float32(
                 app.target_buffer.data(), app.target_buffer_frames,
                 audio.sample_rate(), dispatched_buffer_start_frame_));
+            // THE BIND'S SNAPSHOT OF THE LIMITER'S ENGAGED FRAMES (the
+            // contract at AppState::bound_limiter_frames): taken HERE, on
+            // the GUI thread, the worker done with the list — the fresh
+            // render's completion and both reuse rungs reach this rebind.
+            app.bound_limiter_frames = app.target_limiter_frames;
         }
         // Buffer now matches the engine input that produced it. Gate the clear
         // behind the rebind path: a render that completed while
@@ -1142,6 +1153,12 @@ void GuiTargetRender::ensure_ready() {
         playback.rebind_buffer(GuiBoundAudio::float32(
             app.target_buffer.data(), app.target_buffer_frames,
             audio.sample_rate(), dispatched_buffer_start_frame_));
+        // The bind's snapshot of the limiter's engaged frames, as the
+        // completion's rebind takes it (the contract at
+        // AppState::bound_limiter_frames): no render is in flight on this
+        // path — the same fact that lets it rebind target_buffer's data —
+        // so the list is the GUI thread's to copy.
+        app.bound_limiter_frames = app.target_limiter_frames;
         return;
     }
 
@@ -1283,4 +1300,7 @@ void GuiTargetRender::rebind_to_source() {
         playback.rebind_buffer(GuiBoundAudio::float32(
             audio.samples_ptr(), audio.total_frames(), audio.sample_rate(), 0));
     }
+    // The bind has left the target buffer: the limiter lamp's snapshot goes
+    // (the contract at AppState::bound_limiter_frames).
+    app.bound_limiter_frames.clear();
 }

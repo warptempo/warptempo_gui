@@ -747,6 +747,9 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     rp.frames = frames;
     playback.rebind_buffer(GuiBoundAudio::float32(
         rp.buffer.data(), rp.frames, audio.sample_rate(), 0));
+    // The bind has left the target buffer: the limiter lamp's snapshot goes
+    // (AppState::bound_limiter_frames; the player plays files, no sidecar).
+    app.bound_limiter_frames.clear();
 
     // THE SEAT BELOW IS GATED ON THIS, read before the item is overwritten
     // (the fence above touches no field of the item): the band follows the
@@ -1548,6 +1551,10 @@ void GuiRenderPlayer::unload_item(UnloadTail tail) {
         playback.rebind_buffer(GuiBoundAudio::float32(
             audio.samples_ptr(), audio.total_frames(), audio.sample_rate(), 0));
     }
+    // The source is bound: the limiter lamp's snapshot is cleared with the
+    // bind (AppState::bound_limiter_frames); the fork below re-takes it
+    // where ensure_ready rebinds the target.
+    app.bound_limiter_frames.clear();
     // THE S/T FLIP'S OWN TAIL FORK, verbatim (switch_active_audio_view_to,
     // input_handler.cpp): target view rebinds the current preview or
     // dispatches a fresh one, source view rebinds source.wav.

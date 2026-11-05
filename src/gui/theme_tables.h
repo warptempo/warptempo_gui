@@ -38,7 +38,29 @@
 //                                     2026-11-05: "lighter for list
 //                                     (highlight)")
 //     list press text        070707 = SelectionForeground
-//     card face              E76942 = Alert
+//     card face              E76942 = Alert (the cards; THE LIMITER LAMP too,
+//                                     architect 2026-11-05: "orange for limiter
+//                                     and red for clipper" — a warning)
+//     door lit fill          B595FC = ScaleAwareness (architect 2026-11-05, his
+//                                     "yes" on mock s46_m2: the SEVEN OVERLAY
+//                                     OPENERS' lit face, the "doors" class,
+//                                     lavender — a lit door says a surface
+//                                     stands, a lit lamp says a mode is on;
+//                                     materials.h's THE KEY)
+//     clip lamp              FF0A0A = StandardVuMeter / Maximum, the one NESTED
+//                                     role the tool reads (<StandardVuMeter>
+//                                     <Maximum Value=.../>): Live's own meter
+//                                     clip box — THE CLIP LAMP's lit face
+//                                     (architect 2026-11-05, his d6 "yes": a
+//                                     fault). FFAD56 REFUSED for a lamp: it is
+//                                     ViewCheckControlEnabledOn, the lit KEY's
+//                                     face, and "clip indicator is not a button"
+//     level audio fill       007383 = RangeEditField (Live's volume mini-slider,
+//                                     "green") — the AUDIO level case's fill,
+//                                     the next brief's painter (2026-11-05)
+//     level noise fill       3C6AB6 = ChosenPreListen (Live's cue mini-slider,
+//                                     "blue") — the NOISE level case's fill, the
+//                                     next brief's painter (2026-11-05)
 //   COMPOSITED (Live's alpha role over the clip view's ground, straight alpha
 //   aa/255, a 6-digit word opaque; Python's round() on the float, clamped):
 //     ink                    191919 = WaveformColor over DetailViewBackground
@@ -73,6 +95,11 @@
 //                                     is 60 levels, the difference would nearly
 //                                     black its FFB901, the ratio scales it by
 //                                     86 / 146 = 0.589.
+//     door lit press fill    8D74C4 = door lit fill · the same ratio per channel
+//                                     (B595FC · 0.778 on Default) — a checked
+//                                     door under a standing press, exactly as
+//                                     the lamps' lit press fill is derived
+//                                     (architect 2026-11-05, the doors)
 //     scanner                FFFFFF (the controls' white, every theme)
 
 #include <cstddef>
@@ -83,40 +110,45 @@
 // what reads it (the one owners: materials.h's head, palette_file.h's role
 // list, render.h's palette block).
 struct GuiThemeTones {
-    uint32_t ground;          // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea)
-    uint32_t text;            // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
-    uint32_t text_dim;        // the inert rows and the tooltip's hint line (TextDisabled)
-    uint32_t text_on_lit;     // anything printed on a lit face (ControlContrastFrame)
-    uint32_t key_dim_ink;     // a disabled key's glyph and legend (face + 36/63 toward text_dim)
-    uint32_t key_face;        // the key at rest, the time fields (SurfaceBackground)
-    uint32_t lit_fill;        // a checked key's whole face, Live's "on" (ViewCheckControlEnabledOn)
-    uint32_t lit_press_fill;  // a checked key's face while a press stands on it (lit_fill scaled by the press face's ratio to the face)
-    uint32_t key_press_face;  // an unchecked key's face while a press stands on it (Desktop)
-    uint32_t well_frame;      // the scrub's channel and the tooltip's border (TextDisabled)
-    uint32_t ruler_face;      // the ruler (SurfaceBackground)
-    uint32_t ruler_tick;      // the ruler's ticks (face + 53/127 toward text)
-    uint32_t lane_face;       // the marker lane (Desktop)
-    uint32_t trim_bar_face;   // the trim bar outside the trim (Desktop)
-    uint32_t trim_span_face;  // the trim bar inside the trim (face + 52/127 toward text)
-    uint32_t selection_fill;  // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
-    uint32_t selection_text;  // the selection pair's text; `selected_text` (ControlContrastFrame)
-    uint32_t list_press_fill; // a list row's fill while a press stands on it (SelectionBackground)
-    uint32_t list_press_text; // a list row's text and glyph under that press (SelectionForeground)
-    uint32_t pane_face;       // the modal family's box interior and the tooltip's face (SurfaceBackground)
-    uint32_t score_pane_face; // the score viewer's pane, the page's mat (= the ink)
-    uint32_t card_face;       // the cards' box and their ring; `card_ground` / `card_frame` (Alert)
-    uint32_t card_ink;        // the cards' words and class glyph; `card_text` (Desktop)
-    uint32_t waveform_canvas; // the canvas (DetailGridTiles over DetailViewBackground)
-    uint32_t waveform_ink;    // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
-    uint32_t waveform_core;   // the magnified inner bar's solid fill (ink + 5/32 toward canvas)
-    uint32_t grid;            // the canvas's quarter lines (canvas + 1/4 toward ink)
-    uint32_t center;          // each channel's zero line (= the ink)
-    uint32_t cue;             // every enabled marker's chip (ViewCheckControlEnabledOn)
-    uint32_t cue_outline;     // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
-    uint32_t inactive_cue;    // a disabled marker's chip fill and inert label (BackgroundClip)
-    uint32_t playhead_head;   // the playhead's triangle in the ruler (RangeDefault)
-    uint32_t playhead_line;   // the playhead's canvas line (white + 0.483 toward the head)
-    uint32_t scanner;         // the scanner and the zoom anchor's stem (FFFFFF, every theme)
+    uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea)
+    uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
+    uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
+    uint32_t text_on_lit;         // anything printed on a lit face (ControlContrastFrame)
+    uint32_t key_dim_ink;         // a disabled key's glyph and legend (face + 36/63 toward text_dim)
+    uint32_t key_face;            // the key at rest, the time fields (SurfaceBackground)
+    uint32_t lit_fill;            // a checked key's whole face, Live's "on" (ViewCheckControlEnabledOn)
+    uint32_t lit_press_fill;      // a checked key's face while a press stands on it (lit_fill scaled by the press face's ratio to the face)
+    uint32_t door_lit_fill;       // a checked OVERLAY OPENER's face, the seven doors (ScaleAwareness)
+    uint32_t door_lit_press_fill; // a checked door's face while a press stands on it (door_lit_fill scaled by the same ratio)
+    uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
+    uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
+    uint32_t ruler_face;          // the ruler (SurfaceBackground)
+    uint32_t ruler_tick;          // the ruler's ticks (face + 53/127 toward text)
+    uint32_t lane_face;           // the marker lane (Desktop)
+    uint32_t trim_bar_face;       // the trim bar outside the trim (Desktop)
+    uint32_t trim_span_face;      // the trim bar inside the trim (face + 52/127 toward text)
+    uint32_t selection_fill;      // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
+    uint32_t selection_text;      // the selection pair's text; `selected_text` (ControlContrastFrame)
+    uint32_t list_press_fill;     // a list row's fill while a press stands on it (SelectionBackground)
+    uint32_t list_press_text;     // a list row's text and glyph under that press (SelectionForeground)
+    uint32_t pane_face;           // the modal family's box interior and the tooltip's face (SurfaceBackground)
+    uint32_t score_pane_face;     // the score viewer's pane, the page's mat (= the ink)
+    uint32_t card_face;           // the cards' box and their ring; `card_ground` / `card_frame` (Alert)
+    uint32_t card_ink;            // the cards' words and class glyph; `card_text` (Desktop)
+    uint32_t clip_lamp;           // the logo lane's clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face
+    uint32_t level_audio_fill;    // the AUDIO level case's fill (RangeEditField) — no reader yet, the next brief's painter
+    uint32_t level_noise_fill;    // the NOISE level case's fill (ChosenPreListen) — no reader yet, the next brief's painter
+    uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
+    uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
+    uint32_t waveform_core;       // the magnified inner bar's solid fill (ink + 5/32 toward canvas)
+    uint32_t grid;                // the canvas's quarter lines (canvas + 1/4 toward ink)
+    uint32_t center;              // each channel's zero line (= the ink)
+    uint32_t cue;                 // every enabled marker's chip (ViewCheckControlEnabledOn)
+    uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
+    uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
+    uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
+    uint32_t playhead_line;       // the playhead's canvas line (white + 0.483 toward the head)
+    uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
 // THE GROUP the Settings page's value list shows a theme under: BUILTIN,
@@ -144,6 +176,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x363636, // key_face
          0xFFAD56, // lit_fill
          0xC68743, // lit_press_fill
+         0xB595FC, // door_lit_fill
+         0x8D74C4, // door_lit_press_fill
          0x2A2A2A, // key_press_face
          0x757575, // well_frame
          0x363636, // ruler_face
@@ -159,6 +193,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x191919, // score_pane_face
          0xE76942, // card_face
          0x2A2A2A, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x007383, // level_audio_fill
+         0x3C6AB6, // level_noise_fill
          0x393939, // waveform_canvas
          0x191919, // waveform_ink
          0x1E1E1E, // waveform_core
@@ -181,6 +218,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x372C6D, // key_face
          0xB5FF63, // lit_fill
          0x88BF4A, // lit_press_fill
+         0xB595FC, // door_lit_fill
+         0x8870BD, // door_lit_press_fill
          0x2A1E54, // key_press_face
          0xACBAD3, // well_frame
          0x372C6D, // ruler_face
@@ -196,6 +235,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x130A2B, // score_pane_face
          0xFF0B0A, // card_face
          0x2A1E54, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x9A6C00, // level_audio_fill
+         0x3C6AB6, // level_noise_fill
          0x393071, // waveform_canvas
          0x130A2B, // waveform_ink
          0x191036, // waveform_core
@@ -218,6 +260,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x4F4F4F, // key_face
          0xFF9C39, // lit_fill
          0xB87129, // lit_press_fill
+         0xB595FC, // door_lit_fill
+         0x836CB6, // door_lit_press_fill
          0x393939, // key_press_face
          0xA7A7A7, // well_frame
          0x4F4F4F, // ruler_face
@@ -233,6 +277,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x141414, // score_pane_face
          0xE76942, // card_face
          0x393939, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x007383, // level_audio_fill
+         0x3C6AB6, // level_noise_fill
          0x5F5F5F, // waveform_canvas
          0x141414, // waveform_ink
          0x202020, // waveform_core
@@ -255,6 +302,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x929292, // key_face
          0xFFB901, // lit_fill
          0x966D01, // lit_press_fill
+         0xBE98FF, // door_lit_fill
+         0x705A96, // door_lit_press_fill
          0x565656, // key_press_face
          0x565656, // well_frame
          0x929292, // ruler_face
@@ -270,6 +319,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x222222, // score_pane_face
          0xFF7D43, // card_face
          0x565656, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x00CADB, // level_audio_fill
+         0x1A7DF1, // level_noise_fill
          0xA3A3A3, // waveform_canvas
          0x222222, // waveform_ink
          0x363636, // waveform_core
@@ -292,6 +344,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x2F3138, // key_face
          0xFF91C3, // lit_fill
          0xBC6B90, // lit_press_fill
+         0xB595FC, // door_lit_fill
+         0x856EBA, // door_lit_press_fill
          0x22242A, // key_press_face
          0x7D8088, // well_frame
          0x2F3138, // ruler_face
@@ -307,6 +361,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x14161A, // score_pane_face
          0xE76942, // card_face
          0x22242A, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x008493, // level_audio_fill
+         0x3C6AB6, // level_noise_fill
          0x33353C, // waveform_canvas
          0x14161A, // waveform_ink
          0x191B1F, // waveform_core
@@ -329,6 +386,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x26383F, // key_face
          0xFFC658, // lit_fill
          0xAF883D, // lit_press_fill
+         0xB595FC, // door_lit_fill
+         0x7D66AD, // door_lit_press_fill
          0x16282E, // key_press_face
          0x82918F, // well_frame
          0x26383F, // ruler_face
@@ -344,6 +403,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x06141A, // score_pane_face
          0xE76942, // card_face
          0x16282E, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x007969, // level_audio_fill
+         0x3C6AB6, // level_noise_fill
          0x2C3C43, // waveform_canvas
          0x06141A, // waveform_ink
          0x0C1A20, // waveform_core
@@ -366,6 +428,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x343434, // key_face
          0xFFAD56, // lit_fill
          0xC48542, // lit_press_fill
+         0xB595FC, // door_lit_fill
+         0x8B73C2, // door_lit_press_fill
          0x282828, // key_press_face
          0x8C7F6C, // well_frame
          0x343434, // ruler_face
@@ -381,6 +445,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x171717, // score_pane_face
          0xE76942, // card_face
          0x282828, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x007383, // level_audio_fill
+         0x3C6AB6, // level_noise_fill
          0x383837, // waveform_canvas
          0x171717, // waveform_ink
          0x1C1C1C, // waveform_core
@@ -403,6 +470,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xCECBC1, // key_face
          0xA50000, // lit_fill
          0xB20000, // lit_press_fill
+         0x4A6A03, // door_lit_fill
+         0x507203, // door_lit_press_fill
          0xDDDBD2, // key_press_face
          0x6D6B5F, // well_frame
          0xCECBC1, // ruler_face
@@ -418,6 +487,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x191919, // score_pane_face
          0xBF0000, // card_face
          0xDDDBD2, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xC39549, // level_audio_fill
+         0x9FC15E, // level_noise_fill
          0xC8C6BA, // waveform_canvas
          0x191919, // waveform_ink
          0x343432, // waveform_core
@@ -440,6 +512,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x8C8477, // key_face
          0xFF8F3F, // lit_fill
          0x824920, // lit_press_fill
+         0xCC7E00, // door_lit_fill
+         0x684000, // door_lit_press_fill
          0x304C4C, // key_press_face
          0x7F7566, // well_frame
          0x8C8477, // ruler_face
@@ -455,6 +529,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x191815, // score_pane_face
          0x6B1907, // card_face
          0x304C4C, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xDD9E7A, // level_audio_fill
+         0x54C4AD, // level_noise_fill
          0x7A7368, // waveform_canvas
          0x191815, // waveform_ink
          0x282622, // waveform_core
@@ -477,6 +554,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x333333, // key_face
          0xAD583C, // lit_fill
          0x663423, // lit_press_fill
+         0x7C9E7C, // door_lit_fill
+         0x495D49, // door_lit_press_fill
          0x1E1E1E, // key_press_face
          0x847D68, // well_frame
          0x333333, // ruler_face
@@ -492,6 +571,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x161616, // score_pane_face
          0xE76942, // card_face
          0x1E1E1E, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x455645, // level_audio_fill
+         0x7C9E7C, // level_noise_fill
          0x353535, // waveform_canvas
          0x161616, // waveform_ink
          0x1B1B1B, // waveform_core
@@ -514,6 +596,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x414141, // key_face
          0xA63D40, // lit_fill
          0x3F1718, // lit_press_fill
+         0xD17D21, // door_lit_fill
+         0x4F2F0D, // door_lit_press_fill
          0x1B1718, // key_press_face
          0xA8A8A8, // well_frame
          0x414141, // ruler_face
@@ -529,6 +613,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x090909, // score_pane_face
          0xFF6446, // card_face
          0x1B1718, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x496C7C, // level_audio_fill
+         0x90A959, // level_noise_fill
          0x3E3E3E, // waveform_canvas
          0x090909, // waveform_ink
          0x111111, // waveform_core
@@ -551,6 +638,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x28241F, // key_face
          0xFFD9AA, // lit_fill
          0x322B21, // lit_press_fill
+         0x3F7F68, // door_lit_fill
+         0x0C1914, // door_lit_press_fill
          0x070707, // key_press_face
          0x998860, // well_frame
          0x28241F, // ruler_face
@@ -566,6 +655,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xE5D3A8, // score_pane_face
          0xCF3E26, // card_face
          0x070707, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x997A32, // level_audio_fill
+         0x46777F, // level_noise_fill
          0x1F1C18, // waveform_canvas
          0xE5D3A8, // waveform_ink
          0xC6B692, // waveform_core
@@ -588,6 +680,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x191B1C, // key_face
          0x328462, // lit_fill
          0x42AD81, // lit_press_fill
+         0xE5934B, // door_lit_fill
+         0xFFC162, // door_lit_press_fill
          0x232323, // key_press_face
          0xBFBFBF, // well_frame
          0x191B1C, // ruler_face
@@ -603,6 +697,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xFFFFFF, // score_pane_face
          0xA81E00, // card_face
          0x232323, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xAA321E, // level_audio_fill
+         0xFFA519, // level_noise_fill
          0x212222, // waveform_canvas
          0xFFFFFF, // waveform_ink
          0xDCDCDC, // waveform_core
@@ -625,6 +722,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x3D3D3D, // key_face
          0xFF6100, // lit_fill
          0x1D0B00, // lit_press_fill
+         0x0064BC, // door_lit_fill
+         0x000B16, // door_lit_press_fill
          0x070707, // key_press_face
          0x919191, // well_frame
          0x3D3D3D, // ruler_face
@@ -640,6 +739,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xFFFFFF, // score_pane_face
          0xFF0741, // card_face
          0x070707, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x8E722F, // level_audio_fill
+         0x1E6399, // level_noise_fill
          0x545454, // waveform_canvas
          0xFFFFFF, // waveform_ink
          0xE4E4E4, // waveform_core
@@ -662,6 +764,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x333333, // key_face
          0xFFD87F, // lit_fill
          0xFFFFB1, // lit_press_fill
+         0x6932FF, // door_lit_fill
+         0x9246FF, // door_lit_press_fill
          0x474747, // key_press_face
          0xBFBAAF, // well_frame
          0x333333, // ruler_face
@@ -677,6 +781,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x191816, // score_pane_face
          0xCC3507, // card_face
          0x474747, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x7F623F, // level_audio_fill
+         0x579E93, // level_noise_fill
          0x313131, // waveform_canvas
          0x191816, // waveform_ink
          0x1D1C1A, // waveform_core
@@ -699,6 +806,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x3A332E, // key_face
          0xBF601C, // lit_fill
          0x9A4D17, // lit_press_fill
+         0x77966D, // door_lit_fill
+         0x607958, // door_lit_press_fill
          0x2F2925, // key_press_face
          0x7E7469, // well_frame
          0x3A332E, // ruler_face
@@ -714,6 +823,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x110E0C, // score_pane_face
          0xFF8026, // card_face
          0x2F2925, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xAA2A86, // level_audio_fill
+         0x42543D, // level_noise_fill
          0x352E2A, // waveform_canvas
          0x110E0C, // waveform_ink
          0x171311, // waveform_core
@@ -736,6 +848,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x3B332B, // key_face
          0xC6ECAE, // lit_fill
          0x89A479, // lit_press_fill
+         0x077187, // door_lit_fill
+         0x054E5E, // door_lit_press_fill
          0x2A231D, // key_press_face
          0xA09281, // well_frame
          0x3B332B, // ruler_face
@@ -751,6 +865,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xD5EAC7, // score_pane_face
          0xD5573B, // card_face
          0x2A231D, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x4C7F60, // level_audio_fill
+         0x077187, // level_noise_fill
          0x423830, // waveform_canvas
          0xD5EAC7, // waveform_ink
          0xBECEAF, // waveform_core
@@ -773,6 +890,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x2E313A, // key_face
          0x71A2B6, // lit_fill
          0x587E8E, // lit_press_fill
+         0x94AA55, // door_lit_fill
+         0x738442, // door_lit_press_fill
          0x24262D, // key_press_face
          0x7E7469, // well_frame
          0x2E313A, // ruler_face
@@ -788,6 +907,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x090A0C, // score_pane_face
          0xF68E5F, // card_face
          0x24262D, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xA03C4C, // level_audio_fill
+         0x435415, // level_noise_fill
          0x31333D, // waveform_canvas
          0x090A0C, // waveform_ink
          0x0F1014, // waveform_core
@@ -810,6 +932,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x333333, // key_face
          0x5500AA, // lit_fill
          0x0C0017, // lit_press_fill
+         0xBF5600, // door_lit_fill
+         0x1A0C00, // door_lit_press_fill
          0x070707, // key_press_face
          0x7F7F7F, // well_frame
          0x333333, // ruler_face
@@ -825,6 +949,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xFFF0D6, // score_pane_face
          0xCC002F, // card_face
          0x070707, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x8C6B2F, // level_audio_fill
+         0x009B67, // level_noise_fill
          0x484848, // waveform_canvas
          0xFFF0D6, // waveform_ink
          0xE2D6C0, // waveform_core
@@ -847,6 +974,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x3A372E, // key_face
          0xAAA338, // lit_fill
          0x857F2C, // lit_press_fill
+         0xF9E495, // door_lit_fill
+         0xC2B274, // door_lit_press_fill
          0x2D2B24, // key_press_face
          0x7C7768, // well_frame
          0x3A372E, // ruler_face
@@ -862,6 +991,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x090806, // score_pane_face
          0xE57642, // card_face
          0x2D2B24, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x436603, // level_audio_fill
+         0x0A4A87, // level_noise_fill
          0x3D3931, // waveform_canvas
          0x090806, // waveform_ink
          0x11100D, // waveform_core
@@ -884,6 +1016,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x383838, // key_face
          0x82204A, // lit_fill
          0x721C41, // lit_press_fill
+         0x2CB278, // door_lit_fill
+         0x269C69, // door_lit_press_fill
          0x2D3333, // key_press_face
          0x787878, // well_frame
          0x383838, // ruler_face
@@ -899,6 +1033,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x080808, // score_pane_face
          0xFF856D, // card_face
          0x2D3333, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x285764, // level_audio_fill
+         0x926533, // level_noise_fill
          0x313131, // waveform_canvas
          0x080808, // waveform_ink
          0x0E0E0E, // waveform_core
@@ -921,6 +1058,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x333333, // key_face
          0xAF893D, // lit_fill
          0x675124, // lit_press_fill
+         0x7C9E7C, // door_lit_fill
+         0x495D49, // door_lit_press_fill
          0x1E1E1E, // key_press_face
          0x877A6A, // well_frame
          0x333333, // ruler_face
@@ -936,6 +1075,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x161616, // score_pane_face
          0xE76942, // card_face
          0x1E1E1E, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x474759, // level_audio_fill
+         0x7C9E7C, // level_noise_fill
          0x353535, // waveform_canvas
          0x161616, // waveform_ink
          0x1B1B1B, // waveform_core
@@ -958,6 +1100,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x3E3F3F, // key_face
          0x0D5566, // lit_fill
          0x020D10, // lit_press_fill
+         0xBF4D33, // door_lit_fill
+         0x1D0C08, // door_lit_press_fill
          0x060B0C, // key_press_face
          0x7F7F7F, // well_frame
          0x3E3F3F, // ruler_face
@@ -973,6 +1117,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x090909, // score_pane_face
          0xBF442B, // card_face
          0x060B0C, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xBC604D, // level_audio_fill
+         0xBF852A, // level_noise_fill
          0x363737, // waveform_canvas
          0x090909, // waveform_ink
          0x101010, // waveform_core
@@ -995,6 +1142,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x3A3A3A, // key_face
          0xA30000, // lit_fill
          0x140000, // lit_press_fill
+         0x007DAA, // door_lit_fill
+         0x000F15, // door_lit_press_fill
          0x070707, // key_press_face
          0xA5A5A5, // well_frame
          0x3A3A3A, // ruler_face
@@ -1010,6 +1159,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x0C0C0C, // score_pane_face
          0x540000, // card_face
          0x070707, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x7B0000, // level_audio_fill
+         0x27A9C6, // level_noise_fill
          0x545454, // waveform_canvas
          0x0C0C0C, // waveform_ink
          0x171717, // waveform_core
@@ -1032,6 +1184,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xAAA6A2, // key_face
          0x80BFAD, // lit_fill
          0x639385, // lit_press_fill
+         0xF87680, // door_lit_fill
+         0xBF5B63, // door_lit_press_fill
          0x8B7F76, // key_press_face
          0x776B61, // well_frame
          0xAAA6A2, // ruler_face
@@ -1047,6 +1201,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x332A21, // score_pane_face
          0xCC434D, // card_face
          0x8B7F76, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x03AAA2, // level_audio_fill
+         0x1C8BB0, // level_noise_fill
          0xC0B8B3, // waveform_canvas
          0x332A21, // waveform_ink
          0x494038, // waveform_core
@@ -1069,6 +1226,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xADA18A, // key_face
          0xF2C14F, // lit_fill
          0x56451C, // lit_press_fill
+         0xE58900, // door_lit_fill
+         0x523100, // door_lit_press_fill
          0x383838, // key_press_face
          0x544B3A, // well_frame
          0xADA18A, // ruler_face
@@ -1084,6 +1243,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x000000, // score_pane_face
          0xCF3E26, // card_face
          0x383838, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xF2C14F, // level_audio_fill
+         0x00A087, // level_noise_fill
          0xA39882, // waveform_canvas
          0x000000, // waveform_ink
          0x191814, // waveform_core
@@ -1106,6 +1268,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x353535, // key_face
          0x9B6896, // lit_fill
          0x322130, // lit_press_fill
+         0x0096CC, // door_lit_fill
+         0x003041, // door_lit_press_fill
          0x111111, // key_press_face
          0xA8A8A8, // well_frame
          0x353535, // ruler_face
@@ -1121,6 +1285,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x0F0A14, // score_pane_face
          0x7F0072, // card_face
          0x111111, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x1C2226, // level_audio_fill
+         0x311F3F, // level_noise_fill
          0x313131, // waveform_canvas
          0x0F0A14, // waveform_ink
          0x141019, // waveform_core
@@ -1143,6 +1310,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x554D48, // key_face
          0x7C3A3A, // lit_fill
          0x532727, // lit_press_fill
+         0x350535, // door_lit_fill
+         0x230323, // door_lit_press_fill
          0x353433, // key_press_face
          0x99897A, // well_frame
          0x554D48, // ruler_face
@@ -1158,6 +1327,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x000000, // score_pane_face
          0x7A0000, // card_face
          0x353433, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x562B2B, // level_audio_fill
+         0xAA8455, // level_noise_fill
          0x5F5753, // waveform_canvas
          0x000000, // waveform_ink
          0x0F0E0D, // waveform_core
@@ -1180,6 +1352,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x9E9386, // key_face
          0xFF8C00, // lit_fill
          0x804600, // lit_press_fill
+         0xC6ED00, // door_lit_fill
+         0x637700, // door_lit_press_fill
          0x544A3E, // key_press_face
          0x3F2300, // well_frame
          0x9E9386, // ruler_face
@@ -1195,6 +1369,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x261D13, // score_pane_face
          0xFF9719, // card_face
          0x544A3E, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xCC8228, // level_audio_fill
+         0xABCC00, // level_noise_fill
          0x92877B, // waveform_canvas
          0x261D13, // waveform_ink
          0x372E23, // waveform_core
@@ -1217,6 +1394,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x0C0B09, // key_face
          0xFF8F07, // lit_fill
          0xFFFF15, // lit_press_fill
+         0x560856, // door_lit_fill
+         0xFF18FF, // door_lit_press_fill
          0x23201D, // key_press_face
          0x7A6F4B, // well_frame
          0x0C0B09, // ruler_face
@@ -1232,6 +1411,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xEDDBC0, // score_pane_face
          0x943607, // card_face
          0x23201D, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x7F652A, // level_audio_fill
+         0xFFB100, // level_noise_fill
          0x1A1917, // waveform_canvas
          0xEDDBC0, // waveform_ink
          0xCCBDA6, // waveform_core
@@ -1254,6 +1436,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x333333, // key_face
          0xFF7B07, // lit_fill
          0x231101, // lit_press_fill
+         0x0062C4, // door_lit_fill
+         0x000D1B, // door_lit_press_fill
          0x070707, // key_press_face
          0xAAAAAA, // well_frame
          0x333333, // ruler_face
@@ -1269,6 +1453,9 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x000000, // score_pane_face
          0xA30606, // card_face
          0x070707, // card_ink
+         0xFF0A0A, // clip_lamp
+         0xF26000, // level_audio_fill
+         0xFF8F07, // level_noise_fill
          0x303030, // waveform_canvas
          0x000000, // waveform_ink
          0x080808, // waveform_core

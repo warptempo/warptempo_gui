@@ -231,14 +231,17 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     // playback_common.h's head): the noise summed under what the arm wrote
     // (the render arm's block already scaled by the audio level) —
     // the stream runs between plays, so the bed plays there too — then every
-    // sample clamped.
+    // sample clamped. A BLOCK THAT CLAMPED COUNTS (2026-11-05, the clip
+    // lamp: GuiPlaybackState::clipped_blocks, one release increment the GUI
+    // tick reads with acquire; no allocation, no syscall).
     if (impl->state.noise != nullptr)
         noise_mix_block(*impl->state.noise, channel_buffers,
                         kPlaybackOutputChannels, frames, channel_count,
                         impl->state.output_rate.load(
                             std::memory_order_relaxed));
-    playback_clip_block(channel_buffers, kPlaybackOutputChannels, frames,
-                        channel_count);
+    if (playback_clip_block(channel_buffers, kPlaybackOutputChannels, frames,
+                            channel_count))
+        impl->state.clipped_blocks.fetch_add(1, std::memory_order_release);
     impl->callback_cycles.fetch_add(1, std::memory_order_release);
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
 }
@@ -873,6 +876,13 @@ bool GuiPlayback::stream_dead() const {
 int64_t GuiPlayback::cursor() const {
     if (!impl_) return 0;
     return playback_cursor(impl_->state);
+}
+
+// The clip lamp's read (contract at the declaration): the callback's
+// counter, acquire.
+uint64_t GuiPlayback::clipped_blocks() const {
+    if (!impl_) return 0;
+    return impl_->state.clipped_blocks.load(std::memory_order_acquire);
 }
 
 double GuiPlayback::cursor_precise() const {

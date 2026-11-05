@@ -260,9 +260,10 @@ double gui_font_x_ink_px(const GuiFont& f);
 // defaults on the tablet (200 %; 2026-11-04 night's sizes): "0123456789:."
 // in the ruler's Bold 16 (Small 8 W) 12 + 0 (the ruler, render.h's ruler
 // block); the brand "Warptempo" in Bold 24 (Title 12 W) 17 + 5; the
-// legend's alphabet (the pipe apart) in Bold 22 (Body 11 W) 15 + 0, and the
-// pipe alone 18 + 3, the Regular's rows to the row (the logo lane,
-// render.h's logo lane block). A reader takes the integers as they are.
+// legend's alphabet in Bold 22 (Body 11 W) 15 + 0 (the logo lane, render.h's
+// logo lane block; its pipe is a drawn block on those same rows since
+// 2026-11-05, no longer the face's glyph, so no pipe band is measured
+// there). A reader takes the integers as they are.
 // Measured once per file,
 // em and set and kept (a set is a constant of its reader's), GUI thread
 // only; a character the face lacks paints .notdef, so a set names only
@@ -310,7 +311,10 @@ GuiStrikeBand gui_font_strike_band(const GuiFont& f);
 //   it whatever its sign.
 //   THE PIPE SITS ON THE DIGITS' BAND (architect 2026-10-09 ~21:20, "the
 //   pipe should be even"): "|" (U+007C) takes the "0"'s ink centre, so its
-//   overhang above and below the digits beside it is the same.
+//   overhang above and below the digits beside it is the same — wherever
+//   the face shows one (the labels' grammar, a typed line); the logo lane's
+//   legend draws its own block instead since 2026-11-05 (render.h's logo
+//   lane block) and shows no glyph pipe.
 // THE LIFTS ARE DERIVED at the install from each file's own unscaled
 // outline bounds (gui_font_bundled.cpp), in em units. THE MATCH IS BY GLYPH
 // ID after substitution (text_shape compares a shaped glyph's id against

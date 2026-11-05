@@ -340,10 +340,17 @@ namespace {
 // dimmed by the caller. NO HOT FACE. `face` is the key's FACE, the key itself (materials.h's
 // THE FACE AND ITS GAP, 2026-11-04). ON IT its caller paints the key's
 // Breeze glyph (paint_key_glyph) and UNDER IT its legend (paint_key_legend,
-// 2026-11-03).
+// 2026-11-03). THE DOORS (architect 2026-11-05, materials.h's THE DOORS
+// WEAR LAVENDER): a checked OVERLAY OPENER wears the theme's door fills, the
+// lavender, so the roster's two key walks — the band's and row 8's — hand
+// paint_key the class `id` belongs to (redesign_button_is_door, app_state.h,
+// the one owner); the row-8 walk paints no door today and asks the same
+// predicate so the class is never decided by lane.
 void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
-                       bool pressed) {
-    paint_key(cr, face, key_look(lamp, pressed));
+                       bool pressed, RedesignButton id) {
+    paint_key(cr, face, key_look(lamp, pressed),
+              redesign_button_is_door(id) ? KeyLitClass::Door
+                                          : KeyLitClass::Lamp);
 }
 
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
@@ -1529,17 +1536,20 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // painter, 2026-11-04 night), the
 // brand's ink rows, the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, each run's baseline its ink's top plus the rows above
-// the baseline), the pipe's own ink rows (kLogoLegendPipe, its own baseline
-// the same way) — and THE GLYPH CELL, NOT CENTERED: its top row on the
-// runs' ink top row (architect 2026-11-04 night, his pick f2 of tmp/s38, a
-// deliberate asymmetry: the centered cell read "too low"); across, the clock run's last ink on the
-// well's last column, the pipe's pen one space and its own advance
-// before the clock run's pen, the glyph cell one space advance and the
-// battery's air (kLogoGlyphAirW, one W, 2026-11-04 night) left of the
-// pipe's first ink, its right edge rounded to a whole column, the percent
-// run's last ink one space advance and the air left of the cell; the extent
-// the lane's rows from the first ink column (the percent run's, or the
-// cell's with no percent) through the well's last column.
+// the baseline), THE DRAWN PIPE on those same rows (2026-11-05, the block
+// in render.h) — and, NOT CENTERED, THE GLYPH CELL, its top row on the runs'
+// ink top row (architect 2026-11-04 night, his pick f2 of tmp/s38, a
+// deliberate asymmetry: the centered cell read "too low"), and THE TWO
+// LAMPS, their top row one W under it (kLogoLampDropW, 2026-11-05); across,
+// right to left: the clock run's last ink on the well's last column, the
+// pipe block kLogoPipeAirW left of the clock's first ink column, the glyph
+// cell kLogoPipeAirW left of the block, the percent run's last ink one space
+// advance and the battery's air (kLogoGlyphAirW, one W) left of the cell,
+// the clip lamp kLogoLampGapW left of the percent's first ink column (the
+// cell's first column with no percent), the limiter lamp one key gap left
+// of the clip lamp; the extent the lane's rows from the first ink column
+// (the limiter lamp's first column, always the leftmost) through the well's
+// last column.
 namespace {
 // A TEXT ITEM'S INK ROWS above and below its baseline: the set's ink band
 // in the face as painted (gui_font_ink_band), its rows as they are.
@@ -1572,11 +1582,13 @@ int logo_item_y(const GuiRect& lane, int rows) {
 }
 struct LogoLegendLayout {
     GuiRect lane{0, 0, 0, 0};
-    text_shape::SharedRun clock, pipe, percent;   // percent null when empty
-    double clock_x = 0.0, pipe_x = 0.0, percent_x = 0.0;
+    text_shape::SharedRun clock, percent;   // percent null when empty
+    double clock_x = 0.0, percent_x = 0.0;
     double baseline = 0.0;        // the runs' (the clock's and the percent's)
-    double pipe_baseline = 0.0;   // the pipe's, on its own ink
+    GuiRect pipe{0, 0, 0, 0};     // the drawn block, on the runs' ink rows
     GuiRect cell{0, 0, 0, 0};
+    GuiRect limiter_lamp{0, 0, 0, 0};   // THE TWO LAMPS (render.h)
+    GuiRect clip_lamp{0, 0, 0, 0};
     GuiRect extent{0, 0, 0, 0};
 };
 GuiRect logo_lane_rect(const AppState& app) {
@@ -1590,36 +1602,53 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     const WellColumns well = well_columns(app);
     const GuiFont body = gui_font(GuiFace::Body);
     const LogoTextInk ink = logo_text_ink(GuiFace::Body, kLogoLegendInkSet);
-    l.baseline = static_cast<double>(logo_item_y(l.lane, ink.rows()) +
-                                     ink.above);
-    const LogoTextInk pipe_ink = logo_text_ink(GuiFace::Body, kLogoLegendPipe);
-    l.pipe_baseline = static_cast<double>(
-        logo_item_y(l.lane, pipe_ink.rows()) + pipe_ink.above);
+    const int ink_top = logo_item_y(l.lane, ink.rows());
+    l.baseline = static_cast<double>(ink_top + ink.above);
     const double space = text_shape::memoized_run(body, " ")->width_px;
     l.clock = text_shape::memoized_run(body, legend.clock);
     l.clock_x = static_cast<double>(well.end) - text_shape::ink_right_px(*l.clock);
-    l.pipe = text_shape::memoized_run(body, kLogoLegendPipe);
-    l.pipe_x = l.clock_x - space - l.pipe->width_px;
+    // THE DRAWN PIPE (render.h's logo lane block, 2026-11-05): a block one W
+    // wide on the runs' ink rows, kLogoPipeAirW of ground between its last
+    // column and the clock's first ink column (the floor of the first ink).
+    const int clock_first_ink = static_cast<int>(std::floor(
+        l.clock_x + text_shape::ink_left_px(*l.clock)));
+    const int pipe_air = scaled_px(kLogoPipeAirW);
+    const int pipe_w   = scaled_px(kLogoPipeW, 1);
+    l.pipe = GuiRect{clock_first_ink - pipe_air - pipe_w, ink_top, pipe_w,
+                     ink.rows()};
+    // THE CELL: kLogoPipeAirW of ground between its last column and the
+    // block (the pipe side; the digit side keeps the space advance and the
+    // one W of air, kLogoGlyphAirW — the stated asymmetry, render.h). ITS
+    // TOP ROW IS THE RUNS' INK TOP ROW (the row the percent and clock
+    // digits' ink starts on), not the cell's own centered seat.
     const icons::InkSize cell = logo_glyph_cell();
     const int air = scaled_px(kLogoGlyphAirW);
-    const int cell_right = static_cast<int>(std::nearbyint(
-        l.pipe_x + text_shape::ink_left_px(*l.pipe) - space)) - air;
-    // THE CELL'S TOP ROW IS THE RUNS' INK TOP ROW (the row the percent and
-    // clock digits' ink starts on), not the cell's own centered seat.
-    l.cell = GuiRect{cell_right - cell.w, logo_item_y(l.lane, ink.rows()),
-                     cell.w, cell.h};
-    int first = l.cell.x;
+    const int cell_right = l.pipe.x - pipe_air;   // one past the cell's last column
+    l.cell = GuiRect{cell_right - cell.w, ink_top, cell.w, cell.h};
+    int percent_first_ink = l.cell.x;
     if (!legend.percent.empty()) {
         l.percent = text_shape::memoized_run(body, legend.percent);
         l.percent_x = static_cast<double>(l.cell.x - air) - space -
                       text_shape::ink_right_px(*l.percent);
-        first = std::min(first, static_cast<int>(std::floor(
-            l.percent_x + text_shape::ink_left_px(*l.percent))));
+        percent_first_ink = static_cast<int>(std::floor(
+            l.percent_x + text_shape::ink_left_px(*l.percent)));
     }
-    // THE EXTENT: the columns from the first ink through the well's last
-    // column (the clock's last ink stands on it) and one column of slack past
-    // it for that ink's antialiased fraction, the lane's rows, no clamp:
-    // every ink stands inside the lane by construction.
+    // THE TWO LAMPS (render.h's THE TWO LAMPS): the clip lamp kLogoLampGapW
+    // of ground left of the percent's first ink column (the cell's first
+    // column with no percent run), the limiter lamp one key gap left of it,
+    // both kLogoLampW square with their top row kLogoLampDropW under the
+    // runs' ink top row.
+    const int lamp  = scaled_px(kLogoLampW, 1);
+    const int lamp_y = ink_top + scaled_px(kLogoLampDropW);
+    const int clip_x = percent_first_ink - scaled_px(kLogoLampGapW) - lamp;
+    l.clip_lamp    = GuiRect{clip_x, lamp_y, lamp, lamp};
+    l.limiter_lamp = GuiRect{clip_x - key_gap_px() - lamp, lamp_y, lamp, lamp};
+    // THE EXTENT: the columns from the first ink — the limiter lamp's first
+    // column, the leftmost thing by construction — through the well's last
+    // column (the clock's last ink stands on it) and one column of slack
+    // past it for that ink's antialiased fraction, the lane's rows, no
+    // clamp: every ink stands inside the lane by construction.
+    const int first = l.limiter_lamp.x;
     l.extent = GuiRect{first, l.lane.y, std::max(0, well.end + 1 - first),
                        l.lane.h};
     return l;
@@ -1628,6 +1657,11 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
 
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend) {
     return logo_legend_layout(app, legend).extent;
+}
+
+LogoLampRects logo_lamp_rects(const AppState& app, const GuiLogoLegend& legend) {
+    const LogoLegendLayout l = logo_legend_layout(app, legend);
+    return LogoLampRects{l.limiter_lamp, l.clip_lamp};
 }
 
 void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
@@ -1673,15 +1707,31 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
             static_cast<double>(logo_item_y(lane, ink.rows()) + ink.above));
     }
 
-    // THE LEGEND (logo_legend_layout): the clock run, the pipe on its own
-    // baseline, the glyph in its cell, the percent run — published as
-    // painted for the tick's damage.
+    // THE LEGEND (logo_legend_layout): the clock run, the drawn pipe on the
+    // runs' rows, the glyph in its cell, the percent run, the two lamps —
+    // published as painted for the tick's damage.
     const LogoLegendLayout l = logo_legend_layout(app, app.logo_legend);
     app.logo_legend_rect = l.extent;
     text_shape::show_shaped_run(cr, *l.clock, l.clock_x, l.baseline);
-    text_shape::show_shaped_run(cr, *l.pipe, l.pipe_x, l.pipe_baseline);
     if (l.percent)
         text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
+    // THE DRAWN PIPE AND THE TWO LAMPS: whole device-px cells, no
+    // antialiasing — the block in the text tone; each lamp its face at rest
+    // (`key_face`, Live's indicator box) or lit (the limiter the cards'
+    // orange, `card_ground`; the clip `clip_lamp`, Live's meter red), from
+    // the two bits the tick writes (refresh_logo_lamps, main.cpp; render.h's
+    // THE TWO LAMPS).
+    {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        const GuiPalette& p = palette();
+        paint_ink_rect(cr, l.pipe, text);
+        paint_ink_rect(cr, l.limiter_lamp,
+                       app.limiter_lamp_lit ? p.card_ground : p.key_face);
+        paint_ink_rect(cr, l.clip_lamp,
+                       app.clip_lamp_lit ? p.clip_lamp : p.key_face);
+        cairo_restore(cr);
+    }
 
     // THE GLYPH, Breeze's battery by the plug state (GuiLogoGlyph's rule),
     // its ink box centered in the cell (the floor of the spare; one box for
@@ -1958,7 +2008,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const KeyLook look = key_look(face.selected, pressed);
-        paint_roster_case(cr, key, face.selected, pressed);
+        paint_roster_case(cr, key, face.selected, pressed, def.id);
 
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled): redesign_button_icon's stateful overload — the
@@ -2817,7 +2867,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const KeyLook look = key_look(face.selected, pressed);
-        paint_roster_case(cr, key, face.selected, pressed);
+        paint_roster_case(cr, key, face.selected, pressed, def.id);
         // THE GLYPH ON THE KEY, ITS LEGEND UNDER IT (the band's rule,
         // 2026-11-02 / 2026-11-03: the stateful glyph and the stateful
         // legend through their one seats, the tones the face's and the
@@ -7044,9 +7094,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (key_legend_word), the word its tooltip (out.tooltip below) and its
         // glyph's key; every button wears the enabled bit on its glyph and
         // its legend (THE DISABLED RUNG above owns the bit and which owners
-        // publish it).
+        // publish it). The row holds no door (materials.h's THE DOORS WEAR
+        // LAVENDER: the openers stand on the band), so its lit key is the
+        // lamps' — paint_key's default class.
         const KeyLook look = key_look(plan[i].lit, pressed);
-        paint_roster_case(cr, key, plan[i].lit, pressed);
+        paint_key(cr, key, look);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled; paint_key_glyph's one seat, in the face's tone): by
         // the act vocabulary's own owner — the player's keys

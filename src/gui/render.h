@@ -337,17 +337,21 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S EIGHTEEN (materials.h's head owns each rule; members
-    // since the theme arc, 2026-11-05, their numbers the installed theme's
-    // — Default's quoted at materials.h; the four press tones the press
-    // arc's, the same day, the lit press fill its second landing's).
+    // THE FLAT LOOK'S TWENTY-THREE (materials.h's head owns each rule;
+    // members since the theme arc, 2026-11-05, their numbers the installed
+    // theme's — Default's quoted at materials.h; the four press tones the
+    // press arc's, the same day, the lit press fill its second landing's;
+    // the doors' two, the clip lamp and the two level fills the lamp arc's,
+    // the same night).
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor text_on_lit;     // anything printed on a lit face
     GuiColor key_dim_ink;     // a disabled key's glyph and legend
-    GuiColor key_face;        // the key at rest, the time fields
+    GuiColor key_face;        // the key at rest, the time fields, the two lamps at rest
     GuiColor lit_fill;        // a checked key's whole face, Live's "on"
     GuiColor lit_press_fill;  // a checked key's face under a standing press
+    GuiColor door_lit_fill;   // a checked OVERLAY OPENER's face, the seven doors (materials.h's THE KEY)
+    GuiColor door_lit_press_fill; // a checked door's face under a standing press
     GuiColor key_press_face;  // an unchecked key's face under a standing press
     GuiColor well_frame;      // the scrub's channel, the tooltip's border
     GuiColor ruler_face;      // the ruler
@@ -359,6 +363,9 @@ struct GuiPalette {
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor list_press_fill; // a list row's fill under a standing press
     GuiColor list_press_text; // that row's text and glyph
+    GuiColor clip_lamp;       // the logo lane's clip lamp, lit (THE TWO LAMPS, the logo lane block; the limiter lamp lit wears card_ground)
+    GuiColor level_audio_fill; // the AUDIO level case's fill — NO READER YET, the next brief's painter (2026-11-05)
+    GuiColor level_noise_fill; // the NOISE level case's fill — NO READER YET, the next brief's painter (2026-11-05)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -1175,15 +1182,14 @@ constexpr int kMinWindowHeightPx = 480;
 // (the "W"'s top to the "p"'s foot as painted: gui_font_ink_band of
 // kLogoBrand in the Bold face), the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, in the Body face as painted: each run's baseline its
-// ink's top row plus its rows above the baseline), THE PIPE'S OWN INK ROWS
-// (kLogoLegendPipe, its own baseline, so its rows center on the lane and the
-// runs' on the lane too, rather than the runs riding the pipe's seat) and
-// the battery cell. On the tablet at 200 % (the brand 17 + 5 rows at Bold
-// Title 12 W = 24 device px, the runs 15 + 0 and the pipe 18 + 3 at Body
+// ink's top row plus its rows above the baseline), THE DRAWN PIPE ON THOSE
+// SAME ROWS (below) and the battery cell. On the tablet at 200 % (the brand
+// 17 + 5 rows at Bold Title 12 W = 24 device px, the runs 15 + 0 at Body
 // 11 W = 22 device px):
 // the brand on lane rows 25–46 (its cap rows 25–41, the "p" to 46), the
-// runs 28–42, the pipe 25–45, the battery 28–41 (its top on the runs'),
-// the note 25–42 (its centered 27–44 lifted one W). THE LANE'S GROUND
+// runs 28–42, the pipe 28–42 with them, the battery 28–41 (its top on the
+// runs'), the two lamps 30–43 (one W under the runs' top), the note 25–42
+// (its centered 27–44 lifted one W). THE LANE'S GROUND
 // IS THE BAND'S FLAT GROUND, nothing else on it — no line, no caption tone —
 // and it is INERT CHROME like the strips' pads: no hit, no tooltip, no
 // gesture (the band's ground falls through to nothing, input_pointer.cpp).
@@ -1191,8 +1197,9 @@ constexpr int kMinWindowHeightPx = 480;
 // scaled_px, rounded at the element, EVERYTHING ON IT IN THE TEXT TONE
 // `text` WITH NO SHADOW (the flat look, architect 2026-11-01 "no shadow
 // anywhere", M13's tone 2026-11-02; materials.h's head) — the brand and the
-// legend's runs, the note, the glyph (logo_legend_extent, paint_handler.cpp,
-// the legend's damage rect):
+// legend's runs, the note, the pipe, the glyph — BUT THE TWO LAMPS, which
+// wear their own faces (THE TWO LAMPS below; logo_legend_extent,
+// paint_handler.cpp, the legend's damage rect, the lamps inside it):
 //   ON THE LEFT, THE NOTE: Breeze's MusicNote16th (architect 2026-11-01,
 //     M7: Breeze only — the BPM key's own drawing) on the ink-box road
 //     (icons.h's THE INK BOX), the ink box's larger side kLogoNoteInkW =
@@ -1228,34 +1235,104 @@ constexpr int kMinWindowHeightPx = 480;
 //     gap left 8; the architect kept the cards' 8 the same night ("keep the
 //     cards spacing"), now its own kNotificationGlyphGapW,
 //     notifications.h.)
-//   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
-//     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
-//     (11 W, 22 device px, the Bold), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S LAST
-//     COLUMN (the last key's face's last column: "the clock flush with the
-//     right edge of the buttons"): the clock run "2:12 PM" with its LAST
-//     INK on that column; THE PIPE (kLogoLegendPipe, the face's own glyph,
-//     never a drawn one, architect 2026-10-24: "I don't think we should draw
-//     our own pipe"; lifted onto the digits' band like every pipe the face
-//     shows, gui_font.h's kGuiLiftedSigns), its pen one space advance and
-//     its own advance before the clock run's pen, so the two stand as one
-//     "| 2:12 PM" run would set them (the face kerns neither pair); one
-//     space advance of the face AND ONE W; THE GLYPH CELL; one space
+//   ON THE RIGHT, THE LEGEND "[lamp][lamp] 92% <glyph> | 2:12 PM"
+//     (gui_battery.h's composer for the runs; the tick's refresh_logo_legend,
+//     main.cpp) in the BODY face (11 W, 22 device px, the Bold), the text
+//     tone, LAID RIGHT TO LEFT FROM THE WELL'S LAST COLUMN (the last key's
+//     face's last column: "the clock flush with the right edge of the
+//     buttons"): the clock run "2:12 PM" with its LAST INK on that column;
+//     THE DRAWN PIPE (below) kLogoPipeAirW of ground left of the clock's
+//     first ink; kLogoPipeAirW of ground again; THE GLYPH CELL; one space
 //     advance and one W; the percent run "92%" with its last ink there, so
-//     "100%" grows leftward, away from the clock. THE BATTERY'S AIR
-//     (architect 2026-11-04 night, his pick a3 on the mocks of tmp/s36,
-//     "add 2px"): kLogoGlyphAirW = 1 (one W, scaled_px, rounded at the
-//     element like kLogoBrandGapW) of ground added on each side of the
-//     cell, so on the tablet the cell stands 2 columns further left than
-//     the bare space advance would set it and the percent run 4; the clock, the pipe and
-//     the drawing itself do not move. FLUSH IS THE INK, the chokepoint's own
+//     "100%" grows leftward, away from the clock; kLogoLampGapW of ground;
+//     THE CLIP LAMP, one W of ground, THE LIMITER LAMP (THE TWO LAMPS,
+//     below). THE PIPE IS DRAWN (architect 2026-11-05, REOPENING 2026-10-24's
+//     "I don't think we should draw our own pipe" ON HIS WORD — "the pipe
+//     at bold reads oddly"; his pick p1 of tmp/s46): A HARD BLOCK in the
+//     text tone `text`, kLogoPipeW = 1 W wide (2 device px on the tablet),
+//     ON THE LEGEND RUNS' INK ROWS — the alphabet's band the layout centers
+//     the runs on (on the tablet rows 28..42, the digits' own 15 rows), not
+//     the Bold glyph's 21 rows and not one W up (p2..p5 declined) — filled
+//     in whole device-px cells with no antialiasing (paint_logo_lane; the
+//     face's "|" glyph, lifted onto the digits' band wherever else the face
+//     shows one, is no longer the legend's: gui_font.h's kGuiLiftedSigns
+//     keeps the lift for the labels' grammar). FIVE W OF GROUND ON EACH SIDE
+//     OF THE BLOCK, INK TO INK (kLogoPipeAirW = 5, 10 device px; his "pipe
+//     air good"): the block's right column + 1 + 5 W is the clock run's
+//     first ink column, and the battery cell's right column + 1 + 5 W is
+//     the block's first column. HIS REASON FOR THE NUMBER: the face's space
+//     advance (3 W at Body 11) plus 2 W of air on the pipe side of the cell
+//     — "the cell's pipe-side number" — and the same on the clock side; it
+//     is authored as the one constant 5 W, which EQUALS space + 2 W. THE
+//     CELL'S OTHER SIDE IS UNCHANGED — one space advance and kLogoGlyphAirW
+//     (1 W) between the cell and the percent run's last ink — so THE CELL'S
+//     AIR IS ASYMMETRIC BY HIS RULING: 5 W toward the pipe, space + 1 W
+//     toward the digits (his c6 of tmp/s46, "just reads right"; confirmed
+//     on the numbers, a stated asymmetry). THE BATTERY'S AIR (architect
+//     2026-11-04 night, his pick a3 on the mocks of tmp/s36, "add 2px"):
+//     kLogoGlyphAirW = 1 (one W, scaled_px, rounded at the element like
+//     kLogoBrandGapW) of ground added to the space advance ON THE DIGIT
+//     SIDE OF THE CELL ALONE since 2026-11-05 (both sides until the drawn
+//     pipe took the pipe side); the clock, the pipe and the drawing itself
+//     do not move with the percent. FLUSH IS THE INK, the chokepoint's own
 //     measure (text_shape::ink_left_px / ink_right_px: cairo's glyph
-//     extents of the run as painted), each gap — the space advance and the
-//     air — measured from the pipe's first ink to the cell and from the
-//     cell to the percent run's last ink; the cell's edge rounded to a whole
-//     column. THE RUNS' INK ROWS ARE THE
-//     ALPHABET'S, kLogoLegendInkSet (the composer's every character: the
-//     digits, "%", ":", the space and "AMP"), so the seat never moves with
-//     what the clock reads; the pipe's are its own.
+//     extents of the run as painted): the clock's first ink column is the
+//     floor of its first ink, the percent's likewise; the block and the
+//     cell stand on whole columns. THE RUNS' INK ROWS ARE THE ALPHABET'S,
+//     kLogoLegendInkSet (the composer's every character: the digits, "%",
+//     ":", the space and "AMP"), so the seat never moves with what the
+//     clock reads; the pipe's rows are the same band.
+//   THE TWO LAMPS BY THE BATTERY (architect 2026-11-05, sessions 46 / 47,
+//     his picks c6 / d1 / d6 / g5 of tmp/s46): TWO SQUARES, kLogoLampW = 7 W
+//     each (14 x 14 device px), in the lane LEFT OF THE PERCENT RUN, inert
+//     chrome like everything on the lane — no hit, no tooltip, no gesture.
+//     THE SEAT: by the battery, "ableton places it topmost rightmost
+//     grouping" (Live's control bar's CPU and MIDI boxes), not the band and
+//     not a stack beside NOISE (d2 declined). THEIR ROWS: the top row
+//     kLogoLampDropW = 1 W BELOW the legend runs' ink top row (logo_item_y
+//     of the runs' ink rows + scaled_px(1); on the tablet 28 + 2 = 30, rows
+//     30..43 beside the cell's 28..41) — his "1 w offset too far up" against
+//     the cell's own top row (c1 -> c4); an alignment, not a length. THEIR
+//     COLUMNS: THE CLIP LAMP on the right, its last column + 1 +
+//     kLogoLampGapW (5 W, 10 device px of ground; g5 over g6's 6 W) = the
+//     percent run's first ink column (with no percent run — no battery, or
+//     no level read — the cell's first column takes the percent's place);
+//     THE LIMITER LAMP left of it, ONE W OF GROUND BETWEEN (the key gap,
+//     key_gap_px, kKeyGapW's number) — "LIMITER LEFT, CLIP RIGHT, mirroring
+//     the level sliders" (d1 / d6; on the mock's geometry the pair stood on
+//     columns 2052..2065 / 2068..2081). They move with the percent run's
+//     width as the cell does; the clock and the pipe never move. THEIR
+//     FACES: AT REST `key_face` (Default 363636) — a dark square, Live's
+//     indicator box; LIT, THE LIMITER `card_ground` (Alert E76942, "a
+//     warning", the cards' own orange) and THE CLIP `clip_lamp`
+//     (StandardVuMeter / Maximum FF0A0A, "a fault", Live's meter clip box)
+//     — "orange for limiter and red for clipper" (d6); the lamps' FFAD56
+//     REFUSED: it is the lit KEY's face and "clip indicator is not a
+//     button". No outline, no inset, nothing printed on them, whole cells,
+//     no antialiasing. Both squares are part of logo_legend_layout (two
+//     rects) and of the extent — the first ink column is the limiter's
+//     first column, the lamps standing left of everything — so
+//     refresh_logo_legend's damage covers them whenever the percent moves.
+//     THE TRIGGERS, NO HOLD ("50ms hold isn't really necessary for either.
+//     the refresh rate is enough of a cap"): each lamp is LIT ON THE TICK
+//     THAT SAW ITS EVENT AND DARK ON THE NEXT TICK THAT DID NOT — two bits
+//     on AppState (clip_lamp_lit, limiter_lamp_lit) written only by the
+//     tick's refresh_logo_lamps (main.cpp, beside refresh_logo_legend, on
+//     EVERY tick ahead of the early returns), each edge damaging its own
+//     square through the platform's damage road, nothing damaged while a
+//     bit holds. THE CLIP LAMP — any view, anything the device plays (the
+//     sum is the device's): the audio thread's clip (playback_clip_block)
+//     reports whether it clamped a sample of the block and the callback
+//     counts the clamped blocks (GuiPlaybackState::clipped_blocks); the tick
+//     lights the lamp iff the count moved since the tick before. THE
+//     LIMITER LAMP — TARGET VIEW ONLY ("the render player plays files, no
+//     sidecar — agree"; the source view dark): with the engine playing, the
+//     audio view 'T' and the target buffer bound, the lamp lights iff the
+//     limiter's engaged frames (AppState::bound_limiter_frames, the bind's
+//     own snapshot) hold a frame in the span the playhead advanced since the
+//     tick before, in buffer-local frames — [prev, now), a binary search; a
+//     span that runs backward (a wrap, a scrub, a restart) tests nothing, the
+//     first tick of a play seeds and tests nothing, not playing is dark.
 //   THE GLYPH CELL, ONE SIZE WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
 //     move"): THE TWO DRAWINGS are Breeze's (2026-11-02, M7: Breeze only) —
@@ -1286,18 +1363,23 @@ constexpr int kMinWindowHeightPx = 480;
 //     and one W, above; the cell the larger of the two drawings' ink boxes
 //     on each axis so no state can move it, each drawing centered in it
 //     (the floor of the spare). Painted in the text tone.
-//   (Liberation's own arrows ↑ / ↓ as the glyphs, a drawn pipe and
-//   "nothing" as the discharging glyph were judged on the same sheets and
-//   not taken, docs/engineering/closed_questions.md.)
+//   (Liberation's own arrows ↑ / ↓ as the glyphs and "nothing" as the
+//   discharging glyph were judged on the same sheets and not taken,
+//   docs/engineering/closed_questions.md; the drawn pipe, declined there
+//   2026-10-24, is TAKEN since 2026-11-05 on his word, above.)
 inline constexpr double kLogoLaneW           = 36.0;
 inline constexpr double kLogoNoteInkW        = 9.0;
 inline constexpr double kLogoNoteLiftW       = 1.0;
 inline constexpr double kLogoBrandGapW       = 7.0;
 inline constexpr double kLogoGlyphInkW       = 11.0;
-inline constexpr double kLogoGlyphAirW       = 1.0;
+inline constexpr double kLogoGlyphAirW       = 1.0;   // the digit side alone since 2026-11-05
+inline constexpr double kLogoPipeW           = 1.0;   // the drawn pipe's width
+inline constexpr double kLogoPipeAirW        = 5.0;   // ground on each side of it, ink to ink (= space + 2 W)
+inline constexpr double kLogoLampW           = 7.0;   // each lamp's square
+inline constexpr double kLogoLampGapW        = 5.0;   // the clip lamp to the percent's first ink
+inline constexpr double kLogoLampDropW       = 1.0;   // the lamps' top under the runs' ink top
 inline constexpr const char* kLogoBrand = "Warptempo";
 inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";
-inline constexpr const char* kLogoLegendPipe = "|";
 inline int logo_lane_h_px() {
     return scaled_px(kLogoLaneW, 1);
 }

@@ -1365,6 +1365,76 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
     if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 
+// THE TWO LAMPS BY THE BATTERY, THEIR ONE WRITER (architect 2026-11-05;
+// render.h's THE TWO LAMPS owns every number and reason; the four fields'
+// contract at AppState::clip_lamp_lit): called ON EVERY TICK right after
+// refresh_logo_legend, ahead of the tick's early returns, because the clip
+// is the device's — it clamps under the render player, the score viewer and
+// the silence between plays alike — and a lamp that is lit must go dark on
+// the next tick whatever mode stands. NO HOLD: each lamp is lit on the tick
+// that saw its event and dark on the next that did not ("the refresh rate is
+// enough of a cap"); each EDGE damages that lamp's own square
+// (logo_lamp_rects, the painter's own layout) through the platform's damage
+// road, and nothing is damaged while a bit holds.
+//   THE CLIP LAMP: the engine's clamped-block count (GuiPlayback::
+//   clipped_blocks, the audio thread's counter read with acquire) against
+//   the count this tick's predecessor saw; lit iff it moved. Both words live
+//   the engine's life (the counter) and the project's (the seen word), one
+//   lifetime, so a project switch starts both at zero together.
+//   THE LIMITER LAMP, TARGET PLAYBACK ALONE: with the engine playing, the
+//   audio view 'T' and the bind's snapshot of the limiter's engaged frames
+//   non-empty (AppState::bound_limiter_frames: filled only while the target
+//   buffer is bound, so "the bound buffer is the target buffer" is that
+//   vector's non-emptiness and needs no second predicate — the render player
+//   and the score viewer clear it at their binds, the T→S leg at its), the
+//   cursor in BUFFER-LOCAL frames — GuiPlayback::cursor() reports the domain
+//   position, the bind's domain offset (domain_begin) subtracted — against
+//   the one the tick before saw: lit iff the sorted list holds a frame in
+//   [prev, now), a binary search. A span that runs backward (a loop wrap, a
+//   scrub, a restart) tests nothing on that tick; the first tick of a play
+//   seeds prev = now and tests nothing; every tick that does not test voids
+//   prev, so the next play seeds afresh. GUI-thread logic over the stored
+//   list, no atomic stamp.
+void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
+                        const GuiPlayback& playback) {
+    // THE CLIP LAMP.
+    const uint64_t clipped = playback.clipped_blocks();
+    const bool clip_lit = clipped != app.clip_lamp_seen_blocks;
+    app.clip_lamp_seen_blocks = clipped;
+
+    // THE LIMITER LAMP.
+    bool limiter_lit = false;
+    if (playback.is_playing() && app.active_audio_view == 'T' &&
+        !app.bound_limiter_frames.empty()) {
+        const int64_t now = playback.cursor() - playback.domain_begin();
+        const int64_t prev = app.limiter_lamp_prev_frame;
+        if (prev >= 0 && now > prev) {
+            const std::vector<int64_t>& f = app.bound_limiter_frames;
+            limiter_lit = std::lower_bound(f.begin(), f.end(), prev) !=
+                          std::lower_bound(f.begin(), f.end(), now);
+        }
+        app.limiter_lamp_prev_frame = now;
+    } else {
+        app.limiter_lamp_prev_frame = -1;
+    }
+
+    // THE EDGES, each damaging its own square; the layout is asked only
+    // when a bit flips.
+    if (clip_lit == app.clip_lamp_lit && limiter_lit == app.limiter_lamp_lit)
+        return;
+    const LogoLampRects rects = logo_lamp_rects(app, app.logo_legend);
+    if (clip_lit != app.clip_lamp_lit) {
+        app.clip_lamp_lit = clip_lit;
+        const GuiRect& r = rects.clip;
+        if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
+    }
+    if (limiter_lit != app.limiter_lamp_lit) {
+        app.limiter_lamp_lit = limiter_lit;
+        const GuiRect& r = rects.limiter;
+        if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
+    }
+}
+
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
 // contract is at platform.h; gui_main below is the loop). The window, the
@@ -2128,8 +2198,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE LOGO LANE'S LEGEND, ON EVERY TICK for the same reason: the
         // wall clock and the battery move whatever the project is doing
-        // (refresh_logo_legend, its rule and its damage).
+        // (refresh_logo_legend, its rule and its damage). THE TWO LAMPS
+        // BESIDE IT the same way (refresh_logo_lamps, 2026-11-05): the clip
+        // is the device's under every mode below, and a lit lamp owes its
+        // dark edge to the very next tick.
         refresh_logo_legend(app, gui);
+        refresh_logo_lamps(app, gui, playback);
 
         // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
         // 2026-11-04 night, render_playhead's paragraph, render.h — the

@@ -342,6 +342,15 @@ public:
     bool    is_playing() const;
     int64_t cursor()     const;
 
+    // THE CLIP LAMP'S COUNTER (architect 2026-11-05; render.h's THE TWO
+    // LAMPS): how many callback blocks this engine's clip has clamped a
+    // sample of since the engine was built — the audio thread's count
+    // (GuiPlaybackState::clipped_blocks), read with acquire. Monotonic for
+    // the engine's life, playing or not, whatever is bound; a stream reopen
+    // does not reset it. Main thread only, like cursor(): the tick compares
+    // it with the count it last saw and lights the lamp iff it moved.
+    uint64_t clipped_blocks() const;
+
     // THERE IS NO DEVICE TO PLAY ON (2026-08-28, the render player's rule):
     // true whenever this engine cannot produce sound, WHICHEVER WAY it cannot
     // — the device that went away under a live stream (the AAudio disconnect
