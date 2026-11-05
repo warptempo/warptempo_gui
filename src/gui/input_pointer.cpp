@@ -6695,9 +6695,12 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // shift-admitting ones alone (redesign_button_shift_admits owns that
         // membership), a press having a time whatever it landed on.
         const int64_t now = monotonic_ms();
+        // Designated: the record's fields are its contract, never a position.
         app.chrome_press = AppState::ChromePress{
-            AppState::ChromePress::Kind::Roster,
-            redesign_button_index(tc.id), mods.ctrl, true, now};
+            .kind     = AppState::ChromePress::Kind::Roster,
+            .index    = redesign_button_index(tc.id),
+            .ctrl     = mods.ctrl,
+            .press_ms = now};
         // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
@@ -6766,8 +6769,9 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // THE CHROME ACT, AT THE LIFT — the release half of act-at-release (architect
 // 2026-08-13). The lift runs the act iff it lands ON the armed target — the
 // published rect re-hit at the release's own coordinates, the derive doctrine
-// (the arm's `inside` bit serves the paint alone) — and iff every press-time
-// gate still holds, re-asked here exactly as the modal dialog's release
+// (the arm keeps no inside bit: there is no press look, 2026-11-04) — and iff
+// every press-time gate still holds, re-asked here exactly as the modal
+// dialog's release
 // re-asks its own: the surface may have changed under the hold (a dialog
 // opened by a key, the history view toggled), and an arm must never outrank
 // the live state. A lift anywhere else, or any gate gone, dispatches nothing —
@@ -7106,8 +7110,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
     arm.repeat_due_ms = now + gui.key_repeat_period_ms();
     const RedesignButton id = static_cast<RedesignButton>(arm.index);
     // PAUSED OFF THE BUTTON. The published rect re-hit at the pointer's
-    // remembered position — the lift's own derive doctrine, not the arm's
-    // `inside` bit, which serves the paint.
+    // remembered position — the lift's own derive doctrine (the arm keeps no
+    // inside bit: there is no press look, 2026-11-04).
     if (!app.pointer_in_window ||
         !redesign_button_hit(app, id, app.last_mouse_x, app.last_mouse_y))
         return;
