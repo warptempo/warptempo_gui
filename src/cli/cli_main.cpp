@@ -399,6 +399,11 @@ int main(int argc, char** argv) {
     }
     std::vector<float> render_buf;
     ep.output_buffer = &render_buf;
+    // The engine's required engaged-frames report, supplied and discarded: the
+    // GUI's limiter lamp reads it, the CLI's stdout pass-3 line already says
+    // the count (architect approval 2026-11-05).
+    std::vector<int64_t> limiter_engaged_frames;
+    ep.limiter_engaged_frames = &limiter_engaged_frames;
 
     // Trimmed renders hand the engine the trimmer's translated maps — the
     // engine renders them wholesale, ends at its map's last anchor, and

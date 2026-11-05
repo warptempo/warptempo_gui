@@ -167,7 +167,8 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 //
 // Every public method is thread-safe; callers need no external locking. A
 // single mutex_ guards the disk index, the byte counter (disk_bytes_),
-// lru_seq_, and the writer thread handoff. Large file I/O (disk-tier
+// lru_seq_, the limiter-frames map (insert_limiter_frames) and the writer
+// thread handoff. Large file I/O (disk-tier
 // reads/copies, the disk writer's blob write) happens outside the lock: a disk
 // lookup copies the entry's filename out under the lock, reads the wav
 // unlocked, and re-takes the lock only for the LRU bump or a drop-on-failure.
@@ -246,6 +247,37 @@ public:
                               std::shared_ptr<const std::atomic<bool>>
                                   cancel_token);
 
+    // THE LIMITER'S ENGAGED FRAMES, BESIDE THE ENTRY (architect 2026-11-05,
+    // the limiter lamp's data road): the spectral limiter's report of the
+    // render frames at which it engaged, already translated into the
+    // deliverable's own frame domain (the post crop applied), kept in an
+    // in-memory map keyed by the same fingerprint hash as the blob so a
+    // later cache hit replays the list with the audio. In-memory is
+    // equivalent in lifetime to the blob: the store is process-local (the
+    // disk directory goes at shutdown). do_render inserts it beside each
+    // of its two cache inserts — the target route's insert_master_floats and
+    // the disk route's insert — synchronously, the blob's own insert being a
+    // writer-thread job; an entry whose blob job is later dropped (a late
+    // cancel, an encode failure) therefore stands without a blob until the
+    // same hash is inserted again or shutdown — a few int64 per render,
+    // accepted and never evicted by the LRU, which walks disk entries. The
+    // entry is dropped with the blob's: LRU eviction, lookup's and
+    // publish_wav's drop-on-failure, and a same-hash overwrite by a
+    // DIFFERENT fingerprint (a same-fingerprint re-insert keeps the newer
+    // list, which the writer's later index overwrite must not erase).
+    // Thread-safe under mutex_ like every public method; a no-op when the
+    // store is disabled.
+    void insert_limiter_frames(const std::vector<uint8_t>& fingerprint,
+                               const std::vector<int64_t>& frames);
+
+    // The replay: on a hash match AND exact fingerprint compare, assigns the
+    // stored list to `out` whole and returns true; otherwise returns false
+    // with `out` untouched (the caller clears first — an archival-artifact
+    // load the cache never saw rendered in this process answers nothing, and
+    // the GUI's list stays empty: the lamp dark there).
+    bool lookup_limiter_frames(const std::vector<uint8_t>& fingerprint,
+                               std::vector<int64_t>& out);
+
 private:
     struct WriterJob;
     struct DiskEntry {
@@ -253,6 +285,10 @@ private:
         std::string          filename;
         uint64_t             size_bytes = 0;
         uint64_t             seq        = 0;
+    };
+    struct LimiterFramesEntry {
+        std::vector<uint8_t> fingerprint;
+        std::vector<int64_t> frames;
     };
 
     bool insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
@@ -270,6 +306,16 @@ private:
                     uint64_t& out_bytes);
     void join_writer();
     void remove_disk_pair(const std::string& wav_path);
+    // The frames entry goes with its blob's index entry (the contract at
+    // insert_limiter_frames). Both take mutex_ held by the caller:
+    // forget_limiter_frames at the unconditional drops (LRU eviction, the
+    // drop-on-failure sites), forget_limiter_frames_unless at the two
+    // same-hash overwrites, where the entry for a DIFFERENT fingerprint goes
+    // and the entry for the fingerprint being written — inserted
+    // synchronously ahead of the writer-thread job — stays.
+    void forget_limiter_frames(uint64_t h);
+    void forget_limiter_frames_unless(uint64_t h,
+                                      const std::vector<uint8_t>& keep_fp);
 
     static constexpr uint64_t kDiskBudgetBytes = 10ull * (1ull << 30); // 10 GiB
 
@@ -282,4 +328,5 @@ private:
     std::thread                             writer_;
     std::unordered_map<uint64_t, DiskEntry> disk_index_;
     uint64_t                                disk_bytes_ = 0;
+    std::unordered_map<uint64_t, LimiterFramesEntry> limiter_frames_;
 };

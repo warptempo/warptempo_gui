@@ -132,6 +132,20 @@ struct RenderRequest {
     // authoring-facing.
     std::vector<float>* output_buffer = nullptr;
 
+    // WHERE THE SPECTRAL LIMITER ENGAGED, FOR THE TARGET VIEW (architect
+    // 2026-11-05, the limiter lamp's data road). Nullable; set beside
+    // output_buffer by the target-view dispatcher alone and null on the disk
+    // route. On Success — and only then, at the buffer route's last gate —
+    // do_render assigns it WHOLE: the limiter's engaged render frames
+    // (EngineParams::limiter_engaged_frames) translated through the trim
+    // plan's post crop when one stands, so every entry is an index into
+    // *output_buffer's frames, sorted ascending, empty when the limiter
+    // engaged nowhere. do_render always feeds the engine its own local
+    // vector, so the engine's required field is satisfied whatever this
+    // pointer is. The same list goes into the render cache beside the blob
+    // (RenderCache::insert_limiter_frames) so a later cache hit replays it.
+    std::vector<int64_t>* limiter_engaged_frames = nullptr;
+
     // Batch render output. When `batch_folder` is non-empty, do_render
     // writes its final `.wav` to `<batch_folder>/<batch_basename>.wav`
     // and attempts the per-render source-domain

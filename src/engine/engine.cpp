@@ -110,7 +110,7 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // (architect approval 2026-08-02, the terminal capitalization pass —
 // text-only, otherwise byte-identical output). The severity tag takes the
 // capital; identifier tokens after it (warp_frame_map, output_buffer,
-// source_frame_schedule) keep their spelling, and the bracketed pass/status
+// limiter_engaged_frames, source_frame_schedule) keep their spelling, and the bracketed pass/status
 // tags and the dot-leader progress rows are structured readout rather than
 // prose, so they are unchanged.
 bool validate_warp_frame_map_strictly_ascending(const std::vector<WarpFrameMapSegment>& map) {
@@ -180,6 +180,15 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     if (p.output_buffer == nullptr) {
         std::cerr << "Error: output_buffer is required "
                      "(the engine is buffer-out only).\n";
+        return EngineResult::Failed;
+    }
+    // The limiter's engaged-frames report is required the same way (architect
+    // approval 2026-11-05; the field's contract at engine.h): a
+    // crash-prevention breach check, breach-only — both orchestrators supply
+    // one, the CLI discarding it.
+    if (p.limiter_engaged_frames == nullptr) {
+        std::cerr << "Error: limiter_engaged_frames is required "
+                     "(the spectral limiter reports where it engaged).\n";
         return EngineResult::Failed;
     }
 
@@ -348,10 +357,13 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     // Pass 3: the spectral limiter, applied in place on the emitted buffer.
     // The peak stage and the encode both live orchestrator-side, downstream
-    // of the engine.
+    // of the engine. The limiter fills the caller's engaged-frames list here
+    // and nowhere else (architect approval 2026-11-05; the field's contract
+    // at engine.h) — a report beside the render, not a change to it.
     {
         std::vector<float>& buf = *p.output_buffer;
-        limiter.process(audio_stft, buf);          // spectral -0.3
+        limiter.process(audio_stft, buf,
+                        *p.limiter_engaged_frames);  // spectral -0.3
         if (cancel_pending()) {
             std::cerr << "[cancelled]\n";
             audio_stft.cleanup();

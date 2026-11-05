@@ -7874,6 +7874,22 @@ struct AppState {
     // callback; read by the playback rebind. Zero before the first
     // successful target render in this session.
     int64_t target_buffer_frames = 0;
+    // WHERE THE SPECTRAL LIMITER ENGAGED IN target_buffer (architect
+    // 2026-11-05, the limiter lamp's data road): the render frames at which
+    // the limiter resolved a peak, in the buffer's OWN domain — indices into
+    // target_buffer's frames, the trim's post crop already applied — sorted
+    // ascending, one entry per engaged place, empty when the limiter engaged
+    // nowhere. WRITTEN ONLY BY GuiTargetRender, and REPLACED WHOLE on every
+    // road that fills target_buffer: the fresh render's worker, through
+    // RenderRequest::limiter_engaged_frames (the pipeline assigns it beside
+    // the buffer at its last gate); the two reuse rungs, through
+    // RenderCache::lookup_limiter_frames (a cache hit replays the list the
+    // render left beside its blob; an archival-artifact load the cache never
+    // saw rendered answers nothing and the list is EMPTY — the lamp dark
+    // there); and cleared wherever target_buffer is cleared. No reader yet:
+    // the lamp that lights during target playback where the playhead passes
+    // one of these frames is the next arc's.
+    std::vector<int64_t> target_limiter_frames;
     // The buffer's domain anchor — the full-target-frame coordinate that
     // target_buffer[0] represents — is NOT app state: it travels with the
     // playback bind as GuiPlayback's domain offset, stamped at production time

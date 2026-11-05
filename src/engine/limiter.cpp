@@ -216,10 +216,18 @@ doubles or by N_lim, well under one megabyte per output minute combined.
 All allocations are function-local and freed at every return; nothing persists
 across renders.
 */
-void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
+void Limiter::process(AudioSTFT& stft, std::vector<float>& render,
+                      std::vector<int64_t>& engaged_frames) {
     const int channels    = stft.channels;
     const int sample_rate  = stft.src_info.samplerate;
     const int64_t render_frames = static_cast<int64_t>(render.size()) / channels;
+
+    // The engaged-frames report (architect approval 2026-11-05; contract at
+    // the declaration) starts empty on every call, so each early return
+    // below — the cancellations, the already-compliant render, the 0-peaks
+    // render — hands back an empty list without a line of its own. It is
+    // filled once, at the end, from `resolved`.
+    engaged_frames.clear();
 
     const double ceiling = std::pow(10.0, kSpectralLimiterCeilingDbfs / 20.0);
 
@@ -671,6 +679,29 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         for (int ch = 0; ch < channels; ++ch)
             render[dst + ch] = meas_ola[src + ch];
     }
+
+    // The engaged-frames report (architect approval 2026-11-05): every
+    // entry of `resolved` — the popped peaks, the indirectly-conforming ones
+    // and the cap-retired ones alike, each a place the solver engaged — in
+    // render coords, post = pre - N_lim (the file's head; the copy-back loop
+    // just above reads render frame i from pre position i + N_lim, the same
+    // shift). Peaks are detected over the kept region [valid_lo, valid_hi)
+    // only, so every post position lies in [0, render_frames); the range
+    // test is the contract's own statement, not a reachable drop. One frame
+    // per engaged place: `resolved` holds one entry per pass of a lineage
+    // and per channel, so sort and keep one of each run of equal frames — a
+    // lamp on the tick, not a count. A read of the solver's output after the
+    // render is final: no arithmetic, ordering or I/O above changes.
+    engaged_frames.reserve(resolved.size());
+    for (const Peak& rp : resolved) {
+        const int64_t post = rp.sample_idx - N_lim;
+        if (post < 0 || post >= render_frames) continue;
+        engaged_frames.push_back(post);
+    }
+    std::sort(engaged_frames.begin(), engaged_frames.end());
+    engaged_frames.erase(
+        std::unique(engaged_frames.begin(), engaged_frames.end()),
+        engaged_frames.end());
 
     // The [pass 3/3] progress header goes to stdout.
     std::cout << "[pass 3/3] spectral limiter................. "

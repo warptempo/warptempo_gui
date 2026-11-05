@@ -614,6 +614,7 @@ void RenderCache::shutdown() {
         std::lock_guard<std::mutex> lock(mutex_);
         disk_index_.clear();
         disk_bytes_ = 0;
+        limiter_frames_.clear();
     }
     if (!dir_.empty()) {
         std::error_code ec;
@@ -678,6 +679,7 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
                 it->second.fingerprint == fp) {
                 disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
                 disk_index_.erase(it);
+                forget_limiter_frames(h);
                 drop_pair = true;
             }
         }
@@ -685,6 +687,55 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
     }
 
     return false;
+}
+
+void RenderCache::insert_limiter_frames(const std::vector<uint8_t>& fp,
+                                        const std::vector<int64_t>& frames) {
+    // Contract at the declaration. Synchronous and small (a few int64 per
+    // render), so unlike the blob it needs no writer job; an overwrite of
+    // the same hash replaces the entry whole, a collision's included — the
+    // blob's own overwrite rule.
+    if (!enabled_) {
+        return;
+    }
+    const uint64_t h = fnv1a64(fp);
+    std::lock_guard<std::mutex> lock(mutex_);
+    LimiterFramesEntry e;
+    e.fingerprint = fp;
+    e.frames      = frames;
+    limiter_frames_[h] = std::move(e);
+}
+
+bool RenderCache::lookup_limiter_frames(const std::vector<uint8_t>& fp,
+                                        std::vector<int64_t>& out) {
+    // Contract at the declaration: a hash match confirmed by the exact
+    // fingerprint compare (a collision is a miss, never a wrong hit, as for
+    // the blob). No LRU bump — the list rides the blob's recency.
+    if (!enabled_) {
+        return false;
+    }
+    const uint64_t h = fnv1a64(fp);
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = limiter_frames_.find(h);
+    if (it == limiter_frames_.end() || it->second.fingerprint != fp) {
+        return false;
+    }
+    out = it->second.frames;
+    return true;
+}
+
+void RenderCache::forget_limiter_frames(uint64_t h) {
+    // mutex_ held by the caller (the declaration's rule).
+    limiter_frames_.erase(h);
+}
+
+void RenderCache::forget_limiter_frames_unless(
+        uint64_t h, const std::vector<uint8_t>& keep_fp) {
+    // mutex_ held by the caller (the declaration's rule).
+    auto it = limiter_frames_.find(h);
+    if (it != limiter_frames_.end() && it->second.fingerprint != keep_fp) {
+        limiter_frames_.erase(it);
+    }
 }
 
 bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
@@ -750,6 +801,7 @@ bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
             it->second.fingerprint == fp) {
             disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
             disk_index_.erase(it);
+            forget_limiter_frames(h);
             drop_pair = true;
         }
     }
@@ -863,6 +915,9 @@ void RenderCache::start_writer_job(WriterJob job) {
                 disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
                 disk_index_.erase(it);
             }
+            // A same-hash overwrite: another fingerprint's frames go with its
+            // blob; this fingerprint's own, inserted ahead of this job, stay.
+            forget_limiter_frames_unless(job.h, job.fp);
         }
         remove_disk_pair(job.path);
     }
@@ -922,6 +977,8 @@ void RenderCache::start_writer_job(WriterJob job) {
                     disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
                     disk_index_.erase(it);
                 }
+                // The same-hash overwrite rule as the disk job's above.
+                forget_limiter_frames_unless(job.h, job.fp);
             }
             remove_disk_pair(job.path);
             write_disk_blob();
@@ -943,6 +1000,7 @@ void RenderCache::evict_disk_until(uint64_t target_max) {
             if (it->second.seq < victim->second.seq) victim = it;
         remove_disk_pair(dir_ + "/" + victim->second.filename);
         disk_bytes_ -= victim->second.size_bytes;
+        forget_limiter_frames(victim->first);
         disk_index_.erase(victim);
     }
 }

@@ -860,6 +860,12 @@ RenderOutcome do_render(const RenderRequest& req,
         std::vector<float>* out_buf =
             req.output_buffer ? req.output_buffer : &render_buf;
         ep.output_buffer = out_buf;
+        // The engine's required engaged-frames report (the field's contract
+        // at engine.h) always lands in this local, on both routes: the
+        // engine's render domain, translated below through the post crop
+        // and published to the request's out pointer and the cache.
+        std::vector<int64_t> limiter_engaged_frames;
+        ep.limiter_engaged_frames = &limiter_engaged_frames;
         // Trimmed renders hand the engine the trimmer's translated maps —
         // the engine renders them wholesale, ends at its map's last anchor,
         // and stays trim-ignorant. Untrimmed: the full pair verbatim.
@@ -932,6 +938,28 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
 
+        // THE ENGAGED FRAMES FOLLOW THE CROP (architect 2026-11-05): the
+        // limiter reported them in the engine's render domain, and
+        // finish_render has just applied the trim plan's post crop to the
+        // buffer (apply_post_trim, trimmer.h: drop post.begin_sample frames
+        // from the head and keep post.samples), so the list takes the same
+        // cut — frame' = frame - begin_sample, kept iff 0 <= frame' <
+        // samples — and every entry is an index into the buffer as it now
+        // stands, on both routes. Untrimmed, the list is the engine's as is.
+        // Ascending order survives a constant shift and a range filter.
+        if (trim_plan) {
+            const int64_t begin = trim_plan->post.begin_sample;
+            const int64_t kept  = trim_plan->post.samples;
+            std::vector<int64_t> cropped;
+            cropped.reserve(limiter_engaged_frames.size());
+            for (const int64_t frame : limiter_engaged_frames) {
+                const int64_t shifted = frame - begin;
+                if (shifted < 0 || shifted >= kept) continue;
+                cropped.push_back(shifted);
+            }
+            limiter_engaged_frames = std::move(cropped);
+        }
+
         if (req.output_buffer) {
             // Target playback auditions the deliverable lattice —
             // finish_render just snapped the limited buffer to PCM_24 in
@@ -945,11 +973,15 @@ RenderOutcome do_render(const RenderRequest& req,
                                        static_cast<size_t>(src_ch))
                 : 0;
             // The fingerprint is always computed; the insert additionally
-            // requires a non-empty buffer.
+            // requires a non-empty buffer. The engaged frames go in beside
+            // the blob, under the same gate, so a later cache hit replays
+            // them with the audio (the contract at insert_limiter_frames).
             if (inserted_frames > 0) {
                 req.render_cache->insert_master_floats(
                     fingerprint, *req.output_buffer, src_ch, src_sr,
                     inserted_frames, cancel_token);
+                req.render_cache->insert_limiter_frames(
+                    fingerprint, limiter_engaged_frames);
             }
         }
 
@@ -961,6 +993,12 @@ RenderOutcome do_render(const RenderRequest& req,
         // it to target view.
         if (req.output_buffer) {
             if (cancel_requested()) return cancelled_outcome();
+            // Past the last gate: the engaged frames are published to the
+            // dispatcher whole, beside the buffer it is about to bind (the
+            // field's contract at RenderRequest::limiter_engaged_frames).
+            if (req.limiter_engaged_frames) {
+                *req.limiter_engaged_frames = std::move(limiter_engaged_frames);
+            }
         }
 
         // Atomic publish: staging → final. Buffer path skips this — the
@@ -994,6 +1032,11 @@ RenderOutcome do_render(const RenderRequest& req,
                 } else if (encoded_frames > 0) {
                     req.render_cache->insert(fingerprint, wav_blob, src_ch,
                                              src_sr, encoded_frames);
+                    // Beside the blob, as on the buffer route: a target-view
+                    // cache hit on this archival render's entry replays the
+                    // list too (the contract at insert_limiter_frames).
+                    req.render_cache->insert_limiter_frames(
+                        fingerprint, limiter_engaged_frames);
                 }
             }
             return finalize_published_wav("success");

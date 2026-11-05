@@ -29,6 +29,21 @@ struct EngineParams {
     // reserving.
     std::vector<float>* output_buffer = nullptr;
 
+    // WHERE THE SPECTRAL LIMITER ENGAGED (architect approval 2026-11-05):
+    // required non-null like output_buffer (the engine refuses a null at init,
+    // the same loud breach check). Pass 3 writes it, and nothing else does:
+    // the render-frame positions at which the limiter resolved a peak —
+    // indices into *output_buffer's frames, the engine's own render domain
+    // BEFORE any post crop (a trimmed caller translates through its
+    // PostTrim) — sorted ascending, one entry per engaged place, EMPTY when
+    // the limiter applied no attenuation or the render was cancelled
+    // (Limiter::process owns the contract). It exists for the GUI's limiter
+    // lamp, which lights during target playback where the playhead passes
+    // an engaged frame; the CLI supplies a vector and discards it (its
+    // stdout pass-3 line already reports the count). Caller-owned; must
+    // outlive run_warptempo_engine.
+    std::vector<int64_t>* limiter_engaged_frames = nullptr;
+
     std::vector<WarpFrameMapSegment> warp_frame_map;  // rounded + precise breakpoints
 
     // Phase reset position list. Each entry is an exact double position in

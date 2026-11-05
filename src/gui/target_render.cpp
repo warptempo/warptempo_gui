@@ -526,6 +526,13 @@ void GuiTargetRender::dispatch_render_now() {
         // stays false since no worker round trip is pending. Live state IS the
         // request state on this synchronous rung, so the dispatch's own verdict
         // is exact here.
+        // The limiter's engaged frames replay with the audio (the contract
+        // at AppState::target_limiter_frames): cleared first, so a blob
+        // whose list is gone — a same-hash collision's overwrite — binds an
+        // empty list, never a stale one.
+        app.target_limiter_frames.clear();
+        render_cache.lookup_limiter_frames(last_fingerprint_,
+                                           app.target_limiter_frames);
         dispatched_buffer_start_frame_ = verdict.start_frame;
         // Reuse skips do_render, whose trim-plan block owns the fallback
         // line on fresh dispatches — so the ruled one-line-per-resolve
@@ -577,6 +584,14 @@ void GuiTargetRender::dispatch_render_now() {
             post_read == candidate_identity) {
             // Live state IS the request state on this synchronous rung,
             // so the dispatch's own verdict is exact here.
+            // The engaged frames: the cache answers only when this process
+            // rendered the same recipe (the blob may be gone or still
+            // encoding while its list stands); an artifact the cache never
+            // saw rendered leaves the list EMPTY — the lamp dark (the
+            // contract at AppState::target_limiter_frames).
+            app.target_limiter_frames.clear();
+            render_cache.lookup_limiter_frames(last_fingerprint_,
+                                               app.target_limiter_frames);
             dispatched_buffer_start_frame_ = verdict.start_frame;
             // Reuse skips do_render's trim-plan block; print the fallback
             // signal here — same rationale as the cache rung above (this
@@ -636,9 +651,11 @@ void GuiTargetRender::dispatch_render_now() {
     // Clear the target buffer; do_render appends synthesised samples
     // into it via std::vector::insert. The buffer's domain anchor is stamped
     // below from the request's trim values and travels to the completion rebind
-    // through dispatched_buffer_start_frame_.
+    // through dispatched_buffer_start_frame_. The engaged-frames list goes
+    // with the buffer (the contract at AppState::target_limiter_frames).
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
+    app.target_limiter_frames.clear();
 
     RenderRequest req = build_render_request(
         app.source_audio_path, app.warpmarkers.markers(),
@@ -665,6 +682,12 @@ void GuiTargetRender::dispatch_render_now() {
     // chain — the target-view preview gets the same cropping and limiting
     // as the disk path.
     req.output_buffer = &app.target_buffer;
+    // The limiter's engaged frames land beside the buffer, assigned whole by
+    // do_render at its last gate on Success alone; the worker owns both
+    // members until on_render_done, exactly as it owns target_buffer (the
+    // contracts at RenderRequest::limiter_engaged_frames and
+    // AppState::target_limiter_frames).
+    req.limiter_engaged_frames = &app.target_limiter_frames;
     // The process's single RenderCache (this struct's own member, wired from
     // main.cpp). do_render uses it on this path only to queue the writer-thread
     // canonical encode after a successful limited target render.
@@ -702,9 +725,11 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     } else if (outcome == RenderOutcome::Cancelled) {
         std::fprintf(stderr, "warptempo_gui: Target render cancelled\n");
         // Leave the target buffer's frames count at 0 — playback
-        // gating checks this to refuse Space.
+        // gating checks this to refuse Space. The engaged-frames list goes
+        // with the buffer.
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
+        app.target_limiter_frames.clear();
         // THE RE-PUMP BELOW IS WHAT MAKES ensure_ready'S GENERATION GUARD SAFE
         // (architect 2026-09-02): a cancelled render whose successor is
         // parked in pending_ for the current generation dispatches from
@@ -776,6 +801,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
                              "Target render failed");
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
+        app.target_limiter_frames.clear();
     }
 
     if (outcome != RenderOutcome::Success && !run_active_ &&
@@ -838,6 +864,7 @@ void GuiTargetRender::complete_successful_buffer(
             "warptempo_gui: Target render superseded; discarding\n");
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
+        app.target_limiter_frames.clear();
         // THE "Updating..." LABEL DELIBERATELY STAYS UP, unlike every other
         // road out of a completion: the update is not over. pending_ stands by
         // construction here (the mutation that superseded this render was a
