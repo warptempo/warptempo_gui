@@ -1245,8 +1245,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // their own box, its height the pad, the cap's rows and the pad
 // (time_field_h_px, render.h): the 39-row field on the tablet at 200 %
 // (12 + 15 + 12) puts the Program face's 15.14-row cap band at row
-// floor((39 + 15.14) / 2) = 27,
-// the 26-row field at 200 % (8 + 10 + 8) its 10.32 at row 18.
+// floor((39 + 15.14) / 2) = 27.
 // AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop until the label's removal
 // (2026-10-14).
@@ -2846,10 +2845,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2279) — on the tablet's 2304 the faces on x 788..2279 (the skips
     // 788..929, the verbs 974..1547, the walk 1592..1877, the nudge
     // 1922..2279, Play 2210..2279); the clock's field on the well's first
-    // column, from x 24 — the cell (4.50 em of Liberation Sans Bold
-    // advances, seven digits, the colon and the point, in the program face's
-    // 22 px, 100 px ceiled) and its two 12-px pads, a 124-px field, x
-    // 24..147 — then the name's first ink 14 px past it (x 162), the state
+    // column, from x 24 — the cell (the widest-digit specimen "DD:DD.DDD"'s ink box in the
+    // program face's 22 px, kerning off, floored first ink to ceiled last
+    // ink: 99 px; kTimeShape's block) and its two 12-px pads, a 123-px field,
+    // x 24..146 — then the name's first ink 14 px past it (x 161), the state
     // line's 14 px past the name's advance, clipped one run gap short of the
     // block (x 744). On a 1920-px window at 100 % (faces 35, the key gap 1,
     // the run gap 22, the program face 11 px) the block is 746 px of faces

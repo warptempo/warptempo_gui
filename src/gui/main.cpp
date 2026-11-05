@@ -564,8 +564,8 @@ GuiRect waveform_area(const AppState& a) {
     // 1000 % ceiling (architect 2026-10-05) they PASS the tablet's 1440 rows
     // at key_height's default 17: the band 360 + 170 + 190 = 720 and row 8
     // 190 + 170 + 190 = 550 take 1270 before the well's lanes (the trim 100,
-    // the foot lines 10 + 10, the ruler's and the marker lane's round their
-    // 80-device-px faces), so the top of the vocabulary lands on this floor
+    // the foot lines 10 + 10, the ruler round its 80-device-px face, the
+    // marker lane round the time field's 110), so the top of the vocabulary lands on this floor
     // (since the rebase of 2026-11-05: one W is 10 device px there). (The
     // host runs far below it: the tablet at 200 % on its 1440-tall surface,
     // where they take 355 at the default key and leave the waveform 1085,

@@ -78,8 +78,9 @@
 // ROW COUNT IS NO FIELD HERE: it is a skin length, 5 W through scaled_px,
 // rounded at the element (architect 2026-10-26 ~13:40, "why not just
 // simple scale? tablet is only real surface"; render.h's cue_triangle_rows
-// and kCueTriangleRowsW, the one owner — 10 rows at 200 %, 5 at 100 %),
-// no whole count of W. THE
+// and kCueTriangleRowsW, the one owner — 10 rows at 200 %, 5 at 100 %: the
+// fill is a whole 5 W; its staircase's CELLS are one device px each,
+// cue_triangle_unit_px, the distinct thing that does not scale). THE
 // LABEL'S LENGTHS ARE SKIN LENGTHS TOO, scaled with the text they place
 // (the text round, architect 2026-11-03): the fill's pad, the segment gap
 // and the flag editor's outline (render.h's cue_fill_pad_px,

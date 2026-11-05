@@ -420,11 +420,12 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // together and every word fits as well. A WORD THAT FAILS ITS
 // KEY UNDER AN EXTREME TUNING SIMPLY OVERHANGS IT — a tuning key's own
 // consequence, centered on its key like every cap: at the default box "Paste"
-// is the first to overhang, from osk_font_px 14 ("Copy" from 15, "&123" from
-// 31, "Shift" from 33, "ABC" from 34, "Enter" from 39, "Tb" from 40, "Esc"
-// from 42; "Bksp" not until 51, past osk_font_px's ceiling of 48,
-// device_config.h's grammar), and at osk_font_px 24 "Paste" overhangs at
-// osk_key_w 42 and below.
+// is the first to overhang, from osk_font_px 14 W ("Copy" from 15, "&123"
+// from 16, "Shift" from 17, "ABC" from 17, "Enter" from 20, "Tb" from 20,
+// "Esc" from 21; "Bksp" not until 26, past osk_font_px's ceiling of 24 W,
+// device_config.h's grammar; each threshold is the ceil of the 300 %
+// measurement's device px halved to W, the rebase of 2026-11-05), and at
+// osk_font_px 12 "Paste" overhangs at osk_key_w 21 and below.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the lit fill FFAD56, its cap
@@ -588,7 +589,8 @@ inline bool stands(const AppState& a) {
 // directly on the keyboard with one pad between — ARE RETIRED, "we should
 // stop doing that". The dialog's surface is the modal family's box and
 // controls row; its band, its pad and its line went with the overlay.)
-//   ALONE (the flag editor), AT THE DEFAULTS (osk_key_w 48, osk_key_h 60):
+//   ALONE (the flag editor), AT THE DEFAULTS (osk_key_w 24, osk_key_h 30 W,
+//   48 x 60 device px on the tablet):
 //     on the tablet (200 %, 2304 x 1440) the band 1104–1439 (14 + 308 + 14) across x
 //     0..2303, its first key row's top 1118, the block of keys x 828..1475
 //     (648 wide, 828 clear each side). Row 8 is under it

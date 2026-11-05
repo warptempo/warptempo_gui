@@ -842,8 +842,8 @@ inline std::optional<int> parse_osk_key_size(std::string_view v) {
 // The range: 6 W, 12 device px, is the smallest em at which a cap stays
 // legible on the tablet; 24 W is twice the default, the em by which every
 // function word but "Bksp" and "Space" already overhangs its key at the
-// default key box ("Esc", the last of them, from em 22 W; "Bksp", 107
-// device px at em 24 W in the 2.5u key's face, not until 29), so a larger
+// default key box ("Esc", the last of them, from em 21 W; "Bksp", 118
+// device px at em 24 W against the 2.5u key's 123-px face, not until 26), so a larger
 // cap would only overhang more (onscreen_keyboard.h's EVERY WORD FITS ITS
 // KEY paragraph, cap_word; architect 2026-10-29 night). The settings page
 // opens the LINE EDITOR on it, not a value list (19 values is no short
