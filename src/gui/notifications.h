@@ -787,10 +787,10 @@ inline int notification_glyph_seat_w_px(double ink_px) {
 // THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN: kNotificationGlyphGapAt300
 // = 8 DEVICE PX AT 300 % (4 W), skin_px, rounded at the element. A number of
 // the cards' own, parted from the logo lane's brand gap, kLogoBrandGapAt300
-// (16): the two were one number (the retired caption's title gap, a glyph then
-// words, architect 2026-10-24) until the brand gap went to 16 on the logo
-// lane's mocks (e1 / e2, render.h's LOGO LANE block), and the architect kept
-// the cards' 8 the same night (2026-11-04: "keep the cards spacing").
+// (14): the two were one number (the retired caption's title gap, a glyph then
+// words, architect 2026-10-24) until the brand gap left 8 on the logo lane's
+// mocks (e1 / e2, render.h's LOGO LANE block), and the architect kept the
+// cards' 8 the same night (2026-11-04: "keep the cards spacing").
 inline constexpr double kNotificationGlyphGapAt300 = 8.0;
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's

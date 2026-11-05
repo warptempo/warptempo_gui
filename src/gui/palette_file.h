@@ -44,13 +44,15 @@
 //   waveform_canvas  393939  the canvas, Live's darker band
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
 //                            the lit lamp's outer bar
-//   waveform_core    1C1C1C  THE CORE (architect 2026-11-04, mock f1; its
-//                            tone ruled 1C1C1C in session 33, mocks m1..m7
-//                            of tmp/s33: "1c works"): the magnified
-//                            picture's inner bar, a solid fill three levels
+//   waveform_core    1E1E1E  THE CORE (architect 2026-11-04, mock f1; its
+//                            tone ruled 1E1E1E the same night, his pick i1
+//                            of tmp/s38 over i0, session 33's 1C1C1C — NOT
+//                            a measured Live tone: his pick on the real lit
+//                            capture, on his glass): the magnified
+//                            picture's inner bar, a solid fill five levels
 //                            over the ink ("the absence of it would
 //                            indicate a quiet section"; render.h's THE
-//                            CORE, where the 1A1A1A record is)
+//                            CORE, where the tone's record is)
 //   grid             313131  the quarter lines of each channel's half, the
 //                            horizontals alone (render_canvas) — Live's
 //                            antialiased beat line as one solid px on the
@@ -113,7 +115,9 @@
 
 inline constexpr uint32_t kPaletteCanvas   = 0x393939;
 inline constexpr uint32_t kPaletteInk      = 0x191919;
-inline constexpr uint32_t kPaletteCore     = 0x1C1C1C;
+// THE CORE'S TONE IS HIS OWN PICK, NOT LIVE'S NUMBER (architect 2026-11-04
+// night, pick i1 of tmp/s38 on the real lit capture; the role table above).
+inline constexpr uint32_t kPaletteCore     = 0x1E1E1E;
 inline constexpr uint32_t kPaletteGrid     = 0x313131;
 inline constexpr uint32_t kPaletteCenter   = 0x191919;
 inline constexpr uint32_t kPaletteCue      = 0xFFAD56;

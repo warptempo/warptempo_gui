@@ -762,9 +762,9 @@ void install_true_colors(bool on);
 // rule is at render_waveform_columns' declaration), THE OUTER IN THE INK AND
 // THE INNER A SOLID FILL OVER IT in the `waveform_core` role (architect
 // 2026-11-04, mock f1, THE CORE below; antialiased with its shape on the GPU
-// since 2026-10-30) — 1C1C1C over the 191919 ink on the 393939 canvas, THREE
-// LEVELS OVER THE INK (architect 2026-11-04, session 33: "1c works"; the
-// tone's record at THE CORE below; palette_file.h). THE PLATE WEARS THE INK AND THE
+// since 2026-10-30) — 1E1E1E over the 191919 ink on the 393939 canvas, FIVE
+// LEVELS OVER THE INK (architect 2026-11-04 night, his pick i1 of tmp/s38,
+// not a Live tone; the tone's record at THE CORE below; palette_file.h). THE PLATE WEARS THE INK AND THE
 // CORE AS PUBLISHED (the sink writes their words, GuiCanvasSink::plate),
 // so the pair rides the cache's fingerprint (waveform_plate_inks) and
 // publishes with the plate; the canvas is laid live under the plate's
@@ -1143,14 +1143,17 @@ constexpr int kMinWindowHeightPx = 480;
 //     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
 //     equipment … just had a stylized brand name") — in Liberation Sans
 //     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the text
-//     tone kTextInk, its first ink kLogoBrandGapAt300 = 16 px (8 W;
-//     architect 2026-11-04 night, mocks e1 / e2 of tmp/s36: "it needs more
-//     padding from the text … gap at 16 seems better" — the 8 of the unit
-//     of 2, mock v4, replaced) after the note's last ink column
-//     (text_shape::ink_left_px). (The gap is the retired caption's title
-//     gap. The cards' glyph-seat-to-text gap read it too, a glyph then words,
-//     until this ruling; the architect kept the cards' 8 the same night
-//     ("keep the cards spacing"), now its own kNotificationGlyphGapAt300,
+//     tone kTextInk, its first ink kLogoBrandGapAt300 = 14 px (7 W;
+//     architect 2026-11-04 night, his pick g2 of tmp/s38, one W less than
+//     the 16 of mocks e1 / e2 of tmp/s36 the same night, after the note
+//     went to 18; the e1 / e2 reason, "it needs more padding from the
+//     text", still the gap's reason against the unit of 2's 8, mock v4)
+//     after the note's last ink column (text_shape::ink_left_px): at 300 %
+//     the note's ink on columns 24..35, the brand's first ink column 50.
+//     (The gap is the retired caption's title gap. The cards'
+//     glyph-seat-to-text gap read it too, a glyph then words, until the
+//     gap left 8; the architect kept the cards' 8 the same night ("keep the
+//     cards spacing"), now its own kNotificationGlyphGapAt300,
 //     notifications.h.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
@@ -1215,7 +1218,7 @@ constexpr int kMinWindowHeightPx = 480;
 inline constexpr double kLogoLaneAt300           = 72.0;
 inline constexpr double kLogoNoteInkAt300        = 18.0;
 inline constexpr double kLogoNoteLiftAt300       = 2.0;
-inline constexpr double kLogoBrandGapAt300       = 16.0;
+inline constexpr double kLogoBrandGapAt300       = 14.0;
 inline constexpr double kLogoGlyphInkAt300       = 22.0;
 inline constexpr double kLogoGlyphAirAt300       = 2.0;
 inline constexpr const char* kLogoBrand = "Warptempo";
@@ -2988,7 +2991,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // that edge's last subrow, grown to a line). The composite
 // puts the inner over the outer, so where the two overlap the inner wins: the
 // reading is the source's bar, set off from the levelled bar behind it by
-// the core's three levels over the ink (THE CORE, below), the core's relative
+// the core's five levels over the ink (THE CORE, below), the core's relative
 // thickness the loudness — at or under the
 // compressor's threshold the core is half the raw bar (x E), over it thinner
 // by its ratio.
@@ -2998,17 +3001,20 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE CORE (architect 2026-11-04, mock f1, reversing the lit outline of
 // 2026-09-27) — THE GROWN INNER SHAPE (the inner bars of all columns with
 // their contour, dilated by the `waveform_grow` key) FILLED SOLID in the
-// `waveform_core` role, 1C1C1C, THREE LEVELS OVER THE 191919 INK (architect
-// 2026-11-04, session 33, on mocks m1..m7 of tmp/s33 — core_tones.py: the
-// REAL capture of the lit inner, the core's own pixels recolored one tone
-// each — "1c works"; mock f1's word stands: "the absence of it would
-// indicate a quiet section"). THE TONE'S RECORD: 1A1A1A, one level over the
-// ink, picked the same morning on mock f1 ("1e is already quite bright …
-// just a tiny amt of brightness is all that's needed"), read nearly
-// invisible on the real compressed bar, because f1's dummy inner was a
-// smooth band a third of the plate's height and one level over the ink
-// needs a large contiguous area to register; 1D1D1D was offered and
-// declined for not being a Live tone. The core lies over
+// `waveform_core` role, 1E1E1E, FIVE LEVELS OVER THE 191919 INK (architect
+// 2026-11-04 night, his pick i1 of tmp/s38 over i0, the 1C1C1C below, both
+// the REAL capture of the lit inner with the core's own pixels recolored —
+// NOT a measured Live tone: his pick on his glass; mock f1's word stands:
+// "the absence of it would indicate a quiet section"). THE TONE'S RECORD:
+// 1A1A1A, one level over the ink, picked the same morning on mock f1 ("1e
+// is already quite bright … just a tiny amt of brightness is all that's
+// needed" — f1's dummy inner), read nearly invisible on the real
+// compressed bar, because f1's dummy inner was a smooth band a third of
+// the plate's height and one level over the ink needs a large contiguous
+// area to register; 1C1C1C, three levels, ruled in session 33 on mocks
+// m1..m7 of tmp/s33 (core_tones.py, the real capture recolored one tone
+// each: "1c works"), where 1D1D1D was declined for not being a Live tone;
+// 1E1E1E replaced it that night on his own look. The core lies over
 // the outer bar's ink: the composite is the core at the grown inner's
 // coverage over the ink at the shape's (kListFragmentShader's head), so the
 // inner keeps its shape and its antialiased fringe and draws no line. No
