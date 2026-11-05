@@ -233,13 +233,16 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // nav_zoom_px_per_level() below and the one reader divides by that accessor,
 // never by this constant. The scaling rule and its rationale are stated there.
 //
-// Architect-tunable on the rig, exactly as the vertical one is. 217.5 W
-// SINCE THE REBASE TO 200 % (architect 2026-11-05): the 145 Windows px of
-// 2026-10-02 (the laptop pixel's 200 re-authored) times 1.5, so the rate's
-// device travel on the tablet is what it was — NOT A PAINTED LENGTH, a rate,
-// so it is KEPT EXACT rather than rounded to a whole W: every zoom gesture
-// lands where it did.
-constexpr double kNavZoomPxPerLevel = 217.5;
+// Architect-tunable on the rig, exactly as the vertical one is. 218 W, A
+// WHOLE W BY HIS RULING OF 2026-11-05 ("round each up"): the 145 Windows px
+// of 2026-10-02 (the laptop pixel's 200 re-authored) times 1.5 at the rebase
+// to 200 % the same day gave 217.5 W, which stood exact for a few hours as a
+// rate rather than a painted length, and was then rounded UP with the other
+// two thresholds (kTooltipHoverSlopPx, render.h; kRulerMinMinorPitchPx,
+// paint_handler.cpp) so that every authored number is a whole W. The
+// one-device-px consequence: a level costs 436 device px of travel on the
+// tablet (435 before), a difference no hand can feel.
+constexpr double kNavZoomPxPerLevel = 218.0;
 
 // The rate in DEVICE pixels per zoom level at the live gui_scale — the ONE
 // READER's divisor (nav_drag_zoom_level, input_pointer.cpp).
@@ -251,10 +254,10 @@ constexpr double kNavZoomPxPerLevel = 217.5;
 // the panel on every host, not the same count of device pixels: 200 device px
 // is ~43 mm on the retired road rig and only ~20 mm on the tablet's 249 PPI
 // panel, which is exactly the "too fast" the architect drove. At the tablet's
-// own 200 % a level costs 435 device px (217.5 W, kNavZoomPxPerLevel, kept
-// exact at the rebase of 2026-11-05; a double, never rounded — below) — ~44 mm on that
-// panel, back on the rig's ~43 mm order of hand travel instead of half it. Durations never scale;
-// lengths do — the same split the
+// own 200 % a level costs 436 device px (218 W, kNavZoomPxPerLevel, rounded
+// up to a whole W 2026-11-05; a double, never rounded at the read — below)
+// — ~44 mm on that panel, back on the rig's ~43 mm order of hand travel
+// instead of half it. Durations never scale; lengths do — the same split the
 // press road's four pixel thresholds take (drag_moved_threshold_px,
 // grab_moved_threshold_px, double_click_slack_px,
 // GuiInputCore::set_touch_slop_px).
@@ -271,10 +274,10 @@ constexpr double kNavZoomPxPerLevel = 217.5;
 // divisor rather than a painted dimension, and rounding it to an int would
 // quantize the feel for no gain (render.h's conversion pair states that the
 // double-domain readers deliberately stay out of it). At gui_scale 100 the
-// rate is the authored 217.5 W exactly; the tablet's 200 % gives 435.
+// rate is the authored 218 W exactly; the tablet's 200 % gives 436.
 // The floor keeps the divisor away from zero at any factor the schema could
 // ever admit; inside the live [50, 1000] bracket the value rests in
-// [108.75, 2175] and the floor cannot fire.
+// [109, 2180] and the floor cannot fire.
 inline double nav_zoom_px_per_level() {
     const double rate = kNavZoomPxPerLevel * gui_scale_factor();
     return rate < 1.0 ? 1.0 : rate;

@@ -3761,13 +3761,17 @@ constexpr int64_t kRulerLadderMs[] = {
 constexpr int  kRulerMinorsPerStep = 8;
 // The pitch rule, stated on the MINOR because that is the crowding that matters:
 // a rung is admissible while its minors stay at least this far apart, which puts
-// its labels at least 8x that apart. 13.5 W SINCE THE REBASE TO 200 %
-// (architect 2026-11-05): the 9 Windows px of 2026-10-02 (the laptop
-// pixel's 12 re-authored) times 1.5, 27 device px on the tablet as before —
-// NOT A PAINTED LENGTH but a double compare against gui_scale_factor(), so
-// it is KEPT EXACT rather than rounded to a whole W: every ruler step
-// choice stands.
-constexpr double kRulerMinMinorPitchPx = 13.5;
+// its labels at least 8x that apart. 14 W, A WHOLE W BY HIS RULING OF
+// 2026-11-05 ("round each up"): the 9 Windows px of 2026-10-02 (the laptop
+// pixel's 12 re-authored) times 1.5 at the rebase to 200 % the same day gave
+// 13.5 W, which stood exact for a few hours as a gesture threshold (a double
+// compare against gui_scale_factor(), not a painted length), and was then
+// rounded UP with the other two (kTooltipHoverSlopPx, render.h;
+// kNavZoomPxPerLevel, app_state.h) so that every authored number is a whole
+// W. The one-device-px consequence: the minor pitch's floor is 28 device px
+// on the tablet (27 before), so a zoom whose minor pitch falls in [27, 28)
+// now takes the next coarser rung.
+constexpr double kRulerMinMinorPitchPx = 14.0;
 
 // The smallest ladder rung whose minors clear the minimum pitch. Falls back to
 // the coarsest rung when even that crowds (an absurd zoom-out), which is the

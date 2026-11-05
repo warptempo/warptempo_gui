@@ -998,11 +998,13 @@ inline GuiFont gui_font(GuiFace face) {
 // "seems odd to use 300% and 2dpx"): ONE W = ONE PX AT 100 %, THE WINDOWS-95
 // PIXEL THIS FUNCTION HAS ALWAYS SCALED, = 2 DEVICE PX ON THE TABLET AT ITS
 // 200 %. EVERY AUTHORED LENGTH IS A WHOLE W (an integer), the face sizes too
-// (gui_font.h's table), and a line is one W (hairline_px below). The three
-// exceptions are gesture thresholds and a rate, not painted lengths, kept
-// exact at the rebase and named at their seats: kTooltipHoverSlopPx 4.5,
-// kRulerMinMinorPitchPx 13.5 (paint_handler.cpp), kNavZoomPxPerLevel 217.5
-// (app_state.h). THE PREDECESSOR was the unit of 2 at 300 % (architect
+// (gui_font.h's table), and a line is one W (hairline_px below). NO
+// EXCEPTION: the three gesture thresholds the rebase left at x.5 W for a few
+// hours (kTooltipHoverSlopPx 4.5, kRulerMinMinorPitchPx 13.5 in
+// paint_handler.cpp, kNavZoomPxPerLevel 217.5 in app_state.h) were ROUNDED
+// UP to 5, 14 and 218 the same day (architect 2026-11-05: "round each up"),
+// each seat naming its one-device-px consequence. THE PREDECESSOR was the
+// unit of 2 at 300 % (architect
 // 2026-11-04 night: one W = 2 device px at 300 %, every length authored in
 // device px at 300 % as an even number on a second road, skin_px = scaled_px
 // of a third); the rebase halved every such number, multiplied every Windows
@@ -2440,16 +2442,18 @@ inline constexpr int64_t kTooltipAutoPopMs = 5000;
 // (View.TooltipInfo.updateAnchorPos, "filters out the jitter which is
 // typical for such input sources as stylus"), and that slop is
 // `config_viewConfigurationHoverSlop` = 4dp (core/res/values/config.xml),
-// half the platform's 8dp touch slop. It is taken as 4.5 W through
-// scaled_px (the 3 Windows px of 2026-10-02 times 1.5 at the rebase to
-// 200 %, architect 2026-11-05 — NOT A PAINTED LENGTH, a gesture threshold,
-// so it is KEPT EXACT rather than rounded to a whole W, and scaled_px's
-// nearbyint of 4.5 · 2 is the 9 it was): 9 device px on the tablet at its
-// 200 % under the 320 density it runs at, 4.5dp — Android's 4dp to within
-// half a dp — and half the drag gate (kDragMovedThresholdPx 9, app_state.h)
-// as Android's is half its touch slop. Floor 1, so a small scale never
-// zeroes it.
-inline constexpr double kTooltipHoverSlopPx = 4.5;
+// half the platform's 8dp touch slop. It is taken as 5 W through scaled_px,
+// A WHOLE W BY HIS RULING OF 2026-11-05 ("round each up"): the 3 Windows px
+// of 2026-10-02 times 1.5 at the rebase to 200 % the same day gave 4.5 W,
+// which stood exact for a few hours as a gesture threshold, and was then
+// rounded UP with the other two (kRulerMinMinorPitchPx, paint_handler.cpp;
+// kNavZoomPxPerLevel, app_state.h) so that every authored number is a whole
+// W. The one-device-px consequence: 10 device px on the tablet at its 200 %
+// under the 320 density it runs at (9 before), 5dp — Android's 4dp to within
+// one dp — and the drag gate (kDragMovedThresholdPx 9 W = 18, app_state.h)
+// to within one device px of half, as Android's is half its touch slop.
+// Floor 1, so a small scale never zeroes it.
+inline constexpr int kTooltipHoverSlopPx = 5;
 inline int tooltip_hover_slop_px() {
     return scaled_px(kTooltipHoverSlopPx, 1);
 }
