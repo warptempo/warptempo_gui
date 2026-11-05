@@ -1141,7 +1141,7 @@ void GuiInputHandler::close_history_mode() {
 // tick, pump's order, the same batching the mode's session counter already argues from), so a
 // `,` and a Tab delivered together would cycle the old commit's list: the
 // playhead lands on a flag that is no longer shown, and the ordinal it stored
-// then brightens whatever flag the NEW commit has at that ordinal once the
+// then stems whatever flag the NEW commit has at that ordinal once the
 // rebuild lands — focus and playhead describing different flags, which is
 // exactly what `focus` indexes the painted list to prevent.
 //

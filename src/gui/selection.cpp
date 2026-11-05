@@ -116,7 +116,13 @@ void Selection::damage_overlay_on_subject_change(
 // playhead's. A later write in the same event that moves a fingerprint
 // field (a camera move's synchronous plate rebuild, whose tail rebuilds the
 // flags) rebuilds again before the frame; the fingerprint makes a repeat
-// with nothing moved free.
+// with nothing moved free. THE COST, ACCEPTED (planner's call 2026-11-05,
+// Sol's round): a walk that recenters the camera rebuilds twice; the first
+// position-arrow press on a group rebuilds for the collapse and again at
+// finish_position_nudge's tail, three times if the held column moves the
+// camera. Discrete events, one real rebuild each extra: a rebuild deferred
+// to the event's end would be a structural change for a per-event cost, not
+// a per-frame one.
 // EVERY MUTATOR THAT WRITES THE MEMBERSHIP OR THE FOCUS ENDS HERE —
 // set_single_selection, replace_selection, clear_selection,
 // collapse_to_focused, toggle_selection_membership and
@@ -301,8 +307,12 @@ void Selection::sanitize_selection_after_restore(int n) {
     // flag cache before any frame paints. A rebuild here would read a basis
     // that restore is about to move, and the frame waits for the tail's.
     // (The post-restore rules' replace_selection / clear_selection just
-    // before it on that road do publish: one redundant flag rebuild per
-    // restore, the price of a mutator that never asks who called it.)
+    // before it on that road do publish. The restore's final plate tail is a
+    // fingerprint HIT when the displayed viewport and the target map are
+    // unchanged — the common same-tab, same-column undo — so that publish is
+    // then the one real rebuild; a restore that also moves a keyed viewport
+    // or the target map rebuilds twice. The price of a mutator that never
+    // asks who called it.)
     damage_overlay_on_subject_change(old_subject);
 }
 

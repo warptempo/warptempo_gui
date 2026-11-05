@@ -70,7 +70,7 @@ struct GuiTargetRender;
 // `t` AND `c` LEFT THIS LIST (architect 2026-07-30): each collapsed only to keep a
 // group from resting SPANLESS — the state the 2026-07-29 rejection was about — and
 // with the SPAN FORM retired that state does not exist, a group's cue being its
-// members' brightened flags plus the always-visible cursor on the focus. Both
+// members' stems (the selection's, render.h's THE STATES) plus the always-visible cursor on the focus. Both
 // now CARRY their group (`t` keeping its selection-gated land, `c` jumping to
 // the focus as it always did). Bare `0` had left one day earlier, re-ruled a
 // PURE VIEWPORT MOVE.

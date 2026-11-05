@@ -1799,8 +1799,9 @@ static void seat_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
 // IS NEVER PARKED). Nothing stashes a selection any more, so a route that ENTERS
 // a column or a tab re-acquires one from the PLAYHEAD: scan the active column's
 // store and single-select the marker the playhead is already sitting exactly on.
-// The payoff is the lane model — with that marker selected, the brightened flag
-// and the cursor standing on it say the same thing, which is precisely the
+// The payoff is the lane model — with that marker selected, its stem (an
+// enabled marker's; a disabled chip stays grey and publishes none) and the
+// cursor standing on it say the same thing, which is precisely the
 // state the entry's stored cursor
 // describes — and the price is nothing, because a selection recovered this way is
 // derived from live data instead of remembered from a store that has since moved.
@@ -7498,14 +7499,14 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
                 app.history_mode.focus_half));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
-    // (the selected look moves — the chips' fill, render.h's THE STATES; the
-    // columns stay put), and none when it
+    // (the selected look moves — the stems, the chips keeping their fill,
+    // render.h's THE STATES; the columns stay put), and none when it
     // did not — a re-click on the focused flag re-lands a playhead that is
     // already there, and the land owner is itself idempotent; a press on a
     // nudged pair's other cue moves focus_half alone, which paints nothing
     // (both cues wear the item's look, 2026-11-04) — its landing moves the
     // playhead, whose own damage repaints it. A DROPPED SELECTION is that
-    // same chip change over more flags, so it damages too.
+    // same stem change over more flags, so it damages too.
     if (was != app.history_mode.focus || had_selection) viewport.invalidate_all();
 }
 
@@ -8411,8 +8412,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // THE CROSSING SPENDS THE ARM into the drag. Read, disarm, then act —
         // the release bodies' standing shape. NO CLICK ACT RUNS HERE: it ran
         // at the press, so the stop, the select and the land
-        // all already stand — the select is what paints the dragged flag
-        // BRIGHTENED, and the stop is why no live playback needs handling
+        // all already stand — the select is what stands the dragged marker's
+        // stem, and the stop is why no live playback needs handling
         // below (nothing can restart playback under the held button: no key
         // arrives while this pending stands, on_key's drag-modal statement).
         const PendingMarkerPress press = app.pending_marker_press;

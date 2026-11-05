@@ -988,7 +988,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // restore re-selects the touched set (done above) and LANDS the playhead
     // on its FOCUS — the touched marker for a singleton, the EARLIEST touched
     // member for a group (the focus rule at apply_post_restore_rules_impl) —
-    // the members' own brightened flags and the always-visible cursor on the
+    // the members' own stems and the always-visible cursor on the
     // focus being the whole cue. THE CAMERA ANSWERS TO THE RESTORED MARKERS,
     // THROUGH THE LANDING OWNER'S RESTORE (Viewport::land_subject,
     // LandingKind::Restore, whose answers and ruled-out cameras are at its
@@ -1120,14 +1120,20 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                                                 app.playhead_cursor_sample,
                                                 LandingKind::Restore);
                 }
-                // The restored singleton needs no cue work here: its flag
-                // BRIGHTENS from the restored membership and the top-strip /
-                // full-waveform invalidates below repaint it. Its stem, which
+                // The restored singleton needs no cue work here: its chip
+                // keeps its fill (selection moves the stem alone) and the
+                // top-strip / full-waveform invalidates below repaint the
+                // lane. Its stem, which
                 // stands on every selected enabled marker, needs none either:
                 // the restore's sync kick below rebuilds the flag cache
                 // before any frame (the post-restore rules'
                 // replace_selection already rebuilt it once,
-                // Selection::publish_selection_change), its rebuild damages
+                // Selection::publish_selection_change; that tail is a
+                // fingerprint HIT when the displayed viewport and the target
+                // map are unchanged, the common same-tab, same-column undo, so
+                // the publish's rebuild is then the only real one, and a
+                // restore that also moves a keyed viewport or the target map
+                // rebuilds twice), its rebuild damages
                 // the strip with the waveform, and the invalidates below
                 // cover the same rows.
             }

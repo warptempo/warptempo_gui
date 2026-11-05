@@ -2381,7 +2381,7 @@ void GuiInputHandler::run_center_command() {
     // group from resting SPANLESS, a state that no longer exists now the region
     // IS THE TRIM rather than a group's playhead form. The jump below is a
     // jump TO THE FOCUS and accepts a group's focus as-is; the always-visible
-    // cursor lands there, the other members keeping their brightened flags.
+    // cursor lands there, the other members keeping their stems.
     // (The jump's own no-focus return is center_command_lands_on_focus's live
     // arm — the focus atom — plus an out-of-range belt the faces accept
     // reading unrepaired; the Center button's hint reads that predicate.)
@@ -3093,7 +3093,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // selection survives it BY IDENTITY — the collapse-to-focus that stood here
     // is deleted. It existed to keep a group from resting SPANLESS, and with the
     // SPAN FORM retired there is no such state to avoid: the group's cue is its
-    // members' brightened flags plus the always-visible cursor, and the
+    // members' stems plus the always-visible cursor, and the
     // selection-gated land below re-expresses the focus EXACTLY, which is what
     // seats that cursor where the readout says it is. The trim bar paints
     // from the trim's source-frame bounds every frame, crossing them into

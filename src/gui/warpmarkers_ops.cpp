@@ -1552,9 +1552,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // pre-burst snapshot and its hints — a held KEY's own physical press, a
     // held arrow BUTTON's first fire, the two-surface rule stated once at
     // Undo::coalesce_gesture. NO SELECTION-DRIVEN STEM WORK IS
-    // OWED HERE: since row 5 every enabled marker stems always, in its CLASS
-    // colour alone, so a selection neither creates nor moves a stem — the
-    // group's cue is its members' brightened flags plus the landed cursor.
+    // OWED HERE: the step leaves the selection as it was (the selection's
+    // stems stand on the same members, render.h's THE STATES), so the
+    // group's cue is its members' stems plus the landed cursor.
     // (The skip is the whole per-press action: note_coalesced_commit died with
     // the hover popup in row 5.)
     if (!merge) undo.push_undo_warp(std::move(pre_state), touched, touched);
