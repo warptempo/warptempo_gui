@@ -354,8 +354,9 @@ void GuiInputCore::maybe_resolve_touch_window() {
     // (the nav) or the lift (the tap — a sub-slop lift is a tap already),
     // and no hold can form again before that lift — the latch is a latch,
     // cleared only at the next down. MEASURED THAT DAY on the tablet: a press creeping
-    // slower than the slop over the 300 ms beat (6 W, 18 device px at
-    // 300 %: under ~60 px/s) reached the expiry first and became the hold,
+    // slower than the slop over the 300 ms beat (6 Windows px on the
+    // scaled_px road, 18 device px at 300 %: under ~60 px/s) reached the
+    // expiry first and became the hold,
     // so every slow-starting pan swept a trim region and seated the playhead
     // at the press point — what his test swipes left behind. A latch read
     // here, ahead of the clock, so a strayed contact never pays the time

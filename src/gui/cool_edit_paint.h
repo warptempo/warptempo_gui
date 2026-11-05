@@ -16,8 +16,8 @@
 // part); the colors the flat look's constants (materials.h's THE WELL) and
 // the palette's. THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
-// 2026-11-01, and the trough of the line's fade — and `playhead_line` —
-// the fading line's white peak in the canvas since 2026-11-04 —
+// 2026-11-01 — and `playhead_line` — the line's one static tone in the
+// canvas, 85E2EB since 2026-11-04 night —
 // palette_file.h's role table, as the
 // marker's chip is the palette's `cue` / `cue_unselected` in its
 // `cue_outline` (2026-11-04).
@@ -59,16 +59,17 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // PAINTER: THE FILL, a staircase of `rows` rows of whole cells of one unit u
 // (cue_triangle_unit_px, render.h) from `top` — 2·rows − 1 cells on the top
 // row down to one, the apex row one cell and each row above it two cells
-// wider (17, 15, … 1 at 300 %'s nine rows; 11, 9, … 1 at 200 %'s six) —
+// wider (19, 17, … 1 at 300 %'s ten rows; 13, 11, … 1 at 200 %'s seven) —
 // CENTRED ON THE STEM'S COLUMN `col` (architect 2026-10-09 ~14:35: "at every
 // scale, the marker triangle must be fully centered on the stem"; the stem
-// one W centered on that column since 2026-11-04, render.h's
-// waveform_line_px), in `fill` — AND, given an `outline`, THE CHIP: a second,
-// larger staircase of the same construction in the outline's color painted
-// first, from cue_chip_top_rows() rows above the fill's top through
-// cue_chip_apex_rows() rows below its apex (architect 2026-11-04, mock g1,
-// "a one-W 111111 outline"; render.h's cue_chip_rows owns the
-// construction: 31 x 16 round the fill's 17 x 9 at 300 %). NO SHADOW
+// one W on that column since 2026-11-04, its left pixel the column,
+// render.h's waveform_line_px), in `fill` — AND, given an `outline`, THE
+// CHIP: a second, larger staircase of the same construction in the
+// outline's color painted first, from cue_chip_top_rows() rows above the
+// fill's top through cue_chip_apex_rows() rows below its apex (architect
+// 2026-11-04, mock g1, "a one-W 111111 outline"; render.h's cue_chip_rows
+// owns the construction: 29 x 15 round the fill's 19 x 10 at 300 %). NO
+// SHADOW
 // (architect 2026-11-02, the well's part of the flat look, "no shadow
 // anywhere").
 //
@@ -86,12 +87,12 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // (architect 2026-10-26 ~13:40, on the row count as a per-device number:
 // "why density? why not just simple scale? tablet is only real surface.
 // later tablets may have higher dpi, but not lower" — and "yes" to the
-// planner's proposal): authored 9 device px at 300 %, the 8 rows the
-// tuning key left on the tablet (~13:05, "read the current setting and
-// apply") grown with the text round (architect 2026-11-03; kept by the
-// retrofit the same day), rounded at the
+// planner's proposal): authored 10 device px at 300 % (architect
+// 2026-11-04 night, the unit of 2, mock v4 "chip 10"; 9 from the text round
+// of 2026-11-03, the 8 rows the tuning key left on the tablet grown, kept by
+// the retrofit the same day), rounded at the
 // element like every length off the canvas (render.h's cue_triangle_rows,
-// the one accessor) — 9 rows at 300 %, 6 at 200 %, 4 at 150 % and 138 %,
+// the one accessor) — 10 rows at 300 %, 7 at 200 %, 5 at 150 % and 138 %,
 // 2 at the scale's floor of 50 %.
 //
 // DRAWN ALIASED, COOL EDIT'S HARD STAIRCASE (architect 2026-10-26 ~10:40,

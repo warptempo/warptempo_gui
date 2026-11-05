@@ -55,12 +55,14 @@
 // paint_handler.cpp's key_legend_seat).
 //
 // THE FACE AND ITS GAP (architect 2026-11-04, the unit: his "1 agree" to
-// 69 x 33 and "spacing 3 dpx"; "grow the box instead of adding a border";
-// the hi-fi key metrics of 2026-11-03's retrofit): THE KEY IS ITS PAINTED
-// FACE, render.h's case — 69 device px wide at 300 % by the `key_height`
-// tuning key (icon_case_w_px / icon_case_h_px), 69 x 33 at the default — NO
-// OUTLINE, NO INSET, and TWO KEYS OF A GROUP STAND ONE W OF GROUND APART
-// (render.h's key_gap_px: 3 device px at 300 %, 2 at 200 %, 1 at 138 %), the
+// the hi-fi's face and "grow the box instead of adding a border"; the hi-fi
+// key metrics of 2026-11-03's retrofit; the unit of 2 that night, mock v4:
+// the face 70 x 34 and the gap 2, the pitch 72 kept): THE KEY IS ITS
+// PAINTED FACE, render.h's case — 70 device px wide at 300 % by the
+// `key_height` tuning key (icon_case_w_px / icon_case_h_px), 70 x 34 at the
+// default — NO OUTLINE, NO INSET, and TWO KEYS OF A GROUP STAND ONE W OF
+// GROUND APART (render.h's key_gap_px: 2 device px at 300 %, 1 at 200 %, 1
+// at 138 %), the
 // walk stepping the face and the gap (key_group_pitch_px below), so every
 // face is the same, a group's ends included. THE EDGE RULE IS THE FACES':
 // the band's, row 8's and the controls rows' outermost FACES stand on the

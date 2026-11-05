@@ -757,9 +757,10 @@ int notification_pad_px();
 
 // THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
 // 2026-10-24): the inside height pad + cap + pad,
-// and the ratio the retired caption's (21 of its 40-px lane) and the list rows'
-// (27 of their 51-px row) — the one proportion every off-key glyph keeps to
-// its line. Since 2026-11-02 (Breeze's cut-out DialogInformation and
+// and the ratio the retired caption's (21 of its 40-px lane) and the list
+// rows' (26 of their 51-px row since the unit of 2, 2026-11-04 night; 27
+// before) — the one proportion every off-key glyph keeps to its line. Since
+// 2026-11-02 (Breeze's cut-out DialogInformation and
 // DialogError, M7 / R14) it is
 // the ink box's LARGER SIDE on the ink-box road (icons.h), rounded at the
 // element (the ink is already live px, derived from the live pad and cap).

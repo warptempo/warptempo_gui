@@ -458,16 +458,17 @@ inline constexpr Page page_after(Role role, Page page) {
 // TUNING DEVICE KEYS `osk_key_w` and `osk_key_h` (render.h's seat;
 // device_config.h's grammar, [24, 160] each), defaults 48 and 60, the FLAGS
 // sheet's numbers. THE GAP between adjacent keys, both axes, IS THE PROGRAM
-// KEYS' GAP, ONE W (render.h's key_gap_px: 3 device px at 300 %, 2 at 200 %,
+// KEYS' GAP, ONE W (render.h's key_gap_px: 2 device px at 300 %, 1 at 200 %,
 // 1 at 138 %; architect 2026-11-04, the unit: "the same face and gap on
-// every key surface", the tenth of the height of 2026-10-29 retired); THE
+// every key surface", the tenth of the height of 2026-10-29 retired; the W
+// of 2 that night); THE
 // PITCH is the key plus the gap; a key of n units is n pitches less one gap,
 // each slot's edge rounded at the element (quarter_offset_px). At the
-// defaults on the tablet (300 %): the key 48 x 60, the gap 3, the pitch 51,
-// so 1u 48, 1.5u 73, 2u 99, 2.5u 125 and 4u 201 device px from a slot at
-// the block's edge; at 200 % 32 x 40, the gap 2, the pitch 34. THE
+// defaults on the tablet (300 %): the key 48 x 60, the gap 2, the pitch 50,
+// so 1u 48, 1.5u 73, 2u 98, 2.5u 123 and 4u 198 device px from a slot at
+// the block's edge; at 200 % 32 x 40, the gap 1, the pitch 33. THE
 // KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S face (architect
-// 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the 69 x
+// 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the 70 x
 // key_height face): their box is `osk_key_w` x `osk_key_h` alone, their gap
 // the program's. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is
@@ -486,26 +487,26 @@ inline int quarter_offset_px(int q) {
 }
 
 // THE BLOCK'S WIDTH: the widest row, thirteen units — thirteen pitches less
-// one gap, 660 device px at the defaults on the tablet.
+// one gap, 648 device px at the defaults on the tablet (x 828 .. 1475).
 inline int block_w_px() {
     return quarter_offset_px(kBlockQuarters) - key_gap_px();
 }
 
 // THE EDGE PAD — THE SAME ON ALL FOUR SIDES (architect 2026-10-10, the
 // overlay's mocks: "the pad the same on all four sides"; kept 2026-10-29):
-// 15 device px at 300 % (5 W; the 14 it measured when it was the full-width
-// walk's leftover read back, rounded to the nearest whole W with the unit,
-// architect 2026-11-04), 10 at 200 % and 7 at 138 %, the band's top to the
-// first key row and the last key row to the window's foot (across, the
-// block is centered and the ground beside it is what the window's width
-// leaves).
-inline constexpr double kEdgePadAt300 = 15.0;
+// 14 device px at 300 % (7 W; the 14 it measured when it was the full-width
+// walk's leftover read back, a whole W again with the unit of 2, architect
+// 2026-11-04 night), 9 at 200 % (9.33) and 6 at 138 % (6.44), the band's
+// top to the first key row and the last key row to the window's foot
+// (across, the block is centered and the ground beside it is what the
+// window's width leaves).
+inline constexpr double kEdgePadAt300 = 14.0;
 inline int edge_pad_px() { return skin_px(kEdgePadAt300, 1); }
 
 // The band's whole height: the edge pad, five key rows and the four gaps
-// between them, and the edge pad — at the defaults 15 + 312 + 15 = 342
-// device rows at 300 %, 10 + 208 + 10 = 228 at 200 %, 7 + 144 + 7 = 158 at
-// 138 % (the key 28, the gap 1).
+// between them, and the edge pad — at the defaults 14 + 308 + 14 = 336
+// device rows at 300 %, 9 + 204 + 9 = 222 at 200 % (the key 40, the gap 1),
+// 6 + 144 + 6 = 156 at 138 % (the key 28, the gap 1).
 // THE BAND CARRIES NO LINE (architect 2026-10-14: the raised
 // Hilight line the taskbar overlay laid on its top, 2026-10-10 to 2026-10-14,
 // is gone with the overlay; the placement block below).
@@ -583,16 +584,16 @@ inline bool stands(const AppState& a) {
 // stop doing that". The dialog's surface is the modal family's box and
 // controls row; its band, its pad and its line went with the overlay.)
 //   ALONE (the flag editor), AT THE DEFAULTS (osk_key_w 48, osk_key_h 60):
-//     at 300 % on 2304 x 1440 the band 1098–1439 (15 + 312 + 15) across x
-//     0..2303, its first key row's top 1113, the block of keys x 822..1481
-//     (660 wide, 822 clear each side). Row 8 is under it
+//     at 300 % on 2304 x 1440 the band 1104–1439 (14 + 308 + 14) across x
+//     0..2303, its first key row's top 1118, the block of keys x 828..1475
+//     (648 wide, 828 clear each side). Row 8 is under it
 //     and unreachable: the keyboard's press claim takes the band, the ground
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
-//     arithmetic at modal_box.h's head; at 300 %, key_height 33 and the
-//     keyboard's defaults the controls row 987–1097, its faces 1026–1058,
-//     the box 144–986, its top under the band's rows 0–143 with the
-//     72-row logo lane, 2026-11-03).
+//     arithmetic at modal_box.h's head; at 300 %, key_height 34 and the
+//     keyboard's defaults the controls row 994–1103, its faces 1032–1065,
+//     the box 144–993, its top under the band's rows 0–143 with the
+//     72-row logo lane, 2026-11-04 night).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press or the
 // touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),

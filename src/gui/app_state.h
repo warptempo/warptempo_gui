@@ -3318,7 +3318,9 @@ inline int drag_moved_threshold_px() {
 // scaled_px's composite rule): the grab gate is built from its rounded part,
 // 2 × drag_moved_threshold_px() — 16 device px at 138 % (2 × 8) and 36 at
 // 300 % (2 × 18) — where scaled_px(12) would round once to 17 at 138 %
-// (16.56); at 300 % the two agree, 36, every W being 3 device px there.
+// (16.56); at 300 % the two agree, 36, every Windows px of the scaled_px
+// road being 3 device px there (the skin's own W is 2, render.h's
+// hairline_px; a gesture gate is no painted length).
 constexpr int     kGrabMovedThresholdPx = 2 * kDragMovedThresholdPx;
 
 inline int grab_moved_threshold_px() {
@@ -5590,18 +5592,6 @@ struct AppState {
     // publish_head rule). Empty — a head off the waveform's columns, or
     // nothing painted yet — nothing to grab.
     GuiRect                  playhead_head_hit{0, 0, 0, 0};
-
-    // THE PLAYHEAD FADE'S PAINTED COLOR (architect 2026-11-04; the rule at
-    // render_playhead's THE FADE, render.h), a 0xRRGGBB sRGB word between
-    // the palette's `playhead_head` (the trough) and `playhead_line` (the
-    // peak). ON SCREEN IS AS
-    // PAINTED: written only by the tick, on a change of the byte triple
-    // playhead_fade_color_at answers, which damages the line's columns in
-    // the same breath (playhead_line_rect, main.cpp), and read by
-    // paint_playheads alone — the painter never asks the clock, so the color
-    // painted and the damage owed are one. The peak at construction (the
-    // fade's phase at its origin) until the tick's first read.
-    uint32_t                 playhead_line_rgb = 0xFFFFFF;
 
     // THE OPEN FLAG EDITOR'S BOX, published by the same painter-owns-derived-
     // geometry rule the two stashes above follow, and for the same reason: the
@@ -11839,9 +11829,8 @@ void remap_marker_indices_after_reorder(AppState& app,
 // platform). The ONE shared wall-clock reader for the application layer's
 // millisecond time bases — the press-driven double-click detection (strip-row /
 // marker, input_pointer.cpp), the tooltip's clock (tick_tooltip,
-// input_pointer.cpp), the A/B
-// audition's rests (GuiAbAudition::fire_if_due) and the playhead's fade
-// (the tick's flip, main.cpp, 2026-11-04) — the same CLOCK_MONOTONIC the
+// input_pointer.cpp) and the A/B
+// audition's rests (GuiAbAudition::fire_if_due) — the same CLOCK_MONOTONIC the
 // platform's own deadlines (key repeat, the touch window's region-hold beat —
 // the pan zone's window, the one touch window with a deadline since
 // 2026-09-25, the editor field's carrying none) are stamped on, so the run loop samples them all against one clock. Body in
@@ -11938,10 +11927,9 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 //  - NARROW ON PLATE, reserved for the PER-FRAME sites, which cannot afford a
 //    full repaint and can see a GuiPaintHandler to compute plate columns: the
 //    two 60 Hz SCANNER sites in main.cpp — the tick heartbeat and the pre-paint
-//    advance — and THE FADE'S STEP (the tick's, 2026-11-04: periodic, once
-//    a tick while the line is on screen, and owing the line's columns
-//    alone, playhead_line_rect),
-//    and nothing else. Each passes plate_viewport_basis() through the
+//    advance — and nothing else (the fading line's per-tick step of
+//    2026-11-04 went with the fade that night: the resting line is one
+//    static tone and owes the tick nothing). Each passes plate_viewport_basis() through the
 //    explicit-basis overloads.
 //  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:
 //    the stop teardown (stop_playback_if_playing) and the launch
@@ -12251,7 +12239,6 @@ std::pair<long long, long long> compute_trim_samples(
 // spells both, the cell's owner covering the clock's rect as a superset.)
 GuiRect clock_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
-GuiRect playhead_line_rect(const GuiRect& area, double px_x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
 
@@ -17660,23 +17647,25 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE TWO HISTORY TOGGLES print SESSION (the walk lamp's lit state) and
 // CUMUL (Toggle Cumulative cut as ADD SEL is). ZOOM IN AND ZOOM OUT READ IN
 // AND OUT (architect 2026-10-27: "Zoom In / Zoom Out, or In / Out if too
-// long"): ZOOM OUT runs about 81 px at 300 % at the 15-px legend, past its key, and the pair is
+// long"): ZOOM OUT runs about 86 px at 300 % at the 16-px legend, past its key, and the pair is
 // one shape, so both take the short form. RESTRICT READS RESTR (architect
-// 2026-10-29, "defer to your measurement"): RESTRICT runs 75.0 px at 300 %
-// and would crowd FOLLOW's legend beside it; RESTR runs 50.8 (the 15-px legend, 2026-11-04).
-// THE FIT, AT THE LEGEND FACE'S 15 px EM (kGuiFaceSizes, gui_font.h; 15
-// since the unit, 2026-11-04) AGAINST THE 69-px FACE (the key itself,
-// materials.h's THE FACE AND ITS GAP), measured 2026-11-04: the widest words
-// MAGNIFY 68.3, DISCARD 67.5, SESSION 66.7, HISTORY 66.1 and FLATTEN 65.5 px
-// at 300 % (45.6 / 45.0 / 44.5 / 44.1 / 43.7 at 200 % against the 46-px
-// face), so every word stands inside its own face's columns at both; the
-// tightest neighbors, MAGNIFY beside FOLLOW (63.3), keep about 6 px between
-// their inks at the 72-px pitch (4 at 200 %'s 48). AT 150 % (36.5 / 36.0 /
-// 35.6 / 35.3 / 35.0 against the 34-px face) the five overhang their faces
-// by about a px each side onto the gap, MAGNIFY and FOLLOW under a px apart
-// at the 36-px pitch — a scale the tablet does not run. A smaller key_height
-// leaves the widths alone (the legend reads the face's width, never its
-// height).
+// 2026-10-29, "defer to your measurement"): RESTRICT runs 80.0 px at 300 %
+// and would crowd FOLLOW's legend beside it; RESTR runs 54.2 (the 16-px legend, 2026-11-04 night).
+// THE FIT, AT THE LEGEND FACE'S 16 px EM (kGuiFaceSizes, gui_font.h; 16
+// since the unit of 2, 2026-11-04 night) AGAINST THE 70-px FACE (the key
+// itself, materials.h's THE FACE AND ITS GAP), measured 2026-11-04 night
+// on the product's own shaping road: the widest words
+// MAGNIFY 72.9, DISCARD 72.0, SESSION 71.2, HISTORY 70.6 and FLATTEN 70.0 px
+// at 300 % (50.1 / 49.5 / 48.9 / 48.5 / 48.1 at 200 % against the 47-px
+// face), so the widest words overhang their faces by up to about 1.5 px
+// each side onto the gap (the legend's own rule: it never widens a key);
+// the tightest neighbors, MAGNIFY beside FOLLOW (67.6), keep about 2 px
+// between their inks at the 72-px pitch (at 200 %'s 48 the two inks meet).
+// AT 150 % (36.5 / 36.0 / 35.6 / 35.3 / 35.0 against the 35-px face) the
+// five overhang by under a px each side, MAGNIFY and FOLLOW (33.8) under a
+// px apart at the 36-px pitch — a scale the tablet does not run. A smaller
+// key_height leaves the widths alone (the legend reads the face's width,
+// never its height).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";

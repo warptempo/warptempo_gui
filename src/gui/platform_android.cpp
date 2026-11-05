@@ -526,16 +526,19 @@ GuiPlatform::~GuiPlatform() {
 // The tablet's device-config template (contract at the declaration, rationale
 // at this backend's own). 300 % AT THE WINDOWS PIXEL (architect 2026-10-10,
 // "sure, that can be updated later": the template follows the scale the
-// tablet has run at since 2026-10-06): 3 device px per Windows px, every
-// Windows px a whole number of device px, so a 16-W length paints 48 device
-// px. (The template
+// tablet has run at since 2026-10-06): 3 device px per Windows px on the
+// scaled_px road, every Windows px a whole number of device px, so a
+// 16-Windows-px length paints 48 device px (the skin's own unit, one W = 2
+// device px at 300 % since 2026-11-04 night, is render.h's hairline_px:
+// 300 is the density, not the unit). (The template
 // stood at 275 from 2026-10-02 — the tablet's glyph at its 200 % before the
 // unit's change, 44 device px — and its earlier values are git history and
 // a closed question.) The icon row fits this panel whole (the arithmetic is
-// at paint_icon_row, paint_handler.cpp: the left runs' 1665, the run gap's
-// 45 and the right run's 357 of the well's 2256 device px outside the `h`
-// view at 300, re-derived 2026-11-04 with the 69-px face, the one-W key gap,
-// the 45-px run gap and the well the waveform area), clearing it by 189.
+// at paint_icon_row, paint_handler.cpp: the left runs' 1666, the run gap's
+// 44 and the right run's 358 of the well's 2256 device px outside the `h`
+// view at 300, re-derived 2026-11-04 night with the 70-px face, the one-W
+// key gap of 2, the 44-px run gap and the well the waveform area), clearing
+// it by 188.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into

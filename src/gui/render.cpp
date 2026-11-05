@@ -173,11 +173,14 @@ struct CanvasLines {
 };
 // ONE CANVAS LINE ACROSS THE AREA on area-local row `row`, `t` device rows
 // thick, as an aliased rect appended to the lines of one fill and cut to the
-// area's rows: rows [row − t / 2, row − t / 2 + t). The grid's and the
-// center lines' one row rule (render_canvas, render_center_lines).
+// area's rows: rows [row − (t − 1) / 2, row − (t − 1) / 2 + t) — THE LINE
+// RULE (render.h's waveform_line_px, architect 2026-11-04 night): an even
+// line has no center row, so its TOP row is the row it stands on (at t = 2
+// the row and the one under it); an odd line is centered. The grid's and
+// the center lines' one row rule (render_canvas, render_center_lines).
 void canvas_hline(CanvasLines& lines, const GuiRect& area, int row, int t) {
-    const int top = std::max(area.y, area.y + row - t / 2);
-    const int bot = std::min(area.y + area.h, area.y + row - t / 2 + t);
+    const int top = std::max(area.y, area.y + row - (t - 1) / 2);
+    const int bot = std::min(area.y + area.h, area.y + row - (t - 1) / 2 + t);
     if (bot > top) {
         assert(lines.count < static_cast<int>(lines.rects.size()));
         lines.rects[static_cast<std::size_t>(lines.count++)] =
@@ -191,21 +194,23 @@ namespace {
 // one row rule render_canvas reads.
 void canvas_grid_lines(CanvasLines& lines, const GuiRect& area) {
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // horizontal grid — t = waveform_line_px() thick, ONE W (3 device px at
-    // 300 %, the unit, architect 2026-11-04; the class's one inventory at
-    // render.h's waveform_line_px), each an aliased integer rect inside its
-    // band. THE CENTER LINES STAND OVER THE WAVEFORM
+    // horizontal grid — t = waveform_line_px() thick, ONE W (2 device px at
+    // 300 %, the unit, architect 2026-11-04 night; the class's one inventory
+    // at render.h's waveform_line_px), each an aliased integer rect inside
+    // its band. THE CENTER LINES STAND OVER THE WAVEFORM
     // (architect 2026-10-09 evening), render_center_lines below, a pass after
     // the plate. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the
     // rule and its reason at render.h's row-6 canvas paragraph).
     const int t = waveform_line_px();
     // THE HORIZONTAL GRID per channel, on the plate's own bands
     // (waveform_channel_band): a line on a row r covers rows
-    // [r − t / 2, r − t / 2 + t) — the row r and one each side at 300 % — the
-    // zero row being the row the plate's bars straddle; the k-th grid line
-    // stands t · nearbyint(k · (H / t) / 4) = nearbyint(k · H / 4) device rows
-    // from the zero row, H the channel's half height in device rows — k = 1 ..
-    // 3, the fourth on the band's edge not drawn. Each band is its well's
+    // [r − (t − 1) / 2, r − (t − 1) / 2 + t) — the row r and the one under it
+    // at 300 % (t = 2, the line rule's top-row frame) — the zero row being
+    // the row the plate's bars straddle; the k-th grid line stands t ·
+    // nearbyint(k · (H / t) / 4) device rows from the zero row (at t = 2, 2 ·
+    // nearbyint(k · H / 8), an even number of rows), H the channel's half
+    // height in device rows — k = 1 .. 3, the fourth on the band's edge not
+    // drawn. Each band is its well's
     // interior (no inset, architect 2026-10-09; the two wells 2026-10-16), so
     // H is half a band, every line inside it.
     const auto hline = [&](int row) {

@@ -19,10 +19,11 @@
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
 // UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM: the key's face is a skin
-// length, 69 device px at 300 % wide — Cool Edit's 23-W case, back as a
+// length, 70 device px at 300 % wide — Cool Edit's 23-W case, back as a
 // device-px constexpr since 2026-11-03 (the retrofit, reversing the square
-// key of 2026-11-02) — by the `key_height` tuning key's device px at 300 %
-// tall (33 its default; render.h's case block, icon_case_w_px /
+// key of 2026-11-02; 70 since 2026-11-04 night, the unit of 2) — by the
+// `key_height` tuning key's device px at 300 %
+// tall (34 its default; render.h's case block, icon_case_w_px /
 // icon_case_h_px), the face the whole key, its neighbors one W of ground
 // away (key_gap_px, architect 2026-11-04, the unit); its Breeze glyph
 // is centered on its face by its own ink-box road, its size following the
@@ -36,13 +37,14 @@
 // IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
 // bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (render.h's
 // logo lane block, 72 device px at 300 %), the key, THE STRIP PAD
-// (39 at 300 %, render.h's strip_pad_px; the keys' legends in it), its keys
-// in plain runs on the ground, the runs 45 apart at 300 % (render.h's
+// (38 at 300 %, render.h's strip_pad_px; the keys' legends in it), its keys
+// in plain runs on the ground, the runs 44 apart at 300 % (render.h's
 // program_run_gap_px; the hi-fi's lengths again since 2026-11-03, the
-// retrofit); then THE WELL, flat regions on
+// retrofit, rounded to the unit of 2 on 2026-11-04 night); then THE WELL,
+// flat regions on
 // the ground (render.h's well paragraph and its lanes block, which derive
 // every length at the element) — a row of ground, THE TRIM BAR (its two
-// flat fills on view_bar_field_at300's 15 px and one hairline, a row of
+// flat fills on view_bar_field_at300's 14 px and one hairline, a row of
 // ground under them), THE RULER FLIPPED, a row
 // of ground, THE MARKER LANE of Cool Edit's cues (the flag editor's box on
 // its whole rows, "right now it's too small to click"; usability over
@@ -67,18 +69,18 @@
 // relation from CEP"; its own number since the stems became one W,
 // 2026-11-04, "untouched: the triangle's cell and the ruler's head"), so a
 // triangle's whole cells — Cool Edit's aliased staircase,
-// paint_ce_cue_triangle — stand beside the one-W stem, CENTERED ON IT, the
-// apex the stem's column (the line's center, fill_waveform_line's rule) and
-// every row centred on it with no remainder; THE MARKER'S CHIP is that
-// staircase in a one-W outline, a second, larger staircase of the same
-// cells (architect 2026-11-04, mock g1; render.h's cue_chip_rows: 31 x 16
-// round 17 x 9 at 300 %, 21 x 11 round 11 x 6 at 200 %), the ruler's head
-// the bare staircase. ITS ROW
-// COUNT IS NO FIELD HERE: it is a skin length, 9 DEVICE PX AT 300 % through
-// skin_px, rounded at the element (architect 2026-10-26 ~13:40, "why not
-// just simple scale? tablet is only real surface"; render.h's
-// cue_triangle_rows and kCueTriangleRowsAt300, the one owner — 9 rows at
-// 300 %, 6 at 200 %, 4 at 150 % and 138 %), no whole count of W. THE
+// paint_ce_cue_triangle — stand beside the one-W stem, CENTERED ON THE
+// FRAME'S COLUMN, the apex the stem's column (the even line's left pixel,
+// fill_waveform_line's rule) and every row centred on it with no
+// remainder; THE MARKER'S CHIP is that staircase in a one-W outline, a
+// second, larger staircase of the same cells (architect 2026-11-04, mock
+// g1; render.h's cue_chip_rows: 29 x 15 round 19 x 10 at 300 %, 17 x 9
+// round 13 x 7 at 200 %), the ruler's head the same chip. ITS ROW
+// COUNT IS NO FIELD HERE: it is a skin length, 10 DEVICE PX AT 300 %
+// through skin_px, rounded at the element (architect 2026-10-26 ~13:40,
+// "why not just simple scale? tablet is only real surface"; render.h's
+// cue_triangle_rows and kCueTriangleRowsAt300, the one owner — 10 rows at
+// 300 %, 7 at 200 %, 5 at 150 % and 138 %), no whole count of W. THE
 // LABEL'S LENGTHS ARE SKIN LENGTHS TOO, scaled with the text they place
 // (the text round, architect 2026-11-03): the fill's pad, the segment gap
 // and the flag editor's outline (render.h's cue_fill_pad_px,
@@ -86,7 +88,7 @@
 // column, THE BARE TRIANGLE'S REACH RIGHT, THE OUTLINE'S W AND A GAP OF 12
 // DEVICE PX AT 300 % (render.h's cue_label_lead_px and kCueLabelGapAt300,
 // architect 2026-10-26 ~12:40: the label follows the rows; the W
-// 2026-11-04: 9 + 3 + 12 = 24 at 300 %). Every line down the canvas is
+// 2026-11-04: 10 + 2 + 12 = 24 at 300 %). Every line down the canvas is
 // solid, one W (no dotted line since 2026-11-04). THE WELL'S
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
@@ -100,10 +102,11 @@ struct ProgramSpec {
     // the roster's and the render player's hot face is never lit, the hover
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
-    // (THE STRIPS' RUN GAP — 15 W, row 8's group gap as the bars left it —
-    // AND THE STRIP PAD — 13 W, settled 2026-10-23 — are render.h's device-px
-    // constexprs since 2026-11-03, kRunGapAt300 45 and kStripPadAt300 39, the
-    // same lengths: the retrofit reversed that morning's "half the key".)
+    // (THE STRIPS' RUN GAP — row 8's group gap as the bars left it — AND
+    // THE STRIP PAD — settled 2026-10-23 — are render.h's device-px
+    // constexprs since 2026-11-03, kRunGapAt300 44 and kStripPadAt300 38
+    // since 2026-11-04 night, the unit of 2: the retrofit reversed that
+    // morning's "half the key".)
     // THE STRIPS' ENDS ARE THE WELL'S FIRST AND LAST COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring, the well's columns since the flat well — THE EDGE RULE;
@@ -122,7 +125,8 @@ struct ProgramSpec {
     // tablet's scale: kTimeFieldPadAt300 and the height derived from it and
     // the clock's cap, the marker lane's height too. THE ACTIVE TAB'S NAME
     // AND THE STATE LINE'S AIR past the clock field are paint_handler.cpp's,
-    // kTabNameAirAt300 and kStateAirAt300, 2026-11-03, 15 since 2026-11-04.)
+    // kTabNameAirAt300 and kStateAirAt300, 2026-11-03, 14 since 2026-11-04
+    // night.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
     // THE WELL'S SIDE MARGIN (Cool Edit's x = 202..207 of
@@ -141,11 +145,11 @@ struct ProgramSpec {
     int  grid_divisions;
     // THE TRIM BAR'S FIELD, IN DEVICE PX AT 300 % (architect 2026-11-01
     // night, M5c / M5h, "good"; the two fills on it and one hairline, the
-    // ground line under them, mock z2, 2026-11-03; 15, the nearest whole W,
-    // since 2026-11-04, the unit, so the fill is 18, 6 W, and the bar 147 ..
-    // 167 at 300 %): THE RULING IS THE 300 % NUMBER, read on the skin's road
-    // (render.h's view_bar_field_h_px through skin_px, floor 1: 15 at 300 %,
-    // 10 at 200 %; the bar's rows trim_bar_h_px). (THE RULER'S GROUND, TICKS AND
+    // ground line under them, mock z2, 2026-11-03; 14, 7 W, since
+    // 2026-11-04 night, the unit of 2, so the fill is 16, 8 W, and the bar
+    // 146 .. 163 at 300 %): THE RULING IS THE 300 % NUMBER, read on the
+    // skin's road (render.h's view_bar_field_h_px through skin_px, floor 1:
+    // 14 at 300 %, 9 at 200 %; the bar's rows trim_bar_h_px). (THE RULER'S GROUND, TICKS AND
     // BASELINE and THE MARKER LANE'S W ROWS, QUANTA AND FILL, the hi-fi
     // well's fields 2026-10-09 to 2026-11-02, and THE STEREO DIVIDER'S FACE
     // left with the flat well: render.h's well lanes block derives them at
@@ -164,7 +168,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_hot_face      = false,
     .column_margin_px      = 6,
     .grid_divisions        = 4,
-    .view_bar_field_at300  = 15,
+    .view_bar_field_at300  = 14,
 };
 
 // (THE AUTHORED TOTALS — the band's and row 8's strip pads in W, the lane

@@ -305,9 +305,9 @@ struct WaveformCache {
 // THE SURFACE HOLDS THE ROWS ITS INK CAN REACH (2026-10-13): the window's
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
-// foot) — the ruler lane, the marker lane and the foot line, 37 + 38 + 3 =
-// 78 device rows at 300 % where the whole strip from row 0 is 246 at
-// key_height 33 (re-derived 2026-11-04, the unit). Every cue pixel is
+// foot) — the ruler lane, the marker lane and the foot line, 38 + 39 + 2 =
+// 79 device rows at 300 % where the whole strip from row 0 is 243 at
+// key_height 34 (re-derived 2026-11-04 night, the unit of 2). Every cue pixel is
 // inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
 // the font: in paint_cues (render.cpp) every label's face box and its text
 // are painted under a clip of the label's span
@@ -788,13 +788,6 @@ struct GuiPaintHandler {
         double spp      = 0.0;
     };
     PlateViewportBasis plate_viewport_basis() const;
-    // THE STANDING STEM COVERS THE LINE (2026-11-04, session 33): whether
-    // one of standing_stem_rects' canvas rects stands on `line`'s own
-    // columns (the same x and w) — the opaque stem painted over the
-    // playhead's line, so no change of the line's color can show. PUBLIC for
-    // its one reader, the tick's fade damage (main.cpp, THE PLAYHEAD'S
-    // FADE).
-    bool standing_stem_covers(const GuiRect& area, const GuiRect& line) const;
 
 private:
     // THE DEBT (2026-10-13): set by owe_waveform_rebuild, cleared at the head
@@ -1091,9 +1084,8 @@ private:
     void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
     // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W
-    // opaque line in the fade's stored color (AppState::playhead_line_rgb,
-    // between the palette's `playhead_line` FFFFFF and the head's
-    // `playhead_head` 03C3D5, render_playhead's THE FADE, 2026-11-04) — before the
+    // opaque line in the palette's static `playhead_line` 85E2EB
+    // (render_playhead's paragraph, 2026-11-04 night) — before the
     // coincidence stems, which stand over it.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER

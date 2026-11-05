@@ -221,8 +221,8 @@ inline constexpr double kRowGapPx = 1.0;
 // THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
 // first hours; 51 device px at 300 %, round the text, again since
-// 2026-11-03, the retrofit, after the text round's 56; a whole W, 17 W,
-// kept by the unit, 2026-11-04), the panel's row gap, the row's glyph (the painter's,
+// 2026-11-03, the retrofit, after the text round's 56; a Windows-px length
+// on the scaled_px road, kept by the unit, 2026-11-04), the panel's row gap, the row's glyph (the painter's,
 // 2026-10-23; Windows' small 16-px icon until then; Breeze's since
 // 2026-11-02). A folder row wears icons::Icon::Folder and a wav row
 // icons::Icon::ViewMediaTrack, the double notes — SOURCE's drawing, a

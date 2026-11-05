@@ -100,8 +100,8 @@ struct GuiInputHandler;
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, then retired with the LED, 2026-11-01; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
-// settled at a constant, 39 device px at 300 % (render.h's
-// strip_pad_px); the
+// settled at a constant, 38 device px at 300 % since 2026-11-04 night
+// (render.h's strip_pad_px); the
 // two bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow, editable
 // 2026-10-21..10-22, left with its key, the shadow one scaled px; icons
 // and font, editable 2026-10-09..10-12, the vocabulary chrome,

@@ -150,9 +150,10 @@ namespace {
 // removed: the tablet's window has none; render.h's caption note): THE
 // TOOLBAR BAND
 // (THE LOGO LANE — 72 device px at 300 %, render.h's logo lane block — the
-// key, 69 device px at 300 % wide by the `key_height` tuning key's
-// device px at 300 % tall (33 its default), and the strip pad, 39 at 300 %,
-// the keys' legends in it (the hi-fi metrics again since 2026-11-03), on the
+// key, 70 device px at 300 % wide by the `key_height` tuning key's
+// device px at 300 % tall (34 its default), and the strip pad, 38 at 300 %,
+// the keys' legends in it (the hi-fi metrics again since 2026-11-03, the
+// unit of 2 since 2026-11-04 night), on the
 // flat ground — render.h's program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
 // BLOCK's four, THE WELL — THE PROGRAM'S CANVAS COLUMN, flat regions on the
@@ -234,10 +235,10 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-11-04 rather than adjusted (the unit: every line one W, the 21-px
-// text, the ruler's Bold 15, the trim bar's field 15; the retrofit's 72-row
-// logo lane, 69-px key and strip pad 39 of 2026-11-03 unchanged), AT
-// key_height 33 (the template's value; a tune moves the band's and
+// 2026-11-04 night rather than adjusted (the unit of 2: every line one W of
+// 2 device px, the 22-px text, the ruler's Bold 16, the trim bar's field
+// 14; the 72-row logo lane, the 70-px key and the strip pad 38), AT
+// key_height 34 (the template's value; a tune moves the band's and
 // row 8's case rows and the well by their difference), the waveform the
 // whole leftover and both gaps 0 in every stack (the rule above). Every
 // lane is its own composite of rounded parts (skin_px's and scaled_px's
@@ -246,50 +247,50 @@ namespace {
 // factor. NO LANE ABOVE OR BELOW THE WELL IS A WINDOWS-PX LENGTH: THE BAND
 // IS THE LOGO LANE, THE KEY AND THE STRIP PAD; ROW 8 THE STRIP PAD, THE
 // KEY AND THE STRIP PAD — the logo lane 72, the key the `key_height` key's
-// device px at 300 % (icon_case_h_px), the pad 39 (strip_pad_px),
+// device px at 300 % (icon_case_h_px), the pad 38 (strip_pad_px),
 // each SCALED WITH gui_scale — AND THE WELL'S LANES ARE DERIVED IN DEVICE
 // PX AT THE ELEMENT (render.h's well lanes block). THE CANVAS — THE WELL'S
-// INTERIOR — AT THE BASE'S 300 % AND key_height 33 IS 1080 DEVICE ROWS (the
+// INTERIOR — AT THE BASE'S 300 % AND key_height 34 IS 1085 DEVICE ROWS (the
 // rule at centered_leftover_h below), AND ITS WIDTH 2256 OF THE TABLET'S
 // 2304, 24 device px in from the left (waveform_area: the margin, 18 px,
 // and half the flooring's leftover, 6). Per
 // scale the well above the canvas is the trim lane (ground + the fill, a
 // hairline and the field, + the ground line) + the ruler lane (pad + the
 // digits' ink + pad, + ground) + the marker lane (the time field's height:
-// outline + pad + band + pad + outline) + the lane's foot line: 24 (3 + 3
-// + 15 + 3) + 37 (12 + 10 + 12 + 3) + 38 (3 + 6 + 19 + 7 + 3) + 3 = 102 at
-// 300 %, 16 (2 + 2 + 10 + 2) + 26 (8 + 8 + 8 + 2) + 26 (2 + 4 + 13 + 5 +
-// 2) + 2 = 70 at 200 %; the band the logo lane + the key + the strip pad,
-// 72 + 33 + 39 = 144 at 300 %, 48 + 22 + 26 = 96 at 200 %; row 8 39 + 33 +
-// 39 = 111 at 300 %, 74 at 200 %.
+// outline + pad + band + pad + outline) + the lane's foot line: 20 (2 + 2
+// + 14 + 2) + 38 (12 + 12 + 12 + 2) + 39 (2 + 6 + 22 + 7 + 2) + 2 = 99 at
+// 300 %, 12 (1 + 1 + 9 + 1) + 25 (8 + 8 + 8 + 1) + 26 (1 + 5 + 14 + 5 +
+// 1) + 1 = 64 at 200 %; the band the logo lane + the key + the strip pad,
+// 72 + 34 + 38 = 144 at 300 %, 48 + 23 + 25 = 96 at 200 %; row 8 38 + 34 +
+// 38 = 110 at 300 %, 73 at 200 %.
 //   1920 x H AT 200 % (kept as a worked case; no host runs this geometry
 //   since the laptop GUI's drop, 2026-10-30): the lanes are 96 band (rows
-//   0–95, the logo lane 0–47, the faces 48–69) + 70 the well's lanes = 166
-//   above and 76 below (the well's foot 2 and row 8's 26 + 22 + 26),
-//   leftover H − 242: the waveform H − 242 (its two wells (H − 244) / 2
-//   rows each, floored, round the divider's 2, an odd spare row the
-//   canvas's last), both gaps 0 — 96 / 0 / 70 / H − 242 / 0 / 76; the
+//   0–95, the logo lane 0–47, the faces 48–70) + 64 the well's lanes = 160
+//   above and 74 below (the well's foot 1 and row 8's 25 + 23 + 25),
+//   leftover H − 234: the waveform H − 234 (its two wells (H − 235) / 2
+//   rows each, floored, round the divider's 1, an odd spare row the
+//   canvas's last), both gaps 0 — 96 / 0 / 64 / H − 234 / 0 / 74; the
 //   waveform 1888 wide, 16 px in (the margin, 12, and half the flooring's
 //   8), the well's columns 16 and 1904 (one past 1903).
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — NO CAPTION since 2026-10-24; the architect's
-//   tablet value since 2026-10-06): the lanes are 144 band (72 + 33 + 39,
-//   rows 0–143, the logo lane 0–71, the faces 72–104) + 24 trim (rows
-//   144–146 ground, the bar 147–167: its fill 147–164, rows 165–167
-//   ground) + 37 ruler (168–201, rows 202–204 ground) + 38 marker (205–242)
-//   + 3 foot line (243–245) = 246 above (144 the band, 102 the block) and
-//   114 below (the well's foot 1326–1328 and row 8 on 1329–1439, its faces
-//   1368–1400), leftover 1080: the waveform 1080 on rows 246–1325 (its two
-//   wells 538 rows each round the divider's rows 784–786, the spare row
-//   1325 the canvas's last, render.h's waveform_divider), both gaps 0 —
-//   144 / 0 / 102 / 1080 / 0 / 114; the waveform 2256 wide, 24 px in
+//   tablet value since 2026-10-06): the lanes are 144 band (72 + 34 + 38,
+//   rows 0–143, the logo lane 0–71, the faces 72–105) + 20 trim (rows
+//   144–145 ground, the bar 146–163: its fill 146–161, rows 162–163
+//   ground) + 38 ruler (164–199, rows 200–201 ground) + 39 marker (202–240)
+//   + 2 foot line (241–242) = 243 above (144 the band, 99 the block) and
+//   112 below (the well's foot 1328–1329 and row 8 on 1330–1439, its faces
+//   1368–1401), leftover 1085: the waveform 1085 on rows 243–1327 (its two
+//   wells 541 rows each round the divider's rows 784–785, the spare row
+//   1327 the canvas's last, render.h's waveform_divider), both gaps 0 —
+//   144 / 0 / 99 / 1085 / 0 / 112; the waveform 2256 wide, 24 px in
 //   (columns 24–2279), the well's columns 24 and 2280 (one past 2279). (The
-//   unit of 2026-11-04 took its 8 rows from the canvas, architect:
-//   "waveform height ok to take from".)
+//   unit of 2026-11-04 took rows from the canvas, architect: "waveform
+//   height ok to take from"; the unit of 2 that night gave five back.)
 //   1024x600 AT 200 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 358 -> the waveform 358, both
-//   gaps 0 — 96 / 0 / 70 / 358 / 0 / 76.
+//   this geometry): leftover 366 -> the waveform 366, both
+//   gaps 0 — 96 / 0 / 64 / 366 / 0 / 74.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -437,8 +438,8 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300 and key_height 33 the lanes leave 1440 − 246 − 114 = 1080
-// device rows (2026-11-04, the unit). No
+// gui_scale 300 and key_height 34 the lanes leave 1440 − 243 − 112 = 1085
+// device rows (2026-11-04 night, the unit of 2). No
 // color moves a lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -570,12 +571,15 @@ GuiRect waveform_area(const AppState& a) {
     // the vocabulary reaches it: the lanes scale with gui_scale (lane by
     // lane, each from its rounded parts, which is not one multiply of the
     // sum), the well's rows of ground one W each (2026-11-04), and at the
-    // 1000 % ceiling (architect 2026-10-05) they leave 236 of the tablet's
-    // 1440 rows at key_height's default 33 and pass them from key_height 69,
+    // 1000 % ceiling (architect 2026-10-05) they leave 255 of the tablet's
+    // 1440 rows at key_height's default 34 (the band 240 + 113 + 127, the
+    // well's lanes 68 + 126 + 130 + 7, the foot 7, row 8 127 + 113 + 127)
+    // and pass them from key_height 73,
     // so the top of the vocabulary can land on this floor. (The host runs
     // far below it: the tablet at 300 % on its 1440-tall surface, where they
-    // take 360 at the default key and leave the waveform 1080, the stack
-    // record at the lane table above; re-derived 2026-11-04, the unit.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // take 355 at the default key and leave the waveform 1085, the stack
+    // record at the lane table above; re-derived 2026-11-04 night, the unit
+    // of 2.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
@@ -1240,13 +1244,13 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // covers, centred on the stem's column (cue_triangle_half_w_px and
 // cue_triangle_reach_right_px, render.h, the painter's own cells: the head
 // wears the chip's outline since 2026-11-04) — the chip's rows less one
-// left, its rows right: 15 + 16 = 31 device px at 300 %, 10 + 11 = 21 at
+// left, its rows right: 14 + 15 = 29 device px at 300 %, 8 + 9 = 17 at
 // 200 % (the cells one device px, the rows scaled, 2026-10-26; no shadow
 // since 2026-11-02) — its rows the whole band from the window's top below — which
-// also holds the one-W line of the scanner and the cursor, centered on the
-// column (col − t / 2 .. col − t / 2 + t − 1, waveform_line_px: one column
-// each side at 300 %), so a move repaints every column the head and the
-// line stood on.
+// also holds the one-W line of the scanner and the cursor, on the column
+// (col − (t − 1) / 2 .. col − (t − 1) / 2 + t − 1, waveform_line_px: the
+// column and the one right of it at 300 %, the line rule's left pixel), so
+// a move repaints every column the head and the line stood on.
 // `px_x` is the waveform's own column (offset from area.x, as every
 // playhead pixel is), so the box is placed at area.x + col — the canvas
 // standing the column's margin in from the window's side since 2026-10-09.
@@ -1273,26 +1277,6 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
-
-// THE FADE'S DAMAGE BOX (architect 2026-11-04; the rule at render_playhead's
-// THE FADE, render.h): EXACTLY THE LINE'S COLUMNS ON THE CANVAS'S ROWS —
-// the one-W line centered on the cursor's column (waveform_line_cols, the
-// painter's own gate and clip) over the area's rows, NOT THE RULER'S HEAD,
-// which the fade leaves alone. `px_x` as playhead_invalidate_rect's.
-// An empty rect where the column is off the area. Its one caller is the
-// tick's fade step, a narrow-on-plate site (playhead_pixel_x's table).
-GuiRect playhead_line_rect(const GuiRect& area, double px_x) {
-    const int col = static_cast<int>(std::nearbyint(px_x));
-    const WaveformLineCols c = waveform_line_cols(area.w, col);
-    if (c.w <= 0 || area.h <= 0) return GuiRect{area.x, area.y, 0, 0};
-    return GuiRect{area.x + c.x0, area.y, c.w, area.h};
-}
-
-// THE FADE'S ORIGIN, THE PROCESS'S START (architect 2026-11-04: the fade
-// free-runs on CLOCK_MONOTONIC, no reseat at a seek or a play): stamped
-// once by gui_main before the first project opens, read by every project's
-// tick (run_project's fade step).
-static int64_t g_playhead_fade_origin_ms = 0;
 
 // (THE STATUS CELL'S RECT IS DELETED — 2026-08-13, when the architect moved
 // the whole status chain into the TAB ROW: "just put that text in the tab row,
@@ -2156,88 +2140,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (refresh_logo_legend, its rule and its damage).
         refresh_logo_legend(app, gui);
 
-        // THE PLAYHEAD'S FADE, ON EVERY TICK (architect 2026-11-04; the rule
-        // at render_playhead's THE FADE, render.h): the color on
-        // CLOCK_MONOTONIC from the process's start, stopped or playing,
-        // whatever mode stands — and ON A CHANGE OF THE BYTE TRIPLE ALONE
-        // the painted color stored (AppState::playhead_line_rgb, which
-        // paint_playheads paints) and the line's columns on the canvas's
-        // rows damaged (playhead_line_rect), about once a tick while the
-        // line is on screen (the cost at the rule). The column is the
-        // resting cursor's on the PLATE basis, the pixels' own
-        // (playhead_pixel_x's damage rule, a narrow-on-plate site). Ahead of
-        // every return below, as the legend is: a mode that hides the canvas
-        // keeps the color current and damages nothing (THE DAMAGE IS ONLY
-        // WHAT IS SEEN, below). THE DAMAGE WAITS FOR A LIVE WAVEFORM: with
-        // no piece to dispatch on (a load in flight, or no audio yet — the
-        // open's hold included; no_audio_to_dispatch_on, app_state.h, the
-        // painter's own `plate_branch` condition, on_redraw) the line paints
-        // nothing, and the plate basis must not be asked there — its spp
-        // falls back to painter_samples_per_pixel, which needs the audio's
-        // working column (GuiAudio::working_column's assert). The color is
-        // STILL STORED there, so the first paint after the load paints the
-        // live tone.
-        //
-        // THE DAMAGE IS ONLY WHAT IS SEEN (2026-11-04, session 33; the
-        // Astra consult's (e), tmp/codex_review.md; the planner's measurement
-        // on the tablet: under an overlay or on a covering stem the app
-        // presents nothing at rest — 15 % app, SurfaceFlinger 0, 0 frames —
-        // where it presented 90 a second): the color is stored on
-        // every change whatever covers the line — so the first paint that
-        // exposes it shows the live phase — but the line's rect is damaged
-        // only where a change of its color can show:
-        //   * CUT TO THE EXPOSED CANVAS, onscreen_keyboard::
-        //     waveform_paint_area (the painter's own `canvas_paint`: nothing
-        //     under the modal family's box — the settings page, the picker,
-        //     the render player, the score viewer, a prompt — and the rows
-        //     above the keyboard's slice); an empty cut damages nothing. The
-        //     surface's close damages the canvas whole by its own owner.
-        //   * NOTHING UNDER A STANDING STEM: the coincidence stem is the
-        //     opaque `cue_outline` painted over the line (build_canvas_list's
-        //     order), so while one of its rects stands on the line's own
-        //     columns no color change can show
-        //     (GuiPaintHandler::standing_stem_covers — the one coincidence
-        //     owner's rects, compared as RECTS, never frames: the cursor's
-        //     column is the plate basis's and the stem's the flag stash's,
-        //     and only the painted rects prove the cover). The stem's own
-        //     arrival and departure are damaged by the writes that move the
-        //     cursor or the marker.
-        //   * THE EDGE COLUMNS AGREE WITH THE PAINTER: playhead_line_rect
-        //     and render_playhead both take waveform_line_cols on the same
-        //     plate basis, so a cursor on column 0 damages exactly the two
-        //     columns its clipped line paints (24..25 at 300 %), and a cursor
-        //     whose column is off the area damages nothing. The case seen on
-        //     the tablet 2026-11-04 (START, a 2-px rect on the area's left
-        //     edge at 200 a second, "no line in the capture") was this one
-        //     under a marker at frame 0: its coincidence stem stood on those
-        //     two columns (the capture's 111111 at x 24..25), so the stem
-        //     rule skips it.
-        {
-            const uint32_t rgb = playhead_fade_color_at(
-                monotonic_ms() - g_playhead_fade_origin_ms);
-            if (rgb != app.playhead_line_rgb) {
-                app.playhead_line_rgb = rgb;
-                if (!no_audio_to_dispatch_on(app, audio.total_frames())) {
-                    const GuiPaintHandler::PlateViewportBasis pb =
-                        paint_handler.plate_viewport_basis();
-                    const GuiRect area = waveform_area(app);
-                    const GuiRect line = playhead_line_rect(
-                        area,
-                        playhead_pixel_x(
-                            app, static_cast<int64_t>(pb.vp_start), pb.spp));
-                    const GuiRect seen =
-                        onscreen_keyboard::waveform_paint_area(app);
-                    const int x0 = std::max(line.x, seen.x);
-                    const int y0 = std::max(line.y, seen.y);
-                    const int x1 = std::min(line.x + line.w, seen.x + seen.w);
-                    const int y1 = std::min(line.y + line.h, seen.y + seen.h);
-                    const GuiRect r{x0, y0, x1 - x0, y1 - y0};
-                    if (r.w > 0 && r.h > 0 &&
-                        !paint_handler.standing_stem_covers(area, line))
-                        gui.invalidate_region(r.x, r.y, r.w, r.h);
-                }
-            }
-        }
+        // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
+        // 2026-11-04 night, render_playhead's paragraph, render.h — the
+        // tick's per-frame damage of a fading line stood one day and went
+        // with the fade; the partial repair it was measured under stays,
+        // GuiPlatform::present.)
 
         // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,
         // noise.h): the bed plays under every mode a return below stands for,
@@ -3496,8 +3403,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
 int gui_main() {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
-    // THE PLAYHEAD FADE'S ORIGIN, the process's start (its declaration).
-    g_playhead_fade_origin_ms = monotonic_ms();
 
     // (NO SIGCHLD DISPOSITION HERE, AND NO CHILD: the GUI spawns nothing
     // since 2026-09-29, when the load in place's `gio trash` gave way to a

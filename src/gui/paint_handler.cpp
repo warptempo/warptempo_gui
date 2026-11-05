@@ -346,8 +346,8 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp) {
 // surface — the band, row 8, the render player, the score viewer, the trim
 // presets' row, every modal controls row and the dialogs' word buttons) —
 // THE ONE PLACE the legend's placement is decided: the legend face
-// (GuiFace::Legend, 15 Regular at 300 %, uppercase; 15, the nearest whole W,
-// since the unit, 2026-11-04) CENTERED on the key's face, its cap band
+// (GuiFace::Legend, 16 Regular at 300 %, uppercase; 16, 8 W, since the
+// unit of 2, 2026-11-04 night) CENTERED on the key's face, its cap band
 // centered in the strip's bottom pad (redesign_baseline on the pad's rows,
 // the pad strip_pad_px under the face). A legend never widens a key; one
 // wider than its face
@@ -528,17 +528,18 @@ std::string key_legend_word(std::string_view word) {
 // THE INK BOX: the Breeze drawing's, ONE VISUAL SIZE for every key
 // (2026-11-01, "THE MAIN PAGE IS SETTLED"), ITS LARGER SIDE FOLLOWING THE
 // KEY'S HEIGHT (architect 2026-11-02; the ratio 2026-11-03, mock s2, 16 / 33;
-// 15 / 33 since 2026-11-04, the unit, the nearest whole W at the default):
-// kKeyGlyphInkPerKeySide, 15 / 33, of the `key_height` tuning key's device
-// px at 300 % (render.h's seat) — 15 at the default 33 — the product taken
-// as one device length at 300 % and ROUNDED ONCE, AT THE ELEMENT, by
-// skin_px (its scaled_px's nearbyint; floored at one px), never the side
-// rounded first: 15 at 300 %, 10 at 200 %, 7 at 138 % (6.9). A key_height
+// 16 / 34 since 2026-11-04 night, the unit of 2, a whole W at the default,
+// the icons keeping their size): kKeyGlyphInkPerKeySide, 16 / 34, of the
+// `key_height` tuning key's device px at 300 % (render.h's seat) — 16 at
+// the default 34 — the product taken as one device length at 300 % and
+// ROUNDED ONCE, AT THE ELEMENT, by skin_px (its scaled_px's nearbyint;
+// floored at one px), never the side rounded first: 16 at 300 %, 11 at
+// 200 % (10.67), 7 at 138 % (7.36). A key_height
 // commit reaches it on the relayout road (GuiInputHandler::apply_key_height),
 // the icon caches keyed on the ink px.
 // CENTERED in the painted face `face` (architect 2026-11-03, the retrofit:
 // the glyph centered on the face; the left-square seat of the earlier mocks
-// rejected; the face the whole 69 x 33 key since 2026-11-04), the spare
+// rejected; the face the whole 70 x 34 key since 2026-11-04 night), the spare
 // split with its odd px below and right (the integer floor, the mock's). THE
 // ODD HALF PX IS ACCEPTED (architect 2026-11-02: "I'd prefer slight
 // misalignment over uneven sizing"): a drawing whose ink side's parity
@@ -550,8 +551,8 @@ std::string key_legend_word(std::string_view word) {
 // when the key is disabled. The glyph is
 // clipped to the face: a face smaller than the ink box keeps its glyph
 // centered and lets nothing overhang onto the ground. None is at the
-// defaults — the ink 15 rows on the 33-row face.
-constexpr double kKeyGlyphInkPerKeySide = 15.0 / 33.0;
+// defaults — the ink 16 rows on the 34-row face.
+constexpr double kKeyGlyphInkPerKeySide = 16.0 / 34.0;
 void paint_key_glyph(cairo_t* cr, const GuiRect& face, icons::Icon icon,
                      bool enabled, KeyLook look) {
     const GuiRect& key = face;
@@ -1197,12 +1198,13 @@ constexpr IconRowDef kIconRowRightRun[] = {
 //
 // THE CAP BAND IS THE FACE'S OWN (gui_font.h, gui_font_cap_px): the em
 // times the file's own "H" ink per em (Liberation Sans 1409 / 2048 units),
-// an unrounded double — 14.45 device rows at 300 %'s 21-px em, 9.63 at
-// 200 %'s 14, 6.88 at 138 %'s 10, 19.27 at 400 %'s 28.
+// an unrounded double — 15.14 device rows at 300 %'s 22-px em, 10.32 at
+// 200 %'s 15, 6.88 at 138 %'s 10, 19.95 at 400 %'s 29 (the unit of 2's
+// sizes, 2026-11-04 night).
 //
 // THE SEATS AT THE TABLET'S 300 %: a list row (the folder overlay's row box,
 // folder_overlay.h's kRowHeightPx, 51 rows) seats at row floor((51 +
-// 14.45) / 2) = 32; at 138 % its 23 rows seat at floor((23 + 6.88) / 2) =
+// 15.14) / 2) = 33; at 138 % its 23 rows seat at floor((23 + 6.88) / 2) =
 // 14. The answer is independent of the box's y by construction rather than
 // by a tie rule.
 //
@@ -1238,10 +1240,10 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // the architect's authored drop put them, at both scales. His measured pixel
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
 // their own box, its height the pad, the cap's rows and the pad
-// (time_field_h_px, render.h): the 38-row field at 300 % (12 + 14 + 12)
-// puts the Program face's 14.45-row cap band at row floor((38 + 14.45) / 2)
-// = 26, the 51-row field at 400 % (16 + 19 + 16) its 19.27 rows at row 35,
-// the 26-row field at 200 % (8 + 10 + 8) its 9.63 at row 17.
+// (time_field_h_px, render.h): the 39-row field at 300 % (12 + 15 + 12)
+// puts the Program face's 15.14-row cap band at row floor((39 + 15.14) / 2)
+// = 27, the 52-row field at 400 % (16 + 20 + 16) its 19.95 rows at row 35,
+// the 26-row field at 200 % (8 + 10 + 8) its 10.32 at row 18.
 // AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop until the label's removal
 // (2026-10-14).
@@ -1724,33 +1726,33 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // too narrow for the row covers members otherwise, under the view pairs'
     // overflow rule — a width, never a state.
     //
-    // THE WIDTH MATH, RE-DERIVED for the 69-px face and the one-W gap
-    // (2026-11-04, the unit; the ends the well's columns since 2026-10-23,
-    // the faces' since 2026-11-03, the well the waveform area since
-    // 2026-11-03; key_height moves none of it): in device px at 300 %, the
-    // runs, each n faces of 69 with a key gap of 3 between two
-    // (key_group_w_px: 69n + 3(n − 1)), 45 of ground (the run gap) between
-    // two runs' faces; the right run 5 · 69 + 4 · 3 = 357, its last FACE
+    // THE WIDTH MATH, RE-DERIVED for the 70-px face and the one-W gap of 2
+    // (2026-11-04 night, the unit of 2; the ends the well's columns since
+    // 2026-10-23, the faces' since 2026-11-03, the well the waveform area
+    // since 2026-11-03; key_height moves none of it): in device px at
+    // 300 %, the runs, each n faces of 70 with a key gap of 2 between two
+    // (key_group_w_px: 70n + 2(n − 1)), 44 of ground (the run gap) between
+    // two runs' faces; the right run 5 · 70 + 4 · 2 = 358, its last FACE
     // ending on the well's last column. Outside the `h` view the LEFT WALK is
     // twenty-two members in three runs of 6, 10 and 6,
-    //   429 + 45 + 717 + 45 + 429 = 1665,
+    //   430 + 44 + 718 + 44 + 430 = 1666,
     // and inside it thirteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
     // Renders, Enable Tooltips, Noise — Restrict and the Trim Presets key
     // hidden there with Follow),
-    //   285 + 45 + 429 + 45 + 213 = 1017;
+    //   286 + 44 + 430 + 44 + 214 = 1018;
     // with one run gap of bare ground before the right run the band holds every
     // run at
-    //   1665 + 45 + 357 = 2067
-    // device px outside the view (1419 inside it) — the faces' span the
-    // well's 2256 on the tablet, with 189 px of ground between the left runs
+    //   1666 + 44 + 358 = 2068
+    // device px outside the view (1420 inside it) — the faces' span the
+    // well's 2256 on the tablet, with 188 px of ground between the left runs
     // and the right run beyond the run gap. Off the painted walk (the face
-    // skin_px(69), the key gap skin_px(3), the run gap skin_px(45), the ends
-    // well_columns'): at the tablet's 300 % (faces 69, the well 24 .. 2279)
-    // the left runs' faces on x 24..1688, the right run's 1923..2279 (its
+    // skin_px(70), the key gap skin_px(2), the run gap skin_px(44), the ends
+    // well_columns'): at the tablet's 300 % (faces 70, the well 24 .. 2279)
+    // the left runs' faces on x 24..1689, the right run's 1922..2279 (its
     // last face ending on 2279); at 138 % on a 1920-px window (faces 32, the
-    // key gap 1, the run gap 21, the well 8 .. 1911) the left runs' faces on
-    // x 8..772, the right run's 1748..1911. A roster move restates these
+    // key gap 1, the run gap 20, the well 8 .. 1911) the left runs' faces on
+    // x 8..770, the right run's 1748..1911. A roster move restates these
     // numbers.
     // THE FIT, the one statement every other site points to: the band is 27
     // faces, 23 key gaps and three run gaps outside the view (18, 14 and
@@ -2075,7 +2077,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE BAND'S (the unification's point — "the same size as
 // the other icon buttons", bigger finger targets without stealing waveform
-// height): the program's key (69 x key_height, 2026-11-03) — read from
+// height): the program's key (70 x key_height, 2026-11-04 night) — read from
 // the band's own accessors (render.h's program block) so the rows cannot
 // drift apart — on THE ROW'S OWN GROUND, the strip pad above the case and
 // below it (the simple layout, 2026-10-22; Cool Edit's row 8 under its dock
@@ -2346,17 +2348,17 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // FLAT since 2026-11-01 night, M5m, paint_ce_time_field): A FLAT kKeyFace
 // 363636 BOX, NO RING (Live's numeric fields), the digits THE
 // TEXT TONE kTextInk (M13, 2026-11-02; architect 2026-10-23: "the font
-// color should not be this yellowish color") — 41 DEVICE PX TALL at
+// color should not be this yellowish color") — 39 DEVICE PX TALL at
 // 300 %, THE PAD, THE CAP AND THE PAD (time_field_h_px, render.h, the
 // owner of the pad and the height; 2026-11-03; it does not follow the
 // key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a half-row tie
-// toward the top, the cap rule's own; round the 33-row face at key_height
-// 33, time_field_rect: row 8's 1365 .. 1402 round the face's 1368 ..
-// 1400, the field the taller), its run in THE PROGRAM FACE,
-// 21 px at 300 %, in every time field (row 8's clock, architect 2026-10-26
+// toward the top, the cap rule's own; round the 34-row face at key_height
+// 34, time_field_rect: row 8's 1365 .. 1403 round the face's 1368 ..
+// 1401, the field the taller), its run in THE PROGRAM FACE,
+// 22 px at 300 %, in every time field (row 8's clock, architect 2026-10-26
 // ~11:30; the render player's two, ~12:10, "yes" to symmetry; gui_font.h's
 // table), its cap band centred in the field by redesign_baseline — at 300 %
-// the 14.45-row cap band in the 38-row field, twelve rows of field above it
+// the 15.14-row cap band in the 39-row field, twelve rows of field above it
 // and twelve below (the pad's rule, 2026-11-03; 12 since the unit,
 // 2026-11-04). The digits are
 // TABULAR — Liberation Sans's every digit 0.556 em — with no kerning between
@@ -2371,18 +2373,18 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // live scale, so nothing is trusted to the face. The field is that cell plus
 // THE PAD either side — 12 DEVICE PX at 300 % (time_field_pad_px, render.h;
 // architect 2026-10-23, "symmetrical and much tighter"; 13 his pick of
-// 2026-11-03, mock u3, the nearest whole W since 2026-11-04) — its width
+// 2026-11-03, mock u3, rounded to the unit 2026-11-04) — its width
 // ceiled,
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
 // the one face, so the three fields are one width. The cell is 4.448 em
 // (seven tabular digits at 0.556 em and the colon and the point at 0.278):
-// at 300 % and 21 px, 93.4 device px ceiled to 94, the field 118; at
+// at 300 % and 22 px, 97.9 device px ceiled to 98, the field 122; at
 // 138 % a 10-px em, 44.5 ceiled to 45, the field 57. THE PLAYER'S ROW
 // HOLDS THEM: its scrub is what the fixed terms leave (player_row_layout),
-// the two fields and their gap 118 + 9 + 118 = 245 device px at 300 % and
-// 57 + 4 + 57 = 118 at 138 %, so with the 69-px face, the one-W key gap and
-// the 45-px run gap (2026-11-04) the scrub's channel is 1234 device px at
-// 300 % (2304 wide, x 282 .. 1515) and 1428 at 138 % (1920 wide).
+// the two fields and their gap 122 + 9 + 122 = 253 device px at 300 % and
+// 57 + 4 + 57 = 118 at 138 %, so with the 70-px face, the one-W key gap and
+// the 44-px run gap (2026-11-04 night) the scrub's channel is 1227 device
+// px at 300 % (2304 wide, x 282 .. 1508) and 1431 at 138 % (1920 wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2440,14 +2442,15 @@ static std::string clock_time_text(const AppState& app,
 }
 
 // THE ACTIVE TAB'S NAME AND THE STATE LINE'S AIR (architect 2026-10-22, the
-// tab strip's retirement; the text round's 16 of 2026-11-03 back to 5 W =
-// 15 px with the unit, 2026-11-04, every authored length a whole W): the
-// name's first ink kTabNameAirAt300 = 15 DEVICE PX AT 300 % past the clock
-// field's right edge, the state line's first ink kStateAirAt300 = 15 past
-// the name's advance (paint_bottom_row_buttons_and_clock), skin_px, rounded
-// at the element (10 at 200 %, 7 at 138 %).
-constexpr double kTabNameAirAt300 = 15.0;
-constexpr double kStateAirAt300   = 15.0;
+// tab strip's retirement; the text round's 16 of 2026-11-03, 15 with the
+// morning's unit, 14 = 7 W with the unit of 2, 2026-11-04 night, every
+// authored length a whole W): the name's first ink kTabNameAirAt300 = 14
+// DEVICE PX AT 300 % past the clock field's right edge, the state line's
+// first ink kStateAirAt300 = 14 past the name's advance
+// (paint_bottom_row_buttons_and_clock), skin_px, rounded at the element (9
+// at 200 % (9.33), 6 at 138 % (6.44)).
+constexpr double kTabNameAirAt300 = 14.0;
+constexpr double kStateAirAt300   = 14.0;
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
 // (architect 2026-10-05): ACID's adjacent fields stand three Windows px of
@@ -2655,13 +2658,14 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
 // case's rows [case_y, case_y + case_h), A HALF-ROW TIE TOWARD THE TOP
 // either way (the offset FLOORED, so a field TALLER than the case — as it
 // stands under a key_height below 38 — takes the tie upward too, where
-// truncation would send it down). At key_height 33 the field, 38 at 300 %
+// truncation would send it down). At key_height 34 the field, 39 at 300 %
 // (time_field_h_px), is the taller: 3 rows over the face above it and 2
-// below at 300 % (row 8's 1365 .. 1402 round the face's 1368 .. 1400), 2
-// and 2 at 200 % (the 26-row field round the 22-row face), standing over the
+// below at 300 % (row 8's 1365 .. 1403 round the face's 1368 .. 1401), 2
+// and 1 at 200 % (the 26-row field round the 23-row face), standing over the
 // strip pads either side — inside row 8's and the controls row's rows at
-// every key_height in the key's range, the strip pad 39 at 300 % whatever
-// the key (2026-11-03, the retrofit), so no field overhangs its strip.
+// every key_height in the key's range, the strip pad 38 at 300 % whatever
+// the key (2026-11-03, the retrofit; 38 since 2026-11-04 night), so no
+// field overhangs its strip.
 static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
     const int h = time_field_h_px();
     const int d = case_h - h;
@@ -2759,30 +2763,30 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
-    // THE NUMBERS (device px at 300 %, re-derived 2026-11-04 for the unit —
-    // the 69-px face, the one-W key gap, the 45-px run gap, the 21-px clock;
-    // the skips two, the verbs eight, the step-and-walk group four and the
-    // nudge-and-play group five): the block is 19 faces in four runs, 15 key
-    // gaps and three run gaps, 141 + 573 + 285 + 357 + 3·45 = 1491 px, its
-    // last face ending at the faces' right end (bottom_row_seats'
-    // cases_right, 2280, one past the well's last column 2279) — on the
-    // tablet's 2304 the faces on x 789..2279 (the skips 789..929, the verbs
-    // 975..1547, the walk 1593..1877, the nudge 1923..2279, Play
-    // 2211..2279); the clock's field on the well's first column, from x 24 —
-    // the cell (4.45 em of Liberation Sans advances, seven digits, the colon
-    // and the point, in the program face's 21 px at 300 %, 94 px ceiled) and
-    // its two 12-px pads, a 118-px field, x 24..141 — then the name's first
-    // ink 15 px past it (x 157), the state line's 15 px past the name's
-    // advance, clipped one run gap short of the block (x 744). On a 1920-px
-    // window at 138 % (faces 32, the key gap 1, the run gap 21, the program
-    // face 10 px) the block is 686 px of faces from x 1226, the clock's
-    // field 57 px on x 8..64, the name from x 72.
+    // THE NUMBERS (device px at 300 %, re-derived 2026-11-04 night for the
+    // unit of 2 — the 70-px face, the one-W key gap of 2, the 44-px run gap,
+    // the 22-px clock; the skips two, the verbs eight, the step-and-walk
+    // group four and the nudge-and-play group five): the block is 19 faces
+    // in four runs, 15 key gaps and three run gaps, 142 + 574 + 286 + 358 +
+    // 3·44 = 1492 px, its last face ending at the faces' right end
+    // (bottom_row_seats' cases_right, 2280, one past the well's last column
+    // 2279) — on the tablet's 2304 the faces on x 788..2279 (the skips
+    // 788..929, the verbs 974..1547, the walk 1592..1877, the nudge
+    // 1922..2279, Play 2210..2279); the clock's field on the well's first
+    // column, from x 24 — the cell (4.45 em of Liberation Sans advances,
+    // seven digits, the colon and the point, in the program face's 22 px at
+    // 300 %, 98 px ceiled) and its two 12-px pads, a 122-px field, x
+    // 24..145 — then the name's first ink 14 px past it (x 160), the state
+    // line's 14 px past the name's advance, clipped one run gap short of the
+    // block (x 744). On a 1920-px window at 138 % (faces 32, the key gap 1,
+    // the run gap 20, the program face 10 px) the block is 683 px of faces
+    // from x 1229, the clock's field 57 px on x 8..64, the name from x 71.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and
     // Toggle Value Drag hidden there with the verbs, Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
-    // not standing, 141 + 69 + 141 + 285 + 3·45 = 771 px at 300 %, from x
-    // 1509. THE ROW CARRIES NO
+    // not standing, 142 + 70 + 142 + 286 + 3·44 = 772 px at 300 %, from x
+    // 1508. THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
     // STATE LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so
@@ -3225,7 +3229,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     cairo_save(cr);
     // KDENLIVE'S TOOLTIP (architect 2026-10-31, on the hint-ink mock: the
     // name, and under it a smaller, dimmer hint; "think 90s Japanese
-    // hi-fi"). THE NAME LINE wears the flags' face, GuiFace::Program (21 px
+    // hi-fi"). THE NAME LINE wears the flags' face, GuiFace::Program (22 px
     // at 300 %, "the tooltips font size should be the same as the flags",
     // 2026-10-23) in the text tone kTextInk; THE HINT LINE its own face,
     // GuiFace::Hint (18 px at 300 %), in the
@@ -3243,8 +3247,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // between the two lines. Each cap is the face's own (gui_font_cap_px)
     // rounded at the element; each baseline stands on its cap's bottom row,
     // so a descender hangs into the pad below it. At 300 % a one-line box is
-    // 3 + 12 + 14 + 12 + 3 = 44 device rows, a two-line one
-    // 3 + 12 + 14 + 12 + 12 + 12 + 3 = 68.
+    // 2 + 12 + 15 + 12 + 2 = 43 device rows, a two-line one
+    // 2 + 12 + 15 + 12 + 12 + 12 + 2 = 67 (the unit of 2's line and faces,
+    // 2026-11-04 night; the Hint face's cap 12.38).
     const GuiFont name_font = gui_font(GuiFace::Program);
     const GuiFont hint_font = gui_font(GuiFace::Hint);
     const bool two_line = (line2 != nullptr);
@@ -3640,10 +3645,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //   LOOK, Cool Edit's FLIPPED RULER IN LIVE'S TONES (architect 2026-10-09,
 //     the program is Cool Edit; flat since 2026-11-01 night; render.h's well
 //     paragraph and its ruler block): flat kRulerFace under the trim bar's
-//     frame, no line on its top, the ticks kRulerTick one W wide, centered
-//     on their columns, STANDING ON ITS FOOT — majors 9 rows, minors 3 at
-//     300 %, overlaying the ruler's bottom pad — and the digits Bold 15 in
-//     the text tone,
+//     frame, no line on its top, the ticks kRulerTick one W wide, on their
+//     columns (the line rule's left pixel), STANDING ON ITS FOOT — majors 8
+//     rows, minors 2 at 300 %, overlaying the ruler's bottom pad — and the
+//     digits Bold 16 in the text tone,
 //     bare, their ink centered on the ruler; then a row of ground. (Kdenlive's
 //     look — the majors rising above the flags, the etched ticks — stood
 //     2026-08-01 to 2026-10-09; Cool Edit's E0E0E0 on the dark ground until
@@ -3871,16 +3876,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     // THE TICKS STAND ON THE RULER'S FOOT (the flipped ruler; render.h's
     // ruler block): each ONE CANVAS LINE wide (waveform_line_px, one W since
-    // 2026-11-04, the unit), centered on its column, in kRulerTick, rising
-    // the major's 9 rows or the minor's 3 at 300 % (skin_px) from the foot
-    // into the ruler's bottom pad, NO SHADOW.
+    // 2026-11-04, the unit), on its column (the line rule's left pixel), in
+    // kRulerTick, rising the major's 8 rows or the minor's 2 at 300 %
+    // (skin_px) from the foot into the ruler's bottom pad, NO SHADOW.
     const int ruler_bottom = lane.y + std::min(ruler_h, lane.h);   // one past
     const int major_top = ruler_bottom - ruler_major_tick_h_px();
     const int minor_top = ruler_bottom - ruler_minor_tick_h_px();
 
-    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: BOLD 15
-    // at 300 %, scaled with gui_scale — architect 2026-11-01 night, M5c; 15
-    // since the unit, 2026-11-04) in the text tone kTextInk (2026-11-02, the
+    // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: BOLD 16
+    // at 300 %, scaled with gui_scale — architect 2026-11-01 night, M5c; 16
+    // since the unit of 2, 2026-11-04 night) in the text tone kTextInk (2026-11-02, the
     // font audit: Live's own ruler digits), BARE, THEIR INK CENTERED ON THE
     // RULER — the BASELINE the ruler's pad and the digits' ink above the
     // baseline under the lane's top (render.h's ruler_baseline_px: 22 rows at
@@ -4030,7 +4035,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09; render.h's playhead
-    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 9 at
+    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 10 at
     // 300 %) in whole device cells, Cool Edit's aliased staircase
     // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
     // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
@@ -4038,9 +4043,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // `cue_outline` 111111 — THE SAME DRAWING AS THE CHIP (architect
     // 2026-11-04, mock k1, "4 accept overlap") — its fill the palette's
     // `playhead_head` (Live's cyan 03C3D5 since 2026-11-01), NO SHADOW
-    // (2026-11-02), unchanged by the line's fade (render_playhead), THE
+    // (2026-11-02), the head's own tone apart from the line's static
+    // `playhead_line` (render_playhead), THE
     // OUTLINED SHAPE ON THE RULER'S LAST cue_chip_rows DEVICE ROWS (300 %:
-    // the outer on 186 .. 201, the fill on 189 .. 197), its apex — the
+    // the outer on 185 .. 199, the fill on 187 .. 196), its apex — the
     // bottom centre of the playhead's column — on the ruler's foot row,
     // over the ticks' feet (2026-10-09 ~21:00; the ruler's foot since the
     // flat well). It is OPAQUE over the ticks and digits the walk above
@@ -4483,10 +4489,11 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const int y_top  = area.y;
     const int y_bot  = area.y + area.h - t;
     // THE RUNS' COLUMNS, the two sides' lines' outer columns: from the left
-    // line's first column (the reset's column, unclipped, centered) through
-    // the right line's last (x1 − 1's), cut to the area's columns.
-    const int run_lo = std::max(stem - t / 2, area.x);
-    const int run_hi = std::min(x1 - 1 - t / 2 + t, area.x + area.w);
+    // line's first column (the reset's column, unclipped, on the line rule:
+    // the even line's left pixel the column, render.h's waveform_line_cols)
+    // through the right line's last (x1 − 1's), cut to the area's columns.
+    const int run_lo = std::max(stem - (t - 1) / 2, area.x);
+    const int run_hi = std::min(x1 - 1 - (t - 1) / 2 + t, area.x + area.w);
     GuiRect rs[4];
     int n = 0;
     if (run_hi > run_lo) {
@@ -4698,9 +4705,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
 // row — THROUGH THE ONE-W ROW OF GROUND under the lane TO THE CANVAS'S LAST
-// ROW (300 %: rows 242 .. 1325 on the stem's three columns), so no gap of
-// ground stands between the apex and the stem (his "small gap": the three
-// rows 243 .. 245 the canvas-only stem left). TWO PAINTERS, ONE DECISION:
+// ROW (300 %: rows 240 .. 1327 on the stem's two columns, the marker's and
+// the one right of it), so no gap of ground stands between the apex and
+// the stem (his "small gap": the rows of ground under the lane, 241 .. 242,
+// the canvas-only stem left). TWO PAINTERS, ONE DECISION:
 // the canvas's rows are the GPU's (this pass, through the sink, whose list
 // is scissored to the canvas paint area), the lane's last row and the
 // ground line the chrome's (paint_marker_stem_heads, on the backbuffer after
@@ -4732,16 +4740,6 @@ std::vector<GuiRect> GuiPaintHandler::standing_stem_rects(const GuiRect& area,
         if (c.w > 0) rs.push_back(GuiRect{area.x + c.x0, y0, c.w, y1 - y0});
     }
     return rs;
-}
-
-// THE COVER (the declaration's rule): the same vector the canvas's stem
-// painter takes, on the canvas's rows, each rect compared by its columns.
-bool GuiPaintHandler::standing_stem_covers(const GuiRect& area,
-                                           const GuiRect& line) const {
-    if (line.w <= 0) return false;
-    for (const GuiRect& s : standing_stem_rects(area, area.y, area.y + area.h))
-        if (s.x == line.x && s.w == line.w) return true;
-    return false;
 }
 
 void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
@@ -4799,10 +4797,11 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
         const int x0 = static_cast<int>(std::nearbyint(run.x0));
         const int x1 = static_cast<int>(std::nearbyint(run.x1));
         // From the left side's line's first column through the right side's
-        // line's last (each t wide, centered on its column), cut to the
-        // area's columns.
-        const int lo = std::max(x0 - t / 2, clip_lo);
-        const int hi = std::min(x1 - t / 2 + t, clip_hi);   // exclusive
+        // line's last (each t wide, on its column by the line rule: the even
+        // line's left pixel the column, render.h's waveform_line_cols), cut
+        // to the area's columns.
+        const int lo = std::max(x0 - (t - 1) / 2, clip_lo);
+        const int hi = std::min(x1 - (t - 1) / 2 + t, clip_hi);   // exclusive
         if (hi > lo) {
             rs.push_back(GuiRect{lo, y_top, hi - lo, t});
             rs.push_back(GuiRect{lo, y_bot, hi - lo, t});
@@ -4887,11 +4886,10 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 
 void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
                                       const GuiRect& area) {
-    // THE FADE'S COLOR IS THE STORED ONE (architect 2026-11-04; the rule at
-    // render_playhead's THE FADE): the byte triple the tick stored at its
-    // last change, read as painted (ON SCREEN IS AS PAINTED), so the picture
-    // and the damage the change owed are one color; this pass never reads
-    // the clock. The head in the ruler is unchanged.
+    // THE LINE'S COLOR IS THE PALETTE'S `playhead_line`, ONE STATIC TONE
+    // (architect 2026-11-04 night; the rule at render_playhead's paragraph):
+    // no clock, no stored color, nothing damaged at rest. The head in the
+    // ruler wears its own `playhead_head`.
     // Use the displayed viewport AND its samples-per-pixel
     // (wf_cache.fp_vp_start, derived spp) so the cursor stays in
     // lockstep with the cached waveform / stem / flag layers during
@@ -4906,16 +4904,15 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     //
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form at the resting cursor column whatever the selection is doing — a
-    // SOLID ONE-W OPAQUE LINE in the fade's color between the palette's
-    // `playhead_line` FFFFFF and the head's `playhead_head` 03C3D5 (architect
-    // 2026-11-04; render.h's playhead paragraph). It paints BEFORE
-    // paint_marker_stems, whose coincidence stem stands over it (architect
-    // 2026-11-04), and before the scanner.
+    // SOLID ONE-W OPAQUE LINE in the palette's `playhead_line` 85E2EB
+    // (architect 2026-11-04 night; render.h's playhead paragraph). It paints
+    // BEFORE paint_marker_stems, whose coincidence stem stands over it
+    // (architect 2026-11-04), and before the scanner.
     //
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
-    render_playhead(sink, area, px_x, hex(app.playhead_line_rgb));
+    render_playhead(sink, area, px_x, palette().playhead_line);
 }
 
 // -- GuiPaintHandler::paint_scanner --------------------------------------
@@ -4936,10 +4933,10 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 // THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
 // (architect 2026-10-05), WHITE (architect
 // 2026-10-07: "let's go back to a white scanner") — SOLID, ONE W wide,
-// centered on its column (architect 2026-11-04, the unit,
-// waveform_line_px's rule, render.h), the canvas's rows alone (Cool Edit's
-// playback cursor is a solid line, measured 2026-10-09), and NEVER BLINKING
-// (the fade is the resting cursor's, 2026-11-04).
+// on its column (architect 2026-11-04, the unit, waveform_line_px's rule,
+// render.h), the canvas's rows alone (Cool Edit's playback cursor is a
+// solid line, measured 2026-10-09), and NEVER BLINKING (the resting
+// cursor's line is a static tone of its own since 2026-11-04 night).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (render_playhead is shared with the cursor and cannot reach a strip lane at
@@ -5314,8 +5311,9 @@ namespace {
 // THE PLAYER ROW'S GROUP SPACE IS THE RUN GAP (architect 2026-11-03, on
 // mock dec7b): between its groups (transport → scrub, scrub → the clock's
 // two fields, the fields → the right cluster) stands render.h's
-// program_run_gap_px, the band's run gap (45 at 300 %, the hi-fi's 15 W
-// again since the retrofit, 2026-11-03); the score viewer's two rows, laid
+// program_run_gap_px, the band's run gap (44 at 300 % since 2026-11-04
+// night, the unit of 2; the hi-fi's gap again since the retrofit,
+// 2026-11-03); the score viewer's two rows, laid
 // in the player's shape, read it alike (score_row_layout,
 // score_media_row_layout). The row's own 8-W space is retired
 // (closed_questions.md).
@@ -7359,13 +7357,15 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // one column. The name's x is its own constant, never derived from the
 // drawing, so it stood still when Breeze's drawings came. THE THREE STAND
 // ROUND THE TEXT (back 2026-11-03, the retrofit, after the text round's 29 /
-// 24 / 74 of that morning; whole W since 2026-11-04, the unit): the glyph's
-// ink 27 (.525 of the 51-px row), the seat 18 (the box's text seat) and the
-// name's x 63 (the 64 of 2026-11-03 rounded to the nearest whole W) — the
-// seat, the ink and 18 px of glyph-to-name air.
-static constexpr double kListGlyphInkAt300 = 27.0;
+// 24 / 74 of that morning; whole W since 2026-11-04, the unit; the W of 2
+// that night): the glyph's ink 26 (13 W; .51 of the 51-px row, the row a
+// Windows-px length of the scaled_px road, folder_overlay.h), the seat 18
+// (the box's text seat) and the name's x 62 (31 W; the 64 of 2026-11-03
+// rounded to the unit of 3's 63, then to the unit of 2) — the seat, the
+// ink and 18 px of glyph-to-name air.
+static constexpr double kListGlyphInkAt300 = 26.0;
 static constexpr double kListGlyphXAt300   = kModalBoxTextSeatAt300;
-static constexpr double kListNameXAt300    = 63.0;
+static constexpr double kListNameXAt300    = 62.0;
 
 void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
     if (!folder_overlay::stands(app)) return;
@@ -7470,12 +7470,12 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // drawing, architect 2026-11-02, R14 (4) / R15 (Q4); the logo's
             // single note no longer), Folder on a folder or
             // project row — on the ink-box road (icons.h): its ink box's
-            // larger side kListGlyphInkAt300 = 27 px, .525 of the 51-px row,
+            // larger side kListGlyphInkAt300 = 26 px, .51 of the 51-px row,
             // its rows centered on the row (the floor of the spare), its
             // first ink column kListGlyphXAt300 = 18 px past the pane's left
             // edge (the text seat), in the row text's tone — kTextInk at
             // rest, kSelectionText 111111 on the lit row (the selection
-            // pair, materials.h); the name at kListNameXAt300 = 63 (the
+            // pair, materials.h); the name at kListNameXAt300 = 62 (the
             // names' column above). THE PLAYING
             // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain
             // renders row looks good now" — the clock and the scrub say
@@ -8248,9 +8248,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
         //      Edit's view bar and its span (2026-10-09; no cursor mark in
         //      the bar, ~14:30).
-        //   6. the CURSOR's CANVAS LINE (paint_playheads, solid, in the
-        //      fade's stored color — the head is the ruler pass's, step 9),
-        //      the `h` view's nudged-pair rings under it.
+        //   6. the CURSOR's CANVAS LINE (paint_playheads, solid, the
+        //      palette's static `playhead_line` — the head is the ruler
+        //      pass's, step 9), the `h` view's nudged-pair rings under it.
         //   7. the MARKER STEMS (waveform): the coincidence stems, over the
         //      cursor's line (2026-11-04).
         //   8. the SCANNER (waveform), solid.

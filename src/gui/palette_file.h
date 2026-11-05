@@ -17,10 +17,10 @@
 // (2026-11-01) — the canvas, the ink, the zero line, the grid's one-px
 // equivalent, the playhead's triangle, the orange of Live's markers and
 // lit buttons, (2026-11-02) the grey of its inactive marker, and
-// (2026-11-04) its unselected marker's grey, its dark line and its
-// playhead's line's fade, measured per pixel at 120 fps — but the core,
-// the product's own, and the scanner, the controls' white; each ruled on
-// his mocks.
+// (2026-11-04) its unselected marker's grey, its dark line and the mid
+// tone of its playhead's line's fade, measured per pixel at 120 fps — but
+// the core, the product's own, and the scanner, the controls' white; each
+// ruled on his mocks.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the well, and THE MATERIALS
 // every chrome role — the flat look's constants (chrome_derive.h,
@@ -39,8 +39,8 @@
 // flag editor's field and selection band, the chrome's selected pair). So
 // the palette's program roles are exactly the TWELVE below (TWO ROLES MAY
 // SHARE A NUMBER — `cue_unselected` and `inactive_cue` are both Live's
-// 5D5D5D, as the ink and `center` share 191919, and `playhead_line` and
-// `scanner` FFFFFF: a role is what it paints, not its value):
+// 5D5D5D, as the ink and `center` share 191919: a role is what it paints,
+// not its value):
 //   waveform_canvas  393939  the canvas, Live's darker band
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
 //                            the lit lamp's outer bar
@@ -90,17 +90,14 @@
 //                            it
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
-//                            paragraph) — AND THE LINE'S FADE TROUGH
-//                            (architect 2026-11-04, "1 good": four lossless
-//                            one-px samples of Live's line lie on the byte
-//                            line from FFFFFF toward 03C3D5)
-//   playhead_line    FFFFFF  THE PLAYHEAD'S LINE IN THE CANVAS AT ITS PEAK
-//                            (architect 2026-11-04, Live's, measured per
-//                            pixel): solid, one W, opaque, its color FADING
-//                            linearly in bytes to the head's 03C3D5 and
-//                            back, 600 ms each way (render_playhead's THE
-//                            FADE) — the line's two ends the playhead's two
-//                            tones
+//                            paragraph), the head's alone
+//   playhead_line    85E2EB  THE PLAYHEAD'S LINE IN THE CANVAS (architect
+//                            2026-11-04 night, mock n1, his pick of four
+//                            static tones after the measured cost of a
+//                            fading line): solid, one W, opaque, ONE STATIC
+//                            TONE — the mid tone of Live's fade between
+//                            white and the head's cyan, the triangle wave's
+//                            mean (render_playhead's paragraph)
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems
@@ -124,7 +121,7 @@ inline constexpr uint32_t kPaletteCueUnselected = 0x5D5D5D;
 inline constexpr uint32_t kPaletteCueOutline    = 0x111111;
 inline constexpr uint32_t kPaletteInactiveCue = 0x5D5D5D;
 inline constexpr uint32_t kPalettePlayheadHead = 0x03C3D5;
-inline constexpr uint32_t kPalettePlayheadLine = 0xFFFFFF;
+inline constexpr uint32_t kPalettePlayheadLine = 0x85E2EB;
 inline constexpr uint32_t kPaletteScanner  = 0xFFFFFF;
 
 // THE ROLE TABLE — THE ONE ENUMERATION of the program's roles, in

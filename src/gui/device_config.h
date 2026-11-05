@@ -118,13 +118,14 @@
 //   key_height=<px>          THE KEY'S HEIGHT (architect 2026-10-29, a tuning
 //                            key, "around 33"; the square key of 2026-11-02
 //                            reversed 2026-11-03, the retrofit: the key's
-//                            face 69 device px wide at 300 %, a constexpr,
-//                            and this key its height, default 33): the
+//                            face 70 device px wide at 300 %, a constexpr,
+//                            and this key its height, default 34 since
+//                            2026-11-04 night, the unit of 2): the
 //                            program's key's height in DEVICE PX AT
 //                            300 % (skin_px's axis, the logo lane's unit;
 //                            render.h's icon_case_h_px), the key glyph's
-//                            ink following it (15 * key_height / 33,
-//                            paint_key_glyph), an integer in [21, 99] in
+//                            ink following it (16 * key_height / 34,
+//                            paint_key_glyph), an integer in [20, 100] in
 //                            canonical spelling (parse_key_height below),
 //                            live at the settings editor's OK, the window
 //                            re-laid-out at once
@@ -133,7 +134,7 @@
 //                            key while it stands, which settles into a
 //                            constexpr once he rules the number (render.h's
 //                            case block), its key, grammar and row going
-//                            then; the template spells 33
+//                            then; the template spells 34
 //   osk_key_w=<px>           THE ON-SCREEN KEYBOARD'S KEY BOX (architect
 //   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
 //                            centered, like a phone … chiclets, taller than
@@ -222,10 +223,11 @@
 //                            planner editing both devices' configs at the
 //                            install)
 //   (strip_pad=<W>, THE STRIP PAD, a tuning key with a Settings row
-//                            2026-10-22 to 2026-10-23, SETTLED AT 13 W —
-//                            39 device px at 300 %, render.h's
-//                            strip_pad_px (half the key the morning of
-//                            2026-11-03, 13 W again since that day); an old `strip_pad=` line is the ordinary
+//                            2026-10-22 to 2026-10-23, SETTLED AT A
+//                            CONSTANT — 38 device px at 300 % since
+//                            2026-11-04 night, render.h's strip_pad_px (half
+//                            the key the morning of 2026-11-03, the hi-fi's
+//                            pad again since that day); an old `strip_pad=` line is the ordinary
 //                            unknown-key hard fail, the planner editing both
 //                            devices' configs at the install and the sync
 //                            script's setup removing it on the tablet)
@@ -502,8 +504,9 @@ struct DeviceConfig {
     bool        true_colors = true;
     // THE WAVEFORM PLATE'S GROW in quarters of a device px (2026-10-31, the
     // head's list; a permanent key): required; the construction state is
-    // the template's 0.5 (kWaveformGrowDefaultQuarters below).
-    int         waveform_grow_quarters = 2;
+    // the template's 1 (kWaveformGrowDefaultQuarters below, 2026-11-04
+    // night).
+    int         waveform_grow_quarters = 4;
     // THE PROJECT VOICE'S LEVEL in dB (2026-10-31 night, the head's list; a
     // permanent key): required; the construction state is the templates' 0.
     int         audio_level       = 0;
@@ -514,9 +517,9 @@ struct DeviceConfig {
     int         noise_level       = -9;
     int         noise_crossfade_s = 4;
     // THE KEY'S HEIGHT in device px at 300 % (2026-10-29, the head's list; a
-    // tuning key): required; the construction state is the template's 33
-    // (kKeyHeightDefaultAt300 below; 2026-11-03).
-    int         key_height        = 33;
+    // tuning key): required; the construction state is the template's 34
+    // (kKeyHeightDefaultAt300 below; 2026-11-04 night).
+    int         key_height        = 34;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in device px at 300 % (2026-10-29,
     // the head's list; two tuning keys): required; the construction state is
     // the templates' 48 x 60 (kOskKeyWDefaultAt300, kOskKeyHDefaultAt300
@@ -571,7 +574,7 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: past a width or a
 // scale the icon row — the
 // toolbar band, its twenty-seven standing members in three left runs and one
-// right run of the program's 69-px key (eighteen in the view, its history
+// right run of the program's 70-px key (eighteen in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
 // runs the simple layout's, 2026-10-22) — no longer fits, and its
 // right-anchored run covers the runs to its left (the overflow rule at
@@ -772,23 +775,25 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
     return n;
 }
 
-// THE key_height GRAMMAR (architect 2026-10-29) — an integer in [21, 99]
+// THE key_height GRAMMAR (architect 2026-10-29) — an integer in [20, 100]
 // DEVICE PX AT 300 % in canonical spelling, the one owner the reader, the
 // writer, the settings editor's commit and its recall read
 // (format_key_height, parse_key_height). The range brackets the 2026-10-29
-// mocks' series round his "around 33" with room both ways, 21 to 99; THE
-// DEFAULT IS 33 AGAIN (architect 2026-11-03, the retrofit: the hi-fi key
-// metrics, the square key's 60 of 2026-11-02 reversed), the range
-// unchanged. The settings page opens the LINE EDITOR on
-// it, not a value list (79 values is no short domain, kSettingsValueListKeys'
+// mocks' series round his "around 33" with room both ways, 20 to 100 (the
+// 21 .. 99 of the unit of 3 rounded to the unit of 2, 2026-11-04 night);
+// THE DEFAULT IS 34 (architect 2026-11-04 night, the unit of 2, mock v4:
+// the hi-fi's 33 of 2026-11-03's retrofit, which reversed the square key's
+// 60 of 2026-11-02, rounded up so the face is 70 x 34 and the pitch stays
+// 72). The settings page opens the LINE EDITOR on
+// it, not a value list (81 values is no short domain, kSettingsValueListKeys'
 // rule). A TUNING KEY: when he rules the number, the key, these functions
 // and its Settings row go, and the value becomes a constexpr behind
 // render.h's icon_case_h_px.
-inline constexpr int kKeyHeightMinAt300     = 21;
-inline constexpr int kKeyHeightMaxAt300     = 99;
-inline constexpr int kKeyHeightDefaultAt300 = 33;
+inline constexpr int kKeyHeightMinAt300     = 20;
+inline constexpr int kKeyHeightMaxAt300     = 100;
+inline constexpr int kKeyHeightDefaultAt300 = 34;
 inline constexpr const char* kKeyHeightGrammarReason =
-    "must be an integer in [21, 99] in canonical spelling";
+    "must be an integer in [20, 100] in canonical spelling";
 std::string format_key_height(int px);
 inline std::optional<int> parse_key_height(std::string_view v) {
     const std::optional<int> n = parse_canonical_config_int(v);
@@ -804,8 +809,9 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // the FLAGS sheet's key box, 48 wide and 60 tall (tmp/kbmock's generator);
 // the range runs from half the default width to well past the height, wide
 // enough for him to try a key wider than tall, and its top keeps the widest
-// row (thirteen units) inside the tablet's 2304 (13 x (160 + 3) - 3 =
-// 2116, the gap the program keys' one W since 2026-11-04). The settings page opens the LINE EDITOR on each, not a value list
+// row (thirteen units) inside the tablet's 2304 (13 x (160 + 2) - 2 =
+// 2104, the gap the program keys' one W, 2 device px at 300 % since
+// 2026-11-04 night). The settings page opens the LINE EDITOR on each, not a value list
 // (137 values is no short domain, kSettingsValueListKeys' rule). TWO TUNING
 // KEYS: when he rules the numbers, the keys, these functions and their
 // Settings rows go, and the values become constexprs behind
@@ -869,14 +875,15 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
 // writer spells (it formats each quarter and compares), so `0.50`, `1.0`,
 // `.5` and anything off the quarters lattice or out of range are the
 // launch's hard fail, as every other key's off-spelling is. The default is
-// 0.5 (the reason at the head's entry and at kWaveformSubcells); the top, 2,
-// is what the shader's one-word window was sized for (gl_canvas.cpp's
-// asserts) and twice the mocks' thickest, 1.0, which already read too thick
-// at a clean passage.
+// 1 (architect 2026-11-04 night, on the real lit capture at grow 1 beside
+// the unit's 2-px lines: "is good as well"; 0.5 from 2026-10-31 to then,
+// the record at render.h's grow paragraph); the top, 2, is what the
+// shader's one-word window was sized for (gl_canvas.cpp's asserts) and
+// twice the default.
 inline constexpr int kWaveformGrowQuartersPerPx   = 4;
 inline constexpr int kWaveformGrowMinQuarters     = 0;
 inline constexpr int kWaveformGrowMaxQuarters     = 8;
-inline constexpr int kWaveformGrowDefaultQuarters = 2;
+inline constexpr int kWaveformGrowDefaultQuarters = 4;
 inline constexpr const char* kWaveformGrowGrammarReason =
     "must be a multiple of 0.25 in [0, 2] in canonical spelling "
     "(0, 0.25, 0.5, ... 2)";
@@ -1062,9 +1069,10 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: 300 % and the external files dir's `projects/`;
 // it stamps every key, required since 2026-10-14: `true_colors=on` (the
 // struct's own value),
-// `waveform_grow=0.5` (2026-10-31, kWaveformGrowDefaultQuarters),
+// `waveform_grow=1` (2026-10-31, kWaveformGrowDefaultQuarters; 1 since
+// 2026-11-04 night),
 // `audio_level=0` (2026-10-31 night, the files as they are), `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
-// `key_height=33` (2026-10-29; 33 again since 2026-11-03), `osk_key_w=48`,
+// `key_height=34` (2026-10-29; 34 since 2026-11-04 night), `osk_key_w=48`,
 // `osk_key_h=60` and `osk_font_px=24` (2026-10-29,
 // kKeyHeightDefaultAt300, kOskKeyWDefaultAt300,
 // kOskKeyHDefaultAt300, kOskFontPxDefaultAt300), kDefaultProjectsRepo and

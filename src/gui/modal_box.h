@@ -53,19 +53,20 @@
 // paint_key_legend) (paint_modal_box).
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the well's rows of ground. At the tablet's 2304 x 1440, 300 %
-// and key_height 33 (its default; the 69-px face, the strip pad 39 and the
-// 72-row logo lane; the hairline one W, 2026-11-04): the box's top rows
-// 144–146 (the trim lane's first rows, the ground directly under the band's
-// rows 0–143, the logo lane 0–71), its bottom rows 1326–1328 (the well's
-// foot) and its columns 21–23 and 2280–2282 (one hairline outside the
-// well), those rows and columns ground, the PANE x 24..2279 (the well's
-// first and last columns, the main canvas's own, 2256 wide) and y
-// 147..1325 (the main canvas's own last row 1325); the controls row
-// 1329–1439, its face rows 1368–1400, its first face's columns 24–92 and
-// its last 2211–2279 — the faces on the pane's outer columns. A DIALOG'S
-// TEXT (THE TEXT SEAT, below) on the list rows' seat, 18 px in from the
-// pane's edges: its pen on column 42, its ascender line on row 165, its
-// wrap ending one past column 2261, its foot clip one past row 1307.
+// and key_height 34 (its default; the 70-px face, the strip pad 38 and the
+// 72-row logo lane; the hairline one W, 2 device px, 2026-11-04 night): the
+// box's top rows 144–145 (the trim lane's first rows, the ground directly
+// under the band's rows 0–143, the logo lane 0–71), its bottom rows
+// 1328–1329 (the well's foot) and its columns 22–23 and 2280–2281 (one
+// hairline outside the well), those rows and columns ground, the PANE x
+// 24..2279 (the well's first and last columns, the main canvas's own, 2256
+// wide) and y 146..1327 (the main canvas's own last row 1327); the controls
+// row 1330–1439, its face rows 1368–1401, its first face's columns 24–93
+// and its last 2210–2279 — the faces on the pane's outer columns. A
+// DIALOG'S TEXT (THE TEXT SEAT, below) on the list rows' seat, 18 px in
+// from the pane's edges: its pen on column 42, its ascender line on row
+// 164, its wrap ending one past column 2261, its foot clip one past row
+// 1309.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
 // on his settings-keyboard mock; the spacing 2026-10-22): when a dialog
@@ -81,14 +82,14 @@
 // SIDES' NORMAL PADDINGS (architect 2026-10-22, "the rule that we had
 // implemented before"): the strip pad under the row's cases plus the
 // keyboard band's own edge pad above its first key row — by construction,
-// the row standing directly on the band with nothing between. At 300 %: 39
-// + 15 = 54 device rows (at the defaults below the row's faces end on 1058
-// and the first key row starts on 1113). THE ROWS, at key_height 33 and the
+// the row standing directly on the band with nothing between. At 300 %: 38
+// + 14 = 52 device rows (at the defaults below the row's faces end on 1065
+// and the first key row starts on 1118). THE ROWS, at key_height 34 and the
 // keyboard's defaults, osk_key_w 48 and osk_key_h 60 (2026-10-29, the
-// compact keyboard; its band 342 rows since the unit's gap and pad,
-// 2026-11-04): the keyboard's band 1098–1439 (its first key row's top
-// 1113), the controls row 987–1097 (its face rows 1026–1058), the box's
-// bottom rows 984–986 (ground), the pane y 147..983.
+// compact keyboard; its band 336 rows since the unit of 2's gap and pad,
+// 2026-11-04 night): the keyboard's band 1104–1439 (its first key row's top
+// 1118), the controls row 994–1103 (its face rows 1032–1065), the box's
+// bottom rows 992–993 (ground), the pane y 146..991.
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);
@@ -163,7 +164,7 @@ inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
 // frame itself … at most one device pixel"; the frame's ring retired
 // 2026-11-01 night, M6 A, its rows and columns become ground; ONE W since
 // 2026-11-04, the unit): THE INTERIOR is the box less ONE HAIRLINE on each
-// side (hairline_px: 3 device px at 300 %, 2 at 200 %, 1 at 138 %; the box's
+// side (hairline_px: 2 device px at 300 %, 1 at 200 %, 1 at 138 %; the box's
 // outer rows and columns the ground), the pane every member stands on —
 // across, the well's own columns (modal_box_rect), 24 .. 2279 at 300 % — and
 // the lists' rows stand ONE HAIRLINE OF AIR inside it
@@ -180,7 +181,7 @@ inline GuiRect modal_box_interior_rect(const AppState& a, int keyboard_h) {
 }
 // THE CONTENT'S AIR inside the pane (THE PANE, above): ONE HAIRLINE, the
 // line rule's W (architect 2026-11-04, the unit, reversing "never scaled":
-// every former one-device-px length is one W) — 3 at 300 %, 2 at 200 %.
+// every former one-device-px length is one W) — 2 at 300 %, 1 at 200 %.
 inline int modal_box_content_pad_px() { return hairline_px(); }
 
 // THE SCORE VIEWER'S PANE — THE ONE DELIBERATE EXCEPTION to kPaneFace
@@ -231,9 +232,9 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 // through skin_px at the element (18 at 300 %, 12 at 200 %, 9 at 150 %).
 // MEASURED FROM THE PANE (architect 2026-11-04, the unit, reversing the
 // 2026-11-03 seat measured from the box: with the ring one W the eye's air
-// between the pane's edge and the text would have fallen to 15 at 300 %;
-// 18 from the pane is the nearest whole W to the 17 he approved inside the
-// pane, M8b / M14), on all four sides alike.
+// between the pane's edge and the text would have fallen short at 300 %;
+// 18 from the pane, 9 W, is the whole W nearest the 17 he approved inside
+// the pane, M8b / M14), on all four sides alike.
 // Its readers, which cannot drift apart:
 //   THE BOX'S TEXT — a prompt's question, the progress modal's sentence and
 //     the dialog editors' line, symmetric on all four sides: THE PEN the
@@ -241,10 +242,10 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 //     ending the seat short of its right edge (one past 2261), THE FIRST
 //     ROW'S ASCENDER LINE — the face's own "l" ink top,
 //     gui_font_ascender_ink_px, never the line box's top: the air he sees is
-//     the ink's — the seat under its top row (row 165; modal_box_text_
+//     the ink's — the seat under its top row (row 164; modal_box_text_
 //     baseline0), each further row one list row pitch below (the row and
-//     its 1-W gap), and THE FOOT the seat over its bottom edge (the text
-//     room's clip, one past row 1307);
+//     its gap, folder_overlay.h's kRowGapPx), and THE FOOT the seat over its
+//     bottom edge (the text room's clip, one past row 1309);
 //   THE LISTS' TEXT COLUMN — paint_handler.cpp's kListGlyphXAt300, the
 //     glyph's first ink column in a listing with glyph rows and the names' column in a
 //     glyph-less one (the settings page, the value lists, the trim presets,
