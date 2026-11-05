@@ -169,7 +169,7 @@ void drop_rasters();
 // keys' skin_px of 18 / 34 of the `key_height` tuning key's height
 // (kKeyGlyphInkPerKeySide, paint_key_glyph, 18 at the default 34,
 // 2026-11-04 night, his pick d1, one W over the unit's 16), the logo lane's
-// note skin_px(20) (kLogoNoteInkAt300) and battery glyph skin_px(20)
+// note skin_px(20) (kLogoNoteInkAt300) and battery glyph skin_px(22)
 // (kLogoGlyphInkAt300, render.h), the list rows' skin_px(26)
 // (kListGlyphInkAt300, paint_handler.cpp), the cards' .525 of the first
 // line's inside height (kNotificationGlyphRatio, notifications.h). The fit

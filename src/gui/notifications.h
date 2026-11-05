@@ -773,7 +773,7 @@ inline constexpr double kNotificationGlyphRatio = 0.525;
 // as the seat so THE TEXT'S COLUMN did not move when Breeze's drawing,
 // placed by its own ink, replaced the planner's i and X (the column derived
 // from the same ink length, never from the new drawing's width). The
-// card's text pen stands this seat plus the brand gap past ring + pad
+// card's text pen stands this seat plus the glyph gap (below) past ring + pad
 // (paint_notifications).
 inline int notification_glyph_seat_w_px(double ink_px) {
     const int box_h = std::max(
@@ -781,11 +781,15 @@ inline int notification_glyph_seat_w_px(double ink_px) {
     return static_cast<int>(std::nearbyint(box_h * 34.0 / 40.0));
 }
 
-// THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN is the logo lane's brand
-// gap, kLogoBrandGapAt300 (render.h: 9 px at 300 %, skin_px; the retired
-// caption's title gap, which it was until the caption went the same day) —
-// the same seat, a glyph then words, so one number (architect
-// 2026-10-24).
+// THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN: kNotificationGlyphGapAt300
+// = 8 DEVICE PX AT 300 % (4 W), skin_px, rounded at the element. It was the
+// logo lane's brand gap, kLogoBrandGapAt300 (the retired caption's title
+// gap; the same seat, a glyph then words, so one number, architect
+// 2026-10-24) until 2026-11-04 night, when the brand gap went to 16 on the
+// logo lane's mocks alone (e1 / e2, render.h's LOGO LANE block); the cards
+// were not on them, so they keep the 8 as a number of their own until he
+// rules it.
+inline constexpr double kNotificationGlyphGapAt300 = 8.0;
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
 // own "H" ink (gui_font_cap_px, the one cap measure redesign_baseline

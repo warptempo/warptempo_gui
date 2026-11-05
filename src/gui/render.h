@@ -1092,16 +1092,19 @@ constexpr int kMinWindowHeightPx = 480;
 // 138 %), whatever the key's height (logo_lane_h_px). EVERY ITEM'S INK IS
 // CENTERED ON THE LANE BY ITS OWN INK (architect 2026-11-03, on mock dec0b:
 // "everything is set by the logo"; the lane's spare split with its odd row
-// below, the floor of the half): the note's ink box, the brand's ink rows
+// below, the floor of the half) — THE NOTE EXCEPTED BY ONE W, lifted
+// kLogoNoteLiftAt300 above its centered seat (below): the note's ink box, the brand's ink rows
 // (the "W"'s top to the "p"'s foot as painted: gui_font_ink_band of
 // kLogoBrand in the Bold face), the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, in the Body face as painted: each run's baseline its
 // ink's top row plus its rows above the baseline), THE PIPE'S OWN INK ROWS
 // (kLogoLegendPipe, its own baseline, so its rows center on the lane and the
 // runs' on the lane too, rather than the runs riding the pipe's seat) and
-// the battery cell. At 300 % (the brand 17 + 5 rows, the runs 14 + 0, the
-// pipe 17 + 3, the Body face 21 since the unit, 2026-11-04): the brand on
-// lane rows 25–46, the runs 29–42, the pipe 26–45. THE LANE'S GROUND
+// the battery cell. At 300 % (the brand 17 + 5 rows at Bold 24, the runs
+// 15 + 0 and the pipe 18 + 3 at Body 22, the unit of 2, 2026-11-04 night):
+// the brand on lane rows 25–46 (its cap rows 25–41, the "p" to 46), the
+// runs 28–42, the pipe 25–45, the battery 29–42, the note 24–43 (its
+// centered 26–45 lifted one W). THE LANE'S GROUND
 // IS THE BAND'S FLAT GROUND, nothing else on it — no line, no caption tone —
 // and it is INERT CHROME like the strips' pads: no hit, no tooltip, no
 // gesture (the band's ground falls through to nothing, input_pointer.cpp).
@@ -1117,15 +1120,27 @@ constexpr int kMinWindowHeightPx = 480;
 //     20 px (10 W; the 21 of the morning's unit rounded to the unit of 2,
 //     architect 2026-11-04 night, mock v4), ITS FIRST INK
 //     COLUMN ON THE WELL'S FIRST COLUMN (well_columns — the first key's
-//     face's first column: "the glyph flush with the icons"). THEN THE BRAND, "Warptempo"
+//     face's first column: "the glyph flush with the icons"). ITS ROWS ONE W
+//     ABOVE ITS CENTERED SEAT (architect 2026-11-04 night, mock e2 of
+//     tmp/s36): kLogoNoteLiftAt300 = 2 px (one W, skin_px, rounded at the
+//     element) subtracted from logo_item_y's row for the note alone, so at
+//     300 % its 20-row ink box stands on rows 24..43, not 26..45 — his
+//     reason: the centered note "seems to hang lower than the text that
+//     follows it", its box reaching 4 rows below the brand's cap foot (row
+//     41; the brand's cap 25..41, its "p" to 46); the box's bottom on the
+//     brand's baseline (mock e1, 4 px up) was "too high". The brand, the
+//     legend and the battery keep the centered seat. THEN THE BRAND, "Warptempo"
 //     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
 //     equipment … just had a stylized brand name") — in Liberation Sans
 //     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the text
-//     tone kTextInk, its first ink kLogoBrandGapAt300 = 8 px (4 W, the 10
-//     rounded to the unit of 2, architect 2026-11-04 night, mock v4) after the
-//     note's last ink column (text_shape::ink_left_px). (The gap is the retired caption's title gap; the cards'
-//     glyph-seat-to-text gap reads it too, a glyph then words,
-//     notifications.h.)
+//     tone kTextInk, its first ink kLogoBrandGapAt300 = 16 px (8 W;
+//     architect 2026-11-04 night, mocks e1 / e2 of tmp/s36: "it needs more
+//     padding from the text … gap at 16 seems better" — the 8 of the unit
+//     of 2, mock v4, replaced) after the note's last ink column
+//     (text_shape::ink_left_px). (The gap is the retired caption's title
+//     gap. The cards' glyph-seat-to-text gap read it too, a glyph then words,
+//     until this ruling; it keeps the 8 as its own kNotificationGlyphGapAt300,
+//     notifications.h, the cards not being on the mocks.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
 //     (22 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S LAST
@@ -1163,28 +1178,32 @@ constexpr int kMinWindowHeightPx = 480;
 //     horizontal battery with its nub to the right, the charging one
 //     carrying a plug inside it, so their ink boxes are one box. THE CELL IS
 //     THAT BOX on the ink-box road (icons.h's THE INK BOX) at ONE LENGTH for
-//     both, kLogoGlyphInkAt300 = 20 px its larger side (10 W; architect
-//     2026-11-04 night, mock v4, "that size works": the 19 of the retrofit
-//     and the 18 of the morning's unit both replaced — the outline is wider
-//     than tall, so the cell is 20 wide and 12 rows tall on the 72-row lane
-//     — the drawing on rows 30..41 at 300 %, measured on the tablet's
-//     capture — beside the digits' ink, 15 rows at Body 22 on rows 28..42,
-//     each centered on the lane by its own ink, the battery half a row under
-//     the digits' center by the floors: HIS ACCEPTED PARITY (architect
-//     2026-11-04 night, "leave": mocks a1, the drawing 2 px up and 1.5 rows
-//     high, and a2, 1 px up and half a row high, both declined); the air
-//     either side of the cell the space advance and one W, above),
+//     both, kLogoGlyphInkAt300 = 22 px its larger side (11 W; architect
+//     2026-11-04 night, mocks e1 / e2 of tmp/s36: "battery good at 22") —
+//     the outline is wider than tall (20 x 12 user units, pixel-aligned in
+//     its 22-unit viewBox), so the fit's zoom is 1.1 and THE CELL IS 22 WIDE
+//     AND 14 ROWS TALL on the 72-row lane, both drawings alike (the raster's
+//     arithmetic: the outline's rows 5.5 .. 18.7, its first and last rows
+//     partial, alpha 127 and 192; measured with resvg's renderer), its rows
+//     29..42 at 300 % by logo_item_y beside the digits' ink, 15 rows at Body
+//     22 on rows 28..42 — both end on row 42, the battery half a row under
+//     the digits' center by the floors. (The 20 of the unit's mock v4 — a
+//     cell 20 x 12 on rows 30..41, half a row under the digits too, the seat
+//     he accepted that night over mocks a1 and a2 — replaced the same
+//     night.) The air either side of the cell the space advance and one W,
+//     above,
 //     the larger of the two drawings' ink boxes on
 //     each axis so no state can move it, each drawing centered in it (the
 //     floor of the spare); ITS ROWS CENTERED ON THE LANE like every
-//     item's. Painted in the text tone.
+//     item's but the note's. Painted in the text tone.
 //   (Liberation's own arrows ↑ / ↓ as the glyphs, a drawn pipe and
 //   "nothing" as the discharging glyph were judged on the same sheets and
 //   not taken, docs/engineering/closed_questions.md.)
 inline constexpr double kLogoLaneAt300           = 72.0;
 inline constexpr double kLogoNoteInkAt300        = 20.0;
-inline constexpr double kLogoBrandGapAt300       = 8.0;
-inline constexpr double kLogoGlyphInkAt300       = 20.0;
+inline constexpr double kLogoNoteLiftAt300       = 2.0;
+inline constexpr double kLogoBrandGapAt300       = 16.0;
+inline constexpr double kLogoGlyphInkAt300       = 22.0;
 inline constexpr double kLogoGlyphAirAt300       = 2.0;
 inline constexpr const char* kLogoBrand = "Warptempo";
 inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";

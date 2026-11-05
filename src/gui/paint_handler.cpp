@@ -1518,7 +1518,8 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // the two cannot disagree: the lane is the band's first logo_lane_h_px rows
 // (72 at 300 %, 2026-11-03); EVERY ITEM CENTERED ON THE LANE BY ITS OWN
 // INK, the spare row below (architect 2026-11-03, on mock dec0b) — the
-// note's ink box, the
+// note's ink box (lifted one W above that seat, kLogoNoteLiftAt300, by the
+// painter, 2026-11-04 night), the
 // brand's ink rows, the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, each run's baseline its ink's top plus the rows above
 // the baseline), the pipe's own ink rows (kLogoLegendPipe, its own baseline
@@ -1635,12 +1636,14 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // THE NOTE (MusicNote16th on the ink-box road — the launcher's and the
     // BPM key's drawing too, a deliberate share, architect 2026-11-02, R14
     // (4): "the logo, the launcher and BPM keep the single note"): its ink box's first
-    // column on the well's first column and its rows centered on the
-    // lane.
+    // column on the well's first column and its rows ONE W ABOVE their
+    // centered seat on the lane (kLogoNoteLiftAt300, render.h's logo lane
+    // block, 2026-11-04 night: the centered note hung below the brand).
     const int note_ink = skin_px(kLogoNoteInkAt300, 1);
     const icons::InkSize note = logo_note_ink();
     icons::draw_glyph(cr, icons::Icon::MusicNote16th, well.x,
-                      logo_item_y(lane, note.h), note_ink, kTextInk);
+                      logo_item_y(lane, note.h) - skin_px(kLogoNoteLiftAt300),
+                      note_ink, kTextInk);
 
     // THE BRAND, a constant: its first ink the gap past the note's last
     // ink column, its ink rows centered on the lane.
@@ -3444,8 +3447,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // Breeze's cut-out DialogInformation or DialogError (icons.h's ink-box
 // road; architect 2026-11-02, R14),
 // its ink .525 of the first line's inside height (kNotificationGlyphRatio),
-// at its seat (notification_glyph_seat_w_px) — then the logo lane's brand
-// gap, then THE SENTENCE (the layout block in the body).
+// at its seat (notification_glyph_seat_w_px) — then the glyph gap
+// (kNotificationGlyphGapAt300, 8 at 300 %), then THE SENTENCE (the layout
+// block in the body).
 // (A window-close X stood in a second button box at the right from
 // 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
 // when the whole card became the button — "whole card dismisses, X gone" —
@@ -3499,7 +3503,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1; the glyph Breeze's
     // since 2026-11-02): the border (`ring`, one W), ONE PAD of
     // plain face (notifications.h, every side), the class glyph's SEAT, the
-    // logo lane's brand gap, the text's pen; the wrap's room ends one pad
+    // glyph gap (kNotificationGlyphGapAt300), the text's pen; the wrap's room ends one pad
     // short of the right border. The first line's INSIDE rows are pad + cap
     // + pad; the glyph's ink box's larger side is kNotificationGlyphRatio of
     // them (icons.h's THE INK BOX), its first ink column at ring + pad and
@@ -3516,7 +3520,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int glyph_ink = std::max(
         1, static_cast<int>(std::nearbyint(glyph_ink_px)));
     const int glyph_w   = notification_glyph_seat_w_px(glyph_ink_px);
-    const int glyph_gap = skin_px(kLogoBrandGapAt300);
+    const int glyph_gap = skin_px(kNotificationGlyphGapAt300);
     const int lead_w   = ring + pad + glyph_w + glyph_gap;
     const int tail_w   = pad + ring;
     const int chrome_w = lead_w + tail_w;
