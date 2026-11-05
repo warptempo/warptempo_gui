@@ -29,8 +29,8 @@
 // his own picks (the core, 2026-11-04 night, and the playhead line's static
 // tone, 2026-11-04 night: white 0.483 toward the head, every other theme
 // derived at the same ratio, ruling 4 of 2026-11-05) — the static_asserts
-// at the foot are that proof in the build, every one of the thirty-three
-// words with its literal (the press arc's three, 2026-11-05, among them).
+// at the foot are that proof in the build, every one of the thirty-four
+// words with its literal (the press arc's four, 2026-11-05, among them).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -148,7 +148,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the generated `default` row reproduces the
 // measured palette of 2026-11-01..05 to the byte — every one of the
-// thirty-three words with its literal, so a change to the tool's derivation that moved
+// thirty-four words with its literal, so a change to the tool's derivation that moved
 // one of them is a build failure here. (The literals are the record; the
 // generated header holds the same numbers and is never hand-edited.)
 namespace gui_default_theme_proof {
@@ -162,6 +162,7 @@ static_assert(kDefault.text_on_lit     == 0x111111);
 static_assert(kDefault.key_dim_ink     == 0x5A5A5A);
 static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.lit_fill        == 0xFFAD56);
+static_assert(kDefault.lit_press_fill  == 0xC68743);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x363636);

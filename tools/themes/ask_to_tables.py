@@ -81,6 +81,21 @@ header's head. Our Default tone = Live's role, the planner having verified
                                     (ruling 4: Default keeps his pick, every
                                     other theme the same ratio, white toward
                                     the head — not the mean)
+    lit press fill         C68743 = lit fill · (mean(press face) / mean(face))
+                                    per channel (42 / 54 = 0.778 on Default;
+                                    Immaterial FF91C3 · 0.737 = BC6B90) — a
+                                    checked key under a standing press
+                                    (architect 2026-11-05, the press arc's
+                                    second landing, his "ratio" on mocks d1 /
+                                    i1 of tmp/s45: "darken the lit key by the
+                                    relationship ... so the lit press is
+                                    derived"). THE RATIO, NOT THE DIFFERENCE
+                                    (d2 / i2, ruled out): the ratio keeps the
+                                    theme's lit hue and scales with its own
+                                    press step — Classic Medium Light's step
+                                    is 60 levels, the difference would nearly
+                                    black its FFB901, the ratio scales it by
+                                    86 / 146 = 0.589.
     scanner                FFFFFF (the controls' white, every theme)
 
 Where a theme makes the lane, the trim's outside or the dim text coincide with
@@ -138,6 +153,7 @@ MEMBERS = [
     ('key_dim_ink',     'a disabled key\'s glyph and legend (face + 36/63 toward text_dim)'),
     ('key_face',        'the key at rest, the time fields (SurfaceBackground)'),
     ('lit_fill',        'a checked key\'s whole face, Live\'s "on" (ViewCheckControlEnabledOn)'),
+    ('lit_press_fill',  'a checked key\'s face while a press stands on it (lit_fill scaled by the press face\'s ratio to the face)'),
     ('key_press_face',  'an unchecked key\'s face while a press stands on it (Desktop)'),
     ('well_frame',      'the scrub\'s channel and the tooltip\'s border (TextDisabled)'),
     ('ruler_face',      'the ruler (SurfaceBackground)'),
@@ -180,7 +196,7 @@ def slugify(stem):
 
 
 def read_roles(path):
-    """The fourteen roles of one .ask file, each an uppercase hex word of 6 or
+    """The sixteen roles (ROLES) of one .ask file, each an uppercase hex word of 6 or
     8 digits, the file's first occurrence of each role."""
     with open(path, 'r', encoding='utf-8') as f:
         text = f.read()
@@ -221,6 +237,15 @@ def mix(a, b, t):
     return tuple(clamp_byte(a[i] + t * (b[i] - a[i])) for i in range(3))
 
 
+def scale(c, ratio):
+    """c · ratio, per channel, rounded and clamped (the head's lit press fill)."""
+    return tuple(clamp_byte(c[i] * ratio) for i in range(3))
+
+
+def mean(c):
+    return (c[0] + c[1] + c[2]) / 3.0
+
+
 def word(c):
     return '0x%02X%02X%02X' % (c[0], c[1], c[2])
 
@@ -249,6 +274,9 @@ def derive(roles):
     ink      = over(rgb(roles['WaveformColor']), detail)
     canvas   = over(rgb(roles['DetailGridTiles']), detail)
     white    = (255, 255, 255)
+    if mean(face) == 0.0:
+        fail('SurfaceBackground is black: the lit press fill has no ratio')
+    press_ratio = mean(desktop) / mean(face)
     t = {
         'ground':          ground,
         'text':            text,
@@ -257,6 +285,7 @@ def derive(roles):
         'key_dim_ink':     mix(face, dim, 36.0 / 63.0),
         'key_face':        face,
         'lit_fill':        on,
+        'lit_press_fill':  scale(on, press_ratio),
         'key_press_face':  desktop,
         'well_frame':      dim,
         'ruler_face':      face,

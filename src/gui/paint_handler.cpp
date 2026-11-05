@@ -326,9 +326,11 @@ namespace {
 
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
-// 2026-11-01; paint_key, materials.h, where its three faces stand).
+// 2026-11-01; paint_key, materials.h, where its four faces stand).
 // LIT — the FFAD56 fill — for a CHECKED button (the roster's `selected`,
-// `lamp`; the yellow for lamps only, 2026-11-02; key_look), pressed or not;
+// `lamp`; the yellow for lamps only, 2026-11-02; key_look), darkened to
+// `lit_press_fill`, Default's C68743, while a press stands on it (the press
+// arc's second landing, 2026-11-05: the lit fill by the press face's ratio);
 // THE PRESS FACE, Default's 2A2A2A, for a `pressed` unchecked one — a live
 // press standing on it — for as long as the press stands, the key back to
 // its own state at the lift or the slide-off (the press arc, architect
@@ -1137,9 +1139,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // SELECTS THE PAIR'S OTHER MEMBER at its lift (architect 2026-10-23 night,
 // "building a suction on the other one is the right way to go"; the consumed
 // nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
-// on_key) — never greyed for it — the key staying lit under the hold
-// (paint_roster_case: lit while checked, pressed or not, key_look; the
-// press face is the unchecked key's alone, 2026-11-05).
+// on_key) — never greyed for it — the key staying lit under the hold, its
+// lit fill darkened by the press ratio (paint_roster_case: key_look's
+// LitPress, the press arc's second landing, 2026-11-05).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -6987,7 +6989,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat
-        // One, `lit`) alone, pressed or not; THE PRESS FACE for a LIVE
+        // One, `lit`) alone, its lit fill darkened by the press ratio while
+        // a press stands on it (key_look's LitPress, 2026-11-05); THE PRESS
+        // FACE for a LIVE
         // PRESS on an unchecked one — armed with the pointer inside it, or
         // armed from the on-screen keyboard's Enter / Space — for as long
         // as the press stands (key_look, materials.h; the press arc,
@@ -7176,10 +7180,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // table, GuiFace::Keys; architect 2026-10-24, "C24" — the night's C34 "too
 // far", "a separate face" since that night, the body's 22 before it) — the
 // band painting NO LINE at its own top edge (architect 2026-08-27, on
-// glass). AT REST the cap in the text tone `text` on the face; the two
+// glass). AT REST the cap in the text tone `text` on the face; the
 // faces the roster's (key_look, materials.h; architect 2026-11-02, the
 // yellow for lamps only):
-//   ARMED     — LIT, the FFAD56 fill, its cap `text_on_lit` (Default's 111111) (M8 / M12):
+//   ARMED     — LIT, the FFAD56 fill, its cap `text_on_lit` (Default's 111111) (M8 / M12),
+//               the fill darkened to `lit_press_fill` under the finger (the
+//               press arc's second landing, 2026-11-05), its cap still
+//               `text_on_lit`:
 //               SHIFT while it is armed and THE PAGE KEY while the symbols
 //               page stands — the two lamps. IT IS ALL
 //               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
@@ -7205,7 +7212,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // text_editor::encode_utf8, the editors' own encoder), all on the one sans
 // face through the one shaping chokepoint. This surface draws no icon.
 //
-// STATE-AXIS: every one of the three faces is decided ONCE per key, from the
+// STATE-AXIS: every one of the four faces is decided ONCE per key, from the
 // two lamps and the one held index this body reads at its head — compared as
 // a SLOT, not an index, so the page key's held face survives its own page
 // change (onscreen_keyboard::same_slot, architect 2026-10-29 night; back
@@ -7290,9 +7297,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                  page == onscreen_keyboard::Page::Symbols);
 
             // THE KEY (paint_key, materials.h): LIT while armed (Shift, the
-            // page key on the symbols page), else the press face under the
-            // finger, else at rest, the cap printed ON its face in the
-            // face's ink.
+            // page key on the symbols page), its fill darkened under the
+            // finger (key_look's LitPress, 2026-11-05), else the press face
+            // under the finger, else at rest, the cap printed ON its face in
+            // the face's ink.
             const KeyLook look = key_look(armed, pressed);
             paint_key(cr, r, look);
 

@@ -58,6 +58,21 @@
 //                                     (ruling 4: Default keeps his pick, every
 //                                     other theme the same ratio, white toward
 //                                     the head — not the mean)
+//     lit press fill         C68743 = lit fill · (mean(press face) / mean(face))
+//                                     per channel (42 / 54 = 0.778 on Default;
+//                                     Immaterial FF91C3 · 0.737 = BC6B90) — a
+//                                     checked key under a standing press
+//                                     (architect 2026-11-05, the press arc's
+//                                     second landing, his "ratio" on mocks d1 /
+//                                     i1 of tmp/s45: "darken the lit key by the
+//                                     relationship ... so the lit press is
+//                                     derived"). THE RATIO, NOT THE DIFFERENCE
+//                                     (d2 / i2, ruled out): the ratio keeps the
+//                                     theme's lit hue and scales with its own
+//                                     press step — Classic Medium Light's step
+//                                     is 60 levels, the difference would nearly
+//                                     black its FFB901, the ratio scales it by
+//                                     86 / 146 = 0.589.
 //     scanner                FFFFFF (the controls' white, every theme)
 
 #include <cstddef>
@@ -75,6 +90,7 @@ struct GuiThemeTones {
     uint32_t key_dim_ink;     // a disabled key's glyph and legend (face + 36/63 toward text_dim)
     uint32_t key_face;        // the key at rest, the time fields (SurfaceBackground)
     uint32_t lit_fill;        // a checked key's whole face, Live's "on" (ViewCheckControlEnabledOn)
+    uint32_t lit_press_fill;  // a checked key's face while a press stands on it (lit_fill scaled by the press face's ratio to the face)
     uint32_t key_press_face;  // an unchecked key's face while a press stands on it (Desktop)
     uint32_t well_frame;      // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;      // the ruler (SurfaceBackground)
@@ -127,6 +143,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5A5A5A, // key_dim_ink
          0x363636, // key_face
          0xFFAD56, // lit_fill
+         0xC68743, // lit_press_fill
          0x2A2A2A, // key_press_face
          0x757575, // well_frame
          0x363636, // ruler_face
@@ -163,6 +180,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7A7DA7, // key_dim_ink
          0x372C6D, // key_face
          0xB5FF63, // lit_fill
+         0x88BF4A, // lit_press_fill
          0x2A1E54, // key_press_face
          0xACBAD3, // well_frame
          0x372C6D, // ruler_face
@@ -199,6 +217,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x818181, // key_dim_ink
          0x4F4F4F, // key_face
          0xFF9C39, // lit_fill
+         0xB87129, // lit_press_fill
          0x393939, // key_press_face
          0xA7A7A7, // well_frame
          0x4F4F4F, // ruler_face
@@ -235,6 +254,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x707070, // key_dim_ink
          0x929292, // key_face
          0xFFB901, // lit_fill
+         0x966D01, // lit_press_fill
          0x565656, // key_press_face
          0x565656, // well_frame
          0x929292, // ruler_face
@@ -271,6 +291,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5C5E66, // key_dim_ink
          0x2F3138, // key_face
          0xFF91C3, // lit_fill
+         0xBC6B90, // lit_press_fill
          0x22242A, // key_press_face
          0x7D8088, // well_frame
          0x2F3138, // ruler_face
@@ -307,6 +328,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5B6B6D, // key_dim_ink
          0x26383F, // key_face
          0xFFC658, // lit_fill
+         0xAF883D, // lit_press_fill
          0x16282E, // key_press_face
          0x82918F, // well_frame
          0x26383F, // ruler_face
@@ -343,6 +365,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x665F54, // key_dim_ink
          0x343434, // key_face
          0xFFAD56, // lit_fill
+         0xC48542, // lit_press_fill
          0x282828, // key_press_face
          0x8C7F6C, // well_frame
          0x343434, // ruler_face
@@ -379,6 +402,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x979489, // key_dim_ink
          0xCECBC1, // key_face
          0xA50000, // lit_fill
+         0xB20000, // lit_press_fill
          0xDDDBD2, // key_press_face
          0x6D6B5F, // well_frame
          0xCECBC1, // ruler_face
@@ -415,6 +439,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x857B6D, // key_dim_ink
          0x8C8477, // key_face
          0xFF8F3F, // lit_fill
+         0x824920, // lit_press_fill
          0x304C4C, // key_press_face
          0x7F7566, // well_frame
          0x8C8477, // ruler_face
@@ -451,6 +476,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x615D51, // key_dim_ink
          0x333333, // key_face
          0xAD583C, // lit_fill
+         0x663423, // lit_press_fill
          0x1E1E1E, // key_press_face
          0x847D68, // well_frame
          0x333333, // ruler_face
@@ -487,6 +513,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7C7C7C, // key_dim_ink
          0x414141, // key_face
          0xA63D40, // lit_fill
+         0x3F1718, // lit_press_fill
          0x1B1718, // key_press_face
          0xA8A8A8, // well_frame
          0x414141, // ruler_face
@@ -523,6 +550,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x695D44, // key_dim_ink
          0x28241F, // key_face
          0xFFD9AA, // lit_fill
+         0x322B21, // lit_press_fill
          0x070707, // key_press_face
          0x998860, // well_frame
          0x28241F, // ruler_face
@@ -559,6 +587,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x787979, // key_dim_ink
          0x191B1C, // key_face
          0x328462, // lit_fill
+         0x42AD81, // lit_press_fill
          0x232323, // key_press_face
          0xBFBFBF, // well_frame
          0x191B1C, // ruler_face
@@ -595,6 +624,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x6D6D6D, // key_dim_ink
          0x3D3D3D, // key_face
          0xFF6100, // lit_fill
+         0x1D0B00, // lit_press_fill
          0x070707, // key_press_face
          0x919191, // well_frame
          0x3D3D3D, // ruler_face
@@ -631,6 +661,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x83807A, // key_dim_ink
          0x333333, // key_face
          0xFFD87F, // lit_fill
+         0xFFFFB1, // lit_press_fill
          0x474747, // key_press_face
          0xBFBAAF, // well_frame
          0x333333, // ruler_face
@@ -667,6 +698,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x615850, // key_dim_ink
          0x3A332E, // key_face
          0xBF601C, // lit_fill
+         0x9A4D17, // lit_press_fill
          0x2F2925, // key_press_face
          0x7E7469, // well_frame
          0x3A332E, // ruler_face
@@ -703,6 +735,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x75695C, // key_dim_ink
          0x3B332B, // key_face
          0xC6ECAE, // lit_fill
+         0x89A479, // lit_press_fill
          0x2A231D, // key_press_face
          0xA09281, // well_frame
          0x3B332B, // ruler_face
@@ -739,6 +772,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5C5755, // key_dim_ink
          0x2E313A, // key_face
          0x71A2B6, // lit_fill
+         0x587E8E, // lit_press_fill
          0x24262D, // key_press_face
          0x7E7469, // well_frame
          0x2E313A, // ruler_face
@@ -775,6 +809,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5E5E5E, // key_dim_ink
          0x333333, // key_face
          0x5500AA, // lit_fill
+         0x0C0017, // lit_press_fill
          0x070707, // key_press_face
          0x7F7F7F, // well_frame
          0x333333, // ruler_face
@@ -811,6 +846,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x605C4F, // key_dim_ink
          0x3A372E, // key_face
          0xAAA338, // lit_fill
+         0x857F2C, // lit_press_fill
          0x2D2B24, // key_press_face
          0x7C7768, // well_frame
          0x3A372E, // ruler_face
@@ -847,6 +883,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x5D5D5D, // key_dim_ink
          0x383838, // key_face
          0x82204A, // lit_fill
+         0x721C41, // lit_press_fill
          0x2D3333, // key_press_face
          0x787878, // well_frame
          0x383838, // ruler_face
@@ -883,6 +920,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x635C52, // key_dim_ink
          0x333333, // key_face
          0xAF893D, // lit_fill
+         0x675124, // lit_press_fill
          0x1E1E1E, // key_press_face
          0x877A6A, // well_frame
          0x333333, // ruler_face
@@ -919,6 +957,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x636464, // key_dim_ink
          0x3E3F3F, // key_face
          0x0D5566, // lit_fill
+         0x020D10, // lit_press_fill
          0x060B0C, // key_press_face
          0x7F7F7F, // well_frame
          0x3E3F3F, // ruler_face
@@ -955,6 +994,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777777, // key_dim_ink
          0x3A3A3A, // key_face
          0xA30000, // lit_fill
+         0x140000, // lit_press_fill
          0x070707, // key_press_face
          0xA5A5A5, // well_frame
          0x3A3A3A, // ruler_face
@@ -991,6 +1031,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x8D847D, // key_dim_ink
          0xAAA6A2, // key_face
          0x80BFAD, // lit_fill
+         0x639385, // lit_press_fill
          0x8B7F76, // key_press_face
          0x776B61, // well_frame
          0xAAA6A2, // ruler_face
@@ -1027,6 +1068,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7A705C, // key_dim_ink
          0xADA18A, // key_face
          0xF2C14F, // lit_fill
+         0x56451C, // lit_press_fill
          0x383838, // key_press_face
          0x544B3A, // well_frame
          0xADA18A, // ruler_face
@@ -1063,6 +1105,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777777, // key_dim_ink
          0x353535, // key_face
          0x9B6896, // lit_fill
+         0x322130, // lit_press_fill
          0x111111, // key_press_face
          0xA8A8A8, // well_frame
          0x353535, // ruler_face
@@ -1099,6 +1142,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x7C6F65, // key_dim_ink
          0x554D48, // key_face
          0x7C3A3A, // lit_fill
+         0x532727, // lit_press_fill
          0x353433, // key_press_face
          0x99897A, // well_frame
          0x554D48, // ruler_face
@@ -1135,6 +1179,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x685339, // key_dim_ink
          0x9E9386, // key_face
          0xFF8C00, // lit_fill
+         0x804600, // lit_press_fill
          0x544A3E, // key_press_face
          0x3F2300, // well_frame
          0x9E9386, // ruler_face
@@ -1171,6 +1216,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x4B442F, // key_dim_ink
          0x0C0B09, // key_face
          0xFF8F07, // lit_fill
+         0xFFFF15, // lit_press_fill
          0x23201D, // key_press_face
          0x7A6F4B, // well_frame
          0x0C0B09, // ruler_face
@@ -1207,6 +1253,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x777777, // key_dim_ink
          0x333333, // key_face
          0xFF7B07, // lit_fill
+         0x231101, // lit_press_fill
          0x070707, // key_press_face
          0xAAAAAA, // well_frame
          0x333333, // ruler_face

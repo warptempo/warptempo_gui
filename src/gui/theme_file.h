@@ -38,9 +38,10 @@
 // owns what each role paints) and the theme tone that fills it. The first
 // eight are Windows' own element names (ButtonFace, ButtonText, Hilight /
 // HilightText, WindowText, InfoWindow / InfoText and the tooltip's border),
-// the chrome's painters written against them; the SEVENTEEN after them are
+// the chrome's painters written against them; the EIGHTEEN after them are
 // the flat look's tones (materials.h's head, 2026-11-01..05: the fourteen of
-// the look and the press arc's three, 2026-11-05), members since the theme
+// the look and the press arc's four, 2026-11-05 — the three of its first
+// landing and the lit press fill of its second), members since the theme
 // arc so every painter reads palette() — the values are no longer Windows'
 // and no longer constants. A ROLE STANDS IFF A PAINTER READS IT
 // (the relief quartet, the field ground and the clock pair retired
@@ -52,10 +53,10 @@
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's twenty-five (the eight of
+// 2026-10-04), in GuiPalette's order: the chrome's twenty-six (the eight of
 // 2026-10-04 — the caption's six, 2026-10-05..10-21, left with the captions;
 // the seven unread ones, 2026-11-02, with the overlays' rings — and the
-// seventeen flat-look tones, 2026-11-05, the press arc's three among them). The program's roles are the
+// eighteen flat-look tones, 2026-11-05, the press arc's four among them). The program's roles are the
 // palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
 // palette_file.cpp's coverage proof walks it, so a role cannot be valued and
@@ -77,15 +78,16 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"card_ground",     &GuiPalette::card_ground,     &GuiThemeTones::card_face},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
     {"card_frame",      &GuiPalette::card_frame,      &GuiThemeTones::card_face},
-    // THE FLAT LOOK'S SEVENTEEN (materials.h's head: the text tones, the
-    // key and its press face, the well's tones, the panes, the lists' press
-    // pair).
+    // THE FLAT LOOK'S EIGHTEEN (materials.h's head: the text tones, the
+    // key, its press face and its lit press fill, the well's tones, the
+    // panes, the lists' press pair).
     {"text",            &GuiPalette::text,            &GuiThemeTones::text},
     {"text_dim",        &GuiPalette::text_dim,        &GuiThemeTones::text_dim},
     {"text_on_lit",     &GuiPalette::text_on_lit,     &GuiThemeTones::text_on_lit},
     {"key_dim_ink",     &GuiPalette::key_dim_ink,     &GuiThemeTones::key_dim_ink},
     {"key_face",        &GuiPalette::key_face,        &GuiThemeTones::key_face},
     {"lit_fill",        &GuiPalette::lit_fill,        &GuiThemeTones::lit_fill},
+    {"lit_press_fill",  &GuiPalette::lit_press_fill,  &GuiThemeTones::lit_press_fill},
     {"key_press_face",  &GuiPalette::key_press_face,  &GuiThemeTones::key_press_face},
     {"well_frame",      &GuiPalette::well_frame,      &GuiThemeTones::well_frame},
     {"ruler_face",      &GuiPalette::ruler_face,      &GuiThemeTones::ruler_face},

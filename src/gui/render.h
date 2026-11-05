@@ -126,8 +126,9 @@ struct TrimRange {
 // computes no color at paint time: every one is a theme row's word, the
 // derived tones computed once by the generator (theme_tables.h's head).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
-// one accessor palette() — the chrome's seventeen flat-look tones among them
-// (materials.h, 2026-11-01: the ground, the key's faces (rest, lit), the
+// one accessor palette() — the chrome's eighteen flat-look tones among them
+// (materials.h, 2026-11-01: the ground, the key's faces (rest, press, lit,
+// lit press), the
 // text tones, the well's tones — the trim bar, its frame, the ruler, its
 // ticks, the marker lane — the panes and the selection pair; members of the
 // struct since 2026-11-05) — or
@@ -336,16 +337,17 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S SEVENTEEN (materials.h's head owns each rule; members
+    // THE FLAT LOOK'S EIGHTEEN (materials.h's head owns each rule; members
     // since the theme arc, 2026-11-05, their numbers the installed theme's
-    // — Default's quoted at materials.h; the three press tones the press
-    // arc's, the same day).
+    // — Default's quoted at materials.h; the four press tones the press
+    // arc's, the same day, the lit press fill its second landing's).
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor text_on_lit;     // anything printed on a lit face
     GuiColor key_dim_ink;     // a disabled key's glyph and legend
     GuiColor key_face;        // the key at rest, the time fields
     GuiColor lit_fill;        // a checked key's whole face, Live's "on"
+    GuiColor lit_press_fill;  // a checked key's face under a standing press
     GuiColor key_press_face;  // an unchecked key's face under a standing press
     GuiColor well_frame;      // the scrub's channel, the tooltip's border
     GuiColor ruler_face;      // the ruler
