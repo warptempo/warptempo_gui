@@ -394,14 +394,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // viewer the key is lit and its lift is the viewer's own router's close
     // (route_score_viewer_key). No modifier, no repeat.
     {RedesignButton::IconScore, GuiKeys::M, false, false, false},      // bare m
-    // THE NOISE (architect 2026-10-28), behind the Score key, the third run's
-    // last: bare `w`, the background sound's lamp through on_key like every
-    // row (GuiNoise::toggle, noise.h, the one chokepoint the key reaches too).
-    // Live on a locked tab, under the grid-iterations lock and in the `h`
-    // view (all three allowlists admit it, so the derived partition leaves it
-    // standing); grey with no folder the `noise` key names (its own arm,
-    // redesign_button_enabled). No modifier, no repeat.
-    {RedesignButton::IconNoise, GuiKeys::W, false, false, false},      // bare w
+    // (THE TWO LEVEL CASES, IconAudioLevel and IconNoiseLevel, behind the
+    // Score key, the third run's last two since 2026-11-05, HAVE NO ROW:
+    // sliders, pressed by their own arm, arm_level_case_press, not by a
+    // chord — the one pair of roster members off this table, which the
+    // static_assert below counts out. THE NOISE lamp's row stood here
+    // 2026-10-28 to 2026-11-05, bare `w` through GuiNoise::toggle; the lamp,
+    // the chord and the toggle are retired with the cases.)
     // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like
     // iteration — its chord opens the mode and closes it, and the button
     // dispatches on both edges because the icon row's band claim sits ABOVE the
@@ -814,11 +813,23 @@ constexpr ToolbarChord kToolbarChords[] = {
 // bookkeeping — history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
 // live face in the `h` view while its press claimed nothing. This makes that
-// drift a build error instead. (An addend walked the menu anchors' count, +
-// 2 to + 5, from 2026-08-13 until they left with the menu row, 2026-10-21.)
-static_assert(std::size(kToolbarChords) ==
+// drift a build error instead. THE TWO LEVEL CASES ARE THE ADDEND (architect
+// 2026-11-05): sliders with no chord, pressed by their own arm
+// (arm_level_case_press) and answered LIVE in the `h` view by an explicit
+// arm of that walk (history_mode_refuses_button_chord), so the table covers
+// the roster less exactly those two (redesign_button_is_level_case, the
+// count's one owner). (An addend walked the menu anchors' count, + 2 to
+// + 5, from 2026-08-13 until they left with the menu row, 2026-10-21.)
+constexpr int kLevelCaseCount = [] {
+    int n = 0;
+    for (int i = 0; i < kRedesignButtonCount; ++i)
+        if (redesign_button_is_level_case(static_cast<RedesignButton>(i))) ++n;
+    return n;
+}();
+static_assert(std::size(kToolbarChords) + kLevelCaseCount ==
                   static_cast<std::size_t>(kRedesignButtonCount),
-              "kToolbarChords must cover every RedesignButton");
+              "kToolbarChords must cover every RedesignButton but the two "
+              "level cases");
 
 // (THE MODAL-TRAP REACH-THROUGH IS RETIRED — architect 2026-08-13, "we can
 // drop the Save reach through". From 2026-08-11 a plain left press on a roster
@@ -1300,8 +1311,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   begins with),
 //   ZOOM IN AND ZOOM OUT (2026-10-27; `=` / `-` and their shifted forms on
 //   the allowlist through is_zoom_step_key),
-//   THE NOISE LAMP (2026-10-28; bare `w` on the allowlist, device state the
-//   view has no reason to refuse),
+//   THE TWO LEVEL CASES (2026-11-05, in the NOISE lamp's seat; the lamp's
+//   bare `w` was on the allowlist 2026-10-28 to then — device state the view
+//   has no reason to refuse; the cases carry no chord, so the walk below
+//   answers them LIVE by an explicit arm),
 //   ZOOM TO FIT (Full Zoom Out until 2026-10-24) AND CENTER since the
 //   2026-08-12 relayout (bare `0` is the allowlist's own zoom admission,
 //   Shift+0's frame beside it, and bare `c` is the mode's vocabulary —
@@ -1464,6 +1477,15 @@ static bool history_mode_refuses_button_chord(const AppState* state,
                                               RedesignButton b) {
     // (THE THREE MENU ANCHORS, which carried no chord for this walk, answered
     // false here until the menu row went, 2026-10-21.)
+    // THE TWO LEVEL CASES ANSWER LIVE OUTRIGHT (architect 2026-11-05, the
+    // sliders in the NOISE lamp's seat; the lamp's bare `w` was on the
+    // view's allowlist from 2026-10-28, the planner's call the architect
+    // agreed to, Tooltips' class): DEVICE STATE the view has no reason to
+    // refuse — the two levels touch nothing the view froze — and the cases
+    // carry no chord for the allowlist to walk, so the answer is stated here
+    // rather than defaulted below: never greyed, never hidden, in every
+    // session.
+    if (redesign_button_is_level_case(b)) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -4794,9 +4816,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     // their own band claims below and for the two overlays' veils, which let
     // the icon row's press through to their opener (architect 2026-10-13 for
     // the player, 2026-10-25 for the picker).
+    // THE TWO LEVEL CASES ARE THE CLAIM'S SECOND HALF (architect 2026-11-05):
+    // where no chord row's face holds the press, a level case's face may —
+    // the sliders, armed by their own kind (arm_level_case_press). A ctrl
+    // press on a case never reaches either arm: the modifier gate above
+    // walks the chord table and refuses a ctrl press on anything else, which
+    // is the barrel binding nothing on a case.
     const auto claim_button_row_press = [&] {
         if (chrome_band_modifiers_refused(app, x, y, mods)) return;
-        arm_redesign_press(x, y, mods);
+        if (!arm_redesign_press(x, y, mods)) arm_level_case_press(x, y);
     };
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
@@ -6846,6 +6874,17 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
     // inside its key — is un-pressed by the same damage the arm paid.
     if (arm.kind == AppState::ChromePress::Kind::Roster && arm.inside)
         invalidate_roster_press_face(arm.index);
+    // A LEVEL ARM'S END (2026-11-05, the sliders; AppState::ChromePress's
+    // Level kind): EVERY ROAD OUT OF THE ARM COMES THROUGH HERE — the lift,
+    // the button-lost and the pointer-leave clears — and every one of them
+    // is the drag's end, the level staying where the last motion put it:
+    // the noise's -inf release and the one config write where the level
+    // moved (settle_level_case). The lift's own act, the long press's 0 dB,
+    // follows in finish_level_press_release on a press that moved nothing,
+    // so the two writes are never both owed.
+    if (arm.kind == AppState::ChromePress::Kind::Level)
+        settle_level_case(static_cast<RedesignButton>(arm.index),
+                          arm.level_changed);
     return arm;
 }
 
@@ -6859,6 +6898,138 @@ void GuiInputHandler::invalidate_roster_press_face(int index) {
         viewport.invalidate_rect(bottom_row_area(app));
     else
         viewport.invalidate_top_strip();
+}
+
+// -- THE TWO LEVEL CASES' ARM (architect 2026-11-05; the contract at
+//    AppState::ChromePress's Level kind, the declarations' comment,
+//    input_handler.h) ---------------------------------------------------------
+
+// THE PRESS: the band claim's second half (claim_button_row_press, after
+// arm_redesign_press found no chord row's face under the press). A press on
+// a level case's PAINTED face — the published rect, point_on_key through
+// `contains` — arms the Level kind with the press's x, y, the level's travel
+// fraction and the clock; A DISABLED CASE'S PRESS IS A CONSUMED NOTHING,
+// read as the roster's is, off the painted bit (RedesignButtonFace::enabled,
+// strictly as-painted). No face damage: a slider has no press look.
+bool GuiInputHandler::arm_level_case_press(int x, int y) {
+    for (const RedesignButton id :
+         {RedesignButton::IconAudioLevel, RedesignButton::IconNoiseLevel}) {
+        const AppState::RedesignButtonFace& face =
+            app.redesign_buttons[static_cast<size_t>(redesign_button_index(id))];
+        if (!face.contains(x, y)) continue;
+        if (!face.enabled) return true;
+        const double db = id == RedesignButton::IconAudioLevel
+                              ? app.device_config->audio_level
+                              : app.device_config->noise_level;
+        app.chrome_press = AppState::ChromePress{
+            .kind     = AppState::ChromePress::Kind::Level,
+            .index    = redesign_button_index(id),
+            .press_ms = monotonic_ms(),
+            .x0       = x,
+            .y0       = y,
+            .t0       = level_travel_fraction(db)};
+        return true;
+    }
+    return false;
+}
+
+// THE DRAG (on_motion, under a standing Level arm, the button held): until a
+// motion has left the hover slop on either axis (kTooltipHoverSlopPx, the
+// roster's own jitter measure) the press is still a tap or a hold and moves
+// nothing — a wobble under a long press must not nudge the level a tenth of
+// a dB and leave the file behind the voice. Past it the press is a DRAG for
+// good: on this and every later motion the level is the ROUNDED taper of
+// t0 + (x − x0) / the travel, clamped to [0, 1] (level_db_from_travel; y
+// ignored), applied live where it differs from the level standing
+// (apply_level_case), wherever the pointer is — on the face, off it, over
+// the canvas: the arm runs to the lift, the scrub thumb's shape, no
+// slide-off feint. `level_changed` records that some motion moved the
+// level, which is what the end's one write is owed for.
+void GuiInputHandler::update_level_press_motion(int x, int y) {
+    AppState::ChromePress& arm = app.chrome_press;
+    if (arm.kind != AppState::ChromePress::Kind::Level) return;
+    if (!arm.moved) {
+        const int slop = tooltip_hover_slop_px();
+        if (std::abs(x - arm.x0) <= slop && std::abs(y - arm.y0) <= slop)
+            return;
+        arm.moved = true;
+    }
+    const double travel = static_cast<double>(level_travel_px());
+    double t = arm.t0 + static_cast<double>(x - arm.x0) / travel;
+    if (t < 0.0) t = 0.0;
+    if (t > 1.0) t = 1.0;
+    const double db = level_db_from_travel(t);
+    const RedesignButton id = static_cast<RedesignButton>(arm.index);
+    const double standing = id == RedesignButton::IconAudioLevel
+                                ? app.device_config->audio_level
+                                : app.device_config->noise_level;
+    if (db == standing) return;
+    apply_level_case(id, db);
+    arm.level_changed = true;
+}
+
+// THE LIFT (finish_chrome_press_release's Level arm, under the veil's say):
+// A PRESS THAT NEVER LEFT THE SLOP AND WHOSE HOLD IS ≥ chrome_shift_hold_ms()
+// — the roster's long-press measure, read off the arm's stamp at the release
+// as every long press is — SETS 0 dB (architect 2026-11-05, "long press, not
+// double tap"), applied and persisted, if the lift lands on the case's face
+// (the published rect, the derive doctrine) and the level is not 0 dB
+// already (a same-value commit writes nothing, the device keys' rule). A
+// short motionless press does nothing (a slider is not a button); a moved
+// press's level stands where the last motion put it, settled by the take.
+void GuiInputHandler::finish_level_press_release(
+        const AppState::ChromePress& arm, int x, int y) {
+    if (arm.moved) return;
+    if (monotonic_ms() - arm.press_ms < chrome_shift_hold_ms()) return;
+    const RedesignButton id = static_cast<RedesignButton>(arm.index);
+    if (!redesign_button_hit(app, id, x, y)) return;
+    const double standing = id == RedesignButton::IconAudioLevel
+                                ? app.device_config->audio_level
+                                : app.device_config->noise_level;
+    if (standing == 0.0) return;
+    apply_level_case(id, 0.0);
+    settle_level_case(id, /*level_changed=*/true);
+}
+
+// THE LIVE APPLY, ONE BODY FOR THE DRAG, THE LONG PRESS AND THE TYPED LINE
+// (GuiSettingsEditor::apply_device_setting's two level arms): the live
+// struct takes the level, its voice takes it at the next fill —
+// GuiPlayback::set_audio_level_db (0 at -inf, the mute) for AUDIO,
+// GuiNoise::set_level_db for NOISE (the gain and the switch: a rise from
+// -inf lights the voice and starts the loader, a fall to -inf fades it out;
+// nothing freed here, noise.h) — and THE CASE'S FACE RECT IS DAMAGED, the
+// published face (the number and the fill both inside it; the legend on the
+// ground does not change): THE LEVEL'S ONE DAMAGE — the per-tick comparator
+// watches enabled, selected, glyph and drawing, no level, so every edge of
+// a case's value pays its own damage here, as the press arc's
+// invalidate_roster_press_face pays the press's. A case not standing (an
+// empty rect, no pixel to be stale) damages nothing.
+void GuiInputHandler::apply_level_case(RedesignButton id, double db) {
+    if (id == RedesignButton::IconAudioLevel) {
+        app.device_config->audio_level = db;
+        playback.set_audio_level_db(db);
+    } else {
+        app.device_config->noise_level = db;
+        if (app.noise != nullptr) app.noise->set_level_db(db);
+    }
+    const GuiRect& face =
+        app.redesign_buttons[static_cast<size_t>(redesign_button_index(id))]
+            .rect;
+    if (face.w > 0 && face.h > 0) viewport.invalidate_rect(face);
+}
+
+// THE END'S TAIL, every road's (take_chrome_press for the lift and the two
+// clears, finish_level_press_release after the long press's apply, the
+// typed line's arms): THE NOISE'S -inf RELEASE — a NOISE case left at -inf
+// frees the bank behind the fence (GuiNoise::release_if_silent, a no-op
+// above -inf or with nothing loaded; never per motion, noise.h's head) —
+// and ONE CONFIG WRITE where the level moved (persist_device_config, the
+// typed line's own persist: a failure cards, the live value standing).
+void GuiInputHandler::settle_level_case(RedesignButton id,
+                                        bool level_changed) {
+    if (id == RedesignButton::IconNoiseLevel && app.noise != nullptr)
+        app.noise->release_if_silent();
+    if (level_changed) (void)settings_editor.persist_device_config();
 }
 
 // THE CHROME ACT, AT THE LIFT — the release half of act-at-release (architect
@@ -6935,6 +7106,13 @@ void GuiInputHandler::finish_chrome_press_release(
         // Never reaches here: the card's lift is taken and dispatched at the
         // head of on_button_release, at its claim's own rank above every
         // veil (finish_notification_release).
+        return;
+    case AppState::ChromePress::Kind::Level:
+        // THE LEVEL CASE'S LIFT (2026-11-05): no chord to build — its one
+        // act is the long press's 0 dB, its own body; the veil above has had
+        // its say (a modal raised mid-hold swallows the act, the drag's
+        // level standing and already settled by the take).
+        finish_level_press_release(arm, x, y);
         return;
     }
     // A HOLD THAT ALREADY FIRED CONSUMES ITS OWN LIFT (architect 2026-08-16):
@@ -8122,6 +8300,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // claim and the touch pan zone ask the same one owner
     // (notification_card_at) for the same reason.
     update_notification_hover(mouse_x, mouse_y);
+    // A LEVEL CASE'S DRAG (architect 2026-11-05, the sliders; AppState::
+    // ChromePress's Level kind): a standing Level arm owns the motion whole
+    // — the slop crossing and the relative travel, the level applied live
+    // wherever the pointer is (update_level_press_motion) — until the lift
+    // or the button-lost clear above. It stands above the modal branches
+    // because none of them can arm one (a case under a modal or an overlay
+    // is dead and arms nothing), and a modal RAISED MID-DRAG leaves the drag
+    // its pointer: the lift's act is what the veil swallows.
+    if (app.chrome_press.kind == AppState::ChromePress::Kind::Level) {
+        update_level_press_motion(mouse_x, mouse_y);
+        return;
+    }
     // THE ROSTER WALK STAYS LIVE UNDER EVERY MODAL SURFACE — the MODAL
     // branches that return before the no-gesture tail (the prompt's, the
     // player's, the picker's and the dialog editors' below) all call it —

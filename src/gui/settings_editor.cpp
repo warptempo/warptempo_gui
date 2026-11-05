@@ -379,12 +379,6 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     } else if (key == "waveform_grow") {
         for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n)
             out.push_back(format_waveform_grow(n));
-    } else if (key == "audio_level") {
-        for (int db = kAudioLevelMaxDb; db >= kAudioLevelMinDb; --db)
-            out.push_back(format_audio_level(db));
-    } else if (key == "noise_level") {
-        for (int db = kNoiseLevelMaxDb; db >= kNoiseLevelMinDb; --db)
-            out.push_back(format_noise_level(db));
     } else if (key == "noise_crossfade_s") {
         for (int s = kNoiseCrossfadeMinS; s <= kNoiseCrossfadeMaxS; ++s)
             out.push_back(format_noise_crossfade_s(s));
@@ -1217,8 +1211,9 @@ void GuiSettingsEditor::commit() {
 // project is opened first — a rename-by-hand case, accepted.
 // `true_colors` (2026-10-21, the popup's command row made a key): AT ONCE,
 // live, no card — its arm below; `waveform_grow` (2026-10-31) the same, its arm after
-// that, `audio_level` (2026-10-31 night) the same, its arm after that,
-// `noise`, `noise_level` and `noise_crossfade_s`
+// that, `audio_level` (2026-10-31 night; the band's AUDIO case's grammar
+// and apply since 2026-11-05) the same, its arm after that,
+// `noise`, `noise_level` (the NOISE case's since 2026-11-05) and `noise_crossfade_s`
 // (2026-10-28) the same, at once and no card, their arms after it, and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
 // `osk_font_px` (2026-10-29) the same, their arms last
@@ -1232,7 +1227,7 @@ void GuiSettingsEditor::commit() {
 // the same, at once and no card, its arm after true_colors'. (`icons` and
 // `font` had arms here 2026-10-09..10-12; each left
 // with its key; `waveform`, the color presets' key, 2026-10-14..11-01.) The
-// commit is the OK's or Enter's, and for the seven keys
+// commit is the OK's or Enter's, and for the five keys
 // with a value list (kSettingsValueListKeys, settings_editor.h) also a
 // list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
 // the choice rows' list rows of 2026-10-07..10-14, which showed a value and
@@ -1241,8 +1236,8 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. (The keys with a value list
-// are seven since 2026-11-05, `theme` the newest, `waveform_grow` and
-// `audio_level` among them.)
+// are five since 2026-11-05, `theme` the newest and the two levels gone to
+// the band's sliders that day, `waveform_grow` among them.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     switch (apply_device_setting(key, value)) {
@@ -1342,10 +1337,11 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // device_config.h), the value trimmed as every string key's; a same-name
     // commit is the unchanged no-op, so GuiNoise::change_folder never sees
     // one. Otherwise the live struct takes the name and the one GuiNoise
-    // CHANGES FOLDER — THE LAMP DARKENS AND THE MEMORY IS DUMPED ON EVERY
-    // NAME CHANGE, lit or not (his ruling: "whatever's in memory is dumped if
-    // we change the subfolder name"), the new folder probed for the next lit
-    // press — and the file is written. NO CARD: the NOISE key's face is the
+    // CHANGES FOLDER — THE MEMORY IS DUMPED ON EVERY NAME CHANGE, audible or
+    // not (his ruling: "whatever's in memory is dumped if we change the
+    // subfolder name"), the new folder probed and, under an audible level,
+    // loaded at once (the level is the switch, noise.h) — and the file is
+    // written. NO CARD: the NOISE case's face is the
     // answer, live with a folder there and grey when it is absent or refused,
     // exactly as a launch with that name would show (the absent-folder rule,
     // noise.h). Tab completes the value against the folders there
@@ -1382,47 +1378,48 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night, a permanent
-    // key; playback_common.h's head owns the order): an integer under its
-    // one grammar owner (parse_audio_level, device_config.h), APPLIED LIVE AT
-    // THE COMMIT — the live struct, then the open project's engine
-    // (GuiPlayback::set_audio_level_db, reached through the input handler's
-    // `playback`; the gain read by the audio thread at its next fill, a play
-    // under way taking it at once) — and persisted, so NO CARD: the sound is
-    // the answer. The next project's engine is seated from the struct
-    // (run_project). The page opens its VALUE LIST (31 values,
-    // kSettingsValueListKeys); Tab completes no value; stage 2's recall is
-    // the writer's spelling (recall_gui_setting_value).
-    if (key == "audio_level") {
-        const std::optional<int> db = parse_audio_level(value);
-        if (!db) return reject(kAudioLevelGrammarReason);
-        if (*db == app.device_config->audio_level) return unchanged();
-        app.device_config->audio_level = *db;
-        input->playback.set_audio_level_db(*db);
+    // THE TWO LEVELS, TYPED (the project voice's, architect 2026-10-31 night;
+    // the noise's, 2026-10-28; both the band's two sliders' keys since
+    // 2026-11-05 — RedesignButton::IconAudioLevel, app_state.h; playback_
+    // common.h's head owns the order): a value of THE LEVEL GRAMMAR under
+    // its one owner (parse_level_db, device_config.h: a decimal dB in
+    // [-60.0, 0.0] or -inf, the integer spelling admitted), APPLIED LIVE AT
+    // THE COMMIT THROUGH THE SLIDERS' OWN ROAD (GuiInputHandler::
+    // apply_level_case — the live struct, the voice's setter and the case's
+    // face damaged; then settle_level_case's tail: a typed -inf on the noise
+    // frees the bank at once, GuiNoise::release_if_silent, and a rise from
+    // -inf lights it) — and persisted here, so NO CARD: the sound and the
+    // case's fill are the answer. A value spelling the level already held
+    // ("-9" for "-9.0") is the unchanged no-op. The next project's engine is
+    // seated from the struct (run_project). The page opens the line editor
+    // on either (no value list since 2026-11-05: the decimal domain is no
+    // short list); Tab completes no value; stage 2's recall is the writer's
+    // canonical spelling (recall_gui_setting_value), so a loaded "-9"
+    // recalls as "-9.0".
+    if (key == "audio_level" || key == "noise_level") {
+        const bool audio = key == "audio_level";
+        const std::optional<double> db = parse_level_db(value);
+        if (!db) return reject(kLevelGrammarReason);
+        const double standing = audio ? app.device_config->audio_level
+                                      : app.device_config->noise_level;
+        if (*db == standing) return unchanged();
+        const RedesignButton id = audio ? RedesignButton::IconAudioLevel
+                                        : RedesignButton::IconNoiseLevel;
+        input->apply_level_case(id, *db);
+        input->settle_level_case(id, /*level_changed=*/false);
         (void)persist();
         return applied();
     }
 
-    // THE NOISE'S LEVEL AND ITS CROSSFADE (architect 2026-10-28; noise.h owns
-    // the sound): each an integer under its one grammar owner
-    // (parse_noise_level, parse_noise_crossfade_s, device_config.h), APPLIED
-    // LIVE AT THE COMMIT — the live struct, then the one GuiNoise's setter
-    // (the level's gain read by the audio thread at its next fill, the
-    // crossfade, in the key's seconds, at the next transition's draw) — and
-    // persisted, so NO CARD: the sound is the answer. A commit with the lamp
-    // dark takes effect at the next lit press. Tab completes no value for
-    // either (complete_closed_value and complete_noise_value name neither:
-    // a number is typed, or picked from the value list); stage 2's recall is
-    // the writer's spelling (recall_gui_setting_value).
-    if (key == "noise_level") {
-        const std::optional<int> db = parse_noise_level(value);
-        if (!db) return reject(kNoiseLevelGrammarReason);
-        if (*db == app.device_config->noise_level) return unchanged();
-        app.device_config->noise_level = *db;
-        if (app.noise != nullptr) app.noise->set_level_db(*db);
-        (void)persist();
-        return applied();
-    }
+    // THE NOISE'S CROSSFADE (architect 2026-10-28; noise.h owns the sound):
+    // an integer under its one grammar owner (parse_noise_crossfade_s,
+    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then
+    // the one GuiNoise's setter (the crossfade, in the key's seconds, at the
+    // next transition's draw) — and persisted, so NO CARD: the sound is the
+    // answer. Tab completes no value (complete_closed_value and
+    // complete_noise_value name it not: a number is typed, or picked from
+    // the value list); stage 2's recall is the writer's spelling
+    // (recall_gui_setting_value).
     if (key == "noise_crossfade_s") {
         const std::optional<int> s = parse_noise_crossfade_s(value);
         if (!s) return reject(kNoiseCrossfadeGrammarReason);

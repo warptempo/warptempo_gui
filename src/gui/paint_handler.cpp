@@ -353,6 +353,75 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
                                           : KeyLitClass::Lamp);
 }
 
+// THE TWO LEVEL CASES' PAINTER (architect 2026-11-05, session 46, his "yes"
+// on mock s46_m1 of tmp/s46; the ruling at RedesignButton::IconAudioLevel,
+// app_state.h): AUDIO and NOISE, the `audio_level` and `noise_level`
+// SLIDERS in the band's third run, each ON A KEY FACE. THE FACE: the key at
+// rest (paint_key's Rest, the theme's `key_face`) — NEVER LIT, NEVER
+// PRESSED: a slider shows its value, and ITS FILL IS THE FEEDBACK (the
+// planner's reading; a press face would read as a button's blink under a
+// finger that is setting a number) — UNDER A FILL FROM THE FACE'S LEFT EDGE,
+// nearbyint(t · face width) device px wide, the face's full height, NO
+// BORDER (his "agree on no border"), no inset: `level_audio_fill` (Live's
+// RangeEditField, Default 007383) for AUDIO, `level_noise_fill`
+// (ChosenPreListen, Default 3C6AB6) for NOISE, where t is the ROUNDED
+// level's travel fraction (level_travel_fraction, the square-law taper,
+// app_state.h: 0 dB the face full, -9 dB 0.596 of it, -60 dB two columns,
+// -inf none) — whole device-px cells, no antialiasing (paint_cell_rect).
+// THE NUMBER over it: the level's canonical spelling, "0.0", "-9.0", "-inf"
+// (format_level_db, THE LEVEL GRAMMAR, device_config.h), in the BODY face
+// (Liberation Sans Bold 11 W, 22 device px on the tablet: the number is
+// read, so Body and not the legends' Regular 7 W), the text tone `text`
+// whatever is under it — the fill and the face alike, as m1 shows —
+// centered on the face by its cap band (redesign_baseline, the chrome
+// labels' rule) and horizontally by its ink (ink_left_px / ink_right_px,
+// the floor of the spare to the left); the run shaped through the memo
+// (memoized_run: a few dozen spellings). DISABLED (`enabled` false — the
+// NOISE case with no folder or a failed load, both under the roster's
+// blanket greys): the fill and the number in `key_dim_ink`, the face
+// unchanged, the slider inert. The legend under the face is the caller's
+// (paint_key_legend, as every key's). THE REPAINT: every change of a case's
+// level damages its face rect explicitly (GuiInputHandler::apply_level_case)
+// — the per-tick comparator watches no level — and the enabled edge is the
+// comparator's as every key's.
+void paint_level_case(cairo_t* cr, const GuiRect& face, RedesignButton id,
+                      bool enabled, double level_db) {
+    if (face.w <= 0 || face.h <= 0) return;
+    paint_key(cr, face, KeyLook::Rest);
+    const GuiPalette& p = palette();
+    const GuiColor fill_tone =
+        !enabled ? p.key_dim_ink
+        : id == RedesignButton::IconAudioLevel ? p.level_audio_fill
+                                               : p.level_noise_fill;
+    const double t = level_travel_fraction(level_db);
+    const int fill_w = static_cast<int>(std::nearbyint(t * face.w));
+    if (fill_w > 0) {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        paint_cell_rect(cr, GuiRect{face.x, face.y, std::min(fill_w, face.w),
+                                    face.h},
+                        fill_tone);
+        cairo_restore(cr);
+    }
+    const GuiFont font = gui_font(GuiFace::Body);
+    const text_shape::SharedRun run =
+        text_shape::memoized_run(font, format_level_db(level_db));
+    const double ink_l = text_shape::ink_left_px(*run);
+    const double ink_r = text_shape::ink_right_px(*run);
+    const double ink_w = ink_r - ink_l;
+    const double x = static_cast<double>(face.x) +
+                     std::floor((static_cast<double>(face.w) - ink_w) * 0.5) -
+                     ink_l;
+    const double baseline = redesign_baseline(
+        font, static_cast<double>(face.y), static_cast<double>(face.h));
+    cairo_save(cr);
+    cairo_rectangle(cr, face.x, face.y, face.w, face.h);
+    cairo_clip(cr);
+    set_palette_source(cr, enabled ? p.text : p.key_dim_ink);
+    text_shape::show_shaped_run(cr, *run, x, baseline);
+    cairo_restore(cr);
+}
+
 // THE KEY'S LEGEND SEAT (architect 2026-10-23, "text under buttons": the
 // act's name printed UNDER the key on the ground, "just a little label
 // underneath"; back 2026-11-03, the retrofit, under every key of every
@@ -1023,11 +1092,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     // its closer (RedesignButton::IconScore). One case onto the walk, no run
     // moving.
     {RedesignButton::IconScore},
-    // THE NOISE (architect 2026-10-28), the third run's last since
-    // 2026-10-28: bare `w`, the background sound's lamp
-    // (RedesignButton::IconNoise, noise.h). One case onto the walk, no run
-    // moving.
-    {RedesignButton::IconNoise},
+    // THE TWO LEVEL CASES (architect 2026-11-05), the third run's last two,
+    // in the NOISE lamp's seat (2026-10-28 to 2026-11-05): AUDIO then NOISE,
+    // the `audio_level` and `noise_level` sliders (RedesignButton::
+    // IconAudioLevel, app_state.h; paint_level_case below). Two cases onto
+    // the walk, the run one pitch longer than the lamp's, no run moving: on
+    // the tablet the left walk ends well short of the left runs' limit (the
+    // right run's first face less the run gap, icon_row_seats).
+    {RedesignButton::IconAudioLevel},
+    {RedesignButton::IconNoiseLevel},
     // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
     // right-anchored since, kIconRowHistoryOpener below.)
 };
@@ -1055,8 +1128,9 @@ constexpr IconRowDef kIconRowButtons[] = {
 // and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). No other group is
 // refused whole in the view: the zoom group keeps Zoom In, Zoom Out and Zoom
 // to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders (bare `l`, admitted 2026-10-25),
-// the tooltip lamp (bare backslash) and the NOISE lamp (bare `w`, admitted
-// 2026-10-28).
+// the tooltip lamp (bare backslash) and the two level cases (no chord, LIVE
+// by the walk's own arm since 2026-11-05; the NOISE lamp's bare `w`
+// admitted 2026-10-28 until then).
 //
 // THE SLOTS: UNDO'S FOUR (Undo, Redo, Copy Phase Resets and Render, since
 // 2026-10-25; three until then) take the view's two acts, Revert and Load in
@@ -1071,8 +1145,9 @@ constexpr IconRowDef kIconRowButtons[] = {
 // (kTransportHistoryStandIns). The zoom group stands on the four members the
 // view does not refuse in every session (Zoom In and Zoom Out since
 // 2026-10-27, Zoom to Fit and, since 2026-10-12, Waveform Magnification) and
-// the render-entry group on three (Play Renders,
-// since 2026-10-25, Enable Tooltips, and Noise since 2026-10-28), their others hidden
+// the render-entry group on four (Play Renders,
+// since 2026-10-25, Enable Tooltips, and the two level cases since
+// 2026-11-05 — the NOISE lamp 2026-10-28 until then), their others hidden
 // (history_mode_hides_button, paint_icon_row's walk).
 // The history opener and the view pairs are right-anchored and do not move
 // (kIconRowHistoryOpener).
@@ -1768,7 +1843,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
     // READ-ONLY toggle, SETTINGS, ENABLE TOOLTIPS, since 2026-10-26 the
-    // SCORE key and since 2026-10-28 the NOISE lamp) the third — then,
+    // SCORE key and since 2026-11-05 the two level cases, AUDIO and NOISE,
+    // in the NOISE lamp's seat of 2026-10-28) the third — then,
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
     // (kIconRowRightRun). IN THE `h` VIEW the history group's four icon-row
     // companions stand in two groups' slots — Revert and Load in Place in
@@ -1836,11 +1912,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (render.h's palette says so), and so has the menu row's.
     //
     // THE FACES ARE THE PROGRAM'S CASE (paint_roster_case, above, where the
-    // faces stand): the rest face, the lit fill for a CHECKED one — no press
-    // face (2026-11-04) — the live fact its chord flips
-    // (redesign_button_selected), the view pairs' lit members among them —
-    // and no hot face. The pointer walk finds the tooltip's button
-    // (recompute_redesign_button_hover).
+    // faces stand): the rest face, the press face under a standing press
+    // (2026-11-05, the press arc), the lit fill for a CHECKED one — the live
+    // fact its chord flips (redesign_button_selected), the view pairs' lit
+    // members among them — and no hot face; THE TWO LEVEL CASES their own
+    // painter (paint_level_case: the rest face under the level's fill and
+    // number, never lit, never pressed). The pointer walk finds the
+    // tooltip's button (recompute_redesign_button_hover).
     // THE DISABLED FACE IS THE TWO MODES' AND THE TOOLBAR MIGRANTS':
     // the row's own members never grey for a REFUSAL —
     // presses always dispatch and the CHORDS' OWN refusals answer (loading
@@ -1951,7 +2029,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // standing in their slots (since 2026-10-05; the iteration group's
         // again since 2026-10-26, kIconRowHistoryStandIns). The view pairs, Zoom In,
         // Zoom Out, Zoom to Fit, the magnification lamp, the tooltip lamp, the
-        // NOISE lamp (2026-10-28) and the history opener stay live, as do the history
+        // two level cases (2026-11-05; the NOISE lamp 2026-10-28 until then)
+        // and the history opener stay live, as do the history
         // COMPANIONS — each
         // on the derivation's own answer, which is not one reason but two:
         // bare `g`, `u`, `,` and `.` are the mode's own VOCABULARY and answer live
@@ -2005,6 +2084,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // gate reads the painted extent, so a damage confined to the bottom
         // pad, which the ground erases, still reprints the legend.
         if (!clip_meets(cr, painted)) return;
+        // THE TWO LEVEL CASES (architect 2026-11-05): the sliders' own
+        // painter — the rest face, the level's fill and its number, no
+        // glyph, no lit or press look (paint_level_case) — and the legend
+        // under the face as every key's.
+        if (redesign_button_is_level_case(def.id)) {
+            paint_level_case(cr, key, def.id, face.enabled,
+                             def.id == RedesignButton::IconAudioLevel
+                                 ? app.device_config->audio_level
+                                 : app.device_config->noise_level);
+            paint_key_legend(cr, key, legend, face.enabled);
+            return;
+        }
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const KeyLook look = key_look(face.selected, pressed);

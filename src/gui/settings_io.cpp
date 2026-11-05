@@ -390,19 +390,20 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_waveform_grow, device_config.h), the writer's own spelling.
     if (key == "waveform_grow" && app.device_config != nullptr)
         return format_waveform_grow(app.device_config->waveform_grow_quarters);
-    // THE PROJECT VOICE'S LEVEL (2026-10-31 night): through its one
-    // formatter (format_audio_level, device_config.h), the writer's own
-    // spelling.
+    // THE PROJECT VOICE'S LEVEL (2026-10-31 night): through the two levels'
+    // one formatter (format_level_db, device_config.h, 2026-11-05), the
+    // writer's own canonical spelling — a config loaded as "-9" recalls as
+    // "-9.0".
     if (key == "audio_level" && app.device_config != nullptr)
-        return format_audio_level(app.device_config->audio_level);
+        return format_level_db(app.device_config->audio_level);
     // THE NOISE'S THREE (2026-10-28): the folder's name verbatim, as the
-    // writer writes it, and the two integers each through its one formatter
-    // (format_noise_level, format_noise_crossfade_s, device_config.h), the
-    // writer's own spelling.
+    // writer writes it, the level through the levels' one formatter
+    // (format_level_db) and the crossfade through its own
+    // (format_noise_crossfade_s, device_config.h), the writer's own spelling.
     if (key == "noise" && app.device_config != nullptr)
         return app.device_config->noise;
     if (key == "noise_level" && app.device_config != nullptr)
-        return format_noise_level(app.device_config->noise_level);
+        return format_level_db(app.device_config->noise_level);
     if (key == "noise_crossfade_s" && app.device_config != nullptr)
         return format_noise_crossfade_s(
             app.device_config->noise_crossfade_s);

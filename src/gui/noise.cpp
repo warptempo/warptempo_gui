@@ -25,11 +25,11 @@ static_assert(std::endian::native == std::endian::little,
 namespace {
 
 // The one stderr line every refusal and every failure prints (noise.h's
-// head): the folder or the file, the reason, the key's answer.
+// head): the folder or the file, the reason, the case's answer.
 void say_no_noise(const std::filesystem::path& file, const std::string& why) {
     std::fprintf(stderr,
-                 "warptempo_gui: No noise from '%s': %s; the NOISE key stays "
-                 "dark\n",
+                 "warptempo_gui: No noise from '%s': %s; the NOISE case stays "
+                 "grey\n",
                  file.string().c_str(), why.c_str());
 }
 
@@ -106,7 +106,8 @@ inline void read_frame(const GuiNoiseBank::Segment& seg, double pos,
 // and `nxt` -1, both positions 0, `xf_len` 0 — written on the main thread.
 // Two callers, each stating its own proof that no fill runs:
 // noise_voice_reset_on_dead_stream (the dead-stream exception at
-// GuiNoiseVoice) and GuiNoise::change_folder (the in_fill fence).
+// GuiNoiseVoice) and GuiNoise::release_bank (the in_fill fence; change_folder
+// and release_if_silent through it).
 void reset_voice_sequence(GuiNoiseVoice& v) {
     v.env     = 0.0;
     v.cur     = -1;
@@ -134,26 +135,26 @@ void noise_mix_block(GuiNoiseVoice& v, float* const* channel_buffers,
     v.in_fill.store(true, std::memory_order_seq_cst);
     const InFillGuard guard{v.in_fill};
     const GuiNoiseBank* bank = v.bank.load(std::memory_order_seq_cst);
-    // NO BANK — no load yet, a lit lamp's load in flight (nothing to play,
-    // and the fade-in begins when the load lands — his "the LED lights at
-    // once, the fade-in begins when the load lands"), or a key change's
-    // release: the fill returns TOUCHING NO PRIVATE FIELD, the property
-    // change_folder's reset rests on. (A sequence never stands without a
-    // bank: `cur` is drawn only below this line, and change_folder resets it
-    // with the bank.)
+    // NO BANK — no load yet, an audible level's load in flight (nothing to
+    // play, and the fade-in begins when the load lands — his "the LED lights
+    // at once, the fade-in begins when the load lands", the switch's shape
+    // since the lamp went), or a key change's or a -inf lift's release: the
+    // fill returns TOUCHING NO PRIVATE FIELD, the property release_bank's
+    // reset rests on. (A sequence never stands without a bank: `cur` is
+    // drawn only below this line, and release_bank resets it with the bank.)
     if (bank == nullptr) return;
     const bool target = v.target.load(std::memory_order_acquire);
-    // THE IDLE ARM — the lamp dark and the bed silent, the common case.
+    // THE IDLE ARM — the switch off and the bed silent, the common case.
     if (!target && v.env == 0.0 && v.cur < 0) return;
     const int count = static_cast<int>(bank->segments.size());
     if (count <= 0) return;
 
-    // START A SEQUENCE at a lit lamp with none standing: the generator seeded
-    // from the press's seed (ordered by `target`'s acquire above), a segment
-    // drawn uniformly, from its start; the envelope as it stands, which is 0:
-    // a sequence ends only where the fade-out reached silence (below), so a
-    // press during a fade-out finds `cur` standing and reverses the fade
-    // instead of starting here.
+    // START A SEQUENCE at an audible level with none standing: the generator
+    // seeded from the rise's seed (ordered by `target`'s acquire above), a
+    // segment drawn uniformly, from its start; the envelope as it stands,
+    // which is 0: a sequence ends only where the fade-out reached silence
+    // (below), so a rise during a fade-out finds `cur` standing and reverses
+    // the fade instead of starting here.
     if (target && v.cur < 0) {
         uint64_t s = v.seed.load(std::memory_order_relaxed);
         if (s == 0) s = kNoiseSeedFallback;
@@ -179,8 +180,9 @@ void noise_mix_block(GuiNoiseVoice& v, float* const* channel_buffers,
     const double gain      = v.gain.load(std::memory_order_relaxed);
 
     for (int64_t n = 0; n < frame_count; ++n) {
-        // THE ENVELOPE moves toward the lamp at its own rate, clamped to
-        // [0, 1]: a press during either fade reverses from the current level.
+        // THE ENVELOPE moves toward the switch at its own rate, clamped to
+        // [0, 1]: a crossing of -inf during either fade reverses from the
+        // current level.
         if (target) {
             v.env += up;
             if (v.env > 1.0) v.env = 1.0;
@@ -251,8 +253,8 @@ void noise_mix_block(GuiNoiseVoice& v, float* const* channel_buffers,
         v.pos_cur += increment;
         if (v.nxt >= 0) v.pos_nxt += increment;
 
-        // THE SEQUENCE ENDS when a dark lamp's fade reaches silence, so the
-        // next lit press starts a fresh random segment from its start.
+        // THE SEQUENCE ENDS when the fall to -inf's fade reaches silence, so
+        // the next rise starts a fresh random segment from its start.
         if (!target && v.env == 0.0) {
             v.cur     = -1;
             v.nxt     = -1;
@@ -360,15 +362,28 @@ bool GuiNoise::lit() const {
     return voice_.target.load(std::memory_order_relaxed);
 }
 
-void GuiNoise::toggle() {
-    if (!available()) return;
-    if (lit()) {
-        // THE DARK EDGE: the audio thread fades out and ends the sequence.
-        voice_.target.store(false, std::memory_order_release);
+void GuiNoise::set_level_db(double db) {
+    level_db_ = db;
+    // The gain: 0 at -inf (std::pow(10, -inf) is 0, spelled out all the
+    // same), read by the audio thread at its next fill.
+    const float gain = db == kLevelDbOff
+                           ? 0.0f
+                           : static_cast<float>(std::pow(10.0, db / 20.0));
+    voice_.gain.store(gain, std::memory_order_relaxed);
+    apply_switch();
+}
+
+void GuiNoise::apply_switch() {
+    const bool audible = level_db_ > kLevelDbOff && available();
+    if (!audible) {
+        // THE FALL (or an unavailable folder): the audio thread fades out and
+        // ends the sequence; nothing freed here (release_if_silent).
+        if (lit()) voice_.target.store(false, std::memory_order_release);
         return;
     }
-    // THE LIT EDGE: the seed first, then the lamp (release), so a sequence
-    // the audio thread starts on this press draws from this press's seed.
+    if (lit()) return;
+    // THE RISE: the seed first, then the switch (release), so a sequence the
+    // audio thread starts on this rise draws from this rise's seed.
     uint64_t seed = static_cast<uint64_t>(
         std::chrono::steady_clock::now().time_since_epoch().count());
     if (seed == 0) seed = kNoiseSeedFallback;
@@ -382,18 +397,29 @@ void GuiNoise::toggle() {
     }
 }
 
+void GuiNoise::release_if_silent() {
+    if (level_db_ > kLevelDbOff) return;
+    // Nothing loaded or loading: nothing to free (a fresh install's -inf, or
+    // a second lift on -inf).
+    if (!worker_.joinable() && bank_ == nullptr &&
+        status_.load(std::memory_order_acquire) == kIdle)
+        return;
+    release_bank();
+}
+
 void GuiNoise::tick() {
     if (lit() && status_.load(std::memory_order_acquire) == kFailed) {
-        // The lamp darkens; available() reads the failure from here on.
+        // The voice darkens; available() reads the failure from here on.
         voice_.target.store(false, std::memory_order_release);
     }
 }
 
 void noise_voice_reset_on_dead_stream(GuiNoiseVoice& v) {
-    // The lamp first; then the voice's private fields, written on this thread
-    // under the dead-stream exception (GuiNoiseVoice's thread note): no fill
-    // runs until a reopen, which is this thread's own and comes after.
-    v.target.store(false, std::memory_order_release);
+    // The voice's private fields alone, written on this thread under the
+    // dead-stream exception (GuiNoiseVoice's thread note): no fill runs until
+    // a reopen, which is this thread's own and comes after. `target` stands:
+    // the bed resumes on the next stream with a fresh segment (noise.h's
+    // head, the route drop's reading, 2026-11-05).
     reset_voice_sequence(v);
 }
 
@@ -401,8 +427,8 @@ void GuiNoise::reset_on_dead_stream() {
     noise_voice_reset_on_dead_stream(voice_);
 }
 
-void GuiNoise::change_folder(const std::string& folder_name) {
-    // 1. The lamp darkens.
+void GuiNoise::release_bank() {
+    // 1. The voice darkens.
     voice_.target.store(false, std::memory_order_release);
     // 2. The loader gone: nothing is published after this line.
     if (worker_.joinable()) {
@@ -410,24 +436,28 @@ void GuiNoise::change_folder(const std::string& folder_name) {
         worker_.join();
     }
     worker_ = std::jthread{};
-    // 3. The bank unpublished, then 4. THE FENCE (noise.h, change_folder's
-    // Dekker argument): wait out the one fill that may hold the old bank.
+    // 3. The bank unpublished, then 4. THE FENCE (noise.h, the protocol at
+    // change_folder, its Dekker argument): wait out the one fill that may
+    // hold the old bank.
     voice_.bank.store(nullptr, std::memory_order_seq_cst);
     while (voice_.in_fill.load(std::memory_order_seq_cst))
         std::this_thread::yield();
     // 5. The private fields to no-sequence, behind the fence (the second
     // exception at GuiNoiseVoice).
     reset_voice_sequence(voice_);
-    // 6. The memory dumped, the state afresh, the new folder probed.
+    // 6. The memory dumped, the state afresh.
     bank_.reset();
     status_.store(kIdle, std::memory_order_release);
-    files_.clear();
-    probe(folder_name);
 }
 
-void GuiNoise::set_level_db(int db) {
-    voice_.gain.store(static_cast<float>(std::pow(10.0, db / 20.0)),
-                      std::memory_order_relaxed);
+void GuiNoise::change_folder(const std::string& folder_name) {
+    release_bank();
+    files_.clear();
+    probe(folder_name);
+    // An audible level relights over the new folder at once (noise.h: the
+    // level is the switch); an absent or refused folder leaves the voice
+    // dark and the case grey.
+    apply_switch();
 }
 
 void GuiNoise::set_crossfade_s(int seconds) {
@@ -489,7 +519,7 @@ void GuiNoise::load(std::stop_token stop) {
             return;
         }
         // THE ALLOCATION, uninitialized (the read fills every element); a host
-        // that cannot give it is the one line and the dark key.
+        // that cannot give it is the one line and the grey case.
         std::unique_ptr<int16_t[]> data(new (std::nothrow)
                                             int16_t[file.elements]);
         if (!data) {

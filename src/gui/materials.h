@@ -59,10 +59,13 @@
 // (ScaleAwareness), and under a press `door_lit_press_fill`, Default's
 // 8D74C4 — the door fill by THE SAME RATIO the lamps' lit press takes
 // (theme_tables.h's head). Every other checked key — the state lamps
-// (FOLLOW, RESTRICT, MAGNIFY, NOISE, Read Only, Tooltips, the walk lamp,
+// (FOLLOW, RESTRICT, MAGNIFY, Read Only, Tooltips, the walk lamp,
 // Cumulative, the iteration lamp, Value Drag, Add to Selection), the view
 // pairs' lit members, the on-screen keyboard's latched Shift and symbols key
-// — keeps `lit_fill` / `lit_press_fill`. What is printed on a door-lit face
+// — keeps `lit_fill` / `lit_press_fill`. (THE TWO LEVEL CASES, AUDIO and
+// NOISE, are never checked and never pressed-faced: sliders, their fill
+// their value — paint_level_case, paint_handler.cpp; architect 2026-11-05.)
+// What is printed on a door-lit face
 // is `text_on_lit` still (key_ink: lit is lit). THE PAINTER LEARNS THE CLASS
 // AT ONE SITE: paint_key's `KeyLitClass` (below), read for the two lit looks
 // alone, the roster's painter passing the predicate's answer

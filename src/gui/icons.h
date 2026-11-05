@@ -87,7 +87,7 @@ namespace icons {
     X(ZoomFitBest) X(ZoomPrevious) X(ZoomInY) X(GoJump)                  \
     X(TimelineUseZoneOn) X(EditCut) X(MusicNote16th) X(Mathmode)         \
     X(Merge) X(AudioHeadphones) X(Lock) X(SettingsConfigure)             \
-    X(HelpWhatsthis) X(ViewMediaLyrics) X(Raindrop) X(ShallowHistory)    \
+    X(HelpWhatsthis) X(ViewMediaLyrics) X(ShallowHistory)                \
     X(DeepHistory) X(BlackSum) X(DocumentRevert) X(KeyframePrevious)     \
     X(KeyframeNext) X(DialogOkApply) X(ViewMediaTrack)                   \
     X(ViewMediaVisualization) X(Speedometer) X(ChronometerStart)         \

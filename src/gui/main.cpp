@@ -1460,9 +1460,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // THE AUDIO LEVEL, SEATED FROM THE LIVE CONFIG (2026-10-31 night; the
     // `audio_level` device key, playback_common.h's head): this project's
     // engine scales everything it plays by the level the loop's one struct
-    // holds now — a value committed in an earlier project carries over —
-    // and the settings editor's `audio_level` arm sets it live from here on
-    // (GuiPlayback::set_audio_level_db).
+    // holds now — a value set in an earlier project carries over — and the
+    // band's AUDIO case and the settings editor's `audio_level` arm set it
+    // live from here on (GuiInputHandler::apply_level_case,
+    // GuiPlayback::set_audio_level_db).
     playback.set_audio_level_db(device_config.audio_level);
     WaveformCache wf_cache;
     // Top-strip flag rects live on their own surface, rebuilt
@@ -1482,8 +1483,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     app.gui_scale     = device_config.gui_scale;
     app.projects_repo = device_config.projects_repo;
     // THE NOISE, the app's one, reached by pointer the device config's way
-    // (AppState::noise): the NOISE key's faces, bare `w` and the settings
-    // editor's three noise arms read it.
+    // (AppState::noise): the NOISE case's face, its drag and long press and
+    // the settings editor's three noise arms read it.
     app.noise         = &noise;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
@@ -2214,41 +2215,41 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,
         // noise.h): the bed plays under every mode a return below stands for,
         // so its two per-tick questions are asked ahead of all of them — a
-        // load that failed under a lit lamp darkens the lamp and greys the
-        // key (GuiNoise::tick), and a dead stream darkens the lamp and resets
-        // the voice (the block below). Nothing is damaged here: the roster's
-        // per-tick comparator below carries the NOISE key's face edge, for
-        // both.
+        // load that failed under an audible level darkens the voice and
+        // greys the NOISE case (GuiNoise::tick), and a dead stream resets the
+        // voice's sequence (the block below). Nothing is damaged here: the
+        // roster's per-tick comparator below carries the NOISE case's enabled
+        // edge, and a drop moves no level (the case paints its level).
         noise.tick();
 
-        // THE LAMP FOLLOWS THE NO-AUTO-RECOVER RULE (architect 2026-10-28,
-        // "we should follow the rule, iPhone does this also": the iPhone's
-        // Background Sounds toggle goes off when the route changes). A route
-        // drop (headphones connected or taken off) kills the AAudio stream,
-        // and the bed sounds only through the running stream's callback, so a
-        // lit lamp would say the noise plays while nothing does. ONE QUESTION
-        // per tick — the latch (GuiPlayback::stream_dead), LIT OR NOT — and
-        // the answer DARKENS the lamp and RESETS the voice
+        // THE BED FOLLOWS THE NO-AUTO-RECOVER RULE (architect 2026-10-28,
+        // "we should follow the rule, iPhone does this also"; the route
+        // drop's reading of 2026-11-05: the bed resumes at the next reopen,
+        // its level untouched). A route drop (headphones connected or taken
+        // off) kills the AAudio stream, and the bed sounds only through the
+        // running stream's callback, so nothing sounds until a press reopens
+        // it. ONE QUESTION per tick — the latch (GuiPlayback::stream_dead),
+        // AUDIBLE OR NOT — and the answer RESETS THE VOICE'S SEQUENCE
         // (GuiNoise::reset_on_dead_stream, whose precondition is this very
-        // read): no grace, no reopen, no card. The lamp is not asked because
-        // a dark lamp may still hold a voice mid-fade — a dark press by hand
-        // within the 40 ms fade-out just before the drop left `cur` standing
-        // with a fade tail for the next reopen to play. The drop is a loud
-        // fault the music already answers with "the next play press reopens
-        // the device" (the error callback's "nothing recovers by itself",
-        // playback_aaudio.cpp); the lamp answers the same way, dark, and the
-        // next NOISE press is an ordinary lit press — a fresh random segment,
-        // the fade-in, and the `w` case's own reopen or card. The call touches
-        // neither the stream nor the latch, so every tick below still reads
-        // the drop exactly as it did. The latch stands until a press reopens,
-        // so this calls again on every tick of the dead interval, its writes
-        // idempotent and no fill running. THIS IS THE PRESS-LESS DROP'S ROAD
-        // ALONE (noise.h's head, the two roads): on Android input drains
+        // read): no grace, no reopen, no card, the level and the switch as
+        // they stand. The level is not asked because a voice at -inf may
+        // still hold a sequence mid-fade — a fall to -inf within the 40 ms
+        // fade-out just before the drop left `cur` standing with a fade tail
+        // for the next reopen to play. The drop is a loud fault the music
+        // already answers with "the next play press reopens the device" (the
+        // error callback's "nothing recovers by itself", playback_aaudio.cpp);
+        // the bed answers the same way, silent, and that reopen is its resume
+        // — a fresh random segment, the fade-in, on the new stream. The call
+        // touches neither the stream nor the latch, so every tick below still
+        // reads the drop exactly as it did. The latch stands until a press
+        // reopens, so this calls again on every tick of the dead interval, its
+        // writes idempotent and no fill running. THIS IS THE PRESS-LESS DROP'S
+        // ROAD ALONE (noise.h's head, the two roads): on Android input drains
         // ahead of this tick, and a press that reopens first — Play, an
-        // audition start, the lit NOISE press, the car's Play at a connect —
-        // clears the latch before this read, so the reopen resets the voice
-        // itself ahead of its close (close_dead_stream, playback_aaudio.cpp)
-        // and this tick then reads no drop.
+        // audition start, the car's Play at a connect — clears the latch
+        // before this read, so the reopen resets the sequence itself ahead of
+        // its close (close_dead_stream, playback_aaudio.cpp) and this tick
+        // then reads no drop.
         if (playback.stream_dead()) noise.reset_on_dead_stream();
 
         // Startup file load, deferred out of pre-run() to the first tick on an
@@ -3174,9 +3175,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // this branch is never reached: the act ends once, with one sentence.
         // The reopen is still the press's and never the tick's — the
         // audition's arm reads the latch, as the render player's tick does,
-        // and the NOISE lamp's poll on stream_dead (above, in the loop
-        // body) DARKENS the lamp and resets the voice at a drop, lit or not,
-        // and reopens nothing (2026-10-28).
+        // and the noise bed's poll on stream_dead (above, in the loop body)
+        // resets the voice's sequence at a drop, audible or not, and reopens
+        // nothing (2026-10-28; the sequence alone since 2026-11-05, the bed
+        // resuming at the next press's reopen).
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);
@@ -3596,13 +3598,20 @@ int gui_main() {
     // background sound's one owner, constructed beside the config it reads —
     // the folder under `noise/` beside the config that the `noise` key names
     // probed here (absent is the ordinary state and silent; an unlistable
-    // folder or a `.wav` out of shape one stderr line, the key grey; probed
-    // again only when the settings editor's `noise` arm changes the name,
-    // GuiNoise::change_folder), and the two integer keys' values handed to
-    // the voice (the config is required, so all three stand). The lamp is
-    // dark at every launch: no key holds it. Every project's engine mixes its
-    // voice (run_project's attach), and it outlives them all — shut down
-    // below, after the loop, when no engine is left to read its bank.
+    // folder or a `.wav` out of shape one stderr line, the NOISE case grey;
+    // probed again only when the settings editor's `noise` arm changes the
+    // name, GuiNoise::change_folder), then the level and the crossfade handed
+    // to the voice (the config is required, so all three stand). THE BED
+    // PLAYS FROM THE LAUNCH (architect 2026-11-05, the level its one switch;
+    // reversing the lamp's "off at every launch"): the level's seat AFTER the
+    // probe lights the voice and starts the loader where the persisted level
+    // is above -inf and the folder is there — the bank reads while the first
+    // project opens, and the bed begins, with the fade-in, when the first
+    // project's stream runs (the engine is per project: before a project
+    // opens nothing sounds). At -inf, a fresh install's value, nothing loads.
+    // Every project's engine mixes its voice (run_project's attach), and it
+    // outlives them all — shut down below, after the loop, when no engine is
+    // left to read its bank.
     GuiNoise noise;
     noise.probe(device_config.noise);
     noise.set_level_db(device_config.noise_level);

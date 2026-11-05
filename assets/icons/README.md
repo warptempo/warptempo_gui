@@ -88,7 +88,6 @@ transcriptions, with no path data changed.
 | `SettingsConfigure` | `actions/22/settings-configure.svg (-> configure.svg)` | `9121870839c7a14189f6c9125959829e6d32c6f302233b31fff995989bd80355` |
 | `HelpWhatsthis` | `actions/22/help-whatsthis.svg` | `a1fbf15f03cda98d9c8ab1ceffe641d71662cd6b303db0bf878651321969762f` |
 | `ViewMediaLyrics` | `actions/22/view-media-lyrics.svg` | `1798db8ff7d67aa780fba0ed906df1497496ad94f05fb1fe6cca0a414884a97d` |
-| `Raindrop` | `actions/22/raindrop.svg` | `d707a1b993c33457af562d52e634f00d8d09ca290adb8df9bc32c86fc7a87f89` |
 | `ShallowHistory` | `actions/22/shallow-history.svg (-> appointment-new.svg)` | `8fa5b7d7eaba2c0e8a0518c6a4ccb85ad95ee98f653bbfa5f6ccfcb0ff0cc492` |
 | `DeepHistory` | `actions/22/deep-history.svg` | `57233ea276c64d77c740b0bc166efffe96813a28e93f655eaa970f3f1f879242` |
 | `BlackSum` | `actions/22/black_sum.svg` | `217bcb4e246e2893edb1fbfbdea0bf60ee1d4d981dea3a54edd74682b8c0e214` |

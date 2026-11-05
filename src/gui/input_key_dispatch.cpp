@@ -478,13 +478,10 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // dispatch arm's own spelling.
     const bool is_score_viewer =
         (key == GuiKeys::M && !ctrl && !shift && !alt);
-    // BARE `w`, THE NOISE LAMP (architect 2026-10-28): DEVICE STATE, NOT THE
-    // PIECE — a second voice under the engine's (noise.h), authoring nothing
-    // the lock protects — so it is admitted on a locked tab and, the
-    // iteration gate falling through to this list, under grid iterations.
-    // Bare-exact, the dispatch arm's own spelling.
-    const bool is_noise =
-        (key == GuiKeys::W && !ctrl && !shift && !alt);
+    // (BARE `w`, THE NOISE LAMP, was admitted here 2026-10-28 to 2026-11-05
+    // — device state, authoring nothing the lock protects; the lamp went
+    // with the band's two level cases, which carry no chord and read no lock
+    // at their faces, redesign_button_enabled's arm.)
     // BARE `i` WHILE GRID ITERATIONS STANDS — THE OFF EDGE, a STATE-DEPENDENT
     // admission like the arrows' lane term (architect 2026-10-13: the mode
     // lights on a tab whose own bit is clear even while the other tab is
@@ -542,7 +539,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
              is_settings_page ||
-             is_tooltip_lamp || is_score_viewer || is_noise ||
+             is_tooltip_lamp || is_score_viewer ||
              is_iteration_off_edge);
 }
 
@@ -3177,18 +3174,18 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
-    // THE NOISE LAMP — BARE `w` (2026-10-28, the planner's call, architect
-    // agreed 2026-10-28, Tooltips' class): a DEVICE lamp, the background
-    // sound under everything the engine plays (noise.h), touching nothing the
-    // view froze and nothing the view has a reason to refuse — so the view
-    // admits it and the NOISE key stands lit in here by the derived partition.
-    const bool is_noise = (key == GuiKeys::W && bare);
+    // (THE NOISE LAMP — BARE `w` — was admitted here 2026-10-28 to
+    // 2026-11-05, the planner's call the architect agreed to, Tooltips'
+    // class: device state the view has no reason to refuse. The lamp went
+    // with the band's two level cases, which carry no chord: the `h` chord
+    // walk answers them LIVE by its own arm, history_mode_refuses_button_
+    // chord, input_pointer.cpp, on the same reason.)
     return !(is_zoom_step || is_zero || is_play_renders ||
              is_view_selector || is_add_to_selection || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_open_project ||
              is_revert_project ||
-             is_tooltip_lamp || is_waveform_magnification || is_noise);
+             is_tooltip_lamp || is_waveform_magnification);
 }
 
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
@@ -6894,8 +6891,9 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
 // first `=` (a key carries none). On the row of a key with a value list
 // (settings_key_has_value_list — `true_colors`, `theme`,
-// `waveform_grow`, `audio_level`, `noise`, `noise_level`,
-// `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
+// `waveform_grow`, `noise`, `noise_crossfade_s`; the two levels' lists left
+// 2026-11-05 for the band's sliders, their rows the line editor's) THAT
+// KEY'S VALUE LIST IS SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
 // sub-page whose commit and Cancel return to this page
 // (return_to_settings_page). On every other row THE PAGE
@@ -6992,7 +6990,7 @@ void GuiInputHandler::build_value_list_rows(const std::string& key) {
 // line now carrying the value (return_to_settings_page, architect
 // 2026-10-28 night: "setting a value should also return to the main page").
 // No card on success (architect 2026-10-25): the change is the answer — the
-// colors, the sound, the NOISE key's face, the row's own text.
+// colors, the sound, the NOISE case's face, the row's own text.
 void GuiInputHandler::value_list_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -9194,50 +9192,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // taken by the player's router before this dispatch is reached.
         playback_lifecycle.toggle_restrict();
         break;
-    case GuiKeys::W:
-        // Toggle the NOISE lamp (architect 2026-10-28), the background sound.
-        // The whole body lives in GuiNoise::toggle (noise.h), THE CHOKEPOINT —
-        // two producers, one route: this key and the icon row's NOISE key,
-        // which synthesizes exactly this bare chord. History-less, device
-        // state, legal on a locked tab, under the grid-iterations lock and in
-        // the `h` view (all three allowlists admit it). With no folder under
-        // noise/ of the `noise` key's name the key's face is grey and its
-        // lift never reaches here; the KEY is then a SILENT no-op inside
-        // toggle (its available() precondition), the greyed-face rule's
-        // keyboard half, as `0` at a ceiling is.
-        //
-        // THE LIT PRESS IS A LAUNCH PRESS FOR THE DEVICE QUESTION (architect
-        // 2026-10-28): the bed sounds only through the running stream's
-        // callback, so on the LIT edge alone this asks the launch gates' own
-        // reopen (GuiPlayback::ensure_device_available_for_play) before the
-        // toggle — a stream a route change killed (Bluetooth headphones
-        // connected with the app open) is reopened and started here instead
-        // of leaving the lit lamp silent until a Play press. A FALSE cards
-        // the launch gates' sentence and STILL toggles: the lamp lights and
-        // stays silent, the load-in-flight shape, until the next launch press
-        // reopens. The DARK edge asks nothing. The ordinary press makes no
-        // device call (the start is idempotent on a running stream). THE IMMEDIATE REOPEN IS SAFE UNDER THE
-        // HANDS-OFF RULE (2026-10-28, Sol's finding of that day closed by it):
-        // this press has already ended any standing A/B audition at on_key's
-        // head (GuiInputHandler::end_audition_for_press) before this arm runs,
-        // so no act can read the reopened stream under the lowered playing
-        // bit as its play's natural end and go on by itself. A DROP NOT YET
-        // POLLED NEEDS NOTHING HERE (2026-10-28): the device question runs
-        // BEFORE toggle(), so a dead stream's reopen resets the voice first
-        // (close_dead_stream, playback_aaudio.cpp — `target` false, the
-        // sequence ended), and toggle() then reads a dark lamp and seeds and
-        // lights afresh: a fresh segment, the fade-in. (A later drop darkens
-        // the lamp and resets the voice at gui_main's poll or at the next
-        // reopen, noise.h's head.)
-        if (app.noise != nullptr) {
-            if (app.noise->available() && !app.noise->lit() &&
-                !playback.ensure_device_available_for_play()) {
-                notifications.notify(AppState::NotificationClass::Normal,
-                                     kPlaybackDeviceUnavailableCard);
-            }
-            app.noise->toggle();
-        }
-        break;
+    // (BARE `w`, THE NOISE LAMP'S TOGGLE — GuiNoise::toggle through the
+    // launch press's device question — stood here 2026-10-28 to 2026-11-05.
+    // The lamp, its chord and the toggle are retired with the band's two
+    // level cases, sliders with no chord (RedesignButton::IconAudioLevel,
+    // app_state.h): the noise's level is its one switch, set by the NOISE
+    // case's drag and the typed `noise_level` line, and the bed asks no
+    // device question — the music's reopen is its resume, noise.h's head.
+    // Bare `w` is UNBOUND again, chord_is_bound's default, and silent here.)
     case GuiKeys::Grave:
         // Toggle the Waveform Magnification lamp (architect 2026-09-22,
         // reversed and universal 2026-09-24; the bare backtick since

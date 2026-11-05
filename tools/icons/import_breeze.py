@@ -75,7 +75,8 @@ ROSTER = [
     ('SettingsConfigure', 'actions/22/settings-configure'),
     ('HelpWhatsthis', 'actions/22/help-whatsthis'),
     ('ViewMediaLyrics', 'actions/22/view-media-lyrics'),
-    ('Raindrop', 'actions/22/raindrop'),
+    # (Raindrop, the NOISE lamp's drawing, left the roster 2026-11-05 with
+    # the lamp: the band's two level cases paint no glyph.)
     ('ShallowHistory', 'actions/22/shallow-history'),
     ('DeepHistory', 'actions/22/deep-history'),
     ('BlackSum', 'actions/22/black_sum'),

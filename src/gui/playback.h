@@ -242,14 +242,18 @@ public:
     void attach_noise(GuiNoiseVoice* voice);
 
     // THE AUDIO LEVEL (architect 2026-10-31 night; the `audio_level` device
-    // key, device_config.h): the project voice — everything this engine
-    // plays from its bound buffer — scaled by 10^(db/20) before the noise is
-    // summed and the sum clipped (playback_common.h's head). Main thread
-    // only, any time, playing or not: the render body reads the gain once per
-    // fill, so the change sounds at the next fill. Seated by run_project from
-    // the config before init, written live by the settings editor's
-    // `audio_level` arm (GuiSettingsEditor::apply_device_setting).
-    void set_audio_level_db(int db);
+    // key, device_config.h — a decimal dB or -inf under THE LEVEL GRAMMAR
+    // since 2026-11-05): the project voice — everything this engine plays
+    // from its bound buffer — scaled by 10^(db/20), 0 at -inf (the mute),
+    // before the noise is summed and the sum clipped (playback_common.h's
+    // head). Main thread only, any time, playing or not: the render body
+    // reads the gain once per fill, so the change sounds at the next fill.
+    // Seated by run_project from the config before init, written live by the
+    // band's AUDIO case at every drag motion and its long press
+    // (GuiInputHandler::apply_level_case, input_pointer.cpp) and by the
+    // settings editor's typed `audio_level` arm
+    // (GuiSettingsEditor::apply_device_setting).
+    void set_audio_level_db(double db);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or
     // passes `end_sample` (exclusive). PLAYS THE WINDOW ONCE AND STOPS — no
@@ -386,26 +390,25 @@ public:
     // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;
 
-    // THE DROP ITSELF (architect 2026-10-28, the noise lamp's darkening): the
+    // THE DROP ITSELF (architect 2026-10-28, the noise voice's reset): the
     // error callback's `stream_dead` latch ALONE — true from a route drop
     // under a live stream until the first reopen attempt closes that stream.
-    // `impl_ && impl_->stream_dead` (acquire). THE LATCH HAS TWO MAIN-THREAD READERS THAT RESET THE
-    // NOISE VOICE (2026-10-28, noise.h's head, the two roads): (1) THIS
-    // MEMBER, whose one caller is gui_main's per-tick poll beside
-    // noise.tick() (main.cpp), which, while the latch stands, LIT OR NOT,
-    // DARKENS the NOISE lamp and resets its voice
-    // (GuiNoise::reset_on_dead_stream, idempotent, so the per-tick repeat
-    // over the dead interval costs nothing) and reopens nothing; (2) the
-    // device's own load of the latch at a reopen (reopen_stream_if_dead
-    // and launch_window's post-publish arm, through close_dead_stream,
-    // playback_aaudio.cpp), which resets the voice ahead of the close that
-    // clears the latch, so a press that reaches the device before the tick
-    // consumes no drop unseen. A pure read; main thread only.
-    // NOT device_unavailable: the latch alone, not the null stream, so the
-    // reset runs only over the interval a drop opened, and a refused
-    // reopen's null stream is the press's to answer — a lit press refused
-    // there cards and keeps its lamp lit, silent (noise.h's head), which the
-    // poll must not then darken.
+    // `impl_ && impl_->stream_dead` (acquire). THE LATCH HAS TWO MAIN-THREAD
+    // READERS THAT RESET THE NOISE VOICE'S SEQUENCE (2026-10-28, noise.h's
+    // head, the two roads; the sequence alone since 2026-11-05, the level
+    // and the switch untouched, the bed resuming at the next reopen): (1)
+    // THIS MEMBER, whose one caller is gui_main's per-tick poll beside
+    // noise.tick() (main.cpp), which, while the latch stands, audible or
+    // not, resets the voice's sequence (GuiNoise::reset_on_dead_stream,
+    // idempotent, so the per-tick repeat over the dead interval costs
+    // nothing) and reopens nothing; (2) the device's own load of the latch at
+    // a reopen (reopen_stream_if_dead and launch_window's post-publish arm,
+    // through close_dead_stream, playback_aaudio.cpp), which resets the
+    // sequence ahead of the close that clears the latch, so a press that
+    // reaches the device before the tick consumes no drop unseen. A pure
+    // read; main thread only. NOT device_unavailable: the latch alone, not
+    // the null stream, so the reset runs only over the interval a drop
+    // opened, and a refused reopen's null stream is the press's to answer.
     bool    stream_dead() const;
 
     // WHAT A FACE READS (architect 2026-09-02, the truthful-buttons rule over
@@ -436,13 +439,13 @@ public:
     // kPlaybackDeviceUnavailableCard only when this answers FALSE; by the
     // car's Play (car_play_playback, which cards alike, and the two media
     // Play arms, GuiCarTransport::on_media_command and the render player's,
-    // which ignore the answer); by THE NOISE LAMP'S LIT PRESS (architect
-    // 2026-10-28, the `w` case of input_key_dispatch.cpp: the bed sounds only
-    // through the running stream's callback, so the lit press is a launch
-    // press for the device question; a FALSE cards and the lamp still
-    // lights). No road reopens without a press. It closes a dead stream — the
-    // noise voice reset first, its lamp dark (close_dead_stream, noise.h's
-    // head) — and reopens a dead or null one at the head — play()'s own
+    // which ignore the answer). (THE NOISE LAMP'S LIT PRESS was a caller
+    // 2026-10-28 to 2026-11-05, the `w` case; the lamp went with the level
+    // cases, and nothing asks the device question for the bed: the music's
+    // reopen is the bed's resume, noise.h's head.) No road reopens without a
+    // press. It closes a dead stream — the noise voice's sequence reset
+    // first (close_dead_stream, noise.h's head) — and reopens a dead or null
+    // one at the head — play()'s own
     // first two lines, hoisted here so a route that dropped (a headphone
     // pulled, a Bluetooth route gone) comes back at the NEXT PRESS
     // instead of leaving every main-window launch road carding forever

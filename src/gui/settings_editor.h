@@ -138,12 +138,16 @@ struct GuiInputHandler;
 //    (GuiInputHandler::apply_theme), no card; waveform_grow the same,
 //    the window repainted (GuiInputHandler::apply_waveform_grow), no card
 //    (the waveform is the answer); the audio level at once, handed to the
-//    open project's engine (GuiPlayback::set_audio_level_db) at the OK, no
-//    card (the sound is the answer); the noise's level and
-//    crossfade at once, handed to the one GuiNoise (noise.h) at the OK, no
-//    card (the sound is the answer); the noise's folder at once, the lamp
-//    darkened and the resident recordings freed (GuiNoise::change_folder),
-//    no card (the NOISE key's face is the answer); the key's height at once,
+//    open project's engine (GuiPlayback::set_audio_level_db, through the
+//    band's AUDIO case's own apply, GuiInputHandler::apply_level_case) at
+//    the OK, no card (the sound and the case's fill are the answer); the
+//    noise's level the same (GuiNoise::set_level_db, a typed -inf freeing
+//    the bank at once, GuiNoise::release_if_silent) and its crossfade at
+//    once, handed to the one GuiNoise (noise.h) at the OK, no card (the
+//    sound is the answer); the noise's folder at once, the resident
+//    recordings freed and the new folder loaded under an audible level
+//    (GuiNoise::change_folder), no card (the NOISE case's face is the
+//    answer); the key's height at once,
 //    the window re-laid-out (GuiInputHandler::apply_key_height), no card
 //    (the keys on screen are the answer); the keyboard's key box the same
 //    (GuiInputHandler::apply_osk_key_size), no card (the keyboard standing
@@ -203,7 +207,9 @@ struct GuiInputHandler;
 // content behind the settings page's row for its key, whose row tap commits
 // at once — apply_device_setting, this editor's own road. THE SETTINGS
 // PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
-// nothing, each opening this line editor.)
+// nothing, each opening this line editor. FIVE SINCE 2026-11-05: the two
+// levels' lists left with the band's two sliders and their decimal grammar,
+// kSettingsValueListKeys below.)
 //
 // THE KEYS TAB COMPLETES — ONE TABLE, THE NINETEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
@@ -288,18 +294,21 @@ consteval bool settings_page_piece_keys_pinned() {
 }
 static_assert(settings_page_piece_keys_pinned());
 
-// THE KEYS WITH A VALUE LIST — ONE TABLE, THE SEVEN (architect 2026-10-28
-// night for four, 2026-10-31 for `waveform_grow` and that night for
-// `audio_level`, 2026-11-05 for `theme`; the first, `waveform`'s presets of
-// 2026-10-25, went with the presets 2026-11-01): the settings page's row
-// for one of these swaps the folder overlay's content to THE KEY'S VALUES
-// (GuiInputHandler::build_value_list_rows, its rows from
+// THE KEYS WITH A VALUE LIST — ONE TABLE, THE FIVE (architect 2026-10-28
+// night for four, 2026-10-31 for `waveform_grow`, 2026-11-05 for `theme`;
+// the first, `waveform`'s presets of 2026-10-25, went with the presets
+// 2026-11-01; `audio_level` and `noise_level`, listed 2026-10-31 night and
+// 2026-10-28 night, LEFT 2026-11-05 with the two level cases: their domain
+// is a decimal in [-60.0, 0.0] or -inf, no short list, so their rows open
+// the line editor and the band's sliders are their live road): the settings
+// page's row for one of these swaps the folder overlay's content to THE
+// KEY'S VALUES (GuiInputHandler::build_value_list_rows, its rows from
 // GuiSettingsEditor::value_choices below), and a row's tap commits that value
 // at once through apply_device_setting, the typed line's own body, then
 // returns to the page on that key's row (the list a sub-page of the page,
 // 2026-10-28 night). Every other page row opens the line editor. Each is a device
-// key with a short domain the list can show whole: the two words, the folders under `noise/`, each level's 31 whole dB (the
-// audio's and the noise's), the crossfade's 30 whole seconds, the grow's
+// key with a short domain the list can show whole: the two words, the
+// folders under `noise/`, the crossfade's 30 whole seconds, the grow's
 // 9 quarters and the themes' slugs. A LIST IS A SEQUENCE OF GROUPS
 // (value_list_groups below; 2026-11-05): `theme`'s two, BUILTIN (Live's
 // stock seven) and EXTRA (the dropped-in packs), each under an inert Group
@@ -309,10 +318,9 @@ static_assert(settings_page_piece_keys_pinned());
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
 // are no short domain, so its row opens the line editor; nor are the
 // keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its
-// `osk_font_px`, 37.)
+// `osk_font_px`, 37; nor, since 2026-11-05, the two levels.)
 inline constexpr const char* kSettingsValueListKeys[] = {
-    "true_colors", "theme", "waveform_grow", "audio_level", "noise",
-    "noise_level", "noise_crossfade_s",
+    "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
 };
 inline bool settings_key_has_value_list(std::string_view key) {
     for (const char* k : kSettingsValueListKeys)
@@ -412,11 +420,12 @@ struct GuiSettingsEditor {
     // (complete_noise_value's listing, settings_editor.cpp's folder_names:
     // directories through a link, no dot-directory) that the key's grammar
     // admits (is_noise_folder_name), so every row commits; no folder there,
-    // or no config home, is a list with no rows; `audio_level` (2026-10-31
-    // night) and `noise_level` 0 down to -30 in steps of 1; `noise_crossfade_s` 1 up to 30; `waveform_grow` 0 up
-    // to 2 in quarters (2026-10-31). Every value is
-    // the key's writer spelling (format_audio_level, format_noise_level,
-    // format_noise_crossfade_s, format_waveform_grow),
+    // or no config home, is a list with no rows; `noise_crossfade_s` 1 up
+    // to 30; `waveform_grow` 0 up to 2 in quarters (2026-10-31). (The two
+    // levels' 31 whole dB each left 2026-11-05 with the decimal grammar and
+    // the band's sliders.) Every value is
+    // the key's writer spelling (format_noise_crossfade_s,
+    // format_waveform_grow),
     // so the seat compares it with setting_value byte for byte. Listed afresh
     // at each call; nothing is cached.
     std::vector<std::string> value_choices(const std::string& key) const;
@@ -462,8 +471,10 @@ struct GuiSettingsEditor {
 
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
     // `true_colors=`, `theme=` (2026-11-05), `waveform_grow=` (2026-10-31),
-    // `audio_level=` (2026-10-31 night), `noise=`,
-    // `noise_level=`,
+    // `audio_level=` (2026-10-31 night; the line's door alone since
+    // 2026-11-05, the band's AUDIO case its live road), `noise=`,
+    // `noise_level=` (the line's door alone since 2026-11-05, the NOISE
+    // case's),
     // `noise_crossfade_s=` and the tuning keys `key_height=`, `osk_key_w=`,
     // `osk_key_h=` and `osk_font_px=` (2026-10-29, the line's door alone,
     // having no value list) — ONE BODY, TWO DOORS
@@ -485,13 +496,17 @@ struct GuiSettingsEditor {
     DeviceSettingOutcome apply_device_setting(const std::string& key,
                                               const std::string& value);
 
-private:
     // THE DEVICE CONFIG'S WRITE, ADVISORY (the commit's persist): the whole
     // struct written (write_device_config, device_config.h); a failure prints
     // the diagnostic and cards the display, the live value standing either
-    // way. Returns whether the file was written. Its reader is every device
-    // key's commit (apply_device_setting's persist).
+    // way. Returns whether the file was written. TWO READERS: every device
+    // key's commit (apply_device_setting's persist) and, since 2026-11-05,
+    // the two level cases' end (GuiInputHandler::settle_level_case: one
+    // write at a drag's lift or its button-lost end, and at the long press's
+    // 0 dB — the slider's writes through the typed line's own road).
     bool persist_device_config();
+
+private:
     // THE LINE'S DOOR onto apply_device_setting (the head's item 1). Returns
     // true when `key` is a device key, the commit then fully handled — the
     // field refused and its text selected on a refusal, the editor closed on

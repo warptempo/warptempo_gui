@@ -132,21 +132,22 @@ std::string format_gui_scale_percent(int percent) {
     return std::string(buf);
 }
 
-// The audio level's canonical spelling (2026-10-31 night) and the two noise
-// integers' (2026-10-28): `%d`, exactly what parse_canonical_config_int
-// admits back (device_config.h).
-std::string format_audio_level(int db) {
+// THE TWO LEVELS' CANONICAL SPELLING (THE LEVEL GRAMMAR, device_config.h,
+// 2026-11-05): `-inf` for the off / mute value, else ONE FRACTIONAL DIGIT
+// (`%.1f`: "0.0", "-9.0", "-60.0"), exactly what parse_level_db admits back
+// — every stored level is a multiple of 0.1 by construction (the grammar's
+// one digit, the sliders' rounding), so the one digit is the value whole.
+// A negative zero never reaches the writer (the sliders normalize it, the
+// grammar refuses "-0.0"); the add of 0.0 keeps that true of any double.
+std::string format_level_db(double db) {
+    if (db == kLevelDbOff) return "-inf";
     char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", db);
+    std::snprintf(buf, sizeof(buf), "%.1f", db + 0.0);
     return std::string(buf);
 }
 
-std::string format_noise_level(int db) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", db);
-    return std::string(buf);
-}
-
+// The crossfade's canonical spelling (2026-10-28): `%d`, exactly what
+// parse_canonical_config_int admits back (device_config.h).
 std::string format_noise_crossfade_s(int s) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", s);
@@ -241,14 +242,14 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The grow's canonical decimal (format_waveform_grow).
             s += format_waveform_grow(cfg.waveform_grow_quarters);
         } else if (k == "audio_level") {
-            // The project voice's canonical integer (format_audio_level).
-            s += format_audio_level(cfg.audio_level);
+            // The project voice's canonical decimal or -inf (format_level_db).
+            s += format_level_db(cfg.audio_level);
         } else if (k == "noise") {
             // The folder's name verbatim (is_noise_folder_name's grammar).
             s += cfg.noise;
         } else if (k == "noise_level") {
-            // The level's canonical integer (format_noise_level).
-            s += format_noise_level(cfg.noise_level);
+            // The level's canonical decimal or -inf (format_level_db).
+            s += format_level_db(cfg.noise_level);
         } else if (k == "noise_crossfade_s") {
             // The crossfade's canonical integer (format_noise_crossfade_s).
             s += format_noise_crossfade_s(cfg.noise_crossfade_s);
@@ -364,7 +365,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
             return {};
         }
         // THE NOISE'S THREE KEYS (2026-10-28): each under its one grammar
-        // owner (is_noise_folder_name, parse_noise_level,
+        // owner (is_noise_folder_name, parse_level_db,
         // parse_noise_crossfade_s, device_config.h), required like every key;
         // any other spelling the launch's hard fail. The folder's name is
         // judged by its shape alone: a name whose folder is absent loads, and
@@ -390,21 +391,24 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.waveform_grow_quarters = *quarters;
             return {};
         }
-        // THE PROJECT VOICE'S LEVEL (2026-10-31 night, a permanent key):
-        // under its one grammar owner (parse_audio_level, device_config.h),
-        // required like every key; any other spelling the launch's hard fail.
+        // THE TWO LEVELS (the project voice's, 2026-10-31 night, and the
+        // noise's, 2026-10-28; permanent keys): under their one grammar
+        // owner (parse_level_db, device_config.h — the decimal, -inf, and
+        // the integer spelling of the configs written before 2026-11-05
+        // admitted on the read), required like every key; any other
+        // spelling the launch's hard fail.
         if (key == "audio_level") {
-            const std::optional<int> db = parse_audio_level(value);
+            const std::optional<double> db = parse_level_db(value);
             if (!db) {
-                return bad_value(ln, key, value, kAudioLevelGrammarReason);
+                return bad_value(ln, key, value, kLevelGrammarReason);
             }
             out.audio_level = *db;
             return {};
         }
         if (key == "noise_level") {
-            const std::optional<int> db = parse_noise_level(value);
+            const std::optional<double> db = parse_level_db(value);
             if (!db) {
-                return bad_value(ln, key, value, kNoiseLevelGrammarReason);
+                return bad_value(ln, key, value, kLevelGrammarReason);
             }
             out.noise_level = *db;
             return {};

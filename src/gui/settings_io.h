@@ -154,10 +154,10 @@ std::string format_settings_text(
 // or the switch's word (`true_colors`, 2026-10-21), or the
 // plate's grow (`waveform_grow`, 2026-10-31, through format_waveform_grow),
 // or the project voice's level (`audio_level`, 2026-10-31 night, through
-// format_audio_level), or the
-// noise's folder name verbatim (`noise`, 2026-10-28) and its two integers
-// (`noise_level`, `noise_crossfade_s`, 2026-10-28, through
-// format_noise_level and format_noise_crossfade_s), or the key's height
+// format_level_db, the two levels' one formatter since 2026-11-05), or the
+// noise's folder name verbatim (`noise`, 2026-10-28), its level
+// (`noise_level`, through format_level_db) and its crossfade
+// (`noise_crossfade_s`, 2026-10-28, through format_noise_crossfade_s), or the key's height
 // (`key_height`, 2026-10-29, a tuning key, through format_key_height), or
 // the keyboard's key box (`osk_key_w`, `osk_key_h`, 2026-10-29, two tuning
 // keys, through format_osk_key_size), or the keyboard's cap size

@@ -907,11 +907,13 @@ struct GuiInputHandler {
     // not a fifth owner). No card: it is a user press, not a lost device, and
     // the tab stays where the act had it (the interruption rule,
     // ab_audition.h). So no press can do its own work under a standing act —
-    // the lamps (Follow, Magnification, Tooltips, NOISE), zoom, pan and the
+    // the lamps (Follow, Magnification, Tooltips), the two level cases'
+    // presses, zoom, pan and the
     // camera keys, which left it standing until that day, end it like
-    // everything else, and the NOISE lamp's lit press can no longer reopen a
-    // dead stream under an act that would read it as a natural end (Sol's
-    // finding of 2026-10-28). A press in the sub-tick window between a play's
+    // everything else (the NOISE lamp's lit press, which could reopen a dead
+    // stream under an act that would read it as a natural end — Sol's
+    // finding of 2026-10-28 — went with the lamp 2026-11-05; the level cases
+    // reopen nothing). A press in the sub-tick window between a play's
     // natural end and the tick that observes it finds the phase standing and
     // ends the act exactly as bare Space does there.
     // THE ENTRIES, whole (re-derived 2026-10-28 by reading main.cpp's hook
@@ -1295,29 +1297,32 @@ struct GuiInputHandler {
 
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the icon
-    // row's thirty and row 8's twenty-one (row 1's three menu anchors
+    // row's thirty-one and row 8's twenty-one (row 1's three menu anchors
     // until 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-28 night, the Trim Presets key
-    // closing the zoom group):
-    //   THE ICON ROW, 21 + 4 + 1 + 4 = 30 — the left walk's twenty-one
+    // counts re-derived from them 2026-11-05, the two level cases in the
+    // NOISE lamp's seat):
+    //   THE ICON ROW, 22 + 4 + 1 + 4 = 31 — the left walk's twenty-two
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Phase
     //   Resets and Render;
     //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow and
     //   Trim Presets;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings, Enable
-    //   Tooltips, the Score key and the NOISE lamp), the history view's four stand-ins (Revert and Load in
+    //   Tooltips, the Score key and the two level cases, AUDIO and NOISE —
+    //   sliders with no chord, pressed by their own arm, arm_level_case_press),
+    //   the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right behind it in one run (kIconRowViewPairs, Source /
-    //   Target and Warp / Phase Reset since 2026-10-14) — 26
+    //   Target and Warp / Phase Reset since 2026-10-14) — 27
     //   standing outside the `h` view (the four stand-ins publishing empty
-    //   rects) and 18 inside it (the stand-ins in, Undo's group and the
+    //   rects) and 19 inside it (the stand-ins in, Undo's group and the
     //   iteration group out, and the view's hide leaving Open Project and
     //   Save's group whole, Zoom In, Zoom Out, Zoom to Fit and Waveform
     //   Magnification (since 2026-10-12), Play Renders (since 2026-10-25),
-    //   Enable Tooltips and Noise (since 2026-10-28) alone of theirs);
+    //   Enable Tooltips (since 2026-10-28) and the two level cases (since
+    //   2026-11-05; the NOISE lamp 2026-10-28 to then) alone of theirs);
     //   ROW 8, 2 + 8 + 4 + 5 + 2 = 21 — the skips (Go to Start, Go to End,
     //   kTransportSkipGroup, 2026-10-24), the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
@@ -1485,6 +1490,35 @@ struct GuiInputHandler {
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,
                                      int x, int y);
+
+    // THE TWO LEVEL CASES' ARM (architect 2026-11-05, the sliders; the
+    // contract at AppState::ChromePress's Level kind, the ruling at
+    // RedesignButton::IconAudioLevel). arm_level_case_press is the band
+    // claim's second half, asked where arm_redesign_press found no chord row
+    // under the press: a press on a level case's PAINTED face arms the Level
+    // kind — the painted enabled bit read as the roster's is, a dead case a
+    // consumed nothing — and returns whether a case claimed it.
+    // update_level_press_motion is the drag's one body (on_motion, under a
+    // standing Level arm): the slop crossing, the relative travel, the
+    // rounded level applied live (apply_level_case) wherever the pointer is.
+    // finish_level_press_release is the lift's: the long press's 0 dB on a
+    // motionless hold that lands on the face, then settle_level_case.
+    // apply_level_case writes the level into the live struct, hands it to
+    // its voice (GuiPlayback::set_audio_level_db / GuiNoise::set_level_db)
+    // and DAMAGES THE CASE'S FACE RECT — the one damage of a level edge: the
+    // per-tick comparator watches no level. settle_level_case is EVERY END's
+    // tail (the lift, and take_chrome_press's clears for the button-lost and
+    // pointer-leave ends, a drag that loses the pointer being a lift): the
+    // noise's -inf release (GuiNoise::release_if_silent) and one config
+    // write where the level moved (GuiSettingsEditor::persist_device_config,
+    // the typed line's own persist). The settings editor's two typed level
+    // arms take apply_level_case and settle_level_case too, one road.
+    bool arm_level_case_press(int x, int y);
+    void update_level_press_motion(int x, int y);
+    void finish_level_press_release(const AppState::ChromePress& arm,
+                                    int x, int y);
+    void apply_level_case(RedesignButton id, double db);
+    void settle_level_case(RedesignButton id, bool level_changed);
 
     // THE ARM'S THIRD BODY — the HOLD-REPEAT's firing tick (architect
     // 2026-08-16), driven from the run loop beside the hover recompute. While a

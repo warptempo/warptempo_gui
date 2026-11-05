@@ -13,10 +13,11 @@
 // in every time. We rejected drop downs because it was too much work to make
 // them Windows identical, but now we don't have the responsibility" — "brief
 // it as a scrolling list", "Yes"; this widget as it stands, no new chrome) —
-// since 2026-10-28 night for `true_colors`, `noise`, `noise_level` and
-// `noise_crossfade_s`, and since 2026-10-31 for `waveform_grow` and that
-// night `audio_level` (kSettingsValueListKeys, settings_editor.h; the color
-// presets' list of 2026-10-25 went with the presets 2026-11-01) — a SUB-PAGE of the settings
+// since 2026-10-28 night for `true_colors`, `noise` and
+// `noise_crossfade_s`, since 2026-10-31 for `waveform_grow` and since
+// 2026-11-05 for `theme` (kSettingsValueListKeys, settings_editor.h; the color
+// presets' list of 2026-10-25 went with the presets 2026-11-01, the two
+// levels' lists 2026-11-05 with the band's sliders) — a SUB-PAGE of the settings
 // page, whose Cancel, Esc and commit return to the page on that key's row
 // and whose opener key closes the whole panel (architect 2026-10-28 night,
 // GuiInputHandler::return_to_settings_page); and THE TRIM PRESETS LIST

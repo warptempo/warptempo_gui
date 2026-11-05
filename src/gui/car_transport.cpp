@@ -70,10 +70,10 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
             // answer is IGNORED: a console key is not a deliberate press at
             // the glass, so a failed reopen raises no card; the next real
             // press meets the launch gates and cards there. A dead stream's
-            // reopen here DARKENS A LIT NOISE LAMP (2026-10-28, the
-            // iPhone's behavior at a connect; close_dead_stream,
-            // playback_aaudio.cpp, noise.h's head): the bed does not resume
-            // by itself on the new route.
+            // reopen here RESUMES AN AUDIBLE NOISE BED on the new route with
+            // a fresh segment (2026-11-05, the route drop's reading;
+            // close_dead_stream, playback_aaudio.cpp, noise.h's head): the
+            // bed never resumes by itself, and this reopen is a press's.
             (void)playback.ensure_device_available_for_play();
             return;
         case Kind::Pause:

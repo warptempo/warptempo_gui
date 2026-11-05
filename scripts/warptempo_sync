@@ -177,7 +177,9 @@ shopt -s nocaseglob
 #      every key is required since 2026-10-14; a line already there is
 #      kept -- the true_colors=on line (2026-10-21), the theme=default line
 #      (2026-11-05, the window's theme, one of Live 12's, after
-#      true_colors), the noise=rain, noise_level=-9 and
+#      true_colors), the noise=rain, noise_level=-inf (2026-11-05, the
+#      level the icon row's NOISE slider sets, -inf being off: -9 from
+#      2026-10-28 until then) and
 #      noise_crossfade_s=4 lines (2026-10-28), the key_height=17 line
 #      (2026-10-29, a tuning key; the key's height in W, 17 since the
 #      rebase to 200 % of 2026-11-05: 34 device px on the tablet), the
@@ -185,9 +187,13 @@ shopt -s nocaseglob
 #      tuning keys, in W), the osk_font_px=12 line (2026-10-29 night, the
 #      keyboard's cap size in W, a tuning key) and
 #      the waveform_grow=1 line (2026-10-31, the waveform's antialiasing
-#      grow, a permanent key; 1 since 2026-11-04 night) and the audio_level=0 line (2026-10-31 night,
-#      the level of the program's own sound, a permanent key) the
-#      same way (ADDED_LINES below), and every line of a retired key the app refuses to start with is removed --
+#      grow, a permanent key; 1 since 2026-11-04 night) and the audio_level=0.0 line (2026-10-31 night,
+#      the level of the program's own sound, a permanent key; the decimal
+#      spelling since 2026-11-05, the icon row's AUDIO slider) the
+#      same way (ADDED_LINES below) -- A LINE ALREADY THERE IS KEPT, so an
+#      existing tablet keeps its two levels as it tuned them, whole-number
+#      spellings included (the app reads them and rewrites them decimal at
+#      its next commit) -- and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in
@@ -248,7 +254,9 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # key (step 5's awk splits them on the spaces): THE sRGB -> DISPLAY-P3 SWITCH, a
 # required key since 2026-10-21 (the Settings menu's True Colors row made a
 # key), on on both devices; and THE NOISE'S THREE, required since 2026-10-28 —
-# the sound's folder, rain, the level, -9 dB, and the crossfade, 4 s; and
+# the sound's folder, rain, the level, -inf since 2026-11-05 (off: the icon
+# row's NOISE slider is its switch, "-inf is default only for new install";
+# -9 dB until then), and the crossfade, 4 s; and
 # THE KEY'S HEIGHT, a tuning key required while it stands since 2026-10-29,
 # 17 W (34 device px on the tablet at its 200 %; the hi-fi key metrics,
 # again since 2026-11-03; every tuning key in W since the rebase of
@@ -260,10 +268,13 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # required while it stands since 2026-10-29 night, 12 W (24 device px); and THE
 # WAVEFORM'S ANTIALIASING GROW, a permanent key required since 2026-10-31,
 # one device px (2026-11-04 night; half before); and THE AUDIO LEVEL, the program's own sound's level, a
-# permanent key required since 2026-10-31 night, 0 dB, the files as they are
-# (src/gui/device_config.h records each). A value tuned on the
-# tablet is kept: a line already there is never touched.
-ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-9 noise_crossfade_s=4 key_height=17 osk_key_w=24 osk_key_h=30 osk_font_px=12"
+# permanent key required since 2026-10-31 night, 0.0 dB, the files as they
+# are (the two levels decimal since 2026-11-05: one fractional digit in
+# [-60.0, 0.0] or -inf; src/gui/device_config.h records each). A value tuned
+# on the tablet is kept: a line already there is never touched — the two
+# levels' lines among them, a whole-number spelling of before included,
+# which the app reads and rewrites decimal at its next commit.
+ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0.0 noise=rain noise_level=-inf noise_crossfade_s=4 key_height=17 osk_key_w=24 osk_key_h=30 osk_font_px=12"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -293,11 +304,12 @@ ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=ra
 # crossfade in whole seconds); and role, the device's part in the projects
 # repository (author or mirror), retired 2026-10-30 with the laptop GUI, one
 # device running the program; and waveform_column_px, the waveform's
-# column width, a tuning key retired 2026-11-01 night. A TUNED LEVEL DOES NOT TRAVEL THROUGH setup:
-# the old line is deleted and ADDED_LINES' noise_level=-9 takes its place,
+# column width, a tuning key retired 2026-11-01 night. A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
+# the old line is deleted and ADDED_LINES' noise_level=-inf takes its place,
 # so the planner renames the two lines by hand at the install, on both
 # devices, the program not running; a crossfade in ms comes back as
-# ADDED_LINES' noise_crossfade_s=4 the same way.
+# ADDED_LINES' noise_crossfade_s=4 the same way. (A noise_level= line
+# already standing is kept, whatever its spelling.)
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
               flag_face flag_face_selected flag_label flag_label_selected
@@ -312,7 +324,7 @@ RETIRED_KEYS=(sync_path theme_level
               waveform_column_px waveform chrome)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
-# beside the app's settings file, the folder the app's NOISE key reads.
+# beside the app's settings file, the folder the app's NOISE slider plays.
 NOISE_FAR="$APPCFG/noise"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
@@ -878,7 +890,7 @@ mirror_noise() {
     local -a subs=() near_list=() far_subs=() far_files=() gone_files=() gone_dirs=()
     local -A near_sub=() near_file=() skip_sub=()
     if [[ ! -d "$NOISE_NEAR" ]]; then
-        printf 'no noise: the laptop has no %s; nothing placed or deleted, the NOISE key as it stands\n' "$NOISE_NEAR"
+        printf 'no noise: the laptop has no %s; nothing placed or deleted, the NOISE slider as it stands\n' "$NOISE_NEAR"
         return 0
     fi
     # THE LAPTOP'S SOUNDS: its subfolders (a link to a folder counts, as the
@@ -912,7 +924,7 @@ mirror_noise() {
         done
     done
     if [[ "$total" -eq 0 ]]; then
-        printf 'no noise: %s holds no subfolder with a .wav; nothing placed or deleted, the NOISE key as it stands\n' "$NOISE_NEAR"
+        printf 'no noise: %s holds no subfolder with a .wav; nothing placed or deleted, the NOISE slider as it stands\n' "$NOISE_NEAR"
         return 0
     fi
 

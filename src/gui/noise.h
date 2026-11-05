@@ -1,25 +1,42 @@
 #pragma once
 
-// THE NOISE — THE BACKGROUND SOUND (architect 2026-10-28). A lamp key, NOISE
-// on bare `w` (RedesignButton::IconNoise, app_state.h), lights a bed of sound
-// that plays CONTINUOUSLY as A SECOND VOICE mixed under everything the
-// playback engine plays — work playback, the A/B audition, the render player,
-// the score's soundtrack — and over its silence between plays, AT ONE LEVEL,
-// NEVER DUCKED and never paused by any of them; only the lamp, a route drop
-// (which darkens it, below), a change of the `noise` key (below) or closing
-// the app silences it. The lamp is OFF AT EVERY LAUNCH: no device key holds
-// it (his "iPhone requires enabling each time"). THE BED SOUNDS ONLY THROUGH
-// THE RUNNING STREAM'S CALLBACK, so the device question is the lamp's too
-// (architect 2026-10-28): the LIT PRESS asks the launch press's reopen
-// (GuiPlayback::ensure_device_available_for_play, at the `w` case of
-// input_key_dispatch.cpp — a refusal cards and still lights the lamp, silent
-// as a load in flight is), and THE LAMP FOLLOWS THE NO-AUTO-RECOVER RULE
-// (architect 2026-10-28, the iPhone's Background Sounds the precedent: its
-// toggle goes off when the route changes): a route drop (a headphone
-// connected or taken off) DARKENS the lamp and resets the voice, lit or not,
-// at THE FIRST MAIN-THREAD ACT THAT READS THE DROP'S LATCH — a lit lamp says
-// the noise plays, and on a dead stream it does not. THE RESET'S TWO ROADS
-// (2026-10-28, one body, noise_voice_reset_on_dead_stream below):
+// THE NOISE — THE BACKGROUND SOUND (architect 2026-10-28; THE LEVEL IS ITS
+// ONE SWITCH since 2026-11-05). A bed of sound plays CONTINUOUSLY as A SECOND
+// VOICE mixed under everything the playback engine plays — work playback,
+// the A/B audition, the render player, the score's soundtrack — and over its
+// silence between plays, AT ONE LEVEL, NEVER DUCKED and never paused by any
+// of them. THE LEVEL IS THE SWITCH (architect 2026-11-05, the two level
+// cases, mock s46_m1: "ableton has no sliders that also act as buttons";
+// "the only off switch is -inf, and that should actually shut it off so
+// reduce footprint"): the `noise_level` device key — a decimal dB or -inf,
+// THE LEVEL GRAMMAR, device_config.h — set by the band's NOISE case
+// (RedesignButton::IconNoiseLevel, app_state.h: a slider, dragged relative
+// on the square-law travel, a long press setting 0 dB) and by the settings
+// editor's typed line; ABOVE -inf THE BED PLAYS, AT -inf IT IS OFF. There is
+// no lamp and no toggle (the NOISE lamp on bare `w`, 2026-10-28 to
+// 2026-11-05, RETIRED with the cases; his "iPhone requires enabling each
+// time" reversed on the same word): THE BED PLAYS FROM THE LAUNCH at the
+// persisted level — gui_main seats set_level_db after the probe, and an
+// audible level with a folder there lights the voice and starts the loader
+// before the first project opens; the engine is per project, so before a
+// project's stream runs nothing sounds, and the bed begins when the first
+// stream does (the fade-in once the load has landed). THE BED SOUNDS ONLY
+// THROUGH THE RUNNING STREAM'S CALLBACK, and nothing asks the device question
+// for it: the music's reopen is the bed's (below). Only the level at -inf, a
+// change of the `noise` key to a folder that is absent or refused (below) or
+// closing the app silences it for good; A ROUTE DROP PAUSES IT (next).
+//
+// A ROUTE DROP STOPS THE VOICE WITH ITS STREAM, AND THE BED RESUMES AT THE
+// NEXT REOPEN (architect 2026-11-05, the route drop's reading, confirmed by
+// the planner's "Decisions" item; reversing 2026-10-28's darkening of the
+// lamp, the iPhone's Background Sounds precedent, which went with the lamp):
+// a route drop (a headphone connected or taken off) kills the AAudio stream,
+// and on a dead stream nothing sounds; THE LEVEL IS UNTOUCHED and so is the
+// voice's `target` — noise_voice_reset_on_dead_stream (below) resets the
+// SEQUENCE ALONE, so the next stream the music opens finds an audible,
+// sequence-less voice and starts a fresh random segment with the fade-in.
+// THE RESET'S TWO ROADS (2026-10-28, one body, noise_voice_reset_on_dead_
+// stream below):
 //   1. THE POLL — gui_main's beside tick() (GuiPlayback::stream_dead,
 //      GuiNoise::reset_on_dead_stream), for the press-less drop, the one
 //      road that reads the latch without reopening;
@@ -27,20 +44,22 @@
 //      post-publish dead arm (playback_aaudio.cpp), ahead of the
 //      close_stream that clears the latch: a press that reaches the device
 //      before the tick (on Android input drains ahead of the tick) — a Play
-//      press, an audition start, the NOISE key's own lit press, THE CAR'S
-//      PLAY at a Bluetooth connect — darkens the lamp there, so a lit lamp
-//      never resumes its old sequence on the new stream (at a connect the
-//      lamp goes dark, the iPhone's behavior), and a dark lamp's fade tail
-//      never plays after the reopen.
-// Nothing reopens by itself, the error callback's "nothing recovers by
-// itself" whole for the bed as for the music; the next lit press is an
-// ordinary one and keeps asking the launch press's device question.
+//      press, an audition start, THE CAR'S PLAY at a Bluetooth connect —
+//      resets the sequence there, so the old sequence never resumes
+//      mid-segment on the new stream and a fade tail never plays after the
+//      reopen: a fresh segment, the fade-in.
+// THE NO-AUTO-RECOVER RULE HOLDS: nothing reopens by itself, the error
+// callback's "nothing recovers by itself" whole for the bed as for the music
+// — the bed is silent from the drop until the next press that reopens the
+// stream (Play, an audition, the car's Play at a connect), and that reopen
+// is the bed's resume.
 //
 // THE SOUND IS A FOLDER UNDER `noise/` BESIDE THE DEVICE CONFIG, named by the
 // `noise` device key (device_config_path()'s parent / "noise" / the key's
 // value — `noise/rain/` for the first run's `noise=rain`;
 // is_noise_folder_name, device_config.h, owns the name's grammar). Present
-// plays; AN ABSENT FOLDER IS THE ORDINARY STATE and greys the key with no
+// plays; AN ABSENT FOLDER IS THE ORDINARY STATE and greys the NOISE case
+// (its fill and its number in the disabled ink, the slider inert) with no
 // card and no line. Every
 // regular file whose name ends `.wav` (lowercase, exact) is a SEGMENT. THE
 // ADMITTED SHAPE: PCM16, two channels, at least one frame, every file at THE
@@ -60,14 +79,17 @@
 // a² + b² = 1: the right curve for two uncorrelated noise beds; his "a must")
 // of `noise_crossfade_s` whole seconds, a permanent device key (architect
 // 2026-10-28 night: the crossfade is a recording's relationship to itself, so
-// a later sound may want another value); a lit press starts a fresh
+// a later sound may want another value); a rise from -inf starts a fresh
 // random segment from its start (his "random start = the segment road, no
-// mid-segment offset"). The bed FADES IN over kNoiseFadeInMs at the lit press
-// — from when the load lands, the lamp lighting at once — and OUT over
-// kNoiseFadeOutMs at the dark press, both linear amplitude ramps; a press
-// during either fade reverses from the current level, no restart. The two
-// fades are SETTLED (architect 2026-10-28, on the glass, after one day as
-// tuning keys), the lamp's own and the same for every sound. The level is the
+// mid-segment offset"). The bed FADES IN over kNoiseFadeInMs at the rise
+// above -inf — from when the load lands — and OUT over kNoiseFadeOutMs at
+// the fall to -inf, both linear amplitude ramps; a crossing during either
+// fade reverses from the current level, no restart (a drag wobbling across
+// -inf only darkens and relights the voice, nothing freed and nothing
+// reloaded — a 400 MB bank is not reloaded per finger wobble; the release
+// is the lift's, GuiNoise::release_if_silent below). The two fades are
+// SETTLED (architect 2026-10-28, on the glass, after one day as tuning
+// keys), the switch's own and the same for every sound. The level is the
 // permanent device key `noise_level` in dB, applied to the files as they are:
 // NATURAL LOUDNESS VARIATION KEPT, no per-segment equalizing (his ruling).
 //
@@ -83,6 +105,7 @@
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <string>
 #include <thread>
@@ -103,19 +126,24 @@ inline constexpr int kNoiseFadeOutMs = 40;
 // freed by GuiNoise::change_folder under its fence (below) or by
 // GuiNoise::shutdown, after every engine is down.
 //
-// THE WHOLE NAMED FOLDER IS RESIDENT FROM THE FIRST LIT PRESS UNTIL THE APP
-// CLOSES OR THE `noise` KEY NAMES ANOTHER FOLDER (the planner's call on the
-// architect's deferral, architect agreed 2026-10-28; his "whatever's in
-// memory is dumped if we change the subfolder name", 2026-10-28). NOTHING
-// LIMITS THE SIZE (architect 2026-10-28, closed): docs/HELP.md names the
-// sensible ceiling, about 35 minutes, about 400 MB at 48 kHz. The bank is
-// read by the audio thread with no lock, so a buffer may be freed only once
-// no fill can be reading it: at the app's end, every engine down, or at a key
-// change behind change_folder's in_fill fence, which proves it for the one
-// bank at once. A rolling window of loaded segments would free buffers under
-// a playing audio thread at every segment — a fence per segment for a memory
-// saving the tablet does not need. A dark lamp keeps the bank; the next lit
-// press plays at once.
+// THE WHOLE NAMED FOLDER IS RESIDENT FROM THE FIRST RISE ABOVE -inf UNTIL
+// THE APP CLOSES, THE `noise` KEY NAMES ANOTHER FOLDER, OR THE LEVEL IS LEFT
+// AT -inf (the planner's call on the architect's deferral, architect agreed
+// 2026-10-28; his "whatever's in memory is dumped if we change the subfolder
+// name", 2026-10-28; THE -inf RELEASE 2026-11-05: "the only off switch is
+// -inf, and that should actually shut it off so reduce footprint" — the
+// bank freed at the slider's LIFT on -inf, or at a typed -inf commit,
+// GuiNoise::release_if_silent, never mid-drag). NOTHING LIMITS THE SIZE
+// (architect 2026-10-28, closed): docs/HELP.md names the sensible ceiling,
+// about 35 minutes, about 400 MB at 48 kHz. The bank is read by the audio
+// thread with no lock, so a buffer may be freed only once no fill can be
+// reading it: at the app's end, every engine down, or behind the in_fill
+// fence (release_bank, the body change_folder and release_if_silent share),
+// which proves it for the one bank at once. A rolling window of loaded
+// segments would free buffers under a playing audio thread at every segment
+// — a fence per segment for a memory saving the tablet does not need. A
+// drag that crosses -inf and comes back keeps the bank (the fade reverses,
+// nothing reloads); a lift on -inf frees it, and the next rise reloads.
 struct GuiNoiseBank {
     struct Segment {
         std::unique_ptr<int16_t[]> samples;   // frames * 2, interleaved
@@ -131,13 +159,15 @@ struct GuiNoiseBank {
 //
 // THE CONTROL WORDS, all std::atomic. Written by the main thread and read by
 // the audio thread: `bank` (null until the load lands, then the one published
-// bank; null again from a key change until the next load lands), `target`
-// (the lamp: true lit), `gain` (linear, 10^(noise_level/20)), `crossfade_ms`
-// (the `noise_crossfade_s` key in ms, set_crossfade_s's one conversion; read
-// at each transition's draw) and `seed` (written at every lit press
-// BEFORE `target`'s release store; read when a sequence starts, so the
-// target's acquire load orders it). Written by the audio thread and read by
-// the main thread: `in_fill` (below).
+// bank; null again from a key change or a -inf release until the next load
+// lands), `target` (THE SWITCH: true while the level stands above -inf with
+// a folder available, GuiNoise::apply_switch), `gain` (linear,
+// 10^(noise_level/20), 0 at -inf), `crossfade_ms` (the `noise_crossfade_s`
+// key in ms, set_crossfade_s's one conversion; read at each transition's
+// draw) and `seed` (written at every rise above -inf BEFORE `target`'s
+// release store; read when a sequence starts, so the target's acquire load
+// orders it). Written by the audio thread and read by the main thread:
+// `in_fill` (below).
 //
 // THE AUDIO-THREAD-PRIVATE FIELDS — `env` (the fade envelope, 0..1), `cur`
 // (the playing segment, -1 no sequence), `pos_cur` (its fractional frame, in
@@ -163,11 +193,12 @@ struct GuiNoiseBank {
 // (reopen_stream_if_dead, playback_aaudio.cpp), ordered after that write by
 // program order and before the new thread by its start.
 // THE SECOND EXCEPTION — THE MAIN THREAD BEHIND THE IN_FILL FENCE
-// (2026-10-28, GuiNoise::change_folder): with `bank` stored null and
-// `in_fill` read false (seq_cst both), no fill is inside its body and every
-// later fill finds no bank and touches no private field, so the main thread
-// may reset them (change_folder's protocol states the proof).
-// THE LAMP SURVIVES A PROJECT SWITCH (device state; the planner's call,
+// (2026-10-28, GuiNoise::release_bank, the body change_folder and
+// release_if_silent share): with `bank` stored null and `in_fill` read false
+// (seq_cst both), no fill is inside its body and every later fill finds no
+// bank and touches no private field, so the main thread may reset them
+// (release_bank's protocol states the proof).
+// THE BED SURVIVES A PROJECT SWITCH (device state; the planner's call,
 // architect agreed 2026-10-28): the bed gaps for the device's reopen (one
 // AAudio stream stop and start on the tablet) and resumes where it was, no
 // fade.
@@ -201,10 +232,11 @@ struct GuiNoiseVoice {
 // buffer), at the device's `output_rate`. NO ALLOCATION, NO
 // LOCK, NO SYSCALL, NO I/O. A suspended device (`output_rate` 0) returns at
 // once; every other fill marks `in_fill` and loads `bank` first, and a fill
-// with no bank (no load yet, a lit lamp's load in flight — the fade-in begins
-// when the load lands — or a key change's release) returns touching no
-// private field. A dark, silent voice then returns too — the idle arm, the
-// common case: the music path pays four atomic words per fill (in_fill's
+// with no bank (no load yet, an audible level's load in flight — the fade-in
+// begins when the load lands — or a key change's or a -inf lift's release)
+// returns touching no private field. A switched-off, silent voice then
+// returns too — the idle arm, the common case on a fresh install's -inf:
+// the music path pays four atomic words per fill (in_fill's
 // store, the bank's load, target's load, in_fill's clear) and one branch, at
 // a fill every ~5 ms, nothing. Called by the device's callback on BOTH arms,
 // the silence arm's and the render body's, before the clip
@@ -214,17 +246,21 @@ void noise_mix_block(GuiNoiseVoice& voice, float* const* channel_buffers,
                      uint32_t output_rate);
 
 // THE VOICE RESET ON A DEAD STREAM, THE ONE BODY (2026-10-28; the head's two
-// roads): `target` stored false (release) and the audio-thread-private fields
-// to the no-sequence state noise_mix_block's idle arm reads (noise.cpp's
-// reset_voice_sequence) — so the next lit press starts a fresh random segment
-// with the fade-in from silence. PRECONDITION: THE STREAM IS DEAD, READ
-// THROUGH THE LATCH ON THIS THREAD JUST BEFORE THE CALL; no fill runs, and
-// the reopen that follows is this thread's own — the first exception at
-// GuiNoiseVoice. Idempotent. Two callers: GuiNoise::reset_on_dead_stream (the
-// poll) and playback_aaudio.cpp's reset ahead of a dead stream's close (the
-// reopen). NOT at every close_stream: a project switch and the shutdown close
-// a live stream, and the lamp survives those (the thread note's last
-// paragraph).
+// roads; THE SEQUENCE ALONE since 2026-11-05, the route drop's reading): the
+// audio-thread-private fields to the no-sequence state noise_mix_block's
+// idle arm reads (noise.cpp's reset_voice_sequence) — `target` and the level
+// UNTOUCHED, so an audible voice starts a fresh random segment with the
+// fade-in from silence on the next stream the music opens, and a switched-
+// off voice's fade tail never plays after the reopen. (Until 2026-11-05 it
+// also stored `target` false, the lamp's darkening at a drop; the lamp is
+// gone and the bed resumes at the next reopen by his ruling.) PRECONDITION:
+// THE STREAM IS DEAD, READ THROUGH THE LATCH ON THIS THREAD JUST BEFORE THE
+// CALL; no fill runs, and the reopen that follows is this thread's own — the
+// first exception at GuiNoiseVoice. Idempotent. Two callers:
+// GuiNoise::reset_on_dead_stream (the poll) and playback_aaudio.cpp's reset
+// ahead of a dead stream's close (the reopen). NOT at every close_stream: a
+// project switch and the shutdown close a live stream, and the bed survives
+// those (the thread note's last paragraph).
 void noise_voice_reset_on_dead_stream(GuiNoiseVoice& voice);
 
 // THE MAIN THREAD'S OBJECT — ONE FOR THE APP, owned by gui_main (main.cpp),
@@ -251,64 +287,98 @@ public:
     // change_folder's join).
     void probe(const std::string& folder_name);
 
-    // THE KEY'S ENABLED PREDICATE: the probe admitted the folder and no load
-    // has failed.
+    // THE CASE'S ENABLED PREDICATE (the NOISE case greys on false, its fill
+    // and number in the disabled ink; redesign_button_enabled's arm): the
+    // probe admitted the folder and no load has failed.
     bool available() const;
-    // THE LAMP (its key's lit fill): the voice's `target`, true from the lit
-    // press — before the
-    // load lands.
+    // THE SWITCH AS THE VOICE READS IT: `target`, true while the level stands
+    // above -inf with a folder available (apply_switch) — before the load
+    // lands. A reader of the voice's own word, no painter's (the case paints
+    // its level, never this bit).
     bool lit() const;
 
-    // THE CHOKEPOINT — bare `w` and the NOISE key's synthesized chord, two
-    // producers, one route. PRECONDITION available(); unavailable, a silent
-    // no-op (the greyed key's lift never reaches here; the key is the
-    // keyboard's half of that rule). Flips `target`: on the LIT edge the seed
-    // (steady_clock ns, nonzero) is stored before `target` (release) and, the
-    // bank neither loaded nor loading, THE LOADER starts; on the DARK edge
-    // nothing else — the audio thread fades out and ends the sequence. The
-    // device question of the lit edge is the `w` case's, ahead of this call
-    // (input_key_dispatch.cpp); a lamp a route drop darkened
-    // (noise_voice_reset_on_dead_stream, the poll's or a reopen's) or a key
-    // change darkened (change_folder) comes back only through this lit edge.
-    void toggle();
+    // THE LEVEL, LIVE AND THE ONE SWITCH (architect 2026-11-05; the head):
+    // `db` a value of THE LEVEL GRAMMAR (device_config.h) — a decimal dB in
+    // [-60.0, 0.0] or kLevelDbOff. Stores the gain (10^(db/20), 0 at -inf)
+    // for the audio thread's next fill, then applies the switch
+    // (apply_switch): ABOVE -inf with available() true and the voice dark,
+    // THE RISE — the seed (steady_clock ns, nonzero) stored before `target`
+    // (release) and, the bank neither loaded nor loading, THE LOADER started
+    // once per folder; AT -inf with the voice lit, THE FALL — `target`
+    // false, the audio thread's 40 ms fade-out ending the sequence. Nothing
+    // else: no free, no reload — a drag that crosses -inf and comes back only
+    // darkens and relights the voice (the fade reverses from where it is),
+    // and the bank is freed at the lift alone (release_if_silent). THE
+    // CALLERS: gui_main after the probe (the launch's seat: the bed from the
+    // launch), the NOISE case's every drag motion and its long press
+    // (GuiInputHandler::apply_level_case, input_pointer.cpp) and the settings
+    // editor's typed `noise_level` arm (apply_device_setting). Unavailable,
+    // the gain is stored and the switch stays off: a later change_folder to
+    // a folder that is there lights it at this level.
+    void set_level_db(double db);
+    // THE -inf RELEASE (architect 2026-11-05, "that should actually shut it
+    // off so reduce footprint"): with the level at -inf, the bank is FREED
+    // behind the fence (release_bank, change_folder's steps 1..6 with the
+    // SAME folder — the file list kept, `status_` Idle, so the next rise
+    // above -inf reloads: the load lands and the fade-in runs). Above -inf,
+    // or with nothing loaded or loading, a no-op. THE CALLERS: the NOISE
+    // case's lift and its button-lost end (GuiInputHandler::settle_level_
+    // case) and the typed -inf commit (apply_device_setting) — never a drag
+    // motion (a 400 MB bank is not reloaded per finger wobble, the head). On
+    // the main thread while an engine may be filling: the fence proves no
+    // fill holds the bank (release_bank's protocol); the fade-out the fall
+    // began is cut where the fence lands, the voice silent at -inf anyway
+    // (gain 0).
+    void release_if_silent();
 
     // THE PER-TICK POLL (main.cpp's tick, every tick): a load that failed
-    // under a lit lamp darkens the lamp and leaves the key grey from then on
-    // (available() reads the failure, until a key change names a folder
-    // afresh); the roster's per-tick comparator repaints. Nothing else: the
-    // dead stream is gui_main's poll beside this call (2026-10-28,
+    // under an audible level darkens the voice and leaves the case grey from
+    // then on (available() reads the failure, until a key change names a
+    // folder afresh); the roster's per-tick comparator repaints. Nothing
+    // else: the dead stream is gui_main's poll beside this call (2026-10-28,
     // reset_on_dead_stream below), because the playback object is there and
     // not here.
     void tick();
 
     // THE POLL'S VOICE RESET ON A DEAD STREAM (architect 2026-10-28, the
-    // no-auto-recover rule at the head), LIT OR NOT: the one body,
-    // noise_voice_reset_on_dead_stream, on this object's voice — the lamp
-    // dark and the sequence ended, so the next lit press starts a fresh
-    // random segment with the fade-in from silence. WITHOUT THE RESET the
-    // stale voice would run a fade-out blip at the next Play press's reopen,
-    // the mixer finishing the dark edge it never got to run on the dead
-    // stream — whether the lamp was lit at the drop or a dark press by hand
-    // fell within the 40 ms fade-out just before it (why the poll asks no
-    // lamp). PRECONDITION: THE STREAM IS DEAD, READ THROUGH THE LATCH
-    // (GuiPlayback::stream_dead true on this thread, just before the call) —
-    // the first exception to the voice's one-audio-thread rule, stated at
-    // GuiNoiseVoice. ONE CALLER OF THIS METHOD: gui_main's poll beside tick()
-    // (main.cpp), every tick the stream stands dead, for the press-less drop;
-    // the writes are idempotent, so the repeat costs nothing. A press that
-    // reopens before the tick resets through the free function itself, ahead
-    // of the close that clears the latch (the head's second road,
-    // playback_aaudio.cpp). Nothing is damaged here: the roster's
-    // per-tick comparator carries the NOISE key's face edge.
+    // no-auto-recover rule at the head; the sequence alone since
+    // 2026-11-05), AUDIBLE OR NOT: the one body,
+    // noise_voice_reset_on_dead_stream, on this object's voice — the sequence
+    // ended, `target` and the level untouched, so the next stream the music
+    // opens starts a fresh random segment with the fade-in from silence (the
+    // bed's resume at the reopen, the head). WITHOUT THE RESET the stale
+    // voice would resume mid-segment, or run a fade-out blip, at the next
+    // Play press's reopen — the mixer finishing what it never got to run on
+    // the dead stream — whether the level was audible at the drop or a fall
+    // to -inf fell within the 40 ms fade-out just before it (why the poll
+    // asks no level). PRECONDITION: THE STREAM IS DEAD, READ THROUGH THE
+    // LATCH (GuiPlayback::stream_dead true on this thread, just before the
+    // call) — the first exception to the voice's one-audio-thread rule,
+    // stated at GuiNoiseVoice. ONE CALLER OF THIS METHOD: gui_main's poll
+    // beside tick() (main.cpp), every tick the stream stands dead, for the
+    // press-less drop; the writes are idempotent, so the repeat costs
+    // nothing. A press that reopens before the tick resets through the free
+    // function itself, ahead of the close that clears the latch (the head's
+    // second road, playback_aaudio.cpp). Nothing is damaged here: the case
+    // paints its level, which a drop does not move.
     void reset_on_dead_stream();
 
     // THE KEY CHANGE, LIVE (architect 2026-10-28: "whatever's in memory is
     // dumped if we change the subfolder name"; the planner's protocol).
     // Called by the settings editor's `noise` arm (apply_device_setting) on
     // the main thread with the new name, while an engine may be running and
-    // its callback filling. THE PROTOCOL, in order:
-    //   1. `target` stored false (release): the lamp darkens (the roster's
-    //      per-tick comparator carries the face edge).
+    // its callback filling: release_bank (the protocol below), the file list
+    // cleared, probe(folder_name), then apply_switch — AN AUDIBLE LEVEL
+    // RELIGHTS AT ONCE over a folder the probe admits (the level is the
+    // switch, 2026-11-05: the new folder loads and fades in when it lands);
+    // a folder the probe refuses or cannot find leaves available() false:
+    // the case greys, no card (the absent-folder rule), the config still
+    // holding the name he typed, and the next admitted folder lights again.
+    // A SAME-NAME COMMIT never reaches here: the editor's arm answers it
+    // unchanged first.
+    // THE RELEASE PROTOCOL (release_bank, noise.cpp — ONE BODY for this
+    // method and for release_if_silent, the -inf lift's), in order:
+    //   1. `target` stored false (release): the voice darkens.
     //   2. The loader, if joinable: request_stop and join (a load in flight
     //      ends within one 8 MB chunk; nothing is published after this line —
     //      the publish is the loader's last act, and it is gone).
@@ -331,26 +401,19 @@ public:
     //      bank lands, whose publish orders these writes before the next fill
     //      that reads them.
     //   6. bank_ freed (the memory dumped), `status_` stored Idle (a prior
-    //      Failed does not stick to the new folder), the file list cleared,
-    //      then probe(folder_name): the next lit press loads the new folder.
-    // A folder the probe refuses or cannot find leaves available() false: the
-    // key greys, no card (the absent-folder rule), the config still holding
-    // the name he typed. AAudio's data callback is one thread, the one fill
-    // this fence waits on.
-    // A DARK-LAMP COMMIT takes the same road — step 1 a no-op, the bank freed
-    // all the same (his ruling: the memory is dumped on a name change, lit or
-    // not). A SAME-NAME COMMIT never reaches here: the editor's arm answers
-    // it unchanged first.
+    //      Failed does not stick; the next rise loads afresh).
+    // AAudio's data callback is one thread, the one fill this fence waits
+    // on. A COMMIT AT -inf takes the same road — step 1 a no-op, the bank
+    // freed all the same (his ruling: the memory is dumped on a name change,
+    // audible or not).
     void change_folder(const std::string& folder_name);
 
-    // THE TWO DEVICE KEYS, LIVE: the level's linear gain read by the audio
-    // thread at its next fill, the crossfade read at the next transition's
-    // draw. Seeded by gui_main from the config, written by the settings
-    // editor's two arms (apply_device_setting, the typed line's and the value
-    // list's one body). THE CROSSFADE TAKES THE KEY'S SECONDS and this setter
-    // is the ONE conversion to the voice's milliseconds (the voice's lengths,
-    // the two fades among them, are ms).
-    void set_level_db(int db);
+    // THE CROSSFADE, LIVE: read at the next transition's draw. Seeded by
+    // gui_main from the config, written by the settings editor's arm
+    // (apply_device_setting, the typed line's and the value list's one
+    // body). IT TAKES THE KEY'S SECONDS and this setter is the ONE conversion
+    // to the voice's milliseconds (the voice's lengths, the two fades among
+    // them, are ms).
     void set_crossfade_s(int seconds);
 
     // THE VOICE every project's engine mixes (GuiPlayback::attach_noise).
@@ -372,8 +435,23 @@ private:
     // read in 8 MB chunks (the stop token asked between them), then the one
     // publish; any failure one stderr line, nothing published, Failed.
     void load(std::stop_token stop);
+    // THE SWITCH'S ONE BODY (set_level_db, change_folder): the voice lit on
+    // an audible level over an available folder (the seed, `target`, the
+    // loader once per folder), dark otherwise; a no-op where it already
+    // stands as the level says.
+    void apply_switch();
+    // THE RELEASE, steps 1..6 of the protocol at change_folder: the voice
+    // dark, the loader joined, the bank unpublished behind the fence and
+    // freed, the state Idle. The file list and the folder's name stay (the
+    // -inf lift's reload needs no second probe); change_folder clears and
+    // re-probes after it.
+    void release_bank();
 
     GuiNoiseVoice     voice_;
+    // THE LEVEL AS SET (set_level_db's last `db`, kLevelDbOff until the
+    // launch's seat): the switch's input, read by apply_switch and
+    // release_if_silent on the main thread.
+    double            level_db_ = -std::numeric_limits<double>::infinity();
     // Written by probe() on the main thread while no loader exists.
     std::vector<File> files_;
     int               rate_      = 0;
@@ -381,12 +459,12 @@ private:
     // THE KEY'S NAME, as probe() was last given it: the stderr line's path
     // and the folder a key change replaces.
     std::string       folder_name_;
-    // THE LOAD'S STATE: Idle until the first lit press (and again from a key
-    // change), Loading while the worker reads, Ready (released after the
-    // bank's publish) or Failed.
+    // THE LOAD'S STATE: Idle until the first rise above -inf (and again from a
+    // key change or a -inf release), Loading while the worker reads, Ready
+    // (released after the bank's publish) or Failed.
     std::atomic<int>  status_{kIdle};
     // THE BANK'S OWNER: set by the worker before its publish, freed by
-    // change_folder behind its fence or by shutdown() after the join.
+    // release_bank behind its fence or by shutdown() after the join.
     std::unique_ptr<GuiNoiseBank> bank_;
     std::jthread      worker_;
 };

@@ -1,6 +1,7 @@
 #include "playback.h"
 
 #include "playback_common.h"
+#include "device_config.h"  // kLevelDbOff — the audio level's mute
 #include "noise.h"  // noise_mix_block — the second voice the callback sums
 
 #include <aaudio/AAudio.h>
@@ -290,13 +291,15 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // gates through ensure_device_available_for_play, the render player's
     // road through play()'s own head (reopen_stream_if_dead, one body for
     // both). The user presses play again — the same answer the product gives
-    // every other rare, loud fault. THE NOISE LAMP FOLLOWS THIS RULE TOO
-    // (architect 2026-10-28): the lamp darkens and the voice resets, lit or
-    // not, at the first main-thread act that reads this latch — gui_main's
-    // poll on GuiPlayback::stream_dead at the next tick, or, a press reaching
-    // the device first, the reopen's own close of the dead stream
-    // (close_dead_stream) — and the next lit press is a launch press for the
-    // device question (noise.h's head, the two roads).
+    // every other rare, loud fault. THE NOISE BED FOLLOWS THIS RULE TOO
+    // (architect 2026-10-28; the sequence alone since 2026-11-05): the
+    // voice's sequence resets, audible or not, at the first main-thread act
+    // that reads this latch — gui_main's poll on GuiPlayback::stream_dead at
+    // the next tick, or, a press reaching the device first, the reopen's own
+    // close of the dead stream (close_dead_stream) — its level and switch
+    // untouched, so the bed is silent until that next launch press reopens
+    // and resumes on the new stream with a fresh segment (noise.h's head,
+    // the two roads).
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
     impl->stream_dead.store(true, std::memory_order_release);
@@ -530,14 +533,14 @@ bool open_stream(GuiPlayback::Impl& impl) {
 
 // THE DEAD STREAM'S CLOSE, the two sites that read the latch true on the main
 // thread and close what it names: reopen_stream_if_dead's dead arm and
-// launch_window's post-publish dead arm. THE NOISE VOICE IS RESET HERE, AHEAD
-// OF close_stream, which clears the latch: the latch was read true on this
-// thread just before (each caller's own acquire load), no fill runs on a dead
-// stream, and the reopen that follows is this thread's own — the precondition
-// of noise_voice_reset_on_dead_stream (noise.h, the first exception at
-// GuiNoiseVoice). NOT in close_stream itself: a project switch (init's
-// shutdown) and the app's shutdown close a LIVE stream, and the lamp survives
-// those (noise.h's thread note). The voice is attached before the device opens
+// launch_window's post-publish dead arm. THE NOISE VOICE'S SEQUENCE IS RESET
+// HERE, AHEAD OF close_stream, which clears the latch: the latch was read
+// true on this thread just before (each caller's own acquire load), no fill
+// runs on a dead stream, and the reopen that follows is this thread's own —
+// the precondition of noise_voice_reset_on_dead_stream (noise.h, the first
+// exception at GuiNoiseVoice). NOT in close_stream itself: a project switch
+// (init's shutdown) and the app's shutdown close a LIVE stream, and the bed
+// survives those (noise.h's thread note). The voice is attached before the device opens
 // (GuiPlaybackState::noise, run_project's first act on its engine); the null
 // test is that field's own contract, null mixing nothing.
 void close_dead_stream(GuiPlayback::Impl& impl) {
@@ -553,19 +556,21 @@ void close_dead_stream(GuiPlayback::Impl& impl) {
 // (launch_window, which play() and play_loop() both forward to) — the
 // render player's road, which reaches play() with no gate ahead of it — and
 // by ensure_device_available_for_play, the main window's three launch gates'
-// question (architect 2026-09-02) and its other callers — the car's Play and
-// the noise lamp's lit press (the list at its declaration, playback.h): before
+// question (architect 2026-09-02) and its other caller — the car's Play (the
+// list at its declaration, playback.h): before
 // it the gates READ the latch ahead of play() and so never let play() reopen,
 // leaving the tablet mute behind the card after every route drop. A failed
 // reopen leaves playback disabled until the next press — no retry, no timer —
 // and, with `device_ready` still true, is exactly the "no stream standing"
 // shape device_unavailable reads.
-// THE DEAD ARM RESETS THE NOISE VOICE FIRST (2026-10-28, the no-auto-recover
-// rule's second road, noise.h's head): close_dead_stream below, ahead of the
-// close that clears the latch, so a press that reaches here before gui_main's
-// poll has read the drop — a Play press, an audition start, the NOISE key's
-// lit press, the car's Play at a Bluetooth connect — darkens the lamp and
-// ends the old sequence instead of resuming it on the new stream.
+// THE DEAD ARM RESETS THE NOISE VOICE'S SEQUENCE FIRST (2026-10-28, the
+// no-auto-recover rule's second road, noise.h's head; the sequence alone
+// since 2026-11-05): close_dead_stream below, ahead of the close that clears
+// the latch, so a press that reaches here before gui_main's poll has read
+// the drop — a Play press, an audition start, the car's Play at a Bluetooth
+// connect — ends the old sequence instead of resuming it mid-segment on the
+// new stream; an audible bed starts a fresh segment there, the reopen its
+// resume.
 bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
     if (impl.stream_dead.load(std::memory_order_acquire)) {
         close_dead_stream(impl);
@@ -638,10 +643,13 @@ void GuiPlayback::attach_noise(GuiNoiseVoice* voice) {
 }
 
 // The forward (contract at the declaration): one relaxed store the render
-// body reads at its next fill (GuiPlaybackState::audio_gain).
-void GuiPlayback::set_audio_level_db(int db) {
-    impl_->state.audio_gain.store(static_cast<float>(std::pow(10.0, db / 20.0)),
-                                  std::memory_order_relaxed);
+// body reads at its next fill (GuiPlaybackState::audio_gain); 0 at -inf, the
+// mute (std::pow(10, -inf) is 0, spelled out all the same).
+void GuiPlayback::set_audio_level_db(double db) {
+    const float gain = db == kLevelDbOff
+                           ? 0.0f
+                           : static_cast<float>(std::pow(10.0, db / 20.0));
+    impl_->state.audio_gain.store(gain, std::memory_order_relaxed);
 }
 
 bool GuiPlayback::init(int sample_rate, int channels, const float* samples,

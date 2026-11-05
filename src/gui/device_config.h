@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -101,41 +102,49 @@
 //                            the volume on the tablet itself"): everything
 //                            the program itself plays — the source and the
 //                            target, the A/B audition, the render player,
-//                            the score's audio — scaled by one level, an
-//                            integer in [-30, 0] in canonical spelling (the
-//                            noise_level grammar), dB applied to the
-//                            files as they are, the noise summed after it
-//                            at its own level and the clip last
-//                            (playback_common.h's head); live at the
-//                            settings editor's OK and at the settings
-//                            page's value list's tap
+//                            the score's audio — scaled by one level, a
+//                            decimal dB in [-60.0, 0.0] or `-inf` (THE LEVEL
+//                            GRAMMAR below, shared with noise_level since
+//                            2026-11-05), applied to the files as they are,
+//                            the noise summed after it at its own level and
+//                            the clip last (playback_common.h's head); live
+//                            at every motion of the band's AUDIO case (the
+//                            slider, RedesignButton::IconAudioLevel,
+//                            app_state.h) and at the settings editor's OK
 //                            (GuiPlayback::set_audio_level_db); PERMANENT
-//                            and REQUIRED; both templates spell 0, the files
-//                            as they are
+//                            and REQUIRED; both templates spell 0.0, the
+//                            files as they are
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
 //                            exactly one non-empty path component
 //                            (is_noise_folder_name below); live at the
 //                            settings editor's OK and at the settings
-//                            page's value list's tap, the lamp darkening and
-//                            the resident recordings freed
+//                            page's value list's tap, the resident
+//                            recordings freed and the new folder loaded
+//                            where the level is audible
 //                            (GuiNoise::change_folder); the list shows and
 //                            Tab completes the folders there. PERMANENT and
 //                            REQUIRED; both templates spell `rain`. A name
-//                            with no folder LOADS and greys the NOISE key
+//                            with no folder LOADS and greys the NOISE case
 //                            (the absent-folder rule, noise.h) — only the
 //                            shape is the grammar's
-//   noise_level=<dB>         THE BACKGROUND SOUND'S LEVEL (architect
-//                            2026-10-28; noise.h owns the sound): an integer
-//                            in [-30, 0] in canonical spelling, dB applied
-//                            to the files as they are — one level, never
-//                            ducked, live at the settings editor's OK and
-//                            at the settings page's value list's tap;
-//                            PERMANENT and REQUIRED, device-level (he retunes
-//                            it by hand per piece); both templates spell -9
-//                            (his "the rain is a masker, the default should
-//                            be higher than -18")
+//   noise_level=<dB>         THE BACKGROUND SOUND'S LEVEL AND ITS ONE SWITCH
+//                            (architect 2026-10-28; the switch 2026-11-05,
+//                            "the only off switch is -inf"; noise.h owns
+//                            the sound): a decimal dB in [-60.0, 0.0] or
+//                            `-inf` (THE LEVEL GRAMMAR below), applied to
+//                            the files as they are — one level, never
+//                            ducked; above -inf the bed plays, from the
+//                            launch on, and -inf is off, the recordings
+//                            freed; live at every motion of the band's
+//                            NOISE case (RedesignButton::IconNoiseLevel)
+//                            and at the settings editor's OK
+//                            (GuiNoise::set_level_db); PERMANENT and
+//                            REQUIRED, device-level (he retunes it by hand
+//                            per piece); both templates spell -inf ("-inf
+//                            is default only for new install": a fresh
+//                            tablet is silent until he raises it)
 //   noise_crossfade_s=<s>    THE NOISE'S CROSSFADE between two segments, in
 //                            whole SECONDS (architect 2026-10-28): an integer
 //                            in [1, 30] in canonical spelling, live at the
@@ -548,13 +557,15 @@ struct DeviceConfig {
     // night).
     int         waveform_grow_quarters = 4;
     // THE PROJECT VOICE'S LEVEL in dB (2026-10-31 night, the head's list; a
-    // permanent key): required; the construction state is the templates' 0.
-    int         audio_level       = 0;
-    // THE NOISE'S FOLDER NAME, its level in dB and its crossfade in seconds
-    // (2026-10-28, the head's list): required; the construction state is the
-    // templates' values (`rain`, -9, 4).
+    // permanent key; a double under THE LEVEL GRAMMAR since 2026-11-05, -inf
+    // the mute): required; the construction state is the templates' 0.0.
+    double      audio_level       = 0.0;
+    // THE NOISE'S FOLDER NAME, its level in dB (a double, -inf off, THE
+    // LEVEL GRAMMAR, 2026-11-05) and its crossfade in seconds (2026-10-28,
+    // the head's list): required; the construction state is the templates'
+    // values (`rain`, -inf, 4).
     std::string noise             = "rain";
-    int         noise_level       = -9;
+    double      noise_level       = -std::numeric_limits<double>::infinity();
     int         noise_crossfade_s = 4;
     // THE KEY'S HEIGHT in W (2026-10-29, the head's list; a tuning key):
     // required; the construction state is the template's 17
@@ -739,9 +750,9 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
 // spelled here beside the other keys'.
 inline constexpr const char* kThemeGrammarReason = "must name a theme";
 
-// A CANONICAL SIGNED INTEGER (2026-10-28, the two noise integers' shared
-// lexis, since 2026-10-29 the key's height's and the keyboard's key
-// box's, and since 2026-10-31 night the audio level's): an optional `-`,
+// A CANONICAL SIGNED INTEGER (2026-10-28, the noise's integers' shared
+// lexis — the crossfade's since the two levels went decimal 2026-11-05 — and
+// since 2026-10-29 the key's height's and the keyboard's key box's): an optional `-`,
 // then digits with no leading zero, and no `-0` — exactly what `%d` prints,
 // so the reader admits back only the writer's spelling. At most nine digits,
 // which every range below sits far inside, so the accumulation cannot
@@ -764,44 +775,65 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     return neg ? -n : n;
 }
 
-// THE audio_level GRAMMAR (architect 2026-10-31 night) — the noise_level
-// grammar's twin below: an integer in [-30, 0] dB in canonical spelling; the
-// one owner the reader, the writer, the settings editor's commit and its
-// recall, and the settings page's value list read (format_audio_level,
-// parse_audio_level; the list's 31 rows are this range in 1 dB steps, as
-// the noise's). 0 is the files as they are; the level scales the project
+// THE LEVEL GRAMMAR — `audio_level` AND `noise_level`, ONE OWNER (architect
+// 2026-11-05, the two level cases; "i plan to use stable values for both",
+// so both keys stay and persist; the two integer grammars of 2026-10-28 and
+// 2026-10-31 night, [-30, 0] in whole dB, are this one since): the value is
+// `-inf`, or a DECIMAL dB in [-60.0, 0.0] — an optional `-`, digits with no
+// leading zero but a lone `0`, then optionally `.` and EXACTLY ONE digit.
+// THE WRITER SPELLS ONE FRACTIONAL DIGIT, "0.0", "-9.0", "-60.0", and `-inf`
+// (format_level_db); THE READER ADMITS THE INTEGER SPELLING TOO, "-9", "0"
+// (parse_level_db), so a config written before the decimal loads as it is
+// and the next commit rewrites it canonical; "-0" and "-0.0" are refused
+// (zero is "0" / "0.0"), as every other spelling is. THE RANGE IS THE
+// SLIDERS' FLOOR: the case reads -60.0 at its last step and -inf below it
+// ("-60 then -inf"; the taper at AppState::ChromePress's Level kind,
+// app_state.h), and a typed value takes the same range. -inf is the
+// infinity (kLevelDbOff), the audio's mute and the noise's one off switch
+// (noise.h's head). The readers: the config's reader and writer, the
+// settings editor's two typed arms and its recall (apply_device_setting,
+// recall_setting_value), the two cases' lift (the drag persists through the
+// writer). 0.0 is the files as they are; the audio level scales the project
 // voice before the noise is summed (playback_common.h's head), so the two
 // levels together keep the sum clear of the clip and the tablet's own
 // volume sets the loudness.
-inline constexpr int kAudioLevelMinDb = -30;
-inline constexpr int kAudioLevelMaxDb = 0;
-inline constexpr const char* kAudioLevelGrammarReason =
-    "must be an integer in [-30, 0] in canonical spelling";
-std::string format_audio_level(int db);
-inline std::optional<int> parse_audio_level(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kAudioLevelMinDb || *n > kAudioLevelMaxDb)
-        return std::nullopt;
-    return n;
-}
-
-// THE noise_level GRAMMAR (architect 2026-10-28) — an integer in [-30, 0] dB
-// in canonical spelling; the one owner the reader, the writer, the settings
-// editor's commit and its recall, and the settings page's value list read
-// (format_noise_level, parse_noise_level; the list's 31 rows are this range
-// in 1 dB steps, architect 2026-10-28 night: "1 dB, 0 to -30"). 0 is the
-// files as they are, -30 a faint bed; the level is applied to the segments
-// as they lie, no equalizing (noise.h's head).
-inline constexpr int kNoiseLevelMinDb = -30;
-inline constexpr int kNoiseLevelMaxDb = 0;
-inline constexpr const char* kNoiseLevelGrammarReason =
-    "must be an integer in [-30, 0] in canonical spelling";
-std::string format_noise_level(int db);
-inline std::optional<int> parse_noise_level(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kNoiseLevelMinDb || *n > kNoiseLevelMaxDb)
-        return std::nullopt;
-    return n;
+inline constexpr double kLevelDbMin = -60.0;
+inline constexpr double kLevelDbMax = 0.0;
+inline constexpr double kLevelDbOff = -std::numeric_limits<double>::infinity();
+inline constexpr const char* kLevelGrammarReason =
+    "must be -inf or a decimal in [-60.0, 0.0] with at most one fractional "
+    "digit";
+std::string format_level_db(double db);
+inline std::optional<double> parse_level_db(std::string_view v) {
+    if (v == "-inf") return kLevelDbOff;
+    bool neg = false;
+    if (!v.empty() && v.front() == '-') {
+        neg = true;
+        v.remove_prefix(1);
+    }
+    // The integer part: digits, no leading zero but a lone `0`, at most
+    // three (the range's widest, 60, sits far inside).
+    const size_t dot = v.find('.');
+    const std::string_view whole = v.substr(0, dot);
+    if (whole.empty() || whole.size() > 3) return std::nullopt;
+    if (whole.size() > 1 && whole.front() == '0') return std::nullopt;
+    int n = 0;
+    for (const char c : whole) {
+        if (c < '0' || c > '9') return std::nullopt;
+        n = n * 10 + (c - '0');
+    }
+    // The fractional part, when present: exactly one digit.
+    int tenth = 0;
+    if (dot != std::string_view::npos) {
+        const std::string_view frac = v.substr(dot + 1);
+        if (frac.size() != 1 || frac[0] < '0' || frac[0] > '9')
+            return std::nullopt;
+        tenth = frac[0] - '0';
+    }
+    if (neg && n == 0 && tenth == 0) return std::nullopt;   // no "-0", "-0.0"
+    const double db = (neg ? -1.0 : 1.0) * (n + tenth / 10.0);
+    if (db < kLevelDbMin || db > kLevelDbMax) return std::nullopt;
+    return db;
 }
 
 // THE noise_crossfade_s GRAMMAR (architect 2026-10-28) — an integer in
@@ -1022,7 +1054,7 @@ inline bool is_last_project_name(const std::string& v) {
 // `noise/` (GuiNoise::probe composes the folder only from a name this admits),
 // and a line separator cannot be serialized. THE ABSENT FOLDER IS NOT THE
 // GRAMMAR'S: a well-shaped name whose folder does not exist LOADS, and the
-// NOISE key greys (noise.h's head). CLOSED (closed_questions.md, this its
+// NOISE case greys (noise.h's head). CLOSED (closed_questions.md, this its
 // owner): an empty `noise=` line. THE CHOICE OF SOUND FROM INSIDE THE APP is
 // the settings page's `noise` row (architect 2026-10-28 night): a value list
 // of the folders there, a tap committing the name through the typed line's
@@ -1123,7 +1155,10 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // struct's own value), `theme=default` (2026-11-05, kGuiDefaultTheme's slug),
 // `waveform_grow=1` (2026-10-31, kWaveformGrowDefaultQuarters; 1 since
 // 2026-11-04 night),
-// `audio_level=0` (2026-10-31 night, the files as they are), `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),
+// `audio_level=0.0` (2026-10-31 night, the files as they are; the decimal
+// spelling since 2026-11-05), `noise=rain`, `noise_level=-inf` (the bed off
+// on a fresh install, 2026-11-05; -9 from 2026-10-28 until then) and
+// `noise_crossfade_s=4` (2026-10-28),
 // `key_height=17` (2026-10-29; 17 W since the rebase of 2026-11-05),
 // `osk_key_w=24`, `osk_key_h=30` and `osk_font_px=12` (2026-10-29,
 // kKeyHeightDefaultW, kOskKeyWDefaultW,

@@ -364,8 +364,8 @@ struct GuiPalette {
     GuiColor list_press_fill; // a list row's fill under a standing press
     GuiColor list_press_text; // that row's text and glyph
     GuiColor clip_lamp;       // the logo lane's clip lamp, lit (THE TWO LAMPS, the logo lane block; the limiter lamp lit wears card_ground)
-    GuiColor level_audio_fill; // the AUDIO level case's fill — NO READER YET, the next brief's painter (2026-11-05)
-    GuiColor level_noise_fill; // the NOISE level case's fill — NO READER YET, the next brief's painter (2026-11-05)
+    GuiColor level_audio_fill; // the AUDIO level case's fill, Live's RangeEditField (paint_level_case, paint_handler.cpp; 2026-11-05)
+    GuiColor level_noise_fill; // the NOISE level case's fill, Live's ChosenPreListen (paint_level_case; 2026-11-05)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -1288,7 +1288,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     chrome like everything on the lane — no hit, no tooltip, no gesture.
 //     THE SEAT: by the battery, "ableton places it topmost rightmost
 //     grouping" (Live's control bar's CPU and MIDI boxes), not the band and
-//     not a stack beside NOISE (d2 declined). THEIR ROWS: the top row
+//     not a stack beside the NOISE case (d2 declined). THEIR ROWS: the top row
 //     kLogoLampDropW = 1 W BELOW the legend runs' ink top row (logo_item_y
 //     of the runs' ink rows + scaled_px(1); on the tablet 28 + 2 = 30, rows
 //     30..43 beside the cell's 28..41) — his "1 w offset too far up" against
@@ -2600,6 +2600,24 @@ inline constexpr int64_t kTooltipAutoPopMs = 5000;
 inline constexpr int kTooltipHoverSlopPx = 5;
 inline int tooltip_hover_slop_px() {
     return scaled_px(kTooltipHoverSlopPx, 1);
+}
+
+// THE LEVEL SLIDERS' TRAVEL (architect 2026-11-05, the two level cases,
+// AppState::ChromePress's Level kind): the pointer motion that carries a
+// case's travel fraction across its whole range 0..1 — kLevelTravelW = 800 W
+// through scaled_px, 1600 device px on the tablet at 200 %, 800 at 100 %;
+// the fraction per device px is 1 / level_travel_px(). A gesture length, a
+// whole W like the three thresholds above (his "round each up" of the same
+// day); floor 1, so a small scale never zeroes it. The drag is RELATIVE on
+// it — the fraction at the press plus the motion over this length, the
+// square-law taper turning it into dB (level_db_from_travel, app_state.h) —
+// so a fine level needs a long stroke and a coarse one a short one, the pen
+// covering 0 to -60 dB in about three quarters of the well's width. Its
+// one reader is the drag (GuiInputHandler::update_level_press_motion,
+// input_pointer.cpp).
+inline constexpr double kLevelTravelW = 800.0;
+inline int level_travel_px() {
+    return scaled_px(kLevelTravelW, 1);
 }
 
 // (THE HOVER FADE IS RETIRED — architect 2026-10-02: "hover is awkward with

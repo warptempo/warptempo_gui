@@ -411,9 +411,11 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // spell is on this list.
 //
 // WHAT IS DELIBERATELY ABSENT: the digits 5..9;
-// Backspace, and every letter the ladder never tests (A, E, X, Y — T
+// Backspace, and every letter the ladder never tests (A, E, W, X, Y — T
 // left the class 2026-10-28 night for the Trim Presets list's opener; W
-// left the class 2026-10-28 for the NOISE lamp's toggle; E
+// left the class 2026-10-28 for the NOISE lamp's toggle and came BACK
+// 2026-11-05 with the lamp's retirement for the band's two level cases,
+// sliders with no chord; E
 // left the class 2026-10-10 for Alt+E, the Edit title's access key, and came
 // BACK 2026-10-21 with the menu row's removal; Y
 // left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
@@ -534,12 +536,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // magnification level propagate's Ctrl and Ctrl+Alt chords and
         // Ctrl+Alt+Shift+M went with that markers column 2026-09-23.
         case GuiKeys::M: return bare;
-        // BARE `w` TOGGLES THE NOISE LAMP (architect 2026-10-28, the NOISE
-        // key's chord; GuiNoise::toggle, noise.h), in both modes: device state,
-        // admitted by the read-only allowlist and by the `h` view's. Under a
-        // standing overlay its router consumes it (the inherited rule). Every
-        // modified `w` binds nothing.
-        case GuiKeys::W: return bare;
+        // (BARE `w` TOGGLED THE NOISE LAMP 2026-10-28 to 2026-11-05; the lamp
+        // went with the band's two level cases, sliders with no chord, so
+        // every `w` is UNBOUND again — the default below, the silence of an
+        // unbound key — and the on-screen keyboard's `w` still types into an
+        // editor, text and no chord.)
         // BARE `t` OPENS THE TRIM PRESETS LIST (architect 2026-10-28 night,
         // the TRIM key's chord; GuiInputHandler::open_trim_presets), in both
         // modes: the `h` view's allowlist refuses it there (its key hidden
@@ -843,10 +844,11 @@ static_assert(chord_is_bound(GuiKeys::M, GuiInputState{}, false) &&
                                   GuiInputState{true, true, true}, false),
               "`m` binds bare only — the score viewer — and none of the "
               "seven modifier combinations spells anything");
-// `w` binds bare only — the NOISE lamp (2026-10-28) — in both modes, and no
-// modifier spells anything on it.
-static_assert(chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::W, GuiInputState{}, true) &&
+// `w` binds NOTHING in either mode (2026-11-05: the NOISE lamp's bare `w` of
+// 2026-10-28 went with the lamp, the band's two level cases carrying no
+// chord), and no modifier spells anything on it.
+static_assert(!chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::W, GuiInputState{}, true) &&
                   !chord_is_bound(GuiKeys::W,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::W,
@@ -861,8 +863,8 @@ static_assert(chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
                                   GuiInputState{false, true, true}, false) &&
                   !chord_is_bound(GuiKeys::W,
                                   GuiInputState{true, true, true}, false),
-              "`w` binds bare only — the NOISE lamp — and none of the "
-              "seven modifier combinations spells anything");
+              "`w` binds nothing — the NOISE lamp went 2026-11-05 — bare "
+              "or under any of the seven modifier combinations");
 // `r` binds bare — the RESTRICT lamp (2026-10-29) — in both modes, and the
 // render pair's two Ctrl+Alt spellings; no other modifier spells anything.
 static_assert(chord_is_bound(GuiKeys::R, GuiInputState{}, false) &&
