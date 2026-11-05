@@ -2555,6 +2555,9 @@ void GuiInputHandler::run_overview_command() {
             if (app.history_mode.active) {
                 if (clear_history_mode_focus(app.history_mode)) {
                     viewport.invalidate_all();
+                    // The stems leave with the focus in this event
+                    // (paint_marker_stems' ONE-STATE RULE, 2026-11-05).
+                    viewport.refresh_flag_cache();
                 }
             } else if (!app.selected_markers.empty() ||
                        app.last_selected_marker != -1) {

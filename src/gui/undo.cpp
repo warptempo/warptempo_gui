@@ -1123,10 +1123,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // The restored singleton needs no cue work here: its flag
                 // BRIGHTENS from the restored membership and the top-strip /
                 // full-waveform invalidates below repaint it. Its stem, which
-                // wears the flag's bright fill while selected, needs none
-                // either: the flag cache's selection fingerprint misses, its
-                // rebuild damages the strip with the waveform (selection.cpp's
-                // record), and the invalidates below cover the same rows.
+                // stands on every selected enabled marker, needs none either:
+                // the restore's sync kick below rebuilds the flag cache
+                // before any frame (the post-restore rules'
+                // replace_selection already rebuilt it once,
+                // Selection::publish_selection_change), its rebuild damages
+                // the strip with the waveform, and the invalidates below
+                // cover the same rows.
             }
         } else if (sel_size >= 2) {
             // GROUP: LAND the playhead on the restore's FOCUS (architect

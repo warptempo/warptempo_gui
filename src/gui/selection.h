@@ -28,8 +28,8 @@ struct Selection {
     // REPLACE THE WHOLE MEMBERSHIP WITH A SET, focus `focus` (2026-08-29).
     // set_single_selection's own body one arity up (the STICKY CTRL is a tool
     // posture no Selection body writes; the contract is at
-    // AppState::add_to_selection). TWO CALLERS,
-    // re-grepped 2026-09-23, in two classes. THE PASTE LANDING installs a
+    // AppState::add_to_selection). THREE CALLERS,
+    // re-grepped 2026-11-05, in three classes. THE PASTE LANDING installs a
     // set it just created: the phase-reset propagate's landing in the P column
     // (PhaseResetPropagate::land_paste_in_phase_reset_view), for which this arity
     // was added — it wrote the two fields directly until 2026-08-29, leaning
@@ -38,8 +38,13 @@ struct Selection {
     // the paste's entry gate rather than of the replace). THE UNDO RESTORE is
     // the second (apply_post_restore_rules_impl, undo.cpp): it installs the
     // TOUCHED set rather than a created one, and its own comment carries why
-    // the mutator rather than a hand-written pair. So a wholesale replace
-    // outside a Selection mutator no longer exists anywhere.
+    // the mutator rather than a hand-written pair. THE BPM FORM'S OPEN
+    // (Ctrl+B, input_key_dispatch.cpp, 2026-11-05) is the third: it keeps
+    // the span's membership and moves the focus to its first member, where
+    // a single-select and a hand re-insert stood. So a write of the
+    // membership outside a Selection mutator exists nowhere but the reorder
+    // remap (remap_marker_indices_after_reorder, which follows the same
+    // markers to their new indices).
     // `focus` must be a member (the paste hands the earliest created marker
     // and the restore the earliest touched one, the programmatic group's own
     // rule); an EMPTY set with focus -1 degenerates to clear_selection's
@@ -71,9 +76,12 @@ struct Selection {
     // drag's damage is a full-area invalidate, so the mirror's readers never
     // need the proposed value mid-drag.
     // THREE READERS. Two are the damage owner just below (called at every
-    // selection mutator): the overlay lives in the WAVEFORM but the selection
-    // mutators damage only the top strip, so a change of subject
-    // needs waveform damage to paint/erase the overlay's forward span. The
+    // selection mutator, through the publish but at the restore's sanitize):
+    // the overlay lives in the WAVEFORM but the mutators' own damage is the
+    // top strip's, and the publish's flag rebuild damages the waveform only
+    // when it runs (it refuses while loading or before the first plate), so
+    // a change of subject owns its waveform damage to paint/erase the
+    // overlay's forward span. The
     // third is the LEAD-IN LAUNCH OFFSET OWNER
     // (phase_reset_lead_in_launch_offset, defined beside this in
     // selection.cpp since 2026-08-30): a start-edge Space with a subject
@@ -97,8 +105,10 @@ struct Selection {
     // TWO routes that address another cell write it AFTER their mutator
     // returns (the walk lands on the payload through this reset, 2026-11-02;
     // the inventory is at
-    // AppState::addressed_cell). No damage of its own — every caller damages
-    // the top strip.
+    // AppState::addressed_cell). No damage of its own — every caller
+    // publishes through publish_selection_change below, but the restore's
+    // sanitize, whose one caller repaints and rebuilds the whole picture
+    // (its seat, selection.cpp).
     void seat_focus(int idx);
 
     // Damage the waveform when the overlay subject changed across a mutation.
@@ -113,13 +123,11 @@ struct Selection {
     // focus moving between resets at different frames.
     void damage_overlay_on_subject_change(std::optional<int64_t> old_subject);
 
-    // THE STEM'S SUBJECT PAIR IS DELETED (row 5, 2026-08-01). stem_subject() /
-    // damage_stem_on_subject_change() were the phase-overlay owner's twin for the
-    // selected-marker stem, because that stem was a SELECTION visual that could
-    // appear, move or vanish with no other repaint. The stem is the
-    // selection's again since 2026-11-05 (render.h's THE STATES), and it
-    // rides the flag cache's selection fingerprint, whose rebuild stages the
-    // stem stash and damages the waveform with the strip
-    // (maybe_rebuild_flag_cache, waveform_cache.cpp) — no mutator here owes
-    // stem damage. The overlay owner above stands.
+    // PUBLISH A SELECTION CHANGE — the ONE tail of every mutator above that
+    // writes the membership or the focus (the contract is at the definition,
+    // selection.cpp): the top strip's damage, the overlay owner above, and
+    // the flag cache's rebuild IN THE SAME EVENT (Viewport::refresh_flag_cache),
+    // so the selection stem and the playhead's landing paint together.
+    // `old_subject` is phase_overlay_subject() captured before the write.
+    void publish_selection_change(std::optional<int64_t> old_subject);
 };

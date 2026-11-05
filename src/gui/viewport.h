@@ -351,9 +351,12 @@ struct Viewport {
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
     // THE MARKER DRAG RELEASE'S SEAM (2026-09-14; the rule
-    // is at MarkerDragOps::commit_drag's tail), and a True Colors flip's
+    // is at MarkerDragOps::commit_drag's tail), a True Colors flip's
     // that leaves the plate's inks alone (the apply shape at
-    // install_true_colors' declaration, render.h).
+    // install_true_colors' declaration, render.h), and every same-event
+    // rebuild of the stems' ONE-STATE RULE — the selection's publish among
+    // them (2026-11-05; the inventory is at
+    // GuiPaintHandler::paint_marker_stems, paint_handler.cpp).
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the
     // synchronous plate rebuild's tail and the tick run, with no plate render.
@@ -790,7 +793,8 @@ struct Viewport {
     // invalidate_waveform_area in 2026-07-30 and then deleted outright with
     // Selection's stem subject pair; the selection stem (2026-11-05) rides
     // the flag cache's selection fingerprint, whose rebuild damages the
-    // waveform.)
+    // waveform — run in the selecting event itself by every Selection
+    // mutator's publish, Selection::publish_selection_change.)
     void invalidate_top_strip();
     void invalidate_all();
     // (THE WHOLE SURFACE IS THE GUI'S GEOMETRY, the tablet's window the whole

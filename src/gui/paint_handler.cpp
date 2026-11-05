@@ -4769,25 +4769,34 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // the playhead. The scanner follows. The full sequence is the paint-order
 // block in on_redraw (build_canvas_list).
 // THE ONE-STATE RULE (architect 2026-11-04, after the drag's stutter on his
-// glass): THE STEM AND THE LINE ALWAYS AGREE WITHIN ONE PAINTED FRAME
-// where they stand together — a selected marker the playhead rides, a drag
-// or a position nudge moving both. The stem is laid out at the marker
-// position THE FRAME PAINTS THE CHIP AT — the stash is the flag cache's,
-// staged by the rebuild that drew the blitted surface and promoted with it
-// at the frame's top (on_redraw), so stem and chip are one state by
-// construction — and the line's position is the live cursor's. So EVERY
-// WRITE THAT MOVES A MARKER AND THE CURSOR TOGETHER REBUILDS THE FLAG CACHE
-// IN THE SAME EVENT, before any frame can paint
-// (Viewport::refresh_flag_cache, fingerprint-guarded): the drag's
-// per-motion ride (marker_drag.cpp's apply), its release (commit_drag), the
-// position nudge's tail (position_nudge.cpp), and every write that kicks
-// the synchronous plate rebuild, whose tail rebuilds the flags
+// glass; the selection's half 2026-11-05, after his blink, "saw the blink
+// twice in about a dozen or two selects"): THE STEM AND THE LINE ALWAYS
+// AGREE WITHIN ONE PAINTED FRAME where they stand together — a selected
+// marker the playhead rides, a select that lands the playhead on its
+// marker, a drag or a position nudge moving both. The stem is laid out at
+// the marker position THE FRAME PAINTS THE CHIP AT, on the members THE
+// FRAME PAINTS SELECTED — the stash is the flag cache's, staged by the
+// rebuild that drew the blitted surface and promoted with it at the frame's
+// top (on_redraw), so stem and chip are one state by construction — and
+// the line's position is the live cursor's. So EVERY WRITE THAT CHANGES
+// WHAT THE STEM SHOWS REBUILDS THE FLAG CACHE IN THE SAME EVENT, before any
+// frame can paint (Viewport::refresh_flag_cache, fingerprint-guarded, no
+// plate render): every Selection mutator's publish
+// (Selection::publish_selection_change, selection.cpp — the chip tap's
+// select runs it before its land), the `h` view's focus and selection
+// writes beside their landings (focus_history_diff_flag,
+// select_history_diff_flags_modified, cycle_history_diff_flag_focus and the
+// view's clears that move the playhead), the drag's per-motion ride
+// (marker_drag.cpp's apply), its release (commit_drag), the position
+// nudge's tail (position_nudge.cpp), and every write that kicks the
+// synchronous plate rebuild, whose tail rebuilds the flags
 // (kick_waveform_sync). A cursor move alone changes no stem. Nothing is
-// debounced or deferred.
+// debounced or deferred; the tick's rebuild stays as the belt.
 // DAMAGE: no site of its own. The stash changes only with the flag cache's
 // rebuild — the selection is a field of its fingerprint
 // (FlagCache::fp_selection_hash, the `h` view's focus and selection beside
-// it), so a selection change rebuilds it — and that rebuild damages the
+// it), and the selection's writers run the rebuild in their own event (the
+// rule above) — and that rebuild damages the
 // window's rows from the viewport's lanes through the waveform area's foot
 // (maybe_rebuild_flag_cache's tail, damage_window_top_rows), which holds
 // every cell a stem stands on (the canvas's rows, and the lane's last row

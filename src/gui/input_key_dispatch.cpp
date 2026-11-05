@@ -2094,6 +2094,12 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     clear_history_mode_focus(app.history_mode);
     app.history_mode.focus      = there.flag;
     app.history_mode.focus_half = there.half;
+    // THE STEMS IN THIS EVENT (2026-11-05, paint_marker_stems' ONE-STATE
+    // RULE): the mode's focus and selection are the diff lane's selected
+    // look, its stems among it, so the flag cache is rebuilt here, before the
+    // land below can paint the playhead beside the old stems
+    // (Viewport::refresh_flag_cache, fingerprint-guarded).
+    viewport.refresh_flag_cache();
     // Every branch that reaches here lands, through the movement owner.
     land_playhead_on_domain_frame(
         app, audio, viewport,
@@ -2530,6 +2536,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // emits on a focus move.
         if (clear_history_mode_focus(app.history_mode)) {
             viewport.invalidate_all();
+            // The stems leave with the focus in this event (paint_marker_stems'
+            // ONE-STATE RULE, 2026-11-05), before the playhead moves.
+            viewport.refresh_flag_cache();
         }
         // The ACTIVE domain's own ends: live_total_frames is what the displayed
         // timeline runs to in either view, and it is the same total the
@@ -8171,21 +8180,22 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // nothing and the line editor's typed character, so playback cannot
         // restart until the form closes.
         open_bpm_form(GuiBpmField::Beats);
-        // The open SINGLE-SELECTS the owner and LANDS the playhead on it —
-        // the marker lane owns the playhead (land_playhead_on_marker,
+        // The open FOCUSES the owner and LANDS the playhead on it — the
+        // marker lane owns the playhead (land_playhead_on_marker,
         // input_pointer.cpp), and the open hands the lane a new focus: the
-        // EARLIEST selected, while the focus that built this span sits
-        // wherever the multi-select click left it. The re-insert below
-        // restores the MEMBERSHIP only — std::set::insert leaves
-        // last_selected_marker alone — so the focus stays `owner`. NOTHING
+        // EARLIEST selected (`owner` is the set's first member,
+        // bpm_sweep_plan), while the focus that built this span sits
+        // wherever the multi-select click left it. THE MEMBERSHIP STAYS THE
+        // SPAN'S, through the whole-set replace (2026-11-05): a single-select
+        // followed by a hand re-insert of the members stood here, and once
+        // the select published its stems in the same event (the ONE-STATE
+        // RULE, paint_marker_stems) the frame between would have shown the
+        // owner's stem alone and the members' a tick late. NOTHING
         // re-derives a region here (the extent re-derive died with the SPAN
         // FORM, architect 2026-07-30): the group's cue is its members'
-        // brightened flags plus the visible cursor on `owner`. No second
-        // land.
-        selection.set_single_selection(owner);
+        // stems plus the visible cursor on `owner`. No second land.
+        selection.replace_selection(span_selection, owner);
         land_playhead_on_marker(app, audio, viewport, owner);
-        // The open's whole-window damage covers the strip.
-        for (int s : span_selection) app.selected_markers.insert(s);
         return true;
     }
 

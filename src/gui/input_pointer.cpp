@@ -2688,6 +2688,9 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
         if (clear_history_mode_focus(app.history_mode)) {
             // A discrete command: full-window damage for the face swap.
             viewport.invalidate_all();
+            // The stems leave with the focus in this event (paint_marker_stems'
+            // ONE-STATE RULE, 2026-11-05), before the playhead moves.
+            viewport.refresh_flag_cache();
         }
         const int64_t sample = place_playhead_at_click_column(x - area.x);
         if (sample >= 0) arm_region_drag_at(x - area.x, x, y);
@@ -3391,9 +3394,10 @@ void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
     // and the drag it may become is an ordinary singleton drag. The clicked
     // marker takes THE SELECTED LOOK here (its stem, render.h's THE STATES;
     // the land below puts the playhead on its frame, the focus's mark)
-    // — set_single_selection damages the top strip,
-    // and the flag cache's rebuild on the selection's fingerprint damages
-    // the waveform with it, so no stem work is owed.
+    // — set_single_selection publishes the change, the flag cache rebuilt
+    // IN THIS EVENT with the waveform's damage
+    // (Selection::publish_selection_change), so the new stem and the land's
+    // playhead paint in one frame and no stem work is owed here.
     selection.set_single_selection(hit);
     // THE LAND IS THE MOVEMENT OWNER HERE, as it is on the modified arms.
     land_playhead_on_marker(app, audio, viewport, hit);
@@ -5762,6 +5766,9 @@ void GuiInputHandler::run_nav_click_act(int press_x, bool history,
             // A discrete command: full-window damage for the face swap, the
             // mode's placement-press shape.
             viewport.invalidate_all();
+            // The stems leave with the focus in this event (paint_marker_stems'
+            // ONE-STATE RULE, 2026-11-05), before the playhead moves.
+            viewport.refresh_flag_cache();
         }
         place_playhead_at_click_column(press_x - area.x);
         return;
@@ -7473,6 +7480,12 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
         app.history_mode.focus      = hit;
         app.history_mode.focus_half = half;
     }
+    // THE STEMS IN THIS EVENT (2026-11-05, paint_marker_stems' ONE-STATE
+    // RULE): the mode's focus and selection are the diff lane's selected
+    // look, its stems among it, so the flag cache is rebuilt here, before the
+    // land below can paint the playhead beside the old stems
+    // (Viewport::refresh_flag_cache, fingerprint-guarded).
+    viewport.refresh_flag_cache();
     if (app.history_mode.focus >= 0) {
         // THE CUE THE PRESS HIT is the landing (a nudged pair's two cues each
         // their own, 2026-10-26).
@@ -7540,6 +7553,12 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit,
     }
     app.history_mode.focus      = hit;
     app.history_mode.focus_half = half;
+    // THE STEMS IN THIS EVENT (2026-11-05, paint_marker_stems' ONE-STATE
+    // RULE): the mode's focus and selection are the diff lane's selected
+    // look, its stems among it, so the flag cache is rebuilt here, before the
+    // land below can paint the playhead beside the old stems
+    // (Viewport::refresh_flag_cache, fingerprint-guarded).
+    viewport.refresh_flag_cache();
     land_playhead_on_domain_frame(
         app, audio, viewport,
         history_diff_flag_landing_domain_frame(

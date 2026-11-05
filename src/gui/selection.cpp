@@ -93,19 +93,40 @@ void Selection::damage_overlay_on_subject_change(
     viewport.invalidate_waveform_area();
 }
 
-// THE SELECTED-MARKER STEM'S DAMAGE PAIR IS DELETED (row 5, 2026-08-01).
-// stem_subject() named the SINGLETON selection's frame and
-// damage_stem_on_subject_change() paid one full waveform-area invalidate
-// whenever that frame changed — the whole apparatus existed because the stem
-// was a SELECTION cue that could appear, move or vanish with no other repaint
-// (a collapse that then refuses, a membership toggle across the 1<->2 line).
-// Every enabled marker stems, always, so a selection change moves no stem. It
-// does RECOLOUR one (architect 2026-09-23: a selected marker's stem wears its
-// flag's bright fill), and that repaint is not the mutators' to owe: the flag
-// cache's selection fingerprint misses, the rebuild republishes the stash, and
-// its own damage covers the waveform with the strip (maybe_rebuild_flag_cache,
-// waveform_cache.cpp). The phase-overlay pair above is untouched — its subject
-// really is the focus.
+// PUBLISH A SELECTION CHANGE (architect 2026-11-05, his blink: "saw the
+// blink twice in about a dozen or two selects"). A SELECTION CHANGE MOVES THE
+// STEMS: since 2026-11-05 the stem is the selection's (render.h's THE STATES;
+// MarkerStem published per selected enabled cue by the flag cache's
+// rebuild), so a select takes the stem off the old members and stands it on
+// the new. The mutators' own damage stays the top strip's plus the overlay
+// owner's above; the WAVEFORM damage and the stem stash are the flag cache
+// rebuild's (maybe_rebuild_flag_cache, waveform_cache.cpp: the selection and
+// the focus are its fingerprint's fp_selection_hash, and its tail damages
+// the viewport's lanes through the waveform's foot). That rebuild ran only at
+// the tick until this helper, and a select that lands the playhead in the
+// same event (land_playhead_on_marker, the chip tap's road) damaged a frame
+// that could paint BEFORE the tick: the playhead's line on the newly
+// selected marker with the old stems still standing, the new stem a frame
+// late — the blink. So this runs the rebuild IN THE SAME EVENT
+// (Viewport::refresh_flag_cache, fingerprint-guarded, no plate render), the
+// ONE-STATE RULE at paint_marker_stems (paint_handler.cpp): the stash holds
+// the new selection's stems before the event returns, whatever it paints
+// next, and the stem and the landing paint together. Publishing before the
+// caller's land is correct: the stem's column is the marker's, never the
+// playhead's. A later write in the same event that moves a fingerprint
+// field (a camera move's synchronous plate rebuild, whose tail rebuilds the
+// flags) rebuilds again before the frame; the fingerprint makes a repeat
+// with nothing moved free.
+// EVERY MUTATOR THAT WRITES THE MEMBERSHIP OR THE FOCUS ENDS HERE —
+// set_single_selection, replace_selection, clear_selection,
+// collapse_to_focused, toggle_selection_membership and
+// repair_last_selected (cycle_selection through set_single_selection) — but
+// sanitize_selection_after_restore, whose seat says why.
+void Selection::publish_selection_change(std::optional<int64_t> old_subject) {
+    viewport.invalidate_top_strip();
+    damage_overlay_on_subject_change(old_subject);
+    viewport.refresh_flag_cache();
+}
 
 void Selection::repair_last_selected() {
     if (app.last_selected_marker < 0) return;
@@ -117,9 +138,12 @@ void Selection::repair_last_selected() {
     // waveform repaint — bare Return routes here and, in P view, returns
     // before the warp-only editor with no waveform damage, and `c`'s recenter
     // can be a no-op at an already-centered rest — so own the overlay repaint
-    // here like every other focus-writing mutator. When reached from
-    // toggle_selection_membership this double-fires with that mutator's own pair,
-    // harmlessly (both damage the same subject change, a benign damage-union).
+    // here like every other focus-writing mutator, through the one publish
+    // (publish_selection_change, whose flag rebuild a standalone repair —
+    // bare Return, `c` — needs as much as any select). When reached from
+    // toggle_selection_membership this double-fires with that mutator's own
+    // publish, harmlessly (the same damage, a benign damage-union, and the
+    // second rebuild a fingerprint hit).
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     if (app.selected_markers.empty()) {
         seat_focus(-1);
@@ -128,7 +152,7 @@ void Selection::repair_last_selected() {
         // if empty).
         seat_focus(*app.selected_markers.rbegin());
     }
-    damage_overlay_on_subject_change(old_subject);
+    publish_selection_change(old_subject);
 }
 
 // The contract is at the declaration. The addressed cell is reset here and
@@ -148,27 +172,24 @@ void Selection::set_single_selection(int idx) {
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     seat_focus((idx >= 0) ? idx : -1);
-    viewport.invalidate_top_strip();
-    // ONE DAMAGE OWNER, THE TOP STRIP, since 2026-08-29: a selection change
+    // THE TOP STRIP, NOT THE BOTTOM ROW, since 2026-08-29: a selection change
     // moves nothing on the bottom row any more. It used to damage that row's
     // state lane too, for the RESOLVED READOUT that showed the last-selected
     // marker's value there, and that readout retired whole with the one-day
     // status bar — the state cell carries only the two progress-class strings,
-    // which no selection writes. The flags' own selected/unselected colour swap
-    // rides the top-strip damage above (through the flag cache's selection
-    // fingerprint).
-    damage_overlay_on_subject_change(old_subject);
+    // which no selection writes. The chips and the stems ride the publish's
+    // same-event flag rebuild.
+    publish_selection_change(old_subject);
 }
 
 // The whole-set replace (contract at the declaration): set_single_selection's
-// body one arity up, with the same damage — one chokepoint for a replace made
+// body one arity up, with the same publish — one chokepoint for a replace made
 // programmatically.
 void Selection::replace_selection(std::set<int> members, int focus) {
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.selected_markers   = std::move(members);
     seat_focus(app.selected_markers.count(focus) ? focus : -1);
-    viewport.invalidate_top_strip();
-    damage_overlay_on_subject_change(old_subject);
+    publish_selection_change(old_subject);
 }
 
 void Selection::clear_selection() {
@@ -177,9 +198,9 @@ void Selection::clear_selection() {
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.selected_markers.clear();
     seat_focus(-1);
-    viewport.invalidate_top_strip();
-    // Clearing the focus erases any overlay it annotated (subject frame -> none).
-    damage_overlay_on_subject_change(old_subject);
+    // Clearing the focus erases any overlay it annotated (subject frame ->
+    // none), and the stems with the membership.
+    publish_selection_change(old_subject);
 }
 
 void Selection::collapse_to_focused() {
@@ -220,14 +241,12 @@ void Selection::collapse_to_focused() {
         return;   // already exactly the focused singleton
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
-    viewport.invalidate_top_strip();
     // The phase-reset overlay's own P+target repaint rides its subject owner,
-    // which the 2+ -> 1 case here triggers. (A collapse used to owe the
-    // selected-marker stem's APPEAR a damage as well — the fine-tuning callers
-    // can collapse then REFUSE and full-invalidate nothing — but the chips
-    // and the selection stems ride the flag cache rebuild's waveform damage,
-    // keyed by the selection.)
-    damage_overlay_on_subject_change(old_subject);
+    // which the 2+ -> 1 case here triggers. (The fine-tuning callers can
+    // collapse then REFUSE and full-invalidate nothing, so the stems the
+    // collapse takes off the other members are the publish's flag rebuild's
+    // to repaint, in this event.)
+    publish_selection_change(old_subject);
 }
 
 bool Selection::toggle_selection_membership(int idx) {
@@ -249,10 +268,9 @@ bool Selection::toggle_selection_membership(int idx) {
         if (app.last_selected_marker == idx) repair_last_selected();
         added = false;
     }
-    viewport.invalidate_top_strip();
-    // (When repair_last_selected fired above it double-fires its own overlay
-    // damage, a benign damage-union.)
-    damage_overlay_on_subject_change(old_subject);
+    // (When repair_last_selected fired above it published already, a benign
+    // damage-union and a fingerprint hit.)
+    publish_selection_change(old_subject);
     return added;
 }
 
@@ -275,6 +293,16 @@ void Selection::sanitize_selection_after_restore(int n) {
     // this is normally redundant; it stays as the structural owner so a
     // subject-dropping restore cannot leave a stale overlay if a future path
     // sanitizes without a full redraw.
+    // NOT THROUGH publish_selection_change, the one mutator that is not
+    // (2026-11-05): its sole caller, restore_history_entry (undo.cpp), runs it
+    // MID-RESTORE — the stores replaced, the audio-view switch and the
+    // landing still to come — and that body's tail invalidates the window's
+    // rows and kicks the synchronous plate rebuild, whose tail rebuilds the
+    // flag cache before any frame paints. A rebuild here would read a basis
+    // that restore is about to move, and the frame waits for the tail's.
+    // (The post-restore rules' replace_selection / clear_selection just
+    // before it on that road do publish: one redundant flag rebuild per
+    // restore, the price of a mutator that never asks who called it.)
     damage_overlay_on_subject_change(old_subject);
 }
 
