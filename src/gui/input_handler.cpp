@@ -3441,6 +3441,17 @@ void GuiInputHandler::apply_true_colors(bool on) {
     viewport.invalidate_all();
 }
 
+void GuiInputHandler::apply_theme(const GuiTheme& theme) {
+    // The apply shape is at install_palette's declaration (render.h):
+    // install_true_colors' two caches, for the same reason.
+    const WaveformPlateInks before = waveform_plate_inks();
+    install_palette(theme);
+    icons::drop_rasters();
+    if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
+    else                                 viewport.refresh_flag_cache();
+    viewport.invalidate_all();
+}
+
 void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     // The contract — sole writer, band resolved by tab, damage only when the
     // named band is the active one, history-less — is at the declaration

@@ -6,10 +6,10 @@
 #include "gui_font.h"
 #include "text_shape.h"
 #include "theme_file.h"
-#include "palette_file.h"   // kGuiPaletteRoles
+#include "palette_file.h"   // kGuiPaletteRoles (the program's roles)
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
-#include "chrome_derive.h"  // live_chrome_words (the chrome's roles)
-#include "materials.h"      // the flat look's ground, key and text tones
+#include "theme_file.h"     // kGuiThemeRoles (the chrome's roles)
+#include "materials.h"      // paint_key, KeyLook
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -284,7 +284,7 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
 // THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; flat
 // since 2026-11-01 night; the rule and its row at render.h's
 // waveform_divider, the one geometry owner): across the area's columns, ONE
-// ROW OF THE GROUND (the palette's `face`, kGround) cut to the area's rows —
+// ROW OF THE GROUND (the palette's `face`, `ground`) cut to the area's rows —
 // CHROME ON THE CANVAS, painted through the sink so the GL canvas draws it
 // from its list (canvas_sink.h's head). ITS OWN PASS, AFTER THE PLATE AND THE CENTER
 // LINES and BEFORE EVERY VERTICAL LINE (build_canvas_list's order): the
@@ -928,7 +928,7 @@ void render_trim_flags(cairo_t* cr,
 
     // THE BAR (render.h's well paragraph; architect 2026-11-03, mock z2):
     // under the lane's first row of ground (the caller's), THE FILL'S ROWS
-    // (trim_bar_fill_h_px) a FLAT kTrimBarFace across the well's columns,
+    // (trim_bar_fill_h_px) a FLAT `trim_bar_face` across the well's columns,
     // NO FRAME; the bar's last row the caller's
     // ground too (paint_trim erases the whole lane first), the one-W line
     // between the bar and the ruler, nothing painted over it here.
@@ -939,7 +939,7 @@ void render_trim_flags(cairo_t* cr,
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     if (fill_h > 0)
         paint_cell_rect(cr, GuiRect{lane_x, bar_y, lane_w, fill_h},
-                        hex(kTrimBarFace));
+                        palette().trim_bar_face);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
@@ -953,7 +953,7 @@ void render_trim_flags(cairo_t* cr,
     // spanning the view fills the bar end to end; a side lying farther off
     // than one hairline is held there, outside the clip, so the rect stays in
     // cairo's range at any zoom): A
-    // FLAT kTrimSpanFace FILL on the fill's rows, no outline of its own
+    // FLAT `trim_span_face` FILL on the fill's rows, no outline of its own
     // (architect 2026-11-03, mock z2). NO PLAYHEAD IN THE BAR (architect
     // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
     const int span_lo = std::max(bc.col, -px);
@@ -961,7 +961,7 @@ void render_trim_flags(cairo_t* cr,
     if (span_hi > span_lo && fill_h > 0)
         paint_cell_rect(cr, GuiRect{lane_x + span_lo, bar_y,
                                     span_hi - span_lo, fill_h},
-                        hex(kTrimSpanFace));
+                        palette().trim_span_face);
 
     // THE GRABS, as painted: the span's two end zones and the body between
     // them (render.h's view_bar_grab_w_px, trim_endcap_rect,
@@ -1305,7 +1305,7 @@ enum class GuiFlagSide { Live, Added, Removed };
 // STEM ENTRY (every selected enabled cue, MarkerStem: the stem is the
 // selection's), and whether its label is STRUCK (show_cue_label's bar). The
 // label's other look is the segment's own (inert, or the text tone,
-// materials.h's kTextInk); the selection never reaches it.
+// materials.h's `text`); the selection never reaches it.
 struct FlagFace {
     GuiColor fill;
     GuiColor outline;
@@ -1359,7 +1359,7 @@ struct FlagFace {
 // cells — wears it, one look for inert cue text, selected or not. A
 // DISABLED STRUCK CUE — the red set counts disabled rows
 // (warp_red_flag_set_cached's (3)) — is the grey chip with its inactive
-// label struck. "Text tone" is materials.h's kTextInk B5B5B5, the words'
+// label struck. "Text tone" is materials.h's `text` (Default's B5B5B5), the words'
 // and the flags' one ink — every label on the lane's face with no fill,
 // selected or not.
 FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
@@ -1567,14 +1567,14 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         // whatever its state: A SELECTED SEGMENT TAKES NO FILL and no ink of
         // its own (architect 2026-11-02, render.h's THE STATES).
         // THE BOX IS THE LANE'S FLAT FACE (2026-10-29; Live's 2A2A2A since
-        // 2026-11-03, materials.h's kLaneFace), the one color of every
+        // 2026-11-03, materials.h's `lane_face`), the one color of every
         // pixel of the lane, so the box masks earlier text exactly.
         {
             for (const auto& sp : spans)
                 paint_cell_rect(cr,
                                 GuiRect{sp.first, lane.y, sp.second - sp.first,
                                         fill_h},
-                                hex(kLaneFace));
+                                pal.lane_face);
         }
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
@@ -1584,7 +1584,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             // label or the text tone, selected or not; a struck segment's
             // bar in the same ink (show_cue_label).
             show_cue_label(cr, *s.run, tx, base,
-                           s.inert ? pal.inactive_cue : hex(kTextInk),
+                           s.inert ? pal.inactive_cue : pal.text,
                            s.struck);
         }
         cairo_restore(cr);
@@ -2269,6 +2269,9 @@ namespace {
     // before the window exists (the gui_scale shape).
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
+    // The installed theme's row (installed_theme, render.h): the Default row
+    // until the first install, so the word readers never dereference nothing.
+    const GuiTheme*   g_theme = &kGuiThemes[kGuiDefaultTheme];
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
@@ -2283,38 +2286,30 @@ GuiColor surface_text(GuiSurface surface) {
     return pal.label;
 }
 uint64_t palette_generation() { return g_palette_generation; }
+const GuiTheme& installed_theme() { return *g_theme; }
 WaveformPlateInks waveform_plate_inks() {
-    // The window's words (the struct's declaration, render.h).
-    return WaveformPlateInks{display_transform::display_rgb(kPaletteInk),
-                             display_transform::display_rgb(kPaletteCore)};
+    // The window's words (the struct's declaration, render.h), the installed
+    // theme's two tones.
+    const GuiThemeTones& t = installed_theme().tones;
+    return WaveformPlateInks{display_transform::display_rgb(t.waveform_ink),
+                             display_transform::display_rgb(t.waveform_core)};
 }
 
-namespace {
-// THE PROGRAM'S ELEVEN into the installed struct (palette_file.h's role
-// table) — the install's first half (the chrome's members are the other's)
-// — with THE PANEL'S FACE THE FLAT GROUND (materials.h's kGround, the flat
-// look, 2026-11-01).
-void fill_program_palette() {
+void install_palette(const GuiTheme& theme) {
+    // The contract and the apply shape the live caller owes are at the
+    // declaration (render.h). THE PROGRAM'S ELEVEN off the palette's role
+    // table (palette_file.h), THE CHROME'S TWENTY-TWO off the chrome's
+    // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
+    // theme's ground (the flat look, materials.h's head) — the tables
+    // covering the struct exactly (palette_file.cpp), so a role cannot be
+    // valued and not painted; the row kept for the word readers
+    // (installed_theme).
+    g_theme = &theme;
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
-        g_palette.*(r.member) = hex(r.word);
-    g_palette.face = hex(kGround);
-}
-// THE CHROME'S MEMBERS (live_chrome_words, chrome_derive.h: the flat look's
-// constants) — the install's other half.
-void fill_chrome_palette() {
-    const GuiThemeWords w = live_chrome_words();
-    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
-        g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
-}
-} // namespace
-
-void install_palette() {
-    // The program's fields off the palette's constants, then the chrome's
-    // off the flat ground (live_chrome_words, chrome_derive.h, which never
-    // misses), the tables covering the struct exactly (palette_file.cpp), so
-    // a role cannot be valued and not painted.
-    fill_program_palette();
-    fill_chrome_palette();
+        g_palette.*(r.member) = hex(theme.tones.*(r.tone));
+    for (const GuiThemeRole& r : kGuiThemeRoles)
+        g_palette.*(r.member) = hex(theme.tones.*(r.tone));
+    g_palette.face = hex(theme.tones.ground);
     ++g_palette_generation;
 }
 
@@ -2620,21 +2615,21 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE FIELD IS AN EDIT FIELD (architect 2026-10-09 ~12:15, reversing
     // 2026-10-07 ~09:45's "the flag in its selected face, no box and no
     // frame"; its look 2026-11-01 night, M5g: "the box's tones as mocked"):
-    // THE GROUND kGround 242424 inside a kTextInk B5B5B5 outline, the text
+    // THE GROUND `ground` (Default's 242424) inside a `text` (Default's B5B5B5) outline, the text
     // and the caret the chrome's `field_text` (the text tone) — on every
     // state of the marker, disabled included (the chip carries the
     // state). WHY: the field is the legibility guarantee ("when you're
     // looking very closely at a label it has to be legible"), and THE
     // SELECTED SUBSTRING takes the chrome's SELECTED PAIR, `selected_text`
     // 111111 on `selected_fill` 637E86 (Live's browser selection,
-    // materials.h's kSelectionFill / kSelectionText), the ordinary highlight
+    // materials.h's `selection_fill` / `selection_text`), the ordinary highlight
     // — the pair that exists "precisely to avoid this problem" — part of the
     // chrome, as every selection in the product is. A COINCIDENT
     // MARKER'S FIELD IS THE SAME FIELD, its text and caret the field's own,
     // unstruck; `struck` marks its riding segments alone.
     const GuiPalette& pal = palette();
-    const GuiColor field_fill    = hex(kGround);
-    const GuiColor field_outline = hex(kTextInk);
+    const GuiColor field_fill    = pal.ground;
+    const GuiColor field_outline = pal.text;
     const GuiColor field_ink     = pal.field_text;
     const GuiColor sel_fill   = pal.selected_fill;
     const GuiColor sel_text   = pal.selected_text;
@@ -2651,7 +2646,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    segment's box — its run and the fill's pad either side, the text
     //    standing exactly where the resting label's does — with THE
     //    EDITOR'S OUTLINE (render.h's cue_editor_outline_px, one W, 2 device
-    //    px on the tablet) in kTextInk round it, outside the pads on the left and
+    //    px on the tablet) in `text` round it, outside the pads on the left and
     //    right and on the lane's first and last outline rows, the ground
     //    inside. IT PAINTS OVER THE LANE — the
     //    triangle's right edge and any neighbouring label it reaches
@@ -2878,7 +2873,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const int x0 = cursor_x + gap;
             const int w  = pad_l + seg_w + pad_r;
             // The face box over the gap and the segment, as the resting
-            // label's one box covers its gaps — the lane's flat kLaneFace
+            // label's one box covers its gaps — the lane's flat `lane_face`
             // (paint_cues' box) through the well's columns, the ground past
             // them (the run is not clipped, so a ride near the right edge
             // reaches the margin).
@@ -2887,7 +2882,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const int lane1 = std::clamp(well_end, fx, std::max(fx, fx1));
             if (lane1 > fx)
                 paint_cell_rect(cr, GuiRect{fx, lane.y, lane1 - fx, fill_h},
-                                hex(kLaneFace));
+                                pal.lane_face);
             if (fx1 > lane1)
                 paint_cell_rect(cr, GuiRect{lane1, lane.y, fx1 - lane1, fill_h},
                                 pal.face);
@@ -2896,7 +2891,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             // tone (resolve_flag_face's table; materials.h's text tones),
             // struck on a coincident marker.
             show_cue_label(cr, seg_run, tx, baseline,
-                           cell_dis ? pal.inactive_cue : hex(kTextInk),
+                           cell_dis ? pal.inactive_cue : pal.text,
                            struck);
             cursor_x = x0 + w;
         };

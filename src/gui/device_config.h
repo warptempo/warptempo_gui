@@ -1,6 +1,7 @@
 #pragma once
 
 #include "failure.h"
+#include "theme_tables.h"   // kGuiThemes, find_gui_theme: the `theme` key's grammar
 
 #include <cstdint>
 #include <expected>
@@ -10,7 +11,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Fourteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Fifteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -35,6 +36,35 @@
 //                            templates and both installs `on`. (The row's
 //                            toggle, 2026-10-08..10-21, persisted nothing:
 //                            the switch was true at every launch.)
+//   theme=<slug>             THE WINDOW'S THEME (architect 2026-11-05, the
+//                            theme arc: "i'd like to implement all" — Live
+//                            12's own themes selectable WHOLE, chrome and
+//                            well together; palette_file.h's head): the
+//                            SLUG of one row of the generated theme table
+//                            (kGuiThemes, theme_tables.h, written by
+//                            tools/themes/ask_to_tables.py from Live's .ask
+//                            files — the stock seven under BUILTIN,
+//                            `default` Live's "Default Dark Neutral Medium"
+//                            and the only Default variant listed, and the
+//                            extras he drops in under EXTRA, Sonic Bloom's
+//                            today), exactly as the table spells it; any
+//                            other word the launch's hard fail
+//                            (find_gui_theme, THE ONE GRAMMAR OWNER;
+//                            kThemeGrammarReason below). REQUIRED, read at
+//                            launch to install the palette before the
+//                            window exists and applied LIVE at the settings
+//                            editor's OK and at the settings page's value
+//                            list's tap — the list under two inert group
+//                            rows, BUILTIN and EXTRA — a palette reinstall
+//                            and a whole repaint, no card (the apply shape,
+//                            GuiInputHandler::apply_theme); the template
+//                            spells `default`. A config from before the key
+//                            stops the startup on the missing line, as
+//                            every joined key's did (no migration; the sync
+//                            script's setup adds the line on the tablet).
+//                            (A `theme` key of another meaning — a chrome
+//                            theme file read at launch — stood
+//                            2026-10-03..10-08, THE COLOUR KEYS below.)
 //   waveform_grow=<px>       THE WAVEFORM PLATE'S GROW (architect
 //                            2026-10-31; the rule at render.h's
 //                            kWaveformSubcells, the plate shader's GROW,
@@ -287,7 +317,8 @@
 // three 2026-10-31 night, the two voices' levels read together, audio out
 // then the noise; `waveform_column_px` appended at the end and gone within
 // 2026-11-01, `waveform` gone 2026-11-01, `true_colors` after
-// `last_project` since);
+// `last_project` since; `theme` placed after `true_colors` 2026-11-05, the
+// display keys together — true_colors, theme, waveform_grow);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -410,9 +441,12 @@
 // read at launch from a themes folder beside this file (the imported
 // catalog shipped as bundled files, copied in at every launch), absent the
 // chrome's own, with a Settings row; every chrome's colors are compiled in
-// since (theme_file.h), and the program's own colors are one compiled-in
-// palette (palette_file.h). A config still carrying `theme=` is unknown-key fatal, no
-// migration (neither install's carried one).
+// since (theme_file.h), and the program's own colors were one compiled-in
+// palette (palette_file.h) until 2026-11-05. THE `theme` KEY IS BACK WITH
+// ANOTHER MEANING since 2026-11-05 (the head's list): not a file read at
+// launch but the slug of a compiled row — Live 12's own themes, chrome and
+// well together (palette_file.h's head); an old `theme=` line that names no
+// row of the table is the ordinary bad-value hard fail.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -426,7 +460,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fourteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fifteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
@@ -459,7 +493,7 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `true_colors`, since 2026-10-31 `waveform_grow` and
+// `true_colors`, since 2026-11-05 `theme`, since 2026-10-31 `waveform_grow` and
 // `audio_level`, since 2026-10-28 `noise`, `noise_level`
 // and `noise_crossfade_s` and since 2026-10-29 the tuning keys `key_height`,
 // `osk_key_w` and `osk_key_h` and that night `osk_font_px` among them
@@ -492,8 +526,9 @@
 // The key is still REQUIRED in every case: the file admits no absent state,
 // only an empty VALUE.
 //
-// The members are in the writer's order. (No key names a color: the palette
-// is one, compiled in, palette_file.h, architect 2026-11-01.)
+// The members are in the writer's order. (No key names a color: `theme`
+// names a compiled theme by its slug, every color that theme's own row,
+// palette_file.h, architect 2026-11-05.)
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
@@ -502,6 +537,11 @@ struct DeviceConfig {
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
     // templates' and the construction state's.
     bool        true_colors = true;
+    // THE WINDOW'S THEME, a slug of kGuiThemes (2026-11-05, the head's list):
+    // required; `default` the templates' and the construction state's
+    // (kGuiDefaultTheme, theme_tables.h). The string is the writer's
+    // spelling; the row is found at every read (find_gui_theme).
+    std::string theme = kGuiThemes[kGuiDefaultTheme].slug;
     // THE WAVEFORM PLATE'S GROW in quarters of a device px (2026-10-31, the
     // head's list; a permanent key): required; the construction state is
     // the template's 1 (kWaveformGrowDefaultQuarters below, 2026-11-04
@@ -690,6 +730,14 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
     if (v == kTrueColorsOff) return false;
     return std::nullopt;
 }
+
+// THE theme GRAMMAR (2026-11-05) — a slug of the generated theme table,
+// exactly; the one owner is find_gui_theme (theme_tables.h: the row, or
+// nullptr), read by the reader, the settings editor's commit and the value
+// list's seat; the writer writes the slug verbatim and Tab completes against
+// the table's slugs (GuiSettingsEditor::value_choices). The reason is
+// spelled here beside the other keys'.
+inline constexpr const char* kThemeGrammarReason = "must name a theme";
 
 // A CANONICAL SIGNED INTEGER (2026-10-28, the two noise integers' shared
 // lexis, since 2026-10-29 the key's height's and the keyboard's key
@@ -1039,9 +1087,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves twelve keys —
+// the settings editor's ONE device-key body, which serves thirteen keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-21
-// `true_colors=`, since 2026-10-31 `waveform_grow=` (its live act
+// `true_colors=`, since 2026-11-05 `theme=` (its live act
+// GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
 // GuiInputHandler::apply_waveform_grow) and that night `audio_level=` (its
 // live act GuiPlayback::set_audio_level_db), and since 2026-10-28 the noise's three, `noise=`,
 // `noise_level=` and `noise_crossfade_s=`, and since 2026-10-29 the tuning
@@ -1071,7 +1120,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
 // a GUI one: 200 % and the external files dir's `projects/`;
 // it stamps every key, required since 2026-10-14: `true_colors=on` (the
-// struct's own value),
+// struct's own value), `theme=default` (2026-11-05, kGuiDefaultTheme's slug),
 // `waveform_grow=1` (2026-10-31, kWaveformGrowDefaultQuarters; 1 since
 // 2026-11-04 night),
 // `audio_level=0` (2026-10-31 night, the files as they are), `noise=rain`, `noise_level=-9` and `noise_crossfade_s=4` (2026-10-28),

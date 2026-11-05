@@ -52,7 +52,7 @@
 // icon and a name; glyph-less PLAIN rows, a name alone (the value list's
 // values since 2026-10-25, the settings page's key lines since 2026-10-28,
 // the trim presets since 2026-10-28 night, the BPM form's three lines since
-// 2026-10-29); and the INERT rows in the dim print (kTextDimInk), which the
+// 2026-10-29); and the INERT rows in the dim print (`text_dim`), which the
 // highlight never stands on (row_is_inert, the walk below): the page's and
 // the BPM form's GROUP rows, a heading each, and the page's DISABLED rows,
 // the `scale` and `bpm` lines (architect 2026-10-29). A LISTING IN WHICH NO ROW WEARS A GLYPH
@@ -139,7 +139,7 @@
 // pad and its row gap are one W, the line rule's (2026-11-04 night).
 //
 // THE FACES ARE LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; the
-// ladder at the painter): the box's interior is THE PANE, kPaneFace with the
+// ladder at the painter): the box's interior is THE PANE, `pane_face` with the
 // field text, a surface you pick from (modal_box.h's ONE GROUND, ONE PANE),
 // no frame round it. IT COVERS EVERY CONTENT,
 // this one widget being every

@@ -29,7 +29,7 @@
 // (modal_box.h, the geometry's one owner): the box's interior is the page,
 // SCALED TO FIT by the smaller of the two ratios and centered on both axes,
 // the rest the field ground — THE SCORE VIEWER'S PANE, 191919, the box's one
-// exception (modal_box.h's kScorePaneFace, architect 2026-11-01 night, M9
+// exception (modal_box.h's `score_pane_face`, architect 2026-11-01 night, M9
 // A2) — (paint_modal_dialog's score branch). It is the
 // sixth modal owner (AppState::ModalDialogOwner::Score), ranked with the
 // player and the picker, and NO TAB SWITCH HAPPENS UNDER IT ("just like with

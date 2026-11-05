@@ -12,6 +12,19 @@ APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1,
 (6.31.0; LGPL-3.0-or-later, the text in `assets/icons/LICENSE-LGPL-3.txt`): recolored copies of its dark theme's 22-px
 drawings written by `tools/icons/import_breeze.py`, their provenance table in `assets/icons/README.md`.
 
+## The themes
+
+The window's themes (`src/gui/theme_tables.h`, the `theme` device key) are NUMBERS: each row is a table of colors
+transcribed by `tools/themes/ask_to_tables.py` from one Ableton Live 12 theme file (`.ask`, Ableton's theme XML) through
+the derivation at that tool's head; the theme files themselves are not distributed and are not in this repository. The
+stock themes are Ableton AG's, Live 12's own (its `Resources/Themes`: Default Dark Neutral Medium, Angst Robot, Classic
+Medium Dark, Classic Medium Light, Immaterial, Riparian, Twenty-Four Carat). The extras are Sonic Bloom's two free Live 12
+theme packs, "Free Ableton Live 12 Themes #2 (Retro Style)" and "#3" (Sonic Bloom, https://sonicbloom.gumroad.com): SB
+Alabaster, SB Alluvial, SB Bronze, SB Cielo, SB Classica, SB Dash, SB Disco, SB Elegance, SB Fandango, SB Gobo, SB
+Gunmetal, SB Heliotrope, SB Kelp, SB Morea, SB Ochre, SB Onyx, SB Red Greys, SB Requisite, SB Retrograde, SB Rosequartz,
+SB Taupe, SB Umber, SB Vintage, SB Viridian — the files not distributed, their numbers credited here. The tool prints
+these credit lines at every run.
+
 ## The tablet's APK
 
 | Library | Version | Licence |

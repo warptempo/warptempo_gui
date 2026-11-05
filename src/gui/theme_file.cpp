@@ -7,8 +7,8 @@
 
 namespace {
 
-// The role table names each role once, the name its member's own, so a
-// lookup by name (theme_role_index) names one role each. AN
+// The role table names each role once, the name its member's own (the
+// table's record of what each member is, theme_file.h's head). AN
 // EXHAUSTIVE PROOF IN N LOG N: every name measured once, the names sorted,
 // no two neighbours equal (the form that held clang's default constexpr step
 // budget on the NDK's compiler when the table carried 322 roles, 2026-10-07).

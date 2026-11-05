@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render.h"           // GuiRect, GuiColor, the chokepoints
+#include "render.h"           // GuiRect, GuiColor, palette(), the chokepoints
 
 #include <cairo/cairo.h>
 #include <cstdint>
@@ -8,31 +8,42 @@
 // THE MATERIALS — THE FLAT LOOK (architect 2026-11-01, reversing the hi-fi
 // panel of 2026-10-23: "whatever ruling it needs to, we need to reverse to go
 // flat"; Live's grammar, every number measured on his Live 12 shots at
-// 100 %). This header is the one owner of the ground, the key, the lit fill,
-// the text tones, the well's tones and the pane.
+// 100 %). This header is the one owner of the ground's, the key's, the lit
+// fill's, the text tones', the well's tones' and the pane's RULES; THEIR
+// NUMBERS ARE THE INSTALLED THEME'S since 2026-11-05 (the theme arc: Live
+// 12's own themes selectable whole through the `theme` device key,
+// palette_file.h's head) — every painter reads palette()'s member for the
+// role (render.h's GuiPalette; the chrome's role table, theme_file.h), and
+// every number quoted below is DEFAULT'S, Live's "Default Dark Neutral
+// Medium", with the Live role it comes from (the derivation,
+// theme_tables.h's head). The constants that held them (kGround, kKeyFace,
+// kTextInk and the rest, 2026-11-01..05) are retired: nothing outside the
+// installed palette names a color.
 //
-// THE GROUND IS ONE FLAT COLOR, kGround 242424, everywhere outside the well's
-// regions and the keys: the band and its logo lane, row 8, the well's side
-// margins and its rows of ground (the ruler's and the marker lane's foot
-// lines, the stereo divider, the row above the trim bar and the row under
-// the canvas, each one W, render.h's hairline_px), the gaps between keys, the
-// on-screen keyboard's band, the modal family's controls row.
+// THE GROUND IS ONE FLAT COLOR, `ground` — Default's 242424 (SurfaceArea) —
+// everywhere outside the well's regions and the keys: the band and its logo
+// lane, row 8, the well's side margins and its rows of ground (the ruler's
+// and the marker lane's foot lines, the stereo divider, the row above the
+// trim bar and the row under the canvas, each one W, render.h's
+// hairline_px), the gaps between keys, the on-screen keyboard's band, the
+// modal family's controls row.
 // NO BAKE, NO GRAIN, NO GRADIENT, NO LINE, NO BEVEL, NO SHADOW: every pixel
 // of the ground is a solid fill through the palette's chokepoint
 // (set_palette_source, render.h), which converts it for the window as it
 // converts every color (display_color), so True Colors holds with no cache
 // of its own. The palette's `face` and the chrome's `ground` role ARE this
-// constant (render.cpp's fill_program_palette, chrome_derive.h). The modal
-// family's panel margins are this ground too, its box's outer rows and
-// columns included (modal_box.h).
+// tone (render.cpp's install_palette, theme_file.h). The modal family's
+// panel margins are this ground too, its box's outer rows and columns
+// included (modal_box.h).
 //
 // THE KEY (paint_key below; every key alike — the band's, row 8's, the
 // controls rows', the word buttons, the scrub's thumb, the on-screen
 // keyboard's): A FLAT BOX, NO OUTLINE, NO LED, NO GLOW, NO DEPTH, in one of
-// TWO FACES (KeyLook): AT REST kKeyFace 363636; LIT — kLitFill FFAD56,
-// Live's "on" — A CHECKED KEY, its whole face. THE YELLOW IS FOR LAMPS ONLY
-// (architect 2026-11-02, on mocks a3 / b3: "the yellow flash is jarring …
-// keep the yellow only for lamps").
+// TWO FACES (KeyLook): AT REST `key_face`, Default's 363636
+// (SurfaceBackground); LIT — `lit_fill`, Default's FFAD56
+// (ViewCheckControlEnabledOn), Live's "on" — A CHECKED KEY, its whole face.
+// THE YELLOW IS FOR LAMPS ONLY (architect 2026-11-02, on mocks a3 / b3: "the
+// yellow flash is jarring … keep the yellow only for lamps").
 // NO PRESS LOOK ANYWHERE (architect 2026-11-04, reversing the retrofit's
 // press faces of 2026-11-03: "the pen is very fast to go off so the press
 // look looks like a blink"): A PRESS CHANGES NO PAINT on any surface — the
@@ -44,14 +55,15 @@
 // character, the selection pair landing on a row. The press arms stay —
 // the slide-off feint, the hold-repeat, the long press and the barrel —
 // their paint alone retired. A DISABLED key keeps the face its
-// state gives, its glyph and its legend in kKeyDimInk, so a checked-but-inert
-// key under an overlay keeps its lit fill (architect 2026-11-01, M6) — its
-// glyph on the lit face kTextOnLit. Anything printed ON a lit face is
-// kTextOnLit 111111 (the keys' Breeze glyphs, the on-screen keyboard's
-// caps); on a resting face kTextInk (key_ink below). UNDER EVERY
-// KEY ITS PRINTED LEGEND (architect 2026-11-03, the retrofit, reversing the
-// legends' retirement of 2026-11-02): on the ground in the strip's bottom
-// pad, never on the face, so a lit key's legend stays kTextInk (the rule at
+// state gives, its glyph and its legend in `key_dim_ink`, so a
+// checked-but-inert key under an overlay keeps its lit fill (architect
+// 2026-11-01, M6) — its glyph on the lit face `text_on_lit`. Anything
+// printed ON a lit face is `text_on_lit`, Default's 111111
+// (ControlContrastFrame; the keys' Breeze glyphs, the on-screen keyboard's
+// caps); on a resting face `text` (key_ink below). UNDER EVERY KEY ITS
+// PRINTED LEGEND (architect 2026-11-03, the retrofit, reversing the legends'
+// retirement of 2026-11-02): on the ground in the strip's bottom pad, never
+// on the face, so a lit key's legend stays `text` (the rule at
 // paint_handler.cpp's key_legend_seat).
 //
 // THE FACE AND ITS GAP (architect 2026-11-04, the unit: his "1 agree" to
@@ -76,54 +88,88 @@
 // (onscreen_keyboard.h's key_gap_px, 2026-11-04).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
-// as possible"): Live's two, kTextInk B5B5B5 on every word, digit and
-// drawing the chrome prints — the logo lane, the
+// as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
+// on every word, digit and drawing the chrome prints — the logo lane, the
 // clocks, the tab name and state line, the lists, the prompts, the
 // editors, the marker labels, the keyboard's caps, the keys' Breeze glyphs
-// (2026-11-02) and their legends (2026-11-03) — and kTextDimInk 757575 for
-// the settings page's inert rows and the tooltip's hint line; kTextOnLit
-// 111111 on a lit face. THE CARDS' words and glyph wear their own ink,
-// kCardInk 2A2A2A on Live's orange (THE CARDS, below; 2026-11-04 night). A DISABLED KEY'S glyph and legend take
-// their own tone, kKeyDimInk 5A5A5A (architect 2026-11-02, on mock b3: "the
-// disabled icons are too similar to enabled ones", 757575 reading too close
-// to B5B5B5 at a key's size), darker than Live's dim text so a dead key
-// reads dead at a
-// glance; the lists' and the tooltip's dim print keep 757575. NOTHING WEARS A
-// SHADOW (2026-11-01, "no shadow anywhere"; the well's cue labels,
-// triangles and ticks with the rest since 2026-11-02): every word, digit,
-// tick and triangle is ink alone.
+// (2026-11-02) and their legends (2026-11-03) — and `text_dim`, Default's
+// 757575 (TextDisabled), for the settings page's inert rows and the
+// tooltip's hint line; `text_on_lit`, Default's 111111, on a lit face. THE
+// CARDS' words and glyph wear their own ink, `card_ink`, Default's 2A2A2A
+// (Desktop) on Live's orange (THE CARDS, below; 2026-11-04 night). A
+// DISABLED KEY'S glyph and legend take their own tone, `key_dim_ink`,
+// Default's 5A5A5A (architect 2026-11-02, on mock b3: "the disabled icons
+// are too similar to enabled ones", 757575 reading too close to B5B5B5 at a
+// key's size), darker than Live's dim text so a dead key reads dead at a
+// glance — in every theme the face mixed 36/63 toward the dim text, the
+// Default relation kept; the lists' and the tooltip's dim print keep
+// `text_dim`. NOTHING WEARS A SHADOW (2026-11-01, "no shadow anywhere"; the
+// well's cue labels, triangles and ticks with the rest since 2026-11-02):
+// every word, digit, tick and triangle is ink alone.
 //
 // THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h;
 // M13's text tones 2026-11-02; the text round's lengths 2026-11-03): FLAT
 // REGIONS ON THE GROUND, no frame, no ring, no bevel, its columns the keys'
 // faces' outer columns (render.h's well_columns, THE EDGE RULE), top to
 // bottom — THE TRIM BAR two flat fills, no frame (architect 2026-11-03,
-// mock z2): kTrimBarFace 2A2A2A outside the trim, kTrimSpanFace 6A6A6A on
-// the span, one row of ground under them; THE RULER kRulerFace 363636 with
-// the kTextInk digits and the kRulerTick 6B6B6B ticks; one row of ground;
-// THE MARKER LANE kLaneFace 2A2A2A (architect 2026-11-03, the retrofit:
-// Live's next real fill above the 242424 ground); one row of ground; THE
-// CANVAS (the palette's `waveform_canvas`), its stereo divider one row of
-// ground. Every number is Live's, measured on his Live 12 shots (the trim
-// bar the arrangement's overview, the ruler and its ticks the time ruler,
-// the lane the clip view's marker lane).
-// THE TIME FIELDS are flat kKeyFace boxes, no ring (2026-11-01 night, M5m).
-
-// THE GROUND (the head).
-inline constexpr uint32_t kGround = 0x242424;
-
-// THE TEXT TONES (the head).
-inline constexpr uint32_t kTextInk    = 0xB5B5B5;
-inline constexpr uint32_t kTextDimInk = 0x757575;
-inline constexpr uint32_t kTextOnLit  = 0x111111;
-// A disabled key's glyph (the head's THE TEXT TONES, 2026-11-02).
-inline constexpr uint32_t kKeyDimInk  = 0x5A5A5A;
-
-// THE KEY (the head): its face at rest and its lit fill (Live's "on" orange
-// FFAD56, one constant with no device key). (The face's lengths and the gap
-// between two faces, key_gap_px, are render.h's case block.)
-inline constexpr uint32_t kKeyFace      = 0x363636;
-inline constexpr uint32_t kLitFill      = 0xFFAD56;
+// mock z2): `trim_bar_face`, Default's 2A2A2A, outside the trim,
+// `trim_span_face`, Default's 6A6A6A, on the span, one row of ground under
+// them; THE RULER `ruler_face`, Default's 363636, with the `text` digits and
+// the `ruler_tick` ticks, Default's 6B6B6B; one row of ground; THE MARKER
+// LANE `lane_face`, Default's 2A2A2A (architect 2026-11-03, the retrofit:
+// Live's next real fill above the 242424 ground — Desktop); one row of
+// ground; THE CANVAS (the palette's `waveform_canvas`), its stereo divider
+// one row of ground. Every Default number is Live's, measured on his Live
+// 12 shots (the trim bar the arrangement's overview, the ruler and its
+// ticks the time ruler, the lane the clip view's marker lane). Where a
+// theme makes the lane, the trim's outside or the dim text coincide with
+// the ground, that is Live's own number — ACCEPTED, not a bug, no backstop
+// (architect 2026-11-05).
+// THE TIME FIELDS are flat `key_face` boxes, no ring (2026-11-01 night,
+// M5m; cool_edit_paint.h's paint_ce_time_field).
+//
+// THE WELL'S FRAME TONE. `well_frame` is THE GRAMMAR'S ONE FRAME TONE
+// (architect 2026-11-02, M14 "d"), Default's 757575 (TextDisabled, the dim
+// text's own role): the scrub's one-W channel (render.h's scrub block) and
+// the tooltip's one-W border (paint_shift_tooltip; the cards wear
+// `card_face` instead since 2026-11-04 night). THE TRIM BAR'S TWO FILLS
+// (architect 2026-11-03, mock z2; render_trim_flags): `trim_bar_face`, the
+// bar outside the trim, IS THE LANE'S TONE — the same Live role (Desktop),
+// named for what it paints as `pane_face` is `key_face`'s; `trim_span_face`
+// Live's off-button hover in Default, in every theme the face mixed 52/127
+// toward the text (the ticks 53/127).
+//
+// THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
+// selection): a flat bar in `selection_fill`, Default's 637E86
+// (StandbySelectionBackground), under `selection_text`, Default's 111111
+// (ControlContrastFrame) — the flag editor's and the dialog editors'
+// selected substring and the lists' lit row (the chrome's `selected_fill` /
+// `selected_text`, theme_file.h), at rest and under a press alike — a list
+// row under a standing press changes no paint (no press look, 2026-11-04;
+// paint_handler.cpp's paint_folder_overlay).
+//
+// THE PANE (architect 2026-11-01 night, M6 A; 2026-11-02, M11 / M14): Live's
+// panel face, which is the keys' face — `pane_face`, THE SAME LIVE ROLE as
+// `key_face` (SurfaceBackground), named for what it paints: the modal
+// family's box interior, flat, with no frame, ring, shadow or row separator
+// (modal_box.h's head; the score viewer's darker pane, `score_pane_face`,
+// the one exception, is recorded there), and the tooltip's face inside its
+// one-W `well_frame` border (the grammar's one frame tone;
+// paint_shift_tooltip through paint_popup_chrome). The cards wear
+// `card_face` (below).
+//
+// THE CARDS (architect 2026-11-04 night, his pick h1 of tmp/s38 over h0, the
+// tooltip's pane and frame they wore until then, and h2, the orange under
+// 111111 ink): every notification card, both classes alike, is A FLAT BOX in
+// `card_face`, Default's E76942 — LIVE'S STATUS BAR'S ORANGE (Alert),
+// measured on his Live 12 shot of 2026-10-31 (231 105 66) — its words and
+// its class glyph in `card_ink`, Default's 2A2A2A, Live's own text on that
+// bar (42 42 42; Desktop), and NO VISIBLE BORDER: the one-W ring's rows and
+// columns stay in the layout, painted in the fill (the chrome's
+// `card_ground`, `card_text` and `card_frame`, theme_file.h; render.h's THE
+// CARD FACE). NOT THE LAMP'S FFAD56: "the yellow is for lamps only"
+// (2026-11-02) stands — this is Live's status-bar orange, a different tone
+// with a different job, a message rather than a state.
 
 // THE KEY'S TWO FACES (the head's THE KEY): Lit when checked, else Rest — no
 // press face (2026-11-04). key_look is the one place the face is decided —
@@ -137,70 +183,24 @@ inline constexpr bool key_look_lit(KeyLook look) {
 }
 
 // THE INK OF WHAT A KEY CARRIES ON ITS FACE (the head's THE KEY and THE
-// TEXT TONES): kTextOnLit on a lit face (a dead checked key's too), else
-// kTextInk, or kKeyDimInk on a disabled key.
-inline constexpr uint32_t key_ink(KeyLook look, bool enabled) {
-    return key_look_lit(look) ? kTextOnLit : enabled ? kTextInk : kKeyDimInk;
+// TEXT TONES), as the installed theme's sRGB word (the Breeze glyph road
+// takes the word, icons::draw_glyph): `text_on_lit` on a lit face (a dead
+// checked key's too), else `text`, or `key_dim_ink` on a disabled key.
+inline uint32_t key_ink(KeyLook look, bool enabled) {
+    const GuiThemeTones& t = installed_theme().tones;
+    return key_look_lit(look) ? t.text_on_lit
+                              : enabled ? t.text : t.key_dim_ink;
 }
-
-// THE WELL'S TONES (the head's THE WELL). kWellFrame is THE GRAMMAR'S ONE
-// FRAME TONE (architect 2026-11-02, M14 "d"): the scrub's one-W channel
-// (render.h's scrub block) and the tooltip's one-W border
-// (paint_shift_tooltip; the cards wear kCardFace instead since 2026-11-04
-// night). THE TRIM BAR'S TWO FILLS (architect
-// 2026-11-03, mock z2; render_trim_flags): kTrimBarFace, the bar outside
-// the trim, IS THE LANE'S TONE — ONE CONSTANT, kLaneFace's own value (Live's
-// next fill above the ground), named for what it paints as kPaneFace is
-// kKeyFace's; kTrimSpanFace 6A6A6A, the span, Live's off-button hover.
-inline constexpr uint32_t kWellFrame    = 0x757575;
-inline constexpr uint32_t kRulerFace    = 0x363636;
-inline constexpr uint32_t kRulerTick    = 0x6B6B6B;
-inline constexpr uint32_t kLaneFace     = 0x2A2A2A;
-inline constexpr uint32_t kTrimBarFace  = kLaneFace;
-inline constexpr uint32_t kTrimSpanFace = 0x6A6A6A;
-
-// THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
-// selection): a flat 637E86 bar under 111111 text — the flag editor's and
-// the dialog editors' selected substring and the lists' lit row (the
-// chrome's `selected_fill` / `selected_text`, chrome_derive.h), at rest and
-// under a press alike — a list row under a standing press changes no paint
-// (no press look, 2026-11-04; paint_handler.cpp's paint_folder_overlay).
-inline constexpr uint32_t kSelectionFill      = 0x637E86;
-inline constexpr uint32_t kSelectionText      = kTextOnLit;
-
-// THE PANE (architect 2026-11-01 night, M6 A; 2026-11-02, M11 / M14): Live's
-// panel face, which is the keys' face — ONE CONSTANT, kKeyFace's own value,
-// named for what it paints: the modal family's box interior, flat, with no
-// frame, ring, shadow or row separator (modal_box.h's head; the score
-// viewer's darker pane, the one exception, is recorded there), and the
-// tooltip's face inside its one-W kWellFrame border (the grammar's one
-// frame tone; paint_shift_tooltip through paint_popup_chrome). The cards
-// wear kCardFace (below).
-inline constexpr uint32_t kPaneFace = kKeyFace;
-
-// THE CARDS (architect 2026-11-04 night, his pick h1 of tmp/s38 over h0, the
-// tooltip's pane and frame they wore until then, and h2, the orange under
-// 111111 ink): every notification card, both classes alike, is A FLAT BOX in
-// kCardFace E76942 — LIVE'S STATUS BAR'S ORANGE, measured on his Live 12 shot
-// of 2026-10-31 (231 105 66) — its words and its class glyph in kCardInk
-// 2A2A2A, Live's own text on that bar (42 42 42), and NO VISIBLE BORDER: the
-// one-W ring's rows and columns stay in the layout, painted in the fill (the
-// chrome's `card_ground`, `card_text` and `card_frame`, chrome_derive.h;
-// render.h's THE CARD FACE). NOT THE LAMP'S FFAD56: "the yellow is for lamps
-// only" (2026-11-02) stands — this is Live's status-bar orange, a different
-// tone with a different job, a message rather than a state.
-inline constexpr uint32_t kCardFace = 0xE76942;
-inline constexpr uint32_t kCardInk  = 0x2A2A2A;
 
 // -- THE KEY'S PAINTERS ------------------------------------------------------
 
 // ONE KEY on `r`, ITS PAINTED FACE — the key itself (the head's THE KEY and
-// THE FACE AND ITS GAP): the flat face `look` gives — kKeyFace at rest,
-// kLitFill lit (key_look, the caller's checked state) — and nothing
-// else. What a key carries is its caller's — the roster's and the controls
-// rows' Breeze glyph on the face and its legend under it (paint_key_glyph
-// and paint_key_legend, paint_handler.cpp), the on-screen keyboard's caps —
-// in key_ink's tone.
+// THE FACE AND ITS GAP): the flat face `look` gives — palette().key_face at
+// rest, palette().lit_fill lit (key_look, the caller's checked state) — and
+// nothing else. What a key carries is its caller's — the roster's and the
+// controls rows' Breeze glyph on the face and its legend under it
+// (paint_key_glyph and paint_key_legend, paint_handler.cpp), the on-screen
+// keyboard's caps — in key_ink's tone.
 void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look);
 
 // THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key

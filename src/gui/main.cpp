@@ -3497,12 +3497,21 @@ int gui_main() {
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
-    // THE PALETTE, before there is a window: the one palette's constants
-    // (palette_file.h, architect 2026-11-01; no key names a color) and the
-    // chrome's roles off the flat look's constants (live_chrome_words,
-    // chrome_derive.h; materials.h's head), installed once. Every painter
-    // reads it through palette() (render.h's palette block).
-    install_palette();
+    // THE PALETTE, before there is a window: THE CONFIG'S THEME (the `theme`
+    // key, architect 2026-11-05 — one of Live 12's own, palette_file.h's
+    // head), its row found by the key's one grammar owner (find_gui_theme,
+    // theme_tables.h) — the reader above already refused any other slug, so
+    // the find cannot miss here — and every member of the palette installed
+    // off it, the program's and the chrome's alike (install_palette,
+    // render.h). The other road is the settings editor's `theme=` commit and
+    // its value list's tap (GuiInputHandler::apply_theme), which owes the
+    // caches' apply shape this launch call does not. Every painter reads it
+    // through palette() (render.h's palette block).
+    {
+        const GuiTheme* theme = find_gui_theme(device_config.theme);
+        assert(theme != nullptr);
+        install_palette(*theme);
+    }
     // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
     // display_transform.h's head): the switch's bit seeded here, before the
     // window and every cache that converts exist, so the launch owes none of

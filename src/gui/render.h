@@ -7,6 +7,7 @@
 #include "chrome_spec.h"      // live_chrome_spec(), the live chrome's lengths
 #include "program_spec.h"     // kProgramSpec, the program's lengths (the band, row 8)
 #include "display_transform.h" // display_color's transform (sRGB -> the window's space)
+#include "theme_tables.h"     // GuiTheme, the installed theme's row (install_palette)
 
 #include <algorithm>
 #include <array>
@@ -102,35 +103,43 @@ struct TrimRange {
 // well or on a thing that enters it (the waveform's canvas, ink and core,
 // the canvas's grid and center line, the cues' one color and the disabled
 // cue's grey, the playhead and the scanner; palette_file.h's head owns the
-// rule that parts program from chrome) — ONE PALETTE, CONSTANTS, LIVE'S NUMBERS (architect 2026-11-01:
-// the Cool Edit presets and their `waveform` key dropped, the canvas
-// grammar kept), no choice of color left; THE LIT KEY'S FILL is the flat
-// look's constant (materials.h's kLitFill); THE PANEL'S
-// FACE is the flat ground (materials.h's kGround, the flat look, architect
-// 2026-11-01), and THE CHROME'S ROLES are the flat look's constants alone
-// (chrome_derive.h's head, the per-role table; Cool Edit's tones off the
-// Face 2026-10-10 to 2026-10-23). The chrome's roles and their order are
-// the role table (kGuiThemeRoles, theme_file.h). THE APP PAINTS NO CAPTION
+// rule that parts program from chrome) — ONE PALETTE PER THEME, LIVE'S OWN
+// NUMBERS (architect 2026-11-01: the Cool Edit presets and their `waveform`
+// key dropped, the canvas grammar kept, Live's measured default compiled
+// in; architect 2026-11-05, the theme arc: Live 12's own themes, whole, the
+// `theme` device key naming one row of the generated kGuiThemes,
+// theme_tables.h, the Default row that measured palette to the byte); THE
+// LIT KEY'S FILL is the chrome's `lit_fill` (materials.h's THE KEY); THE
+// PANEL'S FACE is the flat ground (the theme's `ground`, Default's 242424,
+// the flat look, architect 2026-11-01), and THE CHROME'S ROLES are the
+// theme's tones, one per role (theme_file.h's role table, the one owner;
+// the flat look's constants 2026-11-01..05; Cool Edit's tones off the Face
+// 2026-10-10 to 2026-10-23). The chrome's roles and their order are the
+// role table (kGuiThemeRoles, theme_file.h). THE APP PAINTS NO CAPTION
 // since 2026-10-24 (THE CAPTION's note, below): its six roles, the
 // `caption` device key and its 42 built-in schemes left 2026-10-21, its
 // flat skin constants with the caption itself.
-// The palette's roles and their words are kGuiPaletteRoles (palette_file.h).
+// The palette's roles and their tones are kGuiPaletteRoles (palette_file.h).
 // There is NO LEVEL (architect 2026-10-04): a dark look, like
 // any look made official, would be a chrome variant of its own
-// (2026-10-08). The app computes no color: every one is a constant.
+// (2026-10-08) — and is, since 2026-11-05, a theme of its own. The app
+// computes no color at paint time: every one is a theme row's word, the
+// derived tones computed once by the generator (theme_tables.h's head).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
-// one accessor palette() — or THE FLAT LOOK'S CONSTANTS (materials.h,
-// 2026-11-01: the ground, the key's faces (rest, press, lit), the text tones, the
-// well's tones — the trim bar, its frame, the ruler, its ticks, the marker
-// lane — and the selection pair) — or
+// one accessor palette() — the chrome's fourteen flat-look tones among them
+// (materials.h, 2026-11-01: the ground, the key's faces (rest, lit), the
+// text tones, the well's tones — the trim bar, its frame, the ruler, its
+// ticks, the marker lane — the panes and the selection pair; members of the
+// struct since 2026-11-05) — or
 // THE BREEZE GLYPHS (architect 2026-11-01, M7: every drawing a Breeze glyph):
 // each file is recolored to `currentColor` and painted in a TEXT TONE the
-// caller passes (kTextInk, kKeyDimInk on a disabled key, kTextOnLit on a lit
-// one; icons.h's THE BOUND DRAWING) — the one place an antialiased picture is
+// caller passes as the installed theme's sRGB word (installed_theme():
+// `text`, `key_dim_ink` on a disabled key, `text_on_lit` on a lit one;
+// icons.h's THE BOUND DRAWING) — the one place an antialiased picture is
 // copied whole.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
 // role: the text tone over the ground, the field, the resting keys and the
-// selection's grey, kTextInk over a resting or pressed key, kTextOnLit over
+// selection's grey, `text` over a resting or pressed key, `text_on_lit` over
 // a lit key.
 // STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
 // HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
@@ -171,7 +180,7 @@ struct TrimRange {
 // Windows 95's DrawEdge grammar, its one-device-px mitred hairline ring of
 // 2026-10-23 and the ring tones it wore are git history. THE CHROME'S LINES
 // are flat ONE-W lines (hairline_px, below, the line rule of 2026-11-04) of ONE TONE,
-// materials.h's kWellFrame 757575: the scrub's channel (the scrub block)
+// materials.h's `well_frame` (Default's 757575): the scrub's channel (the scrub block)
 // and the tooltip's border (THE CARD FACE, below; the cards' ring is painted
 // in their own fill, so no border shows); the modal
 // family's box has none (modal_box.h's head).
@@ -233,7 +242,7 @@ struct TrimRange {
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
 //                 the program's band, row 8 and the canvas column's lanes)
-//                 is the flat ground (materials.h's kGround), no palette
+//                 is the flat ground (the theme's `ground` (Default's 242424, materials.h)), no palette
 //                 role.
 // THE CARD FACE — ONE BOX PAINTER, TWO LOOKS (paint_popup_chrome): a flat box
 // INSIDE A ONE-W BORDER on all four sides (hairline_px, the line rule,
@@ -241,18 +250,19 @@ struct TrimRange {
 // so the card is 56 rows and the one-line tooltip 44 on the tablet (200 %); NO RING
 // TONES, NO SHADOW. THE TOOLTIP (architect 2026-10-04, the period's tooltip;
 // flat since 2026-11-02, M11 with M14 "d"): the pane, materials.h's
-// kPaneFace 363636, in kWellFrame 757575, the grammar's one frame tone — the
-// flat look's constants, no chrome role; ITS NAME LINE the flags' own
+// `pane_face` (Default's 363636), in `well_frame` (Default's 757575), the
+// grammar's one frame tone — the flat look's tones, read from palette()
+// like every role; ITS NAME LINE the flags' own
 // program face (2026-10-23, "the same as the flags", Program 11 W, 22 device
-// px at 200 %) in the text tone kTextInk, ITS HINT LINE the hint face (Hint
+// px at 200 %) in the text tone `text`, ITS HINT LINE the hint face (Hint
 // 9 W, 18 device px) in the dim tone
-// kTextDimInk (architect 2026-10-31; Live's 757575 since M11, 2026-11-02,
+// `text_dim` (architect 2026-10-31; Live's 757575 since M11, 2026-11-02,
 // paint_shift_tooltip). EVERY NOTIFICATION CARD, both classes alike
 // (architect 2026-11-04 night, his pick h1 of tmp/s38 over h0, the
 // tooltip's look they wore from 2026-10-06, and h2, 111111 ink): a box in
-// LIVE'S STATUS BAR'S ORANGE, `card_ground` = kCardFace E76942, its border
+// LIVE'S STATUS BAR'S ORANGE, `card_ground` = `card_face` (Default's E76942), its border
 // `card_frame` the same orange, so NO BORDER SHOWS (the ring is layout),
-// its words at the body size and its class glyph in `card_text` = kCardInk
+// its words at the body size and its class glyph in `card_text` = `card_ink`
 // 2A2A2A, Live's own text on that bar — both measured on his Live 12 shot of
 // 2026-10-31 (materials.h's THE CARDS). THIS PARAGRAPH IS THE RULE'S ONE
 // STATEMENT.
@@ -264,11 +274,11 @@ struct TrimRange {
 // 2026-11-02).
 //
 // THE DISABLED FACES (2026-10-23; the key's own dim tone 5A5A5A since
-// 2026-11-02): a dead key DIMS ITS GLYPH (kKeyDimInk, paint_key_glyph; a
-// glyph on a dead lit key stays kTextOnLit; no key prints a word since
+// 2026-11-02): a dead key DIMS ITS GLYPH (`key_dim_ink`, paint_key_glyph; a
+// glyph on a dead lit key stays `text_on_lit`; no key prints a word since
 // 2026-11-02), its key the face its state gives; a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
-// ROWS wear the dim print (kTextDimInk 757575, paint_folder_overlay,
+// ROWS wear the dim print (`text_dim` (Default's 757575), paint_folder_overlay,
 // 2026-10-28). Nothing else dims. (Windows' word emboss —
 // DrawState DSS_DISABLED, the word in Hilight one Windows px right and down
 // under its Shadow copy, show_embossed_run, 2026-10-03 — retired with no
@@ -308,16 +318,16 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
 // The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
-// derived from the panel's Face since 2026-10-10, the selection pair a
-// constant since 2026-10-21 (chrome_derive.h) — and the palette's program
-// roles, one field each — the chrome's in kGuiThemeRoles' order
-// (theme_file.h), the program's in kGuiPaletteRoles' (palette_file.h), and
-// the panel's `face` — the tables covering the struct exactly
-// (palette_file.cpp's static_asserts); the mapping above says what each
-// paints. Every field is a solid byte triple.
+// derived from the panel's Face since 2026-10-10, the flat look's constants
+// 2026-11-01..05, THE INSTALLED THEME'S TONES since 2026-11-05 (theme_file.h)
+// — and the palette's program roles, one field each — the chrome's in
+// kGuiThemeRoles' order (theme_file.h), the program's in kGuiPaletteRoles'
+// (palette_file.h), and the panel's `face` — the tables covering the struct
+// exactly (palette_file.cpp's static_asserts); the mapping above says what
+// each paints. Every field is a solid byte triple.
 struct GuiPalette {
-    // THE CHROME (Windows' element names; the values the flat look's
-    // constants, chrome_derive.h).
+    // THE CHROME (Windows' element names; the values the installed theme's,
+    // theme_file.h's role table).
     GuiColor ground;          // COLOR_3DFACE
     GuiColor label;           // COLOR_BTNTEXT
     GuiColor selected_fill;   // COLOR_HIGHLIGHT
@@ -326,6 +336,23 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
+    // THE FLAT LOOK'S FOURTEEN (materials.h's head owns each rule; members
+    // since the theme arc, 2026-11-05, their numbers the installed theme's
+    // — Default's quoted at materials.h).
+    GuiColor text;            // every word, digit and drawing the chrome prints
+    GuiColor text_dim;        // the inert rows, the tooltip's hint line
+    GuiColor text_on_lit;     // anything printed on a lit face
+    GuiColor key_dim_ink;     // a disabled key's glyph and legend
+    GuiColor key_face;        // the key at rest, the time fields
+    GuiColor lit_fill;        // a checked key's whole face, Live's "on"
+    GuiColor well_frame;      // the scrub's channel, the tooltip's border
+    GuiColor ruler_face;      // the ruler
+    GuiColor ruler_tick;      // the ruler's ticks
+    GuiColor lane_face;       // the marker lane
+    GuiColor trim_bar_face;   // the trim bar outside the trim
+    GuiColor trim_span_face;  // the trim bar inside the trim
+    GuiColor pane_face;       // the modal family's box interior, the tooltip's face
+    GuiColor score_pane_face; // the score viewer's pane, the page's mat
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -341,16 +368,26 @@ struct GuiPalette {
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of the toolbar band, row 8 and the well's
-    // margins — THE FLAT GROUND since 2026-11-01 (materials.h's kGround).
+    // margins — THE FLAT GROUND since 2026-11-01 (materials.h's head), the
+    // theme's `ground` tone like the chrome's `ground` role.
     GuiColor face;
 };
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
 // state in render.cpp, written by the install family below alone:
-// install_palette at gui_main's startup, before the window exists, and
+// install_palette at gui_main's startup, before the window exists, and at
+// every `theme` commit (GuiInputHandler::apply_theme), and
 // install_true_colors. Before the first install it is construction state
 // (black), never painted.
 const GuiPalette& palette();
+
+// THE INSTALLED THEME'S ROW (theme_tables.h) — the sRGB WORDS behind
+// palette(), for the few readers that need the word rather than a GuiColor:
+// the Breeze glyph road's tone (icons::draw_glyph; key_ink, materials.h),
+// the plate's two inks (waveform_plate_inks below). Every other painter
+// reads palette(). Before the first install it is the Default row
+// (construction state, as palette()'s black), never painted.
+const GuiTheme& installed_theme();
 
 // THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
 // surface's recorded text color under the live chrome — "text over a fill
@@ -371,14 +408,32 @@ enum class GuiSurface {
 };
 GuiColor surface_text(GuiSurface surface);
 
-// Install every color: THE PROGRAM'S, the one palette's constants
-// (palette_file.h's role table, architect 2026-11-01) — and THE CHROME'S,
-// THE FLAT LOOK'S CONSTANTS (live_chrome_words, chrome_derive.h) with the
-// Cool Edit block off the panel's Face, the flat ground (2026-11-01). Its
-// one caller: gui_main's startup, before the window exists. It resolves and
+// Install every color off ONE THEME'S ROW (`theme`, a row of kGuiThemes,
+// theme_tables.h; architect 2026-11-05, the theme arc): THE PROGRAM'S
+// members off the palette's role table (kGuiPaletteRoles, palette_file.h),
+// THE CHROME'S off the chrome's (kGuiThemeRoles, theme_file.h), the panel's
+// `face` off the theme's ground — the tables covering the struct exactly
+// (palette_file.cpp) — and the row kept as installed_theme(). Its callers:
+// gui_main's startup, before the window exists (the config's `theme`), and
+// every `theme` commit through GuiInputHandler::apply_theme. It resolves and
 // never refuses, and it bumps palette_generation below, the flag cache's
 // fingerprint term.
-void install_palette();
+// THE APPLY SHAPE THE CALLER OWES after a live install (apply_theme; the
+// launch's call, before the window and every cache exist, owes none) IS
+// install_true_colors' (below), the same two caches and for the same
+// reason: the icon rasters dropped (icons::drop_rasters — a key glyph's
+// raster keys on its sRGB tone, which the theme moves), the waveform plate
+// kicked when its two inks moved (the waveform_plate_inks pair read before
+// and after; Viewport::kick_waveform_sync, the plate re-rendered in the new
+// inks and the flag cache rebuilt at its tail) and the flag cache alone
+// otherwise (Viewport::refresh_flag_cache), then the whole window
+// invalidated. THE SHADER NEEDS NOTHING: gl_canvas.cpp's list fragment
+// shader reads every color from the draw list's own words (word_rgb of
+// v_words.x / .y; no color uniform), and the plate's two inks ride
+// waveform_plate_inks into the worker's job (waveform_cache.cpp) and its
+// fingerprint, so a theme that moves them rebuilds the plate and one that
+// keeps them re-renders nothing.
+void install_palette(const GuiTheme& theme);
 
 // THE PALETTE'S GENERATION — a counter the install family bumps, so a
 // cached surface whose pixels carry palette colors keys the palette BY
@@ -457,10 +512,10 @@ void install_true_colors(bool on);
 // under the band (the row the retired program ring stood on), then THE
 // BAR'S FILL ROWS (trim_bar_fill_h_px, 8 W, 16 device px at 200 %) across the
 // well's columns, NO FRAME — OUTSIDE THE TRIM a
-// flat kTrimBarFace 2A2A2A (the marker lane's tone), INSIDE IT, THE SPAN,
+// flat `trim_bar_face` (Default's 2A2A2A) (the marker lane's tone), INSIDE IT, THE SPAN,
 // the trim window's columns from the begin column through the end column
 // clipped to the waveform's columns (so a trim spanning the view fills the
-// bar end to end), a flat kTrimSpanFace 6A6A6A — and the bar's last rows ONE
+// bar end to end), a flat `trim_span_face` (Default's 6A6A6A) — and the bar's last rows ONE
 // W OF GROUND across the well's columns, the span included, the
 // line between the bar and the ruler (no line above: the row above the bar
 // is the lane's ground). NO PLAYHEAD IN THE BAR (architect 2026-10-09
@@ -469,13 +524,13 @@ void install_true_colors(bool on);
 // (TrimBarHit, below), and they paint nothing of their own.
 //
 // THE RULER IS COOL EDIT'S, FLIPPED, IN LIVE'S TONES (paint_ruler_row):
-// FLAT kRulerFace 363636 directly under the bar's ground line, NO LINE ON
-// ITS TOP; THE TICKS kRulerTick 6B6B6B, ONE W WIDE (the canvas's line,
+// FLAT `ruler_face` (Default's 363636) directly under the bar's ground line, NO LINE ON
+// ITS TOP; THE TICKS `ruler_tick` (Default's 6B6B6B), ONE W WIDE (the canvas's line,
 // waveform_line_px, 2026-11-04), CENTERED ON THEIR COLUMNS, STANDING ON THE
 // RULER'S FOOT, the major 4 W and the minor 1 W (8 and 2 device rows at
 // 200 %, scaled_px), overlaying its bottom pad, NO SHADOW; THE DIGITS the
 // ruler face (GuiFace::Small, BOLD 8 W, 16 device px at 200 %) in the text
-// tone kTextInk B5B5B5
+// tone `text` (Default's B5B5B5)
 // (architect 2026-11-02, the font audit: Live's own ruler digits), bare,
 // THEIR INK CENTERED ON THE RULER between two 6-W pads (ruler_baseline_px,
 // the ruler block below; HIS RULE, 2026-11-03); then ONE ROW OF GROUND, one
@@ -549,7 +604,7 @@ void install_true_colors(bool on);
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
 //
 // THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09; the lengths program_spec.h's,
-// the drawing render_flag_boxes_impl's): on the lane's FLAT kLaneFace 2A2A2A
+// the drawing render_flag_boxes_impl's): on the lane's FLAT `lane_face` (Default's 2A2A2A)
 // (architect 2026-11-01 night, Live's clip-view marker lane; Live's next
 // fill above the ground since 2026-11-03, the retrofit; materials.h),
 // THE CHIP — COOL EDIT'S TRIANGLE IN A ONE-W OUTLINE (architect 2026-11-04,
@@ -561,7 +616,7 @@ void install_true_colors(bool on);
 // the fill's 19 x 10 at 200 %), on the lane's last rows, its apex the marker's
 // column on the lane's last row, directly above the row of ground under
 // the lane, NO SHADOW (2026-11-02);
-// THE LABEL — the marker's one label, at rest in the text tone kTextInk
+// THE LABEL — the marker's one label, at rest in the text tone `text`
 // B5B5B5 (materials.h; M13, 2026-11-02), NO SHADOW (2026-11-02; its shadow
 // of 2026-10-25 .. 2026-11-02 retired with the well's flat look), in THE
 // LABEL FACE, BOLD Label 11 W, 22 device px at 200 % (gui_font.h's
@@ -625,7 +680,7 @@ void install_true_colors(bool on);
 // over the later's: "why not go simpler — later always wins?", and "a long
 // flag before a short one should continue after the short one ends"). The
 // labels paint LEFT TO RIGHT, each on an OPAQUE FACE BOX of the lane's own
-// kLaneFace from ITS OWN
+// `lane_face` from ITS OWN
 // CHIP'S LEFT EDGE (the column less the chip's half width) to one
 // fill pad past its last segment's text, on THE WHOLE LANE'S ROWS (the
 // press target's rows, so the label is one geometry at rest and selected,
@@ -640,7 +695,7 @@ void install_true_colors(bool on);
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then the live cue by its selection; the strike rides every row):
 //   UNSELECTED  the `cue` FFAD56 fill in the `cue_outline` 111111 outline,
-//             the label in the text tone (materials.h's kTextInk); no stem,
+//             the label in the text tone (materials.h's `text`); no stem,
 //             the playhead on it or not (architect 2026-11-05);
 //   SELECTED  a member of the selection set: the same chip, and A SOLID
 //             ONE-W `cue_outline` STEM on its column FROM THE CHIP'S APEX
@@ -697,8 +752,8 @@ void install_true_colors(bool on);
 // EDITING: THE FIELD IS AN EDIT FIELD ON THE LANE'S WHOLE ROWS (architect
 // 2026-10-09, reversing 2026-10-07 ~09:45's flag-in-its-selected-face; its
 // look 2026-11-01 night, M5g / M5h and the marker lane's metrics rule; the
-// drawing render_flag_editor_box's): a field of THE GROUND kGround 242424 in
-// A THREE-DEVICE-PX kTextInk B5B5B5 OUTLINE ("as today",
+// drawing render_flag_editor_box's): a field of THE GROUND `ground` (Default's 242424) in
+// A THREE-DEVICE-PX `text` (Default's B5B5B5) OUTLINE ("as today",
 // cue_editor_outline_px), the text and the caret in the field text (the
 // text tone), over the edited segment's box on THE WHOLE LANE'S ROWS (the
 // outline on the lane's first and last rows and just outside the pads),
@@ -715,7 +770,7 @@ void install_true_colors(bool on);
 // segments to its right riding its edge in their resting look; and THE
 // SELECTED SUBSTRING IN THE CHROME'S SELECTED PAIR, `selected_text` 111111 on
 // `selected_fill` 637E86 (Live's browser selection, materials.h's
-// kSelectionFill / kSelectionText). A COINCIDENT MARKER'S FIELD IS
+// `selection_fill` / `selection_text`). A COINCIDENT MARKER'S FIELD IS
 // THE SAME FIELD, its text and caret the field's own, NEVER STRUCK (the text
 // there is being edited), its riding segments struck as at rest. WHY A
 // FIELD: it is the legibility guarantee ("when you're looking very closely
@@ -838,12 +893,14 @@ void install_true_colors(bool on);
 
 // THE PLATE'S TWO BAKED INKS, as words: the fingerprint field and the job
 // field that carry the active ink and core to the worker (the worker reads
-// no live state), the palette's two constants (palette_file.h). THE WORDS ARE THE WINDOW'S
+// no live state), the installed theme's two tones (installed_theme,
+// `waveform_ink` and `waveform_core`; palette_file.h). THE WORDS ARE THE WINDOW'S
 // (architect 2026-10-08, display_transform.h's head): waveform_plate_inks
 // hands the two roles through display_transform::display_rgb on the GUI
 // thread, so the plate writes them as they come, and a flip of True Colors
 // (install_true_colors) moves the fingerprint exactly when it moves a
-// colored ink — a gray ink converts to itself and re-renders nothing.
+// colored ink — a gray ink converts to itself and re-renders nothing — and
+// a `theme` commit (install_palette) exactly when the theme's inks differ.
 struct WaveformPlateInks {
     uint32_t ink_rgb  = 0;
     uint32_t core_rgb = 0;
@@ -1125,7 +1182,7 @@ constexpr int kMinWindowHeightPx = 480;
 // gesture (the band's ground falls through to nothing, input_pointer.cpp).
 // paint_handler.cpp's paint_logo_lane paints it, every length below
 // scaled_px, rounded at the element, EVERYTHING ON IT IN THE TEXT TONE
-// kTextInk WITH NO SHADOW (the flat look, architect 2026-11-01 "no shadow
+// `text` WITH NO SHADOW (the flat look, architect 2026-11-01 "no shadow
 // anywhere", M13's tone 2026-11-02; materials.h's head) — the brand and the
 // legend's runs, the note, the glyph (logo_legend_extent, paint_handler.cpp,
 // the legend's damage rect):
@@ -1151,7 +1208,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
 //     equipment … just had a stylized brand name") — in Liberation Sans
 //     Bold at the TITLE size (gui_font.h's table, 12 W, 24 device px at
-//     200 %), the text tone kTextInk, its first ink kLogoBrandGapW = 7 W
+//     200 %), the text tone `text`, its first ink kLogoBrandGapW = 7 W
 //     (14 device px; architect 2026-11-04 night, his pick g2 of tmp/s38,
 //     one W less than the 8 W of mocks e1 / e2 of tmp/s36 the same night,
 //     after the note went to 9 W; the e1 / e2 reason, "it needs more
@@ -1468,7 +1525,7 @@ inline int program_run_gap_px() {
 // (architect 2026-11-01 night, M7, "agree both"; M9 A2 for the score viewer):
 //   THE CHANNEL — ONE W (scrub_channel_h_px, hairline_px, the line rule:
 //     2 device px on the tablet at 200 %, 1 at 100 %, architect 2026-11-04)
-//     of materials.h's kWellFrame 757575, the grammar's frame tone, CENTERED
+//     of materials.h's `well_frame` (Default's 757575), the grammar's frame tone, CENTERED
 //     ON THE FACE — the centered elements' tie rule, (face rows − channel
 //     rows) / 2 below the face's top, rounded down (scrub_channel_above_px):
 //     rows 1384..1385 at 200 % on the keys' face rows 1368..1401 at
@@ -2687,7 +2744,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // implement the bevel divider, but make sure it has no separation from the
 // main chrome"): Cool Edit draws a stereo file as two wells, one per
 // channel, with a seam between them; THE FLAT WELL'S SEAM IS ONE ROW OF THE
-// GROUND, kGround 242424, ONE W (hairline_px, the line rule of 2026-11-04;
+// GROUND, `ground` (Default's 242424), ONE W (hairline_px, the line rule of 2026-11-04;
 // architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED": "the stereo divider one 242424 row" —
 // the hi-fi skin's light line, ground row and dark line, 2026-10-23 to
 // 2026-11-02, retired), across the waveform area, which is the well
@@ -3763,8 +3820,8 @@ struct FlagEditorBox {
 //
 // THE FIELD IS AN EDIT FIELD ON THE LANE'S WHOLE ROWS (architect
 // 2026-10-09; the look 2026-11-01 night; the ruling and its reason at the
-// palette block's editing paragraph): the ground kGround inside a
-// three-px kTextInk outline (cue_editor_outline_px), its text and caret `field_text` on the
+// palette block's editing paragraph): the ground `ground` inside a
+// three-px `text` outline (cue_editor_outline_px), its text and caret `field_text` on the
 // label's own baseline and seat, the caret and the selection band THE LEGAL
 // SET'S BAND (cue_band_top_px, cue_band_h_px — the metrics rule at
 // marker_lane_h_px; the selected ink past the band taking the field text is

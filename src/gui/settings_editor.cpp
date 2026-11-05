@@ -363,6 +363,9 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     std::vector<std::string> out;
     if (key == "true_colors") {
         for (const char* word : kTrueColorsWords) out.emplace_back(word);
+    } else if (key == "theme") {
+        // The table's own order, `default` first (theme_tables.h).
+        for (const GuiTheme& t : kGuiThemes) out.emplace_back(t.slug);
     } else if (key == "noise") {
         const std::filesystem::path home = noise_home();
         if (!home.empty()) {
@@ -388,6 +391,28 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     } else {
         assert(false && "a key with no value list");
     }
+    return out;
+}
+
+std::vector<GuiSettingsEditor::ValueListGroup>
+GuiSettingsEditor::value_list_groups(const std::string& key) const {
+    // The contract is at the declaration (settings_editor.h): `theme` its
+    // two headed groups off the table's own group column, in the table's
+    // order; every other key one headless group of value_choices.
+    std::vector<ValueListGroup> out;
+    if (key == "theme") {
+        const auto group = [&](GuiThemeGroup g, const char* heading) {
+            ValueListGroup vg;
+            vg.heading = heading;
+            for (const GuiTheme& t : kGuiThemes)
+                if (t.group == g) vg.values.emplace_back(t.slug);
+            if (!vg.values.empty()) out.push_back(std::move(vg));
+        };
+        group(GuiThemeGroup::Builtin, "BUILTIN");
+        group(GuiThemeGroup::Extra,   "EXTRA");
+        return out;
+    }
+    out.push_back(ValueListGroup{std::string(), value_choices(key)});
     return out;
 }
 
@@ -927,7 +952,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The eleven device keys other than the scale — one body, ahead of the
+    // 2. The twelve device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1202,10 +1227,12 @@ void GuiSettingsEditor::commit() {
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
 // 2026-10-26, the glow settled at a constant, then retired with the LED,
 // 2026-11-01).
-// (`theme`, in force at once with the palette repainted whole, had an arm
-// here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
+// `theme` (2026-11-05, Live's themes whole; its namesake of
+// 2026-10-03..10-08, a chrome theme file read at launch, left with that key)
+// the same, at once and no card, its arm after true_colors'. (`icons` and
+// `font` had arms here 2026-10-09..10-12; each left
 // with its key; `waveform`, the color presets' key, 2026-10-14..11-01.) The
-// commit is the OK's or Enter's, and for the six keys
+// commit is the OK's or Enter's, and for the seven keys
 // with a value list (kSettingsValueListKeys, settings_editor.h) also a
 // list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
 // the choice rows' list rows of 2026-10-07..10-14, which showed a value and
@@ -1214,8 +1241,8 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. (The keys with a value list
-// are six since 2026-11-01, `waveform_grow` and `audio_level` among
-// them.)
+// are seven since 2026-11-05, `theme` the newest, `waveform_grow` and
+// `audio_level` among them.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     switch (apply_device_setting(key, value)) {
@@ -1282,6 +1309,30 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         if (*on == app.device_config->true_colors) return unchanged();
         app.device_config->true_colors = *on;
         input->apply_true_colors(*on);
+        (void)persist();
+        return applied();
+    }
+
+    // THE THEME (architect 2026-11-05, the theme arc; palette_file.h's head):
+    // a slug of the generated theme table under its one grammar owner
+    // (find_gui_theme, theme_tables.h; the reason kThemeGrammarReason,
+    // device_config.h), APPLIED LIVE AT THE COMMIT, which is the OK's (or
+    // Enter's) or the value list's row tap, through the theme's own apply
+    // shape (GuiInputHandler::apply_theme — the palette reinstalled off the
+    // row, the icon rasters, the plate or the flag cache, the whole window),
+    // so NO CARD: the colors on screen are the answer; a failed write keeps
+    // the live value for the session, the card saying the persist failed,
+    // and the slug already in force is the unchanged no-op. The page opens
+    // its VALUE LIST (the slugs under BUILTIN and EXTRA,
+    // kSettingsValueListKeys); Tab completes a typed prefix against the
+    // slugs (complete_closed_value); stage 2's recall is the slug verbatim
+    // (recall_gui_setting_value).
+    if (key == "theme") {
+        const GuiTheme* theme = find_gui_theme(value);
+        if (theme == nullptr) return reject(kThemeGrammarReason);
+        if (value == app.device_config->theme) return unchanged();
+        app.device_config->theme = value;
+        input->apply_theme(*theme);
         (void)persist();
         return applied();
     }
@@ -1566,6 +1617,8 @@ bool GuiSettingsEditor::complete_closed_value(const std::string& key,
     std::string append;
     if (key == "true_colors")
         append = closed_list_advance(value, kTrueColorsWords);
+    else if (key == "theme")
+        append = closed_list_advance(value, value_choices(key));
     if (append.empty()) return false;
     return append_at_line_end(app, viewport, append);
 }
@@ -1592,7 +1645,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's eighteen and
+        // one key does — any key the recall knows, the table's nineteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");
@@ -1616,9 +1669,10 @@ bool GuiSettingsEditor::autocomplete_value() {
     // (2026-10-28): a non-empty value side on `noise` is a prefix of a
     // folder's name under `noise/` beside the device config
     // (complete_noise_value), its no-advance cases Tabs that walk. THE CLOSED
-    // DOMAINS TOO (architect 2026-10-14 and 2026-10-21): a non-empty value
-    // side on `true_colors` is a prefix of the key's words
-    // (complete_closed_value), its no-advance cases Tabs that walk.
+    // DOMAINS TOO (architect 2026-10-14 and 2026-10-21; `theme` 2026-11-05):
+    // a non-empty value side on `true_colors` or `theme` is a prefix of the
+    // key's words (complete_closed_value), its no-advance cases Tabs that
+    // walk.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {
         // Leading whitespace off, trailing whitespace kept — the reasons are
         // at ltrim_ws. The completer used to be handed the raw substring, so a
@@ -1633,7 +1687,7 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, true_colors and the
+    // gui_scale, projects_repo, projects_path, true_colors, theme and the
     // noise's three — gui_scale and the rest the device config's — per-tab
     // trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical

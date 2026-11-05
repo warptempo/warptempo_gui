@@ -355,7 +355,7 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp) {
 // the pad strip_pad_px under the face). A legend never widens a key; one
 // wider than its face
 // overhangs onto the ground beside it. It stands on the ground whatever the
-// key's face, so a lit key's legend stays kTextInk (paint_key_legend).
+// key's face, so a lit key's legend stays `text` (paint_key_legend).
 struct KeyLegendSeat {
     double x        = 0.0;   // the run's pen
     double baseline = 0.0;
@@ -498,8 +498,8 @@ KeyLegendLayout key_legend_layout(const GuiRect& face, std::string_view word) {
 }
 
 // A KEY'S LEGEND under its face (key_legend_layout), on the ground whatever
-// the key's face, in the text tone kTextInk or, `enabled` false, the
-// disabled key's kKeyDimInk 5A5A5A (materials.h's text tones; architect
+// the key's face, in the text tone `text` or, `enabled` false, the
+// disabled key's `key_dim_ink` (Default's 5A5A5A) (materials.h's text tones; architect
 // 2026-11-03: a lit key's legend stays B5B5B5, the legend being on the
 // ground). No letter of it is underlined (architect 2026-10-30: no keyboard
 // stands under a dialog, so an access key has no producer).
@@ -507,7 +507,8 @@ void paint_key_legend(cairo_t* cr, const GuiRect& face, std::string_view word,
                       bool enabled) {
     if (word.empty()) return;
     const KeyLegendLayout layout = key_legend_layout(face, word);
-    set_palette_source(cr, hex(enabled ? kTextInk : kKeyDimInk));
+    const GuiPalette& p = palette();
+    set_palette_source(cr, enabled ? p.text : p.key_dim_ink);
     text_shape::show_shaped_run(cr, *layout.run, layout.seat.x,
                                 layout.seat.baseline);
 }
@@ -548,9 +549,9 @@ std::string key_legend_word(std::string_view word) {
 // misalignment over uneven sizing"): a drawing whose ink side's parity
 // differs from the face's stands half a px off center rather than taking a
 // size of its own, every key glyph keeping the one ink size. ITS TONE
-// FOLLOWS THE FACE (materials.h's key_ink): kTextOnLit 111111 when the key
+// FOLLOWS THE FACE (materials.h's key_ink): `text_on_lit` (Default's 111111) when the key
 // paints LIT (`look`, key_look's answer: checked, a dead checked key keeping
-// its fill), else kTextInk B5B5B5 on a resting face, or kKeyDimInk 5A5A5A
+// its fill), else `text` (Default's B5B5B5) on a resting face, or `key_dim_ink` (Default's 5A5A5A)
 // when the key is disabled. The glyph is
 // clipped to the face: a face smaller than the ink box keeps its glyph
 // centered and lets nothing overhang onto the ground. None is at the
@@ -1627,12 +1628,13 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // the note, the brand, the legend and its glyph, on the band's ground
     // paint_icon_row already put down — nothing else on the lane. NO SHADOW
     // (the flat look, architect 2026-11-01): the words and the drawings in
-    // the text tone kTextInk (M13, 2026-11-02; Breeze's, M7).
+    // the text tone `text` (M13, 2026-11-02; Breeze's, M7).
     const GuiRect lane{band.x, band.y, band.w,
                        std::min(band.h, logo_lane_h_px())};
     if (lane.w <= 0 || lane.h <= 0) return;
     const WellColumns well = well_columns(app);
-    const GuiColor text = hex(kTextInk);
+    const GuiColor text = palette().text;
+    const uint32_t text_word = installed_theme().tones.text;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
@@ -1646,7 +1648,7 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     const icons::InkSize note = logo_note_ink();
     icons::draw_glyph(cr, icons::Icon::MusicNote16th, well.x,
                       logo_item_y(lane, note.h) - scaled_px(kLogoNoteLiftW),
-                      note_ink, kTextInk);
+                      note_ink, text_word);
 
     // THE BRAND, a constant: its first ink the gap past the note's last
     // ink column, its ink rows centered on the lane.
@@ -1686,7 +1688,7 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
         const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
         icons::draw_glyph(cr, glyph, l.cell.x + (l.cell.w - s.w) / 2,
                           l.cell.y + (l.cell.h - s.h) / 2, glyph_ink,
-                          kTextInk);
+                          text_word);
     }
 
     cairo_restore(cr);
@@ -1814,7 +1816,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
-    // THE LANE IS THE FLAT GROUND (materials.h's kGround, the palette's
+    // THE LANE IS THE FLAT GROUND (the theme's `ground` (Default's 242424, materials.h), the palette's
     // `face`; the flat look, 2026-11-01) under every run, between them and
     // round the faces of a run (the key gaps), NO LINE (the caption line
     // on its first row went with the caption, 2026-10-24). Its upper pad THE
@@ -1931,7 +1933,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         //
         // THE DEAD FACE IS THE GLYPH'S AND THE LEGEND'S ALONE (architect
         // 2026-10-02, the AB set; the flat look 2026-11-01, M6; the key's
-        // dim tone 2026-11-02): dimmed (kKeyDimInk, paint_key_glyph and
+        // dim tone 2026-11-02): dimmed (`key_dim_ink`, paint_key_glyph and
         // paint_key_legend), the key the face its state gives
         // (paint_roster_case). A dead CHECKED button (the grid-iterations
         // lamp on a locked tab, say) keeps its lit fill: the mode cannot
@@ -2357,9 +2359,9 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 
 // THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
 // LENGTH, ONE FIELD SHAPE (architect 2026-10-09, the program is Cool Edit;
-// FLAT since 2026-11-01 night, M5m, paint_ce_time_field): A FLAT kKeyFace
+// FLAT since 2026-11-01 night, M5m, paint_ce_time_field): A FLAT `key_face`
 // 363636 BOX, NO RING (Live's numeric fields), the digits THE
-// TEXT TONE kTextInk (M13, 2026-11-02; architect 2026-10-23: "the font
+// TEXT TONE `text` (M13, 2026-11-02; architect 2026-10-23: "the font
 // color should not be this yellowish color") — 39 DEVICE PX TALL on the
 // tablet at 200 %, THE PAD, THE CAP AND THE PAD (time_field_h_px, render.h, the
 // owner of the pad and the height; 2026-11-03; it does not follow the
@@ -2756,7 +2758,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    // THE FLAT GROUND (materials.h's kGround, 2026-11-01) under the block and
+    // THE FLAT GROUND (the theme's `ground` (Default's 242424, materials.h), 2026-11-01) under the block and
     // between its keys; the clock's flat field (the time field,
     // paint_ce_time_field); the keys flat (paint_roster_case) with their
     // glyphs on them (paint_key_glyph), their legends under them
@@ -2782,7 +2784,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // the sticky-ctrl mode that closes the marker-verb group: it wears the
     // checked face while the mode stands, which is the roster's standing rule
     // for a mode. A checked button a mode greys keeps its checked face, its
-    // glyph kTextOnLit and its legend dimmed, the band's own composition.
+    // glyph `text_on_lit` and its legend dimmed, the band's own composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         const GuiRect key{x, btn_y, btn_w, btn_h};   // the face
         // The legend names the next press's act (2026-10-25, the band's
@@ -2972,7 +2974,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // "Tab A" / "Tab B" on the bare ground right of the clock): its FIRST
         // INK the name's air (kTabNameAirW) past the field's right edge, the run's
         // origin its own left bearing short of that; the program face in THE
-        // TEXT TONE kTextInk, NO SHADOW (the flat look, 2026-11-01; M13's
+        // TEXT TONE `text`, NO SHADOW (the flat look, 2026-11-01; M13's
         // tone 2026-11-02), on the clock's baseline.
         // Never greyed: it is no button (Ctrl+Tab, Switch Tab and the walk's
         // barrel press switch the tab). A tab switch damages the lane
@@ -3024,7 +3026,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             (name_ends_in_separator ? 0
                                     : scaled_px(kStateAirW));
         const int state_w = (right_block_x - lengths.gap) - state_x;
-        set_palette_source(cr, hex(kTextInk));
+        set_palette_source(cr, palette().text);
         text_shape::show_shaped_run(cr, name_run, name_origin, baseline);
         // THE CELL IS THE FIELD LESS ITS TWO PADS — with no floor (removed
         // 2026-10-10; Cool Edit's mock of 2026-10-09 set one, the cell
@@ -3126,7 +3128,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // THE TEXT TONE on the field (M13, 2026-11-02; architect
             // 2026-10-23: "the font color should not be this yellowish
             // color").
-            set_palette_source(cr, hex(kTextInk));
+            set_palette_source(cr, palette().text);
             text_shape::show_shaped_run(cr, time_run,
                                         static_cast<double>(run_x), baseline);
         }
@@ -3139,7 +3141,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, state_x, lane.y, state_w, lane.h);
             cairo_clip(cr);
-            set_palette_source(cr, hex(kTextInk));
+            set_palette_source(cr, palette().text);
             text_shape::show_shaped_run(cr, state_run,
                                         static_cast<double>(state_x) -
                                             text_shape::ink_left_px(state_run),
@@ -3196,9 +3198,9 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     // ONE-W `frame` BORDER (hairline_px, 2026-11-04) on its own outer rows
     // and columns, all four sides one tone — the border laid as the whole
     // box, the face over its inside. No ring tones, no shadow. THE TOOLTIP
-    // passes the pane kPaneFace in the frame tone kWellFrame (architect
+    // passes the pane `pane_face` in the frame tone `well_frame` (architect
     // 2026-11-02, M11 with M14 "d"); THE CARDS pass the chrome's
-    // `card_ground` and `card_frame`, both Live's status-bar orange kCardFace
+    // `card_ground` and `card_frame`, both Live's status-bar orange `card_face`
     // (architect 2026-11-04 night, h1 of tmp/s38), so no border shows and the
     // ring stays layout. The tooltip and each card keep their own height
     // rule and pad (paint_shift_tooltip, notification_pad_px), the border
@@ -3307,9 +3309,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // name, and under it a smaller, dimmer hint; "think 90s Japanese
     // hi-fi"). THE NAME LINE wears the flags' face, GuiFace::Program (11 W,
     // 22 device px on the tablet, "the tooltips font size should be the same
-    // as the flags", 2026-10-23) in the text tone kTextInk; THE HINT LINE
+    // as the flags", 2026-10-23) in the text tone `text`; THE HINT LINE
     // its own face, GuiFace::Hint (9 W, 18 device px), in the
-    // dim tone kTextDimInk (Live's 757575, architect 2026-11-02, M11's
+    // dim tone `text_dim` (Live's 757575, architect 2026-11-02, M11's
     // ruling 3; materials.h's text tones).
     // Neither wears a shadow.
     //
@@ -3379,18 +3381,20 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                                                  : box;
     }
 
-    // THE TOOLTIP'S LOOK, the flat look's constants (no chrome role): the
-    // pane in the one frame tone (render.h's THE CARD FACE).
-    paint_popup_chrome(cr, box, hex(kWellFrame), hex(kPaneFace));
+    // THE TOOLTIP'S LOOK, the flat look's tones off the installed palette
+    // (`pane_face`, `well_frame`, the text pair): the pane in the one frame
+    // tone (render.h's THE CARD FACE).
+    const GuiPalette& p = palette();
+    paint_popup_chrome(cr, box, p.well_frame, p.pane_face);
 
     // THE BASELINES (the box above): the name's on its cap's bottom row
     // under the frame and the pad, the hint's one pad and its own cap lower.
     const double base1 = static_cast<double>(y + inset + cap1);
-    set_palette_source(cr, hex(kTextInk));
+    set_palette_source(cr, p.text);
     text_shape::show_shaped_run(cr, r1, static_cast<double>(x + inset),
                                 base1);
     if (two_line) {
-        set_palette_source(cr, hex(kTextDimInk));
+        set_palette_source(cr, p.text_dim);
         text_shape::show_shaped_run(cr, r2, static_cast<double>(x + inset),
                                     base1 + static_cast<double>(pad + cap2));
     }
@@ -3502,9 +3506,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 //
 // THE LOOK (architect 2026-11-04 night, his pick h1 of tmp/s38): THE CARD
 // FACE — a flat box in LIVE'S STATUS BAR'S ORANGE (`card_ground`,
-// materials.h's kCardFace E76942), its one-W ring painted in the same fill
+// materials.h's `card_face` (Default's E76942)), its one-W ring painted in the same fill
 // (`card_frame`), so no border shows, its words and its class glyph in
-// Live's own text on that bar (`card_text`, kCardInk 2A2A2A); both classes
+// Live's own text on that bar (`card_text`, `card_ink` (Default's 2A2A2A)); both classes
 // alike, the glyph telling them apart (render.h's palette block, THE CARD
 // FACE) — square, NO DROP SHADOW, through the one popup box painter
 // (paint_popup_chrome, the tooltip's too, in its own look); inside the
@@ -3673,7 +3677,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // DialogInformation on a normal card, DialogError on a critical one
         // (architect 2026-11-02, R14: the 10-10 transcriptions, the mark cut
         // out of the filled square), in the words' own tone (the chrome's
-        // `card_text`, kCardInk: the glyph and the words one tone, Live's).
+        // `card_text`, `card_ink`: the glyph and the words one tone, Live's).
         paint_popup_chrome(cr, card, palette().card_frame,
                            palette().card_ground);
         {
@@ -3728,8 +3732,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 // and REAPER'S GEOMETRY MODEL.
 //   LOOK, Cool Edit's FLIPPED RULER IN LIVE'S TONES (architect 2026-10-09,
 //     the program is Cool Edit; flat since 2026-11-01 night; render.h's well
-//     paragraph and its ruler block): flat kRulerFace under the trim bar's
-//     frame, no line on its top, the ticks kRulerTick one W wide, on their
+//     paragraph and its ruler block): flat `ruler_face` under the trim bar's
+//     frame, no line on its top, the ticks `ruler_tick` one W wide, on their
 //     columns (the line rule's left pixel), STANDING ON ITS FOOT — majors 4
 //     W, minors 1 W (8 and 2 device rows on the tablet), overlaying the
 //     ruler's bottom pad — and the digits Bold Small 8 W in the text tone,
@@ -3884,9 +3888,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     cairo_save(cr);
     // THE LANES (architect 2026-11-01 night, the flat well; render.h's well
     // paragraph): the lanes' margins beside the well and the ruler lane's
-    // last row THE GROUND (the palette's `face`, kGround); the ruler FLAT
-    // kRulerFace across the well's columns; the marker lane FLAT
-    // kLaneFace across them (render.h's well_columns: THE EDGE RULE, the
+    // last row THE GROUND (the palette's `face`, `ground`); the ruler FLAT
+    // `ruler_face` across the well's columns; the marker lane FLAT
+    // `lane_face` across them (render.h's well_columns: THE EDGE RULE, the
     // well the waveform area), no ring, no line.
     const GuiPalette& pal = palette();
     const int ruler_h = ruler_h_px();
@@ -3907,7 +3911,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                             pal.face);
         if (in1 > in0)
             paint_cell_rect(cr, GuiRect{in0, marker.y, in1 - in0, marker.h},
-                            hex(kLaneFace));
+                            palette().lane_face);
     }
 
     // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
@@ -3947,14 +3951,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         cairo_restore(cr);
         return;
     }
-    // THE RULER'S FACE (the head of this body): flat kRulerFace across the
+    // THE RULER'S FACE (the head of this body): flat `ruler_face` across the
     // well's columns over the ruler's rows, the lane's last row the
     // ground laid above. The face reads the LIVE area (well_columns), as the
     // well's ground does (paint_canvas_column_frame); the walk below reads
     // the plate's width.
     paint_cell_rect(cr, GuiRect{well_x0, lane.y, well_x1 - well_x0,
                                 std::min(ruler_h, lane.h)},
-                    hex(kRulerFace));
+                    palette().ruler_face);
 
     const int64_t step   = comb.step;
     const double  end_ms = comb.end_ms();
@@ -3969,7 +3973,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE TICKS STAND ON THE RULER'S FOOT (the flipped ruler; render.h's
     // ruler block): each ONE CANVAS LINE wide (waveform_line_px, one W since
     // 2026-11-04, the unit), on its column (the line rule's left pixel), in
-    // kRulerTick, rising the major's 4 W or the minor's 1 W (8 and 2 device
+    // `ruler_tick`, rising the major's 4 W or the minor's 1 W (8 and 2 device
     // rows on the tablet; scaled_px) from the foot into the ruler's bottom
     // pad, NO SHADOW.
     const int ruler_bottom = lane.y + std::min(ruler_h, lane.h);   // one past
@@ -3978,7 +3982,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     // THE DIGITS: THE RULER FACE (gui_font.h's type table, `Small`: BOLD 8
     // W, 16 device px on the tablet, scaled with gui_scale — architect
-    // 2026-11-01 night, M5c; 8 W since 2026-11-04 night) in the text tone kTextInk (2026-11-02, the
+    // 2026-11-01 night, M5c; 8 W since 2026-11-04 night) in the text tone `text` (2026-11-02, the
     // font audit: Live's own ruler digits), BARE, THEIR INK CENTERED ON THE
     // RULER — the BASELINE the ruler's pad and the digits' ink above the
     // baseline under the lane's top (render.h's ruler_baseline_px: 24 rows on
@@ -4075,7 +4079,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
         // colour to all the numbers"): the text tone, bare (the block above).
         const double x = static_cast<double>(cx + lx);
-        set_palette_source(cr, hex(kTextInk));
+        set_palette_source(cr, palette().text);
         text_shape::show_shaped_run(cr, run, x, baseline);
     };
     // THE WALK'S CLIP: the waveform's columns [0, wave_w) over the ruler's
@@ -4113,9 +4117,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // step — at least eight minimum minor pitches — away.
             if (major) paint_major_label(col, step_ms);
             // ONE W wide (`t`), centered on the tick's own column, clipped at
-            // both edges, in kRulerTick, standing on the ruler's foot.
+            // both edges, in `ruler_tick`, standing on the ruler's foot.
             if (tick_on_lane) {
-                set_palette_source(cr, hex(kRulerTick));
+                set_palette_source(cr, palette().ruler_tick);
                 fill_waveform_line(cr, cx, wave_w, col,
                                    major ? major_top : minor_top,
                                    ruler_bottom, t);
@@ -4665,7 +4669,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
-    // THE TRIM LANE'S OWN GROUND (materials.h's kGround, the palette's
+    // THE TRIM LANE'S OWN GROUND (the theme's `ground` (Default's 242424, materials.h), the palette's
     // `face`), under the bar: the lane's first row (the row of ground above
     // the bar) and the well's margins beside it (render_trim_flags spans the
     // canvas's columns alone, the well's); the bar's two
@@ -5170,7 +5174,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE'S GROUND, ON EVERY FRAME WHATEVER STANDS OVER IT: THE FLAT
-    // GROUND (materials.h's kGround, 2026-11-01; bare in the simple layout
+    // GROUND (the theme's `ground` (Default's 242424, materials.h), 2026-11-01; bare in the simple layout
     // 2026-10-22, Cool Edit's dock bar before), the
     // lane the window's width on its foot. The row's tenants are the
     // program's (row 8, and the modal family's controls row — every modal's,
@@ -5707,8 +5711,7 @@ static AppState::PlayerButtonAct trim_presets_pair_twin(
 // `pane` the interior's tone, the definition's head).
 static void paint_modal_box(cairo_t* cr, const AppState& app,
                             int keyboard_h,
-                            const GuiRect& hole = GuiRect{0, 0, 0, 0},
-                            uint32_t pane = kPaneFace);
+                            const GuiRect& hole, GuiColor pane);
 
 namespace {
 
@@ -5890,11 +5893,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         assert(frame.page.stands == score_up);
         if (frame.page.stands) page_hole = frame.clip;
     }
-    // THE PANE kPaneFace, the score viewer's kScorePaneFace its one exception
+    // THE PANE `pane_face`, the score viewer's `score_pane_face` its one exception
     // (modal_box.h's head, M9 A2).
     if (boxed)
         paint_modal_box(cr, app, kb_h, page_hole,
-                        score_up ? kScorePaneFace : kPaneFace);
+                        score_up ? palette().score_pane_face
+                                 : palette().pane_face);
 
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
@@ -6357,11 +6361,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // branch, the score viewer's at its own.
             const int hx = thumb_x_of();
             // THE CHANNEL (render.h's scrub block, M7): ONE W of
-            // kWellFrame centered on the face's rows, across the channel's
+            // `well_frame` centered on the face's rows, across the channel's
             // width, nothing else.
             paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above,
                                         channel.w, channel_h},
-                            hex(kWellFrame));
+                            palette().well_frame);
             {
                 // THE THUMB — the blank flat key block (render.h's scrub
                 // block: the key at rest, no glyph, 8 W by the key's height),
@@ -6555,7 +6559,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     cfont, format_timestamp(seconds_of(shown[i])),
                     text_shape::Kerning::Off);
                 // Row 8's clock's ink, the text tone (M13, 2026-11-02).
-                set_palette_source(cr, hex(kTextInk));
+                set_palette_source(cr, palette().text);
                 text_shape::show_shaped_run(
                     cr, run, static_cast<double>(time_field_run_x(field_x)),
                     redesign_baseline(cfont, static_cast<double>(field.y),
@@ -6627,7 +6631,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                         text_shape::shape_text_run(
                             cfont, format_timestamp(seconds_of(shown[i])),
                             text_shape::Kerning::Off);
-                    set_palette_source(cr, hex(kTextInk));
+                    set_palette_source(cr, palette().text);
                     text_shape::show_shaped_run(
                         cr, run,
                         static_cast<double>(time_field_run_x(field_x)),
@@ -6680,7 +6684,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 paint_ce_time_field(cr, field);
                 const text_shape::ShapedRun run =
                     text_shape::shape_text_run(cfont, text);
-                set_palette_source(cr, hex(kTextInk));
+                set_palette_source(cr, palette().text);
                 text_shape::show_shaped_run(
                     cr, run,
                     static_cast<double>(sl.cell_x0 + sl.cell_w - sl.cell_pad) -
@@ -6979,7 +6983,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // LIST's pair and words (trim_presets_button_enabled) and the BPM
         // FORM's two words (bpm_form_button_enabled) — every other
         // owner's buttons are always live while their dialog stands and
-        // publish enabled=true. The glyph and the legend dimmed (kKeyDimInk,
+        // publish enabled=true. The glyph and the legend dimmed (`key_dim_ink`,
         // paint_key_glyph and paint_key_legend), the key the face its state
         // gives, the roster's rule
         // (architect 2026-10-02 and 2026-10-09).
@@ -7135,10 +7139,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // table, GuiFace::Keys; architect 2026-10-24, "C24" — the night's C34 "too
 // far", "a separate face" since that night, the body's 22 before it) — the
 // band painting NO LINE at its own top edge (architect 2026-08-27, on
-// glass). AT REST the cap in the text tone kTextInk on the face; the two
+// glass). AT REST the cap in the text tone `text` on the face; the two
 // faces the roster's (key_look, materials.h; architect 2026-11-02, the
 // yellow for lamps only):
-//   ARMED     — LIT, the FFAD56 fill, its cap kTextOnLit 111111 (M8 / M12):
+//   ARMED     — LIT, the FFAD56 fill, its cap `text_on_lit` (Default's 111111) (M8 / M12):
 //               SHIFT while it is armed and THE PAGE KEY while the symbols
 //               page stands — the two lamps. IT IS ALL
 //               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
@@ -7198,7 +7202,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // above it. (The program frame the band once stood inside went
     // 2026-10-21 and 2026-10-22; the taskbar overlay's raised Hilight line on its top,
     // 2026-10-10 to 2026-10-14, is gone with the overlay.)
-    // THE BAND'S GROUND IS THE FLAT GROUND (materials.h's kGround, the
+    // THE BAND'S GROUND IS THE FLAT GROUND (the theme's `ground` (Default's 242424, materials.h), the
     // chrome's `ground`; 2026-11-01).
     paint_cell_rect(cr, surf, palette().ground);
 
@@ -7263,7 +7267,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
             // THE CAP in the keys face, no shadow, its cap band centered on
             // the key by redesign_baseline: the text tone on a resting key,
-            // kTextOnLit on a lit one (materials.h's key_ink; no key here is
+            // `text_on_lit` on a lit one (materials.h's key_ink; no key here is
             // ever disabled).
             set_palette_source(cr, hex(key_ink(look, true)));
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
@@ -7345,8 +7349,8 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 //
 // The shape and every rect are modal_box.h's: ONE GROUND, ONE PANE — THE
 // PANEL in the program's ground (the box's margins and the box's own outer
-// rows and columns), and the interior ONE FLAT PANE in `pane` (kPaneFace for
-// every member, the score viewer's kScorePaneFace its one exception: the
+// rows and columns), and the interior ONE FLAT PANE in `pane` (`pane_face` for
+// every member, the score viewer's `score_pane_face` its one exception: the
 // caller's answer, modal_box.h's head), no frame, no ring, no shadow. The
 // controls row under the panel stands
 // on row 8's own rows, whose ground paint_bottom_strip lays (the row standing down under
@@ -7367,7 +7371,7 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 // paints over it, and the GPU's field and page show there.
 static void paint_modal_box(cairo_t* cr, const AppState& app,
                             int keyboard_h, const GuiRect& hole,
-                            uint32_t pane) {
+                            GuiColor pane) {
     const GuiRect panel = modal_panel_rect(app, keyboard_h);
     if (panel.w <= 0 || panel.h <= 0) return;
     const GuiRect interior = modal_box_interior_rect(app, keyboard_h);
@@ -7393,7 +7397,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
         // ONE FLAT PANE, whatever the member (a prompt's question too: the
         // pane is the box), nothing on its edge (modal_box.h's head).
         paint_cell_rect(cr, panel, p.face);
-        paint_cell_rect(cr, interior, hex(pane));
+        paint_cell_rect(cr, interior, pane);
         if (holed) cairo_restore(cr);
         if (keyboard_h > 0)
             paint_cell_rect(cr, modal_controls_row_rect(app, keyboard_h),
@@ -7484,7 +7488,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // EVERYTHING ELSE UNDER THE CONTENT RECT'S CLIP, because a scrolled
     // listing's first and last rows straddle the content's edges and must not
     // paint onto the ground round the pane or the controls row below.
-    paint_modal_box(cr, app, /*keyboard_h=*/0);
+    paint_modal_box(cr, app, /*keyboard_h=*/0, GuiRect{0, 0, 0, 0},
+                    palette().pane_face);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
     // SAME RECT (folder_overlay.h's content_rect, the box's interior), so
     // paint and hit agree about every pixel at any scroll offset. The surface
@@ -7576,8 +7581,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // larger side kListGlyphInkW = 26 px, half the 52-px row,
             // its rows centered on the row (the floor of the spare), its
             // first ink column kListGlyphXW = 18 px past the pane's left
-            // edge (the text seat), in the row text's tone — kTextInk at
-            // rest, kSelectionText 111111 on the lit row (the selection
+            // edge (the text seat), in the row text's tone — `text` at
+            // rest, `selection_text` 111111 on the lit row (the selection
             // pair, materials.h); the name at kListNameXW = 62 (the
             // names' column above). THE PLAYING
             // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain
@@ -7603,9 +7608,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                         : icons::Icon::Folder;
                 const int ink = scaled_px(kListGlyphInkW, 1);
                 const icons::InkSize s = icons::glyph_ink_size(glyph, ink);
+                const GuiThemeTones& t = installed_theme().tones;
                 icons::draw_glyph(cr, glyph, x0 + scaled_px(kListGlyphXW),
                                   r.y + (r.h - s.h) / 2, ink,
-                                  lit ? kSelectionText : kTextInk);
+                                  lit ? t.selection_text : t.text);
             }
             const int text_x = x0 + scaled_px(text_x_w);
 
@@ -7628,11 +7634,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
             // The row's text pair (surface_text, render.h); AN INERT ROW in
-            // THE DIM PRINT, kTextDimInk 757575 (materials.h's text tones,
+            // THE DIM PRINT, `text_dim` (Default's 757575) (materials.h's text tones,
             // architect 2026-10-28: "DEVICE" and "PIECE" dim headings, never
             // lit; 2026-10-29: the disabled `scale` and `bpm` lines the same).
             set_palette_source(
-                cr, inert ? hex(kTextDimInk)
+                cr, inert ? palette().text_dim
                           : surface_text(lit ? GuiSurface::ListRowLit
                                              : GuiSurface::ListRow));
             text_shape::show_shaped_run(

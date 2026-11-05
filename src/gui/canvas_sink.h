@@ -142,7 +142,7 @@ struct GuiCanvasPrimitive {
 // (the list's clip) and the GPU draws it whole at every swap while it
 // stands (the repair's whole-frame verdict, repair_must_be_full) — THE FIELD
 // GROUND (`field`, argb32_opaque_word of display_color, the sink's word for
-// the score viewer's pane, modal_box.h's kScorePaneFace) and over it THE
+// the score viewer's pane, modal_box.h's `score_pane_face`) and over it THE
 // PAGE, one R8 texture of THE GRAY STORE's
 // bytes (GuiScoreGrayPage, score_page_worker.h), texelFetched at integer
 // coordinates and written (g, g, g, 1) at gui_page_place's rect, centered.

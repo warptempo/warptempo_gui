@@ -7,8 +7,10 @@
      22 x 22 viewBox), rendered by resvg at the art's height in the logo's
      text tone #B5B5B5 (apk/build_apk.sh's LAUNCHER_INK, given as resvg's
      user stylesheet) and centered over THE APP'S GROUND, FLAT: #242424
-     (materials.h's kGround, architect 2026-11-02: the icon wears the
-     window's own ground; owned by apk/build_apk.sh's LAUNCHER_GROUND
+     (the Default theme's `ground`, materials.h's head, architect
+     2026-11-02: the icon wears the window's own ground — the Default
+     theme's whatever theme the window runs, 2026-11-05; owned by
+     apk/build_apk.sh's LAUNCHER_GROUND
      alone), one color over the whole
      canvas, so the mask shows a dark shape carrying the note. An
      ADAPTIVE icon, the whole of it: minSdk is 30, so

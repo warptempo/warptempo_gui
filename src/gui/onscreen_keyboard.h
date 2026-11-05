@@ -429,7 +429,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
 // what says the arm is the key's ARMED FACE — the lit fill FFAD56, its cap
-// kTextOnLit (materials.h's paint_key, the flat look 2026-11-01), which this
+// `text_on_lit` (materials.h's paint_key, the flat look 2026-11-01), which this
 // key and the page key (while the symbols page stands) wear off their lamps,
 // a press changing no face (no press look, 2026-11-04) — and the letter
 // caps themselves, every one of which turns capital while the arm stands.

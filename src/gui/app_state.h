@@ -8614,7 +8614,7 @@ struct AppState {
     // NONE, AND IT IS INERT
     // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
     // highlighted, never opened, stepped over by the walk, its text in the
-    // dim print (kTextDimInk); and DISABLED NONE, INERT AS GROUP IS
+    // dim print (`text_dim`); and DISABLED NONE, INERT AS GROUP IS
     // (architect 2026-10-29, the settings page's `scale` and `bpm`: "bpm and
     // scale should be viewable but disabled. they are useful for notes"):
     // a key line in the dim print, never highlighted, never opened,
@@ -8632,11 +8632,12 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its eighteen editable key lines and the two
+    // rows (its two headings, its nineteen editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
-    // the value list Plain rows alone (build_value_list_rows), each carrying
+    // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
-    // words; the trim presets list Plain rows alone
+    // words, and under `theme` its two Group headings, BUILTIN and EXTRA
+    // (2026-11-05); the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
     // preset's name alone (architect 2026-10-28 night); the BPM form a Group
     // row and three Plain rows (build_bpm_form_rows), row f + 1 the field f
@@ -16382,7 +16383,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
         // shared key painter already handles: a disabled checked key keeps
-        // its lit fill, its glyph kTextOnLit (materials.h).
+        // its lit fill, its glyph `text_on_lit` (materials.h).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the

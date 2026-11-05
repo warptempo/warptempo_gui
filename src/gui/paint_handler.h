@@ -1008,7 +1008,7 @@ private:
     // THE BOX every floating surface draws (the tooltip and the
     // notification cards), ONE PAINTER, TWO LOOKS: a flat `ground` box inside
     // a one-W `frame` border on all four sides — the tooltip the pane in
-    // kWellFrame (architect 2026-11-02, M11 with M14 "d"), the cards Live's
+    // `well_frame` (architect 2026-11-02, M11 with M14 "d"), the cards Live's
     // orange with the frame in the fill (2026-11-04 night; render.h's
     // palette block, THE CARD FACE).
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r, GuiColor frame,
@@ -1151,7 +1151,7 @@ private:
     // list panel, Live's browser list on the modal family's pane (M6 A,
     // 2026-11-01 night) — folder
     // and wav rows with their glyphs, the pickers' glyph-less rows, the
-    // settings page's group rows in the dim print (kTextDimInk, 2026-10-28), the
+    // settings page's group rows in the dim print (`text_dim`, 2026-10-28), the
     // highlight band (no pressed face: no press look, 2026-11-04), all under
     // the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands

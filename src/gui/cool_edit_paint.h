@@ -13,8 +13,8 @@
 // cue's triangle (the well's regions — the trim bar, the ruler, the marker
 // lane — are painted by render_trim_flags, paint_ruler_row and the flag
 // pass). The lengths are program_spec.h's and render.h's (each a rounded
-// part); the colors the flat look's constants (materials.h's THE WELL) and
-// the palette's. THE PLAYHEAD'S OWN COLORS are the palette's
+// part); the colors the installed theme's — the flat look's tones
+// (materials.h's THE WELL) and the palette's, every one read from palette(). THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
 // 2026-11-01 — and `playhead_line` — the line's one static tone in the
 // canvas, 85E2EB since 2026-11-04 night —
@@ -40,8 +40,8 @@
 
 // THE TIME FIELD on `field` (architect 2026-11-01 night, M5m, "add 1px to
 // clock and other related fields to make the spacing even"; Live's numeric
-// fields, the transport's position and tempo boxes): A FLAT kKeyFace 363636
-// BOX, NO RING. Its digits are the caller's, the text tone kTextInk, no
+// fields, the transport's position and tempo boxes): A FLAT `key_face` (Default's 363636)
+// BOX, NO RING. Its digits are the caller's, the text tone `text`, no
 // shadow — every time field in the program face's 22 px, row 8's clock
 // (architect 2026-10-26 ~11:30), the render player's two (~12:10, "yes" to
 // symmetry; gui_font.h's table) and the score viewer's — centred on both

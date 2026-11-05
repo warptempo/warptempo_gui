@@ -190,9 +190,11 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # viewBox's (the note's 22 x 22: a 52 dp square), never rasterised small and
 # upscaled (magick's own delegate renders the SVG at its user size and
 # blurs at -resize) -- centered on the transparent 108 dp canvas; the
-# BACKGROUND that canvas FLAT IN THE APP'S GROUND #242424 (materials.h's
-# kGround, Live's, architect 2026-11-02: the icon wears the window's own
-# ground; owned by LAUNCHER_GROUND below alone), one color over the whole
+# BACKGROUND that canvas FLAT IN THE DEFAULT THEME'S GROUND #242424 (Live's
+# SurfaceArea, materials.h's head; architect 2026-11-02: the icon wears the
+# window's own ground — THE DEFAULT THEME'S, whatever `theme` the tablet runs:
+# the icon is one picture, the themes are the window's, 2026-11-05; owned by
+# LAUNCHER_GROUND below alone), one color over the whole
 # square, which the launcher's mask cuts to its shape. Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
 # Byte-stable: -strip drops the date chunks. Cairo paints the
@@ -202,8 +204,8 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
-LAUNCHER_GROUND="#242424"   # the app's ground (materials.h's kGround); the one owner of the color here
-LAUNCHER_INK="#B5B5B5"      # the note's ink, the logo lane's text tone (materials.h's kTextInk)
+LAUNCHER_GROUND="#242424"   # the Default theme's ground (theme_tables.h's `default` row, materials.h's head); the one owner of the color here
+LAUNCHER_INK="#B5B5B5"      # the note's ink, the Default theme's text tone (the logo lane's `text`)
 # THE INK IS GIVEN AS resvg's USER STYLESHEET, the app's own road
 # (svg_icon::parse): the drawing paints in `currentColor` and the one-rule
 # sheet sets the root's `color`. The sheet is a build product under the

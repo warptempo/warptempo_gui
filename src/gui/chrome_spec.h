@@ -3,9 +3,9 @@
 
 // THE CHROME SPEC (architect 2026-10-06): the choices of the period desktop
 // the chrome follows, read by the chokepoint that paints each element, never
-// a literal at the painter. The colors are the materials' and the
-// palette's (materials.h, palette_file.h), the chrome inheriting Cool Edit's
-// tones (chrome_derive.h); the app paints no caption since 2026-10-24
+// a literal at the painter. The colors are the installed theme's, the
+// materials' rules and the palette's (materials.h, palette_file.h; the
+// chrome's role table, theme_file.h); the app paints no caption since 2026-10-24
 // (render.h's caption note); the spec chooses
 // shapes and seats. It names NO FACE: the face is the product's
 // one (gui_font.h's gui_live_face_set), and no color (its own scheme, the

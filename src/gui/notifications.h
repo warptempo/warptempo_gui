@@ -17,9 +17,9 @@
 // (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
 // content on all four sides (notification_pad_px below; P18, architect
 // 2026-10-24), ON THE CARD FACE — A FLAT BOX IN LIVE'S STATUS BAR'S ORANGE,
-// `card_ground` (materials.h's kCardFace E76942), its one-W ring
+// `card_ground` (materials.h's `card_face` (Default's E76942)), its one-W ring
 // `card_frame` painted in the same fill so no border shows, its words and
-// its glyph `card_text` (kCardInk 2A2A2A, Live's text on that bar), both
+// its glyph `card_text` (`card_ink` (Default's 2A2A2A), Live's text on that bar), both
 // classes alike (architect 2026-11-04 night, his pick h1 of tmp/s38; the
 // tooltip's look, which the cards wore from 2026-10-06, is the tooltip's
 // alone; render.h's palette block, THE CARD FACE): the one popup box

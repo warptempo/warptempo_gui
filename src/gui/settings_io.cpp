@@ -383,6 +383,9 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_true_colors, device_config.h), the writer's own spelling.
     if (key == "true_colors" && app.device_config != nullptr)
         return std::string(format_true_colors(app.device_config->true_colors));
+    // THE THEME (2026-11-05): the slug verbatim, as the writer writes it.
+    if (key == "theme" && app.device_config != nullptr)
+        return app.device_config->theme;
     // THE PLATE'S GROW (2026-10-31): through its one formatter
     // (format_waveform_grow, device_config.h), the writer's own spelling.
     if (key == "waveform_grow" && app.device_config != nullptr)

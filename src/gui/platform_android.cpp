@@ -574,6 +574,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
+    // THE WINDOW'S THEME (architect 2026-11-05, a permanent key), spelled:
+    // `default`, Live's "Default Dark Neutral Medium" (kGuiDefaultTheme,
+    // theme_tables.h; device_config.h's head).
+    cfg.theme         = kGuiThemes[kGuiDefaultTheme].slug;
     // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key),
     // spelled: half a device px, 2 quarters (device_config.h's head).
     cfg.waveform_grow_quarters = kWaveformGrowDefaultQuarters;

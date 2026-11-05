@@ -6884,7 +6884,7 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // NOTHING (its lift never reaches here and the highlight never stands on
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
 // first `=` (a key carries none). On the row of a key with a value list
-// (settings_key_has_value_list — `true_colors`,
+// (settings_key_has_value_list — `true_colors`, `theme`,
 // `waveform_grow`, `audio_level`, `noise`, `noise_level`,
 // `noise_crossfade_s`) THAT KEY'S VALUE LIST IS SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
@@ -6923,33 +6923,51 @@ void GuiInputHandler::settings_page_commit(int index) {
 // (settings_page_commit), and every exit but the opener key's returns to
 // that page (return_to_settings_page).
 
-// THE LIST: the key's values (GuiSettingsEditor::value_choices, the
-// domains' one owner), one glyph-less Plain row each, the value both what
-// the row shows and what the tap commits; the overlay records THE KEY
-// (`value_key`), which the commit routes the value to. The band opens on THE
-// LIVE VALUE — the row whose value is the key's current one
-// (GuiSettingsEditor::setting_value, the writer's spelling, which every row
-// value shares), seated by the one set_highlight and centered in the band
-// (scroll_row_centered, architect 2026-10-26). Every listed key's live value
-// is in its list by the load wall's own grammars but `noise`'s, whose live
-// name may have no folder (the absent-folder rule, noise.h): row 0 stands
-// then, and a list with no rows seats nothing (set_highlight's -1).
+// THE LIST: the key's values IN GROUPS (GuiSettingsEditor::value_list_groups,
+// the domains' one owner through value_choices): each group's heading, when
+// it has one, an inert Group row — the settings page's own shape, its
+// "DEVICE" / "PIECE" (build_settings_page_rows); `theme`'s "BUILTIN" and
+// "EXTRA", architect 2026-11-05 — never seated and opening nothing
+// (folder_overlay::row_is_inert), then one glyph-less Plain row per value,
+// the value both what the row shows and what the tap commits; the overlay
+// records THE KEY (`value_key`), which the commit routes the value to. The
+// band opens on THE LIVE VALUE — the row whose value is the key's current
+// one (GuiSettingsEditor::setting_value, the writer's spelling, which every
+// row value shares), seated by the one set_highlight and centered in the
+// band (scroll_row_centered, architect 2026-10-26). Every listed key's live
+// value is in its list by the load wall's own grammars but `noise`'s, whose
+// live name may have no folder (the absent-folder rule, noise.h): the first
+// value row stands then, and a list with no rows seats nothing
+// (set_highlight's -1; a heading row is never the seat).
 void GuiInputHandler::build_value_list_rows(const std::string& key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov           = AppState::FolderOverlay{};
     ov.owner     = AppState::FolderOverlay::Owner::ValueList;
     ov.value_key = key;
     const std::string live_value = settings_editor.setting_value(key);
-    int live = 0;
-    for (std::string& value : settings_editor.value_choices(key)) {
-        if (value == live_value)
-            live = static_cast<int>(ov.rows.size());
-        AppState::FolderOverlayRow row;
-        row.kind  = AppState::FolderOverlayRow::Kind::Plain;
-        row.name  = value;
-        row.value = std::move(value);
-        ov.rows.push_back(std::move(row));
+    int live = -1;
+    int first_value_row = -1;
+    for (GuiSettingsEditor::ValueListGroup& group :
+         settings_editor.value_list_groups(key)) {
+        if (!group.heading.empty()) {
+            AppState::FolderOverlayRow head;
+            head.kind = AppState::FolderOverlayRow::Kind::Group;
+            head.name = std::move(group.heading);
+            ov.rows.push_back(std::move(head));
+        }
+        for (std::string& value : group.values) {
+            if (first_value_row < 0)
+                first_value_row = static_cast<int>(ov.rows.size());
+            if (value == live_value)
+                live = static_cast<int>(ov.rows.size());
+            AppState::FolderOverlayRow row;
+            row.kind  = AppState::FolderOverlayRow::Kind::Plain;
+            row.name  = value;
+            row.value = std::move(value);
+            ov.rows.push_back(std::move(row));
+        }
     }
+    if (live < 0) live = first_value_row;
     folder_overlay::clamp_scroll(app);
     folder_overlay::set_highlight(app, live);
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
@@ -6972,6 +6990,10 @@ void GuiInputHandler::value_list_commit(int index) {
         AppState::FolderOverlay::Owner::ValueList) return;
     const int n = static_cast<int>(app.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
+    // A heading row (`theme`'s BUILTIN / EXTRA) commits nothing: its lift
+    // never reaches here and the highlight never stands on it (the settings
+    // page's own guard; the rule's statement).
+    if (folder_overlay::row_is_inert(app, index)) return;
     const std::string key = app.folder_overlay.value_key;
     const std::string value =
         app.folder_overlay.rows[static_cast<size_t>(index)].value;

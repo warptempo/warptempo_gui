@@ -1,6 +1,6 @@
 #include "cool_edit_paint.h"
 
-#include "materials.h"   // the flat look's constants
+#include "materials.h"   // the flat look's rules (palette() through render.h)
 #include "text_shape.h"
 
 #include <algorithm>
@@ -13,7 +13,7 @@
 void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     if (f.w <= 0 || f.h <= 0) return;
     // THE FLAT KEY FACE, no ring (the declaration's rule).
-    paint_cell_rect(cr, f, hex(kKeyFace));
+    paint_cell_rect(cr, f, palette().key_face);
 }
 
 

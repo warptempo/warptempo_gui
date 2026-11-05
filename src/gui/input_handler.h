@@ -3672,6 +3672,24 @@ private:
     // with the popup.)
     void apply_true_colors(bool on);
 
+    // THE THEME'S ONE LIVE ACT (architect 2026-11-05, the theme arc;
+    // palette_file.h's head): the settings editor's `theme=` commit and its
+    // value list's tap (one body, apply_device_setting) reinstall the whole
+    // palette off the named row through install_palette and run the apply
+    // shape its declaration owes (render.h) — install_true_colors' own, for
+    // the same two caches: the icon rasters dropped (a key glyph's raster
+    // keys on its sRGB tone, which the theme moves), the plate kicked when
+    // its two inks moved — the waveform_plate_inks pair read before and after
+    // — and the flag cache refreshed otherwise, the whole window invalidated.
+    // THE SHADER NEEDS NOTHING (confirmed 2026-11-05 at gl_canvas.cpp's
+    // kListFragmentShader: every color is the draw list's own word, word_rgb
+    // of v_words.x / .y, no color uniform; the plate's inks ride the worker's
+    // job and its fingerprint, waveform_cache.cpp). It cards nothing: the
+    // screen is the answer. The commit gates the no-op and writes the device
+    // config; the launch installs the config's theme before the window exists
+    // (main.cpp), with nothing cached to rebuild.
+    void apply_theme(const GuiTheme& theme);
+
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the
     // bit: bare `o` on the active tab, which the icon row's Read-Only button

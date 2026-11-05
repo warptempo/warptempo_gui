@@ -40,13 +40,13 @@
 // ONE GROUND, ONE PANE (architect 2026-11-01 night, M6 A — "the list pane
 // with no frame" — for every member, M7 / M8 / M11 after it): THE PANEL'S
 // MARGINS, THE CONTROLS ROW AND THE BOX'S OWN OUTER ROWS AND COLUMNS are the
-// flat ground (materials.h's kGround); THE BOX'S INTERIOR — the box less one
-// hairline, one W, on each side — IS ONE FLAT PANE, materials.h's kPaneFace 363636
+// flat ground (the theme's `ground` (Default's 242424, materials.h)); THE BOX'S INTERIOR — the box less one
+// hairline, one W, on each side — IS ONE FLAT PANE, materials.h's `pane_face` (Default's 363636)
 // (Live's panel face, the keys' face), with NO FRAME, NO RING, NO SHADOW AND
 // NO ROW SEPARATOR, every member's alike: the lists, a prompt's question,
 // the progress modal's sentence, a dialog editor's line ("the user
 // shouldn't be typing on a non-flat color", 2026-10-23). THE ONE EXCEPTION
-// IS THE SCORE VIEWER'S PANE, kScorePaneFace 191919 (below). EVERY BUTTON
+// IS THE SCORE VIEWER'S PANE, `score_pane_face` (Default's 191919) (below). EVERY BUTTON
 // THE FLAT KEY with its glyph on it and its legend under it (2026-11-03), a
 // word button's word its glyph's key, its legend in capitals and its
 // tooltip (paint_handler.cpp's modal_word_buttons, modal_word_icon and
@@ -97,9 +97,8 @@
 // and every hit site of a member reads these rects (on screen is as
 // painted).
 #include "app_state.h"
-#include "materials.h"      // kPaneFace
-#include "palette_file.h"   // kPaletteInk, the score viewer's pane
-#include "render.h"
+#include "materials.h"      // the flat look's rules
+#include "render.h"         // palette(): `pane_face`, `score_pane_face`
 
 #include <algorithm>
 #include <cstdint>
@@ -185,17 +184,17 @@ inline GuiRect modal_box_interior_rect(const AppState& a, int keyboard_h) {
 // every former one-device-px length is one W) — 2 device px on the tablet, 1 at 100 %.
 inline int modal_box_content_pad_px() { return hairline_px(); }
 
-// THE SCORE VIEWER'S PANE — THE ONE DELIBERATE EXCEPTION to kPaneFace
-// (architect 2026-11-01 night, M9 A2, "THE SCORE VIEWER IS SETTLED": "not
-// lighter, preferably from ableton palette directly"): 191919, Live's ink —
-// the palette's canvas-ink tone, palette_file.h's kPaletteInk, the one
-// constant reused. THE REASON: the score's page is a picture on a dark mat,
-// not a list field. The GPU's field round the page (score_viewer.cpp's
+// THE SCORE VIEWER'S PANE — THE ONE DELIBERATE EXCEPTION to the box's
+// `pane_face` (architect 2026-11-01 night, M9 A2, "THE SCORE VIEWER IS
+// SETTLED": "not lighter, preferably from ableton palette directly"): the
+// palette's `score_pane_face`, in every theme THE WAVEFORM'S INK (Default's
+// 191919, Live's ink; theme_tables.h's derivation), the one tone reused.
+// THE REASON: the score's page is a picture on a dark mat, not a list field.
+// The GPU's field round the page (score_viewer.cpp's
 // score_viewer_publish_gpu_page) and the CPU's pane under the score
 // viewer's box (paint_modal_dialog's call of paint_modal_box, for a frame
-// with no page hole) both read it; the page's fit and centering are
-// untouched.
-inline constexpr uint32_t kScorePaneFace = kPaletteInk;
+// with no page hole) both read palette().score_pane_face; the page's fit and
+// centering are untouched.
 
 // THE PANEL: everything the modal takes ABOVE the controls row — the box
 // and the ground margins beside it — across the lane, from

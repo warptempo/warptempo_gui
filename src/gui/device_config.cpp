@@ -19,7 +19,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (FOURTEEN keys since 2026-11-01, the
+// REQUIRED SET, every one of them (FIFTEEN keys since 2026-11-05, the
+// window's theme `theme` placed after `true_colors` — Live 12's own themes
+// through one key, palette_file.h; FOURTEEN 2026-11-01, the
 // `waveform` key retired with the color presets — one palette,
 // palette_file.h; FIFTEEN 2026-10-31 night, the
 // project voice's level `audio_level` placed before the noise's three;
@@ -66,6 +68,10 @@ namespace {
 // `waveform` preset key stood before it until 2026-11-01), and the tuning
 // keys keep the end where they leave from.
 //
+// THE THEME (architect 2026-11-05): `theme` FOLLOWS `true_colors`, the
+// display keys together — the conversion, the theme, the plate's grow — a
+// permanent key.
+//
 // THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
 // `true_colors`, the display keys' end — a permanent key, the canvas's one
 // scaling concession (device_config.h's head), so it stands among the
@@ -103,6 +109,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "true_colors",
+    "theme",
     "waveform_grow",
     "audio_level",
     "noise",
@@ -226,6 +233,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "true_colors") {
             // The switch's word (format_true_colors, the grammar's owner).
             s += format_true_colors(cfg.true_colors);
+        } else if (k == "theme") {
+            // The theme's slug verbatim (the reader admitted it as a row of
+            // kGuiThemes, find_gui_theme).
+            s += cfg.theme;
         } else if (k == "waveform_grow") {
             // The grow's canonical decimal (format_waveform_grow).
             s += format_waveform_grow(cfg.waveform_grow_quarters);
@@ -327,8 +338,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
             return {};
         }
         // An old `waveform=`, `palette=`, `chrome=`, `scheme=` or `caption=`
-        // line is the unknown key below (no key names a color since
-        // 2026-11-01: one palette, palette_file.h).
+        // line is the unknown key below (no key names a color: `theme`
+        // names a compiled theme by its slug, palette_file.h).
         // TRUE COLORS (2026-10-21): one of the two words under its one owner
         // (parse_true_colors, device_config.h), required like every key; any
         // other word the launch's hard fail.
@@ -338,6 +349,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kTrueColorsGrammarReason);
             }
             out.true_colors = *on;
+            return {};
+        }
+        // THE THEME (2026-11-05): a slug of the generated theme table under
+        // its one grammar owner (find_gui_theme, theme_tables.h), required
+        // like every key; any other word the launch's hard fail
+        // (kThemeGrammarReason, device_config.h). The slug is kept as the
+        // writer's spelling; the row is found again by every reader.
+        if (key == "theme") {
+            if (find_gui_theme(value) == nullptr) {
+                return bad_value(ln, key, value, kThemeGrammarReason);
+            }
+            out.theme = value;
             return {};
         }
         // THE NOISE'S THREE KEYS (2026-10-28): each under its one grammar
