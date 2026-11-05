@@ -20,7 +20,9 @@
 // different one. ONE ROAD AT EVERY SCALE (architect 2026-10-06): the whole
 // run shaped by HarfBuzz on the face's scaled font (gui_outline_scaled_font:
 // the live face set's file for the use, outlines only), on that font's OWN
-// FreeType face (hb-ft), full GPOS/GSUB, its own advances less the tracking
+// FreeType face (hb-ft), full GPOS/GSUB (the `kern` feature alone
+// switchable, Kerning below: off in the time fields, 2026-11-05), its own
+// advances less the tracking
 // (gui_tracking_px, gui_font.h), the four math signs set onto the hyphen's
 // axis and the pipe onto the digits' band where the live set lifts them
 // (gui_sign_lift_px, gui_font.h) — and
@@ -84,10 +86,26 @@ struct ShapedRun {
     double                   width_px = 0.0;
 };
 
+// THE ONE SHAPING OPTION — KERNING ON OR OFF (architect 2026-11-05). On is
+// the face's own GPOS `kern`, every text surface's default. OFF IS THE TIME
+// FIELDS' ALONE (paint_handler.cpp's kTimeShape block: time_field_metrics'
+// eleven specimen shapings and every time field's painted run — row 8's
+// clock, the render player's two, the score viewer's media pair): Liberation
+// Sans Bold kerns the pair "11" by about 1.2 px at 22 px, so under the
+// face's kerning a time holding "11" ran narrower than the specimen and its
+// later digits walked as the time ran (11:11.111 measured 3.7 px narrower
+// than 04:49.027 on the tablet, session 40); with `kern` off every digit
+// slot is its advance and every time is the specimen's width. Nothing else
+// loses kerning — the ruler's timestamps, the state line, the labels and
+// the lists keep the face's.
+enum class Kerning { On, Off };
+
 // Lay `utf8` out on `font`: HarfBuzz on its face less the tracking (LTR,
-// script and language guessed from the text, full GPOS/GSUB). An empty
+// script and language guessed from the text, full GPOS/GSUB — the `kern`
+// feature alone switched by `kerning`, the one option above). An empty
 // string shapes to an empty run of width 0.
-ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
+ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8,
+                         Kerning kerning = Kerning::On);
 
 // A SHARED HANDLE on one memoized run (memoized_run below): its holders read
 // the memo's own run, never a copy of its glyphs, and the run is const behind
@@ -108,11 +126,13 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // measure shape through it too. A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
-// and a GuiFont is its face, percent and size alone (gui_font.h) — so a run
-// is looked up here by the face, the percent, the size and the text's
-// bytes, and only a text not yet seen under that font is shaped. IDENTITY
-// RESTS ON THAT PREMISE: a hit returns
-// the very run shape_text_run returned for the same font and bytes, so the
+// and a GuiFont is its face, percent and size alone (gui_font.h) — and of
+// the one shaping option (Kerning above; every memoized use today shapes
+// with the default, On) — so a run
+// is looked up here by the face, the percent, the size, the option and the
+// text's bytes, and only a text not yet seen under that key is shaped.
+// IDENTITY RESTS ON THAT PREMISE: a hit returns
+// the very run shape_text_run returned for the same font, option and bytes, so the
 // caller's show_shaped_run puts down the same glyphs at the same offsets as a
 // fresh shape would. THE ANSWER IS A HANDLE (SharedRun), so a hit hands out
 // the run without copying its glyph vector — into a cue layout and again into
@@ -124,7 +144,8 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // font every shape runs on is (gui_outline_scaled_font): every caller paints
 // the flag cache, the editor or the ruler on it, and the handles never leave
 // that thread.
-SharedRun memoized_run(const GuiFont& font, std::string_view utf8);
+SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
+                       Kerning kerning = Kerning::On);
 
 // Paint `run` with its baseline origin at (x, y) in cairo's current source,
 // on the run's own font. Cairo state and the current path are not modified.
@@ -145,20 +166,27 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // stands in from the lane's edge (paint_bottom_row_buttons_and_clock), so
 // the line's origin is pulled back by this bearing — a placement off the
 // origin would read wider by whatever bearing the line's first glyph
-// carries; and THE LOGO LANE (architect 2026-10-24, render.h's logo lane
+// carries; THE LOGO LANE (architect 2026-10-24, render.h's logo lane
 // block): the brand's first ink a gap past the note's last, and the
-// legend's runs and its glyph cell spaced off each other's ink. Every other
+// legend's runs and its glyph cell spaced off each other's ink; and THE
+// TIME FIELDS' CELL (architect 2026-11-05, paint_handler.cpp's kTimeShape
+// block): the widest-digit specimen's first ink, floored, is the cell's
+// first column, and every time field's run origin stands that bearing
+// short of the cell. Every other
 // layout wants a reserved CELL, which is `width_px`'s job.
 double ink_left_px(const ShapedRun& run);
 // A RUN'S LAST INK, in pixels from the run's pen origin to the right edge of
 // its last lit pixel, measured the same way (the run's own positioned glyphs
 // through cairo_scaled_font_glyph_extents: x_bearing + width); an empty run
-// answers 0. ITS ONE CONSUMER is THE LOGO LANE'S LEGEND (architect
+// answers 0. ITS CONSUMERS: THE LOGO LANE'S LEGEND (architect
 // 2026-10-24, "the clock flush with the right edge of the buttons"): the
 // clock run's last ink on the well's last column and the
 // percent run's last ink one space advance and the battery's one W of air
 // short of the glyph cell
-// (paint_handler.cpp's logo_legend_layout).
+// (paint_handler.cpp's logo_legend_layout); and THE TIME FIELDS' CELL
+// (architect 2026-11-05, kTimeShape's block): the widest-digit specimen's
+// last ink, ceiled, is one past the cell's last column, so the cell is the
+// specimen's ink box in whole px and its pads read equal on both sides.
 double ink_right_px(const ShapedRun& run);
 
 // THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels

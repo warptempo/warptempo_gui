@@ -1775,13 +1775,19 @@ inline int cue_chip_h_px() {
 // pads every side with it (paint_shift_tooltip; architect 2026-10-31, row
 // 8's clock "has a nice padding for the font size and resolution"), and
 // THE MARKER LANE below: THE PAD IS EQUAL ON ALL
-// FOUR SIDES OF THE DIGITS' CAP BAND — kTimeFieldPadW, 6 W (12 device px
+// FOUR SIDES OF THE DIGITS' INK — above and below their cap band, left and
+// right of the widest-digit specimen's ink box in whole px (the cell,
+// paint_handler.cpp's time_field_metrics and kTimeShape's block; architect
+// 2026-11-05, the cell having been the specimen's advance ceiled, which
+// read 12 / 14 on the tablet) — kTimeFieldPadW, 6 W (12 device px
 // on the tablet at 200 %; scaled_px, rounded at the element, floored at one
 // px; mock u3's 13 device px rounded to the unit, architect 2026-11-04) —
 // and THE HEIGHT IS DERIVED, the pad, the Program face's cap rows
 // (gui_font_cap_px, rounded at the element) and the pad: 12 + 15 + 12 = 39
 // device rows on the tablet (the 22-device-px face's cap 15.14; mock v4 read
-// 39 too). THE FIELD IS NO KEY (architect 2026-10-29): it does not take the
+// 39 too); THE WIDTH the same way at the painter, the pad, the cell and the
+// pad, 12 + 99 + 12 = 123 on the tablet (time_field_w_px). THE FIELD IS NO
+// KEY (architect 2026-10-29): it does not take the
 // key's height, so at key_height's default 17 W (34 device px) it is the
 // taller of the two, and under a key_height above the field's rows the
 // shorter, centred on the case's rows either way (paint_handler.cpp's

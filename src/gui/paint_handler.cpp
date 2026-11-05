@@ -2374,42 +2374,74 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // redesign_baseline — on the tablet the 15.14-row cap band in the 39-row
 // field, twelve rows of field above it and twelve below (the pad's rule,
 // 2026-11-03; 6 W since the unit, 2026-11-04). The digits are
-// TABULAR — Liberation Sans's every digit 0.556 em — with no kerning between
-// the digits, the colon and the point — so the colon and the point stand
-// still as the time runs.
+// TABULAR — Liberation Sans's every digit 0.556 em — AND THE RUN IS SHAPED
+// WITH KERNING OFF (text_shape::Kerning::Off, architect 2026-11-05: the
+// face's GPOS kerns the pair "11" by about 1.2 px at 22 px, so under its
+// kerning a time holding "11" ran narrower than the specimen and its later
+// digits walked; 11:11.111 measured 3.7 px narrower than 04:49.027 on the
+// tablet, session 40) — so every digit slot is one advance and the colon
+// and the point stand still as the time runs.
 //
 // EACH FIELD'S WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
 // the time runs). The reserved cell is measured from the widest string the
 // field can ever show in this face — the widest digit in every digit slot of
 // "DD:DD.DDD" (kTimeShape) — shaped through the one chokepoint at the
-// live scale, so nothing is trusted to the face. The field is that cell plus
+// live scale with kerning off (the head above), so nothing is trusted to
+// the face. THE CELL IS THE SPECIMEN'S INK BOX IN WHOLE PIXELS (architect
+// 2026-11-05, on the planner's measurement of the tablet's capture, session
+// 40: the field's pads read 12 left and 14 right of the digits' ink, the
+// cell having been the specimen's ADVANCE sum ceiled, 99.08 -> 100, which
+// carried the last glyph's right side bearing and the ceiling's fraction
+// while the vertical pad was taken from the digits' cap band): with the
+// specimen shaped at origin 0, `ink_l` = floor(ink_left_px), `ink_r` =
+// ceil(ink_right_px) (text_shape.h; cairo's own glyph extents of the run
+// as painted), the cell `ink_r - ink_l` (time_field_metrics), so the
+// specimen's first ink stands on the cell's first column and its last on
+// the cell's last. The field is that cell plus
 // THE PAD either side — 6 W, 12 device px on the tablet (time_field_pad_px,
 // render.h; architect 2026-10-23, "symmetrical and much tighter"; 13 device
-// px his pick of 2026-11-03, mock u3, rounded to the unit 2026-11-04) — its width
-// ceiled,
+// px his pick of 2026-11-03, mock u3, rounded to the unit 2026-11-04) —
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
-// the one face, so the three fields are one width. The cell is 4.504 em
+// the one face, so the three fields are one width, and THE PAD IS THE SAME
+// 12 DEVICE PX ON ALL FOUR SIDES OF THE SPECIMEN'S INK. The specimen's
+// advance is 4.504 em
 // in the Program face's Bold (gui_font.h, every use Bold but the legends
 // since 2026-11-04 night: seven tabular digits at 0.556 em, the colon at
 // 0.333 and the point at 0.278): on the tablet at 200 % and a 22-px em,
-// 99.1 device px ceiled to 100, the field 124; at 100 % an 11-px em, 49.5
-// ceiled to 50, the field 62. THE PLAYER'S ROW HOLDS THEM: its scrub is
+// 99.08 device px, its ink box 0 .. 98.84 -> the cell 99 (0 .. 98), the
+// field 123 (x 24 .. 146 on the 2304-px panel); at 100 % an 11-px em, the
+// advance 49.59, the ink 0 .. 49.47 -> the cell 50, the field 62. THE
+// PLAYER'S ROW HOLDS THEM: its scrub is
 // what the fixed terms leave (player_row_layout), the two fields and their
-// gap 124 + 8 + 124 = 256 device px on the tablet, so with the 70-px face,
+// gap 123 + 8 + 123 = 254 device px on the tablet, so with the 70-px face,
 // the one-W key gap and the 44-px run gap (2026-11-04 night) the scrub's
-// channel is 1224 device px (2304 wide, x 282 .. 1505).
+// channel is 1226 device px (2304 wide, x 282 .. 1507), the fields x 1552
+// .. 1674 and 1683 .. 1805.
 //
-// A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
-// 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
-// CELL'S RIGHT EDGE, so nothing moves as the time changes — the purpose of
-// the rule, which the fixed cell keeps (row 8's composition below). THE
+// ONE ORIGIN RULE FOR EVERY TIME FIELD (architect 2026-11-05): THE RUN
+// STARTS AT `field_x + pad - ink_l`, a whole pixel (every term an int, so
+// cairo's glyph placement stays on integer x as before and the digits
+// rasterize as they did), which puts the specimen's first ink on the cell's
+// first column; with kerning off every time is the specimen's advance, so
+// the run ENDS AT THE CELL'S RIGHT EDGE BY CONSTRUCTION — the player's
+// right-alignment of 2026-10-05 (the period's ACID / Vegas fields: the run
+// ending at the reserved cell's right edge so nothing moves as the time
+// changes) is a consequence now, not a second arithmetic. A time whose
+// first or last digit is narrower than the widest digit (a "1", its ink
+// one column in from its slot's edge) shows that air inside its slot: THE
+// TABULAR SLOTS ARE THE CELL, the ink of a "1" is not — accepted. (The
+// ink box is cairo's hinted glyph metrics, whole px per glyph, in which a
+// "4" reads one column wider than a "0" of the same advance, so a time
+// ending in "4" may put a sliver of ink on the right pad's first column —
+// accepted too; the widest digit is picked by advance, all ten being
+// 0.556 em, so the specimen is "00:00.000".) THE
 // CELL'S RIGHT EDGE IS THE FIELD'S RIGHT PAD in every time field, the field
 // being the cell and its two pads (the floor's centering of 2026-10-09 went
 // with the floor). ROW 8'S CLOCK IS THE TIMESTAMP ALONE (architect
 // 2026-10-18: "like the media player cells" — the active tab's letter and
 // the ` | ` before it left the cell; the tab's name stands on the ground after
-// the field since 2026-10-22), ITS RUN STARTING AT THE CELL'S LEFT EDGE; the digits are tabular, so
+// the field since 2026-10-22); the digits are tabular and unkerned, so
 // the run is the specimen's width at every time and nothing in the cell
 // moves as the time runs. (The letter, `00:45.115 | A` from 2026-10-09
 // ~21:20 and `A | 00:45.115` before it, stood from the tab row's deletion of
@@ -2486,12 +2518,20 @@ constexpr double kTimeFieldGapW = 4.0;
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
-// THE CELLS ARE ADVANCES: `time_w` is the specimen's advance sum, so no
-// glyph ever walks; row 8's cell and each player field's is time_w, and each
-// cell is its field's damage box too.
+// THE CELL IS THE SPECIMEN'S INK BOX, THE SLOTS ITS ADVANCES (architect
+// 2026-11-05; kTimeShape's block): `time_w` is the specimen's advance sum,
+// shaped with kerning off, so every time is that wide and no glyph ever
+// walks; `ink_l` / `ink_r` are its first ink floored and its last ink
+// ceiled, from origin 0 (text_shape::ink_left_px / ink_right_px), and
+// `cell_w` = ink_r - ink_l is row 8's cell and each player field's, in
+// whole px; each cell is its field's damage box too. Every shaping here is
+// text_shape::Kerning::Off, the fields' own option.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
+    int    ink_l    = 0;      // the specimen's first ink, floored
+    int    ink_r    = 0;      // one past the specimen's last ink, ceiled
+    int    cell_w   = 0;      // ink_r - ink_l
 };
 static TimeFieldMetrics g_time_field_metrics;
 
@@ -2503,14 +2543,27 @@ static const TimeFieldMetrics& time_field_metrics() {
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
         const char one[2] = {d, '\0'};
-        const double w = text_shape::shape_text_run(font, one).width_px;
+        const double w = text_shape::shape_text_run(
+                             font, one, text_shape::Kerning::Off).width_px;
         if (w > widest_w) { widest_w = w; widest = d; }
     }
     std::string specimen(kTimeShape);
     for (char& c : specimen) if (c == 'D') c = widest;
-    m.time_w = text_shape::shape_text_run(font, specimen).width_px;
+    const text_shape::ShapedRun run =
+        text_shape::shape_text_run(font, specimen, text_shape::Kerning::Off);
+    m.time_w  = run.width_px;
+    m.ink_l   = static_cast<int>(std::floor(text_shape::ink_left_px(run)));
+    m.ink_r   = static_cast<int>(std::ceil(text_shape::ink_right_px(run)));
+    m.cell_w  = m.ink_r - m.ink_l;
     m.percent = font.percent;
     return m;
+}
+
+// EVERY TIME FIELD'S RUN ORIGIN (the one rule at kTimeShape's block): the
+// field's first column, the pad, less the specimen's floored first ink —
+// a whole pixel, the specimen's first ink on the cell's first column.
+static int time_field_run_x(int field_x) {
+    return field_x + time_field_pad_px() - time_field_metrics().ink_l;
 }
 
 // THE BOTTOM ROW'S SEATS — row 8's and the modal controls row's, ONE OWNER
@@ -2660,12 +2713,12 @@ static void row8_block_walk(bool history, const Row8Block& b,
 // (paint_ce_time_field). The row's painter's one layout.
 struct Row8Clock {
     int field_x = 0, field_w = 0;
-    double cell_w = 0.0;    // the digits' specimen (time_field_metrics)
+    int cell_w = 0;    // the specimen's ink box (time_field_metrics)
 };
-static int time_field_w_px(double cell_w);
+static int time_field_w_px(int cell_w);
 static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
     Row8Clock c;
-    c.cell_w  = time_field_metrics().time_w;
+    c.cell_w  = time_field_metrics().cell_w;
     c.field_x = bottom_row_seats(app, lane).left_x;
     c.field_w = time_field_w_px(c.cell_w);
     return c;
@@ -2689,10 +2742,13 @@ static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
     const int off = d >= 0 ? d / 2 : -((1 - d) / 2);
     return GuiRect{x, case_y + off, w, h};
 }
-// A FIELD'S WIDTH round a reserved cell `cell_w` wide: the cell ceiled and
-// the pad either side (no least width since 2026-10-10, kTimeShape's block).
-static int time_field_w_px(double cell_w) {
-    return static_cast<int>(std::ceil(cell_w)) + 2 * time_field_pad_px();
+// A FIELD'S WIDTH round a reserved cell `cell_w` whole px wide: the cell
+// and the pad either side (no least width since 2026-10-10, kTimeShape's
+// block). The time fields hand it the specimen's ink box
+// (time_field_metrics' cell_w, 2026-11-05); the score viewer's page cell
+// its own specimen's advance, ceiled at its site (score_row_layout).
+static int time_field_w_px(int cell_w) {
+    return cell_w + 2 * time_field_pad_px();
 }
 
 
@@ -2862,12 +2918,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const GuiFont font = gui_font(GuiFace::Program);
         // THE CLOCK (row8_clock, the one layout): the field at the row's
         // left seat, its cell and its pads. THE CELL IS THE DIGITS'
-        // SPECIMEN ALONE (architect 2026-10-18: the tab letter and its pipe
-        // left the clock, "like the media player cells"), so it is ONE WIDTH
-        // AT EVERY TIME, the run starting at its left edge (kTimeShape's
-        // block).
+        // SPECIMEN'S INK BOX ALONE (architect 2026-10-18: the tab letter
+        // and its pipe left the clock, "like the media player cells"; the
+        // ink box 2026-11-05), so it is ONE WIDTH
+        // AT EVERY TIME, the run starting the specimen's first ink short of
+        // its left edge (time_field_run_x, kTimeShape's block).
         const Row8Clock clock = row8_clock(app, lane);
-        const double cell_w  = clock.cell_w;
+        const int    cell_w  = clock.cell_w;
         const int    field_x = clock.field_x;
         const int    field_w = clock.field_w;
         const GuiRect clock_field =
@@ -2970,28 +3027,26 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const int state_w = (right_block_x - lengths.gap) - state_x;
         set_palette_source(cr, hex(kTextInk));
         text_shape::show_shaped_run(cr, name_run, name_origin, baseline);
-        // THE CELL'S RIGHT EDGE IS THE FIELD'S RIGHT PAD — with no floor
-        // (removed 2026-10-10; Cool Edit's mock of 2026-10-09 set one, the cell
-        // centered in its surplus) the field is the cell and its two pads, so
-        // this is the one case; its left edge, where the digits start, the
-        // ceiled cell short of it.
-        const int cell_ceil = static_cast<int>(std::ceil(cell_w));
-        const int cell_end  = field_x + field_w - time_field_pad_px();
-        const int cell_x    = cell_end - cell_ceil;
+        // THE CELL IS THE FIELD LESS ITS TWO PADS — with no floor (removed
+        // 2026-10-10; Cool Edit's mock of 2026-10-09 set one, the cell
+        // centered in its surplus) the field is the cell and its two pads,
+        // so this is the one case: the cell's first column one pad in, the
+        // run's origin the specimen's first ink short of it
+        // (time_field_run_x; kTimeShape's block, 2026-11-05).
+        const int cell_x = field_x + time_field_pad_px();
+        const int run_x  = time_field_run_x(field_x);
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
-        // on each side: the reserved width is an ADVANCE sum and a glyph's ink
-        // may sit a hair outside it, and the band is the row's height, which
-        // contains the field and so the baseline's ink by construction.
-        // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the run's
-        // start above is the cell's left edge and so is this box's, so the
-        // damage can never miss the painted digits. CEIL, NOT nearbyint:
-        // cell_w is a fractional advance sum and this is a DAMAGE box, which
-        // may be a hair too wide but never a hair too narrow.
-        app.clock_cell_rect = GuiRect{
-            cell_x - 1, lane.y,
-            static_cast<int>(std::ceil(cell_w)) + 2, lane.h};
+        // on each side: the cell is the SPECIMEN's ink box and another
+        // time's glyph may put a sliver outside it (a "4" in cairo's hinted
+        // metrics, kTimeShape's block), and the band is the row's height,
+        // which contains the field and so the baseline's ink by construction.
+        // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the cell's
+        // first column is one pad into the field and so is this box's, the
+        // run seated on it by the same metrics, so the
+        // damage can never miss the painted digits.
+        app.clock_cell_rect = GuiRect{cell_x - 1, lane.y, cell_w + 2, lane.h};
 
         // THE CELL'S AS-PAINTED RECORD on the target being painted
         // (GuiClockFingerprint, app_state.h): a clip covering the cell
@@ -3064,17 +3119,17 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             state = app.history_mode.active ? history_walk_line(app)
                                             : app.queue_progress_text;
         }
-        // THE CLOCK, UNCLIPPED, IN THE FIXED CELL — the timestamp as one run
-        // starting at the cell's left edge.
+        // THE CLOCK, UNCLIPPED, IN THE FIXED CELL — the timestamp as one run,
+        // kerning off, from the fields' one origin (time_field_run_x).
         if (clock_drawn) {
-            const text_shape::ShapedRun time_run =
-                text_shape::shape_text_run(font, clock_time_text(app, audio));
+            const text_shape::ShapedRun time_run = text_shape::shape_text_run(
+                font, clock_time_text(app, audio), text_shape::Kerning::Off);
             // THE TEXT TONE on the field (M13, 2026-11-02; architect
             // 2026-10-23: "the font color should not be this yellowish
             // color").
             set_palette_source(cr, hex(kTextInk));
             text_shape::show_shaped_run(cr, time_run,
-                                        static_cast<double>(cell_x), baseline);
+                                        static_cast<double>(run_x), baseline);
         }
         if (state_drawn && !state.empty()) {
             // The clock's face on THE CLOCK'S BASELINE (the block above), its
@@ -5443,7 +5498,7 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 // and its rulings are at the painter's player branch.
 struct PlayerRowLayout {
     std::array<int, 9> x{};
-    int field_pad = 0, field_w = 0, field_gap = 0;
+    int field_w = 0, field_gap = 0;
     int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
 };
 static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
@@ -5465,14 +5520,12 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // their width being one of the fixed terms the scrub's own is what is
     // left over. Each is a TIME FIELD (the shape, the face and the
     // fixed-width rule at kTimeShape's block), its cell the widest-digit
-    // specimen alone (time_field_metrics, row 8's own memo), so neither
-    // field nor anything right of it moves as the position runs or an
-    // item of another length loads — the cell and its pads, as row 8's
+    // specimen's ink box alone (time_field_metrics, row 8's own memo), so
+    // neither field nor anything right of it moves as the position runs or
+    // an item of another length loads — the cell and its pads, as row 8's
     // clock is, in its face, the program face (architect 2026-10-26
     // ~12:10, "yes" to symmetry).
-    const double cell_w = time_field_metrics().time_w;
-    l.field_pad = time_field_pad_px();
-    l.field_w   = time_field_w_px(cell_w);
+    l.field_w   = time_field_w_px(time_field_metrics().cell_w);
     l.field_gap = scaled_px(kTimeFieldGapW);
     const int clock_w = l.field_w + l.field_gap + l.field_w;
 
@@ -5549,9 +5602,14 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
     }
     const std::string digits(std::to_string(std::max(1, page_count)).size(),
                              widest);
+    // THE PAGE CELL KEEPS THE ADVANCE RULE: its specimen is its own, not
+    // kTimeShape's, its run is right-aligned on the pad (the painter's
+    // score branch) and its text is not a timestamp, so the cell is the
+    // specimen's advance ceiled, as every time field's was before the ink
+    // box of 2026-11-05 (kTimeShape's block) — the one page-count field.
     l.cell_pad = time_field_pad_px();
-    l.cell_w   = time_field_w_px(
-        text_shape::memoized_run(cfont, digits + " / " + digits)->width_px);
+    l.cell_w   = time_field_w_px(static_cast<int>(std::ceil(
+        text_shape::memoized_run(cfont, digits + " / " + digits)->width_px)));
     const int pitch = key_group_pitch_px();
     const int cx0 = seats.cases_left;
     l.x[0] = cx0;                          // PREV
@@ -5576,14 +5634,13 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
 // floored at two thumbs as the player's is.
 struct ScoreMediaRowLayout {
     std::array<int, 7> x{};
-    int field_pad = 0, field_w = 0, field_gap = 0;
+    int field_w = 0, field_gap = 0;
     int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
 };
 static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     ScoreMediaRowLayout l;
     const int group = program_run_gap_px();
-    l.field_pad = time_field_pad_px();
-    l.field_w   = time_field_w_px(time_field_metrics().time_w);
+    l.field_w   = time_field_w_px(time_field_metrics().cell_w);
     l.field_gap = scaled_px(kTimeFieldGapW);
     const int clock_w = l.field_w + l.field_gap + l.field_w;
     const int pitch = key_group_pitch_px();
@@ -6426,7 +6483,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const PlayerRowLayout pl = player_row_layout(seats);
         assert(plan.size() == pl.x.size());
         for (std::size_t i = 0; i < pl.x.size(); ++i) plan[i].x = pl.x[i];
-        const int field_pad = pl.field_pad;
         const int field_w   = pl.field_w;
         const int field_gap = pl.field_gap;
         const int scrub_x0  = pl.scrub_x0;
@@ -6484,16 +6540,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 const GuiRect field = time_field_rect(
                     field_x, field_w, seats.case_y, seats.case_h);
                 paint_ce_time_field(cr, field);
-                // RIGHT-ALIGNED, ending at the field's right pad (the rule at
-                // kTimeShape's block).
+                // THE FIELDS' ONE ORIGIN (time_field_run_x), kerning off:
+                // the run is the specimen's width, so it ends at the cell's
+                // right edge by construction (the rule at kTimeShape's
+                // block, 2026-11-05).
                 const text_shape::ShapedRun run = text_shape::shape_text_run(
-                    cfont, format_timestamp(seconds_of(shown[i])));
+                    cfont, format_timestamp(seconds_of(shown[i])),
+                    text_shape::Kerning::Off);
                 // Row 8's clock's ink, the text tone (M13, 2026-11-02).
                 set_palette_source(cr, hex(kTextInk));
                 text_shape::show_shaped_run(
-                    cr, run,
-                    static_cast<double>(field_x + field_w - field_pad) -
-                        run.width_px,
+                    cr, run, static_cast<double>(time_field_run_x(field_x)),
                     redesign_baseline(cfont, static_cast<double>(field.y),
                                       static_cast<double>(field.h)));
             }
@@ -6557,15 +6614,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     const GuiRect field = time_field_rect(
                         field_x, ml.field_w, seats.case_y, seats.case_h);
                     paint_ce_time_field(cr, field);
+                    // The player's run verbatim: kerning off, the fields'
+                    // one origin (time_field_run_x; kTimeShape's block).
                     const text_shape::ShapedRun run =
                         text_shape::shape_text_run(
-                            cfont, format_timestamp(seconds_of(shown[i])));
+                            cfont, format_timestamp(seconds_of(shown[i])),
+                            text_shape::Kerning::Off);
                     set_palette_source(cr, hex(kTextInk));
                     text_shape::show_shaped_run(
                         cr, run,
-                        static_cast<double>(field_x + ml.field_w -
-                                            ml.field_pad) -
-                            run.width_px,
+                        static_cast<double>(time_field_run_x(field_x)),
                         redesign_baseline(cfont, static_cast<double>(field.y),
                                           static_cast<double>(field.h)));
                 }
@@ -6595,8 +6653,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // THE PAGE CELL where the player's clock stands: one flat time
             // field reading "<ordinal> / <count>" — the shown page's ordinal
             // WITHIN THE RANGE and the range's count (the architect's "a page
-            // number of its own") — right-aligned on the field's pad as the
-            // clocks' runs are, in the program face, the text tone.
+            // number of its own") — RIGHT-ALIGNED ON THE FIELD'S PAD, as the
+            // clocks' runs were until 2026-11-05 (its text is no timestamp
+            // and its cell its own specimen's advance, score_row_layout),
+            // in the program face, the text tone.
             const int cell_right = std::min(sl.cell_x0 + sl.cell_w, cx1);
             if (cell_right > sl.cell_x0) {
                 const ScoreViewerRange r = score_viewer_range(app);

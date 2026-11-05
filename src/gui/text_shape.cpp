@@ -104,9 +104,13 @@ private:
 // (gui_sign_lift_px, gui_font.h — the four math signs onto the hyphen's
 // axis, 2026-10-09, the lift negative in Liberation Sans, added as it
 // comes; the pipe onto the digits' band, 2026-10-09 ~21:20: matched by glyph id after substitution,
-// HarfBuzz's up-positive sense, the advance untouched).
+// HarfBuzz's up-positive sense, the advance untouched). THE ONE FEATURE
+// SWITCH is `kern` (Kerning, text_shape.h): shaped with no feature list
+// under Kerning::On, the face's own GPOS kerning applied as HarfBuzz's
+// default; under Kerning::Off the one feature `kern = 0` over the whole
+// run, every other default feature untouched.
 void append_glyphs(const GuiFont& font, std::string_view utf8,
-                   ShapedRun& run) {
+                   Kerning kerning, ShapedRun& run) {
     const double         tracking = gui_tracking_px(font);
     cairo_scaled_font_t* scaled   = gui_outline_scaled_font(font);
     ScaledFontFace       locked(scaled);
@@ -121,7 +125,14 @@ void append_glyphs(const GuiFont& font, std::string_view utf8,
     hb_buffer_set_direction(buffer.get(), HB_DIRECTION_LTR);
     hb_buffer_guess_segment_properties(buffer.get());
 
-    hb_shape(hb_font, buffer.get(), nullptr, 0);
+    if (kerning == Kerning::Off) {
+        const hb_feature_t kern_off{HB_TAG('k', 'e', 'r', 'n'), 0,
+                                    HB_FEATURE_GLOBAL_START,
+                                    HB_FEATURE_GLOBAL_END};
+        hb_shape(hb_font, buffer.get(), &kern_off, 1);
+    } else {
+        hb_shape(hb_font, buffer.get(), nullptr, 0);
+    }
 
     unsigned            count = 0;
     const hb_glyph_info_t*     infos =
@@ -146,38 +157,43 @@ void append_glyphs(const GuiFont& font, std::string_view utf8,
 
 } // namespace
 
-ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
+ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8,
+                         Kerning kerning) {
     ShapedRun run;
     run.font = font;
     if (utf8.empty()) return run;
-    append_glyphs(font, utf8, run);
+    append_glyphs(font, utf8, kerning, run);
     return run;
 }
 
-SharedRun memoized_run(const GuiFont& font, std::string_view utf8) {
+SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
+                       Kerning kerning) {
     // The contract, the premise identity rests on and the clear's harmlessness
     // are at the declaration. The key is the font's three fields' bytes,
-    // then the text's: the uses' faces differ in the first, so the ruler's
+    // the kerning option's (2026-11-05: a run shaped with `kern` off is
+    // another run of the same bytes), then the text's: the uses' faces
+    // differ in the first, so the ruler's
     // timestamps, the cue labels, the keys' legends and the logo lane's runs never collide, and
     // the size (the Keys face's live `osk_font_px`, 2026-10-29 night) keys a
     // committed size's runs apart from the old size's.
     constexpr std::size_t kMemoCap = 4096;
     static std::unordered_map<std::string, SharedRun> memo;
     std::string key;
-    key.reserve(utf8.size() + 2 * sizeof(int) + sizeof(double));
+    key.reserve(utf8.size() + 2 * sizeof(int) + sizeof(double) + 1);
     const int face = static_cast<int>(font.face);
     key.append(reinterpret_cast<const char*>(&face), sizeof face);
     key.append(reinterpret_cast<const char*>(&font.percent),
                sizeof font.percent);
     key.append(reinterpret_cast<const char*>(&font.em_w),
                sizeof font.em_w);
+    key.push_back(kerning == Kerning::Off ? '\1' : '\0');
     key.append(utf8);
     const auto it = memo.find(key);
     if (it != memo.end()) return it->second;
     if (memo.size() >= kMemoCap) memo.clear();
     return memo
-        .emplace(std::move(key),
-                 std::make_shared<const ShapedRun>(shape_text_run(font, utf8)))
+        .emplace(std::move(key), std::make_shared<const ShapedRun>(
+                                     shape_text_run(font, utf8, kerning)))
         .first->second;
 }
 
