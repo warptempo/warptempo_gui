@@ -21,7 +21,7 @@
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's eight, each
 // decided once — the build proves every role is listed exactly once):
 //   ground                               = the flat ground kGround 242424
-//   label, field_text, card_text         = THE TEXT TONE kTextInk B5B5B5
+//   label, field_text                    = THE TEXT TONE kTextInk B5B5B5
 //                                          (M13, 2026-11-02)
 //   selected_fill                        = THE CONSTANT kSelectionFill,
 //                                          637E86, Live's browser selection
@@ -29,15 +29,20 @@
 //                                          M6)
 //   selected_text                        = THE CONSTANT kSelectionText,
 //                                          111111 (kTextOnLit)
-//   card_ground                          = THE PANE kPaneFace 363636 (the
-//                                          cards' and the tooltip's face,
-//                                          architect 2026-11-02, M11)
-//   card_frame                           = THE FRAME TONE kWellFrame 757575
-//                                          (their one-px border, M14 "d")
+//   card_ground, card_frame              = THE CARDS' FACE kCardFace
+//                                          E76942, Live's status bar's
+//                                          orange (architect 2026-11-04
+//                                          night, h1 of tmp/s38); the frame
+//                                          the fill, so no border shows (the
+//                                          ring is layout)
+//   card_text                            = THE CARDS' INK kCardInk 2A2A2A,
+//                                          their words and class glyph
+// (The tooltip reads no role: its pane, frame and text tones are the flat
+// look's constants, paint_shift_tooltip.)
 namespace chrome_derive {
 
 enum class Source {
-    Ground, Text, Pane, Frame, SelectionFill, SelectionText,
+    Ground, Text, SelectionFill, SelectionText, CardFace, CardInk,
 };
 struct ChromeRole {
     const char* role;
@@ -49,9 +54,9 @@ inline constexpr ChromeRole kChromeRoles[] = {
     {"selected_fill",             Source::SelectionFill},
     {"selected_text",             Source::SelectionText},
     {"field_text",                Source::Text},
-    {"card_ground",               Source::Pane},
-    {"card_text",                 Source::Text},
-    {"card_frame",                Source::Frame},
+    {"card_ground",               Source::CardFace},
+    {"card_text",                 Source::CardInk},
+    {"card_frame",                Source::CardFace},
 };
 
 // Each listed role's index in the theme's role table, found once.
@@ -86,10 +91,10 @@ constexpr GuiThemeWords derive_chrome() {
         switch (kChromeRoles[i].source) {
             case Source::Ground:        v = kGround;            break;
             case Source::Text:          v = kTextInk;           break;
-            case Source::Pane:          v = kPaneFace;          break;
-            case Source::Frame:         v = kWellFrame;         break;
             case Source::SelectionFill: v = kSelectionFill;     break;
             case Source::SelectionText: v = kSelectionText;     break;
+            case Source::CardFace:      v = kCardFace;          break;
+            case Source::CardInk:       v = kCardInk;           break;
         }
         w[kChromeRoleIndex[i]] = v & 0xFFFFFFu;
     }
@@ -105,9 +110,9 @@ static_assert(kDefaultCheck[theme_role_index("label")] == 0xB5B5B5);
 static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xB5B5B5);
 static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x637E86);
 static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x111111);
-static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x363636);
-static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xB5B5B5);
-static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x757575);
+static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0xE76942);
+static_assert(kDefaultCheck[theme_role_index("card_text")] == 0x2A2A2A);
+static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0xE76942);
 } // namespace chrome_derive
 
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads

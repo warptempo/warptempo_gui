@@ -172,7 +172,8 @@ struct TrimRange {
 // 2026-10-23 and the ring tones it wore are git history. THE CHROME'S LINES
 // are flat ONE-W lines (hairline_px, below, the line rule of 2026-11-04) of ONE TONE,
 // materials.h's kWellFrame 757575: the scrub's channel (the scrub block)
-// and the cards' and the tooltip's border (THE CARD FACE, below, the `card_frame` role); the modal
+// and the tooltip's border (THE CARD FACE, below; the cards' ring is painted
+// in their own fill, so no border shows); the modal
 // family's box has none (modal_box.h's head).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
@@ -202,8 +203,9 @@ struct TrimRange {
 //                 folder overlay's resting names on the pane (architect
 //                 2026-10-06, paint_folder_overlay) — and THE FLAG EDITOR'S
 //                 text and caret (architect 2026-10-09; EDITING, below);
-//   card trio     the tooltip and every notification card (THE CARD FACE,
-//                 below);
+//   card trio     every notification card (THE CARD FACE, below; the
+//                 tooltip reads no role, its tones the flat look's
+//                 constants);
 //   (THE CAPTION and THE WINDOW BORDER went 2026-10-24, the
 //                 app painting no window chrome — the caption's six roles,
 //                 a scheme's start, gradient end and text, active and
@@ -232,20 +234,25 @@ struct TrimRange {
 //                 the program's band, row 8 and the canvas column's lanes)
 //                 is the flat ground (materials.h's kGround), no palette
 //                 role.
-// THE CARD FACE (architect 2026-10-04, the period's tooltip; flat since
-// 2026-11-02, M11 with M14 "d"): the tooltip, both of its lines, and every
-// notification card are A FLAT BOX of `card_ground` — THE PANE, materials.h's
-// kPaneFace 363636 — INSIDE A ONE-W `card_frame` BORDER on all four sides
-// (hairline_px, the line rule, 2026-11-04), kWellFrame 757575, the grammar's
-// one frame tone (paint_popup_chrome), the border standing on the box's own
-// outer rows and columns, so the card is 56 rows and the one-line tooltip 44
-// at 300 %; NO RING TONES, NO SHADOW. The cards' words the text tone
-// (`card_text`) at the body size, THE TOOLTIP'S NAME LINE the flags' own
-// program face (2026-10-23, "the same as the flags", 21 px at 300 %) in the
-// text tone
-// kTextInk like the cards' words, ITS HINT LINE the hint face (18 px) in the
-// dim tone kTextDimInk (architect 2026-10-31; Live's 757575 since M11,
-// 2026-11-02, paint_shift_tooltip). THIS PARAGRAPH IS THE RULE'S ONE
+// THE CARD FACE — ONE BOX PAINTER, TWO LOOKS (paint_popup_chrome): a flat box
+// INSIDE A ONE-W BORDER on all four sides (hairline_px, the line rule,
+// 2026-11-04), the border standing on the box's own outer rows and columns,
+// so the card is 56 rows and the one-line tooltip 44 at 300 %; NO RING
+// TONES, NO SHADOW. THE TOOLTIP (architect 2026-10-04, the period's tooltip;
+// flat since 2026-11-02, M11 with M14 "d"): the pane, materials.h's
+// kPaneFace 363636, in kWellFrame 757575, the grammar's one frame tone — the
+// flat look's constants, no chrome role; ITS NAME LINE the flags' own
+// program face (2026-10-23, "the same as the flags", 22 px at 300 %) in the
+// text tone kTextInk, ITS HINT LINE the hint face (18 px) in the dim tone
+// kTextDimInk (architect 2026-10-31; Live's 757575 since M11, 2026-11-02,
+// paint_shift_tooltip). EVERY NOTIFICATION CARD, both classes alike
+// (architect 2026-11-04 night, his pick h1 of tmp/s38 over h0, the
+// tooltip's look they wore from 2026-10-06, and h2, 111111 ink): a box in
+// LIVE'S STATUS BAR'S ORANGE, `card_ground` = kCardFace E76942, its border
+// `card_frame` the same orange, so NO BORDER SHOWS (the ring is layout),
+// its words at the body size and its class glyph in `card_text` = kCardInk
+// 2A2A2A, Live's own text on that bar — both measured on his Live 12 shot of
+// 2026-10-31 (materials.h's THE CARDS). THIS PARAGRAPH IS THE RULE'S ONE
 // STATEMENT.
 // THE CANVAS HAS NO FRAME since the well's flat look (architect 2026-11-01
 // night, "THE MAIN PAGE IS SETTLED"): its two channels' wells are parted by
@@ -314,9 +321,9 @@ struct GuiPalette {
     GuiColor selected_fill;   // COLOR_HIGHLIGHT
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_text;      // COLOR_WINDOWTEXT
-    GuiColor card_ground;     // COLOR_INFOBK
-    GuiColor card_text;       // COLOR_INFOTEXT
-    GuiColor card_frame;      // the tooltip's border (COLOR_WINDOWFRAME)
+    GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
+    GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
+    GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -1093,7 +1100,8 @@ constexpr int kMinWindowHeightPx = 480;
 // CENTERED ON THE LANE BY ITS OWN INK (architect 2026-11-03, on mock dec0b:
 // "everything is set by the logo"; the lane's spare split with its odd row
 // below, the floor of the half) — THE NOTE EXCEPTED BY ONE W, lifted
-// kLogoNoteLiftAt300 above its centered seat (below): the note's ink box, the brand's ink rows
+// kLogoNoteLiftAt300 above its centered seat, AND THE BATTERY'S CELL, its
+// top row on the runs' ink top row (both below): the note's ink box, the brand's ink rows
 // (the "W"'s top to the "p"'s foot as painted: gui_font_ink_band of
 // kLogoBrand in the Bold face), the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, in the Body face as painted: each run's baseline its
@@ -1103,8 +1111,8 @@ constexpr int kMinWindowHeightPx = 480;
 // the battery cell. At 300 % (the brand 17 + 5 rows at Bold 24, the runs
 // 15 + 0 and the pipe 18 + 3 at Body 22, the unit of 2, 2026-11-04 night):
 // the brand on lane rows 25–46 (its cap rows 25–41, the "p" to 46), the
-// runs 28–42, the pipe 25–45, the battery 29–42, the note 24–43 (its
-// centered 26–45 lifted one W). THE LANE'S GROUND
+// runs 28–42, the pipe 25–45, the battery 28–41 (its top on the runs'),
+// the note 25–42 (its centered 27–44 lifted one W). THE LANE'S GROUND
 // IS THE BAND'S FLAT GROUND, nothing else on it — no line, no caption tone —
 // and it is INERT CHROME like the strips' pads: no hit, no tooltip, no
 // gesture (the band's ground falls through to nothing, input_pointer.cpp).
@@ -1117,19 +1125,21 @@ constexpr int kMinWindowHeightPx = 480;
 //   ON THE LEFT, THE NOTE: Breeze's MusicNote16th (architect 2026-11-01,
 //     M7: Breeze only — the BPM key's own drawing) on the ink-box road
 //     (icons.h's THE INK BOX), the ink box's larger side kLogoNoteInkAt300 =
-//     20 px (10 W; the 21 of the morning's unit rounded to the unit of 2,
-//     architect 2026-11-04 night, mock v4), ITS FIRST INK
+//     18 px (9 W; architect 2026-11-04 night, his pick g1 of tmp/s38: "1w
+//     down in size" — the 20 of the unit of 2 replaced; 12 x 18 at 300 %),
+//     ITS FIRST INK
 //     COLUMN ON THE WELL'S FIRST COLUMN (well_columns — the first key's
 //     face's first column: "the glyph flush with the icons"). ITS ROWS ONE W
 //     ABOVE ITS CENTERED SEAT (architect 2026-11-04 night, mock e2 of
 //     tmp/s36): kLogoNoteLiftAt300 = 2 px (one W, skin_px, rounded at the
 //     element) subtracted from logo_item_y's row for the note alone, so at
-//     300 % its 20-row ink box stands on rows 24..43, not 26..45 — his
+//     300 % its 18-row ink box stands on rows 25..42, not 27..44 — his
 //     reason: the centered note "seems to hang lower than the text that
-//     follows it", its box reaching 4 rows below the brand's cap foot (row
-//     41; the brand's cap 25..41, its "p" to 46); the box's bottom on the
-//     brand's baseline (mock e1, 4 px up) was "too high". The brand, the
-//     legend and the battery keep the centered seat. THEN THE BRAND, "Warptempo"
+//     follows it" (on mocks e1 / e2 of tmp/s36, the 20-px note then: its
+//     centered box reached 4 rows below the brand's cap foot, row 41; the
+//     brand's cap 25..41, its "p" to 46); the box's bottom on the brand's
+//     baseline (mock e1, 4 px up) was "too high". The brand and the legend's
+//     runs and pipe keep the centered seat. THEN THE BRAND, "Warptempo"
 //     (kLogoBrand) — a CONSTANT, never the project's name (his: "most hi-fi
 //     equipment … just had a stylized brand name") — in Liberation Sans
 //     Bold at the TITLE size (gui_font.h's table, 24 px at 300 %), the text
@@ -1185,23 +1195,25 @@ constexpr int kMinWindowHeightPx = 480;
 //     its 22-unit viewBox), so the fit's zoom is 1.1 and THE CELL IS 22 WIDE
 //     AND 14 ROWS TALL on the 72-row lane, both drawings alike (the raster's
 //     arithmetic: the outline's rows 5.5 .. 18.7, its first and last rows
-//     partial, alpha 127 and 192; measured with resvg's renderer), its rows
-//     29..42 at 300 % by logo_item_y beside the digits' ink, 15 rows at Body
-//     22 on rows 28..42 — both end on row 42, the battery half a row under
-//     the digits' center by the floors. (The 20 of the unit's mock v4 — a
-//     cell 20 x 12 on rows 30..41, half a row under the digits too, the seat
-//     he accepted that night over mocks a1 and a2 — replaced the same
-//     night.) The air either side of the cell the space advance and one W,
-//     above,
-//     the larger of the two drawings' ink boxes on
-//     each axis so no state can move it, each drawing centered in it (the
-//     floor of the spare); ITS ROWS CENTERED ON THE LANE like every
-//     item's but the note's. Painted in the text tone.
+//     partial, alpha 127 and 192; measured with resvg's renderer). THE
+//     CELL'S TOP ROW IS THE LEGEND RUNS' INK TOP ROW (architect 2026-11-04
+//     night, his pick f2 of tmp/s38; a DELIBERATE ASYMMETRY to the lane's
+//     "every item centered" rule, stated as the alignment it is, not as a
+//     length): the cell starts on the row the percent and clock digits'
+//     ink starts on (logo_item_y of the runs' ink rows), so at 300 % the
+//     cell stands on rows 28..41 beside the digits' 15 ink rows 28..42 —
+//     both start on row 28, the cell ending one row above the digits. His
+//     reason: the cell centered on the lane (rows 29..42, half a row under
+//     the digits' center by the floors) read "too low"; two rows up (27..40,
+//     mock f1) not taken. The air either side of the cell the space advance
+//     and one W, above; the cell the larger of the two drawings' ink boxes
+//     on each axis so no state can move it, each drawing centered in it
+//     (the floor of the spare). Painted in the text tone.
 //   (Liberation's own arrows ↑ / ↓ as the glyphs, a drawn pipe and
 //   "nothing" as the discharging glyph were judged on the same sheets and
 //   not taken, docs/engineering/closed_questions.md.)
 inline constexpr double kLogoLaneAt300           = 72.0;
-inline constexpr double kLogoNoteInkAt300        = 20.0;
+inline constexpr double kLogoNoteInkAt300        = 18.0;
 inline constexpr double kLogoNoteLiftAt300       = 2.0;
 inline constexpr double kLogoBrandGapAt300       = 16.0;
 inline constexpr double kLogoGlyphInkAt300       = 22.0;

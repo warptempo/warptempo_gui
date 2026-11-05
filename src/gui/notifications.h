@@ -16,11 +16,14 @@
 // the mark showing the card's face through one color — on the ink-box road
 // (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
 // content on all four sides (notification_pad_px below; P18, architect
-// 2026-10-24), ON THE CARD FACE — the tooltip's look, a flat
-// `card_ground` box under `card_text` inside a one-W `card_frame`
-// border (architect 2026-10-04, the sides 2026-10-06; flat since 2026-11-02,
-// M11 with M14 "d"; render.h's palette block, THE CARD FACE): the
-// tooltip's own box (paint_popup_chrome), square, with no drop shadow
+// 2026-10-24), ON THE CARD FACE — A FLAT BOX IN LIVE'S STATUS BAR'S ORANGE,
+// `card_ground` (materials.h's kCardFace E76942), its one-W ring
+// `card_frame` painted in the same fill so no border shows, its words and
+// its glyph `card_text` (kCardInk 2A2A2A, Live's text on that bar), both
+// classes alike (architect 2026-11-04 night, his pick h1 of tmp/s38; the
+// tooltip's look, which the cards wore from 2026-10-06, is the tooltip's
+// alone; render.h's palette block, THE CARD FACE): the one popup box
+// painter's (paint_popup_chrome), square, with no drop shadow
 // (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card

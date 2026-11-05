@@ -1005,11 +1005,14 @@ private:
     // with. (The Settings dropdown, the second floater of this kind, retired
     // 2026-10-21 with paint_dropdown.)
     void paint_shift_tooltip(cairo_t* cr);
-    // THE CARD FACE every floating surface draws (the tooltip and the
-    // notification cards): a flat `card_ground` box inside a one-W
-    // `card_frame` border on all four sides (architect 2026-11-02, M11 with
-    // M14 "d"; render.h's palette block, THE CARD FACE).
-    void paint_popup_chrome(cairo_t* cr, const GuiRect& r);
+    // THE BOX every floating surface draws (the tooltip and the
+    // notification cards), ONE PAINTER, TWO LOOKS: a flat `ground` box inside
+    // a one-W `frame` border on all four sides — the tooltip the pane in
+    // kWellFrame (architect 2026-11-02, M11 with M14 "d"), the cards Live's
+    // orange with the frame in the fill (2026-11-04 night; render.h's
+    // palette block, THE CARD FACE).
+    void paint_popup_chrome(cairo_t* cr, const GuiRect& r, GuiColor frame,
+                            GuiColor ground);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box — above every lane and the
     // keyboard slot, below the pointer-transient tooltip and above the modal (the order is on_redraw's step 13). It

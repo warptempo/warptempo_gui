@@ -78,11 +78,12 @@
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two, kTextInk B5B5B5 on every word, digit and
 // drawing the chrome prints — the logo lane, the
-// clocks, the tab name and state line, the lists, the cards, the prompts,
-// the editors, the marker labels, the keyboard's caps, the keys' Breeze
-// glyphs (2026-11-02) and their legends (2026-11-03) — and kTextDimInk
-// 757575 for the settings page's inert rows and the tooltip's hint line;
-// kTextOnLit 111111 on a lit face. A DISABLED KEY'S glyph and legend take
+// clocks, the tab name and state line, the lists, the prompts, the
+// editors, the marker labels, the keyboard's caps, the keys' Breeze glyphs
+// (2026-11-02) and their legends (2026-11-03) — and kTextDimInk 757575 for
+// the settings page's inert rows and the tooltip's hint line; kTextOnLit
+// 111111 on a lit face. THE CARDS' words and glyph wear their own ink,
+// kCardInk 2A2A2A on Live's orange (THE CARDS, below; 2026-11-04 night). A DISABLED KEY'S glyph and legend take
 // their own tone, kKeyDimInk 5A5A5A (architect 2026-11-02, on mock b3: "the
 // disabled icons are too similar to enabled ones", 757575 reading too close
 // to B5B5B5 at a key's size), darker than Live's dim text so a dead key
@@ -144,8 +145,9 @@ inline constexpr uint32_t key_ink(KeyLook look, bool enabled) {
 
 // THE WELL'S TONES (the head's THE WELL). kWellFrame is THE GRAMMAR'S ONE
 // FRAME TONE (architect 2026-11-02, M14 "d"): the scrub's one-W channel
-// (render.h's scrub block) and the cards' and the tooltip's one-W border
-// (the chrome's `card_frame`). THE TRIM BAR'S TWO FILLS (architect
+// (render.h's scrub block) and the tooltip's one-W border
+// (paint_shift_tooltip; the cards wear kCardFace instead since 2026-11-04
+// night). THE TRIM BAR'S TWO FILLS (architect
 // 2026-11-03, mock z2; render_trim_flags): kTrimBarFace, the bar outside
 // the trim, IS THE LANE'S TONE — ONE CONSTANT, kLaneFace's own value (Live's
 // next fill above the ground), named for what it paints as kPaneFace is
@@ -171,10 +173,24 @@ inline constexpr uint32_t kSelectionText      = kTextOnLit;
 // named for what it paints: the modal family's box interior, flat, with no
 // frame, ring, shadow or row separator (modal_box.h's head; the score
 // viewer's darker pane, the one exception, is recorded there), and the
-// cards' and the tooltip's face (the chrome's `card_ground`,
-// chrome_derive.h) inside their one-W kWellFrame border (`card_frame`, the
-// grammar's one frame tone, paint_popup_chrome).
+// tooltip's face inside its one-W kWellFrame border (the grammar's one
+// frame tone; paint_shift_tooltip through paint_popup_chrome). The cards
+// wear kCardFace (below).
 inline constexpr uint32_t kPaneFace = kKeyFace;
+
+// THE CARDS (architect 2026-11-04 night, his pick h1 of tmp/s38 over h0, the
+// tooltip's pane and frame they wore until then, and h2, the orange under
+// 111111 ink): every notification card, both classes alike, is A FLAT BOX in
+// kCardFace E76942 — LIVE'S STATUS BAR'S ORANGE, measured on his Live 12 shot
+// of 2026-10-31 (231 105 66) — its words and its class glyph in kCardInk
+// 2A2A2A, Live's own text on that bar (42 42 42), and NO VISIBLE BORDER: the
+// one-W ring's rows and columns stay in the layout, painted in the fill (the
+// chrome's `card_ground`, `card_text` and `card_frame`, chrome_derive.h;
+// render.h's THE CARD FACE). NOT THE LAMP'S FFAD56: "the yellow is for lamps
+// only" (2026-11-02) stands — this is Live's status-bar orange, a different
+// tone with a different job, a message rather than a state.
+inline constexpr uint32_t kCardFace = 0xE76942;
+inline constexpr uint32_t kCardInk  = 0x2A2A2A;
 
 // -- THE KEY'S PAINTERS ------------------------------------------------------
 

@@ -1523,7 +1523,9 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // brand's ink rows, the legend's runs' ink rows (the alphabet's,
 // kLogoLegendInkSet, each run's baseline its ink's top plus the rows above
 // the baseline), the pipe's own ink rows (kLogoLegendPipe, its own baseline
-// the same way) and the glyph cell; across, the clock run's last ink on the
+// the same way) — and THE GLYPH CELL, NOT CENTERED: its top row on the
+// runs' ink top row (architect 2026-11-04 night, his pick f2 of tmp/s38, a
+// deliberate asymmetry: the centered cell read "too low"); across, the clock run's last ink on the
 // well's last column, the pipe's pen one space and its own advance
 // before the clock run's pen, the glyph cell one space advance and the
 // battery's air (kLogoGlyphAirAt300, one W, 2026-11-04 night) left of the
@@ -1595,8 +1597,10 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     const int air = skin_px(kLogoGlyphAirAt300);
     const int cell_right = static_cast<int>(std::nearbyint(
         l.pipe_x + text_shape::ink_left_px(*l.pipe) - space)) - air;
-    l.cell = GuiRect{cell_right - cell.w, logo_item_y(l.lane, cell.h), cell.w,
-                     cell.h};
+    // THE CELL'S TOP ROW IS THE RUNS' INK TOP ROW (the row the percent and
+    // clock digits' ink starts on), not the cell's own centered seat.
+    l.cell = GuiRect{cell_right - cell.w, logo_item_y(l.lane, ink.rows()),
+                     cell.w, cell.h};
     int first = l.cell.x;
     if (!legend.percent.empty()) {
         l.percent = text_shape::memoized_run(body, legend.percent);
@@ -1608,7 +1612,7 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     // THE EXTENT: the columns from the first ink through the well's last
     // column (the clock's last ink stands on it) and one column of slack past
     // it for that ink's antialiased fraction, the lane's rows, no clamp:
-    // every ink stands inside the lane, centered on it, by construction.
+    // every ink stands inside the lane by construction.
     l.extent = GuiRect{first, l.lane.y, std::max(0, well.end + 1 - first),
                        l.lane.h};
     return l;
@@ -3130,23 +3134,28 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
 // -- The floating surfaces ---------------------------------------------------
 
-void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
-    // ONE BOX PAINTER FOR EVERY FLOATING SURFACE — the tooltip and every
-    // notification card, whose words their painters set (render.h's THE CARD
-    // FACE, the rule's one statement; architect 2026-11-02, M11 with M14
-    // "d"): A FLAT `card_ground` BOX (the pane, kPaneFace) inside a
-    // ONE-W `card_frame` BORDER (kWellFrame; hairline_px, 2026-11-04) on its own outer rows
+void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
+                                         GuiColor frame, GuiColor ground) {
+    // ONE BOX PAINTER FOR EVERY FLOATING SURFACE, TWO LOOKS — the tooltip and
+    // every notification card, whose words their painters set (render.h's
+    // THE CARD FACE, the rule's one statement): A FLAT `ground` BOX inside a
+    // ONE-W `frame` BORDER (hairline_px, 2026-11-04) on its own outer rows
     // and columns, all four sides one tone — the border laid as the whole
-    // box, the face over its inside. No ring tones, no shadow. The tooltip
-    // and each card keep their own height rule and pad (paint_shift_tooltip,
-    // notification_pad_px), the border inside their heights.
+    // box, the face over its inside. No ring tones, no shadow. THE TOOLTIP
+    // passes the pane kPaneFace in the frame tone kWellFrame (architect
+    // 2026-11-02, M11 with M14 "d"); THE CARDS pass the chrome's
+    // `card_ground` and `card_frame`, both Live's status-bar orange kCardFace
+    // (architect 2026-11-04 night, h1 of tmp/s38), so no border shows and the
+    // ring stays layout. The tooltip and each card keep their own height
+    // rule and pad (paint_shift_tooltip, notification_pad_px), the border
+    // inside their heights.
     if (r.w <= 0 || r.h <= 0) return;
     const int px = hairline_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, r, palette().card_frame);
+    paint_cell_rect(cr, r, frame);
     paint_cell_rect(cr, GuiRect{r.x + px, r.y + px, r.w - 2 * px, r.h - 2 * px},
-                    palette().card_ground);
+                    ground);
     cairo_restore(cr);
 }
 
@@ -3316,7 +3325,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                                                  : box;
     }
 
-    paint_popup_chrome(cr, box);
+    // THE TOOLTIP'S LOOK, the flat look's constants (no chrome role): the
+    // pane in the one frame tone (render.h's THE CARD FACE).
+    paint_popup_chrome(cr, box, hex(kWellFrame), hex(kPaneFace));
 
     // THE BASELINES (the box above): the name's on its cap's bottom row
     // under the frame and the pad, the hint's one pad and its own cap lower.
@@ -3435,12 +3446,14 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // one W since 2026-11-04 night, 2 at 300 % — the ruling at the
 // declaration).
 //
-// THE LOOK (architect 2026-10-02; flat since 2026-11-02, M11 with M14 "d"):
-// THE CARD FACE — the tooltip's own look (architect 2026-10-06, his word:
-// the cards take the tooltip's look), a flat `card_ground` box inside its
-// one-W `card_frame` border, its words `card_text` (render.h's
-// palette block, THE CARD FACE) — square, NO DROP SHADOW, through the one
-// popup box painter (paint_popup_chrome, the tooltip's own); inside the
+// THE LOOK (architect 2026-11-04 night, his pick h1 of tmp/s38): THE CARD
+// FACE — a flat box in LIVE'S STATUS BAR'S ORANGE (`card_ground`,
+// materials.h's kCardFace E76942), its one-W ring painted in the same fill
+// (`card_frame`), so no border shows, its words and its class glyph in
+// Live's own text on that bar (`card_text`, kCardInk 2A2A2A); both classes
+// alike, the glyph telling them apart (render.h's palette block, THE CARD
+// FACE) — square, NO DROP SHADOW, through the one popup box painter
+// (paint_popup_chrome, the tooltip's too, in its own look); inside the
 // border ONE PAD of plain face on all four sides (P18, architect
 // 2026-10-24; notification_pad_px), the first line THE BODY FACE'S CAP tall
 // between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
@@ -3605,9 +3618,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // inside rows (the layout block above): Breeze's cut-out
         // DialogInformation on a normal card, DialogError on a critical one
         // (architect 2026-11-02, R14: the 10-10 transcriptions, the mark cut
-        // out of the filled square), in the card text's tone (the chrome's
-        // `card_text`, kTextInk).
-        paint_popup_chrome(cr, card);
+        // out of the filled square), in the words' own tone (the chrome's
+        // `card_text`, kCardInk: the glyph and the words one tone, Live's).
+        paint_popup_chrome(cr, card, palette().card_frame,
+                           palette().card_ground);
         {
             const icons::Icon glyph =
                 n.cls == AppState::NotificationClass::Critical
@@ -3616,7 +3630,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
             icons::draw_glyph(cr, glyph, card.x + ring + pad,
                               card.y + ring + (inside_h - s.h) / 2,
-                              glyph_ink, kTextInk);
+                              glyph_ink,
+                              argb32_opaque_word(palette().card_text));
         }
 
         if (text_room > 0) {

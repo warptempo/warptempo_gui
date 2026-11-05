@@ -41,14 +41,15 @@ dropped; the path data and each drawing's own viewBox are kept verbatim. The imp
 literal color, a class or a style block, or a shape with no fill on it or an ancestor (resvg's default black). So
 `currentColor` resolves against the color THE PROGRAM SUPPLIES: each file is parsed per color with resvg's user
 stylesheet `svg { color: #RRGGBB; }` (`svg_icon::parse`; the road at `src/gui/icons.h`'s head), the color one of the
-text tones (`src/gui/materials.h`): B5B5B5 at rest, 757575 on a disabled key, 111111 on a lit key or a list's lit row.
+text tones (`src/gui/materials.h`): B5B5B5 at rest, 5A5A5A on a disabled key, 111111 on a lit key or a list's lit row,
+2A2A2A on a notification card (Live's orange, since 2026-11-04 night).
 What the colors told apart is lost, as the ruling accepts: Render's red disc, the two deletes' red and the battery's red
 and green are the glyph's one color (the two cards, whose marks only a second color told apart, are cut out instead,
 below).
 
 ONE ROAD, THE INK BOX. A glyph is scaled by its INK BOX, not its viewBox: the drawing's antialiased ink (alpha > 0) is
 fitted so that its larger side is the seat's own length — 18 / 34 of the key's height at 300 % on every key (18 on the
-34 key, since 2026-11-04 night, his pick d1), 20 for the logo lane's note, 22 for the battery glyph (since 2026-11-04 night), 26 on a list row, .525 of a card's first line inside the
+34 key, since 2026-11-04 night, his pick d1), 18 for the logo lane's note (since 2026-11-04 night, his pick g1), 22 for the battery glyph (since 2026-11-04 night), 26 on a list row, .525 of a card's first line inside the
 border (the unit of 2, 2026-11-04 night) — scaled with the
 window as every chrome length (`icons::glyph_ink_size` / `icons::draw_glyph`; each seat's placement at its painter).
 
