@@ -4149,8 +4149,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // really important for fine tune, just ballpark"): no clipping, no
     // avoidance, as a chip paints over a label. NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's chip being
-    // in the marker lane below (the coincident-stem rule is retired, render.h's
-    // playhead paragraph). It draws NOTHING across the trim bar, the marker
+    // in the marker lane below (render.h's playhead paragraph). It draws NOTHING across the trim bar, the marker
     // lane and the rows of ground; its canvas line is paint_playheads'. CENTRED ON THE PLAYHEAD'S COLUMN, its line's
     // centre (architect 2026-10-09 ~14:35; paint_ce_cue_triangle).
     //
@@ -4744,18 +4743,16 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
-// THE COINCIDENCE STEM (architect 2026-11-04: "in ableton playhead
-// coincident with marker = no stem, stem #11 on hover. we have no hover so
-// we should #11 on coincident"; the full contract at the declaration): on
-// EVERY published entry whose paint frame equals the resting playhead's
-// frame (AppState::playhead_cursor_sample — the frame playhead_pixel_x maps
-// to the cursor's column; a FRAME compare, never a column compare, so two
-// markers a frame apart at a coarse zoom never both light), a SOLID ONE-W
-// line in the `cue_outline` from the chip's apex row down the canvas's
-// whole height (the head segment, below), the stereo divider's row crossed
-// (architect 2026-11-02: "the divider is just another grid line now";
-// canvas_line_rect's form, the line's column gate and edge clip,
-// waveform_line_cols).
+// THE SELECTION STEM (architect 2026-11-05, his pick a2 of tmp/s42,
+// reversing 2026-11-04's coincidence stem — "dropped, along with the rest
+// of cool edit stuff except a few details like the triangle playhead"; the
+// full contract at the declaration): on EVERY published entry — every
+// selected enabled cue on a waveform column (MarkerStem, render.h) — a
+// SOLID ONE-W line in the `cue_outline` from the chip's apex row down the
+// canvas's whole height (the head segment, below), the stereo divider's
+// row crossed (architect 2026-11-02: "the divider is just another grid
+// line now"; canvas_line_rect's form, the line's column gate and edge
+// clip, waveform_line_cols), the playhead on it or not.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its cue's APEX COLUMN, and that column was
@@ -4768,32 +4765,35 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // Z-ORDER (architect 2026-11-04): THE STEM PAINTS OVER THE PLAYHEAD'S LINE,
 // which precedes this pass: both are one W on one column, so a stem under
 // the opaque line would never be seen; while the playhead rests on a
-// marker the dark stem is what shows and the ruler's head marks the
-// playhead. The scanner follows. The full sequence is the paint-order
+// selected marker the dark stem is what shows and the ruler's head marks
+// the playhead. The scanner follows. The full sequence is the paint-order
 // block in on_redraw (build_canvas_list).
 // THE ONE-STATE RULE (architect 2026-11-04, after the drag's stutter on his
-// glass): THE STEM AND THE LINE ALWAYS AGREE WITHIN ONE PAINTED FRAME. The
-// stem's coincidence is decided against the marker position THE FRAME
-// PAINTS THE CHIP AT — the stash is the flag cache's, staged by the rebuild
-// that drew the blitted surface and promoted with it at the frame's top
-// (on_redraw), so stem and chip are one state by construction — and the
-// line's position is the live cursor's. So EVERY WRITE THAT MOVES A MARKER
-// AND THE CURSOR TOGETHER REBUILDS THE FLAG CACHE IN THE SAME EVENT, before
-// any frame can paint (Viewport::refresh_flag_cache, fingerprint-guarded):
-// the drag's per-motion ride (marker_drag.cpp's apply), its release
-// (commit_drag), the position nudge's tail (position_nudge.cpp), and every
-// write that kicks the synchronous plate rebuild, whose tail rebuilds the
-// flags (kick_waveform_sync). A cursor move alone needs nothing: the stash
-// already holds every marker's frame. Nothing is debounced or deferred.
-// DAMAGE: no site of its own. The stem's cells are the line's own columns
-// (on the canvas's rows, and the lane's last row and the ground line above
-// them), and every write of the resting cursor damages them
-// at both positions — the narrow moves through playhead_invalidate_rect
-// (the head's columns from the window's top through the canvas's foot), the
-// discrete ones the whole waveform area (playhead_pixel_x's damage rule;
-// the landing's seat, seat_playhead_on_domain_frame, among them) — and the
-// GL canvas's list is rebuilt whole at every frame that meets the canvas
-// paint area; a stash change rides the flag cache rebuild's waveform damage.
+// glass): THE STEM AND THE LINE ALWAYS AGREE WITHIN ONE PAINTED FRAME
+// where they stand together — a selected marker the playhead rides, a drag
+// or a position nudge moving both. The stem is laid out at the marker
+// position THE FRAME PAINTS THE CHIP AT — the stash is the flag cache's,
+// staged by the rebuild that drew the blitted surface and promoted with it
+// at the frame's top (on_redraw), so stem and chip are one state by
+// construction — and the line's position is the live cursor's. So EVERY
+// WRITE THAT MOVES A MARKER AND THE CURSOR TOGETHER REBUILDS THE FLAG CACHE
+// IN THE SAME EVENT, before any frame can paint
+// (Viewport::refresh_flag_cache, fingerprint-guarded): the drag's
+// per-motion ride (marker_drag.cpp's apply), its release (commit_drag), the
+// position nudge's tail (position_nudge.cpp), and every write that kicks
+// the synchronous plate rebuild, whose tail rebuilds the flags
+// (kick_waveform_sync). A cursor move alone changes no stem. Nothing is
+// debounced or deferred.
+// DAMAGE: no site of its own. The stash changes only with the flag cache's
+// rebuild — the selection is a field of its fingerprint
+// (FlagCache::fp_selection_hash, the `h` view's focus and selection beside
+// it), so a selection change rebuilds it — and that rebuild damages the
+// window's rows from the viewport's lanes through the waveform area's foot
+// (maybe_rebuild_flag_cache's tail, damage_window_top_rows), which holds
+// every cell a stem stands on (the canvas's rows, and the lane's last row
+// and the ground line above them) at both the old stash's columns and the
+// new; the GL canvas's list is rebuilt whole at every frame that meets the
+// canvas paint area.
 //
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
@@ -4805,12 +4805,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // the canvas's rows are the GPU's (this pass, through the sink, whose list
 // is scissored to the canvas paint area), the lane's last row and the
 // ground line the chrome's (paint_marker_stem_heads, on the backbuffer after
-// the flag blit), and BOTH take their rects from standing_stem_rects, the
-// one site that decides coincidence — so the two halves of one stem can
-// never disagree. The DAMAGE of a cursor move covers the added rows too:
-// playhead_invalidate_rect runs from the window's top on the head's
-// columns, the discrete moves and the drag damage the viewport's lanes and
-// the strip, and the flag cache's rebuild the strip with the waveform. The
+// the flag blit), and BOTH take their rects from standing_stem_rects, off
+// the one stash — so the two halves of one stem can never disagree. The
 // playhead's own line stays on the canvas's rows alone.
 //
 // THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): one rects call.
@@ -4819,9 +4815,7 @@ std::vector<GuiRect> GuiPaintHandler::standing_stem_rects(const GuiRect& area,
                                                           int y1) const {
     std::vector<GuiRect> rs;
     if (area.w <= 0 || y1 <= y0) return rs;
-    const int64_t playhead_frame = app.playhead_cursor_sample;
     for (const MarkerStem& stem : app.marker_stems) {
-        if (stem.frame != playhead_frame) continue;
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
         // render.cpp); the gate restates that against the area the painters
@@ -4842,7 +4836,7 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
                palette().cue_outline);
 }
 
-// THE STEM'S HEAD SEGMENT, the chrome's half of the coincidence stem
+// THE STEM'S HEAD SEGMENT, the chrome's half of the selection stem
 // (paint_marker_stems' head, the rule): the marker lane's last row and the
 // row of ground under the lane, on the standing stems' columns, in the
 // `cue_outline` — painted after the flag blit, so it stands over the chip's
@@ -4872,8 +4866,8 @@ void GuiPaintHandler::paint_marker_stem_heads(cairo_t* cr) {
 // t rows from the left side's line's first column through the right side's
 // line's last, aliased integer rects clipped to the area (a side off the
 // area paints nothing there). Painted before the playhead's line and the
-// coincidence stems (paint_marker_stems), a stem on either cue standing on
-// its side in the same color.
+// selection stems (paint_marker_stems), a selected pair's stem on either
+// cue standing on its side in the same color.
 // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): every pair's sides
 // and runs, one rects call.
 void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
@@ -4999,8 +4993,9 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     // form at the resting cursor column whatever the selection is doing — a
     // SOLID ONE-W OPAQUE LINE in the palette's `playhead_line` 85E2EB
     // (architect 2026-11-04 night; render.h's playhead paragraph). It paints
-    // BEFORE paint_marker_stems, whose coincidence stem stands over it
-    // (architect 2026-11-04), and before the scanner.
+    // BEFORE paint_marker_stems, whose selection stem stands over it
+    // (architect 2026-11-04; the stem the selection's since 2026-11-05),
+    // and before the scanner.
     //
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
@@ -8350,8 +8345,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   6. the CURSOR's CANVAS LINE (paint_playheads, solid, the
         //      palette's static `playhead_line` — the head is the ruler
         //      pass's, step 9), the `h` view's nudged-pair rings under it.
-        //   7. the MARKER STEMS (waveform): the coincidence stems, over the
-        //      cursor's line (2026-11-04).
+        //   7. the MARKER STEMS (waveform): the selection stems, over the
+        //      cursor's line (2026-11-05).
         //   8. the SCANNER (waveform), solid.
         //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
         //      digits — AND, in the same pass, the cursor's HEAD (the cyan
@@ -8408,19 +8403,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     `cue_outline` (2026-11-04) — painted AFTER the plate, over the
         //     ink like the stems, and before them.
         //   THE COLUMN IS SHARED, NOT CONTESTED (architect 2026-10-09, the
-        //     program is Cool Edit): a SELECTION's cue is its members' chips
-        //     (architect 2026-11-04), with the landed cursor on the focus; a
-        //     marker the cursor stands on wears the solid coincidence stem,
-        //     painted over the cursor's line (2026-11-04), the ruler's head
-        //     marking the playhead; its head in the ruler and the cue's chip
-        //     in the marker lane never meet. (2026-08-01 lifted the SCANNER above the
+        //     program is Cool Edit): a SELECTION's mark is its members'
+        //     stems (architect 2026-11-05), with the landed cursor on the
+        //     focus; a selected marker the cursor stands on shows its solid
+        //     stem, painted over the cursor's line (2026-11-04), the ruler's
+        //     head marking the playhead; its head in the ruler and the cue's
+        //     chip in the marker lane never meet. (2026-08-01 lifted the SCANNER above the
         //     stems, so the moving line does not blink out at every marker it
         //     crosses.)
 
         // THE CANVAS PASSES ARE NOT PAINTED HERE: the frame's list carries
         // them, built once, whole, in this order (build_canvas_list) — the
         // plate, the center lines, the stereo divider, the lead-in ring, the
-        // nudged-pair rings, the cursor's line, the coincidence stems, the
+        // nudged-pair rings, the cursor's line, the selection stems, the
         // scanner, the zoom anchor.
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
@@ -8439,7 +8434,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // panel face, which the flag blit's cues stand on.
             paint_ruler_row(cr);
             paint_flag_annotations(cr, top_strip);
-            // The coincidence stem's head segment, over the blitted chips
+            // The selection stem's head segment, over the blitted chips
             // (paint_marker_stem_heads; the rule at paint_marker_stems).
             paint_marker_stem_heads(cr);
         }

@@ -1048,17 +1048,16 @@ private:
     // bar too; the outer Cairo damage clip bounds the actual work. See the
     // definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
-    // THE COINCIDENCE STEM (architect 2026-11-04: "we have no hover so we
-    // should #11 on coincident") — the per-frame waveform overlay: on every
-    // published enabled cue whose paint frame the resting playhead stands on
-    // (a frame compare against AppState::playhead_cursor_sample, never a
-    // column compare), a SOLID ONE-W `cue_outline` line down the canvas's
-    // whole height (render.h's marker-lane paragraph; the `h` view's cues
-    // alike, each at its own frame); a DISABLED marker stems never. The
-    // painter publishes every enabled cue's entry (resolve_flag_face's
-    // `stem`), and the coincidence is decided here, at paint; the stem
-    // paints OVER the playhead's line (architect 2026-11-04), so the dark
-    // stem is what shows on a coincident marker.
+    // THE SELECTION STEM (architect 2026-11-05, his pick a2 of tmp/s42,
+    // reversing 2026-11-04's coincidence stem) — the per-frame waveform
+    // overlay: on every published entry, a SOLID ONE-W `cue_outline` line
+    // down the canvas's whole height (render.h's marker-lane paragraph; the
+    // `h` view's cues alike, each at its own column). The painter publishes
+    // an entry for every SELECTED ENABLED cue (resolve_flag_face's `stem`);
+    // an unselected or DISABLED marker stems never, the playhead on it or
+    // not. The stem paints OVER the playhead's line (architect 2026-11-04),
+    // so the dark stem is what shows on a selected marker the playhead
+    // rests on.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its cue's apex column, and
@@ -1075,9 +1074,8 @@ private:
     // row and the ground line under it on the standing stems' columns, the
     // chrome's half of the same stem, painted after the flag blit.
     void paint_marker_stem_heads(cairo_t* cr);
-    // THE ONE COINCIDENCE DECISION both stem painters read: one rect per
-    // stash entry whose frame the resting playhead stands on, over rows
-    // [y0, y1) on its one-W columns gated to `area`'s (the rule at
+    // THE ONE GEOMETRY both stem painters read: one rect per stash entry,
+    // over rows [y0, y1) on its one-W columns gated to `area`'s (the rule at
     // paint_marker_stems).
     std::vector<GuiRect> standing_stem_rects(const GuiRect& area, int y0,
                                              int y1) const;
@@ -1089,7 +1087,7 @@ private:
     // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W
     // opaque line in the palette's static `playhead_line` 85E2EB
     // (render_playhead's paragraph, 2026-11-04 night) — before the
-    // coincidence stems, which stand over it.
+    // selection stems, which stand over it.
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_playheads and paint_marker_stems: the scanner draws OVER the stems

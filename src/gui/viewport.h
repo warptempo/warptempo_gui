@@ -788,9 +788,9 @@ struct Viewport {
     // old singleton stem's narrow damage on the ITEM basis while the stem
     // painted on the PLATE basis; that damage was widened to
     // invalidate_waveform_area in 2026-07-30 and then deleted outright with
-    // Selection's stem subject pair, because no stem appears or vanishes with
-    // the selection; a selected stem's color (2026-11-02) rides the flag
-    // cache's selection fingerprint, whose rebuild damages the waveform.)
+    // Selection's stem subject pair; the selection stem (2026-11-05) rides
+    // the flag cache's selection fingerprint, whose rebuild damages the
+    // waveform.)
     void invalidate_top_strip();
     void invalidate_all();
     // (THE WHOLE SURFACE IS THE GUI'S GEOMETRY, the tablet's window the whole

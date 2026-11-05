@@ -5037,14 +5037,14 @@ struct AppState {
     // nothing else.
     bool          value_drag_lamp = false;
 
-    // THE STEM IS THE PLAYHEAD'S COINCIDENCE, NOT THE SELECTION'S (architect
-    // 2026-11-04: "we have no hover so we should #11 on coincident"): every
-    // enabled marker the resting playhead's frame stands on wears a solid
-    // one-W `cue_outline` stem down the canvas over the playhead's line
-    // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash,
-    // the coincidence decided at paint); a disabled one never. The chip
-    // carries the selection (render.h's THE STATES); a landing puts the
-    // playhead on the clicked marker's frame, so the stem follows it there.
+    // THE STEM IS THE SELECTION'S, THE PLAYHEAD THE FOCUS'S (architect
+    // 2026-11-05, his pick a2 of tmp/s42, reversing 2026-11-04's
+    // coincidence stem; "only 1 playhead onscreen ever"): every selected
+    // enabled marker wears a solid one-W `cue_outline` stem down the canvas
+    // over the playhead's line (GuiPaintHandler::paint_marker_stems, off the
+    // marker painter's stash); an unselected or disabled one never, the
+    // playhead on it or not. The focused member has no paint of its own: a
+    // landing puts the playhead on its frame (render.h's THE STATES).
 
     // Active markers view — THE COLUMN AXIS, two letters: 'W' = warp markers,
     // 'P' = phase reset markers (a third, M, left with the magnification
@@ -5233,7 +5233,8 @@ struct AppState {
     // basis the flags do. (The selected-stem DAMAGE was listed here until
     // 2026-07-30 and never belonged: that stem painted on the PLATE basis, so
     // its item-basis narrow damage was the wrong epoch. Both the damage and the
-    // stem it served are gone — row 5's stems key on no selection at all.)
+    // stem it served are gone; the selection stem of 2026-11-05 paints off
+    // the flag stash, keyed with the chips.)
     // area_w == 0 means cold (nothing promoted
     // yet); the accessor then falls back to the live viewport, matching
     // displayed_or_live_target_map's cold live-map fallback. Written by the
@@ -5525,14 +5526,14 @@ struct AppState {
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
-    // carries one entry per ENABLED cue with its paint frame, which on the two
-    // LIVE columns means every enabled marker whose column is a waveform
+    // carries one entry per SELECTED ENABLED cue, which on the two LIVE
+    // columns means every selected enabled marker whose column is a waveform
     // column in [0, w) (the producers' gate, stem_column_on_waveform in
     // render.cpp; a flag hanging into view from past either edge publishes no
-    // entry) — a disabled marker has no stem ever, expressed as an absent
-    // entry (MarkerStem, render.h) — and in the history mode every live diff
-    // cue on a waveform column, a nudged pair two; the painter lights the
-    // entries the resting playhead's frame coincides with (2026-11-04). Since
+    // entry) — an unselected or disabled marker has no stem, expressed as an
+    // absent entry (MarkerStem, render.h) — and in the history mode every selected
+    // live diff cue on a waveform column, a nudged pair two; the painter
+    // paints every entry (2026-11-05). Since
     // the stems-inert ruling (architect 2026-08-12) `marker_stems` is
     // PAINT-ONLY: its one reader is the per-frame stem painter
     // (GuiPaintHandler::paint_marker_stems), the pointer never reads it
@@ -7344,7 +7345,7 @@ struct AppState {
         // half of the rect they hit (FlagHitRect::diff_half), the Tab cycle
         // its stop's (history_diff_cycle_target). It never changes the
         // flags' picture — both cues of a selected pair take the selected
-        // chip, each its own coincidence stem (architect 2026-11-04) — so
+        // look, each its own stem (architect 2026-11-05) — so
         // no fingerprint keys it. Cleared with the focus
         // (clear_history_mode_focus) and by the whole-struct reset.
         HistoryDiffHalf focus_half = HistoryDiffHalf::Removed;

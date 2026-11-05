@@ -117,9 +117,9 @@ struct Selection {
     // damage_stem_on_subject_change() were the phase-overlay owner's twin for the
     // selected-marker stem, because that stem was a SELECTION visual that could
     // appear, move or vanish with no other repaint. The stem is the
-    // playhead's coincidence since 2026-11-04 (render.h's THE STATES), riding
-    // the playhead's own damage; the chips' selected fill rides the flag
-    // cache's selection fingerprint, whose rebuild damages the waveform with
-    // the strip (maybe_rebuild_flag_cache, waveform_cache.cpp). The overlay
-    // owner above stands.
+    // selection's again since 2026-11-05 (render.h's THE STATES), and it
+    // rides the flag cache's selection fingerprint, whose rebuild stages the
+    // stem stash and damages the waveform with the strip
+    // (maybe_rebuild_flag_cache, waveform_cache.cpp) — no mutator here owes
+    // stem damage. The overlay owner above stands.
 };

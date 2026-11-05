@@ -1158,9 +1158,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // names this column reads as "off" here, and fp_active_markers_view above
     // is what keeps the two readings apart across a switch.
     // See fp_iteration_mode. (The addressed cell is no input: the selected
-    // look is the cue's chip, never a segment's — architect 2026-11-04,
+    // look is the cue's stem, never a segment's — architect 2026-11-05,
     // render.h's THE STATES — keyed by sel_hash above, whose focus term is
-    // harmless; the coincidence stem is decided at paint, no input here.)
+    // harmless: the stem stash this rebuild stages follows the selection,
+    // and the rebuild's tail damages the waveform with the strip.)
     const bool      iter_on    = iteration_column_lit(app, mv);
     // THE STANDING EDITOR'S SUPPRESSION — which marker, and which of its boxes
     // the pass below does not paint — off THE ONE DERIVATION

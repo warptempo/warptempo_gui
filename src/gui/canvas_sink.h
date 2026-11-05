@@ -17,7 +17,7 @@
 // plate, so a plate from before a resize never crosses it, and under every
 // vertical line after it, each crossing it, 2026-11-02), the
 // phase-reset lead-in ring, the nudged pairs' runs,
-// the nudged pairs' rings, the cursor's line, the coincidence stems over it,
+// the nudged pairs' rings, the cursor's line, the selection stems over it,
 // the scanner and the zoom
 // anchor's stem, in that order (build_canvas_list, paint_handler.cpp, after
 // on_redraw's paint-order block). Each but the plate is a solid converted

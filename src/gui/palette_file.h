@@ -17,8 +17,8 @@
 // (2026-11-01) — the canvas, the ink, the zero line, the grid's one-px
 // equivalent, the playhead's triangle, the orange of Live's markers and
 // lit buttons, (2026-11-02) the grey of its inactive marker, and
-// (2026-11-04) its unselected marker's grey, its dark line and the mid
-// tone of its playhead's line's fade, measured per pixel at 120 fps — but
+// (2026-11-04) its dark line and the mid tone of its playhead's line's
+// fade, measured per pixel at 120 fps — but
 // the core, the product's own, and the scanner, the controls' white; each
 // ruled on his mocks.
 //
@@ -37,10 +37,9 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // flag editor's field and selection band, the chrome's selected pair). So
-// the palette's program roles are exactly the TWELVE below (TWO ROLES MAY
-// SHARE A NUMBER — `cue_unselected` and `inactive_cue` are both Live's
-// 5D5D5D, as the ink and `center` share 191919: a role is what it paints,
-// not its value):
+// the palette's program roles are exactly the ELEVEN below (TWO ROLES MAY
+// SHARE A NUMBER — the ink and `center` share 191919: a role is what it
+// paints, not its value):
 //   waveform_canvas  393939  the canvas, Live's darker band
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
 //                            the lit lamp's outer bar
@@ -60,29 +59,25 @@
 //   center           191919  each channel's zero line over the waveform
 //                            (render_center_lines) — Live's zero line IS the
 //                            ink
-//   cue              FFAD56  THE SELECTED MARKER'S FILL (architect
-//                            2026-11-04, reversing 2026-11-02's "the
-//                            triangle never marks selection"): the chip of
-//                            every member of the selection set, warp and
-//                            phase reset alike, both halves of the `h`
-//                            view's selected item (resolve_flag_face), the
-//                            orange of Live's start marker
-//   cue_unselected   5D5D5D  THE UNSELECTED MARKER'S FILL (architect
-//                            2026-11-04, mock g1): LIVE'S OWN UNSELECTED
-//                            MARKER, measured on his Live shot — every live
-//                            cue outside the selection
+//   cue              FFAD56  THE ENABLED MARKER'S FILL (architect
+//                            2026-11-05, his pick a2 of tmp/s42): the chip
+//                            of every enabled cue, selected or not, warp
+//                            and phase reset alike, both halves of the `h`
+//                            view's items (resolve_flag_face), the orange
+//                            of Live's start marker
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
-//                            one-W outline round every live chip, THE
-//                            COINCIDENCE STEM down the canvas (every
-//                            enabled marker the playhead stands on), the
-//                            phase-reset lead-in ring and the nudged pairs'
-//                            ring runs (render.h's THE STATES)
+//                            one-W outline round every chip, THE SELECTION
+//                            STEM down the canvas (every selected enabled
+//                            marker, architect 2026-11-05), the phase-reset
+//                            lead-in ring and the nudged pairs' ring runs
+//                            (render.h's THE STATES)
 //   inactive_cue     5D5D5D  THE DISABLED MARKER (architect 2026-11-02, the
-//                            color sweep, mock C3; HOLLOW since 2026-11-04):
+//                            color sweep, mock C3; the solid chip since
+//                            2026-11-05, "disabled marker gets dim label"):
 //                            LIVE'S INACTIVE WARP MARKER, measured on its own
 //                            303030 lane — ONE CONSTANT, no blend: a disabled
-//                            chip's outline (its fill the lane's face, no
-//                            stem, resolve_flag_face) and every INERT LABEL
+//                            chip's fill (in the `cue_outline`, no stem,
+//                            resolve_flag_face) and every INERT LABEL
 //                            — a disabled cue's segments and a tie
 //                            follower's cells — and its strike bar. "The
 //                            arrow needs to be legible for me, but the text
@@ -107,8 +102,7 @@
 //                            white"; kept 2026-11-01, tunable later)
 // The stereo divider between the channels wears the panel's tones; nothing
 // else in the well has a role. THE LIT KEY'S FILL is the flat look's, not
-// the palette's (materials.h's kLitFill), and the disabled chip's hollow
-// fill is the lane's own face (materials.h's kLaneFace).
+// the palette's (materials.h's kLitFill).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -121,7 +115,6 @@ inline constexpr uint32_t kPaletteCore     = 0x1E1E1E;
 inline constexpr uint32_t kPaletteGrid     = 0x313131;
 inline constexpr uint32_t kPaletteCenter   = 0x191919;
 inline constexpr uint32_t kPaletteCue      = 0xFFAD56;
-inline constexpr uint32_t kPaletteCueUnselected = 0x5D5D5D;
 inline constexpr uint32_t kPaletteCueOutline    = 0x111111;
 inline constexpr uint32_t kPaletteInactiveCue = 0x5D5D5D;
 inline constexpr uint32_t kPalettePlayheadHead = 0x03C3D5;
@@ -143,7 +136,6 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::grid,             kPaletteGrid},
     {&GuiPalette::center,           kPaletteCenter},
     {&GuiPalette::cue,              kPaletteCue},
-    {&GuiPalette::cue_unselected,   kPaletteCueUnselected},
     {&GuiPalette::cue_outline,      kPaletteCueOutline},
     {&GuiPalette::inactive_cue,     kPaletteInactiveCue},
     {&GuiPalette::playhead_head,    kPalettePlayheadHead},
