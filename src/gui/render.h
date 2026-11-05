@@ -1139,8 +1139,9 @@ constexpr int kMinWindowHeightPx = 480;
 //     of 2, mock v4, replaced) after the note's last ink column
 //     (text_shape::ink_left_px). (The gap is the retired caption's title
 //     gap. The cards' glyph-seat-to-text gap read it too, a glyph then words,
-//     until this ruling; it keeps the 8 as its own kNotificationGlyphGapAt300,
-//     notifications.h, the cards not being on the mocks.)
+//     until this ruling; the architect kept the cards' 8 the same night
+//     ("keep the cards spacing"), now its own kNotificationGlyphGapAt300,
+//     notifications.h.)
 //   ON THE RIGHT, THE LEGEND "92% <glyph> | 2:12 PM" (gui_battery.h's
 //     composer; the tick's refresh_logo_legend, main.cpp) in the BODY face
 //     (22 Regular), the text tone, LAID RIGHT TO LEFT FROM THE WELL'S LAST
