@@ -1137,13 +1137,20 @@ constexpr int kMinWindowHeightPx = 480;
 //     shows, gui_font.h's kGuiLiftedSigns), its pen one space advance and
 //     its own advance before the clock run's pen, so the two stand as one
 //     "| 2:12 PM" run would set them (the face kerns neither pair); one
-//     space advance of the face; THE GLYPH CELL; one space advance; the
-//     percent run "92%" with its last ink there, so "100%" grows leftward,
-//     away from the clock. FLUSH IS THE INK, the chokepoint's own measure
-//     (text_shape::ink_left_px / ink_right_px: cairo's glyph extents of the
-//     run as painted), the space advance measured from the pipe's first ink
-//     to the cell and from the cell to the percent run's last ink; the
-//     cell's edge rounded to a whole column. THE RUNS' INK ROWS ARE THE
+//     space advance of the face AND ONE W; THE GLYPH CELL; one space
+//     advance and one W; the percent run "92%" with its last ink there, so
+//     "100%" grows leftward, away from the clock. THE BATTERY'S AIR
+//     (architect 2026-11-04 night, his pick a3 on the mocks of tmp/s36,
+//     "add 2px"): kLogoGlyphAirAt300 = 2 px (one W, skin_px, rounded at the
+//     element like kLogoBrandGapAt300) of ground added on each side of the
+//     cell, so the cell stands 2 columns further left than the bare space
+//     advance would set it and the percent run 4; the clock, the pipe and
+//     the drawing itself do not move. FLUSH IS THE INK, the chokepoint's own
+//     measure (text_shape::ink_left_px / ink_right_px: cairo's glyph
+//     extents of the run as painted), each gap — the space advance and the
+//     air — measured from the pipe's first ink to the cell and from the
+//     cell to the percent run's last ink; the cell's edge rounded to a whole
+//     column. THE RUNS' INK ROWS ARE THE
 //     ALPHABET'S, kLogoLegendInkSet (the composer's every character: the
 //     digits, "%", ":", the space and "AMP"), so the seat never moves with
 //     what the clock reads; the pipe's are its own.
@@ -1159,9 +1166,14 @@ constexpr int kMinWindowHeightPx = 480;
 //     both, kLogoGlyphInkAt300 = 20 px its larger side (10 W; architect
 //     2026-11-04 night, mock v4, "that size works": the 19 of the retrofit
 //     and the 18 of the morning's unit both replaced — the outline is wider
-//     than tall, so the cell is 20 wide and 13 rows tall on the 72-row lane,
-//     the digits' ink 15 rows at Body 22, so the two center alike; no air
-//     either side of the glyph, the gaps one space advance),
+//     than tall, so the cell is 20 wide and 12 rows tall on the 72-row lane
+//     — the drawing on rows 30..41 at 300 %, measured on the tablet's
+//     capture — beside the digits' ink, 15 rows at Body 22 on rows 28..42,
+//     each centered on the lane by its own ink, the battery half a row under
+//     the digits' center by the floors: HIS ACCEPTED PARITY (architect
+//     2026-11-04 night, "leave": mocks a1, the drawing 2 px up and 1.5 rows
+//     high, and a2, 1 px up and half a row high, both declined); the air
+//     either side of the cell the space advance and one W, above),
 //     the larger of the two drawings' ink boxes on
 //     each axis so no state can move it, each drawing centered in it (the
 //     floor of the spare); ITS ROWS CENTERED ON THE LANE like every
@@ -1173,6 +1185,7 @@ inline constexpr double kLogoLaneAt300           = 72.0;
 inline constexpr double kLogoNoteInkAt300        = 20.0;
 inline constexpr double kLogoBrandGapAt300       = 8.0;
 inline constexpr double kLogoGlyphInkAt300       = 20.0;
+inline constexpr double kLogoGlyphAirAt300       = 2.0;
 inline constexpr const char* kLogoBrand = "Warptempo";
 inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";
 inline constexpr const char* kLogoLegendPipe = "|";
@@ -1304,11 +1317,12 @@ inline int hairline_px() { return skin_px(2.0, 1); }
 // is the key's hit box, its glyph's seat and its legend's (below).
 // Every key carries a Breeze glyph centered on its face (paint_key_glyph,
 // paint_handler.cpp; icons.h's THE KEYS), its ink box's larger side
-// FOLLOWING THE KEY'S HEIGHT, 16 * key_height / 34 device px at 300 % — 16
-// at the default 34 (architect 2026-11-04 night, the unit of 2; 16 / 33 off
-// mocks s0..s4 2026-11-03), one size for every key — and UNDER IT, in the
+// FOLLOWING THE KEY'S HEIGHT, 18 * key_height / 34 device px at 300 % — 18
+// at the default 34 (architect 2026-11-04 night, his pick d1 of tmp/s36,
+// every key glyph grown one W; 16 / 34 with the unit of 2 that night, 16 /
+// 33 off mocks s0..s4 2026-11-03), one size for every key — and UNDER IT, in the
 // strip's bottom pad, ITS PRINTED LEGEND (architect 2026-11-03, the
-// retrofit: the Legend face, 16 Regular since the unit of 2, uppercase, the
+// retrofit: the Legend face, 14 Regular since 2026-11-04 night, uppercase, the
 // rule at paint_handler.cpp's key_legend_seat).
 //
 // THE BAND (architect 2026-10-22, the simple layout; the hi-fi's again

@@ -20,8 +20,8 @@
 // road). THE SIZES ARE WHOLE W (architect 2026-11-04, the unit; the W of
 // 2 that night: every authored length a multiple of 2 device px at 300 %,
 // the faces' ems included — the hi-fi's 22 / 16 of 2026-11-03's retrofit
-// whole W again, the Legend 16 with the Small; pt was considered and not
-// taken, gui_scale being the density knob). THE TEXT SIZES (architect
+// whole W again; pt was considered and not taken, gui_scale being the
+// density knob; the Legend parted from the Small at 14 the same night). THE TEXT SIZES (architect
 // 2026-11-03, the retrofit, reversing that morning's text round of 24; the
 // unit of 2 since 2026-11-04 night): PROGRAM 22 Regular
 // (architect 2026-10-26 ~13:05, the size's tuning key read off the tablet's
@@ -43,9 +43,12 @@
 // 2026-10-24, "the caption size 24", off the logo mocks); RULER 16 BOLD (the
 // ruler's digits alone; Bold since 2026-11-01 night, M5c; the retrofit's 16
 // of mock g1, 2026-11-03, a whole W again since 2026-11-04 night); LEGEND
-// 16 Regular (the keys' printed legends alone, uppercase, under every key;
-// back 2026-11-03 with the legends at 14, 16 since 2026-11-04 night, the
-// unit of 2, paint_handler.cpp's key_legend_seat); KEYS 24 Regular (the on-screen
+// 14 Regular (7 W; the keys' printed legends alone, uppercase, under every
+// key but the on-screen keyboards'; back 2026-11-03 with the legends; 14
+// since 2026-11-04 night, his pick b2 on the mocks of tmp/s36 — "it does
+// seem too large now" at the unit's 16, 15 mocked and not taken, off the
+// unit; paint_handler.cpp's key_legend_seat, app_state.h's
+// redesign_button_legend for the fit); KEYS 24 Regular (the on-screen
 // keyboard's caps alone — the letters, the symbols page's characters and
 // the word caps, "a separate face"; architect 2026-10-24, "C24" off his type
 // sheet) BY DEFAULT, THE ONE LIVE SIZE — the `osk_font_px` tuning key's
@@ -126,7 +129,7 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {1, 16.0},   // Small: the ruler's digits, Bold
     {0, 22.0},   // Program: row 8's clock and state line, the player's
                  // clocks, the tooltip's name line
-    {0, 16.0},   // Legend: the keys' legends
+    {0, 14.0},   // Legend: the keys' legends
     {0, 24.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
     {0, 18.0},   // Hint: the tooltip's hint line

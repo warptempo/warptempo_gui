@@ -156,7 +156,8 @@ double ink_left_px(const ShapedRun& run);
 // answers 0. ITS ONE CONSUMER is THE LOGO LANE'S LEGEND (architect
 // 2026-10-24, "the clock flush with the right edge of the buttons"): the
 // clock run's last ink on the well's last column and the
-// percent run's last ink one space advance short of the glyph cell
+// percent run's last ink one space advance and the battery's one W of air
+// short of the glyph cell
 // (paint_handler.cpp's logo_legend_layout).
 double ink_right_px(const ShapedRun& run);
 

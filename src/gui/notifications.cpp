@@ -1,6 +1,6 @@
 #include "notifications.h"
 
-#include "folder_overlay.h"   // kPanelPadPx, the panel's air (one constant read)
+#include "folder_overlay.h"   // pad_px, the panel's air (one accessor read)
 #include "paint_handler.h"    // the lane table
 
 #include <algorithm>
@@ -10,6 +10,11 @@
 int notification_pad_px() {
     // P18 (the ruling at the declaration): an area, rounded at the element.
     return skin_px(kNotificationPadAt300, 1);
+}
+
+int notification_gap_px() {
+    // One W, the line rule's (the ruling at the declaration).
+    return hairline_px();
 }
 
 int notification_cap_px() {
@@ -48,14 +53,15 @@ int notification_card_max_w_px(const AppState& a) {
 
 GuiRect notification_stack_bound(const AppState& a) {
     // THE STACK'S MARGINS: THE TRIM BAR'S FIRST FILL ROW ABOVE, THE KEYS'
-    // OUTER COLUMN AT THE RIGHT, kPanelPadPx AT THE FOOT. THE RIGHT EDGE IS
+    // OUTER COLUMN AT THE RIGHT, THE PANEL'S PAD AT THE FOOT. THE RIGHT EDGE IS
     // THE KEYS' OUTER COLUMN (THE EDGE RULE, as the tooltip's clamp,
     // tooltip_box_rect; architect 2026-11-02, M11's and M14's record
     // pictures): the card's right edge on the well's last column, 2279 at
     // 300 % (well_columns' end, 2280, one past it; the well the waveform
-    // area, architect 2026-11-03; the panel's kPanelPadPx from the window's
+    // area, architect 2026-11-03; the panel's pad from the window's
     // edge until 2026-11-02). The foot is the
-    // panel's own kPanelPadPx (architect 2026-08-30). THE TOP IS ONE RULE FOR
+    // panel's own pad, folder_overlay::pad_px (architect 2026-08-30; one W,
+    // 2 at 300 %, since 2026-11-04 night). THE TOP IS ONE RULE FOR
     // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
     // "it looks like absolute positioning where it should be relative to the
     // elements"): THE TRIM BAR'S FIRST FILL ROW, the row under the trim
@@ -95,7 +101,7 @@ int notification_capacity(const AppState& a) {
     // holds floor((room + gap) / (card + gap)). Floored at one — a window too
     // short for a single card still shows the one it was given, clipped.
     const int card_h = notification_card_h_px();
-    const int gap    = scaled_px(kNotificationGapPx, 1);
+    const int gap    = notification_gap_px();
     const int n      = (notification_stack_bound(a).h + gap) / (card_h + gap);
     return n < 1 ? 1 : n;
 }

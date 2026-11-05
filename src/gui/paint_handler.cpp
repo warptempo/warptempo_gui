@@ -346,8 +346,10 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp) {
 // surface — the band, row 8, the render player, the score viewer, the trim
 // presets' row, every modal controls row and the dialogs' word buttons) —
 // THE ONE PLACE the legend's placement is decided: the legend face
-// (GuiFace::Legend, 16 Regular at 300 %, uppercase; 16, 8 W, since the
-// unit of 2, 2026-11-04 night) CENTERED on the key's face, its cap band
+// (GuiFace::Legend, 14 Regular at 300 %, uppercase; 14, 7 W, since
+// 2026-11-04 night, his pick b2 on the mocks of tmp/s36 over the unit's 16
+// — "it does seem too large now" — and a 15 off the unit) CENTERED on the
+// key's face, its cap band
 // centered in the strip's bottom pad (redesign_baseline on the pad's rows,
 // the pad strip_pad_px under the face). A legend never widens a key; one
 // wider than its face
@@ -528,13 +530,13 @@ std::string key_legend_word(std::string_view word) {
 // THE INK BOX: the Breeze drawing's, ONE VISUAL SIZE for every key
 // (2026-11-01, "THE MAIN PAGE IS SETTLED"), ITS LARGER SIDE FOLLOWING THE
 // KEY'S HEIGHT (architect 2026-11-02; the ratio 2026-11-03, mock s2, 16 / 33;
-// 16 / 34 since 2026-11-04 night, the unit of 2, a whole W at the default,
-// the icons keeping their size): kKeyGlyphInkPerKeySide, 16 / 34, of the
-// `key_height` tuning key's device px at 300 % (render.h's seat) — 16 at
-// the default 34 — the product taken as one device length at 300 % and
-// ROUNDED ONCE, AT THE ELEMENT, by skin_px (its scaled_px's nearbyint;
-// floored at one px), never the side rounded first: 16 at 300 %, 11 at
-// 200 % (10.67), 7 at 138 % (7.36). A key_height
+// 16 / 34 with the unit of 2; 18 / 34 since 2026-11-04 night, his pick d1
+// on the mocks of tmp/s36, "yes on d1": every key glyph grown one W):
+// kKeyGlyphInkPerKeySide, 18 / 34, of the `key_height` tuning key's device
+// px at 300 % (render.h's seat) — 18 at the default 34, 9 W — the product
+// taken as one device length at 300 % and ROUNDED ONCE, AT THE ELEMENT, by
+// skin_px (its scaled_px's nearbyint; floored at one px), never the side
+// rounded first: 18 at 300 %, 12 at 200 % (12.0), 8 at 138 % (8.28). A key_height
 // commit reaches it on the relayout road (GuiInputHandler::apply_key_height),
 // the icon caches keyed on the ink px.
 // CENTERED in the painted face `face` (architect 2026-11-03, the retrofit:
@@ -551,8 +553,9 @@ std::string key_legend_word(std::string_view word) {
 // when the key is disabled. The glyph is
 // clipped to the face: a face smaller than the ink box keeps its glyph
 // centered and lets nothing overhang onto the ground. None is at the
-// defaults — the ink 16 rows on the 34-row face.
-constexpr double kKeyGlyphInkPerKeySide = 16.0 / 34.0;
+// defaults — the ink's larger side 18 on the 70 x 34 face, 8 rows above and
+// 8 below an 18-row ink.
+constexpr double kKeyGlyphInkPerKeySide = 18.0 / 34.0;
 void paint_key_glyph(cairo_t* cr, const GuiRect& face, icons::Icon icon,
                      bool enabled, KeyLook look) {
     const GuiRect& key = face;
@@ -776,7 +779,7 @@ AppState::RedesignButtonFace& publish_button_face(
 // Zoom to Fit .. Flatten, Play Renders .. Score — the keys' faces one key
 // gap apart inside a run (one W of ground between two faces, materials.h's
 // THE FACE AND ITS GAP) and the run gap of ground between two (render.h's
-// program_run_gap_px, 45 at 300 %; redesign_button_opens_icon_run,
+// program_run_gap_px, 44 at 300 %; redesign_button_opens_icon_run,
 // app_state.h, the runs' leaders); the
 // right five — the history opener and the two view pairs — ONE RUN ending
 // at the well's last column, the left walk starting at its first
@@ -1203,9 +1206,9 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // sizes, 2026-11-04 night).
 //
 // THE SEATS AT THE TABLET'S 300 %: a list row (the folder overlay's row box,
-// folder_overlay.h's kRowHeightPx, 51 rows) seats at row floor((51 +
-// 15.14) / 2) = 33; at 138 % its 23 rows seat at floor((23 + 6.88) / 2) =
-// 14. The answer is independent of the box's y by construction rather than
+// folder_overlay.h's kListRowAt300, 52 rows since 2026-11-04 night) seats at
+// row floor((52 + 15.14) / 2) = 33; at 138 % its 24 rows seat at
+// floor((24 + 6.88) / 2) = 15. The answer is independent of the box's y by construction rather than
 // by a tie rule.
 //
 // ONE SEAT FOR EVERY BOXED CHROME LABEL (architect 2026-10-22). THE BOX
@@ -1521,10 +1524,12 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // the baseline), the pipe's own ink rows (kLogoLegendPipe, its own baseline
 // the same way) and the glyph cell; across, the clock run's last ink on the
 // well's last column, the pipe's pen one space and its own advance
-// before the clock run's pen, the glyph cell one space advance left of the
+// before the clock run's pen, the glyph cell one space advance and the
+// battery's air (kLogoGlyphAirAt300, one W, 2026-11-04 night) left of the
 // pipe's first ink, its right edge rounded to a whole column, the percent
-// run's last ink one space advance left of the cell; the extent the lane's
-// rows from the first ink column through the well's last column.
+// run's last ink one space advance and the air left of the cell; the extent
+// the lane's rows from the first ink column (the percent run's, or the
+// cell's with no percent) through the well's last column.
 namespace {
 // A TEXT ITEM'S INK ROWS above and below its baseline: the set's ink band
 // in the face as painted (gui_font_ink_band), its rows as they are.
@@ -1586,14 +1591,15 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     l.pipe = text_shape::memoized_run(body, kLogoLegendPipe);
     l.pipe_x = l.clock_x - space - l.pipe->width_px;
     const icons::InkSize cell = logo_glyph_cell();
+    const int air = skin_px(kLogoGlyphAirAt300);
     const int cell_right = static_cast<int>(std::nearbyint(
-        l.pipe_x + text_shape::ink_left_px(*l.pipe) - space));
+        l.pipe_x + text_shape::ink_left_px(*l.pipe) - space)) - air;
     l.cell = GuiRect{cell_right - cell.w, logo_item_y(l.lane, cell.h), cell.w,
                      cell.h};
     int first = l.cell.x;
     if (!legend.percent.empty()) {
         l.percent = text_shape::memoized_run(body, legend.percent);
-        l.percent_x = static_cast<double>(l.cell.x) - space -
+        l.percent_x = static_cast<double>(l.cell.x - air) - space -
                       text_shape::ink_right_px(*l.percent);
         first = std::min(first, static_cast<int>(std::floor(
             l.percent_x + text_shape::ink_left_px(*l.percent))));
@@ -2381,10 +2387,10 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // at 300 % and 22 px, 97.9 device px ceiled to 98, the field 122; at
 // 138 % a 10-px em, 44.5 ceiled to 45, the field 57. THE PLAYER'S ROW
 // HOLDS THEM: its scrub is what the fixed terms leave (player_row_layout),
-// the two fields and their gap 122 + 9 + 122 = 253 device px at 300 % and
+// the two fields and their gap 122 + 8 + 122 = 252 device px at 300 % and
 // 57 + 4 + 57 = 118 at 138 %, so with the 70-px face, the one-W key gap and
-// the 44-px run gap (2026-11-04 night) the scrub's channel is 1227 device
-// px at 300 % (2304 wide, x 282 .. 1508) and 1431 at 138 % (1920 wide).
+// the 44-px run gap (2026-11-04 night) the scrub's channel is 1228 device
+// px at 300 % (2304 wide, x 282 .. 1509) and 1431 at 138 % (1920 wide).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2453,11 +2459,15 @@ constexpr double kTabNameAirAt300 = 14.0;
 constexpr double kStateAirAt300   = 14.0;
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
-// (architect 2026-10-05): ACID's adjacent fields stand three Windows px of
-// ground apart (columns 1136..1138 between its first two, the same capture);
-// Cool Edit's Begin / End / Length fields three too (pitch 75
-// round 72-W fields).
-constexpr double kTimeFieldGapPx = 3.0;
+// and the score viewer's media pair (architect 2026-10-05): ACID's adjacent
+// fields stand three Windows px of ground apart (columns 1136..1138 between
+// its first two, the same capture); Cool Edit's Begin / End / Length fields
+// three too (pitch 75 round 72-W fields). ON THE UNIT SINCE 2026-11-04
+// night (architect, the unit of 2, "yes, put on todo"): kTimeFieldGapAt300
+// = 8 DEVICE PX AT 300 % (4 W; the three Windows px's 9 rounded down, as the
+// airs went 15 -> 14 and 9 -> 8), skin_px, rounded at the element — 5 at
+// 200 % (5.33), 4 at 138 % (3.68), 3 at 100 % (2.67).
+constexpr double kTimeFieldGapAt300 = 8.0;
 
 // The time fields' metrics, MEMOISED ON THE SCALE — eleven tiny shaping
 // passes (ten digits and the specimen) of THE PROGRAM FACE, every time
@@ -2558,7 +2568,7 @@ constexpr std::span<const TransportRowDef> kRow8Groups[kRow8GroupCount] = {
     kTransportSkipGroup, kMarkerVerbGroup, kTransportStepWalkGroup,
     kTransportNudgePlayGroup};
 // THE ROW'S LENGTHS (the simple layout, 2026-10-22): the run gap between
-// two groups' faces (render.h's program_run_gap_px, 45 at 300 %), the face,
+// two groups' faces (render.h's program_run_gap_px, 44 at 300 %), the face,
 // and the key gap between two faces of a group (render.h's key_gap_px, one
 // W, 2026-11-04).
 struct Row8Lengths {
@@ -3418,8 +3428,9 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // 2026-11-02, M14; the rule and the margins at
 // notification_stack_bound) — growing
 // DOWN over whatever lies there (the icon row's empty right, the thin lanes,
-// the waveform), the cards kNotificationGapPx apart (the card's own 1 px
-// since 2026-10-01, the icon row's 2 before — the ruling at the constant).
+// the waveform), the cards notification_gap_px apart (the card's own gap,
+// one W since 2026-11-04 night, 2 at 300 % — the ruling at the
+// declaration).
 //
 // THE LOOK (architect 2026-10-02; flat since 2026-11-02, M11 with M14 "d"):
 // THE CARD FACE — the tooltip's own look (architect 2026-10-06, his word:
@@ -3484,7 +3495,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int line_h   = notification_line_h_px(font);
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
-    const int gap      = scaled_px(kNotificationGapPx, 1);
+    const int gap      = notification_gap_px();
     // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1; the glyph Breeze's
     // since 2026-11-02): the border (`ring`, one W), ONE PAD of
     // plain face (notifications.h, every side), the class glyph's SEAT, the
@@ -5417,7 +5428,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // touching"): a run's faces stand one key gap apart, one W of ground
     // (2026-11-04; materials.h's key_group_pitch_px), as the band's and row
     // 8's keys stand; THE GROUP SPACE between its items is the run gap
-    // (program_run_gap_px, 45 at 300 %; architect 2026-11-03, mock dec7b,
+    // (program_run_gap_px, 44 at 300 %; architect 2026-11-03, mock dec7b,
     // and the retrofit's number; the head above the word rows). The press
     // reads the rects the button walk publishes from this layout
     // (modal_dialog_button_hit), the painted faces, so the ground between
@@ -5438,7 +5449,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     const double cell_w = time_field_metrics().time_w;
     l.field_pad = time_field_pad_px();
     l.field_w   = time_field_w_px(cell_w);
-    l.field_gap = scaled_px(kTimeFieldGapPx);
+    l.field_gap = skin_px(kTimeFieldGapAt300);
     const int clock_w = l.field_w + l.field_gap + l.field_w;
 
     // -- The walk: the fixed left run, the right-flushed PAIR (word
@@ -5549,7 +5560,7 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     const int group = program_run_gap_px();
     l.field_pad = time_field_pad_px();
     l.field_w   = time_field_w_px(time_field_metrics().time_w);
-    l.field_gap = scaled_px(kTimeFieldGapPx);
+    l.field_gap = skin_px(kTimeFieldGapAt300);
     const int clock_w = l.field_w + l.field_gap + l.field_w;
     const int pitch = key_group_pitch_px();
     const int cx0 = seats.cases_left;
@@ -6331,11 +6342,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    SEPARATORS RETIRED (architect 2026-10-02; Sound Recorder and
         //    mplay32 have none, and the roster's etched separators of
         //    2026-10-06 did not reach this row): the groups stand the run
-        //    gap of bare face apart (program_run_gap_px, 45 at 300 %;
+        //    gap of bare face apart (program_run_gap_px, 44 at 300 %;
         //    architect 2026-11-03, mock dec7b, and the retrofit) — transport → scrub, scrub →
         //    clock, clock → the lamp. THE CLOCK IS TWO TIME FIELDS since
         //    2026-10-05 (architect: Sound Recorder's Position and Length
-        //    panels, ACID's separate fields), kTimeFieldGapPx apart — the
+        //    panels, ACID's separate fields), kTimeFieldGapAt300 apart — the
         //    position, then the length.
         //
         //    THE SCRUB IS THE ONE FLEXIBLE ITEM and everything else is fixed,
@@ -7321,7 +7332,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // THE BAND IS LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; a
 // Windows 95 list view in a sunken field 2026-10-06 to then): THE MODAL
 // FAMILY'S PANE (paint_modal_box), no frame and no row separators, the
-// names in the FIELD TEXT, each row 17 Windows px with its Breeze GLYPH
+// names in the FIELD TEXT, each row 52 device px at 300 % (kListRowAt300,
+// 2026-11-04 night) with its Breeze GLYPH
 // (the walk's glyph block below; folder_overlay.h's row box), and the
 // faces:
 //   a RESTING row         -> NO FILL AT ALL: the pane shows through
@@ -7358,8 +7370,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // drawing, so it stood still when Breeze's drawings came. THE THREE STAND
 // ROUND THE TEXT (back 2026-11-03, the retrofit, after the text round's 29 /
 // 24 / 74 of that morning; whole W since 2026-11-04, the unit; the W of 2
-// that night): the glyph's ink 26 (13 W; .51 of the 51-px row, the row a
-// Windows-px length of the scaled_px road, folder_overlay.h), the seat 18
+// that night): the glyph's ink 26 (13 W; half the 52-px row,
+// folder_overlay.h's kListRowAt300, 2026-11-04 night), the seat 18
 // (the box's text seat) and the name's x 62 (31 W; the 64 of 2026-11-03
 // rounded to the unit of 3's 63, then to the unit of 2) — the seat, the
 // ink and 18 px of glyph-to-name air.
@@ -7470,7 +7482,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // drawing, architect 2026-11-02, R14 (4) / R15 (Q4); the logo's
             // single note no longer), Folder on a folder or
             // project row — on the ink-box road (icons.h): its ink box's
-            // larger side kListGlyphInkAt300 = 26 px, .51 of the 51-px row,
+            // larger side kListGlyphInkAt300 = 26 px, half the 52-px row,
             // its rows centered on the row (the floor of the spare), its
             // first ink column kListGlyphXAt300 = 18 px past the pane's left
             // edge (the text seat), in the row text's tone — kTextInk at

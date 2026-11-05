@@ -17647,25 +17647,27 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE TWO HISTORY TOGGLES print SESSION (the walk lamp's lit state) and
 // CUMUL (Toggle Cumulative cut as ADD SEL is). ZOOM IN AND ZOOM OUT READ IN
 // AND OUT (architect 2026-10-27: "Zoom In / Zoom Out, or In / Out if too
-// long"): ZOOM OUT runs about 86 px at 300 % at the 16-px legend, past its key, and the pair is
+// long"): ZOOM OUT runs 75.4 px at 300 % at the 14-px legend, past its key, and the pair is
 // one shape, so both take the short form. RESTRICT READS RESTR (architect
-// 2026-10-29, "defer to your measurement"): RESTRICT runs 80.0 px at 300 %
-// and would crowd FOLLOW's legend beside it; RESTR runs 54.2 (the 16-px legend, 2026-11-04 night).
-// THE FIT, AT THE LEGEND FACE'S 16 px EM (kGuiFaceSizes, gui_font.h; 16
-// since the unit of 2, 2026-11-04 night) AGAINST THE 70-px FACE (the key
-// itself, materials.h's THE FACE AND ITS GAP), measured 2026-11-04 night
-// on the product's own shaping road: the widest words
-// MAGNIFY 72.9, DISCARD 72.0, SESSION 71.2, HISTORY 70.6 and FLATTEN 70.0 px
-// at 300 % (50.1 / 49.5 / 48.9 / 48.5 / 48.1 at 200 % against the 47-px
-// face), so the widest words overhang their faces by up to about 1.5 px
-// each side onto the gap (the legend's own rule: it never widens a key);
-// the tightest neighbors, MAGNIFY beside FOLLOW (67.6), keep about 2 px
-// between their inks at the 72-px pitch (at 200 %'s 48 the two inks meet).
-// AT 150 % (36.5 / 36.0 / 35.6 / 35.3 / 35.0 against the 35-px face) the
-// five overhang by under a px each side, MAGNIFY and FOLLOW (33.8) under a
-// px apart at the 36-px pitch — a scale the tablet does not run. A smaller
-// key_height leaves the widths alone (the legend reads the face's width,
-// never its height).
+// 2026-10-29, "defer to your measurement"): RESTRICT runs 70.0 px at 300 %
+// and would crowd FOLLOW's legend beside it; RESTR runs 47.5 (the 14-px
+// legend, 2026-11-04 night).
+// THE FIT, AT THE LEGEND FACE'S 14 px EM (kGuiFaceSizes, gui_font.h; 14
+// since 2026-11-04 night, his pick over the unit's 16, "it does seem too
+// large now") AGAINST THE 70-px FACE (the key itself, materials.h's THE
+// FACE AND ITS GAP), measured 2026-11-04 night on the product's own
+// shaping road (the runs' advances): the widest words MAGNIFY 63.8,
+// DISCARD 63.0, SESSION 62.3, HISTORY 61.7, FLATTEN 61.2, ADD SEL and
+// SOURCE 59.9 px at 300 % (41.0 / 40.5 / 40.0 / 39.7 / 39.3 / 38.5 at
+// 200 %, em 9, against the 47-px face), so EVERY LEGEND OF A 70-px KEY
+// FITS ITS FACE, the widest with about 3 px each side; the tightest
+// neighbors, MAGNIFY beside FOLLOW (59.1), keep about 10 px between their
+// runs at the 72-px pitch (about 8 at 200 %'s 48). The rule stands for any
+// word to come (it never widens a key; one wider than its face overhangs
+// onto the ground). AT 150 % (31.9 .. 30.0 against the 35-px face) and
+// 138 % (27.3 .. 25.7 against the 32-px face) the same words fit too. A
+// smaller key_height leaves the widths alone (the legend reads the face's
+// width, never its height).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";

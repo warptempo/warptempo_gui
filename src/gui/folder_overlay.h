@@ -124,10 +124,10 @@
 //     row since 2026-10-14. The content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
 //   * THE ROW IS WINDOWS' LIST ROW (architect 2026-10-02): 17 Windows px
-//     tall at the normal face, as Windows' list boxes with 16-px icons, the
-//     roster's 16-px glyph seated at the toolbar case's 3-px lead and centred
-//     in the row's height, one Windows px between rows (the list's focus
-//     frame stands in it). It was the icon row's BUTTON, the toolbar case's
+//     tall at the normal face, as Windows' list boxes with 16-px icons, one
+//     Windows px between rows — ON THE UNIT SINCE 2026-11-04 night, the row
+//     52 device px at 300 % and one W between rows (kListRowAt300 and
+//     button_row_gap_px below), the glyph centred in the row's height. It was the icon row's BUTTON, the toolbar case's
 //     height, from 2026-08-28 ("we've gone for the button analogy"; "the
 //     buttons are good enough size for my finger"). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
@@ -135,7 +135,8 @@
 //     the row. (The AV Sync Stats panel's text rows stood at a monospace
 //     line's pitch, the row geometry's one fork, from 2026-09-03 until the
 //     panel's deletion on 2026-09-30.)
-// The panel's own authored numbers are the four below.
+// The panel's own authored number is the row below (kListRowAt300); its
+// pad and its row gap are one W, the line rule's (2026-11-04 night).
 //
 // THE FACES ARE LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; the
 // ladder at the painter): the box's interior is THE PANE, kPaneFace with the
@@ -206,41 +207,45 @@ namespace folder_overlay {
 // at the painter's own constants (paint_handler.cpp's kListGlyphInkAt300,
 // kListGlyphXAt300, kListNameXAt300, 2026-10-23).
 
-// THE PANEL'S OUTER INSET, its ONE authored margin — the margin between the
-// band's edge and the rows, at the top, the bottom and both sides.
-// pcmanfm-qt's compact view keeps 1 px between an item and the frame and the
-// architect's ruling lets it "grow proportionally with the taller rows"; 1
-// Windows px since the unit's change (the laptop pixel's 2 re-authored,
-// architect 2026-10-02), and it scales like every other authored length.
-inline constexpr double kPanelPadPx = 1.0;
-// The gap between two rows, the panel's own since the roster's buttons began
-// to touch (architect 2026-10-02): 1 Windows px, the laptop pixel's 2-px
-// button gap re-authored.
-inline constexpr double kRowGapPx = 1.0;
+// THE PANEL'S OUTER INSET — the margin between the band's edge and the rows,
+// at the top, the bottom and both sides: ONE W, the line rule's hairline_px
+// (render.h: 2 device px at 300 %, 1 at 200 % and below; architect
+// 2026-11-04 night, the unit of 2 — the 1-Windows-px pad of 2026-10-02, 3
+// device px at 300 %, re-authored on the unit as every former one-px gap
+// was). pcmanfm-qt's compact view keeps 1 px between an item and the frame
+// and the architect's ruling lets it "grow proportionally with the taller
+// rows" (2026-10-02). (Its one reader since 2026-10-23 is the notification
+// stack's foot margin, notifications.cpp: the rows stand at row_inset_px
+// below.)
+inline int pad_px()               { return hairline_px(); }
+// THE GAP BETWEEN TWO ROWS, the panel's own since the roster's buttons
+// began to touch (architect 2026-10-02): ONE W, hairline_px (2 device px at
+// 300 %, 1 at 200 % and below; the unit of 2, 2026-11-04 night, the
+// 1-Windows-px gap's 3 re-authored).
+inline int button_row_gap_px()    { return hairline_px(); }
 
-// THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
-// button box until 2026-10-02, then the 22-px toolbar case for that day's
-// first hours; 51 device px at 300 %, round the text, again since
-// 2026-11-03, the retrofit, after the text round's 56; a Windows-px length
-// on the scaled_px road, kept by the unit, 2026-11-04), the panel's row gap, the row's glyph (the painter's,
-// 2026-10-23; Windows' small 16-px icon until then; Breeze's since
-// 2026-11-02). A folder row wears icons::Icon::Folder and a wav row
-// icons::Icon::ViewMediaTrack, the double notes — SOURCE's drawing, a
-// deliberate share (architect 2026-11-02, R14 (4) / R15 (Q4): "keep just
-// one"); a plain, a group
-// and a disabled row wear none, and a listing of them alone starts its text at the
-// glyph's column (paint_folder_overlay's names' column, 2026-10-28 night).
-// (The glyph-less
-// TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
-// which wore the folder glyph because it named a folder, with the player's
-// move inside `tmp/` on 2026-09-01.) The accessor keeps the name it had while
-// a row was a wide button.
-inline constexpr double kRowHeightPx = 17.0;
-inline int button_row_height_px() { return scaled_px(kRowHeightPx, 1); }
-inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
-// (Its one reader since 2026-10-23 is the notification stack's margin,
-// notifications.cpp: the rows stand at row_inset_px below.)
-inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
+// THE ROW BOX: kListRowAt300 = 52 DEVICE PX AT 300 % (26 W; architect
+// 2026-11-04 night, the unit of 2, "yes, put on todo": the hi-fi's 51 — 17
+// Windows px on the scaled_px road from 2026-11-03, the retrofit, after the
+// text round's 56 — re-authored as an even length and rounded up), through
+// skin_px, rounded at the element: 52 at 300 %, 35 at 200 % (34.67), 24 at
+// 138 % (23.92), floored at one. EVERY LIST STANDS ON IT — the render
+// player's folders and wavs, the project picker, the settings page, its
+// value list, the trim presets — and the modal box's text rows pitch on it
+// (row + gap, 54 at 300 %; paint_modal_dialog), the panel's row gap under
+// it; the row's glyph is the painter's (2026-10-23; Windows' small 16-px
+// icon until then; Breeze's since 2026-11-02). A folder row wears
+// icons::Icon::Folder and a wav row icons::Icon::ViewMediaTrack, the double
+// notes — SOURCE's drawing, a deliberate share (architect 2026-11-02, R14
+// (4) / R15 (Q4): "keep just one"); a plain, a group and a disabled row
+// wear none, and a listing of them alone starts its text at the glyph's
+// column (paint_folder_overlay's names' column, 2026-10-28 night). (The
+// glyph-less TEXT kind went with the AV Sync Stats panel on 2026-09-30, and
+// the UP kind, which wore the folder glyph because it named a folder, with
+// the player's move inside `tmp/` on 2026-09-01.) The accessor keeps the
+// name it had while a row was a wide button.
+inline constexpr double kListRowAt300 = 52.0;
+inline int button_row_height_px() { return skin_px(kListRowAt300, 1); }
 // THE ROWS' INSET INSIDE THE BOX'S INTERIOR — left, top and right, and the
 // listing's foot: THE CONTENT'S ONE HAIRLINE OF AIR (modal_box.h's THE
 // PANE, architect 2026-10-23: "at most one device pixel"; one W since

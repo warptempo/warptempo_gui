@@ -725,13 +725,14 @@ inline constexpr double kNotificationMaxWidthPx = 465.0;
 
 // THE GAP BETWEEN TWO CARDS IN THE STACK (architect 2026-10-01, ruled on the
 // S4 mock: "reduce the distance between the cards to one pixel at a hundred
-// percent"; one Windows px since 2026-10-02). It was the icon row's
-// button gap (2) read by the card, a borrowing; the card owns its own gap
-// since that night, read by the painter
-// (paint_notifications) and the room's count (notification_capacity) and by
-// nothing else. A length, so it scales, floored at one pixel
-// (scaled_px(x, 1)) so the cards never touch at a small gui_scale.
-inline constexpr double kNotificationGapPx = 1.0;
+// percent"): ONE W, the line rule's hairline_px (render.h: 2 device px at
+// 300 %, 1 at 200 % and below, floored at one so the cards never touch;
+// architect 2026-11-04 night, the unit of 2 — the 1-Windows-px gap of
+// 2026-10-02, 3 device px at 300 %, re-authored on the unit). It was the
+// icon row's button gap (2) read by the card, a borrowing; the card owns its
+// own gap since that night, read by the painter (paint_notifications) and
+// the room's count (notification_capacity) and by nothing else.
+int notification_gap_px();
 
 // HOW MANY LINES A SENTENCE MAY TAKE (architect 2026-08-30, "a few"): a card
 // whose sentence does not fit its room GROWS DOWNWARD to this many lines and
@@ -758,8 +759,8 @@ int notification_pad_px();
 // THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
 // 2026-10-24): the inside height pad + cap + pad,
 // and the ratio the retired caption's (21 of its 40-px lane) and the list
-// rows' (26 of their 51-px row since the unit of 2, 2026-11-04 night; 27
-// before) — the one proportion every off-key glyph keeps to its line. Since
+// rows' (26 of their 52-px row since the unit of 2, 2026-11-04 night; 27
+// of 51 before) — the one proportion every off-key glyph keeps to its line. Since
 // 2026-11-02 (Breeze's cut-out DialogInformation and
 // DialogError, M7 / R14) it is
 // the ink box's LARGER SIDE on the ink-box road (icons.h), rounded at the
@@ -826,7 +827,7 @@ int notification_card_max_w_px(const AppState& a);
 // first fill row, read off the live lane table, so the first card's top
 // border stands on the bar's first fill row (architect 2026-10-08,
 // 2026-11-02; RULED KEPT 2026-11-03; the reasoning at the definition) — DOWN
-// TO kPanelPadPx OF AIR ABOVE THE
+// TO THE PANEL'S PAD OF AIR (folder_overlay::pad_px, one W) ABOVE THE
 // BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
@@ -865,11 +866,12 @@ GuiRect notification_stack_bound(const AppState& a);
 // A pure function of the window and the scale, like the room. Re-derived
 // 2026-10-08 under win2000, the stack seated one line above the trim lane:
 // in a 1920 x 1080 window at 138 % it is 23 (a 929 px room over
-// 38 + 1, the card's own gap, kNotificationGapPx); on the tablet at 300 % it
+// 38 + 1, the card's own gap, notification_gap_px); on the tablet at 300 % it
 // is 12 (1107 over 84 + 3), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are
 // recorded at main.cpp's vertical-stack owner). The card shrank since (56
-// px at 300 % with P18 and the unit, 2026-11-04), so every count is higher: every window
+// px at 300 % with P18 and the unit, 2026-11-04; the gap one W, 2 at 300 %,
+// since 2026-11-04 night), so every count is higher: every window
 // this product runs in holds more cards than the architect will ever stack.
 int notification_capacity(const AppState& a);
 

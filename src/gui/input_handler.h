@@ -3057,8 +3057,8 @@ private:
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
     // the neighboring button, a key pitch (the 70-px face and the one-W gap,
     // 72 at 300 % and 87 at 360 %, 2026-11-04), and below a move to
-    // the next lit row, a popup row (17 W under Windows 2000 —
-    // ChromeSpec::popup_item_height_px), so one row's
+    // the next lit row, a list row (52 device px at 300 %, 17.33 W —
+    // folder_overlay.h's kListRowAt300, 2026-11-04 night), so one row's
     // deliberate step rearms. Authored in Windows px as every chrome length,
     // though the drift is physical: the tablet is the one pen device. The
     // blink was measured on the roster's hot face (gone since 2026-10-09);

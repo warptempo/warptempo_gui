@@ -244,13 +244,14 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 //     gui_font_ascender_ink_px, never the line box's top: the air he sees is
 //     the ink's — the seat under its top row (row 164; modal_box_text_
 //     baseline0), each further row one list row pitch below (the row and
-//     its gap, folder_overlay.h's kRowGapPx), and THE FOOT the seat over its
+//     its gap, folder_overlay.h's kListRowAt300 and button_row_gap_px: 52
+//     + 2 = 54 at 300 % since 2026-11-04 night), and THE FOOT the seat over its
 //     bottom edge (the text room's clip, one past row 1309);
 //   THE LISTS' TEXT COLUMN — paint_handler.cpp's kListGlyphXAt300, the
 //     glyph's first ink column in a listing with glyph rows and the names' column in a
 //     glyph-less one (the settings page, the value lists, the trim presets,
 //     the BPM form), the same seat in from the pane's left column. (The
-//     lists keep their rows: the folder overlay's row box, 51 px, at the
+//     lists keep their rows: the folder overlay's row box, 52 px, at the
 //     content's one W under the pane's top, the cap centred on each row's
 //     band, redesign_baseline.)
 // (A 12-px pad inside a one-px ring stood 2026-10-23 to 2026-11-02.)
