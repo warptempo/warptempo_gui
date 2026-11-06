@@ -24,8 +24,8 @@ eleven variants — Light, Cool, Warm, High — are skipped silently: Default is
 "Default Dark Neutral Medium" alone, architect 2026-11-05). Each entry of
 VARIANTS below adds one more BUILTIN row from a taken file's roles, one role
 read in place of another, optionally shaded in OKLCH (immaterial_gold:
-Immaterial.ask with its own SearchIndication as the accent, darkened to L 72
-and warmed to h 79, architect 2026-11-05 / 2026-11-06), so seven files give
+Immaterial.ask with its own SearchIndication as the accent, darkened to L 78.8
+with its hue kept, architect 2026-11-05 / 2026-11-06), so seven files give
 eight builtin rows. Every `*.ask` under
 a SUBFOLDER is EXTRA, walked recursively, `__MACOSX` directories and `._*`
 files (the zips' resource forks) skipped; the first path component under the
@@ -65,8 +65,9 @@ header's head. Our Default tone = Live's role, the planner having verified
                                     entry names instead, shaded in OKLCH when
                                     the entry says so: immaterial_gold
                                     Immaterial's SearchIndication ECCA6D
-                                    darkened to L 72 and warmed to h 79, its
-                                    chroma scaled by 72 / L0 = C79D57, every
+                                    darkened to L 78.8, the lightness of the
+                                    FF91C3 it replaces, its hue kept, its
+                                    chroma scaled by 78.8 / L0 = D6B762, every
                                     other tone Immaterial's, the lit press fill
                                     re-derived from the shaded accent by the
                                     ratio)
@@ -169,14 +170,14 @@ BUILTIN_AUTHOR = ('Ableton AG', 'https://www.ableton.com')
 
 # THE VARIANTS, the one owner of what a variant is: slug -> (the BUILTIN_FILES
 # stem it reads, {role replaced: the role read in its place}, {role read:
-# (OKLCH lightness, OKLCH hue)} — the SHADE, empty for none). A variant is a
-# BUILTIN row of its own, credited to its source file, through the one
-# derivation with the named role substituted; a role read with a shade is
-# first taken to OKLCH (Ottosson's, `oklch` / `from_oklch` below), its
-# lightness SET to the first number (0..100) and its hue to the second
-# (degrees), its chroma scaled by the new lightness over its own (C / L held
-# at the role's), and back to sRGB, each channel rounded and clamped
-# (`shade`). Its source stem must be a taken builtin, every role read (ROLES)
+# (OKLCH lightness, OKLCH hue or None)} — the SHADE, empty for none). A
+# variant is a BUILTIN row of its own, credited to its source file, through
+# the one derivation with the named role substituted; a role read with a
+# shade is first taken to OKLCH (Ottosson's, `oklch` / `from_oklch` below),
+# its lightness SET to the first number (0..100) and its hue to the second
+# (degrees; None keeps the role's own), its chroma scaled by the new
+# lightness over its own (C / L held at the role's), and back to sRGB, each
+# channel rounded and clamped (`shade`). Its source stem must be a taken builtin, every role read (ROLES)
 # and a shaded role one the entry reads, or the run fails naming it.
 # immaterial_gold (architect 2026-11-05, session 56, his pick m1 of tmp/s56's
 # accent mocks on a real Immaterial capture): Immaterial without the pink
@@ -187,17 +188,18 @@ BUILTIN_AUTHOR = ('Ableton AG', 'https://www.ableton.com')
 # `immaterial` (which stays byte-identical): "lowest overhead, most honest,
 # and least churn if reversed"; a per-theme override and a hand-picked hex
 # are not the road (closed_questions.md). THE SHADE (architect 2026-11-06,
-# sessions 58 and 60): the plain ECCA6D read "too bright" on his glass —
-# "yellow is good but this one is too bright" — and "tune to the ground"
-# meant complementing it: the ground's hue is OKLCH 264, its complement near
-# 84, and a darkened pure yellow drifts olive, so the role is darkened to
-# L 72 (from its own 84.9) and warmed to h 79 (from 89.7), C79D57 — his pick
-# r3_m3 of tmp/s58's round-3 mocks, "implement m3 color"; recorded here as
-# a step on the role, not a hand-picked hex.
+# session 62, his pick x2 of tmp/s62, "implement x2"): the plain ECCA6D
+# (OKLCH L 84.9) read "too bright" on his glass; Live seats its lit accent
+# the same distance over the ground in Default (FFAD56 over 242424) and
+# Immaterial (FF91C3 over 1D1F23) alike, ~55 L, so the role is darkened to
+# L 78.8, the lightness of the FF91C3 it replaces (78.75, to the tenth),
+# its hue kept (89.7): D6B762. It supersedes the same day's L 72 h 79 shade
+# (C79D57, pick r3_m3 of tmp/s58). A step on the role, not a hand-picked
+# hex.
 VARIANTS = {
     'immaterial_gold': ('Immaterial',
                         {'ViewCheckControlEnabledOn': 'SearchIndication'},
-                        {'SearchIndication': (72, 79)}),
+                        {'SearchIndication': (78.8, None)}),
 }
 
 # THE EXTRAS' AUTHORS: the first path component under the ask folder -> the
@@ -399,12 +401,13 @@ def from_oklch(L, C, h):
 
 def shade(word6, lightness, hue):
     """THE VARIANTS' SHADE: `word6` with its OKLCH lightness set to
-    `lightness`, its hue to `hue`, its chroma scaled by lightness / its own;
-    an uppercase 6-digit hex word."""
-    L0, C0, _ = oklch(opaque(word6))
+    `lightness`, its hue to `hue` (None keeps its own), its chroma scaled by
+    lightness / its own; an uppercase 6-digit hex word."""
+    L0, C0, h0 = oklch(opaque(word6))
     if L0 == 0.0:
         fail('shade: %s is black, its chroma has no ratio' % word6)
-    r, g, b = from_oklch(lightness, C0 * lightness / L0, hue)
+    r, g, b = from_oklch(lightness, C0 * lightness / L0,
+                         h0 if hue is None else hue)
     return '%02X%02X%02X' % (r, g, b)
 
 
@@ -537,8 +540,8 @@ def walk(ask_dir):
             if replacement in shades:
                 lightness, hue = shades[replacement]
                 roles[replaced] = shade(roles[replacement], lightness, hue)
-                notes.append('%s at OKLCH L %g h %g as %s'
-                             % (replacement, lightness, hue, replaced))
+                at = 'L %g' % lightness if hue is None else 'L %g h %g' % (lightness, hue)
+                notes.append('%s at OKLCH %s as %s' % (replacement, at, replaced))
             else:
                 roles[replaced] = roles[replacement]
                 notes.append('%s as %s' % (replacement, replaced))
