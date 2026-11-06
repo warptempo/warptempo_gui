@@ -170,8 +170,9 @@ public:
     // platform-internal until the modal dialog's buttons grew a keyboard
     // press-and-hold whose act is at the LIFT; the application needs the edge
     // and needs nothing else from it, so this callback deliberately hands over
-    // no modifier state — the PRESS is what is modifier-exact, exactly as
-    // on_button_release's unused `mods` parameter says of the pointer.
+    // no modifier state — the PRESS is what is modifier-exact and a release's
+    // modifiers never select the act, as on_button_release's `mods` says of
+    // the pointer (its one reader is the tooltip's held bit).
     using KeyReleaseCallback   = std::function<void(GuiKey key)>;
     using ButtonCallback       = std::function<void(int x, int y, GuiInputState mods)>;
     using MotionCallback       = std::function<void(int x, int y, GuiInputState mods)>;

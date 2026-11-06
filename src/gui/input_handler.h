@@ -962,9 +962,10 @@ struct GuiInputHandler {
     // BUTTON (the on-screen keyboard's two keys, the ring's) press it down at
     // the press and commit it here, the keyboard's own act-at-release
     // matching the pointer's. Every other release is a no-op, and the whole
-    // rest of the keyboard contract is edge-on-press. It takes no modifiers, for
-    // the reason on_button_release names its own unused: the PRESS is what is
-    // bare-exact. The arm is AppState::modal_dialog_key_pressed; the body is
+    // rest of the keyboard contract is edge-on-press. It takes no modifiers,
+    // for the reason a pointer release's modifiers never select its act (the
+    // pointer release reads only the held bit, for the tooltip): the PRESS is
+    // what is bare-exact. The arm is AppState::modal_dialog_key_pressed; the body is
     // in input_key_dispatch.cpp beside the ring that arms it.
     void on_key_release(GuiKey key);
     void on_button_press(int x, int y, GuiInputState mods);

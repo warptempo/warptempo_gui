@@ -6474,9 +6474,10 @@ struct AppState {
     // THE TWO LAMPS BY THE BATTERY (architect 2026-11-05; render.h's THE
     // TWO LAMPS, the one owner of every number and reason): WHAT EACH LAMP
     // SHOWS — STATE THE TICK WROTE, never a paint derivation
-    // (refresh_logo_lamps, main.cpp, the ONE WRITER of all seven fields: on
-    // every tick, ahead of the tick's early returns, as the legend's
-    // refresh is) — each lamp LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD
+    // (refresh_logo_lamps, main.cpp, the ONE WRITER of the bits, the stamps
+    // and the seen count, the span's cursor aside, which two resets also
+    // void (limiter_lamp_prev_frame, below): on every tick, ahead of the
+    // tick's early returns, as the legend's refresh is) — each lamp LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD
     // (the `lamp_hold_ms` tuning key, architect 2026-11-05 night, session
     // 49: the one-tick limiter lamp was missed on his glass), an event
     // re-arming it, dark on the first tick at or past its stamp; the clip
