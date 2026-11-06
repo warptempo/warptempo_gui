@@ -1318,10 +1318,12 @@ constexpr int kMinWindowHeightPx = 480;
 //     refresh_logo_legend's damage covers them whenever the percent moves.
 //     THE TRIGGERS AND THE HOLD (architect 2026-11-05 night, session 49:
 //     "a hold on both lamps, lamp_hold_ms a tuning key with a Settings row
-//     (default 100)" — REVERSING the same night's "no hold": the loop ticks
-//     once per vsync, 90 Hz on the tablet, so a lamp lit for one tick is
-//     one 11 ms frame; the clip clamps a RUN of blocks and its lamp spans
-//     ticks, but the limiter's engaged frames are POINTS, and its one-frame
+//     (default 100)" — REVERSING the same night's "no hold": the tick is
+//     the platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms) while
+//     only the PRESENT waits for the 90 Hz vsync, an 11.1 ms period, so a
+//     lamp lit for one 5 ms tick can be cleared before any present and
+//     never be painted; the clip clamps a RUN of blocks and its lamp spans
+//     ticks, but the limiter's engaged frames are POINTS, and its one-tick
 //     lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR
 //     AT LEAST THE HOLD — the `lamp_hold_ms` device key, whole ms in
 //     [20, 1000], default 100, read live at every tick (device_config.h's
@@ -1330,8 +1332,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     lamp lit on that tick and on every tick before the stamp: an event
 //     re-arms it (a run of clamping blocks keeps the lamp lit until the hold
 //     after its last block), the dark edge lands on the first tick at or
-//     past the stamp, and 100 ms at 90 Hz is nine to ten frames. NO TIMER:
-//     the tick is the clock, the vsync its cadence. The bits on AppState
+//     past the stamp, and 100 ms is about nine presents at 90 Hz. NO TIMER OF
+//     ITS OWN: the tick is the clock. The bits on AppState
 //     (clip_lamp_lit, limiter_lamp_lit) are written only by the tick's
 //     refresh_logo_lamps (main.cpp, beside refresh_logo_legend, on EVERY
 //     tick ahead of the early returns), each edge damaging its own square

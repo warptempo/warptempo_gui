@@ -1372,19 +1372,21 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // is the device's — it clamps under the render player, the score viewer and
 // the silence between plays alike — and a lamp's dark edge and the strike's
 // edges are owed whatever mode stands. THE HOLD (architect 2026-11-05 night,
-// session 49, REVERSING the same night's "no hold": the loop ticks once per
-// vsync, 90 Hz on the tablet, so a lamp lit for one tick is one 11 ms frame
-// — the clip clamps a RUN of blocks and its lamp spans ticks, but the
-// limiter's engaged frames are POINTS, and its one-frame lamp was missed on
-// his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD —
+// session 49, REVERSING the same night's "no hold": the tick is the
+// platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms,
+// platform_android.cpp) while only the PRESENT waits for the 90 Hz vsync, an
+// 11.1 ms period, so a lamp lit for one 5 ms tick can be cleared before any
+// present and never be painted — the clip clamps a RUN of blocks and its
+// lamp spans ticks, but the limiter's engaged frames are POINTS, and its
+// one-tick lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD —
 // a tick whose test sees the event stamps now + lamp_hold_ms (the tuning
 // key, read live from the device config at every refresh, so a typed
 // change needs no apply), and the lamp's bit is the event seen this tick or
 // now before the stamp. So an event re-arms the hold (a run of clamping
 // blocks keeps the lamp lit until the hold after its last block), the dark
-// edge lands on the first tick at or past the stamp, and 100 ms at 90 Hz
-// is nine to ten frames. NO TIMER: the tick is the clock, the vsync its
-// cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
+// edge lands on the first tick at or past the stamp, and 100 ms is about
+// nine presents at 90 Hz. NO TIMER OF ITS OWN: the tick is the clock, the
+// stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
 // (architect 2026-11-05 night, session 49): the clip lamp's third bit,
 // GuiPlayback::device_unavailable() read on every tick — the error
 // callback's dead latch or no stream standing, "nothing will sound" — a
