@@ -2069,6 +2069,14 @@ double GuiInputHandler::nav_drag_zoom_level(double dx) const {
 // THE PROPERTY STOPS: the edge REBIND, the one lasting mutation here — once
 // the anchored frame has been pushed off the visible span the anchor becomes
 // the edge pixel's content, and the return trip pivots about that instead.
+// A KNOWN LIMIT, ACCEPTED (architect 2026-11-06, session 68, Astra's
+// localization review): the column held after a wall re-seat is fractional
+// (A / q, e.g. 100.5), and reversing the zoom, the camera's whole-frame
+// rounding can carry the anchor frame's projection across that half-column
+// threshold, so the painted anchor stem (strip_anchor_stem_column, which
+// reprojects the frame each paint) may alternate by one device px. A held
+// raster tie choice or a subframe camera phase would remove it and is NOT
+// TAKEN: it needs a pan or zoom all the way out against a wall and back in.
 // Returns the pivot's (clamped) column; the caller guards a live waveform
 // and a positive spp.
 double GuiInputHandler::rebind_zoom_pivot_into_waveform(
