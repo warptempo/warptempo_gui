@@ -358,18 +358,22 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
 // app_state.h): AUDIO and NOISE, the `audio_level` and `noise_level`
 // SLIDERS in the band's third run, each ON A KEY FACE. THE FACE: the key at
 // rest (paint_key's Rest, the theme's `key_face`) — NEVER LIT, NEVER
-// PRESSED: a slider shows its value, and ITS FILL IS THE FEEDBACK (the
-// planner's reading; a press face would read as a button's blink under a
-// finger that is setting a number) — UNDER A FILL FROM THE FACE'S LEFT EDGE,
+// PRESSED: a slider shows its value, and ITS FILL IS THE FEEDBACK
+// (confirmed by the architect 2026-11-05 night, "no press face on the
+// cases"; a press face would read as a button's blink under a finger that
+// is setting a number) — UNDER A FILL FROM THE FACE'S LEFT EDGE,
 // nearbyint(t · face width) device px wide, the face's full height, NO
 // BORDER (his "agree on no border"), no inset: `level_audio_fill` (Live's
 // RangeEditField, Default 007383) for AUDIO, `level_noise_fill`
-// (ChosenPreListen, Default 3C6AB6) for NOISE, where t is the ROUNDED
+// (ChosenPreListen, Default 3C6AB6) for NOISE, where t is the exact
 // level's travel fraction (level_travel_fraction, the square-law taper,
 // app_state.h: 0 dB the face full, -9 dB 0.596 of it, -60 dB two columns,
 // -inf none) — whole device-px cells, no antialiasing (paint_cell_rect).
-// THE NUMBER over it: the level's canonical spelling, "0.0", "-9.0", "-inf"
-// (format_level_db, THE LEVEL GRAMMAR, device_config.h), in the BODY face
+// THE NUMBER over it: the level TO ONE DECIMAL, "0.0", "-9.0", "-inf"
+// (format_level_db_face, THE LEVEL GRAMMAR, device_config.h: his "single
+// decimal is what ableton does", 2026-11-05 night; the file keeps the exact
+// value), the NOISE case's its own `noise_level` alone (the bed's fixed
+// attenuation under it is not printed, noise.h's head), in the BODY face
 // (Liberation Sans Bold 11 W, 22 device px on the tablet: the number is
 // read, so Body and not the legends' Regular 7 W), the text tone `text`
 // whatever is under it — the fill and the face alike, as m1 shows —
@@ -378,8 +382,11 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
 // the floor of the spare to the left); the run shaped through the memo
 // (memoized_run: a few dozen spellings). DISABLED (`enabled` false — the
 // NOISE case with no folder or a failed load, both under the roster's
-// blanket greys): the fill and the number in `key_dim_ink`, the face
-// unchanged, the slider inert. The legend under the face is the caller's
+// blanket greys): the fill in `key_dim_ink`, THE NUMBER IN `text_dim`
+// (Live's TextDisabled, Default 757575, the inert rows' tone; architect
+// 2026-11-05 night, his pick m3 of tmp/s49 over the number in the ground,
+// m1, in the key face, m2, and in the text tone, m4), the face unchanged,
+// the slider inert. The legend under the face is the caller's
 // (paint_key_legend, as every key's). THE REPAINT: every change of a case's
 // level damages its face rect explicitly (GuiInputHandler::apply_level_case)
 // — the per-tick comparator watches no level — and the enabled edge is the
@@ -405,7 +412,7 @@ void paint_level_case(cairo_t* cr, const GuiRect& face, RedesignButton id,
     }
     const GuiFont font = gui_font(GuiFace::Body);
     const text_shape::SharedRun run =
-        text_shape::memoized_run(font, format_level_db(level_db));
+        text_shape::memoized_run(font, format_level_db_face(level_db));
     const double ink_l = text_shape::ink_left_px(*run);
     const double ink_r = text_shape::ink_right_px(*run);
     const double ink_w = ink_r - ink_l;
@@ -417,7 +424,7 @@ void paint_level_case(cairo_t* cr, const GuiRect& face, RedesignButton id,
     cairo_save(cr);
     cairo_rectangle(cr, face.x, face.y, face.w, face.h);
     cairo_clip(cr);
-    set_palette_source(cr, enabled ? p.text : p.key_dim_ink);
+    set_palette_source(cr, enabled ? p.text : p.text_dim);
     text_shape::show_shaped_run(cr, *run, x, baseline);
     cairo_restore(cr);
 }

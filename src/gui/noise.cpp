@@ -364,13 +364,24 @@ bool GuiNoise::lit() const {
 
 void GuiNoise::set_level_db(double db) {
     level_db_ = db;
-    // The gain: 0 at -inf (std::pow(10, -inf) is 0, spelled out all the
-    // same), read by the audio thread at its next fill.
-    const float gain = db == kLevelDbOff
-                           ? 0.0f
-                           : static_cast<float>(std::pow(10.0, db / 20.0));
-    voice_.gain.store(gain, std::memory_order_relaxed);
+    store_gain();
     apply_switch();
+}
+
+void GuiNoise::set_attenuation_db(double db) {
+    attenuation_db_ = db;
+    store_gain();
+}
+
+void GuiNoise::store_gain() {
+    // The gain: 0 at a -inf level (std::pow(10, -inf) is 0, spelled out all
+    // the same), read by the audio thread at its next fill.
+    const float gain =
+        level_db_ == kLevelDbOff
+            ? 0.0f
+            : static_cast<float>(
+                  std::pow(10.0, (level_db_ + attenuation_db_) / 20.0));
+    voice_.gain.store(gain, std::memory_order_relaxed);
 }
 
 void GuiNoise::apply_switch() {

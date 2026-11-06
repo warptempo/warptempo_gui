@@ -390,20 +390,18 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // (format_waveform_grow, device_config.h), the writer's own spelling.
     if (key == "waveform_grow" && app.device_config != nullptr)
         return format_waveform_grow(app.device_config->waveform_grow_quarters);
-    // THE PROJECT VOICE'S LEVEL (2026-10-31 night): through the two levels'
-    // one formatter (format_level_db, device_config.h, 2026-11-05), the
-    // writer's own canonical spelling — a config loaded as "-9" recalls as
-    // "-9.0".
-    if (key == "audio_level" && app.device_config != nullptr)
-        return format_level_db(app.device_config->audio_level);
-    // THE NOISE'S THREE (2026-10-28): the folder's name verbatim, as the
-    // writer writes it, the level through the levels' one formatter
-    // (format_level_db) and the crossfade through its own
-    // (format_noise_crossfade_s, device_config.h), the writer's own spelling.
+    // THE NOISE (2026-10-28): the folder's name verbatim, as the writer
+    // writes it, the attenuation (2026-11-05 night) through the levels' one
+    // file formatter (format_level_db, device_config.h: the shortest
+    // round-trip decimal — a config loaded as "-9.0" recalls as "-9") and
+    // the crossfade through its own (format_noise_crossfade_s), the writer's
+    // own spelling. (The two levels, `audio_level` and `noise_level`, recall
+    // nothing since 2026-11-05 night: no Settings row, the band's cases
+    // their one road, kSettingsEditorKeys.)
     if (key == "noise" && app.device_config != nullptr)
         return app.device_config->noise;
-    if (key == "noise_level" && app.device_config != nullptr)
-        return format_level_db(app.device_config->noise_level);
+    if (key == "noise_attenuation_level" && app.device_config != nullptr)
+        return format_level_db(app.device_config->noise_attenuation_level);
     if (key == "noise_crossfade_s" && app.device_config != nullptr)
         return format_noise_crossfade_s(
             app.device_config->noise_crossfade_s);

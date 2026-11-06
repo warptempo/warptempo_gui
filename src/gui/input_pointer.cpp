@@ -6936,10 +6936,10 @@ bool GuiInputHandler::arm_level_case_press(int x, int y) {
 // THE DRAG (on_motion, under a standing Level arm, the button held): until a
 // motion has left the hover slop on either axis (kTooltipHoverSlopPx, the
 // roster's own jitter measure) the press is still a tap or a hold and moves
-// nothing — a wobble under a long press must not nudge the level a tenth of
-// a dB and leave the file behind the voice. Past it the press is a DRAG for
-// good: on this and every later motion the level is the ROUNDED taper of
-// t0 + (x − x0) / the travel, clamped to [0, 1] (level_db_from_travel; y
+// nothing — a wobble under a long press must not nudge the level and leave
+// the file behind the voice. Past it the press is a DRAG for good: on this
+// and every later motion the level is the EXACT taper of t0 + (x − x0) / the
+// travel, clamped to [0, 1] (level_db_from_travel, a double; y
 // ignored), applied live where it differs from the level standing
 // (apply_level_case), wherever the pointer is — on the face, off it, over
 // the canvas: the arm runs to the lift, the scrub thumb's shape, no
@@ -6991,13 +6991,15 @@ void GuiInputHandler::finish_level_press_release(
     settle_level_case(id, /*level_changed=*/true);
 }
 
-// THE LIVE APPLY, ONE BODY FOR THE DRAG, THE LONG PRESS AND THE TYPED LINE
-// (GuiSettingsEditor::apply_device_setting's two level arms): the live
-// struct takes the level, its voice takes it at the next fill —
+// THE LIVE APPLY, ONE BODY FOR THE DRAG AND THE LONG PRESS (the cases are
+// the two levels' one road: no Settings row since 2026-11-05 night,
+// kSettingsEditorKeys): the live struct takes the level, its voice takes it
+// at the next fill —
 // GuiPlayback::set_audio_level_db (0 at -inf, the mute) for AUDIO,
-// GuiNoise::set_level_db for NOISE (the gain and the switch: a rise from
-// -inf lights the voice and starts the loader, a fall to -inf fades it out;
-// nothing freed here, noise.h) — and THE CASE'S FACE RECT IS DAMAGED, the
+// GuiNoise::set_level_db for NOISE (the gain, the level plus the fixed
+// attenuation, and the switch: a rise from -inf lights the voice and starts
+// the loader, a fall to -inf fades it out; nothing freed here, noise.h) —
+// and THE CASE'S FACE RECT IS DAMAGED, the
 // published face (the number and the fill both inside it; the legend on the
 // ground does not change): THE LEVEL'S ONE DAMAGE — the per-tick comparator
 // watches enabled, selected, glyph and drawing, no level, so every edge of
@@ -7019,12 +7021,12 @@ void GuiInputHandler::apply_level_case(RedesignButton id, double db) {
 }
 
 // THE END'S TAIL, every road's (take_chrome_press for the lift and the two
-// clears, finish_level_press_release after the long press's apply, the
-// typed line's arms): THE NOISE'S -inf RELEASE — a NOISE case left at -inf
-// frees the bank behind the fence (GuiNoise::release_if_silent, a no-op
-// above -inf or with nothing loaded; never per motion, noise.h's head) —
-// and ONE CONFIG WRITE where the level moved (persist_device_config, the
-// typed line's own persist: a failure cards, the live value standing).
+// clears, finish_level_press_release after the long press's apply): THE
+// NOISE'S -inf RELEASE — a NOISE case left at -inf frees the bank behind
+// the fence (GuiNoise::release_if_silent, a no-op above -inf or with
+// nothing loaded; never per motion, noise.h's head) — and ONE CONFIG WRITE
+// where the level moved (persist_device_config, the device keys' one
+// persist: a failure cards, the live value standing).
 void GuiInputHandler::settle_level_case(RedesignButton id,
                                         bool level_changed) {
     if (id == RedesignButton::IconNoiseLevel && app.noise != nullptr)

@@ -1500,7 +1500,7 @@ struct GuiInputHandler {
     // consumed nothing — and returns whether a case claimed it.
     // update_level_press_motion is the drag's one body (on_motion, under a
     // standing Level arm): the slop crossing, the relative travel, the
-    // rounded level applied live (apply_level_case) wherever the pointer is.
+    // exact level applied live (apply_level_case) wherever the pointer is.
     // finish_level_press_release is the lift's: the long press's 0 dB on a
     // motionless hold that lands on the face, then settle_level_case.
     // apply_level_case writes the level into the live struct, hands it to
@@ -1511,8 +1511,9 @@ struct GuiInputHandler {
     // pointer-leave ends, a drag that loses the pointer being a lift): the
     // noise's -inf release (GuiNoise::release_if_silent) and one config
     // write where the level moved (GuiSettingsEditor::persist_device_config,
-    // the typed line's own persist). The settings editor's two typed level
-    // arms take apply_level_case and settle_level_case too, one road.
+    // the device keys' one persist). The cases are the two levels' one road:
+    // no Settings row, no typed arm (architect 2026-11-05 night,
+    // kSettingsEditorKeys).
     bool arm_level_case_press(int x, int y);
     void update_level_press_motion(int x, int y);
     void finish_level_press_release(const AppState::ChromePress& arm,
@@ -2669,9 +2670,10 @@ private:
     //   THE VALUE LIST (architect 2026-10-25: "maybe a drop
     //   down would make it quicker, because I don't like having to type it
     //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
-    //   night for `true_colors`, `noise`, `noise_level` and
-    //   `noise_crossfade_s`, the same shape; 2026-10-31 for `waveform_grow`
-    //   and that night `audio_level`)
+    //   night for `true_colors`, `noise` and `noise_crossfade_s`, the same
+    //   shape; 2026-10-31 for `waveform_grow`; 2026-11-05 for `theme`; the
+    //   two levels' lists of 2026-10-28 / 10-31 night gone 2026-11-05 and
+    //   their rows that night, the band's cases their one road)
     //   — THE SETTINGS PAGE'S ROW'S
     //   CONTENT for a key of kSettingsValueListKeys, its one road, and A
     //   SUB-PAGE OF THE SETTINGS PAGE (architect 2026-10-28 night: "the
@@ -2683,7 +2685,7 @@ private:
     //     build_value_list_rows: the key's values
     //       (GuiSettingsEditor::value_choices), one glyph-less Plain row each,
     //       its text what it shows and its `value` what it commits, both
-    //       the key's value as written, `-9`, `4`; the key recorded on the overlay (`value_key`); the band
+    //       the key's value as written, `on`, `4`; the key recorded on the overlay (`value_key`); the band
     //       opens on the LIVE value's row, centered in the band
     //       (folder_overlay::scroll_row_centered, 2026-10-26).
     //     value_list_commit: THE OPEN ACT on row `index` — a tap, a click

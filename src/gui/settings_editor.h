@@ -55,7 +55,7 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the nineteen,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the eighteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -86,21 +86,25 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FOURTEEN editable ones the per-device config carries — gui_scale and
+// THIRTEEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only (the color key waveform, editable
 // 2026-10-14..11-01, left with its key and the presets, one palette since),
 // since 2026-10-21 true_colors (the popup's command row made a key), since
 // 2026-11-05 (architect) the window's theme, Live 12's own, since
-// 2026-10-31 (architect) the waveform plate's grow waveform_grow and that
-// night the project voice's level audio_level, and since 2026-10-28 (architect) the noise's folder noise, its noise_level and
-// its crossfade in seconds noise_crossfade_s, and since 2026-10-29
+// 2026-10-31 (architect) the waveform plate's grow waveform_grow, and since
+// 2026-10-28 (architect) the noise's folder noise, since 2026-11-05 night
+// its fixed attenuation noise_attenuation_level, and its crossfade in
+// seconds noise_crossfade_s, and since 2026-10-29
 // (architect) the tuning key key_height, the key case's height, and the
 // same evening the on-screen keyboard's key box's two tuning keys osk_key_w
 // and osk_key_h, and that night its cap size's tuning key osk_font_px (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, then retired with the LED, 2026-11-01; the
+// two levels audio_level and noise_level, editable 2026-10-28 / 10-31 night
+// to 2026-11-05 night, left the editor for the band's two cases, their one
+// road — the main-page rule at kSettingsEditorKeys; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
 // settled at a constant, 19 W since 2026-11-04 night (render.h's
 // strip_pad_px); the
@@ -120,7 +124,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    true_colors, theme, waveform_grow, audio_level, noise, noise_level,
+//    true_colors, theme, waveform_grow, noise, noise_attenuation_level,
 //    noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px —
 //    in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
@@ -137,14 +141,11 @@ struct GuiInputHandler;
 //    palette reinstalled and the window repainted
 //    (GuiInputHandler::apply_theme), no card; waveform_grow the same,
 //    the window repainted (GuiInputHandler::apply_waveform_grow), no card
-//    (the waveform is the answer); the audio level at once, handed to the
-//    open project's engine (GuiPlayback::set_audio_level_db, through the
-//    band's AUDIO case's own apply, GuiInputHandler::apply_level_case) at
-//    the OK, no card (the sound and the case's fill are the answer); the
-//    noise's level the same (GuiNoise::set_level_db, a typed -inf freeing
-//    the bank at once, GuiNoise::release_if_silent) and its crossfade at
-//    once, handed to the one GuiNoise (noise.h) at the OK, no card (the
-//    sound is the answer); the noise's folder at once, the resident
+//    (the waveform is the answer); the noise's attenuation at once, handed
+//    to the one GuiNoise (GuiNoise::set_attenuation_db: the gain
+//    recomputed, the switch untouched) at the OK, no card (the sound is the
+//    answer), and its crossfade the same (GuiNoise::set_crossfade_s); the
+//    noise's folder at once, the resident
 //    recordings freed and the new folder loaded under an audible level
 //    (GuiNoise::change_folder), no card (the NOISE case's face is the
 //    answer); the key's height at once,
@@ -199,36 +200,38 @@ struct GuiInputHandler;
 // before. (SEVEN KEYS HAVE A LIST AGAIN — the architect reversing this
 // 2026-10-25: "we rejected drop downs because it was too much work to make
 // them Windows identical, but now we don't have the responsibility";
-// `true_colors`, `noise`, `noise_level` and
-// `noise_crossfade_s` since 2026-10-28 night, the same shape; `waveform_grow`
-// since 2026-10-31 and `audio_level` that night; `theme` since 2026-11-05,
-// its list under two inert group rows. A list is no
+// `true_colors`, `noise` and `noise_crossfade_s` since 2026-10-28 night,
+// the same shape; `waveform_grow` since 2026-10-31; `theme` since
+// 2026-11-05, its list under two inert group rows. A list is no
 // choice editor and no drop-down: the VALUE LIST, the folder overlay's
 // content behind the settings page's row for its key, whose row tap commits
 // at once — apply_device_setting, this editor's own road. THE SETTINGS
 // PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
 // nothing, each opening this line editor. FIVE SINCE 2026-11-05: the two
 // levels' lists left with the band's two sliders and their decimal grammar,
-// kSettingsValueListKeys below.)
+// kSettingsValueListKeys below, and their rows that night.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE NINETEEN (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE EIGHTEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
 // keyboard's `osk_key_w` and `osk_key_h` after it that evening, its
 // `osk_font_px` after them that night; the plate's grow `waveform_grow`
-// 2026-10-31, after `true_colors` as the config writes it, and the project
-// voice's `audio_level` that night, after it and before the noise's three;
-// the color key `waveform` gone 2026-11-01 with the presets; the window's
-// `theme` 2026-11-05, after `true_colors` as the config writes it):
+// 2026-10-31, after `true_colors` as the config writes it; the color key
+// `waveform` gone 2026-11-01 with the presets; the window's `theme`
+// 2026-11-05, after `true_colors` as the config writes it; the two levels
+// `audio_level` and `noise_level` gone 2026-11-05 night and the noise's
+// attenuation `noise_attenuation_level` joined after `noise`, as the config
+// writes it):
 // the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's fourteen editable keys in that file's
+// CONFIG's thirteen editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
-// no editor). The other keys this editor commits (`scale`, `bpm`,
+// no editor, nor have the two levels, below). The other keys this editor
+// commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
 // the score viewer writes) are typed whole, Tab recalling their
 // values once complete; a key added to the product's editable set joins this
@@ -239,7 +242,13 @@ struct GuiInputHandler;
 // SHOWS those two as DISABLED rows, architect 2026-10-29, "bpm and scale
 // should be viewable but disabled. they are useful for notes", and they stay
 // out of this table, so neither Tab nor the page's rows ever offer them to
-// the line editor; kSettingsPagePieceKeys below):
+// the line editor; kSettingsPagePieceKeys below). A KEY SHOWN AND EDITED ON
+// THE MAIN PAGE GETS NO SETTINGS ROW (architect 2026-11-05 night, session
+// 49): the two levels, `audio_level` and `noise_level`, are seen and set on
+// the band's AUDIO and NOISE cases (RedesignButton::IconAudioLevel,
+// app_state.h), so they are not here — no row, no typed arm, no recall, no
+// Tab — and stay REQUIRED in the config, persisted by the cases' lift and
+// written by the config's writer with every key.
 // GuiInputHandler::build_settings_page_rows lists the device keys under a
 // "DEVICE" group row in this table's order, the split at
 // kSettingsEditorPieceKeyCount, and then the PIECE group's rows in
@@ -247,7 +256,7 @@ struct GuiInputHandler;
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "true_colors", "theme",
-    "waveform_grow", "audio_level", "noise", "noise_level", "noise_crossfade_s",
+    "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
     "key_height", "osk_key_w", "osk_key_h", "osk_font_px",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
@@ -298,9 +307,9 @@ static_assert(settings_page_piece_keys_pinned());
 // night for four, 2026-10-31 for `waveform_grow`, 2026-11-05 for `theme`;
 // the first, `waveform`'s presets of 2026-10-25, went with the presets
 // 2026-11-01; `audio_level` and `noise_level`, listed 2026-10-31 night and
-// 2026-10-28 night, LEFT 2026-11-05 with the two level cases: their domain
-// is a decimal in [-60.0, 0.0] or -inf, no short list, so their rows open
-// the line editor and the band's sliders are their live road): the settings
+// 2026-10-28 night, LEFT 2026-11-05 with the two level cases — their domain
+// a decimal in [-60.0, 0.0] or -inf, no short list — and their rows that
+// night, the band's sliders their one road): the settings
 // page's row for one of these swaps the folder overlay's content to THE
 // KEY'S VALUES (GuiInputHandler::build_value_list_rows, its rows from
 // GuiSettingsEditor::value_choices below), and a row's tap commits that value
@@ -318,7 +327,8 @@ static_assert(settings_page_piece_keys_pinned());
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
 // are no short domain, so its row opens the line editor; nor are the
 // keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its
-// `osk_font_px`, 37; nor, since 2026-11-05, the two levels.)
+// `osk_font_px`, 37; nor the noise's attenuation, a decimal, whose row
+// opens the line editor.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
 };
@@ -357,7 +367,7 @@ struct GuiSettingsEditor {
     // gesture chokepoints that live on GuiInputHandler:
     // handle_active_audio_view_toggle, apply_gui_scale, apply_true_colors,
     // commit_trim_mutation, set_tab_read_only, and the open project's engine
-    // (`playback`, the audio_level arm's live act).
+    // (`playback`, the project's engine).
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,
@@ -421,9 +431,7 @@ struct GuiSettingsEditor {
     // directories through a link, no dot-directory) that the key's grammar
     // admits (is_noise_folder_name), so every row commits; no folder there,
     // or no config home, is a list with no rows; `noise_crossfade_s` 1 up
-    // to 30; `waveform_grow` 0 up to 2 in quarters (2026-10-31). (The two
-    // levels' 31 whole dB each left 2026-11-05 with the decimal grammar and
-    // the band's sliders.) Every value is
+    // to 30; `waveform_grow` 0 up to 2 in quarters (2026-10-31). Every value is
     // the key's writer spelling (format_noise_crossfade_s,
     // format_waveform_grow),
     // so the seat compares it with setting_value byte for byte. Listed afresh
@@ -471,10 +479,8 @@ struct GuiSettingsEditor {
 
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
     // `true_colors=`, `theme=` (2026-11-05), `waveform_grow=` (2026-10-31),
-    // `audio_level=` (2026-10-31 night; the line's door alone since
-    // 2026-11-05, the band's AUDIO case its live road), `noise=`,
-    // `noise_level=` (the line's door alone since 2026-11-05, the NOISE
-    // case's),
+    // `noise=`, `noise_attenuation_level=` (2026-11-05 night, the line's
+    // door alone, having no value list),
     // `noise_crossfade_s=` and the tuning keys `key_height=`, `osk_key_w=`,
     // `osk_key_h=` and `osk_font_px=` (2026-10-29, the line's door alone,
     // having no value list) — ONE BODY, TWO DOORS
@@ -503,7 +509,8 @@ struct GuiSettingsEditor {
     // key's commit (apply_device_setting's persist) and, since 2026-11-05,
     // the two level cases' end (GuiInputHandler::settle_level_case: one
     // write at a drag's lift or its button-lost end, and at the long press's
-    // 0 dB — the slider's writes through the typed line's own road).
+    // 0 dB — the two levels' one write, their Settings rows gone since
+    // 2026-11-05 night).
     bool persist_device_config();
 
 private:

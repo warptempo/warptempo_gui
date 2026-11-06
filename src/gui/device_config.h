@@ -3,6 +3,7 @@
 #include "failure.h"
 #include "theme_tables.h"   // kGuiThemes, find_gui_theme: the `theme` key's grammar
 
+#include <charconv>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -10,9 +11,10 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Fifteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Sixteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -110,10 +112,12 @@
 //                            the clip last (playback_common.h's head); live
 //                            at every motion of the band's AUDIO case (the
 //                            slider, RedesignButton::IconAudioLevel,
-//                            app_state.h) and at the settings editor's OK
-//                            (GuiPlayback::set_audio_level_db); PERMANENT
-//                            and REQUIRED; both templates spell 0.0, the
-//                            files as they are
+//                            app_state.h; GuiPlayback::set_audio_level_db),
+//                            its ONE ROAD: no Settings row (a key shown and
+//                            edited on the main page gets none, architect
+//                            2026-11-05 night, kSettingsEditorKeys);
+//                            PERMANENT and REQUIRED; both templates spell 0,
+//                            the files as they are
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
@@ -138,13 +142,32 @@
 //                            ducked; above -inf the bed plays, from the
 //                            launch on, and -inf is off, the recordings
 //                            freed; live at every motion of the band's
-//                            NOISE case (RedesignButton::IconNoiseLevel)
-//                            and at the settings editor's OK
-//                            (GuiNoise::set_level_db); PERMANENT and
-//                            REQUIRED, device-level (he retunes it by hand
-//                            per piece); both templates spell -inf ("-inf
-//                            is default only for new install": a fresh
-//                            tablet is silent until he raises it)
+//                            NOISE case (RedesignButton::IconNoiseLevel;
+//                            GuiNoise::set_level_db), its ONE ROAD, no
+//                            Settings row (the main-page rule,
+//                            kSettingsEditorKeys, 2026-11-05 night); the
+//                            bed sounds at this level PLUS the attenuation
+//                            below, the case printing this number alone;
+//                            PERMANENT and REQUIRED, device-level (he
+//                            retunes it by hand per piece); both templates
+//                            spell -inf ("-inf is default only for new
+//                            install": a fresh tablet is silent until he
+//                            raises it)
+//   noise_attenuation_level=<dB> THE BACKGROUND SOUND'S FIXED ATTENUATION
+//                            (architect 2026-11-05 night, session 49: "then
+//                            the slider maintains its current behavior and
+//                            law"): a dB ADDED UNDER the NOISE case's number
+//                            — the bed plays at noise_level +
+//                            noise_attenuation_level, the case's face, law,
+//                            travel, floor and long press untouched — a
+//                            decimal dB in [-60.0, 0.0], THE LEVEL GRAMMAR
+//                            LESS `-inf` (parse_noise_attenuation_db below:
+//                            the bed's one off switch is noise_level's);
+//                            live at the settings editor's OK, the gain
+//                            recomputed and the switch untouched
+//                            (GuiNoise::set_attenuation_db); a line-editor
+//                            row, no value list; PERMANENT and REQUIRED;
+//                            both templates spell -9
 //   noise_crossfade_s=<s>    THE NOISE'S CROSSFADE between two segments, in
 //                            whole SECONDS (architect 2026-10-28): an integer
 //                            in [1, 30] in canonical spelling, live at the
@@ -327,7 +350,10 @@
 // then the noise; `waveform_column_px` appended at the end and gone within
 // 2026-11-01, `waveform` gone 2026-11-01, `true_colors` after
 // `last_project` since; `theme` placed after `true_colors` 2026-11-05, the
-// display keys together — true_colors, theme, waveform_grow);
+// display keys together — true_colors, theme, waveform_grow; the noise's
+// attenuation `noise_attenuation_level` placed after `noise_level`
+// 2026-11-05 night, the noise's four — folder, level, attenuation,
+// crossfade);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -469,7 +495,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fifteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the sixteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
@@ -502,13 +528,17 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
 // completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
-// `true_colors`, since 2026-11-05 `theme`, since 2026-10-31 `waveform_grow` and
-// `audio_level`, since 2026-10-28 `noise`, `noise_level`
-// and `noise_crossfade_s` and since 2026-10-29 the tuning keys `key_height`,
-// `osk_key_w` and `osk_key_h` and that night `osk_font_px` among them
-// (kSettingsEditorKeys) — then a key's current value, then a closed value's
-// words, and committing each through this file's writer under the key's own
-// grammar below. (The Settings popup's rows opened it prefilled, one per key,
+// `true_colors`, since 2026-11-05 `theme`, since 2026-10-31 `waveform_grow`,
+// since 2026-10-28 `noise`, since 2026-11-05 night
+// `noise_attenuation_level`, `noise_crossfade_s` and since 2026-10-29 the
+// tuning keys `key_height`, `osk_key_w` and `osk_key_h` and that night
+// `osk_font_px` among them (kSettingsEditorKeys) — then a key's current
+// value, then a closed value's words, and committing each through this
+// file's writer under the key's own grammar below. THE TWO LEVELS,
+// `audio_level` and `noise_level`, are edited on the main page alone, the
+// band's AUDIO and NOISE cases, whose lift writes through the same writer
+// (architect 2026-11-05 night: a key shown and edited on the main page gets
+// no Settings row, kSettingsEditorKeys). (The Settings popup's rows opened it prefilled, one per key,
 // 2026-09-02..10-21.) Until
 // 2026-09-02 the path keys
 // were hand-edited only, and HELP told the user to edit one without
@@ -561,12 +591,15 @@ struct DeviceConfig {
     // the mute): required; the construction state is the templates' 0.0.
     double      audio_level       = 0.0;
     // THE NOISE'S FOLDER NAME, its level in dB (a double, -inf off, THE
-    // LEVEL GRAMMAR, 2026-11-05) and its crossfade in seconds (2026-10-28,
-    // the head's list): required; the construction state is the templates'
-    // values (`rain`, -inf, 4).
-    std::string noise             = "rain";
-    double      noise_level       = -std::numeric_limits<double>::infinity();
-    int         noise_crossfade_s = 4;
+    // LEVEL GRAMMAR, 2026-11-05), its fixed attenuation in dB under that
+    // level (a double, never -inf, 2026-11-05 night) and its crossfade in
+    // seconds (2026-10-28, the head's list): required; the construction
+    // state is the templates' values (`rain`, -inf, -9 —
+    // kNoiseAttenuationDefaultDb below — and 4).
+    std::string noise                   = "rain";
+    double      noise_level             = -std::numeric_limits<double>::infinity();
+    double      noise_attenuation_level = -9.0;
+    int         noise_crossfade_s       = 4;
     // THE KEY'S HEIGHT in W (2026-10-29, the head's list; a tuning key):
     // required; the construction state is the template's 17
     // (kKeyHeightDefaultW below).
@@ -775,37 +808,49 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     return neg ? -n : n;
 }
 
-// THE LEVEL GRAMMAR — `audio_level` AND `noise_level`, ONE OWNER (architect
-// 2026-11-05, the two level cases; "i plan to use stable values for both",
-// so both keys stay and persist; the two integer grammars of 2026-10-28 and
-// 2026-10-31 night, [-30, 0] in whole dB, are this one since): the value is
-// `-inf`, or a DECIMAL dB in [-60.0, 0.0] — an optional `-`, digits with no
-// leading zero but a lone `0`, then optionally `.` and EXACTLY ONE digit.
-// THE WRITER SPELLS ONE FRACTIONAL DIGIT, "0.0", "-9.0", "-60.0", and `-inf`
-// (format_level_db); THE READER ADMITS THE INTEGER SPELLING TOO, "-9", "0"
-// (parse_level_db), so a config written before the decimal loads as it is
-// and the next commit rewrites it canonical; "-0" and "-0.0" are refused
-// (zero is "0" / "0.0"), as every other spelling is. THE RANGE IS THE
+// THE LEVEL GRAMMAR — `audio_level`, `noise_level` AND, LESS `-inf`,
+// `noise_attenuation_level`, ONE OWNER (architect 2026-11-05, the two level
+// cases; "i plan to use stable values for both", so both keys stay and
+// persist; the two integer grammars of 2026-10-28 and 2026-10-31 night,
+// [-30, 0] in whole dB, are this one since; THE EXACT DOUBLE since
+// 2026-11-05 night, his "single decimal is what ableton does" — the face
+// shows one decimal, the file keeps the value whole): the value is `-inf`,
+// or a DECIMAL dB in [-60.0, 0.0] — an optional `-`, digits with no leading
+// zero but a lone `0`, then optionally `.` and ONE OR MORE digits; no `+`,
+// no exponent, no leading `.`. THE WRITER SPELLS THE SHORTEST DECIMAL THAT
+// ROUND-TRIPS, in fixed notation — "0", "-9", "-15.6",
+// "-0.0108695652173913", "-60" — and `-inf` (format_level_db); THE READER
+// ADMITS ANY FRACTIONAL LENGTH (parse_level_db), so "0.0" and "-9.0", the
+// one-digit spellings of before, load as they are and the next commit
+// rewrites them canonical; the value is std::from_chars' on the checked
+// text, the range checked on the value; "-0", "-0.0", "-0.00…" are refused
+// (zero is unsigned), as every other spelling is. THE FACE PRINTS ONE
+// DECIMAL (format_level_db_face: the level rounded to the tenth, "0.0",
+// "-9.0", "-inf"), the band's two cases' number alone. THE RANGE IS THE
 // SLIDERS' FLOOR: the case reads -60.0 at its last step and -inf below it
-// ("-60 then -inf"; the taper at AppState::ChromePress's Level kind,
-// app_state.h), and a typed value takes the same range. -inf is the
-// infinity (kLevelDbOff), the audio's mute and the noise's one off switch
-// (noise.h's head). The readers: the config's reader and writer, the
-// settings editor's two typed arms and its recall (apply_device_setting,
-// recall_setting_value), the two cases' lift (the drag persists through the
-// writer). 0.0 is the files as they are; the audio level scales the project
-// voice before the noise is summed (playback_common.h's head), so the two
-// levels together keep the sum clear of the clip and the tablet's own
-// volume sets the loudness.
+// ("-60 then -inf"; the taper at level_db_from_travel, app_state.h). -inf
+// is the infinity (kLevelDbOff), the audio's mute and the noise's one off
+// switch (noise.h's head); THE ATTENUATION refuses it
+// (parse_noise_attenuation_db: the bed's switch is noise_level's alone).
+// The readers: the config's reader and writer, the two cases' lift (the
+// drag persists through the writer) and their painter (the face's
+// formatter); the attenuation's typed arm and its recall
+// (apply_device_setting, recall_gui_setting_value). 0 dB is the files as
+// they are; the audio level scales the project voice before the noise is
+// summed (playback_common.h's head), so the two levels together keep the
+// sum clear of the clip and the tablet's own volume sets the loudness.
 inline constexpr double kLevelDbMin = -60.0;
 inline constexpr double kLevelDbMax = 0.0;
 inline constexpr double kLevelDbOff = -std::numeric_limits<double>::infinity();
 inline constexpr const char* kLevelGrammarReason =
-    "must be -inf or a decimal in [-60.0, 0.0] with at most one fractional "
-    "digit";
+    "must be -inf or a decimal in [-60.0, 0.0]";
+// THE FILE'S SPELLING (the shortest round-trip decimal, fixed; `-inf`) and
+// THE FACE'S (one decimal; `-inf`), device_config.cpp.
 std::string format_level_db(double db);
+std::string format_level_db_face(double db);
 inline std::optional<double> parse_level_db(std::string_view v) {
     if (v == "-inf") return kLevelDbOff;
+    const std::string_view text = v;
     bool neg = false;
     if (!v.empty() && v.front() == '-') {
         neg = true;
@@ -817,23 +862,39 @@ inline std::optional<double> parse_level_db(std::string_view v) {
     const std::string_view whole = v.substr(0, dot);
     if (whole.empty() || whole.size() > 3) return std::nullopt;
     if (whole.size() > 1 && whole.front() == '0') return std::nullopt;
-    int n = 0;
+    bool nonzero = false;
     for (const char c : whole) {
         if (c < '0' || c > '9') return std::nullopt;
-        n = n * 10 + (c - '0');
+        if (c != '0') nonzero = true;
     }
-    // The fractional part, when present: exactly one digit.
-    int tenth = 0;
+    // The fractional part, when present: one or more digits.
     if (dot != std::string_view::npos) {
         const std::string_view frac = v.substr(dot + 1);
-        if (frac.size() != 1 || frac[0] < '0' || frac[0] > '9')
-            return std::nullopt;
-        tenth = frac[0] - '0';
+        if (frac.empty()) return std::nullopt;
+        for (const char c : frac) {
+            if (c < '0' || c > '9') return std::nullopt;
+            if (c != '0') nonzero = true;
+        }
     }
-    if (neg && n == 0 && tenth == 0) return std::nullopt;   // no "-0", "-0.0"
-    const double db = (neg ? -1.0 : 1.0) * (n + tenth / 10.0);
+    if (neg && !nonzero) return std::nullopt;   // no "-0", "-0.0", "-0.00…"
+    double db = 0.0;
+    const auto res = std::from_chars(text.data(), text.data() + text.size(),
+                                     db, std::chars_format::fixed);
+    if (res.ec != std::errc{} || res.ptr != text.data() + text.size())
+        return std::nullopt;
     if (db < kLevelDbMin || db > kLevelDbMax) return std::nullopt;
-    return db;
+    return db + 0.0;
+}
+// THE NOISE'S ATTENUATION (architect 2026-11-05 night, the head's list):
+// THE LEVEL GRAMMAR LESS `-inf` — a decimal dB in [-60.0, 0.0], the same
+// spellings, the same writer (format_level_db, which never meets -inf
+// here). The default -9 dB the templates spell.
+inline constexpr double kNoiseAttenuationDefaultDb = -9.0;
+inline constexpr const char* kNoiseAttenuationGrammarReason =
+    "must be a decimal in [-60.0, 0.0]";
+inline std::optional<double> parse_noise_attenuation_db(std::string_view v) {
+    if (v == "-inf") return std::nullopt;
+    return parse_level_db(v);
 }
 
 // THE noise_crossfade_s GRAMMAR (architect 2026-10-28) — an integer in
@@ -1119,16 +1180,21 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves thirteen keys —
+// the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
+// which serves its ONE device-key body — twelve keys,
 // `projects_repo=`, `projects_path=`, since 2026-10-21
 // `true_colors=`, since 2026-11-05 `theme=` (its live act
 // GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
-// GuiInputHandler::apply_waveform_grow) and that night `audio_level=` (its
-// live act GuiPlayback::set_audio_level_db), and since 2026-10-28 the noise's three, `noise=`,
-// `noise_level=` and `noise_crossfade_s=`, and since 2026-10-29 the tuning
+// GuiInputHandler::apply_waveform_grow), since 2026-10-28 `noise=` (its
+// GuiNoise::change_folder), since 2026-11-05 night `noise_attenuation_level=`
+// (its GuiNoise::set_attenuation_db) and `noise_crossfade_s=`, and since 2026-10-29 the tuning
 // keys `key_height=` (its live act GuiInputHandler::apply_key_height) and
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
-// and that night `osk_font_px=` (its GuiInputHandler::apply_osk_font_px)
+// and that night `osk_font_px=` (its GuiInputHandler::apply_osk_font_px) —
+// and the band's two level cases' end (GuiInputHandler::settle_level_case,
+// since 2026-11-05: `audio_level=` and `noise_level=`, their live acts
+// GuiPlayback::set_audio_level_db and GuiNoise::set_level_db, the typed
+// lines that wrote them too until 2026-11-05 night gone with their rows)
 // (the
 // noise's latter two `rain_level=` and
 // `rain_crossfade_ms=` earlier that day and the crossfade
@@ -1155,10 +1221,11 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // struct's own value), `theme=default` (2026-11-05, kGuiDefaultTheme's slug),
 // `waveform_grow=1` (2026-10-31, kWaveformGrowDefaultQuarters; 1 since
 // 2026-11-04 night),
-// `audio_level=0.0` (2026-10-31 night, the files as they are; the decimal
-// spelling since 2026-11-05), `noise=rain`, `noise_level=-inf` (the bed off
-// on a fresh install, 2026-11-05; -9 from 2026-10-28 until then) and
-// `noise_crossfade_s=4` (2026-10-28),
+// `audio_level=0` (2026-10-31 night, the files as they are; the shortest
+// round-trip spelling since 2026-11-05 night), `noise=rain`,
+// `noise_level=-inf` (the bed off on a fresh install, 2026-11-05; -9 from
+// 2026-10-28 until then), `noise_attenuation_level=-9` (2026-11-05 night,
+// kNoiseAttenuationDefaultDb) and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=17` (2026-10-29; 17 W since the rebase of 2026-11-05),
 // `osk_key_w=24`, `osk_key_h=30` and `osk_font_px=12` (2026-10-29,
 // kKeyHeightDefaultW, kOskKeyWDefaultW,

@@ -119,7 +119,7 @@ struct GuiPlaybackState {
     // THE AUDIO LEVEL (2026-10-31 night, the head's paragraph): the project
     // voice's linear gain, 10^(audio_level/20), written by the main thread
     // (GuiPlayback::set_audio_level_db: run_project's seat from the device
-    // config, the settings editor's live commit) and read by the render body
+    // config, the band's AUDIO case's live drag) and read by the render body
     // ONCE PER FILL, relaxed — a level change applies at the next fill, and
     // a fill never sees two. 1.0f, 0 dB, is the construction state and the
     // template's: the files as they are. bind and clear leave it alone, as

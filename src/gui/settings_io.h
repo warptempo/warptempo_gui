@@ -153,10 +153,9 @@ std::string format_settings_text(
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`),
 // or the switch's word (`true_colors`, 2026-10-21), or the
 // plate's grow (`waveform_grow`, 2026-10-31, through format_waveform_grow),
-// or the project voice's level (`audio_level`, 2026-10-31 night, through
-// format_level_db, the two levels' one formatter since 2026-11-05), or the
-// noise's folder name verbatim (`noise`, 2026-10-28), its level
-// (`noise_level`, through format_level_db) and its crossfade
+// or the noise's folder name verbatim (`noise`, 2026-10-28), its fixed
+// attenuation (`noise_attenuation_level`, 2026-11-05 night, through
+// format_level_db) and its crossfade
 // (`noise_crossfade_s`, 2026-10-28, through format_noise_crossfade_s), or the key's height
 // (`key_height`, 2026-10-29, a tuning key, through format_key_height), or
 // the keyboard's key box (`osk_key_w`, `osk_key_h`, 2026-10-29, two tuning
@@ -166,6 +165,8 @@ std::string format_settings_text(
 // same
 // "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is
-// the program's own.)
+// the program's own; nor do the two levels, `audio_level` and
+// `noise_level`, since 2026-11-05 night: set on the band's two cases alone,
+// kSettingsEditorKeys.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

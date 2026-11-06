@@ -582,16 +582,20 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // spelled: half a device px, 2 quarters (device_config.h's head).
     cfg.waveform_grow_quarters = kWaveformGrowDefaultQuarters;
     // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night, a permanent
-    // key), spelled: 0.0 dB, the files as they are (device_config.h's head).
+    // key), spelled `0`: 0 dB, the files as they are (device_config.h's
+    // head).
     cfg.audio_level       = 0.0;
-    // THE NOISE'S THREE (architect 2026-10-28), spelled: the folder `rain`
-    // under noise/ beside the config, the level -inf — the bed OFF on a
-    // fresh install (architect 2026-11-05, "-inf is default only for new
-    // install"; -9 dB, his "the rain is a masker", until then) — and the
-    // crossfade 4 s (device_config.h's head).
-    cfg.noise             = "rain";
-    cfg.noise_level       = kLevelDbOff;
-    cfg.noise_crossfade_s = 4;
+    // THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05
+    // night), spelled: the folder `rain` under noise/ beside the config, the
+    // level -inf — the bed OFF on a fresh install (architect 2026-11-05,
+    // "-inf is default only for new install"; -9 dB, his "the rain is a
+    // masker", until then) — the attenuation under it `-9`
+    // (kNoiseAttenuationDefaultDb) and the crossfade 4 s (device_config.h's
+    // head).
+    cfg.noise                   = "rain";
+    cfg.noise_level             = kLevelDbOff;
+    cfg.noise_attenuation_level = kNoiseAttenuationDefaultDb;
+    cfg.noise_crossfade_s       = 4;
     // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: 17 W,
     // 34 device px on the tablet (architect 2026-11-03, the retrofit's hi-fi
     // key metrics; device_config.h's head).

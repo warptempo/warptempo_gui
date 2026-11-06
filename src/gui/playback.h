@@ -250,9 +250,8 @@ public:
     // reads the gain once per fill, so the change sounds at the next fill.
     // Seated by run_project from the config before init, written live by the
     // band's AUDIO case at every drag motion and its long press
-    // (GuiInputHandler::apply_level_case, input_pointer.cpp) and by the
-    // settings editor's typed `audio_level` arm
-    // (GuiSettingsEditor::apply_device_setting).
+    // (GuiInputHandler::apply_level_case, input_pointer.cpp), its one road
+    // (no Settings row since 2026-11-05 night, kSettingsEditorKeys).
     void set_audio_level_db(double db);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or

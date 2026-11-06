@@ -11,8 +11,16 @@
 // reduce footprint"): the `noise_level` device key — a decimal dB or -inf,
 // THE LEVEL GRAMMAR, device_config.h — set by the band's NOISE case
 // (RedesignButton::IconNoiseLevel, app_state.h: a slider, dragged relative
-// on the square-law travel, a long press setting 0 dB) and by the settings
-// editor's typed line; ABOVE -inf THE BED PLAYS, AT -inf IT IS OFF. There is
+// on the square-law travel, a long press setting 0 dB), its one road (no
+// Settings row since 2026-11-05 night, the main-page rule at
+// kSettingsEditorKeys); ABOVE -inf THE BED PLAYS, AT -inf IT IS OFF. THE BED
+// SOUNDS AT THE LEVEL PLUS A FIXED ATTENUATION (architect 2026-11-05 night,
+// session 49: "then the slider maintains its current behavior and law"):
+// the `noise_attenuation_level` device key, a decimal dB in [-60.0, 0.0],
+// never -inf, default -9, set on the Settings page's line
+// (set_attenuation_db) — the gain 10^((level + attenuation)/20); the case
+// prints its own level alone, its law, travel, floor and long press
+// untouched, and the attenuation never lights or darkens the bed. There is
 // no lamp and no toggle (the NOISE lamp on bare `w`, 2026-10-28 to
 // 2026-11-05, RETIRED with the cases; his "iPhone requires enabling each
 // time" reversed on the same word): THE BED PLAYS FROM THE LAUNCH at the
@@ -90,7 +98,8 @@
 // is the lift's, GuiNoise::release_if_silent below). The two fades are
 // SETTLED (architect 2026-10-28, on the glass, after one day as tuning
 // keys), the switch's own and the same for every sound. The level is the
-// permanent device key `noise_level` in dB, applied to the files as they are:
+// permanent device key `noise_level` in dB, under the fixed
+// `noise_attenuation_level` (the head), applied to the files as they are:
 // NATURAL LOUDNESS VARIATION KEPT, no per-segment equalizing (his ruling).
 //
 // THE OUTPUT CLIPS IN-APP: the two voices are summed and every sample clamped
@@ -132,8 +141,8 @@ inline constexpr int kNoiseFadeOutMs = 40;
 // 2026-10-28; his "whatever's in memory is dumped if we change the subfolder
 // name", 2026-10-28; THE -inf RELEASE 2026-11-05: "the only off switch is
 // -inf, and that should actually shut it off so reduce footprint" — the
-// bank freed at the slider's LIFT on -inf, or at a typed -inf commit,
-// GuiNoise::release_if_silent, never mid-drag). NOTHING LIMITS THE SIZE
+// bank freed at the slider's LIFT on -inf, GuiNoise::release_if_silent,
+// never mid-drag). NOTHING LIMITS THE SIZE
 // (architect 2026-10-28, closed): docs/HELP.md names the sensible ceiling,
 // about 35 minutes, about 400 MB at 48 kHz. The bank is read by the audio
 // thread with no lock, so a buffer may be freed only once no fill can be
@@ -162,7 +171,8 @@ struct GuiNoiseBank {
 // bank; null again from a key change or a -inf release until the next load
 // lands), `target` (THE SWITCH: true while the level stands above -inf with
 // a folder available, GuiNoise::apply_switch), `gain` (linear,
-// 10^(noise_level/20), 0 at -inf), `crossfade_ms` (the `noise_crossfade_s`
+// 10^((noise_level + noise_attenuation_level)/20), 0 at a -inf level,
+// GuiNoise::store_gain), `crossfade_ms` (the `noise_crossfade_s`
 // key in ms, set_crossfade_s's one conversion; read at each transition's
 // draw) and `seed` (written at every rise above -inf BEFORE `target`'s
 // release store; read when a sequence starts, so the target's acquire load
@@ -299,8 +309,9 @@ public:
 
     // THE LEVEL, LIVE AND THE ONE SWITCH (architect 2026-11-05; the head):
     // `db` a value of THE LEVEL GRAMMAR (device_config.h) — a decimal dB in
-    // [-60.0, 0.0] or kLevelDbOff. Stores the gain (10^(db/20), 0 at -inf)
-    // for the audio thread's next fill, then applies the switch
+    // [-60.0, 0.0] or kLevelDbOff. Stores the gain (store_gain: 10^((db +
+    // the attenuation)/20), 0 at -inf) for the audio thread's next fill,
+    // then applies the switch
     // (apply_switch): ABOVE -inf with available() true and the voice dark,
     // THE RISE — the seed (steady_clock ns, nonzero) stored before `target`
     // (release) and, the bank neither loaded nor loading, THE LOADER started
@@ -311,11 +322,20 @@ public:
     // and the bank is freed at the lift alone (release_if_silent). THE
     // CALLERS: gui_main after the probe (the launch's seat: the bed from the
     // launch), the NOISE case's every drag motion and its long press
-    // (GuiInputHandler::apply_level_case, input_pointer.cpp) and the settings
-    // editor's typed `noise_level` arm (apply_device_setting). Unavailable,
+    // (GuiInputHandler::apply_level_case, input_pointer.cpp). Unavailable,
     // the gain is stored and the switch stays off: a later change_folder to
     // a folder that is there lights it at this level.
     void set_level_db(double db);
+    // THE ATTENUATION, LIVE (architect 2026-11-05 night; the head): `db` the
+    // `noise_attenuation_level` key's value, a decimal dB in [-60.0, 0.0]
+    // (parse_noise_attenuation_db, device_config.h; never -inf). Stores it
+    // and the gain recomputed from the level and it (store_gain) for the
+    // audio thread's next fill — THE SWITCH UNTOUCHED: the attenuation
+    // never lights or darkens the voice, nothing loads and nothing is freed.
+    // THE CALLERS: gui_main at the launch's seat, BEFORE set_level_db (so
+    // the first gain the voice sees is the attenuated one), and the settings
+    // editor's typed `noise_attenuation_level` arm (apply_device_setting).
+    void set_attenuation_db(double db);
     // THE -inf RELEASE (architect 2026-11-05, "that should actually shut it
     // off so reduce footprint"): with the level at -inf, the bank is FREED
     // behind the fence (release_bank, change_folder's steps 1..6 with the
@@ -323,7 +343,7 @@ public:
     // above -inf reloads: the load lands and the fade-in runs). Above -inf,
     // or with nothing loaded or loading, a no-op. THE CALLERS: the NOISE
     // case's lift and its button-lost end (GuiInputHandler::settle_level_
-    // case) and the typed -inf commit (apply_device_setting) — never a drag
+    // case) — never a drag
     // motion (a 400 MB bank is not reloaded per finger wobble, the head). On
     // the main thread while an engine may be filling: the fence proves no
     // fill holds the bank (release_bank's protocol); the fade-out the fall
@@ -446,12 +466,19 @@ private:
     // -inf lift's reload needs no second probe); change_folder clears and
     // re-probes after it.
     void release_bank();
+    // THE GAIN, from level_db_ and attenuation_db_: 10^((level +
+    // attenuation)/20), 0 at a -inf level, stored for the audio thread's
+    // next fill. Its two callers set_level_db and set_attenuation_db.
+    void store_gain();
 
     GuiNoiseVoice     voice_;
     // THE LEVEL AS SET (set_level_db's last `db`, kLevelDbOff until the
     // launch's seat): the switch's input, read by apply_switch and
     // release_if_silent on the main thread.
     double            level_db_ = -std::numeric_limits<double>::infinity();
+    // THE ATTENUATION AS SET (set_attenuation_db's last `db`, 0 until the
+    // launch's seat): the gain's second input, main-thread owned.
+    double            attenuation_db_ = 0.0;
     // Written by probe() on the main thread while no loader exists.
     std::vector<File> files_;
     int               rate_      = 0;

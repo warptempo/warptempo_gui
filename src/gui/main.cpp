@@ -1461,7 +1461,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // `audio_level` device key, playback_common.h's head): this project's
     // engine scales everything it plays by the level the loop's one struct
     // holds now — a value set in an earlier project carries over — and the
-    // band's AUDIO case and the settings editor's `audio_level` arm set it
+    // band's AUDIO case sets it
     // live from here on (GuiInputHandler::apply_level_case,
     // GuiPlayback::set_audio_level_db).
     playback.set_audio_level_db(device_config.audio_level);
@@ -3600,8 +3600,11 @@ int gui_main() {
     // probed here (absent is the ordinary state and silent; an unlistable
     // folder or a `.wav` out of shape one stderr line, the NOISE case grey;
     // probed again only when the settings editor's `noise` arm changes the
-    // name, GuiNoise::change_folder), then the level and the crossfade handed
-    // to the voice (the config is required, so all three stand). THE BED
+    // name, GuiNoise::change_folder), then the attenuation, the level and the
+    // crossfade handed to the voice (the config is required, so all four
+    // stand) — THE ATTENUATION BEFORE THE LEVEL (2026-11-05 night), so the
+    // gain the level's seat stores, and the bed's first fill reads, is the
+    // attenuated one (GuiNoise::set_attenuation_db). THE BED
     // PLAYS FROM THE LAUNCH (architect 2026-11-05, the level its one switch;
     // reversing the lamp's "off at every launch"): the level's seat AFTER the
     // probe lights the voice and starts the loader where the persisted level
@@ -3614,6 +3617,7 @@ int gui_main() {
     // left to read its bank.
     GuiNoise noise;
     noise.probe(device_config.noise);
+    noise.set_attenuation_db(device_config.noise_attenuation_level);
     noise.set_level_db(device_config.noise_level);
     noise.set_crossfade_s(device_config.noise_crossfade_s);
 

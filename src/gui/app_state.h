@@ -2266,17 +2266,21 @@ enum class RedesignButton {
     // NOT BUTTONS: no glyph, NO CHORD (no kToolbarChords row — the one pair
     // of roster members without one, the table's static_assert counts them
     // out), no lit look, no press face (a slider shows its value; its fill is
-    // the feedback — the planner's reading, stated at paint_level_case,
-    // paint_handler.cpp), no hold-repeat, no barrel. THE FACE: the key at
+    // the feedback — confirmed by the architect 2026-11-05 night, "no press
+    // face on the cases", paint_level_case, paint_handler.cpp), no
+    // hold-repeat, no barrel. THE FACE: the key at
     // rest under a FILL FROM ITS LEFT EDGE — `level_audio_fill` (Live's
     // RangeEditField, Default 007383) for AUDIO, `level_noise_fill`
     // (ChosenPreListen, Default 3C6AB6) for NOISE — nearbyint(t · face width)
     // device px wide, the face's full height, no border, no inset, where t is
     // the level's TRAVEL FRACTION (level_travel_fraction below, the
-    // square-law taper); THE NUMBER over it, the level's canonical spelling
-    // ("0.0", "-9.0", "-inf", format_level_db) in the Body face, the text
-    // tone on the fill and the face alike, centered by its cap band and its
-    // ink; its printed legend AUDIO / NOISE under the face as every key's.
+    // square-law taper); THE NUMBER over it, the level to one decimal
+    // ("0.0", "-9.0", "-inf", format_level_db_face; the file keeps the exact
+    // value) in the Body face, the text tone on the fill and the face alike,
+    // centered by its cap band and its ink; its printed legend AUDIO / NOISE
+    // under the face as every key's. THE CASES ARE THE TWO LEVELS' ONE ROAD:
+    // no Settings row (architect 2026-11-05 night, a key shown and edited on
+    // the main page gets none, kSettingsEditorKeys).
     // THE DRAG IS RELATIVE on the travel (AppState::ChromePress's Level kind,
     // the arm; GuiInputHandler::arm_level_case_press, input_pointer.cpp),
     // applied live at every motion (GuiPlayback::set_audio_level_db,
@@ -2286,8 +2290,10 @@ enum class RedesignButton {
     // DISABLED (every project has a voice) but for the roster's blanket greys
     // (no audio to dispatch on, a standing overlay), which it takes like
     // every key; THE NOISE CASE GREYS AS THE LAMP DID, with no folder the
-    // `noise` key names or a failed load (GuiNoise::available): its fill and
-    // its number in the disabled ink, the face unchanged, the slider inert.
+    // `noise` key names or a failed load (GuiNoise::available): its fill in
+    // the disabled key ink and its number in the dim text tone (his pick m3,
+    // 2026-11-05 night, paint_level_case), the face unchanged, the slider
+    // inert.
     // BOTH ARE DEVICE STATE, NOT THE PIECE, and LIVE EVERYWHERE THE LAMP WAS:
     // on a locked tab, under grid iterations and in the `h` view (no chord,
     // so no allowlist walk reaches them: their arms at redesign_button_enabled
@@ -2296,7 +2302,10 @@ enum class RedesignButton {
     // inherited rule, redesign_button_enabled's overlay arm). THE NOISE
     // LEVEL IS THE BED'S ONE SWITCH (noise.h's head): above -inf the bed
     // plays, from the launch on; -inf is off, the recordings freed at the
-    // lift. THE SOUND IS CHOSEN BY THE `noise` KEY ALONE (a folder's name,
+    // lift. THE BED SOUNDS AT THE CASE'S NUMBER PLUS THE FIXED
+    // `noise_attenuation_level` (2026-11-05 night, a Settings row; the
+    // case's face, law and long press untouched, noise.h's head). THE SOUND
+    // IS CHOSEN BY THE `noise` KEY ALONE (a folder's name,
     // Settings' Tab completing it; no picker, closed 2026-10-28).
     IconAudioLevel,
     IconNoiseLevel,
@@ -3001,12 +3010,14 @@ inline constexpr bool redesign_button_is_level_case(RedesignButton b) {
 // dB = 40 · log10(t), t = 10^(dB / 40) — 0 dB at t = 1 (the fill full),
 // -9 dB at t = 0.596, -60 dB at t = 0.0316 (two columns of a 70-px face),
 // and -inf (kLevelDbOff) at t = 0, an empty fill. THE FLOOR ("-60 then
-// -inf"): a travel whose dB rounds below kLevelDbMin reads -inf, so the
+// -inf"): a travel whose dB falls below kLevelDbMin reads -inf, so the
 // slider shows -60.0 at its last step and -inf below it, and from -inf a
-// rise reads -60.0 first (level_db_from_travel). The level is ROUNDED TO
-// 0.1 dB, the grammar's one digit (device_config.h's THE LEVEL GRAMMAR),
-// a negative zero normalized to 0.0; the fill is drawn from the ROUNDED
-// level's fraction, so the picture and the file agree. Two readers of each:
+// rise reads -60.0 first (level_db_from_travel). The level is THE EXACT
+// TAPER, a double (architect 2026-11-05 night: double precision live and in
+// the file, one decimal on the face — device_config.h's THE LEVEL GRAMMAR),
+// clamped to [kLevelDbMin, kLevelDbMax], a negative zero normalized to 0.0;
+// the fill is drawn from the exact level's fraction and the file keeps the
+// exact level, so the picture and the file agree. Two readers of each:
 // the painter (paint_level_case, paint_handler.cpp) and the drag
 // (GuiInputHandler::update_level_press_motion, input_pointer.cpp); the
 // travel's length is render.h's kLevelTravelW.
@@ -3017,7 +3028,7 @@ inline double level_travel_fraction(double db) {
 inline double level_db_from_travel(double t) {
     if (t <= 0.0) return kLevelDbOff;
     if (t > 1.0) t = 1.0;
-    double db = std::nearbyint(40.0 * std::log10(t) * 10.0) / 10.0;
+    double db = 40.0 * std::log10(t);
     if (db < kLevelDbMin) return kLevelDbOff;
     if (db > kLevelDbMax) db = kLevelDbMax;
     return db + 0.0;   // -0.0 to 0.0
@@ -8847,7 +8858,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its nineteen editable key lines and the two
+    // rows (its two headings, its eighteen editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same

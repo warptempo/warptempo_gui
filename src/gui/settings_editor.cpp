@@ -9,7 +9,6 @@
 #include "text_editor.h"
 #include "undo.h"
 #include "materials.h"
-#include "playback.h"          // the audio_level arm's live act
 #include "score_pages.h"     // the score_path commit's read
 #include "score_viewer.h"      // score_folder_changed
 #include "score_viewer_file.h" // the score's five keys: grammar, recall, write-through
@@ -356,7 +355,7 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
 // row's text carries NO UNIT (architect 2026-10-28 night: "the units are not
 // present in the setup main page, so let's remove it from the lists.
 // consistent with linux unitless values (ffmpeg, etc)"): it is the value as
-// the config and the page's own `key=value` row spell it, `-9`, `4`, the unit
+// the config and the page's own `key=value` row spell it, `on`, `4`, the unit
 // living in the key's name and its grammar alone.
 std::vector<std::string> GuiSettingsEditor::value_choices(
         const std::string& key) const {
@@ -1211,10 +1210,11 @@ void GuiSettingsEditor::commit() {
 // project is opened first — a rename-by-hand case, accepted.
 // `true_colors` (2026-10-21, the popup's command row made a key): AT ONCE,
 // live, no card — its arm below; `waveform_grow` (2026-10-31) the same, its arm after
-// that, `audio_level` (2026-10-31 night; the band's AUDIO case's grammar
-// and apply since 2026-11-05) the same, its arm after that,
-// `noise`, `noise_level` (the NOISE case's since 2026-11-05) and `noise_crossfade_s`
-// (2026-10-28) the same, at once and no card, their arms after it, and the
+// that, `noise` and `noise_crossfade_s` (2026-10-28) and
+// `noise_attenuation_level` (2026-11-05 night) the same, at once and no
+// card, their arms after it (the two levels, `audio_level` and
+// `noise_level`, have no arm since 2026-11-05 night: no Settings row, the
+// band's two cases their one road, kSettingsEditorKeys), and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
 // `osk_font_px` (2026-10-29) the same, their arms last
 // (`bevel_light` and `bevel_dark` stood after it
@@ -1378,35 +1378,26 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE TWO LEVELS, TYPED (the project voice's, architect 2026-10-31 night;
-    // the noise's, 2026-10-28; both the band's two sliders' keys since
-    // 2026-11-05 — RedesignButton::IconAudioLevel, app_state.h; playback_
-    // common.h's head owns the order): a value of THE LEVEL GRAMMAR under
-    // its one owner (parse_level_db, device_config.h: a decimal dB in
-    // [-60.0, 0.0] or -inf, the integer spelling admitted), APPLIED LIVE AT
-    // THE COMMIT THROUGH THE SLIDERS' OWN ROAD (GuiInputHandler::
-    // apply_level_case — the live struct, the voice's setter and the case's
-    // face damaged; then settle_level_case's tail: a typed -inf on the noise
-    // frees the bank at once, GuiNoise::release_if_silent, and a rise from
-    // -inf lights it) — and persisted here, so NO CARD: the sound and the
-    // case's fill are the answer. A value spelling the level already held
-    // ("-9" for "-9.0") is the unchanged no-op. The next project's engine is
-    // seated from the struct (run_project). The page opens the line editor
-    // on either (no value list since 2026-11-05: the decimal domain is no
-    // short list); Tab completes no value; stage 2's recall is the writer's
-    // canonical spelling (recall_gui_setting_value), so a loaded "-9"
-    // recalls as "-9.0".
-    if (key == "audio_level" || key == "noise_level") {
-        const bool audio = key == "audio_level";
-        const std::optional<double> db = parse_level_db(value);
-        if (!db) return reject(kLevelGrammarReason);
-        const double standing = audio ? app.device_config->audio_level
-                                      : app.device_config->noise_level;
-        if (*db == standing) return unchanged();
-        const RedesignButton id = audio ? RedesignButton::IconAudioLevel
-                                        : RedesignButton::IconNoiseLevel;
-        input->apply_level_case(id, *db);
-        input->settle_level_case(id, /*level_changed=*/false);
+    // THE NOISE'S ATTENUATION (architect 2026-11-05 night, session 49: "then
+    // the slider maintains its current behavior and law"; noise.h's head): a
+    // fixed dB under the NOISE case's number, the bed at noise_level + this,
+    // under its one grammar owner (parse_noise_attenuation_db,
+    // device_config.h: THE LEVEL GRAMMAR less -inf, the bed's switch being
+    // the level's), APPLIED LIVE AT THE COMMIT — the live struct, then the
+    // one GuiNoise's setter (the gain recomputed from both, the switch
+    // untouched: the attenuation never lights or darkens the voice) — and
+    // persisted, so NO CARD: the sound is the answer. A value the key
+    // already holds is the unchanged no-op (the exact double: "-9.0" for
+    // "-9"). The page opens the line editor on it (no value list, a
+    // decimal); Tab completes no value; stage 2's recall is the writer's
+    // canonical spelling (recall_gui_setting_value).
+    if (key == "noise_attenuation_level") {
+        const std::optional<double> db = parse_noise_attenuation_db(value);
+        if (!db) return reject(kNoiseAttenuationGrammarReason);
+        if (*db == app.device_config->noise_attenuation_level)
+            return unchanged();
+        app.device_config->noise_attenuation_level = *db;
+        if (app.noise != nullptr) app.noise->set_attenuation_db(*db);
         (void)persist();
         return applied();
     }
@@ -1642,7 +1633,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's nineteen and
+        // one key does — any key the recall knows, the table's eighteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");
@@ -1685,7 +1676,8 @@ bool GuiSettingsEditor::autocomplete_value() {
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
     // gui_scale, projects_repo, projects_path, true_colors, theme and the
-    // noise's three — gui_scale and the rest the device config's — per-tab
+    // rest of the device config's editable keys — gui_scale and the rest the
+    // device config's — per-tab
     // trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S (or, for a device key, the config's writer)

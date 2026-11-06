@@ -6820,7 +6820,9 @@ void GuiInputHandler::open_settings_page(std::string_view seat_key) {
 
 // THE LIST: kSettingsEditorKeys exactly (architect 2026-10-28: the per-tab
 // keys and every key with a GUI lever stay off — "I won't set it
-// manually") EXCEPT the two the BPM key writes, `scale` and `bpm`, listed
+// manually"; the two levels, shown and edited on the band's two cases, too
+// since 2026-11-05 night, the main-page rule) EXCEPT the two the BPM key
+// writes, `scale` and `bpm`, listed
 // as DISABLED rows (architect 2026-10-29: "bpm and scale should be viewable
 // but disabled. they are useful for notes"); the DEVICE keys first and the
 // PIECE rows after (the mock he verified), these in the settings file's
@@ -9197,7 +9199,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     // The lamp, its chord and the toggle are retired with the band's two
     // level cases, sliders with no chord (RedesignButton::IconAudioLevel,
     // app_state.h): the noise's level is its one switch, set by the NOISE
-    // case's drag and the typed `noise_level` line, and the bed asks no
+    // case alone (no Settings row since 2026-11-05 night), and the bed asks no
     // device question — the music's reopen is its resume, noise.h's head.
     // Bare `w` is UNBOUND again, chord_is_bound's default, and silent here.)
     case GuiKeys::Grave:

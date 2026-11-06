@@ -5,6 +5,9 @@
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
+#include <cassert>
+#include <charconv>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -19,8 +22,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (FIFTEEN keys since 2026-11-05, the
-// window's theme `theme` placed after `true_colors` — Live 12's own themes
+// REQUIRED SET, every one of them (SIXTEEN keys since 2026-11-05 night, the
+// noise's fixed attenuation `noise_attenuation_level` placed after
+// `noise_level` — the bed at the case's number plus it; FIFTEEN 2026-11-05,
+// the window's theme `theme` placed after `true_colors` — Live 12's own themes
 // through one key, palette_file.h; FOURTEEN 2026-11-01, the
 // `waveform` key retired with the color presets — one palette,
 // palette_file.h; FIFTEEN 2026-10-31 night, the
@@ -82,9 +87,11 @@ namespace {
 // "audio out versus noise", the two voices' levels read together on the
 // Settings page, audio out first; a permanent key.
 //
-// THE NOISE'S THREE (architect 2026-10-28): `noise`, `noise_level` and
+// THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05
+// night): `noise`, `noise_level`, `noise_attenuation_level` and
 // `noise_crossfade_s` FOLLOW `audio_level`, the permanent keys' end, the
-// folder before its loudness and its crossfade.
+// folder before its loudness, the loudness's fixed attenuation under it,
+// and its crossfade.
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
 // keys have always stood, each leaving when he settles its value:
@@ -114,6 +121,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "audio_level",
     "noise",
     "noise_level",
+    "noise_attenuation_level",
     "noise_crossfade_s",
     "key_height",
     "osk_key_w",
@@ -132,17 +140,37 @@ std::string format_gui_scale_percent(int percent) {
     return std::string(buf);
 }
 
-// THE TWO LEVELS' CANONICAL SPELLING (THE LEVEL GRAMMAR, device_config.h,
-// 2026-11-05): `-inf` for the off / mute value, else ONE FRACTIONAL DIGIT
-// (`%.1f`: "0.0", "-9.0", "-60.0"), exactly what parse_level_db admits back
-// — every stored level is a multiple of 0.1 by construction (the grammar's
-// one digit, the sliders' rounding), so the one digit is the value whole.
-// A negative zero never reaches the writer (the sliders normalize it, the
-// grammar refuses "-0.0"); the add of 0.0 keeps that true of any double.
+// THE LEVELS' CANONICAL SPELLING IN THE FILE (THE LEVEL GRAMMAR,
+// device_config.h; the exact double since 2026-11-05 night): `-inf` for the
+// off / mute value, else THE SHORTEST DECIMAL THAT ROUND-TRIPS, in fixed
+// notation (std::to_chars with chars_format::fixed and no precision: "0",
+// "-9", "-15.6", "-0.0108695652173913", "-60"), exactly what parse_level_db
+// admits back and reads as the same double — the sliders' exact taper and
+// a typed attenuation stored whole. The writer's and the attenuation's
+// recall. A negative zero never reaches the writer (the taper normalizes
+// it, the grammar refuses "-0"); the add of 0.0 keeps that true of any
+// double. The buffer holds the longest fixed spelling of any double in the
+// range, a denormal's few hundred digits included.
 std::string format_level_db(double db) {
     if (db == kLevelDbOff) return "-inf";
+    char buf[512];
+    const auto res = std::to_chars(buf, buf + sizeof(buf), db + 0.0,
+                                   std::chars_format::fixed);
+    assert(res.ec == std::errc{});
+    return std::string(buf, res.ptr);
+}
+
+// THE LEVELS' SPELLING ON THE FACE (architect 2026-11-05 night, "single
+// decimal is what ableton does"): `-inf`, else the level rounded to the
+// tenth and normalized (+0.0, so -0.04 prints "0.0", never "-0.0"), `%.1f`
+// — "0.0", "-9.0", "-15.6", "-60.0". The band's two cases' number
+// (paint_level_case) and nothing else: the file keeps the exact value
+// (format_level_db).
+std::string format_level_db_face(double db) {
+    if (db == kLevelDbOff) return "-inf";
     char buf[32];
-    std::snprintf(buf, sizeof(buf), "%.1f", db + 0.0);
+    std::snprintf(buf, sizeof(buf), "%.1f",
+                  std::nearbyint(db * 10.0) / 10.0 + 0.0);
     return std::string(buf);
 }
 
@@ -250,6 +278,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "noise_level") {
             // The level's canonical decimal or -inf (format_level_db).
             s += format_level_db(cfg.noise_level);
+        } else if (k == "noise_attenuation_level") {
+            // The attenuation's canonical decimal, never -inf
+            // (format_level_db).
+            s += format_level_db(cfg.noise_attenuation_level);
         } else if (k == "noise_crossfade_s") {
             // The crossfade's canonical integer (format_noise_crossfade_s).
             s += format_noise_crossfade_s(cfg.noise_crossfade_s);
@@ -364,8 +396,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.theme = value;
             return {};
         }
-        // THE NOISE'S THREE KEYS (2026-10-28): each under its one grammar
-        // owner (is_noise_folder_name, parse_level_db,
+        // THE NOISE'S FOUR KEYS (2026-10-28; the attenuation 2026-11-05
+        // night): each under its one grammar owner (is_noise_folder_name,
+        // parse_level_db, parse_noise_attenuation_db,
         // parse_noise_crossfade_s, device_config.h), required like every key;
         // any other spelling the launch's hard fail. The folder's name is
         // judged by its shape alone: a name whose folder is absent loads, and
@@ -392,11 +425,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
             return {};
         }
         // THE TWO LEVELS (the project voice's, 2026-10-31 night, and the
-        // noise's, 2026-10-28; permanent keys): under their one grammar
-        // owner (parse_level_db, device_config.h — the decimal, -inf, and
-        // the integer spelling of the configs written before 2026-11-05
-        // admitted on the read), required like every key; any other
-        // spelling the launch's hard fail.
+        // noise's, 2026-10-28; permanent keys) AND THE NOISE'S ATTENUATION
+        // (2026-11-05 night): under their one grammar owner (parse_level_db,
+        // device_config.h — the decimal of any fractional length and -inf,
+        // the attenuation's parser refusing -inf), required like every key;
+        // any other spelling the launch's hard fail.
         if (key == "audio_level") {
             const std::optional<double> db = parse_level_db(value);
             if (!db) {
@@ -411,6 +444,15 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kLevelGrammarReason);
             }
             out.noise_level = *db;
+            return {};
+        }
+        if (key == "noise_attenuation_level") {
+            const std::optional<double> db = parse_noise_attenuation_db(value);
+            if (!db) {
+                return bad_value(ln, key, value,
+                                 kNoiseAttenuationGrammarReason);
+            }
+            out.noise_attenuation_level = *db;
             return {};
         }
         if (key == "noise_crossfade_s") {
