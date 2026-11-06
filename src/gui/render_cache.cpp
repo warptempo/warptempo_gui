@@ -241,10 +241,67 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // current recipe; re-render rather than migrate).
 constexpr uint32_t kFingerprintVersion = 20;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
-// The sidecar_layout line versions the on-disk text container of the sidecar
-// file itself. The fingerprint content version is serialized inside the
-// fingerprint payload by render_fingerprint.
-constexpr uint32_t kSidecarVersion     = 1;
+// The sidecar_layout line versions the on-disk TEXT CONTAINER of the sidecar
+// file itself — its line count and their grammar — never the recipe: the
+// fingerprint content version is serialized inside the fingerprint payload by
+// render_fingerprint. LAYOUT 2 (architect 2026-11-05) JOINED THE SIXTH LINE,
+// `limiter=`, the spectral limiter's engaged frames (render_cache.h's THE
+// SIDECAR'S SIX LINES); the strict reader wants exactly six lines under this
+// number, so every layout-1 record is a miss at the deliverable's three reuse
+// rungs and re-renders once, rewriting wav and sidecar together — accepted,
+// nothing having been rendered for the archive yet.
+constexpr uint32_t kSidecarVersion     = 2;
+constexpr char     kSidecarLimiterPrefix[] = "limiter=";
+
+// The limiter line's text after its prefix: the frames as decimal, single
+// spaces between, nothing at all for an empty list (the grammar at
+// render_cache.h's THE SIDECAR'S SIX LINES).
+std::string format_limiter_frames(const std::vector<int64_t>& frames) {
+    std::string out;
+    for (size_t i = 0; i < frames.size(); ++i) {
+        if (i) out += ' ';
+        out += std::to_string(frames[i]);
+    }
+    return out;
+}
+
+// The limiter line's strict reader: the prefix, then either nothing or
+// single-space-separated non-negative int64 frames in STRICTLY ascending
+// order (the list is a sorted set of places; a repeat or a step back is a
+// shape the writer never produces). Any other shape — a leading, trailing or
+// doubled space, a sign, a non-digit — is false with out untouched.
+bool parse_limiter_line(const std::string& line, std::vector<int64_t>& out) {
+    const std::string_view prefix(kSidecarLimiterPrefix);
+    if (!line.starts_with(prefix)) return false;
+    const std::string_view text(line.data() + prefix.size(),
+                                line.size() - prefix.size());
+    std::vector<int64_t> frames;
+    if (text.empty()) {
+        out = std::move(frames);
+        return true;
+    }
+    const char* cur = text.data();
+    const char* const end = cur + text.size();
+    int64_t prev = -1;
+    while (true) {
+        // Digits only: from_chars would admit a leading '-' ("-0" reads as
+        // 0), a sign the writer never produces.
+        if (*cur < '0' || *cur > '9') return false;
+        int64_t value = 0;
+        const auto r = std::from_chars(cur, end, value);
+        if (r.ec != std::errc{} || r.ptr == cur) return false;
+        if (value <= prev) return false;   // strictly ascending
+        frames.push_back(value);
+        prev = value;
+        cur = r.ptr;
+        if (cur == end) break;
+        if (*cur != ' ') return false;
+        ++cur;
+        if (cur == end) return false;      // a trailing space
+    }
+    out = std::move(frames);
+    return true;
+}
 
 bool write_bytes_to_path(const std::string& path, const std::vector<char>& bytes) {
     std::FILE* f = std::fopen(path.c_str(), "wb");
@@ -437,14 +494,15 @@ std::string fingerprint_sidecar_path(const std::string& wav_path) {
 }
 
 bool write_fingerprint_sidecar(const std::string& wav_path,
-                               const std::vector<uint8_t>& fingerprint) {
+                               const std::vector<uint8_t>& fingerprint,
+                               const std::vector<int64_t>& limiter_frames) {
     RenderFileIdentity wav_identity;
     if (!stat_file_identity(wav_path, wav_identity)) return false;
 
     const std::string sidecar_path = fingerprint_sidecar_path(wav_path);
     const std::string tmp_path = sidecar_path + ".tmp";
     std::string data;
-    data.reserve(128 + fingerprint.size() * 2);
+    data.reserve(128 + fingerprint.size() * 2 + limiter_frames.size() * 12);
     data += kSidecarMagic;
     data += '\n';
     data += "sidecar_layout=";
@@ -458,6 +516,10 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
     data += '\n';
     data += "fingerprint=";
     data += hex_encode(fingerprint);
+    data += '\n';
+    // The sixth line, last (layout 2): the limiter's list.
+    data += kSidecarLimiterPrefix;
+    data += format_limiter_frames(limiter_frames);
     data += '\n';
 
     std::FILE* f = std::fopen(tmp_path.c_str(), "wb");
@@ -489,11 +551,10 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
     return true;
 }
 
-bool fingerprint_sidecar_matches(const std::string& wav_path,
-                                 const std::vector<uint8_t>& fingerprint,
-                                 ArtifactStatIdentity* out_identity) {
+bool read_fingerprint_sidecar(const std::string& wav_path,
+                              FingerprintSidecarRecord& out) {
     // One stat serves both the sidecar's size/mtime validation and the
-    // TOCTOU capture handed back through out_identity: with concurrent
+    // TOCTOU capture handed back in the record's identity: with concurrent
     // GUI/CLI processes publishing the same title, the wav can be atomically
     // replaced between this validation and the caller's later read/copy
     // while the not-yet-replaced sidecar still validates — atomic
@@ -517,7 +578,7 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
         lines.push_back(std::move(line));
     }
     if (!in.eof()) return false;
-    if (lines.size() != 5) return false;
+    if (lines.size() != 6) return false;
     if (lines[0] != kSidecarMagic) return false;
     // Composed from kSidecarVersion exactly as the writer composes it, so a
     // future layout bump moves reader and writer together instead of silently
@@ -537,13 +598,25 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 
     constexpr std::string_view fp_prefix = "fingerprint=";
     if (!lines[4].starts_with(fp_prefix)) return false;
-    std::vector<uint8_t> recorded_fingerprint;
-    if (!hex_decode(lines[4].substr(fp_prefix.size()),
-                    recorded_fingerprint)) {
+    FingerprintSidecarRecord record;
+    if (!hex_decode(lines[4].substr(fp_prefix.size()), record.fingerprint)) {
         return false;
     }
-    if (recorded_fingerprint != fingerprint) return false;
-    if (out_identity) *out_identity = full_identity;
+    if (!parse_limiter_line(lines[5], record.limiter_frames)) return false;
+    record.identity = full_identity;
+    out = std::move(record);
+    return true;
+}
+
+bool fingerprint_sidecar_matches(const std::string& wav_path,
+                                 const std::vector<uint8_t>& fingerprint,
+                                 ArtifactStatIdentity* out_identity,
+                                 std::vector<int64_t>* out_limiter_frames) {
+    FingerprintSidecarRecord record;
+    if (!read_fingerprint_sidecar(wav_path, record)) return false;
+    if (record.fingerprint != fingerprint) return false;
+    if (out_identity) *out_identity = record.identity;
+    if (out_limiter_frames) *out_limiter_frames = std::move(record.limiter_frames);
     return true;
 }
 
@@ -614,7 +687,6 @@ void RenderCache::shutdown() {
         std::lock_guard<std::mutex> lock(mutex_);
         disk_index_.clear();
         disk_bytes_ = 0;
-        limiter_frames_.clear();
     }
     if (!dir_.empty()) {
         std::error_code ec;
@@ -638,7 +710,8 @@ void RenderCache::join_writer() {
 
 bool RenderCache::lookup(const std::vector<uint8_t>& fp,
                          int channels, int sample_rate,
-                         std::vector<float>& out) {
+                         std::vector<float>& out,
+                         std::vector<int64_t>* out_limiter_frames) {
     if (!enabled_) {
         return false;
     }
@@ -660,7 +733,8 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
         // The potentially large wav read happens outside mutex_. If
         // eviction or failed validation removes the pair mid-read, the reader
         // reports a miss and the caller re-renders.
-        if (read_file(path, fp, channels, sample_rate, out)) {
+        if (read_file(path, fp, channels, sample_rate, out,
+                      out_limiter_frames)) {
             std::lock_guard<std::mutex> lock(mutex_);
             if (auto it = disk_index_.find(h); it != disk_index_.end() &&
                 it->second.filename == candidate.filename &&
@@ -679,7 +753,6 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
                 it->second.fingerprint == fp) {
                 disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
                 disk_index_.erase(it);
-                forget_limiter_frames(h);
                 drop_pair = true;
             }
         }
@@ -689,57 +762,9 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
     return false;
 }
 
-void RenderCache::insert_limiter_frames(const std::vector<uint8_t>& fp,
-                                        const std::vector<int64_t>& frames) {
-    // Contract at the declaration. Synchronous and small (a few int64 per
-    // render), so unlike the blob it needs no writer job; an overwrite of
-    // the same hash replaces the entry whole, a collision's included — the
-    // blob's own overwrite rule.
-    if (!enabled_) {
-        return;
-    }
-    const uint64_t h = fnv1a64(fp);
-    std::lock_guard<std::mutex> lock(mutex_);
-    LimiterFramesEntry e;
-    e.fingerprint = fp;
-    e.frames      = frames;
-    limiter_frames_[h] = std::move(e);
-}
-
-bool RenderCache::lookup_limiter_frames(const std::vector<uint8_t>& fp,
-                                        std::vector<int64_t>& out) {
-    // Contract at the declaration: a hash match confirmed by the exact
-    // fingerprint compare (a collision is a miss, never a wrong hit, as for
-    // the blob). No LRU bump — the list rides the blob's recency.
-    if (!enabled_) {
-        return false;
-    }
-    const uint64_t h = fnv1a64(fp);
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = limiter_frames_.find(h);
-    if (it == limiter_frames_.end() || it->second.fingerprint != fp) {
-        return false;
-    }
-    out = it->second.frames;
-    return true;
-}
-
-void RenderCache::forget_limiter_frames(uint64_t h) {
-    // mutex_ held by the caller (the declaration's rule).
-    limiter_frames_.erase(h);
-}
-
-void RenderCache::forget_limiter_frames_unless(
-        uint64_t h, const std::vector<uint8_t>& keep_fp) {
-    // mutex_ held by the caller (the declaration's rule).
-    auto it = limiter_frames_.find(h);
-    if (it != limiter_frames_.end() && it->second.fingerprint != keep_fp) {
-        limiter_frames_.erase(it);
-    }
-}
-
 bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
-                              const std::string& staging_path) {
+                              const std::string& staging_path,
+                              std::vector<int64_t>* out_limiter_frames) {
     // The disk-tier publish keys on the fingerprint alone: it confirms via the
     // .fingerprint sidecar (the fingerprint already binds sample rate), then
     // byte-copies the entry — no format check.
@@ -761,7 +786,9 @@ bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
     const std::string path = dir_ + "/" + candidate.filename;
     bool copied = false;
     ArtifactStatIdentity candidate_identity{};
-    if (fingerprint_sidecar_matches(path, fp, &candidate_identity)) {
+    std::vector<int64_t> candidate_limiter_frames;
+    if (fingerprint_sidecar_matches(path, fp, &candidate_identity,
+                                    &candidate_limiter_frames)) {
         std::error_code ec;
         std::filesystem::copy_file(
             path, staging_path,
@@ -783,6 +810,11 @@ bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
         }
     }
     if (copied) {
+        // The list goes out with the bytes it was written beside (the
+        // validated pair's own line), never on a discarded copy.
+        if (out_limiter_frames) {
+            *out_limiter_frames = std::move(candidate_limiter_frames);
+        }
         std::lock_guard<std::mutex> lock(mutex_);
         if (auto it = disk_index_.find(h); it != disk_index_.end() &&
             it->second.filename == candidate.filename &&
@@ -801,7 +833,6 @@ bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
             it->second.fingerprint == fp) {
             disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
             disk_index_.erase(it);
-            forget_limiter_frames(h);
             drop_pair = true;
         }
     }
@@ -827,6 +858,10 @@ struct RenderCache::WriterJob {
     int channels = 0;
     int sample_rate = 0;
     int64_t frame_count = 0;
+    // The limiter's engaged frames in the blob's own domain, written as the
+    // pair's sidecar line (the contract at RenderCache::insert): the list
+    // travels with the blob, so a dropped job drops both.
+    std::vector<int64_t> limiter_frames;
     // EncodeMasterThenRoute only: the dispatching render's per-dispatch
     // session cancel token (never reset after creation, so a load of it
     // names exactly that session). Null for WriteBlobToDisk jobs.
@@ -835,7 +870,8 @@ struct RenderCache::WriterJob {
 
 void RenderCache::insert(const std::vector<uint8_t>& fp,
                          const std::vector<char>& blob,
-                         int channels, int sample_rate, int64_t frame_count) {
+                         int channels, int sample_rate, int64_t frame_count,
+                         const std::vector<int64_t>& limiter_frames) {
     if (!enabled_) {
         return;
     }
@@ -844,7 +880,7 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     }
 
     const uint64_t h = fnv1a64(fp);
-    insert_disk(h, fp, blob, frame_count);
+    insert_disk(h, fp, blob, frame_count, limiter_frames);
 }
 
 void RenderCache::insert_master_floats(
@@ -852,7 +888,8 @@ void RenderCache::insert_master_floats(
         const std::vector<float>& samples,
         int channels, int sample_rate,
         int64_t frame_count,
-        std::shared_ptr<const std::atomic<bool>> cancel_token) {
+        std::shared_ptr<const std::atomic<bool>> cancel_token,
+        const std::vector<int64_t>& limiter_frames) {
     if (!enabled_) {
         return;
     }
@@ -874,13 +911,15 @@ void RenderCache::insert_master_floats(
     job.channels = channels;
     job.sample_rate = sample_rate;
     job.frame_count = frame_count;
+    job.limiter_frames = limiter_frames;
     job.cancel_token = std::move(cancel_token);
     start_writer_job(std::move(job));
 }
 
 bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
                               const std::vector<char>& blob,
-                              int64_t frame_count) {
+                              int64_t frame_count,
+                              const std::vector<int64_t>& limiter_frames) {
     WriterJob job;
     job.kind = WriterJob::Kind::WriteBlobToDisk;
     job.h = h;
@@ -889,6 +928,7 @@ bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
     job.path = dir_ + "/" + job.fname;
     job.blob = blob;
     job.frame_count = frame_count;
+    job.limiter_frames = limiter_frames;
     start_writer_job(std::move(job));
     return true;
 }
@@ -915,9 +955,6 @@ void RenderCache::start_writer_job(WriterJob job) {
                 disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
                 disk_index_.erase(it);
             }
-            // A same-hash overwrite: another fingerprint's frames go with its
-            // blob; this fingerprint's own, inserted ahead of this job, stay.
-            forget_limiter_frames_unless(job.h, job.fp);
         }
         remove_disk_pair(job.path);
     }
@@ -925,8 +962,8 @@ void RenderCache::start_writer_job(WriterJob job) {
     std::thread new_writer([this, job = std::move(job)]() mutable {
         auto write_disk_blob = [this, &job]() {
             uint64_t written = 0;
-            if (!write_file(job.path, job.fp, job.blob,
-                            job.frame_count, written)) {
+            if (!write_file(job.path, job.fp, job.blob, job.frame_count,
+                            job.limiter_frames, written)) {
                 return;
             }
 
@@ -977,8 +1014,6 @@ void RenderCache::start_writer_job(WriterJob job) {
                     disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
                     disk_index_.erase(it);
                 }
-                // The same-hash overwrite rule as the disk job's above.
-                forget_limiter_frames_unless(job.h, job.fp);
             }
             remove_disk_pair(job.path);
             write_disk_blob();
@@ -1000,7 +1035,6 @@ void RenderCache::evict_disk_until(uint64_t target_max) {
             if (it->second.seq < victim->second.seq) victim = it;
         remove_disk_pair(dir_ + "/" + victim->second.filename);
         disk_bytes_ -= victim->second.size_bytes;
-        forget_limiter_frames(victim->first);
         disk_index_.erase(victim);
     }
 }
@@ -1017,9 +1051,12 @@ void RenderCache::remove_disk_pair(const std::string& wav_path) {
 bool RenderCache::read_file(const std::string& path,
                             const std::vector<uint8_t>& want_fp,
                             int channels, int sample_rate,
-                            std::vector<float>& out) {
+                            std::vector<float>& out,
+                            std::vector<int64_t>* out_limiter_frames) {
     ArtifactStatIdentity candidate_identity{};
-    if (!fingerprint_sidecar_matches(path, want_fp, &candidate_identity)) {
+    std::vector<int64_t> candidate_limiter_frames;
+    if (!fingerprint_sidecar_matches(path, want_fp, &candidate_identity,
+                                     &candidate_limiter_frames)) {
         return false;
     }
     if (read_wav_to_float(path, channels, sample_rate, out)) {
@@ -1034,6 +1071,11 @@ bool RenderCache::read_file(const std::string& path,
         ArtifactStatIdentity post_read{};
         if (stat_artifact_identity(path, post_read) &&
             post_read == candidate_identity) {
+            // The list goes out with the samples it was written beside
+            // (the validated pair's own line), never on a discarded read.
+            if (out_limiter_frames) {
+                *out_limiter_frames = std::move(candidate_limiter_frames);
+            }
             return true;
         }
     }
@@ -1096,7 +1138,9 @@ bool encode_pcm24_wav_blob(const std::vector<float>& samples,
 bool RenderCache::write_file(const std::string& path,
                              const std::vector<uint8_t>& fp,
                              const std::vector<char>& blob,
-                             int64_t frame_count, uint64_t& out_bytes) {
+                             int64_t frame_count,
+                             const std::vector<int64_t>& limiter_frames,
+                             uint64_t& out_bytes) {
     if (frame_count <= 0 || blob.empty()) return false;
 
     const std::string tmp = path + ".tmp";
@@ -1113,7 +1157,7 @@ bool RenderCache::write_file(const std::string& path,
         remove_disk_pair(path);
         return false;
     }
-    if (!write_fingerprint_sidecar(path, fp)) {
+    if (!write_fingerprint_sidecar(path, fp, limiter_frames)) {
         remove_disk_pair(path);
         return false;
     }

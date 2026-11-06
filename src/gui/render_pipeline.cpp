@@ -684,7 +684,18 @@ RenderOutcome do_render(const RenderRequest& req,
     // can leave an orphan wav that enumerate_render_entries surfaces;
     // load_render_entry_in_place's validate-before-mutate path refuses that entry
     // cleanly. That residual crash window is the accepted design.
-    auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
+    // THE LIMITER'S LIST RIDES THE FINGERPRINT (architect 2026-11-05, THE
+    // SIDECAR'S SIX LINES at render_cache.h): every disk publish hands the
+    // wav's own list to the writer — "success" the synthesis's cropped
+    // limiter_engaged_frames, "reused_cache" the list publish_wav read off
+    // the entry's pair, "reused_artifact" the list the matches call parsed
+    // from the candidate's record — so the deliverable's sidecar always
+    // carries the frames of the bytes beside it. The up-to-date rung above
+    // writes nothing: its record matched at the current layout, so its line
+    // already stands.
+    auto finalize_published_wav = [&](const char* outcome,
+                                      const std::vector<int64_t>&
+                                          limiter_frames) -> RenderOutcome {
         LoadInPlaceCriticalSidecars sidecars =
             publish_load_in_place_critical_batch_sidecars();
         if (!sidecars.ok) {
@@ -696,7 +707,8 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         // The fingerprint is the attestation that the artifact set is
         // complete; every render is wav, so it is always written here.
-        if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
+        if (!write_fingerprint_sidecar(final_output_path, fingerprint,
+                                       limiter_frames)) {
             std::fprintf(stderr,
                 "warptempo_gui: Fingerprint sidecar write skipped for %s\n",
                 final_output_path.c_str());
@@ -724,11 +736,13 @@ RenderOutcome do_render(const RenderRequest& req,
         // changes about once per movement); tmp/ cells are never reuse
         // sources, by construction (only exact composed paths are auditioned).
         ArtifactStatIdentity candidate_identity{};
+        std::vector<int64_t> candidate_limiter_frames;
         const std::string artifact_candidate =
             compose_deliverable_path().string();
         if (artifact_candidate != final_output_path &&
             fingerprint_sidecar_matches(artifact_candidate, fingerprint,
-                                        &candidate_identity)) {
+                                        &candidate_identity,
+                                        &candidate_limiter_frames)) {
             std::error_code ec;
             std::filesystem::copy_file(
                 artifact_candidate, staging_output_path,
@@ -765,7 +779,8 @@ RenderOutcome do_render(const RenderRequest& req,
                                             final_output_path, ec);
                 }
                 if (!ec) {
-                    return finalize_published_wav("reused_artifact");
+                    return finalize_published_wav("reused_artifact",
+                                                  candidate_limiter_frames);
                 }
                 std::fprintf(stderr,
                     "warptempo_gui: Render warning: project artifact reuse "
@@ -777,9 +792,11 @@ RenderOutcome do_render(const RenderRequest& req,
 
         // Rung: render cache. A confirmed hit publishes the canonical wav
         // bytes by byte-copying the disk entry file after sidecar
-        // confirmation; no sample conversion occurs.
-        if (req.render_cache->publish_wav(fingerprint,
-                                          staging_output_path)) {
+        // confirmation; no sample conversion occurs. The entry's limiter
+        // list comes out with the bytes, for the deliverable's own sidecar.
+        std::vector<int64_t> cache_limiter_frames;
+        if (req.render_cache->publish_wav(fingerprint, staging_output_path,
+                                          &cache_limiter_frames)) {
             // publish_wav did a potentially large byte write or disk copy to
             // the staging path; a cancel that lands during it must not
             // publish. Re-check between publish_wav and the rename to the
@@ -789,7 +806,8 @@ RenderOutcome do_render(const RenderRequest& req,
             std::error_code ec;
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (!ec) {
-                return finalize_published_wav("reused_cache");
+                return finalize_published_wav("reused_cache",
+                                              cache_limiter_frames);
             }
             std::fprintf(stderr,
                 "warptempo_gui: Render warning: render cache publish "
@@ -973,15 +991,14 @@ RenderOutcome do_render(const RenderRequest& req,
                                        static_cast<size_t>(src_ch))
                 : 0;
             // The fingerprint is always computed; the insert additionally
-            // requires a non-empty buffer. The engaged frames go in beside
-            // the blob, under the same gate, so a later cache hit replays
-            // them with the audio (the contract at insert_limiter_frames).
+            // requires a non-empty buffer. The engaged frames ride the
+            // writer job with the samples and land in the pair's sidecar,
+            // so a later cache hit replays them with the audio (the
+            // contract at RenderCache::insert).
             if (inserted_frames > 0) {
                 req.render_cache->insert_master_floats(
                     fingerprint, *req.output_buffer, src_ch, src_sr,
-                    inserted_frames, cancel_token);
-                req.render_cache->insert_limiter_frames(
-                    fingerprint, limiter_engaged_frames);
+                    inserted_frames, cancel_token, limiter_engaged_frames);
             }
         }
 
@@ -1030,16 +1047,16 @@ RenderOutcome do_render(const RenderRequest& req,
                         "'%s'\n",
                         final_output_path.c_str());
                 } else if (encoded_frames > 0) {
+                    // The list rides the job with the blob, as on the
+                    // buffer route: a target-view cache hit on this
+                    // archival render's entry replays it too (the contract
+                    // at RenderCache::insert).
                     req.render_cache->insert(fingerprint, wav_blob, src_ch,
-                                             src_sr, encoded_frames);
-                    // Beside the blob, as on the buffer route: a target-view
-                    // cache hit on this archival render's entry replays the
-                    // list too (the contract at insert_limiter_frames).
-                    req.render_cache->insert_limiter_frames(
-                        fingerprint, limiter_engaged_frames);
+                                             src_sr, encoded_frames,
+                                             limiter_engaged_frames);
                 }
             }
-            return finalize_published_wav("success");
+            return finalize_published_wav("success", limiter_engaged_frames);
         }
     }
 

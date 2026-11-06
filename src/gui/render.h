@@ -1344,9 +1344,13 @@ constexpr int kMinWindowHeightPx = 480;
 //     reports whether it clamped a sample of the block and the callback
 //     counts the clamped blocks (GuiPlaybackState::clipped_blocks); the
 //     event is the count having moved since the tick before. THE
-//     LIMITER LAMP — TARGET VIEW ONLY ("the render player plays files, no
-//     sidecar — agree"; the source view dark): with the engine playing, the
-//     audio view 'T' and the target buffer bound, the event is the
+//     LIMITER LAMP — THE TARGET BUFFER AND THE RENDER PLAYER'S ITEMS
+//     (architect 2026-11-05, reopening the player's lamp: an item's own
+//     .fingerprint carries its limiter line since the sidecar's layout 2,
+//     render_cache.h; the source view and the score's soundtrack dark; a
+//     render made before that layout, or whose record is missing, lights
+//     nothing until it is rendered again): with the engine playing and a
+//     buffer bound that carries a list, the event is the
 //     limiter's engaged frames (AppState::bound_limiter_frames, the bind's
 //     own snapshot) holding a frame in the span the playhead advanced since
 //     the tick before, in buffer-local frames — [prev, now), a binary

@@ -1407,12 +1407,14 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 //   words live the engine's life (the counter) and the project's (the seen
 //   word and the stamps), one lifetime, so a project switch starts them at
 //   zero together.
-//   THE LIMITER LAMP, TARGET PLAYBACK ALONE: with the engine playing, the
-//   audio view 'T' and the bind's snapshot of the limiter's engaged frames
-//   non-empty (AppState::bound_limiter_frames: filled only while the target
-//   buffer is bound, so "the bound buffer is the target buffer" is that
-//   vector's non-emptiness and needs no second predicate — the render player
-//   and the score viewer clear it at their binds, the T→S leg at its), the
+//   THE LIMITER LAMP, THE TARGET BUFFER'S AND THE PLAYER'S ITEMS' (architect
+//   2026-11-05: the item's .fingerprint carries its list since layout 2; the
+//   score's soundtrack stays dark): with the engine playing and the bind's
+//   snapshot of the limiter's engaged frames non-empty
+//   (AppState::bound_limiter_frames: filled by the target bind and the
+//   player's item bind, cleared by the score viewer's binds and the T→S
+//   leg, so "the bound buffer carries a list" is that vector's
+//   non-emptiness and needs no view term beside it), the
 //   cursor in BUFFER-LOCAL frames — GuiPlayback::cursor() reports the domain
 //   position, the bind's domain offset (domain_begin) subtracted — against
 //   the one the tick before saw: the event iff the sorted list holds a
@@ -1436,8 +1438,7 @@ void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
 
     // THE LIMITER LAMP.
     bool limiter_event = false;
-    if (playback.is_playing() && app.active_audio_view == 'T' &&
-        !app.bound_limiter_frames.empty()) {
+    if (playback.is_playing() && !app.bound_limiter_frames.empty()) {
         const int64_t now = playback.cursor() - playback.domain_begin();
         const int64_t prev = app.limiter_lamp_prev_frame;
         if (prev >= 0 && now > prev) {

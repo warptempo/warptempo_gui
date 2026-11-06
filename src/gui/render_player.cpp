@@ -2,6 +2,7 @@
 
 #include "failure.h"                // GuiFailure (the decode refusal's shape)
 #include "folder_overlay.h"
+#include "render_cache.h"           // read_fingerprint_sidecar (the item's limiter line)
 #include "text_editor.h"            // next_session_id (the one modal counter)
 #include "wav_io.h"                 // wav_probe, checked_audio_sample_count,
                                     // wav_read_full — called, never changed
@@ -747,9 +748,28 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     rp.frames = frames;
     playback.rebind_buffer(GuiBoundAudio::float32(
         rp.buffer.data(), rp.frames, audio.sample_rate(), 0));
-    // The bind has left the target buffer: the limiter lamp's snapshot goes
-    // (AppState::bound_limiter_frames; the player plays files, no sidecar).
+    // THE ITEM'S OWN LIMITER LIST (architect 2026-11-05, reopening the
+    // player's lamp): the bind has left the target buffer, so the lamp's
+    // snapshot (AppState::bound_limiter_frames) is retaken from the item's
+    // .fingerprint — its limiter line, read on the stat pair's identity
+    // alone (read_fingerprint_sidecar: the player has no recipe to compare),
+    // the item's wav frames being the list's domain and this bind's
+    // domain_begin 0, so the frames are buffer-local as the tick wants them.
+    // A record missing, malformed or of an earlier layout leaves the list
+    // empty — the lamp dark for this item — with one stderr line; the item
+    // is never re-rendered in place.
     app.bound_limiter_frames.clear();
+    {
+        FingerprintSidecarRecord record;
+        if (read_fingerprint_sidecar(path.string(), record)) {
+            app.bound_limiter_frames = std::move(record.limiter_frames);
+        } else {
+            std::fprintf(stderr,
+                "warptempo_gui: Render player: no limiter list for '%s' "
+                "(no .fingerprint of the current layout beside it)\n",
+                path.string().c_str());
+        }
+    }
 
     // THE SEAT BELOW IS GATED ON THIS, read before the item is overwritten
     // (the fence above touches no field of the item): the band follows the

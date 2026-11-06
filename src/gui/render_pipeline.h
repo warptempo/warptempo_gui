@@ -142,8 +142,12 @@ struct RenderRequest {
     // *output_buffer's frames, sorted ascending, empty when the limiter
     // engaged nowhere. do_render always feeds the engine its own local
     // vector, so the engine's required field is satisfied whatever this
-    // pointer is. The same list goes into the render cache beside the blob
-    // (RenderCache::insert_limiter_frames) so a later cache hit replays it.
+    // pointer is. The same list goes into the render cache's pair with the
+    // blob (RenderCache::insert_master_floats' limiter_frames, the sidecar's
+    // limiter line) so a later cache hit replays it, and on the disk route
+    // into the deliverable's own .fingerprint (write_fingerprint_sidecar,
+    // THE SIDECAR'S SIX LINES at render_cache.h) so the archival rung and
+    // the render player read it back.
     std::vector<int64_t>* limiter_engaged_frames = nullptr;
 
     // Batch render output. When `batch_folder` is non-empty, do_render

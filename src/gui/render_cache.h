@@ -127,25 +127,63 @@ bool read_wav_to_float(const std::string& path,
 // archival wav as a canonical cache blob without decoding it.
 bool read_file_bytes(const std::string& path, std::vector<char>& out);
 
-// Stats wav_path and writes its identity plus the hex-encoded fingerprint
-// blob to the sidecar via a .tmp staging write and atomic rename. Failure is
-// logged by the caller and non-fatal.
+// THE SIDECAR'S SIX LINES (layout 2, architect 2026-11-05: the limiter's
+// list rides the fingerprint, no file of its own): the magic; `sidecar_layout=2`;
+// `size=` and `mtime=`, the wav's own stat identity; `fingerprint=` the
+// hex-encoded recipe key; and LAST `limiter=<f1> <f2> ...` — THE SPECTRAL
+// LIMITER'S ENGAGED FRAMES in the wav's own frame domain (do_render's trim
+// post crop applied), decimal, single spaces, strictly ascending, the text
+// after the `=` EMPTY when the limiter engaged nowhere. The list is the
+// orange lamp's data (render.h's THE TWO LAMPS): the target view's reuse
+// rungs and the render player's item bind read it back from here, so a wav
+// whose record is missing or of an earlier layout lights nothing until it is
+// rendered again. The frames are the only thing a person has no reason to
+// read ("purely for the GUI to display it"): no time column.
+//
+// Stats wav_path and writes its identity, the hex-encoded fingerprint and
+// the limiter line to the sidecar via a .tmp staging write and atomic
+// rename. Failure is logged by the caller and non-fatal.
 bool write_fingerprint_sidecar(const std::string& wav_path,
-                               const std::vector<uint8_t>& fingerprint);
+                               const std::vector<uint8_t>& fingerprint,
+                               const std::vector<int64_t>& limiter_frames);
 
-// True only when the sidecar exists, parses exactly (magic, version, all
-// three fields, no extras), the wav's current stat identity equals the
-// recorded one, and the recorded hex decodes to a byte-exact match of
-// fingerprint. Any anomaly whatsoever is false — the caller re-renders.
-// On a match, a non-null `out_identity` receives the wav's full stat
-// identity from the SAME stat the validation used (never a second stat):
-// the validation-time capture a reuse consumer compares against a re-stat
-// AFTER its read/copy completes, so audio from a different publication than
-// the validated sidecar is discarded as a miss (the TOCTOU bind at
-// ArtifactStatIdentity above).
+// What one parse of a sidecar hands back: the recorded recipe key, the
+// limiter's list and the wav's full stat identity from the SAME stat the
+// validation used (never a second stat) — the validation-time capture a
+// reuse consumer compares against a re-stat AFTER its read/copy completes,
+// so audio from a different publication than the validated sidecar is
+// discarded as a miss (the TOCTOU bind at ArtifactStatIdentity above).
+struct FingerprintSidecarRecord {
+    std::vector<uint8_t> fingerprint;
+    std::vector<int64_t> limiter_frames;
+    ArtifactStatIdentity identity;
+};
+
+// THE ONE PARSE (architect 2026-11-05): true only when the sidecar exists,
+// parses exactly (the magic, the current layout, exactly six lines, no
+// extras), the wav's current stat identity equals the recorded one, the
+// recorded hex decodes, and the limiter line is well formed (non-negative
+// int64 frames, single-space separated, strictly ascending, or empty). Any
+// anomaly whatsoever is false with `out` untouched — a layout-1 record, a
+// malformed line and a missing file alike. The record's fingerprint is NOT
+// compared to anything here: the render player's item bind, which has no
+// recipe of its own, reads the list on the stat pair's identity alone;
+// every reuse rung goes through fingerprint_sidecar_matches below.
+bool read_fingerprint_sidecar(const std::string& wav_path,
+                              FingerprintSidecarRecord& out);
+
+// THE REUSE VERDICT: read_fingerprint_sidecar above plus the byte-exact
+// compare of the recorded key against `fingerprint`. Any anomaly is false
+// with every out untouched — the caller re-renders. On a match a non-null
+// `out_identity` receives the record's stat identity (the TOCTOU capture)
+// and a non-null `out_limiter_frames` the record's limiter list, the reuse
+// consumer's lamp data (GuiTargetRender's archival rung, the cache's own
+// disk pair through RenderCache::read_file and publish_wav).
 bool fingerprint_sidecar_matches(const std::string& wav_path,
                                  const std::vector<uint8_t>& fingerprint,
-                                 ArtifactStatIdentity* out_identity = nullptr);
+                                 ArtifactStatIdentity* out_identity = nullptr,
+                                 std::vector<int64_t>* out_limiter_frames =
+                                     nullptr);
 
 // Single-tier disk store for rendered target-view and archival audio, keyed by
 // render_fingerprint. Entries are canonical deliverable wav bytes encoded
@@ -167,8 +205,7 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 //
 // Every public method is thread-safe; callers need no external locking. A
 // single mutex_ guards the disk index, the byte counter (disk_bytes_),
-// lru_seq_, the limiter-frames map (insert_limiter_frames) and the writer
-// thread handoff. Large file I/O (disk-tier
+// lru_seq_ and the writer thread handoff. Large file I/O (disk-tier
 // reads/copies, the disk writer's blob write) happens outside the lock: a disk
 // lookup copies the entry's filename out under the lock, reads the wav
 // unlocked, and re-takes the lock only for the LRU bump or a drop-on-failure.
@@ -202,29 +239,44 @@ public:
     // out_samples with interleaved float32 audio and bumping the entry's LRU
     // recency. A hit confirms the wav's .fingerprint sidecar, then reads the
     // interleaved float32 wav payload. Any miss or mismatch returns false and
-    // leaves out_samples untouched. A disk entry whose file pair is missing or
+    // leaves every out untouched. A disk entry whose file pair is missing or
     // fails validation is dropped from the index and reported as a miss.
+    // THE LIMITER'S LIST RIDES THE PAIR (architect 2026-11-05): on a hit a
+    // non-null out_limiter_frames receives the sidecar's limiter line — the
+    // list the render wrote beside its blob, replayed with the audio (the
+    // contract at FingerprintSidecarRecord).
     bool lookup(const std::vector<uint8_t>& fingerprint,
                 int channels, int sample_rate,
-                std::vector<float>& out_samples);
+                std::vector<float>& out_samples,
+                std::vector<int64_t>* out_limiter_frames = nullptr);
 
     // Confirmed-hit publish. Keys on the fingerprint alone: confirms the wav's
     // .fingerprint sidecar (which already binds sample rate), then byte-copies
     // the entry to staging_path. Unlike lookup it neither validates nor decodes
     // against a format — a byte copy needs no channels/sample_rate check — so it
     // is byte-identical to an engine publish by construction with no sample
-    // conversion.
+    // conversion. On a hit a non-null out_limiter_frames receives the entry's
+    // limiter list (as lookup's), which the publisher writes into the
+    // deliverable's own sidecar.
     bool publish_wav(const std::vector<uint8_t>& fingerprint,
-                     const std::string& staging_path);
+                     const std::string& staging_path,
+                     std::vector<int64_t>* out_limiter_frames = nullptr);
 
     // Insert a freshly rendered wav blob into the disk tier, evicting LRU
     // entries until within budget. Overwrites any existing entry with the same
     // hash. Empty/degenerate blobs are dropped. Disk write failures are
     // swallowed (the render already played from the live buffer; the cache
-    // simply will not hold it).
+    // simply will not hold it). limiter_frames is the spectral limiter's
+    // engaged-frames list in the blob's own frame domain (the trim's post
+    // crop applied), written into the pair's sidecar as its limiter line
+    // (THE SIDECAR'S SIX LINES, above) so a later hit replays it with the
+    // audio; the list travels in the writer job with the blob, so a job
+    // dropped on a cancel or an encode failure drops both — an entry never
+    // stands without its list, nor a list without its entry.
     void insert(const std::vector<uint8_t>& fingerprint,
                 const std::vector<char>& wav_blob,
-                int channels, int sample_rate, int64_t frame_count);
+                int channels, int sample_rate, int64_t frame_count,
+                const std::vector<int64_t>& limiter_frames);
 
     // Insert freshly rendered target-route samples. On the limited route they
     // are already on the PCM_24 deliverable lattice. The samples are copied
@@ -239,44 +291,22 @@ public:
     // in the writer job: the job is dropped silently when the token is set,
     // either once the previous writer has been joined (before the writer
     // thread launches) or at the writer thread's post-encode re-check
-    // (before anything becomes externally observable).
+    // (before anything becomes externally observable). limiter_frames as
+    // insert's: the list rides the job and lands in the pair's sidecar.
+    // THE LIST HAS ONE OWNER, THE PAIR (the coder's call, 2026-11-05, on
+    // the planner's recommendation): the in-memory map that once kept the
+    // list beside the index — inserted synchronously ahead of the blob's
+    // job, so an entry could stand without a blob and the same-hash
+    // overwrite needed a rule of its own — is retired; the sidecar's
+    // limiter line is the one record, on disk beside the blob, and the
+    // cache's hit reads it through the same parse every other reader uses.
     void insert_master_floats(const std::vector<uint8_t>& fingerprint,
                               const std::vector<float>& samples,
                               int channels, int sample_rate,
                               int64_t frame_count,
                               std::shared_ptr<const std::atomic<bool>>
-                                  cancel_token);
-
-    // THE LIMITER'S ENGAGED FRAMES, BESIDE THE ENTRY (architect 2026-11-05,
-    // the limiter lamp's data road): the spectral limiter's report of the
-    // render frames at which it engaged, already translated into the
-    // deliverable's own frame domain (the post crop applied), kept in an
-    // in-memory map keyed by the same fingerprint hash as the blob so a
-    // later cache hit replays the list with the audio. In-memory is
-    // equivalent in lifetime to the blob: the store is process-local (the
-    // disk directory goes at shutdown). do_render inserts it beside each
-    // of its two cache inserts — the target route's insert_master_floats and
-    // the disk route's insert — synchronously, the blob's own insert being a
-    // writer-thread job; an entry whose blob job is later dropped (a late
-    // cancel, an encode failure) therefore stands without a blob until the
-    // same hash is inserted again or shutdown — a few int64 per render,
-    // accepted and never evicted by the LRU, which walks disk entries. The
-    // entry is dropped with the blob's: LRU eviction, lookup's and
-    // publish_wav's drop-on-failure, and a same-hash overwrite by a
-    // DIFFERENT fingerprint (a same-fingerprint re-insert keeps the newer
-    // list, which the writer's later index overwrite must not erase).
-    // Thread-safe under mutex_ like every public method; a no-op when the
-    // store is disabled.
-    void insert_limiter_frames(const std::vector<uint8_t>& fingerprint,
-                               const std::vector<int64_t>& frames);
-
-    // The replay: on a hash match AND exact fingerprint compare, assigns the
-    // stored list to `out` whole and returns true; otherwise returns false
-    // with `out` untouched (the caller clears first — an archival-artifact
-    // load the cache never saw rendered in this process answers nothing, and
-    // the GUI's list stays empty: the lamp dark there).
-    bool lookup_limiter_frames(const std::vector<uint8_t>& fingerprint,
-                               std::vector<int64_t>& out);
+                                  cancel_token,
+                              const std::vector<int64_t>& limiter_frames);
 
 private:
     struct WriterJob;
@@ -286,36 +316,25 @@ private:
         uint64_t             size_bytes = 0;
         uint64_t             seq        = 0;
     };
-    struct LimiterFramesEntry {
-        std::vector<uint8_t> fingerprint;
-        std::vector<int64_t> frames;
-    };
 
     bool insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
-                     const std::vector<char>& blob, int64_t frame_count);
+                     const std::vector<char>& blob, int64_t frame_count,
+                     const std::vector<int64_t>& limiter_frames);
     void start_writer_job(WriterJob job);
     void evict_disk_until(uint64_t target_max);
     void sweep_orphans();
     bool read_file(const std::string& path,
                    const std::vector<uint8_t>& want_fp,
                    int channels, int sample_rate,
-                   std::vector<float>& out);
+                   std::vector<float>& out,
+                   std::vector<int64_t>* out_limiter_frames);
     bool write_file(const std::string& path,
                     const std::vector<uint8_t>& fp,
                     const std::vector<char>& blob, int64_t frame_count,
+                    const std::vector<int64_t>& limiter_frames,
                     uint64_t& out_bytes);
     void join_writer();
     void remove_disk_pair(const std::string& wav_path);
-    // The frames entry goes with its blob's index entry (the contract at
-    // insert_limiter_frames). Both take mutex_ held by the caller:
-    // forget_limiter_frames at the unconditional drops (LRU eviction, the
-    // drop-on-failure sites), forget_limiter_frames_unless at the two
-    // same-hash overwrites, where the entry for a DIFFERENT fingerprint goes
-    // and the entry for the fingerprint being written — inserted
-    // synchronously ahead of the writer-thread job — stays.
-    void forget_limiter_frames(uint64_t h);
-    void forget_limiter_frames_unless(uint64_t h,
-                                      const std::vector<uint8_t>& keep_fp);
 
     static constexpr uint64_t kDiskBudgetBytes = 10ull * (1ull << 30); // 10 GiB
 
@@ -328,5 +347,4 @@ private:
     std::thread                             writer_;
     std::unordered_map<uint64_t, DiskEntry> disk_index_;
     uint64_t                                disk_bytes_ = 0;
-    std::unordered_map<uint64_t, LimiterFramesEntry> limiter_frames_;
 };

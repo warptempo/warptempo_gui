@@ -519,20 +519,21 @@ void GuiTargetRender::dispatch_render_now() {
     // the in-memory source samples with no source-changed refusal.
     last_fingerprint_ = compute_live_render_fingerprint(app, audio);
 
+    // The limiter's engaged frames replay with the audio on both reuse
+    // rungs below (the contract at AppState::target_limiter_frames): the
+    // list is cleared first and filled from the validated pair's own
+    // sidecar line, so a hit binds exactly the list written beside the
+    // bytes it reads, never a stale one.
+    app.target_limiter_frames.clear();
     if (render_cache.lookup(last_fingerprint_, audio.channels(),
-                            audio.sample_rate(), app.target_buffer)) {
-        // Hit: target_buffer now holds the cached audio. Mirror
-        // on_render_done()'s Success tail with no async render; in_flight_
-        // stays false since no worker round trip is pending. Live state IS the
-        // request state on this synchronous rung, so the dispatch's own verdict
-        // is exact here.
-        // The limiter's engaged frames replay with the audio (the contract
-        // at AppState::target_limiter_frames): cleared first, so a blob
-        // whose list is gone — a same-hash collision's overwrite — binds an
-        // empty list, never a stale one.
-        app.target_limiter_frames.clear();
-        render_cache.lookup_limiter_frames(last_fingerprint_,
-                                           app.target_limiter_frames);
+                            audio.sample_rate(), app.target_buffer,
+                            &app.target_limiter_frames)) {
+        // Hit: target_buffer now holds the cached audio and
+        // target_limiter_frames its entry's list. Mirror on_render_done()'s
+        // Success tail with no async render; in_flight_ stays false since
+        // no worker round trip is pending. Live state IS the request state
+        // on this synchronous rung, so the dispatch's own verdict is exact
+        // here.
         dispatched_buffer_start_frame_ = verdict.start_frame;
         // Reuse skips do_render, whose trim-plan block owns the fallback
         // line on fresh dispatches — so the ruled one-line-per-resolve
@@ -564,13 +565,15 @@ void GuiTargetRender::dispatch_render_now() {
     // renders quantize in place before cache publication and the codec
     // roundtrip is exact.
     ArtifactStatIdentity candidate_identity{};
+    std::vector<int64_t> candidate_limiter_frames;
     const std::string artifact_candidate =
         compose_render_output_path(
             render_output_directory(app.source_audio_path),
             render_output_stem(app.engine_settings))
             .string();
     if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_,
-                                    &candidate_identity) &&
+                                    &candidate_identity,
+                                    &candidate_limiter_frames) &&
         read_wav_to_float(artifact_candidate, audio.channels(),
                           audio.sample_rate(), app.target_buffer)) {
         // Identity bind (TOCTOU): re-stat AFTER the read completes and
@@ -584,14 +587,11 @@ void GuiTargetRender::dispatch_render_now() {
             post_read == candidate_identity) {
             // Live state IS the request state on this synchronous rung,
             // so the dispatch's own verdict is exact here.
-            // The engaged frames: the cache answers only when this process
-            // rendered the same recipe (the blob may be gone or still
-            // encoding while its list stands); an artifact the cache never
-            // saw rendered leaves the list EMPTY — the lamp dark (the
-            // contract at AppState::target_limiter_frames).
-            app.target_limiter_frames.clear();
-            render_cache.lookup_limiter_frames(last_fingerprint_,
-                                               app.target_limiter_frames);
+            // The engaged frames are the artifact's own: its sidecar's
+            // limiter line, parsed by the matches call above (layout 2,
+            // architect 2026-11-05) — taken only now that the identity bind
+            // has proven the read bytes are the validated record's.
+            app.target_limiter_frames = std::move(candidate_limiter_frames);
             dispatched_buffer_start_frame_ = verdict.start_frame;
             // Reuse skips do_render's trim-plan block; print the fallback
             // signal here — same rationale as the cache rung above (this

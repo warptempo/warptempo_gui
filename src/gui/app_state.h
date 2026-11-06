@@ -6543,16 +6543,21 @@ struct AppState {
     // target_limiter_frames taken at the moment playback is bound to the
     // target buffer — GuiTargetRender::complete_successful_buffer's rebind
     // (the fresh render's and both reuse rungs', which reach that rebind)
-    // and ensure_ready's clean rebind of the same buffer — and CLEARED
-    // wherever the bind leaves the target buffer or the buffer goes:
-    // rebind_to_source (the T→S leg), the render player's item bind and its
-    // close's source bind (render_player.cpp), the score viewer's
-    // soundtrack bind and its close's source bind (score_viewer.cpp), and
+    // and ensure_ready's clean rebind of the same buffer — OR THE RENDER
+    // PLAYER'S ITEM BIND FILLS IT FROM THE ITEM'S OWN RECORD (architect
+    // 2026-11-05, reopening the player's lamp: the item's .fingerprint
+    // limiter line, read_fingerprint_sidecar on the stat pair alone, the
+    // item's wav frames being the list's domain and the bind's domain_begin
+    // 0; a record missing, malformed or of an earlier layout leaves it
+    // empty with one stderr line) — and CLEARED wherever the bind leaves
+    // both: rebind_to_source (the T→S leg), the player's close's source
+    // bind (render_player.cpp), the score viewer's soundtrack bind and its
+    // close's source bind (score_viewer.cpp; the score stays dark), and
     // every road that empties target_buffer (the superseded, cancelled and
     // failed completions). Sorted ascending, buffer-local frames, like its
-    // source. Empty means "no target bind or nothing engaged": the lamp
-    // stays dark either way, which is why the tick needs no second
-    // "bound to target" predicate beside it.
+    // sources. Empty means "nothing bound that carries a list, or nothing
+    // engaged": the lamp stays dark either way, which is why the tick's one
+    // predicate is this vector's non-emptiness — no view term beside it.
     std::vector<int64_t> bound_limiter_frames;
 
     // THE AS-PAINTED RECORDS OF THE ROWS ABOVE THE VIEWPORT'S LANES AND OF THE
@@ -8103,11 +8108,13 @@ struct AppState {
     // nowhere. WRITTEN ONLY BY GuiTargetRender, and REPLACED WHOLE on every
     // road that fills target_buffer: the fresh render's worker, through
     // RenderRequest::limiter_engaged_frames (the pipeline assigns it beside
-    // the buffer at its last gate); the two reuse rungs, through
-    // RenderCache::lookup_limiter_frames (a cache hit replays the list the
-    // render left beside its blob; an archival-artifact load the cache never
-    // saw rendered answers nothing and the list is EMPTY — the lamp dark
-    // there); and cleared wherever target_buffer is cleared. ITS ONE READER
+    // the buffer at its last gate); the two reuse rungs, from the validated
+    // pair's own .fingerprint limiter line (layout 2, architect 2026-11-05:
+    // RenderCache::lookup's out on a cache hit, fingerprint_sidecar_matches'
+    // out on the archival rung — the record beside the bytes answers, this
+    // process having rendered them or not; a deliverable whose record is of
+    // an earlier layout is a miss there and re-renders); and cleared
+    // wherever target_buffer is cleared. ITS ONE READER
     // IS THE BIND (2026-11-05, the limiter lamp): the roads that bind
     // playback to target_buffer copy it into bound_limiter_frames (above,
     // main-thread state), and the tick's lamp test runs over that copy
