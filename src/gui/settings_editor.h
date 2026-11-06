@@ -325,10 +325,11 @@ static_assert(settings_page_piece_keys_pinned());
 // folders under `noise/`, the crossfade's 30 whole seconds, the grow's
 // 9 quarters and the themes' slugs. A LIST IS A SEQUENCE OF GROUPS
 // (value_list_groups below; 2026-11-05): `theme`'s two, BUILTIN (Live's
-// stock seven) and EXTRA (the dropped-in packs), each under an inert Group
-// row like the settings page's own DEVICE / PIECE; every other key one
-// headless group. The typed line still names every one of
-// them, its arms and completers unchanged (the list is a second door).
+// stock seven files and the generator's variants of them, immaterial_gold
+// since 2026-11-05: eight rows) and EXTRA (the dropped-in packs), each
+// under an inert Group row like the settings page's own DEVICE / PIECE;
+// every other key one headless group. The typed line still names every one
+// of them, its arms and completers unchanged (the list is a second door).
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
 // are no short domain, so its row opens the line editor; nor are the
 // keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its

@@ -46,9 +46,11 @@
 //                            SLUG of one row of the generated theme table
 //                            (kGuiThemes, theme_tables.h, written by
 //                            tools/themes/ask_to_tables.py from Live's .ask
-//                            files — the stock seven under BUILTIN,
-//                            `default` Live's "Default Dark Neutral Medium"
-//                            and the only Default variant listed, and the
+//                            files — the stock seven under BUILTIN with
+//                            the tool's VARIANTS of them (immaterial_gold,
+//                            2026-11-05: eight rows), `default` Live's
+//                            "Default Dark Neutral Medium" and the only
+//                            Default variant listed, and the
 //                            extras he drops in under EXTRA, Sonic Bloom's
 //                            today), exactly as the table spells it; any
 //                            other word the launch's hard fail

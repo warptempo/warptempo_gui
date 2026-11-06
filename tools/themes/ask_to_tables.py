@@ -21,7 +21,11 @@ the table it wrote and the credit lines THIRD_PARTY.md carries.
 THE WALK. The folder's top-level `*.ask` files are BUILTIN, of which exactly
 the seven of BUILTIN_FILES below are taken (by file name; Default's other
 eleven variants — Light, Cool, Warm, High — are skipped silently: Default is
-"Default Dark Neutral Medium" alone, architect 2026-11-05). Every `*.ask` under
+"Default Dark Neutral Medium" alone, architect 2026-11-05). Each entry of
+VARIANTS below adds one more BUILTIN row from a taken file's roles, one role
+read in place of another (immaterial_gold: Immaterial.ask with its own
+SearchIndication as the accent, architect 2026-11-05), so seven files give
+eight builtin rows. Every `*.ask` under
 a SUBFOLDER is EXTRA, walked recursively, `__MACOSX` directories and `._*`
 files (the zips' resource forks) skipped; the first path component under the
 ask folder names the author through AUTHORS below, the credit's one source —
@@ -30,7 +34,8 @@ lowercased, every run of non-[a-z0-9] one `_`, leading and trailing `_`
 stripped ("Twenty-Four Carat" -> `twenty_four_carat`, "SB Red Greys" ->
 `sb_red_greys`); the Default file's slug is `default`. A duplicate slug fails
 the run. THE ORDER is the value list's: BUILTIN with `default` first then the
-six by slug, then EXTRA by slug. The display name is the slug — the value list
+other files' rows and the variants together by slug (immaterial_gold right
+after immaterial), then EXTRA by slug. The display name is the slug — the value list
 shows the config's own spelling, as every other list does (settings_editor.h's
 head, the unitless rule).
 
@@ -55,6 +60,11 @@ header's head. Our Default tone = Live's role, the planner having verified
                                     tooltip border)
     inactive cue           5D5D5D = BackgroundClip
     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
+                                    (a VARIANT row reads the role its VARIANTS
+                                    entry names instead: immaterial_gold
+                                    Immaterial's SearchIndication ECCA6D, every
+                                    other tone Immaterial's, the lit press fill
+                                    re-derived from it by the ratio)
     playhead head          03C3D5 = RangeDefault
     selection fill         637E86 = StandbySelectionBackground
     list press fill        B0DDEB = SelectionBackground (the press arc,
@@ -151,6 +161,24 @@ BUILTIN_FILES = {
 }
 BUILTIN_AUTHOR = ('Ableton AG', 'https://www.ableton.com')
 
+# THE VARIANTS, the one owner of what a variant is: slug -> (the BUILTIN_FILES
+# stem it reads, {role replaced: the role read in its place}). A variant is a
+# BUILTIN row of its own, credited to its source file, through the one
+# derivation with the named role substituted; its source stem must be a taken
+# builtin and both roles read (ROLES), or the run fails naming it.
+# immaterial_gold (architect 2026-11-05, session 56, his pick m1 of tmp/s56's
+# accent mocks on a real Immaterial capture): Immaterial without the pink
+# FF91C3 accent — its lit fill and cue read the same file's SearchIndication
+# (ECCA6D, the muted gold) for ViewCheckControlEnabledOn, so the accent sits
+# on the ground "in the same way the ableton ask's are tuned", and the lit
+# press fill follows by the ratio. A SEPARATE THEME, not an override of
+# `immaterial` (which stays byte-identical): "lowest overhead, most honest,
+# and least churn if reversed"; a per-theme override and a hand-picked hex
+# are not the road (closed_questions.md).
+VARIANTS = {
+    'immaterial_gold': ('Immaterial', {'ViewCheckControlEnabledOn': 'SearchIndication'}),
+}
+
 # THE EXTRAS' AUTHORS: the first path component under the ask folder -> the
 # credit (name, url) THIRD_PARTY.md carries. The one table; an author folder
 # not here fails the run.
@@ -162,7 +190,9 @@ AUTHORS = {
 # every stock and Sonic Bloom file (checked over all 45, 2026-11-05; the
 # press arc's two, SelectionBackground and SelectionForeground, over the same
 # files the same day; the lamp arc's three, ScaleAwareness, RangeEditField
-# and ChosenPreListen, the same night).
+# and ChosenPreListen, the same night; SearchIndication, immaterial_gold's
+# accent (VARIANTS), over all 42 files — the 18 stock, the 24 Sonic Bloom —
+# 2026-11-06).
 ROLES = [
     'SurfaceArea', 'Desktop', 'SurfaceBackground', 'ControlContrastFrame',
     'ControlForeground', 'TextDisabled', 'BackgroundClip',
@@ -170,6 +200,7 @@ ROLES = [
     'SelectionBackground', 'SelectionForeground',
     'Alert', 'WaveformColor', 'DetailViewBackground', 'DetailGridTiles',
     'ScaleAwareness', 'RangeEditField', 'ChosenPreListen',
+    'SearchIndication',
 ]
 
 # THE ONE NESTED ROLE (the lamp arc, 2026-11-05): the clip lamp's red is the
@@ -387,6 +418,7 @@ def walk(ask_dir):
         fail('not a folder: ' + ask_dir)
     builtin = []
     extra = []
+    source_roles = {}
     for entry in sorted(os.listdir(ask_dir)):
         path = os.path.join(ask_dir, entry)
         if os.path.isfile(path) and entry.endswith('.ask'):
@@ -394,7 +426,9 @@ def walk(ask_dir):
             if stem not in BUILTIN_FILES:
                 continue
             slug = BUILTIN_FILES[stem] or slugify(stem)
-            builtin.append((slug, 'Builtin', BUILTIN_AUTHOR, entry, derive(read_roles(path))))
+            roles = read_roles(path)
+            source_roles[stem] = roles
+            builtin.append((slug, 'Builtin', BUILTIN_AUTHOR, entry, derive(roles)))
         elif os.path.isdir(path):
             if entry not in AUTHORS:
                 fail('unknown author folder %s (add it to AUTHORS)' % path)
@@ -412,6 +446,19 @@ def walk(ask_dir):
         want = slug or slugify(stem)
         if want not in taken:
             fail('builtin file missing: %s.ask' % stem)
+    for slug, (stem, swaps) in VARIANTS.items():
+        if stem not in BUILTIN_FILES:
+            fail('variant %s: source %s is not a builtin file' % (slug, stem))
+        roles = dict(source_roles[stem])
+        notes = []
+        for replaced, replacement in swaps.items():
+            for r in (replaced, replacement):
+                if r not in ROLES:
+                    fail('variant %s: role %s is not read (add it to ROLES)' % (slug, r))
+            roles[replaced] = roles[replacement]
+            notes.append('%s as %s' % (replacement, replaced))
+        fname = '%s.ask (variant: %s)' % (stem, ', '.join(notes))
+        builtin.append((slug, 'Builtin', BUILTIN_AUTHOR, fname, derive(roles)))
     builtin.sort(key=lambda r: (r[0] != 'default', r[0]))
     extra.sort(key=lambda r: r[0])
     seen = {}
@@ -521,9 +568,13 @@ def emit(rows):
 
 
 def credits(rows):
-    """The credit lines THIRD_PARTY.md's "The themes" section carries."""
+    """The credit lines THIRD_PARTY.md's "The themes" section carries: each
+    file once — a variant adds no file (VARIANTS), THIRD_PARTY.md's prose
+    names it."""
     by_author = {}
     for slug, group, author, fname, _ in rows:
+        if slug in VARIANTS:
+            continue
         by_author.setdefault(author, []).append(fname[:-4])
     out = []
     for author, names in by_author.items():

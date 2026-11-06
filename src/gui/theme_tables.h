@@ -32,6 +32,11 @@
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
 //     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
+//                                     (a VARIANT row reads the role its VARIANTS
+//                                     entry names instead: immaterial_gold
+//                                     Immaterial's SearchIndication ECCA6D, every
+//                                     other tone Immaterial's, the lit press fill
+//                                     re-derived from it by the ratio)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
 //     list press fill        B0DDEB = SelectionBackground (the press arc,
@@ -370,6 +375,48 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x2B2D34, // grid
          0x14161A, // center
          0xFF91C3, // cue
+         0x0C0D10, // cue_outline
+         0x5C6069, // inactive_cue
+         0x47E2F4, // playhead_head
+         0xA6F1FA, // playhead_line
+         0xFFFFFF, // scanner
+     }},
+    {"immaterial_gold", GuiThemeGroup::Builtin, "Ableton AG",   // Immaterial.ask (variant: SearchIndication as ViewCheckControlEnabledOn)
+     {
+         0x1D1F23, // ground
+         0xCBCBCD, // text
+         0x7D8088, // text_dim
+         0x0C0D10, // text_on_lit
+         0x5C5E66, // key_dim_ink
+         0x2F3138, // key_face
+         0xECCA6D, // lit_fill
+         0xAE9550, // lit_press_fill
+         0xB595FC, // door_lit_fill
+         0x856EBA, // door_lit_press_fill
+         0x22242A, // key_press_face
+         0x7D8088, // well_frame
+         0x2F3138, // ruler_face
+         0x707176, // ruler_tick
+         0x22242A, // lane_face
+         0x22242A, // trim_bar_face
+         0x6F7075, // trim_span_face
+         0x6A7C82, // selection_fill
+         0x0C0D10, // selection_text
+         0xBBDBE3, // list_press_fill
+         0x040506, // list_press_text
+         0x2F3138, // pane_face
+         0x14161A, // score_pane_face
+         0xE76942, // card_face
+         0x22242A, // card_ink
+         0xFF0A0A, // clip_lamp
+         0x008493, // level_audio_fill
+         0x3C6AB6, // level_noise_fill
+         0x33353C, // waveform_canvas
+         0x14161A, // waveform_ink
+         0x191B1F, // waveform_core
+         0x2B2D34, // grid
+         0x14161A, // center
+         0xECCA6D, // cue
          0x0C0D10, // cue_outline
          0x5C6069, // inactive_cue
          0x47E2F4, // playhead_head
