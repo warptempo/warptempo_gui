@@ -6894,7 +6894,9 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // first `=` (a key carries none). On the row of a key with a value list
 // (settings_key_has_value_list — `true_colors`, `theme`,
 // `waveform_grow`, `noise`, `noise_crossfade_s`; the two levels' lists left
-// 2026-11-05 for the band's sliders, their rows the line editor's) THAT
+// 2026-11-05 with the decimal grammar and their rows that night under the
+// main-page rule (kSettingsEditorKeys), the band's cases their one editing
+// surface) THAT
 // KEY'S VALUE LIST IS SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
 // sub-page whose commit and Cancel return to this page

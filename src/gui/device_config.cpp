@@ -83,9 +83,9 @@ namespace {
 // permanent keys and not with the tuning keys at the end.
 //
 // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night): `audio_level`
-// FOLLOWS `waveform_grow` and stands immediately BEFORE the noise's three —
-// "audio out versus noise", the two voices' levels read together on the
-// Settings page, audio out first; a permanent key.
+// FOLLOWS `waveform_grow` and stands immediately BEFORE the noise's FOUR —
+// "audio out versus noise", the two voices' levels side by side on the
+// band's two cases (AUDIO, then NOISE), audio out first; a permanent key.
 //
 // THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05
 // night): `noise`, `noise_level`, `noise_attenuation_level` and
