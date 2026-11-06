@@ -285,7 +285,7 @@ static bool launch_frame_on_painted_window(const AppState& a,
     const ItemViewportBasis b = item_viewport_basis(a, audio);
     if (b.spp <= 0.0 || b.area_w <= 0) return true;
     return displayed_frame_on_screen(static_cast<double>(frame), b.vp_start,
-                                     b.spp, b.area_w);
+                                     b.spp, b.lattice_origin, b.area_w);
 }
 
 // WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR (architect 2026-08-30;

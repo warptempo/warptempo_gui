@@ -241,17 +241,17 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 int painted_column_of_source_frame_on_basis(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    double vp_start, double spp) {
+    double vp_start, double spp, int64_t lattice_origin) {
     if (spp <= 0.0) return 0;
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     // The painters' exact shape (frame_to_paint_sample in render.cpp):
     // nearbyint the source frame; in the TargetLive domain forward-map and
-    // nearbyint the map output; then std::nearbyint the fractional column.
+    // nearbyint the map output; then place it on the basis's lattice.
     double ms = std::nearbyint(source_frame);
     if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
         ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
     }
-    return displayed_column_at(ms, vp_start, spp);
+    return displayed_column_at(ms, vp_start, spp, lattice_origin);
 }
 
 bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
@@ -264,7 +264,10 @@ bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
     const int col = painted_column_of_source_frame_on_basis(
         app, audio, static_cast<double>(source_frame),
         displayed_or_live_target_map(app, audio),
-        static_cast<double>(max_viewport_start_grid(app, audio)), q);
+        static_cast<double>(max_viewport_start_grid(app, audio)), q,
+        // The right wall rests on the frame-0 lattice (the rule at the
+        // declaration): its origin is 0.
+        /*lattice_origin=*/0);
     return col >= area.w;
 }
 

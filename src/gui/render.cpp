@@ -744,7 +744,7 @@ void canvas_line_rect(GuiCanvasSink& sink, const GuiRect& area, int col,
 
 void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
-                     double  playhead_pixel_x,
+                     int     col,
                      GuiColor color) {
     if (area.w <= 0 || area.h <= 0) return;
     // Allow partial render at file start / end: a playhead whose column has
@@ -755,16 +755,18 @@ void render_playhead(GuiCanvasSink& sink,
     // (cue_triangle_half_w_px / cue_triangle_reach_right_px, render.h) — the
     // cull is stated in the same columns the damage box takes
     // (playhead_invalidate_rect, main.cpp).
-    if (playhead_pixel_x <
-        -static_cast<double>(cue_triangle_reach_right_px()))
-        return;
-    if (playhead_pixel_x >
-        static_cast<double>(area.w - 1 + cue_triangle_half_w_px()))
-        return;
+    if (col < -cue_triangle_reach_right_px()) return;
+    if (col > area.w - 1 + cue_triangle_half_w_px()) return;
 
     // THE COLUMN IS THE NEAREST LATTICE POINT WHILE THE PLATE'S BAR IN IT IS A
     // CELL, AND THE HALF-COLUMN BIAS THAT LEAVES IS ACCEPTED (architect
-    // 2026-09-02, a coarse-zoom cost).
+    // 2026-09-02, a coarse-zoom cost). THE NEAREST LATTICE POINT IS CHOSEN ON
+    // THE LATTICE'S OWN INDEX (architect 2026-11-06, session 68): `col` is
+    // the caller's playhead_pixel_x / scanner_pixel_x, displayed_column_at's
+    // K − m on the plate basis — the same column the ruler's head stands on
+    // and the damage box is built on (playhead_invalidate_rect) — so a tie
+    // breaks in the lattice's coordinates and the line translates rigidly
+    // with the plate's global cells under a pan.
     // The playhead — and the marker stems, endcaps and flags, which all reach
     // their column through the same nearbyint rule (frame_to_paint_sample at
     // the head of this file) — paints AT a lattice point, while the bar drawn
@@ -783,7 +785,6 @@ void render_playhead(GuiCanvasSink& sink,
     // deepest-zoom floor holding q >= 20 (0.475 px; kDeepestZoomMinFramesPerPx,
     // app_state.h). Reading the bar as [g(c) − spp/2, g(c) + spp/2) is the
     // alternative that was declined.
-    const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
     // The waveform_line_px()-wide line (render.h), on its column straddling
     // the frame (waveform_line_cols), paints whenever its column is onscreen (gated on its own column and
@@ -828,7 +829,7 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
 
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
-                                  int wave_w) {
+                                  long long lattice_origin, int wave_w) {
     TrimBoundColumn out;
     out.ms = displayed_ms;
     // The unrounded verdict: a bound in [vp_start, vp_end) is in view.
@@ -843,7 +844,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
     // header block above): displayed_column_at, warp_frame_map_view.h.
     out.col = displayed_column_at(displayed_ms,
                                   static_cast<double>(vp_start),
-                                  samples_per_pixel);
+                                  samples_per_pixel, lattice_origin);
     // THE EOF-WALL CLAMP, an IN-VIEW bound's alone (render.h): its rounding
     // can reach grid point wave_w, and the clamp keeps its button whole. An
     // offscreen bound keeps its own column, so its button stands where the
@@ -913,6 +914,7 @@ void render_trim_flags(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
+                       long long viewport_lattice_origin,
                        const TrimRange& trim,
                        TrimBarHit* out_hit) {
     // COLD FIRST, so every early return below publishes "nothing grabbable"
@@ -929,10 +931,10 @@ void render_trim_flags(cairo_t* cr,
     // unconditionally.
     const TrimBoundColumn bc = trim_bound_column(
         static_cast<double>(trim.begin), viewport_start_sample,
-        viewport_end_sample, waveform_area.w);
+        viewport_end_sample, viewport_lattice_origin, waveform_area.w);
     const TrimBoundColumn ec = trim_bound_column(
         static_cast<double>(trim.end), viewport_start_sample,
-        viewport_end_sample, waveform_area.w);
+        viewport_end_sample, viewport_lattice_origin, waveform_area.w);
 
     // THE BAR'S COLUMNS ARE THE WELL'S (THE EDGE RULE, 2026-11-01 night):
     // waveform_area's x and its effective width, which are the well's
@@ -1072,6 +1074,7 @@ void iterate_visible_flags_impl(
     const MarkerVec& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
+    long long viewport_lattice_origin,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
     // The LEFT cull's width bound in pixels — how far left of the viewport a box
@@ -1140,7 +1143,8 @@ void iterate_visible_flags_impl(
         if (ms >= cull_hi) continue;   // prefilter — see the cull note above
 
         const int col = displayed_column_at(
-            ms, static_cast<double>(viewport_start_sample), samples_per_pixel);
+            ms, static_cast<double>(viewport_start_sample), samples_per_pixel,
+            viewport_lattice_origin);
         // The cull — the note above: the triangle's first column is
         // col - reach.
         if (col - reach >= waveform_width) continue;
@@ -1716,6 +1720,7 @@ void render_flag_boxes_impl(
     const MarkerVec& markers,
     long long viewport_start_sample,
     long long viewport_end_sample,
+    long long viewport_lattice_origin,
     int sample_rate,
     const std::set<int>& selected_set,
     const std::set<int>& red_set,
@@ -1766,6 +1771,7 @@ void render_flag_boxes_impl(
 
     iterate_visible_flags_impl(lanes.columns_x, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
+                               viewport_lattice_origin,
                                warp_frame_map, drag_overlay,
                                // `iteration_on` widens the bound by the two
                                // cells; the reasoning is at the bound.
@@ -1868,6 +1874,7 @@ void render_flags(cairo_t* cr,
                   const std::vector<GuiWarpMarker>& markers,
                   long long viewport_start_sample,
                   long long viewport_end_sample,
+                  long long viewport_lattice_origin,
                   int sample_rate,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
@@ -1879,7 +1886,8 @@ void render_flags(cairo_t* cr,
                   SuppressedBox suppressed) {
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, markers,
-        viewport_start_sample, viewport_end_sample, sample_rate,
+        viewport_start_sample, viewport_end_sample,
+        viewport_lattice_origin, sample_rate,
         selected_set, red_set,
         // THE PAINTED COMPOSER (flag_display_text, render.h): the tempo's
         // base and its whole chain, the scale capped to `*N.NN`, and the
@@ -1903,6 +1911,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
                             long long viewport_start_sample,
                             long long viewport_end_sample,
+                            long long viewport_lattice_origin,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
@@ -1915,7 +1924,8 @@ void render_phase_reset_flags(cairo_t* cr,
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width,
         phase_resets,
-        viewport_start_sample, viewport_end_sample, sample_rate,
+        viewport_start_sample, viewport_end_sample,
+        viewport_lattice_origin, sample_rate,
         selected_set, red_set,
         // A phase reset authors no payload, so its flag carries the display-only
         // token (render.h owns it and what it reads). It reaches the pass
@@ -1954,6 +1964,7 @@ void render_history_diff_flags(
         const std::vector<HistoryDiffFlag>& flags,
         long long viewport_start_sample,
         long long viewport_end_sample,
+        long long viewport_lattice_origin,
         int focus_index,
         const std::set<int>& selected,
         std::vector<FlagHitRect>* out_hit_rects,
@@ -2023,7 +2034,8 @@ void render_history_diff_flags(
                displayed_column_at(
                    frame_to_paint_sample(static_cast<double>(frame),
                                          warp_frame_map),
-                   static_cast<double>(viewport_start_sample), spp);
+                   static_cast<double>(viewport_start_sample), spp,
+                   viewport_lattice_origin);
     };
     double widest_pair_px = 0.0;
     if (spp > 0.0) {
@@ -2046,6 +2058,7 @@ void render_history_diff_flags(
     iterate_visible_flags_impl(
         lanes.columns_x, waveform_width, flags,
         viewport_start_sample, viewport_end_sample,
+        viewport_lattice_origin,
         warp_frame_map,
         // NO DRAG OVERLAY: the mode consumes every authoring gesture, so no
         // marker drag can be in flight while this pass runs — and a diff flag is
@@ -2488,7 +2501,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
         app, audio, static_cast<double>(marker_frame),
-        map, basis.vp_start, basis.spp);
+        map, basis.vp_start, basis.spp, basis.lattice_origin);
     const GuiRect area = waveform_area(app);
     // THE WAVEFORM'S COLUMNS ARE THIS BOX'S CLIP (architect 2026-09-26, the
     // flag pass's own rule — clip_to_waveform_columns): the width is the one

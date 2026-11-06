@@ -9138,24 +9138,27 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // marker nudge's shape).
     paint_handler.flush_owed_waveform_rebuild();
     const int64_t cursor_before = app.playhead_cursor_sample;
-    double painted_vp_start = 0.0;
-    double painted_spp      = 0.0;
+    double  painted_vp_start = 0.0;
+    double  painted_spp      = 0.0;
+    int64_t painted_origin   = 0;
     if (paint_handler.wf_cache.fp_area_w > 0) {
         const GuiPaintHandler::PlateViewportBasis plate =
             paint_handler.plate_viewport_basis();
         painted_vp_start = plate.vp_start;
         painted_spp      = plate.spp;
+        painted_origin   = plate.lattice_origin;
     } else {
         const ItemViewportBasis basis = item_viewport_basis(app, audio);
         painted_vp_start = basis.vp_start;
         painted_spp      = basis.spp;
+        painted_origin   = basis.lattice_origin;
     }
     viewport.move_playhead_by_arrow_step(step);
     if (camera == NudgeCamera::HoldColumn && painted_spp > 0.0 &&
         app.playhead_cursor_sample != cursor_before)
         viewport.hold_subject_column_after_nudge(displayed_column_at(
             static_cast<double>(cursor_before), painted_vp_start,
-            painted_spp));
+            painted_spp, painted_origin));
     app.camera_hold = hold_before;
 }
 

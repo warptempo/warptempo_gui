@@ -3484,8 +3484,10 @@ struct GuiPlateColumns {
 
 // Draws a waveform_line_px()-wide vertical LINE down the CANVAS's whole
 // height (row 6's canvas paragraph; the stereo divider's row crossed,
-// architect 2026-11-02, waveform_divider's rule), at the column nearest `playhead_pixel_x` (offset
-// from area.x), on it, [col − t / 2, col − t / 2 + t) (the line rule: the
+// architect 2026-11-02, waveform_divider's rule), at the painted column `col`
+// (offset from area.x; playhead_pixel_x / scanner_pixel_x's, the nearest
+// lattice point on the plate basis's own lattice index, app_state.h), on
+// it, [col − t / 2, col − t / 2 + t) (the line rule: the
 // even line straddles the frame), in `color`,
 // SOLID — the scanner (Cool Edit's playback cursor a solid line, measured
 // 2026-10-09) and the resting cursor alike (architect 2026-11-04, Live's
@@ -3523,7 +3525,7 @@ struct GuiPlateColumns {
 // below.
 void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
-                     double  playhead_pixel_x,
+                     int     col,
                      GuiColor color);
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
@@ -3568,8 +3570,10 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 //
 // PURE: all basis inputs are parameters — the collapse unifies the FORMULA. The
 // live trim pass (GuiPaintHandler::paint_trim) calls with the DISPLAYED basis
-// from item_viewport_basis (vp_start_frame/vp_end_frame/area_w — the promoted
-// mirror of the committed fp_vp span + effective width) and `displayed_ms`
+// from item_viewport_basis (vp_start_frame/vp_end_frame/lattice_origin/area_w
+// — the promoted mirror of the committed fp_vp span, its lattice + effective
+// width; the column displayed_column_at's, on that lattice's own index) and
+// `displayed_ms`
 // mapped through displayed_or_live_target_map by displayed_trim_ms (the
 // event-synchronized hit-geometry doctrine), and the hit sites read that
 // pass's publication, so paint and hit are one geometry by construction.
@@ -3608,7 +3612,7 @@ struct TrimBoundColumn {
 };
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
-                                  int wave_w);
+                                  long long lattice_origin, int wave_w);
 
 // The BETWEEN-THE-ENDS column interval [lo, hi) (waveform-relative,
 // half-open, EMPTY when hi <= lo), the ONE owner of the bridge, run by the
@@ -3742,6 +3746,7 @@ void render_trim_flags(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
+                       long long viewport_lattice_origin,
                        const TrimRange& trim,
                        TrimBarHit* out_hit);
 
@@ -3912,6 +3917,7 @@ void render_flags(cairo_t* cr,
                   const std::vector<GuiWarpMarker>& markers,
                   long long viewport_start_sample,
                   long long viewport_end_sample,
+                  long long viewport_lattice_origin,
                   int sample_rate,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
@@ -4110,6 +4116,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
                             long long viewport_start_sample,
                             long long viewport_end_sample,
+                            long long viewport_lattice_origin,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
@@ -4326,6 +4333,7 @@ void render_history_diff_flags(cairo_t* cr,
                                const std::vector<HistoryDiffFlag>& flags,
                                long long viewport_start_sample,
                                long long viewport_end_sample,
+                               long long viewport_lattice_origin,
                                int focus_index,
                                const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,

@@ -774,7 +774,8 @@ struct Viewport {
     // check (GuiPaintHandler::settle_owed_lane_damage) — follows.
     void owe_clock_check();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given
-    // COLUMNS' rects. The columns must be resolved on the PLATE basis — the
+    // PAINTED COLUMNS' rects (playhead_invalidate_rect; scanner_pixel_x's
+    // columns, the ones the line paints at). The columns must be resolved on the PLATE basis — the
     // playheads' pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule, and the table of which sites take this
     // narrow shape versus a full-area widening, live at playhead_pixel_x in
@@ -785,7 +786,7 @@ struct Viewport {
     // branch was the third until it moved onto land_playhead_on_marker and took
     // that owner's full-area shape with it. Every other playhead write is
     // discrete and widens; do not add a narrow caller for one.
-    void invalidate_playhead_columns(double old_px, double new_px);
+    void invalidate_playhead_columns(int old_px, int new_px);
     // (There is no stem-column invalidator any more, and since row 5 no
     // selection-driven stem damage either. invalidate_stem_column computed the
     // old singleton stem's narrow damage on the ITEM basis while the stem

@@ -131,7 +131,7 @@ int64_t stepped_anchor_frame(
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int cf = painted_column_of_source_frame_on_basis(
         app, audio, static_cast<double>(orig_frame), map,
-        basis.vp_start, basis.spp);
+        basis.vp_start, basis.spp, basis.lattice_origin);
     return authored_frame_at_column_on_basis(
         app, audio, cf + step_columns, map, basis.vp_start_frame, basis.spp,
         basis.lattice_origin);
@@ -264,7 +264,8 @@ void finish_position_nudge(
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int prior_subject_column = painted_column_of_source_frame_on_basis(
         app, audio, static_cast<double>(prior_focused_frame),
-        displayed_or_live_target_map(app, audio), basis.vp_start, basis.spp);
+        displayed_or_live_target_map(app, audio), basis.vp_start, basis.spp,
+        basis.lattice_origin);
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
     // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — at every zoom

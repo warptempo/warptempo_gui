@@ -1108,7 +1108,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                             displayed_column_at(
                                 static_cast<double>(cursor_before_restore),
                                 painted_before_restore.vp_start,
-                                painted_before_restore.spp));
+                                painted_before_restore.spp,
+                                painted_before_restore.lattice_origin));
                     app.camera_hold = true;
                 } else {
                     // THE HOLD IS DARK, OR THE RESTORE CROSSED A VIEW: the

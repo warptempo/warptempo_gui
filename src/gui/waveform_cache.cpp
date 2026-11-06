@@ -1378,7 +1378,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         render_history_diff_flags(
             ccr, local_top_strip, flag_lanes, wave_w,
             app.history_mode.flags,
-            vp_start, vp_end,
+            vp_start, vp_end, lattice_origin,
             history_focus,
             app.history_mode.selection,
             &app.staged_flag_hit_rects,
@@ -1396,7 +1396,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         render_phase_reset_flags(
             ccr, local_top_strip, flag_lanes, wave_w,
             app.phaseresetmarkers.markers(),
-            vp_start, vp_end, sr,
+            vp_start, vp_end, lattice_origin, sr,
             app.selected_markers,
             pr_red,
             // The mode's verdict FOR THIS COLUMN, which paints its two BOUND
@@ -1418,7 +1418,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         // it — is that editor's to paint, not this pass's.)
         render_flags(ccr, local_top_strip, flag_lanes, wave_w,
                      app.warpmarkers.markers(),
-                     vp_start, vp_end, sr,
+                     vp_start, vp_end, lattice_origin, sr,
                      app.selected_markers,
                      warp_red,
                      iter_on,

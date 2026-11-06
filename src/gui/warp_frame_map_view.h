@@ -353,11 +353,28 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
         painter_quantized_spp(spp) * static_cast<double>(w)));
 }
 
+// THE VIEWPORT'S OWN LATTICE INDEX m: the grid index of a lattice-snapped
+// viewport start on its lattice of origin `origin` at painter step q (q > 0),
+// m = nearbyint((vp_start − origin) / q), as a whole-valued double. THE ONE
+// RECOVERY, shared by both directions of the lattice: the column->frame
+// landing below (displayed_grid_position_at_column, g(m + col)) and the
+// frame->column placement (displayed_column_at, K − m), so the column a
+// frame paints in and the frame a column lands on are indexed from the same
+// m. Exact for a start the chokepoint settled (the start lies on its own
+// lattice; the mantissa argument is at the landing below). The int64 walk
+// that cannot take a double (playhead_pixel_step_landing, viewport.cpp)
+// casts this same answer.
+inline double viewport_lattice_index(double vp_start, double q,
+                                     int64_t origin) {
+    return std::nearbyint((vp_start - static_cast<double>(origin)) / q);
+}
+
 // THE ONE COLUMN->FRAME LANDING for a lattice-snapped viewport: the exact
 // DISPLAY-DOMAIN grid position at pixel column `col` on the viewport's own
 // lattice, of origin `origin` (AppState::viewport_lattice_origin, carried by
 // the caller's basis). Recover the viewport's column index
-// m = nearbyint((viewport_start − origin)/q), round ONCE, and return the
+// m = nearbyint((viewport_start − origin)/q) (viewport_lattice_index above,
+// the recovery the frame->column placement shares), round ONCE, and return the
 // lattice point itself, origin + nearbyint((m+col)*q), as a whole-frame
 // double. A marker commit funnels this through snap_authored_frame; the
 // playhead landings llrint/nearbyint it; those roundings pass the whole
@@ -409,43 +426,76 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
 inline double displayed_grid_position_at_column(int64_t viewport_start,
                                                 int64_t col, double q,
                                                 int64_t origin) {
-    const double m = std::nearbyint(
-        static_cast<double>(viewport_start - origin) / q);
+    const double m = viewport_lattice_index(
+        static_cast<double>(viewport_start), q, origin);
     return static_cast<double>(origin) +
            std::nearbyint((m + static_cast<double>(col)) * q);
 }
 
-// THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain:
-// nearbyint((displayed - vp_start) / spp), rounded once to the integer column.
+// THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain,
+// ON THE LATTICE'S OWN INDEX (architect 2026-11-06, session 68): the value's
+// nearest lattice index K = nearbyint((displayed − origin) / spp) less the
+// viewport's own m = viewport_lattice_index(vp_start, spp, origin) — the
+// column K − m, the integer column of the point of the caller's lattice
+// nearest the value (ties half to even IN THE LATTICE'S COORDINATES).
+//
+// WHY THE GLOBAL INDEX: the plate's cells are the lattice's, global — column
+// c spans [g(m + c), g(m + c + 1)), render_waveform_columns' edge_at — so a
+// pan at a fixed q and origin translates the plate by whole columns, every
+// cell keeping its content. The viewport-local quotient that stood here,
+// nearbyint((displayed − vp_start) / spp), decided a tie (a point on a
+// half-column: every odd point of the q = 23 lattice seen at q = 46, an
+// ordinary fine-authored marker one level coarser) half to even in the
+// SCREEN's coordinates, which an odd m flips, and at a fractional q it read
+// the rounded start's residue against any near-half point; so the mark
+// picked the left or the right boundary of the same global cell by m's
+// parity and beat 0, −2, 0 px against a plate moving −1 px a step (Astra's
+// s68 review, the architect's localization question). K is a function of
+// the value, q and the origin alone, so under a pan the mark translates
+// rigidly with the plate. At a whole q the answer is the local quotient's
+// column except on a tie when m is odd; at a fractional q
+// it differs only for a point within the start's rounding residue (at most
+// 0.5 / q column) of a half-column. m is the column->frame landing's
+// own recovery (displayed_grid_position_at_column), so a frame's column and
+// a column's frame index the same lattice.
+//
 // One owner for the one rounding — the trim-bound column, the
-// phase-reset overlay's left edge, the strip-drag anchor stem, the undo
+// phase-reset overlay's edges, the strip-drag anchor stem, the undo
 // restore's held column (the singleton under the hold, undo.cpp; the
 // restore's visibility test is displayed_frame_on_screen, inside
 // land_subject), the flag iterator (iterate_visible_flags_impl,
 // render.cpp, whose right cull is this column minus the flag's left border
-// >= w) and
+// >= w), the playheads' and the scanner's painted column (playhead_pixel_x /
+// scanner_pixel_x, main.cpp — the line, the ruler's head, their damage and
+// RESTRICT's stop), the ruler's majors (RulerComb::major_col,
+// paint_handler.cpp, the step's time in frames) and
 // painted_column_of_source_frame_on_basis's tail
 // all place through this exact expression, and used to spell it independently,
 // tied together only by "matching"-style prose. PURE ARITHMETIC,
-// NO BASIS CHOICE INSIDE: the caller supplies its own vp_start/spp (plate
-// basis, item basis, or live values — the two-epochs split at
-// plate_viewport_basis / item_viewport_basis is the caller's to name, at the
-// call site, where the provenance comment belongs).
+// NO BASIS CHOICE INSIDE: the caller supplies its own vp_start/spp AND THE
+// LATTICE ORIGIN OF THE SAME BASIS (plate basis, item basis, or live values —
+// the two-epochs split at plate_viewport_basis / item_viewport_basis is the
+// caller's to name, at the call site, where the provenance comment belongs;
+// the live origin AppState::viewport_lattice_origin, the plate's
+// fp_lattice_origin, the item basis's lattice_origin, a landing's 0).
 //
-// THE UNROUNDED SIBLINGS ARE A DIFFERENT CONCEPT AND STAY SEPARATE:
-// playhead_pixel_x / scanner_pixel_x (main.cpp) and the strip drag's fractional
-// anchor_col want the SUB-PIXEL position, not a column.
+// THE UNROUNDED SIBLING IS A DIFFERENT CONCEPT AND STAYS SEPARATE: the strip
+// drag's fractional anchor_col wants the SUB-PIXEL position, not a column.
 //
 // THE ONE INT64 SIBLING IS ALSO EXEMPT AND COUNTED (2026-08-22):
-// playhead_pixel_step_landing (viewport.cpp) spells this same recovery expression
-// inline in the INT64 domain — its column walk composes with
+// playhead_pixel_step_landing (viewport.cpp) spells this same K − m inline in
+// the INT64 domain — its column walk composes with
 // displayed_grid_position_at_column's int64 col and cannot take this owner's
-// int return — and is recorded at its own site ("the recovery nearbyint is
-// the column direction and is this walk's own"). It is the exempt list's
-// whole int64 class; a second int64 spelling would be the fork this owner
-// exists to prevent.
-inline int displayed_column_at(double displayed, double vp_start, double spp) {
-    return static_cast<int>(std::nearbyint((displayed - vp_start) / spp));
+// int return — m cast from viewport_lattice_index, and is recorded at its own
+// site ("the recovery nearbyint is the column direction and is this walk's
+// own"). It is the exempt list's whole int64 class; a second int64 spelling
+// would be the fork this owner exists to prevent.
+inline int displayed_column_at(double displayed, double vp_start, double spp,
+                               int64_t origin) {
+    const double m = viewport_lattice_index(vp_start, spp, origin);
+    const double k = std::nearbyint(
+        (displayed - static_cast<double>(origin)) / spp);
+    return static_cast<int>(k - m);
 }
 
 // IS A DISPLAYED FRAME ON SCREEN, AS PAINTED — THE CAMERAS' ONE VISIBILITY
@@ -458,13 +508,14 @@ inline int displayed_column_at(double displayed, double vp_start, double spp) {
 // on screen and the second off. PURE ARITHMETIC, the basis the caller's: the
 // three cameras that ask it — Viewport::reseat_playhead_to's keep-visible
 // edge-align, follow_scroll_if_needed and land_subject — pass the live
-// viewport and the live grid step q (painter_samples_per_pixel), the grid
-// their own writes land on. `spp` > 0 and `w` > 0 are the caller's. A
+// viewport, its lattice origin (AppState::viewport_lattice_origin) and the
+// live grid step q (painter_samples_per_pixel), the grid their own writes
+// land on. `spp` > 0 and `w` > 0 are the caller's. A
 // camera's decision, not a guard: it refuses nothing, and every write it
 // chooses still passes clamp_viewport_start.
 inline bool displayed_frame_on_screen(double displayed, double vp_start,
-                                      double spp, int w) {
-    const int col = displayed_column_at(displayed, vp_start, spp);
+                                      double spp, int64_t origin, int w) {
+    const int col = displayed_column_at(displayed, vp_start, spp, origin);
     return col >= 0 && col < w;
 }
 
@@ -472,8 +523,8 @@ inline bool displayed_frame_on_screen(double displayed, double vp_start,
 // waveform's [0, w-1], the column render_strip_anchor_stem draws. Its one
 // reader is the stem painter (paint_strip_drag_anchor, on the PLATE basis).
 inline int strip_anchor_stem_column(double displayed, double vp_start,
-                                    double spp, int w) {
-    int col = displayed_column_at(displayed, vp_start, spp);
+                                    double spp, int64_t origin, int w) {
+    int col = displayed_column_at(displayed, vp_start, spp, origin);
     if (col >= w) col = w - 1;
     if (col < 0)  col = 0;
     return col;
@@ -527,10 +578,11 @@ inline int strip_anchor_stem_column(double displayed, double vp_start,
 // caller's basis, computed with the painters' own math (the marker-stem
 // overlay paint_marker_stems): nearbyint the frame; in the TargetLive domain
 // forward-map it through `warp_frame_map` and nearbyint the map output; then
-// divide by the basis's samples-per-pixel (`spp` — the painted span over the
-// strip width, which is the sixteenth-frame q exactly, the painters' own)
-// from its viewport start (`vp_start`) and round with the painters'
-// std::nearbyint through displayed_column_at. `warp_frame_map` is the map the
+// place it on the basis's lattice through displayed_column_at — its nearest
+// lattice index at the basis's samples-per-pixel (`spp` — the painted span
+// over the strip width, which is the sixteenth-frame q exactly, the
+// painters' own) and lattice origin (`lattice_origin`) less its viewport
+// start's (`vp_start`) own index. `warp_frame_map` is the map the
 // item is painted through — the DISPLAYED map at every caller. Ignored in the
 // Source domain; an empty map in a mapped domain falls back to identity,
 // exactly like paint. The flag EDITOR's unrolled box passes the ITEM basis
@@ -545,7 +597,7 @@ inline int strip_anchor_stem_column(double displayed, double vp_start,
 int painted_column_of_source_frame_on_basis(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    double vp_start, double spp);
+    double vp_start, double spp, int64_t lattice_origin);
 
 // WOULD A MARKER AT `source_frame` PAINT PAST THE LAST COLUMN AT THIS ZOOM —
 // the one owner of the off-edge authoring refusal (architect 2026-09-26,

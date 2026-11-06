@@ -993,7 +993,7 @@ void GuiInputHandler::commit_trim_drag() {
                 if (field == orig) return;  // untouched: bit-exact, no snap
                 const int c = painted_column_of_source_frame_on_basis(
                     app, audio, static_cast<double>(field), map,
-                    basis.vp_start, basis.spp);
+                    basis.vp_start, basis.spp, basis.lattice_origin);
                 field = trim_bound_frame_at_column(app, audio, c);
             };
             // THE COINCIDENCE IS JUDGED BEFORE THE SNAP (architect-ruled

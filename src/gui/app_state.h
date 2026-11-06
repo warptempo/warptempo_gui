@@ -12180,17 +12180,25 @@ ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
 // term.
 bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
                               double new_zoom_level, int64_t new_start);
-// Returns the pixel column (offset from waveform_area.x) for the cursor.
-// ONE FORM ONLY, and it takes the viewport AND its samples-per-pixel
-// EXPLICITLY: there is no live-viewport convenience overload any more (both
+// Returns the PAINTED pixel column (offset from waveform_area.x) for the
+// cursor: displayed_column_at (warp_frame_map_view.h) of the resting cursor's
+// frame — THE NEAREST LATTICE POINT ON THE BASIS'S OWN LATTICE INDEX
+// (architect 2026-11-06, session 68), so the line, the ruler's head, their
+// damage and every column test over them is one column and the mark
+// translates rigidly with the plate under a pan; -1 (no column of the
+// waveform's) on a degenerate spp.
+// ONE FORM ONLY, and it takes the viewport, its samples-per-pixel AND ITS
+// LATTICE ORIGIN EXPLICITLY: there is no live-viewport convenience overload any more (both
 // playhead_pixel_x's and scanner_pixel_x's were deleted 2026-07-30 caller-less,
 // the last users having moved to the plate basis under the damage rule below —
 // do not reintroduce one, since the only basis these pixels have is the plate's).
 // Use it from on_redraw to align the cursor/scanner paint with the cached layers
 // (waveform, marker stems, flags) — those layers render against
 // wf_cache.fp_vp_start at the displayed spp (derivable as
-// (fp_vp_end - fp_vp_start) / fp_area_w), including the 1-2 paint frames while
-// the worker rebuilds against a viewport change. Threading BOTH parameters
+// (fp_vp_end - fp_vp_start) / fp_area_w) on fp_lattice_origin's lattice
+// (GuiPaintHandler::plate_viewport_basis carries all three), including the
+// 1-2 paint frames while
+// the worker rebuilds against a viewport change. Threading ALL THREE parameters
 // through keeps cursor/scanner and surrounding markers in lockstep during that
 // window; passing fp_vp_start alone but reading the live spp would mix frames of
 // reference and visibly displace the cursor for one frame after each zoom
@@ -12240,14 +12248,18 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 //    sites additionally CANNOT reach a paint handler (Viewport,
 //    GuiPlaybackLifecycle and the free land helper all see none), so for them
 //    the widening is the only honest shape as well as the affordable one.
-double  playhead_pixel_x(const AppState& a, int64_t vp_start, double spp);
-// Returns the pixel column (offset from waveform_area.x) for the scanner,
-// computed from the CONTINUOUS playhead_scanner_precise (not the integer
-// sample) so a viewport rescale slides it smoothly. Meaningful only while
+int     playhead_pixel_x(const AppState& a, int64_t vp_start, double spp,
+                         int64_t origin);
+// Returns the painted pixel column (offset from waveform_area.x) for the
+// scanner, quantized from the CONTINUOUS playhead_scanner_precise (not the
+// integer sample) so a viewport rescale slides it smoothly — continuous up to
+// this one quantization, the cursor's own (displayed_column_at on the basis's
+// lattice index). Meaningful only while
 // playhead_scanner_active — at rest playhead_scanner_precise is stale by
 // contract, so every caller reads this behind that gate. Explicit-basis only,
 // for the reason given on playhead_pixel_x above.
-double  scanner_pixel_x(const AppState& a, int64_t vp_start, double spp);
+int     scanner_pixel_x(const AppState& a, int64_t vp_start, double spp,
+                        int64_t origin);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the deformed total derived from the warp_frame_map cache
 // (the forward-translated source length). Used by every viewport helper that needs the
@@ -12532,7 +12544,7 @@ std::pair<long long, long long> compute_trim_samples(
 // declaration in viewport.h. A route touching the clock AND the state cell
 // spells both, the cell's owner covering the clock's rect as a superset.)
 GuiRect clock_invalidate_rect(const AppState& a);
-GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x);
+GuiRect playhead_invalidate_rect(const GuiRect& area, int col);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
 

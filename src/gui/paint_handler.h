@@ -796,8 +796,13 @@ struct GuiPaintHandler {
     // viewport (the rule and the per-site shape table live at playhead_pixel_x,
     // app_state.h). Read-only geometry, no state touched.
     struct PlateViewportBasis {
-        double vp_start = 0.0;
-        double spp      = 0.0;
+        double  vp_start = 0.0;
+        double  spp      = 0.0;
+        // THE LATTICE the plate's columns were cut on (wf_cache's
+        // fp_lattice_origin, published with fp_vp_start, cold 0 beside it):
+        // the frame->column placement's third term (displayed_column_at),
+        // so a mark on this basis indexes the plate's own cells.
+        int64_t lattice_origin = 0;
     };
     PlateViewportBasis plate_viewport_basis() const;
 

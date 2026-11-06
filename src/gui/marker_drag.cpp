@@ -36,7 +36,8 @@ int64_t committed_frame_for_proposal(
     const int64_t eof_wall = audio.total_frames() - 1;
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int c = painted_column_of_source_frame_on_basis(
-        app, audio, proposed, dmap, basis.vp_start, basis.spp);
+        app, audio, proposed, dmap, basis.vp_start, basis.spp,
+        basis.lattice_origin);
     int64_t t = authored_frame_at_column_on_basis(
         app, audio, c, dmap, basis.vp_start_frame, basis.spp,
         basis.lattice_origin);

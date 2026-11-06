@@ -3965,19 +3965,33 @@ int64_t ruler_step_ms(double ms_per_px) {
 // expression that places a major on the screen grid, the ruler's walk's
 // (paint_ruler_row; the canvas draws no vertical grid on them, render.h's
 // row-6 canvas paragraph, 2026-10-09). `vp_ms` and `ms_per_px` the basis in
-// milliseconds, `wave_w` the columns the walk spans; `valid` false on a
-// basis with no span.
+// milliseconds (the ladder's and the walk's bounds), `vp_start`, `spp`,
+// `origin` and `sr` the same basis in frames (the majors' placement),
+// `wave_w` the columns the walk spans; `valid` false on a basis with no span.
 struct RulerComb {
     bool    valid     = false;
     double  ms_per_px = 0.0;
     double  vp_ms     = 0.0;
+    double  vp_start  = 0.0;
+    double  spp       = 0.0;
+    int64_t origin    = 0;
+    int     sr        = 0;
     int64_t step      = 0;
     int     wave_w    = 0;
     // A step index's own rounded column, waveform-relative: the ONE place a
-    // tick position meets the screen grid (the walk's rigid-comb rule).
+    // tick position meets the screen grid (the walk's rigid-comb rule). THE
+    // MAJOR IS PLACED AS EVERY FRAME IS (architect 2026-11-06, session 68):
+    // its step time in the displayed domain's frames, k·step·sr / 1000, on
+    // the basis's lattice through displayed_column_at — the nearest lattice
+    // point on the lattice's own index — so under a pan the majors, and the
+    // minors distributed between them, translate with the plate's global
+    // cells and the marks over them. (The local millisecond quotient that
+    // stood here, nearbyint((t − vp_ms) / ms_per_px), broke a near-tie by
+    // the viewport's own parity and residue, as the frame owner's did.)
     int major_col(int64_t k) const {
-        const double t = static_cast<double>(k) * static_cast<double>(step);
-        return static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
+        const double t_ms = static_cast<double>(k) * static_cast<double>(step);
+        const double t_frames = t_ms * static_cast<double>(sr) / 1000.0;
+        return displayed_column_at(t_frames, vp_start, spp, origin);
     }
     // The walk's first step, whose major stands at or left of column 0.
     int64_t first_step() const {
@@ -3985,11 +3999,16 @@ struct RulerComb {
     }
     double end_ms() const { return vp_ms + ms_per_px * wave_w; }
 };
-RulerComb ruler_comb(double spp, double vp_start, int sr, int wave_w) {
+RulerComb ruler_comb(double spp, double vp_start, int64_t origin, int sr,
+                     int wave_w) {
     RulerComb c;
     if (spp <= 0.0 || sr <= 0 || wave_w <= 0) return c;
     c.ms_per_px = spp * 1000.0 / static_cast<double>(sr);
     c.vp_ms     = vp_start * 1000.0 / static_cast<double>(sr);
+    c.vp_start  = vp_start;
+    c.spp       = spp;
+    c.origin    = origin;
+    c.sr        = sr;
     if (c.ms_per_px <= 0.0) return c;
     c.step   = ruler_step_ms(c.ms_per_px);
     c.wave_w = wave_w;
@@ -4116,7 +4135,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // published yet, spp already live).
     const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
                                               : area.w;
-    const RulerComb comb = ruler_comb(basis.spp, basis.vp_start, sr, wave_w);
+    const RulerComb comb = ruler_comb(basis.spp, basis.vp_start,
+                                      basis.lattice_origin, sr, wave_w);
     if (!comb.valid) {
         publish_head(GuiRect{0, 0, 0, 0});
         cairo_restore(cr);
@@ -4177,7 +4197,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // on different frames. The comb breathes even though nothing about the time
     // grid moved.
     //
-    // THE FIX: each MAJOR keeps its own rounded position, and its EIGHT MINORS
+    // THE FIX: each MAJOR keeps its own rounded position (on the lattice's
+    // own index, RulerComb::major_col, so the majors themselves translate by
+    // whole columns with the plate, 2026-11-06), and its EIGHT MINORS
     // are placed at integer offsets DISTRIBUTED ACROSS THE SEGMENT'S INTEGER
     // WIDTH — offset(i) = nearbyint(i * seg_w / 8) from the major's rounded x,
     // where seg_w is the distance between two rounded majors. A distribution of
@@ -4345,9 +4367,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (End's landing at the whole-song zoom), and the head's left half at the
     // edge keeps that playhead on screen at its true point.
     {
-        const double cursor_px = playhead_pixel_x(
-            app, static_cast<int64_t>(basis.vp_start), basis.spp);
-        const int col   = static_cast<int>(std::nearbyint(cursor_px));
+        // The line's own painted column (playhead_pixel_x on the plate
+        // basis and its lattice origin), so the head stands on the column
+        // the line and the damage box are built on.
+        const int col   = playhead_pixel_x(
+            app, static_cast<int64_t>(basis.vp_start), basis.spp,
+            basis.lattice_origin);
         // The head's rows, the outlined chip's (render.h's cue_chip_rows).
         const int rows  = cue_chip_h_px();
         // The head's painted columns [col − left, col + right) (render.h's
@@ -4458,6 +4483,7 @@ GuiPaintHandler::plate_viewport_basis() const {
           static_cast<double>(wf_cache.fp_area_w)
         : painter_samples_per_pixel(app, audio, waveform_area(app));
     b.vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    b.lattice_origin = wf_cache.fp_lattice_origin;
     return b;
 }
 
@@ -4687,9 +4713,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // banker's-rounded to whole pixels — held the width rigid instead and so
     // moved the far edge by a pixel as the marker moved inside a cell or as the
     // view panned.)
-    const int left_col = displayed_column_at(ms, vp_start, spp);
+    const int left_col = displayed_column_at(ms, vp_start, spp,
+                                             basis.lattice_origin);
     const int right_col = displayed_column_at(
-        ms + static_cast<double>(width_samples), vp_start, spp);
+        ms + static_cast<double>(width_samples), vp_start, spp,
+        basis.lattice_origin);
 
     // Too-zoomed-out: if the extent rounds below one pixel — both edges landing
     // on the same column — paint nothing at all: no sliver, no clamped minimum.
@@ -4923,8 +4951,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "no dots on the
     // trim bar"; render.h's view-bar paragraph).
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
-                      basis.vp_start_frame, basis.vp_end_frame, trim,
-                      out_hit);
+                      basis.vp_start_frame, basis.vp_end_frame,
+                      basis.lattice_origin, trim, out_hit);
 }
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
@@ -5161,7 +5189,8 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
     // The stem's one column derivation (strip_anchor_stem_column over
     // displayed_column_at, warp_frame_map_view.h), on the PLATE basis.
     const int col = strip_anchor_stem_column(anchor_sample, basis.vp_start,
-                                             basis.spp, area.w);
+                                             basis.spp, basis.lattice_origin,
+                                             area.w);
     render_strip_anchor_stem(sink, area, col);
 }
 
@@ -5179,7 +5208,8 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     // the 1-2 paint frames while the worker rebuilds against a
     // viewport change. See declaration comment in app_state.h.
     const PlateViewportBasis basis = plate_viewport_basis();
-    const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
+    const int px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, basis.spp,
+                                      basis.lattice_origin);
     // THIS PASS IS THE CURSOR'S CANVAS LINE, nothing else: its HEAD is the
     // triangle in the ruler (paint_ruler_row); across the view bar
     // (architect 2026-10-09 ~14:30) and the marker lane the playhead draws
@@ -5232,8 +5262,9 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
     if (!app.playhead_scanner_active) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
-    const double scan_px =
-        scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
+    const int scan_px =
+        scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp,
+                        basis.lattice_origin);
     render_playhead(sink, area, scan_px, palette().scanner);
 }
 

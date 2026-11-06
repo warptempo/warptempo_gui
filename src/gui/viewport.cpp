@@ -241,13 +241,13 @@ void Viewport::owe_clock_check() {
         app.clock_painted[static_cast<std::size_t>(t)].owed = true;
 }
 
-void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
+void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
     const GuiRect area = waveform_area(app);
     const GuiRect r_old = playhead_invalidate_rect(area, old_px);
     const GuiRect r_new = playhead_invalidate_rect(area, new_px);
     // Union when close (common case: 1px nudges overlap) — one expose.
     if (rects_intersect(r_old, r_new) ||
-        std::abs(new_px - old_px) < 4.0) {
+        std::abs(new_px - old_px) < 4) {
         const GuiRect u = union_rect(r_old, r_new);
         if (u.w > 0 && u.h > 0) {
             gui.invalidate_region(u.x, u.y, u.w, u.h);
@@ -341,7 +341,8 @@ void Viewport::seat_playhead_on_drop(int64_t new_sample) {
     if (!held || app.camera_hold) return;
     if (painted.spp > 0.0 && app.playhead_cursor_sample != cursor_before)
         hold_subject_column_after_nudge(displayed_column_at(
-            static_cast<double>(cursor_before), painted.vp_start, painted.spp));
+            static_cast<double>(cursor_before), painted.vp_start, painted.spp,
+            painted.lattice_origin));
     app.camera_hold = true;
 }
 
@@ -365,8 +366,10 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
     const double  s = static_cast<double>(subject);
     const int64_t k_subject = static_cast<int64_t>(std::nearbyint(s / q));
     const auto column_at = [&](int64_t k) {
+        // A landing's page: the frame-0 lattice, origin 0.
         return displayed_column_at(
-            s, static_cast<double>(viewport_grid_point(k, q)), q);
+            s, static_cast<double>(viewport_grid_point(k, q)), q,
+            /*origin=*/0);
     };
     int64_t k = 0;
     if (past_right) {
@@ -452,7 +455,8 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
     ViewportLattice lattice = ViewportLattice::Keep;
     if (q > 0.0 &&
         !displayed_frame_on_screen(static_cast<double>(new_sample),
-                                   static_cast<double>(old_vp), q, area.w)) {
+                                   static_cast<double>(old_vp), q,
+                                   old_origin, area.w)) {
         // Off screen and at or right of the start is past the right edge
         // (a frame in the half-column left of the start paints at column 0).
         app.viewport_start_sample = edge_aligned_viewport_start(
@@ -611,17 +615,22 @@ int64_t playhead_pixel_step_landing(const AppState& app, const GuiAudio& audio,
     const GuiRect area = waveform_area(app);
     const double q = painter_samples_per_pixel(app, audio, area);
     if (q <= 0.0) return app.playhead_cursor_sample;
+    // The cursor's painted column on the live lattice's OWN INDEX, K − m
+    // (displayed_column_at's rule in int64, the exempt sibling recorded
+    // there): m the viewport's index (viewport_lattice_index, the recovery
+    // the landing below shares), K the cursor's nearest lattice index.
+    const int64_t origin = app.viewport_lattice_origin;
+    const int64_t m = static_cast<int64_t>(viewport_lattice_index(
+        static_cast<double>(app.viewport_start_sample), q, origin));
     const int64_t cur_col = static_cast<int64_t>(std::nearbyint(
-        static_cast<double>(app.playhead_cursor_sample - app.viewport_start_sample)
-        / q));
+        static_cast<double>(app.playhead_cursor_sample - origin) / q)) - m;
     const int64_t target_col = cur_col + static_cast<int64_t>(delta_px);
     // Pre-clamped into the live domain, the clamp move_playhead_to would apply
     // anyway — a landing must be a frame the cursor can occupy, which is what
     // makes the wall compare exact.
     return clamp_playhead_to_live_domain(
         static_cast<int64_t>(std::llrint(displayed_grid_position_at_column(
-            app.viewport_start_sample, target_col, q,
-            app.viewport_lattice_origin))),
+            app.viewport_start_sample, target_col, q, origin))),
         app, audio);
 }
 
@@ -638,7 +647,8 @@ int64_t playhead_arrow_step_landing(const AppState& app, const GuiAudio& audio,
 void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     if (audio.total_frames() <= 0) return;
     // Resolve the playhead's CURRENT painted column —
-    // nearbyint((cursor - viewport_start)/q), the painters' own placement — and
+    // nearbyint((cursor − origin)/q) − m, the painters' own placement on the
+    // lattice's own index (displayed_column_at's K − m) — and
     // land on the ADJACENT grid column's frame through the one column->frame
     // owner. So one keypress moves exactly one painted pixel even when q is
     // fractional (a sub-pixel sample step could leave the displayed column
@@ -1119,8 +1129,9 @@ void Viewport::invalidate_all() {
 // [0, w − 1], times q the painter-quantized spp (painter_samples_per_pixel),
 // that offset clamped into [0, floor((w − 1)·q)] — the painted column is
 // nearbyint(offset / q) (displayed_column_at, the playhead's and the stems'
-// placement), so offset 0 paints column 0 and the upper bound paints column
-// w − 1, never one past it. The new start is new subject − offset through
+// placement: on the landing's frame-0 lattice at the working zoom's whole q
+// its K − m is that quotient off a tie), so offset 0 paints column 0 and the
+// upper bound paints column w − 1, never one past it. The new start is new subject − offset through
 // clamp_viewport_start, whose grid snap absorbs the sub-sample residue of a
 // column-anchored step, and whose song-end clamp WINS at the song's two ends:
 // there the column cannot be held and the subject walks toward the wall
@@ -1241,7 +1252,8 @@ void Viewport::follow_scroll_if_needed() {
         : app.playhead_cursor_sample;
     if (!displayed_frame_on_screen(
             static_cast<double>(target),
-            static_cast<double>(app.viewport_start_sample), q, area.w)) {
+            static_cast<double>(app.viewport_start_sample), q,
+            app.viewport_lattice_origin, area.w)) {
         const int64_t old_vp = app.viewport_start_sample;
         const int64_t old_origin = app.viewport_lattice_origin;
         app.viewport_start_sample = paged_in_viewport_start(target, visible);
@@ -1400,8 +1412,10 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     // On screen AS PAINTED, both ends (displayed_frame_on_screen).
     const double vp = static_cast<double>(app.viewport_start_sample);
     const bool on_screen =
-        displayed_frame_on_screen(static_cast<double>(lo), vp, q, W) &&
-        displayed_frame_on_screen(static_cast<double>(hi), vp, q, W);
+        displayed_frame_on_screen(static_cast<double>(lo), vp, q,
+                                  app.viewport_lattice_origin, W) &&
+        displayed_frame_on_screen(static_cast<double>(hi), vp, q,
+                                  app.viewport_lattice_origin, W);
     // The working-zoom read, inline by ruling: the walk's one zoom term. AS
     // PAINTED, q against the working column, not the level against 2.0: a
     // rest a hair either side of level 2 (spp under a 1/32 frame from the

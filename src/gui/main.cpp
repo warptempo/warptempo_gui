@@ -1191,21 +1191,26 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio,
     }
 }
 
-double playhead_pixel_x(const AppState& a, int64_t vp_start, double spp) {
-    if (spp <= 0.0) return -1.0;
-    return static_cast<double>(a.playhead_cursor_sample - vp_start) / spp;
+int playhead_pixel_x(const AppState& a, int64_t vp_start, double spp,
+                     int64_t origin) {
+    if (spp <= 0.0) return -1;
+    return displayed_column_at(static_cast<double>(a.playhead_cursor_sample),
+                               static_cast<double>(vp_start), spp, origin);
 }
 
-double scanner_pixel_x(const AppState& a, int64_t vp_start, double spp) {
-    if (spp <= 0.0) return -1.0;
-    // Drive the scanner's pixel from the CONTINUOUS predictor position
+int scanner_pixel_x(const AppState& a, int64_t vp_start, double spp,
+                    int64_t origin) {
+    if (spp <= 0.0) return -1;
+    // Drive the scanner's column from the CONTINUOUS predictor position
     // (playhead_scanner_precise) rather than the quantized integer sample, so a
     // per-frame viewport rescale during a strip-drag zoom slides the scanner
-    // smoothly instead of jittering on integer-frame steps. The line still
-    // paints as a hard waveform_line_px()-wide rect on the rounded pixel,
-    // straddling its frame (render_playhead, waveform_line_cols); only its
-    // basis is continuous.
-    return (a.playhead_scanner_precise - static_cast<double>(vp_start)) / spp;
+    // smoothly instead of jittering on integer-frame steps. The position stays
+    // continuous until this one quantization, displayed_column_at's nearest
+    // lattice point on the basis's own lattice index; the line paints as a
+    // hard waveform_line_px()-wide rect on that column, straddling its frame
+    // (render_playhead, waveform_line_cols).
+    return displayed_column_at(a.playhead_scanner_precise,
+                               static_cast<double>(vp_start), spp, origin);
 }
 
 // Shrink-and-pad: produce a union rectangle covering both inputs. Used to
@@ -1244,11 +1249,16 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // it and the column itself on the tablet, the line straddling its frame,
 // inside the box's 14 columns left), so a move repaints every column the
 // head and the line stood on.
-// `px_x` is the waveform's own column (offset from area.x, as every
-// playhead pixel is), so the box is placed at area.x + col — the canvas
-// standing the column's margin in from the window's side since 2026-10-09.
-GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
-    const int col = area.x + static_cast<int>(std::nearbyint(px_x));
+// `col` is the waveform's own column (offset from area.x, as every
+// playhead pixel is) — THE PAINTED COLUMN, playhead_pixel_x /
+// scanner_pixel_x's on the plate basis, the same number render_playhead
+// draws the line at and the ruler's head stands on (the nearest lattice
+// point on the lattice's own index, displayed_column_at), so the damage is
+// built on the column the paint uses — and the box is placed at
+// area.x + col, the canvas standing the column's margin in from the window's
+// side since 2026-10-09.
+GuiRect playhead_invalidate_rect(const GuiRect& area, int px_col) {
+    const int col = area.x + px_col;
     const int x0 = std::max(area.x, col - cue_triangle_half_w_px());
     const int x1 = std::min(area.x + area.w,
                             col + cue_triangle_reach_right_px());
@@ -1900,7 +1910,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     auto invalidate_dialog_editor_box = [&]() { viewport.invalidate_dialog_editor_box(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
-    auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
+    auto invalidate_playhead_columns = [&](int a, int b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
 
     bool initial_load_done = false;
@@ -3090,8 +3100,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // the narrow-on-plate shape rather than widening.
             const GuiPaintHandler::PlateViewportBasis pb =
                 paint_handler.plate_viewport_basis();
-            const double px = scanner_pixel_x(
-                app, static_cast<int64_t>(pb.vp_start), pb.spp);
+            const int px = scanner_pixel_x(
+                app, static_cast<int64_t>(pb.vp_start), pb.spp,
+                pb.lattice_origin);
             invalidate_playhead_columns(px, px);
             // OFFSCREEN FALLBACK — the paint clock has to keep running
             // even when the scanner column contributes nothing.
@@ -3322,14 +3333,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // line is erased wholesale in the
         // mutating frame and this narrow pair only ever has to cover the ordinary
         // per-frame advance.
-        const double old_px = scanner_pixel_x(app, pb_vp, pb.spp);
+        const int old_px = scanner_pixel_x(app, pb_vp, pb.spp,
+                                           pb.lattice_origin);
         // Advance both fields: the integer sample (domain / change-detection)
         // and the continuous position the scanner pixel is drawn from. new_px
-        // and the invalidated span are therefore computed from the continuous
-        // pixel, matching what paint draws.
+        // and the invalidated span are therefore the column paint quantizes
+        // that continuous position to (scanner_pixel_x), matching what paint
+        // draws.
         app.playhead_scanner_sample = cur;
         app.playhead_scanner_precise = playback.cursor_precise();
-        const double new_px  = scanner_pixel_x(app, pb_vp, pb.spp);
+        const int new_px  = scanner_pixel_x(app, pb_vp, pb.spp,
+                                            pb.lattice_origin);
 
         // invalidate_region during pre-paint appends to damage_ without
         // scheduling a redundant frame callback (platform layer handles
@@ -3344,8 +3358,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // window's RIGHT EDGE: the edge itself, not follow's early margin
         // (kViewportEdgeMarginFraction). ON SCREEN IS AS PAINTED: the column
         // is displayed_column_at's one rounding of the continuous position
-        // the line is drawn from (scanner_pixel_x), on the PLATE basis it is
-        // drawn through, against the waveform area's width the line is
+        // the line is drawn from (scanner_pixel_x), on the PLATE basis and
+        // its lattice origin it is drawn through (the lattice's own index,
+        // the line's column), against the waveform area's width the line is
         // clipped to — so the play stops at the first frame whose line would
         // no longer show, the scanner then up to one frame's advance past the
         // edge. OFF SCREEN TO THE RIGHT ALONE: these plays never run the
@@ -3364,8 +3379,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             const int    w    = waveform_area(app).w;
             const double scan = app.playhead_scanner_precise;
             if (w > 0 &&
-                !displayed_frame_on_screen(scan, pb.vp_start, pb.spp, w) &&
-                displayed_column_at(scan, pb.vp_start, pb.spp) >= w) {
+                !displayed_frame_on_screen(scan, pb.vp_start, pb.spp,
+                                           pb.lattice_origin, w) &&
+                displayed_column_at(scan, pb.vp_start, pb.spp,
+                                    pb.lattice_origin) >= w) {
                 playback_lifecycle.stop_playback_if_playing();
                 return;
             }
