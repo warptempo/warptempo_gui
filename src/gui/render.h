@@ -2327,7 +2327,8 @@ inline int scrub_channel_above_px() {
 // ring's four sides (paint_phase_reset_overlay_ring), the nudged pairs'
 // rings (paint_marker_stem_runs), the canvas's GRID
 // AND CENTER LINES (render_canvas, render_center_lines: a t-thick line
-// centered on its row, canvas_hline) and THE STEREO DIVIDER (chrome
+// keeping its top row on its row, canvas_hline: the horizontal's deliberate
+// asymmetry, recorded there) and THE STEREO DIVIDER (chrome
 // standing on the canvas, waveform_divider) — and, off the canvas, THE
 // RULER'S TICKS (paint_ruler_row, the same line on the ruler's foot). THE
 // LINE RULE'S ONE STATEMENT (architect 2026-11-06, session 66 / 67, "I like
@@ -2439,7 +2440,12 @@ inline int waveform_line_first_col(int col, int t = waveform_line_px()) {
 // line at column 0 or w − 1 paints only its columns inside [0, area_w) and
 // nothing reaches the ground beside the canvas (at t = 2 a line on column 0
 // shows its right pixel alone, column 0; one on w − 1 shows both, w − 2 and
-// w − 1).
+// w − 1). THE RIGHT EDGE'S ASYMMETRY IS DELIBERATE (architect 2026-11-06,
+// session 67): a frame at column w, one past the area's last column (End at
+// the whole-song zoom), paints no line under the gate while a line on column
+// 0 shows its right pixel — "I don't go to the end of the file. There's no
+// purpose. A marker, either warp or phase reset there, does nothing. I would
+// say leave."; the gate stays.
 // The two edge rules' one statement: the line's painted columns, area-local
 // (its first column x0 and its width w), w 0 where the column gate refuses
 // it.

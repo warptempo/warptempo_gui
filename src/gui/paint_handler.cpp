@@ -4290,7 +4290,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // minor rises a quarter as far, and the next major stands a whole
             // step — at least eight minimum minor pitches — away.
             if (major) paint_major_label(col, step_ms);
-            // ONE W wide (`t`), centered on the tick's own column, clipped at
+            // ONE W wide (`t`), straddling its frame (columns col − 1 and col at t = 2,
+            // waveform_line_first_col), clipped at
             // both edges, in `ruler_tick`, standing on the ruler's foot.
             if (tick_on_lane) {
                 set_palette_source(cr, palette().ruler_tick);

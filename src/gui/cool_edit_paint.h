@@ -85,7 +85,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // not simply leave unscaled? That would preserve the stem/flag size
 // relation from CEP"; its own number since the stem became one W,
 // 2026-11-04: "untouched: the triangle's cell and the ruler's head"): the
-// staircase stands in whole device cells beside the stem, centered on it,
+// staircase stands in whole device cells beside the stem, centered on the frame's column
+// with its apex over the stem's right pixel,
 // the playhead's head with them (render.h's cue_triangle_unit_px, which
 // names every reader). THE ROW COUNT IS SCALED
 // (architect 2026-10-26 ~13:40, on the row count as a per-device number:
