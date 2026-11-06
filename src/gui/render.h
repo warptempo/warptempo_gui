@@ -280,7 +280,8 @@ struct TrimRange {
 // 2026-11-02), its key the face its state gives; a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (`text_dim` (Default's 757575), paint_folder_overlay,
-// 2026-10-28). Nothing else dims. (Windows' word emboss —
+// 2026-10-28); the STRUCK CLIP LAMP is its whole square in `key_dim_ink`
+// (the logo lane block's THE STRIKE, 2026-11-05 night). Nothing else dims. (Windows' word emboss —
 // DrawState DSS_DISABLED, the word in Hilight one Windows px right and down
 // under its Shadow copy, show_embossed_run, 2026-10-03 — retired with no
 // disabled word left, 2026-10-23.)
@@ -346,7 +347,7 @@ struct GuiPalette {
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor text_on_lit;     // anything printed on a lit face
-    GuiColor key_dim_ink;     // a disabled key's glyph and legend
+    GuiColor key_dim_ink;     // a disabled key's glyph and legend, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
     GuiColor key_face;        // the key at rest, the time fields, the two lamps at rest
     GuiColor lit_fill;        // a checked key's whole face, Live's "on"
     GuiColor lit_press_fill;  // a checked key's face under a standing press
@@ -363,7 +364,7 @@ struct GuiPalette {
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor list_press_fill; // a list row's fill under a standing press
     GuiColor list_press_text; // that row's text and glyph
-    GuiColor clip_lamp;       // the logo lane's clip lamp, lit, and its strike's bar (THE TWO LAMPS, the logo lane block; the limiter lamp lit wears card_ground)
+    GuiColor clip_lamp;       // the logo lane's clip lamp, lit and not struck (THE TWO LAMPS, the logo lane block; the limiter lamp lit wears card_ground)
     GuiColor level_audio_fill; // the AUDIO level case's fill, Live's RangeEditField (paint_level_case, paint_handler.cpp; 2026-11-05)
     GuiColor level_noise_fill; // the NOISE level case's fill, Live's ChosenPreListen (paint_level_case; 2026-11-05)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
@@ -1353,9 +1354,11 @@ constexpr int kMinWindowHeightPx = 480;
 //     nothing, the first tick of a play seeds and tests nothing, not playing
 //     tests nothing (a lamp lit at the stop keeps its hold out).
 //     THE STRIKE (architect 2026-11-05 night, session 49: "(6) YES — the
-//     strike + the tap"): WHILE THE DEVICE CANNOT SOUND, A ONE-W DIAGONAL
-//     IN `clip_lamp` (Live's meter red, the lamp's own lit tone) ACROSS THE
-//     CLIP LAMP'S SQUARE. THE STATE: a third bit, AppState::clip_lamp_struck,
+//     strike + the tap"; its paint session 52, his pick m1 of tmp/s52: "the
+//     whole dot should turn that color. The whole square"): WHILE THE DEVICE
+//     CANNOT SOUND, THE CLIP LAMP'S WHOLE SQUARE IN `key_dim_ink` (the
+//     disabled key's glyph tone, Default 5A5A5A — "a lighter gray like a
+//     disabled tone", no role of its own). THE STATE: a third bit, AppState::clip_lamp_struck,
 //     written by refresh_logo_lamps alone on every tick once a piece is open
 //     — GuiPlayback::device_unavailable(), the error callback's dead latch
 //     (a headphone pulled, a Bluetooth route dropped) or no stream standing
@@ -1363,20 +1366,14 @@ constexpr int kMinWindowHeightPx = 480;
 //     sound"; a pure read, no timer and no retry (the no-auto-recover rule);
 //     its edges damage the clip lamp's square like the lit bits'. Before a
 //     piece is open no engine exists and nothing is struck (the open's held
-//     frame wears no strike; refresh_logo_lamps). It is INDEPENDENT of the
-//     clip bit: the bar is painted OVER whatever face the lamp wears — a lit
-//     red face under the hold can coincide with a drop for at most the hold,
-//     the bar then red on red; accepted. THE PAINT (paint_lamp_strike,
-//     paint_handler.cpp): after the lamp's face, whole device-px cells, no
-//     antialiasing; FROM THE SQUARE'S TOP-LEFT TO ITS BOTTOM-RIGHT, corner to
-//     corner — THE SLANT IS THE PLANNER'S PICK (2026-11-05 night, the
-//     prohibition sign's), the ruling being "a red diagonal through the clip
-//     lamp" with no slant named; ONE W THICK MEASURED ACROSS THE STROKE: on
-//     row i of the square (0-based) a run of nearbyint(hairline_px · √2)
-//     cells starting at column i, clipped to the square's columns (3 cells
-//     on the tablet, 1 at 100 % — the chip outline's own diagonal,
-//     cue_chip_apex_rows), so the bar's left edge is the exact diagonal; the
-//     face keeps the square around it. THE TAP — THE LANE'S ONE PRESS
+//     frame wears no strike; refresh_logo_lamps). The bit is INDEPENDENT of
+//     the clip bit, but THE PAINT WINS OVER IT (architect 2026-11-05 night,
+//     session 52, "agree": the lamp cannot sound): THE FACE IS THE STRIKE —
+//     the square's one fill picked three ways, struck `key_dim_ink`, else
+//     lit `clip_lamp`, else rest `key_face`, nothing painted over it, whole
+//     device-px cells, no antialiasing (paint_logo_lane's lamps block,
+//     paint_handler.cpp); a lit red under the hold coinciding with a drop
+//     shows the struck square. THE TAP — THE LANE'S ONE PRESS
 //     TARGET, a recorded exception to "clip indicator is not a button" on
 //     his word ("not a departure": Live's CPU indicator resets on a click):
 //     WHILE STRUCK, AND ONLY THEN, a press on the clip lamp's square (the

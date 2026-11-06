@@ -6520,8 +6520,10 @@ struct AppState {
     //                          stream standing, "nothing will sound" —
     //                          false until a piece is open (no engine
     //                          stands before the load, refresh_logo_lamps),
-    //                          independent of clip_lamp_lit (the strike is
-    //                          painted over whatever face the lamp wears),
+    //                          independent of clip_lamp_lit as a bit, the
+    //                          paint winning over it (the struck square is
+    //                          key_dim_ink whole, lit or not; architect
+    //                          2026-11-05 night, session 52),
     //                          and THE ONE GATE OF THE CLIP LAMP'S PRESS
     //                          (GuiInputHandler::arm_clip_lamp_press and its
     //                          lift): while it stands the square is a press

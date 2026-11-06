@@ -1736,29 +1736,6 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     return l;
 }
 
-// THE STRIKE'S BAR (architect 2026-11-05 night, session 49, "a red diagonal
-// through the clip lamp"; render.h's THE TWO LAMPS' STRIKE owns the rule):
-// a one-W diagonal across the square `sq` in `c`, whole device-px cells
-// (the caller's antialias NONE), FROM THE TOP-LEFT CORNER TO THE
-// BOTTOM-RIGHT — the slant the planner's pick of 2026-11-05 night (the
-// prohibition sign's), the ruling naming none. ONE W MEASURED ACROSS THE
-// STROKE: on the square's row i (0-based) a run of nearbyint(hairline_px ·
-// √2) cells starting at its column i, clipped to the square's columns — the
-// chip outline's own one-W diagonal (cue_chip_apex_rows, render.h): 3 cells
-// on the tablet, 1 at 100 % — so the bar's left edge is the exact diagonal
-// and the run extends right. The square is square (kLogoLampW a side). One
-// path, one fill.
-void paint_lamp_strike(cairo_t* cr, const GuiRect& sq, GuiColor c) {
-    if (sq.w <= 0 || sq.h <= 0) return;
-    const int run = static_cast<int>(
-        std::nearbyint(static_cast<double>(hairline_px()) * std::sqrt(2.0)));
-    set_palette_source(cr, c);
-    for (int i = 0; i < sq.h && i < sq.w; ++i) {
-        const int end = std::min(sq.w, i + run);
-        cairo_rectangle(cr, sq.x + i, sq.y + i, end - i, 1);
-    }
-    cairo_fill(cr);
-}
 } // namespace
 
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend) {
@@ -1824,9 +1801,11 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // THE DRAWN PIPE AND THE TWO LAMPS: whole device-px cells, no
     // antialiasing — the block in the text tone; each lamp its face at rest
     // (`key_face`, Live's indicator box) or lit (the limiter the cards'
-    // orange, `card_ground`; the clip `clip_lamp`, Live's meter red), and
-    // over the clip lamp's face, while struck, the strike's bar in
-    // `clip_lamp` (paint_lamp_strike), from the three bits the tick writes
+    // orange, `card_ground`; the clip `clip_lamp`, Live's meter red); the
+    // clip lamp, while struck, THE WHOLE SQUARE in `key_dim_ink`, the dead
+    // key's glyph tone, WINNING OVER ITS LIT BIT (architect 2026-11-05
+    // night, session 52: the lamp cannot sound) — one three-way pick,
+    // struck, else lit, else rest — from the three bits the tick writes
     // (refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS).
     {
         cairo_save(cr);
@@ -1836,9 +1815,9 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
         paint_ink_rect(cr, l.limiter_lamp,
                        app.limiter_lamp_lit ? p.card_ground : p.key_face);
         paint_ink_rect(cr, l.clip_lamp,
-                       app.clip_lamp_lit ? p.clip_lamp : p.key_face);
-        if (app.clip_lamp_struck)
-            paint_lamp_strike(cr, l.clip_lamp, p.clip_lamp);
+                       app.clip_lamp_struck ? p.key_dim_ink
+                       : app.clip_lamp_lit  ? p.clip_lamp
+                                            : p.key_face);
         cairo_restore(cr);
     }
 
