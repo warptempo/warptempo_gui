@@ -33,9 +33,10 @@
 // A2) — (paint_modal_dialog's score branch). It is the
 // sixth modal owner (AppState::ModalDialogOwner::Score), ranked with the
 // player and the picker, and NO TAB SWITCH HAPPENS UNDER IT ("just like with
-// other modals"): its veil admits the SCORE key alone and its router the
-// SCORE key's chord alone, so the active tab is the viewer's for its whole
-// life. Its state is AppState::ScoreViewer and the
+// other modals"): its veil admits the SCORE key alone of the roster (the
+// struck clip lamp's tap beside it, architect 2026-11-05 night, reopens the
+// device and switches nothing) and its router the SCORE key's chord alone,
+// so the active tab is the viewer's for its whole life. Its state is AppState::ScoreViewer and the
 // piece's range keys (app_state.h); this struct owns the acts.
 //
 // TWO FACES OF THE CONTROLS ROW, decided by whether the soundtrack is present

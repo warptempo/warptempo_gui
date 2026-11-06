@@ -1394,9 +1394,12 @@ constexpr int kMinWindowHeightPx = 480;
 //     slide-off feint). A device that never came up is opened by no press
 //     (ensure answers false at once, init's failure logged), so its tap
 //     cards the sentence: the one road, the truthful report. UNDER AN
-//     OVERLAY (the render player, the picker, the score viewer) the lift is
-//     the veil's consumed nothing, the overlay's own Play the reopen there
-//     (arm_clip_lamp_press). Unstruck, the square claims nothing.
+//     OVERLAY THE TAP ANSWERS TOO (architect 2026-11-05 night: "we should
+//     make it respond under the overlay"): the render player's, the
+//     picker family's and the score viewer's veils admit the lamp's arm
+//     beside their opener's, the same act as on the main page; THE MODALS
+//     (a prompt, a dialog editor, the progress modal) veil it as they veil
+//     every arm (arm_clip_lamp_press). Unstruck, the square claims nothing.
 //   THE GLYPH CELL, ONE SIZE WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
 //     move"): THE TWO DRAWINGS are Breeze's (2026-11-02, M7: Breeze only) —

@@ -2863,9 +2863,9 @@ private:
     //       in the render player's router's shape and at its rank in on_key
     //       (under the prompt gate, above every ordinary dispatch), and it is
     //       THE CONTENT'S OPENER CHORDS ALONE (architect 2026-10-30: no
-    //       keyboard stands under a picker, and its veil admits the opener's
-    //       lift alone; 2026-10-25, the opener key the way out): under the
-    //       project picker Ctrl+O closes and Ctrl+Alt+O (the Open Project
+    //       keyboard stands under a picker, and the one roster lift its veil
+    //       admits is the opener's; 2026-10-25, the opener key the way out):
+    //       under the project picker Ctrl+O closes and Ctrl+Alt+O (the Open Project
     //       key's long press) runs Revert (revert_project, its question
     //       standing over the picker), under the settings page and the value
     //       list `;` closes the whole panel, under the trim presets list `t`
@@ -4002,7 +4002,11 @@ private:
     // "so the user can quickly toggle it on/off by pressing the same button
     // twice"): it stays live, SITS LIT while the player stands (2026-10-25,
     // redesign_button_selected), and its lift, bare `l`, is the player's
-    // close — the picker's Open Project likewise. (The caption was an
+    // close — the picker's Open Project likewise. THE STRUCK CLIP LAMP'S
+    // TAP is the veil's other admission, under every overlay (architect
+    // 2026-11-05 night: "we should make it respond under the overlay"): its
+    // lift the main page's device reopen, nothing playing
+    // (arm_clip_lamp_press). (The caption was an
     // exemption 2026-10-05 to 2026-10-24, the menu row's live File anchor
     // 2026-09-03 to 2026-10-21.) The
     // roster's hint dwell is suppressed, an overlay showing no hints
@@ -4024,8 +4028,8 @@ private:
 
     // THE PLAYER'S KEY ROUTER — the whole key vocabulary while the mode
     // stands, and it is the opener's chord alone (architect 2026-10-30: no
-    // keyboard stands under the player, and its veil admits the Play
-    // Renders key's lift alone): bare `l` closes it; every other key is
+    // keyboard stands under the player, and the one roster lift its veil
+    // admits is the Play Renders key's): bare `l` closes it; every other key is
     // consumed. The player's acts are its rows' taps, its controls row's
     // buttons (THE CLOSE BUTTON IS THE ROAD ON GLASS, architect: "tablet
     // requires cancel to close") and the car's head unit

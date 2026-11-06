@@ -4813,9 +4813,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     // 2026-10-05 and went with the caption; the menu row's live File anchor
     // the other, 2026-09-03 to 2026-10-21, gone with the row.)
     // THE BUTTON ROWS' CLAIM — the icon row's and row 8's — ONE BODY for
-    // their own band claims below and for the two overlays' veils, which let
-    // the icon row's press through to their opener (architect 2026-10-13 for
-    // the player, 2026-10-25 for the picker).
+    // their own band claims below and for the three overlays' veils, which
+    // let the icon row's press through to their opener (architect 2026-10-13
+    // for the player, 2026-10-25 for the picker, 2026-10-26 for the score
+    // viewer) and to the struck clip lamp (architect 2026-11-05 night).
     // THE TWO LEVEL CASES ARE THE CLAIM'S SECOND HALF (architect 2026-11-05):
     // where no chord row's face holds the press, a level case's face may —
     // the sliders, armed by their own kind (arm_level_case_press). THE
@@ -4839,8 +4840,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     // else: while the mode stands the pointer has FOUR targets, the folder
     // overlay's rows (claimed above), the play-scrub (every press on it arms
     // the thumb drag, the seek at the lift), the modal row's buttons
-    // (the arm every dialog button takes) and the icon row's own lit key
-    // (below), and EVERY OTHER PRESS IS CONSUMED — the flags, the
+    // (the arm every dialog button takes) and the icon row's band (below:
+    // its own lit key, and the struck clip lamp's square, architect
+    // 2026-11-05 night), and EVERY OTHER PRESS IS CONSUMED — the flags, the
     // waveform, the dead roster. (The menu row's File anchor was a target
     // 2026-09-03 to 2026-10-21, the app's caption 2026-10-05 to 2026-10-24.)
     // The whole rule is stated at render_player_active (input_handler.h).
@@ -4854,7 +4856,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
         // the same button twice"): the icon row's press reaches the roster's
         // own arm, whose painted-bit gate consumes every button but the one
         // the face leaves lit (redesign_button_enabled's overlay arm), and the
-        // lift is bare `l`, the player's own closer.
+        // lift is bare `l`, the player's own closer. The same claim reaches
+        // the struck clip lamp's arm, its lift the main page's reopen.
         if (rect_contains(top_icon_row_area(app), x, y)) {
             claim_button_row_press();
             return;
@@ -4871,7 +4874,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     // (claimed above) and the modal row's one button, Cancel or the settings
     // page's Close (the arm every
     // dialog button takes; the app's caption a third, 2026-10-05 to
-    // 2026-10-24), and EVERY OTHER PRESS IS CONSUMED. A ROW CLICK IS
+    // 2026-10-24), beside the icon row's band (below: the opener key, and
+    // the struck clip lamp's square, architect 2026-11-05 night), and EVERY
+    // OTHER PRESS IS CONSUMED. A ROW CLICK IS
     // THE OPEN ACT, which is why the row carries no OK beside that button. There is no field
     // and so no caret claim and no text drag — the picker has nothing to
     // type into. The whole rule is stated at picker_active (input_handler.h).
@@ -4881,7 +4886,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     // the face leaves live (redesign_button_enabled's overlay arm), and the
     // lift is that key's chord — Ctrl+O under the project picker, `;` under
     // the settings page and the value list — which the picker's router
-    // answers with its close.
+    // answers with its close. The same claim reaches the struck clip lamp's
+    // arm, its lift the main page's reopen.
     if (app.picker.active) {
         if (rect_contains(top_icon_row_area(app), x, y)) {
             claim_button_row_press();
@@ -4894,7 +4900,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     }
 
     // THE SCORE VIEWER'S VEIL (2026-10-26), the player's: the band's press
-    // (its one live key the SCORE key), the page scrub's, a press on a row
+    // (its one live key the SCORE key, and the struck clip lamp's square,
+    // architect 2026-11-05 night), the page scrub's, a press on a row
     // key (its skips' shifted twin the long press's at the lift, architect
     // 2026-10-27, score_button_shift_admits); every
     // other press — the page itself among them, which takes no gesture — is
@@ -6062,17 +6069,35 @@ void GuiInputHandler::on_button_release(GuiMouseButton /*button*/, int x,
     // ending at once on a clean tab) — which is why the arm is cleared at the
     // head of that body and this arm returns immediately after it.
     if (finish_folder_overlay_release(x, y)) return;
+    // THE OVERLAYS' VEILS ADMIT TWO CHROME ARMS, the one predicate the three
+    // release blocks below read: THE OPENER'S ROSTER ARM (its lift the
+    // overlay's close; the press-time painted-bit gate already consumed
+    // every other roster key, which the overlay greys) and THE STRUCK CLIP
+    // LAMP'S (architect 2026-11-05 night: "we should make it respond under
+    // the overlay" — the tap reopens the dead device there as on the main
+    // page, nothing playing; render.h's THE TWO LAMPS' STRIKE). Both lift
+    // through the chrome act's own body, whose overlay term admits exactly
+    // these two (finish_chrome_press_release's head); any other chrome arm
+    // dies in the block undispatched, the veil's answer. THE MODALS still
+    // veil the lamp: a prompt and the progress modal return above, an editor
+    // dialog is that body's own refusal.
+    const bool overlay_admits_chrome =
+        chrome.kind == AppState::ChromePress::Kind::Roster ||
+        chrome.kind == AppState::ChromePress::Kind::Lamp;
     // THE RENDER PLAYER'S OTHER RELEASES (2026-08-28), the press block's
     // mirror: the scrub's marker drag (the seek commits here) and the modal
     // row's armed button through the one shared dispatch. Every other lift
     // is consumed — a chrome arm taken above dies here undispatched, the
-    // veil's answer — but the Play renders arm, the one roster button the
-    // player leaves lit (architect 2026-10-13), which is lifted below.
+    // veil's answer — but the two chrome arms the veil admits
+    // (overlay_admits_chrome): the Play Renders arm, the one roster button
+    // the player leaves lit (architect 2026-10-13), and the struck clip
+    // lamp's (architect 2026-11-05 night), which are lifted below.
     if (app.render_player.active) {
-        // THE PLAY RENDERS BUTTON'S LIFT (architect 2026-10-13), its press
-        // block's mirror: the one roster arm the player's veil admits
-        // dispatches through the chrome act's own body.
-        if (chrome.kind == AppState::ChromePress::Kind::Roster) {
+        // THE PLAY RENDERS BUTTON'S LIFT (architect 2026-10-13) AND THE
+        // STRUCK LAMP'S (architect 2026-11-05 night), the press block's
+        // mirror: the two chrome arms the player's veil admits dispatch
+        // through the chrome act's own body.
+        if (overlay_admits_chrome) {
             finish_chrome_press_release(chrome, x, y);
             return;
         }
@@ -6087,13 +6112,15 @@ void GuiInputHandler::on_button_release(GuiMouseButton /*button*/, int x,
     }
     // THE PICKER'S RELEASE (2026-08-28), its press block's mirror: the modal
     // row's armed Cancel through the one shared dispatch, and every
-    // other lift consumed — the veil's answer — but the opener's arm (Open
-    // Project, or Settings under the settings page and the value list),
-    // the one roster button
-    // the picker leaves live (2026-10-25), lifted through the chrome act's
-    // own body as the player's Play Renders arm is.
+    // other lift consumed — the veil's answer — but the two chrome arms the
+    // veil admits (overlay_admits_chrome): the opener's (Open Project,
+    // Settings under the settings page and the value list, Trim Presets
+    // under its list, BPM under its form), the one roster button the picker
+    // leaves live (2026-10-25), and the struck clip lamp's (architect
+    // 2026-11-05 night), lifted through the chrome act's own body as the
+    // player's are.
     if (app.picker.active) {
-        if (chrome.kind == AppState::ChromePress::Kind::Roster) {
+        if (overlay_admits_chrome) {
             finish_chrome_press_release(chrome, x, y);
             return;
         }
@@ -6101,11 +6128,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton /*button*/, int x,
         return;
     }
     // THE SCORE VIEWER'S RELEASE (2026-10-26), its press block's mirror: the
-    // SCORE key's arm through the chrome act's body, the page scrub's end,
-    // the armed row key through the one shared dispatch; every other lift
-    // consumed.
+    // two chrome arms the veil admits (overlay_admits_chrome) — the SCORE
+    // key's and the struck clip lamp's (architect 2026-11-05 night) —
+    // through the chrome act's body, the page scrub's end, the armed row key
+    // through the one shared dispatch; every other lift consumed.
     if (app.score_viewer.active) {
-        if (chrome.kind == AppState::ChromePress::Kind::Roster) {
+        if (overlay_admits_chrome) {
             finish_chrome_press_release(chrome, x, y);
             return;
         }
@@ -7010,11 +7038,14 @@ void GuiInputHandler::finish_level_press_release(
 // damages, so the hit and the picture agree — arms the Lamp kind with the
 // clock; unstruck the lane stays inert and the press claims nothing. No
 // face damage: a lamp is not a key and wears no press look. UNDER AN
-// OVERLAY (the render player, the picker, the score viewer, whose veils
-// let the icon row's band through to their opener) the arm is taken and
-// its lift consumed by the overlay's own release block, which lifts its
-// opener's Roster arm alone — the veil's answer; the overlay's own Play is
-// the reopen there.
+// OVERLAY THE TAP ANSWERS AS ON THE MAIN PAGE (architect 2026-11-05 night:
+// "we should make it respond under the overlay"): the render player's, the
+// picker's and the score viewer's veils let the icon row's band through to
+// this claim, and their release blocks lift the Lamp arm beside the
+// opener's (overlay_admits_chrome, on_button_release; the overlay term's
+// exemption at finish_chrome_press_release's head). THE MODALS ALONE VEIL
+// IT: a prompt's or the progress modal's press gate returns above the band,
+// and an editor dialog standing at the lift refuses it there.
 bool GuiInputHandler::arm_clip_lamp_press(int x, int y) {
     if (!app.clip_lamp_struck) return false;
     const GuiRect r = logo_lamp_rects(app, app.logo_legend).clip;
@@ -7135,28 +7166,36 @@ void GuiInputHandler::finish_chrome_press_release(
     // once, above the switch, rather than per branch.)
     // A PROMPT needs no term here for any kind: on_button_release's prompt
     // gate returns unconditionally above this call, so no arm reaches this
-    // body while one stands — and neither does THE RENDER PLAYER's or THE
-    // PICKER's, whose release blocks return above this call the same way; the
-    // term below is the surface RAISED MID-HOLD's — THE PROGRESS MODAL
-    // (2026-10-14) of a batch parked behind a killed render's drain, which
-    // can rise under a held button — and every overlay and editor takes the
-    // same refusal through it, though no key can open one under a hold.
-    // EACH OVERLAY IS NO TERM FOR ITS OWN OPENER'S ARM (architect 2026-10-13
-    // for Play Renders under the player, 2026-10-25 for Open Project under the
-    // project picker, 2026-10-28 for Settings under the settings page and the
-    // value list it swaps in, that night for Trim Presets under its list,
-    // 2026-10-29 for BPM under its form —
-    // the tag's answer,
-    // is_folder_overlay_opener): that button, lit under its overlay, is the
-    // one roster arm the overlay's veil admits and its lift is the overlay's
-    // close; any other arm is the mid-hold case above and stays refused.
-    // THE SCORE VIEWER (2026-10-26) is the same class: the SCORE key's arm
-    // is admitted, every other refused (is_overlay_opener, the family).
-    if (keyboard_modal_editor_active() ||
-        ((app.render_player.active || app.picker.active ||
-          score_viewer_stands(app)) &&
-         !is_overlay_opener(
-             app, static_cast<RedesignButton>(arm.index))) ||
+    // body while one stands — and THE OVERLAYS' release blocks (the render
+    // player's, the picker's, the score viewer's) return above this call the
+    // same way for every arm but the two their veils admit, which meet the
+    // overlay term below. The terms below are the surface RAISED MID-HOLD's —
+    // THE PROGRESS MODAL (2026-10-14) of a batch parked behind a killed
+    // render's drain, which can rise under a held button — and every overlay
+    // and editor takes the same refusal through them, though no key can open
+    // one under a hold.
+    // EACH OVERLAY ADMITS TWO ARMS, ITS OPENER'S AND THE STRUCK LAMP'S, the
+    // release blocks' overlay_admits_chrome read again here. THE OPENER'S
+    // (architect 2026-10-13 for Play Renders under the player, 2026-10-25 for
+    // Open Project under the project picker, 2026-10-28 for Settings under
+    // the settings page and the value list it swaps in, that night for Trim
+    // Presets under its list, 2026-10-29 for BPM under its form — the tag's
+    // answer, is_folder_overlay_opener; 2026-10-26 for the SCORE key under
+    // the score viewer, is_overlay_opener, the family): that button, lit
+    // under its overlay, is the one roster arm the veil admits and its lift
+    // is the overlay's close. THE STRUCK CLIP LAMP'S (architect 2026-11-05
+    // night: "we should make it respond under the overlay"): the Lamp kind is
+    // exempt from THE OVERLAY TERM ALONE — the editor and progress terms
+    // still refuse it, the modals veiling the lamp as every arm — and the
+    // kind is tested FIRST because a Lamp arm's index is -1, no button for
+    // is_overlay_opener to read. Any other arm under an overlay is the
+    // mid-hold case above and stays refused.
+    const bool overlay_refuses =
+        (app.render_player.active || app.picker.active ||
+         score_viewer_stands(app)) &&
+        arm.kind != AppState::ChromePress::Kind::Lamp &&
+        !is_overlay_opener(app, static_cast<RedesignButton>(arm.index));
+    if (keyboard_modal_editor_active() || overlay_refuses ||
         app.batch_progress.active) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
