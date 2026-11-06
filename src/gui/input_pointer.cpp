@@ -4666,8 +4666,7 @@ void GuiInputHandler::clear_score_scrub_drag() {
 }
 
 
-void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
-                                      GuiInputState mods) {
+void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // ANY PRESS IS THE TOOLTIP'S HARD END, above every gate — Windows hides a
     // tooltip at a click ("About Tooltip Controls"), and a hint left floating
     // over the thing the user just clicked is noise. The release is one too
@@ -6005,10 +6004,10 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
         notifications.notify(AppState::NotificationClass::Normal, *refusal);
 }
 
-// `mods` HAS ONE READER, the tooltip's held bit at the top. `button` is the
-// left, the one button (GuiMouseButton, gui_input.h).
-void GuiInputHandler::on_button_release(GuiMouseButton /*button*/, int x,
-                                        int y, GuiInputState mods) {
+// `mods` HAS ONE READER, the tooltip's held bit at the top. No button is
+// named: the touch translation's press is the one the core delivers
+// (architect 2026-10-30, the mouse closed on the tablet).
+void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // THE TOOLTIP'S HELD BIT, above every return: the platform's own answer
     // with this release (the release reads up), so a wait may start again —
     // on the next motion past the slop, never on the release's resting

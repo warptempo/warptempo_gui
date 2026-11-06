@@ -2045,15 +2045,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.on_window_close();
     });
 
-    gui.set_on_button_press([&](GuiMouseButton button, int x, int y,
-                                GuiInputState mods) {
+    gui.set_on_button_press([&](int x, int y, GuiInputState mods) {
         if (open_unseen()) return;   // the open's hold (the block above)
-        input_handler.on_button_press(button, x, y, mods);
+        input_handler.on_button_press(x, y, mods);
     });
 
-    gui.set_on_button_release([&](GuiMouseButton button, int x, int y,
-                                  GuiInputState mods) {
-        input_handler.on_button_release(button, x, y, mods);
+    gui.set_on_button_release([&](int x, int y, GuiInputState mods) {
+        input_handler.on_button_release(x, y, mods);
     });
 
     // The "editor open" truth the platform's key repeat records at its arm

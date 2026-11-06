@@ -41,6 +41,11 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // which reads the phase before calling here and advances after). The
     // complete edge inventory is at GuiAuditionSequence (app_state.h).
     clear_audition_sequence(app);
+    // THE LIMITER LAMP'S SPAN IS VOIDED HERE, AHEAD OF THE GUARD (architect
+    // 2026-11-06, session 73): a stop and a launch in one act (the main
+    // view's scrub click) leave no tick between to see the play stopped, so
+    // the stop itself says a span ends (AppState::limiter_lamp_prev_frame).
+    app.limiter_lamp_prev_frame = -1;
     // THE RENDER PLAYER'S FORK, INSIDE THE ONE STOP BODY (2026-08-28): the
     // player's transport is a session over ITS OWN buffer with no scanner and
     // no waveform picture, so its "a session stood" state is

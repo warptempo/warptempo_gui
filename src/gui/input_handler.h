@@ -967,9 +967,8 @@ struct GuiInputHandler {
     // bare-exact. The arm is AppState::modal_dialog_key_pressed; the body is
     // in input_key_dispatch.cpp beside the ring that arms it.
     void on_key_release(GuiKey key);
-    void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
-    void on_button_release(GuiMouseButton button, int x, int y,
-                           GuiInputState mods);
+    void on_button_press(int x, int y, GuiInputState mods);
+    void on_button_release(int x, int y, GuiInputState mods);
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone

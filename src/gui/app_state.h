@@ -6515,7 +6515,14 @@ struct AppState {
     //                          yet: the first tick of a play seeds it and
     //                          tests nothing, and every tick that does not
     //                          test (not playing, the source view, no target
-    //                          bind) voids it back to -1.
+    //                          bind) voids it back to -1; so do the one stop
+    //                          body (stop_playback_if_playing, which a
+    //                          stop-then-launch in one act such as the main
+    //                          view's scrub click passes with no tick
+    //                          between) and the render player's live reseek
+    //                          (GuiRenderPlayer::seek_to, a jump with no
+    //                          stop), so a jump is never a span (architect
+    //                          2026-11-06, session 73).
     //   clip_lamp_struck       THE DEAD-STREAM STRIKE (architect 2026-11-05
     //                          night, session 49; render.h's THE TWO LAMPS'
     //                          STRIKE): GuiPlayback::device_unavailable() as

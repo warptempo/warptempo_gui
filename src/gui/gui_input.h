@@ -1326,14 +1326,6 @@ inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
-// THE POINTER'S BUTTON — LEFT ALONE (architect 2026-10-30: the mouse is
-// closed on the tablet, and the touch translation's press is the one button
-// the core delivers). The type stays the pointer hooks' parameter, the shape
-// of the press / release vocabulary the GUI's bodies are written against.
-enum class GuiMouseButton {
-    Left,
-};
-
 // One delivered touch-navigation frame (the nav update hook's payload — the
 // platform's deliver_touch_nav_frame builds it, the GUI's
 // apply_touch_nav_update consumes it). The platform owns the per-frame delta

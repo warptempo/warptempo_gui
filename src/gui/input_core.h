@@ -173,7 +173,7 @@ public:
     // no modifier state — the PRESS is what is modifier-exact, exactly as
     // on_button_release's unused `mods` parameter says of the pointer.
     using KeyReleaseCallback   = std::function<void(GuiKey key)>;
-    using ButtonCallback       = std::function<void(GuiMouseButton button, int x, int y, GuiInputState mods)>;
+    using ButtonCallback       = std::function<void(int x, int y, GuiInputState mods)>;
     using MotionCallback       = std::function<void(int x, int y, GuiInputState mods)>;
     using CloseCallback        = std::function<void()>;
     // Predicate installed by main.cpp: true when a text editor is consuming

@@ -406,7 +406,7 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // (layer 1 of the repeat contract).
     repeat_key_ = 0;
     if (on_button_press_)
-        on_button_press_(GuiMouseButton::Left, down_x, down_y, current_mods());
+        on_button_press_(down_x, down_y, current_mods());
     // The queued motion: the tap's sub-slop drift (the two on-contact
     // resolutions have none — the contact has not moved yet), the finger's
     // latest position, delivered after the press so it reaches the lift's
@@ -593,7 +593,7 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
         const int x = containing_pixel(touch_last_x_);
         const int y = containing_pixel(touch_last_y_);
         if (clean_release)
-            on_button_release_(GuiMouseButton::Left, x, y, current_mods());
+            on_button_release_(x, y, current_mods());
         else
             deliver_motion(x, y);   // the button-lost edge (the fork above)
     }

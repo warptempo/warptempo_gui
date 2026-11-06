@@ -1079,6 +1079,10 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
         const int64_t live_target = std::min<int64_t>(target, rp.frames - 2);
         if (live_target < 0) return;
         rp.painted_cursor = -1;
+        // THE LIMITER LAMP'S SPAN IS VOIDED (architect 2026-11-06, session
+        // 73): the play stands across the jump, so the tick would test the
+        // skipped frames as heard; -1 makes its next tick seed afresh.
+        app.limiter_lamp_prev_frame = -1;
         playback.play(live_target, rp.frames);
         damage_row();
         // The head unit's clock, re-anchored on the seek (the inventory at
