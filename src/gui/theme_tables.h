@@ -157,7 +157,8 @@ struct GuiThemeTones {
 };
 
 // THE GROUP the Settings page's value list shows a theme under: BUILTIN,
-// Live's stock themes; EXTRA, the .ask files he drops into the ask folder's
+// Live's stock themes and the generator's VARIANTS of them
+// (immaterial_gold); EXTRA, the .ask files he drops into the ask folder's
 // author subfolders.
 enum class GuiThemeGroup { Builtin, Extra };
 
