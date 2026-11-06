@@ -28,8 +28,8 @@
 # past the new count or misspelled (stale_pages). A refusal (one line, exit 1) writes nothing. Nothing about the pages
 # is the user's to set: what a page is and where its range runs are read off the video (WHAT A PAGE IS).
 #   --fit W:H   THE VIEWER'S BOX in device px (default PAGE_FIT, the tablet's): each page is scaled, down or up, to
-#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2036x1145
-#               from any 16:9 video at the default (k = min(2256/1920, 1145/1080)); a PDF's slice is the box's height and its page's width at THE
+#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2101x1182
+#               from any 16:9 video at the default (k = min(2256/1920, 1182/1080) = 1.0944); a PDF's slice is the box's height and its page's width at THE
 #               DOCUMENT SCALE. The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
 #               laptop's terminal, the tablet's logcat warptempo:I): that pair, as W:H, pre-sizes the pages for
 #               another screen or gui_scale.
@@ -214,7 +214,7 @@
 #   slice's are area-scaled as the video road's frames are.
 #
 # THE PDF ROAD'S INSTANCES (measured 2026-10-27 at the default box then, the 2026-10 box of 1111 rows, so every
-# "x 1111" slice height below is that box's, not today's 1145; PAD 26, the staff test, the extent, the rise and the
+# "x 1111" slice height below is that box's, not today's 1182; PAD 26, the staff test, the extent, the rise and the
 # average rows; "rows" are canonical, "systems" the rule's sure ones, "slices" the pages written; "sure", "average" and
 # "dropped" count the PDF pages by outcome). K.550 is the one the rule was ruled on; the ten others are the test set of
 # tmp/research/mozart_pdfs/, and where their rule's systems are not the printed ones is listed below.
@@ -323,30 +323,25 @@ FADE_FLOOR = 16.0
 # this deep wants, and it is the cheap scaler: bicubic adds 2.3 s per 60 s of 4K video at 30 fps, area 0.7 s.
 DIFF_W, DIFF_H = 480, 270
 # THE DEFAULT FIT BOX (--fit's default): THE TABLET'S SCORE-PAGE BOX, the score viewer's fit box
-# modal_box_interior_rect(app, 0) (src/gui/modal_box.h) on the Galaxy Tab S10 FE's 2304 x 1440 at gui_scale 300,
-# derived from the program's layout (2026-10-26) and printed by the viewer itself at its open (score_viewer.cpp's
-# feed_decoder), the line the pair is checked against:
-#   ACROSS (re-derived 2026-11-03, the well the waveform area): the canvas interior (waveform_area,
-#   src/gui/main.cpp) stands column_margin_w_px in from each side, the column margin's 6 W, 18 px; the room
-#   2304 - 36 = 2268 floors to the 16-px grid step, 2256, its slack of 12 split, so the canvas is x 24 .. 2279; the
-#   well's columns are the canvas's (well_columns, render.h: x = 24 and end = 2280, one past 2279), and THE PANE
-#   stands on them (architect 2026-11-03, THE EDGE RULE: the modal box one hairline_px wider each side, x 23 .. 2280,
-#   those two columns ground; its interior, the flat pane, one hairline in): x 24, WIDTH 2256 — the viewer's live box
-#   2256x1183 under this layout, PAGE_FIT's width.
-#   DOWN (re-derived 2026-11-03, the retrofit, at key_height's default 33, the 69-px key cell): the box
-#   (modal_box_rect) runs from the trim lane's first row (top_trim_row_area) to the controls row's top
-#   (modal_controls_row_rect, the bottom row's lane). The band above the trim lane is the logo lane's 72, the key's
-#   cell 33 (the `key_height` key) and the strip pad's 39, 144 rows, the flexible gap 0 (the waveform takes the whole
-#   leftover); the bottom row is the strip, 39 + 33 + 39 = 111 rows on the window's foot from row 1440 - 111 = 1329.
-#   So the box is rows 144..1328 (its last row the well's foot), 1185 rows, those outer rows ground, and its interior
-#   (modal_box_interior_rect) one hairline in: y 145..1327, HEIGHT 1183 — the viewer's printed box 2256x1183 under
-#   the retrofit's layout. PAGE_FIT KEEPS THE PAGES-ON-FILE BOX, 2256x1145 (the text round's layout at the 60-row
-#   key, 2026-11-03 morning: the band 173, the bottom row 120, the interior y 174..1318), the box the pages on file
-#   were fitted to, UNTIL THE RETROFIT'S LAYOUT SETTLES ON HIS GLASS AND THE PAGES ARE RE-EXTRACTED (architect
-#   2026-11-03: the scores go last, the most fragile to adjustments); the viewer fits a page to its live box either
-#   way (score_viewer.h). (The 33-row key's box of 2026-10-29 to 2026-11-02, the band 144 rows and the bottom row
-#   111, was 2256x1183 too; the 2026-10 box, with the 69-px case and the lanes then, 2256x1111.)
-PAGE_FIT = (2256, 1145)
+# modal_box_interior_rect(app, 0) (src/gui/modal_box.h) on the Galaxy Tab S10 FE's 2304 x 1440 at gui_scale 200
+# (the unit: 1 W = 2 device px, the rebase of 2026-11-05), derived from the program's layout and printed by the
+# viewer itself at its open (score_viewer.cpp's feed_decoder), the line the pair is checked against:
+#   ACROSS (the well the waveform area, 2026-11-03): the canvas interior (waveform_area, src/gui/main.cpp) stands
+#   column_margin_w_px in from each side, the column margin's 9 W, 18 device px; the room 2304 - 36 = 2268 floors
+#   to the 16-px grid step, 2256 (141 W), its slack of 12 split, so the canvas is x 24 .. 2279; the well's columns
+#   are the canvas's (well_columns, render.h: x = 24 and end = 2280, one past 2279), and THE PANE stands on them
+#   (architect 2026-11-03, THE EDGE RULE: the modal box one hairline_px wider each side, x 22 .. 2281, those two
+#   columns ground; its interior, the flat pane, one hairline in): x 24, WIDTH 2256.
+#   DOWN (at key_height's default 17 W = 34 device px): the box (modal_box_rect) runs from the trim lane's first
+#   row (top_trim_row_area) to the controls row's top (modal_controls_row_rect, the bottom row's lane). The band
+#   above the trim lane is the logo lane's 36 W (72), the key's cell 17 W (34) and the strip pad's 19 W (38), 144
+#   rows, the flexible gap 0 (the waveform takes the whole leftover); the bottom row is the strip, 38 + 34 + 38 =
+#   110 rows on the window's foot from row 1440 - 110 = 1330. So the box is rows 144..1329 (its last row the
+#   well's foot), 1186 rows, those outer rows ground, and its interior (modal_box_interior_rect) one hairline
+#   (2 device px) in: y 146..1327, HEIGHT 1182 - the viewer's printed box 2256x1182, the box the pages on file
+#   have been fitted to since 2026-11-06 (the scores re-extracted after the layout settled, architect 2026-11-06);
+#   the viewer fits a page to its live box either way (score_viewer.h).
+PAGE_FIT = (2256, 1182)
 # THE PAGE FILE: GRAYSCALE JPEG at this quality, Huffman-optimized (architect 2026-10-26: "grayscale ok", quality 92).
 # A score page is black ink on paper, so one channel loses nothing a reader sees; ffmpeg's mjpeg encoder writes no
 # gray JPEG (its pixel formats are yuvj420p, 422p and 444p alone), so the grab pipes ffmpeg's gray rawvideo to Pillow,
