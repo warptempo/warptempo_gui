@@ -1011,9 +1011,13 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
                                        + std::to_string(i));
             }
             const LabelCacheEntry& lbl = lbl_it->second;
-            // A label_ref imposes its definition's target duration; there is
-            // no ceiling on the implied stretch multiplier — extreme implied
-            // multipliers are the author's concern.
+            // A label_ref imposes its definition's target duration; THIS
+            // BUILDER sets no ceiling on the implied stretch multiplier — the
+            // resolver ahead of it normalizes a ref whose implied effective
+            // tempo leaves [kRefImpliedTempoMin, kRefImpliedTempoMax] to a
+            // plain 1.00 owner, so on the resolved road a surviving ref's
+            // slope lies in the numeric envelope; only a list that bypasses
+            // the resolver reaches here unbounded.
             target_frame = tgt_f_prev + lbl.delta_tgt;
         } else {
             double tempo_val = effective_tempo(m);

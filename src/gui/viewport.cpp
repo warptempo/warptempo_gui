@@ -618,11 +618,15 @@ int64_t playhead_pixel_step_landing(const AppState& app, const GuiAudio& audio,
     // The cursor's painted column on the live lattice's OWN INDEX, K − m
     // (displayed_column_at's rule in int64, the exempt sibling recorded
     // there): m the viewport's index (viewport_lattice_index, the recovery
-    // the landing below shares), K the cursor's nearest lattice index.
+    // the landing below shares), K the cursor's nearest lattice index through
+    // THE PLACEMENT'S OWN SELECTOR, lattice_index_ties_right — an exact tie
+    // goes right (architect 2026-11-06, session 69, the reason at
+    // displayed_column_at), so the step starts from the column the cursor
+    // paints in and the two spellings cannot fork on a tie.
     const int64_t origin = app.viewport_lattice_origin;
     const int64_t m = static_cast<int64_t>(viewport_lattice_index(
         static_cast<double>(app.viewport_start_sample), q, origin));
-    const int64_t cur_col = static_cast<int64_t>(std::nearbyint(
+    const int64_t cur_col = static_cast<int64_t>(lattice_index_ties_right(
         static_cast<double>(app.playhead_cursor_sample - origin) / q)) - m;
     const int64_t target_col = cur_col + static_cast<int64_t>(delta_px);
     // Pre-clamped into the live domain, the clamp move_playhead_to would apply
@@ -647,23 +651,31 @@ int64_t playhead_arrow_step_landing(const AppState& app, const GuiAudio& audio,
 void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     if (audio.total_frames() <= 0) return;
     // Resolve the playhead's CURRENT painted column —
-    // nearbyint((cursor − origin)/q) − m, the painters' own placement on the
-    // lattice's own index (displayed_column_at's K − m) — and
+    // lattice_index_ties_right((cursor − origin)/q) − m, the painters' own
+    // placement on the lattice's own index (displayed_column_at's K − m) — and
     // land on the ADJACENT grid column's frame through the one column->frame
     // owner. So one keypress moves exactly one painted pixel even when q is
     // fractional (a sub-pixel sample step could leave the displayed column
-    // unchanged), AND the landed sample is viewport-phase-independent: it is the
+    // unchanged), AND the landed sample is independent of the viewport's own
+    // index m AT A FIXED q AND ORIGIN: it is the
     // same lattice the click placement and the marker commits land on — the
     // painted one, the camera's lattice origin its third term (0 at every
     // landing; a gesture's own under a pinched rest, architect 2026-10-31,
     // AppState::viewport_lattice_origin) — so a step means the same sample
-    // whatever pan or landing preceded it (finer adjustment
-    // is a deeper zoom's job). The spp is the PAINTER-quantized q rather than
+    // whatever pan preceded it on that lattice, and the same sample after any
+    // landing (origin 0). NOT across a change of origin: a step from a
+    // pinched rest lands on that gesture's lattice, which a later landing
+    // (a tab switch, a walk) replaces with the frame-0 one, so the same
+    // marker's step can land a different frame there — each the correct
+    // frame of its own painted lattice (Astra's determinism audit,
+    // 2026-11-06; the approved gesture-origin design). (Finer adjustment
+    // is a deeper zoom's job.) The spp is the PAINTER-quantized q rather than
     // the logical one for the same reason the click placement's item basis
     // carries that quantization: it is the grid actually drawn (at a whole
     // level the two agree exactly; at a fractional rest q is the logical spp
     // rounded to the sixteenth-frame grid, painter_quantized_spp).
-    // The recovery nearbyint is the column direction and is this walk's own; the
+    // The column's index is the placement's own selector
+    // (lattice_index_ties_right, shared with displayed_column_at); the
     // landing is the shared owner's. move_playhead_to still owns the walls, and
     // a playhead parked off-lattice re-snaps onto it at its first step. THE
     // WHOLE ARITHMETIC LIVES AT playhead_pixel_step_landing since 2026-08-30,
@@ -1128,9 +1140,10 @@ void Viewport::invalidate_all() {
 // reduces to a SAMPLE OFFSET on the live grid: the column clamped into
 // [0, w − 1], times q the painter-quantized spp (painter_samples_per_pixel),
 // that offset clamped into [0, floor((w − 1)·q)] — the painted column is
-// nearbyint(offset / q) (displayed_column_at, the playhead's and the stems'
-// placement: on the landing's frame-0 lattice at the working zoom's whole q
-// its K − m is that quotient off a tie), so offset 0 paints column 0 and the
+// the nearest index to offset / q (displayed_column_at, the playhead's and
+// the stems' placement: on the landing's frame-0 lattice at the working
+// zoom's whole q its K − m is that quotient's, and a rounded col·q is never
+// on a tie), so offset 0 paints column 0 and the
 // upper bound paints column w − 1, never one past it. The new start is new subject − offset through
 // clamp_viewport_start, whose grid snap absorbs the sub-sample residue of a
 // column-anchored step, and whose song-end clamp WINS at the song's two ends:
@@ -1195,9 +1208,9 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
     const GuiRect area = waveform_area(app);
     const double q = painter_samples_per_pixel(app, audio, area);
     if (q <= 0.0 || area.w <= 0) return;
-    // The painted column's own offset on the live grid: nearbyint(offset / q)
-    // recovers the column (displayed_column_at), and the clamp keeps the last
-    // column's offset inside the window.
+    // The painted column's own offset on the live grid: the nearest index to
+    // offset / q recovers the column (displayed_column_at), and the clamp
+    // keeps the last column's offset inside the window.
     const int64_t last_offset = static_cast<int64_t>(
         std::floor(static_cast<double>(area.w - 1) * q));
     const int64_t offset = std::clamp<int64_t>(

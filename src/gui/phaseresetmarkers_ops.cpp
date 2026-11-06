@@ -170,11 +170,16 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // product 0.25 · 0.5 · 0.5 (value_format.h, which states that product as the
 // bound the whole-frame nudge guarantee is computed from), so this term is
 // under half an output sample at unity tempo and up to ~8 at that ceiling.
-// ACROSS A LABEL-REFERENCE SEGMENT THERE IS NO CEILING AT ALL: a label_ref
-// imposes its definition's target duration and the implied stretch is
-// unbounded by construction (warp_frame_map_build.cpp's label_ref arm —
-// "extreme implied multipliers are the author's concern"), so no product-wide
-// number covers this term there.
+// A LABEL-REFERENCE SEGMENT SHARES THAT CEILING ON THE GUI'S ROAD: a
+// label_ref imposes its definition's target duration, and the builder's
+// label_ref arm sets no bound of its own (warp_frame_map_build.cpp), but the
+// resolver ahead of it normalizes a ref whose implied effective tempo leaves
+// [0.125, 8] — the band one authored marker can express — to a plain 1.00
+// owner (resolve_warp_markers_for_render, kRefImpliedTempoMin / Max), and the
+// settings scale's [0.5, 2] divides it like any segment, so a surviving ref's
+// slope lies in the numeric envelope 1/16 .. 16 (Astra's determinism audit,
+// 2026-11-06). Only a list that bypasses the resolver reaches the builder
+// unbounded, and no GUI road does.
 //
 // (2) THE DROP'S OWN SNAP. The call below inverse-maps P − N/2 and snaps the
 // result to a WHOLE SOURCE FRAME (active_domain_to_source_frame ends in
@@ -188,8 +193,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // half an OUTPUT sample of painted width. Slope-free.
 //
 // TOGETHER: a few output samples at ordinary tempos, up to ~8 + ~8 + ½ at the
-// numeric slope ceiling of 16, and unbounded only across a label-reference
-// segment. THERE IS NO UNIVERSAL TWO-SAMPLE CEILING. So "C's image is at most
+// slope ceiling of 16, numeric and label-reference segments alike. THERE IS
+// NO UNIVERSAL TWO-SAMPLE CEILING. So "C's image is at most
 // T", "the grain ends at most at T + N/2" and the "FOR EVERY PLACEMENT iff"
 // above are true TO THE SCHEDULE'S ROUNDING: the grain can end that far past
 // T + N/2 and leave P inside its last samples — at the grain's own
@@ -212,8 +217,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // a band clamped to N/2; the number is NOT made quantization-aware and the
 // band is NOT clamped, because a clamp would hide the engine's geometry
 // rather than fix it. And it is invisible where it is read: SUB-PIXEL at the
-// working zoom for every numeric slope (`c` is zoom level 2.0, one working
-// column per pixel: 46 output samples on the tablet at 44.1 kHz, 50 at
+// working zoom for every slope the GUI resolves (`c` is zoom level 2.0, one
+// working column per pixel: 46 output samples on the tablet at 44.1 kHz, 50 at
 // 48 kHz — the whole ~16.5 worst case is under 0.36 of one pixel).
 //
 // N/2 is measured in the target/output paint domain, then mapped to a

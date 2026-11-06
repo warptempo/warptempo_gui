@@ -129,11 +129,13 @@ constexpr double kUnloadedZoomLevel = 2.0;
 // working zoom shows 2.4 s of source across the device's full width — the
 // tablet's 2304 at 44.1 kHz: 46; at 48 kHz 50 — and a strip narrower than the
 // display (chrome inside the window) keeps that same column and so shows a
-// little less than 2.4 s: a resize never moves the grid. On the deployed
-// device (the tablet full screen) the strip IS the display's width, so the
-// column is the one the strip's width gave before the rule moved to the
-// resolution. W is GuiPlatform::display_width_px (the surface's width; the
-// contract at platform_android.h).
+// little less than 2.4 s: a resize never moves the grid. THE STRIP IS NOT
+// THE DISPLAY even full screen: the waveform stands inside its side margins,
+// floored to the painter's 16-px grid (waveform_area, main.cpp) — on the
+// tablet 2256 of the display's 2304 device px — so W is the display's alone
+// and the column is 46 there (the strip's width would give 47).
+// W is GuiPlatform::display_width_px (the surface's width; the contract at
+// platform_android.h).
 // Spelled (24·sr)/(10·W): both operands are exact integers in a double and
 // the one divide is correctly rounded, so a true .5 tie (2016 px at 44.1 kHz,
 // 52.5) is exact and takes banker's rounding; `2.4 * sr / W` would round 2.4
@@ -4287,10 +4289,11 @@ struct AppState {
     int64_t viewport_start_sample  = 0;
     // THE CAMERA'S LATTICE ORIGIN (architect 2026-10-31: "the lattice is less
     // important than smooth operation … determinism is specific to this
-    // device and this device only") — an integer frame of the active display
-    // domain, beside the start it qualifies; camera state, NOT a per-tab
-    // mirror (no ViewState carries it). Column c of the waveform paints the
-    // frames from origin + nearbyint((k0 + c)·q) (render_waveform_columns'
+    // device and this device only" — the arithmetic on the delivered events,
+    // not the physical gesture, input_core.h's head) — an integer frame of
+    // the active display domain, beside the start it qualifies; camera
+    // state, NOT a per-tab mirror (no ViewState carries it). Column c of the
+    // waveform paints the frames from origin + nearbyint((k0 + c)·q) (render_waveform_columns'
     // edge_at), q the painter step (painter_samples_per_pixel).
     // THE INVARIANT, held by the one writer (clamp_viewport_start, main.cpp):
     // the live viewport_start_sample lies on THIS lattice, origin +
@@ -14995,8 +14998,8 @@ bool target_preview_ready(const GuiTargetRender& target_render);
 // start, so the seed grain can end HALF A SOURCE FRAME AT THE LOCAL SEGMENT
 // SLOPE past the reset's image + this, the drop's own whole-frame snap adds a
 // second such term and the painted band's rounding half an output sample more
-// — a few samples at ordinary tempos, up to ~8 + ~8 + ½ at the numeric slope
-// ceiling of 16, unbounded only across a label-reference segment, and NOT a
+// — a few samples at ordinary tempos, up to ~8 + ~8 + ½ at the slope
+// ceiling of 16, which a resolved label-reference segment shares, and NOT a
 // universal "sample or two". The
 // residue's three terms, its worked case and its acceptance are at the drop's
 // comment, the derivation's one prose home. It reaches no audio and moves no

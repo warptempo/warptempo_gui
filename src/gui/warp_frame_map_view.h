@@ -369,6 +369,23 @@ inline double viewport_lattice_index(double vp_start, double q,
     return std::nearbyint((vp_start - static_cast<double>(origin)) / q);
 }
 
+// THE PLACEMENT'S INDEX SELECTOR (architect 2026-11-06, session 69, TIES
+// RIGHT): the nearest integer to a lattice quotient x, an EXACT half-integer
+// going toward +inf, as a whole-valued double — integer K owns [K − 0.5,
+// K + 0.5). Shared by the frame->column placement (displayed_column_at) and
+// its int64 sibling (playhead_pixel_step_landing, viewport.cpp), so the two
+// cannot fork on a tie; the rule's reason is at displayed_column_at. The
+// compare is against the representable half-integer lo + 0.5, so only an
+// exact tie goes right: floor(x + 0.5) is NOT this — its addition rounds the
+// double just below a half up across the tie. No epsilon, no rounding-mode
+// change; a negative x takes the same expression (toward +inf). Not the
+// viewport's own index (viewport_lattice_index above): m is near-integer on a
+// settled basis and decides no tie.
+inline double lattice_index_ties_right(double x) {
+    const double lo = std::floor(x);
+    return lo + (x >= lo + 0.5 ? 1.0 : 0.0);
+}
+
 // THE ONE COLUMN->FRAME LANDING for a lattice-snapped viewport: the exact
 // DISPLAY-DOMAIN grid position at pixel column `col` on the viewport's own
 // lattice, of origin `origin` (AppState::viewport_lattice_origin, carried by
@@ -390,7 +407,8 @@ inline double viewport_lattice_index(double vp_start, double q,
 // origin would land a frame off the edge) — a commit lands on the frame the
 // finger's painted column shows. At origin 0 it is byte for byte the value
 // the callers' own nearbyint / llrint made of (m+col)*q before the origin
-// existed (both round half to even). At every LANDING the origin is 0
+// existed (both round the FRAME half to even; the placement's column tie is
+// its own, ties right, at displayed_column_at). At every LANDING the origin is 0
 // and this is the frame-0 lattice: viewport-phase-independent, a
 // landing meaning the same sample whatever the camera did on the way there.
 // Under a GESTURE'S rest (a pinch or a pen zoom) the grid follows the
@@ -434,10 +452,30 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 
 // THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain,
 // ON THE LATTICE'S OWN INDEX (architect 2026-11-06, session 68): the value's
-// nearest lattice index K = nearbyint((displayed − origin) / spp) less the
-// viewport's own m = viewport_lattice_index(vp_start, spp, origin) — the
-// column K − m, the integer column of the point of the caller's lattice
-// nearest the value (ties half to even IN THE LATTICE'S COORDINATES).
+// nearest lattice index K = lattice_index_ties_right((displayed − origin) /
+// spp) less the viewport's own m = viewport_lattice_index(vp_start, spp,
+// origin) — the column K − m, the integer column of the point of the
+// caller's lattice nearest the value, AN EXACT TIE GOING RIGHT IN THE
+// LATTICE'S COORDINATES.
+//
+// TIES RIGHT (architect 2026-11-06, session 69): index K owns the quotients
+// [K − 0.5, K + 0.5), start included — the point model's own half-open
+// convention, a lattice frame the left edge of its pixel (render.cpp's
+// render_playhead). WHY A DIRECTED TIE: it is translation-invariant,
+// R(x + d) = R(x) + d for a whole d, so a marker on a half-column dragged one
+// device px a step at a whole q in source view moves one column a step;
+// ties to even is not (an odd d flips the parity), and painted 2, 0, 2 px
+// (Astra's determinism audit, 2026-11-06: F = 4623, q = 46, origin 0).
+// THE ASYMMETRY IS DELIBERATE AND FORCED (Sol's tie review, the same day):
+// with a = R(0.5), translation wants R(−0.5) = a − 1 and reflection wants
+// R(−0.5) = −a, so a = 0.5, no column — a translation-consistent rule
+// cannot be mirror-symmetric at a tie; right over left is the half-open
+// convention's choice, not geometry's (at a two-device-px line either stem
+// is half a device px from the point). Ties to even, ties left and a
+// drag-only tie rule are not taken (closed_questions.md). Only placement
+// takes it: the landing (displayed_grid_position_at_column) and every frame
+// rounding keep nearbyint, and a landed lattice point is never near a
+// placement tie (its quotient is within 0.5 / q of a whole index).
 //
 // WHY THE GLOBAL INDEX: the plate's cells are the lattice's, global — column
 // c spans [g(m + c), g(m + c + 1)), render_waveform_columns' edge_at — so a
@@ -452,10 +490,11 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // parity and beat 0, −2, 0 px against a plate moving −1 px a step (Astra's
 // s68 review, the architect's localization question). K is a function of
 // the value, q and the origin alone, so under a pan the mark translates
-// rigidly with the plate. At a whole q the answer is the local quotient's
-// column except on a tie when m is odd; at a fractional q
-// it differs only for a point within the start's rounding residue (at most
-// 0.5 / q column) of a half-column. m is the column->frame landing's
+// rigidly with the plate. At a whole q the selector on the local quotient
+// would answer the same column (the rule is translation-invariant and the
+// start lies exactly on the lattice); at a fractional q they differ only
+// for a point within the start's rounding residue (at most 0.5 / q column)
+// of a half-column. m is the column->frame landing's
 // own recovery (displayed_grid_position_at_column), so a frame's column and
 // a column's frame index the same lattice.
 //
@@ -486,14 +525,15 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // playhead_pixel_step_landing (viewport.cpp) spells this same K − m inline in
 // the INT64 domain — its column walk composes with
 // displayed_grid_position_at_column's int64 col and cannot take this owner's
-// int return — m cast from viewport_lattice_index, and is recorded at its own
-// site ("the recovery nearbyint is the column direction and is this walk's
-// own"). It is the exempt list's whole int64 class; a second int64 spelling
-// would be the fork this owner exists to prevent.
+// int return — m cast from viewport_lattice_index and K from THE SAME
+// SELECTOR, lattice_index_ties_right, so the two share the tie rule and
+// cannot fork on it (2026-11-06), recorded at its own site. It is the exempt
+// list's whole int64 class; a second int64 spelling would be the fork this
+// owner exists to prevent.
 inline int displayed_column_at(double displayed, double vp_start, double spp,
                                int64_t origin) {
     const double m = viewport_lattice_index(vp_start, spp, origin);
-    const double k = std::nearbyint(
+    const double k = lattice_index_ties_right(
         (displayed - static_cast<double>(origin)) / spp);
     return static_cast<int>(k - m);
 }

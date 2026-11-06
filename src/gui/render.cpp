@@ -765,11 +765,14 @@ void render_playhead(GuiCanvasSink& sink,
     // the caller's playhead_pixel_x / scanner_pixel_x, displayed_column_at's
     // K − m on the plate basis — the same column the ruler's head stands on
     // and the damage box is built on (playhead_invalidate_rect) — so a tie
-    // breaks in the lattice's coordinates and the line translates rigidly
-    // with the plate's global cells under a pan.
+    // breaks in the lattice's coordinates, TO THE RIGHT (architect
+    // 2026-11-06, session 69: the lattice point starts its pixel, so index K
+    // owns [K − 0.5, K + 0.5), the reason at displayed_column_at), and the
+    // line translates rigidly with the plate's global cells under a pan.
     // The playhead — and the marker stems, endcaps and flags, which all reach
-    // their column through the same nearbyint rule (frame_to_paint_sample at
-    // the head of this file) — paints AT a lattice point, while the bar drawn
+    // their column through the same rule (frame_to_paint_sample's frame
+    // rounding at the head of this file, then displayed_column_at) — paints
+    // AT a lattice point, while the bar drawn
     // in that column covers the frames AFTER it, [g(c), g(c+1)) in the plate
     // loop above. So a point and the bar under it can disagree by up to half a
     // column: invisible at the working zoom, and only at coarse zooms does the

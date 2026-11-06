@@ -324,8 +324,10 @@ int64_t authored_frame_at_column_on_basis(
         // target frame (floored at 0), then inverse-map at full precision; the
         // map is monotone increasing, so the target-domain direction is the
         // source-domain direction. That time is the grid position above, so a
-        // phase-reset nudge, drag or sweep commit is viewport-phase-independent
-        // exactly like the source arm's (this arm spelled the two-rounding
+        // phase-reset nudge, drag or sweep commit is independent of the
+        // viewport's own index at a fixed q and origin exactly like the source
+        // arm's — not of the origin itself, a gesture rest's being the
+        // camera's (this arm spelled the two-rounding
         // viewport_start + nearbyint(col*q) until 2026-08-22 — the source arm
         // took the single-rounding grid in 2026-07-14 and this one was missed).
         const double qf = (g < 0.0)

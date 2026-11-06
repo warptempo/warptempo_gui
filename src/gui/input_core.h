@@ -19,6 +19,19 @@
 // producers are the finger's and the pen's contacts, the pen's hover as the
 // pointer, the pen's side button as Ctrl, and the painted keyboard's keys.
 //
+// WHAT "DETERMINISM PER DISPLAY WIDTH" PROMISES (Astra's determinism audit,
+// 2026-11-06): the same state and the same DELIVERED events give the same
+// coordinate arithmetic and the same authored result on this panel — the
+// width fixes the grid's pitch. IT DOES NOT PROMISE THE SAME RESULT FOR THE
+// SAME PHYSICAL GESTURE, because the event sampling and the tick schedule
+// are not the gesture: a held arrow's repeats fire on due ticks scheduled
+// from now, dropping catch-up (tick_chrome_press_repeat, input_pointer.cpp),
+// so the same hold can count one step more or less; the value drag's travel
+// counts from the first delivered sample past the grab gate, not from the
+// gate's own line (the crossing's origin, input_pointer.cpp), so the same
+// stroke can land a step apart. Both are stated local policies, not faults;
+// a physical replay would need the same samples and tick decisions too.
+//
 // WHAT IT CONSUMES: primitive input events in PLAIN UNITS from exactly ONE
 // backend — window-pixel doubles, bools, ids, an already-translated GuiKey
 // with a stable per-key identity beside it. No protocol type, no fixed-point
@@ -113,10 +126,14 @@ enum class GuiPointerLeaveReason {
 // enter and motion, and every one of the touch machine's deliveries and
 // surface queries.
 //
-// std::nearbyint STAYS THE RULE FOR POINTS ON A GRID and is untouched by this:
-// authored frames, lattice columns and sample indices are POINTS, where the
-// nearest one is the right answer and banker's rounding is the project's
-// tie-break (CLAUDE.md "Rounding", snap_authored_frame). A CELL is not a
+// NEAREST-POINT ROUNDING STAYS THE RULE FOR POINTS ON A GRID and is untouched
+// by this: authored frames, lattice columns and sample indices are POINTS,
+// where the nearest one is the right answer and banker's rounding
+// (std::nearbyint) is the project's tie-break (CLAUDE.md "Rounding",
+// snap_authored_frame) — save THE FRAME->COLUMN PLACEMENT, whose exact tie
+// goes right so a moving mark steps one column per column of travel
+// (lattice_index_ties_right, displayed_column_at, warp_frame_map_view.h;
+// architect 2026-11-06, session 69). A CELL is not a
 // point — asking which pixel a coordinate is IN has one answer and no tie to
 // break — so the containment is the one answer for every device that hands
 // this layer a fractional position.

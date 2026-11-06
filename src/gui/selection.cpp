@@ -68,8 +68,8 @@ std::optional<int64_t> Selection::phase_overlay_subject() const {
 // the point the drop was measured against. Under a speed-up (slope < 1, the
 // common direction) that is under half an OUTPUT sample and the launch is
 // exact in integer terms; under a slow-down it is ~2 output samples at tempo
-// 0.30 and ~8 at the numeric slope ceiling of 16, unbounded only across a
-// label-reference segment. The schedule's rounding is NOT part of this
+// 0.30 and ~8 at the slope ceiling of 16, which a resolved label-reference
+// segment shares (the drop's comment). The schedule's rounding is NOT part of this
 // quantity — it bears on where the engine's seed grain ends, which is what
 // the offset was derived against, not on where the launch lands.
 int64_t phase_reset_lead_in_launch_offset(const AppState& app,

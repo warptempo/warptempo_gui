@@ -4542,15 +4542,15 @@ GuiPaintHandler::plate_viewport_basis() const {
 // a seed centre up to half a source frame past the reset still qualifies, and
 // its image is HALF A SOURCE FRAME AT THE LOCAL SEGMENT SLOPE
 // 1/(tempo · marker_scale · settings_scale) — a fraction of a sample at unity
-// tempo, up to ~8 at the numeric slope ceiling of 16, unbounded across a
-// label-reference segment, and NOT the "sample or two" this comment claimed
-// for one day. THIS SITE ADDS THE THIRD TERM: the nearbyint(T)
+// tempo, up to ~8 at the slope ceiling of 16, which a resolved
+// label-reference segment shares, and NOT the "sample or two" this comment
+// claimed for one day. THIS SITE ADDS THE THIRD TERM: the nearbyint(T)
 // below is up to another half OUTPUT sample of painted width. So the band can
 // come out that much wider than N/2 (the worked case — tempo 0.30, reset
 // at source 307 — paints 2049 where N/2 is 2048). NOT CLAMPED to N/2: the
 // clamp would hide the engine's geometry rather than fix it, and this band
 // exists to depict that geometry. It reaches no audio and it is SUB-PIXEL at
-// the working zoom for every numeric slope; it is NOT the trim crop's rounding
+// the working zoom for every resolved slope; it is NOT the trim crop's rounding
 // class (that comparison is withdrawn — the trim's rounding is transient,
 // while this seam sits in every deliverable's geometry).
 //

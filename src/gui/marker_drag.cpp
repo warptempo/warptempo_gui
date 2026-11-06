@@ -222,11 +222,21 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 //
 // The painter then shows the flag at fwd(proposed_src) = fwd(orig) + delta —
 // the original painted position plus exactly the pointer's travel — so the
-// flag tracks the pointer 1:1 BY CONSTRUCTION, under any map, stale or
-// fresh, at every song location (no live-map inverse, no slope-ratio slip
-// when displayed != live or when the pointer's image and the marker sit in
-// different segments). This is the one deliberate revision of the "gesture
-// mechanics stay on the live map" rule: the drag's contract is
+// flag's CONTINUOUS position tracks the pointer 1:1 BY CONSTRUCTION, under
+// any map, stale or fresh, at every song location (no live-map inverse, no
+// slope-ratio slip when displayed != live or when the pointer's image and
+// the marker sit in different segments). THE RASTER IS 1:1 EXACTLY AT A
+// WHOLE q IN SOURCE VIEW, away from the walls: an integer original and an
+// integer pointer travel keep the proposal on whole frames, and the
+// placement's directed tie (ties right, displayed_column_at, architect
+// 2026-11-06) translates with it, one column per device px of travel. AT A
+// FRACTIONAL q AND IN TARGET VIEW the painter's earlier frame rounding
+// (frame_to_paint_sample's source and target roundings) can leave a
+// one-device-px quantization: q = 23.5, F = 4853, origin 0 places the flag at
+// column 207, and 37 px of travel proposes 5722.5, painted from frame 5722
+// at column 243, not 244 (Sol's tie review, 2026-11-06). This is the one
+// deliberate revision of the "gesture mechanics stay on the live map" rule:
+// the drag's contract is
 // pointer-lockstep with the painted flag, so its mechanics run on the
 // DISPLAYED map (the paint basis); the commit's store write and the playhead's
 // final placement remain live-map (post-commit) territory. The live consumer

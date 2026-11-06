@@ -2134,7 +2134,9 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
         //
         // EVERY OTHER KEY RETURNS 0: THE HARDWARE KEYBOARD IS CLOSED FOR GOOD
         // (architect 2026-10-30; this arm owns the ruling, the mouse's own
-        // below): determinism is per display width, so consistency across
+        // below): determinism is per display width (of the arithmetic on the
+        // delivered events, not of the physical gesture — the scope at
+        // input_core.h's head), so consistency across
         // sessions commits him to this one panel, and a keyboard at the tablet
         // would duplicate the pen and the finger and lose the car form factor.
         // A KeyEvent that is not
