@@ -33,10 +33,14 @@
 //     inactive cue           5D5D5D = BackgroundClip
 //     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
 //                                     (a VARIANT row reads the role its VARIANTS
-//                                     entry names instead: immaterial_gold
-//                                     Immaterial's SearchIndication ECCA6D, every
+//                                     entry names instead, shaded in OKLCH when
+//                                     the entry says so: immaterial_gold
+//                                     Immaterial's SearchIndication ECCA6D
+//                                     darkened to L 72 and warmed to h 79, its
+//                                     chroma scaled by 72 / L0 = C79D57, every
 //                                     other tone Immaterial's, the lit press fill
-//                                     re-derived from it by the ratio)
+//                                     re-derived from the shaded accent by the
+//                                     ratio)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
 //     list press fill        B0DDEB = SelectionBackground (the press arc,
@@ -382,7 +386,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0xA6F1FA, // playhead_line
          0xFFFFFF, // scanner
      }},
-    {"immaterial_gold", GuiThemeGroup::Builtin, "Ableton AG",   // Immaterial.ask (variant: SearchIndication as ViewCheckControlEnabledOn)
+    {"immaterial_gold", GuiThemeGroup::Builtin, "Ableton AG",   // Immaterial.ask (variant: SearchIndication at OKLCH L 72 h 79 as ViewCheckControlEnabledOn)
      {
          0x1D1F23, // ground
          0xCBCBCD, // text
@@ -390,8 +394,8 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x0C0D10, // text_on_lit
          0x5C5E66, // key_dim_ink
          0x2F3138, // key_face
-         0xECCA6D, // lit_fill
-         0xAE9550, // lit_press_fill
+         0xC79D57, // lit_fill
+         0x937440, // lit_press_fill
          0xB595FC, // door_lit_fill
          0x856EBA, // door_lit_press_fill
          0x22242A, // key_press_face
@@ -417,7 +421,7 @@ inline constexpr GuiTheme kGuiThemes[] = {
          0x191B1F, // waveform_core
          0x2B2D34, // grid
          0x14161A, // center
-         0xECCA6D, // cue
+         0xC79D57, // cue
          0x0C0D10, // cue_outline
          0x5C6069, // inactive_cue
          0x47E2F4, // playhead_head

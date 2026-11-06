@@ -23,8 +23,9 @@ the seven of BUILTIN_FILES below are taken (by file name; Default's other
 eleven variants — Light, Cool, Warm, High — are skipped silently: Default is
 "Default Dark Neutral Medium" alone, architect 2026-11-05). Each entry of
 VARIANTS below adds one more BUILTIN row from a taken file's roles, one role
-read in place of another (immaterial_gold: Immaterial.ask with its own
-SearchIndication as the accent, architect 2026-11-05), so seven files give
+read in place of another, optionally shaded in OKLCH (immaterial_gold:
+Immaterial.ask with its own SearchIndication as the accent, darkened to L 72
+and warmed to h 79, architect 2026-11-05 / 2026-11-06), so seven files give
 eight builtin rows. Every `*.ask` under
 a SUBFOLDER is EXTRA, walked recursively, `__MACOSX` directories and `._*`
 files (the zips' resource forks) skipped; the first path component under the
@@ -61,10 +62,14 @@ header's head. Our Default tone = Live's role, the planner having verified
     inactive cue           5D5D5D = BackgroundClip
     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
                                     (a VARIANT row reads the role its VARIANTS
-                                    entry names instead: immaterial_gold
-                                    Immaterial's SearchIndication ECCA6D, every
+                                    entry names instead, shaded in OKLCH when
+                                    the entry says so: immaterial_gold
+                                    Immaterial's SearchIndication ECCA6D
+                                    darkened to L 72 and warmed to h 79, its
+                                    chroma scaled by 72 / L0 = C79D57, every
                                     other tone Immaterial's, the lit press fill
-                                    re-derived from it by the ratio)
+                                    re-derived from the shaded accent by the
+                                    ratio)
     playhead head          03C3D5 = RangeDefault
     selection fill         637E86 = StandbySelectionBackground
     list press fill        B0DDEB = SelectionBackground (the press arc,
@@ -140,6 +145,7 @@ the ground, that is Live's own number — accepted, not a bug, no backstop
 (architect 2026-11-05).
 """
 
+import math
 import os
 import re
 import sys
@@ -162,10 +168,16 @@ BUILTIN_FILES = {
 BUILTIN_AUTHOR = ('Ableton AG', 'https://www.ableton.com')
 
 # THE VARIANTS, the one owner of what a variant is: slug -> (the BUILTIN_FILES
-# stem it reads, {role replaced: the role read in its place}). A variant is a
+# stem it reads, {role replaced: the role read in its place}, {role read:
+# (OKLCH lightness, OKLCH hue)} — the SHADE, empty for none). A variant is a
 # BUILTIN row of its own, credited to its source file, through the one
-# derivation with the named role substituted; its source stem must be a taken
-# builtin and both roles read (ROLES), or the run fails naming it.
+# derivation with the named role substituted; a role read with a shade is
+# first taken to OKLCH (Ottosson's, `oklch` / `from_oklch` below), its
+# lightness SET to the first number (0..100) and its hue to the second
+# (degrees), its chroma scaled by the new lightness over its own (C / L held
+# at the role's), and back to sRGB, each channel rounded and clamped
+# (`shade`). Its source stem must be a taken builtin, every role read (ROLES)
+# and a shaded role one the entry reads, or the run fails naming it.
 # immaterial_gold (architect 2026-11-05, session 56, his pick m1 of tmp/s56's
 # accent mocks on a real Immaterial capture): Immaterial without the pink
 # FF91C3 accent — its lit fill and cue read the same file's SearchIndication
@@ -174,9 +186,18 @@ BUILTIN_AUTHOR = ('Ableton AG', 'https://www.ableton.com')
 # press fill follows by the ratio. A SEPARATE THEME, not an override of
 # `immaterial` (which stays byte-identical): "lowest overhead, most honest,
 # and least churn if reversed"; a per-theme override and a hand-picked hex
-# are not the road (closed_questions.md).
+# are not the road (closed_questions.md). THE SHADE (architect 2026-11-06,
+# sessions 58 and 60): the plain ECCA6D read "too bright" on his glass —
+# "yellow is good but this one is too bright" — and "tune to the ground"
+# meant complementing it: the ground's hue is OKLCH 264, its complement near
+# 84, and a darkened pure yellow drifts olive, so the role is darkened to
+# L 72 (from its own 84.9) and warmed to h 79 (from 89.7), C79D57 — his pick
+# r3_m3 of tmp/s58's round-3 mocks, "implement m3 color"; recorded here as
+# a step on the role, not a hand-picked hex.
 VARIANTS = {
-    'immaterial_gold': ('Immaterial', {'ViewCheckControlEnabledOn': 'SearchIndication'}),
+    'immaterial_gold': ('Immaterial',
+                        {'ViewCheckControlEnabledOn': 'SearchIndication'},
+                        {'SearchIndication': (72, 79)}),
 }
 
 # THE EXTRAS' AUTHORS: the first path component under the ask folder -> the
@@ -332,6 +353,61 @@ def mean(c):
     return (c[0] + c[1] + c[2]) / 3.0
 
 
+def srgb_to_linear(byte):
+    x = byte / 255.0
+    return x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4
+
+
+def linear_to_srgb(x):
+    """A linear channel, clipped to [0, 1], encoded to a float byte."""
+    x = max(0.0, min(1.0, x))
+    return (12.92 * x if x <= 0.0031308 else 1.055 * x ** (1.0 / 2.4) - 0.055) * 255.0
+
+
+def cbrt(x):
+    return math.copysign(abs(x) ** (1.0 / 3.0), x)
+
+
+def oklch(c):
+    """An opaque sRGB triple -> OKLCH (L in 0..100, C in percent, h in
+    degrees), Björn Ottosson's matrices (the VARIANTS' SHADE)."""
+    r, g, b = (srgb_to_linear(v) for v in c)
+    l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+    m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+    s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+    L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+    a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+    bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+    return L * 100.0, math.hypot(a, bb) * 100.0, math.degrees(math.atan2(bb, a)) % 360.0
+
+
+def from_oklch(L, C, h):
+    """OKLCH (oklch's units) -> an sRGB triple, each linear channel clipped,
+    encoded, rounded and clamped."""
+    L /= 100.0
+    C /= 100.0
+    a = C * math.cos(math.radians(h))
+    b = C * math.sin(math.radians(h))
+    l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    lin = (4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+           -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+           -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+    return tuple(clamp_byte(linear_to_srgb(x)) for x in lin)
+
+
+def shade(word6, lightness, hue):
+    """THE VARIANTS' SHADE: `word6` with its OKLCH lightness set to
+    `lightness`, its hue to `hue`, its chroma scaled by lightness / its own;
+    an uppercase 6-digit hex word."""
+    L0, C0, _ = oklch(opaque(word6))
+    if L0 == 0.0:
+        fail('shade: %s is black, its chroma has no ratio' % word6)
+    r, g, b = from_oklch(lightness, C0 * lightness / L0, hue)
+    return '%02X%02X%02X' % (r, g, b)
+
+
 def word(c):
     return '0x%02X%02X%02X' % (c[0], c[1], c[2])
 
@@ -446,17 +522,26 @@ def walk(ask_dir):
         want = slug or slugify(stem)
         if want not in taken:
             fail('builtin file missing: %s.ask' % stem)
-    for slug, (stem, swaps) in VARIANTS.items():
+    for slug, (stem, swaps, shades) in VARIANTS.items():
         if stem not in BUILTIN_FILES:
             fail('variant %s: source %s is not a builtin file' % (slug, stem))
         roles = dict(source_roles[stem])
         notes = []
+        for r in shades:
+            if r not in swaps.values():
+                fail('variant %s: shaded role %s is not one the variant reads' % (slug, r))
         for replaced, replacement in swaps.items():
             for r in (replaced, replacement):
                 if r not in ROLES:
                     fail('variant %s: role %s is not read (add it to ROLES)' % (slug, r))
-            roles[replaced] = roles[replacement]
-            notes.append('%s as %s' % (replacement, replaced))
+            if replacement in shades:
+                lightness, hue = shades[replacement]
+                roles[replaced] = shade(roles[replacement], lightness, hue)
+                notes.append('%s at OKLCH L %g h %g as %s'
+                             % (replacement, lightness, hue, replaced))
+            else:
+                roles[replaced] = roles[replacement]
+                notes.append('%s as %s' % (replacement, replaced))
         fname = '%s.ask (variant: %s)' % (stem, ', '.join(notes))
         builtin.append((slug, 'Builtin', BUILTIN_AUTHOR, fname, derive(roles)))
     builtin.sort(key=lambda r: (r[0] != 'default', r[0]))
