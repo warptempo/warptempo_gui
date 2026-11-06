@@ -1521,6 +1521,22 @@ struct GuiInputHandler {
     void apply_level_case(RedesignButton id, double db);
     void settle_level_case(RedesignButton id, bool level_changed);
 
+    // THE STRUCK CLIP LAMP'S ARM (architect 2026-11-05 night, session 49,
+    // "the strike + the tap"; the contract at AppState::ChromePress's Lamp
+    // kind, the rule at render.h's THE TWO LAMPS' STRIKE).
+    // arm_clip_lamp_press is the band claim's third half, asked where
+    // neither arm_redesign_press nor arm_level_case_press claimed the press:
+    // WHILE AppState::clip_lamp_struck STANDS, a press on the clip lamp's
+    // square (logo_lamp_rects(...).clip, the rect the tick damages) arms the
+    // Lamp kind, no face damaged (no press look); unstruck it claims nothing.
+    // Returns whether it armed. finish_clip_lamp_press_release is the lift's
+    // (finish_chrome_press_release's Lamp arm): on the square and the strike
+    // standing, GuiPlayback::ensure_device_available_for_play — the launch
+    // gates' device question, nothing played — and
+    // kPlaybackDeviceUnavailableCard on a false answer.
+    bool arm_clip_lamp_press(int x, int y);
+    void finish_clip_lamp_press_release(int x, int y);
+
     // THE ARM'S THIRD BODY — the HOLD-REPEAT's firing tick (architect
     // 2026-08-16), driven from the run loop beside the hover recompute. While a
     // press stands on a `repeats` button — the bottom row's four cardinal

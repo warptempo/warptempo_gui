@@ -4818,13 +4818,20 @@ void GuiInputHandler::on_button_press(GuiMouseButton /*button*/, int x, int y,
     // the player, 2026-10-25 for the picker).
     // THE TWO LEVEL CASES ARE THE CLAIM'S SECOND HALF (architect 2026-11-05):
     // where no chord row's face holds the press, a level case's face may —
-    // the sliders, armed by their own kind (arm_level_case_press). A ctrl
-    // press on a case never reaches either arm: the modifier gate above
-    // walks the chord table and refuses a ctrl press on anything else, which
-    // is the barrel binding nothing on a case.
+    // the sliders, armed by their own kind (arm_level_case_press). THE
+    // STRUCK CLIP LAMP IS ITS THIRD (architect 2026-11-05 night, session 49:
+    // "the strike + the tap"; render.h's THE TWO LAMPS' STRIKE): where
+    // neither claimed it, a press on the clip lamp's square while the strike
+    // stands arms the Lamp kind (arm_clip_lamp_press) — the logo lane is the
+    // icon row's upper pad, inside this band. A ctrl press on a case or the
+    // lamp never reaches those arms: the modifier gate above walks the chord
+    // table and refuses a ctrl press on anything else, which is the barrel
+    // binding nothing there.
     const auto claim_button_row_press = [&] {
         if (chrome_band_modifiers_refused(app, x, y, mods)) return;
-        if (!arm_redesign_press(x, y, mods)) arm_level_case_press(x, y);
+        if (arm_redesign_press(x, y, mods)) return;
+        if (arm_level_case_press(x, y)) return;
+        arm_clip_lamp_press(x, y);
     };
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
@@ -6991,6 +6998,58 @@ void GuiInputHandler::finish_level_press_release(
     settle_level_case(id, /*level_changed=*/true);
 }
 
+// -- THE STRUCK CLIP LAMP'S ARM (architect 2026-11-05 night, session 49; the
+//    contract at AppState::ChromePress's Lamp kind, the rule at render.h's
+//    THE TWO LAMPS' STRIKE) ----------------------------------------------------
+
+// THE PRESS: the band claim's third half (claim_button_row_press, after
+// arm_redesign_press and arm_level_case_press found nothing). WHILE THE
+// STRIKE STANDS, AND ONLY THEN (AppState::clip_lamp_struck, the tick's
+// bit, so the press acts on the picture last painted), a press on the clip
+// lamp's square — logo_lamp_rects(...).clip, the very rect the tick
+// damages, so the hit and the picture agree — arms the Lamp kind with the
+// clock; unstruck the lane stays inert and the press claims nothing. No
+// face damage: a lamp is not a key and wears no press look. UNDER AN
+// OVERLAY (the render player, the picker, the score viewer, whose veils
+// let the icon row's band through to their opener) the arm is taken and
+// its lift consumed by the overlay's own release block, which lifts its
+// opener's Roster arm alone — the veil's answer; the overlay's own Play is
+// the reopen there.
+bool GuiInputHandler::arm_clip_lamp_press(int x, int y) {
+    if (!app.clip_lamp_struck) return false;
+    const GuiRect r = logo_lamp_rects(app, app.logo_legend).clip;
+    if (!rect_contains(r, x, y)) return false;
+    app.chrome_press = AppState::ChromePress{
+        .kind     = AppState::ChromePress::Kind::Lamp,
+        .press_ms = monotonic_ms()};
+    return true;
+}
+
+// THE LIFT (finish_chrome_press_release's Lamp arm, under the veil's say):
+// ON THE SQUARE STILL (re-hit at the release's own coordinates, the derive
+// doctrine: a lift slid off the square does nothing, the keys' feint) AND
+// THE STRIKE STILL STANDING (a tick may have cleared it under the hold: no
+// second touch can reopen, the touch window having one owner, but the car's
+// media Play can, GuiCarTransport::on_media_command), the launch gates'
+// device question,
+// GuiPlayback::ensure_device_available_for_play: the dead stream closed
+// (the noise voice's sequence reset first, close_dead_stream), reopened at
+// the new route's rate and STARTED, so the bed resumes through the running
+// callback and NOTHING PLAYS — no launch, no engine play, the tablet's
+// silence between plays. A FALSE answer (the reopen refused, or a device
+// that never came up, which no press opens) cards
+// kPlaybackDeviceUnavailableCard as the gates do — a device asked for and
+// none given; a true answer raises nothing, the next tick's refresh
+// clearing the strike and damaging the square (refresh_logo_lamps).
+void GuiInputHandler::finish_clip_lamp_press_release(int x, int y) {
+    if (!app.clip_lamp_struck) return;
+    const GuiRect r = logo_lamp_rects(app, app.logo_legend).clip;
+    if (!rect_contains(r, x, y)) return;
+    if (!playback.ensure_device_available_for_play())
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kPlaybackDeviceUnavailableCard);
+}
+
 // THE LIVE APPLY, ONE BODY FOR THE DRAG AND THE LONG PRESS (the cases are
 // the two levels' one road: no Settings row since 2026-11-05 night,
 // kSettingsEditorKeys): the live struct takes the level, its voice takes it
@@ -7115,6 +7174,12 @@ void GuiInputHandler::finish_chrome_press_release(
         // its say (a modal raised mid-hold swallows the act, the drag's
         // level standing and already settled by the take).
         finish_level_press_release(arm, x, y);
+        return;
+    case AppState::ChromePress::Kind::Lamp:
+        // THE STRUCK CLIP LAMP'S LIFT (2026-11-05 night): no chord — its one
+        // act the device question, its own body; the veil above has had its
+        // say (a modal raised mid-hold swallows it).
+        finish_clip_lamp_press_release(x, y);
         return;
     }
     // A HOLD THAT ALREADY FIRED CONSUMES ITS OWN LIFT (architect 2026-08-16):

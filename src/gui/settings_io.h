@@ -161,7 +161,8 @@ std::string format_settings_text(
 // the keyboard's key box (`osk_key_w`, `osk_key_h`, 2026-10-29, two tuning
 // keys, through format_osk_key_size), or the keyboard's cap size
 // (`osk_font_px`, 2026-10-29 night, a tuning key, through
-// format_osk_font_px), the
+// format_osk_font_px), or the two lamps' hold (`lamp_hold_ms`, 2026-11-05
+// night, a tuning key, through format_lamp_hold_ms), the
 // same
 // "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is

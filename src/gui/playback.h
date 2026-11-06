@@ -374,14 +374,17 @@ public:
     // to it until a LAUNCH PRESS reopens through
     // ensure_device_available_for_play below (or the render player's own play
     // road reaches play(), which reopens at its head): a dead stream waits for
-    // a launch press. THREE READERS, re-grepped
-    // 2026-10-28, and all are TICKS: the render player's (a dead stream
-    // mid-play must PAUSE, not advance), the A/B audition's,
+    // a launch press (or the struck clip lamp's tap, below). FOUR READERS,
+    // re-grepped 2026-11-05 night, and all are TICKS: the render player's (a
+    // dead stream mid-play must PAUSE, not advance), the A/B audition's,
     // GuiAbAudition::fire_if_due, which ends the whole act
     // through the one stop body and cards
-    // kPlaybackDeviceUnavailableCard, and the score viewer's
+    // kPlaybackDeviceUnavailableCard, the score viewer's
     // (GuiScoreViewer::tick, Live transport), which pauses the held cursor
-    // and cards the same sentence for a dropped soundtrack. Plus the
+    // and cards the same sentence for a dropped soundtrack, and the logo
+    // lane's (refresh_logo_lamps, main.cpp, architect 2026-11-05 night),
+    // which STRIKES THE CLIP LAMP while this answers true and a piece is
+    // open (render.h's THE TWO LAMPS' STRIKE). Plus the
     // reopen's own post-reopen read
     // inside ensure_device_available_for_play. A tick is where this belongs
     // and a press is not: a press reopens.
@@ -438,7 +441,11 @@ public:
     // kPlaybackDeviceUnavailableCard only when this answers FALSE; by the
     // car's Play (car_play_playback, which cards alike, and the two media
     // Play arms, GuiCarTransport::on_media_command and the render player's,
-    // which ignore the answer). (THE NOISE LAMP'S LIT PRESS was a caller
+    // which ignore the answer); and BY THE STRUCK CLIP LAMP'S LIFT
+    // (GuiInputHandler::finish_clip_lamp_press_release, architect 2026-11-05
+    // night: "the strike + the tap"), which plays nothing — the reopen and
+    // the start are the whole act, the bed resuming through the running
+    // callback — and cards alike. (THE NOISE LAMP'S LIT PRESS was a caller
     // 2026-10-28 to 2026-11-05, the `w` case; the lamp went with the level
     // cases, and nothing asks the device question for the bed: the music's
     // reopen is the bed's resume, noise.h's head.) No road reopens without a

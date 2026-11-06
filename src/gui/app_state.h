@@ -6471,15 +6471,22 @@ struct AppState {
     // THE TWO LAMPS BY THE BATTERY (architect 2026-11-05; render.h's THE
     // TWO LAMPS, the one owner of every number and reason): WHAT EACH LAMP
     // SHOWS — STATE THE TICK WROTE, never a paint derivation
-    // (refresh_logo_lamps, main.cpp, the ONE WRITER of all four fields: on
+    // (refresh_logo_lamps, main.cpp, the ONE WRITER of all seven fields: on
     // every tick, ahead of the tick's early returns, as the legend's
-    // refresh is) — lit on the tick that saw the lamp's event, dark on the
-    // next tick that did not, NO HOLD; each edge damages its own square
-    // (logo_lamp_rects, paint_handler.h), nothing is damaged while a bit
-    // holds. paint_logo_lane reads the two bits.
+    // refresh is) — each lamp LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD
+    // (the `lamp_hold_ms` tuning key, architect 2026-11-05 night, session
+    // 49: the one-tick limiter lamp was missed on his glass), an event
+    // re-arming it, dark on the first tick at or past its stamp; the clip
+    // lamp STRUCK while the device cannot sound; each edge of a bit damages
+    // its own square (logo_lamp_rects, paint_handler.h), nothing is damaged
+    // while a bit holds. paint_logo_lane reads the three bits.
     //   clip_lamp_lit          THE CLIP LAMP: the device clamped a sample
-    //                          since the tick before — any view, anything
-    //                          the engine plays, the noise summed in.
+    //                          on this tick's span or within the hold
+    //                          before it — any view, anything the engine
+    //                          plays, the noise summed in.
+    //   clip_lamp_lit_until_ms THE CLIP LAMP'S HOLD STAMP: monotonic_ms() of
+    //                          the last tick that saw a clamp plus the
+    //                          hold, 0 at build; lit while now < it.
     //   clip_lamp_seen_blocks  the engine's clamped-block count the tick
     //                          last saw (GuiPlayback::clipped_blocks, the
     //                          audio thread's counter), the compare's other
@@ -6491,18 +6498,41 @@ struct AppState {
     //                          starts both at zero together and no stale
     //                          compare can blink the lamp once.
     //   limiter_lamp_lit       THE LIMITER LAMP: the playhead passed one of
-    //                          the limiter's engaged frames since the tick
-    //                          before, target playback alone.
+    //                          the limiter's engaged frames on this tick's
+    //                          span or within the hold before it, target
+    //                          playback alone.
+    //   limiter_lamp_lit_until_ms THE LIMITER LAMP'S HOLD STAMP, the clip's
+    //                          shape: the last tick that saw an engaged
+    //                          frame plus the hold, 0 at build. BOTH
+    //                          STAMPS LIVE THE PROJECT'S LIFE with the seen
+    //                          count (built with run_project's AppState), so
+    //                          a project switch starts them at zero.
     //   limiter_lamp_prev_frame the buffer-local cursor the tick last saw
     //                          while the limiter test ran, or -1 — no span
     //                          yet: the first tick of a play seeds it and
     //                          tests nothing, and every tick that does not
     //                          test (not playing, the source view, no target
     //                          bind) voids it back to -1.
-    bool     clip_lamp_lit           = false;
-    uint64_t clip_lamp_seen_blocks   = 0;
-    bool     limiter_lamp_lit        = false;
-    int64_t  limiter_lamp_prev_frame = -1;
+    //   clip_lamp_struck       THE DEAD-STREAM STRIKE (architect 2026-11-05
+    //                          night, session 49; render.h's THE TWO LAMPS'
+    //                          STRIKE): GuiPlayback::device_unavailable() as
+    //                          the tick last read it — the dead latch or no
+    //                          stream standing, "nothing will sound" —
+    //                          false until a piece is open (no engine
+    //                          stands before the load, refresh_logo_lamps),
+    //                          independent of clip_lamp_lit (the strike is
+    //                          painted over whatever face the lamp wears),
+    //                          and THE ONE GATE OF THE CLIP LAMP'S PRESS
+    //                          (GuiInputHandler::arm_clip_lamp_press and its
+    //                          lift): while it stands the square is a press
+    //                          target, the tap reopening the device.
+    bool     clip_lamp_lit             = false;
+    int64_t  clip_lamp_lit_until_ms    = 0;
+    uint64_t clip_lamp_seen_blocks     = 0;
+    bool     limiter_lamp_lit          = false;
+    int64_t  limiter_lamp_lit_until_ms = 0;
+    int64_t  limiter_lamp_prev_frame   = -1;
+    bool     clip_lamp_struck          = false;
     // THE BIND'S OWN COPY OF THE LIMITER'S ENGAGED FRAMES (2026-11-05, the
     // limiter lamp's read road): target_limiter_frames below is the RENDER
     // WORKER'S while a target render is in flight (do_render move-assigns
@@ -6569,7 +6599,8 @@ struct AppState {
     // translation: a finger or the pen on a chrome button is the pointer on
     // contact, pressing at the down point and releasing at the lift.
     //
-    // `kind` names the TARGET CLASS, and TWO classes arm since 2026-10-01:
+    // `kind` names the TARGET CLASS, and FOUR classes arm (two since
+    // 2026-10-01, the Level 2026-11-05, the Lamp that night):
     //   Roster — a chord-table button; `index` is the roster index.
     //   Card   — a NOTIFICATION CARD (architect 2026-10-01; the rule is the
     //            hit section of notifications.h); `card_id` is the card's id
@@ -6616,6 +6647,23 @@ struct AppState {
     //            case: the band's modifier gate refuses a ctrl press there,
     //            no chord row admitting it), no burst, no inside bit (no
     //            press face: the fill is the slider's feedback).
+    //   Lamp   — A PRESS ON THE STRUCK CLIP LAMP (architect 2026-11-05
+    //            night, session 49: "the strike + the tap", Live's CPU
+    //            indicator reset by a click, "not a departure"; render.h's
+    //            THE TWO LAMPS' STRIKE): armed by arm_clip_lamp_press
+    //            (input_pointer.cpp), the band claim's third half, ONLY
+    //            WHILE AppState::clip_lamp_struck STANDS, on the square the
+    //            tick damages (logo_lamp_rects(...).clip); `index` stays -1.
+    //            THE LIFT (finish_clip_lamp_press_release): on the square
+    //            still (the keys' slide-off feint: a lift off it does
+    //            nothing) and the strike still standing, the device question
+    //            of the launch gates — GuiPlayback::
+    //            ensure_device_available_for_play, which closes the dead
+    //            stream, reopens and starts it, nothing played — and
+    //            kPlaybackDeviceUnavailableCard where it answers false. No
+    //            press face (a lamp is not a key), no motion arm, no ctrl
+    //            (the band's modifier gate refuses a barrel press there),
+    //            no burst, no long-press meaning.
     // The enum stays a Kind rather than collapsing into a bool because `None`
     // IS the unarmed state, which is what every reader tests.
     // (TWO OTHER KINDS ARE DELETED PRODUCER-LESS, each with the surface that
@@ -6766,7 +6814,7 @@ struct AppState {
     // (THE CAPTION KIND, a press on one of the app's title bar's three
     // buttons, 2026-10-05 to 2026-10-24, went with the caption.)
     struct ChromePress {
-        enum class Kind { None, Roster, Card, Level };
+        enum class Kind { None, Roster, Card, Level, Lamp };
         Kind     kind          = Kind::None;
         int      index         = -1;
         bool     ctrl          = false;
@@ -8153,7 +8201,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the eighteen keys the
+    // 2026-10-28: the Settings button and bare `;`; the nineteen keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened PREFILLED on the row's line once
@@ -8711,7 +8759,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's eighteen keys as
+    // (architect 2026-10-28), with the settings editor's nineteen keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
@@ -8858,7 +8906,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its eighteen editable key lines and the two
+    // rows (its two headings, its nineteen editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
@@ -9378,8 +9426,10 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // roster's face, which greys every button there (redesign_button_enabled's
 // head) and lights no key (redesign_button_selected's head); row 8's clock
 // and tab name, blank there (clock_time_text and
-// paint_bottom_row_buttons_and_clock, paint_handler.cpp); and bare `0`'s
-// fork, the no-op (overview_command_target). It takes the frame
+// paint_bottom_row_buttons_and_clock, paint_handler.cpp); bare `0`'s
+// fork, the no-op (overview_command_target); and the clip lamp's strike,
+// never read there (refresh_logo_lamps, main.cpp, 2026-11-05 night: no
+// engine stands before the load). It takes the frame
 // count rather than the GuiAudio because this header only forward-declares
 // the class.
 inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {

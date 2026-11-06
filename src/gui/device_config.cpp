@@ -22,9 +22,12 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (SIXTEEN keys since 2026-11-05 night, the
-// noise's fixed attenuation `noise_attenuation_level` placed after
-// `noise_level` — the bed at the case's number plus it; FIFTEEN 2026-11-05,
+// REQUIRED SET, every one of them (SEVENTEEN keys since 2026-11-05 night,
+// the lamps' hold `lamp_hold_ms` appended at the end — a tuning key, the
+// least time either lamp by the battery stays lit; SIXTEEN earlier that
+// night, the noise's fixed attenuation `noise_attenuation_level` placed
+// after `noise_level` — the bed at the case's number plus it; FIFTEEN
+// 2026-11-05,
 // the window's theme `theme` placed after `true_colors` — Live 12's own themes
 // through one key, palette_file.h; FOURTEEN 2026-11-01, the
 // `waveform` key retired with the color presets — one palette,
@@ -97,7 +100,8 @@ namespace {
 // keys have always stood, each leaving when he settles its value:
 // `key_height` since 2026-10-29, and the on-screen keyboard's key box,
 // `osk_key_w` and `osk_key_h`, after it since that evening, and the
-// keyboard's cap size, `osk_font_px`, after them since that night (none
+// keyboard's cap size, `osk_font_px`, after them since that night, and the
+// two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
@@ -127,6 +131,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "osk_key_w",
     "osk_key_h",
     "osk_font_px",
+    "lamp_hold_ms",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -203,6 +208,14 @@ std::string format_osk_key_size(int px) {
 std::string format_osk_font_px(int px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", px);
+    return std::string(buf);
+}
+
+// The two lamps' hold's canonical spelling (2026-11-05 night): `%d`, the
+// noise integers' road.
+std::string format_lamp_hold_ms(int ms) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", ms);
     return std::string(buf);
 }
 
@@ -298,6 +311,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The keyboard's cap size's canonical integer
             // (format_osk_font_px).
             s += format_osk_font_px(cfg.osk_font_px);
+        } else if (k == "lamp_hold_ms") {
+            // The lamps' hold's canonical integer (format_lamp_hold_ms).
+            s += format_lamp_hold_ms(cfg.lamp_hold_ms);
         }
         s += '\n';
     }
@@ -495,6 +511,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kOskFontPxGrammarReason);
             }
             out.osk_font_px = *px;
+            return {};
+        }
+        // THE TWO LAMPS' HOLD (2026-11-05 night, a tuning key): under its one
+        // grammar owner (parse_lamp_hold_ms, device_config.h), required like
+        // every key; any other spelling the launch's hard fail.
+        if (key == "lamp_hold_ms") {
+            const std::optional<int> ms = parse_lamp_hold_ms(value);
+            if (!ms) {
+                return bad_value(ln, key, value, kLampHoldGrammarReason);
+            }
+            out.lamp_hold_ms = *ms;
             return {};
         }
         return warptempo_parse::prefix_line_error(

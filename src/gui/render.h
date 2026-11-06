@@ -363,7 +363,7 @@ struct GuiPalette {
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor list_press_fill; // a list row's fill under a standing press
     GuiColor list_press_text; // that row's text and glyph
-    GuiColor clip_lamp;       // the logo lane's clip lamp, lit (THE TWO LAMPS, the logo lane block; the limiter lamp lit wears card_ground)
+    GuiColor clip_lamp;       // the logo lane's clip lamp, lit, and its strike's bar (THE TWO LAMPS, the logo lane block; the limiter lamp lit wears card_ground)
     GuiColor level_audio_fill; // the AUDIO level case's fill, Live's RangeEditField (paint_level_case, paint_handler.cpp; 2026-11-05)
     GuiColor level_noise_fill; // the NOISE level case's fill, Live's ChosenPreListen (paint_level_case; 2026-11-05)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
@@ -1192,7 +1192,9 @@ constexpr int kMinWindowHeightPx = 480;
 // (its centered 27–44 lifted one W). THE LANE'S GROUND
 // IS THE BAND'S FLAT GROUND, nothing else on it — no line, no caption tone —
 // and it is INERT CHROME like the strips' pads: no hit, no tooltip, no
-// gesture (the band's ground falls through to nothing, input_pointer.cpp).
+// gesture (the band's ground falls through to nothing, input_pointer.cpp) —
+// THE ONE EXCEPTION the struck clip lamp's tap (THE TWO LAMPS' STRIKE
+// below, 2026-11-05 night).
 // paint_handler.cpp's paint_logo_lane paints it, every length below
 // scaled_px, rounded at the element, EVERYTHING ON IT IN THE TEXT TONE
 // `text` WITH NO SHADOW (the flat look, architect 2026-11-01 "no shadow
@@ -1285,7 +1287,8 @@ constexpr int kMinWindowHeightPx = 480;
 //   THE TWO LAMPS BY THE BATTERY (architect 2026-11-05, sessions 46 / 47,
 //     his picks c6 / d1 / d6 / g5 of tmp/s46): TWO SQUARES, kLogoLampW = 7 W
 //     each (14 x 14 device px), in the lane LEFT OF THE PERCENT RUN, inert
-//     chrome like everything on the lane — no hit, no tooltip, no gesture.
+//     chrome like everything on the lane — no hit, no tooltip, no gesture —
+//     but the struck clip lamp's tap (THE STRIKE below).
 //     THE SEAT: by the battery, "ableton places it topmost rightmost
 //     grouping" (Live's control bar's CPU and MIDI boxes), not the band and
 //     not a stack beside the NOISE case (d2 declined). THEIR ROWS: the top row
@@ -1313,26 +1316,85 @@ constexpr int kMinWindowHeightPx = 480;
 //     rects) and of the extent — the first ink column is the limiter's
 //     first column, the lamps standing left of everything — so
 //     refresh_logo_legend's damage covers them whenever the percent moves.
-//     THE TRIGGERS, NO HOLD ("50ms hold isn't really necessary for either.
-//     the refresh rate is enough of a cap"): each lamp is LIT ON THE TICK
-//     THAT SAW ITS EVENT AND DARK ON THE NEXT TICK THAT DID NOT — two bits
-//     on AppState (clip_lamp_lit, limiter_lamp_lit) written only by the
-//     tick's refresh_logo_lamps (main.cpp, beside refresh_logo_legend, on
-//     EVERY tick ahead of the early returns), each edge damaging its own
-//     square through the platform's damage road, nothing damaged while a
-//     bit holds. THE CLIP LAMP — any view, anything the device plays (the
+//     THE TRIGGERS AND THE HOLD (architect 2026-11-05 night, session 49:
+//     "a hold on both lamps, lamp_hold_ms a tuning key with a Settings row
+//     (default 100)" — REVERSING the same night's "no hold": the loop ticks
+//     once per vsync, 90 Hz on the tablet, so a lamp lit for one tick is
+//     one 11 ms frame; the clip clamps a RUN of blocks and its lamp spans
+//     ticks, but the limiter's engaged frames are POINTS, and its one-frame
+//     lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR
+//     AT LEAST THE HOLD — the `lamp_hold_ms` device key, whole ms in
+//     [20, 1000], default 100, read live at every tick (device_config.h's
+//     grammar) — a tick that sees the lamp's event stamping now + the hold
+//     (AppState::clip_lamp_lit_until_ms, limiter_lamp_lit_until_ms), the
+//     lamp lit on that tick and on every tick before the stamp: an event
+//     re-arms it (a run of clamping blocks keeps the lamp lit until the hold
+//     after its last block), the dark edge lands on the first tick at or
+//     past the stamp, and 100 ms at 90 Hz is nine to ten frames. NO TIMER:
+//     the tick is the clock, the vsync its cadence. The bits on AppState
+//     (clip_lamp_lit, limiter_lamp_lit) are written only by the tick's
+//     refresh_logo_lamps (main.cpp, beside refresh_logo_legend, on EVERY
+//     tick ahead of the early returns), each edge damaging its own square
+//     through the platform's damage road, nothing damaged while a bit
+//     holds. THE CLIP LAMP — any view, anything the device plays (the
 //     sum is the device's): the audio thread's clip (playback_clip_block)
 //     reports whether it clamped a sample of the block and the callback
-//     counts the clamped blocks (GuiPlaybackState::clipped_blocks); the tick
-//     lights the lamp iff the count moved since the tick before. THE
+//     counts the clamped blocks (GuiPlaybackState::clipped_blocks); the
+//     event is the count having moved since the tick before. THE
 //     LIMITER LAMP — TARGET VIEW ONLY ("the render player plays files, no
 //     sidecar — agree"; the source view dark): with the engine playing, the
-//     audio view 'T' and the target buffer bound, the lamp lights iff the
+//     audio view 'T' and the target buffer bound, the event is the
 //     limiter's engaged frames (AppState::bound_limiter_frames, the bind's
-//     own snapshot) hold a frame in the span the playhead advanced since the
-//     tick before, in buffer-local frames — [prev, now), a binary search; a
-//     span that runs backward (a wrap, a scrub, a restart) tests nothing, the
-//     first tick of a play seeds and tests nothing, not playing is dark.
+//     own snapshot) holding a frame in the span the playhead advanced since
+//     the tick before, in buffer-local frames — [prev, now), a binary
+//     search; a span that runs backward (a wrap, a scrub, a restart) tests
+//     nothing, the first tick of a play seeds and tests nothing, not playing
+//     tests nothing (a lamp lit at the stop keeps its hold out).
+//     THE STRIKE (architect 2026-11-05 night, session 49: "(6) YES — the
+//     strike + the tap"): WHILE THE DEVICE CANNOT SOUND, A ONE-W DIAGONAL
+//     IN `clip_lamp` (Live's meter red, the lamp's own lit tone) ACROSS THE
+//     CLIP LAMP'S SQUARE. THE STATE: a third bit, AppState::clip_lamp_struck,
+//     written by refresh_logo_lamps alone on every tick once a piece is open
+//     — GuiPlayback::device_unavailable(), the error callback's dead latch
+//     (a headphone pulled, a Bluetooth route dropped) or no stream standing
+//     (a device that never came up, a refused reopen): "nothing will
+//     sound"; a pure read, no timer and no retry (the no-auto-recover rule);
+//     its edges damage the clip lamp's square like the lit bits'. Before a
+//     piece is open no engine exists and nothing is struck (the open's held
+//     frame wears no strike; refresh_logo_lamps). It is INDEPENDENT of the
+//     clip bit: the bar is painted OVER whatever face the lamp wears — a lit
+//     red face under the hold can coincide with a drop for at most the hold,
+//     the bar then red on red; accepted. THE PAINT (paint_lamp_strike,
+//     paint_handler.cpp): after the lamp's face, whole device-px cells, no
+//     antialiasing; FROM THE SQUARE'S TOP-LEFT TO ITS BOTTOM-RIGHT, corner to
+//     corner — THE SLANT IS THE PLANNER'S PICK (2026-11-05 night, the
+//     prohibition sign's), the ruling being "a red diagonal through the clip
+//     lamp" with no slant named; ONE W THICK MEASURED ACROSS THE STROKE: on
+//     row i of the square (0-based) a run of nearbyint(hairline_px · √2)
+//     cells starting at column i, clipped to the square's columns (3 cells
+//     on the tablet, 1 at 100 % — the chip outline's own diagonal,
+//     cue_chip_apex_rows), so the bar's left edge is the exact diagonal; the
+//     face keeps the square around it. THE TAP — THE LANE'S ONE PRESS
+//     TARGET, a recorded exception to "clip indicator is not a button" on
+//     his word ("not a departure": Live's CPU indicator resets on a click):
+//     WHILE STRUCK, AND ONLY THEN, a press on the clip lamp's square (the
+//     very rect the tick damages, logo_lamp_rects(...).clip, so the hit and
+//     the picture agree) arms AppState::ChromePress's Lamp kind
+//     (arm_clip_lamp_press, the band claim's third half, input_pointer.cpp);
+//     no press look; a lift on the square with the strike still standing
+//     asks the launch gates' device question,
+//     GuiPlayback::ensure_device_available_for_play — the dead stream closed
+//     (the noise voice's sequence reset first), reopened at the new route's
+//     rate and STARTED, so the bed resumes through the running callback and
+//     NOTHING PLAYS — and cards kPlaybackDeviceUnavailableCard on a false
+//     answer, as the gates do; a true answer raises nothing, the next tick
+//     clearing the strike. A lift off the square does nothing (the keys'
+//     slide-off feint). A device that never came up is opened by no press
+//     (ensure answers false at once, init's failure logged), so its tap
+//     cards the sentence: the one road, the truthful report. UNDER AN
+//     OVERLAY (the render player, the picker, the score viewer) the lift is
+//     the veil's consumed nothing, the overlay's own Play the reopen there
+//     (arm_clip_lamp_press). Unstruck, the square claims nothing.
 //   THE GLYPH CELL, ONE SIZE WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
 //     move"): THE TWO DRAWINGS are Breeze's (2026-11-02, M7: Breeze only) —

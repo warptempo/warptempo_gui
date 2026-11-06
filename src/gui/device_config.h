@@ -14,7 +14,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Sixteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Seventeen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -228,7 +228,23 @@
 //                            while it stands, which settles into the face
 //                            table's constexpr once he rules the number
 //                            (kGuiFaceSizes), its key, grammar and row going
-//                            then; the template spells 24
+//                            then; the template spells 12
+//   lamp_hold_ms=<ms>        THE TWO LAMPS' HOLD (architect 2026-11-05
+//                            night, session 49, "a hold on both lamps,
+//                            lamp_hold_ms a tuning key with a Settings row
+//                            (default 100)"; render.h's THE TWO LAMPS): the
+//                            least time either lamp by the battery stays
+//                            lit after its last event, in whole
+//                            MILLISECONDS, an integer in [20, 1000] in
+//                            canonical spelling (parse_lamp_hold_ms below);
+//                            read LIVE by the tick at every refresh
+//                            (refresh_logo_lamps, main.cpp), so a commit at
+//                            the settings editor's OK takes effect at the
+//                            next tick with no live act; A TUNING KEY with a
+//                            Settings row, REQUIRED like every key while it
+//                            stands, which settles into a constexpr once he
+//                            rules the number, its key, grammar and row
+//                            going then; the template spells 100
 //   (waveform=<name>, THE WAVEFORM PRESET, a required key naming one of
 //                            the built-in color presets, RETIRED with the
 //                            presets (architect 2026-11-01: one palette,
@@ -353,7 +369,8 @@
 // display keys together — true_colors, theme, waveform_grow; the noise's
 // attenuation `noise_attenuation_level` placed after `noise_level`
 // 2026-11-05 night, the noise's four — folder, level, attenuation,
-// crossfade);
+// crossfade; the lamps' hold `lamp_hold_ms` APPENDED after `osk_font_px`
+// the same night, the tuning keys keeping the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -495,7 +512,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the sixteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seventeen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
@@ -532,7 +549,8 @@
 // since 2026-10-28 `noise`, since 2026-11-05 night
 // `noise_attenuation_level`, `noise_crossfade_s` and since 2026-10-29 the
 // tuning keys `key_height`, `osk_key_w` and `osk_key_h` and that night
-// `osk_font_px` among them (kSettingsEditorKeys) — then a key's current
+// `osk_font_px`, and since 2026-11-05 night the tuning key `lamp_hold_ms`,
+// among them (kSettingsEditorKeys) — then a key's current
 // value, then a closed value's words, and committing each through this
 // file's writer under the key's own grammar below. THE TWO LEVELS,
 // `audio_level` and `noise_level`, are edited on the main page alone, the
@@ -613,6 +631,10 @@ struct DeviceConfig {
     // head's list; a tuning key): required; the construction state is the
     // templates' 12 (kOskFontPxDefaultW below).
     int         osk_font_px       = 12;
+    // THE TWO LAMPS' HOLD in ms (2026-11-05 night, the head's list; a tuning
+    // key): required; the construction state is the templates' 100
+    // (kLampHoldDefaultMs below).
+    int         lamp_hold_ms      = 100;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -1004,6 +1026,32 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
     return n;
 }
 
+// THE lamp_hold_ms GRAMMAR (architect 2026-11-05 night, session 49) — an
+// integer of whole MILLISECONDS in [20, 1000] in canonical spelling ("100",
+// never "0100" or "+100": the int tuning keys' grammar, key_height's), the
+// one owner the reader, the writer, the settings editor's commit and its
+// recall read (format_lamp_hold_ms, parse_lamp_hold_ms). THE DEFAULT IS
+// 100 ms, his number: nine to ten frames at the tablet's 90 Hz vsync, the
+// tick being the lamps' clock (refresh_logo_lamps, main.cpp; render.h's THE
+// TWO LAMPS). The range: 20 ms is about two frames at 90 Hz, the least that
+// is still a hold; 1000 ms, a second, is past any meter's peak hold. The
+// settings page opens the LINE EDITOR on it, not a value list (981 values is
+// no short domain, kSettingsValueListKeys' rule). A TUNING KEY: when he
+// rules the number, the key, these functions and its Settings row go, and
+// the value becomes a constexpr beside refresh_logo_lamps.
+inline constexpr int kLampHoldMinMs     = 20;
+inline constexpr int kLampHoldMaxMs     = 1000;
+inline constexpr int kLampHoldDefaultMs = 100;
+inline constexpr const char* kLampHoldGrammarReason =
+    "must be an integer in [20, 1000] in canonical spelling";
+std::string format_lamp_hold_ms(int ms);
+inline std::optional<int> parse_lamp_hold_ms(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kLampHoldMinMs || *n > kLampHoldMaxMs)
+        return std::nullopt;
+    return n;
+}
+
 // THE waveform_grow GRAMMAR (architect 2026-10-31; the lattice quarters
 // since that afternoon's 4x ruling, render.h's kWaveformSubcells) — a
 // multiple of 0.25 DEVICE PX in [0, 2] in canonical spelling, held as
@@ -1181,7 +1229,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — twelve keys,
+// which serves its ONE device-key body — thirteen keys,
 // `projects_repo=`, `projects_path=`, since 2026-10-21
 // `true_colors=`, since 2026-11-05 `theme=` (its live act
 // GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
@@ -1190,7 +1238,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // (its GuiNoise::set_attenuation_db) and `noise_crossfade_s=`, and since 2026-10-29 the tuning
 // keys `key_height=` (its live act GuiInputHandler::apply_key_height) and
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
-// and that night `osk_font_px=` (its GuiInputHandler::apply_osk_font_px) —
+// and that night `osk_font_px=` (its GuiInputHandler::apply_osk_font_px),
+// and since 2026-11-05 night `lamp_hold_ms=` (no live act: the tick reads
+// the live struct, refresh_logo_lamps) —
 // and the band's two level cases' end (GuiInputHandler::settle_level_case,
 // since 2026-11-05: `audio_level=` and `noise_level=`, their live acts
 // GuiPlayback::set_audio_level_db and GuiNoise::set_level_db, the typed
@@ -1229,7 +1279,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // `key_height=17` (2026-10-29; 17 W since the rebase of 2026-11-05),
 // `osk_key_w=24`, `osk_key_h=30` and `osk_font_px=12` (2026-10-29,
 // kKeyHeightDefaultW, kOskKeyWDefaultW,
-// kOskKeyHDefaultW, kOskFontPxDefaultW), kDefaultProjectsRepo and
+// kOskKeyHDefaultW, kOskFontPxDefaultW), `lamp_hold_ms=100` (2026-11-05
+// night, kLampHoldDefaultMs), kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run lands a

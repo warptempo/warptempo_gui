@@ -187,7 +187,9 @@ shopt -s nocaseglob
 #      rebase to 200 % of 2026-11-05: 34 device px on the tablet), the
 #      osk_key_w=24 and osk_key_h=30 lines (2026-10-29, the keyboard's two
 #      tuning keys, in W), the osk_font_px=12 line (2026-10-29 night, the
-#      keyboard's cap size in W, a tuning key) and
+#      keyboard's cap size in W, a tuning key), the lamp_hold_ms=100 line
+#      (2026-11-05 night, the seventeenth key: the least time either lamp
+#      by the battery stays lit, in ms, a tuning key) and
 #      the waveform_grow=1 line (2026-10-31, the waveform's antialiasing
 #      grow, a permanent key; 1 since 2026-11-04 night) and the audio_level=0 line (2026-10-31 night,
 #      the level of the program's own sound, a permanent key; the icon row's
@@ -269,6 +271,8 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # keys required while they stand since 2026-10-29 evening, 24 x 30 W (48 x
 # 60 device px); and THE ON-SCREEN KEYBOARD'S CAP SIZE, a tuning key
 # required while it stands since 2026-10-29 night, 12 W (24 device px); and THE
+# TWO LAMPS' HOLD, a tuning key required while it stands since 2026-11-05
+# night (the seventeenth key), 100 ms; and THE
 # WAVEFORM'S ANTIALIASING GROW, a permanent key required since 2026-10-31,
 # one device px (2026-11-04 night; half before); and THE AUDIO LEVEL, the program's own sound's level, a
 # permanent key required since 2026-10-31 night, 0 dB, the files as they
@@ -280,7 +284,7 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # on the tablet is kept: a line already there is never touched — the two
 # levels' lines among them, whatever their spelling (0.0 and -9.0 read as
 # well as 0 and -9), which the app rewrites canonical at its next commit.
-ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-inf noise_attenuation_level=-9 noise_crossfade_s=4 key_height=17 osk_key_w=24 osk_key_h=30 osk_font_px=12"
+ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-inf noise_attenuation_level=-9 noise_crossfade_s=4 key_height=17 osk_key_w=24 osk_key_h=30 osk_font_px=12 lamp_hold_ms=100"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -1265,8 +1269,9 @@ apply_setup() {
 
     # 5. THE SETTINGS FILE: projects_repo made right, true_colors, theme,
     # waveform_grow, audio_level, noise, noise_level, noise_attenuation_level,
-    # noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px
-    # their lines where absent
+    # noise_crossfade_s, key_height, osk_key_w, osk_key_h, osk_font_px and
+    # lamp_hold_ms (the seventeenth, 2026-11-05 night) their lines where
+    # absent
     # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
     # keys, the LED glow's, the noise's two fades, the level's and the
@@ -1297,7 +1302,7 @@ apply_setup() {
             END               { if (had == 0) print repo
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, theme, waveform_grow, audio_level, noise, noise_level, noise_attenuation_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px and has no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, theme, waveform_grow, audio_level, noise, noise_level, noise_attenuation_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h, osk_font_px and lamp_hold_ms and has no line of a retired key"
         else
             head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"

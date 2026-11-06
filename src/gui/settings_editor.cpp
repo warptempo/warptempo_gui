@@ -1216,7 +1216,9 @@ void GuiSettingsEditor::commit() {
 // `noise_level`, have no arm since 2026-11-05 night: no Settings row, the
 // band's two cases their one road, kSettingsEditorKeys), and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
-// `osk_font_px` (2026-10-29) the same, their arms last
+// `osk_font_px` (2026-10-29) the same, their arms after them, and the
+// lamps' hold `lamp_hold_ms` (2026-11-05 night) the same but for a live act,
+// having none, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1484,6 +1486,26 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE TWO LAMPS' HOLD (architect 2026-11-05 night, session 49, a tuning
+    // key; render.h's THE TWO LAMPS): an integer of milliseconds under its
+    // one grammar owner (parse_lamp_hold_ms, device_config.h), STORED INTO
+    // THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT AND NO
+    // DAMAGE: nothing is laid out or painted by it; the tick reads
+    // app.device_config->lamp_hold_ms at every refresh (refresh_logo_lamps,
+    // main.cpp), so the commit takes effect at the next tick, the next event
+    // stamping its hold with the new number (a lamp lit under the old hold
+    // keeps the stamp it was given). The page opens the line editor on it (no
+    // value list, 981 values no short domain); Tab completes no value;
+    // stage 2's recall is the writer's spelling (recall_gui_setting_value).
+    if (key == "lamp_hold_ms") {
+        const std::optional<int> ms = parse_lamp_hold_ms(value);
+        if (!ms) return reject(kLampHoldGrammarReason);
+        if (*ms == app.device_config->lamp_hold_ms) return unchanged();
+        app.device_config->lamp_hold_ms = *ms;
+        (void)persist();
+        return applied();
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1633,7 +1655,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's eighteen and
+        // one key does — any key the recall knows, the table's nineteen and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

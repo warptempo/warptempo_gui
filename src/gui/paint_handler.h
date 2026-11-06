@@ -55,7 +55,11 @@ struct GuiTargetRender;
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // THE TWO LAMPS' SQUARES for `legend` at this geometry (render.h's THE TWO
 // LAMPS; the same layout as the extent's, so the two cannot disagree): the
-// tick damages one when its bit flips (main.cpp's refresh_logo_lamps).
+// tick damages one when one of its bits flips (main.cpp's
+// refresh_logo_lamps: the lit bits under the hold, the clip lamp's strike),
+// and the clip square is the struck lamp's hit box too
+// (GuiInputHandler::arm_clip_lamp_press and its lift), so the hit and the
+// picture are one rect.
 struct LogoLampRects {
     GuiRect limiter;
     GuiRect clip;

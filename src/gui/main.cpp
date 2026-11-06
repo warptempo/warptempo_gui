@@ -1366,21 +1366,45 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 }
 
 // THE TWO LAMPS BY THE BATTERY, THEIR ONE WRITER (architect 2026-11-05;
-// render.h's THE TWO LAMPS owns every number and reason; the four fields'
+// render.h's THE TWO LAMPS owns every number and reason; the seven fields'
 // contract at AppState::clip_lamp_lit): called ON EVERY TICK right after
 // refresh_logo_legend, ahead of the tick's early returns, because the clip
 // is the device's — it clamps under the render player, the score viewer and
-// the silence between plays alike — and a lamp that is lit must go dark on
-// the next tick whatever mode stands. NO HOLD: each lamp is lit on the tick
-// that saw its event and dark on the next that did not ("the refresh rate is
-// enough of a cap"); each EDGE damages that lamp's own square
-// (logo_lamp_rects, the painter's own layout) through the platform's damage
-// road, and nothing is damaged while a bit holds.
+// the silence between plays alike — and a lamp's dark edge and the strike's
+// edges are owed whatever mode stands. THE HOLD (architect 2026-11-05 night,
+// session 49, REVERSING the same night's "no hold": the loop ticks once per
+// vsync, 90 Hz on the tablet, so a lamp lit for one tick is one 11 ms frame
+// — the clip clamps a RUN of blocks and its lamp spans ticks, but the
+// limiter's engaged frames are POINTS, and its one-frame lamp was missed on
+// his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD —
+// a tick whose test sees the event stamps now + lamp_hold_ms (the tuning
+// key, read live from the device config at every refresh, so a typed
+// change needs no apply), and the lamp's bit is the event seen this tick or
+// now before the stamp. So an event re-arms the hold (a run of clamping
+// blocks keeps the lamp lit until the hold after its last block), the dark
+// edge lands on the first tick at or past the stamp, and 100 ms at 90 Hz
+// is nine to ten frames. NO TIMER: the tick is the clock, the vsync its
+// cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
+// (architect 2026-11-05 night, session 49): the clip lamp's third bit,
+// GuiPlayback::device_unavailable() read on every tick — the error
+// callback's dead latch or no stream standing, "nothing will sound" — a
+// pure read that reopens nothing (no timer, no retry: the tap on the struck
+// lamp and every launch press are the reopens). NO PIECE, NO STRIKE: before
+// the load — the fresh set's first ticks and the open's held frame, which
+// paints the logo lane as always — no engine exists yet (GuiPlayback is
+// brought up by the load, GuiFileLoader::load_file), and the read answers
+// true for a device nothing has asked for; so the strike is read only once
+// a piece is open (no_audio_to_dispatch_on, the roster's own no-piece term),
+// else every open's held frame would wear it. Each EDGE of a bit damages
+// that lamp's own square (logo_lamp_rects, the painter's own layout)
+// through the platform's damage road, and nothing is damaged while a bit
+// holds.
 //   THE CLIP LAMP: the engine's clamped-block count (GuiPlayback::
 //   clipped_blocks, the audio thread's counter read with acquire) against
-//   the count this tick's predecessor saw; lit iff it moved. Both words live
-//   the engine's life (the counter) and the project's (the seen word), one
-//   lifetime, so a project switch starts both at zero together.
+//   the count this tick's predecessor saw; the event iff it moved. Both
+//   words live the engine's life (the counter) and the project's (the seen
+//   word and the stamps), one lifetime, so a project switch starts them at
+//   zero together.
 //   THE LIMITER LAMP, TARGET PLAYBACK ALONE: with the engine playing, the
 //   audio view 'T' and the bind's snapshot of the limiter's engaged frames
 //   non-empty (AppState::bound_limiter_frames: filled only while the target
@@ -1389,42 +1413,58 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 //   and the score viewer clear it at their binds, the T→S leg at its), the
 //   cursor in BUFFER-LOCAL frames — GuiPlayback::cursor() reports the domain
 //   position, the bind's domain offset (domain_begin) subtracted — against
-//   the one the tick before saw: lit iff the sorted list holds a frame in
-//   [prev, now), a binary search. A span that runs backward (a loop wrap, a
-//   scrub, a restart) tests nothing on that tick; the first tick of a play
-//   seeds prev = now and tests nothing; every tick that does not test voids
-//   prev, so the next play seeds afresh. GUI-thread logic over the stored
-//   list, no atomic stamp.
+//   the one the tick before saw: the event iff the sorted list holds a
+//   frame in [prev, now), a binary search. A span that runs backward (a
+//   loop wrap, a scrub, a restart) tests nothing on that tick; the first
+//   tick of a play seeds prev = now and tests nothing; every tick that does
+//   not test voids prev, so the next play seeds afresh. GUI-thread logic
+//   over the stored list, no atomic stamp. A lamp lit when the play stops
+//   keeps its hold out, dark at its stamp like any other.
 void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
-                        const GuiPlayback& playback) {
+                        const GuiAudio& audio, const GuiPlayback& playback) {
+    const int64_t now_ms  = monotonic_ms();
+    const int64_t hold_ms = app.device_config->lamp_hold_ms;
+
     // THE CLIP LAMP.
     const uint64_t clipped = playback.clipped_blocks();
-    const bool clip_lit = clipped != app.clip_lamp_seen_blocks;
+    const bool clip_event = clipped != app.clip_lamp_seen_blocks;
     app.clip_lamp_seen_blocks = clipped;
+    if (clip_event) app.clip_lamp_lit_until_ms = now_ms + hold_ms;
+    const bool clip_lit = clip_event || now_ms < app.clip_lamp_lit_until_ms;
 
     // THE LIMITER LAMP.
-    bool limiter_lit = false;
+    bool limiter_event = false;
     if (playback.is_playing() && app.active_audio_view == 'T' &&
         !app.bound_limiter_frames.empty()) {
         const int64_t now = playback.cursor() - playback.domain_begin();
         const int64_t prev = app.limiter_lamp_prev_frame;
         if (prev >= 0 && now > prev) {
             const std::vector<int64_t>& f = app.bound_limiter_frames;
-            limiter_lit = std::lower_bound(f.begin(), f.end(), prev) !=
-                          std::lower_bound(f.begin(), f.end(), now);
+            limiter_event = std::lower_bound(f.begin(), f.end(), prev) !=
+                            std::lower_bound(f.begin(), f.end(), now);
         }
         app.limiter_lamp_prev_frame = now;
     } else {
         app.limiter_lamp_prev_frame = -1;
     }
+    if (limiter_event) app.limiter_lamp_lit_until_ms = now_ms + hold_ms;
+    const bool limiter_lit =
+        limiter_event || now_ms < app.limiter_lamp_lit_until_ms;
+
+    // THE STRIKE, once a piece is open.
+    const bool struck =
+        !no_audio_to_dispatch_on(app, audio.total_frames()) &&
+        playback.device_unavailable();
 
     // THE EDGES, each damaging its own square; the layout is asked only
     // when a bit flips.
-    if (clip_lit == app.clip_lamp_lit && limiter_lit == app.limiter_lamp_lit)
+    if (clip_lit == app.clip_lamp_lit && limiter_lit == app.limiter_lamp_lit &&
+        struck == app.clip_lamp_struck)
         return;
     const LogoLampRects rects = logo_lamp_rects(app, app.logo_legend);
-    if (clip_lit != app.clip_lamp_lit) {
-        app.clip_lamp_lit = clip_lit;
+    if (clip_lit != app.clip_lamp_lit || struck != app.clip_lamp_struck) {
+        app.clip_lamp_lit    = clip_lit;
+        app.clip_lamp_struck = struck;
         const GuiRect& r = rects.clip;
         if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
     }
@@ -2201,10 +2241,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // wall clock and the battery move whatever the project is doing
         // (refresh_logo_legend, its rule and its damage). THE TWO LAMPS
         // BESIDE IT the same way (refresh_logo_lamps, 2026-11-05): the clip
-        // is the device's under every mode below, and a lit lamp owes its
-        // dark edge to the very next tick.
+        // and the strike are the device's under every mode below, and a lit
+        // lamp owes its dark edge to the first tick past its hold.
         refresh_logo_legend(app, gui);
-        refresh_logo_lamps(app, gui, playback);
+        refresh_logo_lamps(app, gui, audio, playback);
 
         // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
         // 2026-11-04 night, render_playhead's paragraph, render.h — the

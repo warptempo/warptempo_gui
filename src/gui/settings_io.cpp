@@ -419,6 +419,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // one formatter (format_osk_font_px, device_config.h).
     if (key == "osk_font_px" && app.device_config != nullptr)
         return format_osk_font_px(app.device_config->osk_font_px);
+    // THE TWO LAMPS' HOLD (2026-11-05 night, a tuning key): through its one
+    // formatter (format_lamp_hold_ms, device_config.h).
+    if (key == "lamp_hold_ms" && app.device_config != nullptr)
+        return format_lamp_hold_ms(app.device_config->lamp_hold_ms);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

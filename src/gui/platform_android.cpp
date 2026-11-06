@@ -609,6 +609,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // tuning key), spelled: the face table's Keys 12 W, 24 device px on the
     // tablet (device_config.h's head).
     cfg.osk_font_px       = kOskFontPxDefaultW;
+    // THE TWO LAMPS' HOLD (architect 2026-11-05 night, a tuning key),
+    // spelled: 100 ms (device_config.h's head).
+    cfg.lamp_hold_ms      = kLampHoldDefaultMs;
     return cfg;
 }
 

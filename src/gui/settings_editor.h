@@ -55,7 +55,7 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the eighteen,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the nineteen,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -99,7 +99,9 @@ struct GuiInputHandler;
 // seconds noise_crossfade_s, and since 2026-10-29
 // (architect) the tuning key key_height, the key case's height, and the
 // same evening the on-screen keyboard's key box's two tuning keys osk_key_w
-// and osk_key_h, and that night its cap size's tuning key osk_font_px (the
+// and osk_key_h, and that night its cap size's tuning key osk_font_px, and
+// since 2026-11-05 night (architect) the two lamps' hold's tuning key
+// lamp_hold_ms (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, then retired with the LED, 2026-11-01; the
 // two levels audio_level and noise_level, editable 2026-10-28 / 10-31 night
@@ -125,8 +127,8 @@ struct GuiInputHandler;
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
 //    true_colors, theme, waveform_grow, noise, noise_attenuation_level,
-//    noise_crossfade_s, key_height, osk_key_w, osk_key_h and osk_font_px —
-//    in ONE body,
+//    noise_crossfade_s, key_height, osk_key_w, osk_key_h, osk_font_px and
+//    lamp_hold_ms — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
 //    owner in device_config.h
@@ -153,7 +155,9 @@ struct GuiInputHandler;
 //    (the keys on screen are the answer); the keyboard's key box the same
 //    (GuiInputHandler::apply_osk_key_size), no card (the keyboard standing
 //    under the editor is the answer); the keyboard's cap size the same, the
-//    window repainted (GuiInputHandler::apply_osk_font_px), no card.
+//    window repainted (GuiInputHandler::apply_osk_font_px), no card; the
+//    lamps' hold stored and persisted alone, no live act and no card (the
+//    tick reads the live struct at its next refresh, refresh_logo_lamps).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -211,7 +215,7 @@ struct GuiInputHandler;
 // levels' lists left with the band's two sliders and their decimal grammar,
 // kSettingsValueListKeys below, and their rows that night.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE EIGHTEEN (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE NINETEEN (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
@@ -222,13 +226,14 @@ struct GuiInputHandler;
 // 2026-11-05, after `true_colors` as the config writes it; the two levels
 // `audio_level` and `noise_level` gone 2026-11-05 night and the noise's
 // attenuation `noise_attenuation_level` joined after `noise`, as the config
-// writes it):
+// writes it; the lamps' hold `lamp_hold_ms` the same night, at the device
+// keys' tail):
 // the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's thirteen editable keys in that file's
+// CONFIG's fourteen editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor, nor have the two levels, below). The other keys this editor
 // commits (`scale`, `bpm`,
@@ -257,7 +262,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "true_colors", "theme",
     "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
-    "key_height", "osk_key_w", "osk_key_h", "osk_font_px",
+    "key_height", "osk_key_w", "osk_key_h", "osk_font_px", "lamp_hold_ms",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two groups split the table here, and the asserts pin
@@ -328,7 +333,7 @@ static_assert(settings_page_piece_keys_pinned());
 // are no short domain, so its row opens the line editor; nor are the
 // keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its
 // `osk_font_px`, 37; nor the noise's attenuation, a decimal, whose row
-// opens the line editor.)
+// opens the line editor; nor the lamps' hold `lamp_hold_ms`, 981 values.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
 };
@@ -483,7 +488,8 @@ struct GuiSettingsEditor {
     // door alone, having no value list),
     // `noise_crossfade_s=` and the tuning keys `key_height=`, `osk_key_w=`,
     // `osk_key_h=` and `osk_font_px=` (2026-10-29, the line's door alone,
-    // having no value list) — ONE BODY, TWO DOORS
+    // having no value list) and `lamp_hold_ms=` (2026-11-05 night, the
+    // line's door alone) — ONE BODY, TWO DOORS
     // (architect 2026-10-25, 2026-10-28 night for the value lists' keys): the
     // typed line's commit (commit_device_setting, below, the editor's door)
     // and a VALUE LIST's pick (GuiInputHandler::value_list_commit) both land

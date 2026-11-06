@@ -37,23 +37,28 @@ struct GuiRenderPlayer;
 // and a device that was never there are one fact to the user. It cannot double
 // with them: it returns, and the stop body it takes leaves the act Idle, so no
 // launch of the act's follows it.
-// BESIDE THOSE FOUR (re-grepped 2026-10-28): the car's Play
-// (car_play_playback, the toggle's play prologue) and the score viewer's tick
-// (a dead device mid-soundtrack pauses, the render player's rule). (THE
+// BESIDE THOSE FOUR (re-grepped 2026-11-05 night): the car's Play
+// (car_play_playback, the toggle's play prologue), the score viewer's tick
+// (a dead device mid-soundtrack pauses, the render player's rule) and the
+// struck clip lamp's lift (GuiInputHandler::finish_clip_lamp_press_release,
+// architect 2026-11-05 night: a press that reopens and plays nothing, and
+// cards on a refused reopen). (THE
 // NOISE LAMP'S LIT PRESS asked it too, 2026-10-28 to 2026-11-05; the lamp
 // went with the level cases, and the noise bed asks no device question — it
 // sounds through whichever stream the music opens, noise.h's head.)
 // It lives here rather than in notifications.h
 // because the fact is this cluster's: the question is GuiPlayback::
 // ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect
-// 2026-09-02): each PRESS site (the three launch sites, the car's Play)
-// reopens a dead AAudio stream before it asks, and
+// 2026-09-02): each PRESS site (the three launch sites, the car's Play, the
+// struck clip lamp's tap) reopens a dead AAudio stream before it asks, and
 // cards only when that reopen failed. The
-// reads: the THREE TICKS keep device_unavailable (re-grepped 2026-10-28) — the
-// render player's (a dead stream mid-play must pause), the A/B audition's
-// (a dead stream mid-act must end the act, the fourth site above) and the
-// score viewer's (a dead stream under a playing soundtrack pauses it and
-// cards this sentence) — and the
+// reads: the FOUR TICKS keep device_unavailable (re-grepped 2026-11-05
+// night) — the render player's (a dead stream mid-play must pause), the A/B
+// audition's (a dead stream mid-act must end the act, the fourth site
+// above), the score viewer's (a dead stream under a playing soundtrack
+// pauses it and cards this sentence) and the logo lane's (refresh_logo_lamps:
+// the clip lamp struck, its tap the reopen, carding this sentence on a
+// refusal) — and the
 // two PLAY-face predicates (space_launch_would_play,
 // ab_audition_preflight_ok) read device_absent, the never-came-up half alone
 // — a face is a read, never a reopen, and it must not grey what the press
