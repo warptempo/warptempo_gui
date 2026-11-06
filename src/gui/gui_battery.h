@@ -16,9 +16,12 @@
 // paint_handler.cpp's paint_logo_lane paint it).
 
 struct GuiBattery {
-    // WHETHER A POWER SOURCE IS ATTACHED: Plugged covers charging, full and
-    // "not charging" while on power alike (any source: AC, USB, wireless,
-    // dock); Unknown is no status at all, or one the host cannot read.
+    // WHETHER THE CABLE IS ATTACHED (architect 2026-11-05 night: the glyph
+    // tells him the plug is in, not that current flows): Plugged covers
+    // charging, full, and a charge the host's battery protection has paused
+    // with the cable in alike (the host's answer is composed at
+    // MainActivity.pushBattery); Unknown is no status at all, or one the host
+    // cannot read.
     enum class Plugged : uint8_t { Plugged, Unplugged, Unknown };
 
     // FALSE WHEN THE HOST REPORTS NO BATTERY (the broadcast's EXTRA_PRESENT).
@@ -32,8 +35,10 @@ struct GuiBattery {
 
 // THE LEGEND'S GLYPH, ALWAYS ONE OF THE TWO (architect 2026-10-24: "I prefer
 // not to use nothing … the glyph always there taking up space so that the
-// clock doesn't move"): CHARGING while any power source is attached, 100 %
-// INCLUDED ("the charging one on even at 100 %"), and on a host with no
+// clock doesn't move"): CHARGING while THE CABLE IS ATTACHED, 100 %
+// INCLUDED ("the charging one on even at 100 %") and a charge paused by the
+// host's battery protection included (architect 2026-11-05 night: the glyph
+// says the plug is in, not that current flows), and on a host with no
 // battery (power is attached); DISCHARGING while discharging — and while
 // the plug state is UNKNOWN (the cold answer before the tablet's first
 // broadcast, an unreadable sysfs node): the charging glyph claims power, so

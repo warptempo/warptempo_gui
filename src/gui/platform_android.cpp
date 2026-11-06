@@ -491,9 +491,12 @@ std::atomic<uint32_t> g_battery_word{
 // THE JNI ENTRY for the battery (name-based resolution, as the car's):
 // MainActivity's `private static native void nativeBatteryState(boolean
 // present, int percent, int plugged)`. `percent` is 0..100 or -1 for a level
-// the broadcast did not carry; `plugged` is EXTRA_PLUGGED as the broadcast
-// carried it — 0 unplugged, any positive source plugged (AC, USB, wireless,
-// dock), and -1 for an extra that was missing: Unknown.
+// the broadcast did not carry; `plugged` is the Java side's COMPOSED answer to
+// whether the cable is attached (architect 2026-11-05 night; the rule at
+// MainActivity.pushBattery, from Android's EXTRA_PLUGGED or Samsung's
+// `online` cable type, which stays up through the battery protection's
+// charging pause) — 0 unplugged, positive attached, and -1 for no answer:
+// Unknown.
 extern "C" JNIEXPORT void JNICALL
 Java_com_warptempo_gui_MainActivity_nativeBatteryState(JNIEnv* /*env*/,
                                                         jclass /*clazz*/,

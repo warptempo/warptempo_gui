@@ -550,19 +550,49 @@ public class MainActivity extends NativeActivity {
     // atomic word, so the call is safe before the native loop's init and after
     // its shutdown and needs no lock here. `percent` is 0..100, or -1 for a
     // level the intent did not carry (a missing or negative EXTRA_LEVEL, or no
-    // usable EXTRA_SCALE); `plugged` is EXTRA_PLUGGED as carried -- 0 on
-    // battery, any positive power source plugged, -1 for a missing extra,
-    // which the legend shows as the battery (gui_battery.h's GuiLogoGlyph).
+    // usable EXTRA_SCALE); `plugged` is pushBattery's composed answer to
+    // "is the cable attached" (the rule at pushBattery) -- 1 attached, 0
+    // unplugged, -1 for no answer, which the legend shows as the battery
+    // (gui_battery.h's GuiLogoGlyph).
     private static native void nativeBatteryState(boolean present, int percent,
                                                   int plugged);
 
+    // THE PLUGGED ANSWER MEANS THE CABLE IS ATTACHED, NOT THAT CURRENT FLOWS
+    // (architect 2026-11-05 night: the glyph is there "to tell me if I've
+    // successfully plugged in or not. Sometimes the connection may be weak or
+    // the plug may have come loose. So if that little sign is there, it tells
+    // me that the plug, I don't need to worry about plugging it in"). THIS IS
+    // THE ONE PLACE THE INTENT IS READ, and the answer is composed here:
+    //   * EXTRA_PLUGGED > 0 -> 1: Android says a source is attached;
+    //   * else Samsung's `online` >= 2 -> 1: the cable is attached while
+    //     Android's flag is down;
+    //   * else EXTRA_PLUGGED == 0 -> 0: unplugged;
+    //   * else -1: neither extra carried, Unknown.
+    // EXTRA_PLUGGED ALONE FAILS: One UI's battery protection pauses the
+    // charge with the cable in and zeroes it (measured on the tablet
+    // 2026-11-05 night: plugged 0, status DISCHARGING, the level falling,
+    // for half an hour on the charger). `online` is SAMSUNG'S VENDOR EXTRA on
+    // the same sticky intent, the sec_battery cable type (the kernel's power
+    // supply online type): 1 none, the battery alone, on every true unplug;
+    // >= 2 a cable, measured 3 and 6 during the charger's negotiation and 19
+    // and 38 the settled HV / PD types, the whole protection pause included;
+    // 0 unknown, read as no answer. Its neighbors charger_type and hv_charger
+    // are not the key: they read 0 / false through the negotiation's first
+    // seconds while `online` already says 3. A host without the extra falls
+    // back to Android's flag alone.
     private void pushBattery(Intent intent) {
         final boolean present =
                 intent.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true);
         final int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
         final int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
         final int percent = (level >= 0 && scale > 0) ? level * 100 / scale : -1;
-        final int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+        final int androidPlugged =
+                intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+        final int samsungOnline = intent.getIntExtra("online", -1);
+        final int plugged = androidPlugged > 0  ? 1
+                          : samsungOnline >= 2  ? 1
+                          : androidPlugged == 0 ? 0
+                                                : -1;
         nativeBatteryState(present, percent, plugged);
     }
 
