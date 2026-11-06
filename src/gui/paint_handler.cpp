@@ -1622,7 +1622,8 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // in render.h) — and, NOT CENTERED, THE GLYPH CELL, its top row on the runs'
 // ink top row (architect 2026-11-04 night, his pick f2 of tmp/s38, a
 // deliberate asymmetry: the centered cell read "too low"), and THE TWO
-// LAMPS, their top row one W under it (kLogoLampDropW, 2026-11-05); across,
+// LAMPS, their top row on it too (2026-11-06, his pick m5 / m6 of
+// tmp/s63); across,
 // right to left: the clock run's last ink on the well's last column, the
 // pipe block kLogoPipeAirW left of the clock's first ink column, the glyph
 // cell kLogoPipeAirW left of the block, the percent run's last ink one space
@@ -1718,10 +1719,10 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     // THE TWO LAMPS (render.h's THE TWO LAMPS): the clip lamp kLogoLampGapW
     // of ground left of the percent's first ink column (the cell's first
     // column with no percent run), the limiter lamp one key gap left of it,
-    // both kLogoLampW square with their top row kLogoLampDropW under the
-    // runs' ink top row.
+    // both kLogoLampW square with their top row ON the runs' ink top row,
+    // the cell's own (2026-11-06, his pick m5 / m6 of tmp/s63).
     const int lamp  = scaled_px(kLogoLampW, 1);
-    const int lamp_y = ink_top + scaled_px(kLogoLampDropW);
+    const int lamp_y = ink_top;
     const int clip_x = percent_first_ink - scaled_px(kLogoLampGapW) - lamp;
     l.clip_lamp    = GuiRect{clip_x, lamp_y, lamp, lamp};
     l.limiter_lamp = GuiRect{clip_x - key_gap_px() - lamp, lamp_y, lamp, lamp};

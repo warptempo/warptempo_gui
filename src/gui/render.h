@@ -1189,7 +1189,7 @@ constexpr int kMinWindowHeightPx = 480;
 // 11 W = 22 device px):
 // the brand on lane rows 25–46 (its cap rows 25–41, the "p" to 46), the
 // runs 28–42, the pipe 28–42 with them, the battery 28–41 (its top on the
-// runs'), the two lamps 30–43 (one W under the runs' top), the note 25–42
+// runs'), the two lamps 28–43 (their top on the runs' too), the note 25–42
 // (its centered 27–44 lifted one W). THE LANE'S GROUND
 // IS THE BAND'S FLAT GROUND, nothing else on it — no line, no caption tone —
 // and it is INERT CHROME like the strips' pads: no hit, no tooltip, no
@@ -1286,26 +1286,30 @@ constexpr int kMinWindowHeightPx = 480;
 //     ":", the space and "AMP"), so the seat never moves with what the
 //     clock reads; the pipe's rows are the same band.
 //   THE TWO LAMPS BY THE BATTERY (architect 2026-11-05, sessions 46 / 47,
-//     his picks c6 / d1 / d6 / g5 of tmp/s46): TWO SQUARES, kLogoLampW = 7 W
-//     each (14 x 14 device px), in the lane LEFT OF THE PERCENT RUN, inert
-//     chrome like everything on the lane — no hit, no tooltip, no gesture —
-//     but the struck clip lamp's tap (THE STRIKE below).
+//     his picks c6 / d1 / d6 / g5 of tmp/s46; THE SIZE, THE ROWS AND THE GAP
+//     2026-11-06, session 63, his pick m5 / m6 of tmp/s63): TWO SQUARES,
+//     kLogoLampW = 8 W each (16 x 16 device px), in the lane LEFT OF THE
+//     PERCENT RUN, inert chrome like everything on the lane — no hit, no
+//     tooltip, no gesture — but the struck clip lamp's tap (THE STRIKE
+//     below).
 //     THE SEAT: by the battery, "ableton places it topmost rightmost
 //     grouping" (Live's control bar's CPU and MIDI boxes), not the band and
 //     not a stack beside the NOISE case (d2 declined). THEIR ROWS: the top row
-//     kLogoLampDropW = 1 W BELOW the legend runs' ink top row (logo_item_y
-//     of the runs' ink rows + scaled_px(1); on the tablet 28 + 2 = 30, rows
-//     30..43 beside the cell's 28..41) — his "1 w offset too far up" against
-//     the cell's own top row (c1 -> c4); an alignment, not a length. THEIR
-//     COLUMNS: THE CLIP LAMP on the right, its last column + 1 +
-//     kLogoLampGapW (5 W, 10 device px of ground; g5 over g6's 6 W) = the
-//     percent run's first ink column (with no percent run — no battery, or
-//     no level read — the cell's first column takes the percent's place);
+//     ON THE LEGEND RUNS' INK TOP ROW, the glyph cell's own top row
+//     (logo_item_y of the runs' ink rows; the lamps carry no row offset of
+//     their own, as the cell carries none — no constant; on the tablet rows
+//     28..43 beside the cell's 28..41 and the runs' 28..42) — his pick
+//     m5 / m6; an alignment, not a length. THEIR COLUMNS: THE CLIP LAMP on
+//     the right, its last column + 1 + kLogoLampGapW (4 W, 8 device px of
+//     ground) = the percent run's first ink column (with no percent run —
+//     no battery, or no level read — the cell's first column takes the
+//     percent's place);
 //     THE LIMITER LAMP left of it, ONE W OF GROUND BETWEEN (the key gap,
 //     key_gap_px, kKeyGapW's number) — "LIMITER LEFT, CLIP RIGHT, mirroring
-//     the level sliders" (d1 / d6; on the mock's geometry the pair stood on
-//     columns 2052..2065 / 2068..2081). They move with the percent run's
-//     width as the cell does; the clock and the pipe never move. THEIR
+//     the level sliders" (d1 / d6; on the tablet, the percent's first ink
+//     on column 2090, the pair stands on columns 2048..2063 / 2066..2081).
+//     They move with the percent run's width as the cell does; the clock
+//     and the pipe never move. THEIR
 //     FACES: AT REST `key_face` (Default 363636) — a dark square, Live's
 //     indicator box; LIT, THE LIMITER `card_ground` (Alert E76942, "a
 //     warning", the cards' own orange) and THE CLIP `clip_lamp`
@@ -1443,9 +1447,8 @@ inline constexpr double kLogoGlyphInkW       = 11.0;
 inline constexpr double kLogoGlyphAirW       = 1.0;   // the digit side alone since 2026-11-05
 inline constexpr double kLogoPipeW           = 1.0;   // the drawn pipe's width
 inline constexpr double kLogoPipeAirW        = 5.0;   // ground on each side of it, ink to ink (= space + 2 W)
-inline constexpr double kLogoLampW           = 7.0;   // each lamp's square
-inline constexpr double kLogoLampGapW        = 5.0;   // the clip lamp to the percent's first ink
-inline constexpr double kLogoLampDropW       = 1.0;   // the lamps' top under the runs' ink top
+inline constexpr double kLogoLampW           = 8.0;   // each lamp's square
+inline constexpr double kLogoLampGapW        = 4.0;   // the clip lamp to the percent's first ink
 inline constexpr const char* kLogoBrand = "Warptempo";
 inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";
 inline int logo_lane_h_px() {
