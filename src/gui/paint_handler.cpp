@@ -3905,7 +3905,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //     the program is Cool Edit; flat since 2026-11-01 night; render.h's well
 //     paragraph and its ruler block): flat `ruler_face` under the trim bar's
 //     frame, no line on its top, the ticks `ruler_tick` one W wide, on their
-//     columns (the line rule's left pixel), STANDING ON ITS FOOT — majors 4
+//     columns (the line rule's straddle), STANDING ON ITS FOOT — majors 4
 //     W, minors 1 W (8 and 2 device rows on the tablet), overlaying the
 //     ruler's bottom pad — and the digits Bold Small 8 W in the text tone,
 //     bare, their ink centered on the ruler; then a row of ground. (Kdenlive's
@@ -4143,7 +4143,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     // THE TICKS STAND ON THE RULER'S FOOT (the flipped ruler; render.h's
     // ruler block): each ONE CANVAS LINE wide (waveform_line_px, one W since
-    // 2026-11-04, the unit), on its column (the line rule's left pixel), in
+    // 2026-11-04, the unit), on its column (the line rule's straddle), in
     // `ruler_tick`, rising the major's 4 W or the minor's 1 W (8 and 2 device
     // rows on the tablet; scaled_px) from the foot into the ruler's bottom
     // pad, NO SHADOW.
@@ -4217,12 +4217,15 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // step at least 72 W), so one step each side is all there is.
     // THE TICK'S WIDTH IS THE CANVAS'S LINE, ONE W (hairline_px, the line
     // rule; architect 2026-11-04, the unit, reversing the one device px of
-    // 2026-11-01 night, M5b), CENTERED ON ITS COLUMN (fill_waveform_line).
+    // 2026-11-01 night, M5b), ON ITS COLUMN STRADDLING ITS FRAME
+    // (fill_waveform_line; at t = 2 the columns col − 1 and col, centered on
+    // the boundary at col's left edge).
     const int t = hairline_px();
     // ONE MAJOR'S LABEL at its column `col` and its step time `step_ms`,
-    // CENTERED ON THE MAJOR'S TICK (the tick centered on its column, the
-    // run's centre on the column, an even-width run's spare half column to
-    // the left). The
+    // CENTERED ON THE MAJOR'S TICK (the run from col − run_w / 2: an
+    // even-width run centered on the boundary at col's left edge, the even
+    // tick's own center; an odd-width run on col's center, its spare half
+    // column to the right). The
     // label's TIME is still the exact step time — only
     // tick PLACEMENT is distributed, and a major is at its own exact time
     // anyway. Its x rides `col`, which for a major IS the rounded major, so
@@ -4325,8 +4328,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // avoidance, as a chip paints over a label. NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's chip being
     // in the marker lane below (render.h's playhead paragraph). It draws NOTHING across the trim bar, the marker
-    // lane and the rows of ground; its canvas line is paint_playheads'. CENTRED ON THE PLAYHEAD'S COLUMN, its line's
-    // centre (architect 2026-10-09 ~14:35; paint_ce_cue_triangle).
+    // lane and the rows of ground; its canvas line is paint_playheads'. CENTRED ON THE PLAYHEAD'S COLUMN, its
+    // apex the column (architect 2026-10-09 ~14:35; paint_ce_cue_triangle) — over the line straddling the frame,
+    // the line's right pixel (architect 2026-11-06, session 67, "it should point at the right column").
     //
     // The whole head is the RESTING CURSOR'S: the `h` view, the render player
     // and the audition reach it through this one block, and the scanner keeps
@@ -4721,17 +4725,20 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // line, 111111), WHATEVER THE SELECTION, a coincident reset's too (its
 // struck label the mark, architect 2026-10-26):
 //   THE LEFT SIDE on the reset's own column (band.stem_x) and THE RIGHT
-//     SIDE on the band's last column, each a t-wide line centered on its
-//     column (waveform_line_px, one W) down the canvas's whole height, the
-//     stereo divider's row crossed (architect 2026-11-02; canvas_line_rect's
-//     form). The left side's column is the reset's own, unclipped, so a
-//     reset off the area's left edge paints no left side (the column gate);
+//     SIDE on the band's last column, each a t-wide line on its column by
+//     the line rule (waveform_line_px, one W; waveform_line_first_col: the
+//     left side straddles the reset's frame, the right side on x1 − 2 and
+//     x1 − 1 at t = 2, flush inside the band) down the canvas's whole
+//     height, the stereo divider's row crossed (architect 2026-11-02;
+//     canvas_line_rect's form). The left side's column is the reset's own,
+//     unclipped, so a reset off the area's left edge paints no left side
+//     (the column gate);
 //     the right side's is the CLIPPED band's last column, so a band clipped
 //     at the area's right edge draws it there, flush, as the trim bar's
 //     clipped span reads.
 //   THE TOP RUN on the canvas's first t rows and THE BOTTOM RUN on its
 //     last t, from the left line's first column through the right line's
-//     last (each centered on its column), so the corners close at every t;
+//     last (each by the line rule), so the corners close at every t;
 //     the list's scissor cuts what passes the area's edges.
 // PURE PALETTE BYTES (the palette composites nothing): aliased integer
 // rects, no alpha and no half column. The band's edges are whole columns by
@@ -4757,10 +4764,13 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const int y_bot  = area.y + area.h - t;
     // THE RUNS' COLUMNS, the two sides' lines' outer columns: from the left
     // line's first column (the reset's column, unclipped, on the line rule:
-    // the even line's left pixel the column, render.h's waveform_line_cols)
-    // through the right line's last (x1 − 1's), cut to the area's columns.
-    const int run_lo = std::max(stem - (t - 1) / 2, area.x);
-    const int run_hi = std::min(x1 - 1 - (t - 1) / 2 + t, area.x + area.w);
+    // the even line straddles its frame, render.h's waveform_line_first_col)
+    // through the right line's last (x1 − 1's, so the right side's line
+    // stands on x1 − 2 and x1 − 1 at t = 2, flush inside the band), cut to
+    // the area's columns.
+    const int run_lo = std::max(waveform_line_first_col(stem, t), area.x);
+    const int run_hi = std::min(waveform_line_first_col(x1 - 1, t) + t,
+                                area.x + area.w);
     GuiRect rs[4];
     int n = 0;
     if (run_hi > run_lo) {
@@ -4982,8 +4992,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
 // row — THROUGH THE ONE-W ROW OF GROUND under the lane TO THE CANVAS'S LAST
-// ROW (200 %: rows 240 .. 1327 on the stem's two columns, the marker's and
-// the one right of it), so no gap of ground stands between the apex and
+// ROW (200 %: rows 240 .. 1327 on the stem's two columns, the one left of
+// the marker's and the marker's own, straddling its frame), so no gap of ground stands between the apex and
 // the stem (his "small gap": the rows of ground under the lane, 241 .. 242,
 // the canvas-only stem left). TWO PAINTERS, ONE DECISION:
 // the canvas's rows are the GPU's (this pass, through the sink, whose list
@@ -5069,10 +5079,11 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
         const int x1 = static_cast<int>(std::nearbyint(run.x1));
         // From the left side's line's first column through the right side's
         // line's last (each t wide, on its column by the line rule: the even
-        // line's left pixel the column, render.h's waveform_line_cols), cut
+        // line straddles its frame, render.h's waveform_line_first_col), cut
         // to the area's columns.
-        const int lo = std::max(x0 - (t - 1) / 2, clip_lo);
-        const int hi = std::min(x1 - (t - 1) / 2 + t, clip_hi);   // exclusive
+        const int lo = std::max(waveform_line_first_col(x0, t), clip_lo);
+        const int hi = std::min(waveform_line_first_col(x1, t) + t,
+                                clip_hi);   // exclusive
         if (hi > lo) {
             rs.push_back(GuiRect{lo, y_top, hi - lo, t});
             rs.push_back(GuiRect{lo, y_bot, hi - lo, t});

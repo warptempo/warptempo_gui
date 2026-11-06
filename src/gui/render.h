@@ -540,7 +540,8 @@ void install_true_colors(bool on);
 // THE RULER IS COOL EDIT'S, FLIPPED, IN LIVE'S TONES (paint_ruler_row):
 // FLAT `ruler_face` (Default's 363636) directly under the bar's ground line, NO LINE ON
 // ITS TOP; THE TICKS `ruler_tick` (Default's 6B6B6B), ONE W WIDE (the canvas's line,
-// waveform_line_px, 2026-11-04), CENTERED ON THEIR COLUMNS, STANDING ON THE
+// waveform_line_px, 2026-11-04), ON THEIR COLUMNS STRADDLING THEIR FRAMES
+// (the line rule, 2026-11-06), STANDING ON THE
 // RULER'S FOOT, the major 4 W and the minor 1 W (8 and 2 device rows at
 // 200 %, scaled_px), overlaying its bottom pad, NO SHADOW; THE DIGITS the
 // ruler face (GuiFace::Small, BOLD 8 W, 16 device px at 200 %) in the text
@@ -643,8 +644,8 @@ void install_true_colors(bool on);
 // its top and 14 from its bottom at 200 %) — `show_cue_label`, render.cpp,
 // the one painter of every label look on the face; and THE STEM, ON EVERY
 // SELECTED ENABLED MARKER — a SOLID ONE-W LINE in the `cue_outline`, on
-// the column (its left pixel the column, the line rule at
-// waveform_line_px), FROM THE CHIP'S APEX ROW (the
+// the column (straddling the frame, the line rule at waveform_line_px),
+// FROM THE CHIP'S APEX ROW (the
 // lane's last) through the row of ground under the lane down the canvas's
 // whole height (waveform_line_px, canvas_line_rect's form;
 // paint_marker_stems and its head segment, paint_marker_stem_heads;
@@ -840,8 +841,8 @@ void install_true_colors(bool on);
 // canvas reads the well's whole width with the ground directly beside it.
 // THE ORDER, bottom to top: UNDER THE WAVEFORM, in render_canvas's
 // one pass, the `waveform_canvas` fill and THE HORIZONTAL GRID — per
-// channel, a `grid` line one W tall, centered on its row (waveform_line_px's
-// rule, the unit of 2026-11-04) at the channel's zero row ± t ·
+// channel, a `grid` line one W tall, its top row on its row (canvas_hline,
+// the unit of 2026-11-04; the vertical straddle not taken for rows) at the channel's zero row ± t ·
 // nearbyint(k · H / (4t)) device rows for k = 1, 2, 3, H the
 // channel's half height (its zero row to its band's edge; the k = 4 line
 // would stand on the band's edge and is not drawn), the canvas's full width,
@@ -1524,8 +1525,10 @@ inline int logo_lane_h_px() {
 // flags' triangles and the cue boxes. ARTWORK IS AN AREA IN THIS SENSE
 // (2026-10-23): a drawing's stroke weight is part of the drawing, so it
 // scales with the drawing — the icons and the faces' strokes, never a line.
-// AN EVEN LINE HAS NO CENTER PIXEL: ITS FRAME IS ITS LEFT (TOP) PIXEL — the
-// rule's one statement at waveform_line_cols below.
+// AN EVEN LINE HAS NO CENTER PIXEL: A VERTICAL ONE STRADDLES ITS FRAME, the
+// pixel boundary (architect 2026-11-06), a horizontal one keeps its top row
+// the frame's — the rule's one statement at waveform_line_px below, its
+// paint waveform_line_cols.
 inline int hairline_px() { return scaled_px(1.0, 1); }
 
 // (THE PROGRAM'S FRAME — Cool Edit's frame window round the program, one
@@ -1795,7 +1798,7 @@ inline int trim_lane_h_px() {
 // 2026-11-03; the width one W since 2026-11-04, the unit; the rows 4 W and
 // 1 W since that night): ONE CANVAS LINE WIDE — waveform_line_px, the line
 // rule's W, 2 device px on the tablet at 200 %, 1 at 100 % — ON THE TICK'S
-// COLUMN (fill_waveform_line's rule: the line's left pixel the column), the
+// COLUMN (fill_waveform_line's rule: the line straddles the frame), the
 // major 4 W and the minor 1 W tall, 8 and 2 device rows on the tablet
 // (scaled_px, each floored at one row; the major 10 device rows of the text
 // round and the retrofit rounded to the unit). THEY OVERLAY THE RULER'S FOOT AND ADD
@@ -1853,9 +1856,13 @@ inline int ruler_lane_h_px() {
 // 2026-11-04, the unit — architect: "untouched: the triangle's cell and the
 // ruler's head" — when the stems became one W, waveform_line_px): the flag's
 // cells stand beside the one-W stem, CENTERED ON THE FRAME'S COLUMN (the
-// stem's columns col − (t − 1) / 2 .. col − (t − 1) / 2 + t − 1, the even
-// line's left pixel the column, fill_waveform_line's rule; the odd
-// staircase is centered on the column itself), whatever the gui_scale (THE
+// odd staircase's apex the column itself; the stem's columns col − t / 2 ..
+// col − t / 2 + t − 1, straddling the frame, waveform_line_first_col's rule
+// since 2026-11-06 — so on the tablet the apex points at the stem's RIGHT
+// pixel, the frame's own column: architect 2026-11-06, session 67, "it
+// should point at the right column"; earlier that session "you can leave
+// the triangle tips as they are - they read fine, and optically i dont see
+// them as offcenter"), whatever the gui_scale (THE
 // ROW COUNT IS SCALED, cue_triangle_rows
 // below). ITS READERS: the triangle's rows and columns and its outline's
 // (paint_ce_cue_triangle, the stamp — whole device
@@ -2127,9 +2134,10 @@ inline int cue_baseline_px() {
 // 2026-10-09 ~14:35: a staircase of R rows' top row 2·R − 1 cells from
 // col − (R − 1)u to col + (R − 1)u, u the triangle's cell, one device px):
 // [col − half, col + reach), (R − 1)·u left and R·u right, which holds the
-// one-W stem's own columns on `col` (col − (t − 1) / 2 .. col − (t − 1) / 2
-// + t − 1, t waveform_line_px; the even line's left pixel the column) at
-// every scale. ONE EXTENT, THE CHIP'S
+// one-W stem's own columns on `col` (col − t / 2 .. col − t / 2 + t − 1, t
+// waveform_line_px, the even line straddling the frame, so the apex at col
+// points at the stem's right pixel — architect 2026-11-06, session 67, "it
+// should point at the right column") at every scale. ONE EXTENT, THE CHIP'S
 // (cue_triangle_half_w_px, cue_triangle_reach_right_px; R the chip's rows,
 // cue_chip_rows): 14 and 15 device px on the tablet at 200 %, 6 and 7 at
 // 100 % — the
@@ -2322,18 +2330,27 @@ inline int scrub_channel_above_px() {
 // centered on its row, canvas_hline) and THE STEREO DIVIDER (chrome
 // standing on the canvas, waveform_divider) — and, off the canvas, THE
 // RULER'S TICKS (paint_ruler_row, the same line on the ruler's foot). THE
-// LINE RULE'S ONE STATEMENT (architect 2026-11-04 night: "stems will be
-// 2px, so they have no center ... the leftmost pix should be the real
-// frame"): A VERTICAL LINE OF WIDTH t STANDS ON ITS COLUMN WITH ITS LEFT
-// PIXEL THE FRAME'S — columns [col − (t − 1) / 2, col − (t − 1) / 2 + t),
-// integer division: at t = 2 the column and the one right of it, at t = 1
-// the column itself, at an odd t (3) the column and one each side, centered
-// (waveform_line_cols below, the one owner; a horizontal line's rows by the
-// same rule, its top row the frame's, canvas_hline in render.cpp) — so the
-// cue's triangle and the playhead's head, odd staircases whose apex is the
-// column, stand centered on the frame and the stem stands on it and one
-// right (closed_questions.md's apex-on-the-stem rule). THE PLATE DRAWS
-// NO LINE: the magnified inner is a solid fill, THE CORE (architect
+// LINE RULE'S ONE STATEMENT (architect 2026-11-06, session 66 / 67, "I like
+// your suggestion", superseding 2026-11-04 night's left-pixel rule — "the
+// leftmost pix should be the real frame"): A FRAME IS A PIXEL BOUNDARY, NOT
+// A PIXEL — the plate's column c spans the lattice points g(c) .. g(c + 1)
+// (render_waveform_columns' edge_at), so a frame on the lattice is the
+// boundary between device columns c − 1 and c, the left edge of column c —
+// AND A VERTICAL LINE OF WIDTH t STRADDLES IT: columns [col − t / 2,
+// col − t / 2 + t), integer division (waveform_line_first_col): at t = 2
+// the column LEFT of the frame and the frame's own, centered on the
+// boundary exactly; at t = 1 the column itself; at an odd t (3) the column
+// and one each side, centered on the column (waveform_line_cols below, the
+// one owner). Nothing moves in the lattice, the camera, the landings or the
+// plate: the line's paint alone. THE HORIZONTAL LINES DO NOT STRADDLE (the
+// grid and the center lines, canvas_hline in render.cpp, the deliberate
+// asymmetry and its numbers recorded there): their rows keep the top-row
+// frame. THE CUE'S CHIP AND THE PLAYHEAD'S HEAD DO NOT MOVE: odd
+// staircases whose apex is the frame's column, so over the straddling stem
+// (col − 1, col) the apex points at the stem's RIGHT pixel (architect
+// 2026-11-06, session 67, "it should point at the right column"; the
+// chips' blocks at cue_triangle_unit_px and cue_triangle_half_w_px). THE
+// PLATE DRAWS NO LINE: the magnified inner is a solid fill, THE CORE (architect
 // 2026-11-04, THE CORE below), so every line on the canvas is one W. THE
 // CUES' TRIANGLES AND THE PLAYHEAD'S HEAD keep their one-device-px cell of
 // their own
@@ -2397,20 +2414,32 @@ constexpr int kWaveformSubcells = 4;
 constexpr int kWaveformFloorSubcells = kWaveformSubcells / 4;
 static_assert(kWaveformSubcells % 4 == 0,
               "the never-fade floor is a quarter device px of subrows");
-// THE LINE'S ONE PAINT: a vertical line of width `t` ON COLUMN `col`, ITS
-// LEFT PIXEL THE COLUMN — columns [col − (t − 1) / 2, col − (t − 1) / 2 + t),
-// integer division (THE LINE RULE'S ONE STATEMENT at waveform_line_px's
-// block, architect 2026-11-04 night: an even line has no center, its
-// leftmost pixel is the frame; an odd line is centered as before) — of a
+// THE LINE'S FIRST COLUMN for a frame on column `col`: col − t / 2, integer
+// division — THE STRADDLE (THE LINE RULE'S ONE STATEMENT at
+// waveform_line_px's block, architect 2026-11-06: the frame is the boundary
+// at column col's left edge, so an even line takes the column left of it
+// and col itself; an odd line is centered on col). The one spelling of the
+// rule: waveform_line_cols below, and the two rings' runs, which span from a
+// side's first column (paint_phase_reset_overlay_ring,
+// paint_marker_stem_runs).
+inline int waveform_line_first_col(int col, int t = waveform_line_px()) {
+    return col - t / 2;
+}
+// THE LINE'S ONE PAINT: a vertical line of width `t` ON COLUMN `col`,
+// STRADDLING ITS FRAME — columns [col − t / 2, col − t / 2 + t)
+// (waveform_line_first_col; at t = 2 the columns col − 1 and col) — of a
 // strip whose columns
 // are [0, area_w), at window x `area_x`, rows [y0, y1), as ONE aliased
 // integer rect in the caller's source colour, `t` the canvas's line, one W
 // (waveform_line_px). THE TWO EDGE RULES live here: a line is GATED ON ITS
 // OWN COLUMN (col outside [0, area_w) paints nothing, so a marker at column
-// −1 shows no pixel at 0 even where its line's right column would — a line
-// belongs to its column), and its columns are CLIPPED AT BOTH EDGES, so a
+// w shows no pixel at w − 1 even where its line's left column would at
+// t = 2, nor one at column −1 a pixel at 0 at an odd t — a line belongs to
+// its column), and its columns are CLIPPED AT BOTH EDGES, so a
 // line at column 0 or w − 1 paints only its columns inside [0, area_w) and
-// nothing reaches the ground beside the canvas.
+// nothing reaches the ground beside the canvas (at t = 2 a line on column 0
+// shows its right pixel alone, column 0; one on w − 1 shows both, w − 2 and
+// w − 1).
 // The two edge rules' one statement: the line's painted columns, area-local
 // (its first column x0 and its width w), w 0 where the column gate refuses
 // it.
@@ -2421,7 +2450,7 @@ struct WaveformLineCols {
 inline WaveformLineCols waveform_line_cols(int area_w, int col,
                                            int t = waveform_line_px()) {
     if (col < 0 || col >= area_w) return WaveformLineCols{};
-    const int lo = col - (t - 1) / 2;
+    const int lo = waveform_line_first_col(col, t);
     const int x0 = lo > 0 ? lo : 0;
     const int x1 = (lo + t < area_w) ? lo + t : area_w;
     return WaveformLineCols{x0, x1 > x0 ? x1 - x0 : 0};
@@ -3450,8 +3479,8 @@ struct GuiPlateColumns {
 // Draws a waveform_line_px()-wide vertical LINE down the CANVAS's whole
 // height (row 6's canvas paragraph; the stereo divider's row crossed,
 // architect 2026-11-02, waveform_divider's rule), at the column nearest `playhead_pixel_x` (offset
-// from area.x), on it, [col − (t − 1) / 2, col − (t − 1) / 2 + t) (the line
-// rule: the even line's left pixel the column), in `color`,
+// from area.x), on it, [col − t / 2, col − t / 2 + t) (the line rule: the
+// even line straddles the frame), in `color`,
 // SOLID — the scanner (Cool Edit's playback cursor a solid line, measured
 // 2026-10-09) and the resting cursor alike (architect 2026-11-04, Live's
 // playhead line; the static tone below, the caller's palette read,
@@ -3506,8 +3535,8 @@ void render_playhead(GuiCanvasSink& sink,
 // color straight over the waveform ink it crosses — the ink-notch overdraw and
 // its plate parameter are retired (architect 2026-07-26, with the polarity
 // inversion). The line is an aliased integer rect waveform_line_px() wide,
-// on the column, [col − (t − 1) / 2, col − (t − 1) / 2 + t) (the line rule:
-// the even line's left pixel the column), clipped at both edges
+// on the column, [col − t / 2, col − t / 2 + t) (the line rule: the even
+// line straddles the frame), clipped at both edges
 // (waveform_line_cols).
 void render_strip_anchor_stem(GuiCanvasSink& sink,
                               GuiRect area,

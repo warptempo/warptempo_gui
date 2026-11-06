@@ -1202,8 +1202,9 @@ double scanner_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     // (playhead_scanner_precise) rather than the quantized integer sample, so a
     // per-frame viewport rescale during a strip-drag zoom slides the scanner
     // smoothly instead of jittering on integer-frame steps. The line still
-    // paints as a hard waveform_line_px()-wide rect centered on the rounded
-    // pixel (render_playhead); only its basis is continuous.
+    // paints as a hard waveform_line_px()-wide rect on the rounded pixel,
+    // straddling its frame (render_playhead, waveform_line_cols); only its
+    // basis is continuous.
     return (a.playhead_scanner_precise - static_cast<double>(vp_start)) / spp;
 }
 
@@ -1239,9 +1240,10 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // 7 = 13 at 100 % (the cells one device px, the rows scaled, 2026-10-26; no shadow
 // since 2026-11-02) — its rows the whole band from the window's top below — which
 // also holds the one-W line of the scanner and the cursor, on the column
-// (col − (t − 1) / 2 .. col − (t − 1) / 2 + t − 1, waveform_line_px: the
-// column and the one right of it on the tablet, the line rule's left pixel), so
-// a move repaints every column the head and the line stood on.
+// (col − t / 2 .. col − t / 2 + t − 1, waveform_line_px: the column left of
+// it and the column itself on the tablet, the line straddling its frame,
+// inside the box's 14 columns left), so a move repaints every column the
+// head and the line stood on.
 // `px_x` is the waveform's own column (offset from area.x, as every
 // playhead pixel is), so the box is placed at area.x + col — the canvas
 // standing the column's margin in from the window's side since 2026-10-09.

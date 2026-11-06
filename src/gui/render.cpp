@@ -173,11 +173,24 @@ struct CanvasLines {
 };
 // ONE CANVAS LINE ACROSS THE AREA on area-local row `row`, `t` device rows
 // thick, as an aliased rect appended to the lines of one fill and cut to the
-// area's rows: rows [row − (t − 1) / 2, row − (t − 1) / 2 + t) — THE LINE
-// RULE (render.h's waveform_line_px, architect 2026-11-04 night): an even
+// area's rows: rows [row − (t − 1) / 2, row − (t − 1) / 2 + t) — an even
 // line has no center row, so its TOP row is the row it stands on (at t = 2
 // the row and the one under it); an odd line is centered. The grid's and
 // the center lines' one row rule (render_canvas, render_center_lines).
+// THE DELIBERATE ASYMMETRY (architect 2026-11-06, session 66 / 67, the
+// straddle ruled for the verticals alone): A VERTICAL LINE STRADDLES ITS
+// FRAME (render.h's waveform_line_first_col) because a frame is a pixel
+// BOUNDARY, the left edge of its column; THESE ROWS DO NOT, because the
+// row they stand on is a pixel CENTER. The plate's zero is the band's
+// y + h · 0.5 (render_waveform_columns' y_center), the zero row y + h / 2
+// its floor (WaveformChannelBand::zero_row), and the band's h is ODD on the
+// tablet — the canvas 1085 rows (243 .. 1327 at gui_scale 200, key_height
+// 17), the divider 2, each band (1085 − 2) / 2 = 541 rows, odd at every
+// key_height (one W of key_height moves the canvas by 4 device rows) — so
+// the zero lies on the middle of row y + 270 and no 2-row line centers on
+// it: these rows [r, r + 2) stand half a row low, a straddle's
+// [r − 1, r + 1) half a row high — no gain, so the rows keep their top-row
+// frame.
 void canvas_hline(CanvasLines& lines, const GuiRect& area, int row, int t) {
     const int top = std::max(area.y, area.y + row - (t - 1) / 2);
     const int bot = std::min(area.y + area.h, area.y + row - (t - 1) / 2 + t);
@@ -205,7 +218,8 @@ void canvas_grid_lines(CanvasLines& lines, const GuiRect& area) {
     // THE HORIZONTAL GRID per channel, on the plate's own bands
     // (waveform_channel_band): a line on a row r covers rows
     // [r − (t − 1) / 2, r − (t − 1) / 2 + t) — the row r and the one under it
-    // on the tablet (t = 2, the line rule's top-row frame) — the zero row being
+    // on the tablet (t = 2, the rows' top-row frame, canvas_hline's
+    // asymmetry) — the zero row being
     // the row the plate's bars straddle; the k-th grid line stands t ·
     // nearbyint(k · (H / t) / 4) device rows from the zero row (at t = 2, 2 ·
     // nearbyint(k · H / 8), an even number of rows), H the channel's half
@@ -714,9 +728,9 @@ bool render_waveform_columns(GuiRect area,
 }
 
 namespace {
-// ONE SOLID CANVAS LINE DOWN THE AREA: the waveform_line_px()-wide line
-// centered on column `col` (its column gate and its clip at both edges,
-// waveform_line_cols) as one rect over the area's whole height, the stereo
+// ONE SOLID CANVAS LINE DOWN THE AREA: the waveform_line_px()-wide line on
+// column `col`, straddling its frame (its column gate and its clip at both
+// edges, waveform_line_cols) as one rect over the area's whole height, the stereo
 // divider's row crossed (architect 2026-11-02, render.h's waveform_divider)
 // — the scanner's and the zoom anchor's one form, one sink fill.
 void canvas_line_rect(GuiCanvasSink& sink, const GuiRect& area, int col,
@@ -771,8 +785,8 @@ void render_playhead(GuiCanvasSink& sink,
     // alternative that was declined.
     const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
-    // The waveform_line_px()-wide line (render.h), centered on its column,
-    // paints whenever its column is onscreen (gated on its own column and
+    // The waveform_line_px()-wide line (render.h), on its column straddling
+    // the frame (waveform_line_cols), paints whenever its column is onscreen (gated on its own column and
     // clipped at both edges), so
     // it never leaks into an adjacent region, straight over whatever it
     // crosses — waveform ink included. THE CANVAS'S WHOLE HEIGHT, the stereo
@@ -786,8 +800,9 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
     if (area.w <= 0 || area.h <= 0) return;
     // The clamp is where the affordance lives: an anchor pushed to (or past) a
     // song edge pins to the edge column, so the stem draws exactly there.
-    // The line is waveform_line_px() wide (render.h), centered on the
-    // column, clipped at both edges (waveform_line_cols), so an anchor
+    // The line is waveform_line_px() wide (render.h), on the column
+    // straddling its frame, clipped at both edges (waveform_line_cols), so
+    // an anchor
     // pinned to the first or the last column paints its columns inside.
     if (col < 0)          col = 0;
     if (col >= area.w)    col = area.w - 1;

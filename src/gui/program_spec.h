@@ -69,9 +69,11 @@
 // 2026-11-04, "untouched: the triangle's cell and the ruler's head"), so a
 // triangle's whole cells — Cool Edit's aliased staircase,
 // paint_ce_cue_triangle — stand beside the one-W stem, CENTERED ON THE
-// FRAME'S COLUMN, the apex the stem's column (the even line's left pixel,
-// fill_waveform_line's rule) and every row centred on it with no
-// remainder; THE MARKER'S CHIP is that staircase in a one-W outline, a
+// FRAME'S COLUMN, the apex the frame's column and every row centred on it
+// with no remainder (the stem straddling the frame, fill_waveform_line's
+// rule since 2026-11-06, so on the tablet the apex points at the stem's
+// right pixel: architect 2026-11-06, session 67, "it should point at the
+// right column"); THE MARKER'S CHIP is that staircase in a one-W outline, a
 // second, larger staircase of the same cells (architect 2026-11-04, mock
 // g1; render.h's cue_chip_rows: 29 x 15 round 19 x 10 on the tablet at
 // 200 %, 13 x 7 round 9 x 5 at 100 %), the ruler's head the same chip. ITS

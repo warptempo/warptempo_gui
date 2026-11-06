@@ -63,8 +63,11 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // 100 %'s five) —
 // CENTRED ON THE STEM'S COLUMN `col` (architect 2026-10-09 ~14:35: "at every
 // scale, the marker triangle must be fully centered on the stem"; the stem
-// one W on that column since 2026-11-04, its left pixel the column,
-// render.h's waveform_line_px), in `fill` — AND, given an `outline`, THE
+// one W on that column since 2026-11-04, straddling the frame since
+// 2026-11-06, render.h's waveform_line_px — so on the tablet the apex, the
+// column itself, points at the stem's RIGHT pixel: architect 2026-11-06,
+// session 67, "it should point at the right column"), in `fill` — AND,
+// given an `outline`, THE
 // CHIP: a second, larger staircase of the same construction in the
 // outline's color painted first, from cue_chip_top_rows() rows above the
 // fill's top through cue_chip_apex_rows() rows below its apex (architect
