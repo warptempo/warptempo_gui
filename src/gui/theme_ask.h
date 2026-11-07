@@ -199,9 +199,12 @@
 //                                     (architect 2026-11-05, the doors)
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
-// CANONICAL (architect 2026-11-06: "a look online shows it's canonically full
-// white", his Live 12 reference shot; 2026-11-07: "the scanner being white is
-// not derived"). It is never proposed as a role or a mix.
+// CANONICAL — Live itself paints its scanner white on every theme tested,
+// Default and the built-in themes included, so no theme's file carries it
+// (architect 2026-11-07, session 82: "it comes from all live themes tested -
+// including the default and builtin"; 2026-11-06: "a look online shows it's
+// canonically full white", his Live 12 reference shot). It is never proposed
+// as a role or a mix.
 //
 // Where a theme makes the lane, the trim's outside or the dim text coincide
 // with the ground, that is Live's own number — accepted, not a bug, no
