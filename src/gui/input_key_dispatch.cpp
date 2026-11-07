@@ -6937,8 +6937,9 @@ void GuiInputHandler::settings_page_commit(int index) {
 // THE LIST: the key's values IN GROUPS (GuiSettingsEditor::value_list_groups,
 // the domains' one owner through value_choices): each group's heading, when
 // it has one, an inert Group row — the settings page's own shape, its
-// "DEVICE" / "PIECE" (build_settings_page_rows); `theme`'s "BUILTIN" and
-// "EXTRA", architect 2026-11-05 — never seated and opening nothing
+// "DEVICE" / "PIECE" (build_settings_page_rows); `theme`'s one per group,
+// "WARPTEMPO" first, architect 2026-11-05 / 2026-11-06 — never seated and
+// opening nothing
 // (folder_overlay::row_is_inert), then one glyph-less Plain row per value,
 // the value both what the row shows and what the tap commits; the overlay
 // records THE KEY (`value_key`), which the commit routes the value to. The
@@ -6947,8 +6948,10 @@ void GuiInputHandler::settings_page_commit(int index) {
 // row value shares), seated by the one set_highlight and centered in the
 // band (scroll_row_centered, architect 2026-10-26). Every listed key's live
 // value is in its list by the load wall's own grammars but `noise`'s, whose
-// live name may have no folder (the absent-folder rule, noise.h): the first
-// value row stands then, and a list with no rows seats nothing
+// live name may have no folder (the absent-folder rule, noise.h), and
+// `theme`'s, whose live slug may name no row of the list (the window in
+// default, theme_ask.h's head; 2026-11-06): the first value row stands then,
+// and a list with no rows seats nothing
 // (set_highlight's -1; a heading row is never the seat).
 void GuiInputHandler::build_value_list_rows(const std::string& key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
@@ -7001,7 +7004,7 @@ void GuiInputHandler::value_list_commit(int index) {
         AppState::FolderOverlay::Owner::ValueList) return;
     const int n = static_cast<int>(app.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    // A heading row (`theme`'s BUILTIN / EXTRA) commits nothing: its lift
+    // A heading row (`theme`'s group headings) commits nothing: its lift
     // never reaches here and the highlight never stands on it (the settings
     // page's own guard; the rule's statement).
     if (folder_overlay::row_is_inert(app, index)) return;

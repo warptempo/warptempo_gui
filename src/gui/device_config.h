@@ -1,7 +1,7 @@
 #pragma once
 
 #include "failure.h"
-#include "theme_tables.h"   // kGuiThemes, find_gui_theme: the `theme` key's grammar
+#include "gui_theme.h"      // is_theme_slug, kGuiDefaultThemeSlug: the `theme` key's grammar
 
 #include <charconv>
 #include <cstdint>
@@ -43,30 +43,35 @@
 //                            theme arc: "i'd like to implement all" — Live
 //                            12's own themes selectable WHOLE, chrome and
 //                            well together; palette_file.h's head): the
-//                            SLUG of one row of the generated theme table
-//                            (kGuiThemes, theme_tables.h, written by
-//                            tools/themes/ask_to_tables.py from Live's .ask
-//                            files — the stock seven under BUILTIN with
-//                            the tool's VARIANTS of them (immaterial_gold,
-//                            2026-11-05: eight rows), `default` Live's
-//                            "Default Dark Neutral Medium" and the only
-//                            Default variant listed, and the
-//                            extras he drops in under EXTRA, Sonic Bloom's
-//                            today), exactly as the table spells it; any
-//                            other word the launch's hard fail
-//                            (find_gui_theme, THE ONE GRAMMAR OWNER;
-//                            kThemeGrammarReason below). REQUIRED, read at
+//                            SLUG of one row of the themes' list
+//                            (theme_ask.h, since 2026-11-06 built at launch:
+//                            the compiled group WARPTEMPO — `default`,
+//                            Live's "Default Dark Neutral Medium", and
+//                            immaterial_gold over a dropped Immaterial.ask —
+//                            then the .ask files of `themes/<group>/` beside
+//                            this file, each group its folder), exactly as
+//                            the slug rule spells it. THE READER JUDGES THE
+//                            SHAPE ALONE (is_theme_slug, gui_theme.h; THE
+//                            theme GRAMMAR below): any other word the
+//                            launch's hard fail (kThemeGrammarReason), and a
+//                            well-shaped slug no row bears LOADS — the window
+//                            opens in default with one stderr line and the
+//                            line stays as written until he picks another
+//                            (architect 2026-11-06, session 75: a file
+//                            removed on the laptop and mirrored away; the
+//                            noise's absent-folder shape). REQUIRED, read at
 //                            launch to install the palette before the
 //                            window exists and applied LIVE at the settings
 //                            editor's OK and at the settings page's value
-//                            list's tap — the list under two inert group
-//                            rows, BUILTIN and EXTRA — a palette reinstall
-//                            and a whole repaint, no card (the apply shape,
-//                            GuiInputHandler::apply_theme); the template
-//                            spells `default`. A config from before the key
-//                            stops the startup on the missing line, as
-//                            every joined key's did (no migration; the sync
-//                            script's setup adds the line on the tablet).
+//                            list's tap — the list under one inert group row
+//                            per group, WARPTEMPO first — a palette
+//                            reinstall and a whole repaint, no card (the
+//                            apply shape, GuiInputHandler::apply_theme); the
+//                            template spells `default`. A config from
+//                            before the key stops the startup on the
+//                            missing line, as every joined key's did (no
+//                            migration; the sync script's setup adds the
+//                            line on the tablet).
 //                            (A `theme` key of another meaning — a chrome
 //                            theme file read at launch — stood
 //                            2026-10-03..10-08, THE COLOUR KEYS below.)
@@ -497,10 +502,12 @@
 // chrome's own, with a Settings row; every chrome's colors are compiled in
 // since (theme_file.h), and the program's own colors were one compiled-in
 // palette (palette_file.h) until 2026-11-05. THE `theme` KEY IS BACK WITH
-// ANOTHER MEANING since 2026-11-05 (the head's list): not a file read at
-// launch but the slug of a compiled row — Live 12's own themes, chrome and
-// well together (palette_file.h's head); an old `theme=` line that names no
-// row of the table is the ordinary bad-value hard fail.
+// ANOTHER MEANING since 2026-11-05 (the head's list): the slug of one of
+// Live 12's own themes, chrome and well together (palette_file.h's head) —
+// since 2026-11-06 a row of the list built at launch from Live's .ask files
+// in `themes/<group>/` (theme_ask.h); an old `theme=` line of that era's
+// shape (a name with capitals, a hyphen) is the ordinary bad-value hard
+// fail, a well-shaped one naming no row opening in default.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -596,11 +603,12 @@ struct DeviceConfig {
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
     // templates' and the construction state's.
     bool        true_colors = true;
-    // THE WINDOW'S THEME, a slug of kGuiThemes (2026-11-05, the head's list):
-    // required; `default` the templates' and the construction state's
-    // (kGuiDefaultTheme, theme_tables.h). The string is the writer's
-    // spelling; the row is found at every read (find_gui_theme).
-    std::string theme = kGuiThemes[kGuiDefaultTheme].slug;
+    // THE WINDOW'S THEME, a slug (2026-11-05, the head's list): required;
+    // `default` the templates' and the construction state's
+    // (kGuiDefaultThemeSlug, gui_theme.h). The string is the writer's
+    // spelling, kept as read even when no row bears it (2026-11-06); the row
+    // is found at every read (find_gui_theme, theme_ask.h).
+    std::string theme = std::string(kGuiDefaultThemeSlug);
     // THE WAVEFORM PLATE'S GROW in quarters of a device px (2026-10-31, the
     // head's list; a permanent key): required; the construction state is
     // the template's 1 (kWaveformGrowDefaultQuarters below, 2026-11-04
@@ -799,12 +807,15 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
     return std::nullopt;
 }
 
-// THE theme GRAMMAR (2026-11-05) — a slug of the generated theme table,
-// exactly; the one owner is find_gui_theme (theme_tables.h: the row, or
-// nullptr), read by the reader, the settings editor's commit and the value
-// list's seat; the writer writes the slug verbatim and Tab completes against
-// the table's slugs (GuiSettingsEditor::value_choices). The reason is
-// spelled here beside the other keys'.
+// THE theme GRAMMAR (2026-11-05; the shape alone since 2026-11-06) — a word
+// as the slug rule spells it, its one owner is_theme_slug (gui_theme.h),
+// read by the reader. A WELL-SHAPED SLUG NO ROW BEARS IS NOT THE GRAMMAR'S:
+// it loads and the window opens in default (architect 2026-11-06, session
+// 75; gui_main, theme_ask.h's head). The settings editor's commit asks the
+// list itself (find_gui_theme, theme_ask.h) and refuses a slug no row bears
+// with the same reason; the writer writes the slug verbatim and Tab
+// completes against the list's slugs (GuiSettingsEditor::value_choices). The
+// reason is spelled here beside the other keys'.
 inline constexpr const char* kThemeGrammarReason = "must name a theme";
 
 // A CANONICAL SIGNED INTEGER (2026-10-28, the noise's integers' shared
@@ -1270,7 +1281,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
 // a GUI one: 200 % and the external files dir's `projects/`;
 // it stamps every key, required since 2026-10-14: `true_colors=on` (the
-// struct's own value), `theme=default` (2026-11-05, kGuiDefaultTheme's slug),
+// struct's own value), `theme=default` (2026-11-05, kGuiDefaultThemeSlug),
 // `waveform_grow=1` (2026-10-31, kWaveformGrowDefaultQuarters; 1 since
 // 2026-11-04 night),
 // `audio_level=0` (2026-10-31 night, the files as they are; the shortest

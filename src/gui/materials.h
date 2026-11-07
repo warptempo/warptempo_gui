@@ -15,10 +15,10 @@
 // palette_file.h's head) — every painter reads palette()'s member for the
 // role (render.h's GuiPalette; the chrome's role table, theme_file.h), and
 // every number quoted below is DEFAULT'S, Live's "Default Dark Neutral
-// Medium", with the Live role it comes from (the derivation,
-// theme_tables.h's head). The constants that held them (kGround, kKeyFace,
-// kTextInk and the rest, 2026-11-01..05) are retired: nothing outside the
-// installed palette names a color.
+// Medium" (the compiled row, gui_theme.h), with the Live role it comes from
+// (the derivation, theme_ask.h's head). The constants that held them
+// (kGround, kKeyFace, kTextInk and the rest, 2026-11-01..05) are retired:
+// nothing outside the installed palette names a color.
 //
 // THE GROUND IS ONE FLAT COLOR, `ground` — Default's 242424 (SurfaceArea) —
 // everywhere outside the well's regions and the keys: the band and its logo
@@ -45,7 +45,7 @@
 // Default's FFAD56 (ViewCheckControlEnabledOn), Live's "on" — A CHECKED
 // KEY, its whole face; LIT UNDER PRESS — `lit_press_fill`, Default's
 // C68743, the lit fill scaled by the press face's ratio to the resting
-// face (42 / 54 = 0.778 on Default; the derivation, theme_tables.h's
+// face (42 / 54 = 0.778 on Default; the derivation, theme_ask.h's
 // head) — a checked key while a press stands on it.
 // THE YELLOW IS FOR LAMPS ONLY (architect 2026-11-02, on mocks a3 / b3: "the
 // yellow flash is jarring … keep the yellow only for lamps").
@@ -58,7 +58,7 @@
 // fills. A checked door wears `door_lit_fill`, Default's B595FC
 // (ScaleAwareness), and under a press `door_lit_press_fill`, Default's
 // 8D74C4 — the door fill by THE SAME RATIO the lamps' lit press takes
-// (theme_tables.h's head). Every other checked key — the state lamps
+// (theme_ask.h's head). Every other checked key — the state lamps
 // (FOLLOW, RESTRICT, MAGNIFY, Read Only, Tooltips, the walk lamp,
 // Cumulative, the iteration lamp, Value Drag, Add to Selection), the view
 // pairs' lit members, the on-screen keyboard's latched Shift and symbols key
@@ -191,8 +191,10 @@
 //
 // THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
 // selection): a flat bar in `selection_fill`, Default's 637E86
-// (StandbySelectionBackground), under `selection_text`, Default's 111111
-// (ControlContrastFrame) — the flag editor's and the dialog editors'
+// (StandbySelectionBackground), under `selection_text`, Default's 070707
+// (StandbySelectionForeground, Live's own partner of the bar; architect
+// 2026-11-06, session 75 — ControlContrastFrame's 111111 before it, our
+// mispairing) — the flag editor's and the dialog editors'
 // selected substring and the lists' highlighted row (the chrome's
 // `selected_fill` / `selected_text`, theme_file.h). THE LIST ROW UNDER A
 // PRESS IS LIGHTER (architect 2026-11-05, the press arc: "a list is not a

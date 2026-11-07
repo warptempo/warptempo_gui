@@ -73,7 +73,7 @@ struct GuiInputHandler;
 //      (format_engine_setting_value, recall_gui_setting_value).
 //   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
 //      short closed list — `true_colors`'s `on` / `off` (2026-10-21), `theme`'s
-//      slugs (2026-11-05, kGuiThemes' order) — the
+//      slugs (2026-11-05, the themes' list's order, theme_ask.h) — the
 //      prefix completes
 //      against those words by the same rule as the keys
 //      (complete_closed_value); `projects_path=<prefix>` completes against the
@@ -324,9 +324,10 @@ static_assert(settings_page_piece_keys_pinned());
 // key with a short domain the list can show whole: the two words, the
 // folders under `noise/`, the crossfade's 30 whole seconds, the grow's
 // 9 quarters and the themes' slugs. A LIST IS A SEQUENCE OF GROUPS
-// (value_list_groups below; 2026-11-05): `theme`'s two, BUILTIN (Live's
-// stock seven files and the generator's variants of them, immaterial_gold
-// since 2026-11-05: eight rows) and EXTRA (the dropped-in packs), each
+// (value_list_groups below; 2026-11-05): `theme`'s one per group of the
+// themes' list (architect 2026-11-06, session 75: WARPTEMPO, the compiled
+// group — `default` and immaterial_gold — then each folder under `themes/`
+// alphabetically, EXTRA and SONIC_BLOOM on his devices; theme_ask.h), each
 // under an inert Group row like the settings page's own DEVICE / PIECE;
 // every other key one headless group. The typed line still names every one
 // of them, its arms and completers unchanged (the list is a second door).
@@ -430,7 +431,7 @@ struct GuiSettingsEditor {
     // domains' Tab completer's words (complete_closed_value); the list's
     // rows are value_list_groups' below: `true_colors`
     // kTrueColorsWords (`on`, `off`); `theme` (2026-11-05) the slugs of
-    // kGuiThemes in the table's order, `default` first; `noise`
+    // the themes' list in its order (theme_ask.h), `default` first; `noise`
     // the folders under `noise/` beside the device config, sorted by byte —
     // the names the noise completer lists for an empty prefix
     // (complete_noise_value's listing, settings_editor.cpp's folder_names:
@@ -444,15 +445,16 @@ struct GuiSettingsEditor {
     // at each call; nothing is cached.
     std::vector<std::string> value_choices(const std::string& key) const;
     // THE VALUE LIST'S GROUPS for `key` (architect 2026-11-05, the theme
-    // arc's BUILTIN / EXTRA): the list as the folder overlay shows it — a
-    // sequence of groups, each a heading and its values (value_choices'
-    // spelling), the heading printed as an inert Group row
+    // arc; the groups the folders since 2026-11-06): the list as the folder
+    // overlay shows it — a sequence of groups, each a heading and its values
+    // (value_choices' spelling), the heading printed as an inert Group row
     // (GuiInputHandler::build_value_list_rows, the settings page's own
-    // shape) or EMPTY for no heading row. `theme` answers two, "BUILTIN"
-    // over kGuiThemes' Builtin rows and "EXTRA" over its Extra rows, each
-    // group in the table's order and a group with no rows left out; every
-    // other listed key answers ONE HEADLESS GROUP holding value_choices
-    // whole, so its list is the flat list it was.
+    // shape) or EMPTY for no heading row. `theme` answers one group per
+    // group of the themes' list in its order (theme_ask.h: "WARPTEMPO", the
+    // compiled group, first, then each `themes/` folder alphabetically), the
+    // heading the group's name ALL CAPS (`sonic_bloom` -> "SONIC_BLOOM"), its
+    // rows by slug; every other listed key answers ONE HEADLESS GROUP holding
+    // value_choices whole, so its list is the flat list it was.
     struct ValueListGroup {
         std::string              heading;
         std::vector<std::string> values;
@@ -574,7 +576,7 @@ private:
     // closed list. The value side is a PREFIX (byte compare, the words being
     // ASCII) of the key's words — `on` and
     // `off` (kTrueColorsWords, device_config.h) for `true_colors`, the
-    // themes' slugs (value_choices, kGuiThemes' spelling) for `theme` — and the
+    // themes' slugs (value_choices, the list's spelling) for `theme` — and the
     // buffer advances by the matches' longest common prefix past it: a
     // UNIQUE match completes the word WITH NO TRAILING CHARACTER (a name is
     // not a folder), an ambiguous prefix stops at the common prefix (he

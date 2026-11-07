@@ -151,12 +151,15 @@ set(WARPTEMPO_GUI_SOURCES
     # by construction: warptempo_cli never read any of them, and the file
     # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp
-    # THE CHROME'S COLORS (2026-10-04; compiled in since 2026-10-08): the
-    # role table and each chrome's compiled theme, no files.
+    # THE CHROME'S COLORS (2026-10-04): the chrome's role table.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
-    # THE PALETTE (2026-10-07; one palette, compiled in, since 2026-11-01):
-    # the program's role table's coverage proofs. GUI-ONLY.
+    # THE THEMES' LIST (2026-11-06): Live's .ask files read at launch from
+    # themes/ beside the device config, the compiled group first (theme_ask.h).
+    # GUI-ONLY like the config: the CLI paints nothing.
+    src/gui/theme_ask.cpp
+    # THE PALETTE (2026-10-07; one per theme since 2026-11-05): the
+    # program's role table's coverage proofs. GUI-ONLY.
     src/gui/palette_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp

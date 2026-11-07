@@ -14,18 +14,13 @@ drawings written by `tools/icons/import_breeze.py`, their provenance table in `a
 
 ## The themes
 
-The window's themes (`src/gui/theme_tables.h`, the `theme` device key) are NUMBERS: each row is a table of colors
-transcribed by `tools/themes/ask_to_tables.py` from one Ableton Live 12 theme file (`.ask`, Ableton's theme XML) through
-the derivation at that tool's head; the theme files themselves are not distributed and are not in this repository. The
-stock themes are Ableton AG's, Live 12's own (its `Resources/Themes`: Default Dark Neutral Medium, Angst Robot, Classic
-Medium Dark, Classic Medium Light, Immaterial, Riparian, Twenty-Four Carat); `immaterial_gold` is Immaterial's numbers with
-that file's own SearchIndication role as the accent, shaded darker in OKLCH by the tool, no extra file.
-The extras are Sonic Bloom's two free Live 12 theme packs, "Free Ableton Live 12 Themes #2 (Retro Style)" and "#3"
-(Sonic Bloom, https://sonicbloom.gumroad.com): SB
-Alabaster, SB Alluvial, SB Bronze, SB Cielo, SB Classica, SB Dash, SB Disco, SB Elegance, SB Fandango, SB Gobo, SB
-Gunmetal, SB Heliotrope, SB Kelp, SB Morea, SB Ochre, SB Onyx, SB Red Greys, SB Requisite, SB Retrograde, SB Rosequartz,
-SB Taupe, SB Umber, SB Vintage, SB Viridian — the files not distributed, their numbers credited here. The tool prints
-these credit lines at every run.
+The window's one compiled theme, `default` (`src/gui/gui_theme.h`'s `kGuiDefaultThemeTones`, the `theme` device key),
+is NUMBERS: a table of colors derived from Ableton AG's Live 12 theme file Default Dark Neutral Medium (`.ask`, Ableton's
+theme XML; its `Resources/Themes`) through the derivation at `src/gui/theme_ask.h`'s head. Every other theme is read at
+the program's launch from `.ask` files the user places beside the device config (`themes/<group>/`); NO THEME FILE IS
+DISTRIBUTED with the program or kept in this repository (since 2026-11-06; the numbers of Live's other stock themes and of
+third-party packs are no longer compiled in). `immaterial_gold` is a compiled rule over the user's own copy of Live's
+Immaterial file (its SearchIndication role as the accent, shaded darker in OKLCH), no extra file.
 
 ## The tablet's APK
 

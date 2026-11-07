@@ -7,7 +7,7 @@
 #include "chrome_spec.h"      // live_chrome_spec(), the live chrome's lengths
 #include "program_spec.h"     // kProgramSpec, the program's lengths (the band, row 8)
 #include "display_transform.h" // display_color's transform (sRGB -> the window's space)
-#include "theme_tables.h"     // GuiTheme, the installed theme's row (install_palette)
+#include "gui_theme.h"        // GuiTheme, the installed theme's row (install_palette)
 
 #include <algorithm>
 #include <array>
@@ -107,8 +107,10 @@ struct TrimRange {
 // NUMBERS (architect 2026-11-01: the Cool Edit presets and their `waveform`
 // key dropped, the canvas grammar kept, Live's measured default compiled
 // in; architect 2026-11-05, the theme arc: Live 12's own themes, whole, the
-// `theme` device key naming one row of the generated kGuiThemes,
-// theme_tables.h, the Default row that measured palette to the byte); THE
+// `theme` device key naming one row of the themes' list — since 2026-11-06,
+// session 75, the compiled group and the .ask files read at launch,
+// theme_ask.h — the compiled Default row that measured palette to the byte
+// but the selection pair's text, gui_theme.h); THE
 // LIT KEY'S FILL is the chrome's `lit_fill` (materials.h's THE KEY); THE
 // PANEL'S FACE is the flat ground (the theme's `ground`, Default's 242424,
 // the flat look, architect 2026-11-01), and THE CHROME'S ROLES are the
@@ -124,7 +126,8 @@ struct TrimRange {
 // any look made official, would be a chrome variant of its own
 // (2026-10-08) — and is, since 2026-11-05, a theme of its own. The app
 // computes no color at paint time: every one is a theme row's word, the
-// derived tones computed once by the generator (theme_tables.h's head).
+// derived tones computed once at the launch's read (theme_ask.h's head, THE
+// DERIVATION).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — the chrome's eighteen flat-look tones among them
 // (materials.h, 2026-11-01: the ground, the key's faces (rest, press, lit,
@@ -395,12 +398,12 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE INSTALLED THEME'S ROW (theme_tables.h) — the sRGB WORDS behind
-// palette(), for the few readers that need the word rather than a GuiColor:
-// the Breeze glyph road's tone (icons::draw_glyph; key_ink, materials.h),
-// the plate's two inks (waveform_plate_inks below). Every other painter
-// reads palette(). Before the first install it is the Default row
-// (construction state, as palette()'s black), never painted.
+// THE INSTALLED THEME'S ROW (a copy of the list's row, theme_ask.h) — the
+// sRGB WORDS behind palette(), for the few readers that need the word rather
+// than a GuiColor: the Breeze glyph road's tone (icons::draw_glyph; key_ink,
+// materials.h), the plate's two inks (waveform_plate_inks below). Every other
+// painter reads palette(). Before the first install it is the compiled
+// Default row (construction state, as palette()'s black), never painted.
 const GuiTheme& installed_theme();
 
 // THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
@@ -422,12 +425,15 @@ enum class GuiSurface {
 };
 GuiColor surface_text(GuiSurface surface);
 
-// Install every color off ONE THEME'S ROW (`theme`, a row of kGuiThemes,
-// theme_tables.h; architect 2026-11-05, the theme arc): THE PROGRAM'S
+// Install every color off ONE THEME'S ROW (`theme`, a row of the themes'
+// list, theme_ask.h; architect 2026-11-05, the theme arc): THE PROGRAM'S
 // members off the palette's role table (kGuiPaletteRoles, palette_file.h),
 // THE CHROME'S off the chrome's (kGuiThemeRoles, theme_file.h), the panel's
 // `face` off the theme's ground — the tables covering the struct exactly
-// (palette_file.cpp) — and the row kept as installed_theme(). Its callers:
+// (palette_file.cpp) — and the row COPIED as installed_theme() (architect
+// 2026-11-06, session 75: the list is built once at launch and immutable, a
+// pointer into it would hold too; the copy needs no lifetime argument and
+// covers the construction state before the load). Its callers:
 // gui_main's startup, before the window exists (the config's `theme`), and
 // every `theme` commit through GuiInputHandler::apply_theme. It resolves and
 // never refuses, and it bumps palette_generation below, the flag cache's

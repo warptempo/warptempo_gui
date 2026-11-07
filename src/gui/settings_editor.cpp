@@ -3,6 +3,7 @@
 #include "input_handler.h"
 #include "render_output_naming.h"
 #include "device_config.h"
+#include "theme_ask.h"         // the themes' list: the `theme` value list, the commit's find
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -363,8 +364,8 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     if (key == "true_colors") {
         for (const char* word : kTrueColorsWords) out.emplace_back(word);
     } else if (key == "theme") {
-        // The table's own order, `default` first (theme_tables.h).
-        for (const GuiTheme& t : kGuiThemes) out.emplace_back(t.slug);
+        // The list's own order, the compiled group first (theme_ask.h).
+        for (const GuiTheme& t : gui_themes()) out.push_back(t.slug);
     } else if (key == "noise") {
         const std::filesystem::path home = noise_home();
         if (!home.empty()) {
@@ -389,20 +390,25 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
 
 std::vector<GuiSettingsEditor::ValueListGroup>
 GuiSettingsEditor::value_list_groups(const std::string& key) const {
-    // The contract is at the declaration (settings_editor.h): `theme` its
-    // two headed groups off the table's own group column, in the table's
-    // order; every other key one headless group of value_choices.
+    // The contract is at the declaration (settings_editor.h): `theme` one
+    // headed group per run of the list's group, in the list's order (the
+    // list keeps each group's rows together, theme_ask.h), the heading the
+    // group's name ALL CAPS; every other key one headless group of
+    // value_choices.
     std::vector<ValueListGroup> out;
     if (key == "theme") {
-        const auto group = [&](GuiThemeGroup g, const char* heading) {
-            ValueListGroup vg;
-            vg.heading = heading;
-            for (const GuiTheme& t : kGuiThemes)
-                if (t.group == g) vg.values.emplace_back(t.slug);
-            if (!vg.values.empty()) out.push_back(std::move(vg));
-        };
-        group(GuiThemeGroup::Builtin, "BUILTIN");
-        group(GuiThemeGroup::Extra,   "EXTRA");
+        const std::string* current = nullptr;
+        for (const GuiTheme& t : gui_themes()) {
+            if (current == nullptr || t.group != *current) {
+                current = &t.group;
+                std::string heading = t.group;
+                for (char& c : heading)
+                    c = static_cast<char>(
+                        std::toupper(static_cast<unsigned char>(c)));
+                out.push_back(ValueListGroup{std::move(heading), {}});
+            }
+            out.back().values.push_back(t.slug);
+        }
         return out;
     }
     out.push_back(ValueListGroup{std::string(), value_choices(key)});
@@ -1311,18 +1317,20 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     }
 
     // THE THEME (architect 2026-11-05, the theme arc; palette_file.h's head):
-    // a slug of the generated theme table under its one grammar owner
-    // (find_gui_theme, theme_tables.h; the reason kThemeGrammarReason,
-    // device_config.h), APPLIED LIVE AT THE COMMIT, which is the OK's (or
-    // Enter's) or the value list's row tap, through the theme's own apply
-    // shape (GuiInputHandler::apply_theme — the palette reinstalled off the
-    // row, the icon rasters, the plate or the flag cache, the whole window),
-    // so NO CARD: the colors on screen are the answer; a failed write keeps
-    // the live value for the session, the card saying the persist failed,
-    // and the slug already in force is the unchanged no-op. The page opens
-    // its VALUE LIST (the slugs under BUILTIN and EXTRA,
-    // kSettingsValueListKeys); Tab completes a typed prefix against the
-    // slugs (complete_closed_value); stage 2's recall is the slug verbatim
+    // the slug of a row of the themes' list (find_gui_theme, theme_ask.h —
+    // the list as the launch read it; a slug no row bears, which only a typed
+    // line can name, refused with kThemeGrammarReason, device_config.h: the
+    // reader's shape test is not this commit's, architect 2026-11-06),
+    // APPLIED LIVE AT THE COMMIT, which is the OK's (or Enter's) or the value
+    // list's row tap, through the theme's own apply shape
+    // (GuiInputHandler::apply_theme — the palette reinstalled off the row,
+    // the icon rasters, the plate or the flag cache, the whole window), so NO
+    // CARD: the colors on screen are the answer; a failed write keeps the
+    // live value for the session, the card saying the persist failed, and
+    // the slug already in force is the unchanged no-op. The page opens its
+    // VALUE LIST (the slugs under their groups' headings, WARPTEMPO first,
+    // kSettingsValueListKeys); Tab completes a typed prefix against the slugs
+    // (complete_closed_value); stage 2's recall is the slug verbatim
     // (recall_gui_setting_value).
     if (key == "theme") {
         const GuiTheme* theme = find_gui_theme(value);

@@ -2301,9 +2301,11 @@ namespace {
     // before the window exists (the gui_scale shape).
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
-    // The installed theme's row (installed_theme, render.h): the Default row
-    // until the first install, so the word readers never dereference nothing.
-    const GuiTheme*   g_theme = &kGuiThemes[kGuiDefaultTheme];
+    // The installed theme's row, a copy (installed_theme, render.h): the
+    // compiled Default row until the first install.
+    GuiTheme          g_theme{std::string(kGuiDefaultThemeSlug),
+                              std::string(kGuiCompiledThemeGroup),
+                              kGuiDefaultThemeTones};
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
@@ -2318,7 +2320,7 @@ GuiColor surface_text(GuiSurface surface) {
     return pal.label;
 }
 uint64_t palette_generation() { return g_palette_generation; }
-const GuiTheme& installed_theme() { return *g_theme; }
+const GuiTheme& installed_theme() { return g_theme; }
 WaveformPlateInks waveform_plate_inks() {
     // The window's words (the struct's declaration, render.h), the installed
     // theme's two tones.
@@ -2334,9 +2336,9 @@ void install_palette(const GuiTheme& theme) {
     // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
     // theme's ground (the flat look, materials.h's head) — the tables
     // covering the struct exactly (palette_file.cpp), so a role cannot be
-    // valued and not painted; the row kept for the word readers
+    // valued and not painted; the row copied for the word readers
     // (installed_theme).
-    g_theme = &theme;
+    g_theme = theme;
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
         g_palette.*(r.member) = hex(theme.tones.*(r.tone));
     for (const GuiThemeRole& r : kGuiThemeRoles)

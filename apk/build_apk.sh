@@ -204,7 +204,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
-LAUNCHER_GROUND="#242424"   # the Default theme's ground (theme_tables.h's `default` row, materials.h's head); the one owner of the color here
+LAUNCHER_GROUND="#242424"   # the Default theme's ground (the compiled `default` row, kGuiDefaultThemeTones in src/gui/gui_theme.h; materials.h's head); the one owner of the color here
 LAUNCHER_INK="#B5B5B5"      # the note's ink, the Default theme's text tone (the logo lane's `text`)
 # THE INK IS GIVEN AS resvg's USER STYLESHEET, the app's own road
 # (svg_icon::parse): the drawing paints in `currentColor` and the one-rule

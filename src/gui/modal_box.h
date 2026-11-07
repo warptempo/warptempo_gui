@@ -188,7 +188,7 @@ inline int modal_box_content_pad_px() { return hairline_px(); }
 // `pane_face` (architect 2026-11-01 night, M9 A2, "THE SCORE VIEWER IS
 // SETTLED": "not lighter, preferably from ableton palette directly"): the
 // palette's `score_pane_face`, in every theme THE WAVEFORM'S INK (Default's
-// 191919, Live's ink; theme_tables.h's derivation), the one tone reused.
+// 191919, Live's ink; theme_ask.h's derivation), the one tone reused.
 // THE REASON: the score's page is a picture on a dark mat, not a list field.
 // The GPU's field round the page (score_viewer.cpp's
 // score_viewer_publish_gpu_page) and the CPU's pane under the score

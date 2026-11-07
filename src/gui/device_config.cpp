@@ -276,8 +276,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The switch's word (format_true_colors, the grammar's owner).
             s += format_true_colors(cfg.true_colors);
         } else if (k == "theme") {
-            // The theme's slug verbatim (the reader admitted it as a row of
-            // kGuiThemes, find_gui_theme).
+            // The theme's slug verbatim, as read (is_theme_slug's shape; a
+            // slug no row bears is written back as it stood, 2026-11-06).
             s += cfg.theme;
         } else if (k == "waveform_grow") {
             // The grow's canonical decimal (format_waveform_grow).
@@ -400,13 +400,15 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.true_colors = *on;
             return {};
         }
-        // THE THEME (2026-11-05): a slug of the generated theme table under
-        // its one grammar owner (find_gui_theme, theme_tables.h), required
+        // THE THEME (2026-11-05; the shape alone since 2026-11-06): a slug
+        // under its one grammar owner (is_theme_slug, gui_theme.h), required
         // like every key; any other word the launch's hard fail
-        // (kThemeGrammarReason, device_config.h). The slug is kept as the
-        // writer's spelling; the row is found again by every reader.
+        // (kThemeGrammarReason, device_config.h). A slug no row bears loads
+        // (the list is built after this read; gui_main opens in default).
+        // The slug is kept as the writer's spelling; the row is found again
+        // by every reader.
         if (key == "theme") {
-            if (find_gui_theme(value) == nullptr) {
+            if (!is_theme_slug(value)) {
                 return bad_value(ln, key, value, kThemeGrammarReason);
             }
             out.theme = value;

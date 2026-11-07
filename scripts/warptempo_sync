@@ -9,8 +9,8 @@ shopt -s nocaseglob
 #
 #   warptempo_sync tt [piece ...|all]   TO the tablet:   the source audio,
 #                                       each piece's score folder and the
-#                                       laptop's noise folder, and nothing
-#                                       else.
+#                                       laptop's noise and themes folders,
+#                                       and nothing else.
 #   warptempo_sync ot [piece]           ON the tablet: an interactive shell as the
 #                                       app, in its projects folder (or the named
 #                                       piece's); the app is stopped while you are
@@ -18,7 +18,8 @@ shopt -s nocaseglob
 #   warptempo_sync setup                ONE COMMAND that makes a tablet ready:
 #                                       GitHub's projects clone placed on it, its
 #                                       deploy key, its settings file corrected,
-#                                       the noise folder, the audio, the app
+#                                       the noise and themes folders, the
+#                                       audio, the app
 #                                       started. It shows its plan and asks
 #                                       Proceed? [y/N] before it changes
 #                                       anything.
@@ -32,7 +33,7 @@ shopt -s nocaseglob
 # ============================== HOW TO USE IT ==============================
 #
 #   A new piece: put its folder, holding its one source .wav, under the
-#   projects/ folder your device config's projects_path names, then
+#   projects/ folder $WARPTEMPO_PROJECTS_PATH names, then
 #
 #       warptempo_sync tt          <- every piece's audio the tablet lacks
 #
@@ -47,7 +48,7 @@ shopt -s nocaseglob
 # THE SIDECARS NEVER TRAVEL HERE (architect 2026-09-27). Both devices hold a clone
 # of github.com/warptempo/warptempo_projects and the app itself commits, pushes
 # and pulls them (Save and Commit in `h`); GitHub is the hub. warptempo_sync
-# carries only what git does not: the audio, the scores and the noise in,
+# carries only what git does not: the audio, the scores, the noise and the themes in,
 # nothing out (a
 # render is never fetched from the tablet, architect 2026-10-26 night: the laptop
 # pulls the committed sidecars and renders the same file again, within a few ULPs).
@@ -103,9 +104,9 @@ shopt -s nocaseglob
 # else on the tablet is deleted here: viewer.txt and any stray file stay.
 #
 # tt AND setup MIRROR THE NOISE FOLDER (2026-10-28, mirror_noise; the sound is
-# src/gui/noise.h's). The laptop's `noise/` beside its device config
-# (${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/noise — derived as
-# PROJECTS is, no private path and no environment variable) holds one
+# src/gui/noise.h's). The laptop's `noise/` in the tablet material's home
+# ($WARPTEMPO_TABLET_HOME/noise since 2026-11-06, the variable his; THE
+# ENVIRONMENT below) holds one
 # subfolder per sound, the `noise` device key naming one; its recordings are
 # whatever the architect converts by his own means to the shape the app
 # admits (16-bit PCM stereo WAV at one rate per folder) — THE SCRIPT CONVERTS
@@ -121,13 +122,25 @@ shopt -s nocaseglob
 # made first) unless the tablet's file has the same sha256 (the deploy key's
 # compare). Then THE TABLET'S noise/ IS BROUGHT TO THE LAPTOP'S SHAPE: every
 # noise/<sub>/<name>.wav the laptop's folder lacks is deleted by its own name
-# (app_rm_noise), and every subfolder the laptop lacks is deleted — its
+# (app_rm_mirrored), and every subfolder the laptop lacks is deleted — its
 # `.wav` files by name first, then the emptied directory by rmdir
-# (app_rmdir_noise, rmdir refusing a folder that is not empty). The tablet's
+# (app_rmdir_mirrored, rmdir refusing a folder that is not empty). The tablet's
 # listing is ONE checked reading in push_score's shape. The first copy of his
 # `rain` folder is about 400 MB and a few minutes; a repeat hashes and skips. The
 # tablet's old files/warptempo_gui/sounds/ is not this script's business and
 # is never read or deleted.
+#
+# tt AND setup MIRROR THE THEMES FOLDER THE SAME WAY (2026-11-06, mirror_themes:
+# the noise mirror's one body, mirror_folder). The laptop's
+# $WARPTEMPO_TABLET_HOME/themes holds one subfolder per GROUP (its name the
+# Settings page's group row, lowercase: extra, sonic_bloom), each holding
+# Live's `.ask` theme files as he drops them (the app reads them at its
+# launch; the derivation and the rules are src/gui/'s). Every `.ask` directly
+# in a group goes to files/warptempo_gui/themes/<group>/<name> unless the
+# tablet holds it unchanged; a `.ask` or a group the laptop lacks is deleted
+# from the tablet by name, the emptied group by rmdir (app_rm_mirrored,
+# app_rmdir_mirrored). Absent or empty, one line says so and nothing is placed
+# or deleted. A sync while the app runs shows at its next launch.
 #
 # setup SHOWS ITS PLAN AND ASKS FIRST (architect 2026-09-28: "add y/n confirm, and
 # that's enough insurance"). THERE IS NO BACKUP: what the plan lists as deleted or
@@ -214,9 +227,10 @@ shopt -s nocaseglob
 #      chrome, which left 2026-11-01 with the color presets (one palette)
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
-#   6. THE NOISE FOLDER (2026-10-28; src/gui/noise.h owns the sound): the
-#      laptop's noise/ mirrored to the tablet's files/warptempo_gui/noise/,
-#      exactly as tt does it (the noise paragraph above, mirror_noise). The
+#   6. THE NOISE AND THEMES FOLDERS (2026-10-28, 2026-11-06): the laptop's
+#      noise/ and themes/ mirrored to the tablet's files/warptempo_gui/noise/
+#      and themes/, exactly as tt does it (the noise and themes paragraphs
+#      above, mirror_noise, mirror_themes). The
 #      plan lists every file the real pass would copy or delete and every
 #      folder it would remove; the real pass does it.
 #   7. the audio and the score folders, exactly as `warptempo_sync tt all`.
@@ -232,9 +246,13 @@ shopt -s nocaseglob
 # pass sets every shell-owned directory under projects/ and .git to 777. The app's
 # own directories (render/, tmp/, peaks/) are skipped and not entered: shell may not.
 #
-# THE ENVIRONMENT, two WARPTEMPO_* variables and never a literal in here:
-# WARPTEMPO_TABLET_ADDR (the wireless address, below) and
-# WARPTEMPO_TABLET_DEPLOY_KEY (the tablet's deploy key, setup's step 4).
+# THE ENVIRONMENT, four WARPTEMPO_* variables and never a literal in here:
+# WARPTEMPO_TABLET_ADDR (the wireless address, below),
+# WARPTEMPO_TABLET_DEPLOY_KEY (the tablet's deploy key, setup's step 4),
+# WARPTEMPO_PROJECTS_PATH (the laptop's projects clone's projects/ folder) and
+# WARPTEMPO_TABLET_HOME (the laptop's folder of tablet material: its noise/ and
+# themes/), the last two since 2026-11-06, when the laptop's device config
+# folder, their earlier source, was retired (the laptop runs no GUI).
 #
 # THE TABLET IS ADDRESSED OVER adb, USB first and the wireless address in
 # WARPTEMPO_TABLET_ADDR (host:port, from the environment) as the fallback;
@@ -336,6 +354,9 @@ TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE slider plays.
 NOISE_FAR="$APPCFG/noise"
+# THE THEMES FOLDER on the tablet, beside it (mirror_themes): the .ask files the
+# app reads at its launch, one subfolder per group.
+THEMES_FAR="$APPCFG/themes"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
 note() { printf 'warptempo_sync: %s\n' "$1" >&2; }
@@ -525,17 +546,21 @@ if [[ "$mode" == "ot" ]]; then
     exit 0
 fi
 
-# THE LAPTOP'S PROJECTS FOLDER IS THE projects_path LINE OF ITS CONFIG FILE,
-# written by hand (the laptop runs no GUI, 2026-10-30; docs/INSTALL.md, The
-# laptop); the projects clone is the folder above it.
-PROJECTS="$(sed -n 's/^projects_path=//p' "${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/config" 2>/dev/null)"
+# THE LAPTOP'S PROJECTS FOLDER IS $WARPTEMPO_PROJECTS_PATH (THE ENVIRONMENT,
+# above; docs/INSTALL.md, The laptop); the projects clone is the folder above it.
+PROJECTS="${WARPTEMPO_PROJECTS_PATH:-}"
 PROJECTS="${PROJECTS%/}"
-[[ -n "$PROJECTS" ]] || die "no projects_path= line in the laptop's config (${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/config): write the line naming the projects clone's projects/ folder (docs/INSTALL.md, The laptop)"
+[[ -n "$PROJECTS" ]] || die "WARPTEMPO_PROJECTS_PATH is not set: export it naming the projects clone's projects/ folder (docs/INSTALL.md, The laptop)"
 REPO="${PROJECTS%/*}"
 [[ -d "$PROJECTS" ]] || die "no projects folder at $PROJECTS"
-# THE LAPTOP'S NOISE FOLDER, beside the same device config (the head's noise
-# paragraph; mirror_noise).
-NOISE_NEAR="${XDG_CONFIG_HOME:-$HOME/.config}/warptempo_gui/noise"
+# THE LAPTOP'S TABLET MATERIAL, $WARPTEMPO_TABLET_HOME: its noise/ and themes/
+# (the head's noise and themes paragraphs; mirror_noise, mirror_themes).
+TABLET_HOME="${WARPTEMPO_TABLET_HOME:-}"
+TABLET_HOME="${TABLET_HOME%/}"
+[[ -n "$TABLET_HOME" ]] || die "WARPTEMPO_TABLET_HOME is not set: export it naming the laptop's folder of tablet material (docs/INSTALL.md, The laptop)"
+[[ -d "$TABLET_HOME" ]] || die "no tablet material folder at $TABLET_HOME"
+NOISE_NEAR="$TABLET_HOME/noise"
+THEMES_NEAR="$TABLET_HOME/themes"
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/warptempo_sync.XXXXXXXX")" || die "cannot make a scratch folder"
 cleanup() {
@@ -671,40 +696,47 @@ far_rm_file() {                         # $1 = absolute far path of one file
     run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
     far_gone "$1"
 }
-# THE NOISE'S TWO SHAPES tt and setup DELETE (2026-10-28, mirror_noise), the
-# two-shapes rule above extended to them, in the app's private folder:
-# ONE RECORDING, files/warptempo_gui/noise/<sub>/<name>.wav, by its own name —
-# two path components under noise/, each a plain name (non-empty, no `/`, not
-# `.` or `..`), the second ending .wav — and nothing else (app_rm_noise); and
-# ONE EMPTIED SOUND FOLDER, files/warptempo_gui/noise/<sub> alone, one plain
-# component, removed by rmdir, which refuses a folder that is not empty
-# (app_rmdir_noise). Any other path is refused before adb is asked.
-app_rm_noise() {                        # $1 = path relative to run-as's home
-    local rest sub name
-    case "$1" in
-        "$NOISE_FAR/"*/*.wav) ;;
-        *) die "refusing to delete '$1': not a recording of the noise" ;;
+# THE MIRRORS' TWO SHAPES tt and setup DELETE (2026-10-28 for the noise,
+# 2026-11-06 for the themes; mirror_folder), the two-shapes rule above extended
+# to them, in the app's private folder under a mirrored root ($NOISE_FAR,
+# $THEMES_FAR): ONE FILE, <root>/<sub>/<name>.<ext>, by its own name — two
+# path components under the root, each a plain name (non-empty, no `/`, not
+# `.` or `..`), the second ending .<ext> — and nothing else (app_rm_mirrored);
+# and ONE EMPTIED SUBFOLDER, <root>/<sub> alone, one plain component, removed
+# by rmdir, which refuses a folder that is not empty (app_rmdir_mirrored). The
+# root must be one of the two. Any other path is refused before adb is asked.
+mirrored_root() {                       # $1 = the root a deletion names
+    [[ "$1" == "$NOISE_FAR" || "$1" == "$THEMES_FAR" ]] || \
+        die "refusing to delete under '$1': not a mirrored folder"
+}
+app_rm_mirrored() {                     # $1 = root, $2 = extension, $3 = path relative to run-as's home
+    local root="$1" ext="$2" rest sub name
+    mirrored_root "$root"
+    case "$3" in
+        "$root/"*/*."$ext") ;;
+        *) die "refusing to delete '$3': not a file of $root" ;;
     esac
-    rest="${1#"$NOISE_FAR/"}"
+    rest="${3#"$root/"}"
     sub="${rest%%/*}"; name="${rest#*/}"
     [[ -n "$sub" && "$sub" != "." && "$sub" != ".." && \
        -n "$name" && "$name" != */* && "$name" != "." && "$name" != ".." ]] || \
-        die "refusing to delete '$1': not a recording of the noise"
-    run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
-    far_gone "$1"
+        die "refusing to delete '$3': not a file of $root"
+    run app_sh 'rm -f "$1"' "$3" || die "could not delete $3 on the tablet: stopping here"
+    far_gone "$3"
 }
-app_rmdir_noise() {                     # $1 = path relative to run-as's home
-    local sub
-    case "$1" in
-        "$NOISE_FAR/"?*) ;;
-        *) die "refusing to delete '$1': not a sound folder of the noise" ;;
+app_rmdir_mirrored() {                  # $1 = root, $2 = path relative to run-as's home
+    local root="$1" sub
+    mirrored_root "$root"
+    case "$2" in
+        "$root/"?*) ;;
+        *) die "refusing to delete '$2': not a subfolder of $root" ;;
     esac
-    sub="${1#"$NOISE_FAR/"}"
+    sub="${2#"$root/"}"
     [[ -n "$sub" && "$sub" != */* && "$sub" != "." && "$sub" != ".." ]] || \
-        die "refusing to delete '$1': not a sound folder of the noise"
-    run app_sh 'rmdir "$1"' "$1" || \
-        die "could not delete the folder $1 on the tablet (rmdir refuses one that is not empty): stopping here"
-    far_gone "$1"
+        die "refusing to delete '$2': not a subfolder of $root"
+    run app_sh 'rmdir "$1"' "$2" || \
+        die "could not delete the folder $2 on the tablet (rmdir refuses one that is not empty): stopping here"
+    far_gone "$2"
 }
 # EVERY DELETION IS VERIFIED: a checked far_is must say the path is gone, else
 # setup stops (a dry run deletes nothing, so it asks nothing).
@@ -888,80 +920,87 @@ push_audio() {
     done
 }
 
-# THE NOISE MIRROR (the head's noise paragraph owns the rule), tt's after
-# push_audio and setup's step 6. Sets `noise_mirrored` to 1 when the laptop
-# holds a sound to mirror (the done line's count). Copies first, then the
-# deletions, each file by its own name, then the emptied folders. The sums are
-# readings, so a dry run decides every skip truthfully and lists exactly what
-# the real pass would copy or delete.
-noise_mirrored=0
-mirror_noise() {
-    local d f sub name rel near_sum far_sum listing="$scratch/noise_listing" rec end=0 kept total=0
+# THE MIRROR (the head's noise and themes paragraphs own the rule), tt's after
+# push_audio and setup's step 6, ONE BODY FOR BOTH FOLDERS (2026-11-06): $1 the
+# kind (noise, themes: the folder's name on both sides and the step lines'
+# word), $2 the laptop's folder, $3 the tablet's (relative to run-as's home),
+# $4 the files' extension (wav, ask), $5 / $6 a subfolder's and a file's word
+# (sound / recording, group / theme), $7 what stands when nothing is mirrored,
+# $8 the first-copy note (empty, or ending ", "). Sets `mirrored` to 1 when
+# the laptop holds a file to mirror (the done line's count). Copies first,
+# then the deletions, each file by its own name, then the emptied folders. The
+# sums are readings, so a dry run decides every skip truthfully and lists
+# exactly what the real pass would copy or delete.
+mirrored=0
+mirror_folder() {
+    local kind="$1" near="$2" far="$3" ext="$4" unit="$5" item="$6" stands="$7" first="$8"
+    local d f sub name rel near_sum far_sum listing="$scratch/${kind}_listing" rec end=0 kept total=0
     local -a subs=() near_list=() far_subs=() far_files=() gone_files=() gone_dirs=()
     local -A near_sub=() near_file=() skip_sub=()
-    if [[ ! -d "$NOISE_NEAR" ]]; then
-        printf 'no noise: the laptop has no %s; nothing placed or deleted, the NOISE slider as it stands\n' "$NOISE_NEAR"
+    mirrored=0
+    if [[ ! -d "$near" ]]; then
+        printf 'no %s: the laptop has no %s; nothing placed or deleted, %s\n' "$kind" "$near" "$stands"
         return 0
     fi
-    # THE LAPTOP'S SOUNDS: its subfolders (a link to a folder counts, as the
+    # THE LAPTOP'S SUBFOLDERS (a sound, a theme group; a link to a folder counts, as the
     # app's probe follows one; a dot-name too, the key's grammar admitting
     # one — never `.` or `..`, which the glob does not match), sorted by the
     # glob; a name the app's grammar refuses skipped with one line.
     shopt -s nullglob dotglob
-    local -a dirs=( "$NOISE_NEAR"/*/ )
+    local -a dirs=( "$near"/*/ )
     shopt -u nullglob dotglob
     for d in "${dirs[@]}"; do
         sub="${d%/}"; sub="${sub##*/}"
         if [[ "$sub" =~ ^[[:space:]] || "$sub" =~ [[:space:]]$ || \
               "$sub" == *$'\n'* || "$sub" == *$'\r'* ]]; then
-            printf "skipping the laptop's noise/%s: the app refuses that name (whitespace at an end, or a line break); the tablet's folder of that name, if any, is left alone\n" "$sub"
+            printf "skipping the laptop's %s/%s: the app refuses that name (whitespace at an end, or a line break); the tablet's folder of that name, if any, is left alone\n" "$kind" "$sub"
             skip_sub["$sub"]=1
             continue
         fi
         subs+=( "$sub" ); near_sub["$sub"]=1
-        # ITS RECORDINGS: every regular file directly in it whose name ends
-        # `.wav` exactly, lowercase (the app's probe; the glob, under
+        # ITS FILES: every regular file directly in it whose name ends
+        # `.$ext` exactly, lowercase (the app's probe; the glob, under
         # nocaseglob, matches any case, so the test below decides), dotfiles
         # included as the app includes them.
         shopt -s nullglob dotglob
-        local -a fs=( "$NOISE_NEAR/$sub"/*.wav )
+        local -a fs=( "$near/$sub"/*."$ext" )
         shopt -u nullglob dotglob
         for f in "${fs[@]}"; do
             name="${f##*/}"
-            [[ "$name" == ?*.wav && -f "$f" ]] || continue
+            [[ "$name" == ?*."$ext" && -f "$f" ]] || continue
             near_list+=( "$sub/$name" ); near_file["$sub/$name"]=1
             total=$((total + 1))
         done
     done
     if [[ "$total" -eq 0 ]]; then
-        printf 'no noise: %s holds no subfolder with a .wav; nothing placed or deleted, the NOISE slider as it stands\n' "$NOISE_NEAR"
+        printf 'no %s: %s holds no subfolder with a .%s; nothing placed or deleted, %s\n' "$kind" "$near" "$ext" "$stands"
         return 0
     fi
 
-    # THE TABLET'S noise/, READ CHECKED (push_score's listing shape): its
-    # subfolders and the .wav files directly in them, NUL-separated, then the
+    # THE TABLET'S FOLDER, READ CHECKED (push_score's listing shape): its
+    # subfolders and the .$ext files directly in them, NUL-separated, then the
     # end record; a folder not there yet lists nothing. A depth-1 record is a
-    # sound folder; a depth-2 record ending .wav a recording, any other (a
-    # folder inside a sound) none of the mirror's — its parent's rmdir would
+    # subfolder; a depth-2 record ending .$ext a file, any other (a folder
+    # inside a subfolder) none of the mirror's — its parent's rmdir would
     # refuse, and stop the run, the program never making one.
-    app_sh 'if [ -d "$1" ]; then cd "$1" && find . -mindepth 1 -maxdepth 2 \( -type d -o -type f -name "*.wav" \) -print0 || exit 1; fi; printf "warptempo_sync-end\0"' "$NOISE_FAR" > "$listing" || \
-        die "could not list the tablet's $NOISE_FAR: nothing more was copied or deleted"
+    app_sh 'if [ -d "$1" ]; then cd "$1" && find . -mindepth 1 -maxdepth 2 \( -type d -o -type f -name "*.$2" \) -print0 || exit 1; fi; printf "warptempo_sync-end\0"' "$far" "$ext" > "$listing" || \
+        die "could not list the tablet's $far: nothing more was copied or deleted"
     rec=""
     while IFS= read -r -d '' rec; do
-        (( end )) && die "the tablet's listing of $NOISE_FAR runs on past its end: nothing more was copied or deleted"
+        (( end )) && die "the tablet's listing of $far runs on past its end: nothing more was copied or deleted"
         if [[ "$rec" == "warptempo_sync-end" ]]; then end=1; continue; fi
-        [[ "$rec" == ./?* ]] || die "the tablet's listing of $NOISE_FAR holds a malformed name ('$rec'): nothing more was copied or deleted"
+        [[ "$rec" == ./?* ]] || die "the tablet's listing of $far holds a malformed name ('$rec'): nothing more was copied or deleted"
         rec="${rec#./}"
         if [[ "$rec" != */* ]]; then
             far_subs+=( "$rec" )
         else
             sub="${rec%%/*}"; name="${rec#*/}"
-            [[ -n "$name" && "$name" != */* ]] || die "the tablet's listing of $NOISE_FAR holds a malformed name ('./$rec'): nothing more was copied or deleted"
-            [[ "$name" == *.wav ]] && far_files+=( "$rec" )
+            [[ -n "$name" && "$name" != */* ]] || die "the tablet's listing of $far holds a malformed name ('./$rec'): nothing more was copied or deleted"
+            [[ "$name" == *."$ext" ]] && far_files+=( "$rec" )
         fi
         rec=""
     done < "$listing"
-    [[ "$end" -eq 1 && -z "$rec" ]] || die "the tablet's listing of $NOISE_FAR is incomplete: nothing more was copied or deleted"
+    [[ "$end" -eq 1 && -z "$rec" ]] || die "the tablet's listing of $far is incomplete: nothing more was copied or deleted"
     for rel in "${far_files[@]}"; do
         sub="${rel%%/*}"
         [[ -n "${skip_sub[$sub]:-}" || -n "${near_file[$rel]:-}" ]] || gone_files+=( "$rel" )
@@ -970,37 +1009,49 @@ mirror_noise() {
         [[ -n "${skip_sub[$sub]:-}" || -n "${near_sub[$sub]:-}" ]] || gone_dirs+=( "$sub" )
     done
 
-    noise_mirrored=1
-    head_step "bring the tablet's noise folder to the laptop's ($NOISE_NEAR: $(plural "${#subs[@]}" sound), $(plural "$total" recording), $(du -shL -- "$NOISE_NEAR" | cut -f1); about 400 MB and a few minutes the first time, a recording the tablet holds unchanged skipped):"
+    mirrored=1
+    head_step "bring the tablet's $kind folder to the laptop's ($near: $(plural "${#subs[@]}" "$unit"), $(plural "$total" "$item"), $(du -shL -- "$near" | cut -f1); ${first}a file the tablet holds unchanged skipped):"
     for sub in "${subs[@]}"; do
-        run app_sh 'mkdir -p "$1"' "$NOISE_FAR/$sub" || die "could not make $NOISE_FAR/$sub on the tablet"
+        run app_sh 'mkdir -p "$1"' "$far/$sub" || die "could not make $far/$sub on the tablet"
         kept=0
         for rel in "${near_list[@]}"; do
             [[ "${rel%%/*}" == "$sub" ]] || continue
-            f="$NOISE_NEAR/$rel"
+            f="$near/$rel"
             near_sum="$(sha256sum < "$f" | cut -c1-64)"
             # NOT A CHECKED READING, AND NEED NOT BE (the deploy key's own
             # rule): a reading that fails counts as "differs", and the answer
             # is the laptop's file placed again, verified by sum (put_as_app).
-            far_sum="$(app_sh 'sha256sum "$1" 2>/dev/null; true' "$NOISE_FAR/$rel" | cut -c1-64)"
+            far_sum="$(app_sh 'sha256sum "$1" 2>/dev/null; true' "$far/$rel" | cut -c1-64)"
             if [[ "$near_sum" == "$far_sum" ]]; then
                 kept=$((kept + 1))
             else
-                step "copy noise/$rel to the tablet ($(du -hL -- "$f" | cut -f1))"
-                put_as_app "$f" "$NOISE_FAR/$rel" 644 || die "noise/$rel did not arrive intact on the tablet"
+                step "copy $kind/$rel to the tablet ($(du -hL -- "$f" | cut -f1))"
+                put_as_app "$f" "$far/$rel" 644 || die "$kind/$rel did not arrive intact on the tablet"
             fi
         done
-        [[ "$kept" -gt 0 ]] && step "leave $(plural "$kept" recording) of noise/$sub/: the tablet holds them unchanged"
+        [[ "$kept" -gt 0 ]] && step "leave $(plural "$kept" "$item") of $kind/$sub/: the tablet holds them unchanged"
     done
     for rel in "${gone_files[@]}"; do
-        step "DELETE noise/$rel from the tablet (the laptop's noise folder has no such file)"
-        app_rm_noise "$NOISE_FAR/$rel"
+        step "DELETE $kind/$rel from the tablet (the laptop's $kind folder has no such file)"
+        app_rm_mirrored "$far" "$ext" "$far/$rel"
     done
     for sub in "${gone_dirs[@]}"; do
-        step "DELETE the tablet's emptied noise/$sub/ (the laptop's noise folder has no such sound)"
-        app_rmdir_noise "$NOISE_FAR/$sub"
+        step "DELETE the tablet's emptied $kind/$sub/ (the laptop's $kind folder has no such $unit)"
+        app_rmdir_mirrored "$far" "$far/$sub"
     done
     return 0
+}
+noise_mirrored=0
+mirror_noise() {
+    mirror_folder noise "$NOISE_NEAR" "$NOISE_FAR" wav sound recording \
+        "the NOISE slider as it stands" "about 400 MB and a few minutes the first time, "
+    noise_mirrored=$mirrored
+}
+themes_mirrored=0
+mirror_themes() {
+    mirror_folder themes "$THEMES_NEAR" "$THEMES_FAR" ask group theme \
+        "the Settings page's themes as they stand" ""
+    themes_mirrored=$mirrored
 }
 
 # The pieces push_audio skipped, said again at the end of the run, where they
@@ -1047,13 +1098,16 @@ if [[ "$mode" == "tt" ]]; then
     # the app's private folder as the app, so nothing of it needs opening.
     mirror_noise
     printf '\n'
+    mirror_themes
+    printf '\n'
     report_unresolved
     if (( dry )); then printf 'nothing was changed. run it without -n to do this.\n'
-    elif [[ "$pushed" -eq 0 && "$scores" -eq 0 && "$noise_mirrored" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
+    elif [[ "$pushed" -eq 0 && "$scores" -eq 0 && "$noise_mirrored" -eq 0 && "$themes_mirrored" -eq 0 ]]; then printf 'done: the tablet already had every source.\n'
     else
         done_line="$(plural "$pushed" wav) copied"
         [[ "$scores" -gt 0 ]] && done_line+=", $(plural "$scores" 'score folder') brought up to date"
         [[ "$noise_mirrored" -eq 1 ]] && done_line+=", the noise folder brought up to date"
+        [[ "$themes_mirrored" -eq 1 ]] && done_line+=", the themes folder brought up to date (shown at the app's next launch)"
         printf 'done: %s. A new piece opens from File -> Open Project on the tablet.\n' "$done_line"
     fi
     exit 0
@@ -1178,8 +1232,8 @@ printf '\n'
 # `dry` clear, which DOES it and narrates as it goes. Each pass reads what it
 # needs of the tablet for itself, so the real pass reads the settings file, the
 # deploy key and the audio again after the app is stopped: a last_project the
-# app wrote since the plan is kept. Step 6, the noise mirror, is tt's own body
-# (mirror_noise), its sums read again by each pass.
+# app wrote since the plan is kept. Step 6, the noise and themes mirrors, is
+# tt's own body (mirror_noise, mirror_themes), its sums read again by each pass.
 
 apply_setup() {
     local d f k src key_same root cfg i
@@ -1314,8 +1368,11 @@ apply_setup() {
     fi
     printf '\n'
 
-    # 6. THE NOISE FOLDER, as tt mirrors it (mirror_noise, above).
+    # 6. THE NOISE AND THEMES FOLDERS, as tt mirrors them (mirror_noise,
+    # mirror_themes, above).
     mirror_noise
+    printf '\n'
+    mirror_themes
     printf '\n'
 
     # 7. THE AUDIO AND THE SCORES, as tt all.
