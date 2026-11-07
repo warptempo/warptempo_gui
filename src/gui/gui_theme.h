@@ -25,7 +25,7 @@ struct GuiThemeTones {
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
     uint32_t text_on_lit;         // anything printed on a lit face (ControlContrastFrame)
-    uint32_t key_dim_ink;         // a disabled key's glyph and legend (face + 36/63 toward text_dim)
+    uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
     uint32_t key_face;            // the key at rest, the time fields (SurfaceBackground)
     uint32_t lit_fill;            // a checked key's whole face, Live's "on" (ViewCheckControlEnabledOn)
     uint32_t lit_press_fill;      // a checked key's face while a press stands on it (lit_fill scaled by the press face's ratio to the face)
@@ -34,10 +34,10 @@ struct GuiThemeTones {
     uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
     uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;          // the ruler (SurfaceBackground)
-    uint32_t ruler_tick;          // the ruler's ticks (face + 53/127 toward text)
+    uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the face)
     uint32_t lane_face;           // the marker lane (Desktop)
     uint32_t trim_bar_face;       // the trim bar outside the trim (Desktop)
-    uint32_t trim_span_face;      // the trim bar inside the trim (face + 52/127 toward text)
+    uint32_t trim_span_face;      // the trim bar inside the trim (ScrollbarInnerHandle over Desktop)
     uint32_t selection_fill;      // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
     uint32_t selection_text;      // the selection pair's text; `selected_text` (StandbySelectionForeground, the bar's own partner)
     uint32_t list_press_fill;     // a list row's fill while a press stands on it (SelectionBackground)
@@ -52,7 +52,7 @@ struct GuiThemeTones {
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
     uint32_t waveform_core;       // the magnified inner bar's solid fill (ControlBackground)
-    uint32_t grid;                // the canvas's quarter lines (canvas + 1/4 toward ink)
+    uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
     uint32_t cue;                 // every enabled marker's chip (ViewCheckControlEnabledOn)
     uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
@@ -94,7 +94,7 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0xB5B5B5, // text
     0x757575, // text_dim
     0x111111, // text_on_lit
-    0x5A5A5A, // key_dim_ink
+    0x5D5D5D, // key_dim_ink
     0x363636, // key_face
     0xFFAD56, // lit_fill
     0xC68743, // lit_press_fill
@@ -103,10 +103,10 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x2A2A2A, // key_press_face
     0x757575, // well_frame
     0x363636, // ruler_face
-    0x6B6B6B, // ruler_tick
+    0x919191, // ruler_tick
     0x2A2A2A, // lane_face
     0x2A2A2A, // trim_bar_face
-    0x6A6A6A, // trim_span_face
+    0x696969, // trim_span_face
     0x637E86, // selection_fill
     0x070707, // selection_text
     0xB0DDEB, // list_press_fill
@@ -121,7 +121,7 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x393939, // waveform_canvas
     0x191919, // waveform_ink
     0x1E1E1E, // waveform_core
-    0x313131, // grid
+    0x303030, // grid
     0x191919, // center
     0xFFAD56, // cue
     0x111111, // cue_outline

@@ -277,8 +277,8 @@ struct TrimRange {
 // the ring of the panel's tones round each well stood 2026-10-09 to
 // 2026-11-02).
 //
-// THE DISABLED FACES (2026-10-23; the key's own dim tone 5A5A5A since
-// 2026-11-02): a dead key DIMS ITS GLYPH (`key_dim_ink`, paint_key_glyph; a
+// THE DISABLED FACES (2026-10-23; the key's own dim tone, Default's 5D5D5D,
+// since 2026-11-02): a dead key DIMS ITS GLYPH (`key_dim_ink`, paint_key_glyph; a
 // glyph on a dead lit key stays `text_on_lit`; no key prints a word since
 // 2026-11-02), its key the face its state gives; a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
@@ -535,7 +535,7 @@ void install_true_colors(bool on);
 // flat `trim_bar_face` (Default's 2A2A2A) (the marker lane's tone), INSIDE IT, THE SPAN,
 // the trim window's columns from the begin column through the end column
 // clipped to the waveform's columns (so a trim spanning the view fills the
-// bar end to end), a flat `trim_span_face` (Default's 6A6A6A) — and the bar's last rows ONE
+// bar end to end), a flat `trim_span_face` (Default's 696969) — and the bar's last rows ONE
 // W OF GROUND across the well's columns, the span included, the
 // line between the bar and the ruler (no line above: the row above the bar
 // is the lane's ground). NO PLAYHEAD IN THE BAR (architect 2026-10-09
@@ -545,7 +545,7 @@ void install_true_colors(bool on);
 //
 // THE RULER IS COOL EDIT'S, FLIPPED, IN LIVE'S TONES (paint_ruler_row):
 // FLAT `ruler_face` (Default's 363636) directly under the bar's ground line, NO LINE ON
-// ITS TOP; THE TICKS `ruler_tick` (Default's 6B6B6B), ONE W WIDE (the canvas's line,
+// ITS TOP; THE TICKS `ruler_tick` (Default's 919191), ONE W WIDE (the canvas's line,
 // waveform_line_px, 2026-11-04), ON THEIR COLUMNS STRADDLING THEIR FRAMES
 // (the line rule, 2026-11-06), STANDING ON THE
 // RULER'S FOOT, the major 4 W and the minor 1 W (8 and 2 device rows at
@@ -1390,7 +1390,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     strike + the tap"; its paint session 52, his pick m1 of tmp/s52: "the
 //     whole dot should turn that color. The whole square"): WHILE THE DEVICE
 //     CANNOT SOUND, THE CLIP LAMP'S WHOLE SQUARE IN `key_dim_ink` (the
-//     disabled key's glyph tone, Default 5A5A5A — "a lighter gray like a
+//     disabled key's glyph tone, Default 5D5D5D — "a lighter gray like a
 //     disabled tone", no role of its own). THE STATE: a third bit, AppState::clip_lamp_struck,
 //     written by refresh_logo_lamps alone on every tick once a piece is open
 //     — GuiPlayback::device_unavailable(), the error callback's dead latch

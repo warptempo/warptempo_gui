@@ -588,7 +588,7 @@ KeyLegendLayout key_legend_layout(const GuiRect& face, std::string_view word) {
 
 // A KEY'S LEGEND under its face (key_legend_layout), on the ground whatever
 // the key's face, in the text tone `text` or, `enabled` false, the
-// disabled key's `key_dim_ink` (Default's 5A5A5A) (materials.h's text tones; architect
+// disabled key's `key_dim_ink` (Default's 5D5D5D) (materials.h's text tones; architect
 // 2026-11-03: a lit key's legend stays B5B5B5, the legend being on the
 // ground). No letter of it is underlined (architect 2026-10-30: no keyboard
 // stands under a dialog, so an access key has no producer).
@@ -643,7 +643,7 @@ std::string key_legend_word(std::string_view word) {
 // size of its own, every key glyph keeping the one ink size. ITS TONE
 // FOLLOWS THE FACE (materials.h's key_ink): `text_on_lit` (Default's 111111) when the key
 // paints LIT (`look`, key_look's answer: checked, a dead checked key keeping
-// its fill), else `text` (Default's B5B5B5) on a resting face, or `key_dim_ink` (Default's 5A5A5A)
+// its fill), else `text` (Default's B5B5B5) on a resting face, or `key_dim_ink` (Default's 5D5D5D)
 // when the key is disabled. The glyph is
 // clipped to the face: a face smaller than the ink box keeps its glyph
 // centered and lets nothing overhang onto the ground. None is at the

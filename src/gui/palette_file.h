@@ -74,10 +74,11 @@
 //                            of it would indicate a quiet section";
 //                            render.h's THE CORE, where the tone's record
 //                            is)
-//   grid             313131  the quarter lines of each channel's half, the
+//   grid             303030  the quarter lines of each channel's half, the
 //                            horizontals alone (render_canvas) — Live's
 //                            antialiased beat line as one solid px on the
-//                            canvas (canvas 1/4 toward ink)
+//                            canvas: Live's TakeLaneTrackNotHighlighted over
+//                            it, architect 2026-11-07)
 //   center           191919  each channel's zero line over the waveform
 //                            (render_center_lines) — Live's zero line IS the
 //                            ink
@@ -177,7 +178,7 @@ static_assert(kDefault.ground          == 0x242424);
 static_assert(kDefault.text            == 0xB5B5B5);
 static_assert(kDefault.text_dim        == 0x757575);
 static_assert(kDefault.text_on_lit     == 0x111111);
-static_assert(kDefault.key_dim_ink     == 0x5A5A5A);
+static_assert(kDefault.key_dim_ink     == 0x5D5D5D);
 static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.lit_fill        == 0xFFAD56);
 static_assert(kDefault.lit_press_fill  == 0xC68743);
@@ -186,10 +187,10 @@ static_assert(kDefault.door_lit_press_fill == 0x8D74C4);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x363636);
-static_assert(kDefault.ruler_tick      == 0x6B6B6B);
+static_assert(kDefault.ruler_tick      == 0x919191);
 static_assert(kDefault.lane_face       == 0x2A2A2A);
 static_assert(kDefault.trim_bar_face   == 0x2A2A2A);
-static_assert(kDefault.trim_span_face  == 0x6A6A6A);
+static_assert(kDefault.trim_span_face  == 0x696969);
 static_assert(kDefault.selection_fill  == 0x637E86);
 static_assert(kDefault.selection_text  == 0x070707);
 static_assert(kDefault.pane_face       == 0x363636);
@@ -205,7 +206,7 @@ static_assert(kDefault.level_noise_fill == 0x3C6AB6);
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);
 static_assert(kDefault.waveform_core   == 0x1E1E1E);
-static_assert(kDefault.grid            == 0x313131);
+static_assert(kDefault.grid            == 0x303030);
 static_assert(kDefault.center          == 0x191919);
 static_assert(kDefault.cue             == 0xFFAD56);
 static_assert(kDefault.cue_outline     == 0x111111);

@@ -149,12 +149,12 @@
 // CARDS' words and glyph wear their own ink, `card_ink`, Default's 2A2A2A
 // (Desktop) on Live's orange (THE CARDS, below; 2026-11-04 night). A
 // DISABLED KEY'S glyph and legend take their own tone, `key_dim_ink`,
-// Default's 5A5A5A (architect 2026-11-02, on mock b3: "the disabled icons
-// are too similar to enabled ones", 757575 reading too close to B5B5B5 at a
-// key's size), darker than Live's dim text so a dead key reads dead at a
-// glance — in every theme the face mixed 36/63 toward the dim text, the
-// Default relation kept; the lists' and the tooltip's dim print keep
-// `text_dim`. NOTHING WEARS A SHADOW (2026-11-01, "no shadow anywhere"; the
+// Default's 5D5D5D (ViewCheckControlDisabledOff over the key face, Live's
+// own number on every theme since 2026-11-07, theme_ask.h's head; architect
+// 2026-11-02, on mock b3: "the disabled icons are too similar to enabled
+// ones", 757575 reading too close to B5B5B5 at a key's size), darker than
+// Live's dim text so a dead key reads dead at a glance; the lists' and the
+// tooltip's dim print keep `text_dim`. NOTHING WEARS A SHADOW (2026-11-01, "no shadow anywhere"; the
 // well's cue labels, triangles and ticks with the rest since 2026-11-02):
 // every word, digit, tick and triangle is ink alone.
 //
@@ -164,9 +164,9 @@
 // faces' outer columns (render.h's well_columns, THE EDGE RULE), top to
 // bottom — THE TRIM BAR two flat fills, no frame (architect 2026-11-03,
 // mock z2): `trim_bar_face`, Default's 2A2A2A, outside the trim,
-// `trim_span_face`, Default's 6A6A6A, on the span, one row of ground under
+// `trim_span_face`, Default's 696969, on the span, one row of ground under
 // them; THE RULER `ruler_face`, Default's 363636, with the `text` digits and
-// the `ruler_tick` ticks, Default's 6B6B6B; one row of ground; THE MARKER
+// the `ruler_tick` ticks, Default's 919191; one row of ground; THE MARKER
 // LANE `lane_face`, Default's 2A2A2A (architect 2026-11-03, the retrofit:
 // Live's next real fill above the 242424 ground — Desktop); one row of
 // ground; THE CANVAS (the palette's `waveform_canvas`), its stereo divider
@@ -187,8 +187,9 @@
 // (architect 2026-11-03, mock z2; render_trim_flags): `trim_bar_face`, the
 // bar outside the trim, IS THE LANE'S TONE — the same Live role (Desktop),
 // named for what it paints as `pane_face` is `key_face`'s; `trim_span_face`
-// Live's off-button hover in Default, in every theme the face mixed 52/127
-// toward the text (the ticks 53/127).
+// is Live's ScrollbarInnerHandle over Desktop (the bar's outside), the ruler's
+// ticks Live's DetailViewRulerMarkings over the ruler face, on every theme
+// (architect 2026-11-07, session 82; theme_ask.h's head).
 //
 // THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
 // selection): a flat bar in `selection_fill`, Default's 637E86

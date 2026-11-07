@@ -154,13 +154,25 @@
 //                                   the ink, palette_file.h)
 //     score pane             = ink (modal_box.h's score pane: "from ableton
 //                                   palette directly")
-//   DERIVED (the app's own tones, each the Default mix of two theme roles, so a
-//   light theme keeps the relation; every mix a + t · (b − a) per channel,
-//   rounded half to even and clamped):
-//     grid                   313131 = canvas + 1/4 · (ink − canvas)
-//     key dim ink            5A5A5A = face + 36/63 · (dim − face)
-//     trim span              6A6A6A = face + 52/127 · (text − face)
-//     ruler tick             6B6B6B = face + 53/127 · (text − face)
+//     grid                   303030 = TakeLaneTrackNotHighlighted over the
+//                                     canvas (the quarter lines)
+//     key dim ink            5D5D5D = ViewCheckControlDisabledOff over
+//                                     SurfaceBackground (the key face; 8-digit
+//                                     D3D3D340 on SB Cielo / Morea / Onyx) — a
+//                                     disabled key's glyph and legend, the
+//                                     struck clip lamp's square
+//     trim span              696969 = ScrollbarInnerHandle over Desktop (the
+//                                     trim bar's outside)
+//     ruler tick             919191 = DetailViewRulerMarkings over
+//                                     SurfaceBackground (the ruler face; Live's
+//                                     light ticks)
+//   Each of these four was a Default mix of two roles; the role nearest it in
+//   hex on Default is the faithful reading, so every theme now reads Live's own
+//   number (architect 2026-11-07, session 82). Default's key dim ink 5D5D5D
+//   equals inactive cue's BackgroundClip — Live's own number, accepted. The four
+//   are present in all 31 files he drops and in Default.
+//   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
+//   (b − a) per channel, rounded half to even and clamped):
 //     playhead line          85E2EB = FFFFFF + 0.483 · (head − FFFFFF)
 //                                     (ruling 4: Default keeps his pick, every
 //                                     other theme the same ratio, white toward
@@ -185,15 +197,27 @@
 //                                     door under a standing press, exactly as
 //                                     the lamps' lit press fill is derived
 //                                     (architect 2026-11-05, the doors)
-//     scanner                FFFFFF (the controls' white, every theme)
+//
+// THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
+// CANONICAL (architect 2026-11-06: "a look online shows it's canonically full
+// white", his Live 12 reference shot; 2026-11-07: "the scanner being white is
+// not derived"). It is never proposed as a role or a mix.
 //
 // Where a theme makes the lane, the trim's outside or the dim text coincide
 // with the ground, that is Live's own number — accepted, not a bug, no
-// backstop (architect 2026-11-05). A file whose SurfaceBackground is black
-// (the press ratio's divisor zero) is left out with its line, and
-// immaterial_gold is not listed over an Immaterial.ask whose SearchIndication
-// is black (the chroma ratio's divisor zero): no stock or pack file is either,
-// the arm only keeps the arithmetic defined.
+// backstop (architect 2026-11-05).
+//
+// THE SONIC BLOOM FILES' UNDEFINED ROLES: a pack file may carry a role it does
+// not use as 000000 (ScrollbarInnerHandle black on 12 SB files,
+// DetailViewRulerMarkings on 4). NO RULE CORRECTS IT: he edits the individual
+// .ask file by hand (architect 2026-11-07, session 82: "i'd rather manually fix
+// individual sb themes than make rules around their missing colors").
+//
+// A file whose SurfaceBackground is black (the press ratio's divisor zero) is
+// left out with its line, and immaterial_gold is not listed over an
+// Immaterial.ask whose SearchIndication is black (the chroma ratio's divisor
+// zero): no stock or pack file is either, the arm only keeps the arithmetic
+// defined.
 //
 // THE ARITHMETIC IS PYTHON'S, BIT FOR BIT (the derivation was first written
 // in Python, and the proof of 2026-11-06 diffed every row on the tablet

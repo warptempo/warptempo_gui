@@ -27,7 +27,11 @@ namespace {
 // ChosenPreListen, the same night; SearchIndication, immaterial_gold's accent,
 // over all 42 files 2026-11-06; StandbySelectionForeground, the selection
 // pair's text, over all 31 he drops, 2026-11-06; ControlBackground, the
-// magnify core, 2026-11-06). A file lacking one is left out (the head).
+// magnify core, 2026-11-06; TakeLaneTrackNotHighlighted,
+// ViewCheckControlDisabledOff, ScrollbarInnerHandle and
+// DetailViewRulerMarkings, the grid, the disabled key's ink, the trim span and
+// the ruler's ticks, read since 2026-11-07, over all 31 he drops and Default).
+// A file lacking one is left out (the head).
 constexpr std::string_view kAskRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -37,6 +41,8 @@ constexpr std::string_view kAskRoles[] = {
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
     "ScaleAwareness", "RangeEditField", "ChosenPreListen",
     "SearchIndication", "ControlBackground",
+    "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
+    "ScrollbarInnerHandle", "DetailViewRulerMarkings",
 };
 constexpr std::size_t kAskRoleCount = std::size(kAskRoles);
 
@@ -340,6 +346,14 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     const Rgba detail  = rgba(roles["DetailViewBackground"]);
     const Rgb ink      = over(rgba(roles["WaveformColor"]), detail);
     const Rgb canvas   = over(rgba(roles["DetailGridTiles"]), detail);
+    // The four faithful tones, each Live's role over the surface it paints on
+    // (the head's COMPOSITED block).
+    const Rgba canvas_a  = Rgba{canvas.r, canvas.g, canvas.b, 1.0};
+    const Rgb grid_role  = over(rgba(roles["TakeLaneTrackNotHighlighted"]), canvas_a);
+    const Rgb dim_ink    = over(rgba(roles["ViewCheckControlDisabledOff"]), face_a);
+    const Rgb span_role  = over(rgba(roles["ScrollbarInnerHandle"]),
+                                rgba(roles["Desktop"]));
+    const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), face_a);
     const Rgb white    = Rgb{255, 255, 255};
     if (mean(face) == 0.0) return std::nullopt;
     const double press_ratio = mean(desktop) / mean(face);
@@ -348,7 +362,7 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     t.text                = packed(text);
     t.text_dim            = packed(dim);
     t.text_on_lit         = packed(contrast);
-    t.key_dim_ink         = packed(mix(face, dim, 36.0 / 63.0));
+    t.key_dim_ink         = packed(dim_ink);
     t.key_face            = packed(face);
     t.lit_fill            = packed(on);
     t.lit_press_fill      = packed(scale(on, press_ratio));
@@ -357,10 +371,10 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     t.key_press_face      = packed(desktop);
     t.well_frame          = packed(dim);
     t.ruler_face          = packed(face);
-    t.ruler_tick          = packed(mix(face, text, 53.0 / 127.0));
+    t.ruler_tick          = packed(tick_role);
     t.lane_face           = packed(desktop);
     t.trim_bar_face       = packed(desktop);
-    t.trim_span_face      = packed(mix(face, text, 52.0 / 127.0));
+    t.trim_span_face      = packed(span_role);
     t.selection_fill      = packed(standby);
     t.selection_text      = packed(standby_text);
     t.list_press_fill     = packed(sel_bg);
@@ -375,7 +389,7 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     t.waveform_canvas     = packed(canvas);
     t.waveform_ink        = packed(ink);
     t.waveform_core       = packed(core);
-    t.grid                = packed(mix(canvas, ink, 1.0 / 4.0));
+    t.grid                = packed(grid_role);
     t.center              = packed(ink);
     t.cue                 = packed(on);
     t.cue_outline         = packed(contrast);
