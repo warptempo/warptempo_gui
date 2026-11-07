@@ -1105,7 +1105,7 @@ inline GuiFont gui_font(GuiFace face) {
 // 200 %. EVERY AUTHORED LENGTH IS A WHOLE W (an integer), the face sizes too
 // (gui_font.h's table), and a line is one W (hairline_px below). NO
 // EXCEPTION: the three gesture thresholds the rebase left at x.5 W for a few
-// hours (kTooltipHoverSlopPx 4.5, kRulerMinMinorPitchPx 13.5 in
+// hours (the hover slop 4.5, kHoverSlopW since 2026-11-07, kRulerMinMinorPitchPx 13.5 in
 // paint_handler.cpp, kNavZoomPxPerLevel 217.5 in app_state.h) were ROUNDED
 // UP to 5, 14 and 218 the same day (architect 2026-11-05: "round each up"),
 // each seat naming its one-device-px consequence. THE PREDECESSOR was the
@@ -2670,13 +2670,14 @@ inline int view_bar_grab_w_px() {
 // cue's own (the palette block's playhead paragraph). Git history.)
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
-// seat under the pointer, the three durations of its life and the slop of its
-// wait. They live out here, rather than with the rest of the tooltip's
-// anatomy in paint_handler.cpp, because both the RUN LOOP and the input side
-// read them: the timer owner (GuiInputHandler::tick_tooltip) runs on the tick
-// and damages the band the box can hang into (tooltip_hang_bands,
-// app_state.h), and the one wait writer (note_tooltip_hover) reads the slop
-// and the two delays.
+// seat under the pointer, its hover target (the key's column) and the bypass
+// chain's reach. They live out here, rather than with the rest of the
+// tooltip's anatomy in paint_handler.cpp, because both the RUN LOOP and the
+// input side read them: the clock (GuiInputHandler::tick_tooltip) runs on the
+// tick and damages the band the box can hang into (tooltip_hang_bands,
+// app_state.h), and the one wait writer (note_tooltip_hover) and the two hover
+// walks read the column and the reach. The one duration, the delay, is the
+// `tooltip_delay_ms` tuning key (device_config.h), read live.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from the two faces' caps under the time field's pad (paint_shift_tooltip,
@@ -2714,55 +2715,73 @@ inline int tooltip_flip_gap_px() {
     return scaled_px(kTooltipFlipGapPx);
 }
 
-// THE TIMING IS COMCTL32's (architect 2026-10-06), the tooltip control's
-// defaults as TTM_SETDELAYTIME documents them over GetDoubleClickTime's
-// 500 ms. The model is stated once, at AppState::RedesignTooltip; these are
-// its constants, hard-coded, no keys. Durations ride no scale.
-//
-// TTDT_INITIAL: 500 ms (the double-click time) of rest on a tooltip-bearing
-// button before its hint shows, restarted by every motion past the slop
-// below — on a button not SPENT (a hint gone down there by this life's end
-// or a press does not come back until the pointer has left the button,
-// Windows' rule, stated at the model). Its own number: no hold and no beat reads it, and it reads neither
-// (the chrome shift long press is timed by kHoldDelayMs alone and has no
-// visual announcement).
-inline constexpr int64_t kTooltipInitialMs = 500;
-// TTDT_RESHOW: 100 ms (a fifth of it) instead, for the "subsequent tooltip"
-// — an ARRIVAL straight from one tooltip-bearing button onto the next after a
-// hint has shown, with no gap of no button between (the Guidelines, ch. 12:
-// "if the user moves the pointer directly to another control … display the
-// new tooltip immediately").
-inline constexpr int64_t kTooltipReshowMs = 100;
-// TTDT_AUTOPOP: 5000 ms (ten times it) — a box standing this long goes down,
-// spending its button, the life restarted by motion on its own button.
-inline constexpr int64_t kTooltipAutoPopMs = 5000;
+// THE TIMING IS ONE DELAY, THE `tooltip_delay_ms` TUNING KEY (architect
+// 2026-11-07, session 87, the always-show model; device_config.h's grammar,
+// default 100 ms): every arrival on a key's column waits it, and it is the
+// bypass chain's window after a standing box is left. The model is stated
+// once, at AppState::RedesignTooltip. (Comctl32's three — the 500 ms initial
+// wait, the 100 ms reshow and the 5 s autopop — and the spent button retired
+// with the model, closed_questions.md.)
 
-// THE HOVER SLOP (architect 2026-09-29: the wait counts from STILLNESS WITH
-// HYSTERESIS) — A RECORDED DEPARTURE from Windows: the wait re-anchors, restarting
-// (on a spent button re-anchoring alone), and a standing box's life restarts,
-// only when the pointer moves MORE than this from where it was anchored on
-// EITHER axis, so a hovering pen's jitter can neither starve the wait nor
-// keep a box alive. Windows counts every
-// mouse move — a mouse at rest does not jitter — so the number is ANDROID'S
-// OWN for the same job: AOSP View's hover tooltip ignores a HOVER_MOVE
-// within ViewConfiguration.getScaledHoverSlop() of its anchor on both axes
-// (View.TooltipInfo.updateAnchorPos, "filters out the jitter which is
-// typical for such input sources as stylus"), and that slop is
-// `config_viewConfigurationHoverSlop` = 4dp (core/res/values/config.xml),
-// half the platform's 8dp touch slop. It is taken as 5 W through scaled_px,
-// A WHOLE W BY HIS RULING OF 2026-11-05 ("round each up"): the 3 Windows px
-// of 2026-10-02 times 1.5 at the rebase to 200 % the same day gave 4.5 W,
-// which stood exact for a few hours as a gesture threshold, and was then
-// rounded UP with the other two (kRulerMinMinorPitchPx, paint_handler.cpp;
-// kNavZoomPxPerLevel, app_state.h) so that every authored number is a whole
-// W. The one-device-px consequence: 10 device px on the tablet at its 200 %
-// under the 320 density it runs at (9 before), 5dp — Android's 4dp to within
-// one dp — and the drag gate (kDragMovedThresholdPx 9 W = 18, app_state.h)
-// to within one device px of half, as Android's is half its touch slop.
-// Floor 1, so a small scale never zeroes it.
-inline constexpr int kTooltipHoverSlopPx = 5;
-inline int tooltip_hover_slop_px() {
-    return scaled_px(kTooltipHoverSlopPx, 1);
+// THE KEY'S COLUMN — THE TOOLTIP'S HOVER TARGET (architect 2026-11-07,
+// session 87: "always show"; the model at AppState::RedesignTooltip): a key's
+// painted face PLUS the strip pad under it, where its legend stands (the band's
+// pad under the case; row 8's and every controls row's lower pad, their upper
+// pad not), PLUS HALF THE KEY GAP ON EACH SIDE — the left side the gap's floor
+// half (key_gap_px() / 2), the right side its ceiling half (the rest), so the
+// two halves of an in-run gap sum to the gap whatever its parity and a run's
+// columns TILE with no hole and no overlap: on the tablet at 200 % the gap is
+// 2 device px, one each side; at 100 % it is 1, the left neighbour's column
+// taking it. Ground beyond — a run gap's rest, the pad over row 8's faces —
+// is no column. A face that does not stand (a zero rect) has no column.
+// PRESSES STAY FACE-ONLY (point_on_key, materials.h): this is the tooltip's
+// target alone, read by the two hover walks (recompute_redesign_button_hover,
+// update_modal_dialog_hover) and by nothing that presses.
+inline GuiRect tooltip_column_rect(const GuiRect& face) {
+    if (face.w <= 0 || face.h <= 0) return GuiRect{0, 0, 0, 0};
+    const int gap   = key_gap_px();
+    const int left  = gap / 2;
+    const int right = gap - left;
+    return GuiRect{face.x - left, face.y, face.w + left + right,
+                   face.h + strip_pad_px()};
+}
+
+// THE BYPASS CHAIN'S REACH (architect 2026-11-07, session 87): once a box
+// has stood, the leave of its column keeps the chain while the pen stays
+// within ONE W of that column (Chebyshev, on either axis), or for the delay
+// at any distance (the model at AppState::RedesignTooltip). One W through
+// scaled_px, 2 device px on the tablet at 200 %, floored at one device px.
+inline constexpr double kTooltipChainReachW = 1.0;
+inline int tooltip_chain_reach_px() {
+    return scaled_px(kTooltipChainReachW, 1);
+}
+
+// THE HOVER SLOP (architect 2026-09-29; the tooltip's wait read it until the
+// always-show model of 2026-11-07, which restarts nothing on motion) — ITS
+// ONE READER IS THE LEVEL CASES' PRESS (update_level_press_motion,
+// input_pointer.cpp): until a motion carries a level case's press MORE than
+// this from where it landed on EITHER axis, the press is still a tap or a
+// long press and moves no level, so a hovering or pressing pen's jitter
+// cannot nudge it. The number is ANDROID'S OWN for jitter: AOSP View's hover
+// tooltip ignores a HOVER_MOVE within ViewConfiguration.getScaledHoverSlop()
+// of its anchor on both axes (View.TooltipInfo.updateAnchorPos, "filters out
+// the jitter which is typical for such input sources as stylus"), and that
+// slop is `config_viewConfigurationHoverSlop` = 4dp
+// (core/res/values/config.xml), half the platform's 8dp touch slop. It is
+// taken as 5 W through scaled_px, A WHOLE W BY HIS RULING OF 2026-11-05
+// ("round each up"): the 3 Windows px of 2026-10-02 times 1.5 at the rebase
+// to 200 % the same day gave 4.5 W, which stood exact for a few hours as a
+// gesture threshold, and was then rounded UP with the other two
+// (kRulerMinMinorPitchPx, paint_handler.cpp; kNavZoomPxPerLevel,
+// app_state.h) so that every authored number is a whole W. The
+// one-device-px consequence: 10 device px on the tablet at its 200 % under
+// the 320 density it runs at (9 before), 5dp — Android's 4dp to within one
+// dp — and the drag gate (kDragMovedThresholdPx 9 W = 18, app_state.h) to
+// within one device px of half, as Android's is half its touch slop. Floor
+// 1, so a small scale never zeroes it.
+inline constexpr int kHoverSlopW = 5;
+inline int hover_slop_px() {
+    return scaled_px(kHoverSlopW, 1);
 }
 
 // THE LEVEL SLIDERS' TRAVEL (architect 2026-11-05, the two level cases,

@@ -431,6 +431,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // formatter (format_lamp_hold_ms, device_config.h).
     if (key == "lamp_hold_ms" && app.device_config != nullptr)
         return format_lamp_hold_ms(app.device_config->lamp_hold_ms);
+    // THE TOOLTIP'S DELAY (2026-11-07, a tuning key): through its one
+    // formatter (format_tooltip_delay_ms, device_config.h).
+    if (key == "tooltip_delay_ms" && app.device_config != nullptr)
+        return format_tooltip_delay_ms(app.device_config->tooltip_delay_ms);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

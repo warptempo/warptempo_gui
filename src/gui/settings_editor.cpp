@@ -1227,7 +1227,8 @@ void GuiSettingsEditor::commit() {
 // (2026-11-07, its arm after key_width's) the same, their arms after
 // them, and the
 // lamps' hold `lamp_hold_ms` (2026-11-05 night) the same but for a live act,
-// having none, its arm last
+// having none, its arm after them, and the tooltip's delay
+// `tooltip_delay_ms` (2026-11-07) the same, no live act, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1553,6 +1554,27 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE TOOLTIP'S DELAY (architect 2026-11-07, session 87, a tuning key;
+    // the model at AppState::RedesignTooltip): an integer of milliseconds
+    // under its one grammar owner (parse_tooltip_delay_ms, device_config.h),
+    // STORED INTO THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT
+    // AND NO DAMAGE: nothing is laid out or painted by it; the wait's writer
+    // reads app.device_config->tooltip_delay_ms at every arrival and the
+    // tooltip's clock at every tick (note_tooltip_hover, tick_tooltip), so a
+    // wait or a bypass window already running keeps the deadline it was
+    // given and the next one takes the new number. The page opens the line
+    // editor on it (no value list, 1001 values no short domain); Tab
+    // completes no value; stage 2's recall is the writer's spelling
+    // (recall_gui_setting_value).
+    if (key == "tooltip_delay_ms") {
+        const std::optional<int> ms = parse_tooltip_delay_ms(value);
+        if (!ms) return reject(kTooltipDelayGrammarReason);
+        if (*ms == app.device_config->tooltip_delay_ms) return unchanged();
+        app.device_config->tooltip_delay_ms = *ms;
+        (void)persist();
+        return applied();
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1702,7 +1724,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty-one and
+        // one key does — any key the recall knows, the table's twenty-two and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

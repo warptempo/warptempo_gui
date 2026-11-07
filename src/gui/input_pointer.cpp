@@ -2909,11 +2909,15 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // AND IT OWNS THIS SURFACE'S TOOLTIP WAIT (2026-08-13, when the modal
     // buttons took hints): the same writer
     // and the same tick the roster's walk uses, keyed on the Dialog half of
-    // the owner's index space. EVERY dialog button has a hint, so there is no
-    // membership term here — the hit alone decides, and the painter's stash
-    // carries the text. A held press starts no wait here either (the writer's
-    // held term — the press arm above is the same press), and the pointer
-    // sliding off the box's button takes the box down at once.
+    // the owner's index space. THE TARGET IS THE BUTTON'S COLUMN, not the
+    // face the press above reads (architect 2026-11-07, session 87;
+    // tooltip_column_rect, render.h: the face, its legend's pad under it and
+    // half the gap each side — every dialog button is a key with its legend
+    // under it on a controls row). EVERY dialog button has a hint, so there is
+    // no membership term here — the column alone decides, and the painter's
+    // stash carries the text. A held press starts no wait here either (the
+    // writer's held term — the press arm above is the same press), and the
+    // pointer leaving the box's column takes the box down at once.
     // THE OWNER IS STAMPED WITH THE STASH THE HIT WAS READ FROM (its owner
     // tag and session), so the wait belongs to this painted surface alone
     // and dies with it (the rule is at AppState::RedesignTooltip).
@@ -2926,15 +2930,29 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // found buttons). Without this, the dialog walk's "none" would
     // restart the rows' wait at every motion and no button-row hint would
     // ever ripen.
+    int     tip = -1;
+    GuiRect tip_column{0, 0, 0, 0};
+    if (app.modal_dialog.valid) {
+        for (size_t i = 0; i < app.modal_dialog.buttons.size(); ++i) {
+            const GuiRect column =
+                tooltip_column_rect(app.modal_dialog.buttons[i].rect);
+            if (rect_contains(column, x, y)) {
+                tip        = static_cast<int>(i);
+                tip_column = column;
+                break;
+            }
+        }
+    }
     const AppState::RedesignTooltip& t = app.redesign_tooltip;
-    if (hit < 0 &&
+    if (tip < 0 &&
         ((t.hovered.surface == AppState::RedesignTooltip::Surface::Roster &&
           t.hovered.index >= 0) ||
          (t.visible &&
           t.owner.surface == AppState::RedesignTooltip::Surface::Roster)))
         return;
-    note_tooltip_hover({AppState::RedesignTooltip::Surface::Dialog, hit,
-                        app.modal_dialog.owner, app.modal_dialog.session});
+    note_tooltip_hover({AppState::RedesignTooltip::Surface::Dialog, tip,
+                        app.modal_dialog.owner, app.modal_dialog.session},
+                       tip_column);
 }
 
 void GuiInputHandler::set_player_hot(int index) {
@@ -4674,14 +4692,12 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // (on_button_release); the press is the one that matters, because the
     // hint's job ends the moment the user acts on it, not when they let go;
     // and the held bit is recorded first, so NO WAIT STARTS UNDER THE HELD
-    // PRESS (architect 2026-09-29 — AppState::RedesignTooltip). AND THE PRESS
-    // SPENDS THE BUTTON UNDER THE POINTER, whether a box stood or a wait was
-    // running (architect 2026-10-06, Windows': a clicked tool's hint does not
-    // come back until the pointer has left it — the rule is at the model);
-    // on no button `hovered` is no owner and nothing is spent.
+    // PRESS (architect 2026-09-29 — AppState::RedesignTooltip). THE PRESS
+    // SPENDS NOTHING (architect 2026-11-07, the always-show model): it
+    // forgets the column and breaks the chain, so after the lift a pen
+    // hovering on a column waits the delay as an arrival.
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
-    app.redesign_tooltip.spent = app.redesign_tooltip.hovered;
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
@@ -6012,12 +6028,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 // (architect 2026-10-30, the mouse closed on the tablet).
 void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // THE TOOLTIP'S HELD BIT, above every return: the platform's own answer
-    // with this release (the release reads up), so a wait may start again —
-    // on the next motion past the slop, never on the release's resting
-    // pointer, and not on the button the press spent until the pointer has
-    // left it (AppState::RedesignTooltip). AND ANY RELEASE IS THE TOOLTIP'S
-    // HARD END, as any press is (Windows hides a tooltip at a click, "About
-    // Tooltip Controls").
+    // with this release (the release reads up), so a wait may start again.
+    // AND ANY RELEASE IS THE TOOLTIP'S HARD END, as any press is (a click
+    // hides the hint): the column forgotten, so the next walk with the pen
+    // hovering on a column — its restore motion at the lift point — is an
+    // arrival and waits the delay (AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
     // THE NOTIFICATION CARD'S LIFT (architect 2026-10-01), FIRST — the press
@@ -6473,13 +6488,14 @@ void GuiInputHandler::finalize_active_drags() {
 // a zero rect, as do the icon row's overflow rule and its history stand-ins a
 // member that does not stand, and a zero rect contains no point). It answers
 // two readers from the remembered position — the TOOLTIP's wait (the
-// button a resting pointer's hint names, handed to note_tooltip_hover at the
-// tail) and THE HOT TOOLBAR BUTTON
+// button whose column holds a hovering pointer, handed to note_tooltip_hover
+// at the tail) and THE HOT TOOLBAR BUTTON
 // (AppState::roster_hot; set_roster_hot pays its damage) — which stores none
 // since the cases became the program's (2026-10-09: Cool Edit's toolbar has
 // no hover face under any chrome, program_spec.h's case_hot_face). The
 // rects are the painter's stashes, so the button a hint names is the
-// painted button and nothing is measured here.
+// painted button, its column read off the painted face
+// (tooltip_column_rect, render.h).
 // THE HOT FACE'S ONE SETTER (AppState::roster_hot): a change damages the
 // old button's published rect and the new one's — the face is painted inside
 // the case and nowhere else, and a stale stash's rect was already damaged by
@@ -6562,8 +6578,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     const bool modal_veil =
         app.prompt.active || keyboard_modal_editor_active() ||
         app.batch_progress.active;
-    int  hovered_tip = -1;
-    int  hot         = -1;
+    int     hovered_tip = -1;
+    GuiRect tip_column{0, 0, 0, 0};
+    int     hot         = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         const RedesignButton id = static_cast<RedesignButton>(i);
@@ -6587,15 +6604,26 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // the first is the only one, and the tooltip's break below cannot
         // pass it by.
         if (under_pointer && hot < 0) hot = i;
+        // THE TOOLTIP'S TARGET IS THE KEY'S COLUMN (architect 2026-11-07,
+        // session 87; tooltip_column_rect, render.h): the face, its legend's
+        // pad and half the gap each side — wider than the face the press
+        // reads — and Play's clock field beside it. The rect the pointer is
+        // in goes to the writer with the owner (the bypass chain measures
+        // from it at the leave). The columns of a run tile, so the walk's
+        // first hit is the only one.
+        if (modal_veil || under_card || modal_owns_the_keyboard) continue;
+        const GuiRect column = tooltip_column_rect(f.rect);
+        const bool on_column = rect_contains(column, mx, my);
+        if (!on_column && !rect_contains(f.field, mx, my)) continue;
         // MEMBERSHIP IS THE CONSTANT TABLE'S (2026-09-01): this asks only
         // whether the button HAS a tooltip — a null line 1 (the menu row's
         // exclusion until 2026-10-21; every roster button has one since); the
         // stateful overload
         // (whose every arm returns a non-null line 1) is the painter's, which
         // reads the words at paint time.
-        if (under_pointer && !modal_owns_the_keyboard &&
-            redesign_button_tooltip(id).line1 != nullptr) {
+        if (redesign_button_tooltip(id).line1 != nullptr) {
             hovered_tip = i;
+            tip_column  = on_column ? column : f.field;
             break;
         }
     }
@@ -6650,9 +6678,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // 2026-09-01 truthful-tooltips ruling forked a dozen more on the acts'
     // own predicates, membership untouched.
     // The walk above covers the whole roster either way, and it hands the
-    // button it found (or none) to the wait's one writer, note_tooltip_hover,
-    // which decides by the slop, the held button and the box's own owner; the
-    // tooltip's clock (tick_tooltip) decides visibility. Nothing here does.
+    // button whose column it found (or none) to the wait's one writer,
+    // note_tooltip_hover, which decides by the held button, the chain and the
+    // box's own owner; the tooltip's clock (tick_tooltip) decides visibility.
+    // Nothing here does. THE WALK RUNS ON EVERY HOVER MOTION, ON GROUND TOO
+    // (on_motion's no-gesture tail and every modal branch), and on every tick
+    // with no gesture standing (main.cpp), so the writer sees the pointer
+    // leave a column and the chain's lapse is asked off the band as on it.
     //
     // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT, and this refusal
     // is what makes "a tooltip never floats over a modal" hold rather than merely
@@ -6728,23 +6760,22 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             };
         if (dialog_owner_dead(t.hovered) ||
             (t.visible && dialog_owner_dead(t.owner))) {
-            t.hovered = AppState::RedesignTooltip::Owner{};
-            t.spent   = AppState::RedesignTooltip::Owner{};
             hide_shift_tooltip();
             return;
         }
         if (t.hovered.surface == AppState::RedesignTooltip::Surface::Dialog &&
             t.hovered.index >= 0)
             return;
-        note_tooltip_hover(AppState::RedesignTooltip::Owner{});
+        note_tooltip_hover(AppState::RedesignTooltip::Owner{},
+                           GuiRect{0, 0, 0, 0});
         return;
     }
     // Keying on the id is what makes a direct Render->Paste motion a new
-    // arrival with its own wait (the reshow once a hint has shown since the
-    // last gap, the full wait otherwise) rather than a continuation of the
-    // last one; the rule is at note_tooltip_hover.
+    // arrival (at once while the chain holds, the delay otherwise) rather
+    // than a continuation of the last one; the rule is at note_tooltip_hover.
     note_tooltip_hover({AppState::RedesignTooltip::Surface::Roster,
-                        hovered_tip});
+                        hovered_tip},
+                       tip_column);
 }
 
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect
@@ -6979,8 +7010,8 @@ bool GuiInputHandler::arm_level_case_press(int x, int y) {
 }
 
 // THE DRAG (on_motion, under a standing Level arm, the button held): until a
-// motion has left the hover slop on either axis (kTooltipHoverSlopPx, the
-// roster's own jitter measure) the press is still a tap or a hold and moves
+// motion has left the hover slop on either axis (kHoverSlopW, render.h, its
+// one reader this) the press is still a tap or a hold and moves
 // nothing — a wobble under a long press must not nudge the level and leave
 // the file behind the voice. Past it the press is a DRAG for good: on this
 // and every later motion the level is the EXACT taper of t0 + (x − x0) / the
@@ -6994,7 +7025,7 @@ void GuiInputHandler::update_level_press_motion(int x, int y) {
     AppState::ChromePress& arm = app.chrome_press;
     if (arm.kind != AppState::ChromePress::Kind::Level) return;
     if (!arm.moved) {
-        const int slop = tooltip_hover_slop_px();
+        const int slop = hover_slop_px();
         if (std::abs(x - arm.x0) <= slop && std::abs(y - arm.y0) <= slop)
             return;
         arm.moved = true;
@@ -7954,8 +7985,8 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit,
 // the Settings popup.)
 
 // THE HOVER TOOLTIP'S BOX GOES DOWN — the one hide body, shared by the hard
-// end, the pointer leaving the box's button (note_tooltip_hover) and the
-// life's end (tick_tooltip). It damages the strip AND the box's last painted
+// end and the pointer leaving the box's column (note_tooltip_hover). It
+// damages the strip AND the box's last painted
 // rect, and that is why every edge that takes a hint away must come through
 // here rather than leave it to a hover walk: the box hangs OUTSIDE its strip
 // (under the pointer, or above the bottom row), so a repaint that found no
@@ -7964,7 +7995,6 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit,
 // wherever that hint was drawn.
 static void take_tooltip_box_down(AppState& app, Viewport& viewport) {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
-    t.expire_due_ms = 0;
     if (!t.visible) return;
     const GuiRect painted = t.rect;
     t.visible = false;
@@ -7974,183 +8004,149 @@ static void take_tooltip_box_down(AppState& app, Viewport& viewport) {
 
 // THE HARD END (the model and the callers' inventory are at
 // AppState::RedesignTooltip and the declaration): the box down at once, the
-// wait stopped and the reshow disarmed. `hovered`, the anchor, the seen
-// position and `spent` STAND — the pointer has not moved, so the button under
-// it is still the one it rests on, and a resting pointer starts nothing until
-// a motion carries it past the slop (on a spent button, not even then). The
-// press is the one hard end that spends, and it does so at its own site
-// (on_button_press); this body spends nothing.
+// wait stopped, THE CHAIN BROKEN and THE COLUMN FORGOTTEN — `hovered` goes to
+// no owner, so the next walk that finds the pointer on a column (the pen's
+// restore motion after its lift, the re-entry after a leave, a resting
+// pointer's next tick after an activation flip) is an ARRIVAL and waits the
+// delay. A finger's lift leaves the window (the pointer-leave hook, every
+// reason alike), so no walk runs after it and nothing is waited.
 void GuiInputHandler::hide_shift_tooltip() {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
-    t.wake_due_ms = 0;
-    t.reshow      = false;
+    t.hovered        = AppState::RedesignTooltip::Owner{};
+    t.hovered_column = GuiRect{0, 0, 0, 0};
+    t.wake_due_ms    = 0;
+    t.left_ms        = 0;
     take_tooltip_box_down(app, viewport);
 }
 
-// THE POINTER LEAVING (the declaration carries the contract). The wait's
-// button goes and the seen position is forgotten, so the re-entry's first
-// walk is a motion onto whatever it lands on, and the hard end follows: the
-// pointer leaving the window and the pen's hover leaving the plane both leave
-// the tool, which hides a tooltip at once.
-// A TRANSLATED CONTACT'S LIFT IS NO LEAVE FOR THE TOOLTIP (architect
-// 2026-09-29) and returns before touching anything: the lift is the release
-// of a press that was already the hard end (the box down, the reshow
-// disarmed), and under that held press the button and the anchor followed
-// the contact (note_tooltip_hover's held arm), so both stand at the lift
-// point with the seen position beside them — and so does `spent`, the tap's
-// press having spent the button.
-// A hover that follows (the S Pen's after a lift that left a finger on the
-// glass) arrives as an enter whose walk is the model's own: on the same
-// button it starts no wait however far it moves (the button is spent until
-// the hover leaves it), and onto another button it is an arrival. The pen's
-// lift off an empty glass never comes here (architect 2026-10-07): the pen
-// stays the pointer and the translation ends with a motion at the lift. A
-// finger has no hover after its lift, and its next
-// contact's entry motion already reads held, so nothing changes for it.
-// THE HARD LEAVE forgets the spent button with the hovered one: leaving the
-// window or the plane is leaving the tool.
-void GuiInputHandler::end_tooltip_hover(TooltipHoverEnd end) {
-    if (end == TooltipHoverEnd::ContactLift) return;
-    AppState::RedesignTooltip& t = app.redesign_tooltip;
-    t.hovered = AppState::RedesignTooltip::Owner{};
-    t.spent   = AppState::RedesignTooltip::Owner{};
-    t.seen_x  = AppState::kTooltipUnseen;
-    t.seen_y  = AppState::kTooltipUnseen;
-    hide_shift_tooltip();
-}
-
-// THE WAIT'S ONE WRITER, shared by both hover walks (the roster's and the
-// modal dialog's) so the model is one rule rather than two copies; the model
-// is stated at AppState::RedesignTooltip. In order:
-//   * THE LEAVE OF A SPENT BUTTON: any owner but the spent one (none, or
-//     another button) clears `spent`, before every arm, so the held arm's
-//     slide off the pressed button clears it as the unheld arrival does;
-//   * LEAVING THE BOX'S BUTTON: while a box stands, the pointer anywhere but
-//     on its own button takes it down at once;
-//   * NO BUTTON: the wait stops and the reshow disarms (a gap);
-//   * A HELD PRESS: the button and the anchor follow the pointer and no wait
-//     runs, so the release's resting pointer arms nothing;
-//   * A NEW BUTTON: re-anchored where the pointer is, and the wait starts if
-//     this walk saw a motion — at the reshow when the walk before stood on
-//     another button and a hint has shown since the last gap, at the full
-//     wait otherwise. The owner is compared whole, across surfaces as well
-//     as within one;
-//   * THE SAME BUTTON: a motion past the hover slop from the anchor on either
-//     axis re-anchors there (AOSP View's updateAnchorPos: within the slop is
-//     stillness) and restarts the standing box's life, or, with no box, the
-//     full wait — unless the button is SPENT, where it re-anchors and starts
-//     nothing (a spent button never has a box: the life's end and the press
-//     that spend it both took the box down, and no wait runs to show one).
-//
-// THE TOOLTIP LAMP IS ASKED FIRST (architect 2026-09-29, Enable Tooltips on
-// bare backslash): while AppState::show_tooltips is dark this writer holds the
-// wait's state clear — no hovered owner, no deadline — and returns, so no
-// wait ever starts and tick_tooltip has nothing to ripen on either surface.
-// It keeps only the SEEN position current, so the first walk after the lamp
-// lights tells a motion from a resting pointer exactly as the lit model does
-// (a lamp lit under a still pointer starts no wait until the pointer moves).
-// The box itself went down at the dark edge (set_show_tooltips), so nothing
-// here needs to hide one.
-void GuiInputHandler::note_tooltip_hover(AppState::RedesignTooltip::Owner o) {
-    AppState::RedesignTooltip& t = app.redesign_tooltip;
-    if (!app.show_tooltips) {
-        t.hovered     = AppState::RedesignTooltip::Owner{};
-        t.spent       = AppState::RedesignTooltip::Owner{};
-        t.wake_due_ms = 0;
-        t.seen_x      = app.last_mouse_x;
-        t.seen_y      = app.last_mouse_y;
-        return;
-    }
-    const int64_t now = monotonic_ms();
-    const int x = app.last_mouse_x;
-    const int y = app.last_mouse_y;
-    const bool moved = x != t.seen_x || y != t.seen_y;
-    t.seen_x = x;
-    t.seen_y = y;
-    if (!(o == t.spent)) t.spent = AppState::RedesignTooltip::Owner{};
-    if (t.visible && !(o.index >= 0 && o == t.owner))
-        take_tooltip_box_down(app, viewport);
-    if (o.index < 0) {
-        t.hovered     = AppState::RedesignTooltip::Owner{};
-        t.wake_due_ms = 0;
-        t.reshow      = false;
-        return;
-    }
-    const auto start_wait = [&](int64_t delay_ms) {
-        t.anchor_x    = x;
-        t.anchor_y    = y;
-        t.wake_due_ms = now + delay_ms;
-    };
-    if (t.button_held) {
-        t.hovered     = o;
-        t.anchor_x    = x;
-        t.anchor_y    = y;
-        t.wake_due_ms = 0;
-        return;
-    }
-    if (!(o == t.hovered)) {
-        const bool direct = t.hovered.index >= 0;
-        t.hovered = o;
-        if (moved) {
-            start_wait(direct && t.reshow ? kTooltipReshowMs
-                                          : kTooltipInitialMs);
-        } else {
-            t.anchor_x    = x;
-            t.anchor_y    = y;
-            t.wake_due_ms = 0;
-        }
-        return;
-    }
-    const int slop = tooltip_hover_slop_px();
-    if (std::abs(x - t.anchor_x) <= slop && std::abs(y - t.anchor_y) <= slop)
-        return;
-    if (t.visible) {
-        t.anchor_x      = x;
-        t.anchor_y      = y;
-        t.expire_due_ms = now + kTooltipAutoPopMs;
-    } else if (t.spent == o) {
-        t.anchor_x = x;
-        t.anchor_y = y;
-    } else {
-        start_wait(kTooltipInitialMs);
-    }
-}
-
-// THE TOOLTIP'S CLOCK (the declaration carries the contract; the model is at
-// AppState::RedesignTooltip). Two deadlines on a tick that already runs: the
-// wait's ripening, then the life's end.
-//
-// THE SHOW EDGE seats the box under the pointer as it stands now (shown_x/y,
-// the placement at tooltip_box_rect) but cannot know the box's own rect yet
+// THE SHOW — the one show body, shared by the wait's ripening (tick_tooltip)
+// and the bypass's immediate arrival (note_tooltip_hover): the box takes the
+// hovered owner, SEATED UNDER THE POINTER as it stands now (shown_x/y, the
+// placement at tooltip_box_rect), and the chain is spent into it (`left_ms`
+// 0: the box's own leave re-arms it). The box's own rect cannot be known yet
 // (the paint that publishes it is the frame this schedules), so it damages
 // the band the box can hang into — the full-width band under the pointer, at
 // most tooltip_damage_h_px() tall, and the band above the owner's button
 // where a box that tall would cross the window's foot (tooltip_hang_bands,
-// the bottom row's flip), one of which holds the box whole. No box stands
-// at a ripening: an arrival took the old one down, and a motion on a
-// standing box's own button restarts its life rather than a wait.
-// THE LIFE'S END SPENDS THE BUTTON (the rule is at AppState::RedesignTooltip):
-// the box stands only on the hovered button, so `spent` takes that one.
+// the bottom row's flip), one of which holds the box whole. No box stands at
+// a show: an arrival took the old one down first.
+static void show_tooltip_box(AppState& app, Viewport& viewport) {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    t.wake_due_ms = 0;
+    t.left_ms     = 0;
+    t.owner       = t.hovered;
+    t.visible     = true;
+    t.shown_x     = app.last_mouse_x;
+    t.shown_y     = app.last_mouse_y;
+    const TooltipHangBands bands = tooltip_hang_bands(app);
+    viewport.invalidate_rect(bands.below);
+    viewport.invalidate_rect(bands.above);
+}
+
+// THE CHAIN'S LAPSE (the bypass's rule at AppState::RedesignTooltip): an
+// armed chain is broken once BOTH hold — more than the delay since the leave
+// AND the pointer more than tooltip_chain_reach_px() (one W, Chebyshev)
+// outside the column it left. Asked by the wait's writer before its arrival
+// test and by the clock on every tick, so a pen resting off the band breaks
+// it on time with no motion.
+static void break_lapsed_tooltip_chain(AppState& app, int64_t now) {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    if (t.left_ms == 0) return;
+    if (now - t.left_ms <= app.device_config->tooltip_delay_ms) return;
+    const GuiRect& c = t.left_column;
+    const int x = app.last_mouse_x;
+    const int y = app.last_mouse_y;
+    const int dx = x < c.x ? c.x - x : x >= c.x + c.w ? x - (c.x + c.w - 1) : 0;
+    const int dy = y < c.y ? c.y - y : y >= c.y + c.h ? y - (c.y + c.h - 1) : 0;
+    if (std::max(dx, dy) > tooltip_chain_reach_px()) t.left_ms = 0;
+}
+
+// THE WAIT'S ONE WRITER, shared by both hover walks (the roster's and the
+// modal dialog's) so the model is one rule rather than two copies; the model
+// is stated at AppState::RedesignTooltip. `o` is the owner whose column holds
+// the pointer (no owner off every column) and `column` the rect the walk found
+// it in (tooltip_column_rect, or Play's clock field). In order:
+//   * A HELD PRESS: no column is held and no wait runs (a box cannot stand —
+//     the press took it down — but one would go down here), the chain broken;
+//   * THE CHAIN'S LAPSE (break_lapsed_tooltip_chain), before any arrival
+//     reads it;
+//   * LEAVING THE BOX'S COLUMN: while a box stands, the pointer anywhere but
+//     on its own owner's column takes it down at once AND ARMS THE CHAIN on
+//     the column it stood on (`left_column`, `left_ms` now);
+//   * NO COLUMN: the wait stops;
+//   * THE SAME COLUMN: nothing — motion inside it restarts nothing; the rect
+//     is refreshed (a relayout moves it under the pointer);
+//   * AN ARRIVAL (another owner, compared whole, across surfaces as within
+//     one): the box shows AT ONCE while the chain holds (show_tooltip_box),
+//     else the wait starts, the delay from now.
+// The delay is the live `tooltip_delay_ms` (device_config.h), read at every
+// arrival and lapse test, so a Settings commit takes the next one.
+//
+// THE TOOLTIP LAMP IS ASKED FIRST (architect 2026-09-29, Enable Tooltips on
+// bare backslash): while AppState::show_tooltips is dark this writer holds the
+// wait's state clear — no hovered owner, no deadline, no chain — and returns,
+// so no wait ever starts and tick_tooltip has nothing to ripen on either
+// surface. The box itself went down at the dark edge (set_show_tooltips), so
+// nothing here needs to hide one. The lamp lit under a pointer resting on a
+// column, the next walk is an arrival like any other.
+void GuiInputHandler::note_tooltip_hover(AppState::RedesignTooltip::Owner o,
+                                         const GuiRect& column) {
+    AppState::RedesignTooltip& t = app.redesign_tooltip;
+    const auto forget_column = [&] {
+        t.hovered        = AppState::RedesignTooltip::Owner{};
+        t.hovered_column = GuiRect{0, 0, 0, 0};
+        t.wake_due_ms    = 0;
+    };
+    if (!app.show_tooltips) {
+        forget_column();
+        t.left_ms = 0;
+        return;
+    }
+    if (t.button_held) {
+        forget_column();
+        t.left_ms = 0;
+        take_tooltip_box_down(app, viewport);
+        return;
+    }
+    const int64_t now = monotonic_ms();
+    break_lapsed_tooltip_chain(app, now);
+    if (t.visible && !(o.index >= 0 && o == t.owner)) {
+        t.left_column = t.hovered_column;
+        t.left_ms     = now;
+        take_tooltip_box_down(app, viewport);
+    }
+    if (o.index < 0) {
+        forget_column();
+        return;
+    }
+    if (o == t.hovered) {
+        t.hovered_column = column;
+        return;
+    }
+    t.hovered        = o;
+    t.hovered_column = column;
+    if (t.left_ms != 0) {
+        show_tooltip_box(app, viewport);
+        return;
+    }
+    t.wake_due_ms = now + app.device_config->tooltip_delay_ms;
+}
+
+// THE TOOLTIP'S CLOCK (the declaration carries the contract; the model is at
+// AppState::RedesignTooltip). Two jobs on a tick that already runs: the
+// chain's lapse (break_lapsed_tooltip_chain — the pointer resting off the
+// column it left breaks it once the delay has passed, with no motion to
+// run a walk), then the wait's ripening, the show (show_tooltip_box, whose
+// body carries the damage). No box stands at a ripening: an arrival took the
+// old one down. The box has no life: it goes down only when the pointer
+// leaves its column or at a hard end.
 void GuiInputHandler::tick_tooltip() {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
     const int64_t now = monotonic_ms();
+    break_lapsed_tooltip_chain(app, now);
     if (t.wake_due_ms != 0 && now >= t.wake_due_ms) {
         t.wake_due_ms = 0;
-        if (t.hovered.index >= 0) {
-            t.owner         = t.hovered;
-            t.visible       = true;
-            t.shown_x       = app.last_mouse_x;
-            t.shown_y       = app.last_mouse_y;
-            t.expire_due_ms = now + kTooltipAutoPopMs;
-            t.reshow        = true;
-            const TooltipHangBands bands = tooltip_hang_bands(app);
-            viewport.invalidate_rect(bands.below);
-            viewport.invalidate_rect(bands.above);
-        }
-    }
-    if (t.visible && t.expire_due_ms != 0 && now >= t.expire_due_ms) {
-        take_tooltip_box_down(app, viewport);
-        t.spent = t.hovered;
+        if (t.hovered.index >= 0) show_tooltip_box(app, viewport);
     }
 }
 

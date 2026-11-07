@@ -3988,7 +3988,7 @@ constexpr int  kRulerMinorsPerStep = 8;
 // pixel's 12 re-authored) times 1.5 at the rebase to 200 % the same day gave
 // 13.5 W, which stood exact for a few hours as a gesture threshold (a double
 // compare against gui_scale_factor(), not a painted length), and was then
-// rounded UP with the other two (kTooltipHoverSlopPx, render.h;
+// rounded UP with the other two (kHoverSlopW, render.h;
 // kNavZoomPxPerLevel, app_state.h) so that every authored number is a whole
 // W. The one-device-px consequence: the minor pitch's floor is 28 device px
 // on the tablet (27 before), so a zoom whose minor pitch falls in [27, 28)

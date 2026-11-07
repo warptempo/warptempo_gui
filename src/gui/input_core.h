@@ -54,39 +54,35 @@
 // under the laptop's compositor while its backend stood, until the laptop
 // GUI's drop of 2026-10-30; labwc's repeat delay) keeps its words.
 
-// WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
-// sites do not share, handed to the consumer because it changes what the drop
-// may leave standing (2026-08-08).
-//   * OrdinaryLeave is the pointer focus dropping: pointer_leave's default
-//     and a touch POINTER TRANSLATION's ABNORMAL end WITH NO POINTER
-//     FOCUSED — the window system took the contact and no pen hovers in the
-//     window, so the pointer is gone (delivered after the lost-button
-//     motion; the fires are touch_cancel and touch-capability loss — the
-//     edge inventory at the touch state block). A translation ending with
-//     the pointer FOCUSED fires this hook NOT AT ALL — it delivers a restore
-//     MOTION at the pointer's own position instead (the focus fork; the one
-//     statement is at deliver_touch_translation_end's definition). No
-//     consumer keeps anything across this edge.
-//   * TouchLift is the same translation's CLEAN end, the contact's own lift
-//     (touch_up), with no pointer focused — delivered after the release, the
-//     fork being the same one. An ordinary leave in every respect but one:
-//     THE CONTACT LIFTING IS NOT THE POINTER GOING AWAY for the hover tooltip
-//     (architect 2026-09-29), which keeps its button, its slop anchor, its
-//     seen position and the button's spent state across it, so a later hover
-//     starts no wait on that button until it has left it and arrived again —
-//     Windows' rule after a click (2026-10-06; the rule is at
-//     AppState::RedesignTooltip). Every other consumer reads it as it reads
-//     OrdinaryLeave. (The S Pen's lift off an empty glass takes no leave at
+// THE POINTER LEAVE'S THREE FIRES — one hook, no reason handed (the reason
+// enum, GuiPointerLeaveReason, 2026-08-08 to 2026-11-07, RETIRED when its
+// last reader, the hover tooltip's contact-lift keep, went with the
+// always-show model, AppState::RedesignTooltip: a road nothing reads goes).
+// Every consumer reads every fire alike:
+//   * THE ORDINARY LEAVE, the pointer focus dropping: pointer_leave, and a
+//     touch POINTER TRANSLATION's ABNORMAL end WITH NO POINTER FOCUSED — the
+//     window system took the contact and no pen hovers in the window, so
+//     the pointer is gone (delivered after the lost-button motion; the
+//     fires are touch_cancel and touch-capability loss — the edge inventory
+//     at the touch state block). A translation ending with the pointer
+//     FOCUSED fires this hook NOT AT ALL — it delivers a restore MOTION at
+//     the pointer's own position instead (the focus fork; the one statement
+//     is at deliver_touch_translation_end's definition).
+//   * THE CONTACT'S LIFT, the same translation's CLEAN end (touch_up), with
+//     no pointer focused — delivered after the release, the fork being the
+//     same one. (The hover tooltip kept its button and the button's spent
+//     state across this one, Windows' rule after a click, 2026-10-06 to
+//     2026-11-07.) The S Pen's lift off an empty glass takes no leave at
 //     all since 2026-10-07: the Android backend focuses the pointer at the
-//     lift, so the fork's restore arm runs — pointer_focus_at.)
-//   * PenHoverEnd is the Android backend's S Pen hover ending
-//     (GuiPlatform::end_pen_hover: a HOVER_EXIT — which the platform sends
-//     just before every tip DOWN — a report above the GUI's plane, any first
-//     down, focus loss; architect 2026-09-27, every pen hover effect acts
-//     only within the plane). An ordinary leave in every respect but one
-//     (and, since the Settings popup retired 2026-10-21, no face it would
-//     spare is left: the record follows): THE PEN'S HOVER END DARKENED
-//     NOTHING (architect 2026-10-10, his S Pen
+//     lift, so the fork's restore arm runs — pointer_focus_at.
+//   * THE PEN'S HOVER END, the Android backend's S Pen hover ending
+//     (GuiPlatform::end_pen_hover, through pointer_leave: a HOVER_EXIT —
+//     which the platform sends just before every tip DOWN — a report above
+//     the GUI's plane, any first down, focus loss; architect 2026-09-27,
+//     every pen hover effect acts only within the plane). Its one
+//     difference, while it stood (no face it would spare is left since the
+//     Settings popup retired 2026-10-21: the record follows): THE PEN'S
+//     HOVER END DARKENED NOTHING (architect 2026-10-10, his S Pen
 //     touching down on the open Settings menu's row: "the word Pick Colors
 //     blinks" — the exit's leave put the lit row out for the frame before the
 //     DOWN's own walk re-lit it): every hover-lit face keeps what was painted
@@ -108,17 +104,9 @@
 //     as on leaving any tool (architect 2026-10-06), the in-window bit drops,
 //     the press arms, the drags, the cards' hover and the pen latch clear
 //     (the popup list's scroll holds beside them until 2026-10-14).
-// The distinction is read in one place, main.cpp's hook body, by one
-// consumer: the tooltip's leave (end_tooltip_hover), which the contact's lift
-// (TouchLift) makes no leave at all, OrdinaryLeave and PenHoverEnd being its
-// hard end. (The lit rows' clear, pointer_leave_keeps_lit_rows, which
-// PenHoverEnd skipped, went with the Settings popup, 2026-10-21.) Every other
-// clear the hook performs is unconditional and reads this not at all.
-enum class GuiPointerLeaveReason {
-    OrdinaryLeave,
-    TouchLift,
-    PenHoverEnd,
-};
+// (The lit rows' clear, pointer_leave_keeps_lit_rows, which the pen's hover
+// end skipped, went with the Settings popup, 2026-10-21.) Every clear the
+// hook performs (main.cpp's body) is unconditional.
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names
@@ -251,12 +239,11 @@ public:
     // region, the caret) leaves the pointer resting here for the backend's
     // next hover report, a motion.
     void pointer_focus_at(double x, double y);
-    // The ordinary leave by default (OrdinaryLeave); the pen's hover ending
-    // passes PenHoverEnd (end_pen_hover, 2026-10-10);
-    // TouchLift is deliver_touch_translation_end's alone and does not come
-    // through here (GuiPointerLeaveReason, above the class).
-    void pointer_leave(
-        GuiPointerLeaveReason reason = GuiPointerLeaveReason::OrdinaryLeave);
+    // The pointer leaving — on the tablet the pen's hover ending
+    // (end_pen_hover, 2026-10-10); the contact's lift is
+    // deliver_touch_translation_end's own fire and does not come through
+    // here (THE POINTER LEAVE'S THREE FIRES, above the class).
+    void pointer_leave();
     // The pen's hover motion (the Android backend's hover arm), delivered at
     // once: the hover carries no button, so there is nothing to coalesce.
     void pointer_motion(double x, double y);
@@ -333,25 +320,21 @@ public:
     }
 
     // Fired when the pointer LEAVES (pointer_leave — the pen's hover ending)
-    // and at a touch pointer translation's end on its NO-FOCUS arm only (as
-    // TouchLift after the lift's release, as OrdinaryLeave after an abnormal
-    // end's lost-button motion: the contact is gone and no pen hovers in the
-    // window; a FOCUSED pointer gets a restore motion instead and this hook
-    // stays silent — the focus fork, stated at
-    // deliver_touch_translation_end). The edges drop pointer focus.
-    // WHY IT FIRED IS THE ARGUMENT (GuiPointerLeaveReason, above the class;
-    // 2026-08-08): the pen's hover ending (PenHoverEnd, 2026-10-10) and a
-    // translated contact's lift (TouchLift) pass their own reasons, the
-    // abnormal end OrdinaryLeave. Each fire site passes its own reason and
-    // none infers it. The consumer that reads it (the tooltip's leave) is
-    // named at the enum.
+    // and at a touch pointer translation's end on its NO-FOCUS arm only
+    // (after the lift's release, or after an abnormal end's lost-button
+    // motion: the contact is gone and no pen hovers in the window; a FOCUSED
+    // pointer gets a restore motion instead and this hook stays silent — the
+    // focus fork, stated at deliver_touch_translation_end). The edges drop
+    // pointer focus. IT CARRIES NO ARGUMENT since 2026-11-07: every consumer
+    // reads the three fires alike (THE POINTER LEAVE'S THREE FIRES, above the
+    // class).
     // The one owner of the drop-what-the-pointer-was-naming behavior. What
     // main.cpp wires it to is enumerated THERE, at the hook body, which is the
     // authoritative list — this contract deliberately does not keep a second
     // copy — but the shape is: every face and claim derived from where the
     // pointer is, so a pointer that has gone cannot leave a stranded pressed
     // interior or a hanging tooltip behind. Null-safe.
-    void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
+    void set_pointer_left_hook(std::function<void()> cb);
 
     // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; SIX members
     // from PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
@@ -910,7 +893,7 @@ private:
     //   * touch UP, owner, Pointer  — staged motion flushed, the release at
     //     the last position, THE TRANSLATION END ON THAT SAME EDGE (one
     //     owner, deliver_touch_translation_end), which FORKS ON POINTER
-    //     FOCUS: the leave (TouchLift) when no pen hovers in the window, an
+    //     FOCUS: the leave (the contact's lift) when no pen hovers in the window, an
     //     ordinary restore MOTION at pointer_x_/pointer_y_ when one does (the
     //     pen's own lift off an empty glass, pointer_focus_at) — the motion
     //     re-derives hover from truth;
@@ -1114,11 +1097,10 @@ private:
     // touch translation end's NO-FOCUS arm (the focus fork at
     // deliver_touch_translation_end — a focused pointer gets a restore motion,
     // not this hook). Wired to everything derived from where the pointer is,
-    // main.cpp's hook body holding the authoritative list. It carries why it
-    // fired — the pen's hover ending, a translated contact's lift, or the
-    // abnormal end's ordinary leave — because the tooltip's leave reads it
-    // (GuiPointerLeaveReason). Null-safe.
-    std::function<void(GuiPointerLeaveReason)> pointer_left_hook_;
+    // main.cpp's hook body holding the authoritative list. It carries no
+    // reason (THE POINTER LEAVE'S THREE FIRES, above the class: every
+    // consumer reads them alike since 2026-11-07). Null-safe.
+    std::function<void()> pointer_left_hook_;
     // The touch navigation hooks (see set_touch_nav_hooks). Null-safe at
     // each fire site.
     std::function<void(const GuiTouchNavFrame&)>  touch_nav_update_hook_;
@@ -1215,8 +1197,8 @@ private:
     // lift off an empty glass, pointer_focus_at) gets an ordinary restore
     // MOTION at its last platform-tracked position instead of the leave, no
     // focus gets the leave. clean_release is passed
-    // through to end_touch_left_hold and chooses one thing more, the leave's
-    // reason (TouchLift for a lift, OrdinaryLeave for a hard end): the
+    // through to end_touch_left_hold (the release or the lost-button motion;
+    // the leave carries no reason since 2026-11-07): the
     // finger's OWN LIFT passes true, and the ends where no finger left — the
     // HARD ENDS (2026-08-29) — pass false. Rationale, edges and
     // the resting-anchor judgment at the definition.

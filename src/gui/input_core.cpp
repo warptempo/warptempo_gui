@@ -266,17 +266,15 @@ void GuiInputCore::pointer_focus_at(double x, double y) {
     pointer_y_ = containing_pixel(y);
 }
 
-void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
+void GuiInputCore::pointer_leave() {
     pointer_focused_ = false;
     // Fire the leave hook: no motion arrives while the pen hovers nowhere, so
     // without this a button would keep its pointer-derived face after the pen
     // left. The hook owns the erase damage, and main.cpp's hook body is the
-    // authoritative list of what it clears. THE CALLER'S REASON is the
-    // argument: PenHoverEnd from the Android pen's hover ending, whose leave
-    // darkens no lit row (2026-10-10; the enum carries the rule), and
-    // OrdinaryLeave by default.
+    // authoritative list of what it clears. No reason is handed: every fire
+    // reads alike (THE POINTER LEAVE'S THREE FIRES, input_core.h).
     if (pointer_left_hook_)
-        pointer_left_hook_(reason);
+        pointer_left_hook_();
 }
 
 void GuiInputCore::pointer_motion(double x, double y) {
@@ -551,16 +549,10 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     standing rules' own; suppression would need a "restore" mark on the
     //     motion, a device branch in spirit (the judgment's one record).
     //   * pointer NOT focused — the leave: no pen hovers in the window, so
-    //     the contact ending IS the pointer leaving. Its REASON
-    //     is the one term clean_release still decides here: the lift passes
-    //     TouchLift, the hard end OrdinaryLeave. The hover tooltip is the
-    //     consumer that tells them apart — a lift is a release under a
-    //     pointer that has not moved, so the wait's button, its anchor and
-    //     its spent state stand across it and a later hover on that
-    //     button starts no wait until it has left it (the rule is at
-    //     AppState::RedesignTooltip) — while a contact
-    //     the window system took ends the tooltip's hover as a hard end
-    //     (GuiPointerLeaveReason carries both).
+    //     the contact ending IS the pointer leaving, the lift's and the hard
+    //     end's alike (the leave carries no reason since 2026-11-07, when
+    //     the hover tooltip's always-show model took every leave as its hard
+    //     end, AppState::RedesignTooltip).
     // The mods are current_mods() at delivery: the touch bit is already down,
     // so the motion honestly reads unheld — an ordinary resting motion.
     // THIS IS THE ONE DELIBERATE TOUCH-SIDE READER OF pointer_focused_ (the
@@ -571,9 +563,7 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
         deliver_motion(pointer_x_, pointer_y_);
         return;
     }
-    if (pointer_left_hook_)
-        pointer_left_hook_(clean_release ? GuiPointerLeaveReason::TouchLift
-                                         : GuiPointerLeaveReason::OrdinaryLeave);
+    if (pointer_left_hook_) pointer_left_hook_();
 }
 
 void GuiInputCore::touch_down(int32_t id, double x, double y,
@@ -1241,8 +1231,7 @@ void GuiInputCore::hard_end_touch_stream() {
             // delivery at the last position (a vanished hold would latch
             // the drag-modal gate with no event left to lift it) — then the
             // translation end ON THAT DELIVERY'S OWN EDGE, exactly as the
-            // finger's own lift delivers it: the leave (OrdinaryLeave here,
-            // where the lift's is TouchLift), or the focus-forked restore
+            // finger's own lift delivers it: the leave, or the focus-forked restore
             // motion when a pen hovers in the window, through the one owner.
             // AN ABNORMAL END SINCE 2026-08-29 (architect: "a touch the system
             // takes away is not a click unless it moved"), where this arm
@@ -1341,7 +1330,7 @@ void GuiInputCore::set_on_button_release(ButtonCallback cb)      { on_button_rel
 void GuiInputCore::set_on_motion(MotionCallback cb)              { on_motion_ = std::move(cb); }
 void GuiInputCore::set_text_editor_active_probe(TextEditorProbe cb) { text_editor_active_probe_ = std::move(cb); }
 void GuiInputCore::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
-void GuiInputCore::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb) { pointer_left_hook_ = std::move(cb); }
+void GuiInputCore::set_pointer_left_hook(std::function<void()> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiInputCore::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,

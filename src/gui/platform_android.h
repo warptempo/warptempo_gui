@@ -289,7 +289,7 @@ public:
     int64_t key_repeat_period_ms() const;
 
     // Contract at GuiInputCore::set_pointer_left_hook, input_core.h.
-    void set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb);
+    void set_pointer_left_hook(std::function<void()> cb);
 
     // Fired ONLY on a CHANGE of the window's activation (keyboard focus),
     // from the focus commands (APP_CMD_GAINED_FOCUS / LOST_FOCUS). No face
@@ -636,8 +636,8 @@ private:
     // rule at on_motion_event's hover arm, architect 2026-10-07) — and the
     // edge that ends it — HOVER_EXIT, a hover report or hovering button edge
     // above the GUI's plane (pen_report_in_plane), ANY first contact down (the pen's tip or a
-    // finger), or focus loss, each delivering the core's pointer_leave with
-    // PenHoverEnd (end_pen_hover). What
+    // finger), or focus loss, each delivering the core's pointer_leave
+    // (end_pen_hover). What
     // makes the doors sequence sanely is that one owner: a hover never
     // overlaps a touch the core is translating (on_motion_event's hover and
     // down arms), so a first down's synthesized entry motion never meets a
@@ -892,9 +892,8 @@ private:
     // unless the pen set the bit (pen_ctrl_ above). The door's one producer
     // (the contract at GuiInputCore::set_ctrl).
     void set_pen_ctrl(bool held);
-    // END A PEN HOVER — the core's pointer_leave with the pen's own reason,
-    // PenHoverEnd (the leave that darkens no lit row; GuiPointerLeaveReason,
-    // input_core.h), and its frame, iff one stands (pen_hovering_ above).
+    // END A PEN HOVER — the core's pointer_leave (THE POINTER LEAVE'S THREE
+    // FIRES, input_core.h), and its frame, iff one stands (pen_hovering_ above).
     void end_pen_hover();
     // THE GUI'S PLANE — the one predicate both pen rules read (the hover
     // doors and the retained anchor's release), and the owner of the plane's

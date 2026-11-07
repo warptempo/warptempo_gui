@@ -1416,16 +1416,17 @@ struct GuiInputHandler {
     // open_settings_page.)
 
     // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
-    // hides the box at once, stops the wait and disarms the reshow, leaving
-    // the button under the pointer, the slop's anchor and the spent button
-    // where they are, so a resting pointer starts nothing (the press spends
-    // the button at its own site, after this call). Its callers, re-derived
-    // by grep 2026-10-06: every pointer press and every release,
-    // on_key's modal-opening end (a key that raised a
-    // modal under a roster hint — keys themselves do not hide it), the
-    // platform's close (the one modal opener no key or press reaches), the
+    // hides the box at once, stops the wait, breaks the bypass chain and
+    // forgets the column, so the next walk that finds the pointer on one is an
+    // arrival waiting the delay. Its callers, re-derived by grep 2026-11-07:
+    // every pointer press and every release, on_key's modal-opening end (a
+    // key that raised a modal under a roster hint — keys themselves do not
+    // hide it), the platform's close (the one modal opener no key or press
+    // reaches), the progress modal's open and its swap for the player, the
     // roster walk's tail for a dialog owner whose surface closed or was
-    // replaced, end_tooltip_hover, the lamp's dark edge through it, and
+    // replaced, the pointer-leave hook (main.cpp: every reason alike — the
+    // ordinary leave, a translated contact's lift, the pen's hover leaving
+    // the plane), the TIPS lamp's dark edge (set_show_tooltips), and
     // main.cpp's activation edge. Damages the strip and the box's last
     // painted rect (the box hangs outside the strip; the argument is at the
     // definition).
@@ -1437,35 +1438,28 @@ struct GuiInputHandler {
     // surface in the same one state, armed by that dialog's hover walk.
     void hide_shift_tooltip();
 
-    // THE POINTER LEAVING — the pointer-leave hook's one call (main.cpp), for
-    // every reason, and the tooltip lamp's dark edge (set_show_tooltips).
-    // HARD (the ordinary leave, the pen's hover leaving the plane, the lamp
-    // going dark) means the pointer is on no button: the box
-    // goes down at once (leaving the tool), the wait stops, its button, the
-    // spent button and the seen position are forgotten, and the next arrival
-    // is a motion.
-    // CONTACT LIFT (TouchLift, a translated contact's own lift) is NOT the
-    // pointer going away (architect 2026-09-29): it ends nothing, so the
-    // button, the anchor, the seen position and the spent button (the tap's
-    // press spent it) stand at the lift point, and the S Pen's hover on that button starts no wait until it has
-    // left the button. The rule is at AppState::RedesignTooltip.
-    enum class TooltipHoverEnd { Hard, ContactLift };
-    void end_tooltip_hover(TooltipHoverEnd end);
+    // (THE POINTER LEAVING'S OWN DOOR — end_tooltip_hover and its two ends,
+    // Hard and ContactLift, the contact's lift keeping the spent button —
+    // RETIRED 2026-11-07 with the comctl32 model: with no spent button and no
+    // motion test every leave is the hard end above.)
 
     // THE WAIT'S ONE WRITER, for both hover walks (the roster's and the modal
-    // dialog's), handed the tooltip-bearing button under the pointer (index
-    // < 0: none) and reading the pointer at app.last_mouse_x/y: it starts
-    // (at the full wait or the reshow), restarts or stops the wait by the
-    // slop and the held button, restarts a standing box's life on its own
-    // button and takes the box down as the pointer leaves that button. The
+    // dialog's), handed the tooltip-bearing button whose COLUMN holds the
+    // pointer (index < 0: none) and the rect it was found in (its column,
+    // tooltip_column_rect, or Play's clock field), reading the pointer at
+    // app.last_mouse_x/y: an arrival starts the wait — or, while the bypass
+    // chain holds, shows the box at once — the same column restarts nothing,
+    // a held press or no column stops the wait, and the pointer leaving a
+    // standing box's column takes the box down and arms the chain. The
     // owner's two-surface encoding and the model are at
     // AppState::RedesignTooltip.
-    void note_tooltip_hover(AppState::RedesignTooltip::Owner o);
+    void note_tooltip_hover(AppState::RedesignTooltip::Owner o,
+                            const GuiRect& column);
 
-    // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the wait's
-    // ripening shows the box under the pointer, and the life's end hides it.
-    // Each edge damages once — a show the band the box can hang into
-    // (tooltip_hang_bands), a hide the box's published rect.
+    // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the bypass
+    // chain's lapse, and the wait's ripening showing the box under the
+    // pointer. The show damages once, the band the box can hang into
+    // (tooltip_hang_bands).
     void tick_tooltip();
 
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's
@@ -3033,10 +3027,10 @@ private:
     // under the contact, so the restore motion at the lift re-answered the
     // row the contact last lit, which is the face painted at the lift.
     // THE HOVER STATE ITSELF STAYS LIVE: the pointer's coordinates, the
-    // tooltip's wait (the roster walk still names the button under the
-    // pointer to note_tooltip_hover, so a hint ripens exactly as without the
-    // latch, the tapped button itself staying spent — AppState::
-    // RedesignTooltip), the press claims and the lift's act all read the
+    // tooltip's wait (the roster walk still names the button whose column
+    // holds the pointer to note_tooltip_hover, so a hint ripens exactly as
+    // without the latch, the tapped button's own after the delay —
+    // AppState::RedesignTooltip), the press claims and the lift's act all read the
     // live pointer against the painted picture as ever (ON SCREEN IS AS
     // PAINTED), so a press after the lift is unaffected; a lit row moved by
     // a KEY is not the pointer's and is not held; and an open menu's hover
@@ -3050,17 +3044,16 @@ private:
     // touching down on the open Settings menu's row: "the word Pick Colors
     // blinks"): the platform sends a HOVER_EXIT just before every tip DOWN,
     // in a delivery of its own — within one millisecond of the DOWN on his
-    // glass (traced 2026-10-10, six taps; the figures at
-    // GuiPointerLeaveReason), so a frame paints between the two only
+    // glass (traced 2026-10-10, six taps; the figures at THE POINTER LEAVE'S
+    // THREE FIRES, input_core.h), so a frame paints between the two only
     // sometimes, which is why the blink came and went — and a leave there
     // (end_pen_hover) that darkened would put the menu's lit row out for any
-    // such frame, until the DOWN's own walk re-lit it. The pen's leave is its
-    // own reason, GuiPointerLeaveReason::PenHoverEnd (input_core.h, the
-    // rule's statement), and it keeps every face in the inventory above as
-    // painted — what was lit stays lit, this latch's own principle — while
-    // still clearing the latch and doing everything else a leave does; the
-    // next pointer event re-derives the faces as ever. Every other leave
-    // still darkens.
+    // such frame, until the DOWN's own walk re-lit it. The pen's leave kept
+    // every face in the inventory above as painted — what was lit stays lit,
+    // this latch's own principle — while still clearing the latch and doing
+    // everything else a leave does, until the lit rows it spared retired with
+    // the Settings popup (2026-10-21); since 2026-11-07 the leave carries no
+    // reason, every fire read alike, and no face is left for it to spare.
     // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
     // would re-light the very face it withheld; the latch is a DISTANCE, as
     // the plane's own hysteresis is.
@@ -3091,8 +3084,7 @@ private:
     //   hook, main.cpp): a HOVER_EXIT, a report above the plane, focus loss —
     //   and THE NEXT DOWN, which is one of them: the latch stands only while
     //   the pen's hover does, and every first down ends that hover through
-    //   its leave (end_pen_hover) — the leave that darkens no lit row
-    //   (PenHoverEnd, above).
+    //   its leave (end_pen_hover).
     // THE LATCH IS THE POINTER'S, NOT A CHROME'S: it holds every chrome's lit
     // row alike (the toolbars' hot faces it once held retired with the
     // program's band, 2026-10-09).
@@ -3899,13 +3891,13 @@ private:
     // and the `h` view admit it). The bit (AppState::show_tooltips) is a
     // per-project session posture, dark at every project open, never
     // serialized and never in the undo domain. THE DARK EDGE ENDS THE MODEL
-    // WHOLE: a standing box goes down (the hard end's own body), the wait
-    // stops and the hovered and spent owners are forgotten, so nothing is
-    // left to ripen; from then on note_tooltip_hover keeps that state clear.
-    // THE LIT EDGE STARTS NOTHING: the pointer resting on the button starts
-    // a wait only on a motion past the slop, the model's own rule (no button
-    // is spent then: the dark edge forgot it). The lamp's face rides the
-    // per-tick comparator. History-less; silent.
+    // WHOLE: a standing box goes down, the wait stops, the chain breaks and
+    // the column is forgotten (the hard end's own body), so nothing is left
+    // to ripen; from then on note_tooltip_hover keeps that state clear.
+    // THE LIT EDGE STARTS NOTHING ITSELF: the next walk that finds the
+    // pointer on a column is an arrival, waiting the delay (the TIPS key's
+    // own lift, the pen hovering on it, raises its hint so). The lamp's face
+    // rides the per-tick comparator. History-less; silent.
     void set_show_tooltips(bool desired);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):

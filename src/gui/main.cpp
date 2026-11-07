@@ -2095,17 +2095,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // of them owes this edge a clear. The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h).
-    // THE FIRES ARE THE PEN'S HOVER ENDING (PenHoverEnd) and a touch pointer
-    // translation's end — as TouchLift for the contact's own lift and as
-    // OrdinaryLeave for the hard end, and ONLY on its no-focus arm: with the
+    // THE FIRES ARE THE PEN'S HOVER ENDING and a touch pointer
+    // translation's end — the contact's own lift and the hard end alike,
+    // and ONLY on its no-focus arm: with the
     // pen hovering, the platform delivers a restore MOTION at the pen's own
     // position instead and this body never runs — the ordinary motion path
     // re-derives hover from truth (the fork's one statement is at
     // deliver_touch_translation_end, input_core.cpp). Clearing the pointer's
     // state where a finger last was is precisely what the
     // no-hover-under-touch consequence asks for. The fire sites are the
-    // touch edge inventory's, input_core.h. The reason it is handed matters to
-    // one effect below — the tooltip's end, read last in this account.
+    // touch edge inventory's, input_core.h (THE POINTER LEAVE'S THREE FIRES).
+    // The hook is handed no reason since 2026-11-07: GuiPointerLeaveReason
+    // retired when the tooltip's end, read last in this account, stopped
+    // telling the fires apart.
     // ONE OF THOSE FIRINGS IS THE TOUCH HARD END (a cancel, capability or
     // focus loss on a live pointer translation, hard_end_touch_stream), whose
     // end is the ABNORMAL one (when the second-finger upgrade
@@ -2125,32 +2127,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (2026-08-13) this is sharper than a face: the arm is a pending ACT, and
     // this is the BUTTON-LOST edge — the hold stops being the pointer's to
     // show and the act must not wait on a release that may never come.
-    // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
-    // must end HERE rather than be left to the tick's hover recompute, which
-    // refuses outright while the pointer is outside. THE REASON FORKS IT: the
-    // abnormal end (OrdinaryLeave) and the pen's hover
-    // ending (PenHoverEnd) are HARD ends (architect
-    // 2026-10-06, Windows 95's: leaving the tool hides a tooltip at once) —
-    // the box goes down in this same event, through the one hide that
-    // damages the box's own published rect as well as the strip (the box
-    // hangs outside the strip). A TRANSLATED CONTACT'S LIFT (TouchLift) is NO
-    // LEAVE FOR THE TOOLTIP at all (architect 2026-09-29): it is the release
-    // of a press that already hard-ended the hint and spent its button, so
-    // the wait's button, its anchor, the seen position and the spent state
-    // stand at the lift point as a release leaves them, and a later
-    // hover on that button starts no wait until it has left it
-    // (end_tooltip_hover). (The S Pen's lift off an empty glass never reaches
-    // this body since 2026-10-07: the pen stays the pointer at its lift, the
-    // restore motion's arm — pointer_focus_at.) Every other effect here
-    // reads every reason alike (the open popup's lit row, which the pen's
-    // hover end kept, went with the Settings popup, 2026-10-21).
-    gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
+    // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (hide_shift_tooltip, its hard
+    // end), and it must end HERE rather than be left to the tick's hover
+    // recompute, which refuses outright while the pointer is outside. EVERY
+    // FIRE ALIKE since 2026-11-07 (the always-show model,
+    // AppState::RedesignTooltip): the box goes down in this same event,
+    // through the one hide that damages the box's own published rect as well
+    // as the strip (the box hangs outside the strip), the wait stops, the
+    // chain breaks and the column is forgotten — a translated contact's lift
+    // included, which until then kept the spent button across it; with
+    // nothing spent there is nothing to keep, and a finger's lift raises no
+    // hint because no walk runs after it. (The S Pen's lift off an empty
+    // glass never reaches this body since 2026-10-07: the pen stays the
+    // pointer at its lift, the restore motion's arm — pointer_focus_at.) No
+    // effect here tells the fires apart (the open popup's lit row, which the
+    // pen's hover end kept, went with the Settings popup, 2026-10-21).
+    gui.set_pointer_left_hook([&] {
         app.pointer_in_window = false;
-        using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
-        input_handler.end_tooltip_hover(
-            reason == GuiPointerLeaveReason::TouchLift
-                ? TooltipHoverEnd::ContactLift
-                : TooltipHoverEnd::Hard);
+        input_handler.hide_shift_tooltip();
         // THE RELEASE-TIME ARMS. This hook is no longer their only end:
         // they also die at the BUTTON-LOST edge, an unheld
         // motion while one of them stands — which is what the touch layer's
@@ -2197,7 +2191,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Windows 95's too, 2026-10-06: a tooltip control without TTS_ALWAYSTIP
     // shows only while its window is active): focus leaving or arriving is
     // the user acting elsewhere, not a pointer grazing a gap. hide_shift_tooltip carries its
-    // own damage. The hook fires only when the window's activation actually
+    // own damage, and forgets the column, so a pointer still on one after
+    // the flip is an arrival at the next walk and waits the delay (the
+    // always-show model, 2026-11-07; nothing gates the walk on activation —
+    // on the tablet a focus loss ends the pen's hover, end_pen_hover, so the
+    // pointer has left). The hook fires only when the window's activation actually
     // flips (the platform owns the edge test). NOTHING ELSE TAKES AN
     // UNFOCUSED LOOK (architect 2026-10-03: one selected pair, focused or not,
     // render.h's palette block — the folder overlay's inactive highlight, the
@@ -2586,10 +2584,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
-        // THE HOVER TOOLTIP'S CLOCK — the whole timer, two deadline compares
-        // on a tick that already runs (comctl32's model, architect 2026-10-06:
-        // the wait's ripening and the life's end; the reshow is read where a
-        // wait starts). No timer object, no callback, no
+        // THE HOVER TOOLTIP'S CLOCK — the whole timer, two compares on a tick
+        // that already runs (the always-show model, architect 2026-11-07:
+        // the bypass chain's lapse and the wait's ripening; the delay is read
+        // where a wait starts). No timer object, no callback, no
         // per-frame damage: each edge damages once, inside the owner
         // (GuiInputHandler::tick_tooltip, whose body carries the damage rule).
         input_handler.tick_tooltip();

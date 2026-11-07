@@ -622,6 +622,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // THE TWO LAMPS' HOLD (architect 2026-11-05 night, a tuning key),
     // spelled: 100 ms (device_config.h's head).
     cfg.lamp_hold_ms      = kLampHoldDefaultMs;
+    // THE TOOLTIP'S DELAY (architect 2026-11-07, a tuning key), spelled:
+    // 100 ms (device_config.h's head).
+    cfg.tooltip_delay_ms  = kTooltipDelayDefaultMs;
     return cfg;
 }
 
@@ -2392,11 +2395,11 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // re-entry painted the checker for a frame or more. THE HOVER
             // STILL ENDS where it always did — a HOVER_EXIT, a report above
             // the plane, a first down, focus loss — through end_pen_hover's
-            // leave, the pen's own reason (PenHoverEnd), which DARKENS NO LIT
-            // ROW: the exit the platform sends just before every tip DOWN
-            // arrives in its own delivery, a frame may paint before the DOWN,
-            // and a darkened row would blink there ("the word Pick Colors
-            // blinks"; the rule at GuiPointerLeaveReason, input_core.h). A pen
+            // leave (the exit the platform sends just before every tip DOWN
+            // arrives in its own delivery, so a frame may paint before the
+            // DOWN: "the word Pick Colors blinks", the record at THE POINTER
+            // LEAVE'S THREE FIRES, input_core.h; the leave carries no reason
+            // since 2026-11-07, every fire read alike). A pen
             // lifting while another contact stays on the glass is no hover
             // (hovers are dropped under a contact): its end takes the leave as before and its next hover is an enter;
             // so does every finger's lift (a finger never hovers). A pen
@@ -2419,8 +2422,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // enter or motion is delivered. Back within the plane (at or
             // under the ENTER threshold, the latch's rule) the first report
             // is a fresh enter. Neither the exit nor a report
-            // above the plane releases the retained zoom anchor, and neither
-            // darkens a lit row (PenHoverEnd, end_pen_hover); both DROP a
+            // above the plane releases the retained zoom anchor; both DROP a
             // pending hover release — the exit is what tells the firmware's
             // button release at a range leave from the hand's
             // (pen_hover_release_pending_). Within the plane, a hover showing
@@ -2682,16 +2684,15 @@ void GuiPlatform::set_pen_ctrl(bool held) {
 void GuiPlatform::end_pen_hover() {
     if (!pen_hovering_) return;
     pen_hovering_ = false;
-    // THE PEN'S OWN LEAVE, PenHoverEnd (architect 2026-10-10, "the word Pick
-    // Colors blinks"): the pen has left the tool as Windows' mouse leaving the
-    // window has — the tooltip, the in-window bit, the arms and the latch go — but
-    // its leave DARKENS NOTHING, every hover-lit face keeping what was
-    // painted. The HOVER_EXIT the platform sends just before every tip DOWN
-    // comes through here in a delivery of its own, so a darkening leave would
-    // put the lit row out for any frame painted before the DOWN's own walk
-    // re-lit it (the rule, and the trace that measured the gap, at
-    // GuiPointerLeaveReason, input_core.h).
-    input_.pointer_leave(GuiPointerLeaveReason::PenHoverEnd);
+    // THE PEN'S OWN LEAVE: the pen has left the tool as Windows' mouse leaving
+    // the window has — the tooltip, the in-window bit, the arms and the latch
+    // go. The HOVER_EXIT the platform sends just before every tip DOWN comes
+    // through here in a delivery of its own (architect 2026-10-10, "the word
+    // Pick Colors blinks"; the trace that measured the gap at THE POINTER
+    // LEAVE'S THREE FIRES, input_core.h), which is why this leave once kept
+    // every lit row; no such face is left, and since 2026-11-07 the leave
+    // carries no reason, every fire read alike.
+    input_.pointer_leave();
 }
 
 // THE GUI'S PLANE (architect 2026-09-27): the pen acts on the GUI only
@@ -3042,7 +3043,7 @@ void GuiPlatform::set_on_motion(MotionCallback cb)              { input_.set_on_
 void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb)  { input_.set_text_editor_active_probe(std::move(cb)); }
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { input_.set_repeat_eligible_probe(std::move(cb)); }
 int64_t GuiPlatform::key_repeat_period_ms() const { return input_.key_repeat_period_ms(); }
-void GuiPlatform::set_pointer_left_hook(std::function<void(GuiPointerLeaveReason)> cb) { input_.set_pointer_left_hook(std::move(cb)); }
+void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { input_.set_pointer_left_hook(std::move(cb)); }
 void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,

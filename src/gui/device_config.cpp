@@ -22,8 +22,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (NINETEEN keys since 2026-11-07, the run
-// gap `run_gap` placed after `key_width` — a tuning key, the band's
+// REQUIRED SET, every one of them (TWENTY keys since 2026-11-07, the
+// tooltip's delay `tooltip_delay_ms` appended at the end — a tuning key, the
+// wait from a key column's arrival to its box; NINETEEN earlier that day, the
+// run gap `run_gap` placed after `key_width` — a tuning key, the band's
 // lengths together; EIGHTEEN 2026-11-06, the
 // key's face width `key_width` placed after `key_height` — a tuning key,
 // the key's two sides together; SEVENTEEN 2026-11-05 night,
@@ -108,7 +110,8 @@ namespace {
 // on-screen keyboard's key box, `osk_key_w` and `osk_key_h`, after them since
 // 2026-10-29 evening, and the
 // keyboard's cap size, `osk_font_px`, after them since that night, and the
-// two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night (none
+// two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night, and the
+// tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07 (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
@@ -141,6 +144,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "osk_key_h",
     "osk_font_px",
     "lamp_hold_ms",
+    "tooltip_delay_ms",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -239,6 +243,14 @@ std::string format_osk_font_px(int px) {
 // The two lamps' hold's canonical spelling (2026-11-05 night): `%d`, the
 // noise integers' road.
 std::string format_lamp_hold_ms(int ms) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", ms);
+    return std::string(buf);
+}
+
+// The tooltip's delay's canonical spelling (2026-11-07): `%d`, the noise
+// integers' road.
+std::string format_tooltip_delay_ms(int ms) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", ms);
     return std::string(buf);
@@ -345,6 +357,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "lamp_hold_ms") {
             // The lamps' hold's canonical integer (format_lamp_hold_ms).
             s += format_lamp_hold_ms(cfg.lamp_hold_ms);
+        } else if (k == "tooltip_delay_ms") {
+            // The tooltip's delay's canonical integer
+            // (format_tooltip_delay_ms).
+            s += format_tooltip_delay_ms(cfg.tooltip_delay_ms);
         }
         s += '\n';
     }
@@ -577,6 +593,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kLampHoldGrammarReason);
             }
             out.lamp_hold_ms = *ms;
+            return {};
+        }
+        // THE TOOLTIP'S DELAY (2026-11-07, a tuning key): under its one
+        // grammar owner (parse_tooltip_delay_ms, device_config.h), required
+        // like every key; any other spelling the launch's hard fail.
+        if (key == "tooltip_delay_ms") {
+            const std::optional<int> ms = parse_tooltip_delay_ms(value);
+            if (!ms) {
+                return bad_value(ln, key, value, kTooltipDelayGrammarReason);
+            }
+            out.tooltip_delay_ms = *ms;
             return {};
         }
         return warptempo_parse::prefix_line_error(

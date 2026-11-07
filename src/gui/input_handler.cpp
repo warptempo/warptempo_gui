@@ -3501,5 +3501,5 @@ void GuiInputHandler::set_show_tooltips(bool desired) {
     // overlay's two routers' own backslash arms.
     app.show_tooltips = desired;
     if (desired) return;
-    end_tooltip_hover(TooltipHoverEnd::Hard);
+    hide_shift_tooltip();
 }
