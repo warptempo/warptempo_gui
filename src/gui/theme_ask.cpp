@@ -333,8 +333,9 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     const Rgb alert    = opaque(roles["Alert"]);
     const Rgb door     = opaque(roles["ScaleAwareness"]);
     const Rgb vu_max   = opaque(roles.vu_maximum);
-    const Rgb lvl_aud  = opaque(roles["RangeEditField"]);
-    const Rgb lvl_noi  = opaque(roles["ChosenPreListen"]);
+    const Rgba face_a  = rgba(roles["SurfaceBackground"]);
+    const Rgb lvl_aud  = over(rgba(roles["RangeEditField"]), face_a);
+    const Rgb lvl_noi  = over(rgba(roles["ChosenPreListen"]), face_a);
     const Rgb core     = opaque(roles["ControlBackground"]);
     const Rgba detail  = rgba(roles["DetailViewBackground"]);
     const Rgb ink      = over(rgba(roles["WaveformColor"]), detail);

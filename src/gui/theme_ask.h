@@ -74,7 +74,11 @@
 // Headphones, Sends …), so it is never read by the flat walk.
 //
 // THE DERIVATION — our Default tone = Live's role, each Default number the
-// compiled row's (palette_file.h's static_asserts):
+// compiled row's (palette_file.h's static_asserts). A ROLE-NAMED role is
+// read FLAT, its alpha byte dropped: each is 6-digit in every file he drops
+// (audited 2026-11-06, session 81). A role found carrying alpha is
+// COMPOSITED over the surface it paints on, never stripped (architect
+// 2026-11-06, session 81, his "ok to implement"): the COMPOSITED block.
 //
 //   ROLE-NAMED (one Live role each):
 //     ground                 242424 = SurfaceArea (ruling 2, 2026-11-05: the
@@ -121,11 +125,6 @@
 //                                     ViewCheckControlEnabledOn, the lit KEY's
 //                                     face, and "clip indicator is not a
 //                                     button"
-//     level audio fill       007383 = RangeEditField (Live's volume
-//                                     mini-slider, "green") — the AUDIO level
-//                                     case's fill (paint_level_case)
-//     level noise fill       3C6AB6 = ChosenPreListen (Live's cue mini-slider,
-//                                     "blue") — the NOISE level case's fill
 //     core                   1E1E1E = ControlBackground (architect 2026-11-06,
 //                                     session 80: "let's try changing the core
 //                                     to ControlBackground — sounds like that
@@ -134,10 +133,23 @@
 //                                     night, i1 of tmp/s38, IS that role's
 //                                     number, so the compiled row is unchanged)
 //                                     — the MAGNIFY-lit inner bar's solid fill
-//   COMPOSITED (Live's alpha role over the clip view's ground, straight alpha
-//   aa/255, a 6-digit word opaque; rounded half to even, clamped):
+//   COMPOSITED (Live's role over the surface it paints on, straight alpha
+//   aa/255, a 6-digit word opaque and its bytes kept exactly; rounded half to
+//   even, clamped):
 //     ink                    191919 = WaveformColor over DetailViewBackground
 //     canvas                 393939 = DetailGridTiles over DetailViewBackground
+//     level audio fill       007383 = RangeEditField over SurfaceBackground
+//                                     (Live's volume mini-slider, "green") —
+//                                     the AUDIO level case's fill on the key
+//                                     face (paint_level_case); 8-digit on SB
+//                                     Viridian (F26000AF over 333333 = B65210)
+//                                     and SB Red Greys (7B0000B3 over 3A3A3A =
+//                                     681111), architect 2026-11-06, session 81
+//     level noise fill       3C6AB6 = ChosenPreListen over SurfaceBackground
+//                                     (Live's cue mini-slider, "blue") — the
+//                                     NOISE level case's fill; 6-digit
+//                                     everywhere, composited with AUDIO's for
+//                                     symmetry (the two cases one road)
 //     center                 = ink (a role is what it paints: the zero line IS
 //                                   the ink, palette_file.h)
 //     score pane             = ink (modal_box.h's score pane: "from ableton
