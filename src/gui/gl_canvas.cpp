@@ -178,17 +178,33 @@ constexpr const char* kCanvasFragmentShader =
 //     grown bars' union, and n_i = |inner ∩ pixel|, THE GROWN INNER's.
 //   * THE COMPOSITE, THE CORE OVER THE INK (architect 2026-11-04, mock f1:
 //     the inner a solid `waveform_core` fill over the outer's
-//     `waveform_ink`), source-over in byte space: the fragment writes the
-//     PREMULTIPLIED source  ink · cov_o · (1 − cov_i) + core · cov_i  with
-//     alpha 1 − (1 − cov_o)(1 − cov_i), and the blend
+//     `waveform_ink`), source-over in byte space, THE AREA-CORRECT
+//     COMPOSITE OF THE TWO OPAQUE SHAPES on the subcell grid (architect
+//     2026-11-07, session 83): the ink over the union less the inner, the
+//     core over the inner, the alpha the union's coverage — wi ⊆ wo by the
+//     OR, so the fragment writes the PREMULTIPLIED source
+//     ink · (cov_o − cov_i) + core · cov_i  with alpha cov_o, and the blend
 //     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA) (present_frame) lays it on
-//     the pixel beneath, G: the result is lerp(lerp(G, ink, cov_o), core,
-//     cov_i), rounded once to a byte. Where a bar covers whole (cov_o = 1,
-//     cov_i 0 or 1) the factors are exactly 1 and 0 and the word lands
-//     exactly — the ink, or the core; where nothing covers (n_o = 0) the
-//     fragment discards and the plate stays transparent there. With the
-//     MAGNIFY lamp dark no inner is present (n_i = 0), and the picture is
-//     the grown outer in the ink alone.
+//     the pixel beneath, G: the result is G · (1 − cov_o) + ink · (cov_o −
+//     cov_i) + core · cov_i, rounded once to a byte. THE TWO ARMS: that
+//     expression where the inner reaches a pixel the union does not fill
+//     (n_i > 0, n_o < 16); elsewhere the former nested expression, ink ·
+//     cov_o · (1 − cov_i) + core · cov_i with alpha 1 − (1 − cov_o)(1 −
+//     cov_i), KEPT LITERALLY — there it is algebraically the same (cov_i = 0
+//     or cov_o = 1), and the former source is retained literally to preserve
+//     its existing evaluation; the bytes outside the fringe were verified
+//     unchanged by two-build tablet captures (Default and Immaterial,
+//     2026-11-07, session 84). The nested form counts the inner's subcells
+//     twice where 0 < cov_i and cov_o < 1: it differs from the exact result
+//     by cov_i · (1 − cov_o) · (ink − G) per channel, at most |ink − G| / 4
+//     (cov_i ≤ cov_o) — a dark fringe at the core's edges of up to 8 levels
+//     on Default's canvas (393939 − 191919 = 32, over 4) before byte
+//     rounding, hence the first arm. Where a bar covers whole
+//     (cov_o = 1, cov_i 0 or 1) the factors are exactly 1 and 0 and the
+//     word lands exactly — the ink, or the core; where nothing covers (n_o
+//     = 0) the fragment discards and the plate stays transparent there.
+//     With the MAGNIFY lamp dark no inner is present (n_i = 0), and the
+//     picture is the grown outer in the ink alone.
 //   * THE EXACT FAST PATHS (2026-10-31 night: smooth coarse zoom and pan
 //     with the magnify lamp lit outranks everything but the picture's
 //     bytes, which these paths leave untouched — each is a provable subset
@@ -227,10 +243,11 @@ constexpr const char* kCanvasFragmentShader =
 //     reach_o); both reaching, both, the outer's work replaced by (c) where
 //     the full outer holds. Every road ends in the one composite, and the
 //     word written opaque is the composite's own result at cov_o = 1 and
-//     cov_i 0 or 1 (x · 1.0 = x, x · 0.0 = 0, x + 0.0 = x and 1 − 0 · 1 = 1
-//     in IEEE). A road is a branch on reach_o, reach_i and full_o, uniform
-//     across a column's run of pixels in practice but no constant of the
-//     source: the specialization rule holds inside every road.
+//     cov_i 0 or 1, the former expression's arm (x · 1.0 = x, x · 0.0 = 0,
+//     x + 0.0 = x and 1 − 0 · 1 = 1 in IEEE). A road is a branch on
+//     reach_o, reach_i and full_o, uniform across a column's run of pixels
+//     in practice but no constant of the source: the specialization rule
+//     holds inside every road.
 //   THE COST: two bars' bases and dilations at the pixel's own four
 //   subcolumns over the columns i − L .. i + L, and nothing else — no
 //   erosion, no halo of columns past L (the core needs none, so the
@@ -457,9 +474,19 @@ constexpr const char* kListFragmentShader =
     "        if (n_o == 0) discard;\n"
     "        float cov_o = float(n_o) / 16.0;\n"
     "        float cov_i = float(n_i) / 16.0;\n"
+    // The head's two arms: the exact composite where the inner reaches a
+    // pixel the union does not fill, the former expression literally
+    // elsewhere (the same value there, its evaluation preserved; the bytes
+    // verified unchanged on the tablet, the head).
+    "        if (n_i > 0 && n_o < 16) {\n"
+    "            o_color = vec4(word_rgb(v_words.x) * (cov_o - cov_i) +\n"
+    "                           word_rgb(v_words.y) * cov_i,\n"
+    "                           cov_o);\n"
+    "        } else {\n"
     "        o_color = vec4(word_rgb(v_words.x) * (cov_o * (1.0 - cov_i)) +\n"
     "                       word_rgb(v_words.y) * cov_i,\n"
     "                       1.0 - (1.0 - cov_o) * (1.0 - cov_i));\n"
+    "        }\n"
     "        return;\n"
     "    }\n"
     "    o_color = vec4(word_rgb(v_words.x), 1.0);\n"

@@ -832,10 +832,10 @@ void install_true_colors(bool on);
 // rule is at render_waveform_columns' declaration), THE OUTER IN THE INK AND
 // THE INNER A SOLID FILL OVER IT in the `waveform_core` role (architect
 // 2026-11-04, mock f1, THE CORE below; antialiased with its shape on the GPU
-// since 2026-10-30) — on Default 1E1E1E over the 191919 ink on the 393939
-// canvas, FIVE LEVELS OVER THE INK (architect 2026-11-04 night, his pick i1
-// of tmp/s38), Live's ControlBackground on every theme since 2026-11-06 (the
-// tone's record at THE CORE below; palette_file.h). THE PLATE WEARS THE INK AND THE
+// since 2026-10-30) — LIVE'S SurfaceBackground, THE KEY FACE, on every
+// theme (architect 2026-11-07, session 83): on Default 363636 over the
+// 191919 ink on the 393939 canvas, one step under the canvas (the tone's
+// record at THE CORE below; palette_file.h). THE PLATE WEARS THE INK AND THE
 // CORE AS PUBLISHED (the sink writes their words, GuiCanvasSink::plate),
 // so the pair rides the cache's fingerprint (waveform_plate_inks) and
 // publishes with the plate; the canvas is laid live under the plate's
@@ -3255,9 +3255,10 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // contour, the dilation and the coverage are the fragment
 // shader's, from the bounds texture, per pixel. THE PLATE IS THE ONE RECORD
 // THAT BLENDS: its fragment writes the premultiplied source of the two
-// coverages (the ink's where the grown shape covers, the core's where the
-// grown inner does — the inner over the outer where they overlap is the
-// magnification rule's order) and the GL blend lays it source-over on the
+// coverages (the ink at the union's coverage less the inner's, the core at
+// the grown inner's, the alpha the union's — the inner over the outer where
+// they overlap is the magnification rule's order; kListFragmentShader's
+// head owns the rule) and the GL blend lays it source-over on the
 // canvas and the grid beneath; where a bar covers whole (coverage one) its
 // word lands exactly, and where nothing covers the
 // fragment discards and the plate stays transparent. RETURNS false where it
@@ -3268,7 +3269,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 //
 // The inks' words are PREMULTIPLIED ARGB32 (argb32_opaque_word), built by the
 // sink from the published inks (GuiCanvasSink::plate); the shader scales each
-// by its coverage, so there is one word per colour rather than a table.
+// by its share of the pixel (the ink the union's coverage less the inner's,
+// the core the inner's; kListFragmentShader's head), so there is one word per
+// colour rather than a table.
 //
 // THE INKS (WaveformPlateInks, the `waveform_ink` and `waveform_core`
 // roles AS THE WINDOW TAKES THEM — already converted, waveform_plate_inks)
@@ -3323,27 +3326,32 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE CORE (architect 2026-11-04, mock f1, reversing the lit outline of
 // 2026-09-27) — THE GROWN INNER SHAPE (the inner bars of all columns with
 // their contour, dilated by the `waveform_grow` key) FILLED SOLID in the
-// `waveform_core` role, LIVE'S ControlBackground on every theme (architect
-// 2026-11-06, session 80: "let's try changing the core to ControlBackground —
-// sounds like that will be slightly lighter for most dark themes"; the one
-// owner theme_ask.h's DERIVATION), on Default 1E1E1E, FIVE LEVELS OVER THE
-// 191919 INK — his pick i1 of tmp/s38 of 2026-11-04 night over i0, the
-// 1C1C1C below, both the REAL capture of the lit inner with the core's own
-// pixels recolored, picked on his glass and since found to be that role's
-// number, so Default's row is unchanged; mock f1's word stands: "the absence
-// of it would indicate a quiet section". THE TONE'S RECORD:
-// 1A1A1A, one level over the ink, picked the same morning on mock f1 ("1e
-// is already quite bright … just a tiny amt of brightness is all that's
-// needed" — f1's dummy inner), read nearly invisible on the real
+// `waveform_core` role, LIVE'S SurfaceBackground, THE KEY FACE, on every
+// theme (architect 2026-11-07, session 83, his pick i4 of tmp/s83 on real
+// MAGNIFY-lit captures, Default and Immaterial judged; the one owner
+// theme_ask.h's DERIVATION): his ask a lighter core from a tone the palette
+// already holds, with no antialiasing halo — the candidates mocked the ground
+// (SurfaceArea), the lane (Desktop), the grid, the key face and the canvas.
+// On Default 363636 over the 191919 ink, ONE STEP UNDER THE 393939 CANVAS,
+// so the center line (the ink, over the plate) reads hard across the core —
+// ruled fine (his "yes", session 83); Immaterial 2F3138. Mock f1's word
+// stands: "the absence of it would indicate a quiet section". THE TONE'S
+// RECORD: 1A1A1A, one level over the ink, picked 2026-11-04 morning on mock
+// f1 ("1e is already quite bright … just a tiny amt of brightness is all
+// that's needed" — f1's dummy inner), read nearly invisible on the real
 // compressed bar, because f1's dummy inner was a smooth band a third of
 // the plate's height and one level over the ink needs a large contiguous
 // area to register; 1C1C1C, three levels, ruled in session 33 on mocks
 // m1..m7 of tmp/s33 (core_tones.py, the real capture recolored one tone
 // each: "1c works"), where 1D1D1D was declined for not being a Live tone;
-// 1E1E1E replaced it that night on his own look. The core lies over
-// the outer bar's ink: the composite is the core at the grown inner's
-// coverage over the ink at the shape's (kListFragmentShader's head), so the
-// inner keeps its shape and its antialiased fringe and draws no line. No
+// 1E1E1E, five levels, his pick i1 of tmp/s38 that night on the real lit
+// capture, read from Live's ControlBackground on every theme 2026-11-06
+// (session 80: his pick was that role's number on Default) until the key
+// face replaced it. The core lies over
+// the outer bar's ink: the composite is area-correct, the core over the
+// grown inner's coverage and the ink over the rest of the union's
+// (kListFragmentShader's head), so the inner keeps its shape and its
+// antialiased fringe and draws no line. No
 // inner bar is ever clipped at the lane's edge — its tips are at most half
 // scale (raw at most 1, the compressor's scale and the expander's
 // multiplier at most 1, the foreground gain one half; kForegroundGain's

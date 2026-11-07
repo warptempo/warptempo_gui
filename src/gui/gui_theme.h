@@ -51,7 +51,7 @@ struct GuiThemeTones {
     uint32_t level_noise_fill;    // the NOISE level case's fill (ChosenPreListen), read by paint_level_case
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
-    uint32_t waveform_core;       // the magnified inner bar's solid fill (ControlBackground)
+    uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
     uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
     uint32_t cue;                 // every enabled marker's chip (ViewCheckControlEnabledOn)
@@ -120,7 +120,7 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x3C6AB6, // level_noise_fill
     0x393939, // waveform_canvas
     0x191919, // waveform_ink
-    0x1E1E1E, // waveform_core
+    0x363636, // waveform_core
     0x303030, // grid
     0x191919, // center
     0xFFAD56, // cue

@@ -25,15 +25,15 @@
 // gives no color. THE DEFAULT ROW (`default`, Live's "Default Dark Neutral
 // Medium", COMPILED: kGuiDefaultThemeTones, gui_theme.h; its .ask never
 // read) IS THE 2026-11-01..05 MEASURED PALETTE TO THE BYTE but the selection
-// pair's text (070707 since 2026-11-06, the foot) — the numbers
+// pair's text (070707 since 2026-11-06) and the magnify core (363636, Live's
+// SurfaceBackground, since 2026-11-07; both at the foot) — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
 // 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) and
-// his own picks (the core, 2026-11-04 night — Live's ControlBackground on
-// this row, the role every theme reads since 2026-11-06 — and the playhead
+// his own pick, the playhead
 // line's static tone, 2026-11-04 night: white 0.483 toward the head, every
-// other theme derived at the same ratio, ruling 4 of 2026-11-05) — the static_asserts
+// other theme derived at the same ratio, ruling 4 of 2026-11-05 — the static_asserts
 // at the foot are that proof in the build, every one of the thirty-nine
 // words with its literal (the press arc's four, 2026-11-05, among them, and
 // the lamp arc's five the same night: the doors' lit pair, the clip lamp,
@@ -62,18 +62,16 @@
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
 //                            the lit lamp's outer bar (WaveformColor over
 //                            DetailViewBackground)
-//   waveform_core    1E1E1E  THE CORE (architect 2026-11-04, mock f1; its
-//                            tone ruled 1E1E1E the same night, his pick i1
-//                            of tmp/s38 over i0, session 33's 1C1C1C, on
-//                            the real lit capture, on his glass), SINCE
-//                            2026-11-06 Live's ControlBackground (session
-//                            80: his pick IS that role's number on Default,
-//                            "slightly lighter for most dark themes"): the
-//                            magnified picture's inner bar, a solid fill
-//                            five levels over Default's ink ("the absence
-//                            of it would indicate a quiet section";
-//                            render.h's THE CORE, where the tone's record
-//                            is)
+//   waveform_core    363636  THE CORE (architect 2026-11-04, mock f1), Live's
+//                            SurfaceBackground, THE KEY FACE, on every theme
+//                            (architect 2026-11-07, session 83, his pick i4
+//                            of tmp/s83 on real MAGNIFY-lit captures): the
+//                            magnified picture's inner bar, a solid fill one
+//                            step under Default's 393939 canvas, the center
+//                            line's ink reading hard across it, ruled fine
+//                            ("the absence of it would indicate a quiet
+//                            section"; render.h's THE CORE, where the tone's
+//                            record is: 1E1E1E, ControlBackground, before it)
 //   grid             303030  the quarter lines of each channel's half, the
 //                            horizontals alone (render_canvas) — Live's
 //                            antialiased beat line as one solid px on the
@@ -169,7 +167,10 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // (ChosenPreListen). THE SELECTION PAIR'S TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
-// ControlContrastFrame, until then — our mispairing).
+// ControlContrastFrame, until then — our mispairing). THE MAGNIFY CORE
+// 363636 is Default's SurfaceBackground, the key face (architect 2026-11-07,
+// session 83, his pick i4 of tmp/s83; 1E1E1E, his pick of 2026-11-04 night
+// and ControlBackground's number, until then — render.h's THE CORE).
 namespace gui_default_theme_proof {
 inline constexpr GuiThemeTones kDefault = kGuiDefaultThemeTones;
 // THE CHROME (materials.h's head: the ground, the text tones, the key, the
@@ -205,7 +206,7 @@ static_assert(kDefault.level_noise_fill == 0x3C6AB6);
 // THE PALETTE (the head's eleven).
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);
-static_assert(kDefault.waveform_core   == 0x1E1E1E);
+static_assert(kDefault.waveform_core   == 0x363636);
 static_assert(kDefault.grid            == 0x303030);
 static_assert(kDefault.center          == 0x191919);
 static_assert(kDefault.cue             == 0xFFAD56);

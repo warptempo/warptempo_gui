@@ -89,7 +89,8 @@
 //     key press face         2A2A2A = Desktop (the press arc, 2026-11-05: his
 //                                     pick p2 over ControlBackground 1E1E1E —
 //                                     "press in skeumorphic is darker")
-//     key face, ruler face, pane, time field  363636 = SurfaceBackground
+//     key face, ruler face, pane, time field, magnify core
+//                            363636 = SurfaceBackground (the core below)
 //     cue outline, text on lit  111111 = ControlContrastFrame
 //     text                   B5B5B5 = ControlForeground
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
@@ -125,14 +126,20 @@
 //                                     ViewCheckControlEnabledOn, the lit KEY's
 //                                     face, and "clip indicator is not a
 //                                     button"
-//     core                   1E1E1E = ControlBackground (architect 2026-11-06,
-//                                     session 80: "let's try changing the core
-//                                     to ControlBackground — sounds like that
-//                                     will be slightly lighter for most dark
-//                                     themes"; his Default pick of 2026-11-04
-//                                     night, i1 of tmp/s38, IS that role's
-//                                     number, so the compiled row is unchanged)
-//                                     — the MAGNIFY-lit inner bar's solid fill
+//     core                   363636 = SurfaceBackground, THE KEY FACE, on
+//                                     every theme (architect 2026-11-07,
+//                                     session 83, his pick i4 of tmp/s83 on
+//                                     real MAGNIFY-lit captures, Default and
+//                                     Immaterial judged: a lighter core from a
+//                                     tone the palette already holds, no AA
+//                                     halo) — the MAGNIFY-lit inner bar's solid
+//                                     fill, one step under Default's 393939
+//                                     canvas, so the center line (the ink, over
+//                                     the plate) reads hard across it, ruled
+//                                     fine (his "yes"). Before it
+//                                     ControlBackground (1E1E1E on Default,
+//                                     session 80, 2026-11-06; the record at
+//                                     render.h's THE CORE)
 //   COMPOSITED (Live's role over the surface it paints on, straight alpha
 //   aa/255, a 6-digit word opaque and its bytes kept exactly; rounded half to
 //   even, clamped):

@@ -82,8 +82,10 @@
 //
 // WHAT EACH RECORD WRITES, the rules the GPU's draw keeps: a rect writes its
 // word on its cells; the plate writes, per cell, the
-// premultiplied source of its two coverages — the ink's where the grown
-// shape covers, the core's where the grown inner does (2026-11-04) —
+// premultiplied source of its two coverages — the ink at the union's
+// coverage less the grown inner's, the core at the inner's, the alpha the
+// union's (2026-11-04; area-correct since 2026-11-07, kListFragmentShader's
+// head the rule) —
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
 // producer; the algorithm kListFragmentShader's) and blended source-over
 // under the GL blend, exactly the word in the core and nothing where no bar

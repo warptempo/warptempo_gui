@@ -26,8 +26,7 @@ namespace {
 // day; the lamp arc's three, ScaleAwareness, RangeEditField and
 // ChosenPreListen, the same night; SearchIndication, immaterial_gold's accent,
 // over all 42 files 2026-11-06; StandbySelectionForeground, the selection
-// pair's text, over all 31 he drops, 2026-11-06; ControlBackground, the
-// magnify core, 2026-11-06; TakeLaneTrackNotHighlighted,
+// pair's text, over all 31 he drops, 2026-11-06; TakeLaneTrackNotHighlighted,
 // ViewCheckControlDisabledOff, ScrollbarInnerHandle and
 // DetailViewRulerMarkings, the grid, the disabled key's ink, the trim span and
 // the ruler's ticks, read since 2026-11-07, over all 31 he drops and Default).
@@ -40,7 +39,7 @@ constexpr std::string_view kAskRoles[] = {
     "SelectionBackground", "SelectionForeground",
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
     "ScaleAwareness", "RangeEditField", "ChosenPreListen",
-    "SearchIndication", "ControlBackground",
+    "SearchIndication",
     "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
 };
@@ -342,7 +341,7 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     const Rgba face_a  = rgba(roles["SurfaceBackground"]);
     const Rgb lvl_aud  = over(rgba(roles["RangeEditField"]), face_a);
     const Rgb lvl_noi  = over(rgba(roles["ChosenPreListen"]), face_a);
-    const Rgb core     = opaque(roles["ControlBackground"]);
+    const Rgb core     = face;  // the magnify core = SurfaceBackground (the head)
     const Rgba detail  = rgba(roles["DetailViewBackground"]);
     const Rgb ink      = over(rgba(roles["WaveformColor"]), detail);
     const Rgb canvas   = over(rgba(roles["DetailGridTiles"]), detail);
