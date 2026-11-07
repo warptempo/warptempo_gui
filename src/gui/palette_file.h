@@ -18,7 +18,7 @@
 // LIVE'S .ASK FILES ITSELF at launch, from `themes/<group>/` beside the
 // device config — the files never enter the repository — through the one
 // derivation (theme_ask.h's head), after the COMPILED GROUP, `default` and
-// the immaterial_gold rule. No per-color key, no Settings row for a color.
+// the immaterial_mod rule. No per-color key, no Settings row for a color.
 // Cool Edit Pro 2.1 keeps THE CANVAS GRAMMAR — the view
 // bar, the ruler, the marker lane, the grid and center lines, the cues, the
 // playhead, the stereo divider and their lengths (program_spec.h) — and

@@ -73,12 +73,12 @@ struct GuiTheme {
 };
 
 // THE COMPILED GROUP (architect 2026-11-06, session 75): listed first, under
-// the heading WARPTEMPO — `default`, compiled, and `immaterial_gold`, a
+// the heading WARPTEMPO — `default`, compiled, and `immaterial_mod`, a
 // compiled rule over a dropped Immaterial.ask (theme_ask.h's head). Its two
 // slugs are reserved: a dropped file slugging to either is left out.
 inline constexpr std::string_view kGuiCompiledThemeGroup = "warptempo";
 inline constexpr std::string_view kGuiDefaultThemeSlug   = "default";
-inline constexpr std::string_view kGuiImmaterialGoldSlug = "immaterial_gold";
+inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
 
 // THE DEFAULT ROW, COMPILED (architect 2026-11-06, session 75: `default`
 // stays compiled — the no-folder launch, the missing-theme fallback, the
@@ -168,5 +168,5 @@ constexpr bool is_theme_slug(std::string_view s) {
     return true;
 }
 static_assert(is_theme_slug(kGuiDefaultThemeSlug));
-static_assert(is_theme_slug(kGuiImmaterialGoldSlug));
+static_assert(is_theme_slug(kGuiImmaterialModSlug));
 static_assert(is_theme_slug(kGuiCompiledThemeGroup));

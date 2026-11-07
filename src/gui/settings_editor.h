@@ -330,7 +330,7 @@ static_assert(settings_page_piece_keys_pinned());
 // 9 quarters and the themes' slugs. A LIST IS A SEQUENCE OF GROUPS
 // (value_list_groups below; 2026-11-05): `theme`'s one per group of the
 // themes' list (architect 2026-11-06, session 75: WARPTEMPO, the compiled
-// group — `default` and immaterial_gold — then each folder under `themes/`
+// group — `default` and immaterial_mod — then each folder under `themes/`
 // alphabetically, EXTRA and SONIC_BLOOM on his devices; theme_ask.h), each
 // under an inert Group row like the settings page's own DEVICE / PIECE;
 // every other key one headless group. The typed line still names every one

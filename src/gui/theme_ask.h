@@ -29,15 +29,18 @@
 //
 // THE ORDER — the value list's. THE COMPILED GROUP FIRST, WARPTEMPO
 // (kGuiCompiledThemeGroup): `default` (kGuiDefaultThemeTones, gui_theme.h —
-// compiled, Default's .ask never read), then `immaterial_gold` when a dropped
+// compiled, Default's .ask never read), then `immaterial_mod` when a dropped
 // Immaterial.ask stands; then THE FOLDERS ALPHABETICALLY by name; within every
 // group BY SLUG.
 //
-// IMMATERIAL_GOLD, A COMPILED RULE OVER A DROPPED FILE (architect 2026-11-05,
+// IMMATERIAL_MOD, A COMPILED RULE OVER A DROPPED FILE (architect 2026-11-05,
 // session 56, his pick m1 of tmp/s56 — a separate theme, `immaterial`
 // unchanged: "lowest overhead, most honest, and least churn if reversed";
-// THE SHADE 2026-11-06, session 62, his pick x2 of tmp/s62): the first file
-// of the walk whose slug is `immaterial` (the first group folder holding one)
+// THE SHADE 2026-11-06, session 62, his pick x2 of tmp/s62; THE SLUG
+// `immaterial_mod` since 2026-11-07, session 86 — the `_mod` suffix marks a
+// theme modified by hand or by rule, the device's hand-fixed Sonic Bloom
+// copies following the same suffix as files, `SB <Name>_mod.ask`): the first
+// file of the walk whose slug is `immaterial` (the first group folder holding one)
 // read through THE DERIVATION below with ViewCheckControlEnabledOn read from
 // the same file's SearchIndication (ECCA6D, Immaterial's muted gold) SHADED
 // IN OKLCH (Ottosson's matrices, `oklch` / `from_oklch` in theme_ask.cpp): its
@@ -52,7 +55,7 @@
 // launch going on: unreadable; a name that spells no slug (a stem of no
 // letter or digit); a ROLE of kAskRoles missing (a Live 11 theme); the
 // nested role missing; its slug already taken — the compiled group's two
-// counting first (a dropped file slugging to `default` or `immaterial_gold`
+// counting first (a dropped file slugging to `default` or `immaterial_mod`
 // is left out), then earlier groups, then the same group's earlier file.
 // A group folder whose name is not a slug, or is the compiled group's name,
 // is left out with one line too. A MISSING OR UNLISTABLE `themes/` FOLDER,
@@ -97,7 +100,7 @@
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
 //     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
-//                                     (immaterial_gold reads its shaded
+//                                     (immaterial_mod reads its shaded
 //                                     SearchIndication instead, above)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
@@ -224,7 +227,7 @@
 // individual sb themes than make rules around their missing colors").
 //
 // A file whose SurfaceBackground is black (the press ratio's divisor zero) is
-// left out with its line, and immaterial_gold is not listed over an
+// left out with its line, and immaterial_mod is not listed over an
 // Immaterial.ask whose SearchIndication is black (the chroma ratio's divisor
 // zero): no stock or pack file is either, the arm only keeps the arithmetic
 // defined.

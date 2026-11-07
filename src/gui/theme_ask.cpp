@@ -24,7 +24,7 @@ namespace {
 // every stock and Sonic Bloom file (checked over all 45, 2026-11-05; the
 // press arc's two, SelectionBackground and SelectionForeground, the same
 // day; the lamp arc's three, ScaleAwareness, RangeEditField and
-// ChosenPreListen, the same night; SearchIndication, immaterial_gold's accent,
+// ChosenPreListen, the same night; SearchIndication, immaterial_mod's accent,
 // over all 42 files 2026-11-06; StandbySelectionForeground, the selection
 // pair's text, over all 31 he drops, 2026-11-06; TakeLaneTrackNotHighlighted,
 // ViewCheckControlDisabledOff, ScrollbarInnerHandle and
@@ -305,7 +305,7 @@ std::string hex_word(const Rgb& c) {
     return buf;
 }
 
-// THE SHADE (immaterial_gold, the head): `word` with its OKLCH lightness set
+// THE SHADE (immaterial_mod, the head): `word` with its OKLCH lightness set
 // to `lightness`, its hue kept, its chroma scaled by lightness / its own; an
 // uppercase 6-digit hex word, or nothing for a black word (no ratio).
 std::optional<std::string> shade(const std::string& word, double lightness) {
@@ -399,9 +399,9 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     return t;
 }
 
-// THE GOLD'S LIGHTNESS (the head's IMMATERIAL_GOLD): the OKLCH L of the
+// THE GOLD'S LIGHTNESS (the head's IMMATERIAL_MOD): the OKLCH L of the
 // FF91C3 its accent replaces, to the tenth.
-constexpr double kImmaterialGoldLightness = 78.8;
+constexpr double kImmaterialModLightness = 78.8;
 
 // -- THE LIST ----------------------------------------------------------
 
@@ -520,7 +520,7 @@ void load_gui_themes(const std::filesystem::path& themes_dir) {
     std::vector<AskGroup> groups = list_groups(themes_dir);
     for (AskGroup& g : groups) read_group(g, themes_dir / g.name);
 
-    // THE COMPILED GROUP'S SECOND ROW: immaterial_gold over the walk's first
+    // THE COMPILED GROUP'S SECOND ROW: immaterial_mod over the walk's first
     // `immaterial` file.
     for (const AskGroup& g : groups) {
         const auto it = std::find_if(
@@ -529,17 +529,17 @@ void load_gui_themes(const std::filesystem::path& themes_dir) {
         if (it == g.files.end()) continue;
         AskRoles roles = it->roles;
         const std::optional<std::string> gold =
-            shade(roles["SearchIndication"], kImmaterialGoldLightness);
+            shade(roles["SearchIndication"], kImmaterialModLightness);
         std::optional<GuiThemeTones> tones;
         if (gold) {
             roles["ViewCheckControlEnabledOn"] = *gold;
             tones = derive(roles);
         }
         if (!tones) {
-            say_left_out(it->path, "no immaterial_gold: its SearchIndication "
+            say_left_out(it->path, "no immaterial_mod: its SearchIndication "
                                    "or SurfaceBackground is black");
         } else {
-            list.push_back(GuiTheme{std::string(kGuiImmaterialGoldSlug),
+            list.push_back(GuiTheme{std::string(kGuiImmaterialModSlug),
                                     std::string(kGuiCompiledThemeGroup),
                                     *tones});
         }
@@ -548,7 +548,7 @@ void load_gui_themes(const std::filesystem::path& themes_dir) {
 
     // THE FOLDERS' ROWS, the compiled group's two slugs reserved.
     std::vector<std::string> taken{std::string(kGuiDefaultThemeSlug),
-                                   std::string(kGuiImmaterialGoldSlug)};
+                                   std::string(kGuiImmaterialModSlug)};
     for (const AskGroup& g : groups) {
         for (const AskFile& f : g.files) {
             if (std::find(taken.begin(), taken.end(), f.slug) != taken.end()) {

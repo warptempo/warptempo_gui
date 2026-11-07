@@ -47,7 +47,7 @@
 //                            (theme_ask.h, since 2026-11-06 built at launch:
 //                            the compiled group WARPTEMPO — `default`,
 //                            Live's "Default Dark Neutral Medium", and
-//                            immaterial_gold over a dropped Immaterial.ask —
+//                            immaterial_mod over a dropped Immaterial.ask —
 //                            then the .ask files of `themes/<group>/` beside
 //                            this file, each group its folder), exactly as
 //                            the slug rule spells it. THE READER JUDGES THE

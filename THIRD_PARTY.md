@@ -19,7 +19,7 @@ is NUMBERS: a table of colors derived from Ableton AG's Live 12 theme file Defau
 theme XML; its `Resources/Themes`) through the derivation at `src/gui/theme_ask.h`'s head. Every other theme is read at
 the program's launch from `.ask` files the user places beside the device config (`themes/<group>/`); NO THEME FILE IS
 DISTRIBUTED with the program or kept in this repository (since 2026-11-06; the numbers of Live's other stock themes and of
-third-party packs are no longer compiled in). `immaterial_gold` is a compiled rule over the user's own copy of Live's
+third-party packs are no longer compiled in). `immaterial_mod` is a compiled rule over the user's own copy of Live's
 Immaterial file (its SearchIndication role as the accent, shaded darker in OKLCH), no extra file.
 
 ## The tablet's APK
