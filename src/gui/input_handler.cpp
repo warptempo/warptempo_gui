@@ -3392,8 +3392,6 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // set_gui_scale_percent:
     // drag_moved_threshold_px() reads the value that call just installed.
     gui.set_touch_slop_px(drag_moved_threshold_px());
-    // The stillness radius rides the same road (set_touch_stillness_px).
-    gui.set_touch_stillness_px(scaled_px(kDefaultTouchStillnessPx, 1));
     relayout_window();
 }
 
@@ -3479,6 +3477,13 @@ void GuiInputHandler::set_show_waveform_magnification(bool desired) {
     const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     app.show_waveform_magnification = desired;
     viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
+}
+
+void GuiInputHandler::set_trim_armed(bool desired) {
+    // The contract — sole writer, per-project, history-less — is at the
+    // declaration (input_handler.h). The key's lit face follows through the
+    // roster's per-tick comparator, which reads redesign_button_selected.
+    app.trim_armed = desired;
 }
 
 void GuiInputHandler::set_show_tooltips(bool desired) {

@@ -39,8 +39,9 @@
 // side of the call and hands over values. It reads no window system.
 //
 // WHAT IT EMITS: the consumer hooks the GUI installs — the key, key-release,
-// button and motion callbacks, the pointer-leave hook and the ten touch hooks
-// (the six navigation ones, the editor-field query and the caret-drag trio)
+// button and motion callbacks, the pointer-leave hook and the eleven touch
+// hooks (the seven navigation ones — the sweep-armed query among them since
+// 2026-11-07 — the editor-field query and the caret-drag trio)
 // — plus the two probes it asks the GUI (text-editor-active,
 // repeat-eligible) and the ONE probe it asks the backend (the codepoint
 // refill, at set_codepoint_probe).
@@ -148,19 +149,10 @@ inline int containing_pixel(double v) {
 // learns the scale.
 inline constexpr double kDefaultTouchSlopPx = 9.0;
 
-// THE TOUCH STILLNESS RADIUS AT gui_scale 100, in device pixels (2026-10-22):
-// the Chebyshev distance from the down point a pan-zone contact must stay
-// within for the whole hold beat if the window's expiry is to be the REGION
-// HOLD (the rule and its measured reason at maybe_resolve_touch_window,
-// input_core.cpp). 3 W, a third of the slop (the 2 Windows px of 2026-10-22
-// times 1.5 at the rebase to 200 %, 2026-11-05: 6 device px on the tablet as
-// before); pushed down scaled by the slop's own road (set_touch_stillness_px).
-inline constexpr double kDefaultTouchStillnessPx = 3.0;
-
 // THE MONOTONIC CLOCK EVERY DEADLINE IN THIS LAYER IS MEASURED AGAINST, in
-// microseconds. One owner for the whole GUI: the key-repeat deadline, the touch
-// window and the backend's own bounded clipboard read all read
-// it, so no second reading of the same clock can drift from this one.
+// microseconds. One owner for the whole GUI: the key-repeat deadline and the
+// backend's own bounded clipboard read both read it, so no second reading of
+// the same clock can drift from this one.
 uint64_t gui_monotonic_us();
 
 class GuiInputCore {
@@ -278,7 +270,7 @@ public:
     // two-finger navigation (the pen is never a pinch member), and
     // touch_owner_tool() below, the backend's question of who owns the
     // gesture its pen button would steer. Every other
-    // answer of the machine — the zone, the window, the region hold, the
+    // answer of the machine — the zone, the window, the armed sweep, the
     // caret drag, the single-finger pan and its ctrl fork — is the finger's.
     void touch_down(int32_t id, double x, double y,
                     GuiTouchTool tool = GuiTouchTool::Finger);
@@ -291,13 +283,12 @@ public:
     // backend: the contract must not be droppable by replacing a backend body.
     void touch_capability_lost();
 
-    // BOTH SOFTWARE DEADLINES, SAMPLED. The backend calls this once per
-    // periodic tick, immediately after its own tick hook, and the fixed order
-    // here IS the arbitration (key repeat, then the touch window). Neither
-    // deadline is ever SCHEDULED — they are compared against a free-running
-    // periodic wakeup — and the touch window is ALSO checked eagerly at the
-    // head of every touch event, without which a fast tap resolves one tick
-    // late. Granularity is therefore one tick period.
+    // THE ONE SOFTWARE DEADLINE, SAMPLED: the key repeat's. The backend
+    // calls this once per periodic tick, immediately after its own tick hook.
+    // The deadline is never SCHEDULED — it is compared against a free-running
+    // periodic wakeup — so its granularity is one tick period. (The touch
+    // window's deadline, the region hold's beat, retired 2026-11-07: the
+    // window is decided by geometry alone, input_core.cpp's constants block.)
     void tick();
 
     // THE ONE DOWNWARD PROBE. A synthesized key repeat must not reuse the
@@ -366,10 +357,11 @@ public:
     // from PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
     // update, end, the pan-zone query, and the REGION trio
     // begin/update/end, the dead trim-move members' exact pattern reborn for
-    // the region former — and TEN since 2026-09-05, when the EDITOR-FIELD
-    // query and the CARET-DRAG trio joined for the third ruled divergence;
-    // the retired shapes are closed_questions.md's touch section). ONE
-    // finger on
+    // the region former — TEN since 2026-09-05, when the EDITOR-FIELD
+    // query and the CARET-DRAG trio joined for the third ruled divergence,
+    // and ELEVEN since 2026-11-07, the SWEEP-ARMED query joining for the
+    // TRIM arm lamp; the retired shapes are closed_questions.md's touch
+    // section). ONE finger on
     // the glass IS the pointer — translated whole inside this class, so the
     // GUI sees ordinary pointer deliveries and cannot tell which contact
     // produced them (the translation
@@ -380,13 +372,13 @@ public:
     // SINGLE-FINGER NAVIGATION — the finger drags the pan, the phone model —
     // delivered through
     // the SAME update hook with the finger as the centroid and dist_ratio
-    // pinned at 1.0 (one finger has no distance, so no zoom), a HOLD
-    // past the zone's stretched
-    // window (kTouchRegionHoldMs) is THE REGION HOLD — the expiry drives the
-    // GUI's region former through the region trio, so hold-then-drag sweeps
-    // a region on glass (the eighth ruling: pan is the common act and takes
-    // the primary drag, the region is the deliberate act and takes the
-    // hold) — and a one-finger DRAG, or a HOLD, whose down point lies in an
+    // pinned at 1.0 (one finger has no distance, so no zoom) — EXCEPT WHILE
+    // THE GUI'S TRIM LAMP IS LIT (the sweep_armed query below), when the
+    // same drag with no ctrl is THE ARMED SWEEP: the crossing drives the
+    // GUI's region former through the region trio from the down point
+    // (architect 2026-11-07, session 87, retiring the hold-then-drag region
+    // hold of 2026-08-12: "if I turn it on, it's deliberate and for a
+    // sweep") — and a one-finger DRAG whose down point lies in an
     // OPEN EDITOR'S FIELD is THE CARET DRAG: the caret follows the finger
     // through the caret trio and nothing selects (architect 2026-09-05, the
     // phone's text vocabulary — a divergence from the pointer road's drag
@@ -445,10 +437,10 @@ public:
     //   * pan_zone(x, y): THE ZONE QUERY — does this point lie on the
     //     one-finger PAN SURFACE? Asked ONCE per touch stream, at the FIRST
     //     finger's down; the answer is captured beside the down point and
-    //     DECIDES WHETHER A WINDOW OPENS AT ALL (2026-09-25): ON the zone the
-    //     window runs to the region-hold beat (kTouchRegionHoldMs) and its
-    //     slop crossing is the pan, its expiry the region hold, a second
-    //     finger inside it the pinch; OFF it (and outside an open editor's
+    //     DECIDES WHETHER A WINDOW OPENS AT ALL (2026-09-25): ON the zone a
+    //     window opens with no deadline, its slop crossing the pan (or the
+    //     armed sweep), its lift the tap, a second finger inside it the
+    //     pinch; OFF it (and outside an open editor's
     //     field) the down resolves to the POINTER ON CONTACT — no wait, no
     //     pinch — the touch state block below. SURFACE GEOMETRY ONLY — the
     //     GUI answers the navigation surface (the pan-primary vocabulary's
@@ -459,16 +451,26 @@ public:
     //     at touch_point_in_pan_zone); every other refusal (prompt, editors,
     //     loading/empty audio, live pointer gesture) stays downstream — at the
     //     update body's per-frame state refusal for the nav gestures, in the
-    //     region begin body for the hold — so a refused pan freezes and a
-    //     refused hold is a dead stream rather than a fallback pointer drag.
+    //     region begin body for the armed sweep — so a refused pan freezes
+    //     and a refused sweep is a dead stream rather than a fallback.
     //     THIS ANSWER IS THE GESTURE'S ONE SURFACE ANSWER (architect
     //     2026-10-16): a nav gesture born of the zone's window navigates
     //     wherever its point later travels — chrome, a card, the keys —
     //     until its end; nothing here or in the GUI re-asks the place.
     //     Null — or answering false — means no pan surface: the pointer on
     //     contact everywhere outside an editor's field.
-    //   * region_begin(x, y): the hold resolved on the pan zone at the beat —
-    //     the GUI arms its region former at the DOWN point (the former's own
+    //   * sweep_armed(): THE SWEEP-ARMED QUERY (architect 2026-11-07,
+    //     session 87) — is the GUI's TRIM arm lamp lit for this drag? Asked
+    //     at a pan-zone window's SLOP CROSSING, and only when no ctrl stands
+    //     (the barrel-held drag stays the one-finger zoom, lamp or not): true
+    //     resolves the crossing to the region trio below instead of the
+    //     single-finger pan. A STATE ANSWER, not geometry — the lamp is the
+    //     GUI's (GuiInputHandler::touch_sweep_armed, dark in the `h` view);
+    //     the begin's own refusals stay the begin body's. Null — or
+    //     answering false — means the pan.
+    //   * region_begin(x, y): the armed sweep resolved on the pan zone at the
+    //     slop crossing — the GUI arms its region former at the DOWN point
+    //     (the former's own
     //     press half: deselect, playhead seat, the drag arm), or refuses
     //     inside the body (prompt, the editors, the two overlay modes,
     //     loading/empty audio, live pointer gesture); a refused begin makes
@@ -481,10 +483,9 @@ public:
     //     (the drag's one motion path converts to columns itself).
     //   * region_end(): the gesture ended — finger up, touch_cancel or
     //     touch-capability loss. Any end COMMITS (the former's own release
-    //     regime: a moved drag has already written the trim per motion event,
-    //     so its end runs the sweep's commit tail, while a motionless hold-lift
-    //     wrote nothing and leaves the playhead where the begin seated it — the
-    //     placement). Fired UNCONDITIONALLY once
+    //     regime: the moved drag has already written the trim per motion
+    //     event, so its end runs the sweep's commit tail and the GUI puts the
+    //     lamp out). Fired UNCONDITIONALLY once
     //     the gesture began — the GUI-side drag holds the drag-modal gate
     //     open and its release path is owed — the refused-begin stream
     //     covered by the same !active guard.
@@ -503,10 +504,10 @@ public:
     //     (below) — the field is off the pan zone, which is the waveform
     //     alone on the GUI's answer (the marker lane's box lies outside it,
     //     and the box empties it while a dialog editor stands), so no pan
-    //     and no region hold can
-    //     be meant there. (2) A Field answer
-    //     TAKES THE WINDOW'S DEADLINE AWAY (kTouchWindowNoExpiry,
-    //     input_core.cpp's constants block): the architect's field
+    //     and no sweep can
+    //     be meant there. (2) A Field answer OPENS A WINDOW where the
+    //     pointer would otherwise land on contact, a window with no deadline
+    //     (input_core.cpp's constants block): the architect's field
     //     vocabulary is tap / drag / double tap and carries NO hold meaning,
     //     so nothing there may be decided by a duration — a motionless
     //     finger stays Pending however long it rests and its LIFT is the
@@ -524,7 +525,7 @@ public:
     //     Null — or answering Outside — means no field: off the pan zone,
     //     the pointer on contact.
     //   * caret_begin(x, y): the window resolved to the caret drag at the
-    //     SLOP CROSSING (its one road — the field's window never expires)
+    //     SLOP CROSSING (its one road — no window expires)
     //     and this is the DOWN point: the
     //     GUI seats the caret under it through its one pointer seat body,
     //     drops any selection, clears the double-click seed (a caret drag is
@@ -553,6 +554,7 @@ public:
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,
         std::function<bool(int x, int y)> pan_zone,
+        std::function<bool()> sweep_armed,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end,
@@ -563,10 +565,10 @@ public:
 
     // THE TOUCH SLOP'S ONE DOOR — the travel, in DEVICE pixels, that this layer
     // measures every finger against. TWO USES, both Chebyshev and both `>=`:
-    // the window's EARLY resolve (a finger already dragging should not wait
-    // the window out; the resolution forks on the down point's answers —
-    // single-finger nav on the pan surface, the caret drag in an open
-    // editor's field, the only two places a window opens), and the navigation
+    // the window's resolve by motion (the resolution forks on the down
+    // point's answers — single-finger nav or the armed sweep on the pan
+    // surface, the caret drag in an open editor's field, the only two places
+    // a window opens), and the navigation
     // gestures' LATCH (centroid travel or finger-distance change past it
     // starts navigating, so a two-finger tap navigates nothing and a
     // single-finger nav is born past it by construction). (A third, the live
@@ -618,13 +620,6 @@ public:
     // Reached through GuiPlatform, which re-exports it like every other door of
     // this class.
     void set_touch_slop_px(double px) { touch_slop_px_ = px; }
-    // THE STILLNESS RADIUS, the slop's sibling (2026-10-22; the rule at
-    // maybe_resolve_touch_window, input_core.cpp): a scaled length pushed
-    // down at the SAME two call sites as the slop, beside it, so the two
-    // always stand at one scale. It is NO GATE TWIN — the GUI has no
-    // stillness test of its own; the twin-gate invariant above concerns the
-    // slop alone and stays true.
-    void set_touch_stillness_px(double px) { touch_stillness_px_ = px; }
 
     // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
     // Idle. The full rationale (and why Drain's inclusion is harmless) is at
@@ -737,29 +732,28 @@ private:
     //   * Pending — the WINDOW: the first contact is down and NOTHING has
     //     been delivered. IT OPENS IN TWO PLACES ONLY (2026-09-25, architect:
     //     "zoom is not useful outside waveform", and the second finger's only
-    //     use is the pinch): ON THE PAN ZONE, where it runs to
-    //     kTouchRegionHoldMs (the region-hold beat), and IN AN OPEN EDITOR'S
-    //     FIELD, where it runs to NOTHING AT ALL (kTouchWindowNoExpiry,
-    //     2026-09-05: the field's vocabulary has no hold meaning, so a
-    //     resting finger there simply stays Pending). Anywhere else the down
+    //     use is the pinch): ON THE PAN ZONE and IN AN OPEN EDITOR'S FIELD,
+    //     and in both it runs to NO DEADLINE (architect 2026-11-07 on the
+    //     zone, the region hold retired; 2026-09-05 in the field, whose
+    //     vocabulary has no hold meaning), so a resting contact simply stays
+    //     Pending. Anywhere else the down
     //     resolves to Pointer ON CONTACT (the edge inventory's off-zone down),
     //     so a press on a flag, a button or the trim bar lands at the down
     //     with no wait. It resolves to Pointer on the contact lifting inside
-    //     it (a TAP — the whole burst delivers at the lift, and on the
+    //     it (a TAP, however long the contact rested — the whole burst
+    //     delivers at the lift, and on the
     //     navigation surface that burst's motionless press-release IS the
-    //     deferred click act — the playhead placement, the pointer road's
-    //     own machinery); on the zone's EXPIRY to THE REGION HOLD
-    //     (-> Region below — hold-then-drag sweeps a region, the deliberate
-    //     act's glass form — a MOTIONLESS contact's alone since 2026-10-22,
-    //     the edge inventory's expiry clause), the field having no expiry;
+    //     deferred click act — the playhead placement or the lower half's
+    //     scrub, the pointer road's own machinery, the TRIM lamp lit or not);
     //     on MOTION beyond
     //     the touch slop to SINGLE-FINGER Nav on the zone (the PHONE MODEL,
     //     second glass session 2026-08-11: the finger drags the pan, or
     //     under the ctrl bit the one-finger zoom; no press was ever delivered
-    //     — nothing to unwind) and to the CARET DRAG in the field (2026-09-05,
-    //     the editor_field query; -> Caret below), where the TAP — a lift
-    //     from a window that never expires, however long the finger rested —
-    //     is the field's one road to the pointer beside the double press; a
+    //     — nothing to unwind), or with the TRIM lamp lit and no ctrl to THE
+    //     ARMED SWEEP (-> Region below; the sweep_armed query), and to the
+    //     CARET DRAG in the field (2026-09-05,
+    //     the editor_field query; -> Caret below), where the TAP is the
+    //     field's one road to the pointer beside the double press; a
     //     DoublePress answer at the down resolves to Pointer on contact, the
     //     window never opening. A second FINGER landing inside the ZONE'S
     //     window resolves to two-finger Nav — the jump-free pinch, the
@@ -797,11 +791,13 @@ private:
     //     exemption at set_touch_nav_hooks' update contract). The gesture
     //     ends when its LAST nav finger lifts. A third finger is ignored,
     //     across upgrades and downgrades alike.
-    //   * Region  — THE REGION HOLD (the eighth glass ruling, 2026-08-12):
-    //     the zone window EXPIRED with the down point on the pan zone, and
-    //     the owning finger now drives the REGION former through the region
+    //   * Region  — THE ARMED SWEEP (architect 2026-11-07, session 87; the
+    //     REGION HOLD of 2026-08-12, the zone window's expiry, retired): the
+    //     zone window's slop crossing with the TRIM lamp lit and no ctrl, and
+    //     the owning contact now drives the REGION former through the region
     //     trio — begin fired at entry with the DOWN point (the GUI runs the
-    //     former's own press half and arms the drag, or refuses), motion
+    //     former's own press half and arms the drag, or refuses), the
+    //     crossing position staged as the first frame, motion
     //     staged to the frame boundary and delivered as region_update(x, y),
     //     the lift delivering the staged final frame then region_end (any
     //     end commits — the former's own release regime). NOTHING
@@ -810,7 +806,7 @@ private:
     //     one. A second finger landing here is IGNORED whole (a committed
     //     gesture — the moved-drag rule's family).
     //   * Caret   — THE CARET DRAG (2026-09-05, the third ruled divergence):
-    //     the window's slop crossing or its expiry with the down point in an
+    //     the window's slop crossing with the down point in an
     //     OPEN EDITOR'S FIELD, and the owning finger now drives the editor's
     //     caret through the caret trio — begin fired at entry with the DOWN
     //     point (the GUI seats the caret there and drops any selection),
@@ -820,8 +816,8 @@ private:
     //     caret stays where last seated; nothing selects, commits or seeds).
     //     NOTHING pointer-shaped ever starts: no press, no hold bit, no
     //     release, no translation end — the Region model. A second finger
-    //     landing here is IGNORED whole (a committed gesture — the region
-    //     hold's own rule; the field has no pinch at all, its window
+    //     landing here is IGNORED whole (a committed gesture — the armed
+    //     sweep's own rule; the field has no pinch at all, its window
     //     ignoring a second finger too).
     //   * Drain   — waiting for every remaining (ignored) finger to lift;
     //     nothing is delivered. Entered from Pointer, Nav, Region and Caret
@@ -830,12 +826,11 @@ private:
     // THE EDGE INVENTORY — every route that ends or transforms touch state,
     // authoritative here (the one-authoritative-site rule; each fire site
     // states only its own clause):
-    //   * touch UP, owner, Pending  — a TAP, whichever deadline the window
-    //     rides AND HOWEVER LONG THE FINGER RESTED where it rides none (the
-    //     editor field, 2026-09-05 — its window has no expiry, so a slow tap
-    //     there is still a tap and still seeds the double-tap candidate the
-    //     release owes; and on the zone, a contact that left the stillness
-    //     radius, whose window lost its expiry, 2026-10-22): resolve (enter-motion + press at
+    //   * touch UP, owner, Pending  — a TAP, HOWEVER LONG THE CONTACT RESTED
+    //     (no window has a deadline: in the editor field a slow tap is still
+    //     a tap and still seeds the double-tap candidate the release owes; on
+    //     the zone a resting contact is never a hold, 2026-11-07): resolve
+    //     (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
     //     translation end on the release's own edge; -> the Pointer arm's own
     //     end, Drain if an ignored contact is still down or Idle if not (a
@@ -846,7 +841,7 @@ private:
     //     and in the field since 2026-09-25 (the placement lanes below never
     //     reach it), so ON THE PAN ZONE the burst's motionless press-release
     //     runs the GUI's DEFERRED CLICK ACT at its release — the placement at
-    //     the tap point.
+    //     the tap point (the lower half's scrub), the TRIM lamp lit or not.
     //   * first DOWN with a DoublePress editor-field answer (2026-09-05) —
     //     Idle -> Pointer AT ONCE: the seed makes the press's identity
     //     certain, so the window is opened and resolved in the same call
@@ -859,7 +854,7 @@ private:
     //     DoublePress clause's own shape: the entry motion and the press at
     //     the down point, nothing queued, and every motion from here is
     //     Pointer motion. The press's identity is certain at the down there —
-    //     no pan, no region and no pinch can be meant off the waveform — so
+    //     no pan, no sweep and no pinch can be meant off the waveform — so
     //     nothing waits: a flag selects, a trim endcap grabs and a chrome
     //     button arms at the contact (the chrome's act and its shift long
     //     press stay the pointer road's own, at the lift and on the press's
@@ -870,28 +865,20 @@ private:
     //     empty stretch that release also seeds the EmptyLane double-click
     //     candidate, so TWO TAPS there reach the marker CREATE (the second
     //     tap's press consumes the candidate).
-    //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
-    //     deadline, and lazily at every touch event's arrival) — the ZONE'S
-    //     window only, and only for a MOTIONLESS contact -> Region (the region
-    //     hold at the kTouchRegionHoldMs beat; the begin hook fires at the
-    //     down point, and any sub-stillness drift inside the window stages as
-    //     the gesture's first frame). A ZONE CONTACT THAT LEFT THE STILLNESS
-    //     RADIUS inside the beat (2026-10-22, kDefaultTouchStillnessPx;
-    //     touch_window_left_still_) HAS NO EXPIRY EDGE: it stays Pending at
-    //     any age and leaves only by the slop crossing (the nav) or its lift
-    //     (the tap) — a slow-starting pan is never the hold. THE
-    //     EDITOR'S FIELD HAS NO EXPIRY EDGE AT ALL (2026-09-05): its window
-    //     carries kTouchWindowNoExpiry, so a finger resting there is still
-    //     Pending at any age and leaves this phase only by the slop crossing
-    //     (Caret) or by its own lift (the tap) — the field's vocabulary spends
-    //     no hold, and a resting finger can therefore never fall onto the
-    //     pointer road and into the desk's selection sweep.
+    //   * (NO EXPIRY EDGE: no window carries a deadline — the zone's since
+    //     2026-11-07, the region hold and its stillness radius retired; the
+    //     field's since 2026-09-05. A resting contact stays Pending at any age
+    //     and leaves only by the slop crossing, its lift or, on the zone, a
+    //     second down.)
     //   * motion beyond the touch slop inside the window — FORK on the down
     //     point's captured answers (the phone model, and the editor field
     //     since 2026-09-05): pan surface -> SINGLE-FINGER Nav (the nav seed
     //     measures its latch from the DOWN point, so the first delivered
     //     frame folds the whole accumulated delta exactly as the two-finger
-    //     latch folds, and the frame's ctrl bit picks the pan or the zoom);
+    //     latch folds, and the frame's ctrl bit picks the pan or the zoom),
+    //     or, the sweep_armed query answering true with no ctrl standing,
+    //     -> Region, THE ARMED SWEEP (2026-11-07: the begin at the down point,
+    //     the crossing position staged as the first frame);
     //     the editor's field -> Caret (the begin at the down point, the
     //     crossing position staged as the first frame, so the caret is seated
     //     where the finger landed and then under it in one burst).
@@ -914,9 +901,9 @@ private:
     //     the single-finger gesture runs on.
     //   * second DOWN during Region — IGNORED whole: recorded (the point
     //     count), not routed — a committed gesture, the moved-drag rule's
-    //     family (a region hold that expired into the gesture is as
-    //     deliberate as a moved drag; there is no motionless sub-state to
-    //     upgrade from, the hold having already become the former).
+    //     family (the armed sweep is born of a moved drag; there is no
+    //     motionless sub-state to upgrade from). The pinch stays the
+    //     window's: a second down BEFORE the crossing zooms, the lamp lit.
     //   * second DOWN during Caret — IGNORED whole, the Region clause's own
     //     terms: the finger becomes nothing, not a pinch pivot inside the
     //     field.
@@ -963,9 +950,8 @@ private:
     //   * touch UP, owner, Region — the staged dirty frame DELIVERS first
     //     (the user's own final leg, the nav finger-up's model), then the
     //     region_end hook (any end commits — the former's release regime:
-    //     a moved drag's trim writes are already in and its end runs the
-    //     sweep's commit tail, or a motionless hold-lift wrote nothing with the
-    //     playhead where the begin seated it). No
+    //     the moved drag's trim writes are already in and its end runs the
+    //     sweep's commit tail, the GUI putting the TRIM lamp out). No
     //     release and no translation end: nothing pointer-shaped ever
     //     started; -> Drain / Idle.
     //   * touch UP, owner, Caret — the Region clause's shape: the staged
@@ -1027,9 +1013,9 @@ private:
     // user is aiming or gesturing, and the autopager must not move the song
     // under it. It is not a nicety — the window's whole design defers
     // conversion: a TAP delivers its press+release burst AT THE LIFT carrying
-    // the DOWN point's coordinates (up to kTouchRegionHoldMs later on the
-    // zone, any time later in an editor's field) and the REGION HOLD converts the
-    // down point at the beat's EXPIRY, so a chase that paged in between would
+    // the DOWN point's coordinates (any time later, the window having no
+    // deadline) and THE ARMED SWEEP converts the down point at the slop
+    // crossing, so a chase that paged in between would
     // land the act on whatever frame had slid under that screen column instead
     // of the frame aimed at. Nothing GUI-side is armed during Pending, so
     // any_pointer_gesture_active cannot see that window — this query is what
@@ -1051,39 +1037,25 @@ private:
     // set_touch_slop_px. Born at the authored 100 % value so a core nobody
     // pushes to is the core this file always had.
     double     touch_slop_px_     = kDefaultTouchSlopPx;
-    // The stillness radius (set_touch_stillness_px), device px, born at the
-    // authored 100 % value like the slop.
-    double     touch_stillness_px_ = kDefaultTouchStillnessPx;
     double     touch_down_x_      = 0.0;
     double     touch_down_y_      = 0.0;
     double     touch_last_x_      = 0.0;
     double     touch_last_y_      = 0.0;
-    // Pending only: the window's deadline (monotonic; event timestamps ride a
-    // base this program never compares against — kTouchRegionHoldMs on the
-    // pan zone, kTouchWindowNoExpiry in an editor's field, the only two
-    // places a window opens)
-    // and whether any sub-slop motion arrived inside the window (the queued
-    // motion the resolution replays).
-    uint64_t   touch_window_deadline_us_ = 0;
+    // Pending only: whether any sub-slop motion arrived inside the window
+    // (the queued motion the resolution replays).
     bool       touch_window_moved_       = false;
-    // Pending: the contact has LEFT THE STILLNESS RADIUS of its down point
-    // (2026-10-22) — set at the Pending motion arm, cleared at every down.
-    // While it stands the window's expiry resolves nothing (the region hold is
-    // a MOTIONLESS press; maybe_resolve_touch_window).
-    bool       touch_window_left_still_  = false;
     // Pending: the down point's PAN-ZONE answer, captured ONCE at the first
     // contact's down (the pan_zone query at set_touch_nav_hooks). It decides
     // whether a window opens at all (off the zone and outside a field the
-    // down is the pointer on contact), picks the zone window's deadline, the
-    // slop crossing's pan, the expiry's region hold, and admits the pinch at
-    // the second-down arm.
+    // down is the pointer on contact), forks the slop crossing to the pan or
+    // the armed sweep, and admits the pinch at the second-down arm.
     bool       touch_down_in_pan_zone_   = false;
     // The down point's EDITOR-FIELD answer (2026-09-05), captured ONCE beside
     // the pan-zone bit above at the first finger's down (the editor_field query
     // at set_touch_nav_hooks) and cleared with them in forget_touch_state.
-    // Field forks the window's crossing to the caret drag AND GIVES THE
-    // WINDOW NO DEADLINE (kTouchWindowNoExpiry — a rest in the field decides
-    // nothing, so the tap survives any dwell); DoublePress resolves the down
+    // Field opens a window (deadline-free like every window, so the tap
+    // survives any dwell) and forks its crossing to the caret drag;
+    // DoublePress resolves the down
     // to the pointer on contact (the edge inventory above). Outside leaves the
     // answer to the pan-zone bit.
     GuiTouchEditorField touch_down_in_editor_field_ = GuiTouchEditorField::Outside;
@@ -1154,6 +1126,9 @@ private:
     // The pan-zone query (asked once, at the first finger's down; surface
     // geometry only — the contract at set_touch_nav_hooks).
     std::function<bool(int, int)>                 touch_pan_zone_hook_;
+    // The sweep-armed query (asked at a pan-zone window's slop crossing with
+    // no ctrl standing; the contract at set_touch_nav_hooks).
+    std::function<bool()>                         touch_sweep_armed_hook_;
     // The region trio the Region phase drives (contracts at
     // set_touch_nav_hooks). Null-safe at each fire site.
     std::function<void(int, int)>                 touch_region_begin_hook_;
@@ -1199,26 +1174,19 @@ private:
     // two-finger latch is", literally the same code path. No press was ever
     // delivered and the touch hold is never raised.
     void resolve_touch_window_to_single_nav();
-    // Resolve the Pending window to the REGION HOLD (the on-zone expiry at
-    // the kTouchRegionHoldMs beat — the eighth glass ruling): fire the
-    // region begin at the DOWN point and stage any sub-slop window drift as
-    // the gesture's first frame. Nothing pointer-shaped starts — no press,
-    // no hold bit — the single-nav model.
+    // Resolve the Pending window to THE ARMED SWEEP (the on-zone slop
+    // crossing with the sweep_armed query true and no ctrl — 2026-11-07):
+    // fire the region begin at the DOWN point and stage the crossing
+    // position as the gesture's first frame. Nothing pointer-shaped starts —
+    // no press, no hold bit — the single-nav model.
     void resolve_touch_window_to_region();
     // Resolve the Pending window to the CARET DRAG (2026-09-05 — the slop
-    // crossing or the expiry with the down point in an open editor's field):
+    // crossing with the down point in an open editor's field):
     // fire the caret begin at the DOWN point and stage any window travel —
     // the crossing position, or sub-slop drift — as the drag's first frame.
     // Nothing pointer-shaped starts — no press, no hold bit — the region
     // model.
     void resolve_touch_window_to_caret();
-    // Sample the Pending window's deadline (the zone's region-hold beat; the
-    // field's window never expires). Called from the timerfd tick
-    // (beside maybe_fire_repeat — the run loop's one deadline-sampling spot,
-    // so expiry lands within one tick of its mark) and lazily at every
-    // touch event's arrival, so an event past the deadline is processed
-    // against the resolved state.
-    void maybe_resolve_touch_window();
     // Deliver the staged Pointer-phase motion (touch_frame coalescing) —
     // called at the frame boundary and UNCONDITIONALLY at every end of the
     // touch hold (the flush-vs-clear invariant is at the definition).
@@ -1282,9 +1250,10 @@ private:
     // that motion retroactively was not ours). Either way the end hook fires
     // iff an update was delivered.
     void end_touch_nav_gesture(bool deliver_final_frame);
-    // End a live Region gesture — the Nav end's own split, restated for the
-    // region trio (the finger's lift delivers the staged frame first, the
-    // hard ends drop it) with ONE deliberate difference: region_end fires
+    // End a live Region gesture (the armed sweep) — the Nav end's own
+    // split, restated for the region trio (the finger's lift delivers the
+    // staged frame first, the hard ends drop it) with ONE deliberate
+    // difference: region_end fires
     // UNCONDITIONALLY, the GUI-side drag holding the drag-modal gate open
     // (the trim-move precedent; rationale at the definition).
     void end_touch_region_gesture(bool deliver_final_frame);

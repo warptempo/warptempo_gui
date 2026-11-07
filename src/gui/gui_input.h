@@ -71,21 +71,20 @@ namespace GuiKeys {
 }
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
-// thing before the rest crosses into its held meaning. It is the delay of the
-// TWO HOLDS and of nothing else:
-//   * THE CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at
-//     all four of its read sites — the roster lift, the RENDER PLAYER'S
-//     MODAL ROW, which joined 2026-08-28 (its skips and Delete admit a
-//     modified press, and their long press reaches it), THE NOTIFICATION
-//     CARD'S LIFT, which joined 2026-10-01 (a long press on any card
-//     dismisses every card), and THE TRIM BAR'S CTRL BOUND SET, which joined
-//     2026-10-27 (a barrel press held past the delay sets the END;
-//     PendingClickAct, app_state.h) — one value and
-//     one term. It has NO VISUAL ANNOUNCEMENT: the span is measured where
-//     the act runs (the lift, and the trim set's grab-gate crossing too) and
-//     nothing on screen marks the moment it is crossed;
-//   * THE TOUCH PAN ZONE'S REGION HOLD (input_core.cpp's pending window,
-//     which sits below the GUI model and reads this constant directly).
+// thing before the rest crosses into its held meaning. It is the delay of
+// THE ONE HOLD and of nothing else, THE CHROME SHIFT LONG PRESS
+// (chrome_shift_hold_ms, app_state.h), at all four of its read sites — the
+// roster lift, the RENDER PLAYER'S MODAL ROW, which joined 2026-08-28 (its
+// skips and Delete admit a modified press, and their long press reaches it),
+// THE NOTIFICATION CARD'S LIFT, which joined 2026-10-01 (a long press on any
+// card dismisses every card), and THE TRIM BAR'S CTRL BOUND SET, which joined
+// 2026-10-27 (a barrel press held past the delay sets the END;
+// PendingClickAct, app_state.h) — one value and one term. It has NO VISUAL
+// ANNOUNCEMENT: the span is measured where the act runs (the lift, and the
+// trim set's grab-gate crossing too) and nothing on screen marks the moment
+// it is crossed. (The touch pan zone's region hold, its second reader, is
+// retired, architect 2026-11-07, session 87: the waveform's sweep is the
+// TRIM arm lamp's, GuiInputCore's touch state block.)
 // It was a device config key with a Settings row for its tuning phase, the
 // same day; he ran 300 on the tablet and ruled it settled ("very good"), so
 // it is hard-coded and the key is struck, unknown-key fatal (the tuning rule:
@@ -411,11 +410,12 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // spell is on this list.
 //
 // WHAT IS DELIBERATELY ABSENT: the digits 5..9;
-// Backspace, and every letter the ladder never tests (A, E, W, X, Y — T
+// Backspace, and every letter the ladder never tests (A, E, X, Y — T
 // left the class 2026-10-28 night for the Trim Presets list's opener; W
-// left the class 2026-10-28 for the NOISE lamp's toggle and came BACK
+// left the class 2026-10-28 for the NOISE lamp's toggle, came BACK
 // 2026-11-05 with the lamp's retirement for the band's two level cases,
-// sliders with no chord; E
+// sliders with no chord, and left again 2026-11-07 for the TRIM arm
+// lamp's toggle; E
 // left the class 2026-10-10 for Alt+E, the Edit title's access key, and came
 // BACK 2026-10-21 with the menu row's removal; Y
 // left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
@@ -536,13 +536,16 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // magnification level propagate's Ctrl and Ctrl+Alt chords and
         // Ctrl+Alt+Shift+M went with that markers column 2026-09-23.
         case GuiKeys::M: return bare;
-        // (BARE `w` TOGGLED THE NOISE LAMP 2026-10-28 to 2026-11-05; the lamp
-        // went with the band's two level cases, sliders with no chord, so
-        // every `w` is UNBOUND again — the default below, the silence of an
-        // unbound key — and the on-screen keyboard's `w` still types into an
-        // editor, text and no chord.)
+        // BARE `w` TOGGLES THE TRIM ARM LAMP (architect 2026-11-07, session
+        // 87, the TRIM key's chord; GuiInputHandler::toggle_trim_armed): lit,
+        // the next single-contact drag on the waveform is the trim sweep
+        // instead of the pan (AppState::trim_armed). In both modes: the `h`
+        // view's allowlist refuses it there (its key hidden there). Every
+        // modified `w` binds nothing. (The letter toggled the NOISE lamp
+        // 2026-10-28 to 2026-11-05 and was unbound between.)
+        case GuiKeys::W: return bare;
         // BARE `t` OPENS THE TRIM PRESETS LIST (architect 2026-10-28 night,
-        // the TRIM key's chord; GuiInputHandler::open_trim_presets), in both
+        // the PRESETS key's chord; GuiInputHandler::open_trim_presets), in both
         // modes: the `h` view's allowlist refuses it there (its key hidden
         // there), and under the standing list
         // the picker's router closes on it (route_picker_key, ranked above
@@ -844,11 +847,10 @@ static_assert(chord_is_bound(GuiKeys::M, GuiInputState{}, false) &&
                                   GuiInputState{true, true, true}, false),
               "`m` binds bare only — the score viewer — and none of the "
               "seven modifier combinations spells anything");
-// `w` binds NOTHING in either mode (2026-11-05: the NOISE lamp's bare `w` of
-// 2026-10-28 went with the lamp, the band's two level cases carrying no
-// chord), and no modifier spells anything on it.
-static_assert(!chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::W, GuiInputState{}, true) &&
+// `w` binds bare only — the TRIM arm lamp (2026-11-07) — in both modes, and
+// no modifier spells anything on it.
+static_assert(chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::W, GuiInputState{}, true) &&
                   !chord_is_bound(GuiKeys::W,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::W,
@@ -863,8 +865,8 @@ static_assert(!chord_is_bound(GuiKeys::W, GuiInputState{}, false) &&
                                   GuiInputState{false, true, true}, false) &&
                   !chord_is_bound(GuiKeys::W,
                                   GuiInputState{true, true, true}, false),
-              "`w` binds nothing — the NOISE lamp went 2026-11-05 — bare "
-              "or under any of the seven modifier combinations");
+              "`w` binds bare only — the TRIM arm lamp — and none of the "
+              "seven modifier combinations spells anything");
 // `r` binds bare — the RESTRICT lamp (2026-10-29) — in both modes, and the
 // render pair's two Ctrl+Alt spellings; no other modifier spells anything.
 static_assert(chord_is_bound(GuiKeys::R, GuiInputState{}, false) &&
@@ -1398,7 +1400,8 @@ struct GuiTouchNavFrame {
 //   * Outside     — not in the active editor's field (or no editor is open):
 //                   the ordinary window, whatever surface it is.
 //   * Field       — in the field: the window's slop crossing resolves to the
-//                   CARET DRAG, and the window is given NO DEADLINE at all
+//                   CARET DRAG, and the window, like every touch window
+//                   since 2026-11-07, has NO DEADLINE
 //                   (the field spends no hold, so a motionless finger stays
 //                   Pending however long it rests and its lift is the
 //                   ordinary tap burst — press and release, seeding the

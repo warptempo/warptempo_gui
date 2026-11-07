@@ -882,7 +882,12 @@ compared pixel-for-pixel.
 - **A 700 ms motionless hold converts to the region gesture** and its begin
   seats the playhead — which also proves the disambiguation deadline
   (`kTouchRegionHoldMs`) is being polled off the timerfd through
-  `GuiInputCore::tick()`.
+  `GuiInputCore::tick()`. (A record of that pass: the region hold, its
+  deadline and the stillness rule are retired, architect 2026-11-07, session
+  87. Today the sweep is the TRIM lamp's — lit, a single contact's drag that
+  crosses the slop on the waveform with no barrel is the trim sweep from its
+  down point — and no touch window carries a deadline; `tick()` samples the
+  key repeat alone.)
 - **The overview strip's outside-the-box press teleports at the press.**
 - **BACK leaves the activity cleanly** (no crash, no ANR) and a relaunch runs
   `android_main` a SECOND time in the same process and comes up identical —

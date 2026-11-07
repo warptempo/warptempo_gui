@@ -42,8 +42,8 @@
 // stand (a capture is the nav drag's, refused under a modal), a finger that
 // committed opened no touch window (the picker lies off the pan zone and
 // outside any editor field, so its down was the pointer on contact — the
-// only touch windows left are the waveform's region hold and the editor
-// field's), and the key that committed is a session key the repeat probe never arms. The
+// only touch windows are the waveform's and the editor field's), and the
+// key that committed is a session key the repeat probe never arms. The
 // next set's first geometry is redelivered explicitly (redeliver_geometry),
 // since no INIT_WINDOW comes for the window already adopted.
 // PLAYBACK DOES NOT SURVIVE: it is per project, shut down and re-inited with

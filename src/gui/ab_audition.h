@@ -109,8 +109,8 @@ struct GuiInputHandler;
 // and then ARMS THE REST before the next play (kAuditionPairGapMs inside a
 // pair, kAuditionSwitchGapMs across the switch; both at app_state.h, with the
 // hand pacing they transcribe). The rest's deadline is sampled by fire_if_due
-// on the run loop's existing deadline tick — the one the key-repeat and touch
-// region-hold deadlines already ride — so no timer is added and the
+// on the run loop's existing deadline tick — the one the key-repeat deadline
+// already rides — so no timer is added and the
 // granularity is that tick's (up to one timer period beyond each rest's own
 // milliseconds; the first play's rest of zero is that one period). A rest
 // after a switch may also outlast its milliseconds while the entering tab's
@@ -153,7 +153,7 @@ struct GuiInputHandler;
 //
 // THE ACT IS HANDS-OFF (architect 2026-10-28): any press on the window ends
 // it ahead of the press's own dispatch — a bound chord, a pointer or touch
-// press, a touch pan, pinch or region hold — bare Space and
+// press, a touch pan, pinch or armed trim sweep — bare Space and
 // Shift+Space (and the PLAY key whose lift is one of them) excepted, their
 // own dispatch forking on the act to end it (the entries at
 // GuiInputHandler::end_audition_for_press).

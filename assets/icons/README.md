@@ -80,6 +80,7 @@ transcriptions, with no path data changed.
 | `GoJump` | `actions/22/go-jump.svg` | `6c254b1cd227c165fe0417ec73c23e0a772b5b624ae5505af9c8520fdddb2cdc` |
 | `TimelineUseZoneOn` | `actions/22/timeline-use-zone-on.svg` | `07d476e0b176d65d608cf22db4e16c23f19284bcb1b576c1d56dbefd2faa95c5` |
 | `EditCut` | `actions/22/edit-cut.svg` | `79ae76358c0a2fd9160cc2dd7bbb35dada6ea016f01765ca77f0b21190ea4007` |
+| `Bookmarks` | `actions/22/bookmarks.svg` | `62595b53a0e1783b40795e4963a449191049e831d69c9012ec21c139df86db91` |
 | `MusicNote16th` | `actions/22/music-note-16th.svg` | `1411cf454d39ef5781564fde937acc5b512b8f31f5372b079996680f39bc8c17` |
 | `Mathmode` | `actions/22/mathmode.svg (-> insert-math-expression.svg)` | `9aba84e814f66b3e8dc5b70733572d49022cfff882d100936fb12e602906c91d` |
 | `Merge` | `actions/22/merge.svg` | `277a1f792bdf141940bc09f8c39d8b8f0ed7e9bbcf93a8f00f73eac8e2eef58a` |

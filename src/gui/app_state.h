@@ -833,18 +833,19 @@ struct UndoHistory {
 // so the bar tracks the stroke live and nothing is raised, hidden or stored
 // for it. Read-only-legal, exactly as the trim bar's own gestures are: trim
 // is BAND, not authored content (the ruling at read_only_key_blocked). ONE
-// ENTRY, the hold-beat region hold on the NAVIGATION SURFACE — the WHOLE
-// waveform and nothing else (architect 2026-08-12, the eighth glass ruling,
-// PAN-PRIMARY: the plain drag is the pan, so the sweep is the deliberate act
-// and takes the secondary form, its one road since 2026-10-30). The hold's
-// begin does its press-time work (deselect-all,
-// playhead placement with the play's stop — it never SELECTS a marker) and
-// arms this drag; motion past the shared press-becomes-drag threshold
-// (drag_moved_threshold_px()) writes the trim from the press frame to the pointer
+// ENTRY, THE ARMED SWEEP on the NAVIGATION SURFACE — the WHOLE waveform and
+// nothing else (architect 2026-11-07, session 87: the TRIM arm lamp lit, a
+// single contact's drag crossing the pan's slop with no ctrl is the sweep
+// from its down point instead of the pan, AppState::trim_armed; the
+// hold-beat region hold of 2026-08-12, PAN-PRIMARY's secondary form, is
+// retired). The begin does its press-time work at the down point
+// (deselect-all, playhead placement with the play's stop — it never SELECTS
+// a marker) and arms this drag; motion past the shared press-becomes-drag
+// threshold (drag_moved_threshold_px(), crossed by the platform's first
+// frame) writes the trim from the press frame to the pointer
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
 // input_trim.cpp — which enforces no width, only the song walls). THE BEGIN
-// ITSELF WRITES NO TRIM: a motionless hold-and-lift is the placement and
-// nothing else.
+// ITSELF WRITES NO TRIM; the commit puts the lamp out (commit_region_sweep).
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
 // there is no span field to extend: this holds the press column's authored
@@ -860,15 +861,12 @@ struct UndoHistory {
 // scroll and no playback stop per motion (the press stopped it) — and the RELEASE then parks it at
 // the committed trim start, every trim write's own tail.
 //
-// THE TOUCH REGION HOLD'S BEGIN REACHES arm_region_drag_at (begin_touch_region
-// — the pan zone's stretched window expiring at the beat), forking on the
-// mode into two recipes: the LIVE one through the one placement body
-// (place_playhead_and_arm_region), and the `h` history view's, which clears
-// the MODE's focus + selection instead of the store selection and rides the
-// same motion path; it drives the drag through the region hooks. THE `h` VIEW IS CARVED OUT OF
-// THE TRIM WRITE EXPLICITLY (the motion path's own mode gate): that view
-// promises the trim window is untouched throughout, so its sweep carries the
-// playhead and writes nothing.
+// THE ARMED SWEEP'S BEGIN REACHES arm_region_drag_at (begin_touch_region —
+// the pan zone's window crossing its slop under the lit lamp) through the one
+// placement body (place_playhead_and_arm_region), and drives the drag through
+// the region hooks. THE `h` VIEW HAS NO SWEEP (its playhead-only former
+// retired with the hold, 2026-11-07: "history cannot edit trim"; the lamp is
+// inert there, GuiInputHandler::touch_sweep_armed).
 //
 // THE RELEASE-TIME SLIVER DISSOLVE IS RETIRED with the free span it protected
 // (2026-08-18): a jitter drag that crosses the gate and rests a two-pixel span
@@ -888,8 +886,9 @@ struct RegionDragState {
     bool    moved        = false;  // crossed the threshold into a real drag
     // Whether this sweep has actually WRITTEN a trim bound. It is the end
     // owner's commit gate (commit_region_sweep): a sweep that wrote nothing —
-    // motionless, refused by geometry, or run inside the `h` view — owes no
+    // motionless or refused by geometry — owes no
     // commit tail, so no playhead parks and no render triggers behind it.
+    // (`moved` is the TRIM arm lamp's: a sweep that moved puts it out.)
     bool    wrote_trim   = false;
     int     press_x      = 0;      // press position (window px), for the gate
     int     press_y      = 0;
@@ -902,7 +901,7 @@ struct RegionDragState {
     // former commits on). EVERY SWEEP COLUMN YIELDS TWO VALUES, THE DOMAINS
     // KEPT APART: the ACTIVE-domain frame from playhead_frame_at_click_column
     // seats and carries the PLAYHEAD (the press placement, the live cursor
-    // carry, the playback reseat, the `h` view's playhead-only former), and
+    // carry, the playback reseat), and
     // THIS is the authored one for the TRIM alone — nothing here holds the
     // active-domain value, because nothing on the trim side reads it. In
     // source view the two are the same frame; in target view this is the
@@ -1504,7 +1503,8 @@ struct TouchNavZoomState {
 // everything on lift the finger or on mouse up, but the playhead scrub, we do
 // right on mouse down. We should remove that"), so the lower half's press
 // arms the pending click alone, exactly as the upper half's does — a drag
-// there is the touch layer's pan and a hold its region former (input_core.h);
+// there is the touch layer's pan, or under the lit TRIM lamp its armed sweep
+// (input_core.h);
 // the architect's own 2026-08-12 carve-out — "as soon as I click, it
 // immediately starts to scrub" — is superseded by it. No other press
 // scrubs. The marker-text lane's own scrub was
@@ -1702,7 +1702,8 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order (row 1's three menu
 // anchors, File, Edit and Settings, went with the menu row 2026-10-21, the
 // tab strip's two tabs, TabA and TabB, with the strip 2026-10-22): row 4's
-// TWENTY-SEVEN (re-counted 2026-10-26, the two history toggles back)
+// TWENTY-SEVEN (re-counted 2026-11-07: Copy Phase Resets down to row 8, the
+// TRIM arm lamp in)
 // view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
 // the deleted toolbar row's four behind it since the 2026-08-12 relayout;
 // the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
@@ -1714,11 +1715,11 @@ struct TrimBarPressSeed {
 // PAIRS' FOUR close the row flush right since 2026-10-01, two radio pairs
 // since 2026-10-14, one right run behind the history opener since
 // 2026-10-22), then the
-// bottom row's NINETEEN (re-counted 2026-10-25: the skips back
-// 2026-10-24, Copy Phase Resets gone up to the band; twenty-one with Older /
+// bottom row's TWENTY (re-counted 2026-11-07: Copy Phase Resets down from
+// the band to the verbs' tail; twenty-two with Older /
 // Newer, which stand in the Left / Right seats in the `h` view,
 // kTransportHistoryStandIns) —
-// the transport's one, the two skips, the MARKER-VERB GROUP'S EIGHT
+// the transport's one, the two skips, the MARKER-VERB GROUP'S NINE
 // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the old marker-walk group's
 // four (Previous Marker, Next Marker, Center and Switch Tab) and the four
 // cardinal arrows, in enum order. THE ROW PAINTS ITS OWN ORDER (architect
@@ -1738,8 +1739,8 @@ struct TrimBarPressSeed {
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
 // below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 BUT THE TWO
-// LEVEL CASES (51 chord rows + the two cases = 53 = kRedesignButtonCount
-// since 2026-11-05, the count's own statement below; the cases are sliders,
+// LEVEL CASES (52 chord rows + the two cases = 54 = kRedesignButtonCount
+// since 2026-11-07, the count's own statement below; the cases are sliders,
 // IconAudioLevel's entry): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
@@ -1781,8 +1782,9 @@ enum class RedesignButton {
     // left for the bottom row's walk group 2026-09-29), the
     // lamps behind them (Follow, the middle one, was out
     // for the hours of 2026-09-23), the last of which arrived
-    // from the toolbar group later on 2026-09-04, and THE TRIM PRESETS KEY
-    // closing it since 2026-10-28 night — THE ITERATION GROUP, the pair back from the menu row later
+    // from the toolbar group later on 2026-09-04, and THE TRIM ARM LAMP and
+    // THE PRESETS KEY closing it (2026-11-07; the presets key since
+    // 2026-10-28 night) — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
     // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
@@ -1854,53 +1856,19 @@ enum class RedesignButton {
     // ruling against the no-second-road doctrine's default). Its face is the plain act's (redesign_button_enabled's
     // arm). No lamp: an act, not a mode.
     //
-    // SAVE, UNDO, REDO, COPY (2026-10-25) AND RENDER STAND BEHIND IT IN THE
-    // SAME RUN, the six keys' cells abutting, two px of ground between their
-    // faces (materials.h's THE CELL AND ITS FACE, 2026-11-03; architect
+    // SAVE, UNDO, REDO AND RENDER STAND BEHIND IT IN THE
+    // SAME RUN, the five keys' faces one W of ground apart
+    // (materials.h's THE CELL AND ITS FACE, 2026-11-03; architect
     // 2026-10-22, the
     // simple layout: "push all icons together … add a spacing after render",
     // the run gap after Render the run's end; redesign_button_opens_icon_run).
-    // UNDO STILL LEADS A GROUP of its own with Redo, Copy and Render
+    // UNDO STILL LEADS A GROUP of its own with Redo and Render
     // (redesign_button_opens_icon_group), but a group paints nothing: it is
     // the unit the `h` view's stand-ins replace (kIconRowHistoryStandIns), so
-    // Save stays outside the swap. COPY PHASE RESETS STANDS BETWEEN REDO AND
-    // RENDER since 2026-10-25, the run six cases (below).
+    // Save stays outside the swap. (COPY PHASE RESETS stood between Redo and
+    // Render 2026-10-25 to 2026-11-07; it is row 8's since, its entry below
+    // with the marker verbs.)
     OpenProject, Save, Undo, Redo,
-    // COPY PHASE RESETS (architect 2026-10-24) — the phase-reset propagate's
-    // own key, COPY, IN THE BAND'S FIRST RUN BETWEEN REDO AND
-    // RENDER since 2026-10-25 (architect: "copy should be moved to the left
-    // of render, that's usually where copy action would go, between redo
-    // [and render], and it's where it goes in kdenlive … copy is very rarely
-    // used, a handful of times in a movement, and it does affect the whole
-    // large batch of markers; undo / redo also affect the markers"), a member
-    // of Undo's group, which the `h` view's stand-ins replace whole. It stood
-    // in row 8's verb group between Add to Selection and Toggle Value Drag
-    // on 2026-10-24 ("add sel normally precedes copy" — Add to Selection
-    // builds the run the copy reads), and left it because it pushed the
-    // verbs one column further from the pen hand. THE KEY IS THE LETTER P IN THREE PRESSES: bare P COPIES
-    // the phase resets of the selected run of warp markers into the session
-    // clipboard, CTRL+P PASTES them onto the one selected warp marker behind
-    // the paste's confirmation, and CTRL+SHIFT+P PASTES THEIR STATE — the
-    // clipboard's enabled / disabled bits onto the matching destination
-    // resets in lockstep, positions untouched (Paste Phase Reset State,
-    // removed 2026-10-21 and resurrected here; PhaseResetPropagate::
-    // paste_state_apply). The button is its key under the modifiers the
-    // press carries, the roster's grammar: its plain press copies, its ctrl
-    // press pastes and its ctrl+shift press pastes the state — ON THE GLASS
-    // the S Pen's barrel button (the Ctrl bit) with a tap is the paste and
-    // held through the long press the state paste, the hold's shift
-    // composing with the carried ctrl where the pair is admitted; a long
-    // press without the barrel is the plain copy, SHIFT ALONE NOT ADMITTED
-    // (Shift+P binds nothing). THE ADMISSIONS are redesign_button_ctrl_admits
-    // and redesign_button_ctrl_shift_admits. THE FACE IS THE COPY'S
-    // (phase_reset_copy_refusal), the pastes refusing on their own cards
-    // behind a lit face; the tooltip's one modifier line names both pastes.
-    // The `h` view does not paint it (its allowlist names no `p` chord —
-    // history_mode_hides_button), and the read-only lock greys it with the
-    // marker verbs (none of the three chords is on read_only_key_blocked's
-    // allowlist). NO LAMP (an act), NO REPEAT (a copy repeats onto itself
-    // and a paste raises a prompt).
-    IconCopyPhaseResets,
     Render,
     // (THE EDIT FLAG BUTTON — IconMarkerEditFlag, bare Return on a button,
     // wearing text-field — stood in the bottom row's verb group from
@@ -1998,7 +1966,8 @@ enum class RedesignButton {
     // under the grid-iterations lock, bare `f` being navigation.
     IconFollow,
     // RESTRICT (bare `r`, architect 2026-10-29), directly after Follow and
-    // ahead of Trim Presets — the same VIEWPORT CLASS, Follow's other half: a
+    // ahead of the TRIM arm lamp — the same VIEWPORT CLASS, Follow's other
+    // half: a
     // plain per-project session lamp (AppState::restrict) under which the
     // user's own play stays inside the window — it stops when the scanner
     // reaches the window's right edge and does not start from a playhead off
@@ -2008,9 +1977,29 @@ enum class RedesignButton {
     // the derived partition, and stays live on a locked tab and under the
     // grid-iterations lock, bare `r` being navigation.
     IconRestrict,
-    // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's TAIL,
-    // directly after Restrict and ahead of the iteration group (no new
-    // separator: the iteration group's stays BPM's): BARE `t`, wearing TRIM,
+    // THE TRIM ARM (architect 2026-11-07, session 87, his "agree" per item;
+    // the touch region hold retired for it), directly after Restrict and
+    // ahead of the presets key: BARE `w`, wearing TRIM and the scissors
+    // (Icon::EditCut, the presets key's glyph until that day), A LAMP — the
+    // lamps' orange, not the doors' lavender — over AppState::trim_armed,
+    // whose record holds the whole rule: lit, the next single-contact drag on
+    // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
+    // its down point instead of the pan; only a second press or a committed
+    // sweep puts it out; dark at every project open, lit across a tab switch.
+    // TRIM IS BAND (input_trim.cpp's head), so it stays LIVE on a locked tab
+    // and under the grid-iterations lock (bare `w` on the read-only
+    // allowlist, which the iteration gate inherits), greying with no piece
+    // on the roster's head term; it greys and hides in the `h` view through
+    // the derived partition, bare `w` being on no allowlist of that mode
+    // ("history cannot edit trim"). Its tooltip is "Toggle Trim Sweep", the
+    // lamp rule's name. No modifier, no repeat, no long-press act.
+    IconTrimArm,
+    // THE PRESETS KEY (architect 2026-10-28 night; PRESETS and Breeze's
+    // bookmarks since 2026-11-07, the TRIM legend and the scissors going to
+    // the arm lamp before it), the zoom group's TAIL,
+    // directly after the TRIM arm lamp and ahead of the iteration group (no
+    // new separator: the iteration group's stays BPM's): BARE `t`, wearing
+    // PRESETS,
     // opens THE TRIM PRESETS LIST — the piece's named trim windows, the
     // folder overlay's fifth content (folder_overlay.h; the file
     // trim_presets_file.h). IT IS AN OVERLAY'S OPENER (the three-classes
@@ -2421,9 +2410,10 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. NINETEEN buttons in four groups (2 + 8 + 4 + 5, kRow8Groups,
-    // since 2026-10-25 — 2 + 9 + 4 + 5 on 2026-10-24, Copy Phase Resets
-    // gone up to the band's first run; the clock at the row's left with the
+    // detection. TWENTY buttons in four groups (2 + 9 + 4 + 5, kRow8Groups,
+    // since 2026-11-07 — Copy Phase Resets back down from the band's first
+    // run to the verbs' tail, 2 + 8 + 4 + 5 from 2026-10-25 to then; the
+    // clock at the row's left with the
     // tab name and the state line after it), the block's last face ending
     // on the well's last column (architect 2026-09-29, the right-handed tablet's
     // layout). The enum lists the
@@ -2435,9 +2425,9 @@ enum class RedesignButton {
     // CAME BACK 2026-10-24 as its FIRST GROUP (START | END, kTransportSkipGroup;
     // their shift presses the whole piece's ends), enumerated after Play.
     // THE PAINTED ORDER IS THE PAINTER'S SINCE 2026-10-18 (architect,
-    // regrouping the two right-hand groups): the skips, the eight verbs
+    // regrouping the two right-hand groups): the skips, the nine verbs
     // (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump, Edit, Add Sel,
-    // Drag), then Down, Up, Previous Marker, Next Marker
+    // Drag, Copy), then Down, Up, Previous Marker, Next Marker
     // (kTransportStepWalkGroup), then Switch Tab, Center, Left, Right, Play
     // (kTransportNudgePlayGroup, paint_handler.cpp) — nothing reads this
     // block's order: THE
@@ -2683,7 +2673,7 @@ enum class RedesignButton {
     // press is admitted and the tooltip carries one line. Its ctrl presses
     // were the phase-reset propagate pair, Ctrl+Return / Ctrl+Shift+Return,
     // from 2026-10-21 until the pair got its own key that day
-    // (IconCopyPhaseResets, the band's since 2026-10-25, bare P / Ctrl+P /
+    // (IconCopyPhaseResets, this group's tail since 2026-11-07, bare P / Ctrl+P /
     // Ctrl+Shift+P); a ctrl
     // or a shift press on it is the consumed nothing, and a long press is
     // the plain open.
@@ -2751,8 +2741,9 @@ enum class RedesignButton {
     // id names the button, not the lane it sits in.
     IconAddToSelection,
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40) — the verb group's
-    // EIGHTH and last member, IMMEDIATELY RIGHT OF ADD TO SELECTION (Copy
-    // Phase Resets between the two on 2026-10-24 alone; his reason: arm Add to
+    // EIGHTH member, IMMEDIATELY RIGHT OF ADD TO SELECTION (Copy
+    // Phase Resets between the two on 2026-10-24 alone, and behind it since
+    // 2026-11-07; his reason: arm Add to
     // Selection, pick several flags, then arm this and drag them). Bare `[`, a ONE-SHOT LAMP over AppState::value_drag_lamp: lit,
     // every flag drag is the value drag in every view; dark, none is; the
     // lift of a value drag that began puts it out (the rule is at
@@ -2769,6 +2760,37 @@ enum class RedesignButton {
     // whose allowlist does not name the chord (the derived partition and
     // history_mode_hides_button). It admits no modifier and does not repeat.
     IconValueDrag,
+    // COPY PHASE RESETS (architect 2026-10-24) — the phase-reset propagate's
+    // own key, COPY, THE VERB GROUP'S NINTH AND LAST, RIGHT OF DRAG, since
+    // 2026-11-07 (architect, session 87). It stood in the band's first run
+    // between Redo and Render 2026-10-25 to then (a member of Undo's group,
+    // "where it goes in kdenlive"), and in this group between Add to
+    // Selection and Toggle Value Drag on 2026-10-24 alone. Its chords,
+    // admissions, face, tooltip and `h`-view hide came across unchanged.
+    // THE KEY IS THE LETTER P IN THREE PRESSES: bare P COPIES
+    // the phase resets of the selected run of warp markers into the session
+    // clipboard, CTRL+P PASTES them onto the one selected warp marker behind
+    // the paste's confirmation, and CTRL+SHIFT+P PASTES THEIR STATE — the
+    // clipboard's enabled / disabled bits onto the matching destination
+    // resets in lockstep, positions untouched (Paste Phase Reset State,
+    // removed 2026-10-21 and resurrected here; PhaseResetPropagate::
+    // paste_state_apply). The button is its key under the modifiers the
+    // press carries, the roster's grammar: its plain press copies, its ctrl
+    // press pastes and its ctrl+shift press pastes the state — ON THE GLASS
+    // the S Pen's barrel button (the Ctrl bit) with a tap is the paste and
+    // held through the long press the state paste, the hold's shift
+    // composing with the carried ctrl where the pair is admitted; a long
+    // press without the barrel is the plain copy, SHIFT ALONE NOT ADMITTED
+    // (Shift+P binds nothing). THE ADMISSIONS are redesign_button_ctrl_admits
+    // and redesign_button_ctrl_shift_admits. THE FACE IS THE COPY'S
+    // (phase_reset_copy_refusal), the pastes refusing on their own cards
+    // behind a lit face; the tooltip's one modifier line names both pastes.
+    // The `h` view does not paint it (its allowlist names no `p` chord —
+    // history_mode_hides_button), and the read-only lock greys it with the
+    // marker verbs (none of the three chords is on read_only_key_blocked's
+    // allowlist). NO LAMP (an act), NO REPEAT (a copy repeats onto itself
+    // and a paste raises a prompt).
+    IconCopyPhaseResets,
     // THE MARKER-WALK GROUP'S OLD FOUR (architect 2026-08-15; four since
     // 2026-09-29): PREVIOUS MARKER, NEXT MARKER, CENTER and SWITCH TAB, the
     // group's painted order until 2026-10-18, when the architect regrouped
@@ -2876,23 +2898,25 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-11-05):
-// THIRTY-FOUR in row 4's enum block and NINETEEN in the bottom row's — 53
+// THE ROSTER, re-derived by counting the enumerators above (2026-11-07):
+// THIRTY-FOUR in row 4's enum block and TWENTY in the bottom row's — 54
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
 // 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
-// moving up to the band 2026-10-25; Toggle Session History and Toggle
+// moving up to the band 2026-10-25 and back down to row 8 2026-11-07;
+// Toggle Session History and Toggle
 // Cumulative returned 2026-10-26, and the Score key came the same day; Zoom
 // In and Zoom Out returned 2026-10-27; the NOISE lamp came 2026-10-28 and
 // the Trim Presets key that night; the RESTRICT lamp 2026-10-29; the two
-// level cases replaced the NOISE lamp 2026-11-05).
-// PAINTED, the split is 32 + 21: HistoryOlder and HistoryNewer, enumerated
+// level cases replaced the NOISE lamp 2026-11-05; the TRIM arm lamp came
+// 2026-11-07).
+// PAINTED, the split is 32 + 22: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE
 // BUT THE TWO LEVEL CASES carries a chord in kToolbarChords, which the chord
 // table's own static_assert checks (the table's rows plus the two).
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 53;
+inline constexpr int kRedesignButtonCount = 54;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2912,13 +2936,14 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — TWENTY-ONE since 2026-10-25 (the
-// two skips back 2026-10-24; Copy Phase Resets a member that one day, up to
-// the band's first run since): the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — TWENTY-TWO since 2026-11-07 (the
+// two skips back 2026-10-24; Copy Phase Resets a member 2026-10-24, the
+// band's first run's 2026-10-25 to 2026-11-07, a member again since): the
 // transport's one (Play / Stop), GO TO START and GO TO END, the FOUR
 // SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), OPEN TEXT EDITOR
-// (2026-10-09), ADD TO SELECTION, TOGGLE VALUE DRAG (2026-10-11)
+// (2026-10-09), ADD TO SELECTION, TOGGLE VALUE DRAG (2026-10-11), COPY
+// PHASE RESETS (2026-11-07)
 // (the EDIT FLAG BUTTON, 2026-08-27, and the COPY VALUE button, 2026-08-29,
 // were members until 2026-09-29, when both went up to the icon row — Edit
 // Flag to be deleted the same evening, Copy Value 2026-10-14, the copy riding
@@ -2945,7 +2970,7 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these twenty-one (re-counted 2026-10-25). THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these twenty-two (re-counted 2026-11-07). THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the press face's damage at the arm,
 // the walk's crossing and the lift (the press arc, 2026-11-05;
 // arm_redesign_press, recompute_redesign_button_hover, take_chrome_press),
@@ -2973,6 +2998,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconOpenTextEditor:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::IconValueDrag:
+        case RedesignButton::IconCopyPhaseResets:
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
         case RedesignButton::IconZoomOriginal:
@@ -3074,10 +3100,10 @@ inline double level_db_from_travel(double t) {
 // per member (history_view_hides_button) and asks no group.
 //
 // THE GROUPS, in the left walk's order: OPEN PROJECT AND SAVE, then UNDO,
-// REDO, COPY PHASE RESETS (since 2026-10-25) AND RENDER (the group the
+// REDO AND RENDER (the group the
 // history stand-ins replace, Revert and Load in Place), then the zoom group
-// (Zoom In, Zoom Out, Zoom to Fit, the magnification lamp, Follow, the Trim
-// Presets key since 2026-10-28 night), the
+// (Zoom In, Zoom Out, Zoom to Fit, the magnification lamp, Follow, Restrict,
+// the TRIM arm lamp since 2026-11-07 and the Presets key), the
 // iteration group (the BPM opener, grid iterations, Flatten —
 // the group the walk lamp and Cumulative replace, since 2026-10-26 again)
 // and the render-entry group (Play Renders .. the two level cases). The right
@@ -3089,8 +3115,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         // OPEN PROJECT LEADS SAVE'S GROUP, THE ROW'S FIRST (architect
         // 2026-10-07), so Save is no leader.
         case RedesignButton::OpenProject:
-        // UNDO LEADS REDO, COPY AND RENDER (architect 2026-09-29; Copy
-        // since 2026-10-25): the group the `h` view's stand-ins replace
+        // UNDO LEADS REDO AND RENDER (architect 2026-09-29; Copy among
+        // them 2026-10-25 to 2026-11-07): the group the `h` view's stand-ins replace
         // (kIconRowHistoryStandIns), so Save stays outside the swap.
         case RedesignButton::Undo:
         // ZOOM IN LEADS THE ZOOM GROUP (since the step pair's return in
@@ -3120,8 +3146,7 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // program_run_gap_px), each opened by
 // its
 // LEADER here — Open Project (Open .. Render: the two old groups of Open /
-// Save and Undo / Redo / Render merged, Copy Phase Resets between Redo and
-// Render since 2026-10-25), Zoom In (Zoom In .. Flatten: the zoom and
+// Save and Undo / Redo / Render merged), Zoom In (Zoom In .. Flatten: the zoom and
 // iteration groups merged, the step pair at their head since 2026-10-27)
 // and Play Renders (Play
 // Renders .. Noise, the render-entry group as it stands). THE
@@ -3251,8 +3276,8 @@ inline int double_click_slack_px() {
 // rather than on the hold delay.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
-// nothing to say about it (the same rule the drag-slop and region-hold
-// values carry for their own reason — they model the hand, not the pixels).
+// nothing to say about it (the same rule the drag slop and the hold delay
+// carry for their own reason — they model the hand, not the pixels).
 //
 // The hold is DELIBERATELY LONGER than a click. A shifted act is the rarer
 // one on every button that admits shift (the membership is
@@ -3291,9 +3316,9 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 //   * ScrollDragState — THE PENDING CLICK, whose crossing ends the click and
 //     begins nothing but the placement lanes' head drag (architect
 //     2026-10-30: on glass the pan and the one-finger zoom are the touch
-//     layer's, which crosses straight to Nav, or holds to Region, with no
-//     pointer press delivered);
-//   * RegionDragState — THE SWEEP, the touch region hold's, through
+//     layer's, which crosses straight to Nav, or under the lit TRIM lamp to
+//     Region, with no pointer press delivered);
+//   * RegionDragState — THE SWEEP, the TRIM arm lamp's touch drag, through
 //     apply_region_drag_motion's own gate (a direct trim write since
 //     2026-08-18; the overlay's move and bound drags became the trim bar's
 //     own drags, which read the grab gate);
@@ -4083,7 +4108,7 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         every claim, a press on the PLAY key excepted for the same
 //         reason (its lift is one of those two chords); and the
 //         two touch roads that deliver no press, the pan and pinch frames
-//         and the region hold's begin. So the lamps, zoom, pan and the
+//         and the armed sweep's begin. So the lamps, zoom, pan and the
 //         camera keys, which left the act standing until that day, end it
 //         like every other press. CALLERS, not a fifth owner.
 //     (2) THE USER LAUNCH ENTRIES — GuiPlaybackLifecycle::launch_playback_from,
@@ -4609,6 +4634,30 @@ struct AppState {
     //     above. Refused in the `h` view (off that mode's allowlist);
     //     admitted under both locks (navigation).
     bool    restrict               = false;
+
+    // THE TRIM ARM — THE `w` LAMP (architect 2026-11-07, session 87, the TRIM
+    // key; the touch region hold, its stillness radius and the slow-start
+    // rule retired for it). A PLAIN LAMP in FOLLOW's family: per project,
+    // DARK AT EVERY PROJECT OPEN by the same construction (run_project builds
+    // this AppState fresh), outside undo, not carried by `'`, in no sidecar
+    // and no settings vocabulary, and it STAYS LIT ACROSS A TAB SWITCH (the
+    // sweep trims the active tab). Lit, it ARMS THE NEXT WAVEFORM DRAG: a
+    // single contact on the pan zone that crosses the pan's slop with no ctrl
+    // standing is THE TRIM SWEEP from its down point instead of the pan
+    // (GuiInputHandler::touch_sweep_armed, the platform's sweep-armed query;
+    // begin_touch_region). "IF I TURN IT ON, IT'S DELIBERATE AND FOR A SWEEP"
+    // — ONLY A SECOND PRESS OF THE LAMP OR A COMMITTED SWEEP (one that moved,
+    // commit_region_sweep) PUTS IT OUT: a tap on the waveform (the ordinary
+    // tap), a pinch, the barrel-held zoom, a tab switch, an overlay or a
+    // modal opening all leave it lit. INERT IN THE `h` VIEW, its key hidden
+    // there (bare `w` on no allowlist of the view), the bit surviving the
+    // visit. LIVE on a locked tab and under the grid-iterations lock (TRIM IS
+    // BAND, input_trim.cpp's head: bare `w` on the read-only allowlist the
+    // iteration gate inherits).
+    //   * ONE WRITER: GuiInputHandler::set_trim_armed — bare `w`'s arm (the
+    //     key's lift reaching it by synthesizing that press) and the sweep's
+    //     commit.
+    bool    trim_armed             = false;
 
     // FOLLOW SUSPENDED FOR THE PLAY IN FLIGHT — the pan rule (architect
     // 2026-07-30, "every pan suppresses", kept for the reinstated lamp
@@ -5386,7 +5435,7 @@ struct AppState {
     // load's own wholesale reset. The whole contract is at ValueDragState.
     ValueDragState value_drag;
 
-    // THE SWEEP's drag state (the touch region hold).
+    // THE SWEEP's drag state (the TRIM arm lamp's touch sweep).
     // Cleared on button release / lost button, by the force-end finalizer, and
     // on file load.
     RegionDragState region_drag;
@@ -6728,8 +6777,7 @@ struct AppState {
     // `press_ms` is THE PRESS'S OWN monotonic_ms() STAMP, and the whole of the
     // SHIFT LONG PRESS (architect 2026-08-13): held past chrome_shift_hold_ms() on
     // a shift-admitting button, the lift dispatches the SHIFTED twin — the
-    // waveform's region hold on the roster's surface, and the pointer's one
-    // route to the other half of each shifted pair.
+    // pointer's one route to the other half of each shifted pair.
     // It is stamped by EVERY arm (a press has a time whatever it landed on) and
     // read at the lift of each kind — the roster's chord build, and since
     // 2026-10-01 the card's lift, where a hold reads as the shift that
@@ -7570,7 +7618,7 @@ struct AppState {
         //     what makes the four view selectors and the view pairs inherit it by
         //     composition.
         //   - entry and exit (the whole-struct reset at both owners)
-        //   - bare HOME / END (2026-08-05), the mode's region hold's begin,
+        //   - bare HOME / END (2026-08-05)
         //     and the DEFERRED CLICK ACT at a motionless navigation-surface
         //     release (2026-08-12, the eighth glass ruling: the mode's plain
         //     press is the pending click / grab-pan over the whole waveform,
@@ -8164,7 +8212,7 @@ struct AppState {
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a band authored purely by the ENDCAP / BRIDGE pointer drags on
     // the trim bar, the ctrl bound-set click (the begin, or the end held),
-    // the SWEEP (the touch region hold, which writes the
+    // the SWEEP (the TRIM arm lamp's touch sweep, which writes the
     // pair in one stroke under no width rule at all; it replaced the
     // set-from-region arm when the region became the trim), the
     // Ctrl+Shift+0 MAXIMIZER (writes the full window), the settings editor's
@@ -9385,7 +9433,7 @@ inline bool folder_overlay_stands(const AppState& a) {
 // the project picker, SETTINGS under the settings page AND under the value
 // list (architect 2026-10-28: the page's row for a listed key swaps that
 // key's value list in under the same key, so the key that opened the page
-// closes either), TRIM PRESETS under the trim presets list (2026-10-28
+// closes either), PRESETS under the trim presets list (2026-10-28
 // night), BPM under the BPM form (2026-10-29). It is the one roster key a
 // standing overlay leaves live and lit
 // (redesign_button_enabled's overlay arm, redesign_button_selected) and the
@@ -10435,8 +10483,8 @@ inline int64_t snap_authored_frame(double frame) {
 // world's autonomous movers for the gesture's life:
 //   * repeat_eligible (input_key_dispatch.cpp) — a hold-repeat must not arm
 //     under a gesture and fire once the gesture ends;
-//   * begin_touch_region's refusal (input_pointer.cpp, the eighth ruling's
-//     touch half) — the region hold bypasses the press path, so it restates
+//   * begin_touch_region's refusal (input_pointer.cpp, the armed sweep's
+//     begin, 2026-11-07) — the sweep bypasses the press path, so it restates
 //     the same no-second-writer boundary the press claims inherit by
 //     ordering (the dead begin_touch_trim_move's own reading, revived with
 //     the hook pattern);
@@ -12138,9 +12186,8 @@ void remap_marker_indices_after_reorder(AppState& app,
 // marker, input_pointer.cpp), the tooltip's clock (tick_tooltip,
 // input_pointer.cpp) and the A/B
 // audition's rests (GuiAbAudition::fire_if_due) — the same CLOCK_MONOTONIC the
-// platform's own deadlines (key repeat, the touch window's region-hold beat —
-// the pan zone's window, the one touch window with a deadline since
-// 2026-09-25, the editor field's carrying none) are stamped on, so the run loop samples them all against one clock. Body in
+// platform's own deadline (the key repeat; no touch window carries one since
+// 2026-11-07, the region hold retired) is stamped on, so the run loop samples them all against one clock. Body in
 // app_state.cpp so no TU copies its own clock reader.
 int64_t monotonic_ms();
 
@@ -13704,8 +13751,8 @@ inline bool history_step_button_actionable(
 // the ctrl lane click writes the toggled set with the focus it lands on.
 //
 // It RETURNS WHETHER ANYTHING WAS STANDING, because some of those sites damage
-// the window only when something actually changed (bare Home / End, the mode's
-// region hold and its deferred click act — a face swap costs a repaint, and
+// the window only when something actually changed (bare Home / End and the
+// mode's deferred click act — a face swap costs a repaint, and
 // nothing swapping
 // costs none). Idempotent, and a no-op with the mode down: both fields already
 // rest empty there, the whole-struct reset at close_history_mode having put them
@@ -15146,7 +15193,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // trim presets list and the BPM form), which end at a pick, a row's open
     // or a load and also leave on their Close or Cancel and
     // on THEIR OPENER KEY — Play Renders, Open Project, Settings (the
-    // page's and the value list's both), Trim Presets and BPM, lit and live under them (the overlay arm
+    // page's and the value list's both), Presets and BPM, lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey and the
     // hint dwell suppressed ("overlays don't show hints … the only reason
     // they still show the one button lit is that you can exit by pressing
@@ -15213,7 +15260,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // (2026-10-25); while the SETTINGS PAGE or the VALUE LIST it swaps in
     // stands (2026-10-28), Settings stays live and its lift, bare `;`, is
     // answered by the picker's router with close_picker; while the TRIM
-    // PRESETS LIST stands (2026-10-28 night), Trim Presets stays live and its
+    // PRESETS LIST stands (2026-10-28 night), Presets stays live and its
     // lift, bare `t`, is answered the same way; while the BPM FORM stands
     // (2026-10-29), BPM stays live and its lift, Ctrl+B, is answered with the
     // form's close (close_bpm_form, the mode going with it).
@@ -15428,7 +15475,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // greyed (and hidden) there by the derived partition above.
         case RedesignButton::IconRestrict:
             return true;
-        // THE TRIM PRESETS KEY MIRRORS NOTHING (architect 2026-10-28 night):
+        // THE TRIM ARM LAMP MIRRORS NOTHING, FOLLOW'S ARM (architect
+        // 2026-11-07, session 87): bare `w` flips the lamp on any loaded
+        // piece, both locks admitting it (trim is band, input_trim.cpp's
+        // head; the read-only allowlist's bare `w`, which the iteration gate
+        // inherits); with no piece it greys on the head term above, and its
+        // one refusal is the `h` view's, greyed (and hidden) there by the
+        // derived partition above.
+        case RedesignButton::IconTrimArm:
+            return true;
+        // THE PRESETS KEY MIRRORS NOTHING (architect 2026-10-28 night):
         // bare `t` opens the list on any loaded piece, both locks admitting
         // it (trim is band, input_trim.cpp's head; the read-only allowlist's
         // is_trim_presets, which the iteration gate inherits), so a locked
@@ -16661,7 +16717,7 @@ inline std::string view_pair_label(char audio, char column) {
 // not the lamps' orange, the lamps' orange staying the state lamps' and the
 // view pairs'. Exactly the seven: the history opener (the `h` view), Open
 // Project (the picker), Play Renders (the render player), Settings (the
-// settings page and its value list), Trim Presets (the presets list), BPM
+// settings page and its value list), Presets (the trim presets list), BPM
 // (the BPM form) and Score (the score viewer). The roster's painter passes
 // this answer to paint_key as its KeyLitClass (paint_roster_case,
 // paint_handler.cpp); nothing else reads it. The `h` view's stand-ins
@@ -16710,6 +16766,12 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // at most one of the two is ever lit.
         case RedesignButton::IconRestrict:
             return a.restrict;
+        // THE TRIM ARM LAMP (architect 2026-11-07, session 87): the same
+        // toggle pattern, reading the live bit bare `w` flips and a committed
+        // sweep puts out (AppState::trim_armed), so the lit face and the arm
+        // cannot drift; the per-tick comparator repaints the sweep's put-out.
+        case RedesignButton::IconTrimArm:
+            return a.trim_armed;
         // The Waveform Magnification lamp (architect 2026-09-22, reversed
         // 2026-09-24): the same toggle pattern, reading the live bit the bare
         // backtick flips — lit is the magnified picture, in both audio views.
@@ -16796,7 +16858,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // OPEN PROJECT the project picker's (Ctrl+O, whose picker arm is the
         // picker's Cancel, route_picker_key), SETTINGS the settings page's
         // and the value list's it swaps in (2026-10-28: `;` opens the
-        // page and closes either), TRIM PRESETS the trim presets list's
+        // page and closes either), PRESETS the trim presets list's
         // (2026-10-28 night: bare `t` opens and closes it), BPM the BPM
         // form's (2026-10-29: Ctrl+B opens and closes it). So
         // the key stands lit (the checked key's fill, materials.h) while its
@@ -17624,7 +17686,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // twin; the name is the toggle's.
         case RedesignButton::IconRestrict:
             return {"Toggle Restrict", nullptr};
-        // THE TRIM PRESETS (architect 2026-10-28 night), one line: an
+        // THE TRIM ARM LAMP (architect 2026-11-07, session 87), one line: it
+        // has no twin; the name is the toggle's (the lamp rule at this
+        // table's head), the mode being the trim sweep the lit lamp arms.
+        case RedesignButton::IconTrimArm:
+            return {"Toggle Trim Sweep", nullptr};
+        // THE PRESETS KEY (architect 2026-10-28 night; PRESETS since
+        // 2026-11-07), one line: an
         // overlay's opener NAMED, as Settings and Score are — the press under
         // the standing list being the same key's close — and the key admits
         // no modifier.
@@ -17921,9 +17989,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // tooltip naming the act and never a state.
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection", nullptr};
-        // COPY PHASE RESETS (architect 2026-10-24), the band's first run's
-        // fifth since 2026-10-25 (row 8's verb group's eighth the day
-        // before): the act's name. ITS
+        // COPY PHASE RESETS (architect 2026-10-24), row 8's verb group's
+        // ninth and last since 2026-11-07, right of DRAG (the band's first
+        // run's between Redo and Render 2026-10-25 to then): the act's name. ITS
         // SECOND LINE NAMES BOTH PASTES on one line, Jump to Defining
         // Marker's form (the act and the gesture, not a key): the barrel
         // press (Ctrl+P) pastes the phase resets, the barrel through the long
@@ -17935,7 +18003,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
                     "Barrel button to paste them; hold with the barrel to "
                     "paste their state"};
         // TOGGLE VALUE DRAG (architect 2026-10-11), the verb group's EIGHTH
-        // and last (after Add to Selection), a lamp — the hint NAMES THE
+        // (after Add to Selection, Copy Phase Resets after it since
+        // 2026-11-07), a lamp — the hint NAMES THE
         // TOGGLE, Add to Selection's shape. ONE LINE: it admits no modifier.
         // The words hold lit or dark, spent or not — a tooltip names the act
         // and never a state.
@@ -18025,7 +18094,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // play"), so the transport's PLAY names one key. ZOOM TO FIT READS FIT
 // since 2026-10-24 (architect; ZOOM 0 until then), and the three keys of
 // that day print their own words: START and END (the two skips on row 8)
-// and COPY (Copy Phase Resets, the band's first run's since 2026-10-25).
+// and COPY (Copy Phase Resets, row 8's marker verbs' tail since 2026-11-07).
+// THE TRIM PAIR (architect 2026-11-07, session 87): TRIM the arm lamp, and
+// PRESETS the trim presets list's opener (TRIM until that day).
 // THE TWO HISTORY TOGGLES print SESSION (the walk lamp's lit state) and
 // CUMUL (Toggle Cumulative cut as ADD SEL is). ZOOM IN AND ZOOM OUT READ IN
 // AND OUT (architect 2026-10-27: "Zoom In / Zoom Out, or In / Out if too
@@ -18040,9 +18111,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // `key_width` tuning key's width (architect 2026-11-06; render.h's case
 // block), at its default 35 W the 70-px face (materials.h's THE FACE AND
 // ITS GAP), measured 2026-11-04 night on the product's own shaping road
-// (the runs' advances): the widest words MAGNIFY 63.8, DISCARD 63.0,
+// (the runs' advances): the widest words PRESETS 65.4 (the planner's
+// measure, 2026-11-07), MAGNIFY 63.8, DISCARD 63.0,
 // SESSION 62.3, HISTORY 61.7, FLATTEN 61.2, ADD SEL and SOURCE 59.9 device
-// px, so AT THE DEFAULT EVERY LEGEND FITS ITS FACE, the widest with about 3
+// px, so AT THE DEFAULT EVERY LEGEND FITS ITS FACE, the widest with about 2
 // px each side; the tightest neighbors, MAGNIFY beside FOLLOW (59.1), keep
 // about 10 px between their runs at the 72-px pitch. The rule stands for
 // any word to come and any width tuned: THE LEGEND NEVER WIDENS A KEY, and
@@ -18063,7 +18135,8 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
         case RedesignButton::IconFollow:                return "FOLLOW";
         case RedesignButton::IconRestrict:              return "RESTR";
-        case RedesignButton::IconTrimPresets:           return "TRIM";
+        case RedesignButton::IconTrimArm:               return "TRIM";
+        case RedesignButton::IconTrimPresets:           return "PRESETS";
         case RedesignButton::IconBpm:                   return "BPM";
         case RedesignButton::IconIter:                  return "GRID";
         case RedesignButton::IconFlatten:               return "FLATTEN";
@@ -18190,7 +18263,10 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::IconWaveformMagnification: return Icon::ZoomInY;
         case RedesignButton::IconFollow:                return Icon::GoJump;
         case RedesignButton::IconRestrict:              return Icon::TimelineUseZoneOn;
-        case RedesignButton::IconTrimPresets:           return Icon::EditCut;
+        // TRIM wears the scissors PRESETS wore until 2026-11-07 (architect,
+        // session 87); PRESETS wears Breeze's bookmarks, his pick.
+        case RedesignButton::IconTrimArm:               return Icon::EditCut;
+        case RedesignButton::IconTrimPresets:           return Icon::Bookmarks;
         case RedesignButton::IconBpm:                   return Icon::MusicNote16th;
         case RedesignButton::IconIter:                  return Icon::Mathmode;
         case RedesignButton::IconFlatten:               return Icon::Merge;

@@ -305,6 +305,7 @@ public:
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,
         std::function<bool(int x, int y)> pan_zone,
+        std::function<bool()> sweep_armed,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end,
@@ -373,9 +374,6 @@ public:
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
     // inventory are all at GuiInputCore::set_touch_slop_px, input_core.h.
     void set_touch_slop_px(double px);
-    // THE TOUCH STILLNESS RADIUS, its sibling (GuiInputCore::
-    // set_touch_stillness_px), pushed at the slop's two call sites.
-    void set_touch_stillness_px(double px);
 
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);

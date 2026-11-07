@@ -183,10 +183,10 @@ struct GuiPlaybackLifecycle {
     //     there because every trim write parks the playhead at the new trim start
     //     (input_trim.cpp), which is a cursor-moving command by any other name.
     //   * A POINTER OR TOUCH PLAYHEAD PLACEMENT STOPS (architect 2026-10-06):
-    //     a press, click, drag or hold on the main view that places the
+    //     a press, click or drag on the main view that places the
     //     playhead (the waveform's upper-half click act, the ruler's and the
-    //     marker lane's empty-stretch placement clicks, the shift sweep's press
-    //     and the touch region hold's begin) is the one way to stop a play
+    //     marker lane's empty-stretch placement clicks, and the armed trim
+    //     sweep's begin) is the one way to stop a play
     //     without the Stop button, since no other waveform-area act stops it.
     //     It pays once, at the placement body (place_playhead_at_click_column),
     //     past the gutter refusal and ahead of the first write; a sweep's motion

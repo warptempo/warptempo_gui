@@ -399,6 +399,14 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // dispatch arm's own spelling.
     const bool is_trim_presets =
         (key == GuiKeys::T && !ctrl && !shift && !alt);
+    // BARE `w`, THE TRIM ARM LAMP (architect 2026-11-07, session 87): the
+    // sweep it arms writes the TRIM, which is band (the header's 2026-08-07
+    // ruling, the maximizer's admission above), so the lamp is admitted on a
+    // locked tab and, the iteration gate falling through to this list, under
+    // grid iterations — `t`'s answer. Bare-exact, the dispatch arm's own
+    // spelling.
+    const bool is_trim_arm =
+        (key == GuiKeys::W && !ctrl && !shift && !alt);
     // ADD TO SELECTION (architect 2026-08-18), and it is admitted on the
     // header's own standard rather than a new one: the chord flips a session
     // bit that changes what a PLAIN FLAG CLICK means, and the click it enables
@@ -478,10 +486,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // dispatch arm's own spelling.
     const bool is_score_viewer =
         (key == GuiKeys::M && !ctrl && !shift && !alt);
-    // (BARE `w`, THE NOISE LAMP, was admitted here 2026-10-28 to 2026-11-05
-    // — device state, authoring nothing the lock protects; the lamp went
-    // with the band's two level cases, which carry no chord and read no lock
-    // at their faces, redesign_button_enabled's arm.)
     // BARE `i` WHILE GRID ITERATIONS STANDS — THE OFF EDGE, a STATE-DEPENDENT
     // admission like the arrows' lane term (architect 2026-10-13: the mode
     // lights on a tab whose own bit is clear even while the other tab is
@@ -533,7 +537,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_save || is_publish || is_render || is_render_misc ||
-             is_trim_maximize || is_trim_presets ||
+             is_trim_maximize || is_trim_presets || is_trim_arm ||
              is_add_to_selection ||
              is_play_renders ||
              is_load_in_place_player ||
@@ -9202,14 +9206,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // taken by the player's router before this dispatch is reached.
         playback_lifecycle.toggle_restrict();
         break;
-    // (BARE `w`, THE NOISE LAMP'S TOGGLE — GuiNoise::toggle through the
-    // launch press's device question — stood here 2026-10-28 to 2026-11-05.
-    // The lamp, its chord and the toggle are retired with the band's two
-    // level cases, sliders with no chord (RedesignButton::IconAudioLevel,
-    // app_state.h): the noise's level is its one switch, set by the NOISE
-    // case alone (no Settings row since 2026-11-05 night), and the bed asks no
-    // device question — the music's reopen is its resume, noise.h's head.
-    // Bare `w` is UNBOUND again, chord_is_bound's default, and silent here.)
+    case GuiKeys::W:
+        // Toggle the TRIM arm lamp (architect 2026-11-07, session 87; the
+        // NOISE lamp's toggle stood on the letter 2026-10-28 to 2026-11-05).
+        // The setter is GuiInputHandler::set_trim_armed, shared with the
+        // band's TRIM key's synthesized chord and the sweep's commit.
+        // History-less, legal on a locked tab and under the grid-iterations
+        // lock (trim is band); refused in the `h` view at that mode's
+        // allowlist. Silent: the lamp's face shows the new state.
+        set_trim_armed(!app.trim_armed);
+        break;
     case GuiKeys::Grave:
         // Toggle the Waveform Magnification lamp (architect 2026-09-22,
         // reversed and universal 2026-09-24; the bare backtick since

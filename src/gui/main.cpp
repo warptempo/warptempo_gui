@@ -1808,8 +1808,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     viewport.refresh_flag_cache_ =
         [&]() { paint_handler.maybe_rebuild_flag_cache(); };
 
-    // The touch navigation (touch phase 1, 2026-08-11; SIX hooks since
-    // pan-primary's touch half, the eighth glass ruling 2026-08-12): the
+    // The touch navigation (touch phase 1, 2026-08-11; ELEVEN hooks since
+    // 2026-11-07, the sweep-armed query the last to join): the
     // platform's nav frames —
     // the two-finger PINCH ZOOM (zoom only since 2026-08-14: two fingers
     // never pan, the nav body discarding their centroid delta), and the
@@ -1828,11 +1828,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // per-frame in the update body and in the region begin;
     // off it the platform opens no window at all, the down being the pointer
     // on contact, so no nav gesture can begin anywhere else (2026-09-25).
-    // The REGION TRIO is the eighth ruling's half: the zone's stretched
-    // window (the region-hold beat) expires into the region former —
-    // begin at the down point, one update per frame, an end that always
-    // fires — the dead trim-move hooks' exact pattern reborn (contracts at
-    // GuiPlatform::set_touch_nav_hooks; the GUI bodies at
+    // THE SWEEP-ARMED QUERY AND THE REGION TRIO are THE TRIM ARM LAMP's
+    // (architect 2026-11-07, session 87): asked at the zone window's slop
+    // crossing with no ctrl standing, a lit lamp turns the pan into the
+    // region former — begin at the down point, one update per frame, an end
+    // that always fires — the dead trim-move hooks' exact pattern (contracts
+    // at GuiPlatform::set_touch_nav_hooks; the GUI bodies at
     // begin_touch_region's declaration). THE EDITOR-FIELD QUERY AND THE
     // CARET TRIO are the third divergence's (2026-09-05): the platform asks
     // whether the down lies in the open editor's field — and whether a
@@ -1860,7 +1861,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // and the drop spans the whole open. Dropped: the key press and
     // its repeat (the repeat-eligibility probe answers false, so a dropped
     // press arms none and a held key's fire disarms it), the
-    // button press, a touch navigation frame, the region hold's
+    // button press, a touch navigation frame, the armed sweep's
     // and the caret drag's begins, and the car's buttons. A DROP, NOT A
     // QUEUE: input arriving during the load (read when the loop resumes)
     // and the plate's few milliseconds after it is gone, the simplest shape
@@ -1882,6 +1883,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&](int x, int y) {
             return input_handler.touch_point_in_pan_zone(x, y);
         },
+        [&]() { return input_handler.touch_sweep_armed(); },
         [&](int x, int y) {
             if (open_unseen()) return;
             input_handler.begin_touch_region(x, y);
@@ -3726,8 +3728,6 @@ int gui_main() {
     // size it is opened at.
     GuiPlatform gui;
     gui.set_touch_slop_px(drag_moved_threshold_px());
-    // The stillness radius rides the same road (set_touch_stillness_px).
-    gui.set_touch_stillness_px(scaled_px(kDefaultTouchStillnessPx, 1));
 
     // THE RENDER CACHE, ONCE PER PROCESS: its keying is fingerprint-only — the
     // source path and its identity are INSIDE the key (render_fingerprint,

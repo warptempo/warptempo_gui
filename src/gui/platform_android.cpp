@@ -1811,7 +1811,8 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *
  *   1. the window-system sources, drained to empty (drain_looper);
  *   2. the TICK: on_tick_ then input_.tick(), in that order — the core's own
- *      fixed order (key repeat, then the touch window) is inside tick();
+ *      one deadline (the key repeat; the touch window has none) is inside
+ *      tick();
  *   3. the four worker completions, in registration order;
  *   4. the MEDIA COMMANDS, drained under the mutex and dispatched outside it,
  *      after the workers, so a car button acts before the pass's paint
@@ -2176,7 +2177,7 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     // (architect 2026-09-25; GuiTouchTool, gui_input.h). The architect uses the
     // Tab S10 FE's pen daily, and Samsung reports it as a touchscreen source
     // with the stylus bits beside (TOUCHSCREEN|STYLUS), so its contacts ride
-    // the finger road — the phone-model pan, the region hold, the caret drag,
+    // the finger road — the phone-model pan, the armed sweep, the caret drag,
     // the tap-at-lift and every fingertip-tuned number, which he ruled it
     // keeps. What this backend adds for it is read per event in
     // on_motion_event: the TOOL TYPE (STYLUS or ERASER is the pen, handed to
@@ -3042,6 +3043,7 @@ void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
     std::function<bool(int x, int y)> pan_zone,
+    std::function<bool()> sweep_armed,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
     std::function<void()> region_end,
@@ -3050,7 +3052,7 @@ void GuiPlatform::set_touch_nav_hooks(
     std::function<void(int x, int y)> caret_update,
     std::function<void()> caret_end) {
     input_.set_touch_nav_hooks(std::move(update), std::move(end),
-                               std::move(pan_zone),
+                               std::move(pan_zone), std::move(sweep_armed),
                                std::move(region_begin), std::move(region_update),
                                std::move(region_end), std::move(editor_field),
                                std::move(caret_begin), std::move(caret_update),
@@ -3058,7 +3060,6 @@ void GuiPlatform::set_touch_nav_hooks(
 }
 bool GuiPlatform::touch_contact_active() const { return input_.touch_contact_active(); }
 void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_slop_px(px); }
-void GuiPlatform::set_touch_stillness_px(double px)         { input_.set_touch_stillness_px(px); }
 
 // ---------------------------------------------------------------------------
 // android_main — this platform's entry point

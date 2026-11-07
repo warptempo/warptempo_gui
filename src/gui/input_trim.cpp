@@ -88,8 +88,8 @@
 //     a cursor fighting the gesture that is moving it. The trim bar's arrow
 //     buttons and bridge are its one surface (the waveform overlay armed it too from
 //     2026-08-18 until its resting form was deleted on 2026-09-22);
-//   * THE SWEEP (write_trim_from_sweep, below — the shift+drag former and the
-//     touch region hold), which writes per motion event and commits at its
+//   * THE SWEEP (write_trim_from_sweep, below — the TRIM arm lamp's touch
+//     drag, 2026-11-07), which writes per motion event and commits at its
 //     release through commit_region_sweep, on the endcap drag's own timing for
 //     the same reason;
 //   * the SETTINGS EDITOR's `trim_*=` ACTIVE-tab commits (settings_editor.cpp),
@@ -206,7 +206,7 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // zero"). Every trim former that lands a bound by column takes its frame
 // here, so the family authors on one lattice: the endcap and bridge drags'
 // release snap (commit_trim_drag), the sweep's two ends
-// (sweep_trim_frame_at_column, the touch region hold) and
+// (sweep_trim_frame_at_column, the armed touch sweep) and
 // the ctrl bound-set click (trim_bound_click_frame). The frame
 // is the column's authored time — authored_frame_at_column_on_basis over the
 // displayed-or-live target map on the item viewport basis, the column's LEFT
@@ -418,8 +418,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 
 // THE SWEEP'S TRIM WRITE — one anchor, one moving column, and the trim written
 // straight from the pair (architect 2026-08-18, the region IS the trim). Its
-// two entries are the shift+drag former on the navigation surface and the touch
-// region hold, and both write here per motion event, so a stroke sets the trim
+// one entry is the TRIM arm lamp's touch sweep on the waveform (architect
+// 2026-11-07, session 87), which writes here per motion event, so a stroke
+// sets the trim
 // in one gesture, the trim bar being its live picture (architect 2026-10-03,
 // "the trim bar is enough": the bar is drawn at the view's scale, and this
 // write's own repaint covers it on every accepted event). THE SET-FROM-REGION

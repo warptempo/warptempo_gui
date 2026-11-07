@@ -916,24 +916,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     // GROUP with Redo and Render (redesign_button_opens_icon_group), the unit
     // the `h` view's stand-ins replace, which paints nothing.
     //
-    // COPY PHASE RESETS STANDS BETWEEN REDO AND RENDER since 2026-10-25
-    // (architect: "copy should be moved to the left of render, that's
-    // usually where copy action would go, between redo [and render], and
-    // it's where it goes in kdenlive … copy is very rarely used, a handful of
-    // times in a movement, and it does affect the whole large batch of
-    // markers; undo / redo also affect the markers … the copy right now is
-    // pushing all the other buttons one column to the left, which is further
-    // away from my pen hand"): the first run is SIX — OPEN SAVE UNDO REDO
-    // COPY RENDER — and COPY is a member of Undo's group, which the `h`
-    // view's stand-ins replace whole (it is hidden there anyway,
-    // history_mode_hides_button). Its chords, face and tooltip came across
-    // unchanged from row 8's verb group (2026-10-24 to 2026-10-25): bare P,
-    // Ctrl+P, Ctrl+Shift+P, the barrel's ctrl and the long press as there.
+    // (COPY PHASE RESETS stood between Redo and Render 2026-10-25 to
+    // 2026-11-07, a member of Undo's group; it is row 8's marker verbs' tail
+    // since, right of DRAG — kMarkerVerbGroup — so the first run is OPEN SAVE
+    // UNDO REDO RENDER again, architect 2026-11-07, session 87.)
     {RedesignButton::OpenProject},
     {RedesignButton::Save},
     {RedesignButton::Undo},
     {RedesignButton::Redo},
-    {RedesignButton::IconCopyPhaseResets},
     {RedesignButton::Render},
     // (The view axes' faces are the two radio pairs at this row's right end,
     // architect 2026-10-14 — kIconRowViewPairs below; no view button stands
@@ -1046,11 +1036,16 @@ constexpr IconRowDef kIconRowButtons[] = {
     // user's play inside the window, behind Follow, its radio partner. One
     // case onto the second run, no run and no separator moving.
     {RedesignButton::IconRestrict},
-    // THE TRIM PRESETS (architect 2026-10-28 night), the zoom group's TAIL
-    // behind Restrict: bare `t`, the trim presets list's opener and, while it
-    // stands, its closer (RedesignButton::IconTrimPresets). One case onto the
-    // second run, no run and no separator moving (the iteration group's
-    // stays BPM's).
+    // THE TRIM ARM LAMP (architect 2026-11-07, session 87), behind Restrict:
+    // bare `w`, TRIM, the lamp that arms the next waveform drag as the trim
+    // sweep (RedesignButton::IconTrimArm). One case onto the second run, the
+    // band keeping its count (COPY having left the first run for row 8).
+    {RedesignButton::IconTrimArm},
+    // THE PRESETS KEY (architect 2026-10-28 night; PRESETS since 2026-11-07),
+    // the zoom group's TAIL behind the TRIM lamp: bare `t`, the trim presets
+    // list's opener and, while it stands, its closer
+    // (RedesignButton::IconTrimPresets). No run and no separator moving (the
+    // iteration group's stays BPM's).
     {RedesignButton::IconTrimPresets},
     // THE ITERATION GROUP (architect 2026-09-04): the BPM opener (bare `m`)
     // and grid iteration mode (bare `i`), back from the menu row behind a
@@ -1134,8 +1129,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // that leader's place in its run. The two are the groups every member of
 // which the view refuses through the derived partition
 // (history_mode_disables_button, input_pointer.cpp — none of their chords
-// is the mode's vocabulary or on its allowlist): UNDO'S (Undo, Redo, Copy
-// Phase Resets, Render — Ctrl+Z, Ctrl+Shift+Z, the `p` family, Ctrl+Alt+R)
+// is the mode's vocabulary or on its allowlist): UNDO'S (Undo, Redo, Render
+// — Ctrl+Z, Ctrl+Shift+Z, Ctrl+Alt+R)
 // and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). No other group is
 // refused whole in the view: the zoom group keeps Zoom In, Zoom Out and Zoom
 // to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders (bare `l`, admitted 2026-10-25),
@@ -1143,9 +1138,9 @@ constexpr IconRowDef kIconRowButtons[] = {
 // by the walk's own arm since 2026-11-05; the NOISE lamp's bare `w`
 // admitted 2026-10-28 until then).
 //
-// THE SLOTS: UNDO'S FOUR (Undo, Redo, Copy Phase Resets and Render, since
-// 2026-10-25; three until then) take the view's two acts, Revert and Load in
-// Place, so that group stands two cases narrower in the view; THE ITERATION
+// THE SLOTS: UNDO'S THREE (Undo, Redo and Render; four with Copy Phase
+// Resets 2026-10-25 to 2026-11-07) take the view's two acts, Revert and Load
+// in Place, so that group stands one case narrower in the view; THE ITERATION
 // GROUP'S THREE take the two reading lamps, the walk source and the
 // cumulative reading (architect 2026-10-26, the toggles reinstated "as they
 // were at the time of removal"), so that group stands one case narrower and
@@ -2224,9 +2219,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09),
 //   ADD TO SELECTION (bare `k`, the sticky ctrl, lit while the mode stands)
 //   and TOGGLE VALUE DRAG (bare `[`, since 2026-10-11, lit while armed — the
-//   row's two lamps); COPY PHASE RESETS stood between the two 2026-10-24 to
-//   2026-10-25 and is the band's first run's since (kIconRowButtons). The
-//   four verbs, Open Text Editor and Toggle Value Drag
+//   row's two lamps), and COPY PHASE RESETS (bare P, its barrel presses the
+//   two pastes) closing the group since 2026-11-07, down from the band. The
+//   four verbs, Open Text Editor, Toggle Value Drag and Copy Phase Resets
 //   are the row's resting greys on a locked tab; the jump and Add to
 //   selection are not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
 //   between Toggle inherit and Add to selection until 2026-09-29; Copy was
@@ -2254,8 +2249,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // TWO MODE TERMS. THE HIDE (architect 2026-10-07): in the `h` view a member whose chord
 // the view refuses in every session is NOT PAINTED (history_mode_hides_button,
 // input_pointer.cpp) — Play / Stop, Up and Down, the four verbs, Jump to
-// Defining Marker, Open Text Editor and Toggle Value
-// Drag — and publishes an empty rect, the block closing up from
+// Defining Marker, Open Text Editor, Toggle Value
+// Drag and Copy Phase Resets — and publishes an empty rect, the block
+// closing up from
 // the right margin and the state line taking the room; the row in there is
 // GO TO START and GO TO END (the mode's own absolute jumps), ADD TO
 // SELECTION alone, the walk pair, and SWITCH TAB, CENTER, OLDER and NEWER:
@@ -2411,11 +2407,13 @@ struct TransportRowDef {
 // one-shot: the drag it arms puts it out; under grid iterations permanently
 // lit and grey (2026-10-11 ~01:45; its roster entry, app_state.h).
 //
-// THE GROUP WAS NINE 2026-10-24 TO 2026-10-25: COPY PHASE RESETS stood
-// between Add to Selection and Toggle Value Drag, and went up to the band's
-// first run between Redo and Render (architect 2026-10-25: "the copy right
-// now is pushing all the other buttons one column to the left, which is
-// further away from my pen hand"; kIconRowButtons). EIGHT again since.
+// THE GROUP IS NINE SINCE 2026-11-07 (architect, session 87): COPY PHASE
+// RESETS — bare P, its barrel press Ctrl+P and the barrel through the long
+// press Ctrl+Shift+P — CLOSES IT, right of DRAG, down from the band's first
+// run (between Redo and Render 2026-10-25 to then; between Add to Selection
+// and Toggle Value Drag on 2026-10-24 alone). Its chords, admissions, face,
+// tooltip and `h`-view hide came across unchanged; an act, no lamp, greying
+// on a locked tab with the verbs (its roster entry, app_state.h).
 //
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
@@ -2429,6 +2427,7 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconOpenTextEditor},
     {RedesignButton::IconAddToSelection},
     {RedesignButton::IconValueDrag},
+    {RedesignButton::IconCopyPhaseResets},
 };
 // THE SKIP GROUP (architect 2026-10-24: the two skip buttons back as their
 // own run at the left of Drop), THE RIGHT BLOCK'S FIRST: GO TO START (bare
@@ -3008,7 +3007,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // against the row's right seat (bottom_row_seats, flush with the well's
     // last column), FOUR RUNS (kRow8Groups, 2026-10-24): the SKIP
     // GROUP (START | END, kTransportSkipGroup), the MARKER-VERB GROUP (its
-    // eight counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
+    // nine counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
     // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
     // NUDGE-AND-PLAY GROUP with Play / Stop last (Switch Tab, Center, ← →
     // Play, kTransportNudgePlayGroup; architect 2026-10-18), each a plain
@@ -3028,32 +3027,35 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE NUMBERS (the tablet's device px at 200 %, one W = 2, AT THE
     // DEFAULTS — the 70-px face of key_width 35, the one-W key gap of 2, the
     // 44-px
-    // run gap, the 22-px clock; the skips two, the verbs eight, the step-and-walk
-    // group four and the nudge-and-play group five): the block is 19 faces
-    // in four runs, 15 key gaps and three run gaps, 142 + 574 + 286 + 358 +
-    // 3·44 = 1492 px, its last face ending at the faces' right end
+    // run gap, the 22-px clock; the skips two, the verbs nine since
+    // 2026-11-07, the step-and-walk
+    // group four and the nudge-and-play group five): the block is 20 faces
+    // in four runs, 16 key gaps and three run gaps, 142 + 646 + 286 + 358 +
+    // 3·44 = 1564 px, its last face ending at the faces' right end
     // (bottom_row_seats' cases_right, 2280, one past the well's last column
-    // 2279) — on the tablet's 2304 the faces on x 788..2279 (the skips
-    // 788..929, the verbs 974..1547, the walk 1592..1877, the nudge
+    // 2279) — on the tablet's 2304 the faces on x 716..2279 (the skips
+    // 716..857, the verbs 902..1547, the walk 1592..1877, the nudge
     // 1922..2279, Play 2210..2279); the clock's field on the well's first
     // column, from x 24 — the cell (the widest-digit specimen "DD:DD.DDD"'s ink box in the
     // program face's 22 px, kerning off, floored first ink to ceiled last
     // ink: 99 px; kTimeShape's block) and its two 12-px pads, a 123-px field,
     // x 24..146 — then the name's first ink 14 px past it (x 161), the state
     // line's 14 px past the name's advance, clipped one run gap short of the
-    // block (x 744). On a 1920-px window at 100 % (faces 35, the key gap 1,
-    // the run gap 22, the program face 11 px) the block is 746 px of faces
-    // from x 1158, the clock's field 62 px on x 16..77, the name from x 85.
-    // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor and
-    // Toggle Value Drag hidden there with the verbs, Down
+    // block (x 672). On a 1920-px window at 100 % (faces 35, the key gap 1,
+    // the run gap 22, the program face 11 px) the block is 782 px of faces
+    // from x 1122, the clock's field 62 px on x 16..77, the name from x 85.
+    // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor,
+    // Toggle Value Drag and Copy Phase Resets hidden there with the verbs,
+    // Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
     // not standing, 142 + 70 + 142 + 286 + 3·44 = 772 px on the tablet, from x
     // 1508. THE WIDTH TUNES THE BLOCK (the `key_width` tuning key, 2026-11-06):
-    // 38 · key_width + 162 device px on the tablet, from x 2118 − 38 ·
-    // key_width — at the grammar's ceiling, 50 W, 2062 px from x 218, still
-    // clear of the clock's field and over the name and the state line under
-    // the z rule below. THE ROW CARRIES NO
+    // 40 · key_width + 164 device px on the tablet, from x 2116 − 40 ·
+    // key_width — at the grammar's ceiling, 50 W, 2164 px from x 116, over
+    // the clock's field's right end (x 24..146), the name and the state line
+    // under the z rule below (clear of the field to key_width 49, x 156).
+    // THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
     // STATE LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so

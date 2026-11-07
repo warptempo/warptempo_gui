@@ -949,7 +949,7 @@ struct GuiInputHandler {
     //     or the pen down on the waveform (the pan zone) opens a window that
     //     resolves to the phone-model PAN or the PINCH (apply_touch_nav_update,
     //     at its head — every frame asks, the first one ends the act) or to
-    //     the REGION HOLD (begin_touch_region, at its head). The caret drag's
+    //     the ARMED TRIM SWEEP (begin_touch_region, at its head). The caret drag's
     //     begin needs no call: it runs only under an editor, a modal no act
     //     stands under.
     // Not presses: pointer and pen motion (hover), key release, the
@@ -1158,7 +1158,7 @@ struct GuiInputHandler {
     // while a lane drag does nothing (the placement pending). THE LOWER HALF
     // JOINED THE ZONE with
     // the scrub's move to the lift: it is no longer a different surface, so
-    // a one-finger drag pans there and the region hold reaches it, and a
+    // a one-finger drag pans there and the armed sweep reaches it, and a
     // motionless tap's press-release burst runs the deferred scrub — the
     // asymmetry the architect named ("finger down works in the upper half by
     // waiting for the finger up, but on the lower half it immediately
@@ -1180,59 +1180,76 @@ struct GuiInputHandler {
     // apply_touch_nav_update's per-frame state refusal, so a refused pan
     // FREEZES exactly as a refused two-finger frame does rather than falling
     // back to a pointer drag, and in begin_touch_region's gate list for the
-    // hold. Asked ONCE at the first finger's down, and IT IS THE GESTURE'S
+    // armed sweep. Asked ONCE at the first finger's down, and IT IS THE GESTURE'S
     // ONE SURFACE ANSWER (architect 2026-10-16): a pan or pinch the zone
     // admitted navigates wherever its point travels until the lift, and
     // one it refused never navigates; the answer also decides whether the
-    // platform opens a WINDOW at all (the region-hold beat on the zone; off it, and
+    // platform opens a WINDOW at all (on the zone, with no deadline; off it, and
     // outside an editor's field, the down is the pointer on contact,
     // 2026-09-25) — the platform state block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
     bool touch_point_in_pan_zone(int x, int y) const;
 
-    // THE TOUCH REGION HOOKS (pan-primary's touch half, the eighth glass
-    // ruling 2026-08-12 — "region select to be hold and then drag because
-    // the pan is way more common": the pan zone's stretched window expires
-    // at the region-hold beat into THE REGION FORMER, so
-    // hold-then-drag sweeps a region on glass; the dead trim-move hooks'
-    // exact pattern reborn — closed_questions.md carries the trim move's
-    // end, and why this beat cannot repeat its dwell collision is at
-    // kTouchRegionHoldMs, input_core.cpp). The three ARE
+    // THE SWEEP-ARMED QUERY (architect 2026-11-07, session 87): the platform
+    // asks it at a pan-zone window's slop crossing with no ctrl standing,
+    // and true turns that crossing into THE ARMED SWEEP (the region hooks
+    // below) instead of the single-finger pan. It answers THE TRIM ARM
+    // LAMP (AppState::trim_armed) outside the `h` view and false inside it —
+    // the view cannot edit the trim, its key hidden there; the bit itself
+    // survives the view. A state answer, not geometry; the refusals stay
+    // begin_touch_region's. Wired at main.cpp's set_touch_nav_hooks call.
+    bool touch_sweep_armed() const;
+    // THE TRIM ARM LAMP'S ONE WRITER (AppState::trim_armed): bare `w`'s arm
+    // (the TRIM key's lift reaches it by synthesizing that press) and the
+    // sweep's commit (commit_region_sweep puts it out) are its callers; the
+    // dark seat at every project open is the fresh AppState's. Per-project,
+    // history-less, no damage of its own (the roster's per-tick comparator
+    // repaints the face).
+    void set_trim_armed(bool desired);
+
+    // THE TOUCH REGION HOOKS — THE ARMED SWEEP (architect 2026-11-07, session
+    // 87, retiring the region hold of 2026-08-12 — "if I turn it on, it's
+    // deliberate and for a sweep"): with the TRIM arm lamp lit, a single
+    // contact on the waveform that crosses the pan's slop with no ctrl
+    // standing drives THE REGION FORMER from its DOWN point instead of the
+    // pan (the dead trim-move hooks' exact pattern; closed_questions.md
+    // carries the trim move's end and the hold's). The three ARE
     // the one region former's own machinery driven from the platform's
-    // region hooks: no pending and no second former anywhere — the beat
-    // already disambiguated, so the begin goes straight to the former's
-    // press half and the drag rides the ONE motion path
-    // (apply_region_drag_motion) with the playhead on the moving end.
+    // region hooks: no pending and no second former anywhere — the lamp and
+    // the crossing already disambiguated, so the begin goes straight to the
+    // former's press half and the drag rides the ONE motion path
+    // (apply_region_drag_motion) with the playhead on the moving end. A tap
+    // under the lit lamp is the ordinary tap (run_nav_click_act), a pinch
+    // the ordinary pinch, the barrel-held drag the ordinary one-finger zoom:
+    // the lamp stays lit through all three.
     //
     // begin_touch_region(x, y) runs THE REGION FORMER'S PRESS HALF at the
-    // finger's DOWN point (the pointer's one road onto the sweep, architect
-    // 2026-10-30), forking on the `h` history mode: LIVE = the one placement body
+    // contact's DOWN point, the one placement body
     // (place_playhead_and_arm_region — deselect-all, playhead seated at the
-    // down column after the play's stop, the drag arm); the
-    // MODE = the view-local former's recipe (clear the mode focus +
-    // selection through the pair clearer, the shared placement body, the
-    // same arm) — EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS,
-    // the family rule at RegionDragState (app_state.h).
+    // down column after the play's stop, the drag arm) — EVERY REGION FORMER
+    // DROPS THE SELECTION ITS SURFACE OWNS, the family rule at
+    // RegionDragState (app_state.h). THE `h` VIEW HAS NO FORMER (its hold's
+    // playhead-only sweep retired with the hold: "history cannot edit
+    // trim"); touch_sweep_armed keeps the begin out of it.
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
-    // bypasses (the dead begin_touch_trim_move's own list MINUS the `h`
-    // view, which ADMITS this former as its own view-local vocabulary):
+    // bypasses (the dead begin_touch_trim_move's own list):
     // prompt, the editors via keyboard_modal_editor_active (every editor a
     // modal since 2026-10-25, the press path's veil and the touch
     // navigation's refusal reading the same predicate), loading/empty
     // audio, a live pointer gesture. A refused begin arms nothing and the
     // update/end bodies no-op on the drag's own !active guard, so the
-    // refused stream is dead rather than a fallback pointer drag.
+    // refused stream is dead rather than a fallback pan, the lamp lit.
     //
     // update_touch_region(x, y): the drag's one motion path — the shared
     // Chebyshev gate from the down point, then the span extension with the
-    // playhead riding the moving end. end_touch_region(): the release
-    // path's own body (a moved drag has ALREADY written the trim, per motion
-    // event and under no width rule at all, so its end runs the sweep's
-    // commit tail — where a coincident stroke resets to the whole song; a
-    // MOTIONLESS end wrote nothing and leaves the playhead where
-    // the begin seated it — the former's motionless-release rule, which is what
-    // makes a long-press-then-lift a PLACEMENT. The release-time sliver
-    // dissolve retired with the free span it protected, 2026-08-18, and the
-    // minimum width floor with the architect's 2026-08-19 ruling). Any end
+    // playhead riding the moving end (the platform's first frame is the
+    // crossing position, so the gate opens at once). end_touch_region(): the
+    // release path's own body (the moved drag has ALREADY written the trim,
+    // per motion event and under no width rule at all, so its end runs the
+    // sweep's commit tail — where a coincident stroke resets to the whole
+    // song — and A COMMITTED SWEEP PUTS THE TRIM LAMP OUT, commit_region_sweep;
+    // the release-time sliver dissolve retired with the free span it
+    // protected, 2026-08-18, and the minimum width floor with the
+    // architect's 2026-08-19 ruling). Any end
     // commits — finger up,
     // wl_touch.cancel, capability loss; the platform's end split delivers
     // or drops the staged final frame, its record.
@@ -1262,10 +1279,11 @@ struct GuiInputHandler {
     // tiny text box not feel broken" — a finger dragged inside the open
     // editor moves the caret, the phone's own text vocabulary, rather than
     // the pointer road's selection sweep (EditorTextDragState); the THIRD
-    // ruled touch divergence, taking the region hold's shape). GLASS'S TEXT VOCABULARY IS
+    // ruled touch divergence, taking the region trio's shape). GLASS'S TEXT VOCABULARY IS
     // THE PHONE'S, AND ONLY THAT: a TAP seats the caret, a plain DRAG moves
     // it, a HOLD MEANS NOTHING (a rest then a drag moves the caret, a rest
-    // then a lift is still a tap, kTouchWindowNoExpiry), a DOUBLE TAP selects
+    // then a lift is still a tap — no touch window has a deadline), a
+    // DOUBLE TAP selects
     // the word and a double-tap-drag extends by words, a later single tap
     // collapses the selection — no selection handles, no magnifier, no
     // toolbar and no free-form sweep by finger. These three are the GUI's
@@ -1297,16 +1315,15 @@ struct GuiInputHandler {
 
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the icon
-    // row's thirty-two and row 8's twenty-one (row 1's three menu anchors
+    // row's thirty-two and row 8's twenty-two (row 1's three menu anchors
     // until 2026-10-21, the tab strip's two until 2026-10-22)
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-11-05, the two level cases in the
-    // NOISE lamp's seat, Restrict counted):
+    // counts re-derived from them 2026-11-07, Copy Phase Resets down to row
+    // 8 and the TRIM arm lamp in):
     //   THE ICON ROW, 23 + 4 + 1 + 4 = 32 — the left walk's twenty-three
-    //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Phase
-    //   Resets and Render;
+    //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
     //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow,
-    //   Restrict and Trim Presets;
+    //   Restrict, the TRIM arm lamp and Presets;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings, Enable
     //   Tooltips, the Score key and the two level cases, AUDIO and NOISE —
     //   sliders with no chord, pressed by their own arm, arm_level_case_press),
@@ -1323,19 +1340,21 @@ struct GuiInputHandler {
     //   Magnification (since 2026-10-12), Play Renders (since 2026-10-25),
     //   Enable Tooltips (since 2026-10-28) and the two level cases (since
     //   2026-11-05; the NOISE lamp 2026-10-28 to then) alone of theirs);
-    //   ROW 8, 2 + 8 + 4 + 5 + 2 = 21 — the skips (Go to Start, Go to End,
-    //   kTransportSkipGroup, 2026-10-24), the MARKER-VERB GROUP's eight
+    //   ROW 8, 2 + 9 + 4 + 5 + 2 = 22 — the skips (Go to Start, Go to End,
+    //   kTransportSkipGroup, 2026-10-24), the MARKER-VERB GROUP's nine
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle
-    //   Value Drag since 2026-10-11), the step-and-walk group's four (Down,
+    //   Value Drag since 2026-10-11, Copy Phase Resets since 2026-11-07),
+    //   the step-and-walk group's four (Down,
     //   Up, Previous Marker, Next Marker — kTransportStepWalkGroup), the
     //   nudge-and-play group's five with Play / Stop last (Switch Tab,
     //   Center, Left, Right, Play — kTransportNudgePlayGroup; the two groups
     //   regrouped by the architect 2026-10-18) and the `h` view's Older /
-    //   Newer (kTransportHistoryStandIns, architect 2026-10-11): 19 standing
+    //   Newer (kTransportHistoryStandIns, architect 2026-10-11): 20 standing
     //   outside the view (the two publishing empty rects), and inside it
     //   2 + 1 + 2 + 4 = 9 — the hide's survivors, Older / Newer in the Left /
-    //   Right seats, the pair's rects empty and Down, Up and Play hidden.
+    //   Right seats, the pair's rects empty and Down, Up, Play and Copy Phase
+    //   Resets hidden.
     // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
     // paints — a real rect where it stands, the EMPTY RECT (which no point is
     // inside) where it does not, so no press, hover or tooltip reaches a
@@ -1804,9 +1823,8 @@ struct GuiInputHandler {
     // ends the gestures by hand (the reasoning is at that site).
     void finalize_active_drags();
 
-    // Arm THE SWEEP at a press — THE ONE ARM, serving its one entry (the touch
-    // region hold, the deliberate act since 2026-08-12, the eighth glass
-    // ruling). `anchor_col` is the
+    // Arm THE SWEEP at a press — THE ONE ARM, serving its one entry (the
+    // TRIM arm lamp's touch sweep, architect 2026-11-07). `anchor_col` is the
     // press column (waveform-relative, in range — every caller has just seated
     // the playhead at it and refused the gutter), from which THE ARM ITSELF
     // authors the fixed end of every trim pair the sweep writes:
@@ -1814,14 +1832,11 @@ struct GuiInputHandler {
     // the sweep's one column->trim route, beside the active-domain frame the
     // caller's placement seated the playhead at (the two-values-per-column rule
     // at the field). (x, y) is the press position for
-    // the press-becomes-drag threshold. THE PRESS WRITES NO TRIM: a motionless
-    // release is the placement and nothing else.
-    // TWO CALLERS (re-derived 2026-10-30): the LIVE former's press half
-    // (place_playhead_and_arm_region, the touch begin's live arm), and the
-    // touch begin's MODE arm (begin_touch_region — the view-local recipe
-    // re-expressed at the down point). The LOWER half is on the sweep's
-    // surface too since 2026-08-13 ("... should also be allowed in the lower
-    // half, for consistency"); its PLAIN press is the pending click, whose
+    // the press-becomes-drag threshold. THE PRESS WRITES NO TRIM.
+    // ONE CALLER (2026-11-07): the former's press half
+    // (place_playhead_and_arm_region, the armed sweep's begin). The LOWER
+    // half is on the sweep's surface too since 2026-08-13 ("... should also be allowed in the lower
+    // half, for consistency"); its PLAIN tap is the pending click, whose
     // motionless release runs the one-shot scrub.
     void arm_region_drag_at(int anchor_col, int x, int y);
 
@@ -1835,11 +1850,8 @@ struct GuiInputHandler {
     // TRIM WRITE from the anchor to that endpoint (write_trim_from_sweep), and
     // the playhead riding the moving end. Caller guards active. The write's
     // own repaint is the trim bar's, mid-gesture, so the bar — the sweep's
-    // picture (RegionDragState, app_state.h) — tracks the stroke live.
-    //
-    // THE `h` VIEW IS CARVED OUT OF THE TRIM WRITE HERE, at the one site the
-    // arms share: that view promises the trim window is untouched
-    // throughout, so its sweep carries the playhead and writes nothing.
+    // picture (RegionDragState, app_state.h) — tracks the stroke live. (No
+    // sweep runs in the `h` view since 2026-11-07, so no carve-out stands.)
     void apply_region_drag_motion(int mouse_x, int mouse_y);
 
     // THE SWEEP'S ONE END OWNER — every end path calls it (clean release,
@@ -1849,9 +1861,9 @@ struct GuiInputHandler {
     // crossed/coincident reset, the repaint, the target-render trigger, and the
     // playhead parked at the committed trim start) — AT THE END ONLY, a
     // per-frame cursor chase being a cursor fighting the gesture that is moving
-    // the bounds. A sweep that wrote nothing — motionless, refused by geometry,
-    // or run inside the `h` view — runs none of that tail. The per-case
-    // reading is at the definition.
+    // the bounds. A sweep that wrote nothing — motionless or refused by
+    // geometry — runs none of that tail. A sweep that MOVED puts the TRIM arm
+    // lamp out (2026-11-07). The per-case reading is at the definition.
     void commit_region_sweep();
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
@@ -1866,18 +1878,18 @@ struct GuiInputHandler {
     // ITS ROUTES (re-derived 2026-10-30): the DEFERRED CLICK ACT
     // (run_nav_click_act, its two placement
     // arms — the lower half's release runs the SCRUB arm, which returns above
-    // this body), and the touch region begin — its
-    // MODE arm directly, its live arm through the sweep's press half below.
+    // this body), and the armed sweep's begin through the sweep's press half
+    // below.
     // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
     // [0, area.w)) seats nothing and returns -1, a value no seated frame can
     // take (the clamp's floor is 0).
     int64_t place_playhead_at_click_column(int click_rel_x);
 
-    // THE SWEEP'S LIVE PRESS HALF — ONE call site (architect 2026-10-30): the
-    // touch region begin's
-    // live arm (begin_touch_region — the hold's expiry at the down point):
+    // THE SWEEP'S PRESS HALF — ONE call site: the armed sweep's begin
+    // (begin_touch_region — the slop crossing under the lit TRIM lamp, run at
+    // the down point; architect 2026-11-07):
     // clear the marker selection, run the body above, and arm the sweep. The
-    // clear runs ahead of the body's gutter return, so an inert-gutter hold
+    // clear runs ahead of the body's gutter return, so an inert-gutter begin
     // still deselects but seats no playhead and arms no drag.
     void place_playhead_and_arm_region(int click_rel_x, int x, int y);
 
@@ -3302,8 +3314,8 @@ private:
     // one ANCHOR and one MOVING end, both whole SOURCE frames already inside
     // the song walls (sweep_trim_frame_at_column below is their one producer),
     // written straight into the trim store as an ordered pair — no domain hop
-    // in here. Its one entry is the touch region hold, which calls it PER
-    // MOTION EVENT, so a stroke sets the trim in one gesture. It takes the setter's regime at the first accepted change
+    // in here. Its one entry is the TRIM arm lamp's touch sweep, which
+    // calls it PER MOTION EVENT, so a stroke sets the trim in one gesture. It takes the setter's regime at the first accepted change
     // — the trim-mutation playback stop and the deselect — and leaves the
     // PLAYHEAD PARK and the shared commit tail to the release
     // (commit_region_sweep), the endcap drag's own timing. IT ENFORCES NO
@@ -3551,7 +3563,8 @@ private:
     // everything on lift the finger or on mouse up, but the playhead scrub, we
     // do right on mouse down. We should remove that" — so the lower half's
     // press arms the pending click alone, a drag there being the touch
-    // layer's pan and a hold its region former. Given the click's waveform-relative column, run ONE scrub
+    // layer's pan (or, under the lit TRIM lamp, its armed sweep). Given
+    // the click's waveform-relative column, run ONE scrub
     // act (scrub_act_at — stop a live session, then launch) at that column's
     // frame — the scrub is ONE-SHOT per click (architect 2026-07-23, the
     // Ableton model): the press arms only the pending click, a held press does
@@ -3958,7 +3971,7 @@ private:
     //     opened mid-hold), on_motion's editors' branch, the roster hover walk's
     //     veil (recompute_redesign_button_hover), tooltip_dwell_suppressed,
     //     and the touch road — the navigation's
-    //     refusal (apply_touch_nav_update) and the region hold's
+    //     refusal (apply_touch_nav_update) and the armed sweep's
     //     (begin_touch_region), one predicate since 2026-10-25.
     // PUBLIC for the car's gate (GuiCarTransport::admits).
 public:

@@ -67,6 +67,7 @@ ROSTER = [
     ('GoJump', 'actions/22/go-jump'),
     ('TimelineUseZoneOn', 'actions/22/timeline-use-zone-on'),
     ('EditCut', 'actions/22/edit-cut'),
+    ('Bookmarks', 'actions/22/bookmarks'),
     ('MusicNote16th', 'actions/22/music-note-16th'),
     ('Mathmode', 'actions/22/mathmode'),
     ('Merge', 'actions/22/merge'),
