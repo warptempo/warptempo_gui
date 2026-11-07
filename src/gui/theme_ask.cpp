@@ -26,8 +26,8 @@ namespace {
 // day; the lamp arc's three, ScaleAwareness, RangeEditField and
 // ChosenPreListen, the same night; SearchIndication, immaterial_gold's accent,
 // over all 42 files 2026-11-06; StandbySelectionForeground, the selection
-// pair's text, over all 31 he drops, 2026-11-06). A file lacking one is left
-// out (the head).
+// pair's text, over all 31 he drops, 2026-11-06; ControlBackground, the
+// magnify core, 2026-11-06). A file lacking one is left out (the head).
 constexpr std::string_view kAskRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -36,7 +36,7 @@ constexpr std::string_view kAskRoles[] = {
     "SelectionBackground", "SelectionForeground",
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
     "ScaleAwareness", "RangeEditField", "ChosenPreListen",
-    "SearchIndication",
+    "SearchIndication", "ControlBackground",
 };
 constexpr std::size_t kAskRoleCount = std::size(kAskRoles);
 
@@ -335,6 +335,7 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     const Rgb vu_max   = opaque(roles.vu_maximum);
     const Rgb lvl_aud  = opaque(roles["RangeEditField"]);
     const Rgb lvl_noi  = opaque(roles["ChosenPreListen"]);
+    const Rgb core     = opaque(roles["ControlBackground"]);
     const Rgba detail  = rgba(roles["DetailViewBackground"]);
     const Rgb ink      = over(rgba(roles["WaveformColor"]), detail);
     const Rgb canvas   = over(rgba(roles["DetailGridTiles"]), detail);
@@ -372,7 +373,7 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     t.level_noise_fill    = packed(lvl_noi);
     t.waveform_canvas     = packed(canvas);
     t.waveform_ink        = packed(ink);
-    t.waveform_core       = packed(mix(ink, canvas, 5.0 / 32.0));
+    t.waveform_core       = packed(core);
     t.grid                = packed(mix(canvas, ink, 1.0 / 4.0));
     t.center              = packed(ink);
     t.cue                 = packed(on);

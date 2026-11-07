@@ -126,6 +126,14 @@
 //                                     case's fill (paint_level_case)
 //     level noise fill       3C6AB6 = ChosenPreListen (Live's cue mini-slider,
 //                                     "blue") — the NOISE level case's fill
+//     core                   1E1E1E = ControlBackground (architect 2026-11-06,
+//                                     session 80: "let's try changing the core
+//                                     to ControlBackground — sounds like that
+//                                     will be slightly lighter for most dark
+//                                     themes"; his Default pick of 2026-11-04
+//                                     night, i1 of tmp/s38, IS that role's
+//                                     number, so the compiled row is unchanged)
+//                                     — the MAGNIFY-lit inner bar's solid fill
 //   COMPOSITED (Live's alpha role over the clip view's ground, straight alpha
 //   aa/255, a 6-digit word opaque; rounded half to even, clamped):
 //     ink                    191919 = WaveformColor over DetailViewBackground
@@ -137,7 +145,6 @@
 //   DERIVED (the app's own tones, each the Default mix of two theme roles, so a
 //   light theme keeps the relation; every mix a + t · (b − a) per channel,
 //   rounded half to even and clamped):
-//     core                   1E1E1E = ink + 5/32 · (canvas − ink)
 //     grid                   313131 = canvas + 1/4 · (ink − canvas)
 //     key dim ink            5A5A5A = face + 36/63 · (dim − face)
 //     trim span              6A6A6A = face + 52/127 · (text − face)

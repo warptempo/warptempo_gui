@@ -30,9 +30,10 @@
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
 // 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) and
-// his own picks (the core, 2026-11-04 night, and the playhead line's static
-// tone, 2026-11-04 night: white 0.483 toward the head, every other theme
-// derived at the same ratio, ruling 4 of 2026-11-05) — the static_asserts
+// his own picks (the core, 2026-11-04 night — Live's ControlBackground on
+// this row, the role every theme reads since 2026-11-06 — and the playhead
+// line's static tone, 2026-11-04 night: white 0.483 toward the head, every
+// other theme derived at the same ratio, ruling 4 of 2026-11-05) — the static_asserts
 // at the foot are that proof in the build, every one of the thirty-nine
 // words with its literal (the press arc's four, 2026-11-05, among them, and
 // the lamp arc's five the same night: the doors' lit pair, the clip lamp,
@@ -63,14 +64,16 @@
 //                            DetailViewBackground)
 //   waveform_core    1E1E1E  THE CORE (architect 2026-11-04, mock f1; its
 //                            tone ruled 1E1E1E the same night, his pick i1
-//                            of tmp/s38 over i0, session 33's 1C1C1C — NOT
-//                            a measured Live tone: his pick on the real lit
-//                            capture, on his glass; every other theme the
-//                            same mix, ink 5/32 toward canvas): the
+//                            of tmp/s38 over i0, session 33's 1C1C1C, on
+//                            the real lit capture, on his glass), SINCE
+//                            2026-11-06 Live's ControlBackground (session
+//                            80: his pick IS that role's number on Default,
+//                            "slightly lighter for most dark themes"): the
 //                            magnified picture's inner bar, a solid fill
-//                            five levels over the ink ("the absence of it
-//                            would indicate a quiet section"; render.h's
-//                            THE CORE, where the tone's record is)
+//                            five levels over Default's ink ("the absence
+//                            of it would indicate a quiet section";
+//                            render.h's THE CORE, where the tone's record
+//                            is)
 //   grid             313131  the quarter lines of each channel's half, the
 //                            horizontals alone (render_canvas) — Live's
 //                            antialiased beat line as one solid px on the

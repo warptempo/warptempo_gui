@@ -51,7 +51,7 @@ struct GuiThemeTones {
     uint32_t level_noise_fill;    // the NOISE level case's fill (ChosenPreListen), read by paint_level_case
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
-    uint32_t waveform_core;       // the magnified inner bar's solid fill (ink + 5/32 toward canvas)
+    uint32_t waveform_core;       // the magnified inner bar's solid fill (ControlBackground)
     uint32_t grid;                // the canvas's quarter lines (canvas + 1/4 toward ink)
     uint32_t center;              // each channel's zero line (= the ink)
     uint32_t cue;                 // every enabled marker's chip (ViewCheckControlEnabledOn)
