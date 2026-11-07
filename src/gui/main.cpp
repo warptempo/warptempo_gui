@@ -3582,8 +3582,9 @@ int gui_main() {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     // (The chromes and captions folders were read ahead of it 2026-10-07..14,
-    // the preset files the color picker wrote; the one palette is compiled
-    // in, palette_file.h's head.)
+    // the preset files the color picker wrote; only the Default theme is
+    // compiled in, and the others are Live's .ask files read once at launch
+    // by the theme load below, theme_ask.h's head.)
     DeviceConfig device_config;
     {
         auto cfg = load_device_config(GuiPlatform::device_config_defaults());
