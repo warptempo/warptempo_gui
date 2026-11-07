@@ -79,6 +79,7 @@
 #include "platform.h"
 #include "render.h"
 #include "viewport.h"
+#include "warp_frame_map_view.h"  // lattice_index_ties_right (the slots' tie)
 
 #include <algorithm>
 #include <cmath>
@@ -440,10 +441,11 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // the whole key, no outline (2026-11-04) — in the tablet's device px at
 // 200 %, the key widths the slots' at the one-W gap (2026-11-04): at the
 // defaults (osk_key_w 24, osk_key_h 30, osk_font_px 12 — 48 x 60 and 24
-// device px) "Bksp" 59 px in the 2.5u key's 123, "Enter"
+// device px) "Bksp" 59 px in the 2.5u key's 122, "Enter"
 // 61 in the 2u key's 98, "Space" 71 in the 4u key's 198, "Paste" 64,
-// "Copy" 60, "&123" 57, "Shift" 53, "ABC" 52 and "Esc" 43 in the 1.5u key's
-// 73, "Tb" 29 in the 1u key's 48, and the widest character cap, "@", 23 in
+// "&123" 57, "Shift" 53 and "ABC" 52 in their 1.5u keys' 74, "Copy" 60 and
+// "Esc" 43 in theirs of 72 (the slots' rounding, quarter_offset_px), "Tb" 29
+// in the 1u key's 48, and the widest character cap, "@", 23 in
 // the 1u key's 48 (the capital "W" 23); at his box (osk_key_w 25, the
 // default height, osk_font_px 13 — 50 and 26 device px) "Bksp" 64 in 128,
 // "Enter" 66 in 102, "Space" 77 in 206, "Paste" 69, "Copy" 65 and "&123"
@@ -452,10 +454,11 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // KEY UNDER AN EXTREME TUNING SIMPLY OVERHANGS IT — a tuning key's own
 // consequence, centered on its key like every cap: at the default box "Paste"
 // is the first to overhang, from osk_font_px 14 W ("Copy" from 15, "&123"
-// from 16, "Shift" from 17, "ABC" from 17, "Enter" from 20, "Tb" from 20,
-// "Esc" from 21; "Bksp" not until 26, past osk_font_px's ceiling of 24 W,
-// device_config.h's grammar; each threshold is the ceil of the 300 %
-// measurement's device px halved to W, the rebase of 2026-11-05), and at
+// from 16, "Shift" from 17, "ABC" from 18, "Enter" from 20, "Tb" from 20,
+// "Esc" from 21; "Bksp" not until 25, past osk_font_px's ceiling of 24 W,
+// device_config.h's grammar; each threshold the least whole W at which
+// the word's advance, scaled with the em, exceeds its key's face at the
+// slots' rounding in W of 2026-11-06), and at
 // osk_font_px 12 "Paste" overhangs at osk_key_w 21 and below.
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" armed or resting;
@@ -499,12 +502,21 @@ inline constexpr Page page_after(Role role, Page page) {
 // keys, both axes, IS THE PROGRAM KEYS' GAP, ONE W (render.h's key_gap_px:
 // 2 device px on the tablet at 200 %, 1 at 100 %; architect 2026-11-04, the
 // unit: "the same face and gap on every key surface", the tenth of the
-// height of 2026-10-29 retired); THE PITCH is the key plus the gap; a key
-// of n units is n pitches less one gap, each slot's edge rounded at the
-// element (quarter_offset_px). At the defaults on the tablet (200 %): the
-// key 48 x 60, the gap 2, the pitch 50, so 1u 48, 1.5u 73, 2u 98, 2.5u 123
-// and 4u 198 device px from a slot at the block's edge; at 100 % 24 x 30,
-// the gap 1, the pitch 25. THE
+// height of 2026-10-29 retired); THE PITCH is the key plus the gap, in W;
+// a key of n units is n pitches less one gap, EACH SLOT'S EDGE ROUNDED IN W
+// at the element and only then scaled (quarter_offset_px; architect
+// 2026-11-06, session 77), so every slot edge stands on a whole W at every
+// tuning. At an ODD pitch (an even osk_key_w) an edge an odd number of
+// half-units in falls on a half W, and EVERY SUCH TIE GOES UP, toward +inf
+// (quarter_offset_px), so keys of one span differ by at most one W by
+// their slot and a run of 1u keys between two tied edges keeps the 1u
+// width: at the defaults (the key 24 x 30 W, the gap 1, the pitch 25;
+// 48 x 60, 2 and 50 device px on the tablet at 200 %) every 1u key is 24 W
+// (48 device px), row 3's Shift 37 W (74) and Bksp 61 W (122), the bottom
+// row's page key 37 W (74), Copy 36 (72), Paste 37 (74), Space 99 (198),
+// `.` 24 (48), Esc 36 (72) and Enter 49 (98). At his tuning (osk_key_w 25, the pitch 26 W, even, so
+// no edge needs rounding) 1u 25, 1.5u 38, 2u 51, 2.5u 64 and 4u 103 W (50,
+// 76, 102, 128 and 206 device px). THE
 // KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S face (architect
 // 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the 70 x
 // key_height face): their box is `osk_key_w` x `osk_key_h` alone, their gap
@@ -514,18 +526,28 @@ inline constexpr Page page_after(Role role, Page page) {
 inline int key_w_px()     { return scaled_px(osk_key_width_w(), 1); }
 inline int key_h_px()     { return scaled_px(osk_key_height_w(), 1); }
 inline int key_gap_px()   { return ::key_gap_px(); }
-inline int key_pitch_px() { return key_w_px() + key_gap_px(); }
 
 // A SLOT'S LEFT EDGE, `q` quarters into the block, off the block's left edge:
-// rounded at the element, so a key's width is the rounded span less one gap
-// and the gap between neighbors is the gap exactly.
+// q quarter-pitches IN W, ROUNDED TO A WHOLE W at the element, then through
+// scaled_px, the one road (architect 2026-11-06, session 77); so a key's
+// width is the rounded span less one gap and the gap between neighbors is
+// the gap exactly. Every span and inset of the table is an even number of
+// quarters, so an edge falls on a half-pitch at worst and a tie arises only
+// at an odd pitch. AN EXACT TIE GOES UP, toward +inf (lattice_index_ties_right,
+// warp_frame_map_view.h — the placement's selector, ruled the same day,
+// architect 2026-11-06, session 69: translation-consistent, so every tied
+// edge of a row moves the same way and same-span keys differ by at most one
+// W — where ties to even would round them alternately, two W apart).
 inline int quarter_offset_px(int q) {
-    return static_cast<int>(std::nearbyint(
-        q * static_cast<double>(key_pitch_px()) / kQuartersPerUnit));
+    const double pitch_w = osk_key_width_w() + kKeyGapW;
+    return scaled_px(
+        lattice_index_ties_right(q * pitch_w / kQuartersPerUnit));
 }
 
 // THE BLOCK'S WIDTH: the widest row, thirteen units — thirteen pitches less
-// one gap, 648 device px at the defaults on the tablet (x 828 .. 1475).
+// one gap, a whole W at every tuning (52 quarters, no rounding): 324 W, 648
+// device px at the defaults on the tablet (x 828 .. 1475); 337 W, 674 at
+// his osk_key_w 25.
 inline int block_w_px() {
     return quarter_offset_px(kBlockQuarters) - key_gap_px();
 }
