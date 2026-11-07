@@ -198,6 +198,8 @@ shopt -s nocaseglob
 #      noise_crossfade_s=4 lines (2026-10-28), the key_height=17 line
 #      (2026-10-29, a tuning key; the key's height in W, 17 since the
 #      rebase to 200 % of 2026-11-05: 34 device px on the tablet), the
+#      key_width=35 line (2026-11-06, the eighteenth key, a tuning key; the
+#      key's face width in W: 70 device px on the tablet), the
 #      osk_key_w=24 and osk_key_h=30 lines (2026-10-29, the keyboard's two
 #      tuning keys, in W), the osk_font_px=12 line (2026-10-29 night, the
 #      keyboard's cap size in W, a tuning key), the lamp_hold_ms=100 line
@@ -285,7 +287,9 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # again since 2026-11-03; every tuning key in W since the rebase of
 # 2026-11-05) -- a key_height line already on the tablet is kept as it is
 # (the rebase's own halving of a standing line is the planner's hand edit,
-# not this script's); and THE ON-SCREEN KEYBOARD'S KEY BOX, two tuning
+# not this script's); and THE KEY'S FACE WIDTH, a tuning key required
+# while it stands since 2026-11-06 (the eighteenth key), 35 W (70 device px
+# on the tablet); and THE ON-SCREEN KEYBOARD'S KEY BOX, two tuning
 # keys required while they stand since 2026-10-29 evening, 24 x 30 W (48 x
 # 60 device px); and THE ON-SCREEN KEYBOARD'S CAP SIZE, a tuning key
 # required while it stands since 2026-10-29 night, 12 W (24 device px); and THE
@@ -302,7 +306,7 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # on the tablet is kept: a line already there is never touched — the two
 # levels' lines among them, whatever their spelling (0.0 and -9.0 read as
 # well as 0 and -9), which the app rewrites canonical at its next commit.
-ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-inf noise_attenuation_level=-9 noise_crossfade_s=4 key_height=17 osk_key_w=24 osk_key_h=30 osk_font_px=12 lamp_hold_ms=100"
+ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-inf noise_attenuation_level=-9 noise_crossfade_s=4 key_height=17 key_width=35 osk_key_w=24 osk_key_h=30 osk_font_px=12 lamp_hold_ms=100"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -1323,7 +1327,8 @@ apply_setup() {
 
     # 5. THE SETTINGS FILE: projects_repo made right, true_colors, theme,
     # waveform_grow, audio_level, noise, noise_level, noise_attenuation_level,
-    # noise_crossfade_s, key_height, osk_key_w, osk_key_h, osk_font_px and
+    # noise_crossfade_s, key_height, key_width (the eighteenth, 2026-11-06),
+    # osk_key_w, osk_key_h, osk_font_px and
     # lamp_hold_ms (the seventeenth, 2026-11-05 night) their lines where
     # absent
     # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
@@ -1356,7 +1361,7 @@ apply_setup() {
             END               { if (had == 0) print repo
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, theme, waveform_grow, audio_level, noise, noise_level, noise_attenuation_level, noise_crossfade_s, key_height, osk_key_w, osk_key_h, osk_font_px and lamp_hold_ms and has no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, theme, waveform_grow, audio_level, noise, noise_level, noise_attenuation_level, noise_crossfade_s, key_height, key_width, osk_key_w, osk_key_h, osk_font_px and lamp_hold_ms and has no line of a retired key"
         else
             head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"

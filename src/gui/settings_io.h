@@ -158,7 +158,8 @@ std::string format_settings_text(
 // format_level_db) and its crossfade
 // (`noise_crossfade_s`, 2026-10-28, through format_noise_crossfade_s), or the key's height
 // (`key_height`, 2026-10-29, a tuning key, through format_key_height), or
-// the keyboard's key box (`osk_key_w`, `osk_key_h`, 2026-10-29, two tuning
+// the key's face width (`key_width`, 2026-11-06, a tuning key, through
+// format_key_width), or the keyboard's key box (`osk_key_w`, `osk_key_h`, 2026-10-29, two tuning
 // keys, through format_osk_key_size), or the keyboard's cap size
 // (`osk_font_px`, 2026-10-29 night, a tuning key, through
 // format_osk_font_px), or the two lamps' hold (`lamp_hold_ms`, 2026-11-05

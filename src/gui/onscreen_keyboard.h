@@ -518,7 +518,7 @@ inline constexpr Page page_after(Role role, Page page) {
 // no edge needs rounding) 1u 25, 1.5u 38, 2u 51, 2.5u 64 and 4u 103 W (50,
 // 76, 102, 128 and 206 device px). THE
 // KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S face (architect
-// 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the 70 x
+// 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the key_width x
 // key_height face): their box is `osk_key_w` x `osk_key_h` alone, their gap
 // the program's. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is

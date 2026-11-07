@@ -151,8 +151,9 @@ namespace {
 // removed: the tablet's window has none; render.h's caption note): THE
 // TOOLBAR BAND
 // (THE LOGO LANE — 36 W, 72 device px on the tablet at 200 %, render.h's
-// logo lane block — the key, 35 W wide by the `key_height` tuning key's W
-// tall (17 its default; 70 x 34 device px), and the strip pad, 19 W (38
+// logo lane block — the key, the `key_width` tuning key's W wide by the
+// `key_height` tuning key's W tall (35 and 17 their defaults; 70 x 34
+// device px), and the strip pad, 19 W (38
 // device px), the keys' legends in it (the hi-fi metrics again since
 // 2026-11-03), on the
 // flat ground — render.h's program block),
@@ -240,10 +241,11 @@ namespace {
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
 // 2026-11-04 night rather than adjusted (every line one W, 2 device px on
 // the tablet; the Program 11 W text, the ruler's Bold Small 8 W, the trim
-// bar's field 7 W; the 36-W logo lane, the 35-W key and the strip pad 19
+// bar's field 7 W; the 36-W logo lane, the key and the strip pad 19
 // W; the device rows below the tablet's at 200 %, the unit the integer W
 // since the rebase of 2026-11-05), AT key_height 17 (the template's value; a tune moves the band's and
-// row 8's case rows and the well by their difference), the waveform the
+// row 8's case rows and the well by their difference; key_width moves no
+// row), the waveform the
 // whole leftover and both gaps 0 in every stack (the rule above). Every
 // lane is its own composite of rounded parts (scaled_px's rule, the faces'
 // metrics each rounded at the element), so the device rows
@@ -3620,6 +3622,11 @@ int gui_main() {
     // road is the settings editor's `key_height=` commit
     // (GuiInputHandler::apply_key_height).
     set_key_height_w(device_config.key_height);
+    // THE KEY'S FACE WIDTH THE SAME (the `key_width` tuning key, architect
+    // 2026-11-06; render.h's seat): seeded before the first layout, every
+    // key surface's face, walk and hit box; the other road is the settings
+    // editor's `key_width=` commit (GuiInputHandler::apply_key_width).
+    set_key_width_w(device_config.key_width);
     // THE KEYBOARD'S KEY BOX RIDES THE SAME ROAD (the `osk_key_w` and
     // `osk_key_h` tuning keys, architect 2026-10-29; render.h's seat): seeded
     // before the first layout; the other road is the settings editor's two

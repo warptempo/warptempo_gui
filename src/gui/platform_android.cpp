@@ -535,12 +535,12 @@ GuiPlatform::~GuiPlatform() {
 // scaled_px. (The template stood at 300 from 2026-10-10 to 2026-11-05, the
 // same picture authored in device px at 300 % on a second road, and at 275
 // from 2026-10-02; its earlier values are git history and a closed
-// question.) The icon row fits this panel whole (the arithmetic is at
-// paint_icon_row, paint_handler.cpp: the left runs' 1666, the run gap's 44
-// and the right run's 358 of the well's 2256 device px outside the `h`
-// view, re-derived 2026-11-04 night with the 70-px face, the one-W key gap
-// of 2, the 44-px run gap and the well the waveform area), clearing it by
-// 188.
+// question.) The icon row fits this panel whole at the keys' defaults (the
+// arithmetic is at paint_icon_row, paint_handler.cpp: the left runs' 1738,
+// the run gap's 44 and the right run's 358 of the well's 2256 device px
+// outside the `h` view, with the 70-px face of key_width 35, the one-W key
+// gap of 2, the 44-px run gap and the well the waveform area), clearing it
+// by 116; a key_width past 37 W does not fit (THE FIT there).
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -603,6 +603,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // 34 device px on the tablet (architect 2026-11-03, the retrofit's hi-fi
     // key metrics; device_config.h's head).
     cfg.key_height        = kKeyHeightDefaultW;
+    // THE KEY'S FACE WIDTH (architect 2026-11-06, a tuning key), spelled:
+    // 35 W, 70 device px on the tablet (device_config.h's head).
+    cfg.key_width         = kKeyWidthDefaultW;
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
     // keys), spelled: 24 x 30 W, the FLAGS sheet's 48 x 60 device px on the
     // tablet (device_config.h's head).

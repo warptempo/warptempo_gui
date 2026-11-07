@@ -979,10 +979,11 @@ double gui_scale_factor();
 // 2026-10-29, on five mock sheets varying only the keys' height: "around
 // 33"; its default 33 device px again since 2026-11-03, the retrofit, the
 // square key of 2026-11-02 reversed; 34 device px since 2026-11-04 night,
-// the face 70 x 34 on the tablet): the live value IN W (scaled_px's axis;
+// the face 70 x 34 on the tablet at the defaults): the live value IN W
+// (scaled_px's axis;
 // 17 W = 34 device px at 200 % since the rebase of 2026-11-05), read by
 // icon_case_h_px (the case paragraph below; the face's width is the
-// constexpr kKeyFaceWidthW) and by paint_key_glyph's ink
+// `key_width` tuning key's, its seat next) and by paint_key_glyph's ink
 // size (paint_handler.cpp), nothing else. It is the scale's shape —
 // render.h's accessors are free functions with no AppState, so the value
 // lives as file-scope state in render.cpp, pushed by the same TWO
@@ -995,6 +996,22 @@ double gui_scale_factor();
 // number, and this pair goes.
 void set_key_height_w(int w);
 int  key_height_w();
+
+// THE KEY'S FACE WIDTH, THE `key_width` TUNING KEY'S SEAT (architect
+// 2026-11-06, session 78: the width a tuning key like the height until he
+// rules the number): the live value IN W (scaled_px's axis; the default
+// 35 W = 70 device px at 200 %), read by icon_case_w_px (the case paragraph
+// below) and nothing else — every face's width, walk and hit box reads
+// that accessor; the glyph follows the height alone. The key_height seat's
+// shape exactly — file-scope state in render.cpp, pushed by gui_main's
+// startup read of the device config before the window exists and by the
+// settings editor's `key_width=` commit (GuiInputHandler::apply_key_width,
+// which re-lays-out at once). The grammar and the range are
+// device_config.h's (parse_key_width); the construction state is the
+// template's 35 (kKeyWidthDefaultW). It settles into a constexpr once he
+// rules the number, and this pair goes.
+void set_key_width_w(int w);
+int  key_width_w();
 
 // THE ON-SCREEN KEYBOARD'S KEY BOX, THE `osk_key_w` AND `osk_key_h` TUNING
 // KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
@@ -1571,11 +1588,13 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // to the hi-fi's face and "grow the box instead of adding a border"; the
 // hi-fi key metrics of 2026-11-03's retrofit, the square key of 2026-11-02
 // reversed; mock v4 that night: the face 70 x 34 device px, the gap 2, so
-// every key keeps its pitch of 72 device px and its seat): kKeyFaceWidthW,
-// 35 W WIDE (a constexpr) by THE `key_height` TUNING KEY'S W TALL
-// (key_height_w, its seat above; 17 its default), both through scaled_px,
-// rounded at the element: at key_height 17, 70 x 34 device px on the tablet
-// at 200 %, 35 x 17 at 100 %. THE KEY IS NO LONGER SQUARE. THE PAINTED FACE
+// every key keeps its pitch of 72 device px and its seat): THE `key_width`
+// TUNING KEY'S W WIDE (key_width_w, its seat above; 35 its default;
+// architect 2026-11-06, session 78, a tuning key until he rules the number)
+// by THE `key_height` TUNING KEY'S W TALL (key_height_w, its seat above; 17
+// its default), both through scaled_px, rounded at the element: at the
+// defaults, 70 x 34 device px on the tablet at 200 %, 35 x 17 at 100 %, the
+// group pitch 72 device px. THE KEY IS NO LONGER SQUARE. THE PAINTED FACE
 // IS THE WHOLE KEY — NO OUTLINE, NO INSET — and ITS NEIGHBOR IN A GROUP
 // STANDS ONE W OF GROUND AWAY (kKeyGapW, key_gap_px below: 2 device px at
 // 200 %, 1 at 100 %; materials.h's THE
@@ -1612,12 +1631,14 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // bar's and the ruler's lines stood on, 2026-10-23 — RETIRED with the flat
 // well, 2026-11-02: the well's lines and rows of ground are the hairline
 // itself, the well's lanes block below.)
-// THE FACE'S WIDTH, kKeyFaceWidthW, and ITS HEIGHT, the `key_height` tuning
-// key's live value (its seat above; the case paragraph): scaled_px, floored
-// at three device px so a key never shrinks to a sliver at a tiny scale.
-inline constexpr double kKeyFaceWidthW = 35.0;
+// THE FACE'S WIDTH, the `key_width` tuning key's live value, and ITS
+// HEIGHT, the `key_height` tuning key's (their seats above; the case
+// paragraph): scaled_px, floored at three device px so a key never shrinks
+// to a sliver at a tiny scale. icon_case_w_px is THE ONE READER of the
+// width: every key surface's walk, seat and hit box takes it (or
+// key_group_pitch_px, materials.h, built on it).
 inline int icon_case_w_px() {
-    return scaled_px(kKeyFaceWidthW, 3);
+    return scaled_px(key_width_w(), 3);
 }
 inline int icon_case_h_px() {
     return scaled_px(key_height_w(), 3);

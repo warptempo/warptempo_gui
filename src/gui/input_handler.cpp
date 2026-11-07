@@ -3404,6 +3404,13 @@ void GuiInputHandler::apply_key_height(int w) {
     relayout_window();
 }
 
+void GuiInputHandler::apply_key_width(int w) {
+    // The contract is at the declaration (input_handler.h): the push, then
+    // the scale's relayout tail; the commit's arm owns the persist.
+    set_key_width_w(w);
+    relayout_window();
+}
+
 void GuiInputHandler::apply_osk_key_size(int w_w, int h_w) {
     // The contract is at the declaration (input_handler.h): the push, then
     // the relayout tail; the commit's arm owns the persist.

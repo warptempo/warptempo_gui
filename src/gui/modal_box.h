@@ -32,7 +32,8 @@
 //      box's outer ground columns stand one hairline outside them; its top
 //      rows the trim lane's first rows, its bottom rows the well's foot;
 //   2. directly under it THE CONTROLS ROW, ROW 8'S OWN ROWS — the strip pad,
-//      the key (key_height tall, render.h's icon_case_h_px), the strip pad
+//      the key (key_width wide and key_height tall, render.h's
+//      icon_case_w_px / icon_case_h_px), the strip pad
 //      (strip_h_px) — on the ground, no line, bar or border, the keys'
 //      legends in its bottom pad, its outermost FACES FLUSH WITH THE PANE'S
 //      OUTER COLUMNS, the well's (materials.h's THE FACE AND ITS GAP); on
@@ -53,7 +54,8 @@
 // paint_key_legend) (paint_modal_box).
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the well's rows of ground. At the tablet's 2304 x 1440, 200 %
-// and key_height 17 (its default; the 70-px face, the strip pad 38 and the
+// and the keys' defaults, key_width 35 and key_height 17 (the 70 x 34
+// face, the strip pad 38 and the
 // 72-row logo lane in device px; the hairline one W, 2 device px): the
 // box's top rows 144–145 (the trim lane's first rows, the ground directly
 // under the band's rows 0–143, the logo lane 0–71), its bottom rows

@@ -3010,7 +3010,8 @@ inline constexpr bool redesign_button_is_level_case(RedesignButton b) {
 // THE SLIDERS' TAPER — THE SQUARE LAW (architect 2026-11-05, "accept square
 // law"): the fill's TRAVEL FRACTION t in [0, 1] and the level in dB are
 // dB = 40 · log10(t), t = 10^(dB / 40) — 0 dB at t = 1 (the fill full),
-// -9 dB at t = 0.596, -60 dB at t = 0.0316 (two columns of a 70-px face),
+// -9 dB at t = 0.596, -60 dB at t = 0.0316 (two columns of the 70-px face
+// at the defaults),
 // and -inf (kLevelDbOff) at t = 0, an empty fill. THE FLOOR ("-60 then
 // -inf"): a travel whose dB falls below kLevelDbMin reads -inf, so the
 // slider shows -60.0 at its last step and -inf below it, and from -inf a
@@ -8221,7 +8222,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the nineteen keys the
+    // 2026-10-28: the Settings button and bare `;`; the twenty keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened PREFILLED on the row's line once
@@ -8779,7 +8780,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's nineteen keys as
+    // (architect 2026-10-28), with the settings editor's twenty keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
@@ -8926,7 +8927,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its nineteen editable key lines and the two
+    // rows (its two headings, its twenty editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
@@ -18035,17 +18036,20 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // RESTR runs 47.5 (the 14-px legend, 2026-11-04 night).
 // THE FIT, AT THE LEGEND FACE'S 7 W EM, 14 device px on the tablet at 200 %
 // (kGuiFaceSizes, gui_font.h; 7 W since 2026-11-04 night, his pick over
-// the 8 W before it, "it does seem too large now") AGAINST THE 70-px FACE
-// (35 W, the key itself, materials.h's THE FACE AND ITS GAP), measured
-// 2026-11-04 night on the product's own shaping road (the runs' advances):
-// the widest words MAGNIFY 63.8, DISCARD 63.0, SESSION 62.3, HISTORY 61.7,
-// FLATTEN 61.2, ADD SEL and SOURCE 59.9 device px, so EVERY LEGEND OF A
-// 70-px KEY FITS ITS FACE, the widest with about 3 px each side; the
-// tightest neighbors, MAGNIFY beside FOLLOW (59.1), keep about 10 px
-// between their runs at the 72-px pitch. The rule stands for any word to
-// come (it never widens a key; one wider than its face overhangs onto the
-// ground). A smaller key_height leaves the widths alone (the legend reads
-// the face's width, never its height).
+// the 8 W before it, "it does seem too large now") AGAINST THE FACE — the
+// `key_width` tuning key's width (architect 2026-11-06; render.h's case
+// block), at its default 35 W the 70-px face (materials.h's THE FACE AND
+// ITS GAP), measured 2026-11-04 night on the product's own shaping road
+// (the runs' advances): the widest words MAGNIFY 63.8, DISCARD 63.0,
+// SESSION 62.3, HISTORY 61.7, FLATTEN 61.2, ADD SEL and SOURCE 59.9 device
+// px, so AT THE DEFAULT EVERY LEGEND FITS ITS FACE, the widest with about 3
+// px each side; the tightest neighbors, MAGNIFY beside FOLLOW (59.1), keep
+// about 10 px between their runs at the 72-px pitch. The rule stands for
+// any word to come and any width tuned: THE LEGEND NEVER WIDENS A KEY, and
+// one wider than its face overhangs onto the ground — a narrower face lets
+// the widest legends overhang, accepted while the width is tuned (MAGNIFY
+// from below 32 W, 64 device px, on the tablet). A smaller key_height leaves
+// the widths alone (the legend reads the face's width, never its height).
 inline constexpr const char* redesign_button_legend(RedesignButton b) {
     switch (b) {
         case RedesignButton::OpenProject:               return "OPEN";

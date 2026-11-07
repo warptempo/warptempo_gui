@@ -1222,7 +1222,9 @@ void GuiSettingsEditor::commit() {
 // `noise_level`, have no arm since 2026-11-05 night: no Settings row, the
 // band's two cases their one road, kSettingsEditorKeys), and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
-// `osk_font_px` (2026-10-29) the same, their arms after them, and the
+// `osk_font_px` (2026-10-29) and the key's face width `key_width`
+// (2026-11-06, its arm after key_height's) the same, their arms after
+// them, and the
 // lamps' hold `lamp_hold_ms` (2026-11-05 night) the same but for a live act,
 // having none, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
@@ -1450,6 +1452,24 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE KEY'S FACE WIDTH (architect 2026-11-06, a tuning key; render.h's
+    // `key_width` seat): key_height's arm exactly — an integer under its one
+    // grammar owner (parse_key_width, device_config.h), APPLIED LIVE AT THE
+    // COMMIT (GuiInputHandler::apply_key_width: the renderer's seat and the
+    // window re-laid-out at once) and persisted, NO CARD. The page opens the
+    // line editor on it (no value list, its 41 values no short domain); Tab
+    // completes no value; stage 2's recall is the writer's spelling
+    // (recall_gui_setting_value).
+    if (key == "key_width") {
+        const std::optional<int> w = parse_key_width(value);
+        if (!w) return reject(kKeyWidthGrammarReason);
+        if (*w == app.device_config->key_width) return unchanged();
+        app.device_config->key_width = *w;
+        input->apply_key_width(*w);
+        (void)persist();
+        return applied();
+    }
+
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
     // keys; render.h's `osk_key_w` / `osk_key_h` seat): each an integer under
     // the one grammar owner (parse_osk_key_size, device_config.h), APPLIED
@@ -1663,7 +1683,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's nineteen and
+        // one key does — any key the recall knows, the table's twenty and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

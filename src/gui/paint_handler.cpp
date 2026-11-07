@@ -629,10 +629,13 @@ std::string key_legend_word(std::string_view word) {
 // ROUNDED ONCE, AT THE ELEMENT, by scaled_px (its nearbyint; floored at one
 // px), never the side rounded first: 18 at 200 %, 9 at 100 %. A key_height
 // commit reaches it on the relayout road (GuiInputHandler::apply_key_height),
-// the icon caches keyed on the ink px.
+// the icon caches keyed on the ink px. THE FACE'S WIDTH (the `key_width`
+// tuning key, 2026-11-06) never sizes it: a width commit moves the face and
+// so the glyph's seat, never its ink.
 // CENTERED in the painted face `face` (architect 2026-11-03, the retrofit:
 // the glyph centered on the face; the left-square seat of the earlier mocks
-// rejected; the face the whole 70 x 34 key since 2026-11-04 night), the spare
+// rejected; the face the whole key since 2026-11-04 night, 70 x 34 at the
+// defaults), the spare
 // split with its odd px below and right (the integer floor, the mock's). THE
 // ODD HALF PX IS ACCEPTED (architect 2026-11-02: "I'd prefer slight
 // misalignment over uneven sizing"): a drawing whose ink side's parity
@@ -1104,8 +1107,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // the `audio_level` and `noise_level` sliders (RedesignButton::
     // IconAudioLevel, app_state.h; paint_level_case below). Two cases onto
     // the walk, the run one pitch longer than the lamp's, no run moving: on
-    // the tablet the left walk ends well short of the left runs' limit (the
-    // right run's first face less the run gap, icon_row_seats).
+    // the tablet at the defaults the left walk ends short of the left runs'
+    // limit (the right run's first face less the run gap, icon_row_seats;
+    // THE FIT at paint_icon_row's width math).
     {RedesignButton::IconAudioLevel},
     {RedesignButton::IconNoiseLevel},
     // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
@@ -1243,7 +1247,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
 // widths and scales at which the band holds every run are THE FIT at
 // paint_icon_row's width math, its one statement; the tablet does not reach
-// the rule at its 200 % and key_height's default.
+// the rule at its 200 % and the keys' defaults (a key_width past 37 W does).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource},
      {RedesignButton::ViewTarget}},
@@ -1887,40 +1891,52 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // too narrow for the row covers members otherwise, under the view pairs'
     // overflow rule — a width, never a state.
     //
-    // THE WIDTH MATH, RE-DERIVED for the 35-W face and the one-W gap
-    // (2026-11-04 night; the ends the well's columns since 2026-10-23, the
-    // faces' since 2026-11-03, the well the waveform area since 2026-11-03;
-    // key_height moves none of it): in the tablet's device px at 200 % (one
-    // W = 2), the runs, each n faces of 70 with a key gap of 2 between two
+    // THE WIDTH MATH, AT THE DEFAULTS — the face the `key_width` tuning key's
+    // 35 W (architect 2026-11-06; render.h's case block) and the one-W gap
+    // (the ends the well's columns since 2026-10-23, the faces' since
+    // 2026-11-03, the well the waveform area since 2026-11-03; key_height
+    // moves none of it): in the tablet's device px at 200 % (one W = 2), the
+    // runs, each n faces of 70 with a key gap of 2 between two
     // (key_group_w_px: 70n + 2(n − 1)), 44 of ground (the run gap) between
     // two runs' faces; the right run 5 · 70 + 4 · 2 = 358, its last FACE
     // ending on the well's last column. Outside the `h` view the LEFT WALK is
-    // twenty-two members in three runs of 6, 10 and 6,
-    //   430 + 44 + 718 + 44 + 430 = 1666,
-    // and inside it thirteen in three (Open, Save, Revert, Load in Place |
+    // twenty-three members in three runs of 6, 10 and 7,
+    //   430 + 44 + 718 + 44 + 502 = 1738,
+    // and inside it fourteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
-    // Renders, Enable Tooltips, Noise — Restrict and the Trim Presets key
-    // hidden there with Follow),
-    //   286 + 44 + 430 + 44 + 214 = 1018;
+    // Renders, Enable Tooltips, Audio, Noise — Restrict and the Trim Presets
+    // key hidden there with Follow),
+    //   286 + 44 + 430 + 44 + 286 = 1090;
     // with one run gap of bare ground before the right run the band holds every
     // run at
-    //   1666 + 44 + 358 = 2068
-    // device px outside the view (1420 inside it) — the faces' span the
-    // well's 2256 on the tablet, with 188 px of ground between the left runs
-    // and the right run beyond the run gap. Off the painted walk (the face
-    // scaled_px(35), the key gap scaled_px(1), the run gap scaled_px(22), the
-    // ends well_columns'): at the tablet's 200 % (faces 70, the well 24 ..
-    // 2279) the left runs' faces on x 24..1689, the right run's 1922..2279
-    // (its last face ending on 2279); at 100 % on a 1920-px window (faces
-    // 35, the key gap 1, the run gap 22, the well 16 .. 1903) the left runs'
-    // faces on x 16..848, the right run's 1725..1903. A roster move restates
-    // these numbers.
-    // THE FIT, the one statement every other site points to: the band is 27
-    // faces, 23 key gaps and three run gaps outside the view (18, 14 and
-    // three inside it) against the well, so the tablet's 2304 holds it whole
-    // up to about 328 % outside the view and about 470 % inside it, and at
-    // 100 % a window down to about 716 device px outside the view and 492
-    // inside it; past either the overflow rule (kIconRowViewPairs) answers.
+    //   1738 + 44 + 358 = 2140
+    // device px outside the view (1492 inside it) — the faces' span the
+    // well's 2256 on the tablet, with 116 px (58 W) of ground between the
+    // left runs and the right run beyond the run gap. Off the painted walk
+    // (the face scaled_px(key_width), the key gap scaled_px(1), the run gap
+    // scaled_px(22), the ends well_columns'): at the tablet's 200 % (faces
+    // 70, the well 24 .. 2279) the left runs' faces on x 24..1761, the right
+    // run's 1922..2279 (its last face ending on 2279); at 100 % on a 1920-px
+    // window (faces 35, the key gap 1, the run gap 22, the well 16 .. 1903)
+    // the left runs' faces on x 16..884, the right run's 1725..1903. A roster
+    // move restates these numbers.
+    // THE FIT, the one statement every other site points to: the band is 28
+    // faces, 24 key gaps and three run gaps outside the view (19, 15 and
+    // three inside it) against the well — 1070 W outside, 746 W inside at
+    // key_width 35 — so the tablet's 2304 holds it whole up to about 210 %
+    // outside the view and about 300 % inside it, and at 100 % a window down
+    // to about 1100 device px outside the view and 780 inside it; past either
+    // the overflow rule (kIconRowViewPairs) answers. ON THE TABLET AT 200 %
+    // THE WIDTH TUNES THE FIT: outside the view the band is 56 · key_width +
+    // 180 device px against the well's 2256, so it holds whole up to
+    // key_width 37 W (2252) and from 38 W (2308) the overflow rule answers —
+    // the left runs clipped one run gap short of the history opener (x
+    // 2228 − 10 · key_width), the third run's faces cut or published empty
+    // from its tail, the right run whole: NOISE cut from 38 W and gone from
+    // 39, AUDIO gone from 40, SCORE from 42, TIPS from 44, SETUP (the
+    // settings page's one opener on glass) from 46, LOCK from 48, PLAYER at
+    // the grammar's ceiling, 50 (the first two runs whole up to it). No assert stands on the fit: the clip and the cut
+    // publication are the whole answer at every width.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -2582,10 +2598,12 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // advance 49.59, the ink 0 .. 49.47 -> the cell 50, the field 62. THE
 // PLAYER'S ROW HOLDS THEM: its scrub is
 // what the fixed terms leave (player_row_layout), the two fields and their
-// gap 123 + 8 + 123 = 254 device px on the tablet, so with the 70-px face,
-// the one-W key gap and the 44-px run gap (2026-11-04 night) the scrub's
-// channel is 1226 device px (2304 wide, x 282 .. 1507), the fields x 1552
-// .. 1674 and 1683 .. 1805.
+// gap 123 + 8 + 123 = 254 device px on the tablet, so at the defaults —
+// the 70-px face of key_width 35, the one-W key gap and the 44-px run gap
+// (2026-11-04 night) — the scrub's channel is 1226 device px (2304 wide, x
+// 282 .. 1507), the fields x 1552 .. 1674 and 1683 .. 1805; each W of
+// key_width takes 18 device px from the channel (nine faces), 956 at the
+// grammar's ceiling, 50 W.
 //
 // ONE ORIGIN RULE FOR EVERY TIME FIELD (architect 2026-11-05): THE RUN
 // STARTS AT `field_x + pad - ink_l`, a whole pixel (every term an int, so
@@ -3007,8 +3025,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
-    // THE NUMBERS (the tablet's device px at 200 %, one W = 2, re-derived
-    // 2026-11-04 night — the 70-px face, the one-W key gap of 2, the 44-px
+    // THE NUMBERS (the tablet's device px at 200 %, one W = 2, AT THE
+    // DEFAULTS — the 70-px face of key_width 35, the one-W key gap of 2, the
+    // 44-px
     // run gap, the 22-px clock; the skips two, the verbs eight, the step-and-walk
     // group four and the nudge-and-play group five): the block is 19 faces
     // in four runs, 15 key gaps and three run gaps, 142 + 574 + 286 + 358 +
@@ -3030,7 +3049,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
     // not standing, 142 + 70 + 142 + 286 + 3·44 = 772 px on the tablet, from x
-    // 1508. THE ROW CARRIES NO
+    // 1508. THE WIDTH TUNES THE BLOCK (the `key_width` tuning key, 2026-11-06):
+    // 38 · key_width + 162 device px on the tablet, from x 2118 − 38 ·
+    // key_width — at the grammar's ceiling, 50 W, 2062 px from x 218, still
+    // clear of the clock's field and over the name and the state line under
+    // the z rule below. THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
     // STATE LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so

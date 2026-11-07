@@ -19,10 +19,11 @@
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
 // UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM: the key's face is a skin
-// length, 35 W wide (70 device px on the tablet at 200 %) — Cool Edit's
-// 23-W case, back as a constexpr since 2026-11-03 (the retrofit, reversing
-// the square key of 2026-11-02; 70 device px since 2026-11-04 night) — by
-// the `key_height` tuning key's W tall (17 its default; render.h's case block, icon_case_w_px /
+// length, the `key_width` tuning key's W wide (architect 2026-11-06, a
+// tuning key until he rules the number; 35 its default, 70 device px on
+// the tablet at 200 %) — Cool Edit's 23-W case (the retrofit of 2026-11-03
+// reversing the square key of 2026-11-02) — by the `key_height` tuning
+// key's W tall (17 its default; render.h's case block, icon_case_w_px /
 // icon_case_h_px), the face the whole key, its neighbors one W of ground
 // away (key_gap_px, architect 2026-11-04, the unit); its Breeze glyph
 // is centered on its face by its own ink-box road, its size following the
@@ -96,8 +97,8 @@
 // the faces' own metrics, each its own rounded part.
 struct ProgramSpec {
     // (THE CASE HAS NO W TERM HERE: the key is render.h's case block, its
-    // width the constexpr kKeyFaceWidthW and its height the `key_height`
-    // tuning key's, 2026-11-03, its gap kKeyGapW, 2026-11-04.)
+    // width the `key_width` tuning key's, 2026-11-06, and its height the
+    // `key_height` tuning key's, 2026-11-03, its gap kKeyGapW, 2026-11-04.)
     // COOL EDIT'S TOOLBAR HAS NO HOVER FACE (a capture with the
     // pointer on a button differs from one without only by Wine's tooltip):
     // the roster's and the render player's hot face is never lit, the hover

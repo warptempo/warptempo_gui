@@ -3112,8 +3112,10 @@ private:
     // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
     // along the pen's axis as the tip rises — NOT THE HAND. 36 device px sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
-    // the neighboring button, a key pitch (the 35-W face and the one-W gap,
-    // 36 W, 72 device px on the tablet, 2026-11-04), and below a move to
+    // the neighboring button, a key pitch (the face and the one-W gap, 36 W,
+    // 72 device px on the tablet at key_width's default 35, 2026-11-04; a
+    // key_width under 17 W brings the pitch inside the slop while the width
+    // is tuned), and below a move to
     // the next lit row, a list row (26 W, 52 device px — folder_overlay.h's
     // kListRowW, 2026-11-04 night), so one row's deliberate step rearms.
     // Authored in W as every chrome length, though the drift is physical:
@@ -3662,6 +3664,19 @@ private:
     // seeds the height before the window exists (main.cpp).
     void apply_key_height(int w);
 
+    // THE KEY'S FACE WIDTH'S ONE LIVE ACT (the `key_width` tuning key,
+    // architect 2026-11-06; render.h's seat): push the width to the renderer
+    // (set_key_width_w) and run the RELAYOUT TAIL (relayout_window below) —
+    // the width moves every key surface's walk and seats (the band's runs,
+    // row 8's groups, the controls rows' clusters) and their hit boxes, so
+    // the commit re-lays the window out at once, the key_height act's shape
+    // (a sibling, not one body: each act pushes its own seat). The glyph
+    // follows the height alone, so no icon raster moves. The settings
+    // editor's `key_width=` commit is the sole caller; it gates the no-op,
+    // assigns the live config and persists it (apply_device_setting); the
+    // launch seeds the width before the window exists (main.cpp).
+    void apply_key_width(int w);
+
     // THE KEYBOARD'S KEY BOX'S ONE LIVE ACT (the `osk_key_w` and `osk_key_h`
     // tuning keys, architect 2026-10-29; render.h's seat): push the box to
     // the renderer (set_osk_key_size_w) and run the RELAYOUT TAIL
@@ -3706,8 +3721,9 @@ private:
     // the launch seeds the grow before the window exists (main.cpp).
     void apply_waveform_grow(int quarters);
 
-    // THE RELAYOUT TAIL, the three live layout acts' shared last steps
-    // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29):
+    // THE RELAYOUT TAIL, the four live layout acts' shared last steps
+    // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29;
+    // apply_key_width, 2026-11-06):
     // the full-window
     // invalidate and the resize-path geometry-and-cache rebuild
     // (GuiPaintHandler::on_resize). Run after the new length is pushed to

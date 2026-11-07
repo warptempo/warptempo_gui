@@ -22,7 +22,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (SEVENTEEN keys since 2026-11-05 night,
+// REQUIRED SET, every one of them (EIGHTEEN keys since 2026-11-06, the
+// key's face width `key_width` placed after `key_height` — a tuning key,
+// the key's two sides together; SEVENTEEN 2026-11-05 night,
 // the lamps' hold `lamp_hold_ms` appended at the end — a tuning key, the
 // least time either lamp by the battery stays lit; SIXTEEN earlier that
 // night, the noise's fixed attenuation `noise_attenuation_level` placed
@@ -98,8 +100,10 @@ namespace {
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
 // keys have always stood, each leaving when he settles its value:
-// `key_height` since 2026-10-29, and the on-screen keyboard's key box,
-// `osk_key_w` and `osk_key_h`, after it since that evening, and the
+// `key_height` since 2026-10-29, the key's face width, `key_width`, after
+// it since 2026-11-06 (the key's two sides together), the on-screen
+// keyboard's key box, `osk_key_w` and `osk_key_h`, after them since
+// 2026-10-29 evening, and the
 // keyboard's cap size, `osk_font_px`, after them since that night, and the
 // two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night (none
 // stood from 2026-10-28 night,
@@ -128,6 +132,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "noise_attenuation_level",
     "noise_crossfade_s",
     "key_height",
+    "key_width",
     "osk_key_w",
     "osk_key_h",
     "osk_font_px",
@@ -192,6 +197,14 @@ std::string format_noise_crossfade_s(int s) {
 std::string format_key_height(int px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", px);
+    return std::string(buf);
+}
+
+// The key's face width's canonical spelling (2026-11-06): `%d`, the noise
+// integers' road.
+std::string format_key_width(int w) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", w);
     return std::string(buf);
 }
 
@@ -301,6 +314,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "key_height") {
             // The tuning key's canonical integer (format_key_height).
             s += format_key_height(cfg.key_height);
+        } else if (k == "key_width") {
+            // The tuning key's canonical integer (format_key_width).
+            s += format_key_width(cfg.key_width);
         } else if (k == "osk_key_w") {
             // The keyboard's tuning keys' canonical integer
             // (format_osk_key_size).
@@ -491,6 +507,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kKeyHeightGrammarReason);
             }
             out.key_height = *px;
+            return {};
+        }
+        // THE KEY'S FACE WIDTH (2026-11-06, a tuning key): under its one
+        // grammar owner (parse_key_width, device_config.h), required like
+        // every key; any other spelling the launch's hard fail.
+        if (key == "key_width") {
+            const std::optional<int> w = parse_key_width(value);
+            if (!w) {
+                return bad_value(ln, key, value, kKeyWidthGrammarReason);
+            }
+            out.key_width = *w;
             return {};
         }
         // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): each under
