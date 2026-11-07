@@ -740,7 +740,7 @@ GuiRect well_foot_area(const AppState& a) {
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each a plain run of cases,
 // the run gap of bare ground between two (render.h's program_run_gap_px, the
-// strip pad). It is BOTTOM LANE 0, on the window's
+// `run_gap` tuning key). It is BOTTOM LANE 0, on the window's
 // foot
 // under the well's foot (lane 1, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal
@@ -3629,6 +3629,11 @@ int gui_main() {
     // key surface's face, walk and hit box; the other road is the settings
     // editor's `key_width=` commit (GuiInputHandler::apply_key_width).
     set_key_width_w(device_config.key_width);
+    // THE RUN GAP THE SAME (the `run_gap` tuning key, architect 2026-11-07;
+    // render.h's seat): seeded before the first layout, every run gap of the
+    // band, row 8 and the controls rows; the other road is the settings
+    // editor's `run_gap=` commit (GuiInputHandler::apply_run_gap).
+    set_run_gap_w(device_config.run_gap);
     // THE KEYBOARD'S KEY BOX RIDES THE SAME ROAD (the `osk_key_w` and
     // `osk_key_h` tuning keys, architect 2026-10-29; render.h's seat): seeded
     // before the first layout; the other road is the settings editor's two

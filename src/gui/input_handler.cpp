@@ -3409,6 +3409,13 @@ void GuiInputHandler::apply_key_width(int w) {
     relayout_window();
 }
 
+void GuiInputHandler::apply_run_gap(int w) {
+    // The contract is at the declaration (input_handler.h): the push, then
+    // the scale's relayout tail; the commit's arm owns the persist.
+    set_run_gap_w(w);
+    relayout_window();
+}
+
 void GuiInputHandler::apply_osk_key_size(int w_w, int h_w) {
     // The contract is at the declaration (input_handler.h): the push, then
     // the relayout tail; the commit's arm owns the persist.

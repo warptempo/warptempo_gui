@@ -413,6 +413,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // formatter (format_key_width, device_config.h), the writer's own spelling.
     if (key == "key_width" && app.device_config != nullptr)
         return format_key_width(app.device_config->key_width);
+    // THE RUN GAP (2026-11-07, a tuning key): through its one formatter
+    // (format_run_gap, device_config.h), the writer's own spelling.
+    if (key == "run_gap" && app.device_config != nullptr)
+        return format_run_gap(app.device_config->run_gap);
     // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): through their
     // one formatter (format_osk_key_size, device_config.h).
     if (key == "osk_key_w" && app.device_config != nullptr)

@@ -539,8 +539,9 @@ GuiPlatform::~GuiPlatform() {
 // arithmetic is at paint_icon_row, paint_handler.cpp: the left runs' 1738,
 // the run gap's 44 and the right run's 358 of the well's 2256 device px
 // outside the `h` view, with the 70-px face of key_width 35, the one-W key
-// gap of 2, the 44-px run gap and the well the waveform area), clearing it
-// by 116; a key_width past 37 W does not fit (THE FIT there).
+// gap of 2, the 44-px run gap of run_gap 22 and the well the waveform area),
+// clearing it by 116; a key_width past 37 W or a run_gap past 41 W does not
+// fit (THE FIT there).
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -606,6 +607,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // THE KEY'S FACE WIDTH (architect 2026-11-06, a tuning key), spelled:
     // 35 W, 70 device px on the tablet (device_config.h's head).
     cfg.key_width         = kKeyWidthDefaultW;
+    // THE RUN GAP (architect 2026-11-07, a tuning key), spelled: 22 W, 44
+    // device px on the tablet (device_config.h's head).
+    cfg.run_gap           = kRunGapDefaultW;
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
     // keys), spelled: 24 x 30 W, the FLAGS sheet's 48 x 60 device px on the
     // tablet (device_config.h's head).

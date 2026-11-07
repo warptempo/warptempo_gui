@@ -22,7 +22,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (EIGHTEEN keys since 2026-11-06, the
+// REQUIRED SET, every one of them (NINETEEN keys since 2026-11-07, the run
+// gap `run_gap` placed after `key_width` — a tuning key, the band's
+// lengths together; EIGHTEEN 2026-11-06, the
 // key's face width `key_width` placed after `key_height` — a tuning key,
 // the key's two sides together; SEVENTEEN 2026-11-05 night,
 // the lamps' hold `lamp_hold_ms` appended at the end — a tuning key, the
@@ -101,8 +103,9 @@ namespace {
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
 // keys have always stood, each leaving when he settles its value:
 // `key_height` since 2026-10-29, the key's face width, `key_width`, after
-// it since 2026-11-06 (the key's two sides together), the on-screen
-// keyboard's key box, `osk_key_w` and `osk_key_h`, after them since
+// it since 2026-11-06 (the key's two sides together), the run gap,
+// `run_gap`, after them since 2026-11-07 (the band's lengths together), the
+// on-screen keyboard's key box, `osk_key_w` and `osk_key_h`, after them since
 // 2026-10-29 evening, and the
 // keyboard's cap size, `osk_font_px`, after them since that night, and the
 // two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night (none
@@ -133,6 +136,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "noise_crossfade_s",
     "key_height",
     "key_width",
+    "run_gap",
     "osk_key_w",
     "osk_key_h",
     "osk_font_px",
@@ -203,6 +207,14 @@ std::string format_key_height(int px) {
 // The key's face width's canonical spelling (2026-11-06): `%d`, the noise
 // integers' road.
 std::string format_key_width(int w) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", w);
+    return std::string(buf);
+}
+
+// The run gap's canonical spelling (2026-11-07): `%d`, the noise integers'
+// road.
+std::string format_run_gap(int w) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", w);
     return std::string(buf);
@@ -317,6 +329,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "key_width") {
             // The tuning key's canonical integer (format_key_width).
             s += format_key_width(cfg.key_width);
+        } else if (k == "run_gap") {
+            // The tuning key's canonical integer (format_run_gap).
+            s += format_run_gap(cfg.run_gap);
         } else if (k == "osk_key_w") {
             // The keyboard's tuning keys' canonical integer
             // (format_osk_key_size).
@@ -518,6 +533,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kKeyWidthGrammarReason);
             }
             out.key_width = *w;
+            return {};
+        }
+        // THE RUN GAP (2026-11-07, a tuning key): under its one grammar
+        // owner (parse_run_gap, device_config.h), required like every key;
+        // any other spelling the launch's hard fail.
+        if (key == "run_gap") {
+            const std::optional<int> w = parse_run_gap(value);
+            if (!w) {
+                return bad_value(ln, key, value, kRunGapGrammarReason);
+            }
+            out.run_gap = *w;
             return {};
         }
         // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): each under

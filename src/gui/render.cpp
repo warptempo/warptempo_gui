@@ -2242,6 +2242,10 @@ namespace {
     // set_key_width_w from the same two application points; the template's
     // value as construction state.
     int    g_key_width_w = kKeyWidthDefaultW;
+    // THE RUN GAP in W (render.h's `run_gap` seat), set by set_run_gap_w
+    // from the same two application points; the template's value as
+    // construction state.
+    int    g_run_gap_w = kRunGapDefaultW;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (render.h's
     // `osk_key_w` / `osk_key_h` seat), set by set_osk_key_size_w from the
     // same two application points; the templates' values as construction
@@ -2272,6 +2276,10 @@ void   set_key_width_w(int w) {
     g_key_width_w = w;
 }
 int    key_width_w() { return g_key_width_w; }
+void   set_run_gap_w(int w) {
+    g_run_gap_w = w;
+}
+int    run_gap_w() { return g_run_gap_w; }
 void   set_osk_key_size_w(int w_w, int h_w) {
     g_osk_key_width_w = w_w;
     g_osk_key_height_w = h_w;

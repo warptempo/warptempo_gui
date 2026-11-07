@@ -1223,7 +1223,8 @@ void GuiSettingsEditor::commit() {
 // band's two cases their one road, kSettingsEditorKeys), and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
 // `osk_font_px` (2026-10-29) and the key's face width `key_width`
-// (2026-11-06, its arm after key_height's) the same, their arms after
+// (2026-11-06, its arm after key_height's) and the run gap `run_gap`
+// (2026-11-07, its arm after key_width's) the same, their arms after
 // them, and the
 // lamps' hold `lamp_hold_ms` (2026-11-05 night) the same but for a live act,
 // having none, its arm last
@@ -1470,6 +1471,24 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE RUN GAP (architect 2026-11-07, session 87, a tuning key; render.h's
+    // `run_gap` seat): key_width's arm exactly — an integer under its one
+    // grammar owner (parse_run_gap, device_config.h), APPLIED LIVE AT THE
+    // COMMIT (GuiInputHandler::apply_run_gap: the renderer's seat and the
+    // window re-laid-out at once) and persisted, NO CARD. The page opens the
+    // line editor on it (no value list, its 43 values no short domain); Tab
+    // completes no value; stage 2's recall is the writer's spelling
+    // (recall_gui_setting_value).
+    if (key == "run_gap") {
+        const std::optional<int> w = parse_run_gap(value);
+        if (!w) return reject(kRunGapGrammarReason);
+        if (*w == app.device_config->run_gap) return unchanged();
+        app.device_config->run_gap = *w;
+        input->apply_run_gap(*w);
+        (void)persist();
+        return applied();
+    }
+
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
     // keys; render.h's `osk_key_w` / `osk_key_h` seat): each an integer under
     // the one grammar owner (parse_osk_key_size, device_config.h), APPLIED
@@ -1683,7 +1702,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty and
+        // one key does — any key the recall knows, the table's twenty-one and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

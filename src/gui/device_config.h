@@ -14,7 +14,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eighteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Nineteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -223,6 +223,23 @@
 //                            number (render.h's case block), its key,
 //                            grammar and row going then; the template
 //                            spells 35
+//   run_gap=<w>              THE RUN GAP (architect 2026-11-07, session 87,
+//                            his "agree", a tuning key like key_width): the
+//                            ground between two runs' faces IN W, default
+//                            22 W — 44 device px on the tablet at 200 %
+//                            (render.h's program_run_gap_px, its one
+//                            reader: the band's runs, row 8's groups, the
+//                            render player's and every controls row's group
+//                            spaces), an integer in [2, 44] in canonical
+//                            spelling (parse_run_gap below), live at the
+//                            settings editor's OK, the window re-laid-out
+//                            at once (GuiInputHandler::apply_run_gap);
+//                            A TUNING KEY with a Settings row, REQUIRED
+//                            like every key while it stands, which
+//                            settles into a constexpr once he rules the
+//                            number (render.h's run gap paragraph), its
+//                            key, grammar and row going then; the template
+//                            spells 22
 //   osk_key_w=<px>          THE ON-SCREEN KEYBOARD'S KEY BOX (architect
 //   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
 //                            centered, like a phone … chiclets, taller than
@@ -398,7 +415,8 @@
 // crossfade; the lamps' hold `lamp_hold_ms` APPENDED after `osk_font_px`
 // the same night, the tuning keys keeping the end; the key's face width
 // `key_width` placed after `key_height` 2026-11-06, the key's two sides
-// together);
+// together; the run gap `run_gap` placed after `key_width` 2026-11-07, the
+// band's lengths together);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -542,7 +560,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eighteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nineteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
@@ -580,7 +598,8 @@
 // `noise_attenuation_level`, `noise_crossfade_s` and since 2026-10-29 the
 // tuning keys `key_height`, `osk_key_w` and `osk_key_h` and that night
 // `osk_font_px`, since 2026-11-05 night the tuning key `lamp_hold_ms`, and
-// since 2026-11-06 the tuning key `key_width`, among them (kSettingsEditorKeys) — then a key's current
+// since 2026-11-06 the tuning key `key_width`, and since 2026-11-07 the
+// tuning key `run_gap`, among them (kSettingsEditorKeys) — then a key's current
 // value, then a closed value's words, and committing each through this
 // file's writer under the key's own grammar below. THE TWO LEVELS,
 // `audio_level` and `noise_level`, are edited on the main page alone, the
@@ -657,6 +676,10 @@ struct DeviceConfig {
     // key): required; the construction state is the template's 35
     // (kKeyWidthDefaultW below).
     int         key_width         = 35;
+    // THE RUN GAP in W (2026-11-07, the head's list; a tuning key):
+    // required; the construction state is the template's 22
+    // (kRunGapDefaultW below).
+    int         run_gap           = 22;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (2026-10-29, the head's list;
     // two tuning keys): required; the construction state is the templates'
     // 24 x 30 (kOskKeyWDefaultW, kOskKeyHDefaultW below).
@@ -721,7 +744,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 // right-anchored run covers the runs to its left (the overflow rule at
 // kIconRowViewPairs, paint_handler.cpp). Where that is — the window widths
 // and the scales the tablet's 2304-px panel holds the row whole at, the
-// key's width (the `key_width` tuning key) moving it and its height none of
+// key's width (the `key_width` tuning key) and the run gap (the `run_gap`
+// tuning key, 2026-11-07) moving it and the key's height none of
 // it since 2026-11-03 — is THE FIT at paint_icon_row's width math (paint_handler.cpp),
 // its one statement. The
 // redesign carries no
@@ -1014,8 +1038,8 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // default is the constexpr's. The width alone moves: the glyph follows
 // key_height (paint_key_glyph), the legend never widens the face (a
 // narrower face lets the widest legends overhang onto the ground, accepted
-// while tuning; MAGNIFY below 32 W). Past 37 W on the tablet at 200 % the
-// band no longer fits and its overflow rule answers — the left runs
+// while tuning; MAGNIFY below 32 W). Past 37 W on the tablet at 200 % (and
+// run_gap's default 22, below) the band no longer fits and its overflow rule answers — the left runs
 // clipped short of the right run, the third run's keys gone from its tail,
 // SETUP itself from 46 W (THE FIT at paint_icon_row's width math,
 // paint_handler.cpp). The settings page opens
@@ -1032,6 +1056,39 @@ std::string format_key_width(int w);
 inline std::optional<int> parse_key_width(std::string_view v) {
     const std::optional<int> n = parse_canonical_config_int(v);
     if (!n || *n < kKeyWidthMinW || *n > kKeyWidthMaxW)
+        return std::nullopt;
+    return n;
+}
+
+// THE run_gap GRAMMAR (architect 2026-11-07, session 87, his "agree": the
+// ground between two runs a tuning key like key_width until he rules the
+// number) — an integer in [2, 44] W in canonical spelling, the one owner the
+// reader, the writer, the settings editor's commit and its recall read
+// (format_run_gap, parse_run_gap). THE RANGE IS THE PLANNER'S PICK: at least
+// two key gaps (kKeyGapW, render.h — a run gap no narrower than two faces'
+// ground, so two runs always read apart from a group's own gap), at most
+// twice the default. THE DEFAULT IS 22 W, 44 device px on the tablet at
+// 200 % — the constexpr kRunGapW of 2026-11-04 night, so the picture at the
+// default is the constexpr's. One key for every reader (render.h's
+// program_run_gap_px): the band's runs, row 8's groups, the render player's
+// and every controls row's group spaces. Past 41 W on the tablet at 200 %
+// and key_width 35 the band no longer fits and its overflow rule answers —
+// the left runs clipped one run gap short of the history opener, NOISE cut
+// from its tail at 42 to 44 (THE FIT at paint_icon_row's width math,
+// paint_handler.cpp). The settings page opens the LINE EDITOR on it, not a
+// value list (43 values is no short domain, kSettingsValueListKeys' rule). A
+// TUNING KEY: when he rules the number, the key, these functions and its
+// Settings row go, and the value becomes a constexpr behind render.h's
+// program_run_gap_px.
+inline constexpr int kRunGapMinW     = 2;
+inline constexpr int kRunGapMaxW     = 44;
+inline constexpr int kRunGapDefaultW = 22;
+inline constexpr const char* kRunGapGrammarReason =
+    "must be an integer in [2, 44] in canonical spelling";
+std::string format_run_gap(int w);
+inline std::optional<int> parse_run_gap(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kRunGapMinW || *n > kRunGapMaxW)
         return std::nullopt;
     return n;
 }
@@ -1300,7 +1357,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — fourteen keys,
+// which serves its ONE device-key body — fifteen keys,
 // `projects_repo=`, `projects_path=`, since 2026-10-21
 // `true_colors=`, since 2026-11-05 `theme=` (its live act
 // GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
@@ -1311,8 +1368,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
 // and that night `osk_font_px=` (its GuiInputHandler::apply_osk_font_px),
 // since 2026-11-05 night `lamp_hold_ms=` (no live act: the tick reads
-// the live struct, refresh_logo_lamps), and since 2026-11-06 `key_width=`
-// (its live act GuiInputHandler::apply_key_width) —
+// the live struct, refresh_logo_lamps), since 2026-11-06 `key_width=`
+// (its live act GuiInputHandler::apply_key_width), and since 2026-11-07
+// `run_gap=` (its live act GuiInputHandler::apply_run_gap) —
 // and the band's two level cases' end (GuiInputHandler::settle_level_case,
 // since 2026-11-05: `audio_level=` and `noise_level=`, their live acts
 // GuiPlayback::set_audio_level_db and GuiNoise::set_level_db, the typed
@@ -1350,6 +1408,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // kNoiseAttenuationDefaultDb) and `noise_crossfade_s=4` (2026-10-28),
 // `key_height=17` (2026-10-29; 17 W since the rebase of 2026-11-05),
 // `key_width=35` (2026-11-06, kKeyWidthDefaultW),
+// `run_gap=22` (2026-11-07, kRunGapDefaultW),
 // `osk_key_w=24`, `osk_key_h=30` and `osk_font_px=12` (2026-10-29,
 // kKeyHeightDefaultW, kOskKeyWDefaultW,
 // kOskKeyHDefaultW, kOskFontPxDefaultW), `lamp_hold_ms=100` (2026-11-05

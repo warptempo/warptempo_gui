@@ -3690,6 +3690,19 @@ private:
     // launch seeds the width before the window exists (main.cpp).
     void apply_key_width(int w);
 
+    // THE RUN GAP'S ONE LIVE ACT (the `run_gap` tuning key, architect
+    // 2026-11-07, session 87; render.h's seat): push the gap to the renderer
+    // (set_run_gap_w) and run the RELAYOUT TAIL (relayout_window below) —
+    // the gap moves the band's runs and its left runs' clip, row 8's block,
+    // the controls rows' groups and the player rows' scrub and their hit
+    // boxes, so the commit re-lays the window out at once, the key_width
+    // act's shape (a sibling, not one body: each act pushes its own seat).
+    // No icon raster moves. The settings editor's `run_gap=` commit is the
+    // sole caller; it gates the no-op, assigns the live config and persists
+    // it (apply_device_setting); the launch seeds the gap before the window
+    // exists (main.cpp).
+    void apply_run_gap(int w);
+
     // THE KEYBOARD'S KEY BOX'S ONE LIVE ACT (the `osk_key_w` and `osk_key_h`
     // tuning keys, architect 2026-10-29; render.h's seat): push the box to
     // the renderer (set_osk_key_size_w) and run the RELAYOUT TAIL
@@ -3734,9 +3747,9 @@ private:
     // the launch seeds the grow before the window exists (main.cpp).
     void apply_waveform_grow(int quarters);
 
-    // THE RELAYOUT TAIL, the four live layout acts' shared last steps
+    // THE RELAYOUT TAIL, the five live layout acts' shared last steps
     // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29;
-    // apply_key_width, 2026-11-06):
+    // apply_key_width, 2026-11-06; apply_run_gap, 2026-11-07):
     // the full-window
     // invalidate and the resize-path geometry-and-cache rebuild
     // (GuiPaintHandler::on_resize). Run after the new length is pushed to

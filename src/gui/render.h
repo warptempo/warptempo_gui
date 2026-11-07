@@ -1014,6 +1014,23 @@ int  key_height_w();
 void set_key_width_w(int w);
 int  key_width_w();
 
+// THE RUN GAP, THE `run_gap` TUNING KEY'S SEAT (architect 2026-11-07,
+// session 87, his "agree": the ground between two runs a tuning key like the
+// key's two sides until he rules the number): the live value IN W
+// (scaled_px's axis; the default 22 W = 44 device px at 200 %), read by
+// program_run_gap_px (the run gap paragraph below) and nothing else — every
+// reader of the gap, the band's runs, row 8's groups, the render player's
+// row and the controls rows, takes that accessor. The key_width seat's shape
+// exactly — file-scope state in render.cpp, pushed by gui_main's startup
+// read of the device config before the window exists and by the settings
+// editor's `run_gap=` commit (GuiInputHandler::apply_run_gap, which
+// re-lays-out at once). The grammar and the range are device_config.h's
+// (parse_run_gap); the construction state is the template's 22
+// (kRunGapDefaultW). It settles into a constexpr once he rules the number,
+// and this pair goes.
+void set_run_gap_w(int w);
+int  run_gap_w();
+
 // THE ON-SCREEN KEYBOARD'S KEY BOX, THE `osk_key_w` AND `osk_key_h` TUNING
 // KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
 // like a phone … chiclets, taller than wide"): the live box IN W
@@ -1693,16 +1710,28 @@ inline int icon_row_h_px() {
 }
 // THE GROUND BETWEEN TWO RUNS (architect 2026-10-22, the simple layout; the
 // hi-fi's gap again since 2026-11-03, the retrofit, reversing that
-// morning's "the strip pad"; 22 W since 2026-11-04 night): kRunGapW, 22 W
-// through scaled_px — 44 device px on the tablet at 200 %, 22 at 100 % —
+// morning's "the strip pad"; 22 W since 2026-11-04 night; A TUNING KEY since
+// 2026-11-07, architect session 87, his "agree"): THE `run_gap` TUNING KEY'S
+// W (run_gap_w, its seat above; 22 its default) through scaled_px — 44
+// device px on the tablet at 200 %, 22 at 100 % at the default —
 // between two runs' FACES (the key is
-// its face since 2026-11-04), whatever the key's height: the band's runs, row 8's
-// runs packed right, and the controls rows' groups, the render player's and
-// the score viewer's group spaces included (paint_handler.cpp's
-// player_row_layout and the score rows).
-inline constexpr double kRunGapW = 22.0;
+// its face since 2026-11-04), whatever the key's height: the band's runs and
+// the one run gap the left runs' clip stands short of the history opener,
+// row 8's runs packed right, and the controls rows' groups, the render
+// player's and the score viewer's group spaces included (paint_handler.cpp's
+// icon_row_seats, row8_lengths, player_row_layout and the score rows).
+// program_run_gap_px is THE ONE READER of the key: one key for every gap.
+// A TOO-LARGE GAP is the band's overflow rule's, as a too-wide key is (THE
+// FIT at paint_icon_row's width math, paint_handler.cpp): on the tablet at
+// 200 % and key_width 35 the band holds whole up to 41 W, and from 42 W the
+// left runs are clipped one run gap short of the history opener, the third
+// run's keys cut or published empty from its tail (NOISE cut from 42, the
+// right run whole); row 8's block grows leftward over its state line, and
+// the player's and the score viewer's rows take the gap from the scrub's
+// channel, which their floor of two thumbs drops whole when too little is
+// left.
 inline int program_run_gap_px() {
-    return scaled_px(kRunGapW);
+    return scaled_px(run_gap_w());
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
@@ -2262,7 +2291,7 @@ WellColumns well_columns(const AppState& a);
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
 // (Switch Tab, Center, Left, Right and Play / Stop, the last case; architect
 // 2026-10-18) packed right, each a plain run of cases, the run gap
-// (program_run_gap_px, the strip pad) of bare ground
+// (program_run_gap_px, the `run_gap` tuning key) of bare ground
 // between two (kMarkerVerbGroup in paint_handler.cpp owns that group's
 // membership), all one lane ON THE WINDOW'S FOOT.
 //

@@ -873,7 +873,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // Zoom to Fit .. Flatten, Play Renders .. Score — the keys' faces one key
 // gap apart inside a run (one W of ground between two faces, materials.h's
 // THE FACE AND ITS GAP) and the run gap of ground between two (render.h's
-// program_run_gap_px, 22 W, 44 device px on the tablet; redesign_button_opens_icon_run,
+// program_run_gap_px, the `run_gap` tuning key's W, 22 its default, 44
+// device px on the tablet; redesign_button_opens_icon_run,
 // app_state.h, the runs' leaders); the
 // right five — the history opener and the two view pairs — ONE RUN ending
 // at the well's last column, the left walk starting at its first
@@ -1887,7 +1888,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // overflow rule — a width, never a state.
     //
     // THE WIDTH MATH, AT THE DEFAULTS — the face the `key_width` tuning key's
-    // 35 W (architect 2026-11-06; render.h's case block) and the one-W gap
+    // 35 W (architect 2026-11-06; render.h's case block), the one-W gap and
+    // the run gap the `run_gap` tuning key's 22 W (architect 2026-11-07)
     // (the ends the well's columns since 2026-10-23, the faces' since
     // 2026-11-03, the well the waveform area since 2026-11-03; key_height
     // moves none of it): in the tablet's device px at 200 % (one W = 2), the
@@ -1895,8 +1897,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (key_group_w_px: 70n + 2(n − 1)), 44 of ground (the run gap) between
     // two runs' faces; the right run 5 · 70 + 4 · 2 = 358, its last FACE
     // ending on the well's last column. Outside the `h` view the LEFT WALK is
-    // twenty-three members in three runs of 6, 10 and 7,
-    //   430 + 44 + 718 + 44 + 502 = 1738,
+    // twenty-three members in three runs of 5, 11 and 7 (COPY gone to row 8
+    // and the TRIM lamp joined the second run, 2026-11-07),
+    //   358 + 44 + 790 + 44 + 502 = 1738,
     // and inside it fourteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
     // Renders, Enable Tooltips, Audio, Noise — Restrict and the Trim Presets
@@ -1909,7 +1912,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // well's 2256 on the tablet, with 116 px (58 W) of ground between the
     // left runs and the right run beyond the run gap. Off the painted walk
     // (the face scaled_px(key_width), the key gap scaled_px(1), the run gap
-    // scaled_px(22), the ends well_columns'): at the tablet's 200 % (faces
+    // scaled_px(run_gap), the ends well_columns'): at the tablet's 200 % (faces
     // 70, the well 24 .. 2279) the left runs' faces on x 24..1761, the right
     // run's 1922..2279 (its last face ending on 2279); at 100 % on a 1920-px
     // window (faces 35, the key gap 1, the run gap 22, the well 16 .. 1903)
@@ -1930,7 +1933,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // from its tail, the right run whole: NOISE cut from 38 W and gone from
     // 39, AUDIO gone from 40, SCORE from 42, TIPS from 44, SETUP (the
     // settings page's one opener on glass) from 46, LOCK from 48, PLAYER at
-    // the grammar's ceiling, 50 (the first two runs whole up to it). No assert stands on the fit: the clip and the cut
+    // the grammar's ceiling, 50 (the first two runs whole up to it). THE RUN
+    // GAP TUNES IT TOO (the `run_gap` tuning key, architect 2026-11-07,
+    // session 87; render.h's run gap paragraph): the three run gaps of the
+    // walk and the one before the history opener all read it, so outside the
+    // view the band is 56 · key_width + 48 + 6 · run_gap device px against
+    // the well's 2256 — at key_width 35 whole up to run_gap 41 W (2254), and
+    // from 42 W (2260) the overflow rule answers the same way, the left
+    // runs' limit 1922 − 2 · run_gap and the third run's tail cut: NOISE
+    // cut from 42 W (54 of its 70 columns standing at the grammar's ceiling,
+    // 44), gone from 53, AUDIO cut from 54 — past the ceiling. The gap
+    // before the history opener stays exactly one run gap of clip; the
+    // ground beyond it (116 px at the defaults) is what the left runs leave.
+    // No assert stands on the fit: the clip and the cut
     // publication are the whole answer at every width.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
@@ -2599,10 +2614,11 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // what the fixed terms leave (player_row_layout), the two fields and their
 // gap 123 + 8 + 123 = 254 device px on the tablet, so at the defaults —
 // the 70-px face of key_width 35, the one-W key gap and the 44-px run gap
-// (2026-11-04 night) — the scrub's channel is 1226 device px (2304 wide, x
+// of run_gap 22 (2026-11-04 night) — the scrub's channel is 1226 device px (2304 wide, x
 // 282 .. 1507), the fields x 1552 .. 1674 and 1683 .. 1805; each W of
 // key_width takes 18 device px from the channel (nine faces), 956 at the
-// grammar's ceiling, 50 W.
+// grammar's ceiling, 50 W; each W of run_gap 6 (the row's three group
+// spaces), 1094 at its ceiling, 44 W.
 //
 // ONE ORIGIN RULE FOR EVERY TIME FIELD (architect 2026-11-05): THE RUN
 // STARTS AT `field_x + pad - ink_l`, a whole pixel (every term an int, so
@@ -2813,7 +2829,8 @@ constexpr std::span<const TransportRowDef> kRow8Groups[kRow8GroupCount] = {
     kTransportSkipGroup, kMarkerVerbGroup, kTransportStepWalkGroup,
     kTransportNudgePlayGroup};
 // THE ROW'S LENGTHS (the simple layout, 2026-10-22): the run gap between
-// two groups' faces (render.h's program_run_gap_px, 22 W), the face,
+// two groups' faces (render.h's program_run_gap_px, the `run_gap` tuning
+// key, 22 W its default), the face,
 // and the key gap between two faces of a group (render.h's key_gap_px, one
 // W, 2026-11-04).
 struct Row8Lengths {
@@ -3055,6 +3072,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // key_width — at the grammar's ceiling, 50 W, 2164 px from x 116, over
     // the clock's field's right end (x 24..146), the name and the state line
     // under the z rule below (clear of the field to key_width 49, x 156).
+    // THE GAP TUNES IT TOO (the `run_gap` tuning key, 2026-11-07): the
+    // three run gaps are 6 · run_gap device px of it, so the block is
+    // 40 · key_width + 32 + 6 · run_gap px from x 2248 − 40 · key_width −
+    // 6 · run_gap — at the defaults and the grammar's ceiling, 44 W, 1696 px
+    // from x 584, the state line clipped shorter and nothing else moved.
     // THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
@@ -5651,11 +5673,14 @@ namespace {
 // THE PLAYER ROW'S GROUP SPACE IS THE RUN GAP (architect 2026-11-03, on
 // mock dec7b): between its groups (transport → scrub, scrub → the clock's
 // two fields, the fields → the right cluster) stands render.h's
-// program_run_gap_px, the band's run gap (22 W since 2026-11-04 night; the
-// hi-fi's gap again since the retrofit, 2026-11-03); the score viewer's two
+// program_run_gap_px, the band's run gap (the `run_gap` tuning key's W since
+// 2026-11-07, 22 its default, the 22 W of 2026-11-04 night; the hi-fi's gap
+// again since the retrofit, 2026-11-03); the score viewer's two
 // rows, laid
 // in the player's shape, read it alike (score_row_layout,
-// score_media_row_layout). The row's own 8-W space is retired
+// score_media_row_layout). A wider gap is taken from the scrub's channel,
+// which the rows' floor of two thumbs drops whole when too little is left.
+// The row's own 8-W space is retired
 // (closed_questions.md).
 
 // THE WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel, and
@@ -5757,7 +5782,8 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // touching"): a run's faces stand one key gap apart, one W of ground
     // (2026-11-04; materials.h's key_group_pitch_px), as the band's and row
     // 8's keys stand; THE GROUP SPACE between its items is the run gap
-    // (program_run_gap_px, 22 W; architect 2026-11-03, mock dec7b,
+    // (program_run_gap_px, the `run_gap` tuning key, 22 W its default;
+    // architect 2026-11-03, mock dec7b,
     // and the retrofit's number; the head above the word rows). The press
     // reads the rects the button walk publishes from this layout
     // (modal_dialog_button_hit), the painted faces, so the ground between
@@ -6678,7 +6704,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    SEPARATORS RETIRED (architect 2026-10-02; Sound Recorder and
         //    mplay32 have none, and the roster's etched separators of
         //    2026-10-06 did not reach this row): the groups stand the run
-        //    gap of bare face apart (program_run_gap_px, 22 W;
+        //    gap of bare face apart (program_run_gap_px, the `run_gap`
+        //    tuning key, 22 W its default;
         //    architect 2026-11-03, mock dec7b, and the retrofit) — transport → scrub, scrub →
         //    clock, clock → the lamp. THE CLOCK IS TWO TIME FIELDS since
         //    2026-10-05 (architect: Sound Recorder's Position and Length

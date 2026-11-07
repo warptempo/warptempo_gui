@@ -38,7 +38,8 @@
 // bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (render.h's
 // logo lane block, 36 W), the key, THE STRIP PAD (19 W, render.h's
 // strip_pad_px; the keys' legends in it), its keys in plain runs on the
-// ground, the runs 22 W apart (render.h's program_run_gap_px; the hi-fi's
+// ground, the runs the `run_gap` tuning key's W apart (22 its default since
+// 2026-11-07; render.h's program_run_gap_px; the hi-fi's
 // lengths again since 2026-11-03, the retrofit, rounded to the unit on
 // 2026-11-04 night); then THE WELL,
 // flat regions on
@@ -105,9 +106,10 @@ struct ProgramSpec {
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
     // (THE STRIPS' RUN GAP — row 8's group gap as the bars left it — AND
-    // THE STRIP PAD — settled 2026-10-23 — are render.h's constexprs since
-    // 2026-11-03, kRunGapW 22 and kStripPadW 19 since 2026-11-04 night: the
-    // retrofit reversed that morning's "half the key".)
+    // THE STRIP PAD — settled 2026-10-23 — are render.h's since 2026-11-03,
+    // kStripPadW 19 since 2026-11-04 night (the retrofit reversed that
+    // morning's "half the key") and the run gap the `run_gap` tuning key's
+    // since 2026-11-07, 22 its default, the constexpr kRunGapW 22 before it.)
     // THE STRIPS' ENDS ARE THE WELL'S FIRST AND LAST COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring, the well's columns since the flat well — THE EDGE RULE;
