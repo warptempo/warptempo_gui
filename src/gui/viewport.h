@@ -733,22 +733,22 @@ struct Viewport {
     //     like the zoom appliers — owe_clock_check below; the cursor clamp
     //     that CAN move the value damages the clock itself inside
     //     clamp_display_state_to_live_domain.)
-    //   * input_pointer's two direct cursor writes:
+    //   * input_pointer's one direct cursor write:
     //     seat_playhead_on_domain_frame — the direct writer every marker land,
     //     Tab/`c` jump and history diff-flag click rides (history lands call
     //     it directly; seat_playhead_on_source_frame is the source-to-domain
     //     wrapper feeding it for marker lands, whether through
     //     land_playhead_on_marker / land_playhead_on_domain_frame or
-    //     reseat_playhead_on_marker) — and the region
-    //     sweep's own per-motion cursor write (apply_region_drag_motion, the
-    //     drag carrying the playhead on its moving end).
+    //     reseat_playhead_on_marker). (The region sweep's per-motion cursor
+    //     write and the trim commit's park left with 2026-11-07's ruling,
+    //     session 88: no trim writer moves the playhead.)
     //
     // (THE SECOND POPULATION — routes that landed a playhead AND rewrote the
     // RESOLVED READOUT, each calling this owner and the readout's in turn — is
     // GONE with the readout, 2026-08-29: the A/B tab switch, the undo/redo
-    // restore, the position nudges' shared tail, the load-in-place tail and
-    // the trim commit writers all kept their clock call above and dropped the
-    // other one. Nothing on this row pairs with a second surface any more —
+    // restore, the position nudges' shared tail and the load-in-place tail
+    // all kept their clock call above and dropped the other one (the trim
+    // commit writers did too, until their park left, 2026-11-07). Nothing on this row pairs with a second surface any more —
     // the STATE CELL that replaced the readout is damaged by the progress
     // line's writers (invalidate_status_cell_area
     // above, whose inventory is authoritative), and its rect

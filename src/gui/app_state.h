@@ -839,8 +839,8 @@ struct UndoHistory {
 // from its down point instead of the pan, AppState::trim_armed; the
 // hold-beat region hold of 2026-08-12, PAN-PRIMARY's secondary form, is
 // retired). The begin does its press-time work at the down point
-// (deselect-all, playhead placement with the play's stop — it never SELECTS
-// a marker) and arms this drag; motion past the shared press-becomes-drag
+// (deselect-all — it never SELECTS a marker, and since 2026-11-07, session
+// 88, it seats NO playhead and stops no play) and arms this drag; motion past the shared press-becomes-drag
 // threshold (drag_moved_threshold_px(), crossed by the platform's first
 // frame) writes the trim from the press frame to the pointer
 // column, ordered, through the sweep's own trim writer (write_trim_from_sweep,
@@ -849,22 +849,23 @@ struct UndoHistory {
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
 // there is no span field to extend: this holds the press column's authored
-// source frame (the field's own comment carries the two-domain rule), the trim
+// source frame (the field's own comment), the trim
 // holds the pair, and the bar paints from the trim on every frame including
 // the ones this gesture writes.
 //
 // Under SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23) the drag does NOT
 // select the span's markers — the selection stays EMPTY from the press's
 // deselect-all through release, and the trim writes deselect again on their own
-// setter rule. THE DRAG CARRIES THE PLAYHEAD (architect 2026-07-30): each
-// changed column writes the cursor to the MOVING endpoint, with no viewport
-// scroll and no playback stop per motion (the press stopped it) — and the RELEASE then parks it at
-// the committed trim start, every trim write's own tail.
+// setter rule. THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07, session
+// 88: "Setting the trim should not move the playhead — I usually use scrub
+// now, so moving playhead is just distracting", reversing 2026-07-30's carry
+// on the moving end and the release's park): the begin, the motion and the
+// release write no cursor (the rule at the head of input_trim.cpp); a live
+// play stops at the first accepted trim write (write_trim_from_sweep).
 //
 // THE ARMED SWEEP'S BEGIN REACHES arm_region_drag_at (begin_touch_region —
-// the pan zone's window crossing its slop under the lit lamp) through the one
-// placement body (place_playhead_and_arm_region), and drives the drag through
-// the region hooks. THE `h` VIEW HAS NO SWEEP (its playhead-only former
+// the pan zone's window crossing its slop under the lit lamp), and drives
+// the drag through the region hooks. THE `h` VIEW HAS NO SWEEP (its playhead-only former
 // retired with the hold, 2026-11-07: "history cannot edit trim"; the lamp is
 // inert there, GuiInputHandler::touch_sweep_armed).
 //
@@ -887,7 +888,7 @@ struct RegionDragState {
     // Whether this sweep has actually WRITTEN a trim bound. It is the end
     // owner's commit gate (commit_region_sweep): a sweep that wrote nothing —
     // motionless or refused by geometry — owes no
-    // commit tail, so no playhead parks and no render triggers behind it.
+    // commit tail, so no render triggers behind it.
     // (`moved` is the TRIM arm lamp's: a sweep that moved puts it out.)
     bool    wrote_trim   = false;
     int     press_x      = 0;      // press position (window px), for the gate
@@ -898,14 +899,9 @@ struct RegionDragState {
     // authored_frame_at_column_on_basis over the displayed-or-live target map
     // on the item viewport basis, walls after, snap_authored_frame
     // the one double->authored conversion — the lattice every other trim
-    // former commits on). EVERY SWEEP COLUMN YIELDS TWO VALUES, THE DOMAINS
-    // KEPT APART: the ACTIVE-domain frame from playhead_frame_at_click_column
-    // seats and carries the PLAYHEAD (the press placement, the live cursor
-    // carry, the playback reseat), and
-    // THIS is the authored one for the TRIM alone — nothing here holds the
-    // active-domain value, because nothing on the trim side reads it. In
-    // source view the two are the same frame; in target view this is the
-    // inverse image the active-domain value only names.
+    // former commits on). A SWEEP COLUMN YIELDS THIS ONE VALUE since
+    // 2026-11-07 (session 88: the sweep seats and carries no playhead, so no
+    // active-domain frame is taken beside it).
     int64_t anchor_source_frame = 0;
 };
 
@@ -1152,8 +1148,8 @@ enum class PendingClickKind {
 // ctrl-press-and-drag is byte-for-byte the gesture it has always been (set at
 // the click, then drag that bound live) and only the timing of a motionless
 // click is the lift's. The set's whole tail travels as one unit — the
-// strictly-inside refusal, the playback stop, the commit tail's playhead park,
-// the setter's deselect — because they are one act
+// strictly-inside refusal, the playback stop, the commit tail, the setter's
+// deselect — because they are one act
 // (set_trim_bound_at_click).
 //
 // Session-only, never serialized. Cleared on the crossing (the trim drag takes
@@ -3968,8 +3964,8 @@ struct ViewState {
 // NUMBER AND NOTHING ELSE: change it here alone — no doc or comment elsewhere
 // spells a value.
 // GRANULARITY: the rests are SAMPLED on the run loop's own deadline tick
-// (GuiAbAudition::fire_if_due, beside the key-repeat and touch-window
-// deadlines), so a rest is AT LEAST its milliseconds and up to one timer
+// (GuiAbAudition::fire_if_due, beside the key-repeat
+// deadline), so a rest is AT LEAST its milliseconds and up to one timer
 // period more.
 constexpr int kAuditionMs = 475;
 inline constexpr int kAuditionPairGapMs   = 150;
@@ -19254,13 +19250,12 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // than reading a painted snapshot of it — live-basis by ruling, and it renders
 // synchronously so there is no lag to protect against. THE SWEEP FAMILY STAYS
 // OUT FOR AN UNRELATED REASON: since 2026-09-24 (architect, strictly
-// as-painted) both its playhead half and its trim half convert on the item
-// basis exactly like every other click-placement conversion
-// (item_viewport_basis; playhead_frame_at_click_column,
-// sweep_trim_frame_at_column) — it is excluded here because it writes the
-// trim from a fixed anchor to the live pointer and holds no grabbed subject
-// to protect, not because its conversion reads the live viewport
-// (playhead_frame_at_click_column states the conversion). This is a
+// as-painted) its column converts on the item basis exactly like every
+// other click-placement conversion (item_viewport_basis;
+// sweep_trim_frame_at_column, its one value since its playhead half left,
+// 2026-11-07) — it is excluded here because it writes the trim from a fixed
+// anchor to the live pointer and holds no grabbed subject to protect, not
+// because its conversion reads the live viewport. This is a
 // SUBSET of any_pointer_gesture_active under its own derivation, not a
 // consumer of it: that predicate answers "some pointer gesture is live", this
 // one "the displayed paint basis may not move".

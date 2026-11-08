@@ -383,7 +383,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // Ctrl+Shift+0 maximizes the trim window back to the full song. Trim is
     // BAND, not content (the header), so it is admitted, and its internal
     // behavior is untouched: the maximizer's identity guard, the setter's
-    // deselect, the playhead park and the trim-mutation playback stop are all
+    // deselect and the trim-mutation playback stop are all
     // the same code taking the same decisions. The term is named for the ACT
     // rather than a key, which is what kept each of its moves (x → Shift+[ on
     // 2026-08-24, Shift+[ → Shift+0 on 2026-09-22, Shift+0 → Ctrl+Shift+0 on

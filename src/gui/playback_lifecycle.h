@@ -179,18 +179,22 @@ struct GuiPlaybackLifecycle {
     //     by the 2026-08-05 playback ungating — what narrowed is only the
     //     rationale's source-view half: a TARGET audition is still playing out the
     //     very window the mutation replaces, while a SOURCE one now runs to the
-    //     song's end and never ran against the bounds being moved. The stop stays
-    //     there because every trim write parks the playhead at the new trim start
-    //     (input_trim.cpp), which is a cursor-moving command by any other name.
+    //     song's end and never ran against the bounds being moved. The stop
+    //     stays there on the rule's own both-views symmetry: since 2026-11-07
+    //     (session 88) no trim write moves the playhead (input_trim.cpp's
+    //     head), so the 2026-08-05 park that once argued the source half is
+    //     no longer its reason.
     //   * A POINTER OR TOUCH PLAYHEAD PLACEMENT STOPS (architect 2026-10-06):
     //     a press, click or drag on the main view that places the
     //     playhead (the waveform's upper-half click act, the ruler's and the
-    //     marker lane's empty-stretch placement clicks, and the armed trim
-    //     sweep's begin) is the one way to stop a play
-    //     without the Stop button, since no other waveform-area act stops it.
-    //     It pays once, at the placement body (place_playhead_at_click_column),
-    //     past the gutter refusal and ahead of the first write; a sweep's motion
-    //     then carries the cursor and stops nothing again. NOT in the class: the
+    //     marker lane's empty-stretch placement clicks) is the one way to stop
+    //     a play without the Stop button, since no other waveform-area act
+    //     stops it. It pays once, at the placement body
+    //     (place_playhead_at_click_column), past the gutter refusal and ahead
+    //     of the first write. The armed trim sweep's begin left the class
+    //     2026-11-07 (session 88: it seats no playhead); the sweep stops a
+    //     play as a TRIM MUTATION, at its first accepted write (the bullet
+    //     above). NOT in the class: the
     //     audition scrub (the lower half's click act and the render player's
     //     scrub — "play from here" restarts the audio itself), pans and zooms
     //     (they move no playhead), and the car transport.

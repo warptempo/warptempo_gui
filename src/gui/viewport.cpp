@@ -271,9 +271,9 @@ void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
 // coincidence auto-select's no-op), a RESTORE (the tab switch's band swap,
 // which writes the cursor direct — the act's own two tab switches are
 // restores) and THE CAMERA, which writes no playhead at all. The trim family
-// writes the cursor direct too (park_playhead_at_trim_start, the sweep's
-// carry), and a trim write stops playback through the one stop body, which
-// ends the act anyway. UNCONDITIONAL, never gated on whether the write moved
+// writes no cursor at all (architect 2026-11-07, session 88, the rule at the
+// head of input_trim.cpp), and a trim write stops playback through the one
+// stop body, which ends the act anyway. UNCONDITIONAL, never gated on whether the write moved
 // anything. (From 2026-08-19 to 2026-09-22 these owners also hid the trim
 // region overlay; that hide was deleted with the overlay's resting form.) This
 // is a class statement: the complete clearing-owner inventory is at
@@ -424,12 +424,10 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
 //     scrolled the camera to an offscreen playhead's old instant, and the
 //     restore's camera answers to the markers it restores, never to the
 //     playhead (architect 2026-09-22).
-//   * THE SWEEP'S OWN PER-MOTION CARRY is NOT here and never was: it writes
-//     app.playhead_cursor_sample direct, because a keep-visible edge-align would
-//     scroll the viewport out from under a live gesture (input_pointer.cpp). The
-//     whole trim family is exempt the same way — park_playhead_at_trim_start
-//     writes direct too — so the trim's surfaces take no suppression, they
-//     simply do not pass through here.
+//   * THE TRIM FAMILY is NOT here: no trim writer writes the cursor since
+//     2026-11-07 (session 88, the rule at the head of input_trim.cpp), so the
+//     trim's surfaces take no suppression, they simply do not pass through
+//     here.
 // EVERY OTHER CALLER GOES THROUGH move_playhead_to and inherits the audition
 // end.
 //

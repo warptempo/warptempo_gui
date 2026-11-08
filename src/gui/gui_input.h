@@ -1427,7 +1427,7 @@ enum class GuiTouchEditorField { Outside, Field, DoublePress };
 // contract there). THE PEN IS A FINGER WITH THREE AMENDMENTS (architect
 // 2026-09-25; the Android backend's pen rules are at on_motion_event,
 // platform_android.cpp): it enters the touch machine exactly as
-// a finger does — the phone-model pan, the region hold, the caret drag and
+// a finger does — the phone-model pan, the caret drag and
 // the tap-at-lift all its own — and differs in three places only: its side
 // button is the Ctrl bit (the modifier door, not this enum), it waits for no
 // off-zone window (no touch does since that ruling, so that amendment is not

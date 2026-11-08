@@ -1681,10 +1681,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // on the trim bar is the other road to the whole song
     // (auto_clear_crossed_trim, input_trim.cpp).
     //
-    // The playhead is an OUTPUT of every trim write, never an input: each parks
-    // it at the new trim start (architect 2026-08-05 — the rule and its
-    // membership at the head of input_trim.cpp), and a refused press moves
-    // nothing. Trim's pointer routes are the trim bar's PLAIN press (single via
+    // The playhead is neither an input nor an output of a trim write: none
+    // reads it and none moves it (architect 2026-11-07, session 88 — the rule
+    // and its membership at the head of input_trim.cpp). Trim's pointer routes are the trim bar's PLAIN press (single via
     // an endcap hit, pair via a bridge press) and the SWEEP that writes it in
     // one stroke; trim is outside the selection system, so there is no Delete
     // arm.

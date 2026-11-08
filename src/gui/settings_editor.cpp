@@ -882,19 +882,13 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // The same commit tail trim gestures use, through their one owner
             // (GuiInputHandler::commit_trim_mutation, input_trim.cpp): the
             // crossed-commit reset first — a bound committed onto/across its
-            // partner resets the pair to the song edges, and says so on that
-            // owner's own card since 2026-08-30 — then the
-            // waveform + status-chain repaints and the target-render trigger.
-            // History-less, like all trim. The timestamp invalidate also rides
-            // applied() below; raising it twice costs nothing — the damage list
-            // coalesces by containment, so the identical rect is dropped.
-            // THE TAIL ALSO PARKS THE PLAYHEAD at the committed trim start
-            // (architect 2026-08-05 — every trim write does, the membership
-            // stated at the head of input_trim.cpp). It moves the cursor from inside a modal editor, which is accepted
-            // for uniformity: a typed commit is a commit, and the editor lives
-            // on the bottom row while the move is out on the waveform. The
-            // INACTIVE-band arm below stays out of the rule — it writes a
-            // PARKED pair, not the live window, and moves nothing visible.
+            // partner resets the pair to the song edges — then the
+            // waveform repaint and the target-render trigger.
+            // History-less, like all trim. THE PLAYHEAD STAYS WHERE IT IS
+            // (architect 2026-11-07, session 88: no trim writer moves it, the
+            // membership stated at the head of input_trim.cpp). The
+            // INACTIVE-band arm below writes a PARKED pair, not the live
+            // window, and moves nothing visible.
             input->commit_trim_mutation();
             // THE SETTER'S DESELECT after the bound commit + auto_clear
             // (architect 2026-07-30). Past every refusal (the

@@ -1217,17 +1217,20 @@ struct GuiInputHandler {
     // region hooks: no pending and no second former anywhere — the lamp and
     // the crossing already disambiguated, so the begin goes straight to the
     // former's press half and the drag rides the ONE motion path
-    // (apply_region_drag_motion) with the playhead on the moving end. A tap
+    // (apply_region_drag_motion), the playhead untouched throughout (architect
+    // 2026-11-07, session 88: no trim writer moves it, the rule at the head
+    // of input_trim.cpp). A tap
     // under the lit lamp is the ordinary tap (run_nav_click_act), a pinch
     // the ordinary pinch, the barrel-held drag the ordinary one-finger zoom:
     // the lamp stays lit through all three.
     //
     // begin_touch_region(x, y) runs THE REGION FORMER'S PRESS HALF at the
-    // contact's DOWN point, the one placement body
-    // (place_playhead_and_arm_region — deselect-all, playhead seated at the
-    // down column after the play's stop, the drag arm) — EVERY REGION FORMER
-    // DROPS THE SELECTION ITS SURFACE OWNS, the family rule at
-    // RegionDragState (app_state.h). THE `h` VIEW HAS NO FORMER (its hold's
+    // contact's DOWN point — deselect-all, then the drag arm
+    // (arm_region_drag_at) on a waveform column, a gutter down point arming
+    // nothing; NO PLAYHEAD SEAT and NO PLAYBACK STOP of its own (the trim
+    // write's first accepted change stops a live play, write_trim_from_sweep)
+    // — EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS, the family
+    // rule at RegionDragState (app_state.h). THE `h` VIEW HAS NO FORMER (its hold's
     // playhead-only sweep retired with the hold: "history cannot edit
     // trim"); touch_sweep_armed keeps the begin out of it.
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
@@ -1240,8 +1243,8 @@ struct GuiInputHandler {
     // refused stream is dead rather than a fallback pan, the lamp lit.
     //
     // update_touch_region(x, y): the drag's one motion path — the shared
-    // Chebyshev gate from the down point, then the span extension with the
-    // playhead riding the moving end (the platform's first frame is the
+    // Chebyshev gate from the down point, then the trim written from the
+    // anchor to the moving end (the platform's first frame is the
     // crossing position, so the gate opens at once). end_touch_region(): the
     // release path's own body (the moved drag has ALREADY written the trim,
     // per motion event and under no width rule at all, so its end runs the
@@ -1819,16 +1822,14 @@ struct GuiInputHandler {
 
     // Arm THE SWEEP at a press — THE ONE ARM, serving its one entry (the
     // TRIM arm lamp's touch sweep, architect 2026-11-07). `anchor_col` is the
-    // press column (waveform-relative, in range — every caller has just seated
-    // the playhead at it and refused the gutter), from which THE ARM ITSELF
-    // authors the fixed end of every trim pair the sweep writes:
-    // RegionDragState::anchor_source_frame through sweep_trim_frame_at_column,
-    // the sweep's one column->trim route, beside the active-domain frame the
-    // caller's placement seated the playhead at (the two-values-per-column rule
-    // at the field). (x, y) is the press position for
-    // the press-becomes-drag threshold. THE PRESS WRITES NO TRIM.
-    // ONE CALLER (2026-11-07): the former's press half
-    // (place_playhead_and_arm_region, the armed sweep's begin). The LOWER
+    // press column (waveform-relative, in range — the caller has refused the
+    // gutter), from which THE ARM ITSELF authors the fixed end of every trim
+    // pair the sweep writes: RegionDragState::anchor_source_frame through
+    // sweep_trim_frame_at_column, the sweep's one column->trim route. (x, y)
+    // is the press position for the press-becomes-drag threshold. THE PRESS
+    // WRITES NO TRIM AND SEATS NO PLAYHEAD (architect 2026-11-07, session 88).
+    // ONE CALLER (2026-11-07): the former's press half, the armed sweep's
+    // begin (begin_touch_region). The LOWER
     // half is on the sweep's surface too since 2026-08-13 ("... should also be allowed in the lower
     // half, for consistency"); its PLAIN tap is the pending click, whose
     // motionless release runs the one-shot scrub.
@@ -1841,8 +1842,9 @@ struct GuiInputHandler {
     // whole live body: the shared Chebyshev gate from the press/down point
     // (moved latches once), the moved-drag double-click-candidate clear, the
     // moving endpoint at the pointer column through the click->frame basis, THE
-    // TRIM WRITE from the anchor to that endpoint (write_trim_from_sweep), and
-    // the playhead riding the moving end. Caller guards active. The write's
+    // TRIM WRITE from the anchor to that endpoint (write_trim_from_sweep) — and
+    // NO PLAYHEAD WRITE (architect 2026-11-07, session 88, reversing the
+    // carry of 2026-07-30). Caller guards active. The write's
     // own repaint is the trim bar's, mid-gesture, so the bar — the sweep's
     // picture (RegionDragState, app_state.h) — tracks the stroke live. (No
     // sweep runs in the `h` view since 2026-11-07, so no carve-out stands.)
@@ -1852,10 +1854,8 @@ struct GuiInputHandler {
     // button lost in on_motion, the touch hook's end, and the force-end
     // finalizer), so the disarm and the commit cannot fork. A sweep that WROTE
     // a bound runs the shared trim commit tail (commit_trim_mutation: the
-    // crossed/coincident reset, the repaint, the target-render trigger, and the
-    // playhead parked at the committed trim start) — AT THE END ONLY, a
-    // per-frame cursor chase being a cursor fighting the gesture that is moving
-    // the bounds. A sweep that wrote nothing — motionless or refused by
+    // crossed/coincident reset, the repaint, the target-render trigger; no
+    // playhead write) — AT THE END ONLY. A sweep that wrote nothing — motionless or refused by
     // geometry — runs none of that tail. A sweep that MOVED puts the TRIM arm
     // lamp out (2026-11-07). The per-case reading is at the definition.
     void commit_region_sweep();
@@ -1869,23 +1869,14 @@ struct GuiInputHandler {
     // NO selection, NO
     // drag arm — each caller owns those, which is what lets the
     // mode reuse this recipe without inheriting a sweep it must not have.
-    // ITS ROUTES (re-derived 2026-10-30): the DEFERRED CLICK ACT
+    // ITS ROUTES (re-derived 2026-11-07): the DEFERRED CLICK ACT
     // (run_nav_click_act, its two placement
     // arms — the lower half's release runs the SCRUB arm, which returns above
-    // this body), and the armed sweep's begin through the sweep's press half
-    // below.
+    // this body) alone; the armed sweep's begin seats no playhead since
+    // 2026-11-07 (session 88, the rule at the head of input_trim.cpp).
     // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
-    // [0, area.w)) seats nothing and returns -1, a value no seated frame can
-    // take (the clamp's floor is 0).
-    int64_t place_playhead_at_click_column(int click_rel_x);
-
-    // THE SWEEP'S PRESS HALF — ONE call site: the armed sweep's begin
-    // (begin_touch_region — the slop crossing under the lit TRIM lamp, run at
-    // the down point; architect 2026-11-07):
-    // clear the marker selection, run the body above, and arm the sweep. The
-    // clear runs ahead of the body's gutter return, so an inert-gutter begin
-    // still deselects but seats no playhead and arms no drag.
-    void place_playhead_and_arm_region(int click_rel_x, int x, int y);
+    // [0, area.w)) seats nothing and stops nothing.
+    void place_playhead_at_click_column(int click_rel_x);
 
     // ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click (contract
     // at ScrollDragState, app_state.h; the deferred act below). Records the press and its three
@@ -2754,8 +2745,8 @@ private:
     //       or Enter: the row highlighted, then its pair written as BOTH
     //       bounds of the active tab's LIVE trim and the trim family's one
     //       commit tail run once (commit_trim_mutation — the crossed/equal
-    //       reset, the waveform's damage, the preview trigger, the playhead
-    //       parked at the begin) with the setter's deselect, THE LIST
+    //       reset, the waveform's damage, the preview trigger; the playhead
+    //       untouched) with the setter's deselect, THE LIST
     //       STANDING (as the player stands when a wav plays). The pair the
     //       tab already holds is the store's own no-op, the tap still
     //       highlighting. THEN THE PRESET IS FRAMED (2026-10-28 night, his
@@ -3309,8 +3300,9 @@ private:
     // in here. Its one entry is the TRIM arm lamp's touch sweep, which
     // calls it PER MOTION EVENT, so a stroke sets the trim in one gesture. It takes the setter's regime at the first accepted change
     // — the trim-mutation playback stop and the deselect — and leaves the
-    // PLAYHEAD PARK and the shared commit tail to the release
-    // (commit_region_sweep), the endcap drag's own timing. IT ENFORCES NO
+    // shared commit tail to the release (commit_region_sweep), the endcap
+    // drag's own timing; it writes no playhead (the rule at the head of
+    // input_trim.cpp). IT ENFORCES NO
     // WIDTH: the ordered pair is written as the two ends describe it, walls
     // apart, and a COINCIDENT stroke is cleared to the whole song by the
     // release's auto_clear_crossed_trim — the endcap drag's escape, shared
@@ -3384,43 +3376,27 @@ private:
     // invalidations, so the repaint shows the reset state.
     void auto_clear_crossed_trim();
 
-    // EVERY TRIM WRITE PARKS THE PLAYHEAD AT THE NEW TRIM START (architect
-    // 2026-08-05, generalizing a 2026-07-30 land of the retired region form).
-    // Reads the COMMITTED
-    // begin out of the store — never a caller's local — so a crossed pair that
-    // the commit tail has just RESET to the full window parks the playhead at
-    // frame 0, which is that window's start: a reset is a trim write like any
-    // other and needs no arm of its own. Lands through
-    // land_playhead_on_marker's placement basis (source frame → active domain →
-    // live-domain clamp) with NO viewport move, so a trim start offscreen
-    // leaves the view where the user left it. It writes the cursor DIRECT and
-    // so reaches neither playhead movement owner: a trim write is not a
-    // movement in the music (the argument at this function's definition).
-    // Callers own the refusals above it: a route that
-    // writes no bound must not call this. The full per-route inventory is at
-    // the head of input_trim.cpp.
-    void park_playhead_at_trim_start();
-
     // THE SHARED TRIM COMMIT TAIL, in code rather than in prose: every
-    // trim-SETTING commit runs the same acts in the same order
-    // (auto_clear_crossed_trim, the waveform + status-chain repaints, the
-    // target-render trigger, then the playhead park above), and this member is
-    // their one spelling. FIVE
+    // trim-SETTING commit runs the same three acts in the same order
+    // (auto_clear_crossed_trim, the waveform repaint, the target-render
+    // trigger) and NO PLAYHEAD WRITE (architect 2026-11-07, session 88: no
+    // trim writer moves the playhead, the rule at the head of
+    // input_trim.cpp), and this member is their one spelling. FIVE
     // CALLERS (re-derived 2026-10-28 night, the trim presets list's apply
     // joining)
     // — the SWEEP's release (commit_region_sweep, input_pointer.cpp),
     // the drag release (commit_trim_drag) and the bound-set click
     // (set_trim_bound_at_click), the last two in
     // input_trim.cpp, the settings editor's `trim_*=` active-tab arm
-    // (settings_editor.cpp, reaching it through the friendship above; its
-    // status-chain repaint rides applied() as well, harmlessly twice), and
+    // (settings_editor.cpp, reaching it through the friendship above), and
     // the trim presets list's apply (trim_presets_apply,
     // input_key_dispatch.cpp, both bounds at once).
     // Callers own everything around it: their refusals, the playback stop and
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
     // handle_trim_clear_both (the Ctrl+Shift+0 maximizer resets rather than
-    // auto-clears — a non-setter), which calls the park directly instead.
+    // auto-clears — a non-setter), which spells its own reset, repaint and
+    // trigger.
     void commit_trim_mutation();
 
     // Plain trim-bar press routing — the PLAIN press's route into a trim

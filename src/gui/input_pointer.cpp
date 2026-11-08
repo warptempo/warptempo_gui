@@ -1051,8 +1051,7 @@ bool point_on_nav_surface(const AppState& app, int x, int y) {
 // grid's own input, the shape trim_mouse_x_to_active_frame takes on the same
 // basis. Cold, the basis is the live viewport by its own contract. This is
 // the whole click-placement family's one conversion — the nav click act
-// (place_playhead_at_click_column, run_nav_click_act), the sweep's PLAYHEAD
-// half at the press and in motion (and so the armed touch sweep), the
+// (place_playhead_at_click_column, run_nav_click_act), the
 // scrub click (scrub_press_at) and the empty-lane double-click create — so
 // every one of them lands on the painted grid the gesture family's
 // conversions ride; the 2026-07-25 live-viewport ruling for this family is
@@ -2729,19 +2728,27 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     if (keyboard_modal_editor_active()) return;
     if (app.loading || audio.total_frames() <= 0) return;
     if (any_pointer_gesture_active(app)) return;
+    // THE FORMER'S PRESS HALF at the DOWN point; the platform stages the
+    // crossing position as the drag's first frame. THE ARMED DRAG IS THE ONE
+    // ROUTE TO A SWEEP (architect 2026-11-07, session 87). The deselect runs
+    // FIRST, ahead of the gutter refusal, so a gutter begin still deselects
+    // but arms nothing. NO PLAYHEAD SEAT (architect 2026-11-07, session 88:
+    // "Setting the trim should not move the playhead"; the rule at the head
+    // of input_trim.cpp) and so NO PLAYBACK STOP HERE: the stop a placement
+    // owed is the trim write's own, at the sweep's first accepted change
+    // (write_trim_from_sweep), and a stroke that changes no bound stops
+    // nothing, the one claim of every trim route.
+    selection.clear_selection();
     const GuiRect area = waveform_area(app);
-    // THE FORMER — the sweep's press half whole at the DOWN point
-    // (deselect-all, playhead at the down column with the placement's
-    // playback stop, the drag arm); the platform stages the crossing
-    // position as the drag's first frame. THE ARMED DRAG IS THE ONE ROUTE TO
-    // A SWEEP (architect 2026-11-07).
-    place_playhead_and_arm_region(x - area.x, x, y);
+    const int rel = x - area.x;
+    if (rel < 0 || rel >= area.w) return;
+    arm_region_drag_at(rel, x, y);
 }
 
 void GuiInputHandler::update_touch_region(int x, int y) {
     // The drag's ONE motion path (apply_region_drag_motion): the shared
-    // Chebyshev gate from the down point, the span extension, the playhead
-    // riding the moving end. Self-guarded on the drag's own active bit,
+    // Chebyshev gate from the down point, the trim's moving end, no playhead
+    // write. Self-guarded on the drag's own active bit,
     // which is what makes a refused begin's stream free — and what covers a
     // lost-button motion that ended it mid-gesture.
     if (!app.region_drag.active) return;
@@ -3793,8 +3800,8 @@ void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
     // a click landing a bound on or past its partner writes nothing,
     // deselects nothing and stops nothing), the playback stop that sits
     // past those refusals, the write, the commit tail (the crossed
-    // reset, the playhead park at the new trim start, the repaint and the
-    // target trigger) and the setter's deselect.
+    // reset, the repaint and the target trigger; no playhead write) and the
+    // setter's deselect.
     // Moving the act meant moving that unit, never a piece of it.
     set_trim_bound_at_click(pending_click_writes_begin(press), press.press_x);
 }
@@ -5752,10 +5759,8 @@ void GuiInputHandler::arm_region_drag_at(int anchor_col, int x, int y) {
     app.region_drag = RegionDragState{};
     app.region_drag.active       = true;
     // THE ANCHOR IS AUTHORED HERE, at the one arm, from the press COLUMN: the
-    // whole source frame through the sweep's one column->trim route, beside
-    // the active-domain frame the caller's placement just seated the playhead
-    // at (which nothing on the trim side reads — the two-values-per-column
-    // rule at the field's declaration).
+    // whole source frame through the sweep's one column->trim route (the
+    // field's declaration). No playhead is seated (2026-11-07, session 88).
     app.region_drag.anchor_source_frame = sweep_trim_frame_at_column(anchor_col);
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
@@ -5788,10 +5793,9 @@ void GuiInputHandler::commit_region_sweep() {
     // or gutter begin arms nothing and never reaches here) leaves it lit.
     if (moved && app.trim_armed) set_trim_armed(false);
     // THE COMMIT TAIL IS THE ENDCAP DRAG'S, verbatim and for its own reason:
-    // auto_clear_crossed_trim, the repaints, the target-render trigger, and the
-    // PLAYHEAD PARKED AT THE COMMITTED TRIM START — at the end only, a
-    // per-frame cursor chase being a cursor fighting the gesture that is moving
-    // the bounds.
+    // auto_clear_crossed_trim, the repaint, the target-render trigger — at the
+    // end only. NO PLAYHEAD WRITE, at the end or before it (architect
+    // 2026-11-07, session 88, the rule at the head of input_trim.cpp).
     //
     // AND THAT TAIL IS WHERE THE SWEEP'S DEGENERATE CASE IS ANSWERED (architect
     // 2026-08-19, retiring the sweep's minimum width floor): a stroke that ends
@@ -5803,9 +5807,8 @@ void GuiInputHandler::commit_region_sweep() {
     // collapsed span, and nothing in this function tests a width.
     //
     // A sweep that WROTE NOTHING owes none of THAT TAIL: a motionless
-    // press-release, a stroke refused by degenerate geometry, and the `h`
-    // view's carved-out former all end here with the trim exactly as they found
-    // it, so no playhead parks and no render triggers behind them.
+    // press-release and a stroke refused by degenerate geometry end here with
+    // the trim exactly as they found it, so no render triggers behind them.
     if (wrote) commit_trim_mutation();
 }
 
@@ -5904,28 +5907,22 @@ void GuiInputHandler::run_nav_click_act(int press_x, bool history,
     place_playhead_at_click_column(press_x - area.x);
 }
 
-int64_t GuiInputHandler::place_playhead_at_click_column(int click_rel_x) {
+void GuiInputHandler::place_playhead_at_click_column(int click_rel_x) {
     // THE PLACEMENT PRESS'S PLAYHEAD HALF — the column-to-cursor recipe alone,
-    // with no selection and no region in it, so the `h` history mode can seat a
-    // playhead by exactly the arithmetic and exactly the playback regime the
-    // live press uses (the mode's own arm is in handle_history_mode_press; it
-    // clears the MODE's focus where the live body clears the store selection,
-    // and arms the same drag). Returns the seated frame, or -1 in the gutter.
+    // with no selection in it, so the `h` history mode can seat a playhead by
+    // exactly the arithmetic and exactly the playback regime the live click
+    // uses (run_nav_click_act's mode arm clears the MODE's focus where the
+    // live arm clears the store selection). A gutter column seats nothing.
     const GuiRect area = waveform_area(app);
-    if (click_rel_x < 0 || click_rel_x >= area.w) return -1;
-    // Clamp the click column's frame into the live domain ONCE and hand that
-    // same clamped value back to the caller (the region formers read it as the
-    // gutter sentinel alone — the arm authors its own trim anchor from the
-    // COLUMN, arm_region_drag_at — and the sweep's motion path clamps its
-    // cursor carry by this same rule): move_playhead_to clamps internally, but
-    // the clamp here stays required because the conversion reads
-    // ItemViewportBasis::spp, the PAINTED item epoch, which can extend past
-    // the CURRENT live domain — a resize or a target-domain contraction after
-    // the last item commit leaves the lagging painted basis's last column
-    // computing to domain_total or beyond, one past [0, domain_total-1], which
-    // the display-state validator would clear wholesale. The clamp also
-    // makes -1 a sentinel no seated frame can collide with. THE COLUMN
-    // CONVERTS ON THE PAINTED VIEWPORT, the item basis
+    if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    // Clamp the click column's frame into the live domain: move_playhead_to
+    // clamps internally, but the clamp here stays required because the
+    // conversion reads ItemViewportBasis::spp, the PAINTED item epoch, which
+    // can extend past the CURRENT live domain — a resize or a target-domain
+    // contraction after the last item commit leaves the lagging painted
+    // basis's last column computing to domain_total or beyond, one past
+    // [0, domain_total-1], which the display-state validator would clear
+    // wholesale. THE COLUMN CONVERTS ON THE PAINTED VIEWPORT, the item basis
     // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
     // painted): the playhead seats at the frame the clicked pixels showed even
     // while a viewport job in flight has moved the live viewport ahead of
@@ -5935,31 +5932,11 @@ int64_t GuiInputHandler::place_playhead_at_click_column(int click_rel_x) {
     // A POINTER OR TOUCH PLACEMENT STOPS A LIVE PLAY (architect 2026-10-06; the
     // class is stated at stop_playback_if_playing's declaration): past the
     // gutter refusal above and ahead of the first write, so a click that seats
-    // nothing stops nothing. This is the ONE site for every placement route
-    // (the click act and the sweep's former); the sweep's motion then carries
-    // the cursor with the play already stopped.
+    // nothing stops nothing. This is the ONE site for every placement route,
+    // the click act's (the sweep seats no playhead since 2026-11-07, session
+    // 88; its stop is the trim write's own).
     playback_lifecycle.stop_playback_if_playing();
     viewport.move_playhead_to(sample);
-    return sample;
-}
-
-void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
-                                                    int y) {
-    // THE REGION FORMER'S PRESS HALF — ONE CALLER, the armed touch sweep's
-    // begin (begin_touch_region: the TRIM arm lamp lit and a single contact
-    // crossing the slop on the waveform, run at its DOWN point; architect
-    // 2026-11-07, session 87). A plain tap's placement runs WITHOUT the arm
-    // through run_nav_click_act instead. The
-    // clear runs FIRST, before the shared body's gutter early-return,
-    // so an inert-gutter click (no column to seat a playhead) still deselects.
-    // THE SEAT BELOW IS A MOVEMENT (the press really does move the playhead),
-    // and the press writes no trim: the motion path writes it from the first
-    // crossing on (apply_region_drag_motion). A gutter press seats nothing and
-    // arms nothing.
-    selection.clear_selection();
-    const int64_t sample = place_playhead_at_click_column(click_rel_x);
-    if (sample < 0) return;
-    arm_region_drag_at(click_rel_x, x, y);
 }
 
 void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
@@ -8236,7 +8213,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0) return;
     // Sub-threshold: the press has not yet become a sweep. Below the shared
-    // Chebyshev gate NOTHING HAS HAPPENED AT ALL beyond the press's own click —
+    // Chebyshev gate NOTHING HAS HAPPENED AT ALL beyond the begin's deselect —
     // no trim is written, and the release owes no commit tail (the armed
     // sweep begins past the slop, so its first frame crosses at once). Once
     // a drag, always a drag
@@ -8260,30 +8237,13 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // route.
     app.double_click = DoubleClickCandidate{};
     // The MOVING endpoint at the pointer column, clamped to the visible strip
-    // like the other drags' live tracking. THE COLUMN YIELDS TWO VALUES, THE
-    // DOMAINS KEPT APART (the rule at RegionDragState::anchor_source_frame):
-    // far_frame is the ACTIVE-domain frame for the PLAYHEAD — the cursor carry
-    // below, the same click->frame basis the press seated it on — and the
-    // TRIM's moving end is the same column's whole SOURCE frame, taken
-    // separately at the write below through the sweep's one column->trim
-    // route (sweep_trim_frame_at_column), which needs no domain hop in the
-    // writer. Also clamped into the
-    // live domain: the conversion reads ItemViewportBasis::spp, the PAINTED
-    // item epoch, which can extend past the CURRENT live domain (a resize or
-    // a target-domain contraction after the last item commit), so the
-    // lagging painted basis's last column can land at domain_total — one past
-    // [0, domain_total-1] — which the display-state validator would clear
-    // wholesale (same rule as the press seat, place_playhead_at_click_column).
-    // BOTH VALUES RIDE ONE
-    // PAINTED VIEWPORT (architect 2026-09-24, strictly as painted): the
-    // playhead's through playhead_frame_at_click_column and the trim's through
-    // sweep_trim_frame_at_column both convert on the item basis (cold, the
-    // live viewport by its own contract), so a job in flight parts neither.
+    // like the other drags' live tracking: the column's whole SOURCE frame
+    // through the sweep's one column->trim route (sweep_trim_frame_at_column,
+    // on the painted item basis, architect 2026-09-24), so the writer needs no
+    // domain hop.
     int rel = mouse_x - area.x;
     if (rel < 0) rel = 0;
     if (rel >= area.w) rel = area.w - 1;
-    const int64_t far_frame = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_column(app, audio, rel), app, audio);
     // THE TRIM WRITE — the sweep IS a trim write (architect 2026-08-18): from
     // the drag's fixed ANCHOR to the pointer's column, ordered and clamped to
     // the song walls, through the one owner that carries all of that
@@ -8293,6 +8253,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // the release turns into the whole song. It owns its own same-pair
     // short-circuit, so a sub-pixel jitter event inside one column writes and
     // repaints nothing; `wrote_trim` latches for the release's commit gate.
+    // Its own repaint is the waveform area's, the trim bar's lane inside it.
     //
     // (THE `h` VIEW WAS CARVED OUT HERE while its hold ran a playhead-only
     // sweep; that former retired with the hold, architect 2026-11-07,
@@ -8305,40 +8266,20 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): sweeping a span
     // does NOT select the markers it contains (the reverse coupling — a region
     // selecting its contents — was tried and retired; do not re-propose) — the
-    // press already deselected all and the trim write deselects again on the
+    // begin already deselected all and the trim write deselects again on the
     // setter rule, so the selection is EMPTY throughout.
     //
-    // THE DRAG CARRIES THE PLAYHEAD (architect 2026-07-30, live-test
-    // refinement: "i'd prefer the playhead move along with the drag for
-    // region highlight - more intuitive"). The cursor rides the MOVING
-    // endpoint — far_frame, already clamped playable by the conversion above,
-    // so the write needs no clamp of its own — while the anchor stays put as
-    // the trim's other bound. The begin seated the playhead at the down
-    // point and the contact carries the cursor from here on. THE RELEASE THEN PARKS
-    // IT at the committed trim start (commit_region_sweep), which is the trim
-    // family's own end-of-gesture rule and the reason the park is not run per
-    // event here.
-    // DIRECT CURSOR WRITE, not move_playhead_to: a keep-visible edge-align
-    // would scroll the viewport out from under a live gesture, and the span's
-    // endpoints are painted against the viewport the drag started in.
-    // PLAYBACK IS UNTOUCHED per motion by THIS body: the press/begin's
-    // placement stop (place_playhead_at_click_column) and the trim write's own
-    // first-accepted-change STOP are the whole playback story of this gesture,
-    // so no motion event stops anything.
-    // The waveform invalidate below repaints the cursor's
-    // HEAD AND STEM with the ground — its rect runs from the window top
-    // down through the waveform, so the ruler-lane head is inside it (the
-    // triangle this used to name retired with its lane in row 5); the
-    // TIMESTAMP invalidate is owed
-    // separately because the bottom row's CLOCK shows this cursor whenever
-    // no scanner is active, and it lives outside the waveform area.
+    // THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07, session 88:
+    // "Setting the trim should not move the playhead — I usually use scrub
+    // now, so moving playhead is just distracting"; the rule at the head of
+    // input_trim.cpp), reversing 2026-07-30's carry on the moving end. So
+    // nothing here writes the cursor or damages the clock. PLAYBACK IS
+    // UNTOUCHED per motion by THIS body: the trim write's own first-accepted-
+    // change STOP is the whole playback story of this gesture.
     // (THE SLIVER PARAGRAPH IS RETIRED with the release-time min-size check
     // (2026-08-18) and stayed retired when the minimum width floor went the
     // same way (2026-08-19): a jitter drag dissolves nothing and is widened to
     // nothing — it commits the sliver it drew, and Ctrl+Shift+0 is the way back.)
-    app.playhead_cursor_sample = far_frame;
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_clock_area();
 }
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,

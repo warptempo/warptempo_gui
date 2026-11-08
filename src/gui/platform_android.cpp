@@ -1700,7 +1700,7 @@ int GuiPlatform::detect_refresh_rate_ms() {
     // makes a hard-coded number honest here.
     //
     // THE DIRECTION THAT COSTS NOTHING is still downward: the tick only POLLS
-    // deadlines (key repeat, the touch window, the audition's rests) and drives
+    // deadlines (key repeat, the audition's rests) and drives
     // the playback scanner, so a tick faster than half the refresh is wasted
     // work and never a wrong frame (the paint waits for the vsync callback
     // either way), while a slower one would visibly step the playhead. It was 8 ms — 60 Hz's half-period — until the pin.
@@ -1842,16 +1842,15 @@ void GuiPlatform::pump() {
     // THE POLL BLOCKS until the first of the loop's wake sources: the
     // window-system sources, the four workers, the car's eventfd, and the
     // loop's TWO CADENCES since 2026-10-14 — the 5-ms timerfd tick (key
-    // repeat, the touch window) and the vsync callback, posted only while
+    // repeat) and the vsync callback, posted only while
     // damage waits (the tail).
     drain_looper(-1);
 
     if (timer_fired_) {
         timer_fired_ = false;
         if (on_tick_) on_tick_();
-        // Both software deadlines, sampled in the core's own fixed order
-        // (key repeat, then the touch window) — the arbitration is stated at
-        // GuiInputCore::tick.
+        // The core's one software deadline, the key repeat, sampled
+        // (GuiInputCore::tick).
         input_.tick();
     }
 
@@ -1969,7 +1968,7 @@ void GuiPlatform::run() {
     // THE LOOP HAS TWO WAKE SOURCES of its own since 2026-10-14 (the
     // 2026-08-27 "one wakeup" ruling reversed; the reason at pump's tail):
     // the periodic timerfd, so the blocking poll never waits longer than one
-    // tick period for the tick's work (key repeat, the touch window), and the
+    // tick period for the tick's work (key repeat), and the
     // vsync callback, posted while damage
     // waits, so declared damage paints at the next vsync. The stop bit is this
     // run's alone (platform.h): cleared here, set by the reopen, never by an

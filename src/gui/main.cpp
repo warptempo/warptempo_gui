@@ -2240,11 +2240,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // on the timerfd expiry itself.
         //
         // This is the run loop's own deadline tick, the same expiry the
-        // platform's two software deadlines ride — key repeat and the touch
-        // window's region-hold beat, the one touch deadline left (the pan
-        // zone's window; the editor field's window has none)
-        // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp:
-        // GuiInputCore::tick) — and the chrome button
+        // platform's one software deadline rides — the key repeat
+        // (maybe_fire_repeat, input_core.cpp: GuiInputCore::tick; the touch
+        // window has none since 2026-11-07) — and the chrome button
         // hold-repeat and the A/B audition's rests below; the cards are the
         // tick's FOURTH software deadline and, like the other three, schedule
         // nothing (kNotificationMs, gui_input.h; the model at notifications.h).
@@ -3000,9 +2998,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // stop body, and the natural-end branch below is then unreachable this
         // tick because that body lowers the scanner flag).
         // This is the run loop's own deadline tick, the same timerfd expiry the
-        // platform's key-repeat and touch-window deadlines ride (the region
-        // hold's beat, the one touch deadline left)
-        // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp)
+        // platform's key-repeat deadline rides (maybe_fire_repeat,
+        // input_core.cpp; the touch window has none since 2026-11-07)
         // and the same one the chrome button hold-repeat above and the
         // notification cards' clock at this body's head ride; the act
         // adds no timer of its own. One enum compare when no rest stands. It
@@ -3400,8 +3397,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         //     window x the same way, so a page mid-drag would teleport the
         //     dragged subject under a motionless pointer;
         //   * on glass the conversion is deferred by design — a tap delivers its
-        //     whole burst at the LIFT with the DOWN point's coordinates, and the
-        //     region hold converts the down point at the beat's expiry.
+        //     whole burst at the LIFT with the DOWN point's coordinates.
         // PAUSING THE MOVER is the whole fix: with the page held, the
         // press-time viewport stays valid by construction and every existing
         // conversion is already correct — nothing captures frames at the press
@@ -3415,7 +3411,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // aiming.
         // The touch term is the platform's (touch_contact_active — any finger
         // down), because nothing GUI-side is armed during a touch window (the
-        // waveform's region hold or the editor field's); the contract is at
+        // waveform's or the editor field's); the contract is at
         // the touch state block, input_core.h.
         // THE LAMP IS READ LIVE (architect 2026-09-23, AppState::follow): lit
         // and not suspended for this play by a camera change

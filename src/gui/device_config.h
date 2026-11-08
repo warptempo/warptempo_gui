@@ -527,8 +527,8 @@
 // 2026-09-27, the tablet now being the car's source; a config still carrying
 // the key is unknown-key fatal, no migration.
 // THE HOLD DELAY'S KEY CAME AND WENT 2026-09-29 (architect), a one-day
-// tuning phase: the two holds (the chrome shift long press and the touch
-// region hold) read it, placed after the scale with a
+// tuning phase: the holds (the chrome shift long press and, then, the touch
+// region hold, retired 2026-11-07) read it, placed after the scale with a
 // Settings row of its own, until the architect closed the phase on the
 // glass the same day on 300 ms, now constexpr (kHoldDelayMs, gui_input.h);
 // the key was `hold_delay_ms`, [100, 2000] ms. A config still carrying it is
