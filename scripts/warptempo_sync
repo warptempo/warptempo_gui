@@ -208,10 +208,8 @@ shopt -s nocaseglob
 #      (2026-11-05 night, the seventeenth key: the least time either lamp
 #      by the battery stays lit, in ms, a tuning key), the
 #      tooltip_delay_ms=100 line (2026-11-07, the twentieth key: the wait
-#      from a pen's arrival on a key to its tooltip, in ms, a tuning key), the
-#      tooltip_gap=2 line (2026-11-07, the twenty-first key: the ground
-#      between a tooltip and the button it stands above, in W, a tuning key)
-#      and the waveform_grow=1 line (2026-10-31, the waveform's antialiasing
+#      from a pen's arrival on a key to its tooltip, in ms, a tuning key) and
+#      the waveform_grow=1 line (2026-10-31, the waveform's antialiasing
 #      grow, a permanent key; 1 since 2026-11-04 night) and the audio_level=0 line (2026-10-31 night,
 #      the level of the program's own sound, a permanent key; the icon row's
 #      AUDIO slider since 2026-11-05, the shortest exact decimal since that
@@ -231,8 +229,9 @@ shopt -s nocaseglob
 #      noise_level and noise_crossfade_ms the same day,
 #      noise_crossfade_ms, made noise_crossfade_s in seconds that night,
 #      role, which left 2026-10-30 with the laptop GUI (one device, no mirror),
-#      waveform_column_px, retired 2026-11-01 night, and waveform and its older name
-#      chrome, which left 2026-11-01 with the color presets (one palette)
+#      waveform_column_px, retired 2026-11-01 night, waveform and its older name
+#      chrome, which left 2026-11-01 with the color presets (one palette), and
+#      tooltip_gap, settled 2026-11-07 at 1 W
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
 #   6. THE NOISE AND THEMES FOLDERS (2026-10-28, 2026-11-06): the laptop's
@@ -303,9 +302,7 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # required while it stands since 2026-10-29 night, 12 W (24 device px); and THE
 # TWO LAMPS' HOLD, a tuning key required while it stands since 2026-11-05
 # night (the seventeenth key), 100 ms; and THE TOOLTIP'S DELAY, a tuning key
-# required while it stands since 2026-11-07 (the twentieth key), 100 ms; and
-# THE TOOLTIP'S GAP, a tuning key required while it stands since 2026-11-07
-# (the twenty-first key), 2 W (4 device px on the tablet); and THE
+# required while it stands since 2026-11-07 (the twentieth key), 100 ms; and THE
 # WAVEFORM'S ANTIALIASING GROW, a permanent key required since 2026-10-31,
 # one device px (2026-11-04 night; half before); and THE AUDIO LEVEL, the program's own sound's level, a
 # permanent key required since 2026-10-31 night, 0 dB, the files as they
@@ -317,7 +314,7 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # on the tablet is kept: a line already there is never touched — the two
 # levels' lines among them, whatever their spelling (0.0 and -9.0 read as
 # well as 0 and -9), which the app rewrites canonical at its next commit.
-ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-inf noise_attenuation_level=-9 noise_crossfade_s=4 key_height=17 key_width=35 run_gap=22 osk_key_w=24 osk_key_h=30 osk_font_px=12 lamp_hold_ms=100 tooltip_delay_ms=100 tooltip_gap=2"
+ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-inf noise_attenuation_level=-9 noise_crossfade_s=4 key_height=17 key_width=35 run_gap=22 osk_key_w=24 osk_key_h=30 osk_font_px=12 lamp_hold_ms=100 tooltip_delay_ms=100"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -347,7 +344,10 @@ ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=ra
 # crossfade in whole seconds); and role, the device's part in the projects
 # repository (author or mirror), retired 2026-10-30 with the laptop GUI, one
 # device running the program; and waveform_column_px, the waveform's
-# column width, a tuning key retired 2026-11-01 night. A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
+# column width, a tuning key retired 2026-11-01 night; and tooltip_gap, the
+# ground between a tooltip and the button it stands above, a tuning key of
+# 2026-11-07's session 90, settled in session 91 at 1 W and a constant in the
+# program since (src/gui/render.h's kTooltipGapW). A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level=-inf takes its place,
 # so the planner renames the two lines by hand at the install, on both
 # devices, the program not running; a crossfade in ms comes back as
@@ -364,7 +364,8 @@ RETIRED_KEYS=(sync_path theme_level
               rain_fade_in_ms rain_fade_out_ms
               rain_level rain_crossfade_ms
               noise_crossfade_ms role
-              waveform_column_px waveform chrome)
+              waveform_column_px waveform chrome
+              tooltip_gap)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE slider plays.
@@ -1340,15 +1341,15 @@ apply_setup() {
     # waveform_grow, audio_level, noise, noise_level, noise_attenuation_level,
     # noise_crossfade_s, key_height, key_width (the eighteenth, 2026-11-06),
     # run_gap (the nineteenth, 2026-11-07), osk_key_w, osk_key_h, osk_font_px,
-    # lamp_hold_ms (the seventeenth, 2026-11-05 night), tooltip_delay_ms
-    # (the twentieth, 2026-11-07) and tooltip_gap (the twenty-first, the
-    # same day) their lines where
+    # lamp_hold_ms (the seventeenth, 2026-11-05 night) and tooltip_delay_ms
+    # (the twentieth, 2026-11-07) their lines where
     # absent
     # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
     # keys, the LED glow's, the noise's two fades, the level's and the
     # crossfade's first names, the crossfade's ms key, role, the column
-    # width's key and the color preset's waveform and chrome, RETIRED_KEYS),
+    # width's key, the color preset's waveform and chrome, and the tooltip's
+    # gap, RETIRED_KEYS),
     # the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
@@ -1374,7 +1375,7 @@ apply_setup() {
             END               { if (had == 0) print repo
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, theme, waveform_grow, audio_level, noise, noise_level, noise_attenuation_level, noise_crossfade_s, key_height, key_width, run_gap, osk_key_w, osk_key_h, osk_font_px, lamp_hold_ms, tooltip_delay_ms and tooltip_gap and has no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, theme, waveform_grow, audio_level, noise, noise_level, noise_attenuation_level, noise_crossfade_s, key_height, key_width, run_gap, osk_key_w, osk_key_h, osk_font_px, lamp_hold_ms and tooltip_delay_ms and has no line of a retired key"
         else
             head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"

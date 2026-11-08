@@ -625,9 +625,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // THE TOOLTIP'S DELAY (architect 2026-11-07, a tuning key), spelled:
     // 100 ms (device_config.h's head).
     cfg.tooltip_delay_ms  = kTooltipDelayDefaultMs;
-    // THE TOOLTIP'S GAP (architect 2026-11-07, session 90, a tuning key),
-    // spelled: 2 W, 4 device px on the tablet (device_config.h's head).
-    cfg.tooltip_gap       = kTooltipGapDefaultW;
     return cfg;
 }
 

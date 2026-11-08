@@ -3569,9 +3569,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                   2 * inset;
     const int h = 2 * inset + cap1 + (two_line ? pad + cap2 : 0);
 
-    // OFF THE OWNER'S FACE ALONE (architect 2026-11-07, session 90): above
-    // `btn`, the `tooltip_gap` tuning key between, centered on it, on every
-    // surface alike — the band's box in the logo lane, row 8's and every
+    // OFF THE OWNER'S FACE ALONE (architect 2026-11-07, sessions 90 and 91):
+    // above `btn`, one W between (render.h's kTooltipGapW), its left edge on
+    // `btn`'s, on every surface alike — the band's box in the logo lane, row 8's and every
     // controls row's over what stands above them — then held between the
     // keys' outer columns (the edge rule, 2026-11-02) and under the window's
     // top, the box never shrinking (a truncated hint would be worse than one

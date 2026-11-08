@@ -22,11 +22,12 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY-ONE keys since 2026-11-07, session
-// 90, the tooltip's gap `tooltip_gap` appended at the end — a tuning key, the
-// ground between the box and its owner's face; TWENTY earlier that day, the
-// tooltip's delay `tooltip_delay_ms` appended at the end — a tuning key, the
-// wait from a key column's arrival to its box; NINETEEN earlier still, the
+// REQUIRED SET, every one of them (TWENTY keys since 2026-11-07, session 91,
+// the tooltip's gap `tooltip_gap` retired, settled at 1 W, render.h's
+// kTooltipGapW; TWENTY-ONE from session 90, that key appended at the end;
+// TWENTY earlier that day, the tooltip's delay `tooltip_delay_ms` appended
+// at the end — a tuning key, the wait from a key column's arrival to its box;
+// NINETEEN earlier still, the
 // run gap `run_gap` placed after `key_width` — a tuning key, the band's
 // lengths together; EIGHTEEN 2026-11-06, the
 // key's face width `key_width` placed after `key_height` — a tuning key,
@@ -113,14 +114,15 @@ namespace {
 // 2026-10-29 evening, and the
 // keyboard's cap size, `osk_font_px`, after them since that night, and the
 // two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night, and the
-// tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07, and the
-// tooltip's gap, `tooltip_gap`, after it since that day's session 90 (none
+// tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07 (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
 // (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
 // 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
-// kNoiseFadeOutMs; the LED glow's stood there 2026-10-23 to 2026-10-26,
+// kNoiseFadeOutMs; the tooltip's gap `tooltip_gap` after `tooltip_delay_ms`
+// for session 90 of 2026-11-07, settled at 1 W in session 91, render.h's
+// kTooltipGapW; the LED glow's stood there 2026-10-23 to 2026-10-26,
 // settled at 4 device px (retired with the LED, 2026-11-01); `strip_pad` before it
 // 2026-10-22 to 2026-10-23, settled at a constant (19 W since 2026-11-04
 // night, render.h's strip_pad_px);
@@ -148,7 +150,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "osk_font_px",
     "lamp_hold_ms",
     "tooltip_delay_ms",
-    "tooltip_gap",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -260,14 +261,6 @@ std::string format_tooltip_delay_ms(int ms) {
     return std::string(buf);
 }
 
-// The tooltip's gap's canonical spelling (2026-11-07, session 90): `%d`, the
-// noise integers' road.
-std::string format_tooltip_gap(int w) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", w);
-    return std::string(buf);
-}
-
 // The plate's grow's canonical spelling (2026-10-31; the grammar's words at
 // parse_waveform_grow's head, device_config.h): the quarters as the shortest
 // exact decimal — the integer part, then the fraction in hundredths with
@@ -373,9 +366,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The tooltip's delay's canonical integer
             // (format_tooltip_delay_ms).
             s += format_tooltip_delay_ms(cfg.tooltip_delay_ms);
-        } else if (k == "tooltip_gap") {
-            // The tooltip's gap's canonical integer (format_tooltip_gap).
-            s += format_tooltip_gap(cfg.tooltip_gap);
         }
         s += '\n';
     }
@@ -619,17 +609,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kTooltipDelayGrammarReason);
             }
             out.tooltip_delay_ms = *ms;
-            return {};
-        }
-        // THE TOOLTIP'S GAP (2026-11-07, session 90, a tuning key): under its
-        // one grammar owner (parse_tooltip_gap, device_config.h), required
-        // like every key; any other spelling the launch's hard fail.
-        if (key == "tooltip_gap") {
-            const std::optional<int> w = parse_tooltip_gap(value);
-            if (!w) {
-                return bad_value(ln, key, value, kTooltipGapGrammarReason);
-            }
-            out.tooltip_gap = *w;
             return {};
         }
         return warptempo_parse::prefix_line_error(

@@ -758,37 +758,23 @@ GuiRect bottom_row_area(const AppState& a) {
 }
 
 // THE HOVER TOOLTIP'S SEAT AND ITS DAMAGE BAND (the contract at the
-// declaration, app_state.h; architect 2026-11-07, session 90).
-// THE GAP, the `tooltip_gap` tuning key read live (device_config.h).
-static int tooltip_gap_px(const AppState& a) {
-    return scaled_px(a.device_config->tooltip_gap);
-}
-
+// declaration, app_state.h; architect 2026-11-07, session 91).
 GuiRect tooltip_box_rect(const AppState& a, const GuiRect& face, int w,
                          int h) {
-    // CENTERED ON THE FACE: the box's left edge the face's less the FLOOR HALF
-    // of the box's excess width over the face — so at an odd difference the
-    // extra device px stands on the box's RIGHT, the column's own tie (THE
-    // KEY'S COLUMN, render.h: the left side the floor half, the right the
-    // rest). One expression for every owner, the box wider or narrower than
-    // its face (a negative excess floors too: the box's center half a device
-    // px right of the face's at every odd difference).
-    const int excess = w - face.w;
-    const int left   = excess >= 0 ? excess / 2 : -((1 - excess) / 2);
-    int x = face.x - left;
-    // ABOVE THE FACE: the box's bottom row `tooltip_gap` W over the face's
-    // top row.
-    int y = face.y - tooltip_gap_px(a) - h;
+    // LEFT-ALIGNED ON THE FACE: the box's left edge the face's.
+    int x = face.x;
+    // ABOVE THE FACE: the box's bottom row the gap (kTooltipGapW, render.h)
+    // over the face's top row.
+    int y = face.y - tooltip_gap_px() - h;
     // THE EDGE RULE (architect 2026-11-02, M11 ruling 4): the box between the
-    // keys' outer columns — the right clamp first, then the left, so a box
-    // wider than the span pins its left edge.
+    // keys' outer columns — the right clamp first, pulling a box that would
+    // run past the right one back to end on it, then the left, so a box wider
+    // than the span pins its left edge.
     const WellColumns keys = well_columns(a);
     if (x + w > keys.end) x = keys.end - w;
     if (x < keys.x) x = keys.x;
     // NEVER ABOVE THE WINDOW'S TOP: where the face stands too near it for the
-    // box and the gap (the band's two-line box under a gap past 2 W on the
-    // tablet), the box lays over the face's top rows instead — accepted for a
-    // tuning key (architect 2026-11-07, session 90).
+    // box and the gap, the box lays over the face's top rows instead.
     if (y < 0) y = 0;
     return GuiRect{x, y, w, h};
 }
@@ -818,7 +804,7 @@ GuiRect tooltip_damage_band(const AppState& a) {
     // The bound's rows ending on the gap's top — or from the window's top
     // where they would rise past it, which holds the clamped seat too.
     const int band_h = tooltip_damage_h_px();
-    const int y = std::max(0, face.y - tooltip_gap_px(a) - band_h);
+    const int y = std::max(0, face.y - tooltip_gap_px() - band_h);
     return GuiRect{0, y, a.width, band_h};
 }
 

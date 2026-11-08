@@ -8000,12 +8000,13 @@ void GuiInputHandler::hide_shift_tooltip() {
 
 // THE SHOW — the one show body, shared by the wait's ripening (tick_tooltip)
 // and the bypass's immediate arrival (note_tooltip_hover): the box takes the
-// hovered owner, SEATED OFF THAT OWNER'S FACE ALONE — above it, centered on
-// it (architect 2026-11-07, session 90; the placement at tooltip_box_rect) —
-// and the chain is spent into it (`left_ms` 0: the box's own leave re-arms
-// it). The pen's one say in the seat is taken here and held while the box
-// stands: whether the pointer is on row 8's clock field, Play's second rect
-// (`shown_on_field`, the face the box centers over), so motion between the
+// hovered owner, SEATED OFF THAT OWNER'S FACE ALONE — above it, its left edge
+// on the face's (architect 2026-11-07, sessions 90 and 91; the placement at
+// tooltip_box_rect) — and the chain is spent into it (`left_ms` 0: the box's
+// own leave re-arms it). The pen's one say in the seat is taken here and held
+// while the box stands: whether the pointer is on row 8's clock field, Play's
+// second rect (`shown_on_field`, the face the box stands over), so motion
+// between the
 // clock and Play's key under a standing box moves nothing. The box's own
 // rect cannot be known yet (the paint that publishes it is the frame this
 // schedules), so it damages the band every seat of the box lies in — the

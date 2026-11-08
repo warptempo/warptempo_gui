@@ -5604,8 +5604,9 @@ struct AppState {
         // THE TOOLTIP'S FACE (tooltip_box_rect's `face`; architect
         // 2026-11-07, session 90): the field where the show found the pointer
         // on it (RedesignTooltip::shown_on_field), the key otherwise — so a
-        // box raised over the clock centers on the clock, one raised over
-        // Play's column on the key, and neither moves while it stands.
+        // box raised over the clock stands on the clock's left edge, one
+        // raised over Play's column on the key's (session 91), and neither
+        // moves while it stands.
         const GuiRect& tooltip_face(bool on_field) const {
             return on_field ? field : rect;
         }
@@ -6960,8 +6961,8 @@ struct AppState {
     //     resting pointer (a relayout, a surface closing under it) is an
     //     arrival like any other.
     //   * THE SHOW: the wait ripening shows its column's hint, the box SEATED
-    //     OFF ITS OWNER'S FACE ALONE — above it, centered on it, the
-    //     `tooltip_gap` tuning key between (architect 2026-11-07, session 90;
+    //     OFF ITS OWNER'S FACE ALONE — above it, its left edge on the face's,
+    //     one W between (architect 2026-11-07, sessions 90 and 91;
     //     tooltip_box_rect, app_state.h, the placement's one statement) — so
     //     wherever the pen came onto the column, and however fast, the box
     //     stands in one place for that key, a chained show in the same
@@ -7014,7 +7015,7 @@ struct AppState {
     // nothing hit-tests a tooltip), `shown_on_field` the one fact of the pen
     // the seat keeps — whether the show found the pointer on row 8's clock
     // field, Play's second rect, rather than on Play's column, which face the
-    // box centers over (RedesignButtonFace::tooltip_face; false for every
+    // box stands over (RedesignButtonFace::tooltip_face; false for every
     // other owner, whose field is empty). `rect` and the
     // two `painted_line` strings are AS PAINTED (2026-09-29):
     // the painter runs on every frame, under whatever clip that frame's
@@ -10355,8 +10356,10 @@ inline DialogEditorStop dialog_editor_byte_at(
 }
 
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT LIES IN (architect 2026-11-07,
-// session 90, his "1 yes 2 yes 3 a 4 agree"; the model at
-// AppState::RedesignTooltip). THE SEAT DERIVES FROM THE OWNER'S FACE ALONE,
+// session 90, his "1 yes 2 yes 3 a 4 agree", and session 91 on his glass:
+// the centering "looked odd", the box left-aligned on its face, the gap
+// ruled 1 W; the model at AppState::RedesignTooltip). THE SEAT DERIVES FROM
+// THE OWNER'S FACE ALONE,
 // NEVER THE PEN: the pen picks the owner (the column, the delay, the chain),
 // and the box's place is a function of that owner's painted face and the
 // box's size, so it never moves while it stands and a chained show lands in
@@ -10365,26 +10368,28 @@ inline DialogEditorStop dialog_editor_byte_at(
 // EVERY SURFACE — the band, row 8, every controls row of a dialog or an
 // overlay — for a w x h box over `face` (the owner's painted face: the key's,
 // row 8's clock field where the show chose it, a modal button's rect):
-//   * ABOVE THE FACE: its bottom row the `tooltip_gap` tuning key's W over
-//     the face's top row (box.y = face.y − gap − h; device_config.h's
-//     grammar, read live through scaled_px, so a commit takes the next
-//     show). On the band that is the logo lane, over the brand, the lamps
-//     and the battery while the box stands, never over the well: on the
-//     tablet at 200 % and the default 2 W the band's face top is row 72, so
-//     a one-line box (43 rows) stands on rows 25..67 and a two-line box (67)
-//     on rows 1..67, the gap rows 68..71;
-//   * CENTERED ON THE FACE: box.x = face.x − floor((w − face.w) / 2), the
-//     odd device px on the box's RIGHT (the column's tie, render.h's THE
-//     KEY'S COLUMN), one expression whether the box is wider or narrower;
+//   * ABOVE THE FACE: its bottom row the gap over the face's top row
+//     (box.y = face.y − gap − h; the gap 1 W, render.h's kTooltipGapW,
+//     2 device px on the tablet at 200 %). On the band that is the logo
+//     lane, over the brand, the lamps and the battery while the box stands,
+//     never over the well: on the tablet the band's face top is row 72, so a
+//     one-line box (43 rows) stands on rows 27..69 and a two-line box (67)
+//     on rows 3..69, the gap rows 70..71;
+//   * LEFT-ALIGNED ON THE FACE: box.x = face.x, one expression whether the
+//     box is wider or narrower than its face;
 //   * THEN HELD BETWEEN THE KEYS' OUTER COLUMNS (render.h's well_columns,
 //     THE EDGE RULE; architect 2026-11-02, M11 ruling 4: x 24 .. 2279 on the
-//     tablet) — the right clamp first, then the left, so a box wider than the
+//     tablet) — the right clamp first, so a box that would run past the right
+//     one is pulled in to end on it, then the left, so a box wider than the
 //     span pins its left edge there;
-//   * NEVER ABOVE THE WINDOW'S TOP: y ≥ 0, so under a large gap the band's
-//     two-line box lays over its face's top rows — accepted for a tuning key.
+//   * NEVER ABOVE THE WINDOW'S TOP: y ≥ 0, the box laying over its face's
+//     top rows where the face stands too near the top for the box and the
+//     gap (never on the tablet at 1 W: the band's two-line box keeps three
+//     rows above it).
 // The box never shrinks. (The pointer's seat, Windows 95's — the left edge at
 // the pointer and the top 27 W under it, flipped above the button at the
-// window's foot — retired with this rule, closed_questions.md.)
+// window's foot — retired with session 90's rule, and session 90's centering
+// on the face with session 91's, closed_questions.md.)
 // tooltip_damage_band is the DAMAGE twin, read by the three owners that must
 // damage a box before its rect is published (the show edge, tick_tooltip;
 // main.cpp's roster words comparator; Viewport::invalidate_modal_dialog_area

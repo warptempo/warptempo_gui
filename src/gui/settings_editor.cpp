@@ -1222,13 +1222,13 @@ void GuiSettingsEditor::commit() {
 // them, and the
 // lamps' hold `lamp_hold_ms` (2026-11-05 night) the same but for a live act,
 // having none, its arm after them, and the tooltip's delay
-// `tooltip_delay_ms` (2026-11-07) the same, no live act, its arm after it,
-// and the tooltip's gap `tooltip_gap` (2026-11-07, session 90) the same, no
-// live act, its arm last (`bevel_light` and `bevel_dark` stood after it
+// `tooltip_delay_ms` (2026-11-07) the same, no live act, its arm last
+// (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
 // 2026-10-26, the glow settled at a constant, then retired with the LED,
-// 2026-11-01).
+// 2026-11-01, and the tooltip's gap `tooltip_gap` for session 90 of
+// 2026-11-07, settled at 1 W in session 91, render.h's kTooltipGapW).
 // `theme` (2026-11-05, Live's themes whole; its namesake of
 // 2026-10-03..10-08, a chrome theme file read at launch, left with that key)
 // the same, at once and no card, its arm after true_colors'. (`icons` and
@@ -1570,25 +1570,6 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE TOOLTIP'S GAP (architect 2026-11-07, session 90, a tuning key; the
-    // seat at tooltip_box_rect, app_state.h): an integer of W under its one
-    // grammar owner (parse_tooltip_gap, device_config.h), STORED INTO THE LIVE
-    // STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT AND NO DAMAGE: no box
-    // stands at a commit (the press that committed took it down,
-    // AppState::RedesignTooltip's hard end), and the seat and its damage twin
-    // read app.device_config->tooltip_gap through scaled_px at every show, so
-    // the next box takes the new number. The page opens the line editor on it,
-    // as on run_gap; Tab completes no value; stage 2's recall is the writer's
-    // spelling (recall_gui_setting_value).
-    if (key == "tooltip_gap") {
-        const std::optional<int> w = parse_tooltip_gap(value);
-        if (!w) return reject(kTooltipGapGrammarReason);
-        if (*w == app.device_config->tooltip_gap) return unchanged();
-        app.device_config->tooltip_gap = *w;
-        (void)persist();
-        return applied();
-    }
-
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1738,7 +1719,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty-three and
+        // one key does — any key the recall knows, the table's twenty-two and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

@@ -2670,14 +2670,16 @@ inline int view_bar_grab_w_px() {
 // cue's own (the palette block's playhead paragraph). Git history.)
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
-// hover target (the key's column) and the bypass chain's reach. They live out
-// here, rather than with the rest of the tooltip's anatomy in
-// paint_handler.cpp, because both the RUN LOOP and the input side read them:
+// seat's gap, its hover target (the key's column) and the bypass chain's
+// reach. They live out here, rather than with the rest of the tooltip's
+// anatomy in paint_handler.cpp, because both the RUN LOOP and the input side
+// read them:
 // the clock (GuiInputHandler::tick_tooltip) runs on the tick and damages the
 // band every seat of the box lies in (tooltip_damage_band, app_state.h), and
 // the one wait writer (note_tooltip_hover) and the two hover walks read the
-// column and the reach. The one duration, the delay, is the
-// `tooltip_delay_ms` tuning key (device_config.h), read live.
+// column and the reach, and the seat's gap, which the seat and the damage band
+// both read. The one duration, the delay, is the `tooltip_delay_ms` tuning key
+// (device_config.h), read live.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from the two faces' caps under the time field's pad (paint_shift_tooltip,
@@ -2689,16 +2691,24 @@ inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
 
-// THE SEAT IS THE OWNER'S FACE'S (architect 2026-11-07, session 90): the box
-// above its owner's painted face, centered on it, the `tooltip_gap` tuning
-// key between them (device_config.h's grammar, default 2 W, 4 device px on
-// the tablet; read live, no seat here until he rules the number, when it
-// becomes a constexpr beside this bound), held between the keys' outer
-// columns and under the window's top; one rule on every surface. The
-// placement's one statement is tooltip_box_rect (app_state.h). (The
-// pointer's seat, Windows 95's of 2026-10-06 — the box's left edge at the
-// pointer, its top 27 W under it, flipped 3 W above the button at the
-// window's foot — retired with it, closed_questions.md.)
+// THE SEAT IS THE OWNER'S FACE'S (architect 2026-11-07, session 90; the
+// left alignment and the gap session 91's): the box above its owner's painted
+// face, ITS LEFT EDGE ON THE FACE'S, THE GAP kTooltipGapW between them, held
+// between the keys' outer columns and under the window's top; one rule on
+// every surface. The placement's one statement is tooltip_box_rect
+// (app_state.h). THE GAP IS 1 W (architect 2026-11-07, session 91: "ok to
+// remove the key" — the `tooltip_gap` tuning key of session 90 settled here,
+// closed_questions.md), 2 device px on the tablet at 200 %; read by the seat
+// and its damage twin (tooltip_damage_band) alike. Floored at 0: a gap may
+// vanish at a small scale (0 at 50 %, banker's rounding), the box then
+// standing on the face's top row. (The pointer's seat, Windows 95's of
+// 2026-10-06 — the box's left edge at the pointer, its top 27 W under it,
+// flipped 3 W above the button at the window's foot — retired 2026-11-07,
+// closed_questions.md.)
+inline constexpr int kTooltipGapW = 1;
+inline int tooltip_gap_px() {
+    return scaled_px(kTooltipGapW, 0);
+}
 
 // THE TIMING IS ONE DELAY, THE `tooltip_delay_ms` TUNING KEY (architect
 // 2026-11-07, session 87, the always-show model; device_config.h's grammar,
