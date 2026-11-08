@@ -848,8 +848,9 @@ struct GuiInputHandler {
     // body so every gate applies to them identically — the chrome lift and
     // the hold-repeat tick (input_pointer.cpp), a chord reachable iff a
     // roster row spells its key and its admissions grant the modifier (the
-    // long press Shift alone; the S Pen's barrel is no chrome modifier since
-    // 2026-11-08). Its boundaries each
+    // long press Shift alone; the S Pen's barrel is no modifier on any key
+    // since 2026-11-08, the on-screen keyboard's included — a keyboard key's
+    // one ctrl is Copy's and Paste's own). Its boundaries each
     // live at their own homes: the editors' modality
     // (route_modal_editor_key), strict modifier validation (stated in full
     // below), the modal Enter/Space
@@ -886,10 +887,10 @@ struct GuiInputHandler {
     // CONSUMED NO-OP, uniformly. Space is bare-exact at its one owner
     // (is_play_pause_key, shared with the read-only allowlist), the editors'
     // session keys (Escape / Return) bare-exact and their clipboard chords
-    // (A / C / X / V) ctrl-exact. TWO FAMILIES ARE DELIBERATELY NOT TIGHTENED
-    // because the modifier is a real binding there: is_tab_cycle (Shift+Tab
-    // is the reverse walk) and Ctrl+Z (shift selects redo); the editors'
-    // BackSpace admits ctrl (the word erase) but never alt. Printable
+    // (C / V) ctrl-exact, their BackSpace bare-exact. TWO FAMILIES ARE
+    // DELIBERATELY NOT TIGHTENED because the modifier is a real binding
+    // there: is_tab_cycle (Shift+Tab is the reverse walk) and Ctrl+Z (shift
+    // selects redo). Printable
     // insertion keeps shift and excludes ctrl and alt. AN UNBOUND COMBINATION
     // SAYS NOTHING (architect 2026-08-30): every other refusal answers, so a
     // press with no card and no change can only be unbound — the gates ask
@@ -2296,12 +2297,12 @@ private:
     // flag is cleared regardless.
     void finalize_editor_text_drag();
 
-    // Clipboard: handle a Copy/Cut/Paste editor action against editor `s` and
+    // Clipboard: handle a Copy/Paste editor action against editor `s` and
     // report whether it handled one. THE PLATFORM HOLDS THE ONLY COPY of the
     // payload (GuiPlatform::clipboard_set_text / clipboard_get_text): copy
-    // and cut hand the selected text over and it stays in the program's own
+    // hands the selected text over and it stays in the program's own
     // process (architect 2026-10-29, Android 13+'s "Copied" chip;
-    // platform_android.h), the cut then erasing it. Nothing is kept here;
+    // platform_android.h). Nothing is kept here;
     // paste takes what the platform answers — the newer of the program's
     // copy and the system clip — and inserts it, doing NOTHING at all when
     // there is nothing to paste. Returns false for any other action so the
@@ -3997,7 +3998,7 @@ private:
     // consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
     // Ctrl+Z is not admitted, so typing inside an editor has NO UNDO — the
     // gap these editors have always had, which is also why a refused
-    // clipboard cut must not erase (apply_editor_clipboard,
+    // paste must not erase the selection (apply_editor_clipboard,
     // input_handler.cpp).
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
@@ -4228,7 +4229,10 @@ private:
     // runs unchanged from there. Ahead of the hit test it runs the SESSION-
     // CHANGE OWNER (onscreen_keyboard::reconcile_session, whose declaration
     // names its other caller), so a press can never be routed against lamps the
-    // previous edit armed.
+    // previous edit armed. `mods` is the press's own: A PRESS CARRYING THE
+    // BARREL'S CTRL IS CONSUMED AHEAD OF THE HIT TEST as a gap's press is —
+    // no key, no lamp, no held index (architect 2026-11-08, session 94: the
+    // barrel has no road on any key, the keyboard's included).
     //
     // THE RELEASE OWES THE KEY-UP AND NOTHING ELSE. It is guarded on the held
     // index alone, which only this surface's own press ever sets, so it can sit
@@ -4236,7 +4240,7 @@ private:
     // even when the press's own act closed the editor under it (Enter, Esc):
     // the key-down was delivered, so its pair is owed whatever became of the
     // surface — and the core's repeat cancel is that pair's other job.
-    bool claim_onscreen_keyboard_press(int x, int y);
+    bool claim_onscreen_keyboard_press(int x, int y, GuiInputState mods);
     bool finish_onscreen_keyboard_release();
 
     // THE DIALOG BUTTONS ACT AT THE RELEASE (architect 2026-08-13,

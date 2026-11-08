@@ -45,7 +45,12 @@
 // paste takes the editors' one paste body (text_editor::handle_key's chord
 // arms, GuiInputHandler::apply_editor_clipboard) — and a held one does what
 // a held Ctrl+C or Ctrl+V does, the editor's chord keys being one-shot
-// (repeat_eligible's editor arm).
+// (repeat_eligible's editor arm). THAT OWN CTRL IS THE ONLY CTRL A KEY HERE
+// CARRIES: THE BARREL HAS NO ROAD ON ANY KEY, THIS KEYBOARD'S INCLUDED
+// (architect 2026-11-08, session 94) — a press carrying it is consumed with
+// no act, Shift and the page key included (GuiInputHandler::
+// claim_onscreen_keyboard_press), and the barrel's word erase, select-all
+// and cut went with it.
 //
 // TIMING: KEYS ARE HOTKEYS AND ACT AT THE PRESS (architect: phone muscle
 // memory; and the core's repeat needs the press edge). That is the modality

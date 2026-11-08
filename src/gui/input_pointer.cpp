@@ -880,6 +880,9 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // the ctrl and ctrl+shift admissions the gate asked from 2026-09-26 left with
 // their last members, the record at redesign_button_shift_admits' head). A
 // key whose chord carries a ctrl carries it in its own kToolbarChords row.
+// THE SAME RULE HOLDS ON THE ON-SCREEN KEYBOARD (architect 2026-11-08,
+// session 94: the barrel has no road on any key), at its own claim, which
+// ranks above this gate (claim_onscreen_keyboard_press).
 // THE BARREL'S WAVEFORM ROAD IS UNTOUCHED — "the zoom is worth it ... the
 // most convenient way to have that, because a long press can't substitute":
 // the one-finger ctrl zoom (GuiTouchNavFrame::ctrl), the trim bar's barrel
@@ -3780,7 +3783,8 @@ void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
 // two lamps are at onscreen_keyboard.h. What is here is the press's own
 // dispatch and the release's owed key-up.
 
-bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y) {
+bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
+                                                    GuiInputState mods) {
     if (!onscreen_keyboard::stands(app)) return false;
     const GuiRect surf = onscreen_keyboard::surface_rect(app);
     // THE CLAIM IS THE BAND (onscreen_keyboard::claim_rect; with the taskbar
@@ -3796,6 +3800,22 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y) {
     // against lamps the previous edit armed. It damages the band on a real
     // change and does nothing at all otherwise.
     onscreen_keyboard::reconcile_session(app, viewport);
+
+    // THE BARREL HAS NO ROAD ON THE KEYBOARD (architect 2026-11-08, session
+    // 94, extending the chrome ruling at chrome_band_modifiers_refused: "a
+    // long press will do just fine ..., whereas a barrel click is awkward"):
+    // A PRESS CARRYING THE BARREL'S CTRL IS CONSUMED BEFORE THE HIT TEST, on
+    // every key — the letters, Bksp, Shift, the page key, Copy, Paste, Enter,
+    // Esc, Tab, the space bar — exactly as a press on a gap is: nothing typed,
+    // no lamp toggled, no held key (so no press face and no key-up owed at
+    // the lift), the band's refusal's shape. Copy and Paste keep their OWN
+    // ctrl on an ordinary tap (`with_ctrl`, below), and that is the only ctrl
+    // a key's press carries (a barrel edge under a held key's repeat only
+    // disarms it: no ctrl spelling of a repeating key is the editors', so the
+    // repeat's live re-probe fails, GuiInputCore::maybe_fire_repeat). The
+    // waveform's barrel roads read the platform's bit at their own owners,
+    // untouched.
+    if (mods.ctrl) return true;
 
     // The lamps, read ONCE: the page decides which key is under the finger and
     // the shift arm decides what that key types, so both must be the same
@@ -4751,8 +4771,9 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // one integer compare otherwise.
     // Its rect is opaque: a press inside it never reaches the waveform's
     // gestures underneath, key or gap. (Contract at the declaration; the act
-    // runs at the PRESS, inside.)
-    if (claim_onscreen_keyboard_press(x, y)) return;
+    // runs at the PRESS, inside; a press carrying the barrel's ctrl is
+    // consumed there with no act, architect 2026-11-08.)
+    if (claim_onscreen_keyboard_press(x, y, mods)) return;
 
     // (THE SIZING FRAME's claim, above every veil, 2026-10-05 to 2026-10-24,
     // went with the app's frame.)

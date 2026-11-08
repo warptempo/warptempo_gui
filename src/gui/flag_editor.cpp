@@ -164,8 +164,8 @@ void GuiFlagEditor::enter_text_edit(int idx,
         std::move(initial_pending),
         kind);
 
-    // Open-selected: fully select the seeded content (mirrors Ctrl+A's
-    // anchor=0 / cursor=end assignments) so the first keystroke replaces it
+    // Open-selected: fully select the seeded content (anchor=0 /
+    // cursor=end) so the first keystroke replaces it
     // wholesale; a blank seed
     // selects nothing and rests at caret 0. text_editor::enter already
     // refreshed blink_epoch, so no touch_blink is needed here.

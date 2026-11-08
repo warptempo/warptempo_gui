@@ -178,9 +178,9 @@
 //     phase copy that captured nothing, "No labeled, enabled markers are
 //     selected, so nothing was copied". No clipboard write refuses (the copy
 //     stays in the program's process, platform_android.h's
-//     clipboard_set_text), so no refusal cards. THE EDITORS' OWN Ctrl+C,
-//     Ctrl+X and Ctrl+V are silent: an editor is its own world with that
-//     world's conventions.
+//     clipboard_set_text), so no refusal cards. THE EDITORS' OWN Ctrl+C
+//     and Ctrl+V are silent: an editor is its own world with that world's
+//     conventions.
 //   * THE GITHUB CARDS (2026-09-27), the publish chord (Ctrl+Shift+S since
 //     2026-10-10, in either view) forking on the status (run_publish_chord),
 //     each the KEY'S — in the `h` view the Save face

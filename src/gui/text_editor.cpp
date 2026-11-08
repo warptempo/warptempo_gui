@@ -69,37 +69,11 @@ void erase_selection(State& s) {
     s.selection_anchor = -1;
 }
 
-// The WORD-ERASE word class (Ctrl+Backspace), distinct from the double-click
-// selector's three-class `classify` below. Any byte >=
-// 0x80 counts as a word character, which is what makes the byte walk below
-// codepoint-safe without carrying a decoder: a multi-byte character's bytes are
-// ALL >= 0x80, so a run of them is one uniform class and a boundary can never
-// land inside one. It also gives the behavior a user expects — a word of
-// accented Latin walks as one word.
-bool is_word_char(char c) {
-    const unsigned char u = static_cast<unsigned char>(c);
-    if (u >= 0x80) return true;
-    return (c >= '0' && c <= '9') ||
-           (c >= 'a' && c <= 'z') ||
-           (c >= 'A' && c <= 'Z');
-}
-
-// Index of the boundary to the left of `pos`: skip separators
-// immediately left, then the word run beyond them.
-int prev_word_boundary(const std::string& s, int pos) {
-    int i = pos;
-    while (i > 0 && !is_word_char(s[static_cast<size_t>(i - 1)])) --i;
-    while (i > 0 &&  is_word_char(s[static_cast<size_t>(i - 1)])) --i;
-    return i;
-}
-
 // Character class for the double-click run selector (below). Three classes,
 // the Qt/Kate "programmer's word" convention: WORD is [A-Za-z0-9_] plus any
 // byte >= 0x80 (UTF-8 lead and continuation bytes both classify as word, so a
 // multi-byte character is one uniform run and a selection edge can never land
 // inside one); WHITESPACE is ' ' and '\t'; PUNCTUATION is every other byte.
-// Distinct from the word-erase class above, which excludes '_' and
-// treats every non-word byte as a separator to skip.
 //
 // THE PROBE IS EXACT, not a degradation: `pos` comes from
 // byte_index_from_shaped_x over the shaped run's OWN per-byte pen offsets, so
@@ -165,8 +139,7 @@ namespace {
 
 // The maximal run of the character class under byte index `pos` of a
 // NON-EMPTY string, as [start, end) — never crossing a class change, the
-// desktop double-click convention (GTK/Qt/Kate/Firefox), deliberately
-// distinct from the word erase's skip-separators scanner: a click on
+// desktop double-click convention (GTK/Qt/Kate/Firefox): a click on
 // punctuation selects that punctuation run, not the following word. pos == n
 // (a click past the last glyph) has no character AT n, so it classifies by
 // n-1 and yields the trailing run. THE ONE RUN WALK, read by the
@@ -308,7 +281,7 @@ bool replace_selection(State& s, const std::string& raw) {
         cap = s.iter_hops ? kMaxPendingCharsIterHop : kMaxPendingCharsIterBound;
     // Atomic cap: compute the result size BEFORE mutating anything. Refuse
     // exactly when the operation would push the pending past the cap AND grow
-    // it — a non-growing edit (shorter replacement, empty insert from cut) is
+    // it — a non-growing edit (a shorter replacement, an empty insert) is
     // always accepted so an over-cap pending seeded from a hand-edited file
     // can still be trimmed back.
     const int old_size = static_cast<int>(s.pending.size());
@@ -383,15 +356,19 @@ void enter(State& s, int target,
 
 KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // Precedence mirrors handle_key's branch order exactly (see the header):
-    // session first, then the Ctrl chords, then Backspace (ctrl, never alt or
-    // shift), then printable. Each test returns before the next, so a key
-    // satisfying two predicates classifies as the branch handle_key would act
-    // on. THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30,
-    // its one producer under an editor): its characters, Backspace, Enter,
-    // Esc, Copy and Paste, and the barrel's Ctrl on any of them.
+    // session first, then the Ctrl chords, then Backspace (bare), then
+    // printable. Each test returns before the next, so a key satisfying two
+    // predicates classifies as the branch handle_key would act on. THE
+    // VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30, its one
+    // producer under an editor): its characters, Backspace, Enter, Esc, and
+    // Copy and Paste, the two keys carrying their own ctrl. THE BARREL HAS NO
+    // ROAD ON ANY KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session
+    // 94: claim_onscreen_keyboard_press consumes a press carrying it), so the
+    // barrel's word erase, select-all and cut went that day with their last
+    // producer.
     //
-    // NO ARM ADMITS ALT. Session is bare-exact, the chords are ctrl-exact,
-    // Backspace takes ctrl only, printable already excludes ctrl and alt — so
+    // NO ARM ADMITS ALT. Session and Backspace are bare-exact, the chords are
+    // ctrl-exact, printable already excludes ctrl and alt — so
     // a press wearing a modifier the arm does not bind falls all the way to
     // NotEditorKey and is dropped by the keyboard-modal gate before it can reach
     // an editor at all. That is the whole enforcement: unbound is unbound, and
@@ -400,29 +377,27 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     //
     // Session keys are BARE-EXACT (the strict-modifier rule): a modified
     // Escape / Return has no binding, so it must not cancel or commit
-    // an edit — Ctrl+Enter (the barrel on the Enter key) in particular must not
-    // commit the settings line, a flag, or a BPM form field. Escape
+    // an edit. Escape
     // and Return produce sub-0x20 codepoints, so neither can reappear as a
     // printable below.
     if ((key == GuiKeys::Escape || key == GuiKeys::Return) &&
         !mods.ctrl && !mods.shift && !mods.alt)
         return KeyClass::SessionKey;
     // The chords are CTRL-EXACT (architect 2026-07-28, the same strict-modifier
-    // rule): Ctrl+Shift+V must not paste and Ctrl+Alt+A must not select all.
-    // The `mods.ctrl` term is load-bearing beyond strictness: without it a BARE
-    // a/c/x/v would stop being a typed character, and bare `c` / `x` are global
-    // bindings the editor deliberately shadows by typing them.
+    // rule): Ctrl+Shift+V must not paste. The `mods.ctrl` term is load-bearing
+    // beyond strictness: without it a BARE c / v would stop being a typed
+    // character, and bare `c` is a global binding the editor deliberately
+    // shadows by typing it.
     if (mods.ctrl && !mods.shift && !mods.alt &&
-        (key == GuiKeys::A || key == GuiKeys::C ||
-         key == GuiKeys::X || key == GuiKeys::V))
+        (key == GuiKeys::C || key == GuiKeys::V))
         return KeyClass::ChordKey;
-    // Backspace takes CTRL (the word erase, the barrel held on the key) and
-    // NEVER ALT OR SHIFT: the keyboard's Shift is a one-shot capital for the
-    // next character and never modifies a function key, and alt binds nothing
-    // in this family — so either is genuinely UNBOUND, and the strict-modifier
-    // rule makes it a no-op: it falls to NotEditorKey and the keyboard-modal
-    // gate drops it before any editor sees it.
-    if (!mods.alt && !mods.shift && key == GuiKeys::BackSpace)
+    // Backspace is BARE-EXACT: no producer carries a modifier on it (the
+    // keyboard's Shift is a one-shot capital for the next character and never
+    // modifies a function key, and the barrel has no road on a key since
+    // 2026-11-08) — so any modified Backspace is genuinely UNBOUND, and the
+    // strict-modifier rule makes it a no-op: it falls to NotEditorKey and the
+    // keyboard-modal gate drops it before any editor sees it.
+    if (!mods.ctrl && !mods.alt && !mods.shift && key == GuiKeys::BackSpace)
         return KeyClass::MotionEditKey;
     // Printable insertion: no Ctrl/Alt, and a character-bearing codepoint —
     // ASCII or otherwise (is_insertable_codepoint owns the range, and
@@ -455,7 +430,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
 
     // The session and chord branches below need no modifier tests of their own:
     // the membership gate above already rejected every modified Escape / Return
-    // and every Ctrl+Shift / Ctrl+Alt A/C/X/V as NotEditorKey, so only
+    // and every Ctrl+Shift / Ctrl+Alt C/V as NotEditorKey, so only
     // the exactly-bound presses reach here. The classifier is the single owner
     // of those predicates.
     if (key == GuiKeys::Escape) {
@@ -465,32 +440,17 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::CommitRequested;
     }
 
-    // Ctrl+A: select-all. Sits above the printable-detect path so the
-    // `a` key doesn't fall through and insert a literal 'a'.
-    if (ctrl && key == GuiKeys::A) {
-        if (!s.pending.empty()) {
-            s.selection_anchor = 0;
-            s.cursor_pos = static_cast<int>(s.pending.size());
-            touch_blink(s);
-        }
-        return KeyAction::Consumed;
-    }
-
-    // Ctrl+C / Ctrl+X / Ctrl+V: clipboard. These sit in the editor's owned
-    // keymap (returning a handled action), so they never fall through to the
-    // global dispatch. Ctrl+C, Ctrl+X and Ctrl+V are all unbound globally
-    // (the main window's resolved-value copy is Ctrl+Shift+J since
-    // 2026-10-14), so while an editor stands the TYPED chord is this field's
-    // copy and nothing else. Copy
-    // and cut are a no-op (plain Consumed) without a selection; paste always
-    // requests — the input handler applies the action against the SYSTEM
-    // clipboard, and answers a request with nothing on it by doing nothing.
+    // Ctrl+C / Ctrl+V: clipboard, the keyboard's Copy and Paste keys. These
+    // sit in the editor's owned keymap (returning a handled action), so they
+    // never fall through to the global dispatch. Ctrl+C and Ctrl+V are both
+    // unbound globally (the main window's resolved-value copy is Ctrl+Shift+J
+    // since 2026-10-14), so while an editor stands the chord is this field's
+    // copy and nothing else. Copy is a no-op (plain Consumed) without a
+    // selection; paste always requests — the input handler applies the action
+    // against the SYSTEM clipboard, and answers a request with nothing on it
+    // by doing nothing.
     if (ctrl && key == GuiKeys::C) {
         return has_selection(s) ? KeyAction::CopyRequested
-                                : KeyAction::Consumed;
-    }
-    if (ctrl && key == GuiKeys::X) {
-        return has_selection(s) ? KeyAction::CutRequested
                                 : KeyAction::Consumed;
     }
     if (ctrl && key == GuiKeys::V) {
@@ -500,24 +460,15 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // Editing: BACKSPACE, the keyboard's one editing key (architect
     // 2026-10-30: the on-screen keyboard carries no arrows, no Home / End and
     // no Delete — the caret moves by the pointer, the field's press and its
-    // caret drag). The barrel's Ctrl is its word erase. It reads ctrl and
-    // NEVER alt or shift, and that is a CONTRACT: the membership gate above
-    // classifies any other modifier as NotEditorKey, so `mods.alt` and
-    // `mods.shift` are false on every press that reaches here.
+    // caret drag). It is BARE, and that is a CONTRACT: the membership gate
+    // above classifies any modifier on it as NotEditorKey.
     if (key == GuiKeys::BackSpace) {
         if (has_selection(s)) {
             erase_selection(s);
         } else {
             // Editing keys collapse degenerate anchors before cursor movement can resurrect phantom selections.
             s.selection_anchor = -1;
-            if (ctrl) {
-                const int b = prev_word_boundary(s.pending, s.cursor_pos);
-                if (b < s.cursor_pos) {
-                    s.pending.erase(static_cast<size_t>(b),
-                                    static_cast<size_t>(s.cursor_pos - b));
-                    s.cursor_pos = b;
-                }
-            } else if (s.cursor_pos > 0) {
+            if (s.cursor_pos > 0) {
                 // A WHOLE CODEPOINT, not a byte — deleting one byte of a
                 // multi-byte character would leave the buffer malformed.
                 const int b =

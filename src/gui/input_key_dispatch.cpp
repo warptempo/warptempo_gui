@@ -4469,7 +4469,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (any_text_editor_active()) {
         // Only the editor's motion/edit and printable-insert keys auto-repeat
         // while held; its session (bare Escape/Return) and chord (ctrl-exact
-        // A/C/X/V) keys are one-shot, and NotEditorKey is not the editor's to
+        // C/V) keys are one-shot, and NotEditorKey is not the editor's to
         // repeat — the keyboard-modal gate drops it before anything could act on
         // it anyway. An ALT-carrying motion press is in that last bucket and so
         // does not repeat, which falls out of the classifier rather than being
@@ -4510,7 +4510,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if ((key == GuiKeys::Left || key == GuiKeys::Right) &&
         !mods.ctrl && !mods.alt && !mods.shift)
         return true;
-    if (!mods.alt && !mods.shift &&
+    if (!mods.ctrl && !mods.alt && !mods.shift &&
         (key == GuiKeys::Up || key == GuiKeys::Down))
         return true;
     // Ctrl+Z / Ctrl+Shift+Z (undo / redo) repeat while held (architect
@@ -4549,13 +4549,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // text_editor::classify_key — the gate admits exactly the non-NotEditorKey
 // set, which is the on-screen keyboard's vocabulary (architect 2026-10-30,
 // the keyboard the one key producer under an editor): BARE Escape / Enter,
-// CTRL-EXACT A/C/X/V, BackSpace and Ctrl+BackSpace, and printable insertion
-// (Space lands in the buffer as a typed character, not as playback). NO
-// admitted key carries alt, on any arm.
+// CTRL-EXACT C/V (the keyboard's Copy and Paste, carrying their own ctrl),
+// bare BackSpace, and printable insertion (Space lands in the buffer as a
+// typed character, not as playback). NO admitted key carries alt, on any arm.
 // The strict-modifier rule therefore holds by ONE route: a press wearing a
-// modifier its arm does not bind (Ctrl+Enter, Ctrl+Shift+V — the barrel held
-// on a keyboard key) is NotEditorKey like any other unbound chord and drops
-// right here, so it cannot cancel, commit, paste or erase. The gate-level
+// modifier its arm does not bind (Ctrl+Enter, Ctrl+Shift+V, Ctrl+BackSpace —
+// none has a producer since 2026-11-08, when the barrel's road on the
+// keyboard went, claim_onscreen_keyboard_press) is NotEditorKey like any
+// other unbound chord and drops right here, so it cannot cancel, commit,
+// paste or erase. The gate-level
 // carve-out below is NOT editor consumption — it is gate policy layered on
 // top: bare Tab under any DIALOG editor (the focus ring's step and, where the
 // editor has one, its autocomplete — the fork is route_modal_editor_key's,
@@ -6487,7 +6489,7 @@ bool GuiInputHandler::route_modal_editor_key(
     }
     if (apply_editor_clipboard(action, ed)) {
         // Same repaint as the Consumed branch — text may have changed
-        // (cut / paste); copy repaints harmlessly.
+        // (paste); copy repaints harmlessly.
         repaint();
         return true;
     }

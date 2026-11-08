@@ -17160,7 +17160,10 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // fine on the icons, whereas a barrel click is awkward"): this is the ONE
 // admission set, the hold's shift; no key admits a ctrl or a ctrl+shift
 // press, and a press carrying the barrel's ctrl onto a key is the consumed
-// no-op (chrome_band_modifiers_refused, input_pointer.cpp). The barrel's
+// no-op (chrome_band_modifiers_refused, input_pointer.cpp) — on the
+// on-screen keyboard's keys too since the same day (claim_onscreen_keyboard_
+// press; the editors' barrel word erase, select-all and cut went with it,
+// text_editor::classify_key). The barrel's
 // WAVEFORM road is untouched — "the zoom is worth it ... the most convenient
 // way to have that, because a long press can't substitute" — and its rules
 // stay at their own owners (the touch nav's ctrl zoom, GuiTouchNavFrame::ctrl;

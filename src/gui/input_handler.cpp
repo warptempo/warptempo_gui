@@ -295,7 +295,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
-    // (THE EDITORS' OWN ctrl-exact Ctrl+C / Ctrl+X / Ctrl+V are handled in the
+    // (THE EDITORS' OWN ctrl-exact Ctrl+C / Ctrl+V are handled in the
     // editor blocks above. Past them Ctrl+C binds nothing since 2026-10-14:
     // the resolved value's copy is Ctrl+Shift+J, beside Ctrl+J's jump in the
     // ordinary dispatch below — is_copy_value_key, gui_input.h.)
@@ -2767,21 +2767,16 @@ void GuiInputHandler::run_span_framing_command() {
 bool GuiInputHandler::apply_editor_clipboard(
         text_editor::KeyAction action, text_editor::State& s) {
     switch (action) {
-        // THE COPY AND THE CUT HAND THE SELECTION OVER, AND THE CUT THEN
-        // ERASES IT: the copy stays in the program's own process and no road
-        // refuses it (architect 2026-10-29, the rule at platform_android.h's
-        // clipboard_set_text), so the erased bytes are pastable in the
-        // program until something newer is copied. NEITHER PRESS CARDS: an
-        // editor is its own world (notifications.h), and the paste that
-        // follows shows the truth the moment it is asked for.
+        // THE COPY HANDS THE SELECTION OVER: the copy stays in the program's
+        // own process and no road refuses it (architect 2026-10-29, the rule
+        // at platform_android.h's clipboard_set_text), so the bytes are
+        // pastable in the program until something newer is copied. IT DOES
+        // NOT CARD: an editor is its own world (notifications.h), and the
+        // paste that follows shows the truth the moment it is asked for.
+        // (The cut, the barrel's Ctrl+X, went 2026-11-08 with the barrel's
+        // road on the keyboard.)
         case text_editor::KeyAction::CopyRequested:
             gui.clipboard_set_text(text_editor::selected_text(s));
-            return true;
-        case text_editor::KeyAction::CutRequested:
-            gui.clipboard_set_text(text_editor::selected_text(s));
-            // An empty insert can only shrink the buffer, so this call has no
-            // refusal to report (the cap's rule is at replace_selection).
-            (void)text_editor::replace_selection(s, std::string());
             return true;
         case text_editor::KeyAction::PasteRequested: {
             // The bytes come from the SYSTEM clipboard, so a URL copied in a

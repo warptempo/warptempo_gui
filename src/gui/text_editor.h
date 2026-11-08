@@ -34,17 +34,18 @@
 //     offsets (text_shape::byte_offsets_px) and the click-to-byte search all
 //     address by byte, so there is exactly one coordinate and nothing to
 //     convert between.
-//   - EVERY STEP MOVES A WHOLE CODEPOINT. BackSpace, the Ctrl word erase, the
-//     pointer's caret placement and the double-click run selector all land on
-//     codepoint boundaries, so `cursor_pos` and `selection_anchor` are
-//     boundaries by construction and no operation can split a character.
-//     Ctrl+A takes the string's extremes, which are boundaries trivially.
+//   - EVERY STEP MOVES A WHOLE CODEPOINT. BackSpace, the pointer's caret
+//     placement and the double-click run selector all land on codepoint
+//     boundaries, so `cursor_pos` and `selection_anchor` are boundaries by
+//     construction and no operation can split a character.
 //   - THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30, its
-//     one producer): its characters, Backspace and Ctrl+Backspace, Enter,
-//     Esc, Tab (the dialog ring's and the completion's, upstream of this
-//     module), Copy and Paste (Ctrl+C / Ctrl+V) and, with the barrel's Ctrl,
-//     Ctrl+A and Ctrl+X. It has no arrows, no Home / End and no Delete; the
-//     caret moves by the pointer (the field's press, its caret drag).
+//     one producer): its characters, Backspace, Enter, Esc, Tab (the dialog
+//     ring's and the completion's, upstream of this module), and Copy and
+//     Paste (Ctrl+C / Ctrl+V, the two keys' own ctrl). THE BARREL HAS NO ROAD
+//     ON ANY KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session 94):
+//     its word erase, Ctrl+A and Ctrl+X went with it. It has no arrows, no
+//     Home / End and no Delete; the caret moves by the pointer (the field's
+//     press, its caret drag).
 //   - GRAPHEME CLUSTERS ARE OUT OF SCOPE, deliberately and in the same class as
 //     the no-bidi and no-font-fallback exclusions: a combining mark is its own
 //     codepoint, so it carets and deletes separately from the base character it
@@ -380,7 +381,7 @@ struct State {
     int cursor_pos = 0;
 
     // -1 means no selection. When >= 0, the selected range is
-    // [min(selection_anchor, cursor_pos), max(...)). Set by Ctrl+A, an
+    // [min(selection_anchor, cursor_pos), max(...)). Set by an
     // open-selected seed, the pointer's double-click and drag, and a refused
     // Enter (refuse); cleared
     // by a pointer caret placement, any printable insertion, any backspace,
@@ -511,7 +512,6 @@ enum class KeyAction {
     CommitRequested,
     CancelRequested,
     CopyRequested,
-    CutRequested,
     PasteRequested,
     // A TYPED CHARACTER THE FIELD HAD NO ROOM FOR (architect 2026-08-30, the
     // strictness ruling): consumed exactly as Consumed is — the buffer and the
@@ -537,10 +537,9 @@ enum class KeyAction {
 enum class KeyClass {
     NotEditorKey,   // not the editor's — the keyboard-modal gate drops it
     SessionKey,     // BARE Escape, Return — end the session, never repeat
-    ChordKey,       // CTRL-EXACT A/C/X/V — one-shot
-    // BackSpace, bare or under ctrl (the word erase), NEVER alt or shift —
-    // repeats. The on-screen keyboard's one editing key (architect
-    // 2026-10-30); an alt- or shift-carrying press is NotEditorKey.
+    ChordKey,       // CTRL-EXACT C/V (Copy, Paste) — one-shot
+    // BackSpace, BARE — repeats. The on-screen keyboard's one editing key
+    // (architect 2026-10-30); a modified press is NotEditorKey.
     MotionEditKey,
     // No ctrl/alt and a character-bearing codepoint: >= 0x20, not DEL, not a
     // surrogate, within Unicode. Not ASCII-limited — the platform resolves a
@@ -550,13 +549,13 @@ enum class KeyClass {
 
 // Classify key+mods against the editor's owned keymap, reproducing handle_key's
 // exact predicates and precedence: the session keys before the Ctrl chords, the
-// chords (specific A/C/X/V) before BackSpace, BackSpace (ctrl only) before
-// printable. A key that could satisfy two predicates classifies as the one
-// handle_key acts on (Ctrl+A is a chord, not printable — printable already
-// excludes ctrl). NO ARM ADMITS ALT: session is bare-exact, the chords
-// ctrl-exact, BackSpace ctrl-only, printable already excludes ctrl and alt. So
-// a press wearing a modifier its arm does not bind (Ctrl+Escape, Ctrl+Enter,
-// Ctrl+Shift+V — the barrel held on the keyboard's keys) is simply
+// chords (specific C/V) before BackSpace, BackSpace (bare) before printable. A
+// key that could satisfy two predicates classifies as the one handle_key acts
+// on (Ctrl+C is a chord, not printable — printable already excludes ctrl). NO
+// ARM ADMITS ALT: session and BackSpace are bare-exact, the chords ctrl-exact,
+// printable already excludes ctrl and alt. So a press wearing a modifier its
+// arm does not bind (Ctrl+Escape, Ctrl+Shift+V, Ctrl+BackSpace — no producer
+// spells one since the barrel left the keyboard, 2026-11-08) is simply
 // NotEditorKey: unbound and
 // not-ours need not be told apart, because every keyboard-modal editor drops
 // both at the gate and nothing downstream can act on either. An input routing
@@ -570,9 +569,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // highlighted substring (empty if no selection — and always a whole number of
 // codepoints, since both endpoints are boundaries).
 //
-// replace_selection is the paste/cut primitive, THE ONE INCOMING-TEXT FILTER,
+// replace_selection is the paste primitive, THE ONE INCOMING-TEXT FILTER,
 // and THE ONE OWNER OF THE PER-KIND BYTE CAP — every route that grows a
-// pending buffer comes through it: the paste and the cut (input_handler), the
+// pending buffer comes through it: the paste (input_handler), the
 // settings editor's completion append and its recall prefix
 // (settings_editor.cpp), and THE TYPED KEYSTROKE, which handle_key encodes and
 // hands over rather than repeating the ladder (its own contribution is the
@@ -587,8 +586,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 //     resumes at the next byte, so the good text around it survives.
 // It then atomically either replaces the selection with the FULL filtered text
 // or, when that would grow the pending past the field's per-Kind byte cap,
-// refuses the whole operation (buffer and selection untouched). Cut calls it with an empty string, an always-accepted shrink that
-// simply deletes the selection.
+// refuses the whole operation (buffer and selection untouched). An empty string
+// is an always-accepted shrink that simply deletes the selection.
 //
 // IT ANSWERS FALSE ON EXACTLY THAT REFUSAL (architect 2026-08-30, the
 // strictness ruling; true on every applied path, the empty-insert shrink
@@ -655,7 +654,7 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
 // `pos`, setting selection_anchor to the run start and cursor_pos to its end
 // (an empty pending leaves no selection; a non-empty pending always selects at
 // least one character). This is a selection-specific classifier DISTINCT from
-// the Ctrl+Backspace word-erase scanner — the desktop double-click
+// any word-walking scanner — the desktop double-click
 // convention (select the clicked class's run, never crossing a class change)
 // differs from word-walking, and every toolkit (GTK/Qt/Kate/
 // Firefox) ships a tailored selection heuristic rather than reusing its motion
