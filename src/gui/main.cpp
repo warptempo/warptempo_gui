@@ -758,46 +758,68 @@ GuiRect bottom_row_area(const AppState& a) {
 }
 
 // THE HOVER TOOLTIP'S SEAT AND ITS DAMAGE BAND (the contract at the
-// declaration, app_state.h).
-GuiRect tooltip_box_rect(const AppState& a, const GuiRect& btn, int w, int h) {
-    const AppState::RedesignTooltip& t = a.redesign_tooltip;
-    int x = t.shown_x;
-    int y = t.shown_y + tooltip_pointer_drop_px();
-    if (y + h > a.height) y = btn.y - tooltip_flip_gap_px() - h;
+// declaration, app_state.h; architect 2026-11-07, session 90).
+// THE GAP, the `tooltip_gap` tuning key read live (device_config.h).
+static int tooltip_gap_px(const AppState& a) {
+    return scaled_px(a.device_config->tooltip_gap);
+}
+
+GuiRect tooltip_box_rect(const AppState& a, const GuiRect& face, int w,
+                         int h) {
+    // CENTERED ON THE FACE: the box's left edge the face's less the FLOOR HALF
+    // of the box's excess width over the face — so at an odd difference the
+    // extra device px stands on the box's RIGHT, the column's own tie (THE
+    // KEY'S COLUMN, render.h: the left side the floor half, the right the
+    // rest). One expression for every owner, the box wider or narrower than
+    // its face (a negative excess floors too: the box's center half a device
+    // px right of the face's at every odd difference).
+    const int excess = w - face.w;
+    const int left   = excess >= 0 ? excess / 2 : -((1 - excess) / 2);
+    int x = face.x - left;
+    // ABOVE THE FACE: the box's bottom row `tooltip_gap` W over the face's
+    // top row.
+    int y = face.y - tooltip_gap_px(a) - h;
     // THE EDGE RULE (architect 2026-11-02, M11 ruling 4): the box between the
     // keys' outer columns — the right clamp first, then the left, so a box
     // wider than the span pins its left edge.
     const WellColumns keys = well_columns(a);
     if (x + w > keys.end) x = keys.end - w;
     if (x < keys.x) x = keys.x;
+    // NEVER ABOVE THE WINDOW'S TOP: where the face stands too near it for the
+    // box and the gap (the band's two-line box under a gap past 2 W on the
+    // tablet), the box lays over the face's top rows instead — accepted for a
+    // tuning key (architect 2026-11-07, session 90).
     if (y < 0) y = 0;
     return GuiRect{x, y, w, h};
 }
 
-TooltipHangBands tooltip_hang_bands(const AppState& a) {
+// The owner's painted face, read as the painter reads it (the stash's button
+// for a dialog owner, the roster face the show chose for a roster owner) —
+// without the painter's stash-session refusal, which only ever empties a
+// box, so the damage stays the wider of the two.
+static GuiRect tooltip_owner_face(const AppState& a) {
     const AppState::RedesignTooltip& t = a.redesign_tooltip;
-    const int band_h = tooltip_damage_h_px();
-    TooltipHangBands bands;
-    const int below_y = t.shown_y + tooltip_pointer_drop_px();
-    bands.below = GuiRect{0, below_y, a.width,
-                          std::max(0, std::min(band_h, a.height - below_y))};
-    if (below_y + band_h <= a.height) return bands;
-    // The owner's painted button, read as the painter reads it.
-    GuiRect btn{0, 0, 0, 0};
     const AppState::RedesignTooltip::Owner& o = t.owner;
     if (o.surface == AppState::RedesignTooltip::Surface::Dialog) {
         if (a.modal_dialog.valid && o.index >= 0 &&
             o.index < static_cast<int>(a.modal_dialog.buttons.size()))
-            btn = a.modal_dialog.buttons[static_cast<size_t>(o.index)].rect;
-    } else if (o.index >= 0 && o.index < kRedesignButtonCount) {
-        btn = a.redesign_buttons[static_cast<size_t>(o.index)].rect_at(
-            t.shown_x, t.shown_y);
+            return a.modal_dialog.buttons[static_cast<size_t>(o.index)].rect;
+        return GuiRect{0, 0, 0, 0};
     }
-    if (btn.w <= 0 || btn.h <= 0) return bands;
-    const int above_bottom = btn.y - tooltip_flip_gap_px();
-    const int above_y      = std::max(0, above_bottom - band_h);
-    bands.above = GuiRect{0, above_y, a.width, band_h};
-    return bands;
+    if (o.index >= 0 && o.index < kRedesignButtonCount)
+        return a.redesign_buttons[static_cast<size_t>(o.index)].tooltip_face(
+            t.shown_on_field);
+    return GuiRect{0, 0, 0, 0};
+}
+
+GuiRect tooltip_damage_band(const AppState& a) {
+    const GuiRect face = tooltip_owner_face(a);
+    if (face.w <= 0 || face.h <= 0) return GuiRect{0, 0, 0, 0};
+    // The bound's rows ending on the gap's top — or from the window's top
+    // where they would rise past it, which holds the clamped seat too.
+    const int band_h = tooltip_damage_h_px();
+    const int y = std::max(0, face.y - tooltip_gap_px(a) - band_h);
+    return GuiRect{0, y, a.width, band_h};
 }
 
 // (THE STATUS BAR'S LANE IS DELETED — architect 2026-08-29, the evening of the
@@ -2676,8 +2698,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // paint_shift_tooltip), so live words that have moved past the
             // painted pair are a box standing stale: this damages the old
             // box's published rect, the owner's strip (its glyph, below) and
-            // the band the new one hangs into — the show edge's own pair
-            // (tooltip_hang_bands), one of which holds the new box whole
+            // the band every seat of the new one lies in — the show edge's own
+            // (tooltip_damage_band), which holds the new box whole
             // whatever it measures (viewport.h's floating-surface damage
             // rule), so the frame that paints it publishes its words (the
             // painter publishes only under a clip that covers the box,
@@ -2723,9 +2745,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                         viewport.invalidate_rect(bottom_row_area(app));
                     else
                         invalidate_top_strip();
-                    const TooltipHangBands bands = tooltip_hang_bands(app);
-                    viewport.invalidate_rect(bands.below);
-                    viewport.invalidate_rect(bands.above);
+                    viewport.invalidate_rect(tooltip_damage_band(app));
                 }
             }
         }

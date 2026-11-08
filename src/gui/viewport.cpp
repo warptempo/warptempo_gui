@@ -202,15 +202,13 @@ void Viewport::invalidate_modal_dialog_area() {
         painted == AppState::ModalDialogOwner::Score)
         invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
-    // published rect and the band it can hang into, the show edge's own pair
-    // (tooltip_hang_bands), one of which holds the recomposed box whole.
+    // published rect and the band every seat of it lies in, the show edge's
+    // own (tooltip_damage_band), which holds the recomposed box whole.
     const AppState::RedesignTooltip& tip = app.redesign_tooltip;
     if (tip.visible &&
         tip.owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
         invalidate_rect(tip.rect);
-        const TooltipHangBands bands = tooltip_hang_bands(app);
-        invalidate_rect(bands.below);
-        invalidate_rect(bands.above);
+        invalidate_rect(tooltip_damage_band(app));
     }
 }
 

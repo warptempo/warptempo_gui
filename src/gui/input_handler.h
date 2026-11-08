@@ -1460,9 +1460,9 @@ struct GuiInputHandler {
                             const GuiRect& column);
 
     // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the bypass
-    // chain's lapse, and the wait's ripening showing the box under the
-    // pointer. The show damages once, the band the box can hang into
-    // (tooltip_hang_bands).
+    // chain's lapse, and the wait's ripening showing the box above its
+    // owner's face. The show damages once, the band every seat of the box
+    // lies in (tooltip_damage_band).
     void tick_tooltip();
 
     // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's

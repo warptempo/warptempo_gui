@@ -14,7 +14,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Twenty keys live here and nowhere else,
+// piece (architect 2026-08-27). Twenty-one keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -305,6 +305,24 @@
 //                            which settles into a constexpr once he rules
 //                            the number, its key, grammar and row going
 //                            then; the template spells 100
+//   tooltip_gap=<w>          THE TOOLTIP'S GAP (architect 2026-11-07,
+//                            session 90, his "4 agree"; the seat at
+//                            tooltip_box_rect, app_state.h): the ground
+//                            between the box's bottom row and the top of
+//                            its owner's face IN W, default 2 W — 4 device
+//                            px on the tablet at 200 % (the band's two-line
+//                            box and its gap 71 of the logo lane's 72
+//                            rows), an integer in [0, 12] in canonical
+//                            spelling (parse_tooltip_gap below); read LIVE
+//                            by the seat through scaled_px, so a commit at
+//                            the settings editor's OK takes effect at the
+//                            next show (the commit's own press took any
+//                            standing box down) with no live act and no
+//                            relayout; A TUNING KEY with a
+//                            Settings row, REQUIRED like every key while it
+//                            stands, which settles into a constexpr once he
+//                            rules the number, its key, grammar and row
+//                            going then; the template spells 2
 //   (waveform=<name>, THE WAVEFORM PRESET, a required key naming one of
 //                            the built-in color presets, RETIRED with the
 //                            presets (architect 2026-11-01: one palette,
@@ -434,7 +452,9 @@
 // `key_width` placed after `key_height` 2026-11-06, the key's two sides
 // together; the run gap `run_gap` placed after `key_width` 2026-11-07, the
 // band's lengths together; the tooltip's delay `tooltip_delay_ms` APPENDED
-// after `lamp_hold_ms` the same day, the tuning keys keeping the end);
+// after `lamp_hold_ms` the same day, the tuning keys keeping the end, and
+// the tooltip's gap `tooltip_gap` APPENDED after it the same day, session
+// 90, the tooltip's two together);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -578,8 +598,8 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the twenty
-// keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the
+// twenty-one keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
 // every line and the first-run templates spell every default, so an absent
@@ -617,7 +637,8 @@
 // tuning keys `key_height`, `osk_key_w` and `osk_key_h` and that night
 // `osk_font_px`, since 2026-11-05 night the tuning key `lamp_hold_ms`, and
 // since 2026-11-06 the tuning key `key_width`, and since 2026-11-07 the
-// tuning keys `run_gap` and `tooltip_delay_ms`, among them (kSettingsEditorKeys) — then a key's current
+// tuning keys `run_gap`, `tooltip_delay_ms` and `tooltip_gap`, among them
+// (kSettingsEditorKeys) — then a key's current
 // value, then a closed value's words, and committing each through this
 // file's writer under the key's own grammar below. THE TWO LEVELS,
 // `audio_level` and `noise_level`, are edited on the main page alone, the
@@ -715,6 +736,10 @@ struct DeviceConfig {
     // required; the construction state is the templates' 100
     // (kTooltipDelayDefaultMs below).
     int         tooltip_delay_ms  = 100;
+    // THE TOOLTIP'S GAP in W (2026-11-07, session 90, the head's list; a
+    // tuning key): required; the construction state is the templates' 2
+    // (kTooltipGapDefaultW below).
+    int         tooltip_gap       = 2;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -1229,6 +1254,36 @@ inline std::optional<int> parse_tooltip_delay_ms(std::string_view v) {
     return n;
 }
 
+// THE tooltip_gap GRAMMAR (architect 2026-11-07, session 90, his "4 agree":
+// the ground between the box and its owner's face a tuning key until he
+// rules the number) — an integer in [0, 12] W in canonical spelling ("2",
+// never "02" or "+2": the int tuning keys' grammar, run_gap's), the one owner
+// the reader, the writer, the settings editor's commit and its recall read
+// (format_tooltip_gap, parse_tooltip_gap). THE DEFAULT IS 2 W, 4 device px on
+// the tablet at 200 %: the band's two-line box (67 rows) and its gap stand in
+// 71 of the logo lane's 72 rows, the one-line box (43) in 47. 0 is the box on
+// the face's top row; 12 W, 24 device px, lets the two-line box rise past the
+// window's top over the band, where the seat's clamp (y ≥ 0,
+// tooltip_box_rect) lays it over the face's top rows instead — accepted for a
+// tuning key. Read live by the seat alone (tooltip_box_rect and its damage
+// twin, through scaled_px), so a commit takes effect at the next show. The
+// settings page opens the LINE EDITOR on it, as on run_gap (the ruling's
+// row; kSettingsValueListKeys). A TUNING KEY: when he rules the number, the
+// key, these functions and its Settings row go, and the value becomes a
+// constexpr at render.h's tooltip block.
+inline constexpr int kTooltipGapMinW     = 0;
+inline constexpr int kTooltipGapMaxW     = 12;
+inline constexpr int kTooltipGapDefaultW = 2;
+inline constexpr const char* kTooltipGapGrammarReason =
+    "must be an integer in [0, 12] in canonical spelling";
+std::string format_tooltip_gap(int w);
+inline std::optional<int> parse_tooltip_gap(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kTooltipGapMinW || *n > kTooltipGapMaxW)
+        return std::nullopt;
+    return n;
+}
+
 // THE waveform_grow GRAMMAR (architect 2026-10-31; the lattice quarters
 // since that afternoon's 4x ruling, render.h's kWaveformSubcells) — a
 // multiple of 0.25 DEVICE PX in [0, 2] in canonical spelling, held as
@@ -1406,7 +1461,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — fifteen keys,
+// which serves its ONE device-key body — seventeen keys,
 // `projects_repo=`, `projects_path=`, since 2026-10-21
 // `true_colors=`, since 2026-11-05 `theme=` (its live act
 // GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
@@ -1421,7 +1476,9 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // (its live act GuiInputHandler::apply_key_width), and since 2026-11-07
 // `run_gap=` (its live act GuiInputHandler::apply_run_gap) and
 // `tooltip_delay_ms=` (no live act: the tooltip's writer and clock read the
-// live struct, note_tooltip_hover / tick_tooltip) —
+// live struct, note_tooltip_hover / tick_tooltip) and `tooltip_gap=` (no
+// live act: the seat reads the live struct at the next show,
+// tooltip_box_rect) —
 // and the band's two level cases' end (GuiInputHandler::settle_level_case,
 // since 2026-11-05: `audio_level=` and `noise_level=`, their live acts
 // GuiPlayback::set_audio_level_db and GuiNoise::set_level_db, the typed
@@ -1464,7 +1521,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // kKeyHeightDefaultW, kOskKeyWDefaultW,
 // kOskKeyHDefaultW, kOskFontPxDefaultW), `lamp_hold_ms=100` (2026-11-05
 // night, kLampHoldDefaultMs), `tooltip_delay_ms=100` (2026-11-07,
-// kTooltipDelayDefaultMs), kDefaultProjectsRepo and
+// kTooltipDelayDefaultMs), `tooltip_gap=2` (2026-11-07, session 90,
+// kTooltipGapDefaultW), kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run lands a

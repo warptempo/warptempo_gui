@@ -3459,8 +3459,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // the roster's constant/stateful hint table and the roster's painted rect;
     // a DIALOG owner reads the modal stash the painter itself publishes — its
     // composed hint and its button rect, both written by paint_modal_dialog,
-    // which runs BEFORE this body precisely so the rect a flipped box stands
-    // above is the one this frame draws.
+    // which runs BEFORE this body precisely so the rect the box stands above
+    // is the one this frame draws.
     const char* line1 = nullptr;
     const char* line2 = nullptr;
     GuiRect     btn{0, 0, 0, 0};
@@ -3514,11 +3514,11 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         if (text.line1 == nullptr) return;
         line1 = text.line1;
         line2 = text.line2;
-        // The face's rect under the show's point: row 8's clock where the
-        // pointer rested on it (RedesignButtonFace::rect_at), the key
-        // otherwise — tooltip_hang_bands reads the same.
-        btn   = app.redesign_buttons[owner.index].rect_at(
-            app.redesign_tooltip.shown_x, app.redesign_tooltip.shown_y);
+        // The face the show chose: row 8's clock where the pointer stood on
+        // it at the show (RedesignButtonFace::tooltip_face), the key
+        // otherwise — tooltip_damage_band reads the same.
+        btn   = app.redesign_buttons[owner.index].tooltip_face(
+            app.redesign_tooltip.shown_on_field);
     }
     if (btn.w <= 0 || btn.h <= 0) return;
 
@@ -3569,16 +3569,14 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                   2 * inset;
     const int h = 2 * inset + cap1 + (two_line ? pad + cap2 : 0);
 
-    // UNDER THE POINTER, WINDOWS 95's SEAT (architect 2026-10-06): the left
-    // edge at the pointer's x and the top kTooltipPointerDropPx (27 W,
-    // Windows' 18 px times 1.5) below it, the pointer
-    // where it stood at the show; ABOVE THE OWNER'S BUTTON where that would
-    // cross the window's foot — every bottom-row owner, the roster's and the
-    // modal's alike, the lane resting on the foot — and held between the
-    // keys' outer columns (the edge rule, 2026-11-02), the box never
-    // shrinking (a truncated hint would be worse
-    // than one that shifted). The rule's one statement is tooltip_box_rect
-    // (app_state.h); the measurement is at render.h's kTooltipPointerDropPx.
+    // OFF THE OWNER'S FACE ALONE (architect 2026-11-07, session 90): above
+    // `btn`, the `tooltip_gap` tuning key between, centered on it, on every
+    // surface alike — the band's box in the logo lane, row 8's and every
+    // controls row's over what stands above them — then held between the
+    // keys' outer columns (the edge rule, 2026-11-02) and under the window's
+    // top, the box never shrinking (a truncated hint would be worse than one
+    // that shifted). The rule's one statement is tooltip_box_rect
+    // (app_state.h).
     const GuiRect box = tooltip_box_rect(app, btn, w, h);
     const int x = box.x;
     const int y = box.y;
@@ -8021,7 +8019,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // upper rows or the clock cell. Re-derived from on_redraw's paint sequence
 // 2026-10-13: past the lane painters, the ground and the canvas column (each inside its own rows), the passes that paint OUTSIDE
 // their lane are the floating surfaces — the notification cards (row 1
-// down), the tooltip (under the pointer, or above its button) (the
+// down), the tooltip (above its owner's face, tooltip_box_rect) (the
 // Settings dropdown, hanging from its button, until 2026-10-21). (The keyboard slot starts below the toolbar
 // band's foot, and the folder overlay and the modal family's box of a prompt
 // or a dialog editor at the view bar's top row, directly under the band
@@ -8823,7 +8821,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because they hang outside their strips (the cards from
-    // the band's foot down, the tooltip under the pointer) and overlap whatever is
+    // the band's foot down, the tooltip above its owner's face) and overlap whatever is
     // under them. They are NOT exposure-gated the way the rows are: each
     // writes the rect it painted (or a zero rect) on every run, and a run that
     // skipped would strand a stale rect for the hit tests and the damage to

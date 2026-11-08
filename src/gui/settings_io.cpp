@@ -435,6 +435,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // formatter (format_tooltip_delay_ms, device_config.h).
     if (key == "tooltip_delay_ms" && app.device_config != nullptr)
         return format_tooltip_delay_ms(app.device_config->tooltip_delay_ms);
+    // THE TOOLTIP'S GAP (2026-11-07, session 90, a tuning key): through its
+    // one formatter (format_tooltip_gap, device_config.h).
+    if (key == "tooltip_gap" && app.device_config != nullptr)
+        return format_tooltip_gap(app.device_config->tooltip_gap);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -5601,11 +5601,13 @@ struct AppState {
         bool contains(int x, int y) const {
             return point_on_key(rect, x, y) || rect_contains(field, x, y);
         }
-        // The rect a point on the face lies in — the field where the point
-        // is on it, the key otherwise: the tooltip's flip seat over the
-        // surface the pointer rested on (tooltip_box_rect's `btn`).
-        const GuiRect& rect_at(int x, int y) const {
-            return rect_contains(field, x, y) ? field : rect;
+        // THE TOOLTIP'S FACE (tooltip_box_rect's `face`; architect
+        // 2026-11-07, session 90): the field where the show found the pointer
+        // on it (RedesignTooltip::shown_on_field), the key otherwise — so a
+        // box raised over the clock centers on the clock, one raised over
+        // Play's column on the key, and neither moves while it stands.
+        const GuiRect& tooltip_face(bool on_field) const {
+            return on_field ? field : rect;
         }
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
@@ -6958,9 +6960,13 @@ struct AppState {
     //     resting pointer (a relayout, a surface closing under it) is an
     //     arrival like any other.
     //   * THE SHOW: the wait ripening shows its column's hint, the box SEATED
-    //     UNDER THE POINTER as it stands at that moment (`shown_x/y`;
-    //     tooltip_box_rect, app_state.h, the placement's one statement), not
-    //     following the pen while it stands. THE BOX STANDS AS LONG AS THE
+    //     OFF ITS OWNER'S FACE ALONE — above it, centered on it, the
+    //     `tooltip_gap` tuning key between (architect 2026-11-07, session 90;
+    //     tooltip_box_rect, app_state.h, the placement's one statement) — so
+    //     wherever the pen came onto the column, and however fast, the box
+    //     stands in one place for that key, a chained show in the same
+    //     relation to its own key as the first, and it never follows the pen
+    //     while it stands. THE BOX STANDS AS LONG AS THE
     //     POINTER STAYS ON THE COLUMN: no life, no autopop, and a press spends
     //     nothing.
     //   * LEAVING THE COLUMN HIDES AT ONCE: the walk handing in any other
@@ -7005,8 +7011,11 @@ struct AppState {
     //
     // THE BOX: `owner` is the button whose hint is painted, `visible` is what
     // the painter draws, `rect` the painter's published box (damage only —
-    // nothing hit-tests a tooltip), `shown_x/y` the pointer at the show (the
-    // box's seat). `rect` and the
+    // nothing hit-tests a tooltip), `shown_on_field` the one fact of the pen
+    // the seat keeps — whether the show found the pointer on row 8's clock
+    // field, Play's second rect, rather than on Play's column, which face the
+    // box centers over (RedesignButtonFace::tooltip_face; false for every
+    // other owner, whose field is empty). `rect` and the
     // two `painted_line` strings are AS PAINTED (2026-09-29):
     // the painter runs on every frame, under whatever clip that frame's
     // damage gave it, so a frame whose clip does not cover the new box
@@ -7072,8 +7081,7 @@ struct AppState {
         GuiRect rect{0, 0, 0, 0};
         std::string painted_line1;
         std::string painted_line2;
-        int     shown_x        = 0;
-        int     shown_y        = 0;
+        bool    shown_on_field = false;
         // The wait.
         Owner   hovered{};
         GuiRect hovered_column{0, 0, 0, 0};
@@ -10346,36 +10354,50 @@ inline DialogEditorStop dialog_editor_byte_at(
     return {best, dialog_editor_stop_is_row_end(t, row, best)};
 }
 
-// THE HOVER TOOLTIP'S SEAT AND THE BAND IT CAN HANG INTO (architect
-// 2026-10-06, Windows 95's seat; the measurement and its source are at
-// render.h's kTooltipPointerDropPx, the model at AppState::RedesignTooltip).
-// tooltip_box_rect IS THE PLACEMENT'S ONE STATEMENT, the painter's
-// (paint_shift_tooltip): a w x h box with its left edge at the pointer's x
-// and its top tooltip_pointer_drop_px() below the pointer's y, the pointer
-// as it stood at the show (RedesignTooltip::shown_x/y, anywhere on the key's
-// column — the face, its legend's pad, its half gaps); where that box would
-// cross the window's foot, ABOVE `btn` (the owner's painted button) with
-// tooltip_flip_gap_px() between them; then held between THE KEYS' OUTER
-// COLUMNS (render.h's well_columns, THE EDGE RULE; architect 2026-11-02,
-// M11 ruling 4: x 24 .. 2279 on the tablet, the well the waveform area since
-// architect 2026-11-03, where the window's own edges stood
-// until then) — shifted left to end on the right one, never past the left
-// one (a box wider than the span pins its left edge there), never above the
-// window's top. The box never shrinks.
-// tooltip_hang_bands is the DAMAGE twin, read by the three owners that must
+// THE HOVER TOOLTIP'S SEAT AND THE BAND IT LIES IN (architect 2026-11-07,
+// session 90, his "1 yes 2 yes 3 a 4 agree"; the model at
+// AppState::RedesignTooltip). THE SEAT DERIVES FROM THE OWNER'S FACE ALONE,
+// NEVER THE PEN: the pen picks the owner (the column, the delay, the chain),
+// and the box's place is a function of that owner's painted face and the
+// box's size, so it never moves while it stands and a chained show lands in
+// the same relation to its own key as the first. tooltip_box_rect IS THE
+// PLACEMENT'S ONE STATEMENT, the painter's (paint_shift_tooltip), ONE RULE ON
+// EVERY SURFACE — the band, row 8, every controls row of a dialog or an
+// overlay — for a w x h box over `face` (the owner's painted face: the key's,
+// row 8's clock field where the show chose it, a modal button's rect):
+//   * ABOVE THE FACE: its bottom row the `tooltip_gap` tuning key's W over
+//     the face's top row (box.y = face.y − gap − h; device_config.h's
+//     grammar, read live through scaled_px, so a commit takes the next
+//     show). On the band that is the logo lane, over the brand, the lamps
+//     and the battery while the box stands, never over the well: on the
+//     tablet at 200 % and the default 2 W the band's face top is row 72, so
+//     a one-line box (43 rows) stands on rows 25..67 and a two-line box (67)
+//     on rows 1..67, the gap rows 68..71;
+//   * CENTERED ON THE FACE: box.x = face.x − floor((w − face.w) / 2), the
+//     odd device px on the box's RIGHT (the column's tie, render.h's THE
+//     KEY'S COLUMN), one expression whether the box is wider or narrower;
+//   * THEN HELD BETWEEN THE KEYS' OUTER COLUMNS (render.h's well_columns,
+//     THE EDGE RULE; architect 2026-11-02, M11 ruling 4: x 24 .. 2279 on the
+//     tablet) — the right clamp first, then the left, so a box wider than the
+//     span pins its left edge there;
+//   * NEVER ABOVE THE WINDOW'S TOP: y ≥ 0, so under a large gap the band's
+//     two-line box lays over its face's top rows — accepted for a tuning key.
+// The box never shrinks. (The pointer's seat, Windows 95's — the left edge at
+// the pointer and the top 27 W under it, flipped above the button at the
+// window's foot — retired with this rule, closed_questions.md.)
+// tooltip_damage_band is the DAMAGE twin, read by the three owners that must
 // damage a box before its rect is published (the show edge, tick_tooltip;
 // main.cpp's roster words comparator; Viewport::invalidate_modal_dialog_area
-// for a dialog owner): the full-width band of tooltip_damage_h_px() rows
-// under the pointer, and the band above the owner's button whenever a box
-// that tall would cross the foot — so either seat, at any width and either
-// line count, lies inside one of the two rects. `above` is empty when the
-// box cannot flip or the owner has no painted button.
-GuiRect tooltip_box_rect(const AppState& a, const GuiRect& btn, int w, int h);
-struct TooltipHangBands {
-    GuiRect below{0, 0, 0, 0};
-    GuiRect above{0, 0, 0, 0};
-};
-TooltipHangBands tooltip_hang_bands(const AppState& a);
+// for a dialog owner): THE FULL-WIDTH BAND of tooltip_damage_h_px() rows (the
+// box height's bound) ending on the gap's top over the owner's face, or from
+// the window's top where it would rise past it — so the box, at any width
+// and either line count, clamped or not, lies inside it. A BAND, NOT THE
+// EXACT BOX, because the box's size is not known before its paint: a dialog
+// owner's words are composed by paint_modal_dialog in the frame that paints
+// the box, and a roster owner's need the shaping pass and the audio the
+// painter alone holds. Empty when the owner has no painted face.
+GuiRect tooltip_box_rect(const AppState& a, const GuiRect& face, int w, int h);
+GuiRect tooltip_damage_band(const AppState& a);
 
 // (THE KEYBOARD SLOT'S SHARED BAND — keyboard_slot_band and its ceiling,
 // keyboard_slot_max_height_px, the folder overlay's band from under the icon
@@ -17786,8 +17808,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // swapped cluster) until the 2026-08-18 relayout, and are again since
         // 2026-10-05 — the icon row's history stand-ins until 2026-10-11,
         // row 8's in Left / Right's seats in the nudge-and-play group since
-        // (kTransportHistoryStandIns), so
-        // the tooltip flips above them with the row.
+        // (kTransportHistoryStandIns), the tooltip standing above them as
+        // above every key (tooltip_box_rect).
         case RedesignButton::HistoryOlder:
             return {"Older", "Hold for oldest"};
         case RedesignButton::HistoryNewer:

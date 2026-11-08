@@ -640,17 +640,16 @@ struct Viewport {
     // A STANDING DIALOG TOOLTIP RIDES THIS DAMAGE (2026-09-29):
     // a modal button's hint is composed by the row's own paint
     // (paint_modal_dialog publishes it on the stash) and its box hangs OFF
-    // the modal's controls row, past this rect — above it where the row
-    // stands on the window's foot (too few rows under it for the box, which
-    // flips above its button), below it over the keyboard's band where
-    // a dialog editor's stack stands on the keyboard (modal_box.h) — so a
+    // the modal's controls row, past this rect — ABOVE ITS BUTTON, the seat
+    // on every surface (architect 2026-11-07, session 90; tooltip_box_rect),
+    // over whatever the row stands under — so a
     // row repaint alone would recompose
     // the words (the Play/Pause face's "Pause" becoming "Play" at a folder's
     // end or at a pause) and leave the old box's pixels standing.
     // While a tooltip stands on a Dialog owner this owner also damages the
     // box's published rect (erasing the old words, which may measure wider)
-    // and the band the recomputed box can hang into — the show edge's own
-    // pair (tooltip_hang_bands) — so the frame that repaints the row repaints the
+    // and the band every seat of the recomputed box lies in — the show
+    // edge's own (tooltip_damage_band) — so the frame that repaints the row repaints the
     // hint from the same composition. Every caller above inherits it, the
     // player's three included; the per-tick comparator in main.cpp calls here
     // for the hint changes no row damage carries (the previous-track window's
@@ -805,11 +804,12 @@ struct Viewport {
 
     // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the shift
     // tooltip; the Settings dropdown beside it until 2026-10-21): it hangs
-    // outside the strip that owns it — under the pointer or above the bottom
-    // row — so invalidate_top_strip alone would leave its overhang stale. The
+    // outside the strip that owns it — above its owner's face, in the logo
+    // lane over the band or over the well above the bottom row — so
+    // invalidate_top_strip alone would leave its overhang stale. The
     // hide edge damages the strip AND the surface's own published rect — two
     // cheap calls the platform coalesces — and a show edge the room the
-    // surface will stand in (tooltip_hang_bands), rather than growing a
+    // surface will stand in (tooltip_damage_band), rather than growing a
     // union helper. Since row 8 (2026-08-11) it is
     // also the BOTTOM ROW'S button-face damage entry: the transport/arrow
     // faces live in the bottom strip, so every face writer's damage fork

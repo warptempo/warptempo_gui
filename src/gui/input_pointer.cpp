@@ -7966,7 +7966,9 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit,
 // damages the strip AND the box's last painted
 // rect, and that is why every edge that takes a hint away must come through
 // here rather than leave it to a hover walk: the box hangs OUTSIDE its strip
-// (under the pointer, or above the bottom row), so a repaint that found no
+// (above its owner's face — over the logo lane for a band key, over
+// whatever stands above row 8 or a controls row for theirs), so a repaint
+// that found no
 // box to draw would publish a zero rect and return, and the overhang would
 // have nothing left to erase it. Surface-agnostic: the painted rect is
 // wherever that hint was drawn.
@@ -7998,26 +8000,31 @@ void GuiInputHandler::hide_shift_tooltip() {
 
 // THE SHOW — the one show body, shared by the wait's ripening (tick_tooltip)
 // and the bypass's immediate arrival (note_tooltip_hover): the box takes the
-// hovered owner, SEATED UNDER THE POINTER as it stands now (shown_x/y, the
-// placement at tooltip_box_rect), and the chain is spent into it (`left_ms`
-// 0: the box's own leave re-arms it). The box's own rect cannot be known yet
-// (the paint that publishes it is the frame this schedules), so it damages
-// the band the box can hang into — the full-width band under the pointer, at
-// most tooltip_damage_h_px() tall, and the band above the owner's button
-// where a box that tall would cross the window's foot (tooltip_hang_bands,
-// the bottom row's flip), one of which holds the box whole. No box stands at
-// a show: an arrival took the old one down first.
+// hovered owner, SEATED OFF THAT OWNER'S FACE ALONE — above it, centered on
+// it (architect 2026-11-07, session 90; the placement at tooltip_box_rect) —
+// and the chain is spent into it (`left_ms` 0: the box's own leave re-arms
+// it). The pen's one say in the seat is taken here and held while the box
+// stands: whether the pointer is on row 8's clock field, Play's second rect
+// (`shown_on_field`, the face the box centers over), so motion between the
+// clock and Play's key under a standing box moves nothing. The box's own
+// rect cannot be known yet (the paint that publishes it is the frame this
+// schedules), so it damages the band every seat of the box lies in — the
+// full-width band of tooltip_damage_h_px() rows ending on the gap over the
+// owner's face (tooltip_damage_band), which holds the box whole. No box
+// stands at a show: an arrival took the old one down first.
 static void show_tooltip_box(AppState& app, Viewport& viewport) {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
     t.wake_due_ms = 0;
     t.left_ms     = 0;
     t.owner       = t.hovered;
     t.visible     = true;
-    t.shown_x     = app.last_mouse_x;
-    t.shown_y     = app.last_mouse_y;
-    const TooltipHangBands bands = tooltip_hang_bands(app);
-    viewport.invalidate_rect(bands.below);
-    viewport.invalidate_rect(bands.above);
+    t.shown_on_field =
+        t.owner.surface == AppState::RedesignTooltip::Surface::Roster &&
+        t.owner.index >= 0 && t.owner.index < kRedesignButtonCount &&
+        rect_contains(
+            app.redesign_buttons[static_cast<size_t>(t.owner.index)].field,
+            app.last_mouse_x, app.last_mouse_y);
+    viewport.invalidate_rect(tooltip_damage_band(app));
 }
 
 // THE CHAIN'S LAPSE (the bypass's rule at AppState::RedesignTooltip): an

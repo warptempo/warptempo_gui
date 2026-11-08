@@ -2670,50 +2670,35 @@ inline int view_bar_grab_w_px() {
 // cue's own (the palette block's playhead paragraph). Git history.)
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
-// seat under the pointer, its hover target (the key's column) and the bypass
-// chain's reach. They live out here, rather than with the rest of the
-// tooltip's anatomy in paint_handler.cpp, because both the RUN LOOP and the
-// input side read them: the clock (GuiInputHandler::tick_tooltip) runs on the
-// tick and damages the band the box can hang into (tooltip_hang_bands,
-// app_state.h), and the one wait writer (note_tooltip_hover) and the two hover
-// walks read the column and the reach. The one duration, the delay, is the
+// hover target (the key's column) and the bypass chain's reach. They live out
+// here, rather than with the rest of the tooltip's anatomy in
+// paint_handler.cpp, because both the RUN LOOP and the input side read them:
+// the clock (GuiInputHandler::tick_tooltip) runs on the tick and damages the
+// band every seat of the box lies in (tooltip_damage_band, app_state.h), and
+// the one wait writer (note_tooltip_hover) and the two hover walks read the
+// column and the reach. The one duration, the delay, is the
 // `tooltip_delay_ms` tuning key (device_config.h), read live.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from the two faces' caps under the time field's pad (paint_shift_tooltip,
 // 2026-10-31), so the run loop only needs to know it can never exceed this:
 // 75 W (the 50 Windows px of 2026-10-31 times 1.5 at the rebase to 200 %,
-// 2026-11-05), 150 device rows on the tablet against the two-line box's 65.
+// 2026-11-05), 150 device rows on the tablet against the two-line box's 67.
 inline constexpr int     kTooltipDamageHeightPx = 75;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
 
-// THE SEAT IS THE POINTER'S, WINDOWS 95's (architect 2026-10-06; the Windows
-// Interface Guidelines, 1995, ch. 7: a tooltip is "usually displayed at the
-// lower right of the pointer, but is automatically adjusted if this location
-// is offscreen"): the box's LEFT EDGE at the pointer's x and its TOP
-// kTooltipPointerDropPx below the pointer's y, the pointer where it stood when
-// the box was shown (on the tablet the S Pen's hover point, which is the
-// pointer). 27 W: Windows' 18 px is MEASURED, ToastyTech's win95toolbar.png
-// (Explorer's "Up One Level"): the arrow's tip at (16, 17), the box's
-// top-left at (16, 35), just under the cursor's tail — times 1.5 at the
-// rebase to 200 % (architect 2026-11-05), so the tablet's 54 device px
-// stand; the flip gap below 3 W the same way (Windows' 2). Where the box would
-// cross the window's foot it stands ABOVE THE TOOL instead, its bottom
-// kTooltipFlipGapPx above the owner button's top (comctl32's own fallback, as
-// Wine reimplements it) — which every bottom-row owner meets, the row being
-// 55 W on the foot; past the right edge it shifts left to fit (the
-// clamp, the box never shrinking). The placement's one statement is
-// tooltip_box_rect (app_state.h).
-inline constexpr int kTooltipPointerDropPx = 27;
-inline constexpr int kTooltipFlipGapPx     = 3;
-inline int tooltip_pointer_drop_px() {
-    return scaled_px(kTooltipPointerDropPx);
-}
-inline int tooltip_flip_gap_px() {
-    return scaled_px(kTooltipFlipGapPx);
-}
+// THE SEAT IS THE OWNER'S FACE'S (architect 2026-11-07, session 90): the box
+// above its owner's painted face, centered on it, the `tooltip_gap` tuning
+// key between them (device_config.h's grammar, default 2 W, 4 device px on
+// the tablet; read live, no seat here until he rules the number, when it
+// becomes a constexpr beside this bound), held between the keys' outer
+// columns and under the window's top; one rule on every surface. The
+// placement's one statement is tooltip_box_rect (app_state.h). (The
+// pointer's seat, Windows 95's of 2026-10-06 — the box's left edge at the
+// pointer, its top 27 W under it, flipped 3 W above the button at the
+// window's foot — retired with it, closed_questions.md.)
 
 // THE TIMING IS ONE DELAY, THE `tooltip_delay_ms` TUNING KEY (architect
 // 2026-11-07, session 87, the always-show model; device_config.h's grammar,
