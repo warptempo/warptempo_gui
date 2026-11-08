@@ -83,8 +83,8 @@ namespace icons {
 #define WARPTEMPO_BREEZE_ICONS(X)                                        \
     X(DocumentOpen) X(DocumentSave) X(DocumentSaveAs) X(VcsPull)         \
     X(NetworkConnect) X(VcsCommit) X(EditUndo) X(EditRedo)               \
-    X(MediaRecord) X(DialogCancel) X(EditCopy) X(ZoomIn) X(ZoomOut)      \
-    X(ZoomFitBest) X(ZoomPrevious) X(ZoomInY) X(GoJump)                  \
+    X(MediaRecord) X(DialogCancel) X(EditCopy) X(EditPaste) X(ZoomIn)    \
+    X(ZoomOut) X(ZoomFitBest) X(ZoomPrevious) X(ZoomInY) X(GoJump)                  \
     X(TimelineUseZoneOn) X(EditCut) X(Bookmarks) X(MusicNote16th)       \
     X(Mathmode)                                                          \
     X(Merge) X(AudioHeadphones) X(Lock) X(SettingsConfigure)             \

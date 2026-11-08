@@ -221,7 +221,7 @@
 //     (both forms and the `h` view's), the marker walk at an empty store or a
 //     wall, the singleton tempo step at its bracket's end, Space with nothing
 //     left to play, the history walk's walls and the diff cycle's ends,
-//     Ctrl+Shift+0 over a full window, the picker's row on the project already
+//     Reset Trim over a full window, the picker's row on the project already
 //     open, the render player's folder-end skips, Backspace at the root and
 //     its idle family (no render loaded, seeking before playback), the
 //     position nudge at its wall in both columns, the publish chord over

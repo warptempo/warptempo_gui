@@ -275,7 +275,7 @@ namespace {
 //   * NO CARD, LABEL OR TOOLTIP NAMES A KEY (architect 2026-10-30; the
 //     tooltip's rule at redesign_button_tooltip's head, app_state.h): a
 //     tooltip names the act and, on its second line, the glass gesture that
-//     reaches a twin ("Hold to …", "Barrel button to …"). The one key text
+//     reaches a twin ("Hold to …"). The one key text
 //     is the on-screen keyboard's own caps (onscreen_keyboard.h's cap_word).
 //     The dialog buttons' words are plain words, no letter underlined and
 //     never a bracket (architect 2026-10-30: no keyboard stands under a
@@ -989,8 +989,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // ZOOM TO FIT (2026-08-12, the grand relayout, as Full Zoom Out; renamed
     // 2026-10-24 — the architect's live placement, "the rest in the icon row,
     // after the trim"): bare `0`, Shift+0 Frame the Trim on its shift press
-    // and Ctrl+Shift+0 Reset Trim on its ctrl+shift press (2026-10-24;
-    // Shift+0 the reset from 2026-09-22), the command's pointer home (the
+    // (2026-10-24), the command's pointer home (the
     // Navigation dropdown that duplicated it was deleted 2026-08-15; the
     // record is at kFilePopupItems, app_state.h). The step pair stands in
     // front of it (above). WORKING-ZOOM CENTER (bare `c`) stood
@@ -1272,8 +1271,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // THE TOOLTIP'S TEXT lives with the roster, not here
 // (redesign_button_tooltip, app_state.h, owns both the membership and the text;
 // its MODIFIER line is static_asserted against redesign_button_shift_admits,
-// redesign_button_ctrl_admits and redesign_button_ctrl_shift_admits, so the
-// hint cannot appear where a modified press does nothing).
+// so the hint cannot appear where a modified press does nothing).
 //
 // EVERY BUTTON BUT ROW 1'S HAS ONE (architect 2026-07-31, stated as the ROW's
 // property at the table): the one-line form is the whole story for most, and the
@@ -2223,8 +2221,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   ground past it and THE STATE LINE past the name in the text tone, clipped short of the right block (architect 2026-10-03
 //   for the line);
 //
-//   and, PACKED AGAINST THE RIGHT INSET, four groups as plain runs, the run
-//   gap between two (architect 2026-10-22; four since 2026-10-24):
+//   and, PACKED AGAINST THE RIGHT INSET, five groups as plain runs, the run
+//   gap between two (architect 2026-10-22; five since 2026-11-08, his
+//   "least used left, most used right"):
+//   THE COPY / PASTE DUO (kPhaseResetPropagateGroup, architect 2026-11-08,
+//   session 93) — COPY (bare P, the phase resets' copy, no modifier) and
+//   PASTE (Ctrl+P, the paste, its hold Ctrl+Shift+P the state paste), both
+//   resting greys on a locked tab, PASTE under grid iterations too;
 //   THE SKIPS (kTransportSkipGroup, back 2026-10-24) — GO TO START (bare
 //   Home) and GO TO END (bare End), their shifted presses the whole piece's
 //   ends;
@@ -2234,17 +2237,17 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09),
 //   ADD TO SELECTION (bare `k`, the sticky ctrl, lit while the mode stands)
 //   and TOGGLE VALUE DRAG (bare `[`, since 2026-10-11, lit while armed — the
-//   row's two lamps), and COPY PHASE RESETS (bare P, its barrel presses the
-//   two pastes) closing the group since 2026-11-07, down from the band. The
-//   four verbs, Open Text Editor, Toggle Value Drag and Copy Phase Resets
+//   row's two lamps — closing the group again since 2026-11-08, COPY gone to
+//   the duo). The
+//   four verbs, Open Text Editor and Toggle Value Drag
 //   are the row's resting greys on a locked tab; the jump and Add to
 //   selection are not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
 //   between Toggle inherit and Add to selection until 2026-09-29; Copy was
 //   the icon row's from then until 2026-10-14, its act now the jump's shift
 //   twin, and Edit Flag was deleted);
 //   THE STEP AND THE WALK (kTransportStepWalkGroup, architect 2026-10-18) —
-//   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab, its ctrl press
-//   the paired march) and NEXT MARKER (Tab, its shifted press Shift+Tab);
+//   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab) and NEXT MARKER
+//   (Tab), none admitting a modifier since 2026-11-08;
 //   THE NUDGE AND PLAY (kTransportNudgePlayGroup, architect 2026-10-18) —
 //   SWITCH TAB (Ctrl+Tab, its shifted press the paired march), CENTER (bare
 //   `c`, down from the icon row since 2026-09-29), LEFT and RIGHT (bare
@@ -2265,13 +2268,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // the view refuses in every session is NOT PAINTED (history_mode_hides_button,
 // input_pointer.cpp) — Play / Stop, Up and Down, the four verbs, Jump to
 // Defining Marker, Open Text Editor, Toggle Value
-// Drag and Copy Phase Resets — and publishes an empty rect, the block
+// Drag, and COPY and PASTE (the duo hidden whole, its run gap with it) —
+// and publishes an empty rect, the block
 // closing up from
 // the right margin and the state line taking the room; the row in there is
 // GO TO START and GO TO END (the mode's own absolute jumps), ADD TO
 // SELECTION alone, the walk pair, and SWITCH TAB, CENTER, OLDER and NEWER:
 // nine cases in four groups (2026-10-24; seven in three while the skips
-// were off the row, 2026-10-12 to 2026-10-24). THE STAND-IN (architect 2026-10-11,
+// were off the row, 2026-10-12 to 2026-10-24; the duo hidden whole since
+// 2026-11-08). THE STAND-IN (architect 2026-10-11,
 // kTransportHistoryStandIns): in the view Older / Newer take the seats Left
 // and Right hold outside it, the nudge pair publishing empty rects (Up and
 // Down hidden), and outside it the two publish empty rects. THE STAND-INS DO NOT INHERIT THE
@@ -2311,9 +2316,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // mode's diff-flag cycle, `c` its centring and Ctrl+Tab on its allowlist
 // (Home / End, its own absolute jumps, are keys alone since 2026-10-12, the
 // two skip buttons gone; Play / Stop is the transport's one button and is not
-// painted in the view). PREVIOUS
-// MARKER greys only under a lit grid iterations with no reverse step left
-// (its twin, the march, refusing there too). Outside the view the four VERBS
+// painted in the view). NEXT and PREVIOUS
+// MARKER grey where their step would land nothing (since 2026-11-08, their
+// twins retired). Outside the view the four VERBS
 // and OPEN TEXT EDITOR grey on a locked tab, their own
 // gate — JUMP TO DEFINING MARKER, seated among them, does NOT, its chord being
 // navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT PLAY /
@@ -2367,10 +2372,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // (modal_controls_seats) and stands its items its own eight W apart on the
 // row's ground (paint_modal_dialog's player branch).
 
-// The painter's half of the row's roster: four groups, all in the right
-// block and painted left to right in the order the body lays them (the two
-// skips since 2026-10-24, the marker group, the step and walk, the nudge and
-// play with Play last; the `h` view's stand-ins seated in the last); each
+// The painter's half of the row's roster: five groups, all in the right
+// block and painted left to right in the order the body lays them (the
+// COPY / PASTE duo since 2026-11-08, the two skips since 2026-10-24, the
+// marker group, the step and walk, the nudge and play with Play last; the
+// `h` view's stand-ins seated in the last); each
 // table is declared beside its reasons.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
 // key off the same ids.
@@ -2422,13 +2428,10 @@ struct TransportRowDef {
 // one-shot: the drag it arms puts it out; under grid iterations permanently
 // lit and grey (2026-10-11 ~01:45; its roster entry, app_state.h).
 //
-// THE GROUP IS NINE SINCE 2026-11-07 (architect, session 87): COPY PHASE
-// RESETS — bare P, its barrel press Ctrl+P and the barrel through the long
-// press Ctrl+Shift+P — CLOSES IT, right of DRAG, down from the band's first
-// run (between Redo and Render 2026-10-25 to then; between Add to Selection
-// and Toggle Value Drag on 2026-10-24 alone). Its chords, admissions, face,
-// tooltip and `h`-view hide came across unchanged; an act, no lamp, greying
-// on a locked tab with the verbs (its roster entry, app_state.h).
+// THE GROUP IS EIGHT AGAIN SINCE 2026-11-08 (architect, session 93): COPY
+// PHASE RESETS, its tail from 2026-11-07 (down from the band's first run),
+// left it for the COPY / PASTE duo, the row's leftmost run
+// (kPhaseResetPropagateGroup below); the verbs keep their order, a unit.
 //
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
@@ -2442,10 +2445,23 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconOpenTextEditor},
     {RedesignButton::IconAddToSelection},
     {RedesignButton::IconValueDrag},
+};
+// THE COPY / PASTE DUO (architect 2026-11-08, session 93: row 8 "least used
+// left, most used right"), THE RIGHT BLOCK'S FIRST RUN, before the skips:
+// COPY (bare P, the selected run's phase resets into the clipboard) and
+// PASTE (Ctrl+P, the clipboard's resets onto the one selected anchor behind
+// the paste's question; its long press Ctrl+Shift+P, their enabled /
+// disabled state alone). Both acts, no lamp; both grey on a locked tab and
+// PASTE under grid iterations; in the `h` view both are hidden (no `p`
+// chord on its allowlist), the run going with its gap (row8_block). Their
+// roster entries, app_state.h.
+constexpr TransportRowDef kPhaseResetPropagateGroup[] = {
     {RedesignButton::IconCopyPhaseResets},
+    {RedesignButton::IconPastePhaseResets},
 };
 // THE SKIP GROUP (architect 2026-10-24: the two skip buttons back as their
-// own run at the left of Drop), THE RIGHT BLOCK'S FIRST: GO TO START (bare
+// own run at the left of Drop), THE RIGHT BLOCK'S SECOND since 2026-11-08
+// (its first until the duo came): GO TO START (bare
 // Home, START) and GO TO END (bare End, END), the trim bounds'
 // jump, their shifted press and long press the whole piece's ends
 // (Shift+Home / Shift+End). The run gap stands between it and the marker
@@ -2461,17 +2477,17 @@ constexpr TransportRowDef kTransportSkipGroup[] = {
 // two right-hand groups: "Next marker, previous marker, up, down, separator",
 // read right to left), the right block's second group between the verbs and
 // the nudge-and-play group, in this order: DOWN and UP (bare Down / Up, the
-// value step — its ladder and hold-repeat at their chord rows,
-// input_pointer.cpp), PREVIOUS MARKER (Shift+Tab; its ctrl press is the
-// paired march) and NEXT MARKER (the walk: Tab, its shifted press Shift+Tab;
-// its camera the audio view's). (Until 2026-10-18 the marker-walk group was Previous Marker, Next Marker,
+// value step, one unit — its hold-repeat at their chord rows,
+// input_pointer.cpp), PREVIOUS MARKER (Shift+Tab) and NEXT MARKER (the walk:
+// Tab; its camera the audio view's), neither admitting a modifier since
+// 2026-11-08. (Until 2026-10-18 the marker-walk group was Previous Marker, Next Marker,
 // Center and Switch Tab, and Down / Up led the arrow group behind it.)
 // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON since
 // 2026-09-29 (architect: "an artificial constraint; the tablet is the only
 // real development surface now") — Previous Marker is Next Marker's Shift
 // form and Switch Tab its Ctrl form; Previous Marker had merged into the walk
 // on 2026-09-22 under the rule that it could not, and the walk's modified
-// presses stay. Down / Up are the verticals here, Left / Right the
+// presses retired 2026-11-08, each having its own key. Down / Up are the verticals here, Left / Right the
 // horizontals in the last group; the vertical pair keeps the architect's
 // 2026-08-14 order, down before up (which superseded the row's original vim order, h j k l).
 // IN THE `h` VIEW Down and Up are hidden (history_mode_hides_button), the
@@ -2485,7 +2501,7 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
 // THE NUDGE-AND-PLAY GROUP (architect 2026-10-18 ~21:40: "play button, right
 // nudge, left nudge. Center, switch tabs, separator", read right to left),
 // THE ROW'S LAST: SWITCH TAB (Ctrl+Tab; its shifted press is the paired
-// march), CENTER (bare `c` — down from the icon row's zoom group since
+// march, both chords' one pointer road since 2026-11-08), CENTER (bare `c` — down from the icon row's zoom group since
 // 2026-09-29), LEFT and RIGHT (bare Left / Right, the nudge — the playhead
 // step) and PLAY / STOP.
 // (Until 2026-10-18 Switch Tab and Center closed the marker-walk group and
@@ -2818,16 +2834,17 @@ static BottomRowSeats modal_controls_seats(const AppState& app,
 
 // ROW 8'S RIGHT BLOCK (2026-10-21: lifted out of
 // paint_bottom_row_buttons_and_clock; the numbers and the z rule at the
-// painter's THE NUMBERS). THE FOUR GROUPS IN
+// painter's THE NUMBERS). THE FIVE GROUPS IN
 // PAINTED ORDER, each read off its own table, so a box joining or leaving
 // moves the block with no second edit; IN THE `h` VIEW the nudge pair's
 // seats are the walk's two steps (kTransportHistoryStandIns, its one owner,
-// seated through transport_row_seated). FOUR GROUPS since 2026-10-24, the
-// skips first.
-constexpr int kRow8GroupCount = 4;
+// seated through transport_row_seated). FIVE GROUPS since 2026-11-08, the
+// COPY / PASTE duo first, then the skips (architect, session 93: "least
+// used left, most used right").
+constexpr int kRow8GroupCount = 5;
 constexpr std::span<const TransportRowDef> kRow8Groups[kRow8GroupCount] = {
-    kTransportSkipGroup, kMarkerVerbGroup, kTransportStepWalkGroup,
-    kTransportNudgePlayGroup};
+    kPhaseResetPropagateGroup, kTransportSkipGroup, kMarkerVerbGroup,
+    kTransportStepWalkGroup, kTransportNudgePlayGroup};
 // THE ROW'S LENGTHS (the simple layout, 2026-10-22): the run gap between
 // two groups' faces (render.h's program_run_gap_px, the `run_gap` tuning
 // key, 22 W its default), the face,
@@ -3022,9 +3039,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE ACTIVE TAB'S NAME on the ground after it and THE STATE LINE after
     // the name (the block at the clock below) — then THE RIGHT BLOCK, packed
     // against the row's right seat (bottom_row_seats, flush with the well's
-    // last column), FOUR RUNS (kRow8Groups, 2026-10-24): the SKIP
+    // last column), FIVE RUNS (kRow8Groups, 2026-11-08): the COPY / PASTE
+    // DUO (kPhaseResetPropagateGroup), the SKIP
     // GROUP (START | END, kTransportSkipGroup), the MARKER-VERB GROUP (its
-    // nine counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
+    // eight counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
     // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
     // NUDGE-AND-PLAY GROUP with Play / Stop last (Switch Tab, Center, ← →
     // Play, kTransportNudgePlayGroup; architect 2026-10-18), each a plain
@@ -3041,42 +3059,48 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
-    // THE NUMBERS (the tablet's device px at 200 %, one W = 2, AT THE
-    // DEFAULTS — the 70-px face of key_width 35, the one-W key gap of 2, the
-    // 44-px
-    // run gap, the 22-px clock; the skips two, the verbs nine since
-    // 2026-11-07, the step-and-walk
-    // group four and the nudge-and-play group five): the block is 20 faces
-    // in four runs, 16 key gaps and three run gaps, 142 + 646 + 286 + 358 +
-    // 3·44 = 1564 px, its last face ending at the faces' right end
+    // THE NUMBERS (2026-11-08, the COPY / PASTE duo; in W, then the tablet's
+    // device px at 200 %, one W = 2), AT THE DEFAULTS — the 35-W face of
+    // key_width 35, the one-W key gap, the 22-W run gap of run_gap 22, the
+    // 11-W clock: the block is 21 faces in five runs (the duo two, the skips
+    // two, the verbs eight, the step-and-walk four, the nudge-and-play five),
+    // 16 key gaps and four run gaps, 71 + 71 + 287 + 143 + 179 + 4·22 = 839 W
+    // = 1678 px, its last face ending at the faces' right end
     // (bottom_row_seats' cases_right, 2280, one past the well's last column
-    // 2279) — on the tablet's 2304 the faces on x 716..2279 (the skips
-    // 716..857, the verbs 902..1547, the walk 1592..1877, the nudge
-    // 1922..2279, Play 2210..2279); the clock's field on the well's first
+    // 2279) — on the tablet's 2304 the faces on x 602..2279 (the duo
+    // 602..743, COPY 602..671 and PASTE 674..743, the skips 788..929, the
+    // verbs 974..1547, the walk 1592..1877, the nudge 1922..2279, Play
+    // 2210..2279); the clock's field on the well's first
     // column, from x 24 — the cell (the widest-digit specimen "DD:DD.DDD"'s ink box in the
     // program face's 22 px, kerning off, floored first ink to ceiled last
     // ink: 99 px; kTimeShape's block) and its two 12-px pads, a 123-px field,
     // x 24..146 — then the name's first ink 14 px past it (x 161), the state
     // line's 14 px past the name's advance, clipped one run gap short of the
-    // block (x 672). On a 1920-px window at 100 % (faces 35, the key gap 1,
-    // the run gap 22, the program face 11 px) the block is 782 px of faces
-    // from x 1122, the clock's field 62 px on x 16..77, the name from x 85.
+    // block (x 558), the room the existing clip leaves it. AT THE
+    // ARCHITECT'S TABLET VALUE, run_gap 9 W (18 px; his "I've turned down the
+    // spacing between the sections to 9W"), the block is 751 + 4·9 = 787 W =
+    // 1574 px from x 706 (the duo 706..847), the state line clipped at x 688.
+    // On a 1920-px window at 100 % (faces 35, the key gap 1,
+    // the run gap 22, the program face 11 px) the block is 839 px of faces
+    // from x 1065, the clock's field 62 px on x 16..77, the name from x 85.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor,
-    // Toggle Value Drag and Copy Phase Resets hidden there with the verbs,
-    // Down
+    // Toggle Value Drag, COPY and PASTE hidden there with the verbs — the duo
+    // whole, its run gap with it — Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
     // not standing, 142 + 70 + 142 + 286 + 3·44 = 772 px on the tablet, from x
-    // 1508. THE WIDTH TUNES THE BLOCK (the `key_width` tuning key, 2026-11-06):
-    // 40 · key_width + 164 device px on the tablet, from x 2116 − 40 ·
-    // key_width — at the grammar's ceiling, 50 W, 2164 px from x 116, over
-    // the clock's field's right end (x 24..146), the name and the state line
-    // under the z rule below (clear of the field to key_width 49, x 156).
-    // THE GAP TUNES IT TOO (the `run_gap` tuning key, 2026-11-07): the
-    // three run gaps are 6 · run_gap device px of it, so the block is
-    // 40 · key_width + 32 + 6 · run_gap px from x 2248 − 40 · key_width −
-    // 6 · run_gap — at the defaults and the grammar's ceiling, 44 W, 1696 px
-    // from x 584, the state line clipped shorter and nothing else moved.
+    // 1508 at the defaults. THE WIDTH AND THE GAP TUNE THE BLOCK (the
+    // `key_width` and `run_gap` tuning keys, 2026-11-06 / 2026-11-07): 21 faces
+    // of 2 · key_width, 16 key gaps of 2 and four run gaps of 2 · run_gap, so
+    // the block is 42 · key_width + 32 + 8 · run_gap device px on the tablet,
+    // from x 2248 − 42 · key_width − 8 · run_gap. At run_gap 22 it clears the
+    // clock's field (x 24..146) to key_width 45 (x 182), reaches the field from
+    // 46, and runs past the well's first column from 49 — at the grammar's
+    // ceiling, 50 W, 2308 px from x −28, its first 28 px off the panel's left
+    // edge (the row carries no collision rule, below). At run_gap 9 it clears
+    // the field to key_width 48 (x 160) and stays on the panel through 50
+    // (x 76). At key_width 35 and run_gap's ceiling, 44 W, the block is 1854
+    // px from x 426, the state line clipped shorter and nothing else moved.
     // THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
@@ -3104,7 +3128,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // where nothing overlaps the order changes no byte: the clock and the
     // clipped line lie wholly left of the block, and the block's fresh
     // ground is paint_bottom_strip's own flat ground over the same span.
-    // THE FOUR GROUPS IN PAINTED ORDER, each read off its own table, so a
+    // THE FIVE GROUPS IN PAINTED ORDER, each read off its own table, so a
     // box joining or leaving moves the block with no second edit.
     // IN THE `h` VIEW the nudge pair's seats are the walk's two steps
     // (kTransportHistoryStandIns, its one owner, seated through
@@ -3194,8 +3218,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // origin its own left bearing short of that; the program face in THE
         // TEXT TONE `text`, NO SHADOW (the flat look, 2026-11-01; M13's
         // tone 2026-11-02), on the clock's baseline.
-        // Never greyed: it is no button (Ctrl+Tab, Switch Tab and the walk's
-        // barrel press switch the tab). A tab switch damages the lane
+        // Never greyed: it is no button (Ctrl+Tab and the Switch Tab
+        // key switch the tab). A tab switch damages the lane
         // (GuiActiveViews' switch, the state cell's owner).
         // IN THE `h` VIEW THE NAME'S RUN ENDS IN THE WALK LINE'S OWN
         // SEPARATOR, "Tab A | " (architect 2026-10-24: the name ran into the

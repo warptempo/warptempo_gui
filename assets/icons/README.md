@@ -72,6 +72,7 @@ transcriptions, with no path data changed.
 | `MediaRecord` | `actions/22/media-record.svg` | `a53acc5fa7381ccb9fcc02d218d203ab8a5ab6fddd542569ffca87c885bdbeab` |
 | `DialogCancel` | `actions/22/dialog-cancel.svg` | `e292845ffca2e88efbc2494bc9c9d6ddc479b907e2a792c6be880229a1dc0586` |
 | `EditCopy` | `actions/22/edit-copy.svg` | `34f11f3f9452b7d2389599d52540abfb70c2aa074e1119c2777488fc4e7412c1` |
+| `EditPaste` | `actions/22/edit-paste.svg` | `aa76c92f924b6e8efb75b6f10ac255e474b2f8df087564c400743a4114c15ad6` |
 | `ZoomIn` | `actions/22/zoom-in.svg` | `c1cb53527ad5cbabdeae9a25d289aa5bf5559737935634bfc81a6ced9c0be2a6` |
 | `ZoomOut` | `actions/22/zoom-out.svg` | `cfb5a75b1defeda835329d31401f4a0ff126bf831dc7810eaadccf374808a296` |
 | `ZoomFitBest` | `actions/22/zoom-fit-best.svg` | `7c43931b78725877af03061e72a75cf21f397adeda43984d7fd85cbd3693b706` |

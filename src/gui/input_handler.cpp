@@ -481,9 +481,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is the Ctrl+S entry's now, on that entry's
     //                              own reasoning — it publishes what the tab
     //                              already holds)
-    //   - Ctrl+Shift+0 (no alt)  → the trim maximizer, Reset Trim (2026-08-07,
-    //                              on Shift+[ until 2026-09-22, Shift+0 until
-    //                              2026-10-24). Trim is BAND, not content
+    //   - Shift+T (no ctrl/alt)  → the trim maximizer, Reset Trim (2026-08-07;
+    //                              PRESETS' hold since 2026-11-08). Trim is
+    //                              BAND, not content
     //   - l (no mods)            → the render player (2026-08-28): it plays
     //                              a rendered wav and authors nothing; its
     //                              one authoring act, Load in place, refuses
@@ -615,9 +615,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // producers still do: THE CAR'S Previous / Next on a locked tab, which
         // build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and take
         // the read-only card naming Undo or Redo, and the ITERATION sentence's
-        // lit buttons whose long-press or barrel twin is the Ctrl+Shift+Tab
-        // march, which the iteration list subtracts (the walk, Previous
-        // Marker, Switch Tab). The bare literal kTabReadOnlyCard stays the
+        // lit buttons whose long-press twin is the Ctrl+Shift+Tab
+        // march, which the iteration list subtracts (Switch Tab). The bare literal kTabReadOnlyCard stays the
         // word of the sites that KNOW THEIR ACT and say the tab instead (its
         // readers at notifications.h).
         //
@@ -1094,16 +1093,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // THE ZOOM STEP ON `=` AND `-` (architect 2026-10-27, Zoom In and Zoom
-    // Out returned): `=` steps the horizontal ZOOM in and `-` out, ONE LEVEL
-    // bare and TWO shifted (is_zoom_step_key / zoom_step_levels, gui_input.h),
+    // Out returned): `=` steps the horizontal ZOOM in and `-` out, ONE LEVEL,
+    // bare only (is_zoom_step_key / zoom_step_levels, gui_input.h; the
+    // shifted two-level step retired 2026-11-08, architect session 93),
     // ABOUT THE VIEWPORT'S CENTRE (Viewport::zoom_step, whose head owns what
-    // the step does to the hold, follow and Zoom to Fit's recall). Ctrl and
-    // alt bind nothing, one spelling per act. Each is a SILENT consumed no-op at its wall — `=` at the floor,
+    // the step does to the hold, follow and Zoom to Fit's recall). No
+    // modifier binds, one spelling per act. Each is a SILENT consumed no-op at its wall — `=` at the floor,
     // `-` at the fit, the benign one-dimensional refusal — and its key greys
     // there (zoom_step_actionable, the act's own leading return). A pure
     // viewport move: it stops nothing and writes no selection. One-shot.
     if (is_zoom_step_key(key, mods)) {
-        viewport.zoom_step(zoom_step_levels(key, mods));
+        viewport.zoom_step(zoom_step_levels(key));
         return;
     }
 
@@ -1525,7 +1525,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Delete drops at the read-only gate above, which is the keyboard
         // path's single guard, and no pointer path reaches the delete routines.
         // Trim is not part of the selection system, so Delete never acts on a
-        // bound (Ctrl+Shift+0 is trim's clear; the sweep, the bar's drags and its
+        // bound (Shift+T is trim's clear; the sweep, the bar's drags and its
         // bound-set clicks are its setters).
         // THE TWO COLUMNS ANSWER DIFFERENTLY SINCE 2026-08-24, the Ctrl+D arm's
         // twin: deleting a marker is an EXISTENCE edit rather than a
@@ -1594,24 +1594,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (tempo_cent_step_direction_actionable, app_state.h), the kind refusal
     // (since 2026-09-13) and the group's wall greying AND carding beside it.
     //
-    // THE MODIFIER IS THE MAGNITUDE (architect 2026-08-31): bare
-    // steps ONE cent and Ctrl THREE, through the ladder's one owner
-    // arrow_step_magnitude (gui_input.h, whose head says why Shift spells
-    // nothing since 2026-10-30) — the vertical pair's alone since
-    // 2026-09-21, the horizontal ladder being retired (the tempo is numeric,
-    // placement graphical). THE ACT IS THE
-    // SAME BODY at both magnitudes: adjust_tempo_cents has taken a signed cent
-    // count since it was written, so the two chords differ in nothing but
-    // the number they hand it, and its own arms answer at the scaled size —
-    // the singleton CLAMPS into the tempo bracket (a Ctrl press one cent
-    // from the max lands ON the max, and one already resting there is the
-    // silent walled no-op with the greyed button beside it), while the group
-    // REFUSES WHOLE unless every selected member can take the FULL step
-    // (group rigidity, at the scan). SHIFT AND CTRL+SHIFT SPELL NOTHING here
-    // as everywhere — they fall through to the strict-modifier tail — and
-    // ALT still binds no press at all. Read-only tabs refuse upstream in both
-    // forms: the allowlist does not admit the vertical arrows on any
-    // modifier, and the buttons grey on the same lock.
+    // ONE UNIT A PRESS, BARE ONLY (architect 2026-11-08, session 93: the
+    // ladder's Ctrl rung, three units, retired with the barrel's chrome road;
+    // gui_input.h's THE ARROW STEP): adjust_tempo_cents takes a signed cent
+    // count, here ±1, and its own arms answer — the singleton CLAMPS into
+    // the tempo bracket (one already resting on the wall is the silent
+    // walled no-op with the greyed button beside it), while the group REFUSES
+    // WHOLE unless every selected member can take the step (group rigidity,
+    // at the scan). EVERY MODIFIED UP / DOWN SPELLS NOTHING — it falls
+    // through to the strict-modifier tail. Read-only tabs refuse upstream:
+    // the allowlist does not admit the vertical arrows, and the buttons grey
+    // on the same lock.
     //
     // THE ADDRESSED CELL PICKS THE BODY (architect 2026-09-04, the iteration
     // bound cells): with a bound cell addressed (AppState::addressed_cell,
@@ -1630,9 +1623,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // above admits Up/Down exactly on a bound axis (iteration_lock_key_blocked),
     // so the payload step belongs to a dark
     // lamp, and the buttons grey on the same fork.
-    if (!alt && !shift && (key == GuiKeys::Up || key == GuiKeys::Down)) {
-        const int64_t delta = (key == GuiKeys::Up ? +1 : -1) *
-                              arrow_step_magnitude(mods);
+    if (!alt && !shift && !ctrl &&
+        (key == GuiKeys::Up || key == GuiKeys::Down)) {
+        const int64_t delta = key == GuiKeys::Up ? +1 : -1;
         switch (app.addressed_cell) {
         case MarkerCell::Payload:
             card_op_refusal(notifications,
@@ -1665,21 +1658,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         return;
     }
-    // CTRL+SHIFT+0 RESETS THE TRIM to the whole song (architect 2026-10-24;
-    // Shift+0 from 2026-09-22, which frames the trim since — its arm beside
-    // bare `0`'s above) — the maximizer, the RECOVERY route trim's absence
-    // from undo requires. It sat on Shift+[ beside the trim region toggle on
-    // bare `[` until the architect deleted that toggle on 2026-09-22 (the
-    // tablet's pen reaches the trim bar) and gave the bracket to the Waveform
-    // Magnification lamp; `0` already means "the whole song" to the camera,
-    // so its ctrl-shifted form says it to the trim. The one predicate is
-    // is_trim_maximize_key (gui_input.h). It arrives as the `0` key plus the
-    // modifier bits, never as a `)` keysym: the backend's keys come only
-    // through synthesize_key, the GuiKey and the modifier bits apart. ITS POINTER ROUTE IS ZOOM TO FIT'S CTRL+SHIFT
-    // PRESS (redesign_button_ctrl_shift_admits: on the glass the S Pen's
-    // barrel held through the long press); a bound dragged onto its partner
-    // on the trim bar is the other road to the whole song
-    // (auto_clear_crossed_trim, input_trim.cpp).
+    // SHIFT+T RESETS THE TRIM to the whole song (architect 2026-11-08,
+    // session 93: the PRESETS key's hold, its own letter shifted)
+    // — the maximizer, the RECOVERY route trim's absence from undo requires.
+    // The one predicate is is_trim_reset_key (gui_input.h). ITS POINTER ROUTE
+    // IS THE PRESETS KEY'S LONG PRESS (redesign_button_shift_admits), and
+    // under the standing trim presets list the list's router runs this same
+    // body (route_picker_key); a bound dragged onto its partner on the trim
+    // bar is the other road to the whole song (auto_clear_crossed_trim,
+    // input_trim.cpp).
     //
     // The playhead is neither an input nor an output of a trim write: none
     // reads it and none moves it (architect 2026-11-07, session 88 — the rule
@@ -1687,7 +1674,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // an endcap hit, pair via a bridge press) and the SWEEP that writes it in
     // one stroke; trim is outside the selection system, so there is no Delete
     // arm.
-    if (is_trim_maximize_key(key, mods)) {
+    if (is_trim_reset_key(key, mods)) {
         handle_trim_maximize();
         return;
     }
@@ -1716,8 +1703,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // contract at the declaration). THE KEY REACHES THE OPENER ON A LOCKED
     // TAB AND UNDER GRID ITERATIONS (read_only_key_blocked's
     // is_trim_presets, which the iteration gate inherits): trim is band. The
-    // `h` view's allowlist refuses it. Every modified `t` binds nothing
-    // (chord_is_bound), silent.
+    // `h` view's allowlist refuses it. SHIFT+T is the reset (its arm above,
+    // the PRESETS key's hold since 2026-11-08); every other modified `t`
+    // binds nothing (chord_is_bound), silent.
     if (key == GuiKeys::T && !shift && !ctrl && !alt) {
         open_trim_presets({});
         return;
@@ -2505,9 +2493,9 @@ void GuiInputHandler::run_overview_command() {
     // because we've changed views, zero should just lose its meaning"): a
     // ceiling this key did not produce, or a stamp taken in the other audio
     // view. A benign refusal already at its state — silent, no card
-    // (notifications.h) — and the button greys unless one of its two modified
-    // presses would act, Shift+0's frame or Ctrl+Shift+0's reset
-    // (span_framing_would_act, reset_trim_would_act; 2026-10-25). The
+    // (notifications.h) — and the button greys unless its modified press would
+    // act, Shift+0's frame (span_framing_would_act; the reset left for the
+    // PRESETS key's hold, 2026-11-08). The
     // whole-song state is left standing, so a flip back
     // brings the stamp into reach again. (Until that ruling a cross-view
     // stamp was re-expressed through the live map and the unstamped ceiling

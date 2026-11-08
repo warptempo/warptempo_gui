@@ -579,7 +579,7 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods);
 // carries the ruling, and it is the model's ONE authoritative home.
 // Authoring-mutation chords (Delete, undo/redo, the propagate commands,
 // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
-// renders and the Ctrl+Shift+0 trim reset are ADMITTED — a save writes the state
+// renders and Reset Trim (Shift+T) are ADMITTED — a save writes the state
 // the tab already holds, a render reads it, and trim is band — and so,
 // since 2026-10-21, is `;`, the settings page (2026-10-28) and the editor
 // its rows open: the lock governs the keys, not the editor (architect
@@ -666,7 +666,7 @@ bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
 // unchanged value all write no bound and so deselect nothing. (The read-only
 // arms of that list — the refused bound set and the refused settings commit —
 // are gone with the 2026-08-07 reclassification of trim as band.)
-// THE NON-SETTER IS EXACTLY ONE ROUTE: Ctrl+Shift+0, the dedicated trim MAXIMIZER,
+// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+T, PRESETS' hold, the dedicated trim MAXIMIZER,
 // which widens the window to the whole song rather than claiming one, so there is
 // no window for a deselect to hand the user (the architect's 2026-07-29
 // exemption, kept verbatim through the 2026-07-30 re-pose). Everything else
@@ -848,7 +848,8 @@ struct GuiInputHandler {
     // body so every gate applies to them identically — the chrome lift and
     // the hold-repeat tick (input_pointer.cpp), a chord reachable iff a
     // roster row spells its key and its admissions grant the modifier (the
-    // long press Shift, the S Pen's barrel Ctrl). Its boundaries each
+    // long press Shift alone; the S Pen's barrel is no chrome modifier since
+    // 2026-11-08). Its boundaries each
     // live at their own homes: the editors' modality
     // (route_modal_editor_key), strict modifier validation (stated in full
     // below), the modal Enter/Space
@@ -1478,8 +1479,9 @@ struct GuiInputHandler {
     // AppState::ChromePress).
     // arm_redesign_press is every chord-bearing band claim's press half:
     // hit-test the painter-published rects against the chord table and, on a
-    // hit, apply the button's shift / enabled refusals, then ARM —
-    // press-time shift carried with the arm — dispatching NOTHING. Returns
+    // hit, apply the button's enabled refusal, then ARM — no modifier
+    // carried, the barrel's ctrl consumed at the band gate before it
+    // (architect 2026-11-08) — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
     // being a consumed nothing). Every roster button is chord-bearing since
     // the menu row's three anchors — the press-time exception, each a
@@ -1489,8 +1491,7 @@ struct GuiInputHandler {
     // (2026-10-01), resuming the held card's clock.
     // finish_chrome_press_release is the release half: re-hit the armed
     // target at the release's own coordinates and re-ask the press-time
-    // gates — the modal veil FIRST, for every kind alike, then the roster's own
-    // shift admission under the CARRIED shift, then the enabled bit ON THE
+    // gates — the modal veil FIRST, for every kind alike, then the enabled bit ON THE
     // PAINTED FACE (architect 2026-09-24, strictly as-painted; never the live
     // predicates; a view pair's lit member dispatches like any button since
     // its pop, 2026-10-23 night, kToolbarChords' NO RADIO COLUMN) — then run
@@ -1502,7 +1503,7 @@ struct GuiInputHandler {
     // measured against the arm's press stamp and ORed into the one shift term
     // the chord is built from, on the shift-admitting buttons alone
     // (chrome_shift_hold_ms(), app_state.h, carries the ruling).
-    bool arm_redesign_press(int x, int y, GuiInputState mods);
+    bool arm_redesign_press(int x, int y);
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,
                                      int x, int y);
@@ -3141,7 +3142,7 @@ private:
     // have undo — so trim is excluded also"). That is the warp store, the phase
     // reset store and the engine settings — what
     // push_undo_both captures — and NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
-    // Ctrl+Shift+0 is its recovery), and so do the S/T bit, the W/P bit, the A/B
+    // Reset Trim is its recovery), and so do the S/T bit, the W/P bit, the A/B
     // tab, the camera, the hold posture, the follow lamp and projects_repo — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
@@ -3339,10 +3340,9 @@ private:
     // floor at a gesture: the render boundary owns whether a window is
     // honorable, and it answers with an untrimmed render, not a refusal.)
 
-    // Ctrl+Shift+0 MAXIMIZES the trim to the full window [0, total-1] — RESET TRIM
+    // Shift+T MAXIMIZES the trim to the full window [0, total-1] — RESET TRIM
     // (architect 2026-07-25 for the act, re-posed 2026-07-30 under always-set,
-    // on Ctrl+Shift+0 since 2026-10-24 — Shift+0 from 2026-09-22, Shift+[
-    // before, x before that: the full
+    // on the PRESETS key's hold since 2026-11-08: the full
     // window IS the old unset state — it renders untrimmed and plays to the
     // natural end). Read-only admits it (trim is band, the ruling at
     // read_only_key_blocked); the body then delegates WHOLE to
@@ -3355,11 +3355,11 @@ private:
 
     // Write the FULL window [0, total-1]. Silent no-op when the window is
     // ALREADY full (the identity guard that replaced the old has-a-bound refusal
-    // gate — an already-maximized Ctrl+Shift+0 stops nothing, repaints nothing and
+    // gate — an already-maximized Reset Trim stops nothing, repaints nothing and
     // triggers nothing). The caller is handle_trim_maximize.
     void handle_trim_clear_both();
 
-    // Field-reset core shared by handle_trim_clear_both (the Ctrl+Shift+0 maximizer)
+    // Field-reset core shared by handle_trim_clear_both (the Shift+T maximizer)
     // and the crossed-commit reset below: write the canonical full pair for the
     // loaded source through the one seeding owner, full_trim_window
     // (app_state.h). No invalidation and no trigger — callers own their repaint
@@ -3394,7 +3394,7 @@ private:
     // Callers own everything around it: their refusals, the playback stop and
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
-    // handle_trim_clear_both (the Ctrl+Shift+0 maximizer resets rather than
+    // handle_trim_clear_both (the Shift+T maximizer resets rather than
     // auto-clears — a non-setter), which spells its own reset, repaint and
     // trigger.
     void commit_trim_mutation();

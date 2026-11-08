@@ -198,7 +198,7 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app) {
     return PhaseResetCopyRefusal::None;
 }
 
-// Asked at the press and by the Copy Phase Resets key's face every tick since
+// Asked at the press and by the COPY key's face every tick since
 // 2026-10-24 (phase_reset_copy_actionable), with no memo: the walk stops at
 // the first propagating member, and a selection is tens of markers. (A memo
 // served the per-tick faces until 2026-10-21, AppState's note where it
@@ -221,13 +221,16 @@ PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app) {
 }
 
 // THE COPY KEY'S FACE TERM (the declaration, app_state.h): the copy's ladder
-// alone, the lock being the face's own term. (The pigeon's face in the
-// phase-reset view — phase_reset_propagate_pair_actionable and
-// phase_reset_paste_actionable — stood for the evening of 2026-10-21; Open
-// Text Editor's seat, 2026-10-21 to 2026-10-24, greyed for its plain act
-// alone.)
+// alone, the lock being the face's own term.
 bool phase_reset_copy_actionable(const AppState& app) {
     return phase_reset_copy_refusal(app) == PhaseResetCopyRefusal::None;
+}
+
+// THE PASTE KEY'S FACE TERM (architect 2026-11-08, session 93; the
+// declaration, app_state.h): the two pastes' one ladder, the locks being the
+// face's own terms.
+bool phase_reset_paste_actionable(const AppState& app) {
+    return phase_reset_paste_refusal(app) == PhaseResetPasteRefusal::None;
 }
 
 void PhaseResetPropagate::copy_from_selection() {

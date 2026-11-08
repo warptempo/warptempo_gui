@@ -28,10 +28,8 @@ struct GuiInputHandler;
 // three again since that column's deletion 2026-09-23): the
 // TWO COLUMNS' position nudges (Left/Right in the
 // marker lane) and the one coalescing arm of the Up/Down VALUE STEP on the
-// addressed cell — the tempo cent step — each in
-// both of the step's magnitudes (bare and the barrel's three), which the
-// coalescing is blind to exactly as it is blind to direction (the record is
-// at coalesce_gesture) — collapses
+// addressed cell — the tempo cent step — each
+// blind to direction (the record is at coalesce_gesture) — collapses
 // into ONE undo entry under EITHER rule:
 //   (1) REPEAT IDENTITY, for a HELD BUTTON: the burst's OPENER
 //       pushes the pre-burst snapshot, and every SYNTHESIZED REPEAT behind it

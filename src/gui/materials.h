@@ -100,8 +100,8 @@
 // and the legend `text` (key_ink below), the legend being on the ground.
 // THE LISTS' ROWS go the other way, lighter (THE SELECTION PAIR, below).
 // NO TIMING, NO HOLD, NO ANIMATION: the face follows the press bit as
-// painted; the press arms — the slide-off feint, the hold-repeat, the long
-// press and the barrel — are unchanged. THE OTHER FEEDBACK STAYS: the act
+// painted; the press arms — the slide-off feint, the hold-repeat and the long
+// press — are unchanged. THE OTHER FEEDBACK STAYS: the act
 // itself, a stateful key's glyph showing the act its next press runs, the
 // typed character, the selection pair landing on a row. A DISABLED key
 // keeps the face its state gives, its glyph and its legend in

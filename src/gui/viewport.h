@@ -429,8 +429,8 @@ struct Viewport {
                                double anchor_x, bool final,
                                ViewportLattice lattice);
     // THE ZOOM STEP (architect 2026-10-27: bare `=` / `-` and the band's
-    // Zoom In / Zoom Out keys one level, Shift+= / Shift+- and the keys'
-    // shift press or long press two): `levels` whole levels from the current
+    // Zoom In / Zoom Out keys one level, since 2026-11-08 the only step):
+    // `levels` whole levels from the current
     // one (negative deeper — zoom_step_levels, gui_input.h), saturating at
     // the map's live bounds (zoom_step_level, app_state.h), ZOOMING ABOUT THE
     // VIEWPORT'S CENTRE — the frame at the waveform's centre column stays

@@ -59,6 +59,7 @@ ROSTER = [
     ('MediaRecord', 'actions/22/media-record'),
     ('DialogCancel', 'actions/22/dialog-cancel'),
     ('EditCopy', 'actions/22/edit-copy'),
+    ('EditPaste', 'actions/22/edit-paste'),
     ('ZoomIn', 'actions/22/zoom-in'),
     ('ZoomOut', 'actions/22/zoom-out'),
     ('ZoomFitBest', 'actions/22/zoom-fit-best'),

@@ -38,9 +38,11 @@ std::string format_domain_timestamp(double source_frame, const AppState& app,
 // input_key_dispatch.cpp; architect 2026-10-24 — Ctrl+Return /
 // Ctrl+Shift+Return from 2026-10-21, Ctrl+P / Ctrl+Alt+P /
 // Ctrl+Alt+Shift+P before) switch on these to card — THE TWO PASTES SHARE
-// THE PASTE'S LADDER, term for term — and THE COPY'S IS THE COPY PHASE
-// RESETS KEY'S FACE TERM (phase_reset_copy_actionable, app_state.h), the
-// key greying for its plain act alone. THE FIRST RUNG IS THE WARP COLUMN:
+// THE PASTE'S LADDER, term for term — and each ladder is its key's face term
+// (architect 2026-11-08, the COPY / PASTE duo): the copy's COPY's
+// (phase_reset_copy_actionable, app_state.h), the paste's PASTE's
+// (phase_reset_paste_actionable), one ladder answering for both its pastes,
+// Ctrl+P its tap and Ctrl+Shift+P its hold. THE FIRST RUNG IS THE WARP COLUMN:
 // all three act on a warp-marker selection, so in the phase-reset column
 // they refuse there (architect 2026-10-21, "phase clipboard only in warp":
 // the P-column question is closed and the family is never widened). Pure:

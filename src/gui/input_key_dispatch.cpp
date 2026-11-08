@@ -379,17 +379,17 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
         (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_render_misc =
         (ctrl && alt && shift && key == GuiKeys::R);
-    // RESET TRIM (architect 2026-08-07, on its key since 2026-10-24):
-    // Ctrl+Shift+0 maximizes the trim window back to the full song. Trim is
+    // RESET TRIM (architect 2026-08-07, on its key since 2026-11-08):
+    // Shift+T, the PRESETS key's hold, maximizes the trim window back to the
+    // full song. Trim is
     // BAND, not content (the header), so it is admitted, and its internal
     // behavior is untouched: the maximizer's identity guard, the setter's
     // deselect and the trim-mutation playback stop are all
     // the same code taking the same decisions. The term is named for the ACT
-    // rather than a key, which is what kept each of its moves (x → Shift+[ on
-    // 2026-08-24, Shift+[ → Shift+0 on 2026-09-22, Shift+0 → Ctrl+Shift+0 on
-    // 2026-10-24) a spelling change here. The trim
+    // rather than a key, which is what kept each of its moves (the last, to
+    // Shift+T on 2026-11-08) a spelling change here. The trim
     // region toggle that was admitted beside it is deleted (2026-09-22).
-    const bool is_trim_maximize = is_trim_maximize_key(key, mods);
+    const bool is_trim_maximize = is_trim_reset_key(key, mods);
     // BARE `t`, THE TRIM PRESETS LIST (architect 2026-10-28 night): the
     // list's acts write the TRIM, which is band (the header's 2026-08-07
     // ruling, the maximizer's admission above), and the list's own
@@ -2948,10 +2948,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory. THE DERIVATION ASKS THE BASE CHORD, so a lit button's modifier
 // twins are this list's members too, and every one is: Open Project's
-// Ctrl+Alt+O, Zoom to Fit's Shift+0 and Ctrl+Shift+0, the zoom pair's
-// shifted steps and the tab buttons' Ctrl+Tab are admitted below, Save's
-// lift is the publish chord in here, and the walk's, the march's, the
-// skips' and the history steps' shifted forms are the mode's own
+// Ctrl+Alt+O, Zoom to Fit's Shift+0 and the tab buttons' Ctrl+Tab are
+// admitted below, Save's lift is the publish chord in here, and the walk's,
+// the march's, the skips' and the history steps' forms are the mode's own
 // vocabulary (history_mode_owns_key) — so no press a lit button makes is
 // one this list refuses.
 //
@@ -2996,19 +2995,18 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
-    // ZOOM TO FIT, FRAME THE TRIM AND RESET TRIM — Zoom to Fit's three
-    // presses (bare `0`, Shift+0 since 2026-10-24, and Ctrl+Shift+0, the
-    // barrel held through the long press, admitted 2026-10-30, architect:
-    // every press a lit button can make is a press the view admits, so no
-    // chord the roster spells is refused here): the first two are the camera,
-    // touching nothing the view froze — the frame is the trim bar's
-    // double-click, which the view has always run (handle_history_mode_press's
-    // trim-bar arm) — and the third is the trim's reset
-    // (handle_trim_maximize), its own body answering in here as outside.
+    // ZOOM TO FIT AND FRAME THE TRIM — Zoom to Fit's two presses (bare `0`
+    // and Shift+0, since 2026-10-24; architect 2026-10-30: every press a lit
+    // button can make is a press the view admits): the camera, touching
+    // nothing the view froze — the frame is the trim bar's double-click,
+    // which the view has always run (handle_history_mode_press's trim-bar
+    // arm). (RESET TRIM, Shift+T, the PRESETS key's hold, is not admitted:
+    // the view names neither `t` chord — the key is hidden here, bare `t`'s
+    // refusal its one road's — so the view refuses it as it refuses every
+    // trim write.)
     const bool is_zero  = (key == GuiKeys::Digit0 && bare) ||
-                          is_trim_frame_key(key, mods) ||
-                          is_trim_maximize_key(key, mods);
-    // THE ZOOM STEP (`=` / `-`, bare and shifted; architect 2026-10-27): the
+                          is_trim_frame_key(key, mods);
+    // THE ZOOM STEP (`=` / `-`, bare only since 2026-11-08; architect 2026-10-27): the
     // camera, as the Ctrl+drag zoom the view already admits is — so the Zoom
     // In and Zoom Out keys stand live in the view by the derived partition.
     const bool is_zoom_step = is_zoom_step_key(key, mods);
@@ -4404,8 +4402,8 @@ namespace {
 // apart the way hand-kept lists would. BARE TAB EXACTLY, the forward walk
 // (architect 2026-10-30: the on-screen keyboard's Tab key, its one producer,
 // carries no shift — Shift is a one-shot capital for the next character — so
-// the reverse walk had no producer and went; the barrel's Ctrl+Tab is the
-// tab-cycle family's, never this ring's).
+// the reverse walk had no producer and went; Ctrl+Tab is the tab-cycle
+// family's, never this ring's).
 bool modal_ring_tab(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Tab && !mods.ctrl && !mods.shift && !mods.alt;
 }
@@ -4495,19 +4493,17 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // kToolbarChords — the four ARROWS (Left/Right being the playhead step in
     // the waveform lane and the position nudge in the marker lane, Up/Down the
     // VALUE STEP on the addressed cell — the tempo or a bound; the lane split
-    // is decided per fire at dispatch, so the arrows repeat as one family, on
-    // their ctrl spelling too) and UNDO / REDO, Ctrl+Z / Ctrl+Shift+Z. These
+    // is decided per fire at dispatch, so the arrows repeat as one family) and
+    // UNDO / REDO, Ctrl+Z / Ctrl+Shift+Z. These
     // arms name exactly those rows' chords; every other chord is one-shot.
-    // THE FOUR ARROWS REPEAT IN EVERY FORM THEY BIND (architect 2026-08-31):
-    // a HELD REPEAT CARRIES ITS MODIFIER, so a held Ctrl+Up (the barrel held
-    // on the button) walks three cents a fire — the burst continues the
-    // gesture the press began, which is the whole meaning of a hold. Up /
-    // Down bind bare and Ctrl (the ladder, arrow_step_magnitude, whose head
-    // says why Shift spells nothing since 2026-10-30); Left / Right bind BARE ONLY
-    // (the horizontal ladder retired 2026-09-21; the Ctrl form 2026-09-23),
-    // so a held Left / Right button walks one step of the active
-    // column's unit a fire, a hop on the phase-reset column, keeping its
-    // column at every fire while the hold posture stands. The lane
+    // THE FOUR ARROWS REPEAT IN THEIR ONE FORM, BARE (architect 2026-08-31;
+    // every arrow binds bare alone since 2026-11-08, the vertical ladder's
+    // Ctrl rung retired, gui_input.h's THE ARROW STEP): a held Up / Down
+    // button walks a cent a fire — the burst continues the gesture the press
+    // began, which is the whole meaning of a hold; a held Left / Right
+    // button walks one step of the active column's unit a fire, a hop on the
+    // phase-reset column, keeping its column at every fire while the hold
+    // posture stands. The lane
     // split and the unit are decided per fire at dispatch, so the arm is
     // their own rather than a term in the bare list above; CTRL, SHIFT and
     // ALT spell nothing to repeat.
@@ -6247,7 +6243,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // back on the FIELD carries no strength and clears it.
 //
 // EVERY SHAPE IS BARE-EXACT: the modifier guard below refuses every modified
-// key (the barrel's Ctrl+Tab is the tab-cycle family's, never this ring's).
+// key (Ctrl+Tab is the tab-cycle family's, never this ring's).
 // THE STASH'S IDENTITY GATES IT like the press claim — the stash is the
 // painter's publication and may only SELECT; the surface that owns input
 // DECIDES (modal_dialog_stash_current, the one comparison). A flag editor
@@ -7668,6 +7664,23 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // SHIFT+T RESETS THE TRIM UNDER THE TRIM PRESETS LIST (architect
+    // 2026-11-08, session 93): the PRESETS key's long press under its own
+    // list, OPEN PROJECT's Revert-under-the-picker shape — the same body the
+    // ordinary dispatch's arm calls (handle_trim_maximize), THE LIST STAYING
+    // STANDING, its rows and highlight untouched. The list stays truthful:
+    // its rows are names alone, and the one face that reads the live trim,
+    // the controls row's Save (trim_presets_button_enabled: the highlighted
+    // pair against the tab's trim), is damaged here as the apply damages it.
+    // The reset lands under the standing box, the trim bar and the waveform
+    // covered while the list stands (folder_overlay.h's head), and shows at
+    // the list's close, whose damage is the whole window.
+    if (trim_presets && is_trim_reset_key(key, mods)) {
+        handle_trim_maximize();
+        viewport.invalidate_modal_dialog_area();
+        return;
+    }
+
     // CTRL+B CLOSES THE BPM FORM AND THE MODE WITH IT (architect 2026-10-29,
     // the same rule one content over): the BPM key's lift under the form,
     // the opener's own chord, runs the form's close (close_bpm_form), as its
@@ -7831,9 +7844,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // CTRL+P: paste clipboard phase resets onto the destination anchored at
-    // the single selected warp marker (architect 2026-10-24, the Copy Phase
-    // Resets key's ctrl press — on the glass the barrel button with a tap;
-    // Ctrl+Alt+P from 2026-07-23, Ctrl+Shift+Return from 2026-10-21). W-mode only; the three
+    // the single selected warp marker (architect 2026-10-24; since 2026-11-08
+    // the PASTE key's base chord). W-mode only; the three
     // gates — the P view, an empty clipboard, and a selection that is not
     // exactly one marker — EACH SAY SO ON A CARD since 2026-08-30 (the
     // strictness ruling; the sentences are the family's shared literals, so
@@ -7852,10 +7864,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // CTRL+SHIFT+P: propagate the enabled/disabled *state* of clipboard
     // placements onto the matching destination region's phase resets, in
-    // order (architect 2026-10-24, PASTE PHASE RESET STATE resurrected as the
-    // Copy Phase Resets key's ctrl+shift press — on the glass the barrel held
-    // through the long press; Ctrl+Alt+Shift+P until its removal of
-    // 2026-10-21 with the Edit menu). Positions are not modified. W-mode
+    // order (architect 2026-10-24, PASTE PHASE RESET STATE resurrected; since
+    // 2026-11-08 the PASTE key's hold). Positions are not modified. W-mode
     // only; its three gates are its Ctrl+P sibling's term for term and CARD
     // in that sibling's own sentences (since 2026-08-30), where the
     // rationale is stated. Unlike Ctrl+P, no confirmation prompt — applies

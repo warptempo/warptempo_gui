@@ -197,18 +197,15 @@ struct GuiInputState {
     bool     synthesized_repeat  = false;
 };
 
-// -- THE ARROW STEP LADDER (architect 2026-08-31) ----------------------------
+// -- THE ARROW STEP (architect 2026-08-31; ONE RUNG since 2026-11-08) --------
 //
-// THE MODIFIER IS THE STEP'S MAGNITUDE ON THE VERTICAL ARROWS, AND ON THEM
-// ALONE: bare is ONE unit and Ctrl is THREE, and the unit is
-// whatever the bare Up / Down's own act steps on the addressed cell — a CENT
-// on the tempo (singleton and group), a cent or a hop on a bound. The tempo
-// is NUMERIC, so a count of
-// cents is a number the user thinks in. THE LADDER HAS TWO RUNGS (architect
-// 2026-10-30): the Up / Down buttons repeat, and a held repeat outranks the
-// long-press shift (ToolbarChord::repeats, input_pointer.cpp), so Shift+Up /
-// Shift+Down bind nothing; the barrel's Ctrl is the one modifier the
-// buttons carry.
+// NO MODIFIER IS A STEP'S MAGNITUDE (architect 2026-11-08, session 93: the
+// vertical ladder's last rung, Ctrl+Up / Ctrl+Down's three units — the S Pen
+// barrel's step on the Up / Down keys — retired with the barrel's chrome
+// road; Shift's ten went 2026-10-30). Each press steps ONE unit, whatever the
+// bare Up / Down's own act steps on the addressed cell — a CENT on the tempo
+// (singleton and group), a cent or a hop on a bound — and the held button's
+// repeat is the way to go further.
 //
 // THE HORIZONTAL PAIR HAS NO LADDER (architect 2026-09-21, retiring the
 // 2026-08-31 horizontal rungs on every column): horizontal placement is
@@ -222,20 +219,14 @@ struct GuiInputState {
 // camera is the hold posture's (NudgeCamera below), so this function is never
 // asked about a horizontal press.
 //
-// SHIFT AND CTRL+SHIFT SPELL NOTHING — strict modifier validation, so each
-// is the consumed no-op it is everywhere else. Alt likewise. The dispatch
-// arms ask for the magnitude only after they have refused those
-// combinations.
+// EVERY MODIFIED ARROW SPELLS NOTHING — strict modifier validation, so each
+// is the consumed no-op it is everywhere else (chord_is_bound: the four
+// arrows bind bare alone).
 //
-// THE WALLS ARE THE BARE FORM'S, at the scaled size: a SINGLETON step clamps
-// onto its wall and a GROUP press refuses whole where any member could not
-// take the FULL step — the unified wall policy, stated at the head of
-// position_nudge.h and instanced at the group tempo scan
-// (tempo_cent_step_group_actionable).
-inline constexpr int64_t kArrowStepCtrl = 3;
-constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
-    return mods.ctrl ? kArrowStepCtrl : 1;
-}
+// THE WALLS: a SINGLETON step clamps onto its wall and a GROUP press refuses
+// whole where any member could not take the step — the unified wall policy,
+// stated at the head of position_nudge.h and instanced at the group tempo
+// scan (tempo_cent_step_group_actionable).
 
 // ONE HORIZONTAL ARROW PRESS'S STEP, as the dispatch hands it to the act, the
 // landing owners and the faces: a signed COUNT in one of two UNITS, the count
@@ -519,10 +510,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::S: return bare || sh || cl || cs;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
-        // THE PHASE-RESET PROPAGATE, ONE LETTER (architect 2026-10-24, the
-        // Copy Phase Resets key): bare `p` COPIES the selected run's phase
-        // resets, CTRL+P PASTES them and CTRL+SHIFT+P PASTES THEIR STATE
-        // (is_phase_reset_copy_key and its two siblings below). Shift+P and
+        // THE PHASE-RESET PROPAGATE, ONE LETTER (architect 2026-10-24): bare
+        // `p` COPIES the selected run's phase resets (the COPY key), CTRL+P
+        // PASTES them and CTRL+SHIFT+P PASTES THEIR STATE (the PASTE key's
+        // tap and hold since 2026-11-08; is_phase_reset_copy_key and its two
+        // siblings below). Shift+P and
         // every alt spelling bind nothing. (The letter bound nothing from
         // 2026-10-21, the pair on Return's ctrl forms, the state paste
         // removed; Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P before that, and
@@ -549,8 +541,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // modes: the `h` view's allowlist refuses it there (its key hidden
         // there), and under the standing list
         // the picker's router closes on it (route_picker_key, ranked above
-        // this predicate's every reader). Every modified `t` binds nothing.
-        case GuiKeys::T: return bare;
+        // this predicate's every reader). SHIFT+T RESETS THE TRIM (architect
+        // 2026-11-08, session 93, the PRESETS key's hold; is_trim_reset_key
+        // below), under the standing list too, the list staying. Every other
+        // modified `t` binds nothing.
+        case GuiKeys::T: return bare || sh;
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
         // in every state), which is why it reads no mode term while the seven
@@ -584,11 +579,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // nothing.
         case GuiKeys::R: return bare || ca || cas;
 
-        // Zoom to Fit, on its shifted form FRAME THE TRIM, and on its
-        // ctrl+shift form RESET TRIM (architect 2026-10-24; Shift+0 the
-        // reset from 2026-09-22, when the maximizer left Shift+[ for the
-        // magnification lamp). Ctrl+0 binds nothing.
-        case GuiKeys::Digit0: return bare || sh || cs;
+        // Zoom to Fit, and on its shifted form FRAME THE TRIM (architect
+        // 2026-10-24). Ctrl+0 binds nothing, and CTRL+SHIFT+0 NOTHING since
+        // 2026-11-08 (architect, session 93): Reset Trim, its act from
+        // 2026-10-24, is Shift+T, the PRESETS key's hold.
+        case GuiKeys::Digit0: return bare || sh;
         // The four selectors, one axis each: bare 1 is Source, bare 2
         // Target, bare 3 Warp, bare 4 Phase Reset (architect 2026-10-14, the
         // icon row's two radio pairs; the key for the value standing selects
@@ -614,10 +609,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the lamp was on bare `]` for its first hours, then on bare `[`.)
         case GuiKeys::Grave: return bare;
         // THE ZOOM STEP (architect 2026-10-27, Zoom In and Zoom Out returned):
-        // `=` deeper and `-` shallower, bare one level and SHIFTED two
-        // (is_zoom_step_key below, the dispatch's and both allowlists' one
-        // predicate). Ctrl and alt spell nothing on either key.
-        case GuiKeys::Equal: case GuiKeys::Minus: return bare || sh;
+        // `=` deeper and `-` shallower, one level, BARE ONLY since 2026-11-08
+        // (architect, session 93: the shifted two-level step retired;
+        // is_zoom_step_key below, the dispatch's and both allowlists' one
+        // predicate). No modifier spells anything on either key.
+        case GuiKeys::Equal: case GuiKeys::Minus: return bare;
         // Toggle Value Drag (architect 2026-10-11), the bare LEFT BRACKET,
         // bound in both modes as `k` is: the one-shot lamp arming the flag's
         // value drag (AppState::value_drag_lamp), the `h` view's allowlist
@@ -658,17 +654,17 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // definition — the Delete button's long press. The
         // ctrl and alt forms bind nothing.
         case GuiKeys::Delete: return bare || sh;
-        // The marker walk (bare forward, shift back; its landing camera is
-        // the landing owner's, Viewport::land_subject), the A/B tab switch
-        // and the paired march. No Alt spelling of Tab binds (the Alt walk
-        // was deleted 2026-09-23).
+        // The marker walk (bare forward — NEXT — and shift back — PREV; its
+        // landing camera is the landing owner's, Viewport::land_subject), the
+        // A/B tab switch and the paired march (SWITCH and its hold). No Alt
+        // spelling of Tab binds (the Alt walk was deleted 2026-09-23).
         case GuiKeys::Tab: return bare || sh || cl || cs;
-        // The value step on the addressed cell (the tempo or a bound), IN
-        // TWO MAGNITUDES: bare one unit and Ctrl three (the ladder's owner is
-        // arrow_step_magnitude above, whose head says why Shift spells
-        // nothing since 2026-10-30). Shift and Ctrl+Shift spell nothing.
+        // The value step on the addressed cell (the tempo or a bound), ONE
+        // UNIT, BARE ONLY since 2026-11-08 (architect, session 93: Ctrl's
+        // three-unit rung retired; the head of THE ARROW STEP above). Every
+        // modified Up / Down spells nothing.
         case GuiKeys::Up: case GuiKeys::Down:
-            return bare || cl;
+            return bare;
         // The playhead / marker position step, BARE ONLY on every column
         // (architect 2026-09-21: the horizontal ladder is retired — placement
         // is graphical; the step's unit is the active column's,
@@ -780,21 +776,21 @@ static_assert(!chord_is_bound(GuiKeys::J, GuiInputState{}, false) &&
 static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit0,
                                  GuiInputState{false, true, false}, false) &&
-                  chord_is_bound(GuiKeys::Digit0,
-                                 GuiInputState{true, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Digit0,
+                                  GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Digit0,
                                   GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Digit0,
                                   GuiInputState{true, true, true}, false),
-              "bare `0` is Zoom to Fit, Shift+0 frames the trim and "
-              "Ctrl+Shift+0 resets it (2026-10-24); no other decoration of "
-              "`0` binds");
+              "bare `0` is Zoom to Fit and Shift+0 frames the trim; "
+              "Ctrl+Shift+0, the reset until 2026-11-08, and every other "
+              "decoration of `0` bind nothing");
 static_assert(chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Minus, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Equal,
-                                 GuiInputState{false, true, false}, false) &&
-                  chord_is_bound(GuiKeys::Minus,
-                                 GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Equal,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::Minus,
+                                  GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Equal,
                                   GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Minus,
@@ -803,8 +799,9 @@ static_assert(chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
                                   GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Minus,
                                   GuiInputState{false, false, true}, false),
-              "bare `=` / `-` step the zoom one level in / out and Shift+= / "
-              "Shift+- two (2026-10-27); no ctrl or alt form binds");
+              "bare `=` / `-` step the zoom one level in / out; Shift+= / "
+              "Shift+-, the two-level step until 2026-11-08, and every ctrl "
+              "or alt form bind nothing");
 // `l` binds bare only since 2026-09-30, when Shift+L went with the AV Sync
 // Stats panel, so its anchor witnesses the "only" whole: the one positive,
 // then EVERY non-bare combination of the three modifiers as a negative — the
@@ -887,12 +884,13 @@ static_assert(chord_is_bound(GuiKeys::R, GuiInputState{}, false) &&
                                   GuiInputState{false, true, true}, false),
               "`r` binds bare — the RESTRICT lamp — and the render pair "
               "alone");
-// `t` binds bare only — the Trim Presets list (2026-10-28 night) — in both
-// modes, and no modifier spells anything on it.
+// `t` binds bare — the Trim Presets list (2026-10-28 night) — and shifted —
+// Reset Trim, the PRESETS key's hold (2026-11-08) — in both modes, and no
+// other modifier spells anything on it.
 static_assert(chord_is_bound(GuiKeys::T, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::T, GuiInputState{}, true) &&
-                  !chord_is_bound(GuiKeys::T,
-                                  GuiInputState{false, true, false}, false) &&
+                  chord_is_bound(GuiKeys::T,
+                                 GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::T,
                                   GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::T,
@@ -905,8 +903,9 @@ static_assert(chord_is_bound(GuiKeys::T, GuiInputState{}, false) &&
                                   GuiInputState{false, true, true}, false) &&
                   !chord_is_bound(GuiKeys::T,
                                   GuiInputState{true, true, true}, false),
-              "`t` binds bare only — the Trim Presets list — and none of the "
-              "seven modifier combinations spells anything");
+              "`t` binds bare — the Trim Presets list — and Shift+T, Reset "
+              "Trim; none of the six other modifier combinations spells "
+              "anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
 // Ctrl+Alt Revert — and no shifted spelling of any of them. (Open
 // Project's icon-row button reaches Revert by a shift press, the button's
@@ -948,8 +947,9 @@ static_assert(!chord_is_bound(GuiKeys::F,
                   !chord_is_bound(GuiKeys::D,
                                   GuiInputState{false, false, true}, false),
               "no Alt-alone letter binds");
-// THE LETTER P IS THE PROPAGATE (architect 2026-10-24): bare the copy, Ctrl
-// the paste, Ctrl+Shift the state paste, in both modes (the `h` view's
+// THE LETTER P IS THE PROPAGATE (architect 2026-10-24): bare the copy (COPY),
+// Ctrl the paste and Ctrl+Shift the state paste (PASTE's tap and hold since
+// 2026-11-08), in both modes (the `h` view's
 // allowlist then refuses all three, the key hidden there); Shift+P and every alt
 // spelling bind nothing — the anchor walks all eight combinations.
 consteval bool letter_p_binds_the_propagate() {
@@ -994,14 +994,17 @@ static_assert(chord_is_bound(GuiKeys::S,
               "Ctrl+Shift+S, the publish chord, binds in both modes; "
               "Ctrl+Alt+Shift+S stays unbound");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Up,
-                                 GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Up,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Down,
+                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Up,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Up,
                                   GuiInputState{true, true, false}, false),
-              "a vertical arrow binds bare and Ctrl — the step ladder's two "
-              "magnitudes — and neither Shift nor Ctrl+Shift spells a third");
+              "a vertical arrow binds bare alone — one unit — and Ctrl+Up / "
+              "Ctrl+Down (the three-step until 2026-11-08), Shift and "
+              "Ctrl+Shift spell nothing");
 static_assert(chord_is_bound(GuiKeys::Left, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Right, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Left,
@@ -1172,28 +1175,27 @@ inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for the chord that RESETS THE TRIM to the whole song
-// (GuiInputHandler::handle_trim_maximize): CTRL+SHIFT+0 exactly — ctrl and
-// shift, no alt (architect 2026-10-24, when Shift+0 became the trim's frame,
-// below; Shift+0 from 2026-09-22, off Shift+[ when the bracket went to the
-// magnification lamp). It arrives as the `0` key plus the modifier bits: the
-// backend produces keys only through synthesize_key, which carries the GuiKey
-// and the modifier bits apart, so a `)` never reaches the dispatch. One-shot.
-// THREE READERS: on_key's dispatch arm (input_handler.cpp), the read-only
+// (GuiInputHandler::handle_trim_maximize): SHIFT+T exactly — shift, no ctrl,
+// no alt (architect 2026-11-08, session 93: the PRESETS key's hold, its own
+// letter under the hold's shift). It
+// arrives as the `t` key plus the shift bit: the backend produces keys only
+// through synthesize_key, which carries the GuiKey and the modifier bits
+// apart. One-shot. THREE READERS: on_key's dispatch arm (input_handler.cpp),
+// the trim presets list's router (route_picker_key, input_key_dispatch.cpp —
+// the hold under the standing list, the list staying) and the read-only
 // allowlist (read_only_key_blocked, which ADMITS it — trim is band, not
-// content) and the `h` view's (history_mode_allowlist_refuses, which ADMITS
-// it since 2026-10-30, architect: every press the lit Zoom to Fit key can
-// make is admitted in the view); the Zoom to Fit button's ctrl+shift press
-// (on the glass the S Pen's barrel held through the long press) reaches the
-// first through on_key (redesign_button_ctrl_shift_admits).
-inline bool is_trim_maximize_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::Digit0 && mods.ctrl && mods.shift && !mods.alt;
+// content). The `h` view's allowlist names it no more than bare `t`
+// (history_mode_allowlist_refuses), so the view refuses it, the PRESETS key
+// hidden there.
+inline bool is_trim_reset_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::T && !mods.ctrl && mods.shift && !mods.alt;
 }
 
 // True for the chord that FRAMES THE TRIM (GuiInputHandler::
 // run_span_framing_command, the trim bar's double-click exactly — a proper
 // trim sub-window with the edge margin each side, else the whole song):
 // SHIFT+0 exactly — shift, no ctrl, no alt (architect 2026-10-24; it was the
-// reset until then, above). Bare `0` is Zoom to Fit's toggle and untouched;
+// reset until then). Bare `0` is Zoom to Fit's toggle and untouched;
 // `0` is the whole song to the camera, shifted the trim's span to the camera.
 // A CAMERA ACT: it writes no store and no trim, so the read-only allowlist
 // (read_only_key_blocked) and the `h` view's (history_mode_key_blocked)
@@ -1207,37 +1209,31 @@ inline bool is_trim_frame_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for the chords that STEP THE ZOOM (architect 2026-10-27, item (e):
-// Zoom In and Zoom Out "basically as they used to be ... and then add the
-// Shift version, which instead of going 2x goes 4x"): `=` zooms in and `-`
-// out, BARE ONE LEVEL and SHIFTED TWO (the step sizes below) — no ctrl, no
-// alt. Both arrive as their own keys with the modifier bits beside them (the
-// backend produces keys only through synthesize_key), so Shift+= is the `=`
-// key with the shift bit and never `+`, and Shift+- never `_`. A CAMERA ACT about the viewport's centre
+// Zoom In and Zoom Out "basically as they used to be"): `=` zooms in and `-`
+// out, ONE LEVEL, BARE EXACTLY — no ctrl, no shift, no alt (architect
+// 2026-11-08, session 93: the shifted two-level step, Shift+= / Shift+-, the
+// keys' hold from 2026-10-27, retired). A CAMERA ACT about the viewport's centre
 // (Viewport::zoom_step), writing no store, no trim and no playhead, so the
 // read-only allowlist (read_only_key_blocked, which the grid-iterations lock
 // falls through to) and the `h` view's (history_mode_key_blocked) both ADMIT
 // it, as the view admits the barrel-held drag zoom. ONE-SHOT
-// (repeat_eligible names neither key; the buttons' long press is their
-// shift, START / END's shape). THREE READERS: on_key's dispatch arm
+// (repeat_eligible names neither key). THREE READERS: on_key's dispatch arm
 // (input_handler.cpp) and the two allowlists; the Zoom In / Zoom Out keys
-// reach the first through on_key, their long press the
-// shifted chord (redesign_button_shift_admits).
+// reach the first through on_key.
 inline bool is_zoom_step_key(GuiKey key, GuiInputState mods) {
     return (key == GuiKeys::Equal || key == GuiKeys::Minus) && !mods.ctrl &&
-           !mods.alt;
+           !mods.shift && !mods.alt;
 }
-// THE STEP'S SIZES, in zoom levels: the map is spp(level) = column ×
+// THE STEP'S SIZE, in zoom levels: the map is spp(level) = column ×
 // 2^(level − 2) (kWorkingZoomLevel's block, app_state.h), so one level is ×2
-// — "the steps were doubles" — and the shifted step's two are ×4.
-inline constexpr double kZoomStepLevels      = 1.0;
-inline constexpr double kZoomStepShiftLevels = 2.0;
+// — "the steps were doubles".
+inline constexpr double kZoomStepLevels = 1.0;
 // THE SIGNED STEP a chord is_zoom_step_key admits asks for: `=` deeper
-// (negative, a smaller level being more zoomed in), `-` shallower; the
-// shift picks the size. Read by the dispatch arm alone; the two keys' faces
-// ask both sizes by name (redesign_button_enabled's arms).
-inline constexpr double zoom_step_levels(GuiKey key, GuiInputState mods) {
-    const double n = mods.shift ? kZoomStepShiftLevels : kZoomStepLevels;
-    return key == GuiKeys::Equal ? -n : n;
+// (negative, a smaller level being more zoomed in), `-` shallower. Read by
+// the dispatch arm alone; the two keys' faces ask the size by name
+// (redesign_button_enabled's arms).
+inline constexpr double zoom_step_levels(GuiKey key) {
+    return key == GuiKeys::Equal ? -kZoomStepLevels : kZoomStepLevels;
 }
 
 // THE VALUE PAIR (architect 2026-08-29), the two acts that replaced the
@@ -1280,12 +1276,10 @@ inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
 // selected warp marker behind the paste's confirmation, and CTRL+SHIFT+P
 // PASTES THEIR STATE — the clipboard's enabled / disabled bits onto the
 // matching destination resets in lockstep, positions untouched, no prompt
-// (PhaseResetPropagate::paste_state_apply, resurrected that day). The Copy
-// Phase Resets key carries all three: its plain press the copy, its ctrl
-// press (the S Pen's barrel button with a tap on the glass) the paste and
-// its ctrl+shift press (the barrel held through the long press) the state
-// paste (redesign_button_ctrl_admits / redesign_button_ctrl_shift_admits,
-// app_state.h). The family was Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P from
+// (PhaseResetPropagate::paste_state_apply, resurrected that day). THE COPY /
+// PASTE DUO carries the three since 2026-11-08 (architect, session 93): COPY
+// is bare P; PASTE's row is Ctrl+P, its hold Ctrl+Shift+P
+// (redesign_button_shift_admits, app_state.h). The family was Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P from
 // 2026-07-23 to 2026-10-21, the pigeon's Ctrl+J pair in the phase-reset view
 // for that evening's hours, and Ctrl+Return / Ctrl+Shift+Return on the Open
 // Text Editor seat from that night until 2026-10-24, the state paste removed
