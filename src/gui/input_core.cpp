@@ -395,8 +395,9 @@ void GuiInputCore::resolve_touch_window_to_region() {
     // FORMER through the region hooks and NOTHING pointer-shaped starts — no
     // entry motion, no press, the touch hold never raised (the single-nav
     // model, not the Pointer one). The begin fires at the DOWN point — the
-    // former's press half runs there (deselect, playhead seat, the drag arm),
-    // so the span anchors where the contact landed — and the crossing
+    // former's press half runs there (the deselect and the drag arm; NO
+    // playhead seat, the trim's writers never move it, session 88), so the
+    // span anchors where the contact landed — and the crossing
     // position is the gesture's own first leg, staged for the frame boundary
     // (the caret resolver's shape).
     touch_phase_ = TouchPhase::Region;

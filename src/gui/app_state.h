@@ -1737,8 +1737,8 @@ struct TrimBarPressSeed {
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
 // below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 BUT THE TWO
-// LEVEL CASES (52 chord rows + the two cases = 54 = kRedesignButtonCount
-// since 2026-11-07, the count's own statement below; the cases are sliders,
+// LEVEL CASES (53 chord rows + the two cases = 55 = kRedesignButtonCount
+// since 2026-11-08, the count's own statement below; the cases are sliders,
 // IconAudioLevel's entry): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
@@ -2680,10 +2680,11 @@ enum class RedesignButton {
     // press is admitted and the tooltip carries one line. Its ctrl presses
     // were the phase-reset propagate pair, Ctrl+Return / Ctrl+Shift+Return,
     // from 2026-10-21 until the pair got its own key that day
-    // (IconCopyPhaseResets, this group's tail since 2026-11-07, bare P / Ctrl+P /
-    // Ctrl+Shift+P); a ctrl
-    // or a shift press on it is the consumed nothing, and a long press is
-    // the plain open.
+    // (now IconCopyPhaseResets, bare P with no admission, and
+    // IconPastePhaseResets, Ctrl+P with its hold Ctrl+Shift+P, the duo
+    // kPhaseResetPropagateGroup holds as row 8's leftmost run since
+    // 2026-11-08); a ctrl or a shift press on it is the consumed nothing,
+    // and a long press is the plain open.
     IconOpenTextEditor,
     // ADD TO SELECTION — the verb group's SEVENTH and last member since
     // 2026-10-09, Open Text Editor standing immediately ahead of it (every
