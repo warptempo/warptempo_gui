@@ -992,24 +992,25 @@ double gui_scale_factor();
 // the window exists and so before the first layout, and the settings
 // editor's `key_height=` commit (GuiInputHandler::apply_key_height, which
 // re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_key_height); the construction state is the template's 17
-// (kKeyHeightDefaultW). It settles into a constexpr once he rules the
+// (parse_key_height); the construction state is 17 (kKeyHeightDefaultW),
+// the first-run value the shipped defaults file's (device_config.h's THE
+// FIRST-RUN VALUES). It settles into a constexpr once he rules the
 // number, and this pair goes.
 void set_key_height_w(int w);
 int  key_height_w();
 
 // THE KEY'S FACE WIDTH, THE `key_width` TUNING KEY'S SEAT (architect
 // 2026-11-06, session 78: the width a tuning key like the height until he
-// rules the number): the live value IN W (scaled_px's axis; the default
-// 35 W = 70 device px at 200 %), read by icon_case_w_px (the case paragraph
+// rules the number): the live value IN W (scaled_px's axis; 35 W = 70
+// device px at 200 %), read by icon_case_w_px (the case paragraph
 // below) and nothing else — every face's width, walk and hit box reads
 // that accessor; the glyph follows the height alone. The key_height seat's
 // shape exactly — file-scope state in render.cpp, pushed by gui_main's
 // startup read of the device config before the window exists and by the
 // settings editor's `key_width=` commit (GuiInputHandler::apply_key_width,
 // which re-lays-out at once). The grammar and the range are
-// device_config.h's (parse_key_width); the construction state is the
-// template's 35 (kKeyWidthDefaultW). It settles into a constexpr once he
+// device_config.h's (parse_key_width); the construction state is 35
+// (kKeyWidthDefaultW), the first-run value the shipped defaults file's. It settles into a constexpr once he
 // rules the number, and this pair goes.
 void set_key_width_w(int w);
 int  key_width_w();
@@ -1017,7 +1018,7 @@ int  key_width_w();
 // THE RUN GAP, THE `run_gap` TUNING KEY'S SEAT (architect 2026-11-07,
 // session 87, his "agree": the ground between two runs a tuning key like the
 // key's two sides until he rules the number): the live value IN W
-// (scaled_px's axis; the default 22 W = 44 device px at 200 %), read by
+// (scaled_px's axis; 22 W = 44 device px at 200 %), read by
 // program_run_gap_px (the run gap paragraph below) and nothing else — every
 // reader of the gap, the band's runs, row 8's groups, the render player's
 // row and the controls rows, takes that accessor. The key_width seat's shape
@@ -1025,8 +1026,8 @@ int  key_width_w();
 // read of the device config before the window exists and by the settings
 // editor's `run_gap=` commit (GuiInputHandler::apply_run_gap, which
 // re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_run_gap); the construction state is the template's 22
-// (kRunGapDefaultW). It settles into a constexpr once he rules the number,
+// (parse_run_gap); the construction state is 22 (kRunGapDefaultW), the
+// first-run value the shipped defaults file's. It settles into a constexpr once he rules the number,
 // and this pair goes.
 void set_run_gap_w(int w);
 int  run_gap_w();
@@ -1041,8 +1042,9 @@ int  run_gap_w();
 // exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
 // (GuiInputHandler::apply_osk_key_size, which re-lays-out at once). The
 // grammar and the range are device_config.h's (parse_osk_key_size); the
-// construction state is the templates' 24 x 30 W (kOskKeyWDefaultW,
-// kOskKeyHDefaultW; 48 x 60 device px on the tablet). It settles into two constexprs once he rules the
+// construction state is 24 x 30 W (kOskKeyWDefaultW, kOskKeyHDefaultW; 48
+// x 60 device px on the tablet), the first-run values the shipped defaults
+// file's. It settles into two constexprs once he rules the
 // numbers, and these three go.
 void set_osk_key_size_w(int w_w, int h_w);
 int  osk_key_width_w();
@@ -1056,8 +1058,9 @@ int  osk_key_height_w();
 // config before the window exists and by the settings editor's
 // `osk_font_px=` commit (GuiInputHandler::apply_osk_font_px, which repaints
 // at once). The grammar and the range are device_config.h's
-// (parse_osk_font_px); the construction state is the templates' 12
-// (kOskFontPxDefaultW; 24 device px on the tablet). It settles into the face table's Keys entry
+// (parse_osk_font_px); the construction state is 12 (kOskFontPxDefaultW;
+// 24 device px on the tablet), the first-run value the shipped defaults
+// file's. It settles into the face table's Keys entry
 // once he rules the number, and this pair goes.
 void set_osk_font_em_w(int em_w);
 int  osk_font_em_w();
@@ -1077,8 +1080,9 @@ int  osk_font_em_w();
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `waveform_grow=` commit and its value
 // list's tap (GuiInputHandler::apply_waveform_grow, which repaints at once:
-// no plate re-render, the tips do not move). The construction state is the
-// template's 0.5 (kWaveformGrowDefaultQuarters). A PERMANENT KEY, unlike the
+// no plate re-render, the tips do not move). The construction state is 1
+// (kWaveformGrowDefaultQuarters), the first-run value the shipped defaults
+// file's. A PERMANENT KEY, unlike the
 // three tuning seats above: this pair stays.
 void set_waveform_grow_quarters(int quarters);
 int  waveform_grow_quarters();
@@ -2450,8 +2454,10 @@ inline int waveform_line_px() {
 // pixels spread the weight exactly at .5; at 0 they are thin, at 1 they are
 // overly thick", a one-px stroke centered on the contour being the shape
 // grown half a pixel each side — is reversed, and stays as the record of
-// the 0.5 that was the default until 2026-11-04 night. THE DEFAULT IS 1.0,
-// kWaveformGrowDefaultQuarters = 4 subcells (architect 2026-11-04 night, on
+// the 0.5 that was the default until 2026-11-04 night. THE DEFAULT WAS 1.0
+// from then — kWaveformGrowDefaultQuarters = 4 subcells, the construction
+// state since the first-run value became the shipped defaults file's,
+// device_config.h's THE FIRST-RUN VALUES, 2026-11-09 (architect 2026-11-04 night, on
 // the real lit capture at grow 1 beside the 2-px lines of the unit of 2:
 // "is good as well"); the key stays a key, permanent. 0.625, the exact
 // analog of Ableton at 125 % Windows scale, lies off the quarters lattice;

@@ -188,36 +188,15 @@ shopt -s nocaseglob
 #   5. the tablet's settings file (files/warptempo_gui/config): the projects_repo
 #      line is made to read github.com/warptempo/warptempo_projects, and --
 #      every key is required since 2026-10-14; a line already there is
-#      kept -- the true_colors=on line (2026-10-21), the theme=default line
-#      (2026-11-05, the window's theme, one of Live 12's, after
-#      true_colors), the noise=rain, noise_level=-inf (2026-11-05, the
-#      level the icon row's NOISE slider sets, -inf being off: -9 from
-#      2026-10-28 until then), noise_attenuation_level=-9 (2026-11-05 night,
-#      the fixed dB the background sound plays at under the slider's
-#      number) and
-#      noise_crossfade_s=4 lines (2026-10-28), the key_height=17 line
-#      (2026-10-29, a tuning key; the key's height in W, 17 since the
-#      rebase to 200 % of 2026-11-05: 34 device px on the tablet), the
-#      key_width=35 line (2026-11-06, the eighteenth key, a tuning key; the
-#      key's face width in W: 70 device px on the tablet), the run_gap=22
-#      line (2026-11-07, the nineteenth key, a tuning key; the ground
-#      between two runs of buttons in W: 44 device px on the tablet), the
-#      osk_key_w=24 and osk_key_h=30 lines (2026-10-29, the keyboard's two
-#      tuning keys, in W), the osk_font_px=12 line (2026-10-29 night, the
-#      keyboard's cap size in W, a tuning key), the lamp_hold_ms=100 line
-#      (2026-11-05 night, the seventeenth key: the least time either lamp
-#      by the battery stays lit, in ms, a tuning key), the
-#      tooltip_delay_ms=100 line (2026-11-07, the twentieth key: the wait
-#      from a pen's arrival on a key to its tooltip, in ms, a tuning key) and
-#      the waveform_grow=1 line (2026-10-31, the waveform's antialiasing
-#      grow, a permanent key; 1 since 2026-11-04 night) and the audio_level=0 line (2026-10-31 night,
-#      the level of the program's own sound, a permanent key; the icon row's
-#      AUDIO slider since 2026-11-05, the shortest exact decimal since that
-#      night) the
-#      same way (ADDED_LINES below) -- A LINE ALREADY THERE IS KEPT, so an
-#      existing tablet keeps its two levels as it tuned them, whatever their
-#      spelling (the app reads 0.0 and -9.0 as well as 0 and -9, and
-#      rewrites them canonical at its next commit) -- and every line of a retired key the app refuses to start with is removed --
+#      kept -- each line of the repository's assets/device_config_defaults
+#      (the app's first-run values, the tablet's own config as last
+#      snapshotted, 2026-11-09; src/gui/device_config.h's THE FIRST-RUN
+#      VALUES) but gui_scale, projects_repo, projects_path and last_project
+#      is added where its key has no line (ADDED_LINES below, read from that
+#      file at every run) -- A LINE ALREADY THERE IS KEPT, so an
+#      existing tablet keeps every value as it tuned it, the two levels
+#      whatever their spelling (the app reads 0.0 and -9.0 as well as 0 and
+#      -9, and rewrites them canonical at its next commit) -- and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in
@@ -281,40 +260,37 @@ GITHUB_CLONE_URL="https://github.com/warptempo/warptempo_projects.git"
 ORIGIN_URL="ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git"
 PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 # THE ADDED LINES, each added only where the tablet's file has no line of its
-# key (step 5's awk splits them on the spaces): THE sRGB -> DISPLAY-P3 SWITCH, a
-# required key since 2026-10-21 (the Settings menu's True Colors row made a
-# key), on on both devices; and THE NOISE'S THREE, required since 2026-10-28 —
-# the sound's folder, rain, the level, -inf since 2026-11-05 (off: the icon
-# row's NOISE slider is its switch, "-inf is default only for new install";
-# -9 dB until then), and the crossfade, 4 s; and
-# THE KEY'S HEIGHT, a tuning key required while it stands since 2026-10-29,
-# 17 W (34 device px on the tablet at its 200 %; the hi-fi key metrics,
-# again since 2026-11-03; every tuning key in W since the rebase of
-# 2026-11-05) -- a key_height line already on the tablet is kept as it is
-# (the rebase's own halving of a standing line is the planner's hand edit,
-# not this script's); and THE KEY'S FACE WIDTH, a tuning key required
-# while it stands since 2026-11-06 (the eighteenth key), 35 W (70 device px
-# on the tablet); and THE RUN GAP, a tuning key required while it stands
-# since 2026-11-07 (the nineteenth key), 22 W (44 device px on the tablet);
-# and THE ON-SCREEN KEYBOARD'S KEY BOX, two tuning
-# keys required while they stand since 2026-10-29 evening, 24 x 30 W (48 x
-# 60 device px); and THE ON-SCREEN KEYBOARD'S CAP SIZE, a tuning key
-# required while it stands since 2026-10-29 night, 12 W (24 device px); and THE
-# TWO LAMPS' HOLD, a tuning key required while it stands since 2026-11-05
-# night (the seventeenth key), 100 ms; and THE TOOLTIP'S DELAY, a tuning key
-# required while it stands since 2026-11-07 (the twentieth key), 100 ms; and THE
-# WAVEFORM'S ANTIALIASING GROW, a permanent key required since 2026-10-31,
-# one device px (2026-11-04 night; half before); and THE AUDIO LEVEL, the program's own sound's level, a
-# permanent key required since 2026-10-31 night, 0 dB, the files as they
-# are; and THE NOISE'S ATTENUATION, a permanent key required since
-# 2026-11-05 night, -9 dB under the NOISE slider's number (the levels
-# decimal since 2026-11-05, in [-60.0, 0.0] or -inf, the attenuation never
-# -inf, each written as the shortest exact decimal since that night, 0,
-# -9, -15.6; src/gui/device_config.h records each). A value tuned
-# on the tablet is kept: a line already there is never touched — the two
-# levels' lines among them, whatever their spelling (0.0 and -9.0 read as
-# well as 0 and -9), which the app rewrites canonical at its next commit.
-ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=rain noise_level=-inf noise_attenuation_level=-9 noise_crossfade_s=4 key_height=17 key_width=35 run_gap=22 osk_key_w=24 osk_key_h=30 osk_font_px=12 lamp_hold_ms=100 tooltip_delay_ms=100"
+# key (step 5's awk splits them on the newlines), DERIVED AT EVERY RUN FROM THE
+# DEFAULTS FILE (2026-11-09): the repository's assets/device_config_defaults,
+# the app's own first-run values (the tablet's config as last snapshotted by
+# tools/snapshot_device_defaults.sh at an arc's last commit; the APK packs the
+# same file, src/gui/device_config.h's THE FIRST-RUN VALUES), found beside this
+# script's own real location (the script lives in the repository; a link to it
+# is followed), so setup adds exactly what a first run writes. EVERY LINE BUT
+# FOUR KEYS', which the derivation leaves out:
+#   projects_repo -- PROJECTS_REPO_LINE's: setup FORCES that line (step 5),
+#     whatever the tablet holds, because it must name the repository whose clone
+#     setup places (GITHUB_CLONE_URL, ORIGIN_URL), not a snapshot's value;
+#   gui_scale, projects_path and last_project -- keys of the config's birth
+#     (2026-08-27), so every file the app has ever written holds their lines and
+#     an add-where-missing never meets them; and two of them are the device's
+#     own facts, never a snapshot's to give: projects_path is where THIS tablet's
+#     clone lives, and last_project the piece THIS tablet opened (a snapshot's
+#     name may be one it lacks).
+# A value tuned on the tablet is kept: a line already there is never touched
+# — the two levels' lines among them, whatever their spelling (0.0 and -9.0
+# read as well as 0 and -9), which the app rewrites canonical at its next
+# commit. (Until 2026-11-09 the lines were spelled here, each key's value
+# beside the record of when it joined; src/gui/device_config.h records each
+# key.)
+DEFAULTS_FILE="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/../assets/device_config_defaults"
+[[ -f "$DEFAULTS_FILE" ]] || { printf 'warptempo_sync: no defaults file at %s (the repository'"'"'s assets/device_config_defaults)\n' "$DEFAULTS_FILE" >&2; exit 1; }
+ADDED_LINES="$(grep -v -E '^(gui_scale|projects_repo|projects_path|last_project)=' -- "$DEFAULTS_FILE")"
+[[ -n "$ADDED_LINES" ]] || { printf 'warptempo_sync: %s holds no line to add\n' "$DEFAULTS_FILE" >&2; exit 1; }
+# The same lines on one line, and their keys, for the plan's words.
+ADDED_SHOWN="${ADDED_LINES//$'\n'/ }"
+ADDED_KEYS_SHOWN="$(sed 's/=.*//' <<< "$ADDED_LINES" | tr '\n' ' ')"
+ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -348,11 +324,11 @@ ADDED_LINES="true_colors=on theme=default waveform_grow=1 audio_level=0 noise=ra
 # ground between a tooltip and the button it stands above, a tuning key of
 # 2026-11-07's session 90, settled in session 91 at 1 W and a constant in the
 # program since (src/gui/render.h's kTooltipGapW). A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
-# the old line is deleted and ADDED_LINES' noise_level=-inf takes its place,
-# so the planner renames the two lines by hand at the install, on both
-# devices, the program not running; a crossfade in ms comes back as
-# ADDED_LINES' noise_crossfade_s=4 the same way. (A noise_level= line
-# already standing is kept, whatever its spelling.)
+# the old line is deleted and ADDED_LINES' noise_level line (the defaults
+# file's) takes its place, so the planner renames the two lines by hand at the
+# install, on both devices, the program not running; a crossfade in ms comes
+# back as ADDED_LINES' noise_crossfade_s line the same way. (A noise_level=
+# line already standing is kept, whatever its spelling.)
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
               flag_face flag_face_selected flag_label flag_label_selected
@@ -1337,14 +1313,10 @@ apply_setup() {
         put_as_app "$TABLET_KEY.pub" "$APPCFG/deploy_key.pub" 644 || die "the deploy key's .pub did not arrive intact"
     fi
 
-    # 5. THE SETTINGS FILE: projects_repo made right, true_colors, theme,
-    # waveform_grow, audio_level, noise, noise_level, noise_attenuation_level,
-    # noise_crossfade_s, key_height, key_width (the eighteenth, 2026-11-06),
-    # run_gap (the nineteenth, 2026-11-07), osk_key_w, osk_key_h, osk_font_px,
-    # lamp_hold_ms (the seventeenth, 2026-11-05 night) and tooltip_delay_ms
-    # (the twentieth, 2026-11-07) their lines where
-    # absent
-    # (ADDED_LINES), the retired keys' lines gone (sync_path, the thirteen
+    # 5. THE SETTINGS FILE: projects_repo made right, every other key of the
+    # defaults file but gui_scale, projects_path and last_project its line
+    # where absent
+    # (ADDED_LINES, read from assets/device_config_defaults), the retired keys' lines gone (sync_path, the thirteen
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
     # keys, the LED glow's, the noise's two fades, the level's and the
     # crossfade's first names, the crossfade's ms key, role, the column
@@ -1365,9 +1337,11 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v added="$ADDED_LINES" -v retired="${RETIRED_KEYS[*]}" '
+        # The added lines reach awk through its environment, which takes the
+        # bytes as they are (a -v value is escape-processed), one per line.
+        WARPTEMPO_SYNC_ADDED="$ADDED_LINES" awk -v repo="$PROJECTS_REPO_LINE" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1
-                                nt = split(added, t, " "); for (i = 1; i <= nt; i++) tkey[i] = substr(t[i], 1, index(t[i], "=")) }
+                                nt = split(ENVIRON["WARPTEMPO_SYNC_ADDED"], t, "\n"); for (i = 1; i <= nt; i++) tkey[i] = substr(t[i], 1, index(t[i], "=")) }
                               { for (i = 1; i <= nt; i++) if (substr($0, 1, length(tkey[i])) == tkey[i]) had_t[i] = 1 }
             /^projects_repo=/ { print repo; had = 1; next }
             (substr($0, 1, index($0, "=")) in gone) { next }
@@ -1375,15 +1349,15 @@ apply_setup() {
             END               { if (had == 0) print repo
                                 for (i = 1; i <= nt; i++) if (!(i in had_t)) print t[i] }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, true_colors, theme, waveform_grow, audio_level, noise, noise_level, noise_attenuation_level, noise_crossfade_s, key_height, key_width, run_gap, osk_key_w, osk_key_h, osk_font_px, lamp_hold_ms and tooltip_delay_ms and has no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository and every key setup adds from the defaults file ($ADDED_KEYS_SHOWN) and has no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, each of $ADDED_LINES where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, each of $ADDED_SHOWN where its key has no line, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, each of $ADDED_LINES where its key has no line, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, each of $ADDED_SHOWN where its key has no line, and no line of a retired key"
     fi
     printf '\n'
 

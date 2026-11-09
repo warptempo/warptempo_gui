@@ -526,106 +526,71 @@ GuiPlatform::~GuiPlatform() {
 // init()
 // ---------------------------------------------------------------------------
 
-// The tablet's device-config template (contract at the declaration, rationale
-// at this backend's own). 200 % AT THE W (architect 2026-11-05, THE REBASE
-// TO 200 %, byte-identical on the glass: the template follows the scale the
-// tablet runs at): 2 device px per W on the scaled_px road, every W a whole
-// number of device px, so a 16-W length paints 32 device px and a line (one
-// W, render.h's hairline_px) 2 — the unit's one statement at render.h's
-// scaled_px. (The template stood at 300 from 2026-10-10 to 2026-11-05, the
-// same picture authored in device px at 300 % on a second road, and at 275
-// from 2026-10-02; its earlier values are git history and a closed
-// question.) The icon row fits this panel whole at the keys' defaults (the
-// arithmetic is at paint_icon_row, paint_handler.cpp: the left runs' 1738,
-// the run gap's 44 and the right run's 358 of the well's 2256 device px
-// outside the `h` view, with the 70-px face of key_width 35, the one-W key
-// gap of 2, the 44-px run gap of run_gap 22 and the well the waveform area),
-// clearing it by 116; a key_width past 37 W or a run_gap past 41 W does not
-// fit (THE FIT there).
-//
-// THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
-// — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
-// with no permission granted and the app reads and writes with no storage
-// permission at all (MANAGE_EXTERNAL_STORAGE, declared for the struck
-// Synchronize / OTG arc, left the manifest 2026-09-30) — the `projects/` of
-// the tablet's clone of the projects repository, whose root is the external
-// files dir itself (`warptempo_sync setup` places the clone; the pull and
-// `warptempo_sync tt`'s audio fill it). It is stamped as a LITERAL absolute
-// path: the config is a file the user may read and edit, and a file that names
-// where the projects are is worth more than one that says "ask the activity".
+// THE ONE ASSET READ WHOLE (2026-11-09; the icons' directory walk below and
+// the defaults file's single read share it): `path` opened through the
+// activity's AAssetManager and read to its length. THE ERROR ARM'S
+// PRODUCERS: an asset that will not open or not read whole (IO on the
+// installed APK, or a build that packed no such file).
+static std::expected<std::string, std::string>
+read_asset_whole(AAssetManager* mgr, const std::string& path) {
+    AAsset* asset = AAssetManager_open(mgr, path.c_str(),
+                                       AASSET_MODE_STREAMING);
+    if (!asset) {
+        return std::unexpected("could not open the APK asset '" + path + "'");
+    }
+    const off_t len = AAsset_getLength(asset);
+    std::string bytes(len > 0 ? static_cast<size_t>(len) : 0, '\0');
+    size_t got = 0;
+    while (got < bytes.size()) {
+        const int n = AAsset_read(asset, bytes.data() + got,
+                                  bytes.size() - got);
+        if (n <= 0) break;
+        got += static_cast<size_t>(n);
+    }
+    AAsset_close(asset);
+    if (got != bytes.size()) {
+        return std::unexpected("could not read the APK asset '" + path +
+                               "' whole");
+    }
+    return bytes;
+}
+
+// The tablet's device-config template (contract at the declaration). THE
+// SHIPPED DEFAULTS FILE (architect 2026-11-08, session 95; device_config.h's
+// THE FIRST-RUN VALUES): the repository's assets/device_config_defaults,
+// packed by build_apk.sh's assets step as the APK's root asset
+// `device_config_defaults`, read whole and PARSED BY THE CONFIG'S OWN READER
+// (parse_device_config_text), so every value — the 200 % scale the tablet
+// runs at, the literal projects_path (the external files dir's `projects/`,
+// the tablet's projects clone's, where adb pushes with no permission
+// granted), last_project, every tuning key — is the tablet's own config as
+// last snapshotted, and none is spelled in code. THE ERROR ARM'S PRODUCERS:
+// an asset that will not open or read whole, and a file the reader refuses,
+// both build defects, the file being the program's own (no manager is
+// breach-only, read_asset_dir's below); gui_main answers each exactly as it
+// answers a bad config — one line and no window. (The externalDataPath the projects path was derived from until
+// 2026-11-09 has no reader left: the file names the path, so its breach
+// abort went with the derivation, the type rule.)
 // A STATIC THAT READS THE BACKEND'S GLOBAL: this accessor is asked before any
 // GuiPlatform exists (gui_main resolves the config ahead of init()), and the
 // glue's android_app* reaches it only through g_android_app, parked by
 // android_main before gui_main runs — the same road init() takes to adopt the
-// window. No externalDataPath is FATAL rather than a fallback: the tablet's
-// projects clone and its audio live there and nothing else puts a project on
-// this device, so a template pointing anywhere else could never be right.
-DeviceConfig GuiPlatform::device_config_defaults() {
-    DeviceConfig cfg;
-    cfg.gui_scale     = 200;
-    const char* dir = (g_android_app && g_android_app->activity)
-                          ? g_android_app->activity->externalDataPath
-                          : nullptr;
-    // A breach abort, like this file's four others: the glue handed a state
-    // that cannot exist, so fail loudly and the user relaunches.
-    if (!dir || !*dir) {
-        __android_log_write(ANDROID_LOG_FATAL, kLogTag,
-                            "no externalDataPath: the projects folder is the "
-                            "projects/ of the tablet's clone there, placed "
-                            "by warptempo_sync setup");
-        abort();
+// window.
+std::expected<DeviceConfig, std::string> GuiPlatform::device_config_defaults() {
+    static constexpr const char* kAsset = "device_config_defaults";
+    AAssetManager* mgr = (g_android_app && g_android_app->activity)
+                             ? g_android_app->activity->assetManager
+                             : nullptr;
+    if (!mgr) return std::unexpected(std::string("no AAssetManager"));
+    auto text = read_asset_whole(mgr, kAsset);
+    if (!text) return std::unexpected(std::move(text.error()));
+    auto cfg = parse_device_config_text(*text);
+    if (!cfg) {
+        return std::unexpected(std::string("invalid shipped defaults in the "
+                                           "APK asset '") +
+                               kAsset + "': " + cfg.error());
     }
-    cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
-    cfg.projects_repo = kDefaultProjectsRepo;
-    cfg.last_project  = "";
-    // THE WINDOW'S THEME (architect 2026-11-05, a permanent key), spelled:
-    // `default`, Live's "Default Dark Neutral Medium", the compiled row
-    // (kGuiDefaultThemeSlug, gui_theme.h; device_config.h's head).
-    cfg.theme         = std::string(kGuiDefaultThemeSlug);
-    // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key),
-    // spelled: half a device px, 2 quarters (device_config.h's head).
-    cfg.waveform_grow_quarters = kWaveformGrowDefaultQuarters;
-    // THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night, a permanent
-    // key), spelled `0`: 0 dB, the files as they are (device_config.h's
-    // head).
-    cfg.audio_level       = 0.0;
-    // THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05
-    // night), spelled: the folder `rain` under noise/ beside the config, the
-    // level -inf — the bed OFF on a fresh install (architect 2026-11-05,
-    // "-inf is default only for new install"; -9 dB, his "the rain is a
-    // masker", until then) — the attenuation under it `-9`
-    // (kNoiseAttenuationDefaultDb) and the crossfade 4 s (device_config.h's
-    // head).
-    cfg.noise                   = "rain";
-    cfg.noise_level             = kLevelDbOff;
-    cfg.noise_attenuation_level = kNoiseAttenuationDefaultDb;
-    cfg.noise_crossfade_s       = 4;
-    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key), spelled: 17 W,
-    // 34 device px on the tablet (architect 2026-11-03, the retrofit's hi-fi
-    // key metrics; device_config.h's head).
-    cfg.key_height        = kKeyHeightDefaultW;
-    // THE KEY'S FACE WIDTH (architect 2026-11-06, a tuning key), spelled:
-    // 35 W, 70 device px on the tablet (device_config.h's head).
-    cfg.key_width         = kKeyWidthDefaultW;
-    // THE RUN GAP (architect 2026-11-07, a tuning key), spelled: 22 W, 44
-    // device px on the tablet (device_config.h's head).
-    cfg.run_gap           = kRunGapDefaultW;
-    // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
-    // keys), spelled: 24 x 30 W, the FLAGS sheet's 48 x 60 device px on the
-    // tablet (device_config.h's head).
-    cfg.osk_key_w         = kOskKeyWDefaultW;
-    cfg.osk_key_h         = kOskKeyHDefaultW;
-    // THE ON-SCREEN KEYBOARD'S CAP SIZE (architect 2026-10-29 night, a
-    // tuning key), spelled: the face table's Keys 12 W, 24 device px on the
-    // tablet (device_config.h's head).
-    cfg.osk_font_px       = kOskFontPxDefaultW;
-    // THE TWO LAMPS' HOLD (architect 2026-11-05 night, a tuning key),
-    // spelled: 100 ms (device_config.h's head).
-    cfg.lamp_hold_ms      = kLampHoldDefaultMs;
-    // THE TOOLTIP'S DELAY (architect 2026-11-07, a tuning key), spelled:
-    // 100 ms (device_config.h's head).
-    cfg.tooltip_delay_ms  = kTooltipDelayDefaultMs;
-    return cfg;
+    return *cfg;
 }
 
 // THE ICON BUNDLE IS THE APK'S ASSET DIRECTORY (contract at the
@@ -660,28 +625,12 @@ read_asset_dir(const std::string& dir_name,
                 return name.ends_with(sfx);
             }))
             continue;
-        const std::string path = dir_name + "/" + name;
-        AAsset* asset = AAssetManager_open(mgr, path.c_str(),
-                                           AASSET_MODE_STREAMING);
-        if (!asset) {
-            failure = "could not open the APK asset '" + path + "'";
+        auto bytes = read_asset_whole(mgr, dir_name + "/" + name);
+        if (!bytes) {
+            failure = std::move(bytes.error());
             break;
         }
-        const off_t len = AAsset_getLength(asset);
-        std::string bytes(len > 0 ? static_cast<size_t>(len) : 0, '\0');
-        size_t got = 0;
-        while (got < bytes.size()) {
-            const int n = AAsset_read(asset, bytes.data() + got,
-                                      bytes.size() - got);
-            if (n <= 0) break;
-            got += static_cast<size_t>(n);
-        }
-        AAsset_close(asset);
-        if (got != bytes.size()) {
-            failure = "could not read the APK asset '" + path + "' whole";
-            break;
-        }
-        out.emplace(name, std::move(bytes));
+        out.emplace(name, std::move(*bytes));
     }
     AAssetDir_close(dir);
     if (!failure.empty()) return std::unexpected(std::move(failure));
@@ -3076,8 +3025,9 @@ namespace {
 // project model retired both halves — the app opens the device config's
 // `last_project`, or the first valid project in name order, through the one
 // portable owner (startup_source, project_model.h), and Open Project is the
-// picker. What this backend still owns of the convention is WHERE the projects
-// are: the template's projects_path, device_config_defaults above.)
+// picker. WHERE the projects are is the shipped defaults file's
+// projects_path line, the first-run value device_config_defaults above
+// reads.)
 
 // LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
 // repository's own font files — every one (gui_font.h's

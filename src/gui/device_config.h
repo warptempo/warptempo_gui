@@ -22,9 +22,15 @@
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
 //                            GitHub recheck's corpus; free text, may be blank
 //   projects_path=<path>     the ABSOLUTE folder whose subfolders are the
-//                            projects (project_model.h owns the model)
+//                            projects (project_model.h owns the model); the
+//                            first-run value the defaults file's literal
+//                            path, the tablet's external files dir's
+//                            `projects/`
 //   last_project=<name>      the folder NAME opened last, written at every
-//                            successful open; blank until the first
+//                            successful open; the defaults file's until the
+//                            first (blank means nothing opened yet), a name
+//                            the device lacks falling through to the first
+//                            valid project (startup_source, project_model.h)
 //   true_colors=<on|off>     THE sRGB -> DISPLAY-P3 CONVERSION'S SWITCH
 //                            (architect 2026-10-21, the Settings menu's
 //                            "True Colors" command row made a key with the
@@ -35,8 +41,9 @@
 //                            launch to seed the switch and applied LIVE at
 //                            the settings editor's OK and at the settings
 //                            page's value list's tap (the apply shape,
-//                            GuiInputHandler::apply_true_colors); both
-//                            templates and both installs `on`. (The row's
+//                            GuiInputHandler::apply_true_colors); the
+//                            first-run value the defaults file's (THE
+//                            FIRST-RUN VALUES below). (The row's
 //                            toggle, 2026-10-08..10-21, persisted nothing:
 //                            the switch was true at every launch.)
 //   theme=<slug>             THE WINDOW'S THEME (architect 2026-11-05, the
@@ -67,7 +74,7 @@
 //                            per group, WARPTEMPO first — a palette
 //                            reinstall and a whole repaint, no card (the
 //                            apply shape, GuiInputHandler::apply_theme); the
-//                            template spells `default`. A config from
+//                            first-run value the defaults file's. A config from
 //                            before the key stops the startup on the
 //                            missing line, as every joined key's did (no
 //                            migration; the sync script's setup adds the
@@ -99,11 +106,12 @@
 //                            is the appropriate one, kept for good because a
 //                            replacement panel may not come at this density
 //                            (the grow is the device-px number whose right
-//                            value depends most on it). The template spells
-//                            0.5, the 2026-10-30 reasoning its reason
-//                            (neighboring pixels spread the weight exactly
-//                            at .5), 0.625 the exact analog of Ableton at
-//                            125 % Windows scale
+//                            value depends most on it). The first-run value
+//                            the defaults file's (1 there, his ruling of
+//                            2026-11-04 night at parse_waveform_grow; 0.5
+//                            before it, the 2026-10-30 reasoning its reason:
+//                            neighboring pixels spread the weight exactly
+//                            at .5)
 //   audio_level=<dB>         THE PROJECT VOICE'S LEVEL (architect
 //                            2026-10-31 night: "it should be audio out
 //                            versus noise, and I should be able to adjust
@@ -123,8 +131,8 @@
 //                            its ONE ROAD: no Settings row (a key shown and
 //                            edited on the main page gets none, architect
 //                            2026-11-05 night, kSettingsEditorKeys);
-//                            PERMANENT and REQUIRED; both templates spell 0,
-//                            the files as they are
+//                            PERMANENT and REQUIRED; the first-run value the
+//                            defaults file's (0 there, the files as they are)
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
@@ -136,7 +144,8 @@
 //                            where the level is audible
 //                            (GuiNoise::change_folder); the list shows and
 //                            Tab completes the folders there. PERMANENT and
-//                            REQUIRED; both templates spell `rain`. A name
+//                            REQUIRED; the first-run value the defaults
+//                            file's (`rain` there). A name
 //                            with no folder LOADS and greys the NOISE case
 //                            (the absent-folder rule, noise.h) — only the
 //                            shape is the grammar's
@@ -156,10 +165,13 @@
 //                            bed sounds at this level PLUS the attenuation
 //                            below, the case printing this number alone;
 //                            PERMANENT and REQUIRED, device-level (he
-//                            retunes it by hand per piece); both templates
-//                            spell -inf ("-inf is default only for new
-//                            install": a fresh tablet is silent until he
-//                            raises it)
+//                            retunes it by hand per piece); the first-run
+//                            value the defaults file's — the tablet's own
+//                            level as snapshotted, so a fresh install
+//                            sounds the bed at it (the template's -inf of
+//                            2026-11-05, "-inf is default only for new
+//                            install", gave way 2026-11-09 to the snapshot,
+//                            THE FIRST-RUN VALUES below)
 //   noise_attenuation_level=<dB> THE BACKGROUND SOUND'S FIXED ATTENUATION
 //                            (architect 2026-11-05 night, session 49: "then
 //                            the slider maintains its current behavior and
@@ -174,7 +186,7 @@
 //                            recomputed and the switch untouched
 //                            (GuiNoise::set_attenuation_db); a line-editor
 //                            row, no value list; PERMANENT and REQUIRED;
-//                            both templates spell -9
+//                            the first-run value the defaults file's
 //   noise_crossfade_s=<s>    THE NOISE'S CROSSFADE between two segments, in
 //                            whole SECONDS (architect 2026-10-28): an integer
 //                            in [1, 30] in canonical spelling, live at the
@@ -183,13 +195,13 @@
 //                            transition); PERMANENT and REQUIRED — the
 //                            crossfade is a recording's relationship to
 //                            itself, so a later sound may want another
-//                            value; both templates spell 4
+//                            value; the first-run value the defaults file's
 //   key_height=<px>          THE KEY'S HEIGHT (architect 2026-10-29, a tuning
 //                            key, "around 33"; the square key of 2026-11-02
 //                            reversed 2026-11-03, the retrofit: the key's
 //                            face key_width wide (below) and this key its
-//                            height, default 17 W — 70 x 34 device px on
-//                            the tablet at the defaults): the program's
+//                            height, 17 W as constructed — 70 x 34 device
+//                            px on the tablet at 35 x 17): the program's
 //                            key's height IN W
 //                            (one W = 2 device px on the tablet at 200 %,
 //                            render.h's scaled_px, the rebase of
@@ -204,11 +216,11 @@
 //                            key while it stands, which settles into a
 //                            constexpr once he rules the number (render.h's
 //                            case block), its key, grammar and row going
-//                            then; the template spells 17
+//                            then; the first-run value the defaults file's
 //   key_width=<w>            THE KEY'S FACE WIDTH (architect 2026-11-06,
 //                            session 78, a tuning key like key_height):
-//                            the program's key's face width IN W, default
-//                            35 W — 70 device px on the tablet at 200 %
+//                            the program's key's face width IN W, 35 W as
+//                            constructed — 70 device px on the tablet at 200 %
 //                            (render.h's icon_case_w_px, the band's,
 //                            row 8's and every controls row's walk
 //                            reading it; the glyph follows key_height
@@ -221,12 +233,12 @@
 //                            like every key while it stands, which
 //                            settles into a constexpr once he rules the
 //                            number (render.h's case block), its key,
-//                            grammar and row going then; the template
-//                            spells 35
+//                            grammar and row going then; the first-run
+//                            value the defaults file's
 //   run_gap=<w>              THE RUN GAP (architect 2026-11-07, session 87,
 //                            his "agree", a tuning key like key_width): the
-//                            ground between two runs' faces IN W, default
-//                            22 W — 44 device px on the tablet at 200 %
+//                            ground between two runs' faces IN W, 22 W as
+//                            constructed — 44 device px on the tablet at 200 %
 //                            (render.h's program_run_gap_px, its one
 //                            reader: the band's runs, row 8's groups, the
 //                            render player's and every controls row's group
@@ -238,8 +250,8 @@
 //                            like every key while it stands, which
 //                            settles into a constexpr once he rules the
 //                            number (render.h's run gap paragraph), its
-//                            key, grammar and row going then; the template
-//                            spells 22
+//                            key, grammar and row going then; the first-run
+//                            value the defaults file's
 //   osk_key_w=<px>          THE ON-SCREEN KEYBOARD'S KEY BOX (architect
 //   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
 //                            centered, like a phone … chiclets, taller than
@@ -256,8 +268,8 @@
 //                            every key while they stand, which settle into
 //                            constexprs once he rules the numbers
 //                            (onscreen_keyboard.h's geometry), their keys,
-//                            grammar and rows going then; the template
-//                            spells 24 and 30
+//                            grammar and rows going then; the first-run
+//                            values the defaults file's
 //   osk_font_px=<px>         THE ON-SCREEN KEYBOARD'S CAP SIZE (architect
 //                            2026-10-29 night, "font size osk config tmp
 //                            key"): the keys face's em (gui_font.h's
@@ -271,7 +283,7 @@
 //                            while it stands, which settles into the face
 //                            table's constexpr once he rules the number
 //                            (kGuiFaceSizes), its key, grammar and row going
-//                            then; the template spells 12
+//                            then; the first-run value the defaults file's
 //   lamp_hold_ms=<ms>        THE TWO LAMPS' HOLD (architect 2026-11-05
 //                            night, session 49, "a hold on both lamps,
 //                            lamp_hold_ms a tuning key with a Settings row
@@ -287,7 +299,8 @@
 //                            Settings row, REQUIRED like every key while it
 //                            stands, which settles into a constexpr once he
 //                            rules the number, its key, grammar and row
-//                            going then; the template spells 100
+//                            going then; the first-run value the defaults
+//                            file's
 //   tooltip_delay_ms=<ms>    THE TOOLTIP'S DELAY (architect 2026-11-07,
 //                            session 87, the always-show model: "maybe a tiny
 //                            delay before showing it"; AppState::
@@ -304,7 +317,7 @@
 //                            row, REQUIRED like every key while it stands,
 //                            which settles into a constexpr once he rules
 //                            the number, its key, grammar and row going
-//                            then; the template spells 100
+//                            then; the first-run value the defaults file's
 //   (tooltip_gap=<w>, THE TOOLTIP'S GAP, the ground between the box and its
 //                            owner's face in W, a tuning key in [0, 12] with
 //                            a Settings row, required for session 90 of
@@ -585,14 +598,34 @@
 // private internal directory before anything reads it (android_main,
 // platform_android.cpp), exactly as it already does for the cache home.
 //
+// THE FIRST-RUN VALUES ARE ONE TRACKED FILE, `assets/device_config_defaults`
+// (architect 2026-11-08, session 95: "there should be a pipeline in place
+// that snapshots it each time we do an arc … so my settings are durable and
+// git-historied"; the design the planner's on his "I defer to you"): THIS
+// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty lines, last_project and
+// projects_path included, its values the tablet's own config as
+// snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
+// tablet at every arc's last commit, and a changed file rides that commit.
+// The APK packs it (apk/build_apk.sh's assets step) and the backend's
+// template is that asset PARSED BY THIS FILE'S READER
+// (parse_device_config_text below, GuiPlatform::device_config_defaults), so
+// a defaults file that breaks the grammar fails the launch exactly as a bad
+// config does: the file is the program's own, a bad one a program bug. No
+// value in the source is a first-run value: the struct's members and the
+// seats' initializers (render.cpp) are CONSTRUCTION STATE, overwritten by
+// the startup read before any use. The sync script's setup adds the same
+// file's lines where a tablet's config lacks a key (its ADDED_LINES,
+// derived from the file at run time). A TUNING KEY STAYS A KEY: a snapshot
+// is not a retirement.
+//
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
-// program-written — the first run stamps it from the backend's own template and
+// program-written — the first run stamps it from the defaults file and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the twenty
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
-// every line and the first-run templates spell every default, so an absent
+// every line and the defaults file spells every key, so an absent
 // line is the shared scanner's missing-required-key refusal like any other,
 // with no migration and no launch-time repair),
 // one canonical spelling per
@@ -648,8 +681,10 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for every key: each is required, so a successful read always
-// assigns them; the backend's template (GuiPlatform::device_config_defaults)
-// SPELLS EVERY DEFAULT (architect 2026-10-14: every key required). EVERY KEY
+// assigns them, and NONE IS A FIRST-RUN VALUE: the backend's template
+// (GuiPlatform::device_config_defaults) is the shipped defaults file parsed
+// (THE FIRST-RUN VALUES above, 2026-11-09), every key spelled there
+// (architect 2026-10-14: every key required). EVERY KEY
 // WRITES ITS LINE, so a first run stamps the
 // whole file and its read-back loads. (The `icons` and `font` keys left
 // 2026-10-12: the icons and Liberation Sans are hard-coded.)
@@ -670,70 +705,66 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
-    // templates' and the construction state's.
+    // construction state.
     bool        true_colors = true;
     // THE WINDOW'S THEME, a slug (2026-11-05, the head's list): required;
-    // `default` the templates' and the construction state's
-    // (kGuiDefaultThemeSlug, gui_theme.h). The string is the writer's
+    // `default` the construction state (kGuiDefaultThemeSlug, gui_theme.h:
+    // the compiled theme's slug). The string is the writer's
     // spelling, kept as read even when no row bears it (2026-11-06); the row
     // is found at every read (find_gui_theme, theme_ask.h).
     std::string theme = std::string(kGuiDefaultThemeSlug);
     // THE WAVEFORM PLATE'S GROW in quarters of a device px (2026-10-31, the
     // head's list; a permanent key): required; the construction state is
-    // the template's 1 (kWaveformGrowDefaultQuarters below, 2026-11-04
-    // night).
+    // 1 px (kWaveformGrowDefaultQuarters below).
     int         waveform_grow_quarters = 4;
     // THE PROJECT VOICE'S LEVEL in dB (2026-10-31 night, the head's list; a
     // permanent key; a double under THE LEVEL GRAMMAR since 2026-11-05, -inf
-    // the mute): required; the construction state is the templates' 0.0.
+    // the mute): required; the construction state is 0.0.
     double      audio_level       = 0.0;
     // THE NOISE'S FOLDER NAME, its level in dB (a double, -inf off, THE
     // LEVEL GRAMMAR, 2026-11-05), its fixed attenuation in dB under that
     // level (a double, never -inf, 2026-11-05 night) and its crossfade in
     // seconds (2026-10-28, the head's list): required; the construction
-    // state is the templates' values (`rain`, -inf, -9 —
-    // kNoiseAttenuationDefaultDb below — and 4).
+    // state is `rain`, -inf, -9 and 4.
     std::string noise                   = "rain";
     double      noise_level             = -std::numeric_limits<double>::infinity();
     double      noise_attenuation_level = -9.0;
     int         noise_crossfade_s       = 4;
     // THE KEY'S HEIGHT in W (2026-10-29, the head's list; a tuning key):
-    // required; the construction state is the template's 17
-    // (kKeyHeightDefaultW below).
+    // required; the construction state is 17 (kKeyHeightDefaultW below).
     int         key_height        = 17;
     // THE KEY'S FACE WIDTH in W (2026-11-06, the head's list; a tuning
-    // key): required; the construction state is the template's 35
-    // (kKeyWidthDefaultW below).
+    // key): required; the construction state is 35 (kKeyWidthDefaultW
+    // below).
     int         key_width         = 35;
     // THE RUN GAP in W (2026-11-07, the head's list; a tuning key):
-    // required; the construction state is the template's 22
-    // (kRunGapDefaultW below).
+    // required; the construction state is 22 (kRunGapDefaultW below).
     int         run_gap           = 22;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (2026-10-29, the head's list;
-    // two tuning keys): required; the construction state is the templates'
-    // 24 x 30 (kOskKeyWDefaultW, kOskKeyHDefaultW below).
+    // two tuning keys): required; the construction state is 24 x 30
+    // (kOskKeyWDefaultW, kOskKeyHDefaultW below).
     int         osk_key_w         = 24;
     int         osk_key_h         = 30;
     // THE ON-SCREEN KEYBOARD'S CAP SIZE, its em in W (2026-10-29 night, the
-    // head's list; a tuning key): required; the construction state is the
-    // templates' 12 (kOskFontPxDefaultW below).
+    // head's list; a tuning key): required; the construction state is 12
+    // (kOskFontPxDefaultW below).
     int         osk_font_px       = 12;
     // THE TWO LAMPS' HOLD in ms (2026-11-05 night, the head's list; a tuning
-    // key): required; the construction state is the templates' 100
-    // (kLampHoldDefaultMs below).
+    // key): required; the construction state is 100.
     int         lamp_hold_ms      = 100;
     // THE TOOLTIP'S DELAY in ms (2026-11-07, the head's list; a tuning key):
-    // required; the construction state is the templates' 100
-    // (kTooltipDelayDefaultMs below).
+    // required; the construction state is 100.
     int         tooltip_delay_ms  = 100;
 };
 
-// The repository a device is STAMPED WITH when it has never named one — the
-// first-run template's `projects_repo=` value. It moved here
+// THE PROJECTS REPOSITORY AS CONSTRUCTED — AppState's `projects_repo`
+// initializer, its one reader, a value gui_main's session seat overwrites
+// from the live config before anything reads the field (main.cpp, "THE
+// DEVICE CONFIG'S LIVE VALUES"). IT IS NOT THE FIRST-RUN VALUE: that is the
+// defaults file's `projects_repo=` line (THE FIRST-RUN VALUES above,
+// 2026-11-09), which names the same repository today. It moved here
 // from settings_file.h with the key (architect approval 2026-08-27): the
-// sidecar no longer references it, and AppState's own field reads it so a
-// session that has not read the config yet names the same repository the
-// template stamps. It is NOT a load fallback — the key is required, so a
+// sidecar no longer references it. It is NOT a load fallback — the key is required, so a
 // config either names a repository (blank included) or refuses. THE PROJECTS
 // REPOSITORY IS ITS OWN, SEPARATE AND PUBLIC (architect 2026-09-27): the
 // pieces' sidecar history lives in warptempo_projects, laid out as
@@ -1006,8 +1037,8 @@ inline std::optional<double> parse_level_db(std::string_view v) {
 // THE NOISE'S ATTENUATION (architect 2026-11-05 night, the head's list):
 // THE LEVEL GRAMMAR LESS `-inf` — a decimal dB in [-60.0, 0.0], the same
 // spellings, the same writer (format_level_db, which never meets -inf
-// here). The default -9 dB the templates spell.
-inline constexpr double kNoiseAttenuationDefaultDb = -9.0;
+// here). Its first-run value the defaults file's (THE FIRST-RUN VALUES
+// above).
 inline constexpr const char* kNoiseAttenuationGrammarReason =
     "must be a decimal in [-60.0, 0.0]";
 inline std::optional<double> parse_noise_attenuation_db(std::string_view v) {
@@ -1040,10 +1071,13 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
 // owner the reader, the writer, the settings editor's commit and its recall
 // read (format_key_height, parse_key_height). The range brackets the
 // 2026-10-29 mocks' series round his "around 33" device px with room both
-// ways; THE DEFAULT IS 17 W, 34 device px (architect 2026-11-04 night, mock
-// v4: the hi-fi's 33 of 2026-11-03's retrofit, which reversed the square
-// key's 60 of 2026-11-02, rounded up so the face is 70 x 34 device px at
-// key_width's default). The settings page opens the LINE EDITOR on it, not a
+// ways. kKeyHeightDefaultW IS CONSTRUCTION STATE ALONE, render.cpp's seat's
+// initializer, which gui_main's startup seeding overwrites before the first
+// layout; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES
+// above, 2026-11-09). Its 17 W, 34 device px, is the template's of
+// 2026-11-04 night (mock v4: the hi-fi's 33 of 2026-11-03's retrofit, which
+// reversed the square key's 60 of 2026-11-02, rounded up so the face is 70
+// x 34 device px at 35 W wide). The settings page opens the LINE EDITOR on it, not a
 // value list (41 values is no short domain, kSettingsValueListKeys' rule).
 // A TUNING KEY: when he rules the number, the key, these functions
 // and its Settings row go, and the value becomes a constexpr behind
@@ -1066,13 +1100,16 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // integer in [10, 50] W in canonical spelling, key_height's own range (the
 // key's two sides one bracket, symmetry), the one owner the reader, the
 // writer, the settings editor's commit and its recall read
-// (format_key_width, parse_key_width). THE DEFAULT IS 35 W, 70 device px on
-// the tablet at 200 % — the face of 2026-11-04 night, so the picture at the
-// default is the constexpr's. The width alone moves: the glyph follows
+// (format_key_width, parse_key_width). kKeyWidthDefaultW IS CONSTRUCTION
+// STATE ALONE, render.cpp's seat's initializer, overwritten by gui_main's
+// startup seeding before the first layout; THE FIRST-RUN VALUE IS THE
+// DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 35 W, 70
+// device px on the tablet at 200 %, is the face of 2026-11-04 night, the
+// template's until 2026-11-09. The width alone moves: the glyph follows
 // key_height (paint_key_glyph), the legend never widens the face (a
 // narrower face lets the widest legends overhang onto the ground, accepted
 // while tuning; MAGNIFY below 32 W). Past 37 W on the tablet at 200 % (and
-// run_gap's default 22, below) the band no longer fits and its overflow rule answers — the left runs
+// run_gap 22, below) the band no longer fits and its overflow rule answers — the left runs
 // clipped short of the right run, the third run's keys gone from its tail,
 // SETUP itself from 46 W (THE FIT at paint_icon_row's width math,
 // paint_handler.cpp). The settings page opens
@@ -1100,9 +1137,12 @@ inline std::optional<int> parse_key_width(std::string_view v) {
 // (format_run_gap, parse_run_gap). THE RANGE IS THE PLANNER'S PICK: at least
 // two key gaps (kKeyGapW, render.h — a run gap no narrower than two faces'
 // ground, so two runs always read apart from a group's own gap), at most
-// twice the default. THE DEFAULT IS 22 W, 44 device px on the tablet at
-// 200 % — the constexpr kRunGapW of 2026-11-04 night, so the picture at the
-// default is the constexpr's. One key for every reader (render.h's
+// twice 22 W. kRunGapDefaultW IS CONSTRUCTION STATE ALONE, render.cpp's
+// seat's initializer, overwritten by gui_main's startup seeding before the
+// first layout; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN
+// VALUES above, 2026-11-09). Its 22 W, 44 device px on the tablet at 200 %,
+// is the constexpr kRunGapW of 2026-11-04 night, the template's until
+// 2026-11-09. One key for every reader (render.h's
 // program_run_gap_px): the band's runs, row 8's groups, the render player's
 // and every controls row's group spaces. Past 41 W on the tablet at 200 %
 // and key_width 35 the band no longer fits and its overflow rule answers —
@@ -1130,9 +1170,13 @@ inline std::optional<int> parse_run_gap(std::string_view v) {
 // TWO — an integer in [12, 80] W in canonical spelling (the rebase of
 // 2026-11-05 halved the [24, 160] device px of 2026-10-29), the one owner
 // the reader, the writer, the settings editor's commit and its recall read
-// (format_osk_key_size, parse_osk_key_size). The defaults are the FLAGS
-// sheet's key box, 24 W wide and 30 tall, 48 x 60 device px on the tablet
-// (tmp/kbmock's generator); the range runs from half the default width to
+// (format_osk_key_size, parse_osk_key_size). kOskKeyWDefaultW and
+// kOskKeyHDefaultW ARE CONSTRUCTION STATE ALONE, render.cpp's seats'
+// initializers, overwritten by gui_main's startup seeding before the first
+// layout; THE FIRST-RUN VALUES ARE THE DEFAULTS FILE'S (THE FIRST-RUN
+// VALUES above, 2026-11-09). Theirs are the FLAGS sheet's key box, 24 W
+// wide and 30 tall, 48 x 60 device px on the tablet (tmp/kbmock's
+// generator), the template's until 2026-11-09; the range runs from half that width to
 // well past the height, wide enough for him to try a key wider than tall,
 // and its top keeps the widest row (thirteen units) inside the tablet's
 // 2304 device px (13 x (160 + 2) - 2 = 2104 there, the gap the program
@@ -1161,12 +1205,16 @@ inline std::optional<int> parse_osk_key_size(std::string_view v) {
 // [12, 48] device px of 2026-10-29), the keys face's em (gui_font.h's
 // GuiFace::Keys, scaled with gui_scale like every table size), the one
 // owner the reader, the writer, the settings editor's commit and its recall
-// read (format_osk_font_px, parse_osk_font_px). The default is the face
-// table's 12 W, 24 device px on the tablet (architect 2026-10-24, "C24").
+// read (format_osk_font_px, parse_osk_font_px). kOskFontPxDefaultW IS
+// CONSTRUCTION STATE ALONE, render.cpp's seat's initializer, overwritten by
+// gui_main's startup seeding before the first paint; THE FIRST-RUN VALUE IS
+// THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 12 W is
+// the face table's, 24 device px on the tablet (architect 2026-10-24,
+// "C24"), the template's until 2026-11-09.
 // The range: 6 W, 12 device px, is the smallest em at which a cap stays
-// legible on the tablet; 24 W is twice the default, the em by which every
+// legible on the tablet; 24 W is twice 12 W, the em by which every
 // function word but "Bksp" and "Space" already overhangs its key at the
-// default key box ("Esc", the last of them, from em 21 W; "Bksp", 118
+// 24 x 30 key box ("Esc", the last of them, from em 21 W; "Bksp", 118
 // device px at em 24 W against the 2.5u key's 122-px face, not until 25), so a larger
 // cap would only overhang more (onscreen_keyboard.h's EVERY WORD FITS ITS
 // KEY paragraph, cap_word; architect 2026-10-29 night). The settings page
@@ -1191,18 +1239,19 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
 // integer of whole MILLISECONDS in [20, 1000] in canonical spelling ("100",
 // never "0100" or "+100": the int tuning keys' grammar, key_height's), the
 // one owner the reader, the writer, the settings editor's commit and its
-// recall read (format_lamp_hold_ms, parse_lamp_hold_ms). THE DEFAULT IS
-// 100 ms, his number: nine to ten frames at the tablet's 90 Hz vsync, the
-// tick being the lamps' clock (refresh_logo_lamps, main.cpp; render.h's THE
-// TWO LAMPS). The range: 20 ms is about two frames at 90 Hz, the least that
+// recall read (format_lamp_hold_ms, parse_lamp_hold_ms). THE FIRST-RUN
+// VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above; 100 ms, his
+// number of 2026-11-05 night, the template's until 2026-11-09: nine to ten
+// frames at the tablet's 90 Hz vsync, the tick being the lamps' clock,
+// refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS). The range: 20 ms
+// is about two frames at 90 Hz, the least that
 // is still a hold; 1000 ms, a second, is past any meter's peak hold. The
 // settings page opens the LINE EDITOR on it, not a value list (981 values is
 // no short domain, kSettingsValueListKeys' rule). A TUNING KEY: when he
 // rules the number, the key, these functions and its Settings row go, and
 // the value becomes a constexpr beside refresh_logo_lamps.
-inline constexpr int kLampHoldMinMs     = 20;
-inline constexpr int kLampHoldMaxMs     = 1000;
-inline constexpr int kLampHoldDefaultMs = 100;
+inline constexpr int kLampHoldMinMs = 20;
+inline constexpr int kLampHoldMaxMs = 1000;
 inline constexpr const char* kLampHoldGrammarReason =
     "must be an integer in [20, 1000] in canonical spelling";
 std::string format_lamp_hold_ms(int ms);
@@ -1217,19 +1266,20 @@ inline std::optional<int> parse_lamp_hold_ms(std::string_view v) {
 // integer of whole MILLISECONDS in [0, 1000] in canonical spelling ("100",
 // never "0100" or "+100": the int tuning keys' grammar, lamp_hold_ms's), the
 // one owner the reader, the writer, the settings editor's commit and its
-// recall read (format_tooltip_delay_ms, parse_tooltip_delay_ms). THE DEFAULT
-// IS 100 ms, his "maybe a tiny delay before showing it": nine frames at the
-// tablet's 90 Hz vsync, the run loop's tick being the tooltip's clock
-// (tick_tooltip; the model at AppState::RedesignTooltip). The range: 0 is no
+// recall read (format_tooltip_delay_ms, parse_tooltip_delay_ms). THE
+// FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above; 100
+// ms, the template's until 2026-11-09, his "maybe a tiny delay before
+// showing it": nine frames at the tablet's 90 Hz vsync, the run loop's tick
+// being the tooltip's clock, tick_tooltip; the model at
+// AppState::RedesignTooltip). The range: 0 is no
 // wait at all (the box at the arrival's next tick); 1000 ms, a second, twice
 // comctl32's old initial wait. The settings page opens the LINE EDITOR on it,
 // not a value list (1001 values is no short domain, kSettingsValueListKeys'
 // rule). A TUNING KEY: when he rules the number, the key, these functions
 // and its Settings row go, and the value becomes a constexpr at render.h's
 // tooltip block.
-inline constexpr int kTooltipDelayMinMs     = 0;
-inline constexpr int kTooltipDelayMaxMs     = 1000;
-inline constexpr int kTooltipDelayDefaultMs = 100;
+inline constexpr int kTooltipDelayMinMs = 0;
+inline constexpr int kTooltipDelayMaxMs = 1000;
 inline constexpr const char* kTooltipDelayGrammarReason =
     "must be an integer in [0, 1000] in canonical spelling";
 std::string format_tooltip_delay_ms(int ms);
@@ -1254,12 +1304,17 @@ inline std::optional<int> parse_tooltip_delay_ms(std::string_view v) {
 // `1.5`, `1.75`, `2` — and the reader admits exactly the nine strings the
 // writer spells (it formats each quarter and compares), so `0.50`, `1.0`,
 // `.5` and anything off the quarters lattice or out of range are the
-// launch's hard fail, as every other key's off-spelling is. The default is
-// 1 (architect 2026-11-04 night, on the real lit capture at grow 1 beside
-// the unit's 2-px lines: "is good as well"; 0.5 from 2026-10-31 to then,
-// the record at render.h's grow paragraph); the top, 2, is what the
-// shader's one-word window was sized for (gl_canvas.cpp's asserts) and
-// twice the default.
+// launch's hard fail, as every other key's off-spelling is.
+// kWaveformGrowDefaultQuarters IS CONSTRUCTION STATE ALONE — render.cpp's
+// seat's initializer, overwritten by gui_main's startup seeding before the
+// window exists, and the plate program gl_canvas.cpp builds first, rebuilt
+// at the first draw of a list at another grow; THE FIRST-RUN VALUE IS THE
+// DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 1 is the
+// template's of 2026-11-04 night (architect, on the real lit capture at
+// grow 1 beside the unit's 2-px lines: "is good as well"; 0.5 from
+// 2026-10-31 to then, the record at render.h's grow paragraph); the top, 2,
+// is what the shader's one-word window was sized for (gl_canvas.cpp's
+// asserts) and twice 1.
 inline constexpr int kWaveformGrowQuartersPerPx   = 4;
 inline constexpr int kWaveformGrowMinQuarters     = 0;
 inline constexpr int kWaveformGrowMaxQuarters     = 8;
@@ -1345,7 +1400,7 @@ inline bool is_last_project_name(const std::string& v) {
 // component and
 // NON-EMPTY — is_last_project_name's clauses (no `/`, not `.` or `..`, no
 // `\n` or `\r` anywhere, no leading or trailing config whitespace) with the
-// empty arm REFUSED: the key names a sound, the templates spell `rain`, and a
+// empty arm REFUSED: the key names a sound, the defaults file spells one, and a
 // blank line is a state the program never writes. THE COMPOSITION ARGUMENT IS
 // is_last_project_name's: a `/` or a `..` would compose a path outside
 // `noise/` (GuiNoise::probe composes the folder only from a name this admits),
@@ -1375,7 +1430,8 @@ std::string format_gui_scale_percent(int percent);
 std::filesystem::path device_config_path();
 
 // The file's exact bytes for this value set — the string half write_device_config
-// hands to the atomic writer, and the first-run template's bytes too, so the
+// hands to the atomic writer, and the first-run template's bytes too (the
+// defaults file's lines as this writer spells them back), so the
 // stamped file and a committed one are one format by construction.
 std::string format_device_config_text(const DeviceConfig& cfg);
 
@@ -1384,6 +1440,16 @@ std::string format_device_config_text(const DeviceConfig& cfg);
 // the caller adds the path context.
 std::expected<DeviceConfig, std::string> read_device_config(
     const std::filesystem::path& path);
+
+// THE SAME READER OVER BYTES IN HAND (2026-11-09): the shipped defaults
+// file's text (assets/device_config_defaults, THE FIRST-RUN VALUES above),
+// judged by read_device_config's one body — the shared scanner and every
+// per-key grammar — so a defaults file is loadable iff a config holding its
+// lines is. Errors carry the same "line N: " prefix; the caller (the
+// backend's template, GuiPlatform::device_config_defaults) adds the asset's
+// name.
+std::expected<DeviceConfig, std::string> parse_device_config_text(
+    const std::string& text);
 
 // Write the live values atomically (temp + fsync + rename, through the shared
 // atomic writer), creating the parent directory if it is missing. Answers
@@ -1458,32 +1524,12 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 
 // STARTUP: the config, created from `first_run_template` if the file does not
 // exist yet and then read back like any other. The template is the running
-// BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
-// a GUI one: 200 % and the external files dir's `projects/`;
-// it stamps every key, required since 2026-10-14: `true_colors=on` (the
-// struct's own value), `theme=default` (2026-11-05, kGuiDefaultThemeSlug),
-// `waveform_grow=1` (2026-10-31, kWaveformGrowDefaultQuarters; 1 since
-// 2026-11-04 night),
-// `audio_level=0` (2026-10-31 night, the files as they are; the shortest
-// round-trip spelling since 2026-11-05 night), `noise=rain`,
-// `noise_level=-inf` (the bed off on a fresh install, 2026-11-05; -9 from
-// 2026-10-28 until then), `noise_attenuation_level=-9` (2026-11-05 night,
-// kNoiseAttenuationDefaultDb) and `noise_crossfade_s=4` (2026-10-28),
-// `key_height=17` (2026-10-29; 17 W since the rebase of 2026-11-05),
-// `key_width=35` (2026-11-06, kKeyWidthDefaultW),
-// `run_gap=22` (2026-11-07, kRunGapDefaultW),
-// `osk_key_w=24`, `osk_key_h=30` and `osk_font_px=12` (2026-10-29,
-// kKeyHeightDefaultW, kOskKeyWDefaultW,
-// kOskKeyHDefaultW, kOskFontPxDefaultW), `lamp_hold_ms=100` (2026-11-05
-// night, kLampHoldDefaultMs), `tooltip_delay_ms=100` (2026-11-07,
-// kTooltipDelayDefaultMs), kDefaultProjectsRepo and
-// a blank
-// last_project),
-// so a first run lands a
-// file that is
-// already right for it and the user edits
-// from there rather than from a wrong guess. A missing parent directory is
-// created.
+// BACKEND's answer (GuiPlatform::device_config_defaults): the shipped
+// defaults file parsed, every key spelled there, its values the tablet's
+// own config as last snapshotted (THE FIRST-RUN VALUES above, 2026-11-09;
+// until then the backend spelled each value in code), so a first run lands
+// a file that is already right for it and the user edits from there rather
+// than from a wrong guess. A missing parent directory is created.
 //
 // The error is the whole failure vocabulary of this file: an unresolvable
 // config home, a create that failed, an unopenable file, or the reader's first

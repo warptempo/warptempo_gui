@@ -15,6 +15,7 @@
 #include <fstream>
 #include <optional>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -372,14 +373,14 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
     return s;
 }
 
-std::expected<DeviceConfig, std::string> read_device_config(
-        const std::filesystem::path& path) {
+namespace {
+// THE ONE BODY under both readers (read_device_config, the file;
+// parse_device_config_text, the shipped defaults' bytes, 2026-11-09): the
+// shared scanner and this file's per-key grammar over one stream, so the
+// defaults file and a config are judged by the same words.
+std::expected<DeviceConfig, std::string> read_device_config_stream(
+        std::istream& f) {
     DeviceConfig out;
-
-    std::ifstream f(path);
-    if (!f) {
-        return std::unexpected("could not open '" + path.string() + "'");
-    }
 
     auto scan = warptempo_settings::scan_key_value_file(
         f, [&out](int ln, const std::string& key, const std::string& value)
@@ -617,6 +618,22 @@ std::expected<DeviceConfig, std::string> read_device_config(
     if (!scan) return std::unexpected(std::move(scan.error()));
     return out;
 }
+} // namespace
+
+std::expected<DeviceConfig, std::string> read_device_config(
+        const std::filesystem::path& path) {
+    std::ifstream f(path);
+    if (!f) {
+        return std::unexpected("could not open '" + path.string() + "'");
+    }
+    return read_device_config_stream(f);
+}
+
+std::expected<DeviceConfig, std::string> parse_device_config_text(
+        const std::string& text) {
+    std::istringstream in(text);
+    return read_device_config_stream(in);
+}
 
 std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg) {
     // THE TWO CLAUSES ARE COMPOSED HERE (GuiFailure, failure.h — 2026-09-02,
@@ -679,10 +696,13 @@ std::expected<DeviceConfig, std::string> load_device_config(
                                    path.parent_path().string() + "': " +
                                    ec.message());
         }
-        // FIRST RUN: stamp the backend's template and then read it back like
-        // any other file, so the very first session takes exactly the path
-        // every later one does — there is no "apply the template directly"
-        // shortcut that could drift from what the reader accepts.
+        // FIRST RUN: stamp the backend's template — the shipped defaults
+        // file's values, already through this reader once
+        // (parse_device_config_text, GuiPlatform::device_config_defaults) —
+        // and then read it back like any other file, so the very first
+        // session takes exactly the path every later one does — there is no
+        // "apply the template directly" shortcut that could drift from what
+        // the reader accepts.
         if (!atomic_write_string_to_path(
                 path.string(), format_device_config_text(first_run_template))) {
             return std::unexpected("could not create '" + path.string() + "'");

@@ -677,7 +677,8 @@ void GuiGlCanvas::ensure_programs() {
         program_ = prog;
     }
     // THE CANVAS LIST'S OBJECTS (2026-10-13; kListVertexShader's head): the
-    // program — at the plate's default grow; a list at another grow has it
+    // program — at the plate's construction grow
+    // (kWaveformGrowDefaultQuarters); a list at another grow has it
     // rebuilt at its first draw (present_frame, build_list_program) — its
     // own vertex array — the instance attributes never touch
     // the default one the texture triangle draws from — over one instance

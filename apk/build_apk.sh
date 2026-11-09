@@ -16,8 +16,8 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. the launcher icon rendered (resvg + magick)
-#   1. assets (the font files and the      into a staged res/; aapt2 compile
-#      icons)                                 + link (manifest + res + assets)
+#   1. assets (the font files, the         into a staged res/; aapt2 compile
+#      icons, the device defaults)            + link (manifest + res + assets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
 #   4. javac -> d8 (the Java sliver)    8. apksigner sign  9. verify
@@ -129,6 +129,16 @@ shopt -u nullglob
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
+# THE DEVICE CONFIG'S FIRST-RUN VALUES: the repository's tracked
+# assets/device_config_defaults (the tablet's own config as last snapshotted
+# by tools/snapshot_device_defaults.sh; src/gui/device_config.h's THE
+# FIRST-RUN VALUES) copied as the APK's root asset `device_config_defaults`,
+# which GuiPlatform::device_config_defaults reads and parses at every launch
+# (platform_android.cpp). A missing file stops the script here.
+DEFAULTS_FILE="$APPDIR/../assets/device_config_defaults"
+[ -f "$DEFAULTS_FILE" ] || wt_die "missing $DEFAULTS_FILE (the device config's first-run values)"
+cp -f "$DEFAULTS_FILE" "$ASSETS/device_config_defaults"
+wt_say "asset: device_config_defaults ($(stat -c%s "$ASSETS/device_config_defaults") bytes)"
 # (No picture is packed for the chrome: the ground is one flat color,
 # materials.h's head.)
 

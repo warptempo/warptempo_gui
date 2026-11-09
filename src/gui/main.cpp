@@ -243,7 +243,7 @@ namespace {
 // the tablet; the Program 11 W text, the ruler's Bold Small 8 W, the trim
 // bar's field 7 W; the 36-W logo lane, the key and the strip pad 19
 // W; the device rows below the tablet's at 200 %, the unit the integer W
-// since the rebase of 2026-11-05), AT key_height 17 (the template's value; a tune moves the band's and
+// since the rebase of 2026-11-05), AT key_height 17 (the construction state's value, the template's until 2026-11-09; a tune moves the band's and
 // row 8's case rows and the well by their difference; key_width moves no
 // row), the waveform the
 // whole leftover and both gaps 0 in every stack (the rule above). Every
@@ -3569,8 +3569,8 @@ int gui_main() {
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run stamps the BACKEND's
-    // own template — the seam's device_config_defaults(), the one platform fact
-    // the GUI proper needs here — and then reads it back like any other launch.
+    // own template — the seam's device_config_defaults(), the shipped
+    // defaults file parsed — and then reads it back like any other launch.
     //
     // IT IS FATAL AND IT IS EARLY. A malformed config is the adversarial class
     // (the file is program-written, so a violation is a hand edit): one blunt
@@ -3589,9 +3589,19 @@ int gui_main() {
     // the preset files the color picker wrote; only the Default theme is
     // compiled in, and the others are Live's .ask files read once at launch
     // by the theme load below, theme_ask.h's head.)
+    // THE TEMPLATE IS THE SHIPPED DEFAULTS FILE (device_config.h's THE
+    // FIRST-RUN VALUES, 2026-11-09), read and parsed at every launch: a file
+    // the reader refuses is a build defect, answered here exactly as a bad
+    // config is.
     DeviceConfig device_config;
     {
-        auto cfg = load_device_config(GuiPlatform::device_config_defaults());
+        auto defaults = GuiPlatform::device_config_defaults();
+        if (!defaults) {
+            std::fprintf(stderr, "warptempo_gui: %s\n",
+                         defaults.error().c_str());
+            return 1;
+        }
+        auto cfg = load_device_config(*defaults);
         if (!cfg) {
             std::fprintf(stderr, "warptempo_gui: %s\n", cfg.error().c_str());
             return 1;

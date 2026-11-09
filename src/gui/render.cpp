@@ -2235,32 +2235,33 @@ namespace {
     // settings editor's gui_scale commit). EVERY painted pixel quantity in the product reads it
     // through gui_scale_factor().
     int    g_gui_scale_percent = 100;
+    // THE SEATS BELOW START AT CONSTRUCTION STATE (the k…Default constants,
+    // device_config.h), which gui_main's startup seeding overwrites from the
+    // read config before the first layout; none is a first-run value — the
+    // shipped first-run value is the defaults file's (device_config.h's THE
+    // FIRST-RUN VALUES, 2026-11-09).
     // THE KEY'S HEIGHT in W (render.h's `key_height`
     // seat), set by set_key_height_w from the same two application
-    // points; the templates' value as construction state.
+    // points.
     int    g_key_height_w = kKeyHeightDefaultW;
     // THE KEY'S FACE WIDTH in W (render.h's `key_width` seat), set by
-    // set_key_width_w from the same two application points; the template's
-    // value as construction state.
+    // set_key_width_w from the same two application points.
     int    g_key_width_w = kKeyWidthDefaultW;
     // THE RUN GAP in W (render.h's `run_gap` seat), set by set_run_gap_w
-    // from the same two application points; the template's value as
-    // construction state.
+    // from the same two application points.
     int    g_run_gap_w = kRunGapDefaultW;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (render.h's
     // `osk_key_w` / `osk_key_h` seat), set by set_osk_key_size_w from the
-    // same two application points; the templates' values as construction
-    // state.
+    // same two application points.
     int    g_osk_key_width_w = kOskKeyWDefaultW;
     int    g_osk_key_height_w = kOskKeyHDefaultW;
     // THE ON-SCREEN KEYBOARD'S CAP SIZE, its em in W (render.h's
     // `osk_font_px` seat), set by set_osk_font_em_w from the same two
-    // application points; the templates' value as construction state.
+    // application points.
     int    g_osk_font_em_w = kOskFontPxDefaultW;
     // THE WAVEFORM PLATE'S GROW in quarters of a device px (render.h's
     // `waveform_grow` seat, a permanent key), set by
-    // set_waveform_grow_quarters from the same two application points; the
-    // template's value as construction state.
+    // set_waveform_grow_quarters from the same two application points.
     int    g_waveform_grow_quarters = kWaveformGrowDefaultQuarters;
 } // namespace
 // A QUARTER OF A DEVICE PX IS ONE SUBCELL: the key's lattice is the grid's,

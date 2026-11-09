@@ -89,24 +89,22 @@ public:
     // backend is born with, stamped into `$XDG_CONFIG_HOME/warptempo_gui/config`
     // on the first launch that finds no file there and never consulted again
     // (device_config.h owns the file, its schema and its keys,
-    // kDeviceConfigKeys, every one required). A PLATFORM FACT, on the seam for
-    // that reason: the scale a panel wants and where on this device the
-    // projects live are answers only the backend has. STATIC because it is
-    // asked before any window exists — gui_main resolves the config ahead of
-    // init(). This backend answers 200 % and `<externalDataPath>/projects` as
-    // the projects path. 200 is the scale the tablet runs at (architect
-    // 2026-11-05, the rebase: one W = 2 device px, a 16-W glyph 32 device
-    // px; 300 from 2026-10-10 to 2026-11-05), the whole icon row fitting
-    // (rationale at the definition, platform_android.cpp). The projects path is the
-    // activity's own absolute path stamped literally — the `projects/` of the
-    // tablet's projects clone, whose root is the external files dir — and it
-    // is read off the backend's one file-scope pointer (g_android_app), which
-    // android_main parks before
-    // gui_main asks; the choice is stated at the definition. The
-    // XDG_CONFIG_HOME the config resolves under is pointed at the app's
-    // private internal directory by android_main before gui_main runs, beside
-    // the cache home it has always set.
-    static DeviceConfig device_config_defaults();
+    // kDeviceConfigKeys, every one required). THE SHIPPED DEFAULTS FILE
+    // (architect 2026-11-08, session 95; device_config.h's THE FIRST-RUN
+    // VALUES): the APK's root asset `device_config_defaults` — the
+    // repository's tracked assets/device_config_defaults, the tablet's own
+    // config as last snapshotted, every key spelled — read through the
+    // activity's AAssetManager off the backend's one file-scope pointer
+    // (g_android_app), which android_main parks before gui_main asks, and
+    // parsed by the config's own reader (parse_device_config_text). STATIC
+    // because it is asked before any window exists — gui_main resolves the
+    // config ahead of init(). THE ERROR ARM'S PRODUCERS are build defects (an
+    // asset not packed or not read whole, a file the reader refuses), which
+    // gui_main answers as it answers a bad config. The XDG_CONFIG_HOME the
+    // config resolves under is pointed at the app's private internal
+    // directory by android_main before gui_main runs, beside the cache home
+    // it has always set.
+    static std::expected<DeviceConfig, std::string> device_config_defaults();
 
     // THE BUNDLED ICONS' FILES — the drawings of assets/icons/ (icons.h's
     // head), as a map from FILE NAME (`<Enumerator>.svg`, icons.h's

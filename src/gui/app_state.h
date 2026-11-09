@@ -4901,9 +4901,10 @@ struct AppState {
     // day's fifth parser grant, Ctrl+S does not carry it, gui_main reads it
     // once at startup, and its one authoring surface — the settings editor's
     // `projects_repo=<host/path>` — writes the config at the commit. The
-    // initializer reads kDefaultProjectsRepo (device_config.h, the template
-    // stamp) so a session that has not read the config yet names the same
-    // repository a first run stamps; every reader (the prefetch kick, the
+    // initializer reads kDefaultProjectsRepo (device_config.h), construction
+    // state only: the session seats the live config's value
+    // (main.cpp) before any reader runs, and the first-run value is the
+    // defaults file's (device_config.h's THE FIRST-RUN VALUES); every reader (the prefetch kick, the
     // render dispatch, the commit job) reads THIS field, whose source moved
     // and whose readers did not.
     std::string projects_repo = kDefaultProjectsRepo;

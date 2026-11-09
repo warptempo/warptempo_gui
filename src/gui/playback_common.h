@@ -121,8 +121,8 @@ struct GuiPlaybackState {
     // (GuiPlayback::set_audio_level_db: run_project's seat from the device
     // config, the band's AUDIO case's live drag) and read by the render body
     // ONCE PER FILL, relaxed — a level change applies at the next fill, and
-    // a fill never sees two. 1.0f, 0 dB, is the construction state and the
-    // template's: the files as they are. bind and clear leave it alone, as
+    // a fill never sees two. 1.0f, 0 dB, is the construction state: the
+    // files as they are. bind and clear leave it alone, as
     // the noise: it is the engine's level, not the binding's.
     std::atomic<float> audio_gain{1.0f};
 
