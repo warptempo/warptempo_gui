@@ -367,8 +367,11 @@ public:
     // sweep") — and a one-finger DRAG whose down point lies in an
     // OPEN EDITOR'S FIELD is THE CARET DRAG: the caret follows the finger
     // through the caret trio and nothing selects (architect 2026-09-05, the
-    // phone's text vocabulary — a divergence from the pointer road's drag
-    // there, the selection sweep, which is why it lives here). TWO fingers
+    // phone's text vocabulary; since 2026-11-08, session 95, the pointer
+    // road's drag in the field moves the caret the same way —
+    // set_editor_caret_from_x clears the anchor on both roads — so the two
+    // agree and this layer owns only the touch gesture's own recognition).
+    // TWO fingers
     // are the ZOOM gesture: this layer measures both the
     // centroid delta and the distance ratio and delivers both, and the GUI
     // discards the centroid delta on a two-finger frame — two fingers zoom
@@ -476,9 +479,10 @@ public:
     //     open and its release path is owed — the refused-begin stream
     //     covered by the same !active guard.
     //   * editor_field(x, y): THE EDITOR-FIELD QUERY (2026-09-05) — does this
-    //     point lie in the ACTIVE EDITOR'S FIELD, and does a double-click
-    //     candidate on that editor's text stand here (GuiTouchEditorField,
-    //     gui_input.h — the answer's contract)? Asked ONCE, at the FIRST
+    //     point lie in the ACTIVE EDITOR'S FIELD (GuiTouchEditorField,
+    //     gui_input.h — Field or Outside alone, the answer's contract; no
+    //     editor-text double-click candidate is asked since 2026-11-08,
+    //     touch_point_in_editor_field)? Asked ONCE, at the FIRST
     //     finger's down, beside the pan-zone query, captured beside the
     //     down point and cleared with them. It reads the field rect the
     //     GUI's own press claim reads — the marker lane's unrolled flag box

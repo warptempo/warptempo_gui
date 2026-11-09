@@ -656,7 +656,10 @@ inline int block_w_px() {
 // 1154, the gap's two cells 1152 .. 1153. AN EXTREME TUNING THAT PUSHES THE
 // BLOCK PAST THE WINDOW'S EDGE IS THAT TUNING KEY'S OWN CONSEQUENCE, like an
 // overhanging cap word: no clamp. (In this table the `5` | `6` gap stands
-// over r | t and f | g — row 1 leads with Tb and row 2 with the pass key.)
+// over r | t and f | g — row 1 leads with Tab and row 2 with the pass key.
+// The architect, shown that on 2026-11-09, session 97 — not t | y, as "the
+// true center of the alphabet" might suggest — RULED "keep 5|6": the seat
+// stays on the digit row's gap.)
 inline int block_x_px(const GuiRect& band) {
     const double factor   = gui_scale_factor();
     const double pitch_w  = osk_key_width_w() + kKeyGapW;

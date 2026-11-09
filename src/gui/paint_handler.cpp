@@ -7648,7 +7648,7 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // MODAL FAMILY'S PANEL every time it stands — the view bar's top row
     // through the controls row's top since 2026-10-14 (modal_box.h),
     // whatever its listing's length (its fixed height) — and the keyboard's
-    // is its four key rows,
+    // is its five key rows (onscreen_keyboard::kRowCount),
     // so "the band" is a question with two answers and the bit describes
     // the pixels THIS frame may have written. With NEITHER standing the band
     // to cover is the slot's tallest — the hide's own damage, which is what

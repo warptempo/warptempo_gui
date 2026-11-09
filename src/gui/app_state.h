@@ -6254,7 +6254,7 @@ struct AppState {
     // rects: the overlay's is the CEILING BAND every time it stands (from the
     // WINDOW'S TOP down since 2026-09-03, whatever its listing's length —
     // its fixed height of 2026-08-28 at the architect's new ceiling) while the
-    // keyboard's is its four key rows, and with neither standing the band to
+    // keyboard's is its five key rows, and with neither standing the band to
     // cover is the slot's tallest, which is what the hide's own damage draws
     // — and then paints whichever tenant stands, so neither painter can claim
     // pixels the frame did not write.
