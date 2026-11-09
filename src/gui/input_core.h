@@ -184,26 +184,29 @@ public:
     // change mid-hold would break the match. `codepoint` is the UTF-32 value
     // the key resolves to under the live keyboard state, filled at the press
     // and re-filled per synthesized repeat through the codepoint probe.
-    // `with_ctrl` IS A CTRL THE KEY CARRIES ITSELF (architect 2026-10-29, the
-    // on-screen keyboard's Copy and Paste keys, the one producer): true ORs
-    // ctrl into the GuiInputState this press is delivered with — and into
-    // every synthesized repeat armed off it, so a held chord repeats as the
-    // chord, the way a physical Ctrl+key hold does — whatever the tracked
-    // modifiers say; a release ignores it, as a release carries no modifier
-    // state at all. It is a property of the KEY EVENT, never of the tracked
-    // state: set_ctrl is not touched, so no ctrl edge is announced and
-    // nothing else reads a ctrl that outlives the press.
+    // `carried` ARE THE MODIFIERS THE KEY CARRIES ITSELF (GuiCarriedMods,
+    // gui_input.h; the on-screen keyboard the one producer: Copy's and
+    // Paste's ctrl, architect 2026-10-29, and LEFT's and RIGHT's latched
+    // shift, 2026-11-08): each bit set ORs into the GuiInputState this press
+    // is delivered with — and into every synthesized repeat armed off it, so
+    // a held chord repeats as the chord, the way a physical Ctrl+key or
+    // Shift+key hold does — whatever the tracked modifiers say; a release
+    // ignores it, as a release carries no modifier state at all. It is a
+    // property of the KEY EVENT, never of the tracked state: set_ctrl is not
+    // touched, so no ctrl edge is announced and nothing else reads a
+    // modifier that outlives the press.
     void key_event(GuiKey key, uint32_t stable_code, bool pressed,
-                   uint32_t codepoint, bool with_ctrl);
+                   uint32_t codepoint, GuiCarriedMods carried);
 
     // THE CTRL EDGE — the one tracked modifier, the only bit GuiInputState's
-    // ctrl carries from this layer (shift and alt are never raised here: the
-    // roster's long press raises shift on the chord itself, downstream of
-    // this layer, and nothing binds alt on glass). ITS ONE PRODUCER IS THE S
+    // ctrl carries from this layer's tracked state (shift and alt are never
+    // tracked here: the roster's long press raises shift on the chord itself,
+    // downstream of this layer, a key's own carried shift rides its key
+    // event alone, and nothing binds alt on glass). ITS ONE PRODUCER IS THE S
     // PEN'S SIDE BUTTON (architect 2026-09-25: the pen's button IS the Ctrl
     // bit — the glass's only Ctrl modifier, bare `k`'s sticky ctrl being a
     // lamp the flag press reads and not this bit, and the painted Copy and
-    // Paste keys' ctrl riding their own key events, key_event's with_ctrl,
+    // Paste keys' ctrl riding their own key events, key_event's `carried`,
     // not this bit either): the backend calls this with ctrl = the button
     // held — for what the pen owns alone, its hover or a gesture
     // touch_owner_tool() reports as the pen's (an ignored pen passes
@@ -480,31 +483,22 @@ public:
     //     down point and cleared with them. It reads the field rect the
     //     GUI's own press claim reads — the marker lane's unrolled flag box
     //     or the dialog editor's edit control, the modal family's box's
-    //     interior (2026-10-14), whichever editor is open —
-    //     and the GUI's own double-click seed, so the platform keeps no
-    //     memory of taps and no second spelling of the field. It forks THREE
-    //     things. (1) The window's SLOP CROSSING resolves to the CARET DRAG
-    //     (below) — the field is off the pan zone, which is the waveform
-    //     alone on the GUI's answer (the marker lane's box lies outside it,
-    //     and the box empties it while a dialog editor stands), so no pan
-    //     and no sweep can
-    //     be meant there. (2) A Field answer OPENS A WINDOW where the
-    //     pointer would otherwise land on contact, a window with no deadline
-    //     (input_core.cpp's constants block): the architect's field
-    //     vocabulary is tap / drag / double tap and carries NO hold meaning,
+    //     interior (2026-10-14), whichever editor is open — so the platform
+    //     keeps no memory of taps and no second spelling of the field. It
+    //     forks TWO things. (1) The window's SLOP CROSSING resolves to the
+    //     CARET DRAG (below) — the field is off the pan zone, which is the
+    //     waveform alone on the GUI's answer (the marker lane's box lies
+    //     outside it, and the box empties it while a dialog editor stands),
+    //     so no pan and no sweep can be meant there. (2) A Field answer
+    //     OPENS A WINDOW where the pointer would otherwise land on contact, a
+    //     window with no deadline (input_core.cpp's constants block): the
+    //     architect's field vocabulary is a tap and a drag (2026-11-08,
+    //     session 95, the double tap retired) and carries NO hold meaning,
     //     so nothing there may be decided by a duration — a motionless
-    //     finger stays Pending however long it rests and its LIFT is the
-    //     ordinary tap burst, seeding the double-tap candidate exactly as a
-    //     quick tap does, while a finger that rests and then drags still
-    //     moves the caret through the crossing and can never fall into the
-    //     desk's selection sweep. (3) A DoublePress answer resolves the
-    //     window to the POINTER AT THE DOWN ITSELF, the press delivered on
-    //     contact: a second down inside the double-click window and slack of
-    //     a seed can only be the double press, so nothing waits (the third
-    //     clause, GuiInputHandler::on_key), the GUI's consumed second press
-    //     selects
-    //     the word, and the finger's motion from there is ordinary Pointer
-    //     motion driving the GUI's word-wise extension.
+    //     contact stays Pending however long it rests and its LIFT is the
+    //     ordinary tap burst, the press seating the caret, while a contact
+    //     that rests and then drags still moves the caret through the
+    //     crossing.
     //     Null — or answering Outside — means no field: off the pan zone,
     //     the pointer on contact.
     //   * caret_begin(x, y): the window resolved to the caret drag at the
@@ -668,13 +662,13 @@ private:
     // outright — a key press re-arms or disarms via press-time eligibility, and
     // the touch translation's press clears repeat_key_ at its delivery — so no
     // armed hold can straddle a target change.
-    // repeat_with_ctrl_ is the armed press's own `with_ctrl` (key_event's
+    // repeat_carried_ is the armed press's own carried modifiers (key_event's
     // contract), ORed into each fire's modifiers before the eligibility
     // re-check, so a held carried chord repeats as itself.
-    GuiKey        repeat_key_       = 0;
-    uint32_t      repeat_keycode_   = 0;
-    bool          repeat_editor_ctx_ = false;
-    bool          repeat_with_ctrl_  = false;
+    GuiKey         repeat_key_       = 0;
+    uint32_t       repeat_keycode_   = 0;
+    bool           repeat_editor_ctx_ = false;
+    GuiCarriedMods repeat_carried_{};
     uint64_t      repeat_due_us_    = 0;
     uint64_t      repeat_delay_us_  = 600'000;   // sensible defaults if the
     uint64_t      repeat_period_us_ = 33'000;    // platform is mute (600ms/30Hz)
@@ -736,9 +730,7 @@ private:
     //     ARMED SWEEP (-> Region below; the sweep_armed query), and to the
     //     CARET DRAG in the field (2026-09-05,
     //     the editor_field query; -> Caret below), where the TAP is the
-    //     field's one road to the pointer beside the double press; a
-    //     DoublePress answer at the down resolves to Pointer on contact, the
-    //     window never opening. A second FINGER landing inside the ZONE'S
+    //     field's one road to the pointer. A second FINGER landing inside the ZONE'S
     //     window resolves to two-finger Nav — the jump-free pinch, the
     //     window's whole point there; in the field's window, or where either
     //     contact is a PEN, it is ignored.
@@ -811,8 +803,8 @@ private:
     // states only its own clause):
     //   * touch UP, owner, Pending  — a TAP, HOWEVER LONG THE CONTACT RESTED
     //     (no window has a deadline: in the editor field a slow tap is still
-    //     a tap and still seeds the double-tap candidate the release owes; on
-    //     the zone a resting contact is never a hold, 2026-11-07): resolve
+    //     a tap, seating the caret; on the zone a resting contact is never a
+    //     hold, 2026-11-07): resolve
     //     (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
     //     translation end on the release's own edge; -> the Pointer arm's own
@@ -825,16 +817,9 @@ private:
     //     reach it), so ON THE PAN ZONE the burst's motionless press-release
     //     runs the GUI's DEFERRED CLICK ACT at its release — the placement at
     //     the tap point (the lower half's scrub), the TRIM lamp lit or not.
-    //   * first DOWN with a DoublePress editor-field answer (2026-09-05) —
-    //     Idle -> Pointer AT ONCE: the seed makes the press's identity
-    //     certain, so the window is opened and resolved in the same call
-    //     (the entry motion and the press at the down point, nothing
-    //     queued), and the finger's motion from here is Pointer motion —
-    //     the GUI's consumed second press selected the word and armed its
-    //     word-wise drag.
     //   * first DOWN OFF THE PAN ZONE AND OUTSIDE AN OPEN EDITOR'S FIELD
     //     (2026-09-25, every tool alike) — Idle -> Pointer AT ONCE, the
-    //     DoublePress clause's own shape: the entry motion and the press at
+    //     window opened and resolved in the same call: the entry motion and the press at
     //     the down point, nothing queued, and every motion from here is
     //     Pointer motion. The press's identity is certain at the down there —
     //     no pan, no sweep and no pinch can be meant off the waveform — so
@@ -1037,10 +1022,8 @@ private:
     // the pan-zone bit above at the first finger's down (the editor_field query
     // at set_touch_nav_hooks) and cleared with them in forget_touch_state.
     // Field opens a window (deadline-free like every window, so the tap
-    // survives any dwell) and forks its crossing to the caret drag;
-    // DoublePress resolves the down
-    // to the pointer on contact (the edge inventory above). Outside leaves the
-    // answer to the pan-zone bit.
+    // survives any dwell) and forks its crossing to the caret drag. Outside
+    // leaves the answer to the pan-zone bit.
     GuiTouchEditorField touch_down_in_editor_field_ = GuiTouchEditorField::Outside;
     // Region: a finger position staged for the touch_frame boundary
     // (the Nav dirty-frame cadence; delivered as region_update(x, y)).

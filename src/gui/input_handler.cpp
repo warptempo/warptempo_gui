@@ -1500,11 +1500,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Shift is the only modifier they take: Ctrl, Ctrl+Shift and Alt forms
     // bind nothing and are consumed no-ops under strict modifier validation.
     //
-    // A TEXT EDITOR NEVER REACHES THIS ARM: Home / End under any modifier are
-    // the editors' own caret motion and selection (text_editor::classify_key's
-    // MotionEditKey arm admits ctrl and shift on Home / End), and the editor
-    // blocks sit at the top of on_key, far above this dispatch — so an open
-    // editor consumes the chord before the jump can see it. The render player
+    // A TEXT EDITOR NEVER REACHES THIS ARM: Home / End are no editor's keys
+    // (text_editor::classify_key names neither), so the keyboard-modal gate
+    // at the top of on_key, far above this dispatch, drops the chord before
+    // the jump can see it (modal_editor_key_blocked). The render player
     // never reaches it either: its router owns the whole keyboard while it
     // stands, and its own Shift+Home / Shift+End are the item folder's ends
     // (route_render_player_key).

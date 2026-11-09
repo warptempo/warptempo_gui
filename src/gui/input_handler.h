@@ -1268,30 +1268,29 @@ struct GuiInputHandler {
 
     // THE EDITOR-FIELD QUERY (2026-09-05) — the pan-zone query's third
     // sibling, asked at the same down: does this point lie in the ACTIVE
-    // EDITOR'S FIELD, and does a double-click candidate on that editor's
-    // text stand here (GuiTouchEditorField, gui_input.h, is the answer's
+    // EDITOR'S FIELD (GuiTouchEditorField, gui_input.h, is the answer's
     // contract)? It reads the ONE field rect the press claim reads
     // (ActiveEditorText::field — the marker lane's published box, or the
     // dialog editor's edit control, the modal family's box's interior since
-    // 2026-10-14) and the double-click seed the release
-    // already keeps, through the press arm's own predicate, so the platform
-    // learns nothing about text and keeps no memory of taps. Wired at
-    // main.cpp's set_touch_nav_hooks call. Non-const because the active
-    // editor's resolution is (it yields the editor's own state pointer).
+    // 2026-10-14), so the platform learns nothing about text and keeps no
+    // memory of taps. Wired at main.cpp's set_touch_nav_hooks call.
+    // Non-const because the active editor's resolution is (it yields the
+    // editor's own state pointer).
     GuiTouchEditorField touch_point_in_editor_field(int x, int y);
 
     // THE TOUCH CARET DRAG (architect 2026-09-05, on the tablet: "make the
     // tiny text box not feel broken" — a finger dragged inside the open
-    // editor moves the caret, the phone's own text vocabulary, rather than
-    // the pointer road's selection sweep (EditorTextDragState); the THIRD
-    // ruled touch divergence, taking the region trio's shape). GLASS'S TEXT VOCABULARY IS
-    // THE PHONE'S, AND ONLY THAT: a TAP seats the caret, a plain DRAG moves
-    // it, a HOLD MEANS NOTHING (a rest then a drag moves the caret, a rest
-    // then a lift is still a tap — no touch window has a deadline), a
-    // DOUBLE TAP selects
-    // the word and a double-tap-drag extends by words, a later single tap
-    // collapses the selection — no selection handles, no magnifier, no
-    // toolbar and no free-form sweep by finger. These three are the GUI's
+    // editor moves the caret, the phone's own text vocabulary; the THIRD
+    // ruled touch divergence, taking the region trio's shape). THE FIELD'S
+    // VOCABULARY IS A TAP AND A DRAG, AND NOTHING ELSE (architect 2026-11-08,
+    // session 95, retiring 2026-09-05's double tap and double-tap-drag by
+    // words): a TAP seats the caret, collapsing a selection, a plain DRAG
+    // moves it, collapsing too, a HOLD MEANS NOTHING (a rest then a drag
+    // moves the caret, a rest then a lift is still a tap — no touch window
+    // has a deadline), the pen and the finger alike — no selection handles,
+    // no magnifier, no toolbar, no sweep. THE SELECTION COMES FROM THE KEYS
+    // ALONE: the on-screen keyboard's latched Shift with LEFT / RIGHT
+    // (text_editor::handle_key's caret arm). These three are the GUI's
     // answer to the
     // platform's caret trio. They arm no drag record, keep no state of their
     // own and nothing joins any_pointer_gesture_active: each acts on the
@@ -1300,15 +1299,15 @@ struct GuiInputHandler {
     // down — the touch window has one owner and the on-screen keyboard needs
     // a touch of its own), and with no editor active each is a no-op.
     //
-    // begin_touch_caret_drag(x, y): the down point — clear the double-click
-    // seed (a caret drag is motion, and motion between two taps breaks a
-    // candidate; the stream's own end never seeds), drop any selection, seat
+    // begin_touch_caret_drag(x, y): the down point — clear any double-click
+    // seed (a caret drag is motion, and motion breaks a candidate, the C8
+    // rule the nav frames apply), drop any selection, seat
     // the caret under x through THE ONE POINTER SEAT (set_editor_caret_from_x,
     // which restarts the blink) and damage the editor's surface.
     // update_touch_caret_drag(x, y): the same seat per delivered frame,
     // nothing selecting — the I-beam follows the finger.
     // end_touch_caret_drag(): THE DRAIN RULE — the caret stays where it was
-    // last seated, nothing selects, nothing commits, nothing seeds, the
+    // last seated, nothing selects, nothing commits, the
     // editor stays open and Enter remains its one commit route; the body
     // restarts the blink so the resting caret is lit the instant the finger
     // leaves, and damages for it. Fired on the finger's lift and on the hard
@@ -4219,8 +4218,8 @@ private:
     // types into the very editor raising the veil.
     //
     // THE PRESS CLAIMS THE WHOLE RECT and answers true for every press inside
-    // it, key or not: the gaps between keys, the edge pad, a row's stagger
-    // and the ground beside the centered block all CONSUME: a finger that
+    // it, key or not: the gaps between keys, the edge pad and the ground
+    // beside the seated block all CONSUME: a finger that
     // misses a key must not fall through to the
     // waveform's pan underneath. A key's
     // act runs AT THE PRESS through GuiPlatform::synthesize_key, so the whole

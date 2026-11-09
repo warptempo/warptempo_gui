@@ -84,14 +84,18 @@
 // SIDES' NORMAL PADDINGS (architect 2026-10-22, "the rule that we had
 // implemented before"): the strip pad under the row's cases plus the
 // keyboard band's own edge pad above its first key row — by construction,
-// the row standing directly on the band with nothing between. On the tablet
-// (200 %): 38 + 14 = 52 device rows (at the defaults below the row's faces
-// end on 1065 and the first key row starts on 1118). THE ROWS, at
-// key_height 17 and the keyboard's defaults, osk_key_w 24 and osk_key_h 30
-// (48 x 60 device px; 2026-10-29, the compact keyboard; its band 336 rows
-// since the unit's gap and pad, 2026-11-04 night): the keyboard's band 1104–1439 (its first key row's top
-// 1118), the controls row 994–1103 (its face rows 1032–1065), the box's
-// bottom rows 992–993 (ground), the pane y 146..991.
+// the row standing directly on the band with nothing between; THAT EDGE PAD
+// IS THE KEYBOARD'S HEIGHT FLOOR'S ANSWER since 2026-11-08
+// (onscreen_keyboard::edge_pad_px: the band's top at or above the lower
+// channel's center line, the pads grown in even W), so the box is as much
+// shorter as the floor grows it. On the tablet (200 %) at key_height 17 and
+// the keyboard's defaults, osk_key_w 24 and osk_key_h 30 (48 x 60 device
+// px): 38 + 38 = 76 device rows (the row's faces end on 1017 and the first
+// key row starts on 1094); THE ROWS: the keyboard's band 1056–1439 (its
+// pads 38, the floor's), the controls row 946–1055 (its face rows
+// 984–1017), the box's bottom rows 944–945 (ground), the pane y 146..943.
+// At his tuning (key_height 25, osk_key_h 35): 38 + 18 = 56 rows, the band
+// 1046–1439, the controls row 920–1045 (its face rows 958–1007).
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);

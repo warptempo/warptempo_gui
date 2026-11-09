@@ -4401,9 +4401,9 @@ namespace {
 // and repeat_eligible's ring arm just below), so the spelling cannot drift
 // apart the way hand-kept lists would. BARE TAB EXACTLY, the forward walk
 // (architect 2026-10-30: the on-screen keyboard's Tab key, its one producer,
-// carries no shift — Shift is a one-shot capital for the next character — so
-// the reverse walk had no producer and went; Ctrl+Tab is the tab-cycle
-// family's, never this ring's).
+// carries no shift — the latched Shift rides LEFT and RIGHT alone, since
+// 2026-11-08 — so the reverse walk had no producer and went; Ctrl+Tab is the
+// tab-cycle family's, never this ring's).
 bool modal_ring_tab(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Tab && !mods.ctrl && !mods.shift && !mods.alt;
 }
@@ -4467,9 +4467,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (modal_dialog_editor_active() && modal_dialog_focus_live() >= 0)
         return false;
     if (any_text_editor_active()) {
-        // Only the editor's motion/edit and printable-insert keys auto-repeat
-        // while held; its session (bare Escape/Return) and chord (ctrl-exact
-        // C/V) keys are one-shot, and NotEditorKey is not the editor's to
+        // Only the editor's motion/edit keys — Backspace and, since
+        // 2026-11-08 (sessions 95 / 96), LEFT / RIGHT bare or carrying the
+        // latched Shift, the shift riding every fire — and its
+        // printable-insert keys auto-repeat while held; its session (bare
+        // Escape/Return), chord (ctrl-exact C/V, Copy and Paste) and pass
+        // keys are one-shot, and NotEditorKey is not the editor's to
         // repeat — the keyboard-modal gate drops it before anything could act on
         // it anyway. An ALT-carrying motion press is in that last bucket and so
         // does not repeat, which falls out of the classifier rather than being
@@ -4550,8 +4553,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // set, which is the on-screen keyboard's vocabulary (architect 2026-10-30,
 // the keyboard the one key producer under an editor): BARE Escape / Enter,
 // CTRL-EXACT C/V (the keyboard's Copy and Paste, carrying their own ctrl),
-// bare BackSpace, and printable insertion (Space lands in the buffer as a
-// typed character, not as playback). NO admitted key carries alt, on any arm.
+// the bare pass key, bare BackSpace, LEFT / RIGHT bare or carrying the
+// latched Shift (2026-11-08 — so a main-page Left / Right binding never
+// fires under an editor: the editor's own arm takes the key, and every
+// other spelling drops here), and printable insertion (Space lands in the
+// buffer as a typed character, not as playback). NO admitted key carries
+// alt, on any arm.
 // The strict-modifier rule therefore holds by ONE route: a press wearing a
 // modifier its arm does not bind (Ctrl+Enter, Ctrl+Shift+V, Ctrl+BackSpace —
 // none has a producer since 2026-11-08, when the barrel's road on the

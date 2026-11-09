@@ -192,8 +192,9 @@ struct CanvasLines {
 // [r − 1, r + 1) half a row high — no gain, so the rows keep their top-row
 // frame.
 void canvas_hline(CanvasLines& lines, const GuiRect& area, int row, int t) {
-    const int top = std::max(area.y, area.y + row - (t - 1) / 2);
-    const int bot = std::min(area.y + area.h, area.y + row - (t - 1) / 2 + t);
+    const int first = area.y + canvas_hline_first_row(row, t);
+    const int top = std::max(area.y, first);
+    const int bot = std::min(area.y + area.h, first + t);
     if (bot > top) {
         assert(lines.count < static_cast<int>(lines.rects.size()));
         lines.rects[static_cast<std::size_t>(lines.count++)] =

@@ -1035,7 +1035,8 @@ int  run_gap_w();
 // KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
 // like a phone … chiclets, taller than wide"): the live box IN W
 // (scaled_px's axis), read by onscreen_keyboard.h's geometry and nothing
-// else. The key_height seat's shape exactly — file-scope state in render.cpp,
+// else (osk_key_h moving the band's height and so its height floor's pads,
+// onscreen_keyboard::edge_pad_px, 2026-11-08). The key_height seat's shape exactly — file-scope state in render.cpp,
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
 // (GuiInputHandler::apply_osk_key_size, which re-lays-out at once). The
@@ -2269,8 +2270,8 @@ GuiRect well_foot_area(const AppState& a);
 // SURFACE STANDS ON THESE COLUMNS — the keys' faces, the logo lane's ink,
 // row 8, the cards' and the tooltip's boxes and THE MODAL PANE (modal_box.h:
 // the box's outer ground columns one hairline outside them). The on-screen
-// keyboard is exempt, a small centered
-// block by his ruling (onscreen_keyboard.h).
+// keyboard is exempt, a small block seated on the window's center by his
+// ruling (onscreen_keyboard.h's block_x_px).
 struct WellColumns {
     int x   = 0;   // the well's first column (the waveform area's x)
     int end = 0;   // one past its last column (the area's x + w)
@@ -3108,6 +3109,30 @@ inline WaveformChannelBand waveform_channel_band(int area_h, int divider_px,
                                                  int channel) {
     const int ch_h = waveform_channel_band_h(area_h, divider_px);
     return WaveformChannelBand{channel == 0 ? 0 : ch_h + divider_px, ch_h};
+}
+
+// A CANVAS ROW-LINE'S FIRST ROW, area-local: a line `t` rows thick standing
+// on area-local row `row` covers rows [row − (t − 1) / 2, … + t) — the grid's
+// and the center lines' one row rule (canvas_hline, render.cpp, where its
+// deliberate top-row asymmetry is recorded), before the cut to the area.
+inline int canvas_hline_first_row(int row, int t) { return row - (t - 1) / 2; }
+
+// THE LOWER CHANNEL'S CENTER LINE'S TOP ROW, window y — the line
+// render_center_lines paints for channel 1, on its band's zero row through
+// the one row rule above (one W thick, waveform_line_px), or -1 where the
+// band has no rows (the line is not painted). The canvas ALWAYS HAS THE TWO
+// WELLS (2026-10-16): both center lines paint with or without a source, mono
+// or stereo (build_canvas_list's two branches), so the line stands whenever
+// the canvas has rows. ITS ONE READER is the on-screen keyboard's height
+// floor (onscreen_keyboard::edge_pad_px, architect 2026-11-08). On the
+// tablet at 200 % the canvas 243 .. 1327 at key_height 17 puts it on rows
+// 1056..1057, and 259 .. 1311 at key_height 25 on rows 1048..1049.
+inline int lower_center_line_top_row(const GuiRect& area) {
+    const WaveformChannelBand band =
+        waveform_channel_band(area.h, waveform_divider_px(), 1);
+    if (area.h <= 0 || band.h <= 0) return -1;
+    return std::max(area.y, area.y + canvas_hline_first_row(
+                                         band.zero_row(), waveform_line_px()));
 }
 
 // THE TWO WELLS' ROWS, window y, [y0, y1): the upper well's from the

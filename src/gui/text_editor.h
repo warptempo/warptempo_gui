@@ -34,18 +34,22 @@
 //     offsets (text_shape::byte_offsets_px) and the click-to-byte search all
 //     address by byte, so there is exactly one coordinate and nothing to
 //     convert between.
-//   - EVERY STEP MOVES A WHOLE CODEPOINT. BackSpace, the pointer's caret
-//     placement and the double-click run selector all land on codepoint
-//     boundaries, so `cursor_pos` and `selection_anchor` are boundaries by
-//     construction and no operation can split a character.
+//   - EVERY STEP MOVES A WHOLE CODEPOINT. BackSpace, LEFT and RIGHT and the
+//     pointer's caret placement all land on codepoint boundaries, so
+//     `cursor_pos` and `selection_anchor` are boundaries by construction and
+//     no operation can split a character.
 //   - THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30, its
 //     one producer): its characters, Backspace, Enter, Esc, Tab (the dialog
-//     ring's and the completion's, upstream of this module), and Copy and
-//     Paste (Ctrl+C / Ctrl+V, the two keys' own ctrl). THE BARREL HAS NO ROAD
-//     ON ANY KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session 94):
-//     its word erase, Ctrl+A and Ctrl+X went with it. It has no arrows, no
-//     Home / End and no Delete; the caret moves by the pointer (the field's
-//     press, its caret drag).
+//     ring's and the completion's, upstream of this module), Copy and Paste
+//     (Ctrl+C / Ctrl+V, the two keys' own ctrl), and since 2026-11-08
+//     (sessions 95 / 96) LEFT and RIGHT — the caret, and with the latched
+//     Shift the selection — and the pass key. THE BARREL HAS NO ROAD ON ANY
+//     KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session 94): its
+//     word erase, Ctrl+A and Ctrl+X went with it. It has no Home / End and
+//     no Delete. THE SELECTION COMES FROM THE KEYS ALONE (architect
+//     2026-11-08, session 95): the field's tap seats the caret and its drag
+//     moves it, collapsing (begin_touch_caret_drag's declaration,
+//     input_handler.h); a refused Enter selects the whole text (refuse).
 //   - GRAPHEME CLUSTERS ARE OUT OF SCOPE, deliberately and in the same class as
 //     the no-bidi and no-font-fallback exclusions: a combining mark is its own
 //     codepoint, so it carets and deletes separately from the base character it
@@ -381,11 +385,11 @@ struct State {
     int cursor_pos = 0;
 
     // -1 means no selection. When >= 0, the selected range is
-    // [min(selection_anchor, cursor_pos), max(...)). Set by an
-    // open-selected seed, the pointer's double-click and drag, and a refused
-    // Enter (refuse); cleared
-    // by a pointer caret placement, any printable insertion, any backspace,
-    // and by enter/deactivate.
+    // [min(selection_anchor, cursor_pos), max(...)). Set by a shifted LEFT /
+    // RIGHT (the anchor where the caret stood, the free end cursor_pos) and
+    // a refused Enter (refuse); cleared by a pointer caret placement or drag,
+    // an unshifted LEFT / RIGHT, any printable insertion, the pass key, any
+    // backspace, and by enter/deactivate.
     int selection_anchor = -1;
 
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
@@ -419,9 +423,8 @@ struct State {
     // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: the painter folds the
     // offset into the ORIGIN it publishes (FlagEditorBox::text_origin_x,
     // "the window x byte 0 paints at"), so editor_stop_at's
-    // nearest-boundary search, the
-    // F2.1 text drag and the double-click word select all land correctly on a
-    // scrolled field with no knowledge that it scrolled.
+    // nearest-boundary search and every caret seat it serves land correctly
+    // on a scrolled field with no knowledge that it scrolled.
     //
     // It lives on State rather than beside either geometry because it is
     // SESSION state: it must survive from frame to frame — recomputing it from
@@ -538,8 +541,12 @@ enum class KeyClass {
     NotEditorKey,   // not the editor's — the keyboard-modal gate drops it
     SessionKey,     // BARE Escape, Return — end the session, never repeat
     ChordKey,       // CTRL-EXACT C/V (Copy, Paste) — one-shot
-    // BackSpace, BARE — repeats. The on-screen keyboard's one editing key
-    // (architect 2026-10-30); a modified press is NotEditorKey.
+    // The pass key (GuiKeys::Pass), BARE — one-shot (architect 2026-11-08,
+    // sessions 95 / 96).
+    InsertKey,
+    // BackSpace, BARE, and LEFT / RIGHT, bare or SHIFT-ONLY (architect
+    // 2026-11-08, sessions 95 / 96) — repeat. Any other modifier is
+    // NotEditorKey.
     MotionEditKey,
     // No ctrl/alt and a character-bearing codepoint: >= 0x20, not DEL, not a
     // surrogate, within Unicode. Not ASCII-limited — the platform resolves a
@@ -549,11 +556,13 @@ enum class KeyClass {
 
 // Classify key+mods against the editor's owned keymap, reproducing handle_key's
 // exact predicates and precedence: the session keys before the Ctrl chords, the
-// chords (specific C/V) before BackSpace, BackSpace (bare) before printable. A
+// chords (specific C/V) before the pass key, the pass key before BackSpace and
+// the caret keys, those before printable. A
 // key that could satisfy two predicates classifies as the one handle_key acts
 // on (Ctrl+C is a chord, not printable — printable already excludes ctrl). NO
-// ARM ADMITS ALT: session and BackSpace are bare-exact, the chords ctrl-exact,
-// printable already excludes ctrl and alt. So a press wearing a modifier its
+// ARM ADMITS ALT: session, the pass key and BackSpace are bare-exact, the
+// chords ctrl-exact, LEFT / RIGHT bare or shift-only, printable already
+// excludes ctrl and alt. So a press wearing a modifier its
 // arm does not bind (Ctrl+Escape, Ctrl+Shift+V, Ctrl+BackSpace — no producer
 // spells one since the barrel left the keyboard, 2026-11-08) is simply
 // NotEditorKey: unbound and
@@ -573,9 +582,11 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // and THE ONE OWNER OF THE PER-KIND BYTE CAP — every route that grows a
 // pending buffer comes through it: the paste (input_handler), the
 // settings editor's completion append and its recall prefix
-// (settings_editor.cpp), and THE TYPED KEYSTROKE, which handle_key encodes and
+// (settings_editor.cpp), THE TYPED KEYSTROKE, which handle_key encodes and
 // hands over rather than repeating the ladder (its own contribution is the
-// KeyAction::OverCapacity it returns when this refuses). Its acceptance rule:
+// KeyAction::OverCapacity it returns when this refuses), and THE PASS KEY's
+// `pass`, handle_key's one whole-token insertion (2026-11-08). Its
+// acceptance rule:
 //   - PRINTABLE ASCII (0x20..0x7e) passes.
 //   - WELL-FORMED MULTI-BYTE UTF-8 passes verbatim — the sequence's length
 //     matches its lead byte, every continuation byte is one, and the decoded
@@ -650,23 +661,6 @@ void restart_blink(State& s);
 int byte_index_from_shaped_x(double click_x, double text_origin_x,
                              const std::vector<double>& boundaries);
 
-// Select the maximal run of the clicked character's class under byte index
-// `pos`, setting selection_anchor to the run start and cursor_pos to its end
-// (an empty pending leaves no selection; a non-empty pending always selects at
-// least one character). This is a selection-specific classifier DISTINCT from
-// any word-walking scanner — the desktop double-click
-// convention (select the clicked class's run, never crossing a class change)
-// differs from word-walking, and every toolkit (GTK/Qt/Kate/
-// Firefox) ships a tailored selection heuristic rather than reusing its motion
-// boundaries. Three classes, the Qt/Kate "programmer's word" variant: WORD is
-// [A-Za-z0-9_] plus any byte >= 0x80 (so a multi-byte character is one uniform
-// run and a selection edge lands only on codepoint boundaries), WHITESPACE
-// is ' ' and '\t', PUNCTUATION is every other byte — so clicking `=`, `.`, or
-// `::` selects that punctuation run. The double-click path in the input handler
-// calls this after mapping the click x to a byte index
-// (byte_index_from_shaped_x).
-void select_word_at(State& s, int pos);
-
 // THE SOFT WRAP — the one rule that breaks a dialog editor's line into the
 // rows the modal family's box shows (architect 2026-10-14: "looks like a
 // multiline edit but that's ok — long lines can wrap"; nothing scrolls).
@@ -732,21 +726,5 @@ inline std::vector<WrapRow> soft_wrap_rows(
     }
     return rows;
 }
-
-// THE DOUBLE-CLICK-DRAG'S EXTENSION (2026-09-05): grow the selection BY WORDS
-// from a fixed anchor run — [anchor_start, anchor_end), the run
-// select_word_at selected at the double-click — toward the byte under the
-// pointer, `pos`. The moving end snaps OUTWARD to the boundary of the run
-// under the pointer (select_word_at's own three-class rule, never a different
-// one): a pointer past the anchor's end selects from anchor_start to that
-// run's end, a pointer before the anchor's start selects from that run's
-// start to anchor_end, and a pointer back inside the anchor run leaves just
-// that run selected. It writes selection_anchor and cursor_pos so the
-// cursor rides the moving end (the keyboard's shift-extend shape) and
-// restarts the blink; an empty pending selects nothing. Called by the input
-// handler's text-drag motion while the drag it armed at a double-click is
-// live (EditorTextDragState::by_words).
-void extend_selection_by_words(State& s, int anchor_start, int anchor_end,
-                               int pos);
 
 } // namespace text_editor

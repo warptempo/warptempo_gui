@@ -422,14 +422,16 @@ public:
     // that produces no character — it is REMEMBERED against stable_code so the
     // core's codepoint probe can re-answer for a synthesized repeat, which is
     // the whole reason this is a method rather than a bare forward.
-    // `with_ctrl` is a ctrl the key carries itself — the painted Copy and
-    // Paste keys' (2026-10-29), handed to the core's key_event as is (its
-    // contract there): the S Pen's barrel stays the glass's tracked Ctrl.
+    // `carried` are the modifiers the key carries itself (GuiCarriedMods,
+    // gui_input.h) — the painted Copy and Paste keys' ctrl (2026-10-29), LEFT
+    // and RIGHT's latched shift (2026-11-08) — handed to the core's key_event
+    // as is (its contract there): the S Pen's barrel stays the glass's
+    // tracked Ctrl.
     //
     // ITS ONE CALLER (2026-08-27) is the keyboard's press router, which
     // calls it through the seam like any other member.
     void synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
-                        uint32_t codepoint, bool with_ctrl);
+                        uint32_t codepoint, GuiCarriedMods carried);
 
     // -- THE CAR'S TWO SEAM MEMBERS (architect design 2026-08-28 §3;
     // gui_media.h is the vocabulary) --------------------------------------

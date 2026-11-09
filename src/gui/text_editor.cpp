@@ -43,6 +43,22 @@ int prev_codepoint_boundary(const std::string& s, int pos) {
     return i;
 }
 
+// The codepoint boundary strictly RIGHT of `pos` (the text's size when there
+// is none) — the caret keys' step (handle_key's Left / Right arm).
+int next_codepoint_boundary(const std::string& s, int pos) {
+    const int n = static_cast<int>(s.size());
+    if (pos >= n) return n;
+    int i = std::max(pos, 0) + 1;
+    while (i < n && is_utf8_continuation_byte(
+                        static_cast<unsigned char>(s[static_cast<size_t>(i)])))
+        ++i;
+    return i;
+}
+
+// THE PASS KEY'S TEXT (architect 2026-11-08, sessions 95 / 96): the flag
+// grammar's `pass` token, the one word a key types whole.
+constexpr const char* kPassKeyText = "pass";
+
 // The insertable codepoints for the typed path: everything from U+0020 up
 // EXCEPT the C0 controls, DEL, the surrogate range, and anything past the
 // Unicode maximum. ASCII controls are dropped as they always were (Return and
@@ -67,30 +83,6 @@ void erase_selection(State& s) {
                     static_cast<size_t>(b - a));
     s.cursor_pos = a;
     s.selection_anchor = -1;
-}
-
-// Character class for the double-click run selector (below). Three classes,
-// the Qt/Kate "programmer's word" convention: WORD is [A-Za-z0-9_] plus any
-// byte >= 0x80 (UTF-8 lead and continuation bytes both classify as word, so a
-// multi-byte character is one uniform run and a selection edge can never land
-// inside one); WHITESPACE is ' ' and '\t'; PUNCTUATION is every other byte.
-//
-// THE PROBE IS EXACT, not a degradation: `pos` comes from
-// byte_index_from_shaped_x over the shaped run's OWN per-byte pen offsets, so
-// non-ASCII earlier in the line shifts nothing (the pre-shaping monospace
-// mapping, which divided x by one advance, is what could be shifted — it died
-// with the face).
-enum class CharClass { Word, Whitespace, Punctuation };
-
-CharClass classify(char c) {
-    const unsigned char u = static_cast<unsigned char>(c);
-    if (u >= 0x80) return CharClass::Word;
-    if (u == ' ' || u == '\t') return CharClass::Whitespace;
-    if ((c >= '0' && c <= '9') ||
-        (c >= 'a' && c <= 'z') ||
-        (c >= 'A' && c <= 'Z') ||
-        c == '_') return CharClass::Word;
-    return CharClass::Punctuation;
 }
 
 } // namespace
@@ -133,74 +125,6 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
         }
     }
     return best;
-}
-
-namespace {
-
-// The maximal run of the character class under byte index `pos` of a
-// NON-EMPTY string, as [start, end) — never crossing a class change, the
-// desktop double-click convention (GTK/Qt/Kate/Firefox): a click on
-// punctuation selects that punctuation run, not the following word. pos == n
-// (a click past the last glyph) has no character AT n, so it classifies by
-// n-1 and yields the trailing run. THE ONE RUN WALK, read by the
-// double-click's select and by the double-click-drag's word-wise extension so
-// the two cannot disagree about where a word ends.
-std::pair<int, int> class_run_at(const std::string& text, int pos) {
-    const int n = static_cast<int>(text.size());
-    pos = std::clamp(pos, 0, n);
-    const int probe = (pos == n) ? pos - 1 : pos;
-    const CharClass cls = classify(text[static_cast<size_t>(probe)]);
-    int start = probe;
-    while (start > 0 &&
-           classify(text[static_cast<size_t>(start - 1)]) == cls) --start;
-    int end = probe + 1;
-    while (end < n &&
-           classify(text[static_cast<size_t>(end)]) == cls) ++end;
-    return {start, end};
-}
-
-} // namespace
-
-void select_word_at(State& s, int pos) {
-    const int n = static_cast<int>(s.pending.size());
-    if (n <= 0) {
-        s.selection_anchor = -1;
-        s.cursor_pos = 0;
-        return;
-    }
-    // A run is always at least one character when pending is non-empty, so the
-    // empty-selection arm above survives only for the empty-pending case.
-    const auto [start, end] = class_run_at(s.pending, pos);
-    s.selection_anchor = start;
-    s.cursor_pos       = end;
-    touch_blink(s);
-}
-
-void extend_selection_by_words(State& s, int anchor_start, int anchor_end,
-                               int pos) {
-    const int n = static_cast<int>(s.pending.size());
-    if (n <= 0) {
-        s.selection_anchor = -1;
-        s.cursor_pos = 0;
-        return;
-    }
-    anchor_start = std::clamp(anchor_start, 0, n);
-    anchor_end   = std::clamp(anchor_end, anchor_start, n);
-    const auto [run_start, run_end] = class_run_at(s.pending, pos);
-    // The anchor run stands and the moving end snaps outward past it: the
-    // cursor rides the moving end, exactly as a shift-extended keyboard walk
-    // leaves it, so a later shift+arrow keeps growing from the same anchor.
-    if (run_end <= anchor_start) {
-        s.selection_anchor = anchor_end;
-        s.cursor_pos       = run_start;
-    } else if (run_start >= anchor_end) {
-        s.selection_anchor = anchor_start;
-        s.cursor_pos       = run_end;
-    } else {
-        s.selection_anchor = anchor_start;
-        s.cursor_pos       = anchor_end;
-    }
-    touch_blink(s);
 }
 
 std::string selected_text(const State& s) {
@@ -356,19 +280,22 @@ void enter(State& s, int target,
 
 KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // Precedence mirrors handle_key's branch order exactly (see the header):
-    // session first, then the Ctrl chords, then Backspace (bare), then
-    // printable. Each test returns before the next, so a key satisfying two
-    // predicates classifies as the branch handle_key would act on. THE
-    // VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30, its one
-    // producer under an editor): its characters, Backspace, Enter, Esc, and
-    // Copy and Paste, the two keys carrying their own ctrl. THE BARREL HAS NO
-    // ROAD ON ANY KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session
-    // 94: claim_onscreen_keyboard_press consumes a press carrying it), so the
-    // barrel's word erase, select-all and cut went that day with their last
-    // producer.
+    // session first, then the Ctrl chords, then the pass key, then Backspace
+    // (bare) and the caret keys, then printable. Each test returns before the
+    // next, so a key satisfying two predicates classifies as the branch
+    // handle_key would act on. THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S
+    // (architect 2026-10-30, its one producer under an editor): its
+    // characters, Backspace, Enter, Esc, Copy and Paste (the two keys
+    // carrying their own ctrl), and since 2026-11-08 (sessions 95 / 96) LEFT
+    // and RIGHT (bare, or carrying the latched Shift) and the pass key. THE
+    // BARREL HAS NO ROAD ON ANY KEY, THE KEYBOARD'S INCLUDED (architect
+    // 2026-11-08, session 94: claim_onscreen_keyboard_press consumes a press
+    // carrying it), so the barrel's word erase, select-all and cut went that
+    // day with their last producer.
     //
-    // NO ARM ADMITS ALT. Session and Backspace are bare-exact, the chords are
-    // ctrl-exact, printable already excludes ctrl and alt — so
+    // NO ARM ADMITS ALT. Session, the pass key and Backspace are bare-exact,
+    // the chords are ctrl-exact, the caret keys shift-free or shift-only,
+    // printable already excludes ctrl and alt — so
     // a press wearing a modifier the arm does not bind falls all the way to
     // NotEditorKey and is dropped by the keyboard-modal gate before it can reach
     // an editor at all. That is the whole enforcement: unbound is unbound, and
@@ -391,13 +318,26 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     if (mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::C || key == GuiKeys::V))
         return KeyClass::ChordKey;
+    // THE PASS KEY is BARE-EXACT and ONE-SHOT (architect 2026-11-08, sessions
+    // 95 / 96): one insertion of a whole token per press, so a hold has
+    // nothing to continue (repeat_eligible repeats MotionEditKey and
+    // PrintableKey alone).
+    if (!mods.ctrl && !mods.alt && !mods.shift && key == GuiKeys::Pass)
+        return KeyClass::InsertKey;
     // Backspace is BARE-EXACT: no producer carries a modifier on it (the
-    // keyboard's Shift is a one-shot capital for the next character and never
-    // modifies a function key, and the barrel has no road on a key since
+    // keyboard's latched Shift rides LEFT and RIGHT alone, the capitals
+    // travelling in the codepoint, and the barrel has no road on a key since
     // 2026-11-08) — so any modified Backspace is genuinely UNBOUND, and the
     // strict-modifier rule makes it a no-op: it falls to NotEditorKey and the
     // keyboard-modal gate drops it before any editor sees it.
     if (!mods.ctrl && !mods.alt && !mods.shift && key == GuiKeys::BackSpace)
+        return KeyClass::MotionEditKey;
+    // THE CARET KEYS (architect 2026-11-08, sessions 95 / 96): LEFT and
+    // RIGHT bare move the caret, and carrying the latched Shift (the key's
+    // own shift, synthesize_key's `carried`) extend the selection; both
+    // repeat. Ctrl and alt bind nothing on them.
+    if (!mods.ctrl && !mods.alt &&
+        (key == GuiKeys::Left || key == GuiKeys::Right))
         return KeyClass::MotionEditKey;
     // Printable insertion: no Ctrl/Alt, and a character-bearing codepoint —
     // ASCII or otherwise (is_insertable_codepoint owns the range, and
@@ -423,15 +363,16 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     if (classify_key(key, mods) == KeyClass::NotEditorKey)
         return KeyAction::NotConsumed;
 
-    // Only ctrl is ever read below, and `mods.alt` is FALSE on every press
-    // that reaches this line: no classifier arm admits alt. That is why no
-    // branch tests it.
+    // Only ctrl and the caret keys' shift are ever read below, and
+    // `mods.alt` is FALSE on every press that reaches this line: no
+    // classifier arm admits alt. That is why no branch tests it.
     const bool ctrl  = mods.ctrl;
 
-    // The session and chord branches below need no modifier tests of their own:
-    // the membership gate above already rejected every modified Escape / Return
-    // and every Ctrl+Shift / Ctrl+Alt C/V as NotEditorKey, so only
-    // the exactly-bound presses reach here. The classifier is the single owner
+    // The session, chord and pass branches below need no modifier tests of
+    // their own: the membership gate above already rejected every modified
+    // Escape / Return / pass key, every Ctrl+Shift / Ctrl+Alt C/V and every
+    // ctrl- or alt-carrying caret key as NotEditorKey, so only the
+    // exactly-bound presses reach here. The classifier is the single owner
     // of those predicates.
     if (key == GuiKeys::Escape) {
         return KeyAction::CancelRequested;
@@ -457,9 +398,59 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::PasteRequested;
     }
 
-    // Editing: BACKSPACE, the keyboard's one editing key (architect
-    // 2026-10-30: the on-screen keyboard carries no arrows, no Home / End and
-    // no Delete — the caret moves by the pointer, the field's press and its
+    // THE PASS KEY (architect 2026-11-08, sessions 95 / 96, reversing
+    // 2026-10-29's "no `pass` key" — Toggle Inherit is veiled under the
+    // editor): the text `pass` at the caret, REPLACING a selection, as ONE
+    // insertion through the one incoming filter, so each editor's byte cap
+    // and its commit's grammar judge it exactly as a paste of the same four
+    // bytes; a refused one is the typed path's OverCapacity (its card at
+    // route_modal_editor_key). Bare by the membership gate.
+    if (key == GuiKeys::Pass) {
+        return replace_selection(s, kPassKeyText) ? KeyAction::Consumed
+                                                  : KeyAction::OverCapacity;
+    }
+
+    // THE CARET KEYS, LEFT AND RIGHT (architect 2026-11-08, sessions 95 /
+    // 96, reversing 2026-10-30's "no arrows"; every editor kind — the flag
+    // editor, the bound editors, the settings line, the trim preset's name,
+    // the BPM form's line — through route_modal_editor_key). EVERY STEP IS
+    // ONE CODEPOINT (the head's rule), the caret indexed by byte.
+    //   * BARE: the caret moves one codepoint; with a selection standing the
+    //     selection COLLAPSES to that side — LEFT to its start, RIGHT to its
+    //     end — with no further step. At the text's ends: no motion.
+    //   * CARRYING THE LATCHED SHIFT (the keyboard's Shift lamp, the key's
+    //     own shift): the selection's FREE END, cursor_pos, moves one
+    //     codepoint, the anchor seated at the caret where it stood at the
+    //     first shifted move when no anchor stood; shrinking back to empty is
+    //     legal (the anchor stays, so the next shifted step grows the other
+    //     way). At the text's ends: no motion and no anchor.
+    // Held, either repeats (repeat_eligible's editor arm, the shift riding
+    // every fire, GuiInputCore::key_event's contract).
+    if (key == GuiKeys::Left || key == GuiKeys::Right) {
+        const bool right = key == GuiKeys::Right;
+        const int  to    = right ? next_codepoint_boundary(s.pending, s.cursor_pos)
+                                 : prev_codepoint_boundary(s.pending, s.cursor_pos);
+        if (mods.shift) {
+            if (to != s.cursor_pos) {
+                if (s.selection_anchor < 0) s.selection_anchor = s.cursor_pos;
+                s.cursor_pos = to;
+            }
+        } else if (has_selection(s)) {
+            s.cursor_pos       = right ? selection_end(s) : selection_start(s);
+            s.selection_anchor = -1;
+        } else {
+            // A degenerate anchor (a shifted walk shrunk back to empty)
+            // collapses with the unshifted step, Backspace's own rule.
+            s.selection_anchor = -1;
+            s.cursor_pos       = to;
+        }
+        touch_blink(s);
+        return KeyAction::Consumed;
+    }
+
+    // Editing: BACKSPACE, the keyboard's one deleting key (architect
+    // 2026-10-30: no Home / End and no Delete; the caret moves by LEFT and
+    // RIGHT since 2026-11-08 and by the pointer, the field's press and its
     // caret drag). It is BARE, and that is a CONTRACT: the membership gate
     // above classifies any modifier on it as NotEditorKey.
     if (key == GuiKeys::BackSpace) {

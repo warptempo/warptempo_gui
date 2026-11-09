@@ -612,8 +612,11 @@ std::string key_legend_word(std::string_view word) {
 }
 
 // A KEY'S GLYPH ON ITS FACE (architect 2026-11-01 / 2026-11-02; icons.h's
-// THE INK BOX) — THE ONE PLACE the glyph's seat and tone are decided, every
-// key's (the band's, row 8's, the controls rows', the word buttons); ITS
+// THE INK BOX) — THE ONE PLACE the glyph's seat, size and tone are decided,
+// every key's (the band's, row 8's, the controls rows', the word buttons,
+// and since 2026-11-08 the on-screen keyboard's glyph keys —
+// onscreen_keyboard::cap_icon, architect sessions 95 / 96: "one ink size
+// with the program keys", never a size of osk_key_h's); ITS
 // LEGEND UNDER THE FACE (paint_key_legend above, back 2026-11-03) names the
 // act in print, the tooltip in words: the roster's redesign_button_tooltip
 // (app_state.h), the controls rows' hints (update_modal_dialog_hover,
@@ -7091,8 +7094,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
             // PUBLISH the click-to-caret geometry (DialogEditorText's
             // contract): the rows, each with its band and its origin, and the
-            // run's pen — so a click, the F2.1 text drag, the double-click's
-            // word select and Home / End land on the rows painted here.
+            // run's pen — so a click, the F2.1 caret drag and the finger's
+            // caret drag land on the rows painted here.
             AppState::DialogEditorText& out = app.dialog_editor_text;
             out.valid  = true;
             out.byte_x = bx_off;
@@ -7457,17 +7460,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // glass). AT REST the cap in the text tone `text` on the face; the
 // faces the roster's (key_look, materials.h; architect 2026-11-02, the
 // yellow for lamps only):
-//   ARMED     — LIT, the FFAD56 fill, its cap `text_on_lit` (Default's 111111) (M8 / M12),
+//   LIT       — the FFAD56 fill, its cap `text_on_lit` (Default's 111111) (M8 / M12),
 //               the fill darkened to `lit_press_fill` under the finger (the
 //               press arc's second landing, 2026-11-05), its cap still
 //               `text_on_lit`:
-//               SHIFT while it is armed and THE PAGE KEY while the symbols
-//               page stands — the two lamps. IT IS ALL
-//               SHIFT'S ARM HAS TO SAY ITSELF WITH now that the cap is the
-//               word "Shift" in both states — that, and the letter caps,
-//               every one of which turns capital while the arm stands.
+//               SHIFT while it is latched (sticky since 2026-11-08) and THE
+//               PAGE KEY while the symbols page stands — the two lamps. IT IS
+//               ALL SHIFT'S LATCH HAS TO SAY ITSELF WITH now that the cap is
+//               the word "Shift" in both states — that, and the letter caps,
+//               every one of which turns capital while the latch stands.
 //   PRESSED   — THE PRESS FACE, Default's 2A2A2A, under the finger from the
-//               press to the lift on an unarmed key (the press arc, architect
+//               press to the lift on an unlit key (the press arc, architect
 //               2026-11-05, his "yes" for the keyboards; materials.h's head),
 //               held BY SLOT so the page key's own page change keeps the
 //               face under the finger (same_slot, below).
@@ -7479,20 +7482,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // NO HOVER FACE AND NO TOOLTIP: this surface exists on a platform with no
 // pointer, so a hover has no producer and a hint has nowhere to hang.
 //
-// EVERY CAP IS TEXT (architect 2026-08-27, on glass — the Breeze glyphs the
-// function keys wore for a day read oversized beside the letter caps; "no
-// glyphs", 2026-10-29): the function keys, Space and the page key say their
-// words, the character keys their characters (UTF-8 encoded through
-// text_editor::encode_utf8, the editors' own encoder), all on the one sans
-// face through the one shaping chokepoint. This surface draws no icon.
+// A CAP IS A GLYPH, A WORD OR A CHARACTER (architect 2026-11-08, sessions
+// 95 / 96, reversing "no glyphs" of 2026-08-27 / 2026-10-29): the function
+// keys that act on the text wear their Breeze glyph at THE PROGRAM KEYS' ONE
+// INK SIZE through paint_key_glyph — the size's one owner — centered on the
+// face (onscreen_keyboard::cap_icon names which); Shift, Esc, Space and the
+// page key say their words, the character keys their characters (UTF-8
+// encoded through text_editor::encode_utf8, the editors' own encoder), on
+// the one sans face through the one shaping chokepoint.
 //
 // STATE-AXIS: every one of the four faces is decided ONCE per key, from the
 // two lamps and the one held index this body reads at its head — compared as
 // a SLOT, not an index, so the page key's held face survives its own page
 // change (onscreen_keyboard::same_slot, architect 2026-10-29 night; back
 // 2026-11-05) — and the cap comes from the layout table's own derivations
-// (cap_word, shifted_char). There is no second list of what a key looks
-// like anywhere.
+// (cap_icon, cap_word, shifted_char). There is no second list of what a key
+// looks like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                                               const GuiRect& exposed) {
     // (The slot's as-painted bit is written by paint_keyboard_slot, the
@@ -7514,9 +7519,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // gates above would decide when a painter noticed the change, and a painter
     // may declare no damage.
     const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
-    const onscreen_keyboard::Page page        = kb.page;
-    const bool                    shift_armed = kb.shift_armed;
-    const int                     held        = kb.pressed_key;
+    const onscreen_keyboard::Page page          = kb.page;
+    const bool                    shift_latched = kb.shift_latched;
+    const int                     held          = kb.pressed_key;
 
     cairo_save(cr);
 
@@ -7537,10 +7542,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // 2026-10-29 night; scaled with gui_scale; architect 2026-10-24, "C24"),
     // selected through
     // the one face owner and shaped through the one chokepoint (text_shape.h)
-    // like every other label in the product. EVERY key on this surface takes
-    // it — the character caps, the page key's words and the function keys'
-    // words alike — so there is no second way a cap can be drawn, and no
-    // measure against the key: every word fits its key, and one that a
+    // like every other label in the product. EVERY key on this surface that
+    // wears text takes it — the character caps, the page key's words and the
+    // word keys' words alike — so there is no second way a cap can be drawn,
+    // and no measure against the key: every word fits its key, and one that a
     // tuning makes fail overhangs it (cap_word's rule, onscreen_keyboard.h;
     // architect 2026-10-29 night). A cap is one to five glyphs, which are the
     // cheapest runs there are.
@@ -7565,21 +7570,31 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // page key's own press has moved the page this walk is on.
             const bool pressed =
                 onscreen_keyboard::same_slot(static_cast<int>(index), held);
-            const bool armed   =
-                (k.role == Role::Shift      && shift_armed) ||
+            const bool lit     =
+                (k.role == Role::Shift      && shift_latched) ||
                 (k.role == Role::SymbolMode &&
                  page == onscreen_keyboard::Page::Symbols);
 
-            // THE KEY (paint_key, materials.h): LIT while armed (Shift, the
-            // page key on the symbols page), its fill darkened under the
-            // finger (key_look's LitPress, 2026-11-05), else the press face
-            // under the finger, else at rest, the cap printed ON its face in
-            // the face's ink.
-            const KeyLook look = key_look(armed, pressed);
+            // THE KEY (paint_key, materials.h): LIT while its lamp stands
+            // (Shift latched, the page key on the symbols page), its fill
+            // darkened under the finger (key_look's LitPress, 2026-11-05),
+            // else the press face under the finger, else at rest, the cap
+            // printed ON its face in the face's ink.
+            const KeyLook look = key_look(lit, pressed);
             paint_key(cr, r, look);
 
+            // THE GLYPH KEYS (onscreen_keyboard::cap_icon, 2026-11-08): the
+            // program keys' own glyph painter, so the ink size is theirs
+            // (kKeyGlyphInkPerKeySide of `key_height`), centered on the face,
+            // in the face's ink (enabled: no key here is ever disabled).
+            if (const std::optional<icons::Icon> icon =
+                    onscreen_keyboard::cap_icon(k)) {
+                paint_key_glyph(cr, r, *icon, /*enabled=*/true, look);
+                return;
+            }
+
             // THE CAP: the word the table's one cap owner answers (cap_word —
-            // the function keys, Space and the page key), or, where it
+            // Shift, Esc, Space and the page key), or, where it
             // answers none, the character key's own character through the ONE
             // case derivation (shifted_char) — never a second uppercase table
             // — UTF-8 encoded by the editors' one encoder, so a cap is spelled
@@ -7588,7 +7603,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             const char* cap = onscreen_keyboard::cap_word(k, page);
             if (cap == nullptr) {
                 one = text_editor::encode_utf8(
-                    onscreen_keyboard::shifted_char(k.ch, shift_armed));
+                    onscreen_keyboard::shifted_char(k.ch, shift_latched));
                 cap = one.c_str();
             }
             const text_shape::ShapedRun run =

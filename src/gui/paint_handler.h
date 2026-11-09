@@ -1126,7 +1126,7 @@ private:
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — its
     // band across the program lanes on the window's foot, its block of keys
-    // centered in it (onscreen_keyboard.h's placement block), over row 8 and
+    // seated in it (onscreen_keyboard.h's placement block), over row 8 and
     // the waveform area's lower part. It paints AFTER every waveform pass and
     // BEFORE the modal and the floating surfaces, which is where it sits in
     // the picture: the flag editor is above it in the marker lane, a dialog

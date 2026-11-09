@@ -12,7 +12,10 @@
 // at ONE ROAD, THE INK BOX (below), each seat naming its own ink length:
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
 //   visual size; its printed legend under the key again since 2026-11-03,
-//   paint_key_legend): every key carries one,
+//   paint_key_legend): every key carries one — and since 2026-11-08 the
+//   on-screen keyboard's glyph keys, at the same one size
+//   (onscreen_keyboard::cap_icon: Tab FormatIndentMore, Enter KeyEnter, the
+//   rest shared drawings) —
 //   centered on its face (paint_key_glyph, paint_handler.cpp), `text`
 //   B5B5B5 at rest and pressed, `key_dim_ink` (Default's 5D5D5D) on a disabled key,
 //   `text_on_lit` (Default's 111111) on a lit one (materials.h's key_ink, 2026-11-02).
@@ -102,7 +105,8 @@ namespace icons {
     X(GoParentFolder) X(GoPreviousViewPage) X(GoNextViewPage)            \
     X(EditReset) X(ZoneIn) X(ZoneOut) X(WindowClose)                     \
     X(EditClear) X(ViewRefresh) X(Folder) X(DialogInformation)           \
-    X(DialogError) X(Battery000) X(Battery000Charging)
+    X(DialogError) X(Battery000) X(Battery000Charging)                   \
+    X(FormatIndentMore) X(KeyEnter)
 
 // The drawings, one per file of assets/icons/ (each file named by its
 // enumerator — kIconNames below).

@@ -1137,53 +1137,23 @@ DialogEditorStop editor_stop_at(const ActiveEditorText& g, int mouse_x,
             false};
 }
 
-// THE BYTE A WORD SELECT CLASSIFIES under the pointer — the double-click's
-// select and its drag by words (text_editor::select_word_at,
-// extend_selection_by_words): the stop's own byte, EXCEPT a stop carrying the
-// row-end affinity, a press PAST a hard-wrapped row's text, whose character is
-// the row's last — the one before the stop — never the next row's first,
-// which is what the bare byte would name (2026-10-14).
-int editor_word_probe_at(const ActiveEditorText& g, int mouse_x,
-                         int mouse_y) {
-    const DialogEditorStop s = editor_stop_at(g, mouse_x, mouse_y);
-    if (!s.row_end || s.byte <= 0) return s.byte;
-    int p = s.byte - 1;
-    while (p > 0 && (static_cast<unsigned char>(
-                         g.ed->pending[static_cast<std::size_t>(p)]) &
-                     0xC0) == 0x80)
-        --p;
-    return p;
-}
-
 // THE ONE POINTER SEAT: every press and every drag motion that puts the caret
 // under the pointer comes through here — the plain press, the pointer road's
-// selection sweep and the finger's caret drag (the touch trio's
-// bodies below) — and it restarts the blink phase as the keyboard's own
-// motion keys do, so a caret being dragged is lit where it lands rather than
-// possibly caught in the dark half of a period, then sets the stop's
+// caret drag (a tap's sub-slop motions) and the finger's caret drag (the
+// touch trio's bodies below) — and it COLLAPSES ANY SELECTION (architect
+// 2026-11-08, session 95: a tap seats the caret, a drag moves it, the
+// selection is the keys' alone), restarts the blink phase as the keyboard's
+// own motion keys do, so a caret being dragged is lit where it lands rather
+// than possibly caught in the dark half of a period, then sets the stop's
 // row-end affinity (a press past a hard-wrapped row's text keeps the caret
-// painted at that row's end, 2026-10-14). The one seat that is NOT a
-// pointer byte — the double-click-drag's word boundary — goes through
-// text_editor::extend_selection_by_words instead, which blinks for itself.
+// painted at that row's end, 2026-10-14).
 void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x,
                              int mouse_y) {
     const DialogEditorStop s = editor_stop_at(g, mouse_x, mouse_y);
+    g.ed->selection_anchor = -1;
     g.ed->cursor_pos = s.byte;
     text_editor::touch_blink(*g.ed);
     g.ed->caret_row_end = s.row_end;
-}
-
-// IS THIS PRESS THE EDITOR'S DOUBLE-CLICK'S SECOND HALF — a candidate on the
-// editor's text, inside the double-click window and the scaled slack of the
-// seeding release? ONE predicate for the two readers that must agree: the
-// press arm's double-click test, and the touch translation's editor-field
-// query, which asks it at a finger's down so the second press can be
-// delivered on contact (the third clause: the seed makes the press certain).
-bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
-    return dc.surface == DoubleClickSurface::EditorText &&
-           monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-           std::abs(x - dc.press_x) <= double_click_slack_px() &&
-           std::abs(y - dc.press_y) <= double_click_slack_px();
 }
 
 } // namespace
@@ -2742,7 +2712,8 @@ void GuiInputHandler::end_touch_region() {
 // (input_handler.h), the machine at GuiInputCore::set_touch_nav_hooks.
 // Every seat is THE ONE POINTER SEAT (set_editor_caret_from_x), which is
 // what keeps the finger's caret and the press's on one byte rule and one
-// blink rule; nothing here selects, commits or seeds.
+// blink rule; nothing here selects, commits or seeds (the field's whole
+// vocabulary, a tap and a drag, at begin_touch_caret_drag's declaration).
 
 GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
                                                                   int y) {
@@ -2761,13 +2732,7 @@ GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
     // dragged the editor's caret through the card.
     if (notification_card_at(app, x, y) != 0)
         return GuiTouchEditorField::Outside;
-    // The seed is read LIVE: a finger's down delivers nothing, so the
-    // top-of-press clear has not run and the candidate the last lift seeded
-    // still stands — exactly what the press arm's own predicate will see
-    // when the resolution delivers that press.
-    return editor_double_press_at(app.double_click, x, y)
-               ? GuiTouchEditorField::DoublePress
-               : GuiTouchEditorField::Field;
+    return GuiTouchEditorField::Field;
 }
 
 void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
@@ -2779,11 +2744,10 @@ void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
     // glass's road (return_modal_focus_to_field); the seat below restarts the
     // blink.
     if (g.dialog) return_modal_focus_to_field();
-    // A caret drag is motion between two taps, so the seed the last tap
-    // left cannot become a double-click across it (the C8 rule the nav
-    // frames apply); the stream's own end seeds nothing.
+    // A caret drag is motion, so no seed standing can become a double-click
+    // across it (the C8 rule the nav frames apply); the stream's own end
+    // seeds nothing.
     app.double_click = DoubleClickCandidate{};
-    g.ed->selection_anchor = -1;
     set_editor_caret_from_x(g, x, y);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
@@ -2795,9 +2759,8 @@ void GuiInputHandler::update_touch_caret_drag(int x, int y) {
     // the one touch, so no road opens another meanwhile (architect
     // 2026-10-30; the contract at the declaration).
     if (!g.valid) return;
-    // The I-beam follows the finger and nothing selects — the anchor is
-    // dropped at every seat.
-    g.ed->selection_anchor = -1;
+    // The I-beam follows the finger and nothing selects — the seat drops the
+    // anchor at every frame.
     set_editor_caret_from_x(g, x, y);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
@@ -3806,10 +3769,11 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
     // long press will do just fine ..., whereas a barrel click is awkward"):
     // A PRESS CARRYING THE BARREL'S CTRL IS CONSUMED BEFORE THE HIT TEST, on
     // every key — the letters, Bksp, Shift, the page key, Copy, Paste, Enter,
-    // Esc, Tab, the space bar — exactly as a press on a gap is: nothing typed,
+    // Esc, Tab, LEFT, RIGHT, the pass key, the space bar — exactly as a press
+    // on a gap is: nothing typed,
     // no lamp toggled, no held key (so no press face and no key-up owed at
     // the lift), the band's refusal's shape. Copy and Paste keep their OWN
-    // ctrl on an ordinary tap (`with_ctrl`, below), and that is the only ctrl
+    // ctrl on an ordinary tap (`carried`, below), and that is the only ctrl
     // a key's press carries (a barrel edge under a held key's repeat only
     // disarms it: no ctrl spelling of a repeating key is the editors', so the
     // repeat's live re-probe fails, GuiInputCore::maybe_fire_repeat). The
@@ -3818,11 +3782,11 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
     if (mods.ctrl) return true;
 
     // The lamps, read ONCE: the page decides which key is under the finger and
-    // the shift arm decides what that key types, so both must be the same
+    // the shift latch decides what that key types, so both must be the same
     // answer the last paint used.
     const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
-    const onscreen_keyboard::Page page        = kb.page;
-    const bool                    shift_armed = kb.shift_armed;
+    const onscreen_keyboard::Page page          = kb.page;
+    const bool                    shift_latched = kb.shift_latched;
 
     onscreen_keyboard::KeyDef def{};
     const int hit = onscreen_keyboard::key_at(app, page, x, y, def);
@@ -3838,25 +3802,24 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
         app.onscreen_keyboard.pressed_key    = hit;
         app.onscreen_keyboard.pressed_keysym = 0;
         if (def.role == Role::Shift) {
-            // ONE-SHOT, and a second tap while armed clears it — a toggle, not
-            // a latch (there is no caps lock). Inside one edit the arm has
-            // exactly two clearers — this tap and the letter it capitalizes,
-            // below; the edit ENDING is the third, and belongs to the
+            // A LATCH (architect 2026-11-08, sessions 95 / 96, retiring the
+            // one-shot arm of 2026-08-27): a press lights it, a second press
+            // puts it out, and NOTHING ELSE inside one edit touches it — no
+            // letter spends it. Lit, the letters type capital (shifted_char)
+            // and LEFT / RIGHT carry its shift (the selection's extend,
+            // below). The edit ENDING clears it, and belongs to the
             // session-change owner (onscreen_keyboard.h).
-            app.onscreen_keyboard.shift_armed = !shift_armed;
+            app.onscreen_keyboard.shift_latched = !shift_latched;
         } else {
-            // THE PAGE KEY LEAVES A PENDING CAPITAL STANDING, like every other
-            // key that types no letter (the rule is stated whole at the
-            // ordinary key's spend, below). It costs nothing to keep: the only
-            // thing an arm can ever change is a LETTER, and every letter is on
-            // the flags page, so a round trip through the symbols and back
-            // finds the arm exactly where it was left. Where the key goes is
-            // the layout's own answer (page_after).
+            // THE PAGE KEY LEAVES THE LATCH STANDING: a round trip through
+            // the symbols and back finds it exactly where it was left, and on
+            // the symbols page it still extends the selection. Where the key
+            // goes is the layout's own answer (page_after).
             app.onscreen_keyboard.page =
                 onscreen_keyboard::page_after(def.role, page);
         }
-        // BOTH REPAINT THE WHOLE SURFACE: shift moves every letter cap's case
-        // and a page change re-letters every letter slot.
+        // BOTH REPAINT THE WHOLE SURFACE: the latch's edge moves every letter
+        // cap's case and a page change re-letters every letter slot.
         viewport.invalidate_rect(surf);
         return true;
     }
@@ -3864,17 +3827,15 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
     // AN ORDINARY KEY. Resolve what it types from the layout table's own two
     // derivations — never a second list — and hand it to the platform's key
     // door with the key's PLACE as the core's stable per-key identity.
-    GuiKey   keysym      = 0;
-    uint32_t codepoint   = 0;
-    // Does the key carry its own ctrl? Copy and Paste alone (below).
-    bool     with_ctrl   = false;
-    // Did this key SPEND the arm? Only a letter can (see the spend below).
-    bool     capitalized = false;
+    GuiKey         keysym    = 0;
+    uint32_t       codepoint = 0;
+    // The modifiers the key carries itself (GuiCarriedMods): Copy's and
+    // Paste's ctrl, LEFT's and RIGHT's latched shift (below).
+    GuiCarriedMods carried{};
     switch (def.role) {
         case Role::Character: {
-            const char32_t typed = onscreen_keyboard::shifted_char(def.ch,
-                                                                   shift_armed);
-            capitalized = (typed != def.ch);
+            const char32_t typed = onscreen_keyboard::shifted_char(
+                def.ch, shift_latched);
             // The keysym is the LOWERCASE base (GuiKey is ASCII case-folded);
             // the CASE travels in the codepoint, which is what the editors'
             // printable classification reads — and what they insert, through
@@ -3893,19 +3854,44 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
         case Role::Tab:       keysym = GuiKeys::Tab;       break;
         // COPY AND PASTE ARE THE EDITORS' OWN CHORDS (architect 2026-10-29):
         // the letter's keysym with the key's own ctrl riding the event
-        // (synthesize_key's `with_ctrl`, GuiInputCore::key_event's contract),
+        // (synthesize_key's `carried`, GuiInputCore::key_event's contract),
         // so text_editor::handle_key's Ctrl+C and Ctrl+V arms answer them
         // exactly as they answer any other key's chord — a copy with no selection
         // copying nothing — and every gate and repeat rule on the road reads
         // the chord. A chord types no character, so the codepoint stays 0.
         case Role::Copy:
-            keysym    = GuiKeys::C;
-            with_ctrl = true;
+            keysym        = GuiKeys::C;
+            carried.ctrl  = true;
             break;
         case Role::Paste:
-            keysym    = GuiKeys::V;
-            with_ctrl = true;
+            keysym        = GuiKeys::V;
+            carried.ctrl  = true;
             break;
+        // LEFT AND RIGHT ARE THE EDITORS' CARET KEYS (architect 2026-11-08,
+        // sessions 95 / 96): GuiKeys::Left / Right on the ordinary road — the
+        // keyboard-modal gate admits them under an editor, so no main-page
+        // Left / Right binding can fire — CARRYING THE LATCHED SHIFT when the
+        // lamp is lit (the selection's extend, text_editor::handle_key's
+        // caret arm), the shift riding every repeat of a held key
+        // (GuiInputCore::key_event's contract).
+        case Role::Left:
+            keysym        = GuiKeys::Left;
+            carried.shift = shift_latched;
+            break;
+        case Role::Right:
+            keysym        = GuiKeys::Right;
+            carried.shift = shift_latched;
+            break;
+        // THE PASS KEY IS A KEY ON THE ONE ROAD (architect 2026-11-08,
+        // sessions 95 / 96): a key event carries one codepoint, never a
+        // string, so the key synthesizes its own keysym, GuiKeys::Pass, and
+        // the EDITOR answers it with the text `pass` through the one incoming
+        // filter (text_editor::handle_key's pass arm) — so it meets the same
+        // modal gate, the same session, the same byte cap and card as every
+        // other key, rather than the press router writing into an editor's
+        // buffer behind the key path. (No editor's text is on the undo
+        // stack, so there is no coalescing for it to join.) One-shot.
+        case Role::Pass:      keysym = GuiKeys::Pass;      break;
         case Role::Shift:
         case Role::SymbolMode: return true;   // handled above; unreachable
     }
@@ -3918,39 +3904,23 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
     app.onscreen_keyboard.pressed_keysym = keysym;
     viewport.invalidate_rect(onscreen_keyboard::key_rect(app, page, hit));
 
-    // A SHIFT ARM IS SPENT BY THE LETTER IT CAPITALIZED AND BY NOTHING ELSE.
-    // ONE-SHOT SHIFT MEANS THE NEXT LETTER (planner ruling 2026-08-27), so a
-    // key that types no capital leaves the arm standing: the comma and the
-    // period, the space bar, backspace, Enter, Esc, Tab, Copy, Paste, the
-    // page key and every digit and symbol. Shift, comma, `q` types
-    // `,Q`. The
-    // test is the layout table's own case derivation moving this key's
-    // character (`capitalized`, set at the Character arm above) rather than a
-    // list of exempt roles — a list would be a second statement of which keys
-    // have a capital form, and shifted_char is already the one.
+    // NO KEY SPENDS THE SHIFT LATCH (architect 2026-11-08, sessions 95 / 96):
+    // a capital letter, a LEFT / RIGHT extend and every other key leave it
+    // lit, so nothing here writes it or owes the band its damage — the
+    // latch's own two edges are the Shift press above and the session change.
     //
-    // THE REPEAT KEEPS THE CASE IT WAS PRESSED WITH, and that is the ruling
-    // rather than a leak: the PRESS'S CODEPOINT IS THE KEY EVENT'S IDENTITY, so
-    // a held `q` pressed with the arm up repeats `Q` for the whole hold,
-    // exactly as a physical Shift+Q hold repeats Q with the shift key still
-    // down. The arm clears at the PRESS, not at the repeats — the lamp is dark
-    // from that first press onward — and the backend's codepoint table
-    // (platform_android.cpp's synthesize_key) is what re-answers each
-    // synthesized repeat, deliberately not re-derived against the live lamp.
-    //
-    // The whole surface repaints because every other letter cap drops back to
-    // lowercase with it. Done BEFORE the act: the act can close the editor
-    // and take the surface with it (after Enter there may be no surface left
-    // to talk about), and a damage queued after that would name a rect
-    // nothing paints.
-    if (capitalized) {
-        app.onscreen_keyboard.shift_armed = false;
-        viewport.invalidate_rect(surf);
-    }
+    // THE REPEAT KEEPS THE CASE AND THE SHIFT IT WAS PRESSED WITH: the PRESS'S
+    // CODEPOINT IS THE KEY EVENT'S IDENTITY, so a held `q` pressed with the
+    // latch lit repeats `Q` for the whole hold, exactly as a physical Shift+Q
+    // hold repeats Q with the shift key still down — the backend's codepoint
+    // table (platform_android.cpp's synthesize_key) re-answers each
+    // synthesized repeat, deliberately not re-derived against the live lamp —
+    // and a held LEFT / RIGHT's carried shift rides every fire
+    // (GuiInputCore::key_event's contract).
 
     // THE ACT, at the press. Everything downstream is the ordinary key path.
     gui.synthesize_key(keysym, static_cast<uint32_t>(hit), /*pressed=*/true,
-                       codepoint, with_ctrl);
+                       codepoint, carried);
     return true;
 }
 
@@ -3975,11 +3945,12 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     // it may not be skipped (contract at GuiInputCore::key_event: the arm dies
     // on the matching stable code and on nothing else this path can reach).
     // A release carries no character and no modifier, exactly as a physical
-    // one does not (Copy's and Paste's ctrl was the press's alone).
+    // one does not (Copy's and Paste's ctrl, LEFT's and RIGHT's shift, were
+    // the press's alone).
     if (keysym != 0) {
         gui.synthesize_key(keysym, static_cast<uint32_t>(held),
                            /*pressed=*/false, /*codepoint=*/0,
-                           /*with_ctrl=*/false);
+                           /*carried=*/GuiCarriedMods{});
     }
     return true;
 }
@@ -4695,8 +4666,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
-    // its own fresh candidate — ALL FOUR at a motionless RELEASE now (TrimBar /
-    // EditorText / EmptyLane, the empty lane joining that class 2026-08-12 with
+    // its own fresh candidate — ALL THREE at a motionless RELEASE now (TrimBar /
+    // EmptyLane, the empty lane joining that class 2026-08-12 with
     // its press becoming the placement lane's pending click (the navigation
     // surface's until 2026-09-25, when the empty lane left it — placement
     // lanes above), so only the release knows it stayed a click and a drag
@@ -4998,14 +4969,16 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
         if (arm_modal_dialog_press(x, y)) return;
     }
 
-    // A PRESS ON THE ACTIVE EDITOR'S FIELD places the caret and arms a
-    // selection drag (anchor == caret until the pen moves). Resolved before
-    // the veil below so the gesture reaches every editor. ONLY A TAP, A PEN
-    // PRESS AND THE DOUBLE PRESS ARRIVE HERE: a finger's drag in the
-    // field is the touch translation's caret drag and delivers no press (the
-    // trio's bodies beside begin_touch_region). A press outside the active
-    // editor's field is swallowed by THE VEIL, every editor being a modal
-    // since 2026-10-25.
+    // A PRESS ON THE ACTIVE EDITOR'S FIELD seats the caret, collapsing any
+    // selection, and arms the pointer road's caret drag (EditorTextDragState:
+    // the motions until the lift move the caret, the selection staying
+    // collapsed). Resolved before the veil below so the gesture reaches every
+    // editor. ONLY A TAP ARRIVES HERE (its press, its sub-slop motions and
+    // its release in one burst at the lift): a drag in the field, pen or
+    // finger, is the touch translation's caret drag and delivers no press
+    // (the trio's bodies beside begin_touch_region). A press outside the
+    // active editor's field is swallowed by THE VEIL, every editor being a
+    // modal since 2026-10-25.
     {
         const ActiveEditorText g = active_editor_text(app, audio);
         if (g.valid) {
@@ -5018,52 +4991,20 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
             // below, closing nothing.
             if (rect_contains(g.field, x, y)) {
                 // THE FIELD TAKES THE FOCUS BACK AT THE PRESS (architect
-                // 2026-10-02; the rule at return_modal_focus_to_field), ahead
-                // of all three arms below, the caret's blink restarted so it
-                // is lit at once (the blink alone: the arm that follows
-                // seats the caret).
+                // 2026-10-02; the rule at return_modal_focus_to_field), the
+                // caret's blink restarted so it is lit at once (the blink
+                // alone: the seat that follows places the caret).
                 if (g.dialog && return_modal_focus_to_field())
                     text_editor::restart_blink(*g.ed);
-                // NO PRESS EXTENDS THE SELECTION (architect 2026-10-30, pen
-                // and finger the whole input: no shift bit reaches a press);
-                // glass selects by the double tap and, from it, the
-                // double-tap-drag by words (below).
-                // Double-click: a second click within the window on this
-                // editor's text selects the RUN of the clicked character class
-                // (word / punctuation / whitespace) under the click — select_
-                // word_at's own classifier, not just a word. The surface tag
-                // keeps it from consuming a marker / trim-bar candidate. AND
-                // IT ARMS THE DRAG BY WORDS (architect 2026-09-05): the
-                // selected run is the anchor, and a drag from this press
-                // extends the selection to the boundary of the word under the
-                // pointer past it on either side — the desktop editors'
-                // double-click-drag. On glass this press arrives at the
-                // finger's DOWN (the translation delivers a second press on
-                // contact once the seed makes it certain), so a double tap
-                // that then drags takes this same arm. It is the one stated
-                // exception to "a double-click is never a drag" (the rule at
-                // DoubleClickSurface, app_state.h): selection inside an open
-                // field, not a drag gesture on the canvas.
-                if (editor_double_press_at(dc_at_press, x, y)) {
-                    text_editor::select_word_at(
-                        *g.ed, editor_word_probe_at(g, x, y));
-                    app.editor_text_drag = EditorTextDragState{
-                        .active     = true,
-                        .by_words   = true,
-                        .word_start = text_editor::selection_start(*g.ed),
-                        .word_end   = text_editor::selection_end(*g.ed)};
-                    // The dialog editors' edit damage is the box's interior
-                    // (invalidate_dialog_editor_box, viewport.h).
-                    if (g.dialog) viewport.invalidate_dialog_editor_box();
-                    else          viewport.invalidate_top_strip();
-                    return;
-                }
+                // NO PRESS SELECTS (architect 2026-11-08, session 95,
+                // retiring the double tap's word select and its drag by
+                // words): the seat collapses the selection, and the
+                // selection is the keys' alone (Shift + LEFT / RIGHT).
                 set_editor_caret_from_x(g, x, y);
-                // Collapsed anchor — extends to a real selection only if the
-                // pointer then moves.
-                g.ed->selection_anchor = g.ed->cursor_pos;
                 app.editor_text_drag = EditorTextDragState{};
                 app.editor_text_drag.active = true;
+                // The dialog editors' edit damage is the box's interior
+                // (invalidate_dialog_editor_box, viewport.h).
                 if (g.dialog) viewport.invalidate_dialog_editor_box();
                 else          viewport.invalidate_top_strip();
                 return;
@@ -5733,10 +5674,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
 void GuiInputHandler::finalize_editor_text_drag() {
     const ActiveEditorText g = active_editor_text(app, audio);
     if (g.valid) {
-        // A press that never moved leaves a plain caret and no selection,
-        // matching the existing click-to-caret.
-        if (g.ed->selection_anchor == g.ed->cursor_pos)
-            g.ed->selection_anchor = -1;
+        // The caret stays where the last seat placed it, no selection
+        // standing (every seat collapses it, set_editor_caret_from_x).
         if (g.dialog) viewport.invalidate_dialog_editor_box();
         else          viewport.invalidate_top_strip();
     }
@@ -6157,27 +6096,12 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
         finish_chrome_press_release(chrome, x, y);
         return;
     }
-    // F2.1: a release ending an editor-text drag finalizes the
-    // selection (or collapses to a caret) before the modal swallow below.
+    // F2.1: a release ending an editor-text caret drag ends it before the
+    // modal swallow below. IT SEEDS NO DOUBLE-CLICK (architect 2026-11-08,
+    // session 95: the field's double tap is retired; a tap and a drag are
+    // its whole vocabulary).
     if (app.editor_text_drag.active) {
-        const ActiveEditorText g = active_editor_text(app, audio);
-        // Read before the finalize, which clears the arm whole.
-        const bool by_words     = app.editor_text_drag.by_words;
         finalize_editor_text_drag();
-        // Double-click seeding: a MOTIONLESS release (a pure click that left a
-        // caret, no selection) seeds an editor-text candidate so a second click
-        // within the window selects the clicked character class's run (word /
-        // punctuation / whitespace). A drag that made a selection seeds nothing.
-        // NOR DOES THE DOUBLE-CLICK'S OWN RELEASE (2026-09-05, the drag by
-        // words): it is the second click, never the first half of a third, and
-        // an empty field's word select leaves no selection to say so.
-        if (!by_words && g.valid &&
-            !text_editor::has_selection(*g.ed)) {
-            app.double_click = DoubleClickCandidate{
-                .surface = DoubleClickSurface::EditorText,
-                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
-                .target = -1};
-        }
         return;
     }
     if (text_editor::is_active(app.settings_editor)) return;
@@ -6303,8 +6227,8 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
         // SPATIAL pairing press-to-press, and it is the honest one for the
         // touch layer, whose synthesized release carries the finger's LAST
         // position while the press carries its down point. THE TIMESTAMP IS
-        // THE SEED'S OWN, which is the release — the family's rule (TrimBar,
-        // EditorText and EmptyLane all stamp their motionless release), so the
+        // THE SEED'S OWN, which is the release — the family's rule (TrimBar
+        // and EmptyLane stamp their motionless release too), so the
         // window is measured release-to-press here as it is everywhere else.
         // The split is deliberate: only the position has a reason to look back
         // at the press. (A consumed open armed nothing, so it cannot reach
@@ -8391,26 +8315,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         const ActiveEditorText g = active_editor_text(app, audio);
         if (g.valid) {
-            const EditorTextDragState& d = app.editor_text_drag;
-            if (d.by_words) {
-                // THE DOUBLE-CLICK-DRAG: the double-clicked run stands as
-                // the anchor and the moving end snaps to the boundary of the
-                // run under the pointer, past the anchor on either side or
-                // back to the anchor alone (the contract at
-                // text_editor::extend_selection_by_words). No gate: the
-                // second press already decided what this drag is.
-                text_editor::extend_selection_by_words(
-                    *g.ed, d.word_start, d.word_end,
-                    editor_word_probe_at(g, mouse_x, mouse_y));
-            } else {
-                // The anchor set at press stays put; moving cursor_pos
-                // extends the selection — the plain press seats the anchor at
-                // the caret it just placed, and nothing rewrites it from here.
-                // No gate either: the sweep moves on every motion (a finger's
-                // caret drag is the touch translation's own stream and never
-                // arrives here).
-                set_editor_caret_from_x(g, mouse_x, mouse_y);
-            }
+            // THE CARET FOLLOWS, NOTHING SELECTS (architect 2026-11-08,
+            // session 95: a drag in a field moves the caret): the one seat,
+            // which collapses the selection, on every motion. No gate (a
+            // tap's sub-slop motions are this road's only producer; a drag
+            // past the slop is the touch translation's caret drag and never
+            // arrives here).
+            set_editor_caret_from_x(g, mouse_x, mouse_y);
             if (g.dialog) viewport.invalidate_dialog_editor_box();
             else          viewport.invalidate_top_strip();
         }

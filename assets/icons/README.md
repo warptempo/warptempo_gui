@@ -15,7 +15,11 @@ as Arch Linux installs them under `/usr/share/icons/breeze-dark/`, the 22-px fol
 (architect 2026-11-02, R12 / R14 / R15). Every key carries a glyph centered on its face and its printed legend under it
 (architect 2026-11-03, the retrofit: the legends back, the tooltips naming the act); which key wears which drawing is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
 `render_player_button_icon` and `modal_word_icon` in `src/gui/paint_handler.cpp`, `score_viewer_button_icon` in
-`src/gui/score_viewer.h`). OFF THE KEYS (`src/gui/icons.h`'s head): the logo lane's note is MusicNote16th (the BPM
+`src/gui/score_viewer.h`), and since 2026-11-08 (architect, sessions 95 / 96) the on-screen keyboard's glyph keys
+(`onscreen_keyboard::cap_icon` in `src/gui/onscreen_keyboard.h`: Tab FormatIndentMore and Enter KeyEnter, its two
+drawings of its own; Bksp EditClear, Copy / Paste EditCopy / EditPaste, LEFT / RIGHT GoPrevious / GoNext and the pass
+key InsertLink shared with the program keys), at the program keys' one ink size. OFF THE KEYS (`src/gui/icons.h`'s
+head): the logo lane's note is MusicNote16th (the BPM
 key's drawing too) and its battery legend's glyph Battery000Charging while on power, Battery000 otherwise; the list
 rows wear Folder on a folder or project row and ViewMediaTrack, the double notes, on a wav row (SOURCE's drawing, a
 deliberate share: "keep just one"); a normal card wears DialogInformation and a critical one DialogError, the two
@@ -139,6 +143,8 @@ transcriptions, with no path data changed.
 | `Folder` | `places/22/folder.svg` | `2bda082b65bc5265eadce09310c8e180f99d535803cf2380e5c40addc7a61344` |
 | `Battery000` | `status/22/battery-000.svg` | `5d6e18e0d0de0b25a31840ab145836600ee49f9ea303cf9cfffab7480f4bbecb` |
 | `Battery000Charging` | `status/22/battery-000-charging.svg` | `cf32f3a179b10791c7489706c1ede044b4bd4ece16eb7b86e2be87024e3e1e16` |
+| `FormatIndentMore` | `actions/22/format-indent-more.svg` | `5d13577a091c917fec9ddd2a6347f71fc8d60ab279d8c5d7e59cbd8a98aa1025` |
+| `KeyEnter` | `actions/22/key-enter.svg` | `b2f24627fc85743b6985633da5ba2f85122d1e66a007c5f3ec8693c86a2ceccb` |
 
 THE TWO CARDS ARE HAND TRANSCRIPTIONS, not the importer's (architect 2026-11-02, R14 (3)): Breeze's
 `status/22/dialog-error.svg` and `status/22/dialog-information.svg` fill a rounded square in one color and draw the

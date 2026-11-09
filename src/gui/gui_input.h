@@ -68,6 +68,14 @@ namespace GuiKeys {
     constexpr GuiKey IsoLeftTab = 0xfe20;
     constexpr GuiKey KpEnter    = 0xff8d;
     constexpr GuiKey Delete     = 0xffff;
+    // THE ON-SCREEN KEYBOARD'S PASS KEY (architect 2026-11-08, sessions 95 /
+    // 96): no physical key, so no X11 name; it rides XK_Insert's code, the
+    // editing block's one keysym nothing else here names. Its one meaning is
+    // the editors' (text_editor::handle_key: the text `pass` inserted at the
+    // caret, through the one incoming filter); nothing in the dispatch binds
+    // it, so outside an editor it would be an unbound key — and the keyboard
+    // that types it stands only under one.
+    constexpr GuiKey Pass       = 0xff63;
 }
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
@@ -195,6 +203,20 @@ struct GuiInputState {
     // repeat outright (a press-and-lift act fires once), and the platform's
     // own consumed-edge sites read it so a burst never disarms itself.
     bool     synthesized_repeat  = false;
+};
+
+// THE MODIFIERS A KEY CARRIES ITSELF (architect 2026-10-29, the ctrl of the
+// on-screen keyboard's Copy and Paste; the shift since 2026-11-08, sessions
+// 95 / 96: LEFT and RIGHT carry the latched Shift, the selection's extend),
+// the one producer the keyboard's press router
+// (GuiInputHandler::claim_onscreen_keyboard_press). A property of the KEY
+// EVENT, never of the tracked state: GuiPlatform::synthesize_key hands it to
+// GuiInputCore::key_event, which ORs each bit into the press's
+// GuiInputState and into every synthesized repeat armed off it (its
+// contract), and a release carries none.
+struct GuiCarriedMods {
+    bool ctrl  = false;
+    bool shift = false;
 };
 
 // -- THE ARROW STEP (architect 2026-08-31; ONE RUNG since 2026-11-08) --------
@@ -1398,23 +1420,18 @@ struct GuiTouchNavFrame {
 //                   since 2026-11-07, has NO DEADLINE
 //                   (the field spends no hold, so a motionless finger stays
 //                   Pending however long it rests and its lift is the
-//                   ordinary tap burst — press and release, seeding the
-//                   double-tap candidate as a quick tap does). The pointer's
-//                   press is reached there by a tap and by the double press
-//                   alone.
-//   * DoublePress — in the field AND a double-click candidate on this
-//                   editor's text stands within the double-click window and
-//                   slack of this point: the down can only be the SECOND
-//                   PRESS, so the translation delivers it at the down (the
-//                   third clause, GuiInputHandler::on_key), the GUI's
-//                   consumed second
-//                   press selects the word, and the finger's later motion
-//                   extends that selection by words through the GUI's own
-//                   drag arm — the desk's double-click-drag, one arm.
-// The GUI answers it from the field rect its press claim reads and from the
-// double-click seed it already holds, so the platform keeps no memory of taps
-// and no second spelling of the field exists.
-enum class GuiTouchEditorField { Outside, Field, DoublePress };
+//                   ordinary tap burst — press and release, the press
+//                   seating the caret). The pointer's press is reached there
+//                   by a tap alone.
+// (A THIRD ANSWER, DoublePress — a double-click candidate on the editor's
+// text standing at the down, the second press delivered on contact for the
+// word select and its drag by words — stood 2026-09-05 to 2026-11-08: the
+// architect retired the field's double tap, session 95; the field's whole
+// vocabulary is a tap and a drag.)
+// The GUI answers it from the field rect its press claim reads, so the
+// platform keeps no memory of taps and no second spelling of the field
+// exists.
+enum class GuiTouchEditorField { Outside, Field };
 
 // THE TOOL THAT TOUCHED (2026-09-25, the S Pen) — the backend's answer at a
 // contact's down, handed through GuiInputCore::touch_down (the door's

@@ -906,37 +906,26 @@ struct RegionDragState {
     int64_t anchor_source_frame = 0;
 };
 
-// The editor field's press-and-drag (F2.1): the pointer road's drag-to-select
-// inside the active text editor. A press on the active editor's field places
-// the caret and arms this record; every motion after it moves cursor_pos with
-// the anchor standing, so the drag SWEEPS a selection from the press byte (a
-// contact's plain drag moves the caret instead, and that divergence lives in
-// the touch translation, not here — the caret drag at
-// GuiInputCore::set_touch_nav_hooks). Only one
-// editor is active at a
-// time, so the active editor (and thus its text geometry) is discoverable
-// from the per-editor is_active checks; a single armed record is enough. Set
-// on a press that lands on the active editor's field; cleared on release, on
-// a lost button mid-drag, and on file load (the motion / release handlers also
-// self-heal if the backing editor closes out from under an in-flight drag).
-// A finger never arms it by a drag: on glass a drag inside the field is the
-// caret-drag hook stream and delivers no press, so the only presses that
-// reach this record from the tablet are a tap's burst and the double press.
+// The editor field's press-and-drag (F2.1): the pointer road's CARET DRAG
+// inside the active text editor. A press on the active editor's field seats
+// the caret and arms this record; every motion after it seats the caret again
+// under the pointer, the selection collapsed at every seat (architect
+// 2026-11-08, session 95: a drag in a field moves the caret, NOTHING
+// SELECTS — the selection is the keyboard's Shift + LEFT / RIGHT alone; the
+// drag-to-select sweep and the double-click's drag by words retired). Only
+// one editor is active at a time, so the active editor (and thus its text
+// geometry) is discoverable from the per-editor is_active checks; a single
+// armed record is enough. Set on a press that lands on the active editor's
+// field; cleared on release, on a lost button mid-drag, and on file load (the
+// motion / release handlers also self-heal if the backing editor closes out
+// from under an in-flight drag). Neither the pen nor a finger arms it by a
+// drag: on glass a drag inside the field is the touch translation's
+// caret-drag hook stream (GuiInputCore::set_touch_nav_hooks) and delivers no
+// press, so the only press that reaches this record is a tap's burst, its
+// sub-slop motions the record's only motion. It also stands as a key gate
+// for the burst's life (on_key's editor text-drag gate).
 struct EditorTextDragState {
     bool active = false;
-    // THE DOUBLE-CLICK-DRAG (architect 2026-09-05): the double-click's second
-    // press arms this record BY WORDS, the clicked word standing as the
-    // anchor — [word_start, word_end), the run select_word_at selected — and
-    // the motion extends the selection to the boundary of the word under the
-    // pointer past the anchor on either side, or back to the anchor word
-    // alone (text_editor::extend_selection_by_words, the same class rule the
-    // double-click's own select reads). The release seeds no candidate: it is
-    // the second click, never the first half of a third. It takes this one
-    // arm — on glass the translation delivers the second press at the down
-    // once the seed makes its identity certain.
-    bool by_words   = false;
-    int  word_start = 0;
-    int  word_end   = 0;
 };
 
 // WHICH BOX OF A MARKER'S RUN A PRESS LANDED ON is a MarkerCell
@@ -1525,17 +1514,20 @@ struct TouchNavZoomState {
 // 2026-10-24 with the caption.)
 
 // The surface a double-click candidate belongs to. The surface tag is what keeps
-// the five double-click surfaces from cross-firing: a candidate seeded on one
+// the three double-click surfaces from cross-firing: a candidate seeded on one
 // surface can only be consumed by a press on the SAME surface (a trim-bar click
 // then a marker click within the window can never consume). None = no candidate.
+// (EditorText, the editor field's word select and its drag by words, stood
+// 2026-09-05 to 2026-11-08: the architect retired the field's double tap,
+// session 95 — a tap and a drag are the field's whole vocabulary.)
 enum class DoubleClickSurface {
-    None, TrimBar, Marker, EditorText, EmptyLane
+    None, TrimBar, Marker, EmptyLane
 };
 
 // Double-click detection (the platform delivers no double-click event, so it
 // is hand-rolled from two plain clicks). A click on a double-click-bearing surface
 // records this candidate AT A MOTIONLESS RELEASE — one seed timing for all
-// four canvas surfaces since 2026-08-15, when the marker click moved to the
+// three surfaces since 2026-08-15, when the marker click moved to the
 // lift and its press-time seed (the last of them) went with it (the app's
 // CAPTION, 2026-10-05 to 2026-10-24, seeded at its press); the NEXT press on the
 // SAME surface,
@@ -1551,10 +1543,8 @@ enum class DoubleClickSurface {
 // its release is inert and nothing freezes the displayed basis. A recognized
 // second press whose act REFUSES (a locked tab, the P column's payload, the
 // create's home-view gate) arms nothing either — it is still the second press
-// of a double-click. THE ONE STATED EXCEPTION is EditorText: its second press
-// arms the text drag BY WORDS (architect 2026-09-05), which is selection
-// inside an open field, not a drag gesture on the canvas. THE INVENTORY,
-// re-grepped 2026-09-22 — every consume of a candidate, all in
+// of a double-click. THE INVENTORY, re-grepped 2026-09-22 (and 2026-11-08,
+// the EditorText surface retired) — every consume of a candidate, all in
 // input_pointer.cpp and all reached through on_button_press, which the touch
 // translation drives with the same deliveries, so glass keeps the rule with
 // no touch-side code:
@@ -1568,10 +1558,7 @@ enum class DoubleClickSurface {
 //       PendingMarkerPress arm, the editor opened or refused (the refused
 //       consume fell through to that arm until this ruling);
 //   (4) EmptyLane (on_button_press's empty marker-lane arm) — creates and
-//       returns ahead of arm_placement_press, as it always did;
-//   (5) EditorText (the editor field's press arm, over
-//       editor_double_press_at, which the touch layer's DoublePress query
-//       also reads) — the exception above.
+//       returns ahead of arm_placement_press, as it always did.
 //   (The caption's, which toggled the window maximised, 2026-10-05 to
 //   2026-10-24, went with the caption.)
 // Surfaces:
@@ -1611,9 +1598,6 @@ enum class DoubleClickSurface {
 //                 nothing, the moved-drag rule, and needs no clear of its own:
 //                 the press's own top-of-frame clear already emptied the field
 //                 and nothing has re-seeded it under the held button.
-//   EditorText -> selects the clicked character class's RUN (word / punctuation
-//                 / whitespace) in the active text editor (target unused; both
-//                 axes' slack compared).
 //   EmptyLane  -> creates a marker at the clicked position on an EMPTY
 //                 marker-lane spot, then SELECTS it and LANDS the playhead on
 //                 it (architect 2026-07-23; select+land re-ratified 2026-08-12
@@ -5772,8 +5756,8 @@ struct AppState {
     // last row — and a hard row's end on THAT row under the caret's row-end
     // affinity (dialog_editor_row_of, text_editor::State::caret_row_end); a
     // press picks the row under it and the nearest stop on it
-    // (dialog_editor_byte_at) — so the click, the F2.1 text drag, the
-    // double-click word select and Home / End walk the rows the painter drew.
+    // (dialog_editor_byte_at) — so the click, the F2.1 caret drag and the
+    // finger's caret drag walk the rows the painter drew.
     // Written by paint_modal_dialog: zeroed at the top of every run, filled by
     // whichever editor the dialog actually paints. That makes it a statement
     // about what is ON SCREEN — an editor the dialog's precedence hides (a
@@ -6206,8 +6190,10 @@ struct AppState {
     // The painted keyboard (onscreen_keyboard.h) stands while any of the five
     // editor kinds does (stands()), on a backend that asks for one, and it
     // holds NOTHING
-    // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
-    // arm and the PAGE (flags and symbols, the two pages of
+    // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the
+    // SHIFT LATCH (sticky since 2026-11-08: a press lights it, a second puts
+    // it out; the press router's Shift arm, input_pointer.cpp) and the PAGE
+    // (flags and symbols, the two pages of
     // onscreen_keyboard.h's table, architect 2026-10-29) — and both are
     // SESSION-SCOPED: `lamp_session`
     // is the text_editor_session() they were set in, and the ONE OWNER
@@ -6233,7 +6219,7 @@ struct AppState {
     // is shared with the folder overlay since the render player, and one bit
     // describes the SLOT rather than either tenant.)
     // `pressed_keysym` is the key-up the held key OWES, or 0 for a held key
-    // that synthesizes nothing (the page key, the shift arm). It is
+    // that synthesizes nothing (the page key, Shift). It is
     // stored rather than re-derived from `pressed_key` because the press's own
     // act may have moved the page under the index — the page key is exactly
     // that — and a release must never resolve through a table that has
@@ -6245,7 +6231,7 @@ struct AppState {
     struct OnscreenKeyboard {
         enum class Page : uint8_t { Flags, Symbols };
         uint64_t lamp_session     = 0;
-        bool     shift_armed      = false;
+        bool     shift_latched    = false;
         Page     page             = Page::Flags;
         int      pressed_key      = -1;
         GuiKey   pressed_keysym   = 0;
@@ -10276,8 +10262,7 @@ inline int dialog_editor_row_of(const AppState::DialogEditorText& t, int pos,
 // (a press or a drag past the row's text) paints at that row's end, and any
 // other road (typing, a press at the next row's start) leaves it on the next
 // row's start. THE READERS, all on this one rule: dialog_editor_byte_at (the
-// press, the F2.1 drag, the finger's caret drag and, through the stop's probe,
-// the double-click's word select and its drag by words), and the painter's
+// press, the F2.1 caret drag and the finger's caret drag), and the painter's
 // caret through dialog_editor_row_of (the selection band is bytes and needs
 // no affinity). A press past a row's text lands here.
 inline int dialog_editor_row_last_stop(const AppState::DialogEditorText& t,

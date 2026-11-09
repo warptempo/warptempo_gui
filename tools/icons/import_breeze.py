@@ -128,6 +128,10 @@ ROSTER = [
     ('Folder', 'places/22/folder'),
     ('Battery000', 'status/22/battery-000'),
     ('Battery000Charging', 'status/22/battery-000-charging'),
+    # The on-screen keyboard's two drawings of its own (architect 2026-11-08,
+    # sessions 95 / 96: glyphs on its function keys): Tab and Enter.
+    ('FormatIndentMore', 'actions/22/format-indent-more'),
+    ('KeyEnter', 'actions/22/key-enter'),
 ]
 
 # THE HAND TRANSCRIPTIONS (architect 2026-11-02, R14 (3)): the two cards'

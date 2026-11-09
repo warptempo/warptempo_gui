@@ -680,8 +680,8 @@ struct Viewport {
     // transitions, one per dialog editor; THE REFUSAL — every refused commit
     // in settings_editor and the BPM field commit's three (flag_editor), the text
     // selected whole; THE POINTER'S TEXT DRAG — input_pointer's `g.dialog`
-    // sites (the glass's caret drag, click-to-caret, the shift extend, the
-    // double-click word select, the drag's motion and its release).
+    // sites (the glass's caret drag, click-to-caret, the drag's motion and
+    // its release).
     void invalidate_dialog_editor_box();
     // The unified bottom row's CLOCK CELL, and the authoritative inventory of
     // who wants it

@@ -2804,7 +2804,7 @@ void GuiPlatform::release_pen_zoom_anchor() {
 }
 
 void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
-                                 uint32_t codepoint, bool with_ctrl) {
+                                 uint32_t codepoint, GuiCarriedMods carried) {
     // Remember the character against the stable code BEFORE delivering, so the
     // core's codepoint probe can answer for a repeat synthesized off this
     // press. A release carries no character and must not erase the press's:
@@ -2813,13 +2813,12 @@ void GuiPlatform::synthesize_key(GuiKey key, uint32_t stable_code, bool pressed,
     //
     // THIS IS ALSO WHY A HELD SHIFTED LETTER REPEATS IN UPPER CASE, which is
     // the ruling and not a leak: the PRESS'S CODEPOINT IS THE KEY EVENT'S
-    // IDENTITY, so a `Q` typed off the painted keyboard's one-shot arm repeats
-    // `Q` for the whole hold exactly as a physical Shift+Q hold does. The arm
-    // itself cleared at that press (the rule and its whole statement are at the
-    // press router, input_pointer.cpp), and nothing here re-derives a repeat's
-    // character against the live lamp.
+    // IDENTITY, so a `Q` typed off the painted keyboard's latched Shift
+    // repeats `Q` for the whole hold exactly as a physical Shift+Q hold does
+    // (the latch's rule is at the press router, input_pointer.cpp), and
+    // nothing here re-derives a repeat's character against the live lamp.
     if (pressed) key_codepoints_[stable_code] = codepoint;
-    input_.key_event(key, stable_code, pressed, codepoint, with_ctrl);
+    input_.key_event(key, stable_code, pressed, codepoint, carried);
 }
 
 // THE HOST'S BATTERY (the declaration's contract): the atomic word the JNI

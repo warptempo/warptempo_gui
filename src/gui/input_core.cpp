@@ -31,15 +31,16 @@ namespace {
 // by a SECOND DOWN (the pinch). So no tick samples the window and a slow
 // start is simply a pan that has not crossed yet.
 //
-// THE FIELD'S VOCABULARY (architect's tablet vocabulary, 2026-09-05): a TAP
-// seats the caret and seeds the double tap, a DRAG moves it, a DOUBLE TAP
-// selects the word — no hold meaning, no handles and no toolbar. A resting
-// finger there stays Pending and its lift is the ordinary tap burst, which is
-// what keeps it out of the desk's selection sweep.
+// THE FIELD'S VOCABULARY (architect 2026-11-08, session 95, retiring
+// 2026-09-05's double tap): a TAP seats the caret, a DRAG moves it, and
+// NOTHING ELSE — no double tap, no hold meaning, no handles and no toolbar,
+// the selection the on-screen keyboard's alone (begin_touch_caret_drag's
+// declaration, input_handler.h). A resting contact there stays Pending and
+// its lift is the ordinary tap burst.
 //
-// NOR CAN THE WINDOW COLLIDE WITH THE DOUBLE TAP: a tap's whole burst
-// delivers at the LIFT, so a double-click candidate is only ever seeded by a
-// finger that has already left the glass.
+// NOR CAN THE WINDOW COLLIDE WITH THE OTHER SURFACES' DOUBLE TAPS: a tap's
+// whole burst delivers at the LIFT, so a double-click candidate is only ever
+// seeded by a contact that has already left the glass.
 //
 // THE SLOP IS NO LONGER A CONSTANT HERE. It is touch_slop_px_, a settable
 // member whose default is the authored kDefaultTouchSlopPx and whose live
@@ -64,7 +65,7 @@ void GuiInputCore::tick() {
 // ---------------------------------------------------------------------------
 
 void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
-                             uint32_t codepoint, bool with_ctrl) {
+                             uint32_t codepoint, GuiCarriedMods carried) {
     if (!pressed) {
         // Cancel repeat if the released key was the one repeating.
         if (stable_code == repeat_keycode_) {
@@ -85,10 +86,11 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
 
     GuiInputState mods = current_mods();
     mods.codepoint = codepoint;
-    // THE KEY'S OWN CTRL (the contract at the declaration): ORed in before
-    // the eligibility probe and the delivery read it, so both judge the
-    // chord the key IS.
-    if (with_ctrl) mods.ctrl = true;
+    // THE KEY'S OWN MODIFIERS (the contract at the declaration): ORed in
+    // before the eligibility probe and the delivery read them, so both judge
+    // the chord the key IS.
+    if (carried.ctrl)  mods.ctrl  = true;
+    if (carried.shift) mods.shift = true;
     // Arm key repeat (last-key-wins). Eligibility is decided at press time by
     // the application probe under the pre-dispatch context (evaluated before
     // deliver_key runs, so a press that opens an editor is judged pre-open):
@@ -116,7 +118,7 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
         repeat_key_        = key;
         repeat_keycode_    = stable_code;
         repeat_editor_ctx_ = editor_ctx;
-        repeat_with_ctrl_  = with_ctrl;
+        repeat_carried_    = carried;
         repeat_due_us_     = gui_monotonic_us() + repeat_delay_us_;
     } else {
         repeat_key_ = 0;
@@ -196,8 +198,9 @@ void GuiInputCore::maybe_fire_repeat() {
     // live keyboard state may have moved under the held key. The backend
     // answers for its own keymap (contract at set_codepoint_probe).
     if (codepoint_probe_) mods.codepoint = codepoint_probe_(repeat_keycode_);
-    // The armed press's own ctrl rides every fire (key_event's contract).
-    if (repeat_with_ctrl_) mods.ctrl = true;
+    // The armed press's own modifiers ride every fire (key_event's contract).
+    if (repeat_carried_.ctrl)  mods.ctrl  = true;
+    if (repeat_carried_.shift) mods.shift = true;
     // Layer (2) of the repeat contract — layer (1), the event-edge disarms, has
     // already killed the hold at any intervening pointer-button press and
     // re-armed/disarmed it at any key press. Re-
@@ -598,46 +601,31 @@ void GuiInputCore::touch_down(int32_t id, double x, double y,
             // it. It forks the window's SLOP CROSSING toward the caret
             // drag (at the motion site) — the field is off the pan zone, the
             // waveform alone on the GUI's answer, so the two bits cannot
-            // both be true — and its DoublePress answer resolves the window
-            // at the bottom of this arm, on this very down. (Neither window
-            // carries a deadline: the constants block.)
+            // both be true. (Neither window carries a deadline: the
+            // constants block.)
             touch_down_in_editor_field_ =
                 touch_editor_field_hook_
                     ? touch_editor_field_hook_(containing_pixel(x),
                                                containing_pixel(y))
                     : GuiTouchEditorField::Outside;
-            // THE ON-CONTACT RESOLUTIONS — the third clause (content acts the
-            // moment its identity is certain), twice:
-            //   * THE DOUBLE PRESS (2026-09-05). A down inside the editor's
-            //     field within the double-click window and slack of a seed
-            //     the GUI holds can only be the SECOND PRESS — a tap would
-            //     have been one already, and a drag from it is the
-            //     double-click-drag, which the pointer road carries — so the
-            //     entry motion and the press land at this down point, the
-            //     GUI's consumed second press selects the word and arms its
-            //     word-wise drag, and every motion from here is Pointer motion
-            //     driving that arm. A lift without motion is then the release,
-            //     exactly the double tap.
-            //   * EVERY DOWN OFF THE PAN ZONE AND OUTSIDE AN OPEN EDITOR'S
-            //     FIELD (architect 2026-09-25, for the pen and the finger
-            //     alike: "zoom is not useful outside waveform", and the second
-            //     finger's only use is the pinch). Nothing a window could
-            //     decide is meant there — no pan, no armed sweep, no pinch —
-            //     so the press is the pointer's at the down: a flag selects
-            //     and lands, a trim endcap or the bridge grabs, a chrome
-            //     button arms, all with no wait, and the finger's motion from
-            //     here is the pointer's own drag (the GUI's press-becomes-drag
-            //     gate, the slop's twin, decides it). THE CHROME'S RULES ARE
-            //     THE POINTER ROAD'S, UNTOUCHED: an icon still acts at the
-            //     lift and its shift twin is still the long press timed from
-            //     the press's own clock.
-            //     A second contact landing from here is ignored (the Pointer
-            //     arm below).
-            // Nothing is queued in either case (the contact has not moved).
-            if (touch_down_in_editor_field_ ==
-                    GuiTouchEditorField::DoublePress ||
-                (!touch_down_in_pan_zone_ &&
-                 touch_down_in_editor_field_ == GuiTouchEditorField::Outside))
+            // THE ON-CONTACT RESOLUTION — the third clause (content acts the
+            // moment its identity is certain): EVERY DOWN OFF THE PAN ZONE
+            // AND OUTSIDE AN OPEN EDITOR'S FIELD (architect 2026-09-25, for
+            // the pen and the finger alike: "zoom is not useful outside
+            // waveform", and the second finger's only use is the pinch).
+            // Nothing a window could decide is meant there — no pan, no
+            // armed sweep, no pinch — so the press is the pointer's at the
+            // down: a flag selects and lands, a trim endcap or the bridge
+            // grabs, a chrome button arms, all with no wait, and the finger's
+            // motion from here is the pointer's own drag (the GUI's
+            // press-becomes-drag gate, the slop's twin, decides it). THE
+            // CHROME'S RULES ARE THE POINTER ROAD'S, UNTOUCHED: an icon still
+            // acts at the lift and its shift twin is still the long press
+            // timed from the press's own clock. A second contact landing from
+            // here is ignored (the Pointer arm below). Nothing is queued (the
+            // contact has not moved).
+            if (!touch_down_in_pan_zone_ &&
+                touch_down_in_editor_field_ == GuiTouchEditorField::Outside)
                 resolve_touch_window_to_pointer();
             break;
         case TouchPhase::Pending: {
