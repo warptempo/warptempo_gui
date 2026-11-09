@@ -2943,6 +2943,16 @@ struct FlagHitRect {
     double tri_y        = 0.0;
     double tri_w        = 0.0;
     double tri_h        = 0.0;
+    // THE LABEL'S TEXT ORIGIN (architect 2026-11-09, session 100: "the first
+    // char on the left of the tooltip should align horizontally with the
+    // first char of the marker"): the pen x the cue pass hands its FIRST
+    // painted segment's run (paint_cues, render.cpp: the segment's box start
+    // plus the fill pad), as painted, unclipped. `has_text_x` false where no
+    // segment paints or the label's box lies off the waveform's columns, and
+    // on the riding cells' run. ONE READER, the cue tooltip's seat
+    // (marker_tooltip_box_rect, app_state.h); no hit reads it.
+    bool   has_text_x   = false;
+    double text_x       = 0.0;
 };
 // THE ONE CONTAINMENT TEST of a published cue (the label's box or its
 // triangle), half-open on both axes like rect_contains.

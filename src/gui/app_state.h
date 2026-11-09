@@ -7072,11 +7072,17 @@ struct AppState {
     // the `h` view's diff flags — raises no box and says no refusal); its
     // TARGET the cue's published hit rects, the press's own walk
     // (marker_cue_hit over flag_hit_rects, no wider column), the rect handed
-    // to the chain their label box ∪ chip; its SEAT tooltip_box_rect
-    // unchanged, over THE CUE'S FACE — that same box, read from the live
-    // stash at paint time (marker_cue_face), so the box stands above the
-    // marker lane (over the ruler and the trim bar), its left edge on the
-    // chip's left edge. A store mutation that could shift the index under a
+    // to the chain their label box ∪ chip; its SEAT tooltip_box_rect's rule
+    // over THE CUE'S FACE — that same box, read from the live stash at paint
+    // time (marker_cue_face), so the box stands above the marker lane (over
+    // the ruler and the trim bar) — WITH ITS TEXT ON THE LABEL'S (architect
+    // 2026-11-09, session 100: "the text should align - ie, the first char
+    // on the left of the tooltip should align horizontally with the first
+    // char of the marker. the hit area should remain triangle plus text,
+    // however."): the box's left moved so line 1's pen origin stands on the
+    // label's as painted (FlagHitRect::text_x; marker_tooltip_box_rect), the
+    // edge clamp still winning; a cue with no label keeps its left on the
+    // chip's. A store mutation that could shift the index under a
     // resting pen comes only through a press — a hard end — and the readers
     // range-check the index all the same.
     //
@@ -10397,7 +10403,10 @@ inline DialogEditorStop dialog_editor_byte_at(
 // overlay — for a w x h box over `face` (the owner's painted face: the key's,
 // row 8's clock field where the show chose it, a modal button's rect, a cue's
 // label box ∪ chip since 2026-11-09 — "same placement as for icons", the box
-// then above the marker lane, over the ruler and the trim bar):
+// then above the marker lane, over the ruler and the trim bar; a cue's x
+// handed in moved so the box's text stands on the label's, the same day's
+// "the first char on the left of the tooltip should align horizontally with
+// the first char of the marker", marker_tooltip_box_rect):
 //   * ABOVE THE FACE: its bottom row the gap over the face's top row
 //     (box.y = face.y − gap − h; the gap 1 W, render.h's kTooltipGapW,
 //     2 device px on the tablet at 200 %). On the band that is the logo
@@ -19318,5 +19327,23 @@ int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out);
 // moved (FOLLOW paging, a relayout) is read where it is painted: the face
 // (as marker_cue_hit's) of the topmost published rect naming store index
 // `idx`, or the zero rect where none does or in the `h` view — the painter
-// then paints nothing and the walk's next pass ends the box.
+// then paints nothing and the walk's next pass ends the box. The face is the
+// box's VERTICAL seat and the damage band's (tooltip_owner_face); its
+// horizontal seat is the label's text, below.
 GuiRect marker_cue_face(const AppState& app, int idx);
+// marker_tooltip_box_rect — THE CUE'S BOX SEAT (architect 2026-11-09,
+// session 100: "the text should align - ie, the first char on the left of
+// the tooltip should align horizontally with the first char of the marker.
+// the hit area should remain triangle plus text, however."): a w x h box
+// whose TEXT ORIGIN — its left plus `text_inset`, the painter's frame and
+// pad before line 1's pen — stands on THE LABEL'S TEXT ORIGIN as the cue
+// pass drew it (FlagHitRect::text_x, published by the painter: pen origins,
+// not ink). tooltip_box_rect does the rest unchanged over an anchor that is
+// the cue's face (marker_cue_face) with that x: above the face, the gap,
+// the keys' outer columns' clamp (still winning near the well's edges) and
+// the window's top. A cue with no painted label segment keeps the first
+// seat, the box's left on the chip's left. The target is untouched — the
+// chain's rect and the hit stay label box ∪ chip (marker_cue_hit). The zero
+// rect where no published rect names `idx`.
+GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
+                                int w, int h);

@@ -521,13 +521,35 @@ int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out) {
     return r->marker_index;
 }
 
-GuiRect marker_cue_face(const AppState& app, int idx) {
-    if (app.history_mode.active || idx < 0) return GuiRect{0, 0, 0, 0};
+// The topmost rect in the LIVE stash naming store index `idx`, or null (and
+// null in the `h` view, whose indices are the diff flags').
+static const FlagHitRect* live_cue_rect(const AppState& app, int idx) {
+    if (app.history_mode.active || idx < 0) return nullptr;
     for (auto it = app.flag_hit_rects.rbegin();
          it != app.flag_hit_rects.rend(); ++it) {
-        if (it->marker_index == idx) return flag_hit_rect_face(*it);
+        if (it->marker_index == idx) return &*it;
     }
-    return GuiRect{0, 0, 0, 0};
+    return nullptr;
+}
+
+GuiRect marker_cue_face(const AppState& app, int idx) {
+    const FlagHitRect* r = live_cue_rect(app, idx);
+    return r ? flag_hit_rect_face(*r) : GuiRect{0, 0, 0, 0};
+}
+
+GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
+                                int w, int h) {
+    const FlagHitRect* r = live_cue_rect(app, idx);
+    if (!r) return GuiRect{0, 0, 0, 0};
+    // THE ANCHOR: the cue's face for the rows (above it, the gap), its x
+    // moved so the box's text origin — its left plus `text_inset` — stands
+    // on the label's (FlagHitRect::text_x); a cue with no label keeps the
+    // face's left, the chip's. Everything else is tooltip_box_rect's.
+    GuiRect anchor = flag_hit_rect_face(*r);
+    if (anchor.w <= 0 || anchor.h <= 0) return GuiRect{0, 0, 0, 0};
+    if (r->has_text_x)
+        anchor.x = static_cast<int>(std::nearbyint(r->text_x)) - text_inset;
+    return tooltip_box_rect(app, anchor, w, h);
 }
 
 // THE VALUE'S SOURCE MARKER — the contract and the two readers are at the

@@ -1501,6 +1501,14 @@ static CuePassScratch g_cue_pass_scratch;
 // marker lane, `x0` / `w` the waveform's columns the pass is clipped to (the
 // caller set the clip). Cues arrive in store order and are ordered here by
 // column (stable).
+// A label segment's TEXT ORIGIN, the pen x its run is shown at: its box
+// start plus the fill pad. One expression for the label pass and the
+// publication (FlagHitRect::text_x), so the cue tooltip's text lines up on
+// the pen the label was really drawn at.
+static double cue_segment_text_x(const CueSegment& s, int pad) {
+    return static_cast<double>(s.x0 + pad);
+}
+
 static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                        std::vector<CueDraw>& cues,
                        std::vector<FlagHitRect>* out_hit_rects,
@@ -1602,8 +1610,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         }
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
-            const double tx = static_cast<double>(
-                s.x0 + pad);
+            const double tx = cue_segment_text_x(s, pad);
             // The label's ink (resolve_flag_face's table): the inactive
             // label or the text tone, selected or not; a struck segment's
             // bar in the same ink (show_cue_label).
@@ -1668,6 +1675,17 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             r.iter_upper_boundary_x = cells && c.seg[2].present
                                           ? static_cast<double>(c.seg[2].x0)
                                           : right;
+            // The label's text origin: the first painted segment's pen x,
+            // the very `tx` the label pass above hands show_cue_label
+            // (FlagHitRect::text_x, the cue tooltip's seat).
+            if (label_on) {
+                for (const CueSegment& s : c.seg) {
+                    if (!s.present) continue;
+                    r.has_text_x = true;
+                    r.text_x     = cue_segment_text_x(s, pad);
+                    break;
+                }
+            }
             // The chip's box: its painted columns
             // (cue_triangle_half_w_px, cue_triangle_reach_right_px) over its
             // rows.

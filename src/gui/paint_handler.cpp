@@ -3506,7 +3506,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         marker_value = marker_tooltip_value(app, audio, owner.index);
         if (marker_value.empty()) return;
         line1 = marker_value.c_str();
-        btn   = marker_cue_face(app, owner.index);
+        btn   = marker_cue_face(app, owner.index);   // the vertical seat
     } else if (owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
         const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
         if (!dlg.valid ||
@@ -3620,7 +3620,15 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // top, the box never shrinking (a truncated hint would be worse than one
     // that shifted). The rule's one statement is tooltip_box_rect
     // (app_state.h).
-    const GuiRect box = tooltip_box_rect(app, btn, w, h);
+    // A CUE'S BOX (architect 2026-11-09, session 100: "the first char on the
+    // left of the tooltip should align horizontally with the first char of
+    // the marker") seats its TEXT ORIGIN, x + inset below, on the label's
+    // pen as the cue pass drew it — marker_tooltip_box_rect, app_state.h,
+    // over the same rule; `btn` stays its vertical seat.
+    const GuiRect box =
+        owner.surface == AppState::RedesignTooltip::Surface::Marker
+            ? marker_tooltip_box_rect(app, owner.index, inset, w, h)
+            : tooltip_box_rect(app, btn, w, h);
     const int x = box.x;
     const int y = box.y;
     // PUBLISHED AS PAINTED: a clip that covers the box draws it whole, so the
