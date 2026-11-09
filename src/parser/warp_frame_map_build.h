@@ -413,7 +413,12 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // Ctrl+J jumps to the source marker — so the display half, its
 // sample_rate parameter and its format_timestamp use are deleted rather than
 // left producer-less. Comment-only, architect approval 2026-09-14; the two
-// chords retold, comment-only, architect approval 2026-09-29.)
+// chords retold, comment-only, architect approval 2026-09-29. Since
+// 2026-11-09 (architect, session 100) THE HOVER TOOLTIP displays the payload,
+// verbatim and alone, for a cue the copy would act on while the GUI's TIPS
+// lamp is lit (marker_tooltip_value, the GUI's app_state.h) — a hover, not a
+// state surface; no display string returns here. Comment-only, architect
+// approval 2026-11-09.)
 std::string resolved_marker_payload(const std::vector<WarpMarker>& mv, int idx,
                                     long total_frames,
                                     int* source_index_out = nullptr);

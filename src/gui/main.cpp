@@ -780,12 +780,15 @@ GuiRect tooltip_box_rect(const AppState& a, const GuiRect& face, int w,
 }
 
 // The owner's painted face, read as the painter reads it (the stash's button
-// for a dialog owner, the roster face the show chose for a roster owner) —
-// without the painter's stash-session refusal, which only ever empties a
-// box, so the damage stays the wider of the two.
+// for a dialog owner, the roster face the show chose for a roster owner, the
+// cue's face in the live flag stash for a marker owner, marker_cue_face) —
+// without the painter's stash-session and value refusals, which only ever
+// empty a box, so the damage stays the wider of the two.
 static GuiRect tooltip_owner_face(const AppState& a) {
     const AppState::RedesignTooltip& t = a.redesign_tooltip;
     const AppState::RedesignTooltip::Owner& o = t.owner;
+    if (o.surface == AppState::RedesignTooltip::Surface::Marker)
+        return marker_cue_face(a, o.index);
     if (o.surface == AppState::RedesignTooltip::Surface::Dialog) {
         if (a.modal_dialog.valid && o.index >= 0 &&
             o.index < static_cast<int>(a.modal_dialog.buttons.size()))
@@ -2731,6 +2734,29 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                         viewport.invalidate_rect(bottom_row_area(app));
                     else
                         invalidate_top_strip();
+                    viewport.invalidate_rect(tooltip_damage_band(app));
+                }
+            }
+            // A STANDING CUE'S BOX, the same words test (architect
+            // 2026-11-09, session 100; the Marker owner at AppState::
+            // RedesignTooltip): its one line is the cue's resolved value,
+            // recomposed live through the one owner (marker_tooltip_value,
+            // memoized on the store's generation and the audio identity, so
+            // a tick costs a compare), held against the painted line; a
+            // change damages the old box's published rect and the band every
+            // seat of the new one lies in, the show edge's own. An empty live
+            // value owes nothing here (no box paints for it, as a key with no
+            // words): the walk's next pass finds no owner on the cue and ends
+            // the box, its hide damaging the painted rect.
+            if (app.redesign_tooltip.visible &&
+                app.redesign_tooltip.owner.surface ==
+                    AppState::RedesignTooltip::Surface::Marker) {
+                const std::string live = marker_tooltip_value(
+                    app, audio, app.redesign_tooltip.owner.index);
+                if (!live.empty() &&
+                    (app.redesign_tooltip.painted_line1 != live ||
+                     !app.redesign_tooltip.painted_line2.empty())) {
+                    viewport.invalidate_rect(app.redesign_tooltip.rect);
                     viewport.invalidate_rect(tooltip_damage_band(app));
                 }
             }

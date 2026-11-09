@@ -8509,8 +8509,12 @@ void GuiInputHandler::copy_focused_marker_value() {
     // invariant that an accepted press shows something): A CLIPBOARD WRITE IS
     // THE ONE SUCCESS IN THE PRODUCT THAT PAINTS NOTHING — no surface displays
     // a clipboard, and since the resolved readout retired with the status bar
-    // no standing surface displays a resolved value either — so this card is
-    // the whole of what the press shows, AND IT NAMES THE VALUE (architect
+    // no standing surface displays a resolved value either — THE HOVER
+    // TOOLTIP DOES SINCE 2026-11-09 (architect, session 100: with the TIPS
+    // lamp lit an eligible cue's tooltip is its resolved value, composed
+    // through this gate and this composer, marker_tooltip_value), but that is
+    // the pen's hover, never the press's answer — so this card is the whole
+    // of what the press shows, AND IT NAMES THE VALUE (architect
     // 2026-09-13): reading what was copied otherwise needs a terminal or a
     // text editor, and a card is an event, so no state surface returns. The
     // value is the very `payload` handed to the clipboard, single-quoted as

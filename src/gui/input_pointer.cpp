@@ -2861,8 +2861,9 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // THE OWNER IS STAMPED WITH THE STASH THE HIT WAS READ FROM (its owner
     // tag and session), so the wait belongs to this painted surface alone
     // and dies with it (the rule is at AppState::RedesignTooltip).
-    // A ROSTER OWNER IS THE ROSTER WALK'S (2026-10-07 evening): with no
-    // dialog button under the pointer and a roster wait or box standing,
+    // A ROSTER OWNER IS THE ROSTER WALK'S (2026-10-07 evening), AND A
+    // MARKER OWNER WITH IT (2026-11-09, the cues that walk answers for): with
+    // no dialog button under the pointer and such a wait or box standing,
     // this walk hands nothing — every caller runs the roster walk right
     // after this one, and that walk answers for its own owner (under a
     // dialog its veil or the no-wait rule hands "none" itself; the color
@@ -2885,10 +2886,10 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     }
     const AppState::RedesignTooltip& t = app.redesign_tooltip;
     if (tip < 0 &&
-        ((t.hovered.surface == AppState::RedesignTooltip::Surface::Roster &&
+        ((t.hovered.surface != AppState::RedesignTooltip::Surface::Dialog &&
           t.hovered.index >= 0) ||
          (t.visible &&
-          t.owner.surface == AppState::RedesignTooltip::Surface::Roster)))
+          t.owner.surface != AppState::RedesignTooltip::Surface::Dialog)))
         return;
     note_tooltip_hover({AppState::RedesignTooltip::Surface::Dialog, tip,
                         app.modal_dialog.owner, app.modal_dialog.session},
@@ -6592,8 +6593,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     //
     // A STANDING DIALOG'S WAIT IS THE DIALOG'S (2026-08-13, when the modal's
     // buttons took tooltips): this walk answers for the ROSTER's index space
-    // only, IN EVERY STATE, so with no roster button under the pointer it
-    // hands "none" to the writer (a soft end for a standing ROSTER box),
+    // and, since 2026-11-09, the marker lane's cues only, IN EVERY STATE, so
+    // with neither under the pointer it hands "none" to the writer (a soft
+    // end for a standing ROSTER or MARKER box),
     // HARD-ENDS a DIALOG owner — the wait's or the standing box's — whose
     // surface is gone or replaced, and leaves a DIALOG wait whose surface
     // stands and still wears the stash that armed it: the modal's own walk
@@ -6655,6 +6657,28 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         if (t.hovered.surface == AppState::RedesignTooltip::Surface::Dialog &&
             t.hovered.index >= 0)
             return;
+        // THE MARKER LANE'S CUES (architect 2026-11-09, session 100: "with
+        // tooltips on, hover should show resolved value for marker. same
+        // placement as for icons"; the Marker owner at AppState::
+        // RedesignTooltip): with no key's column under the pointer, the cue
+        // the press would take — the press's own walk and arbitration over
+        // the published rects (marker_cue_hit) — is the owner when the value
+        // copy would act on it (marker_tooltip_value non-empty), the rect
+        // handed to the chain its face. Under the same gates as a key: no
+        // veil, no card over it, the no-wait rule; the `h` view and the P
+        // column answer no cue through the two owners. Asked only while the
+        // TIPS lamp is lit — dark, the writer holds the wait clear anyway, so
+        // the lane's hit and the value are not composed for nothing.
+        if (app.show_tooltips && !modal_veil && !under_card &&
+            !modal_owns_the_keyboard) {
+            GuiRect face{0, 0, 0, 0};
+            const int cue = marker_cue_hit(app, mx, my, &face);
+            if (cue >= 0 && !marker_tooltip_value(app, audio, cue).empty()) {
+                note_tooltip_hover(
+                    {AppState::RedesignTooltip::Surface::Marker, cue}, face);
+                return;
+            }
+        }
         note_tooltip_hover(AppState::RedesignTooltip::Owner{},
                            GuiRect{0, 0, 0, 0});
         return;
@@ -8688,7 +8712,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // The redesigned rows' hover is the ONLY hover left: the marker hover
         // popup and its whole recompute machinery died with the marker-text lane
         // (row 5), so the no-gesture tail has nothing else to resolve. With no
-        // menu up a hover opens nothing.
+        // menu up a hover opens nothing. (The cue's hover tooltip, 2026-11-09,
+        // is that same walk's: it asks the marker lane's cues where no key's
+        // column holds the pointer.)
         recompute_redesign_button_hover();
         return;
     }

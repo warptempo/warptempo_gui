@@ -3482,16 +3482,32 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const AppState::RedesignTooltip::Owner owner = app.redesign_tooltip.owner;
     if (owner.index < 0) return;
 
-    // THE TWO SURFACES (the encoding is at the field): a ROSTER owner reads
+    // THE THREE SURFACES (the encoding is at the field): a ROSTER owner reads
     // the roster's constant/stateful hint table and the roster's painted rect;
     // a DIALOG owner reads the modal stash the painter itself publishes — its
     // composed hint and its button rect, both written by paint_modal_dialog,
     // which runs BEFORE this body precisely so the rect the box stands above
-    // is the one this frame draws.
+    // is the one this frame draws; a MARKER owner (2026-11-09) reads its cue's
+    // recomposed value and the cue's published face.
     const char* line1 = nullptr;
     const char* line2 = nullptr;
     GuiRect     btn{0, 0, 0, 0};
-    if (owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
+    // A MARKER OWNER'S ONE LINE, held here so line1 can point into it.
+    std::string marker_value;
+    if (owner.surface == AppState::RedesignTooltip::Surface::Marker) {
+        // THE CUE'S RESOLVED VALUE (architect 2026-11-09, session 100; the
+        // Marker owner at AppState::RedesignTooltip): ONE LINE, the value
+        // copy's payload verbatim, recomposed through the one owner
+        // (marker_tooltip_value — empty, and so no box, wherever the copy
+        // would refuse), in the name line's face and ink; no hint line. The
+        // face is the cue's in the LIVE stash (marker_cue_face), so a cue
+        // that moved is read where it is painted; a cue with no published
+        // rect paints nothing, and the walk's next pass ends the box.
+        marker_value = marker_tooltip_value(app, audio, owner.index);
+        if (marker_value.empty()) return;
+        line1 = marker_value.c_str();
+        btn   = marker_cue_face(app, owner.index);
+    } else if (owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
         const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
         if (!dlg.valid ||
             owner.index >= static_cast<int>(dlg.buttons.size())) {

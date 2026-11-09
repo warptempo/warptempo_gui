@@ -5227,6 +5227,30 @@ struct AppState {
     };
     mutable ValueSourceMarkerCache value_source_marker_cache;
 
+    // MEMOIZED CUE TOOLTIP VALUE — the answer marker_tooltip_value last gave
+    // past its cheap gates (architect 2026-11-09, session 100: the hovered
+    // cue's tooltip is its resolved value). The hover walk asks it on every
+    // motion and every tick with the pen on a cue, main.cpp's comparator on
+    // every tick a cue's box stands, and the painter at every redraw callback
+    // — once per pending damage rectangle, the scanner's at playback cadence
+    // — so without the memo each would re-run the eligibility gate and the
+    // parser composer on an unchanged answer. The key is what that part of
+    // the body reads and nothing wider: the cue's warp store index, the warp
+    // store's generation (the store's change token, ValueSourceMarkerCache's
+    // own), and the audio identity the composer resolves against and the
+    // red-flag cache keys on (the frame count and the sample rate). Mutable
+    // and written by marker_tooltip_value alone; a stale key is the whole
+    // invalidation. Session-only, never serialized.
+    struct MarkerTooltipValueCache {
+        bool        valid        = false;
+        long long   markers_gen  = -1;
+        int         index        = -1;
+        int64_t     total_frames = -1;
+        int         sample_rate  = -1;
+        std::string value;
+    };
+    mutable MarkerTooltipValueCache marker_tooltip_value_cache;
+
     // (THE MEMOIZED COPY CAPTURE — CopyCapturesCache, the answer
     // phase_reset_copy_captures last gave, keyed on the warp store's
     // generation and the run's two ends — stood 2026-09-24 to 2026-10-21 for
@@ -6934,6 +6958,8 @@ struct AppState {
     //     row 8 (Play's clock field an owner's rect beside its column), the
     //     dialogs' and overlays' controls rows. PRESSES STAY FACE-ONLY
     //     (point_on_key): the column is the tooltip's hover target alone.
+    //     A CUE'S TARGET IS ITS PRESS TARGET (2026-11-09): the marker lane's
+    //     published hit rects, no column (the Marker owner, below).
     //   * EVERY ARRIVAL WAITS THE DELAY: the walk handing in an owner other
     //     than the one before (another column, or a column after none), no
     //     press held, starts the wait, `tooltip_delay_ms` from now. MOTION
@@ -7003,40 +7029,63 @@ struct AppState {
     // leaves the old pixels standing — it publishes the UNION of the old
     // rect and the new one (a later hide then erases both) and keeps the
     // words it last really drew; a covering frame publishes the box and its
-    // words exactly. The words are what main.cpp's two comparators hold
+    // words exactly. The words are what main.cpp's three comparators hold
     // against the live ones — a roster button's stateful overload
-    // (redesign_button_tooltip) and a modal button's recomposed hint — since
-    // either can move with state under a still pointer.
+    // (redesign_button_tooltip), a modal button's recomposed hint and a cue's
+    // recomposed value (marker_tooltip_value) — since each can move with
+    // state under a still pointer.
     //
     // THE WAIT: `hovered` is the tooltip-bearing button whose column holds the
     // pointer (no owner off every column, under a held press and after a hard
     // end until the next walk), `hovered_column` the rect the walk found it in
-    // (the column, or Play's clock field) — the rect a standing box's leave
-    // hands the chain — and `wake_due_ms` the wait's deadline (0 = no wait
-    // runs). A standing box's owner is always `hovered`: a box shows only on
+    // (the column, Play's clock field, or a cue's face) — the rect a
+    // standing box's leave hands the chain — and `wake_due_ms` the wait's
+    // deadline (0 = no wait runs). A standing box's owner is always `hovered`: a box shows only on
     // it, and any other owner takes the box down first.
     // THE CHAIN: `left_column` is the column of the last standing box the
     // pointer left and `left_ms` that leave's stamp (0 = no chain: never
     // armed, broken, or spent into a box). `button_held` is the logical
     // primary button's state as the last pointer event delivered it.
     //
-    // AN OWNER NAMES ONE OF TWO SURFACES since 2026-08-13, when the modal's
-    // buttons took tooltips too (architect: "we just do a tooltip just like
-    // the regular icon tooltips"). THE ENCODING, stated once here and nowhere restated:
-    // `surface` says WHICH index space `index` lives in — Roster indexes the
-    // redesign roster (redesign_buttons / RedesignButton), Dialog indexes
-    // AppState::modal_dialog.buttons — and `index` < 0 means NO OWNER in
-    // either. The pair is compared whole (the defaulted ==), so index 0 of the
-    // roster and index 0 of a dialog are different buttons and a slide between
-    // them is an arrival. It is deliberately ONE state rather than two
-    // parallel tooltip states — there is at most one box in the product, one
-    // painter for it and one clock.
+    // AN OWNER NAMES ONE OF THREE SURFACES: the roster's keys, a dialog's
+    // buttons since 2026-08-13 (architect: "we just do a tooltip just like
+    // the regular icon tooltips"), and THE MARKER LANE'S CUES since
+    // 2026-11-09 (architect, session 100: "with tooltips on, hover should
+    // show resolved value for marker. same placement as for icons").
+    // THE ENCODING, stated once here and nowhere restated: `surface` says
+    // WHICH index space `index` lives in — Roster indexes the redesign roster
+    // (redesign_buttons / RedesignButton), Dialog indexes
+    // AppState::modal_dialog.buttons, Marker indexes THE WARP STORE
+    // (app.warpmarkers, the W column's cue the pen is on) — and `index` < 0
+    // means NO OWNER in any. The pair is compared whole (the defaulted ==),
+    // so index 0 of the roster, of a dialog and of the store are different
+    // owners and a slide between them is an arrival. It is deliberately ONE
+    // state rather than parallel tooltip states — there is at most one box in
+    // the product, one painter for it and one clock — so the delay, the
+    // arrival, the bypass chain (spanning keys and cues alike), the hard ends
+    // and the no-wait rule hold for a cue exactly as for a key.
+    // A MARKER OWNER'S BOX: its one line the cue's RESOLVED VALUE, the value
+    // copy's own payload verbatim (marker_tooltip_value, app_state.h — no
+    // second line, no source, no prefix), and ONLY on a cue the copy would
+    // act on (payload_eligibility Eligible and a non-empty payload; every
+    // other cue — an owner, a disabled marker, a stack member, the P column,
+    // the `h` view's diff flags — raises no box and says no refusal); its
+    // TARGET the cue's published hit rects, the press's own walk
+    // (marker_cue_hit over flag_hit_rects, no wider column), the rect handed
+    // to the chain their label box ∪ chip; its SEAT tooltip_box_rect
+    // unchanged, over THE CUE'S FACE — that same box, read from the live
+    // stash at paint time (marker_cue_face), so the box stands above the
+    // marker lane (over the ruler and the trim bar), its left edge on the
+    // chip's left edge. A store mutation that could shift the index under a
+    // resting pen comes only through a press — a hard end — and the readers
+    // range-check the index all the same.
     //
-    // WHO WRITES THE WAIT: the two hover walks, each for its own surface and
-    // each through note_tooltip_hover — recompute_redesign_button_hover for the
-    // roster, update_modal_dialog_hover for a standing dialog, each reading
-    // the columns off its surface's published faces. No other route starts a
-    // wait: the tooltip is the hovering pointer's alone.
+    // WHO WRITES THE WAIT: the two hover walks, each through
+    // note_tooltip_hover — recompute_redesign_button_hover for the roster's
+    // keys and, where no key's column holds the pointer, the marker lane's
+    // cues (2026-11-09), update_modal_dialog_hover for a standing dialog,
+    // each reading its targets off its surface's published faces. No other
+    // route starts a wait: the tooltip is the hovering pointer's alone.
     //
     // A DIALOG OWNER CARRIES THE STASH THAT ARMED IT: `dialog_owner` and
     // `dialog_session` are the modal stash's owner tag and session
@@ -7048,7 +7097,7 @@ struct AppState {
     // player's row). The defaulted == compares them too, so a stash change
     // under a standing index is a new arrival.
     struct RedesignTooltip {
-        enum class Surface { Roster, Dialog };
+        enum class Surface { Roster, Dialog, Marker };
         struct Owner {
             Surface          surface        = Surface::Roster;
             int              index          = -1;
@@ -10346,7 +10395,9 @@ inline DialogEditorStop dialog_editor_byte_at(
 // PLACEMENT'S ONE STATEMENT, the painter's (paint_shift_tooltip), ONE RULE ON
 // EVERY SURFACE — the band, row 8, every controls row of a dialog or an
 // overlay — for a w x h box over `face` (the owner's painted face: the key's,
-// row 8's clock field where the show chose it, a modal button's rect):
+// row 8's clock field where the show chose it, a modal button's rect, a cue's
+// label box ∪ chip since 2026-11-09 — "same placement as for icons", the box
+// then above the marker lane, over the ruler and the trim bar):
 //   * ABOVE THE FACE: its bottom row the gap over the face's top row
 //     (box.y = face.y − gap − h; the gap 1 W, render.h's kTooltipGapW,
 //     2 device px on the tablet at 200 %). On the band that is the logo
@@ -10369,10 +10420,10 @@ inline DialogEditorStop dialog_editor_byte_at(
 // the pointer and the top 27 W under it, flipped above the button at the
 // window's foot — retired with session 90's rule, and session 90's centering
 // on the face with session 91's, closed_questions.md.)
-// tooltip_damage_band is the DAMAGE twin, read by the three owners that must
+// tooltip_damage_band is the DAMAGE twin, read by the owners that must
 // damage a box before its rect is published (the show edge, tick_tooltip;
-// main.cpp's roster words comparator; Viewport::invalidate_modal_dialog_area
-// for a dialog owner): THE FULL-WIDTH BAND of tooltip_damage_h_px() rows (the
+// main.cpp's roster and cue words comparators; Viewport::
+// invalidate_modal_dialog_area for a dialog owner): THE FULL-WIDTH BAND of tooltip_damage_h_px() rows (the
 // box height's bound) ending on the gap's top over the owner's face, or from
 // the window's top where it would rise past it — so the box, at any width
 // and either line count, clamped or not, lies inside it. A BAND, NOT THE
@@ -19222,9 +19273,50 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // it. It was `popup_eligible_marker` — the hover popup's name, kept
 // through that popup's death in row 5, through the bottom strip's readout and
 // through the one-day status bar's right cell — and it is named for what it
-// gates now that no surface DISPLAYS a resolved value at all.
+// gates. Since 2026-11-09 (architect, session 100) ONE SURFACE DISPLAYS a
+// resolved value again, the hovered cue's tooltip under the TIPS lamp, and
+// its membership is this gate's Eligible (marker_tooltip_value below).
 PayloadEligibility payload_eligibility(const AppState& app,
                                        const GuiAudio& audio, int idx);
 // The boolean face of the verdict: Eligible and nothing else.
 bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
                              int idx);
+
+// THE CUE'S HOVER TOOLTIP (architect 2026-11-09, session 100: "with tooltips
+// on, hover should show resolved value for marker. same placement as for
+// icons"; the model, the third owner surface and its encoding at
+// AppState::RedesignTooltip). Its three questions, one owner each, read by
+// the roster's hover walk (recompute_redesign_button_hover), the painter
+// (paint_shift_tooltip), main.cpp's words comparator and the owner face the
+// damage band reads (tooltip_owner_face):
+//
+// marker_tooltip_value — THE WORDS AND THE MEMBERSHIP AT ONCE: the cue at
+// warp store index `idx` raises a box iff this is non-empty, and the box's
+// one line is this string verbatim. It is EXACTLY the value copy's answer
+// (copy_focused_marker_value, input_key_dispatch.cpp): payload_eligibility
+// Eligible, then the one parser composer resolved_marker_payload over the
+// sliced store, its empty answer refused — so the words on the box are the
+// very string the copy hands the clipboard. Empty, too, in the `h` view (its
+// lane's flags are diff flags, their indices the mode's own), while a load
+// stands or no audio is bound. Every other cue — an owner, a disabled
+// marker, a collapsed-stack member, the P column — answers empty and raises
+// NO box: no refusal words (closed_questions.md: refusal and state lines on
+// tooltips stay deleted; the absence is the message). Memoized at the owner
+// (AppState::MarkerTooltipValueCache).
+std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
+                                 int idx);
+// marker_cue_hit — THE TARGET: the cue under (x, y) by the PRESS'S OWN WALK
+// and arbitration (hit_test_flag's topmost_flag_rect over the published
+// AppState::flag_hit_rects, chips over labels, the last painted on top), its
+// marker index or −1 — and `face_out`, when a cue is hit, that rect's FACE:
+// the bounding box of its label box ∪ its chip, the label box starting at
+// the chip's left edge on the marker lane's rows (FlagHitRect, render.h). −1
+// in the `h` view (the indices there are the diff flags'). No wider column
+// than the cue: the key's column is a key-surface rule (tooltip_column_rect).
+int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out);
+// marker_cue_face — THE SEAT'S FACE, read from the LIVE stash so a cue that
+// moved (FOLLOW paging, a relayout) is read where it is painted: the face
+// (as marker_cue_hit's) of the topmost published rect naming store index
+// `idx`, or the zero rect where none does or in the `h` view — the painter
+// then paints nothing and the walk's next pass ends the box.
+GuiRect marker_cue_face(const AppState& app, int idx);

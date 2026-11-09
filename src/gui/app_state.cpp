@@ -5,7 +5,7 @@
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
-#include "warp_frame_map_build.h"  // resolved_marker_payload (value_source_marker)
+#include "warp_frame_map_build.h"  // resolved_marker_payload (value_source_marker, marker_tooltip_value)
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 
@@ -452,6 +452,82 @@ PayloadEligibility payload_eligibility(const AppState& app,
 bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
                              int idx) {
     return payload_eligibility(app, audio, idx) == PayloadEligibility::Eligible;
+}
+
+// THE CUE'S HOVER TOOLTIP — the three contracts are at the declarations
+// (app_state.h); the model at AppState::RedesignTooltip.
+std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
+                                 int idx) {
+    if (app.history_mode.active || app.loading) return "";
+    if (app.active_markers_view != 'W') return "";
+    const int64_t total = audio.total_frames();
+    if (total <= 0) return "";
+    const auto& mv = app.warpmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
+    AppState::MarkerTooltipValueCache& c = app.marker_tooltip_value_cache;
+    const long long gen = app.warpmarkers.generation();
+    const int sr = audio.sample_rate();
+    if (c.valid && c.markers_gen == gen && c.index == idx &&
+        c.total_frames == total && c.sample_rate == sr)
+        return c.value;
+    // THE COPY'S OWN TWO QUESTIONS IN THE COPY'S ORDER
+    // (copy_focused_marker_value): the gate, then the composer, its empty
+    // answer no value.
+    std::string value;
+    if (payload_eligibility(app, audio, idx) == PayloadEligibility::Eligible)
+        value = resolved_marker_payload(slice_to_warp_markers(mv), idx,
+                                        static_cast<long>(total));
+    c.valid        = true;
+    c.markers_gen  = gen;
+    c.index        = idx;
+    c.total_frames = total;
+    c.sample_rate  = sr;
+    c.value        = value;
+    return value;
+}
+
+// A published cue's face: the bounding box of its label box ∪ its chip,
+// either possibly empty, widened to whole pixels.
+static GuiRect flag_hit_rect_face(const FlagHitRect& r) {
+    double x0 = 0.0, y0 = 0.0, x1 = 0.0, y1 = 0.0;
+    bool any = false;
+    const auto take = [&](double x, double y, double w, double h) {
+        if (w <= 0.0 || h <= 0.0) return;
+        if (!any) {
+            x0 = x; y0 = y; x1 = x + w; y1 = y + h;
+            any = true;
+            return;
+        }
+        x0 = std::min(x0, x);
+        y0 = std::min(y0, y);
+        x1 = std::max(x1, x + w);
+        y1 = std::max(y1, y + h);
+    };
+    take(r.x, r.y, r.w, r.h);
+    take(r.tri_x, r.tri_y, r.tri_w, r.tri_h);
+    if (!any) return GuiRect{0, 0, 0, 0};
+    const int ix0 = static_cast<int>(std::floor(x0));
+    const int iy0 = static_cast<int>(std::floor(y0));
+    const int ix1 = static_cast<int>(std::ceil(x1));
+    const int iy1 = static_cast<int>(std::ceil(y1));
+    return GuiRect{ix0, iy0, ix1 - ix0, iy1 - iy0};
+}
+
+int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out) {
+    if (app.history_mode.active) return -1;
+    const FlagHitRect* r = topmost_flag_rect(app, x, y);
+    if (!r || r->marker_index < 0) return -1;
+    if (face_out) *face_out = flag_hit_rect_face(*r);
+    return r->marker_index;
+}
+
+GuiRect marker_cue_face(const AppState& app, int idx) {
+    if (app.history_mode.active || idx < 0) return GuiRect{0, 0, 0, 0};
+    for (auto it = app.flag_hit_rects.rbegin();
+         it != app.flag_hit_rects.rend(); ++it) {
+        if (it->marker_index == idx) return flag_hit_rect_face(*it);
+    }
+    return GuiRect{0, 0, 0, 0};
 }
 
 // THE VALUE'S SOURCE MARKER — the contract and the two readers are at the

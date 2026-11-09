@@ -139,7 +139,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // KEYS DO NOT HIDE THE HOVER TOOLTIP (architect 2026-10-06, Windows 95's
     // tooltip control, which processes mouse messages alone — the model is at
     // AppState::RedesignTooltip): a hint standing while the user types stays.
-    // A KEY THAT RAISES A MODAL TAKES A ROSTER HINT DOWN WITH IT, at every
+    // A KEY THAT RAISES A MODAL TAKES A ROSTER HINT DOWN WITH IT (A CUE'S
+    // TOO, 2026-11-09: the same walk's owner), at every
     // return of this body: Windows shows a tooltip only while its window is
     // active, and a modal takes the activation. The test is the roster walk's
     // own no-wait rule (tooltip_dwell_suppressed — a prompt, any editor, the
@@ -154,7 +155,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const AtScopeExit modal_tooltip_end{[this] {
         const AppState::RedesignTooltip& t = app.redesign_tooltip;
         if (t.visible &&
-            t.owner.surface == AppState::RedesignTooltip::Surface::Roster &&
+            t.owner.surface != AppState::RedesignTooltip::Surface::Dialog &&
             tooltip_dwell_suppressed())
             hide_shift_tooltip();
     }};
