@@ -184,10 +184,16 @@
 //   are present in all 31 files he drops and in Default.
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
 //   (b − a) per channel, rounded half to even and clamped):
-//     playhead line          85E2EB = FFFFFF + 0.483 · (head − FFFFFF)
-//                                     (ruling 4: Default keeps his pick, every
-//                                     other theme the same ratio, white toward
-//                                     the head — not the mean)
+//     playhead line          42D2E0 = FFFFFF + 0.75 · (head − FFFFFF), the
+//                                     head lightened a quarter of the way to
+//                                     white, on every theme, Default included
+//                                     (architect 2026-11-10, session 103, on
+//                                     mocks of Gunmetal_mod's line at 0.483,
+//                                     0.75 and the head's own color: "lets do
+//                                     1/4 ... that should be the new rule for
+//                                     all, no special cases" — the line-as-head
+//                                     look's lower contrast liked, a little
+//                                     too dark; Gunmetal_mod 5D6170 -> 868894)
 //     lit fill, door lit fill
 //                            454545 = THE LAMP RULE: the key face · (mean(face)
 //                                     / mean(press face)) per channel (54 / 42

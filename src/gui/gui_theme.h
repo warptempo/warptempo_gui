@@ -58,7 +58,7 @@ struct GuiThemeTones {
     uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
-    uint32_t playhead_line;       // the playhead's canvas line (white + 0.483 toward the head)
+    uint32_t playhead_line;       // the playhead's canvas line (white + 0.75 toward the head, since 2026-11-10)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
@@ -90,7 +90,9 @@ inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
 // StandbySelectionBackground bar; the 111111 of ControlContrastFrame before
 // it was our mispairing) AND THE LAMP RULE'S FOUR (architect 2026-11-10,
 // session 103, "universal": the lit faces 454545, the lit presses 2A2A2A,
-// the text on lit B5B5B5; theme_ask.h's DERIVED block). palette_file.h's
+// the text on lit B5B5B5; theme_ask.h's DERIVED block) AND THE PLAYHEAD
+// LINE 42D2E0 (the same session, "no special cases": white 0.75 toward the
+// head). palette_file.h's
 // static_asserts pin every word.
 inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x242424, // ground
@@ -130,7 +132,7 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
     0x03C3D5, // playhead_head
-    0x85E2EB, // playhead_line
+    0x42D2E0, // playhead_line
     0xFFFFFF, // scanner
 };
 
