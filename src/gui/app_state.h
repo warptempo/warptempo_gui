@@ -1993,8 +1993,8 @@ enum class RedesignButton {
     // THE TRIM ARM (architect 2026-11-07, session 87, his "agree" per item;
     // the touch region hold retired for it), directly after Restrict and
     // ahead of the presets key: BARE `w`, wearing TRIM and the scissors
-    // (Icon::EditCut, the presets key's glyph until that day), A LAMP — the
-    // lamps' orange, not the doors' lavender — over AppState::trim_armed,
+    // (Icon::EditCut, the presets key's glyph until that day), A LAMP —
+    // the lamps' lit face — over AppState::trim_armed,
     // whose record holds the whole rule: lit, the next single-contact drag on
     // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
     // its down point instead of the pan; only a second press, a committed
@@ -16839,12 +16839,12 @@ inline std::string view_pair_label(char audio, char column) {
 
 // THE DOORS — THE SEVEN OVERLAY OPENERS, THE ONE OWNER OF THE CLASS
 // (architect 2026-11-05, his "yes" on mock s46_m2 of tmp/s46; materials.h's
-// THE DOORS WEAR LAVENDER): the keys whose checked face says A SURFACE
-// STANDS rather than A MODE IS ON — each sits lit while its overlay stands
-// and closes it (redesign_button_selected's overlay arms below) — so their
-// lit face is the theme's `door_lit_fill` (Default B595FC, lavender) and
-// not the lamps' orange, the lamps' orange staying the state lamps' and the
-// view pairs'. Exactly the seven: the history opener (the `h` view), Open
+// THE KEY): the keys whose checked face says A SURFACE STANDS rather than A
+// MODE IS ON — each sits lit while its overlay stands and closes it
+// (redesign_button_selected's overlay arms below) — their lit face the
+// theme's `door_lit_fill`, since the lamp rule (architect 2026-11-10,
+// session 103) the lamps' own lit face on every theme (Default 454545), the
+// class kept. Exactly the seven: the history opener (the `h` view), Open
 // Project (the picker), Play Renders (the render player), Settings (the
 // settings page and its value list), Presets (the trim presets list), BPM
 // (the BPM form) and Score (the score viewer). The roster's painter passes
@@ -17267,8 +17267,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // the act at all — the panel has no Shift and no Space.
 //
 // A LAMP CARRIES NO SECOND OR THIRD ACTION; A DOOR MAY (architect 2026-11-08,
-// session 93). A lamp — an FFAD56 toggle, its lit face its state — admits
-// nothing; a door — a lavender overlay opener (redesign_button_is_door) — may
+// session 93). A lamp — a toggle, its lit face its state — admits
+// nothing; a door — an overlay opener (redesign_button_is_door) — may
 // carry a twin on its hold, his reason: "the fact that they're modal
 // guarantees that the lamp or their on state doesn't conflict with the
 // secondary action". The doors with twins: OPEN PROJECT's Revert and

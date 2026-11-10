@@ -24,13 +24,13 @@ struct GuiThemeTones {
     uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea)
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
-    uint32_t text_on_lit;         // anything printed on a lit face (ControlContrastFrame)
+    uint32_t text_on_lit;         // anything printed on a lit face (ControlForeground, = text, since the lamp rule 2026-11-10)
     uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
     uint32_t key_face;            // the key at rest, the time fields (SurfaceBackground)
-    uint32_t lit_fill;            // a checked key's whole face, Live's "on" (ViewCheckControlEnabledOn)
-    uint32_t lit_press_fill;      // a checked key's face while a press stands on it (lit_fill scaled by the press face's ratio to the face)
-    uint32_t door_lit_fill;       // a checked OVERLAY OPENER's face, the seven doors (ScaleAwareness)
-    uint32_t door_lit_press_fill; // a checked door's face while a press stands on it (door_lit_fill scaled by the same ratio)
+    uint32_t lit_fill;            // a checked key's whole face (THE LAMP RULE: the key face · mean(face) / mean(Desktop))
+    uint32_t lit_press_fill;      // a checked key's face while a press stands on it (Desktop, = key_press_face)
+    uint32_t door_lit_fill;       // a checked OVERLAY OPENER's face, the seven doors (= lit_fill since the lamp rule 2026-11-10)
+    uint32_t door_lit_press_fill; // a checked door's face while a press stands on it (Desktop, = lit_press_fill)
     uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
     uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;          // the ruler (SurfaceBackground)
@@ -88,18 +88,21 @@ inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
 // but THE SELECTION PAIR'S TEXT 070707, Default's StandbySelectionForeground
 // (architect 2026-11-06, session 75: Live's own partner of the
 // StandbySelectionBackground bar; the 111111 of ControlContrastFrame before
-// it was our mispairing). palette_file.h's static_asserts pin every word.
+// it was our mispairing) AND THE LAMP RULE'S FOUR (architect 2026-11-10,
+// session 103, "universal": the lit faces 454545, the lit presses 2A2A2A,
+// the text on lit B5B5B5; theme_ask.h's DERIVED block). palette_file.h's
+// static_asserts pin every word.
 inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x242424, // ground
     0xB5B5B5, // text
     0x757575, // text_dim
-    0x111111, // text_on_lit
+    0xB5B5B5, // text_on_lit
     0x5D5D5D, // key_dim_ink
     0x363636, // key_face
-    0xFFAD56, // lit_fill
-    0xC68743, // lit_press_fill
-    0xB595FC, // door_lit_fill
-    0x8D74C4, // door_lit_press_fill
+    0x454545, // lit_fill
+    0x2A2A2A, // lit_press_fill
+    0x454545, // door_lit_fill
+    0x2A2A2A, // door_lit_press_fill
     0x2A2A2A, // key_press_face
     0x757575, // well_frame
     0x363636, // ruler_face

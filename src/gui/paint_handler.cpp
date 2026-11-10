@@ -327,10 +327,10 @@ namespace {
 // THE ROSTER'S KEY — the band's and row 8's every button, the render
 // player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
 // 2026-11-01; paint_key, materials.h, where its four faces stand).
-// LIT — the FFAD56 fill — for a CHECKED button (the roster's `selected`,
-// `lamp`; the yellow for lamps only, 2026-11-02; key_look), darkened to
-// `lit_press_fill`, Default's C68743, while a press stands on it (the press
-// arc's second landing, 2026-11-05: the lit fill by the press face's ratio);
+// LIT — the lit fill, Default's 454545 — for a CHECKED button (the roster's
+// `selected`, `lamp`; key_look), `lit_press_fill`, the press face, Default's
+// 2A2A2A, while a press stands on it (THE LAMP RULE, 2026-11-10,
+// materials.h's THE KEY);
 // THE PRESS FACE, Default's 2A2A2A, for a `pressed` unchecked one — a live
 // press standing on it — for as long as the press stands, the key back to
 // its own state at the lift or the slide-off (the press arc, architect
@@ -340,9 +340,9 @@ namespace {
 // dimmed by the caller. NO HOT FACE. `face` is the key's FACE, the key itself (materials.h's
 // THE FACE AND ITS GAP, 2026-11-04). ON IT its caller paints the key's
 // Breeze glyph (paint_key_glyph) and UNDER IT its legend (paint_key_legend,
-// 2026-11-03). THE DOORS (architect 2026-11-05, materials.h's THE DOORS
-// WEAR LAVENDER): a checked OVERLAY OPENER wears the theme's door fills, the
-// lavender, so the roster's two key walks — the band's and row 8's — hand
+// 2026-11-03). THE DOORS (architect 2026-11-05, materials.h's THE KEY): a
+// checked OVERLAY OPENER wears the theme's door fills (the lamps' words
+// since the lamp rule, 2026-11-10), so the roster's two key walks — the band's and row 8's — hand
 // paint_key the class `id` belongs to (redesign_button_is_door, app_state.h,
 // the one owner); the row-8 walk paints no door today and asks the same
 // predicate so the class is never decided by lane.
@@ -644,7 +644,7 @@ std::string key_legend_word(std::string_view word) {
 // misalignment over uneven sizing"): a drawing whose ink side's parity
 // differs from the face's stands half a px off center rather than taking a
 // size of its own, every key glyph keeping the one ink size. ITS TONE
-// FOLLOWS THE FACE (materials.h's key_ink): `text_on_lit` (Default's 111111) when the key
+// FOLLOWS THE FACE (materials.h's key_ink): `text_on_lit` (Default's B5B5B5, the text tone since 2026-11-10) when the key
 // paints LIT (`look`, key_look's answer: checked, a dead checked key keeping
 // its fill), else `text` (Default's B5B5B5) on a resting face, or `key_dim_ink` (Default's 5D5D5D)
 // when the key is disabled. The glyph is
@@ -1230,9 +1230,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // SELECTS THE PAIR'S OTHER MEMBER at its lift (architect 2026-10-23 night,
 // "building a suction on the other one is the right way to go"; the consumed
 // nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
-// on_key) — never greyed for it — the key staying lit under the hold, its
-// lit fill darkened by the press ratio (paint_roster_case: key_look's
-// LitPress, the press arc's second landing, 2026-11-05).
+// on_key) — never greyed for it — the key staying lit under the hold, in
+// the lit press face (paint_roster_case: key_look's LitPress; the lamp
+// rule, 2026-11-10).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -7288,13 +7288,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
         // paint_roster_case, the one painter): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat
-        // One, `lit`) alone, its lit fill darkened by the press ratio while
-        // a press stands on it (key_look's LitPress, 2026-11-05); THE PRESS
+        // One, `lit`) alone, the lit press face while a press stands on it
+        // (key_look's LitPress; the lamp rule, 2026-11-10); THE PRESS
         // FACE for a LIVE
         // PRESS on an unchecked one — armed with the pointer inside it, or
         // armed from the on-screen keyboard's Enter / Space — for as long
         // as the press stands (key_look, materials.h; the press arc,
-        // architect 2026-11-05; the yellow for lamps only, 2026-11-02) —
+        // architect 2026-11-05) —
         // the glyph on the key, the legend under it.
         // (Windows'
         // push button 2026-10-02 to 2026-10-22 is git history.) THE FOCUS IS
@@ -7343,9 +7343,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (key_legend_word), the word its tooltip (out.tooltip below) and its
         // glyph's key; every button wears the enabled bit on its glyph and
         // its legend (THE DISABLED RUNG above owns the bit and which owners
-        // publish it). The row holds no door (materials.h's THE DOORS WEAR
-        // LAVENDER: the openers stand on the band), so its lit key is the
-        // lamps' — paint_key's default class.
+        // publish it). The row holds no door (materials.h's THE KEY: the
+        // openers stand on the band), so its lit key is the lamps' —
+        // paint_key's default class.
         const KeyLook look = key_look(plan[i].lit, pressed);
         paint_key(cr, key, look);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
@@ -7482,11 +7482,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // far", "a separate face" since that night, the body's 22 before it) — the
 // band painting NO LINE at its own top edge (architect 2026-08-27, on
 // glass). AT REST the cap in the text tone `text` on the face; the
-// faces the roster's (key_look, materials.h; architect 2026-11-02, the
-// yellow for lamps only):
-//   LIT       — the FFAD56 fill, its cap `text_on_lit` (Default's 111111) (M8 / M12),
-//               the fill darkened to `lit_press_fill` under the finger (the
-//               press arc's second landing, 2026-11-05), its cap still
+// faces the roster's (key_look, materials.h):
+//   LIT       — the lit fill, its cap `text_on_lit` (Default's 454545 under
+//               B5B5B5, the lamp rule of 2026-11-10) (M8 / M12), the press
+//               face `lit_press_fill` under the finger, its cap still
 //               `text_on_lit`:
 //               SHIFT while it is latched (sticky since 2026-11-08) and THE
 //               PAGE KEY while the symbols page stands — the two lamps. IT IS
@@ -7600,8 +7599,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                  page == onscreen_keyboard::Page::Symbols);
 
             // THE KEY (paint_key, materials.h): LIT while its lamp stands
-            // (Shift latched, the page key on the symbols page), its fill
-            // darkened under the finger (key_look's LitPress, 2026-11-05),
+            // (Shift latched, the page key on the symbols page), the lit
+            // press face under the finger (key_look's LitPress, 2026-11-10),
             // else the press face under the finger, else at rest, the cap
             // printed ON its face in the face's ink.
             const KeyLook look = key_look(lit, pressed);

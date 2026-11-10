@@ -344,18 +344,18 @@ struct GuiPalette {
     // THE FLAT LOOK'S TWENTY-THREE (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the four press tones the
-    // press arc's, the same day, the lit press fill its second landing's;
-    // the doors' two, the clip lamp and the two level fills the lamp arc's,
-    // the same night).
+    // press arc's, the same day; the doors' two, the clip lamp and the two
+    // level fills the lamp arc's, the same night; the lit pairs and the text
+    // on lit THE LAMP RULE's since 2026-11-10).
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor text_on_lit;     // anything printed on a lit face
     GuiColor key_dim_ink;     // a disabled key's glyph and legend, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
     GuiColor key_face;        // the key at rest, the time fields, the two lamps at rest
-    GuiColor lit_fill;        // a checked key's whole face, Live's "on"
-    GuiColor lit_press_fill;  // a checked key's face under a standing press
-    GuiColor door_lit_fill;   // a checked OVERLAY OPENER's face, the seven doors (materials.h's THE KEY)
-    GuiColor door_lit_press_fill; // a checked door's face under a standing press
+    GuiColor lit_fill;        // a checked key's whole face, the key face lightened (the lamp rule)
+    GuiColor lit_press_fill;  // a checked key's face under a standing press (= key_press_face)
+    GuiColor door_lit_fill;   // a checked OVERLAY OPENER's face, the seven doors (= lit_fill; materials.h's THE KEY)
+    GuiColor door_lit_press_fill; // a checked door's face under a standing press (= lit_press_fill)
     GuiColor key_press_face;  // an unchecked key's face under a standing press
     GuiColor well_frame;      // the scrub's channel, the tooltip's border
     GuiColor ruler_face;      // the ruler
@@ -1361,9 +1361,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     indicator box; LIT, THE LIMITER `card_ground` (Alert E76942, "a
 //     warning", the cards' own orange) and THE CLIP `clip_lamp`
 //     (StandardVuMeter / Maximum FF0A0A, "a fault", Live's meter clip box)
-//     — "orange for limiter and red for clipper" (d6); the lamps' FFAD56
-//     REFUSED: it is the lit KEY's face and "clip indicator is not a
-//     button". No outline, no inset, nothing printed on them, whole cells,
+//     — "orange for limiter and red for clipper" (d6); a key's lit look
+//     REFUSED: "clip indicator is not a button". No outline, no inset, nothing printed on them, whole cells,
 //     no antialiasing. Both squares are part of logo_legend_layout (two
 //     rects) and of the extent — the first ink column is the limiter's
 //     first column, the lamps standing left of everything — so

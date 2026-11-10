@@ -42,33 +42,35 @@
 // FOUR FACES (KeyLook): AT REST `key_face`, Default's 363636
 // (SurfaceBackground); UNDER PRESS `key_press_face`, Default's 2A2A2A
 // (Desktop) — DARKER THAN THE FACE, the push in; LIT — `lit_fill`,
-// Default's FFAD56 (ViewCheckControlEnabledOn), Live's "on" — A CHECKED
-// KEY, its whole face; LIT UNDER PRESS — `lit_press_fill`, Default's
-// C68743, the lit fill scaled by the press face's ratio to the resting
-// face (42 / 54 = 0.778 on Default; the derivation, theme_ask.h's
-// head) — a checked key while a press stands on it.
-// THE YELLOW IS FOR LAMPS ONLY (architect 2026-11-02, on mocks a3 / b3: "the
-// yellow flash is jarring … keep the yellow only for lamps").
-// THE DOORS WEAR LAVENDER (architect 2026-11-05, his "yes" on mock s46_m2 of
-// tmp/s46): THE SEVEN OVERLAY OPENERS — HISTORY, OPEN PROJECT, PLAY RENDERS,
-// SETTINGS, TRIM PRESETS, BPM and SCORE (redesign_button_is_door,
-// app_state.h, the class's one owner) — are a CLASS OF THEIR OWN among the
-// checked keys: a lit door says A SURFACE STANDS (its overlay, which the same
-// key closes), a lit lamp says A MODE IS ON, and the two facts wear two
-// fills. A checked door wears `door_lit_fill`, Default's B595FC
-// (ScaleAwareness), and under a press `door_lit_press_fill`, Default's
-// 8D74C4 — the door fill by THE SAME RATIO the lamps' lit press takes
-// (theme_ask.h's head). Every other checked key — the state lamps
-// (FOLLOW, RESTRICT, MAGNIFY, Read Only, Tooltips, the walk lamp,
-// Cumulative, the iteration lamp, Value Drag, Add to Selection), the view
-// pairs' lit members, the on-screen keyboard's latched Shift and symbols key
-// — keeps `lit_fill` / `lit_press_fill`. (THE TWO LEVEL CASES, AUDIO and
-// NOISE, are never checked and never pressed-faced: sliders, their fill
-// their value — paint_level_case, paint_handler.cpp; architect 2026-11-05.)
-// What is printed on a door-lit face
-// is `text_on_lit` still (key_ink: lit is lit). THE PAINTER LEARNS THE CLASS
-// AT ONE SITE: paint_key's `KeyLitClass` (below), read for the two lit looks
-// alone, the roster's painter passing the predicate's answer
+// Default's 454545 — A CHECKED KEY, its whole face; LIT UNDER PRESS —
+// `lit_press_fill`, Default's 2A2A2A — a checked key while a press stands
+// on it.
+// THE LAMP RULE (architect 2026-11-10, session 103, on a scratch seen on his
+// glass: "So a universal rule for the lamps"; "Pressing a lit key, I think,
+// should look like pressing an unlit key"): A LIT KEY IS THE KEY FACE
+// LIGHTENED BY THE INVERSE PRESS RATIO — the face times mean(face) /
+// mean(press face), per channel (54 / 42 on Default: 363636 -> 454545;
+// the derivation, theme_ask.h's DERIVED block) — the press's darkening run
+// the other way, so a lit key reads a little lighter; his reason: the full
+// accent on a lit key read too bright and asked the accent to match the
+// ground as few themes do. A LIT KEY UNDER PRESS WEARS THE PRESS FACE
+// ITSELF, exactly as an unlit key does (`lit_press_fill` = the press face).
+// THE DOORS (redesign_button_is_door, app_state.h, the class's one owner:
+// THE SEVEN OVERLAY OPENERS — HISTORY, OPEN PROJECT, PLAY RENDERS, SETTINGS,
+// TRIM PRESETS, BPM and SCORE) WEAR THE SAME LIT PAIR since the lamp rule:
+// `door_lit_fill` / `door_lit_press_fill` stay their own members, their
+// words the lamps' (`lit_fill` / `lit_press_fill`) on every theme. Every
+// other checked key — the state lamps (FOLLOW, RESTRICT, MAGNIFY, Read
+// Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
+// Drag, Add to Selection), the view pairs' lit members, the on-screen
+// keyboard's latched Shift and symbols key — wears `lit_fill` /
+// `lit_press_fill`. (THE TWO LEVEL CASES, AUDIO and NOISE, are never checked
+// and never pressed-faced: sliders, their fill their value —
+// paint_level_case, paint_handler.cpp; architect 2026-11-05.) What is
+// printed on a lit face, a lamp's or a door's, is `text_on_lit` (key_ink:
+// lit is lit), the text tone since the lamp rule. THE PAINTER LEARNS THE
+// CLASS AT ONE SITE: paint_key's `KeyLitClass` (below), read for the two lit
+// looks alone, the roster's painter passing the predicate's answer
 // (paint_roster_case, paint_handler.cpp); key_look stays four-valued.
 // THE PRESS IS DARKER (architect 2026-11-05, the press arc, his pick p2 of
 // tmp/s45 over p1's ControlBackground 1E1E1E, reversing 2026-11-04's "no
@@ -85,15 +87,9 @@
 // to rest while the pointer is off it and pressing again when it slides
 // back; the on-screen keyboard's key and the scrub's thumb, which act at
 // the press or carry the finger, from the press to the lift). A LIT KEY
-// UNDER PRESS DARKENS BY THE SAME RATIO (architect 2026-11-05, the press
-// arc's second landing, his "ratio" on mocks d1 / i1 of tmp/s45 — "we could
-// darken the lit key by the relationship ... so the lit press is derived";
-// the first landing had left it unchanged): the lit fill times mean(press
-// face) / mean(resting face), per channel, the one derived word
-// `lit_press_fill`, computed by the theme tool and not at paint time — the
-// ratio over the difference because it keeps the theme's lit hue and scales
-// with the theme's own press step (the tool's head); what it carries stays
-// `text_on_lit` (key_look_lit below). A DISABLED KEY UNDER PRESS IS
+// UNDER PRESS WEARS THE SAME PRESS FACE (THE LAMP RULE above, 2026-11-10:
+// `lit_press_fill`, computed by the derivation and not at paint time); what
+// it carries stays `text_on_lit` (key_look_lit below). A DISABLED KEY UNDER PRESS IS
 // UNCHANGED (his "disable no press is right"): a dead key arms nothing
 // (every press arm refuses a painted-dead face), so no press stands on it.
 // What a key carries keeps its ink on the press face: the glyph, the cap
@@ -108,8 +104,10 @@
 // `key_dim_ink`, so a checked-but-inert key under an overlay keeps its lit
 // fill (architect 2026-11-01, M6) — its glyph on the lit face
 // `text_on_lit`. Anything printed ON a lit face is `text_on_lit`, Default's
-// 111111 (ControlContrastFrame; the keys' Breeze glyphs, the on-screen
-// keyboard's caps); on a resting or pressed face `text` (key_ink below).
+// B5B5B5 — THE TEXT TONE (ControlForeground) since the lamp rule
+// (2026-11-10: a dark ink would vanish on the lighter face; the keys'
+// Breeze glyphs, the on-screen keyboard's caps); on a resting or pressed
+// face `text` (key_ink below).
 // UNDER EVERY KEY ITS
 // PRINTED LEGEND (architect 2026-11-03, the retrofit, reversing the legends'
 // retirement of 2026-11-02): on the ground in the strip's bottom pad, never
@@ -145,7 +143,8 @@
 // editors, the marker labels, the keyboard's caps, the keys' Breeze glyphs
 // (2026-11-02) and their legends (2026-11-03) — and `text_dim`, Default's
 // 757575 (TextDisabled), for the settings page's inert rows and the
-// tooltip's hint line; `text_on_lit`, Default's 111111, on a lit face. THE
+// tooltip's hint line; `text_on_lit`, Default's B5B5B5 (the text tone,
+// 2026-11-10), on a lit face. THE
 // CARDS' words and glyph wear their own ink, `card_ink`, Default's 2A2A2A
 // (Desktop) on Live's orange (THE CARDS, below; 2026-11-04 night). A
 // DISABLED KEY'S glyph and legend take their own tone, `key_dim_ink`,
@@ -231,9 +230,8 @@
 // bar (42 42 42; Desktop), and NO VISIBLE BORDER: the one-W ring's rows and
 // columns stay in the layout, painted in the fill (the chrome's
 // `card_ground`, `card_text` and `card_frame`, theme_file.h; render.h's THE
-// CARD FACE). NOT THE LAMP'S FFAD56: "the yellow is for lamps only"
-// (2026-11-02) stands — this is Live's status-bar orange, a different tone
-// with a different job, a message rather than a state.
+// CARD FACE) — Live's status-bar orange, a message rather than a state, not
+// the markers' chip (`cue`, Default's FFAD56).
 
 // THE KEY'S FOUR FACES (the head's THE KEY): LitPress when checked with a
 // press standing on the key (the press arc's second landing, architect
@@ -250,15 +248,16 @@ inline constexpr KeyLook key_look(bool checked, bool pressed) {
                    : KeyLook::Rest;
 }
 // A LIT FACE, pressed or not: what is printed on it is `text_on_lit`
-// (key_ink below) — the darkened lit press fill is the lamp's fill still.
+// (key_ink below) — the lit press face is the lamp's face still.
 inline constexpr bool key_look_lit(KeyLook look) {
     return look == KeyLook::Lit || look == KeyLook::LitPress;
 }
-// WHICH LIT FILL A CHECKED KEY WEARS (the head's THE DOORS WEAR LAVENDER,
-// architect 2026-11-05): Lamp — `lit_fill` / `lit_press_fill`, every checked
-// key but the seven; Door — `door_lit_fill` / `door_lit_press_fill`, the
-// seven overlay openers (redesign_button_is_door, app_state.h, the one
-// owner of the roster). Read by paint_key for KeyLook::Lit and LitPress
+// WHICH LIT FILL A CHECKED KEY WEARS (the head's THE KEY, the classes of
+// 2026-11-05; since the lamp rule of 2026-11-10 the two classes share the
+// lit pair's words on every theme): Lamp — `lit_fill` / `lit_press_fill`,
+// every checked key but the seven; Door — `door_lit_fill` /
+// `door_lit_press_fill`, the seven overlay openers (redesign_button_is_door,
+// app_state.h, the one owner of the roster). Read by paint_key for KeyLook::Lit and LitPress
 // alone; Rest and Press ignore it. Lamp is the default, so every key
 // surface that paints no door — the modal rows, the on-screen keyboard, the
 // scrub's thumb — asks nothing.

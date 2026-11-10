@@ -5,8 +5,9 @@
 void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look, KeyLitClass cls) {
     if (r.w <= 0 || r.h <= 0) return;
     const GuiPalette& p = palette();
-    // The two lit looks take the class's pair (the head's THE DOORS WEAR
-    // LAVENDER); Rest and Press are one face for every class.
+    // The two lit looks take the class's pair (the head's THE KEY; the two
+    // pairs one in words since the lamp rule, 2026-11-10); Rest and Press
+    // are one face for every class.
     const bool door = cls == KeyLitClass::Door;
     const GuiColor face =
         look == KeyLook::Lit      ? (door ? p.door_lit_fill : p.lit_fill)

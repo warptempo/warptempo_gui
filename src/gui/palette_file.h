@@ -25,19 +25,20 @@
 // gives no color. THE DEFAULT ROW (`default`, Live's "Default Dark Neutral
 // Medium", COMPILED: kGuiDefaultThemeTones, gui_theme.h; its .ask never
 // read) IS THE 2026-11-01..05 MEASURED PALETTE TO THE BYTE but the selection
-// pair's text (070707 since 2026-11-06) and the magnify core (363636, Live's
-// SurfaceBackground, since 2026-11-07; both at the foot) — the numbers
+// pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
+// SurfaceBackground, since 2026-11-07) and the lamp rule's four (2026-11-10;
+// all at the foot) — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
-// playhead's triangle, the orange of Live's markers and lit buttons;
+// playhead's triangle, the orange of Live's markers;
 // 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) and
 // his own pick, the playhead
 // line's static tone, 2026-11-04 night: white 0.483 toward the head, every
 // other theme derived at the same ratio, ruling 4 of 2026-11-05 — the static_asserts
 // at the foot are that proof in the build, every one of the thirty-nine
-// words with its literal (the press arc's four, 2026-11-05, among them, and
-// the lamp arc's five the same night: the doors' lit pair, the clip lamp,
-// the two level fills).
+// words with its literal (the press arc's four, 2026-11-05, among them, the
+// lamp arc's three the same night — the clip lamp, the two level fills —
+// and the lamp rule's four of 2026-11-10: the lit pairs, the text on lit).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -86,8 +87,8 @@
 //                            and phase reset alike, both halves of the `h`
 //                            view's items (resolve_flag_face), the orange
 //                            of Live's start marker
-//                            (ViewCheckControlEnabledOn, the lit key's fill
-//                            too)
+//                            (ViewCheckControlEnabledOn, its one reader since
+//                            the lamp rule, 2026-11-10)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
 //                            one-W outline round every chip, THE SELECTION
 //                            STEM down the canvas (every selected enabled
@@ -125,7 +126,8 @@
 //                            white"; kept 2026-11-01; white in every theme)
 // The stereo divider between the channels wears the panel's tones; nothing
 // else in the well has a role. THE LIT KEY'S FILL is the chrome's
-// (`lit_fill`, theme_file.h), the same Live role as `cue`.
+// (`lit_fill`, theme_file.h): since the lamp rule (architect 2026-11-10,
+// session 103) the key face lightened, no longer `cue`'s Live role.
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -160,11 +162,13 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_ask.h's head), which the
 // loader reproduces for every dropped file (the proof of 2026-11-06, on the
-// tablet). The lamp arc's five (2026-11-05 night) are Live's own words read
-// off the Default file: the doors' lit fill B595FC (ScaleAwareness) and its
-// press 8D74C4 (B595FC × 42 / 54), the clip lamp FF0A0A (StandardVuMeter /
-// Maximum), the level fills 007383 (RangeEditField) and 3C6AB6
-// (ChosenPreListen). THE SELECTION PAIR'S TEXT 070707 is Default's
+// tablet). The lamp arc's three (2026-11-05 night) are Live's own words read
+// off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum),
+// the level fills 007383 (RangeEditField) and 3C6AB6 (ChosenPreListen).
+// THE LAMP RULE'S FOUR (architect 2026-11-10, session 103, "universal"):
+// the lit faces, the lamps' and the doors' alike, 454545 (363636 × 54 / 42),
+// both lit presses 2A2A2A (Desktop, the press face), the text on lit B5B5B5
+// (ControlForeground, the text) — theme_ask.h's DERIVED block. THE SELECTION PAIR'S TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
 // ControlContrastFrame, until then — our mispairing). THE MAGNIFY CORE
@@ -178,13 +182,13 @@ inline constexpr GuiThemeTones kDefault = kGuiDefaultThemeTones;
 static_assert(kDefault.ground          == 0x242424);
 static_assert(kDefault.text            == 0xB5B5B5);
 static_assert(kDefault.text_dim        == 0x757575);
-static_assert(kDefault.text_on_lit     == 0x111111);
+static_assert(kDefault.text_on_lit     == 0xB5B5B5);
 static_assert(kDefault.key_dim_ink     == 0x5D5D5D);
 static_assert(kDefault.key_face        == 0x363636);
-static_assert(kDefault.lit_fill        == 0xFFAD56);
-static_assert(kDefault.lit_press_fill  == 0xC68743);
-static_assert(kDefault.door_lit_fill   == 0xB595FC);
-static_assert(kDefault.door_lit_press_fill == 0x8D74C4);
+static_assert(kDefault.lit_fill        == 0x454545);
+static_assert(kDefault.lit_press_fill  == 0x2A2A2A);
+static_assert(kDefault.door_lit_fill   == 0x454545);
+static_assert(kDefault.door_lit_press_fill == 0x2A2A2A);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x363636);

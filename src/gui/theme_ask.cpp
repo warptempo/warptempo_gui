@@ -23,8 +23,8 @@ namespace {
 // THE ROLES READ from every file (the head's DERIVATION), each present in
 // every stock and Sonic Bloom file (checked over all 45, 2026-11-05; the
 // press arc's two, SelectionBackground and SelectionForeground, the same
-// day; the lamp arc's three, ScaleAwareness, RangeEditField and
-// ChosenPreListen, the same night; SearchIndication, immaterial_mod's accent,
+// day; the level cases' two, RangeEditField and ChosenPreListen, the same
+// night; SearchIndication, immaterial_mod's accent,
 // over all 42 files 2026-11-06; StandbySelectionForeground, the selection
 // pair's text, over all 31 he drops, 2026-11-06; TakeLaneTrackNotHighlighted,
 // ViewCheckControlDisabledOff, ScrollbarInnerHandle and
@@ -38,7 +38,7 @@ constexpr std::string_view kAskRoles[] = {
     "StandbySelectionForeground",
     "SelectionBackground", "SelectionForeground",
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
-    "ScaleAwareness", "RangeEditField", "ChosenPreListen",
+    "RangeEditField", "ChosenPreListen",
     "SearchIndication",
     "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
@@ -222,7 +222,7 @@ Rgb mix(const Rgb& a, const Rgb& b, double t) {
                clamp_byte(a.b + t * (b.b - a.b))};
 }
 
-// c · ratio, per channel, rounded and clamped (the lit press fills).
+// c · ratio, per channel, rounded and clamped (the lit face).
 Rgb scale(const Rgb& c, double ratio) {
     return Rgb{clamp_byte(c.r * ratio), clamp_byte(c.g * ratio),
                clamp_byte(c.b * ratio)};
@@ -319,8 +319,8 @@ uint32_t packed(const Rgb& c) {
            (static_cast<uint32_t>(c.g) << 8) | static_cast<uint32_t>(c.b);
 }
 
-// One theme's tones (the head's DERIVATION), or nothing when its
-// SurfaceBackground is black (the press ratio has no divisor).
+// One theme's tones (the head's DERIVATION), or nothing when its Desktop is
+// black (the lit face's ratio has no divisor).
 std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
     const Rgb desktop  = opaque(roles["Desktop"]);
@@ -336,7 +336,6 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     const Rgb sel_bg   = opaque(roles["SelectionBackground"]);
     const Rgb sel_fg   = opaque(roles["SelectionForeground"]);
     const Rgb alert    = opaque(roles["Alert"]);
-    const Rgb door     = opaque(roles["ScaleAwareness"]);
     const Rgb vu_max   = opaque(roles.vu_maximum);
     const Rgba face_a  = rgba(roles["SurfaceBackground"]);
     const Rgb lvl_aud  = over(rgba(roles["RangeEditField"]), face_a);
@@ -354,19 +353,21 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
                                 rgba(roles["Desktop"]));
     const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), face_a);
     const Rgb white    = Rgb{255, 255, 255};
-    if (mean(face) == 0.0) return std::nullopt;
-    const double press_ratio = mean(desktop) / mean(face);
+    if (mean(desktop) == 0.0) return std::nullopt;
+    // THE LAMP RULE (the head's DERIVED block): the key face lightened by
+    // the inverse press ratio.
+    const Rgb lit      = scale(face, mean(face) / mean(desktop));
     GuiThemeTones t{};
     t.ground              = packed(ground);
     t.text                = packed(text);
     t.text_dim            = packed(dim);
-    t.text_on_lit         = packed(contrast);
+    t.text_on_lit         = packed(text);
     t.key_dim_ink         = packed(dim_ink);
     t.key_face            = packed(face);
-    t.lit_fill            = packed(on);
-    t.lit_press_fill      = packed(scale(on, press_ratio));
-    t.door_lit_fill       = packed(door);
-    t.door_lit_press_fill = packed(scale(door, press_ratio));
+    t.lit_fill            = packed(lit);
+    t.lit_press_fill      = packed(desktop);
+    t.door_lit_fill       = packed(lit);
+    t.door_lit_press_fill = packed(desktop);
     t.key_press_face      = packed(desktop);
     t.well_frame          = packed(dim);
     t.ruler_face          = packed(face);
@@ -537,7 +538,7 @@ void load_gui_themes(const std::filesystem::path& themes_dir) {
         }
         if (!tones) {
             say_left_out(it->path, "no immaterial_mod: its SearchIndication "
-                                   "or SurfaceBackground is black");
+                                   "or Desktop is black");
         } else {
             list.push_back(GuiTheme{std::string(kGuiImmaterialModSlug),
                                     std::string(kGuiCompiledThemeGroup),
@@ -557,7 +558,7 @@ void load_gui_themes(const std::filesystem::path& themes_dir) {
             }
             const std::optional<GuiThemeTones> tones = derive(f.roles);
             if (!tones) {
-                say_left_out(f.path, "its SurfaceBackground is black");
+                say_left_out(f.path, "its Desktop is black");
                 continue;
             }
             taken.push_back(f.slug);

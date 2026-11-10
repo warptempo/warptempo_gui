@@ -544,8 +544,9 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // are unchanged by the re-laying.)
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" latched or
-// resting; what says the latch is the key's LIT FACE — the lit fill FFAD56,
-// its cap `text_on_lit` (materials.h's paint_key, the flat look 2026-11-01),
+// resting; what says the latch is the key's LIT FACE — the lit fill, Default's
+// 454545 (the lamp rule, 2026-11-10), its cap `text_on_lit` (materials.h's
+// paint_key, the flat look 2026-11-01),
 // which this key and the page key (while the symbols page stands) wear off
 // their lamps — a press on an unlit key the press face, Default's 2A2A2A,
 // from the press to the lift (the press arc, 2026-11-05) — and the letter

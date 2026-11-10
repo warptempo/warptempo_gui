@@ -47,9 +47,11 @@
 // lightness set to L 78.8 — the lightness of the FF91C3 it replaces, so the
 // accent sits over the ground at the ~55 L Live gives Default and Immaterial
 // alike — its hue kept (89.7), its chroma scaled by 78.8 / L0, each channel
-// clipped, encoded, rounded and clamped (`shade`): D6B762; every other tone
-// Immaterial's, the lit press fill re-derived by the ratio. Listed only when
-// that file is present and usable.
+// clipped, encoded, rounded and clamped (`shade`): D6B762. Since the lamp
+// rule (architect 2026-11-10, session 103) ViewCheckControlEnabledOn feeds
+// the markers' chip (`cue`) alone, so the shaded accent reaches the chip
+// alone; every other tone is Immaterial's. Listed only when that file is
+// present and usable.
 //
 // A FILE IS LEFT OUT, WITH ONE stderr LINE naming its path and why, the
 // launch going on: unreadable; a name that spells no slug (a stem of no
@@ -94,14 +96,21 @@
 //                                     "press in skeumorphic is darker")
 //     key face, ruler face, pane, time field, magnify core
 //                            363636 = SurfaceBackground (the core below)
-//     cue outline, text on lit  111111 = ControlContrastFrame
-//     text                   B5B5B5 = ControlForeground
+//     cue outline            111111 = ControlContrastFrame
+//     text, text on lit      B5B5B5 = ControlForeground (text on lit since
+//                                     the lamp rule, 2026-11-10, session
+//                                     103: the lit face is the key face
+//                                     lightened, below, where a dark ink
+//                                     would vanish; ControlContrastFrame
+//                                     before it, on the accent)
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
-//     lit fill AND cue       FFAD56 = ViewCheckControlEnabledOn
-//                                     (immaterial_mod reads its shaded
-//                                     SearchIndication instead, above)
+//     cue                    FFAD56 = ViewCheckControlEnabledOn, every
+//                                     enabled marker's chip, its one reader
+//                                     since the lamp rule (2026-11-10,
+//                                     session 103; immaterial_mod reads its
+//                                     shaded SearchIndication instead, above)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
 //     selection text         070707 = StandbySelectionForeground (architect
@@ -115,20 +124,12 @@
 //     card face              E76942 = Alert (the cards; THE LIMITER LAMP too,
 //                                     architect 2026-11-05: "orange for limiter
 //                                     and red for clipper" — a warning)
-//     door lit fill          B595FC = ScaleAwareness (architect 2026-11-05, his
-//                                     "yes" on mock s46_m2: the SEVEN OVERLAY
-//                                     OPENERS' lit face, the "doors" class,
-//                                     lavender — a lit door says a surface
-//                                     stands, a lit lamp says a mode is on;
-//                                     materials.h's THE KEY)
 //     clip lamp              FF0A0A = StandardVuMeter / Maximum, the one NESTED
 //                                     role: Live's own meter clip box — THE
 //                                     CLIP LAMP's lit face (architect
 //                                     2026-11-05, his d6 "yes": a fault).
-//                                     FFAD56 REFUSED for a lamp: it is
-//                                     ViewCheckControlEnabledOn, the lit KEY's
-//                                     face, and "clip indicator is not a
-//                                     button"
+//                                     A key's lit look REFUSED for it:
+//                                     "clip indicator is not a button"
 //     core                   363636 = SurfaceBackground, THE KEY FACE, on
 //                                     every theme (architect 2026-11-07,
 //                                     session 83, his pick i4 of tmp/s83 on
@@ -187,26 +188,28 @@
 //                                     (ruling 4: Default keeps his pick, every
 //                                     other theme the same ratio, white toward
 //                                     the head — not the mean)
-//     lit press fill         C68743 = lit fill · (mean(press face) / mean(face))
-//                                     per channel (42 / 54 = 0.778 on Default;
-//                                     Immaterial FF91C3 · 0.737 = BC6B90) — a
-//                                     checked key under a standing press
-//                                     (architect 2026-11-05, the press arc's
-//                                     second landing, his "ratio" on mocks d1 /
-//                                     i1 of tmp/s45: "darken the lit key by the
-//                                     relationship ... so the lit press is
-//                                     derived"). THE RATIO, NOT THE DIFFERENCE
-//                                     (d2 / i2, ruled out): the ratio keeps the
-//                                     theme's lit hue and scales with its own
-//                                     press step — Classic Medium Light's step
-//                                     is 60 levels, the difference would nearly
-//                                     black its FFB901, the ratio scales it by
-//                                     86 / 146 = 0.589.
-//     door lit press fill    8D74C4 = door lit fill · the same ratio per channel
-//                                     (B595FC · 0.778 on Default) — a checked
-//                                     door under a standing press, exactly as
-//                                     the lamps' lit press fill is derived
-//                                     (architect 2026-11-05, the doors)
+//     lit fill, door lit fill
+//                            454545 = THE LAMP RULE: the key face · (mean(face)
+//                                     / mean(press face)) per channel (54 / 42
+//                                     on Default; Gunmetal_mod 2E313A -> 3B3F4B)
+//                                     — a checked key's face, the lamps' and
+//                                     the seven doors' alike (architect
+//                                     2026-11-10, session 103, on the scratch
+//                                     seen on his glass: "So a universal rule
+//                                     for the lamps"): the full accent on a lit
+//                                     key read too bright and asked the accent
+//                                     to match the ground as few themes do; a
+//                                     lit key reads a little lighter, the
+//                                     press's darkening run the other way.
+//                                     Where a theme's Desktop is lighter than
+//                                     its face the lit face comes out darker,
+//                                     and where the ratio is steep a channel
+//                                     clips at FF — Live's numbers, no rule
+//     lit press fill, door lit press fill
+//                            2A2A2A = Desktop, the press face itself (the same
+//                                     ruling: "Pressing a lit key, I think,
+//                                     should look like pressing an unlit
+//                                     key")
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,
@@ -226,11 +229,10 @@
 // .ask file by hand (architect 2026-11-07, session 82: "i'd rather manually fix
 // individual sb themes than make rules around their missing colors").
 //
-// A file whose SurfaceBackground is black (the press ratio's divisor zero) is
-// left out with its line, and immaterial_mod is not listed over an
-// Immaterial.ask whose SearchIndication is black (the chroma ratio's divisor
-// zero): no stock or pack file is either, the arm only keeps the arithmetic
-// defined.
+// A file whose Desktop is black (the lit face's divisor zero) is left out
+// with its line, and immaterial_mod is not listed over an Immaterial.ask
+// whose SearchIndication is black (the chroma ratio's divisor zero): no stock
+// or pack file is either, the arm only keeps the arithmetic defined.
 //
 // THE ARITHMETIC IS PYTHON'S, BIT FOR BIT (the derivation was first written
 // in Python, and the proof of 2026-11-06 diffed every row on the tablet
