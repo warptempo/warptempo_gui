@@ -3469,9 +3469,16 @@ void GuiInputHandler::set_show_waveform_magnification(bool desired) {
 }
 
 void GuiInputHandler::set_trim_armed(bool desired) {
-    // The contract — sole writer, per-project, history-less — is at the
-    // declaration (input_handler.h). The key's lit face follows through the
-    // roster's per-tick comparator, which reads redesign_button_selected.
+    // The contract — sole writer, per-project, history-less, its own face's
+    // damage — is at the declaration (input_handler.h). THE FACE IS DAMAGED
+    // HERE, on an actual edge, for every writer (2026-11-10, session 102,
+    // Sol's F-02): bare `w`, the sweep's commit and ADD SEL's lit edge all
+    // light or darken TRIM in the frame asked, the key's home strip through
+    // invalidate_roster_press_face's fork — the per-tick comparator would
+    // catch it only on a timer tick, which a vsync-only pump never runs.
+    if (app.trim_armed != desired)
+        invalidate_roster_press_face(
+            static_cast<int>(RedesignButton::IconTrimArm));
     app.trim_armed = desired;
     // THE RADIO (architect 2026-11-10, session 101, "1 radio"): TRIM's lit
     // edge puts ADD SEL out — the two lamps each arm the next waveform drag

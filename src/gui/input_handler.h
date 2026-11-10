@@ -1211,8 +1211,10 @@ struct GuiInputHandler {
     // 101) are its callers; the dark seat at every project open is the fresh
     // AppState's. ITS LIT EDGE PUTS ADD SEL OUT (the radio's other half,
     // toggle_follow's shape), damaging that lamp's bottom-row face as bare
-    // `k` does. Per-project, history-less, no damage of its own for TRIM's
-    // face (the roster's per-tick comparator repaints it).
+    // `k` does. Per-project, history-less. EVERY ACTUAL EDGE DAMAGES TRIM'S
+    // OWN FACE (its home strip, invalidate_roster_press_face's fork;
+    // 2026-11-10, session 102), so each caller's lamp moves in the frame it
+    // was asked for, not at the next timer tick's comparator.
     void set_trim_armed(bool desired);
 
     // THE TOUCH REGION HOOKS — THE ARMED SWEEP (architect 2026-11-07, session

@@ -837,9 +837,13 @@ struct Viewport {
     // mutation path, one recompute the motion handler and every viewport
     // mutator called — and both died with the marker-text lane they served
     // (the spell-out popup, the lane's one-run fallback tier, and the
-    // pass/ref readout's hover arm). Nothing replaced them: a marker's value
-    // is written on its flag now, so there is no hover-only surface left to
-    // keep in sync. The redesigned rows' own button hover
-    // (recompute_redesign_button_hover, input_pointer.cpp) is unrelated and
-    // untouched.
+    // pass/ref readout's hover arm). Nothing replaced THEM: a marker's value
+    // is written on its flag, and no viewport-side hover state exists to keep
+    // in sync. ONE MARKER HOVER SURFACE STANDS SINCE 2026-11-09 (session 100,
+    // 00a87821), and it is not the viewport's: with TIPS lit an eligible
+    // cue's resolved value hangs in the roster's tooltip box, targeted by the
+    // roster's hover walk (recompute_redesign_button_hover,
+    // input_pointer.cpp) and published and ended through
+    // AppState::RedesignTooltip's Surface::Marker, painted by
+    // paint_shift_tooltip — that model's owners, not a revival of these.
 };

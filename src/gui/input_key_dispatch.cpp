@@ -8313,9 +8313,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // THE RADIO WITH TRIM (architect 2026-11-10, session 101, "1 radio"):
     // the lit edge puts the TRIM arm lamp out through its one writer, as
     // FOLLOW's puts RESTRICT out (toggle_follow) — each lamp now arms the
-    // next waveform drag, the two sweeps one drag apart; TRIM's face follows
-    // through its own road, the per-tick comparator. The off edge puts
-    // nothing out. In the `h` view the edge still puts TRIM out (the bit
+    // next waveform drag, the two sweeps one drag apart; TRIM's face darkens
+    // in this frame too, through its setter's own damage (set_trim_armed
+    // damages TRIM's home strip on every edge). The off edge puts nothing
+    // out. In the `h` view the edge still puts TRIM out (the bit
     // survives the view).
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {
         app.add_to_selection = !app.add_to_selection;

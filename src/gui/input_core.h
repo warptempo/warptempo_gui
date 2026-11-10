@@ -926,11 +926,16 @@ private:
     //     two-finger survivor is the DOWNGRADE above, not a drain producer).
     //   * touch UP, owner, Region — the staged dirty frame DELIVERS first
     //     (the user's own final leg, the nav finger-up's model), then the
-    //     region_end hook (any end commits — the former's release regime:
-    //     the moved drag's trim writes are already in and its end runs the
-    //     sweep's commit tail, the GUI putting the TRIM lamp out). No
-    //     release and no translation end: nothing pointer-shaped ever
-    //     started; -> Drain / Idle.
+    //     region_end hook (any end commits — the former's release regime,
+    //     the one end owner commit_region_sweep's two arms: TRIM's moved
+    //     drag has its trim writes already in, its end running the sweep's
+    //     commit tail and the GUI putting the TRIM lamp out; ADD SEL's moved
+    //     drag has its membership already written per motion, its end
+    //     keeping the selection, putting the ADD SEL lamp out, and — only
+    //     where the span holds a member the sweep added — stopping playback
+    //     and landing the playhead on that swept focus). No release and no
+    //     translation end: nothing pointer-shaped ever started; -> Drain /
+    //     Idle.
     //   * touch UP, owner, Caret — the Region clause's shape: the staged
     //     dirty frame DELIVERS first (the finger's own final leg — the caret
     //     lands where the finger lifted), then caret_end, which always fires
