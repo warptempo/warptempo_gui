@@ -394,13 +394,14 @@ void GuiInputCore::resolve_touch_window_to_single_nav() {
 void GuiInputCore::resolve_touch_window_to_region() {
     // Pending -> Region (THE ARMED SWEEP, architect 2026-11-07, session 87;
     // contract at the declaration): the contact CROSSED THE SLOP on the pan
-    // zone with the TRIM lamp lit and no ctrl, so it now DRIVES THE REGION
-    // FORMER through the region hooks and NOTHING pointer-shaped starts — no
-    // entry motion, no press, the touch hold never raised (the single-nav
-    // model, not the Pointer one). The begin fires at the DOWN point — the
-    // former's press half runs there (the deselect and the drag arm; NO
-    // playhead seat, the trim's writers never move it, session 88), so the
-    // span anchors where the contact landed — and the crossing
+    // zone with a sweep lamp lit (TRIM, or ADD SEL since 2026-11-10) and no
+    // ctrl, so it now DRIVES THE REGION FORMER through the region hooks and
+    // NOTHING pointer-shaped starts — no entry motion, no press, the touch
+    // hold never raised (the single-nav model, not the Pointer one). The
+    // begin fires at the DOWN point — the lit lamp's former's press half runs
+    // there (TRIM's deselect and drag arm, NO playhead seat, the trim's
+    // writers never move it, session 88; ADD SEL's snapshot and arm, no
+    // deselect), so the span anchors where the contact landed — and the crossing
     // position is the gesture's own first leg, staged for the frame boundary
     // (the caret resolver's shape).
     touch_phase_ = TouchPhase::Region;
@@ -942,12 +943,16 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             // answers, the only two a window opens on (touch_down's Idle
             // arm): on the pan surface the drag IS the single-finger nav (the
             // phone model — the pan, or under the ctrl bit the one-finger
-            // zoom; no press ever delivered) UNLESS THE TRIM LAMP IS LIT AND
+            // zoom; no press ever delivered) UNLESS A SWEEP LAMP IS LIT AND
             // NO CTRL STANDS, when it is THE ARMED SWEEP (architect
             // 2026-11-07, session 87: the region former from the down point,
             // the sweep_armed query at set_touch_nav_hooks, asked here at the
             // crossing; the barrel-held drag stays the one-finger zoom, lamp
-            // or not); IN AN OPEN EDITOR'S FIELD it is the CARET DRAG
+            // or not). ONE FORK FOR BOTH SWEEPS: the query answers for the
+            // TRIM lamp or the ADD SEL lamp (architect 2026-11-10, session
+            // 101), and which former the Region phase drives is the GUI's
+            // begin's choice, not this machine's; IN AN OPEN EDITOR'S FIELD
+            // it is the CARET DRAG
             // (2026-09-05): the field is off the pan zone, and its quick drag
             // moves the caret rather than reaching the pointer's press (the
             // editor_field query's contract).

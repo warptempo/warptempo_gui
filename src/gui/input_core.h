@@ -359,7 +359,8 @@ public:
     // delivered through
     // the SAME update hook with the finger as the centroid and dist_ratio
     // pinned at 1.0 (one finger has no distance, so no zoom) — EXCEPT WHILE
-    // THE GUI'S TRIM LAMP IS LIT (the sweep_armed query below), when the
+    // A GUI SWEEP LAMP IS LIT (TRIM, or ADD SEL since 2026-11-10; the
+    // sweep_armed query below), when the
     // same drag with no ctrl is THE ARMED SWEEP: the crossing drives the
     // GUI's region former through the region trio from the down point
     // (architect 2026-11-07, session 87, retiring the hold-then-drag region
@@ -449,7 +450,9 @@ public:
     //     Null — or answering false — means no pan surface: the pointer on
     //     contact everywhere outside an editor's field.
     //   * sweep_armed(): THE SWEEP-ARMED QUERY (architect 2026-11-07,
-    //     session 87) — is the GUI's TRIM arm lamp lit for this drag? Asked
+    //     session 87) — is a GUI sweep lamp lit for this drag (the TRIM arm
+    //     lamp, or since 2026-11-10, session 101, the ADD SEL lamp — a radio
+    //     pair, the GUI's begin choosing the lit one's former)? Asked
     //     at a pan-zone window's SLOP CROSSING, and only when no ctrl stands
     //     (the barrel-held drag stays the one-finger zoom, lamp or not): true
     //     resolves the crossing to the region trio below instead of the
@@ -459,8 +462,8 @@ public:
     //     answering false — means the pan.
     //   * region_begin(x, y): the armed sweep resolved on the pan zone at the
     //     slop crossing — the GUI arms its region former at the DOWN point
-    //     (the former's own
-    //     press half: deselect, playhead seat, the drag arm), or refuses
+    //     (the lit lamp's former's own press half: TRIM's deselect and drag
+    //     arm, ADD SEL's selection snapshot and arm), or refuses
     //     inside the body (prompt, the editors, the two overlay modes,
     //     loading/empty audio, live pointer gesture); a refused begin makes
     //     the two hooks below no-ops through the drag's own !active guard, so
@@ -472,9 +475,9 @@ public:
     //     (the drag's one motion path converts to columns itself).
     //   * region_end(): the gesture ended — finger up, touch_cancel or
     //     touch-capability loss. Any end COMMITS (the former's own release
-    //     regime: the moved drag has already written the trim per motion
-    //     event, so its end runs the sweep's commit tail and the GUI puts the
-    //     lamp out). Fired UNCONDITIONALLY once
+    //     regime: the moved drag has already written the trim — or the
+    //     selection — per motion event, so its end runs the sweep's commit
+    //     tail and the GUI puts the lamp out). Fired UNCONDITIONALLY once
     //     the gesture began — the GUI-side drag holds the drag-modal gate
     //     open and its release path is owed — the refused-begin stream
     //     covered by the same !active guard.
@@ -730,8 +733,9 @@ private:
     //     the touch slop to SINGLE-FINGER Nav on the zone (the PHONE MODEL,
     //     second glass session 2026-08-11: the finger drags the pan, or
     //     under the ctrl bit the one-finger zoom; no press was ever delivered
-    //     — nothing to unwind), or with the TRIM lamp lit and no ctrl to THE
-    //     ARMED SWEEP (-> Region below; the sweep_armed query), and to the
+    //     — nothing to unwind), or with a sweep lamp lit (TRIM or ADD SEL)
+    //     and no ctrl to THE ARMED SWEEP (-> Region below; the sweep_armed
+    //     query), and to the
     //     CARET DRAG in the field (2026-09-05,
     //     the editor_field query; -> Caret below), where the TAP is the
     //     field's one road to the pointer. A second FINGER landing inside the ZONE'S
@@ -772,7 +776,8 @@ private:
     //     across upgrades and downgrades alike.
     //   * Region  — THE ARMED SWEEP (architect 2026-11-07, session 87; the
     //     REGION HOLD of 2026-08-12, the zone window's expiry, retired): the
-    //     zone window's slop crossing with the TRIM lamp lit and no ctrl, and
+    //     zone window's slop crossing with a sweep lamp lit (TRIM, or ADD SEL
+    //     since 2026-11-10) and no ctrl, and
     //     the owning contact now drives the REGION former through the region
     //     trio — begin fired at entry with the DOWN point (the GUI runs the
     //     former's own press half and arms the drag, or refuses), the

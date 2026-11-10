@@ -8309,8 +8309,17 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // left to main.cpp's per-tick face comparator: that walk would catch the
     // drift on the NEXT tick, and a mode toggle must light in the frame it was
     // asked for.
+    //
+    // THE RADIO WITH TRIM (architect 2026-11-10, session 101, "1 radio"):
+    // the lit edge puts the TRIM arm lamp out through its one writer, as
+    // FOLLOW's puts RESTRICT out (toggle_follow) — each lamp now arms the
+    // next waveform drag, the two sweeps one drag apart; TRIM's face follows
+    // through its own road, the per-tick comparator. The off edge puts
+    // nothing out. In the `h` view the edge still puts TRIM out (the bit
+    // survives the view).
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {
         app.add_to_selection = !app.add_to_selection;
+        if (app.add_to_selection && app.trim_armed) set_trim_armed(false);
         viewport.invalidate_rect(bottom_row_area(app));
         return true;
     }
@@ -9233,7 +9242,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // Toggle the TRIM arm lamp (architect 2026-11-07, session 87; the
         // NOISE lamp's toggle stood on the letter 2026-10-28 to 2026-11-05).
         // The setter is GuiInputHandler::set_trim_armed, shared with the
-        // band's TRIM key's synthesized chord and the sweep's commit.
+        // band's TRIM key's synthesized chord, the sweep's commit and ADD
+        // SEL's lit edge; its own lit edge puts ADD SEL out (the radio,
+        // 2026-11-10).
         // History-less, legal on a locked tab and under the grid-iterations
         // lock (trim is band); refused in the `h` view at that mode's
         // allowlist. Silent: the lamp's face shows the new state.

@@ -1194,23 +1194,31 @@ struct GuiInputHandler {
     // THE SWEEP-ARMED QUERY (architect 2026-11-07, session 87): the platform
     // asks it at a pan-zone window's slop crossing with no ctrl standing,
     // and true turns that crossing into THE ARMED SWEEP (the region hooks
-    // below) instead of the single-finger pan. It answers THE TRIM ARM
-    // LAMP (AppState::trim_armed) outside the `h` view and false inside it —
-    // the view cannot edit the trim, its key hidden there; the bit itself
-    // survives the view. A state answer, not geometry; the refusals stay
-    // begin_touch_region's. Wired at main.cpp's set_touch_nav_hooks call.
+    // below) instead of the single-finger pan. IT ANSWERS FOR TWO LAMPS
+    // (architect 2026-11-10, session 101): THE TRIM ARM LAMP
+    // (AppState::trim_armed) or THE ADD SEL LAMP (AppState::add_to_selection)
+    // lit, outside the `h` view, and false inside it — the view cannot edit
+    // the trim, and its own diff-flag selection is the lamp's click role
+    // there, its drag staying the pan; both bits survive the view. The two
+    // lamps are a radio pair, so the begin picks the one lit former. A state
+    // answer, not geometry; the refusals stay begin_touch_region's. Wired at
+    // main.cpp's set_touch_nav_hooks call.
     bool touch_sweep_armed() const;
     // THE TRIM ARM LAMP'S ONE WRITER (AppState::trim_armed): bare `w`'s arm
-    // (the TRIM key's lift reaches it by synthesizing that press) and the
-    // sweep's commit (commit_region_sweep puts it out) are its callers; the
-    // dark seat at every project open is the fresh AppState's. Per-project,
-    // history-less, no damage of its own (the roster's per-tick comparator
-    // repaints the face).
+    // (the TRIM key's lift reaches it by synthesizing that press), the
+    // sweep's commit (commit_region_sweep puts it out) and ADD SEL's lit edge
+    // (bare `k`'s arm puts it out — THE RADIO, architect 2026-11-10, session
+    // 101) are its callers; the dark seat at every project open is the fresh
+    // AppState's. ITS LIT EDGE PUTS ADD SEL OUT (the radio's other half,
+    // toggle_follow's shape), damaging that lamp's bottom-row face as bare
+    // `k` does. Per-project, history-less, no damage of its own for TRIM's
+    // face (the roster's per-tick comparator repaints it).
     void set_trim_armed(bool desired);
 
     // THE TOUCH REGION HOOKS — THE ARMED SWEEP (architect 2026-11-07, session
     // 87, retiring the region hold of 2026-08-12 — "if I turn it on, it's
-    // deliberate and for a sweep"): with the TRIM arm lamp lit, a single
+    // deliberate and for a sweep"; THE ADD SEL SWEEP their second former since
+    // 2026-11-10, session 101, below): with the TRIM arm lamp lit, a single
     // contact on the waveform that crosses the pan's slop with no ctrl
     // standing drives THE REGION FORMER from its DOWN point instead of the
     // pan (the dead trim-move hooks' exact pattern; closed_questions.md
@@ -1235,6 +1243,17 @@ struct GuiInputHandler {
     // rule at RegionDragState (app_state.h). THE `h` VIEW HAS NO FORMER (its hold's
     // playhead-only sweep retired with the hold: "history cannot edit
     // trim"); touch_sweep_armed keeps the begin out of it.
+    // UNDER THE LIT ADD SEL LAMP INSTEAD (architect 2026-11-10, session 101:
+    // "add sel should allow sweep like trim"; the two lamps a radio pair) the
+    // begin runs THE SELECTION FORMER'S press half — NO deselect (the sweep
+    // only adds), the arm (arm_selection_sweep_at) on a waveform column, a
+    // gutter down point arming nothing — and the same update and end drive
+    // it: the update recomputes the membership at the pen's column
+    // (apply_selection_sweep_to_column), the end puts ADD SEL out after a
+    // moved sweep and lands the playhead on the focus a swept member took
+    // (commit_region_sweep). Its refusals are this begin's, no more: the
+    // read-only lock and the grid-iterations lock refuse no marker click's
+    // selection (run_marker_click_act), so they refuse no sweep either.
     // THE REFUSALS LIVE IN THE BEGIN, mirroring the press path the gesture
     // bypasses (the dead begin_touch_trim_move's own list):
     // prompt, the editors via keyboard_modal_editor_active (every editor a
@@ -1836,6 +1855,24 @@ struct GuiInputHandler {
     // motionless release runs the one-shot scrub.
     void arm_region_drag_at(int anchor_col, int x, int y);
 
+    // THE ADD SEL SWEEP'S ARM (architect 2026-11-10, session 101) — the
+    // selection former's press half, arm_region_drag_at's twin on the same
+    // record (RegionDragState::select): `anchor_col` the down point's column
+    // (waveform-relative, in range — the caller has refused the gutter),
+    // (x, y) the press position for the shared threshold, and THE SELECTION
+    // STANDING NOW snapshotted as the union's fixed half. IT WRITES NOTHING
+    // ELSE: no deselect (the sweep only adds), no playhead, no stop. ONE
+    // CALLER: begin_touch_region under the lit ADD SEL lamp.
+    void arm_selection_sweep_at(int anchor_col, int x, int y);
+
+    // THE ADD SEL SWEEP'S PER-MOTION BODY (architect 2026-11-10, session
+    // 101): the membership recomputed at the pen's column `pen_col` (clamped
+    // into [0, w) by the caller) through the Selection mutator, and only
+    // when the membership or the focus moved. The rule is at the definition
+    // (input_pointer.cpp). ONE CALLER: apply_region_drag_motion past the
+    // shared gate on the `select` former.
+    void apply_selection_sweep_to_column(int pen_col);
+
     // THE SWEEP'S ONE MOTION PATH, hoisted for its two drivers (2026-08-12, the
     // touch half): on_motion's region branch (pointer motion under the held
     // button, past its own button-lost arm) and update_touch_region (the
@@ -1845,7 +1882,9 @@ struct GuiInputHandler {
     // moving endpoint at the pointer column through the click->frame basis, THE
     // TRIM WRITE from the anchor to that endpoint (write_trim_from_sweep) — and
     // NO PLAYHEAD WRITE (architect 2026-11-07, session 88, reversing the
-    // carry of 2026-07-30). Caller guards active. The write's
+    // carry of 2026-07-30); on the ADD SEL former (RegionDragState::select,
+    // 2026-11-10) the selection's recompute at that column in the trim
+    // write's place (apply_selection_sweep_to_column). Caller guards active. The write's
     // own repaint is the trim bar's, mid-gesture, so the bar — the sweep's
     // picture (RegionDragState, app_state.h) — tracks the stroke live. (No
     // sweep runs in the `h` view since 2026-11-07, so no carve-out stands.)
@@ -1858,7 +1897,11 @@ struct GuiInputHandler {
     // crossed/coincident reset, the repaint, the target-render trigger; no
     // playhead write) — AT THE END ONLY. A sweep that wrote nothing — motionless or refused by
     // geometry — runs none of that tail. A sweep that MOVED puts the TRIM arm
-    // lamp out (2026-11-07). The per-case reading is at the definition.
+    // lamp out (2026-11-07). THE ADD SEL SWEEP ENDS HERE TOO (the `select`
+    // former, architect 2026-11-10, session 101): no trim tail; a moved
+    // sweep puts ADD SEL out, and one whose span holds a member it added
+    // stops a live play and lands the playhead on the focus. The per-case
+    // reading is at the definition.
     void commit_region_sweep();
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes

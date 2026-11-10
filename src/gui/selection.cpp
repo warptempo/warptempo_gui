@@ -172,8 +172,9 @@ void Selection::seat_focus(int idx) {
 void Selection::set_single_selection(int idx) {
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     // THE STICKY CTRL DOES NOT DIE HERE (architect 2026-09-10): the Add to
-    // selection lamp is a TOOL POSTURE cleared by nothing but its own toggle,
-    // so no Selection mutator touches it. The whole contract is at
+    // selection lamp is a TOOL POSTURE whose off edges are acts and lamps
+    // (its toggle, the spending acts, its own sweep's commit, TRIM's lit
+    // edge), so no Selection mutator touches it. The whole contract is at
     // AppState::add_to_selection.
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);

@@ -853,10 +853,12 @@ struct UndoHistory {
 // holds the pair, and the bar paints from the trim on every frame including
 // the ones this gesture writes.
 //
-// Under SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23) the drag does NOT
-// select the span's markers — the selection stays EMPTY from the press's
-// deselect-all through release, and the trim writes deselect again on their own
-// setter rule. THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07, session
+// Under SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23) the TRIM sweep
+// does NOT select the span's markers — the selection stays EMPTY from the
+// press's deselect-all through release, and the trim writes deselect again on
+// their own setter rule. (THE ADD SEL SWEEP, the `select` former below, is the
+// other lamp's act and selects what it spans — architect 2026-11-10, session
+// 101 — it writes no trim, so no trim sweep selects anything still.) THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07, session
 // 88: "Setting the trim should not move the playhead — I usually use scrub
 // now, so moving playhead is just distracting", reversing 2026-07-30's carry
 // on the moving end and the release's park): the begin, the motion and the
@@ -865,7 +867,10 @@ struct UndoHistory {
 //
 // THE ARMED SWEEP'S BEGIN REACHES arm_region_drag_at (begin_touch_region —
 // the pan zone's window crossing its slop under the lit lamp), and drives
-// the drag through the region hooks. THE `h` VIEW HAS NO SWEEP (its playhead-only former
+// the drag through the region hooks. UNDER THE LIT ADD SEL LAMP the same
+// begin reaches arm_selection_sweep_at instead (the `select` former below,
+// architect 2026-11-10, session 101), the two lamps a radio pair so one
+// former answers each drag. THE `h` VIEW HAS NO SWEEP (its playhead-only former
 // retired with the hold, 2026-11-07: "history cannot edit trim"; the lamp is
 // inert there, GuiInputHandler::touch_sweep_armed).
 //
@@ -904,6 +909,35 @@ struct RegionDragState {
     // 2026-11-07 (session 88: the sweep seats and carries no playhead, so no
     // active-domain frame is taken beside it).
     int64_t anchor_source_frame = 0;
+
+    // THE ADD SEL SWEEP (architect 2026-11-10, session 101: "add sel should
+    // allow sweep like trim"; "make it a oneshot after all - drag once, it's
+    // spent. simpler rule, can reuse trim's mechanism largely"). THE SAME
+    // RECORD, A SECOND FORMER: `select` true when the begin armed under the
+    // ADD SEL lamp (AppState::add_to_selection) rather than TRIM's, so the one
+    // core Region phase, the one motion path (apply_region_drag_motion) and
+    // the one end owner (commit_region_sweep) carry it, every membership list
+    // that names region_drag (any_pointer_gesture_active, the force-end
+    // finalizer, the key gate's pointer-gesture test) covering it unchanged.
+    // `active`, `moved`, `press_x` / `press_y` keep their meaning; the trim
+    // fields above stay unread and unwritten on this former. Its rule —
+    // membership live per motion, never clearing, the focus the last swept
+    // member, the playhead at the lift, the lamp out at a moved commit — is
+    // at apply_selection_sweep_to_column (input_pointer.cpp).
+    bool          select       = false;
+    // THE DOWN POINT'S COLUMN, offset from waveform_area's x, in [0, w): the
+    // swept span's fixed end (the selection sweep reads the picture by
+    // COLUMN, the frame as painted — no camera moves during the gesture: the
+    // Region phase ignores a second finger and the gesture pauses follow).
+    int           anchor_col   = 0;
+    // THE SELECTION STANDING AT THE DOWN, snapshotted at the arm: the union's
+    // fixed half, so pulling the span back drops only what this sweep added.
+    std::set<int> prior_members;
+    int           prior_focus  = -1;
+    // The focus the last update seated FROM THE SWEPT SPAN — a swept member
+    // that was not a prior member — or -1 when the span holds none: the end
+    // owner lands the playhead (and stops a live play) only when it is >= 0.
+    int           swept_focus  = -1;
 };
 
 // The editor field's press-and-drag (F2.1): the pointer road's CARET DRAG
@@ -1963,8 +1997,9 @@ enum class RedesignButton {
     // lamps' orange, not the doors' lavender — over AppState::trim_armed,
     // whose record holds the whole rule: lit, the next single-contact drag on
     // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
-    // its down point instead of the pan; only a second press or a committed
-    // sweep puts it out; dark at every project open, lit across a tab switch.
+    // its down point instead of the pan; only a second press, a committed
+    // sweep or ADD SEL's lit edge (the radio, 2026-11-10) puts it out; dark
+    // at every project open, lit across a tab switch.
     // TRIM IS BAND (input_trim.cpp's head), so it stays LIVE on a locked tab
     // and under the grid-iterations lock (bare `w` on the read-only
     // allowlist, which the iteration gate inherits), greying with no piece
@@ -2702,6 +2737,11 @@ enum class RedesignButton {
     // that ACCUMULATES a selection was unreachable on the rig; a lit mode is
     // the pointer-only spelling of the same act, and the keyboard keeps the
     // modifier it always had.
+    //
+    // SINCE 2026-11-10 (architect, session 101) IT ARMS THE NEXT WAVEFORM
+    // DRAG AS WELL, THE ADD SEL SWEEP, a one-shot in a radio with TRIM (the
+    // rule at AppState::add_to_selection); its tooltip stays the toggle's
+    // name, TRIM's precedent (the lamp rule at redesign_button_tooltip).
     //
     // IT WEARS THE SELECTED FACE, being a mode — the roster's standing rule
     // for a lamp, reading the live bit its own chord writes. THE ROW HAS A LAMP AGAIN because of it, having had
@@ -4623,17 +4663,23 @@ struct AppState {
     // standing is THE TRIM SWEEP from its down point instead of the pan
     // (GuiInputHandler::touch_sweep_armed, the platform's sweep-armed query;
     // begin_touch_region). "IF I TURN IT ON, IT'S DELIBERATE AND FOR A SWEEP"
-    // — ONLY A SECOND PRESS OF THE LAMP OR A COMMITTED SWEEP (one that moved,
-    // commit_region_sweep) PUTS IT OUT: a tap on the waveform (the ordinary
+    // — ONLY A SECOND PRESS OF THE LAMP, A COMMITTED SWEEP (one that moved,
+    // commit_region_sweep) OR ADD SEL LIGHTING PUTS IT OUT: a tap on the
+    // waveform (the ordinary
     // tap), a pinch, the barrel-held zoom, a tab switch, an overlay or a
-    // modal opening all leave it lit. INERT IN THE `h` VIEW, its key hidden
+    // modal opening all leave it lit — AND ADD SEL'S LIT EDGE PUTS IT OUT,
+    // THE RADIO (architect 2026-11-10, session 101, "1 radio": that lamp arms
+    // the next waveform drag too, as THE ADD SEL SWEEP; its lit edge, bare
+    // `k`'s arm, calls the writer below, and this lamp's lit edge puts ADD
+    // SEL out inside it — FOLLOW / RESTRICT's shape; the sweep-armed query
+    // now answers for either lamp). INERT IN THE `h` VIEW, its key hidden
     // there (bare `w` on no allowlist of the view), the bit surviving the
     // visit. LIVE on a locked tab and under the grid-iterations lock (TRIM IS
     // BAND, input_trim.cpp's head: bare `w` on the read-only allowlist the
     // iteration gate inherits).
     //   * ONE WRITER: GuiInputHandler::set_trim_armed — bare `w`'s arm (the
-    //     key's lift reaching it by synthesizing that press) and the sweep's
-    //     commit.
+    //     key's lift reaching it by synthesizing that press), the sweep's
+    //     commit and ADD SEL's lit edge (the radio).
     bool    trim_armed             = false;
 
     // FOLLOW SUSPENDED FOR THE PLAY IN FLIGHT — the pan rule (architect
@@ -5021,6 +5067,22 @@ struct AppState {
     // SET BY ONE ROUTE — bare `k` / the bottom row's Add to selection button,
     // which toggles it both ways (handle_mode_keys, input_key_dispatch.cpp).
     // The button's lamp reads THIS bit, so the face and the mode cannot drift.
+    //
+    // AND IT ARMS THE NEXT WAVEFORM DRAG (architect 2026-11-10, session 101:
+    // "add sel should allow sweep like trim"; "sweep is in waveform area only
+    // - not in markers or other lanes"; "make it a oneshot after all - drag
+    // once, it's spent"): lit, a single contact on the pan zone that crosses
+    // the pan's slop with no ctrl standing is THE ADD SEL SWEEP from its down
+    // point instead of the pan — the TRIM lamp's road exactly
+    // (GuiInputHandler::touch_sweep_armed, begin_touch_region), on the same
+    // record (RegionDragState::select). It ADDS every marker of the active
+    // column whose painted column the span covers to the selection standing
+    // at the down, live per motion, disabled markers included, the focus the
+    // last swept member; the playhead lands on that focus at the lift (the
+    // rule at apply_selection_sweep_to_column, input_pointer.cpp). A tap
+    // stays the playhead tap, a pinch the pinch, the barrel-held drag the
+    // one-finger zoom. INERT IN THE `h` VIEW: the drag there stays the pan,
+    // the lamp's role in the view its diff-flag click alone (below).
     // SESSION SCRATCH, NEVER SERIALIZED, like history_cumulative: no sidecar
     // key, no undo entry, no snapshot field.
     //
@@ -5052,21 +5114,33 @@ struct AppState {
     // selection (bare `v`, at run_history_revert's committed tail —
     // selection_consumed's inventory below).
     //
-    // IT STAYS LIT UNTIL AN ACT SPENDS THE SELECTION, OR `k` PUTS IT OUT
-    // (architect 2026-09-10 for the posture, 2026-09-12 for the acts). It is a
-    // TOOL POSTURE, not a per-selection posture: it says what the POINTER does
-    // to a flag, so nothing about the selection's own CONTENT can end it. A
-    // Tab walk, `p`, Ctrl+Tab, a waveform
-    // click, a marker drop, an undo restore and a LOAD IN PLACE all leave it
-    // lit, and the plain flag press keeps taking the ctrl branch until an act
-    // consumes what was built. That is bare `f`'s posture exactly
+    // IT STAYS LIT UNTIL AN ACT SPENDS THE SELECTION, ITS OWN SWEEP IS DONE,
+    // TRIM LIGHTS, OR `k` PUTS IT OUT (architect 2026-09-10 for the posture,
+    // 2026-09-12 for the acts, 2026-11-10 for the sweep and the radio). It is
+    // a TOOL POSTURE, not a per-selection posture: it says what the POINTER
+    // does to a flag and to the next waveform drag, so nothing about the
+    // selection's own CONTENT can end it. A Tab walk, `p`, Ctrl+Tab, a
+    // waveform click, a marker drop, an undo restore and a LOAD IN PLACE all
+    // leave it lit, and the plain flag press keeps taking the ctrl branch
+    // until an act consumes what was built. ITS OFF EDGES ARE FOUR: the
+    // toggle; selection_consumed (the acts that spend a selection, below);
+    // THE SWEEP'S COMMIT — a sweep that moved past the slop is the act the
+    // lamp armed and spends it, TRIM's one-shot rule (commit_region_sweep;
+    // a refused or unmoved begin leaves it lit), WHICH ENDS THE STICKY-CTRL
+    // CLICK POSTURE TOO, the consequence the ruling accepted: press the lamp
+    // again to keep adding by click; and TRIM's LIT EDGE, THE RADIO
+    // (architect 2026-11-10, "1 radio": GuiInputHandler::set_trim_armed puts
+    // this out, and this bit's lit edge, bare `k`'s arm, puts TRIM out —
+    // FOLLOW / RESTRICT's shape, each lamp arming the next waveform drag).
+    // That is bare `f`'s posture exactly
     // (AppState::follow): the session lamps are one family, in no settings
     // vocabulary, never serialized, and per-project state for as long as the
     // project stays open. `follow` and `restrict` are written by their two
     // toggles alone, each lit edge putting the other out (the radio,
     // 2026-10-29); this bit took a COMPANION WRITE, the act class
-    // below (selection_consumed), a USE CASE ending rather than a radio
-    // partner's toggle. (Bare `x`'s VALUE DRAG lamp was the
+    // below (selection_consumed), a USE CASE ending, and since 2026-11-10
+    // the radio partner's lit edge (TRIM's) and its own sweep's commit
+    // besides. (Bare `x`'s VALUE DRAG lamp was the
     // family's third member from 2026-09-10 until 2026-09-13, when the
     // architect deleted it for a posture derived from the view; bare `[`'s
     // VALUE DRAG LAMP is its third member again since 2026-10-11, its off
@@ -5085,7 +5159,10 @@ struct AppState {
     //
     // NO SELECTION MUTATOR CLEARS IT (architect 2026-09-10): an off edge
     // nothing announced is exactly the silent swap the mutual-exclusion ruling
-    // of the same day forbids everywhere else.
+    // of the same day forbids everywhere else. The sweep's commit is no
+    // mutator clearing it: it is this lamp's own act ending, at the lift of
+    // the drag the lamp armed (2026-11-10), and its mutator writes
+    // (Selection::replace_selection) touch no lamp.
     //
     // AND THE ACT THAT SPENDS A SELECTION PUTS IT OUT (architect 2026-09-12,
     // the lamps resolved by use case). The toggle is still the only thing that

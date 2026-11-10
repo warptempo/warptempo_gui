@@ -28,8 +28,8 @@ struct Selection {
     // REPLACE THE WHOLE MEMBERSHIP WITH A SET, focus `focus` (2026-08-29).
     // set_single_selection's own body one arity up (the STICKY CTRL is a tool
     // posture no Selection body writes; the contract is at
-    // AppState::add_to_selection). THREE CALLERS,
-    // re-grepped 2026-11-05, in three classes. THE PASTE LANDING installs a
+    // AppState::add_to_selection). FOUR CALLERS,
+    // re-grepped 2026-11-10, in four classes. THE PASTE LANDING installs a
     // set it just created: the phase-reset propagate's landing in the P column
     // (PhaseResetPropagate::land_paste_in_phase_reset_view), for which this arity
     // was added — it wrote the two fields directly until 2026-08-29, leaning
@@ -41,13 +41,18 @@ struct Selection {
     // the mutator rather than a hand-written pair. THE BPM FORM'S OPEN
     // (Ctrl+B, input_key_dispatch.cpp, 2026-11-05) is the third: it keeps
     // the span's membership and moves the focus to its first member, where
-    // a single-select and a hand re-insert stood. So a write of the
+    // a single-select and a hand re-insert stood. THE ADD SEL SWEEP
+    // (apply_selection_sweep_to_column, input_pointer.cpp, architect
+    // 2026-11-10, session 101) is the fourth: per motion it installs the
+    // selection standing at its down plus the markers its span covers,
+    // focused on the last swept member (or the prior focus), and only when
+    // the membership or the focus moved. So a write of the
     // membership outside a Selection mutator exists nowhere but the reorder
     // remap (remap_marker_indices_after_reorder, which follows the same
     // markers to their new indices).
     // `focus` must be a member (the paste hands the earliest created marker
     // and the restore the earliest touched one, the programmatic group's own
-    // rule); an EMPTY set with focus -1 degenerates to clear_selection's
+    // rule; the sweep a swept or the prior focus); an EMPTY set with focus -1 degenerates to clear_selection's
     // state.
     void replace_selection(std::set<int> members, int focus);
     void clear_selection();

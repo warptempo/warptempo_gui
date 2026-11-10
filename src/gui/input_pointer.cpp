@@ -1569,7 +1569,11 @@ bool history_view_hides_button(RedesignButton b) {
 //     Each lands on
 //     the FOCUS its own arm just set: the clicked marker, the clicked range
 //     end, the toggled-in marker, or the focus repaired after a toggle-out (an
-//     empty post-toggle selection lands nothing). The plain click's FOUR
+//     empty post-toggle selection lands nothing). THE ADD SEL SWEEP joins
+//     them (architect 2026-11-10, session 101, commit_region_sweep): at its
+//     lift it lands on the focus its last swept member took, behind the
+//     click's own stop — a sweep that added no member lands and stops
+//     nothing. The plain click's FOUR
 //     deferred completions left this list 2026-07-29 with the group drag —
 //     horizontal movement is a focus act, the doctrine at the head of
 //     position_nudge.h;
@@ -2607,8 +2611,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // BOTH of the band's gestures live on the POINTER — the row press, whose
     // act is at the lift, and the band's own SCROLL DRAG, which is that same
     // arm past the vertical gate. Left in the zone, a finger crossing the
-    // slop on a row would resolve to the phone-model pan (or, under the lit
-    // TRIM lamp, to the sweep every content refuses), so the list would
+    // slop on a row would resolve to the phone-model pan (or, under a lit
+    // sweep lamp, TRIM or ADD SEL, to the sweep every content refuses), so
+    // the list would
     // answer a tap and nothing else. ONE SPELLING OF "ON THE BAND": the same
     // rect the press claim reads.
     if (folder_overlay::stands(app) &&
@@ -2624,21 +2629,27 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     return point_on_nav_surface(app, x, y);
 }
 
-// --- The touch region former (the TRIM arm lamp's sweep) -------------------
+// --- The touch region formers (the TRIM and ADD SEL lamps' sweeps) ---------
 //
 // THE ARMED SWEEP (architect 2026-11-07, session 87, retiring the region hold
 // of 2026-08-12) — the full contract and the refusal list are at the
-// declarations (input_handler.h). These three ARE the one region former's
+// declarations (input_handler.h). These three ARE the region record's
 // machinery driven from the platform's region hooks: no pending and no
 // threshold wait at the begin — the lit lamp and the slop crossing already
-// disambiguated, so the begin runs the former's press half directly — and no
-// second former anywhere.
+// disambiguated, so the begin runs a former's press half directly. TWO
+// FORMERS ON ONE RECORD since 2026-11-10 (architect, session 101: "can reuse
+// trim's mechanism largely"): the TRIM sweep and THE ADD SEL SWEEP
+// (RegionDragState::select), the begin choosing by the one lit lamp of the
+// radio pair; one core phase, one motion path, one end owner.
 
 bool GuiInputHandler::touch_sweep_armed() const {
-    // THE LAMP IS INERT IN THE `h` VIEW (its key hidden there, the history
-    // allowlist naming no bare `w`): the view cannot edit the trim, so its
-    // drag stays the pan. The bit itself survives the view.
-    return app.trim_armed && !app.history_mode.active;
+    // EITHER LAMP ARMS THE DRAG (the radio pair, so at most one stands).
+    // BOTH ARE INERT IN THE `h` VIEW: TRIM's key is hidden there (the history
+    // allowlist naming no bare `w`) and the view cannot edit the trim; ADD
+    // SEL's role in there is its diff-flag click alone (bare `k` on the
+    // allowlist), so the drag stays the pan. The bits survive the view.
+    return (app.trim_armed || app.add_to_selection) &&
+           !app.history_mode.active;
 }
 
 void GuiInputHandler::begin_touch_region(int x, int y) {
@@ -2668,6 +2679,18 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     if (keyboard_modal_editor_active()) return;
     if (app.loading || audio.total_frames() <= 0) return;
     if (any_pointer_gesture_active(app)) return;
+    // THE ADD SEL SWEEP'S PRESS HALF (architect 2026-11-10, session 101) when
+    // that lamp is the lit one (the radio pair: TRIM lit wins only because it
+    // is asked first, the two never standing together). NO DESELECT — the
+    // sweep only adds — and nothing else at the down: the arm on a waveform
+    // column, a gutter down point arming nothing (the lamp stays lit).
+    if (!app.trim_armed && app.add_to_selection) {
+        const GuiRect sel_area = waveform_area(app);
+        const int sel_rel = x - sel_area.x;
+        if (sel_rel < 0 || sel_rel >= sel_area.w) return;
+        arm_selection_sweep_at(sel_rel, x, y);
+        return;
+    }
     // THE FORMER'S PRESS HALF at the DOWN point; the platform stages the
     // crossing position as the drag's first frame. THE ARMED DRAG IS THE ONE
     // ROUTE TO A SWEEP (architect 2026-11-07, session 87). The deselect runs
@@ -2700,7 +2723,9 @@ void GuiInputHandler::end_touch_region() {
     // wl_touch.cancel, capability loss; the platform's end split delivers or
     // drops the staged final frame, its record): the moved sweep runs the
     // shared trim commit tail through the gesture's one end owner, which puts
-    // the TRIM arm lamp out. The owner is self-guarded like the update.
+    // the TRIM arm lamp out — or, on the ADD SEL former, puts ADD SEL out and
+    // lands the playhead on the swept focus. The owner is self-guarded like
+    // the update.
     commit_region_sweep();
 }
 
@@ -5702,10 +5727,93 @@ void GuiInputHandler::arm_region_drag_at(int anchor_col, int x, int y) {
     // PLAIN pending click, ScrollDragState, which arms no sweep at all.)
 }
 
+// THE ADD SEL SWEEP'S ARM (contract at the declaration): the record armed
+// on its `select` former with the down column and the selection standing now.
+void GuiInputHandler::arm_selection_sweep_at(int anchor_col, int x, int y) {
+    app.region_drag = RegionDragState{};
+    app.region_drag.active        = true;
+    app.region_drag.select        = true;
+    app.region_drag.anchor_col    = anchor_col;
+    app.region_drag.press_x       = x;
+    app.region_drag.press_y       = y;
+    app.region_drag.prior_members = app.selected_markers;
+    app.region_drag.prior_focus   = app.last_selected_marker;
+}
+
+// THE ADD SEL SWEEP — THE MEMBERSHIP RULE (architect 2026-11-10, session 101:
+// "add sel should allow sweep like trim"; "sweep is in waveform area only";
+// "2 agree" — live membership; "disagree - include. they might be the
+// target"; "make the last selected in sweep the selection/focus. that's what
+// file managers do"). Asked at every motion past the shared gate, from the
+// snapshot, so the result is a pure function of the down column and the
+// pen's column:
+//   * THE MEMBERS are the selection standing at the down (the snapshot,
+//     RegionDragState::prior_members) UNION every marker of the ACTIVE
+//     COLUMN (the store the marker click selects in, W or P) whose PAINTED
+//     COLUMN lies in the swept span — the down column to the pen's, both
+//     inclusive, either direction. PULLING BACK drops only what this sweep
+//     added, never a prior member; the sweep ADDS ONLY (removal stays the
+//     marker click's toggle). DISABLED MARKERS ARE INCLUDED ("they might be
+//     the target"; a disabled chip shows nothing of its selection — accepted
+//     by the ruling).
+//   * THE COLUMN IS THE PAINTER'S (ON SCREEN IS AS PAINTED): the marker's
+//     source frame through painted_column_of_source_frame_on_basis on the
+//     ITEM basis over the displayed map (displayed_or_live_target_map,
+//     item_viewport_basis) — the flag iterator's own shape
+//     (iterate_visible_flags_impl, render.cpp: the chip's apex column, the
+//     stem's column, the column a tap on that chip resolves), so a marker
+//     whose chip stands on a swept column is in, and one past either edge of
+//     the waveform (a column outside [0, w), where the pen's column is
+//     clamped) is never spanned.
+//   * THE FOCUS is the last marker the sweep selected: the swept member that
+//     was NOT a prior member nearest the pen's end of the span — rightward
+//     (or on the down column) the largest column, leftward the smallest — a
+//     tie on one column taking the largest store index (the topmost chip, the
+//     one a tap there grabs, hit_test_flag), re-seated as the span recomputes.
+//     With no such member the focus is the prior one (or none).
+//   * THE WRITE IS THE SELECTION MUTATOR'S (Selection::replace_selection, its
+//     publish the damage), and only when the membership or the focus moved,
+//     so a motion inside one column republishes nothing. No other paint: the
+//     stems appearing are the sweep's picture. The playhead and playback wait
+//     for the lift (commit_region_sweep).
+void GuiInputHandler::apply_selection_sweep_to_column(int pen_col) {
+    RegionDragState& d = app.region_drag;
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    if (basis.spp <= 0.0) return;
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    const int lo = std::min(d.anchor_col, pen_col);
+    const int hi = std::max(d.anchor_col, pen_col);
+    const bool leftward = pen_col < d.anchor_col;
+    std::set<int> members = d.prior_members;
+    int swept_focus = -1;
+    int focus_col   = 0;
+    const int n = active_marker_count(app);
+    for (int i = 0; i < n; ++i) {
+        const int c = painted_column_of_source_frame_on_basis(
+            app, audio, static_cast<double>(active_marker_time_frame(app, i)),
+            dmap, basis.vp_start, basis.spp, basis.lattice_origin);
+        if (c < lo || c > hi) continue;
+        members.insert(i);
+        if (d.prior_members.count(i)) continue;
+        // Ascending i, so a tie replaces: the largest index on one column.
+        if (swept_focus < 0 || (leftward ? c <= focus_col : c >= focus_col)) {
+            swept_focus = i;
+            focus_col   = c;
+        }
+    }
+    d.swept_focus = swept_focus;
+    const int focus = swept_focus >= 0 ? swept_focus : d.prior_focus;
+    if (members == app.selected_markers && focus == app.last_selected_marker)
+        return;
+    selection.replace_selection(std::move(members), focus);
+}
+
 // THE SWEEP'S ONE END OWNER (contract at the declaration). Every end path calls
 // it — the clean release, on_motion's button-lost arm, the touch hook's end and
 // the force-end finalizer — so the disarm and the commit cannot fork, which is
-// what the four hand-copied end bodies this replaced could not promise.
+// what the four hand-copied end bodies this replaced could not promise. BOTH
+// FORMERS END HERE (the ADD SEL sweep's arm below the disarm).
 //
 // SELF-GUARDED, so the touch hooks' refused-begin streams and the force-end's
 // unconditional call are all free.
@@ -5713,7 +5821,34 @@ void GuiInputHandler::commit_region_sweep() {
     if (!app.region_drag.active) return;
     const bool wrote = app.region_drag.wrote_trim;
     const bool moved = app.region_drag.moved;
+    const bool select = app.region_drag.select;
+    const int swept_focus = app.region_drag.swept_focus;
     app.region_drag = RegionDragState{};
+    if (select) {
+        // THE ADD SEL SWEEP IS A ONE-SHOT, TRIM'S RULE (architect 2026-11-10,
+        // session 101: "drag once, it's spent"): a sweep that MOVED past the
+        // slop puts ADD SEL out, whatever it spanned — a refused or gutter
+        // begin arms nothing and never reaches here, the lamp lit. Its off
+        // edge damages the lamp's bottom-row face in this frame, as bare `k`
+        // does. This also ends the lamp's sticky-ctrl click posture (the
+        // ruling's accepted consequence: press it again to keep adding).
+        if (moved && app.add_to_selection) {
+            app.add_to_selection = false;
+            viewport.invalidate_rect(bottom_row_area(app));
+        }
+        // THE PLAYHEAD LANDS ON THE FOCUS AT THE LIFT, the way a marker click
+        // lands it (the playhead is the focus's one mark), behind the click's
+        // own playback stop — and only where the span holds a member this
+        // sweep added: a sweep that selected nothing moves neither focus nor
+        // playhead and stops nothing. The membership was written per motion,
+        // so nothing selection-shaped is owed here.
+        if (swept_focus >= 0 && app.last_selected_marker >= 0) {
+            playback_lifecycle.stop_playback_if_playing();
+            land_playhead_on_marker(app, audio, viewport,
+                                    app.last_selected_marker);
+        }
+        return;
+    }
     // A COMMITTED SWEEP PUTS THE TRIM ARM LAMP OUT (architect 2026-11-07,
     // session 87; AppState::trim_armed): a sweep that moved past the slop is
     // the act the lamp armed, whatever it wrote — the coincident stroke's
@@ -6171,9 +6306,9 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // release, through the `scrub` flag the press stashed. Its press-time
     // dispatch is deleted; the contract is at ScrollDragState, app_state.h.)
     if (app.region_drag.active) {
-        // THE SWEEP wrote the trim live during the drag (see on_motion); the
-        // release runs the shared commit tail through the gesture's ONE end
-        // owner, which every end path calls. A MOTIONLESS press-release (never
+        // THE SWEEP wrote the trim (or ADD SEL's, the selection) live during
+        // the drag (see on_motion); the release runs the shared commit tail
+        // through the gesture's ONE end owner, which every end path calls. A MOTIONLESS press-release (never
         // crossed the threshold) wrote nothing, so the owner just disarms —
         // the begin was the placement and its own act is done.
         commit_region_sweep();
@@ -6316,7 +6451,9 @@ void GuiInputHandler::finalize_active_drags() {
     // THE SWEEP wrote the trim live; the force-end COMMITS it exactly as the
     // release would, through the gesture's one end owner. Trim is history-less
     // by ruling, so what it wrote is not undoable — the standing trim gap, not
-    // something this force-end introduces.
+    // something this force-end introduces. The ADD SEL sweep's selection
+    // stands as written and its end runs as the release's (the lamp out, the
+    // land), the same owner.
     commit_region_sweep();
     // The pending click MERELY DISARMS, moved or not — a force-end is not a
     // click, so the deferred click act does NOT run, and a crossed press began
@@ -8140,15 +8277,25 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // sweep; that former retired with the hold, architect 2026-11-07,
     // session 87 — "history cannot edit trim" — and the armed sweep never
     // begins in the view, touch_sweep_armed.)
+    //
+    // THE ADD SEL FORMER TAKES THE SAME COLUMN AND WRITES THE SELECTION
+    // INSTEAD (architect 2026-11-10, session 101; the rule at
+    // apply_selection_sweep_to_column) — no trim write, so nothing below runs.
+    if (app.region_drag.select) {
+        apply_selection_sweep_to_column(rel);
+        return;
+    }
     if (write_trim_from_sweep(app.region_drag.anchor_source_frame,
                               sweep_trim_frame_at_column(rel))) {
         app.region_drag.wrote_trim = true;
     }
-    // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): sweeping a span
-    // does NOT select the markers it contains (the reverse coupling — a region
-    // selecting its contents — was tried and retired; do not re-propose) — the
-    // begin already deselected all and the trim write deselects again on the
-    // setter rule, so the selection is EMPTY throughout.
+    // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): sweeping a TRIM
+    // span does NOT select the markers it contains (the reverse coupling — a
+    // region selecting its contents — was tried and retired; do not
+    // re-propose) — the begin already deselected all and the trim write
+    // deselects again on the setter rule, so the selection is EMPTY
+    // throughout. (Selecting a span's markers is ADD SEL's own sweep since
+    // 2026-11-10, the branch above, which writes no trim.)
     //
     // THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07, session 88:
     // "Setting the trim should not move the playhead — I usually use scrub
@@ -8554,8 +8701,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // conversion, hit tests) lives in the handlers below.
     if (app.region_drag.active) {
         // Left button must still be held; if not, the release was lost —
-        // end the gesture, committing the trim it has written (as a clean
-        // release would). Modifier changes mid-drag are ignored.
+        // end the gesture, committing the trim (or, on the ADD SEL former,
+        // the selection) it has written (as a clean release would). Modifier changes mid-drag are ignored.
         // THIS ARM ALSO ENDS A LIVE TOUCH REGION GESTURE that a pointer
         // motion interrupts (the hook gesture holds no logical button, so
         // primary_button_held reads false here), every end a commit.

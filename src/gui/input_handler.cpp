@@ -3473,6 +3473,14 @@ void GuiInputHandler::set_trim_armed(bool desired) {
     // declaration (input_handler.h). The key's lit face follows through the
     // roster's per-tick comparator, which reads redesign_button_selected.
     app.trim_armed = desired;
+    // THE RADIO (architect 2026-11-10, session 101, "1 radio"): TRIM's lit
+    // edge puts ADD SEL out — the two lamps each arm the next waveform drag
+    // — with that lamp's own damage, bare `k`'s bottom-row invalidate, so
+    // its face darkens in the frame asked. The off edge puts nothing out.
+    if (desired && app.add_to_selection) {
+        app.add_to_selection = false;
+        viewport.invalidate_rect(bottom_row_area(app));
+    }
 }
 
 void GuiInputHandler::set_show_tooltips(bool desired) {
