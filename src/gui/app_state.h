@@ -1156,7 +1156,8 @@ enum class PendingClickKind {
 // WHICH BOUND THE CLICK WRITES IS A VERDICT AT THE ACT, NOT A PRESS-TIME FACT
 // (architect 2026-11-10): the lift or the crossing moves WHICHEVER END CAP IS
 // NEAREST THE PRESS COLUMN ON THE PAINTED COLUMNS (the caps as the trim bar
-// shows them, on screen is as painted), a tie the begin's, a click outside
+// shows them, on screen is as painted), a tie the begin's but right of
+// both caps, where it is the end's, a click outside
 // the trim
 // moving the near cap outward — the S Pen's side button is the Ctrl bit
 // (platform_android.cpp), so a tap with the button held is the click. NO
@@ -8420,7 +8421,9 @@ struct AppState {
     // FOURTH ModalDialogOwner (Picker), never an
     // editor: no buffer, no caret, no keyboard-modal gate — the router
     // GuiInputHandler::route_picker_key is its whole chord vocabulary (the
-    // opener's alone, architect 2026-10-30), and
+    // opener's and the tooltip lamp's bare backslash, the two roster lifts
+    // the picker's veil admits — overlay_admits_button, architect
+    // 2026-11-10), and
     // ITS ROW IS ONE BUTTON (architect 2026-08-29: a click on a row
     // opens it, so the row needs no OK — "if I'm using the picker my hand
     // stays on the right", and the one button sits flush right), its word
@@ -15989,8 +15992,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // be reflected here by hand; that is the accepted cost of the two
         // classes the walk cannot see.
         //
-        // THE DROP NEVER GREYS PAST THE LOCK ON THE HOME-VIEW REFUSAL
-        // (architect 2026-08-30, the S+P
+        // THE DROP DOES NOT GREY PAST THE LOCK ON THE HOME-VIEW REFUSAL
+        // ALONE (architect 2026-08-30, the S+P
         // opening's own consequence — no face edit was needed, the twin
         // rule's arm inverting by the predicate alone): bare `s` refuses
         // only in T+W (active_column_authoring_allowed — the P column drops
@@ -18147,8 +18150,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // said "in target view" while the press tripped there).
         // THE OVERLOAD TOUCHES THE SECOND LINE ALONE (2026-09-01): in the P
         // column the shifted press refuses as already crossed, so the line
-        // drops. (The button never greys on the T+W refusal under the twin
-        // rule, so the plain lift reaches the chord and the chord cards.)
+        // drops, as it does over a multi-selection whose every place the
+        // group drop would skip (2026-11-10). (On the T+W refusal the
+        // button stays lit under the twin rule while the shifted press
+        // would act, so the plain lift reaches the chord and the chord
+        // cards.)
         case RedesignButton::IconMarkerDrop:
             return {"Drop Marker",
                     "Hold to drop a phase reset"};

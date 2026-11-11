@@ -43,10 +43,14 @@
 //     invariant for the whole gesture and there is nothing to cross.
 //   THE BARREL'S BOUND-SET CLICK REFUSES AT ITS PARTNER (architect
 //     2026-11-10): it moves WHICHEVER END CAP IS NEAREST the click ON THE
-//     PAINTED COLUMNS, a tie the begin's — inward from inside the trim,
-//     outward from outside it — and a click exactly on its cap, or one whose
-//     frame would land the bound on or past its partner (a trim narrower
-//     than a column or two), is a consumed no-op that writes nothing
+//     PAINTED COLUMNS, a tie the begin's but right of both caps, where it
+//     is the end's — inward from inside the trim,
+//     outward from outside it — and a click on its cap's own painted
+//     column, on the bound's own frame, or one whose
+//     frame would land the bound on or past its partner (a midpoint tie
+//     whose frame rounds onto the end's, where a column is under a frame),
+//     is a consumed no-op that
+//     writes nothing
 //     (trim_bound_click). A clamp would move the bound somewhere the user
 //     did not click; a refusal is the ruled answer there. IT ACTS AT THE LIFT
 //     since 2026-08-15, and since 2026-08-17 it is the ONE click still
@@ -1078,7 +1082,11 @@ void GuiInputHandler::commit_trim_drag() {
 // NEAREST IS DECIDED ONCE, IN THE DECIDER, ON THE PAINTED COLUMNS (architect
 // 2026-11-10, on screen is as painted: the cap nearest the PEN, by distance
 // on the bar): the bound whose cap's column is the fewer columns from the
-// clicked column, A TIE GOING TO THE BEGIN. A cap's column is the column the
+// clicked column, A TIE GOING TO THE BEGIN — EXCEPT RIGHT OF BOTH CAPS,
+// WHERE IT IS THE END'S (such a tie stands only where the two caps share
+// one column: the click is outside the trim, and the cap on its side is the
+// end; the midpoint tie between two columns stays the begin's). A cap's
+// column is the column the
 // trim bar's painter drew it on — the painter's own owner chain
 // (displayed_trim_ms -> trim_bound_column, render.h) on the same item
 // viewport basis and displayed map the click's column converts on, so the
@@ -1088,23 +1096,43 @@ void GuiInputHandler::commit_trim_drag() {
 // be the farther on glass, which is why frames do not decide. So a click
 // INSIDE the trim pulls the nearer cap in to it, and a click OUTSIDE the
 // trim moves the near cap OUTWARD to it (left of the begin the begin, right
-// of the end the end). NO LONG PRESS MEANS ANYTHING ON THE TRIM BAR: the
+// of the end the end) — a trim one column wide included, which widens to
+// the left by a click left of it and to the right by a click right of it.
+// NO LONG PRESS MEANS ANYTHING ON THE TRIM BAR: the
 // verdict reads no clock.
 //
-// TWO CONSUMED NO-OPS, BOTH SILENT — nothing writes, nothing deselects,
-// nothing stops, the caller arms no drag, no card. A CLICK EXACTLY ON ITS
-// CAP: the clicked frame is the nearest bound's own resting frame, so there
-// is nothing to move. AND THE PARTNER WALL: the nearest bound's new frame
-// would land ON or PAST its partner (a begin at or past the end, an end at
-// or before the begin). The column verdict can ask for that — on a trim
-// narrower than a column or two both caps share the clicked column, whose
-// left-edge frame is ordered against neither bound by construction, and the
-// target map's rounding can do the same at a cap — and there no cap can be
-// told from the other on glass, so the click does nothing: never the other
-// bound, never a second verdict. So this route never produces a crossed or
-// coincident pair and never reaches the crossed-commit reset with one (trim
-// has no undo, and resetting the whole window on a mis-click is the outcome
-// it cannot afford): commit_trim_mutation below carries the shared commit
+// THREE CONSUMED NO-OPS, ALL SILENT — nothing writes, nothing deselects,
+// nothing stops, the caller arms no drag, no card — asked in this order.
+//
+// A CLICK EXACTLY ON ITS CAP IS A CONSUMED NO-OP, AND "ON ITS CAP" IS THE
+// CAP'S PAINTED COLUMN (architect 2026-11-10, on screen is as painted): the
+// clicked column is the nearest cap's own column, whatever lattice the
+// bound was authored on. The pen is on the cap and there is nothing to move
+// on glass — a bound set at another zoom or in the other view rests off
+// this view's lattice, so its column's own frame is not the bound's, and
+// writing it would stop the play, clear the selection and trigger a render
+// for a move nobody can see. THE ONE ACCEPTED CONSEQUENCE: a click on the
+// lane's last (or first) column where the cap already stands does not
+// re-author the bound to total-1 (or 0); the endcap drag and the maximize
+// (Reset Trim) do.
+//
+// THE SAME FRAME: another column can hold the nearest bound's own resting
+// frame (the columns at and past the one holding the source's last frame
+// all land on total-1; at a zoom where a column is under a frame, several
+// columns share one), and there is nothing to write.
+//
+// THE PARTNER WALL: the nearest bound's new frame would land ON or PAST its
+// partner (a begin at or past the end, an end at or before the begin). WHAT
+// STILL REACHES IT under the column verdict is ONE CASE: at a zoom where a
+// column is under a frame, a midpoint tie between the two caps (the
+// begin's) whose clicked frame rounds onto the end's. There the two bounds
+// are a frame apart and the click does nothing: never the other
+// bound, never a second verdict. The end's arm is its mirror and has no
+// producer found; both stay, because trim has no undo and the compare is
+// two integers. So this route never produces a crossed or
+// coincident pair and never reaches the crossed-commit reset with one (
+// resetting the whole window on a mis-click is the outcome trim
+// cannot afford): commit_trim_mutation below carries the shared commit
 // tail every setter runs (auto_clear_crossed_trim first), kept for that
 // shape and not because this route can fire it. (The begin / end clicks'
 // card for this wall, 2026-08-01, went with those clicks.)
@@ -1129,7 +1157,8 @@ void GuiInputHandler::commit_trim_drag() {
 // force-end finalizer and the touch layer's abnormal end leave the bound
 // WHERE IT WAS. It DESELECTS at its tail, being a trim SETTER (architect
 // 2026-07-29), and only PAST THE REFUSALS: a degenerate audio/geometry
-// state, a click on its own cap and the partner wall set nothing and leave
+// state, a click on its own cap's column, one on the bound's own frame and
+// the partner wall set nothing and leave
 // the selection exactly as it was. The deselect RESTS in every case, including when this
 // click ARMS a drag (set_trim_bound_at_click_then_arm_drag): that gesture
 // has no cancel either, so its caller captures nothing (the no-cancel rule
@@ -1143,7 +1172,8 @@ void GuiInputHandler::commit_trim_drag() {
 // THE DECISION HALF (hoisted 2026-08-03; the nearest verdict's one home
 // since 2026-11-10): which bound the click would move and the frame it
 // would write, or nullopt on every refusal — a degenerate audio/geometry
-// state, a click exactly on its cap, and the partner wall. Nothing here
+// state, a click on its cap's painted column, a click on the bound's own
+// frame, and the partner wall. Nothing here
 // mutates: the caller below owns the stop, the write and the tail.
 std::optional<GuiInputHandler::TrimBoundClick>
 GuiInputHandler::trim_bound_click(int mouse_x) const {
@@ -1175,28 +1205,45 @@ GuiInputHandler::trim_bound_click(int mouse_x) const {
     // in the coordinate `col` is in. An in-view cap is clamped onto the
     // lane's last column as it is painted, an off-screen one keeps its raw
     // column. Exact integer distances, 64-bit (an off-screen column can
-    // stand far past the lane); a tie is the begin's.
+    // stand far past the lane); a tie is the begin's, except right of both
+    // caps — only where they share one column — where it is the end's, the
+    // cap on the click's side.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* const map_arg =
         map.empty() ? nullptr : &map;
-    const auto columns_from_cap = [&](int64_t bound_frame) {
-        const int64_t cap = trim_bound_column(
+    const auto cap_column = [&](int64_t bound_frame) -> int64_t {
+        return trim_bound_column(
             displayed_trim_ms(bound_frame, map_arg), basis.vp_start_frame,
             basis.vp_end_frame, basis.lattice_origin, basis.area_w).col;
-        const int64_t at = col;
-        return at >= cap ? at - cap : cap - at;
     };
-    const bool is_begin = columns_from_cap(app.trim.begin_frame) <=
-                          columns_from_cap(app.trim.end_frame);
-    // ON ITS OWN CAP: nothing to move (see the header). On a one-frame source
-    // (canonical full window [0, 0]) every click lands here, correctly.
+    const auto columns_apart = [](int64_t p, int64_t q) {
+        return p >= q ? p - q : q - p;
+    };
+    const int64_t at        = col;
+    const int64_t begin_col = cap_column(app.trim.begin_frame);
+    const int64_t end_col   = cap_column(app.trim.end_frame);
+    const int64_t to_begin = columns_apart(at, begin_col);
+    const int64_t to_end   = columns_apart(at, end_col);
+    const bool is_begin =
+        to_begin < to_end || (to_begin == to_end && at <= end_col);
+    // ON ITS OWN CAP, AS PAINTED (see the header; architect 2026-11-10): the
+    // clicked column is the chosen cap's own column, so there is nothing to
+    // move on glass — whatever frame that column would author. Ahead of the
+    // two frame tests, which a bound resting off this view's lattice would
+    // pass.
+    if (at == (is_begin ? begin_col : end_col)) return std::nullopt;
+    // THE SAME FRAME (see the header): another column holding the chosen
+    // bound's own resting frame writes nothing either. On a one-frame source
+    // (canonical full window [0, 0]) every click ends at one of these two.
     if (frame == (is_begin ? app.trim.begin_frame : app.trim.end_frame))
         return std::nullopt;
     // THE PARTNER WALL (see the header), exact integer compares against the
     // partner as it rests, in the source domain the store and `frame` live
-    // in: a real arm under the column verdict — a trim narrower than a
-    // column or two, the target map's rounding at a cap — and a silent one.
+    // in. The begin's arm is reached by one case, a midpoint tie whose
+    // frame rounds onto the end's where a column is under a frame; the
+    // end's arm is its mirror, with no producer found, kept with it — trim
+    // has no undo and the compare is two integers. Silent.
     if (is_begin ? frame >= app.trim.end_frame
                  : frame <= app.trim.begin_frame)
         return std::nullopt;
@@ -1206,10 +1253,11 @@ GuiInputHandler::trim_bound_click(int mouse_x) const {
 std::optional<GuiInputHandler::TrimBoundClick>
 GuiInputHandler::set_trim_bound_at_click(int mouse_x) {
     // EVERY REFUSAL IS THE DECIDER'S (trim_bound_click above) — the
-    // degenerate audio/geometry states, the click on its own cap and the
+    // degenerate audio/geometry states, the click on its own cap's painted
+    // column, the click on the bound's own frame and the
     // partner wall — AND
     // EACH IS SILENT: in a degenerate state there is no bar under the pointer
-    // to press, a bound already standing where the click asked is its
+    // to press, a cap already standing where the click asked is its
     // own answer, and at the wall no cap can be told from the other on
     // glass. So this function is exactly the act.
     const std::optional<TrimBoundClick> decided = trim_bound_click(mouse_x);
@@ -1254,7 +1302,8 @@ GuiInputHandler::set_trim_bound_at_click(int mouse_x) {
 // release commit are all the drag's own rules, unchanged.
 //
 // THE ARM RIDES THE SET'S VERDICT, BOTH HALVES OF IT: a refused set (a
-// degenerate audio/geometry state, a click on its own cap, the partner
+// degenerate audio/geometry state, a click on its own cap's column or on
+// the bound's own frame, the partner
 // wall) arms nothing,
 // so a consumed no-op stays a consumed no-op with no drag left hanging on a bound
 // that never moved; and THE BOUND THE DRAG TAKES IS THE BOUND THE SET MOVED

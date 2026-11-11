@@ -5430,7 +5430,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                     // THE BOUND IS THE NEAREST END CAP (architect 2026-11-10):
                     // whichever cap is nearest the press column on the
                     // painted columns, a tie the
-                    // begin's, decided where the set runs (trim_bound_click,
+                    // begin's but right of both caps, where it is the
+                    // end's, decided where the set runs (trim_bound_click,
                     // input_trim.cpp); a held press means nothing more than
                     // a tap.
                     // NO stop here, for the reason it was never here: the bound

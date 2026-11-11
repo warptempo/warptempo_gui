@@ -1328,12 +1328,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // in the phase column drops in both audio views, S+P and T+P
             // alike, the lead-in taken in each (architect 2026-10-12) — so the
             // only refusal left here is the warp column's and the card needs
-            // no fork). THE DROP BUTTON NEVER GREYS ON THIS REFUSAL
+            // no fork). THE DROP BUTTON STAYS LIT OVER THIS REFUSAL WHILE
+            // ITS SHIFT TWIN WOULD ACT
             // (the twin rule, recorded at its arm in
             // redesign_button_enabled): in T+W its shift twin above — the
             // long press, glass's only road — still crosses and drops, so
             // the button stays lit and its PLAIN lift reaches this card,
-            // synthesizing this very chord.
+            // synthesizing this very chord; it greys there only over a
+            // multi-selection whose every place the group drop would skip
+            // (phase_reset_drop_crossing_would_act, architect 2026-11-10),
+            // where neither form acts and no press arrives.
             if (!active_column_authoring_allowed(app)) {
                 notifications.notify(
                     AppState::NotificationClass::Normal,
@@ -3381,10 +3385,14 @@ void GuiInputHandler::drop_phase_reset_crossing() {
     // or T+P — the act refuses WHOLE, before any switch, and says so. Bare `s`
     // is untouched (in the P column it is the drop). The Drop button's shift
     // lift and the glass long press synthesize this same chord and meet this
-    // same refusal; its face NEVER greys past the lock (one form is always
-    // live, the twin rule's arm at redesign_button_enabled), and its
-    // tooltip's shift line drops exactly where this refuses (the stateful
-    // overload, 2026-09-01).
+    // same refusal; its face greys past the lock only where NEITHER form
+    // would act (the twin rule's arm at redesign_button_enabled): in the P
+    // column the plain drop is live, so this refusal never greys it, and
+    // the one dead pair is the group drop's — T+W over a multi-selection
+    // whose every place is skipped (phase_reset_drop_crossing_would_act,
+    // architect 2026-11-10). Its
+    // tooltip's shift line drops exactly where the chord would refuse (the
+    // stateful overload, on that same predicate).
     if (!phase_reset_drop_crossing_actionable(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              "Already in phase reset view");

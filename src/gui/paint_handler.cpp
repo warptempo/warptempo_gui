@@ -515,9 +515,11 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act,
 // R14's transport rule: "two arrows with a bar" on every to-the-end step);
 // REPEAT MediaRepeatSingle (the row's one lamp); DOWN / UP GoDown / GoUp;
 // FOLDER GoParentFolder; LOAD DialogOkApply (the band's LOAD key's and the
-// word buttons' OK / YES, the same act, modal_word_icon); DELETE EditDelete; CLOSE WindowClose (the last key's act is
+// word buttons' OK / YES, the same act, modal_word_icon); DELETE EditDelete; CLOSE WindowClose (the leaving key's act is
 // Close since 2026-10-28 night: the player asks nothing, and a button's
-// word says what leaving does, the rule at kModalCancelLabel). THE PLAY
+// word says what leaving does, the rule at kModalCancelLabel; the key is the
+// left cluster's last since 2026-11-10, the row's last seat the
+// transport's). THE PLAY
 // KEY'S GLYPH NAMES ITS NEXT PRESS (architect 2026-10-25; the roster's rule
 // at redesign_button_icon's stateful overload) BY ITS FACE
 // (render_player_play_face, the owner the tooltip reads too): PAUSE
@@ -5760,7 +5762,8 @@ namespace {
 // MODAL's Cancel cancels the render. OK AND CANCEL belong to the EDITORS,
 // where a typed line is pending. CLOSE leaves a surface that asked nothing:
 // the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER (its
-// last key, PlayerButtonAct::Close) and THE TRIM PRESETS LIST
+// left cluster's last key, PlayerButtonAct::Close — the row's last seat is
+// the transport's since 2026-11-10) and THE TRIM PRESETS LIST
 // (2026-10-28 night: its acts return to it, only Close and its opener leave;
 // its last word button). The words are plain, no letter underlined
 // (architect 2026-10-30: the buttons are the dialogs' one road, no keyboard

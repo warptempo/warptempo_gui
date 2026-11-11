@@ -3524,12 +3524,16 @@ private:
     // item viewport basis), walls [0, total-1], then the shared commit tail.
     // NEAREST is the decider's verdict, ON THE PAINTED COLUMNS (the caps'
     // columns as the trim bar's painter draws them, on the click's own
-    // basis), a tie the begin's;
+    // basis), a tie the begin's but right of both caps, where it is the
+    // end's;
     // a click outside the trim moves the near cap outward; NO LONG PRESS
-    // MEANS ANYTHING HERE. A click exactly on its cap is a CONSUMED NO-OP —
-    // no write, no deselect, no stop, no drag, no card — and so is THE
+    // MEANS ANYTHING HERE. A click exactly on its cap — THE CAP'S PAINTED
+    // COLUMN, whatever lattice the bound was authored on — is a CONSUMED
+    // NO-OP: no write, no deselect, no stop, no drag, no card. So is a
+    // click on another column holding the bound's own frame, and so is THE
     // PARTNER WALL, a click whose frame would land the nearest bound on or
-    // past its partner (a trim narrower than a column or two), so this
+    // past its partner (a midpoint tie whose frame rounds onto the end's,
+    // where a column is under a frame), so this
     // route never
     // hands a crossed pair to auto_clear_crossed_trim. History-less like
     // every trim mutation; repaint + target_render.trigger() like the drag
