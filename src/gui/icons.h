@@ -8,7 +8,8 @@
 // their licence). EVERY DRAWING IS KDE's BREEZE (breeze-icons 6.31.0's dark
 // theme, the 22-px folders), RECOLORED to `currentColor` by
 // tools/icons/import_breeze.py (the README's RECOLOR RULE; its one table is
-// the enumerator -> source list) and PAINTED IN THE TEXT TONES (materials.h)
+// the enumerator -> source list) and PAINTED IN THE TEXT TONES — a lit
+// key's in the accent — (materials.h)
 // at ONE ROAD, THE INK BOX (below), each seat naming its own ink length:
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
 //   visual size; its printed legend under the key again since 2026-11-03,
@@ -18,8 +19,9 @@
 //   rest shared drawings) —
 //   centered on its face (paint_key_glyph, paint_handler.cpp), `text`
 //   B5B5B5 at rest and pressed, `key_dim_ink` (Default's 5D5D5D) on a disabled key,
-//   `text_on_lit` (Default's B5B5B5, the text tone since the lamp rule of
-//   2026-11-10) on a lit one (materials.h's key_ink, 2026-11-02).
+//   THE ACCENT `cue` (Default's FFAD56) on a lit one, pressed or not, and
+//   the dimmed accent `lit_dim_ink` (Default's 83592C) on a lit disabled one
+//   (materials.h's key_ink; architect 2026-11-11).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note
 //   (MusicNote16th, BPM's glyph too) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_logo_lane), the list rows'
@@ -48,7 +50,8 @@
 //
 // THE BOUND DRAWING (architect 2026-11-02; the road of 2026-10-10 restored):
 // a file that paints in `currentColor` — every file here — WEARS THE COLOR
-// ITS CALLER PASSES, a 0xRRGGBB value (one of the text tones; no role
+// ITS CALLER PASSES, a 0xRRGGBB value (one of the theme row's words — the
+// text tones, a lit key's accent and its dimmed tone; no role
 // table): its bytes are kept and parsed per color with resvg's user
 // stylesheet `svg { color: #RRGGBB; }` (svg_icon::parse), which
 // `currentColor` resolves against — the file never edited at run time. The
@@ -155,8 +158,10 @@ std::optional<std::string> load_set();
 // rasters are converted for the window as they are made, svg_icon.h): the
 // cache refills lazily at the new sizes and in the new conversion, the
 // fits with them; the parsed drawings stay (a bound parse keys its sRGB
-// color, which neither change moves). (No color pick drops anything: the
-// glyphs' colors are the constant text tones.)
+// color, which neither change moves), AND ON A THEME COMMIT
+// (GuiInputHandler::apply_theme: a raster keys on its sRGB color, which the
+// theme moves, render.h's install_palette). A key's lit edge drops nothing:
+// the accent is one more color key beside the text tones.
 void drop_rasters();
 
 // -- THE INK BOX: one road for every seat (architect 2026-11-01, M4 / M5:
@@ -191,7 +196,7 @@ struct InkSize {
 InkSize glyph_ink_size(Icon icon, int ink_px);
 
 // THE GLYPH, its INK BOX's top-left at (x, y), in `color` (0xRRGGBB, sRGB —
-// the caller's text tone; the head's THE BOUND DRAWING): one copy of the
+// the caller's tone; the head's THE BOUND DRAWING): one copy of the
 // cropped raster at that integer device px, no resample, a straight OVER.
 // Cairo state is saved and restored; the caller's clip stands. Cannot fail:
 // the launch's load parsed every drawing.

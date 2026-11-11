@@ -25,8 +25,9 @@ namespace {
 // before the window exists and never changed after.
 //
 // THE BOUND PARSES: per (drawing, color) the tree resvg built under that
-// color, made the first time a draw asks — at most the text tones per
-// drawing — and held for the session.
+// color, made the first time a draw asks — at most the tones a glyph's
+// caller passes per drawing (the text tones, a lit key's accent and its
+// dimmed tone, per theme installed) — and held for the session.
 //
 // THE CACHES: per (drawing, ink px) a FIT, and per (drawing, ink px, color)
 // its cropped raster. Main thread only: every draw is the painter's.

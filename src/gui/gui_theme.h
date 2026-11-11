@@ -24,14 +24,10 @@ struct GuiThemeTones {
     uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea)
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
-    uint32_t text_on_lit;         // anything printed on a lit face (ControlForeground, = text, since the lamp rule 2026-11-10)
     uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
-    uint32_t key_face;            // the key at rest, the time fields (SurfaceBackground)
-    uint32_t lit_fill;            // a checked key's whole face, and the level case's fill (THE LAMP RULE: the key face · mean(face) / mean(Desktop))
-    uint32_t lit_press_fill;      // a checked key's face while a press stands on it (Desktop, = key_press_face)
-    uint32_t door_lit_fill;       // a checked OVERLAY OPENER's face, the seven doors (= lit_fill since the lamp rule 2026-11-10)
-    uint32_t door_lit_press_fill; // a checked door's face while a press stands on it (Desktop, = lit_press_fill)
-    uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
+    uint32_t lit_dim_ink;         // a checked-but-disabled key's glyph: the accent dimmed (cue · mean(key_dim_ink) / mean(text)); a word alone, read by key_ink (materials.h)
+    uint32_t key_face;            // the key at rest, checked or not; the time fields (SurfaceBackground)
+    uint32_t key_press_face;      // a key's face while a press stands on it, checked or not (Desktop)
     uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;          // the ruler (SurfaceBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the face)
@@ -47,12 +43,13 @@ struct GuiThemeTones {
     uint32_t card_face;           // the cards' box and their ring; `card_ground` / `card_frame` (Alert)
     uint32_t card_ink;            // the cards' words and class glyph; `card_text` (Desktop)
     uint32_t clip_lamp;           // the logo lane's clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face
+    uint32_t level_fill;          // the NOISE level case's fill (RangeEditField over the key face), read by paint_level_case
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
     uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
-    uint32_t cue;                 // every enabled marker's chip (ViewCheckControlEnabledOn)
+    uint32_t cue;                 // THE ACCENT: every enabled marker's chip and a checked key's glyph, the on-screen keyboard's lit cap too (ViewCheckControlEnabledOn)
     uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
@@ -86,23 +83,19 @@ inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
 // but THE SELECTION PAIR'S TEXT 070707, Default's StandbySelectionForeground
 // (architect 2026-11-06, session 75: Live's own partner of the
 // StandbySelectionBackground bar; the 111111 of ControlContrastFrame before
-// it was our mispairing) AND THE LAMP RULE'S FOUR (architect 2026-11-10,
-// session 103, "universal": the lit faces 454545, the lit presses 2A2A2A,
-// the text on lit B5B5B5; theme_ask.h's DERIVED block) AND THE PLAYHEAD
-// LINE 42D2E0 (the same session, "no special cases": white 0.75 toward the
-// head). palette_file.h's
-// static_asserts pin every word.
+// it was our mispairing) AND THE PLAYHEAD LINE 42D2E0 (architect
+// 2026-11-10, session 103, "no special cases": white 0.75 toward the head)
+// AND THE TWO OF 2026-11-11 (architect, sessions 104 / 105): the dimmed
+// accent 83592C, a checked-but-disabled key's glyph (FFAD56 × 93 / 181,
+// theme_ask.h's DERIVED block), and the level case's fill 007383
+// (RangeEditField). palette_file.h's static_asserts pin every word.
 inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x242424, // ground
     0xB5B5B5, // text
     0x757575, // text_dim
-    0xB5B5B5, // text_on_lit
     0x5D5D5D, // key_dim_ink
+    0x83592C, // lit_dim_ink
     0x363636, // key_face
-    0x454545, // lit_fill
-    0x2A2A2A, // lit_press_fill
-    0x454545, // door_lit_fill
-    0x2A2A2A, // door_lit_press_fill
     0x2A2A2A, // key_press_face
     0x757575, // well_frame
     0x363636, // ruler_face
@@ -119,6 +112,7 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0xE76942, // card_face
     0x2A2A2A, // card_ink
     0xFF0A0A, // clip_lamp
+    0x007383, // level_fill
     0x393939, // waveform_canvas
     0x191919, // waveform_ink
     0x363636, // waveform_core

@@ -47,11 +47,11 @@
 // lightness set to L 78.8 — the lightness of the FF91C3 it replaces, so the
 // accent sits over the ground at the ~55 L Live gives Default and Immaterial
 // alike — its hue kept (89.7), its chroma scaled by 78.8 / L0, each channel
-// clipped, encoded, rounded and clamped (`shade`): D6B762. Since the lamp
-// rule (architect 2026-11-10, session 103) ViewCheckControlEnabledOn feeds
-// the markers' chip (`cue`) alone, so the shaded accent reaches the chip
-// alone; every other tone is Immaterial's. Listed only when that file is
-// present and usable.
+// clipped, encoded, rounded and clamped (`shade`): D6B762.
+// ViewCheckControlEnabledOn is THE ACCENT (`cue`): the markers' chip and a
+// lit key's glyph (architect 2026-11-11), and the dimmed accent is derived
+// from it, so the shaded gold reaches those three; every other tone is
+// Immaterial's. Listed only when that file is present and usable.
 //
 // A FILE IS LEFT OUT, WITH ONE stderr LINE naming its path and why, the
 // launch going on: unreadable; a name that spells no slug (a stem of no
@@ -97,20 +97,21 @@
 //     key face, ruler face, pane, time field, magnify core
 //                            363636 = SurfaceBackground (the core below)
 //     cue outline            111111 = ControlContrastFrame
-//     text, text on lit      B5B5B5 = ControlForeground (text on lit since
-//                                     the lamp rule, 2026-11-10, session
-//                                     103: the lit face is the key face
-//                                     lightened, below, where a dark ink
-//                                     would vanish; ControlContrastFrame
-//                                     before it, on the accent)
+//     text                   B5B5B5 = ControlForeground
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
-//     cue                    FFAD56 = ViewCheckControlEnabledOn, every
-//                                     enabled marker's chip, its one reader
-//                                     since the lamp rule (2026-11-10,
-//                                     session 103; immaterial_mod reads its
-//                                     shaded SearchIndication instead, above)
+//     cue                    FFAD56 = ViewCheckControlEnabledOn, THE
+//                                     ACCENT: every enabled marker's chip AND
+//                                     A LIT KEY'S GLYPH, the on-screen
+//                                     keyboard's lit cap too (architect
+//                                     2026-11-11, sessions 104 / 105: "a real
+//                                     button in a hifi style case, whose case
+//                                     gets darker as the button is pushed in,
+//                                     but whose led lights up" — one accent
+//                                     for both; materials.h's THE KEY;
+//                                     immaterial_mod reads its shaded
+//                                     SearchIndication instead, above)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
 //     selection text         070707 = StandbySelectionForeground (architect
@@ -149,6 +150,16 @@
 //   even, clamped):
 //     ink                    191919 = WaveformColor over DetailViewBackground
 //     canvas                 393939 = DetailGridTiles over DetailViewBackground
+//     level fill             007383 = RangeEditField over SurfaceBackground
+//                                     (Live's volume color) — THE NOISE LEVEL
+//                                     CASE'S FILL on the key face
+//                                     (paint_level_case; architect 2026-11-11:
+//                                     "give noise the volume color from the
+//                                     ask ... so at 0 it wears the full vol
+//                                     color, and at -inf it wears the button
+//                                     case color"); a file's 8-digit word
+//                                     composited over the face, never stripped
+//                                     (architect 2026-11-06, session 81)
 //     center                 = ink (a role is what it paints: the zero line IS
 //                                   the ink, palette_file.h)
 //     score pane             = ink (modal_box.h's score pane: "from ableton
@@ -182,36 +193,28 @@
 //                                     all, no special cases" — the line-as-head
 //                                     look's lower contrast liked, a little
 //                                     too dark; Gunmetal_mod 5D6170 -> 868894)
-//     lit fill, door lit fill
-//                            454545 = THE LAMP RULE: the key face · (mean(face)
-//                                     / mean(press face)) per channel (54 / 42
-//                                     on Default; Gunmetal_mod 2E313A -> 3B3F4B)
-//                                     — a checked key's face, the lamps' and
-//                                     the seven doors' alike (architect
-//                                     2026-11-10, session 103, on the scratch
-//                                     seen on his glass: "So a universal rule
-//                                     for the lamps"): the full accent on a lit
-//                                     key read too bright and asked the accent
-//                                     to match the ground as few themes do; a
-//                                     lit key reads a little lighter, the
-//                                     press's darkening run the other way.
-//                                     Where a theme's Desktop is lighter than
-//                                     its face the lit face comes out darker,
-//                                     and where the ratio is steep a channel
-//                                     clips at FF — Live's numbers, no rule.
-//                                     THE LEVEL CASE'S FILL TOO, NOISE's
-//                                     (architect 2026-11-10: "monochrome on
-//                                     the front page"; the fill over the key
-//                                     face, paint_level_case) — the cases'
-//                                     own two roles, RangeEditField and
-//                                     ChosenPreListen composited over the face
-//                                     (2026-11-05 night), retired with it and
-//                                     gone from the roles read
-//     lit press fill, door lit press fill
-//                            2A2A2A = Desktop, the press face itself (the same
-//                                     ruling: "Pressing a lit key, I think,
-//                                     should look like pressing an unlit
-//                                     key")
+//     lit dim ink            83592C = THE DIMMED ACCENT: the accent (cue) ·
+//                                     (mean(key dim ink) / mean(text)) per
+//                                     channel, the means over the three sRGB
+//                                     bytes, ONE SCALAR for the three channels
+//                                     so the accent keeps its hue (93 / 181 on
+//                                     Default: FFAD56 -> 83592C), rounded half
+//                                     to even and clamped — the glyph of A
+//                                     CHECKED-BUT-DISABLED KEY (a lamp on a
+//                                     locked tab, under grid iterations, in
+//                                     the `h` view), the accent dimmed as the
+//                                     disabled glyph is dimmed against the
+//                                     resting one (architect 2026-11-11,
+//                                     session 105, his pick "a"; key_ink,
+//                                     materials.h). A theme whose text is
+//                                     black (no divisor) keeps the accent
+//                                     whole, ratio 1; where the disabled ink
+//                                     is lighter than the text the dimmed
+//                                     accent comes out lighter, a channel
+//                                     clipping at FF — Live's numbers, no rule
+//   (The lit key's lighter face and its own press and print tones, the lamp
+//   rule of 2026-11-10, retired 2026-11-11 with their five tones: a lit key
+//   wears the key's two faces, its state on the glyph.)
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,
@@ -231,10 +234,10 @@
 // .ask file by hand (architect 2026-11-07, session 82: "i'd rather manually fix
 // individual sb themes than make rules around their missing colors").
 //
-// A file whose Desktop is black (the lit face's divisor zero) is left out
-// with its line, and immaterial_mod is not listed over an Immaterial.ask
-// whose SearchIndication is black (the chroma ratio's divisor zero): no stock
-// or pack file is either, the arm only keeps the arithmetic defined.
+// immaterial_mod is not listed over an Immaterial.ask whose SearchIndication
+// is black (the chroma ratio's divisor zero), with its line: no stock or
+// pack file is, the arm only keeps the arithmetic defined. The derivation
+// itself is total and leaves no file out.
 //
 // THE ARITHMETIC IS PYTHON'S, BIT FOR BIT (the derivation was first written
 // in Python, and the proof of 2026-11-06 diffed every row on the tablet
