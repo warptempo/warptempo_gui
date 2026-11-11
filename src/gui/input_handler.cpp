@@ -204,9 +204,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the BPM form) — ranked under the prompt (the player's load
     // confirmation, the picker's Revert and the viewer's Reset are prompts
     // and outrank them); at most one stands. While one stands ITS ROUTER IS
-    // THE WHOLE VOCABULARY, and the vocabulary is its opener's chord alone
-    // (architect 2026-10-30: no keyboard stands under an overlay, and the
-    // one roster lift its veil admits is the opener's,
+    // THE WHOLE VOCABULARY, and the vocabulary is its opener's chords and
+    // the tooltip lamp's bare backslash (architect 2026-10-30: no keyboard
+    // stands under an overlay, and the roster lifts its veil admits are the
+    // opener's and, since 2026-11-10, the tooltip lamp's,
     // finish_chrome_press_release; the routers' contracts are at their
     // declarations). No key meets an overlay's own row press or scrub, the
     // touch window having one owner (the statement below at the gestures).
@@ -616,8 +617,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // producers still do: THE CAR'S Previous / Next on a locked tab, which
         // build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and take
         // the read-only card naming Undo or Redo, and the ITERATION sentence's
-        // lit buttons whose long-press twin is the Ctrl+Shift+Tab
-        // march, which the iteration list subtracts (Switch Tab). The bare literal kTabReadOnlyCard stays the
+        // lit buttons whose long-press twin the iteration list refuses: the
+        // Ctrl+Shift+Tab march, which it subtracts (Switch Tab), and since
+        // 2026-11-10 the label paste, Shift+Return, off the Open Text Editor
+        // key lit on a bound axis (the list admits the plain Return there
+        // alone). The bare literal kTabReadOnlyCard stays the
         // word of the sites that KNOW THEIR ACT and say the tab instead (its
         // readers at notifications.h).
         //
@@ -1023,9 +1027,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // it). Read-only already dropped Return at the allowlist gate above (every
     // one of these is an authoring surface — the old click-to-edit refused
     // read-only too). Modifier-strict: only the plain, unmodified press opens
-    // an editor; a modified Enter is unbound (chord_is_bound's Return arm,
-    // gui_input.h, since 2026-10-24) and is dropped at the unbound-key gate
-    // before this arm — the phase-reset propagate pair is the letter P's.
+    // an editor; Shift+Enter is the label paste, its own arm below this one
+    // (2026-11-10), and every other modified Enter is unbound
+    // (chord_is_bound's Return arm, gui_input.h) and matches no arm — the
+    // phase-reset propagate pair is the letter P's.
     if (key == GuiKeys::Return && !ctrl && !shift && !alt) {
         selection.repair_last_selected();
         // THE WARP COLUMN IS THE PAYLOAD EDITOR'S VIEW GATE SINCE 2026-08-24
@@ -1059,7 +1064,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         if (!flag_editor_open_actionable(app)) {
             notifications.notify(AppState::NotificationClass::Normal,
-                                 "Select a warp marker to edit its line");
+                                 kSelectWarpMarkerToEditCard);
             return;
         }
         const int focus = app.last_selected_marker;
@@ -1090,6 +1095,43 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                               app.addressed_cell);
             return;
         }
+        return;
+    }
+
+    // SHIFT+RETURN IS THE LABEL PASTE (architect 2026-11-10: "a long press
+    // on EDIT replaces the whole label on every selected marker with the
+    // system clipboard's text, without opening the editor, through the
+    // editor's own validation") — the Open Text Editor key's hold, its one
+    // producer (redesign_button_shift_admits; the on-screen keyboard's Enter
+    // carries no shift and arrives only under an editor, whose gate takes
+    // every modified Return above). Shift-exact (is_label_paste_key). IT IS
+    // ADMITTED WHERE THE PLAIN OPEN IS, ON THE PAYLOAD AXIS: both locks
+    // dropped it at the lock's gate above — the read-only list names no
+    // Return, and the iteration list admits the PLAIN Return on a bound
+    // axis alone, so under a lit lamp this chord takes the lock's card —
+    // and past it the editor's own question, the focus repaired first
+    // (label_paste_actionable: a focus standing in the warp column, the
+    // payload addressed), refusing on the plain open's own sentence. The
+    // `h` view never sends it: the key does not stand there
+    // (history_mode_hides_button, its plain chord off that allowlist).
+    // THE ACT IS GuiFlagEditor::paste_payload_onto_selection, whose
+    // declaration holds the contract: every selected marker's line replaced
+    // by the clipboard's text through the editor's filter, cap and commit
+    // judgment, all or nothing, one undo entry, the selection, the focus and
+    // the playhead standing. THE CLIPBOARD IS READ HERE, the editors'
+    // paste's own read (apply_editor_clipboard): an empty answer — no clip,
+    // no text on it, a failed read — pastes nothing, silently. A member of
+    // the warp status/value family, admitted in W+target as the editor's
+    // commit is (the tail's contract at warpmarkers_ops.cpp's head). One
+    // act per press: the key does not repeat.
+    if (is_label_paste_key(key, mods)) {
+        selection.repair_last_selected();
+        if (!label_paste_actionable(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kSelectWarpMarkerToEditCard);
+            return;
+        }
+        flag_editor.paste_payload_onto_selection(gui.clipboard_get_text());
         return;
     }
 
@@ -2798,15 +2840,17 @@ bool GuiInputHandler::apply_editor_clipboard(
             // AND A PASTE TOO LONG FOR THE FIELD SAYS SO (architect
             // 2026-08-30): the filter refuses the operation whole, leaving the
             // field as it stood, and the card says why. The
-            // sentence is here because this is the paste's one site — the
+            // sentence (kPasteTooLongCard, notifications.h) is raised here
+            // for the editors' paste — the label paste, the EDIT key's hold,
+            // raises the same one at its own site
+            // (GuiFlagEditor::paste_payload_onto_selection) — and the
             // keyboard's own over-capacity refusal reports through
             // KeyAction::OverCapacity and cards at route_modal_editor_key.
             std::string text = gui.clipboard_get_text();
             if (text.empty()) return true;
             if (!text_editor::replace_selection(s, text)) {
                 notifications.notify(AppState::NotificationClass::Normal,
-                                     "The pasted text is too long for this "
-                                     "field");
+                                     kPasteTooLongCard);
             }
             return true;
         }
@@ -3540,8 +3584,8 @@ void GuiInputHandler::set_show_tooltips(bool desired) {
     // The contract — sole writer, per-project, history-less, the dark edge
     // ending the model whole — is at the declaration (input_handler.h), and
     // so are its callers: the main window's bare-backslash arm (which the
-    // icon row's button reaches by synthesizing that press) and the folder
-    // overlay's two routers' own backslash arms.
+    // icon row's button reaches by synthesizing that press) and the three
+    // overlays' routers' own backslash arms.
     app.show_tooltips = desired;
     if (desired) return;
     hide_shift_tooltip();

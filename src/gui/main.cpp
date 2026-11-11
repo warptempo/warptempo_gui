@@ -1507,11 +1507,13 @@ void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
 // contract is at platform.h; gui_main below is the loop). The window, the
-// input core, the device config, the noise, the held display width and the
-// render cache are the caller's and outlive every call.
+// input core, the device config, the noise, the level cases' recall, the
+// held display width and the render cache are the caller's and outlive
+// every call.
 GuiProjectOutcome run_project(GuiPlatform&            gui,
                               DeviceConfig&           device_config,
                               GuiNoise&               noise,
+                              GuiLevelRecall&         level_recall,
                               int&                    held_display_width_px,
                               RenderCache&            render_cache,
                               const GuiProjectSource& project,
@@ -1552,9 +1554,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     app.gui_scale     = device_config.gui_scale;
     app.projects_repo = device_config.projects_repo;
     // THE NOISE, the app's one, reached by pointer the device config's way
-    // (AppState::noise): the NOISE case's face, its drag and long press and
+    // (AppState::noise): the NOISE case's face, its drag and tap and
     // the settings editor's three noise arms read it.
     app.noise         = &noise;
+    // THE LEVEL CASES' RECALL, the app's one, the same way (architect
+    // 2026-11-10; GuiLevelRecall, app_state.h): the level a tap turned off
+    // in an earlier project is the one a tap restores in this one.
+    app.level_recall  = &level_recall;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
     // every later one inherits it standing (the loop contract, platform.h).
@@ -3750,6 +3756,13 @@ int gui_main() {
     noise.set_level_db(device_config.noise_level);
     noise.set_crossfade_s(device_config.noise_crossfade_s);
 
+    // THE LEVEL CASES' RECALL (architect 2026-11-10: the tap's memory,
+    // "session only"; GuiLevelRecall, app_state.h): EMPTY AT THE LAUNCH,
+    // one for the process — the levels it remembers are the config's, device
+    // state every project shares — handed to every project's session and
+    // written to no file.
+    GuiLevelRecall level_recall;
+
     // WHICH PROJECT OPENS FIRST — the project model's question (startup_source,
     // project_model.h): the remembered project and then the first valid one
     // in name order. None is the blunt terminal line and exit 1: the app
@@ -3815,8 +3828,9 @@ int gui_main() {
     int  exit_status = 0;
     for (;;) {
         const GuiProjectOutcome outcome =
-            run_project(gui, device_config, noise, held_display_width_px,
-                        render_cache, project, window_up);
+            run_project(gui, device_config, noise, level_recall,
+                        held_display_width_px, render_cache, project,
+                        window_up);
         if (outcome.reopen.empty()) {
             exit_status = outcome.exit_status;
             break;

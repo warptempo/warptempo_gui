@@ -13,6 +13,7 @@
 
 #include <cctype>
 #include <cstdio>
+#include <expected>
 #include <string>
 #include <utility>
 #include <vector>
@@ -542,32 +543,41 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     viewport.invalidate_top_strip();
 }
 
-// Validate `pending` as a single canonical line and, on success, write
-// the parsed marker's fields back onto markers_[idx]. Cascade-renames
-// label_def changes onto every other marker that referenced the old
-// name when the edited row is the definition those references bind (the
-// rule at the rename below). Pushes one undo entry covering all touched
-// markers.
+// THE PAYLOAD COMMIT'S JUDGMENT AND ITS WRITE, ON A STORE — ONE OWNER FOR ITS
+// TWO ROADS (2026-11-10): the flag editor's commit (commit_top_flag_edit) and
+// the label paste (paste_payload_onto_selection, architect 2026-11-10), which
+// runs it once per selected marker over one evolving copy of the store, so a
+// pasted line is judged and written exactly as the same line typed into that
+// marker's editor is — never by a second derivation.
 //
-// On failure: selects the whole pending text (text_editor::refuse), cards
-// the reason, leaves the editor active. The refusal CALLS the loader's own line predicate, no
+// Validate `payload` as a single canonical line for `mv_const[idx]` and, on
+// success, return the store with the parsed marker's fields written back
+// onto that row. Cascade-renames label_def changes onto every other marker
+// that referenced the old name when the edited row is the definition those
+// references bind (the rule at the rename below). `canonical_changed` says
+// whether any serialized field moved, `n_refs_renamed` and the two names
+// what the cascade did. PRECONDITION: `idx` names a row of `mv_const`.
+//
+// On failure: the reason, one sentence, and nothing else — the caller owns
+// the refusal's surface. The refusal CALLS the loader's own line predicate, no
 // second grammar, so a payload loads iff it commits; the load's face of the
 // same function is load-fatal.
-void GuiFlagEditor::commit_top_flag_edit() {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
-    const int idx = app.top_flag_editor.target;
-    const auto& mv_const = app.warpmarkers.markers();
-    if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
-        // Editor target became invalid (e.g. the marker was removed
-        // underneath the editor by an undo or delete). Drop edit.
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
+namespace {
 
+struct PayloadCommit {
+    std::vector<GuiWarpMarker> proposed;
+    bool                       canonical_changed = false;
+    int                        n_refs_renamed    = 0;
+    std::string                old_def;
+    std::string                new_def;
+};
+
+std::expected<PayloadCommit, std::string> propose_payload_commit(
+        const std::vector<GuiWarpMarker>& mv_const, int idx,
+        const std::string& payload) {
     // The buffer is the plain payload: no bracket rides in it (the bounds
     // are the cells' own, each with its own editor), so
     // parse_single_canonical_line reads it as it reads a sidecar line.
-    const std::string& payload = app.top_flag_editor.pending;
 
     // Assemble the parse candidate in SERIALIZER form. The editor holds the
     // PAYLOAD alone, so the two fields ahead of the pipe come from the marker's
@@ -608,14 +618,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // and the parser resolver normalizes each to a plain 1.00 owner at
     // render/preview time (one stderr line per timestamp). No editor-side
     // gate; the rename cascade below stays, scoped to non-empty new names.
-    if (!ok) {
-        text_editor::refuse(app.top_flag_editor);
-        viewport.invalidate_top_strip();
-        const std::string refusal = "Edit rejected: " + err;
-        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
-        notifications.notify(AppState::NotificationClass::Normal, refusal);
-        return;
-    }
+    if (!ok) return std::unexpected(std::move(err));
 
     // No first-marker special case: a marker at time 0 accepts any payload
     // the grammar allows — pass, label ref, label def. The parser resolver
@@ -718,7 +721,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // editor — and a bracket exists only while grid iterations is lit, where
     // this editor cannot open at all: bare Return and the payload
     // double-click are both refused on a payload axis while the lamp stands
-    // (authoring_locked, app_state.h). So the invariant "a committed
+    // (authoring_locked, app_state.h) — and the label paste, this body's
+    // other road, is refused there at the lock's gate (Shift+Return is on
+    // no admission of iteration_lock_key_blocked). So the invariant "a committed
     // NON-CARRIER never keeps a bracket" holds vacuously here, and the clear
     // below is a BELT over two already-empty optionals — kept because it is
     // the store's own rule stated at the surface that could otherwise break
@@ -757,32 +762,31 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // clears nothing and no commit here is bracket-only. `canonical_changed`
     // is the whole store-change question now.)
 
-    // A COMMIT THAT CHANGES THE MARKER IS A MARKER MUTATION AND STOPS (architect
-    // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
-    // declaration): past the refusal above and ahead of the write, and only on
-    // a changed commit, so a commit of the text already standing leaves a play
-    // running as the open did (the open's exemption, stop_playback_for_modal_
-    // open's decision table).
-    if (canonical_changed) playback_lifecycle.stop_playback_if_playing();
-    // Capture pre-state for undo BEFORE mutating.
-    std::vector<GuiWarpMarker> pre_state = mv_const;
-    app.warpmarkers.markers_mut() = std::move(proposed);
+    PayloadCommit out;
+    out.canonical_changed = canonical_changed;
+    out.n_refs_renamed    = n_refs_renamed;
+    out.old_def           = old_def;
+    out.new_def           = new_def;
+    out.proposed          = std::move(proposed);
+    return out;
+}
 
-    if (n_refs_renamed > 0) {
-        std::fprintf(stderr,
-            "warptempo_gui: Renamed label_def '%s' -> '%s'; "
-            "updated %d refs\n",
-            old_def.c_str(), new_def.c_str(), n_refs_renamed);
-    }
+} // namespace
 
-    if (canonical_changed) {
-        undo.push_undo_warp(std::move(pre_state));
-    }
+// THE PAYLOAD REFUSAL'S ONE SENTENCE, stderr and the card (the struct's
+// THE REFUSAL'S REASON): the editor's commit and the label paste say a
+// refused line in the same words.
+void GuiFlagEditor::card_payload_refusal(const std::string& err) {
+    const std::string refusal = "Edit rejected: " + err;
+    std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+    notifications.notify(AppState::NotificationClass::Normal, refusal);
+}
 
-    text_editor::deactivate(app.top_flag_editor);
-
-    if (!canonical_changed) return;
-
+// THE CHANGED PAYLOAD WRITE'S TAIL, the editor's commit's and the label
+// paste's alike, run after a store write that moved a serialized field.
+// `reland_idx` is the marker the target-view re-land follows: the editor's
+// target, or the paste's focus.
+void GuiFlagEditor::payload_commit_tail(int reland_idx) {
     // Unconditional by ruling — rationale at GuiTargetRender::trigger. Any
     // store change repaints and triggers.
     undo.recompute_dirty();
@@ -803,22 +807,162 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // rule at Viewport::move_playhead_to, viewport.cpp). SOURCE VIEW NEEDS
     // NOTHING: identity domain, no image
     // moves.
-    // AND canonical_changed IS THE SECOND TERM, which is exactly the map-input
+    // AND canonical_changed IS THE SECOND TERM — the callers', who run this
+    // tail on a changed write alone — which is exactly the map-input
     // set (tempo_inherits / tempo_cents / tempo_scale / label_def / label_ref /
     // disabled / renamed refs; position is not editable here) and which, since
-    // 2026-09-10, is also the whole store-change question this body asks: the
+    // 2026-09-10, is also the whole store-change question the commit asks: the
     // BRACKET-ONLY commit the second term was carved out for — the carrier-loss
     // clear and the retired retroactive clamp — cannot happen under the
-    // iteration lock, so the two gates collapsed into one.
-    if (app.active_audio_view == 'T' && canonical_changed) {
+    // iteration lock, so the two gates collapsed into one. THE LABEL PASTE
+    // re-lands on ITS FOCUS (app.last_selected_marker, a member of the pasted
+    // selection), the group verbs' own re-land (toggle_disabled_body,
+    // warpmarkers_ops.cpp).
+    if (app.active_audio_view == 'T') {
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();
-        if (idx >= 0 && idx < static_cast<int>(mv_post.size())) {
+        if (reland_idx >= 0 &&
+            reland_idx < static_cast<int>(mv_post.size())) {
             viewport.reseat_playhead_to(source_frame_to_active_domain(
-                app, audio, mv_post[idx].time_frame));
+                app, audio, mv_post[reland_idx].time_frame));
         }
     }
     target_render.trigger();
+}
+
+// The flag editor's commit: the session's pending line through the payload
+// commit's one owner (propose_payload_commit, above), pushing one undo entry
+// covering all touched markers.
+//
+// On failure: selects the whole pending text (text_editor::refuse), cards
+// the reason, leaves the editor active.
+void GuiFlagEditor::commit_top_flag_edit() {
+    if (!text_editor::is_active(app.top_flag_editor)) return;
+    const int idx = app.top_flag_editor.target;
+    const auto& mv_const = app.warpmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv_const.size())) {
+        // Editor target became invalid (e.g. the marker was removed
+        // underneath the editor by an undo or delete). Drop edit.
+        this->exit_top_flag_edit_no_commit();
+        return;
+    }
+
+    std::expected<PayloadCommit, std::string> commit =
+        propose_payload_commit(mv_const, idx, app.top_flag_editor.pending);
+    if (!commit) {
+        text_editor::refuse(app.top_flag_editor);
+        viewport.invalidate_top_strip();
+        card_payload_refusal(commit.error());
+        return;
+    }
+    const bool canonical_changed = commit->canonical_changed;
+
+    // A COMMIT THAT CHANGES THE MARKER IS A MARKER MUTATION AND STOPS (architect
+    // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
+    // declaration): past the refusal above and ahead of the write, and only on
+    // a changed commit, so a commit of the text already standing leaves a play
+    // running as the open did (the open's exemption, stop_playback_for_modal_
+    // open's decision table).
+    if (canonical_changed) playback_lifecycle.stop_playback_if_playing();
+    // Capture pre-state for undo BEFORE mutating.
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    app.warpmarkers.markers_mut() = std::move(commit->proposed);
+
+    if (commit->n_refs_renamed > 0) {
+        std::fprintf(stderr,
+            "warptempo_gui: Renamed label_def '%s' -> '%s'; "
+            "updated %d refs\n",
+            commit->old_def.c_str(), commit->new_def.c_str(),
+            commit->n_refs_renamed);
+    }
+
+    if (canonical_changed) {
+        undo.push_undo_warp(std::move(pre_state));
+    }
+
+    text_editor::deactivate(app.top_flag_editor);
+
+    if (!canonical_changed) return;
+
+    payload_commit_tail(idx);
+}
+
+// THE LABEL PASTE (architect 2026-11-10: EDIT's hold "replaces the whole
+// label on every selected marker with the clipboard's text, without opening
+// the editor, through the editor's own validation"; the contract at the
+// declaration). PER SELECTED MARKER, in the store's order, what opening its
+// editor, selecting all, pasting and pressing OK would do: a scratch session
+// of the flag editor's kind seeded with the marker's line, the whole line
+// selected (enter_text_edit's open-selected), the clipboard through THE ONE
+// INCOMING FILTER (text_editor::replace_selection — its vocabulary and the
+// kind's byte cap, no second derivation), then the line through the
+// commit's one owner (propose_payload_commit) against the store AS THE
+// EARLIER MARKERS OF THIS PASTE LEFT IT — so a pasted label definition
+// meets the duplicate refusal at its second marker exactly as the second
+// editor's OK would. ALL OR NOTHING: every marker is judged before any is
+// written; the first refusal cards its own sentence — the paste's
+// over-capacity card, or the commit's "Edit rejected: …" — and the store
+// stands untouched. A marker whose line already says the pasted one moves
+// no serialized field, and A PASTE THAT CHANGES NO MARKER writes nothing: no
+// undo entry, no stop, no damage. Otherwise ONE UNDO ENTRY covers the whole
+// act, a marker mutation that stops a live play as the editor's changed
+// commit does, with that commit's tail (payload_commit_tail: the dirty
+// mark, the lanes' repaint, the target-view re-warp and the focus's
+// re-land, the render trigger). THE SELECTION, THE FOCUS AND THE PLAYHEAD
+// STAND: nothing here selects or moves (the target-view re-land is a
+// translation onto the focus's own image, the family's contract at
+// warpmarkers_ops.cpp's head).
+void GuiFlagEditor::paste_payload_onto_selection(
+        const std::string& clipboard_text) {
+    // AN EMPTY CLIPBOARD PASTES NOTHING, silently — the editor's own paste
+    // (GuiInputHandler::apply_editor_clipboard).
+    if (clipboard_text.empty()) return;
+    const std::vector<GuiWarpMarker>& mv_const = app.warpmarkers.markers();
+    std::vector<GuiWarpMarker> proposed = mv_const;
+    std::vector<std::string>   rename_lines;
+    bool changed = false;
+    for (const int idx : app.selected_markers) {
+        // The stale-index belt's skip, the group verbs' own
+        // (toggle_disabled_body, warpmarkers_ops.cpp).
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        text_editor::State scratch;
+        text_editor::enter(scratch, idx, flag_text(proposed, idx),
+                           text_editor::Kind::FlagPayload);
+        if (!scratch.pending.empty()) {
+            scratch.selection_anchor = 0;
+            scratch.cursor_pos = static_cast<int>(scratch.pending.size());
+        }
+        if (!text_editor::replace_selection(scratch, clipboard_text)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kPasteTooLongCard);
+            return;
+        }
+        std::expected<PayloadCommit, std::string> commit =
+            propose_payload_commit(proposed, idx, scratch.pending);
+        if (!commit) {
+            card_payload_refusal(commit.error());
+            return;
+        }
+        changed = changed || commit->canonical_changed;
+        if (commit->n_refs_renamed > 0) {
+            rename_lines.push_back(
+                "Renamed label_def '" + commit->old_def + "' -> '" +
+                commit->new_def + "'; updated " +
+                std::to_string(commit->n_refs_renamed) + " refs");
+        }
+        proposed = std::move(commit->proposed);
+    }
+    if (!changed) return;
+
+    // A PASTE THAT CHANGES A MARKER IS A MARKER MUTATION AND STOPS, the
+    // editor's changed commit's own rule (above), ahead of the write.
+    playback_lifecycle.stop_playback_if_playing();
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    app.warpmarkers.markers_mut() = std::move(proposed);
+    for (const std::string& line : rename_lines)
+        std::fprintf(stderr, "warptempo_gui: %s\n", line.c_str());
+    undo.push_undo_warp(std::move(pre_state));
+    payload_commit_tail(app.last_selected_marker);
 }
 
 // Wipe BOTH STORES' session-only iter brackets (2026-09-09, with the mode's

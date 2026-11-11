@@ -1541,8 +1541,12 @@ struct GuiInputHandler {
     // update_level_press_motion is the drag's one body (on_motion, under a
     // standing Level arm): the slop crossing, the relative travel, the
     // exact level applied live (apply_level_case) wherever the pointer is.
-    // finish_level_press_release is the lift's: the long press's 0 dB on a
-    // motionless hold that lands on the face, then settle_level_case.
+    // finish_level_press_release is the lift's: THE TAP (architect
+    // 2026-11-10) — a motionless press of any duration lifted on the face
+    // toggles the case off and back, a finite level remembered and -inf
+    // set, or from -inf the remembered level set (0 dB with none;
+    // GuiLevelRecall, app_state.h) — through apply_level_case, then
+    // settle_level_case.
     // apply_level_case writes the level into the live struct, hands it to
     // its voice (GuiPlayback::set_audio_level_db / GuiNoise::set_level_db)
     // and DAMAGES THE CASE'S FACE RECT — the one damage of a level edge: the
@@ -1649,8 +1653,10 @@ struct GuiInputHandler {
     //    are score_viewer.h's, the bodies input_key_dispatch.cpp and
     //    input_pointer.cpp) --
     // THE VIEWER'S KEY ROUTER — the whole vocabulary while it stands, the
-    // render player's shape (architect 2026-10-30): the one key that reaches
-    // it is the SCORE key's lift, bare `m`, which closes it; every other key
+    // render player's shape (architect 2026-10-30): the two keys that reach
+    // it are the SCORE key's lift, bare `m`, which closes it, and the TIPS
+    // key's, bare backslash, which toggles the tooltip lamp
+    // (set_show_tooltips, architect 2026-11-10); every other key
     // is consumed. The viewer's acts are its controls row's keys
     // (dispatch_modal_dialog_button) and the page scrub's.
     void route_score_viewer_key(GuiKey key, GuiInputState mods);
@@ -2356,9 +2362,11 @@ private:
     // there is nothing to paste. Returns false for any other action so the
     // caller can fall through to its remaining branches.
     //
-    // This and Ctrl+Shift+J's value copy (copy_focused_marker_value,
-    // input_key_dispatch.cpp) are the whole of the GUI's clipboard reach; no
-    // other site copies or pastes.
+    // This, Ctrl+Shift+J's value copy (copy_focused_marker_value,
+    // input_key_dispatch.cpp) and Shift+Return's label paste (on_key's arm,
+    // 2026-11-10: the read handed to GuiFlagEditor::
+    // paste_payload_onto_selection) are the whole of the GUI's clipboard
+    // reach; no other site copies or pastes.
     bool apply_editor_clipboard(text_editor::KeyAction action,
                                 text_editor::State& s);
 
@@ -2615,7 +2623,7 @@ private:
     // kModalCancelLabel, paint_handler.cpp, architect 2026-10-28 night) —
     // the trim presets list's row the player's shape instead, the BPM
     // form's RENDER and Cancel in that cluster — and route_picker_key below is its whole
-    // key vocabulary, its opener's chord alone. FIVE CONTENTS — the project picker, the settings
+    // key vocabulary, its opener's chords and the tooltip lamp's. FIVE CONTENTS — the project picker, the settings
     // page (2026-10-28), the value list (2026-10-25; its keys since
     // 2026-10-28 night), the page's row for a listed key,
     // the trim presets list (2026-10-28 night) and the BPM form
@@ -2909,9 +2917,12 @@ private:
     //     route_picker_key: THE WHOLE KEY VOCABULARY while a picker stands,
     //       in the render player's router's shape and at its rank in on_key
     //       (under the prompt gate, above every ordinary dispatch), and it is
-    //       THE CONTENT'S OPENER CHORDS ALONE (architect 2026-10-30: no
-    //       keyboard stands under a picker, and the one roster lift its veil
-    //       admits is the opener's; 2026-10-25, the opener key the way out):
+    //       THE CONTENT'S OPENER CHORDS AND THE TOOLTIP LAMP'S (architect
+    //       2026-10-30: no keyboard stands under a picker, and the roster
+    //       lifts its veil admits are the opener's and the tooltip lamp's;
+    //       2026-10-25, the opener key the way out; 2026-11-10, "tips should
+    //       remain open in all situations": bare backslash toggles the lamp
+    //       under every content, set_show_tooltips, the picker standing):
     //       under the project picker Ctrl+O closes and Ctrl+Alt+O (the Open Project
     //       key's long press) runs Revert (revert_project, its question
     //       standing over the picker), under the settings page and the value
@@ -3927,7 +3938,9 @@ private:
     // THE TOOLTIP LAMP'S ONE SETTER (architect 2026-09-29) — one key: bare
     // backslash, which the icon row's Enable Tooltips button reaches by
     // synthesizing that press, in every state the roster is live (both locks
-    // and the `h` view admit it). The bit (AppState::show_tooltips) is a
+    // and the `h` view admit it) AND UNDER EVERY OVERLAY (architect
+    // 2026-11-10: the three overlays' routers answer the same key with this
+    // setter, the TIPS key live through their veils). The bit (AppState::show_tooltips) is a
     // per-project session posture, dark at every project open, never
     // serialized and never in the undo domain. THE DARK EDGE ENDS THE MODEL
     // WHOLE: a standing box goes down, the wait stops, the chain breaks and
@@ -4100,9 +4113,11 @@ private:
     bool render_player_active() const { return app.render_player.active; }
 
     // THE PLAYER'S KEY ROUTER — the whole key vocabulary while the mode
-    // stands, and it is the opener's chord alone (architect 2026-10-30: no
-    // keyboard stands under the player, and the one roster lift its veil
-    // admits is the Play Renders key's): bare `l` closes it; every other key is
+    // stands, and it is the opener's chord and the tooltip lamp's (architect
+    // 2026-10-30: no keyboard stands under the player, and the roster lifts
+    // its veil admits are the Play Renders key's and, since 2026-11-10, the
+    // TIPS key's): bare `l` closes it, bare backslash toggles the tooltip
+    // lamp (set_show_tooltips); every other key is
     // consumed. The player's acts are its rows' taps, its controls row's
     // buttons (THE CLOSE BUTTON IS THE ROAD ON GLASS, architect: "tablet
     // requires cancel to close") and the car's head unit

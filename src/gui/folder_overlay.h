@@ -81,7 +81,9 @@
 // Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
 // over the page and the value list it swaps in 2026-10-28, Trim Presets over
 // its list 2026-10-28 night, BPM over its form 2026-10-29 —
-// is_folder_overlay_opener). The waveform's own
+// is_folder_overlay_opener — and the tooltip lamp, live under every content
+// since 2026-11-10, overlay_admits_button; every key left dead is unlit
+// too, overlay_deadens_button). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces

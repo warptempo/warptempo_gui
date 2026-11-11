@@ -6,12 +6,14 @@
 // the A/B audition, the render player, the score's soundtrack — and over its
 // silence between plays, AT ONE LEVEL, NEVER DUCKED and never paused by any
 // of them. THE LEVEL IS THE SWITCH (architect 2026-11-05, the two level
-// cases, mock s46_m1: "ableton has no sliders that also act as buttons";
+// cases, mock s46_m1:
 // "the only off switch is -inf, and that should actually shut it off so
 // reduce footprint"): the `noise_level` device key — a decimal dB or -inf,
 // THE LEVEL GRAMMAR, device_config.h — set by the band's NOISE case
 // (RedesignButton::IconNoiseLevel, app_state.h: a slider, dragged relative
-// on the square-law travel, a long press setting 0 dB), its one road (no
+// on the square-law travel, A TAP TOGGLING IT TO -inf AND BACK to the level
+// the tap left, architect 2026-11-10 — the level still the one switch, the
+// tap one more hand on it), its one road (no
 // Settings row since 2026-11-05 night, the main-page rule at
 // kSettingsEditorKeys); ABOVE -inf THE BED PLAYS, AT -inf IT IS OFF. THE BED
 // SOUNDS AT THE LEVEL PLUS A FIXED ATTENUATION (architect 2026-11-05 night,
@@ -19,11 +21,12 @@
 // the `noise_attenuation_level` device key, a decimal dB in [-60.0, 0.0],
 // never -inf, default -9, set on the Settings page's line
 // (set_attenuation_db) — the gain 10^((level + attenuation)/20); the case
-// prints its own level alone, its law, travel, floor and long press
+// prints its own level alone, its law, travel, floor and tap
 // untouched, and the attenuation never lights or darkens the bed. There is
-// no lamp and no toggle (the NOISE lamp on bare `w`, 2026-10-28 to
-// 2026-11-05, RETIRED with the cases; his "iPhone requires enabling each
-// time" reversed on the same word): THE BED PLAYS FROM THE LAUNCH at the
+// no lamp and no switch beside the level (the NOISE lamp on bare `w`,
+// 2026-10-28 to 2026-11-05, RETIRED with the cases; his "iPhone requires
+// enabling each time" reversed on the same word): THE BED PLAYS FROM THE
+// LAUNCH at the
 // persisted level — gui_main seats set_level_db after the probe, and an
 // audible level with a folder there lights the voice and starts the loader
 // before the first project opens; the engine is per project, so before a
@@ -321,7 +324,10 @@ public:
     // darkens and relights the voice (the fade reverses from where it is),
     // and the bank is freed at the lift alone (release_if_silent). THE
     // CALLERS: gui_main after the probe (the launch's seat: the bed from the
-    // launch), the NOISE case's every drag motion and its long press
+    // launch), the NOISE case's every drag motion and its tap, the fall to
+    // -inf and the recall from it alike — the recall after a release is THE
+    // RISE above, the loader started afresh (the state Idle since the
+    // release) on its own thread, no motion owed before it
     // (GuiInputHandler::apply_level_case, input_pointer.cpp). Unavailable,
     // the gain is stored and the switch stays off: a later change_folder to
     // a folder that is there lights it at this level.
@@ -342,7 +348,8 @@ public:
     // SAME folder — the file list kept, `status_` Idle, so the next rise
     // above -inf reloads: the load lands and the fade-in runs). Above -inf,
     // or with nothing loaded or loading, a no-op. THE CALLERS: the NOISE
-    // case's lift and its button-lost end (GuiInputHandler::settle_level_
+    // case's lift — a drag's and the tap's (2026-11-10) — and its
+    // button-lost end (GuiInputHandler::settle_level_
     // case) — never a drag
     // motion (a 400 MB bank is not reloaded per finger wobble, the head). On
     // the main thread while an engine may be filling: the fence proves no

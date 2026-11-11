@@ -631,12 +631,16 @@ constexpr ToolbarChord kToolbarChords[] = {
     // authoring surface), the grid-iterations gate (Return admitted on a bound
     // axis alone), the tie's card and flag_editor_open_actionable. NOT A
     // RADIO AND NO LAMP (an act whose editor session is the state), and it
-    // does NOT repeat (an opener). IT ADMITS NO MODIFIER since 2026-10-24:
-    // its ctrl and ctrl+shift presses, Copy / Paste Phase Resets on
-    // Ctrl+Return / Ctrl+Shift+Return from 2026-10-21, went with the
-    // family's move to the letter P (the COPY / PASTE rows, below).
+    // does NOT repeat (an opener). IT ADMITS SHIFT since 2026-11-10
+    // (redesign_button_shift_admits): the long press ORs the hold's shift
+    // into this bare row, SHIFT+Return, THE LABEL PASTE — the clipboard's
+    // text onto every selected marker's line, no editor opened (the arm
+    // below bare Return's, input_handler.cpp). Its ctrl and ctrl+shift
+    // presses, Copy / Paste Phase Resets on Ctrl+Return / Ctrl+Shift+Return
+    // from 2026-10-21, went with the family's move to the letter P
+    // 2026-10-24 (the COPY / PASTE rows, below).
     {RedesignButton::IconOpenTextEditor,
-     GuiKeys::Return, false, false, false},                             // bare Return
+     GuiKeys::Return, false, false, false},                             // bare Return (+Shift: Shift+Return)
     // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH
     // since 2026-10-09, behind Open Text Editor (the group's count has
     // moved around it with every arrival and departure; the succession is in
@@ -4864,7 +4868,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // their own band claims below and for the three overlays' veils, which
     // let the icon row's press through to their opener (architect 2026-10-13
     // for the player, 2026-10-25 for the picker, 2026-10-26 for the score
-    // viewer) and to the struck clip lamp (architect 2026-11-05 night).
+    // viewer), to the tooltip lamp (architect 2026-11-10, live under every
+    // overlay) and to the struck clip lamp (architect 2026-11-05 night).
     // THE TWO LEVEL CASES ARE THE CLAIM'S SECOND HALF (architect 2026-11-05):
     // where no chord row's face holds the press, a level case's face may —
     // the sliders, armed by their own kind (arm_level_case_press). THE
@@ -4889,7 +4894,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // overlay's rows (claimed above), the play-scrub (every press on it arms
     // the thumb drag, the seek at the lift), the modal row's buttons
     // (the arm every dialog button takes) and the icon row's band (below:
-    // its own lit key, and the struck clip lamp's square, architect
+    // its own lit key, the tooltip lamp, architect 2026-11-10, and the
+    // struck clip lamp's square, architect
     // 2026-11-05 night), and EVERY OTHER PRESS IS CONSUMED — the flags, the
     // waveform, the dead roster. (The menu row's File anchor was a target
     // 2026-09-03 to 2026-10-21, the app's caption 2026-10-05 to 2026-10-24.)
@@ -4902,9 +4908,11 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
         // THE PLAY RENDERS BUTTON TOGGLES THE PLAYER OFF (architect
         // 2026-10-13: "so the user can quickly toggle it on/off by pressing
         // the same button twice"): the icon row's press reaches the roster's
-        // own arm, whose painted-bit gate consumes every button but the one
-        // the face leaves lit (redesign_button_enabled's overlay arm), and the
-        // lift is bare `l`, the player's own closer. The same claim reaches
+        // own arm, whose painted-bit gate consumes every button but the two
+        // the face leaves live (redesign_button_enabled's overlay arm: this
+        // key and the tooltip lamp), and the
+        // lift is bare `l`, the player's own closer — the lamp's bare
+        // backslash, the player's router's other arm. The same claim reaches
         // the struck clip lamp's arm, its lift the main page's reopen.
         if (rect_contains(top_icon_row_area(app), x, y)) {
             claim_button_row_press();
@@ -4922,7 +4930,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // (claimed above) and the modal row's one button, Cancel or the settings
     // page's Close (the arm every
     // dialog button takes; the app's caption a third, 2026-10-05 to
-    // 2026-10-24), beside the icon row's band (below: the opener key, and
+    // 2026-10-24), beside the icon row's band (below: the opener key, the
+    // tooltip lamp, architect 2026-11-10, and
     // the struck clip lamp's square, architect 2026-11-05 night), and EVERY
     // OTHER PRESS IS CONSUMED. A ROW CLICK IS
     // THE OPEN ACT, which is why the row carries no OK beside that button. There is no field
@@ -4930,11 +4939,13 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // type into. The whole rule is stated at picker_active (input_handler.h).
     // THE OPENER KEY CLOSES IT (architect 2026-10-25, the player's own
     // Play Renders toggle one overlay over): the icon row's press reaches the
-    // roster's arm, whose painted-bit gate consumes every button but the one
-    // the face leaves live (redesign_button_enabled's overlay arm), and the
+    // roster's arm, whose painted-bit gate consumes every button but the two
+    // the face leaves live (redesign_button_enabled's overlay arm: the
+    // opener and the tooltip lamp), and the
     // lift is that key's chord — Ctrl+O under the project picker, `;` under
     // the settings page and the value list — which the picker's router
-    // answers with its close. The same claim reaches the struck clip lamp's
+    // answers with its close, the lamp's bare backslash with the lamp's
+    // toggle. The same claim reaches the struck clip lamp's
     // arm, its lift the main page's reopen.
     if (app.picker.active) {
         if (rect_contains(top_icon_row_area(app), x, y)) {
@@ -4948,7 +4959,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     }
 
     // THE SCORE VIEWER'S VEIL (2026-10-26), the player's: the band's press
-    // (its one live key the SCORE key, and the struck clip lamp's square,
+    // (its two live keys, the SCORE key and the tooltip lamp, architect
+    // 2026-11-10, and the struck clip lamp's square,
     // architect 2026-11-05 night), the page scrub's, a press on a row
     // key (its skips' shifted twin the long press's at the lift, architect
     // 2026-10-27, score_button_shift_admits); every
@@ -6169,15 +6181,19 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // ending at once on a clean tab) — which is why the arm is cleared at the
     // head of that body and this arm returns immediately after it.
     if (finish_folder_overlay_release(x, y)) return;
-    // THE OVERLAYS' VEILS ADMIT TWO CHROME ARMS, the one predicate the three
-    // release blocks below read: THE OPENER'S ROSTER ARM (its lift the
-    // overlay's close; the press-time painted-bit gate already consumed
-    // every other roster key, which the overlay greys) and THE STRUCK CLIP
+    // THE OVERLAYS' VEILS ADMIT TWO KINDS OF CHROME ARM, the one predicate
+    // the three release blocks below read: A ROSTER ARM — THE OPENER'S (its
+    // lift the overlay's close) OR THE TOOLTIP LAMP'S (architect 2026-11-10,
+    // "tips should remain open in all situations": its lift bare backslash,
+    // the overlay's router's own arm); the press-time painted-bit gate
+    // already consumed every other roster key, which the overlay greys —
+    // and THE STRUCK CLIP
     // LAMP'S (architect 2026-11-05 night: "we should make it respond under
     // the overlay" — the tap reopens the dead device there as on the main
-    // page, nothing playing; render.h's THE TWO LAMPS' STRIKE). Both lift
+    // page, nothing playing; render.h's THE TWO LAMPS' STRIKE). They lift
     // through the chrome act's own body, whose overlay term admits exactly
-    // these two (finish_chrome_press_release's head); any other chrome arm
+    // these (finish_chrome_press_release's head: overlay_admits_button for a
+    // roster arm, the Lamp kind's exemption); any other chrome arm
     // dies in the block undispatched, the veil's answer. THE MODALS still
     // veil the lamp: a prompt and the progress modal return above, an editor
     // dialog is that body's own refusal.
@@ -6188,14 +6204,16 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // mirror: the scrub's marker drag (the seek commits here) and the modal
     // row's armed button through the one shared dispatch. Every other lift
     // is consumed — a chrome arm taken above dies here undispatched, the
-    // veil's answer — but the two chrome arms the veil admits
-    // (overlay_admits_chrome): the Play Renders arm, the one roster button
-    // the player leaves lit (architect 2026-10-13), and the struck clip
+    // veil's answer — but the chrome arms the veil admits
+    // (overlay_admits_chrome): the Play Renders arm, the roster button
+    // the player leaves lit (architect 2026-10-13), the tooltip lamp's
+    // (architect 2026-11-10) and the struck clip
     // lamp's (architect 2026-11-05 night), which are lifted below.
     if (app.render_player.active) {
-        // THE PLAY RENDERS BUTTON'S LIFT (architect 2026-10-13) AND THE
+        // THE PLAY RENDERS BUTTON'S LIFT (architect 2026-10-13), THE
+        // TOOLTIP LAMP'S (architect 2026-11-10) AND THE
         // STRUCK LAMP'S (architect 2026-11-05 night), the press block's
-        // mirror: the two chrome arms the player's veil admits dispatch
+        // mirror: the chrome arms the player's veil admits dispatch
         // through the chrome act's own body.
         if (overlay_admits_chrome) {
             finish_chrome_press_release(chrome, x, y);
@@ -6212,11 +6230,12 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     }
     // THE PICKER'S RELEASE (2026-08-28), its press block's mirror: the modal
     // row's armed Cancel through the one shared dispatch, and every
-    // other lift consumed — the veil's answer — but the two chrome arms the
+    // other lift consumed — the veil's answer — but the chrome arms the
     // veil admits (overlay_admits_chrome): the opener's (Open Project,
     // Settings under the settings page and the value list, Presets
-    // under its list, BPM under its form), the one roster button the picker
-    // leaves live (2026-10-25), and the struck clip lamp's (architect
+    // under its list, BPM under its form), the roster button the picker
+    // leaves live as its way out (2026-10-25), the tooltip lamp's
+    // (architect 2026-11-10) and the struck clip lamp's (architect
     // 2026-11-05 night), lifted through the chrome act's own body as the
     // player's are.
     if (app.picker.active) {
@@ -6228,8 +6247,9 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
         return;
     }
     // THE SCORE VIEWER'S RELEASE (2026-10-26), its press block's mirror: the
-    // two chrome arms the veil admits (overlay_admits_chrome) — the SCORE
-    // key's and the struck clip lamp's (architect 2026-11-05 night) —
+    // chrome arms the veil admits (overlay_admits_chrome) — the SCORE
+    // key's, the tooltip lamp's (architect 2026-11-10) and the struck clip
+    // lamp's (architect 2026-11-05 night) —
     // through the chrome act's body, the page scrub's end, the armed row key
     // through the one shared dispatch; every other lift consumed.
     if (app.score_viewer.active) {
@@ -7026,7 +7046,7 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
     // the button-lost and the pointer-leave clears — and every one of them
     // is the drag's end, the level staying where the last motion put it:
     // the noise's -inf release and the one config write where the level
-    // moved (settle_level_case). The lift's own act, the long press's 0 dB,
+    // moved (settle_level_case). The lift's own act, the tap's toggle,
     // follows in finish_level_press_release on a press that moved nothing,
     // so the two writes are never both owed.
     if (arm.kind == AppState::ChromePress::Kind::Level)
@@ -7055,7 +7075,8 @@ void GuiInputHandler::invalidate_roster_press_face(int index) {
 // arm_redesign_press found no chord row's face under the press). A press on
 // a level case's PAINTED face — the published rect, point_on_key through
 // `contains` — arms the Level kind with the press's x, y, the level's travel
-// fraction and the clock; A DISABLED CASE'S PRESS IS A CONSUMED NOTHING,
+// fraction and the clock (the stamp every arm takes; this kind's lift
+// measures no hold); A DISABLED CASE'S PRESS IS A CONSUMED NOTHING,
 // read as the roster's is, off the painted bit (RedesignButtonFace::enabled,
 // strictly as-painted). No face damage: a slider has no press look.
 bool GuiInputHandler::arm_level_case_press(int x, int y) {
@@ -7082,8 +7103,8 @@ bool GuiInputHandler::arm_level_case_press(int x, int y) {
 
 // THE DRAG (on_motion, under a standing Level arm, the button held): until a
 // motion has left the hover slop on either axis (kHoverSlopW, render.h, its
-// one reader this) the press is still a tap or a hold and moves
-// nothing — a wobble under a long press must not nudge the level and leave
+// one reader this) the press is still a tap and moves
+// nothing — a wobble under a resting pen must not nudge the level and leave
 // the file behind the voice. Past it the press is a DRAG for good: on this
 // and every later motion the level is the EXACT taper of t0 + (x − x0) / the
 // travel, clamped to [0, 1] (level_db_from_travel, a double; y
@@ -7116,25 +7137,42 @@ void GuiInputHandler::update_level_press_motion(int x, int y) {
 }
 
 // THE LIFT (finish_chrome_press_release's Level arm, under the veil's say):
-// A PRESS THAT NEVER LEFT THE SLOP AND WHOSE HOLD IS ≥ chrome_shift_hold_ms()
-// — the roster's long-press measure, read off the arm's stamp at the release
-// as every long press is — SETS 0 dB (architect 2026-11-05, "long press, not
-// double tap"), applied and persisted, if the lift lands on the case's face
-// (the published rect, the derive doctrine) and the level is not 0 dB
-// already (a same-value commit writes nothing, the device keys' rule). A
-// short motionless press does nothing (a slider is not a button); a moved
-// press's level stands where the last motion put it, settled by the take.
+// A PRESS THAT NEVER LEFT THE SLOP, LIFTED ON THE CASE'S FACE (the published
+// rect, the derive doctrine), IS THE TAP, AND THE TAP TOGGLES THE CASE OFF
+// AND BACK (architect 2026-11-10, "like the fit recall"; the rule at
+// RedesignButton::IconAudioLevel) — WHATEVER THE PRESS'S DURATION: the long
+// press that set 0 dB (2026-11-05) is retired ("awkward on something that
+// slides"), so no hold is measured here. ON A CASE STANDING AT A FINITE
+// LEVEL the tap REMEMBERS that level (GuiLevelRecall, the app's, through
+// AppState::level_recall — the tap its one writer: a drag that ends at -inf
+// remembers nothing and no drag clears it) and sets -inf; ON A CASE STANDING
+// AT -inf it sets the remembered level, 0 dB WITH NOTHING REMEMBERED (his
+// ruling; empty at the launch). THE LEVEL GOES THE DRAG'S OWN ROAD:
+// apply_level_case (the live struct, the voice, the face's damage), then
+// settle_level_case with the level moved (one config write; the NOISE
+// case's -inf frees its bank there, as a drag's lift on -inf does, and its
+// recall from -inf is GuiNoise::set_level_db's RISE — the loader started
+// afresh on its own thread, the freed bank's state Idle, the bed fading in
+// when the load lands; nothing on that road asks for a motion before it).
+// The two levels always differ (one finite, one -inf), so the tap always
+// writes. A moved press's level stands where the last motion put it,
+// settled by the take.
 void GuiInputHandler::finish_level_press_release(
         const AppState::ChromePress& arm, int x, int y) {
     if (arm.moved) return;
-    if (monotonic_ms() - arm.press_ms < chrome_shift_hold_ms()) return;
     const RedesignButton id = static_cast<RedesignButton>(arm.index);
     if (!redesign_button_hit(app, id, x, y)) return;
-    const double standing = id == RedesignButton::IconAudioLevel
-                                ? app.device_config->audio_level
-                                : app.device_config->noise_level;
-    if (standing == 0.0) return;
-    apply_level_case(id, 0.0);
+    const bool audio_case = id == RedesignButton::IconAudioLevel;
+    const double standing = audio_case ? app.device_config->audio_level
+                                       : app.device_config->noise_level;
+    std::optional<double>& remembered =
+        audio_case ? app.level_recall->audio : app.level_recall->noise;
+    double db = kLevelDbOff;
+    if (standing != kLevelDbOff)
+        remembered = standing;
+    else
+        db = remembered.value_or(0.0);
+    apply_level_case(id, db);
     settle_level_case(id, /*level_changed=*/true);
 }
 
@@ -7154,7 +7192,7 @@ void GuiInputHandler::finish_level_press_release(
 // "we should make it respond under the overlay"): the render player's, the
 // picker's and the score viewer's veils let the icon row's band through to
 // this claim, and their release blocks lift the Lamp arm beside the
-// opener's (overlay_admits_chrome, on_button_release; the overlay term's
+// opener's and the tooltip lamp's (overlay_admits_chrome, on_button_release; the overlay term's
 // exemption at finish_chrome_press_release's head). THE MODALS ALONE VEIL
 // IT: a prompt's or the progress modal's press gate returns above the band,
 // and an editor dialog standing at the lift refuses it there.
@@ -7193,7 +7231,7 @@ void GuiInputHandler::finish_clip_lamp_press_release(int x, int y) {
                              kPlaybackDeviceUnavailableCard);
 }
 
-// THE LIVE APPLY, ONE BODY FOR THE DRAG AND THE LONG PRESS (the cases are
+// THE LIVE APPLY, ONE BODY FOR THE DRAG AND THE TAP (the cases are
 // the two levels' one road: no Settings row since 2026-11-05 night,
 // kSettingsEditorKeys): the live struct takes the level, its voice takes it
 // at the next fill —
@@ -7223,7 +7261,7 @@ void GuiInputHandler::apply_level_case(RedesignButton id, double db) {
 }
 
 // THE END'S TAIL, every road's (take_chrome_press for the lift and the two
-// clears, finish_level_press_release after the long press's apply): THE
+// clears, finish_level_press_release after the tap's apply): THE
 // NOISE'S -inf RELEASE — a NOISE case left at -inf frees the bank behind
 // the fence (GuiNoise::release_if_silent, a no-op above -inf or with
 // nothing loaded; never per motion, noise.h's head) — and ONE CONFIG WRITE
@@ -7280,13 +7318,14 @@ void GuiInputHandler::finish_chrome_press_release(
     // gate returns unconditionally above this call, so no arm reaches this
     // body while one stands — and THE OVERLAYS' release blocks (the render
     // player's, the picker's, the score viewer's) return above this call the
-    // same way for every arm but the two their veils admit, which meet the
+    // same way for every arm but the ones their veils admit, which meet the
     // overlay term below. The terms below are the surface RAISED MID-HOLD's —
     // THE PROGRESS MODAL (2026-10-14) of a batch parked behind a killed
     // render's drain, which can rise under a held button — and every overlay
     // and editor takes the same refusal through them, though no key can open
     // one under a hold.
-    // EACH OVERLAY ADMITS TWO ARMS, ITS OPENER'S AND THE STRUCK LAMP'S, the
+    // EACH OVERLAY ADMITS THREE ARMS, ITS OPENER'S, THE TOOLTIP LAMP'S AND
+    // THE STRUCK LAMP'S, the
     // release blocks' overlay_admits_chrome read again here. THE OPENER'S
     // (architect 2026-10-13 for Play Renders under the player, 2026-10-25 for
     // Open Project under the project picker, 2026-10-28 for Settings under
@@ -7294,19 +7333,25 @@ void GuiInputHandler::finish_chrome_press_release(
     // Presets under its list, 2026-10-29 for BPM under its form — the tag's
     // answer, is_folder_overlay_opener; 2026-10-26 for the SCORE key under
     // the score viewer, is_overlay_opener, the family): that button, lit
-    // under its overlay, is the one roster arm the veil admits and its lift
-    // is the overlay's close. THE STRUCK CLIP LAMP'S (architect 2026-11-05
+    // under its overlay, is a roster arm the veil admits and its lift
+    // is the overlay's close. THE TOOLTIP LAMP'S (architect 2026-11-10,
+    // "tips should remain open in all situations"): the other roster arm
+    // every overlay admits, its lift bare backslash, answered by the
+    // standing overlay's router with the lamp's one setter — the two roster
+    // members one predicate, overlay_admits_button (app_state.h), the face's
+    // own. THE STRUCK CLIP LAMP'S (architect 2026-11-05
     // night: "we should make it respond under the overlay"): the Lamp kind is
     // exempt from THE OVERLAY TERM ALONE — the editor and progress terms
     // still refuse it, the modals veiling the lamp as every arm — and the
     // kind is tested FIRST because a Lamp arm's index is -1, no button for
-    // is_overlay_opener to read. Any other arm under an overlay is the
+    // overlay_admits_button to read. Any other arm under an overlay — a
+    // Level arm among them, a case being dead there — is the
     // mid-hold case above and stays refused.
     const bool overlay_refuses =
         (app.render_player.active || app.picker.active ||
          score_viewer_stands(app)) &&
         arm.kind != AppState::ChromePress::Kind::Lamp &&
-        !is_overlay_opener(app, static_cast<RedesignButton>(arm.index));
+        !overlay_admits_button(app, static_cast<RedesignButton>(arm.index));
     if (keyboard_modal_editor_active() || overlay_refuses ||
         app.batch_progress.active) return;
     switch (arm.kind) {
@@ -7321,9 +7366,9 @@ void GuiInputHandler::finish_chrome_press_release(
         return;
     case AppState::ChromePress::Kind::Level:
         // THE LEVEL CASE'S LIFT (2026-11-05): no chord to build — its one
-        // act is the long press's 0 dB, its own body; the veil above has had
-        // its say (a modal raised mid-hold swallows the act, the drag's
-        // level standing and already settled by the take).
+        // act is the tap's toggle (2026-11-10), its own body; the veil
+        // above has had its say (a modal raised mid-hold swallows the act,
+        // the drag's level standing and already settled by the take).
         finish_level_press_release(arm, x, y);
         return;
     case AppState::ChromePress::Kind::Lamp:

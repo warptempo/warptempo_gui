@@ -23,14 +23,17 @@ namespace {
 // THE ROLES READ from every file (the head's DERIVATION), each present in
 // every stock and Sonic Bloom file (checked over all 45, 2026-11-05; the
 // press arc's two, SelectionBackground and SelectionForeground, the same
-// day; the level cases' two, RangeEditField and ChosenPreListen, the same
-// night; SearchIndication, immaterial_mod's accent,
+// day; SearchIndication, immaterial_mod's accent,
 // over all 42 files 2026-11-06; StandbySelectionForeground, the selection
 // pair's text, over all 31 he drops, 2026-11-06; TakeLaneTrackNotHighlighted,
 // ViewCheckControlDisabledOff, ScrollbarInnerHandle and
 // DetailViewRulerMarkings, the grid, the disabled key's ink, the trim span and
 // the ruler's ticks, read since 2026-11-07, over all 31 he drops and Default).
-// A file lacking one is left out (the head).
+// A file lacking one is left out (the head). THE LIST NAMES EXACTLY THE
+// ROLES A TONE READS: RangeEditField and ChosenPreListen, the level cases'
+// two fills of 2026-11-05 night, left it 2026-11-10 with those fills (the
+// cases wear the lit key's face, the head's DERIVED block), so a file
+// lacking either is no longer left out for it.
 constexpr std::string_view kAskRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -38,7 +41,6 @@ constexpr std::string_view kAskRoles[] = {
     "StandbySelectionForeground",
     "SelectionBackground", "SelectionForeground",
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
-    "RangeEditField", "ChosenPreListen",
     "SearchIndication",
     "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
@@ -342,8 +344,6 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     const Rgb alert    = opaque(roles["Alert"]);
     const Rgb vu_max   = opaque(roles.vu_maximum);
     const Rgba face_a  = rgba(roles["SurfaceBackground"]);
-    const Rgb lvl_aud  = over(rgba(roles["RangeEditField"]), face_a);
-    const Rgb lvl_noi  = over(rgba(roles["ChosenPreListen"]), face_a);
     const Rgb core     = face;  // the magnify core = SurfaceBackground (the head)
     const Rgba detail  = rgba(roles["DetailViewBackground"]);
     const Rgb ink      = over(rgba(roles["WaveformColor"]), detail);
@@ -388,8 +388,6 @@ std::optional<GuiThemeTones> derive(const AskRoles& roles) {
     t.card_face           = packed(alert);
     t.card_ink            = packed(desktop);
     t.clip_lamp           = packed(vu_max);
-    t.level_audio_fill    = packed(lvl_aud);
-    t.level_noise_fill    = packed(lvl_noi);
     t.waveform_canvas     = packed(canvas);
     t.waveform_ink        = packed(ink);
     t.waveform_core       = packed(core);

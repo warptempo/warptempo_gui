@@ -2017,7 +2017,8 @@ enum class RedesignButton {
     // folder overlay's fifth content (folder_overlay.h; the file
     // trim_presets_file.h). IT IS AN OVERLAY'S OPENER (the three-classes
     // rule): lit while the list stands and its press then CLOSES it
-    // (is_folder_overlay_opener), the one roster key the list leaves live.
+    // (is_folder_overlay_opener), the list leaving it live beside the
+    // tooltip lamp alone (overlay_admits_button).
     // TRIM IS BAND (input_trim.cpp's head), so it stays LIVE on a locked tab
     // and under the grid-iterations lock — bare `t` on the read-only
     // allowlist, which the iteration gate inherits (iteration_lock_key_blocked
@@ -2231,7 +2232,8 @@ enum class RedesignButton {
     // (score_viewer.h) — the movement's sheet music one page at a time in
     // the modal family's box. IT IS AN OVERLAY'S OPENER: lit while the viewer
     // stands and its press then CLOSES it (is_overlay_opener, the folder
-    // overlay's openers' family), the one roster key the viewer leaves live.
+    // overlay's openers' family), the viewer leaving it live beside the
+    // tooltip lamp alone (overlay_admits_button).
     // It greys with no score loaded (redesign_button_enabled's arm) and in
     // the `h` view (off that mode's allowlist, through the derived
     // partition, Settings' shape), and stays lit on a locked tab and under
@@ -2269,43 +2271,58 @@ enum class RedesignButton {
     // edge). Lit, the model runs as AppState::RedesignTooltip states it. It is chrome,
     // not authoring: LIVE on a locked tab, under the grid-iterations lock and
     // in the `h` view (bare backslash is on all three allowlists), so it greys
-    // only with the WHOLE ROSTER at redesign_button_enabled's head gates — no
-    // audio to dispatch on, and the folder overlay standing. Under the
-    // overlay the KEY stays live: the render player's and the picker's
-    // routers each answer bare backslash through the same setter (architect 2026-09-29), so the player row's hints can be lit and
-    // put out where they stand. It admits no modifier and does not repeat.
+    // only with the WHOLE ROSTER at redesign_button_enabled's head gate, no
+    // audio to dispatch on. IT STAYS LIVE UNDER EVERY OVERLAY (architect
+    // 2026-11-10: "tips should remain open in all situations") — the render
+    // player, the picker's five contents and the score viewer: enabled and
+    // lit when on there (overlay_admits_button, the overlay's opener its one
+    // companion), its press admitted through each veil
+    // (finish_chrome_press_release's head) and its chord answered by each
+    // overlay's router through the same setter (route_render_player_key,
+    // route_picker_key, route_score_viewer_key), so an overlay's own row
+    // hints can be lit and put out where they stand. THE MODALS VEIL IT as
+    // every key (a prompt, an editor, the progress modal). It admits no
+    // modifier and does not repeat.
     IconTooltips,
     // THE TWO LEVEL CASES (architect 2026-11-05, session 46, his "yes" on
-    // mock s46_m1 of tmp/s46; "ableton has no sliders that also act as
-    // buttons"), the band's third run's LAST TWO, directly after the tooltip
-    // lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28 to 2026-11-05,
-    // RETIRED with its chord and its raindrop glyph; the run one pitch
-    // longer): AUDIO then NOISE, the `audio_level` and `noise_level` device
-    // keys' SLIDERS (device_config.h's THE LEVEL GRAMMAR). THEY ARE SLIDERS,
-    // NOT BUTTONS: no glyph, NO CHORD (no kToolbarChords row — the one pair
-    // of roster members without one, the table's static_assert counts them
-    // out), no lit look, no press face (a slider shows its value; its fill is
-    // the feedback — confirmed by the architect 2026-11-05 night, "no press
-    // face on the cases", paint_level_case, paint_handler.cpp), no
-    // hold-repeat, no barrel. THE FACE: the key at
-    // rest under a FILL FROM ITS LEFT EDGE — `level_audio_fill` (Live's
-    // RangeEditField, Default 007383) for AUDIO, `level_noise_fill`
-    // (ChosenPreListen, Default 3C6AB6) for NOISE — nearbyint(t · face width)
+    // mock s46_m1 of tmp/s46), the band's third run's LAST TWO, directly
+    // after the tooltip lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28
+    // to 2026-11-05, RETIRED with its chord and its raindrop glyph; the run
+    // one pitch longer): AUDIO then NOISE, the `audio_level` and
+    // `noise_level` device keys' SLIDERS (device_config.h's THE LEVEL
+    // GRAMMAR). THEY ARE SLIDERS: no glyph, NO CHORD (no kToolbarChords row —
+    // the one pair of roster members without one, the table's static_assert
+    // counts them out), no lit look, no press face (a slider shows its
+    // value; its fill is the feedback — confirmed by the architect
+    // 2026-11-05 night, "no press face on the cases", paint_level_case,
+    // paint_handler.cpp), no hold-repeat, no hold twin, no barrel. THE FACE:
+    // the key at rest under a FILL FROM ITS LEFT EDGE IN THE LIT KEY'S FACE,
+    // `lit_fill`, both cases alike (architect 2026-11-10, "monochrome on the
+    // front page"; the cases' own two fill roles of 2026-11-05 retired) —
+    // nearbyint(t · face width)
     // device px wide, the face's full height, no border, no inset, where t is
     // the level's TRAVEL FRACTION (level_travel_fraction below, the
     // square-law taper); THE NUMBER over it, the level to one decimal
     // ("0.0", "-9.0", "-inf", format_level_db_face; the file keeps the exact
-    // value) in the Body face, the text tone on the fill and the face alike,
-    // centered by its cap band and its ink; its printed legend AUDIO / NOISE
-    // under the face as every key's. THE CASES ARE THE TWO LEVELS' ONE ROAD:
-    // no Settings row (architect 2026-11-05 night, a key shown and edited on
-    // the main page gets none, kSettingsEditorKeys).
+    // value) in the Body face, the text tone on the fill and the face alike
+    // and AT -inf THE DISABLED TEXT TONE (architect 2026-11-10: off reads
+    // off), centered by its cap band and its ink; its printed legend AUDIO /
+    // NOISE under the face as every key's. THE CASES ARE THE TWO LEVELS' ONE
+    // ROAD: no Settings row (architect 2026-11-05 night, a key shown and
+    // edited on the main page gets none, kSettingsEditorKeys).
     // THE DRAG IS RELATIVE on the travel (AppState::ChromePress's Level kind,
     // the arm; GuiInputHandler::arm_level_case_press, input_pointer.cpp),
     // applied live at every motion (GuiPlayback::set_audio_level_db,
-    // GuiNoise::set_level_db) and persisted once at the lift; THE LONG PRESS
-    // SETS 0 dB (his "long press, not double tap"); a short motionless press
-    // does nothing (a slider is not a button). THE AUDIO CASE IS NEVER
+    // GuiNoise::set_level_db) and persisted once at the lift. A TAP TOGGLES
+    // THE CASE OFF AND BACK (architect 2026-11-10, "like the fit recall";
+    // reversing 2026-11-05's "ableton has no sliders that also act as
+    // buttons" on his own word, and retiring that day's long press to 0 dB,
+    // "awkward on something that slides"): a press that never left the hover
+    // slop, lifted on the face, WHATEVER ITS DURATION, on a case standing at
+    // a finite level remembers that level and sets -inf; on a case standing
+    // at -inf it sets the remembered level, 0 dB with nothing remembered
+    // (GuiLevelRecall below, the session's memory, in no file;
+    // GuiInputHandler::finish_level_press_release). THE AUDIO CASE IS NEVER
     // DISABLED (every project has a voice) but for the roster's blanket greys
     // (no audio to dispatch on, a standing overlay), which it takes like
     // every key; THE NOISE CASE GREYS AS THE LAMP DID, with no folder the
@@ -2317,13 +2334,17 @@ enum class RedesignButton {
     // on a locked tab, under grid iterations and in the `h` view (no chord,
     // so no allowlist walk reaches them: their arms at redesign_button_enabled
     // and history_mode_refuses_button_chord state it outright); under a
-    // standing overlay they are dead as every roster key but the opener (the
-    // inherited rule, redesign_button_enabled's overlay arm). THE NOISE
+    // standing overlay they are dead as every roster key but the opener and
+    // the tooltip lamp, and wear the disabled look there — the fill
+    // `key_dim_ink`, the number `text_dim` — the press reading that painted
+    // bit (the inherited rule, redesign_button_enabled's overlay arm). THE
+    // NOISE
     // LEVEL IS THE BED'S ONE SWITCH (noise.h's head): above -inf the bed
     // plays, from the launch on; -inf is off, the recordings freed at the
-    // lift. THE BED SOUNDS AT THE CASE'S NUMBER PLUS THE FIXED
+    // lift — the tap's too, the recalling tap reloading them. THE BED SOUNDS
+    // AT THE CASE'S NUMBER PLUS THE FIXED
     // `noise_attenuation_level` (2026-11-05 night, a Settings row; the
-    // case's face, law and long press untouched, noise.h's head). THE SOUND
+    // case's face, law and tap untouched, noise.h's head). THE SOUND
     // IS CHOSEN BY THE `noise` KEY ALONE (a folder's name,
     // Settings' Tab completing it; no picker, closed 2026-10-28).
     IconAudioLevel,
@@ -2699,15 +2720,23 @@ enum class RedesignButton {
     // derived partition greys it and the view does not paint it. NO LAMP (an
     // act), NO REPEAT (an opener).
     //
-    // IT IS THE PLAIN ACT ALONE since 2026-10-24 (architect): no modified
-    // press is admitted and the tooltip carries one line. Its ctrl presses
-    // were the phase-reset propagate pair, Ctrl+Return / Ctrl+Shift+Return,
-    // from 2026-10-21 until the pair got its own key that day
-    // (now IconCopyPhaseResets, bare P with no admission, and
-    // IconPastePhaseResets, Ctrl+P with its hold Ctrl+Shift+P, the duo
-    // kPhaseResetPropagateGroup holds as row 8's leftmost run since
-    // 2026-11-08); a ctrl or a shift press on it is the consumed nothing,
-    // and a long press is the plain open.
+    // ITS HOLD PASTES THE LABEL (architect 2026-11-10): the long press
+    // dispatches SHIFT+Return, THE LABEL PASTE — the system clipboard's text
+    // REPLACING THE WHOLE LINE OF EVERY SELECTED MARKER, no editor opened,
+    // through the editor's own filter, cap and commit judgment, all or
+    // nothing, one undo entry (GuiFlagEditor::paste_payload_onto_selection,
+    // flag_editor.h; the arm below bare Return's, input_handler.cpp). An
+    // act key and no lamp, so the twin is lawful
+    // (redesign_button_shift_admits' head). THE FACE IS THE PLAIN OPEN'S
+    // (the twin rule: the paste wants what the open wants, on the payload
+    // axis); under a lit grid-iterations lamp the hold takes the lock's
+    // card and the tooltip drops its line. (The key was the plain act alone
+    // from 2026-10-24 until then; its ctrl presses were the phase-reset
+    // propagate pair, Ctrl+Return / Ctrl+Shift+Return, from 2026-10-21
+    // until the pair got its own key that day — now IconCopyPhaseResets,
+    // bare P with no admission, and IconPastePhaseResets, Ctrl+P with its
+    // hold Ctrl+Shift+P, the duo kPhaseResetPropagateGroup holds as row 8's
+    // leftmost run since 2026-11-08.)
     IconOpenTextEditor,
     // ADD TO SELECTION — the verb group's SEVENTH and last member since
     // 2026-10-09, Open Text Editor standing immediately ahead of it (every
@@ -3084,6 +3113,25 @@ inline double level_db_from_travel(double t) {
     return db + 0.0;   // -0.0 to 0.0
 }
 
+// THE LEVEL CASES' RECALL — THE TAP'S MEMORY (architect 2026-11-10: a tap on
+// a level case toggles it off and back, "like the fit recall", the recall
+// "session only"; the tap's rule at RedesignButton::IconAudioLevel): per
+// case, the finite level the last tap turned off, EMPTY AT THE LAUNCH and
+// until that case's first tap from a finite level. ONLY THE TAP WRITES IT: a
+// drag that ends at -inf remembers nothing and no drag clears it. EMPTY, THE
+// TAP FROM -inf RECALLS 0 dB (his ruling). IN NO FILE AND NO DEVICE KEY: it
+// dies with the process. IT IS THE APP'S, NOT A PROJECT'S: the two levels
+// are device state the loop's one config struct carries from project to
+// project (main.cpp's run_project seats them), so the level a tap turned
+// off in one project is the level a tap restores in the next — one object
+// owned by gui_main beside the config and the noise, reached through
+// AppState::level_recall. Its one reader and writer:
+// GuiInputHandler::finish_level_press_release (input_pointer.cpp).
+struct GuiLevelRecall {
+    std::optional<double> audio;
+    std::optional<double> noise;
+};
+
 // (redesign_button_is_history_companion IS DELETED — architect 2026-08-30,
 // the truthful-buttons ruling. It named the four history companions for ONE
 // consumer, the line in redesign_button_enabled that lifted them over the
@@ -3310,7 +3358,7 @@ inline int double_click_slack_px() {
 // value nor the beat, and no tooltip rises under a held press at all
 // (AppState::RedesignTooltip); the ruling's home is the read site.
 //
-// A NAMED READER OF THE ONE CONSTANT: the four read sites say which hold
+// A NAMED READER OF THE ONE CONSTANT: the three read sites say which hold
 // they measure while the value itself has one owner (kHoldDelayMs,
 // gui_input.h).
 inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
@@ -4975,11 +5023,21 @@ struct AppState {
     // cannot live in this per-project struct. Seated at each AppState's
     // construction by run_project and never null while the GUI runs. Its
     // readers: the NOISE case's enabled arm (redesign_button_enabled), the
-    // case's drag and long press (GuiInputHandler::apply_level_case,
+    // case's drag and tap (GuiInputHandler::apply_level_case,
     // settle_level_case — set_level_db, release_if_silent) and the settings
     // editor's three noise arms (change_folder, set_level_db +
     // release_if_silent, set_crossfade_s).
     GuiNoise* noise = nullptr;
+
+    // THE LEVEL CASES' RECALL (architect 2026-11-10; GuiLevelRecall's head):
+    // the app's ONE, owned by gui_main and reached by pointer like the
+    // device config and the noise above — the levels it remembers are device
+    // state that outlives every project, so it cannot live in this
+    // per-project struct. Seated at each AppState's construction by
+    // run_project and never null while the GUI runs. Its one reader and
+    // writer: the level cases' tap (GuiInputHandler::
+    // finish_level_press_release).
+    GuiLevelRecall* level_recall = nullptr;
 
     // THE OPEN PROJECT'S NAME — the name of the folder DIRECTLY UNDER the
     // projects path that holds this source, which is what the project model
@@ -6792,14 +6850,19 @@ struct AppState {
     //            finger goes until the lift — the scrub thumb's shape, no
     //            slide-off feint, and the pan / pinch machinery never sees it
     //            (the band's press claim is above the canvas's). THE LIFT
-    //            (finish_level_press_release): a press that never moved and
-    //            whose hold is ≥ chrome_shift_hold_ms() SETS 0 dB (his "long
-    //            press, not double tap"); a short motionless press does
-    //            nothing (a slider is not a button); a moved press's level
+    //            (finish_level_press_release): a press that never moved,
+    //            lifted on the case's face, IS THE TAP, whatever its
+    //            duration (architect 2026-11-10; the long press's 0 dB of
+    //            2026-11-05 retired, `press_ms` unread by this kind) — a
+    //            finite level remembered and the case set to -inf, or from
+    //            -inf the remembered level set, 0 dB with none
+    //            (GuiLevelRecall), applied and settled as a drag's level
+    //            is; a moved press's level
     //            stands where the last motion put it. THE END, every road
     //            (settle_level_case: the lift, take_chrome_press's clears —
     //            the button-lost and pointer-leave ends, a drag that loses
-    //            the pointer being a lift): the noise's -inf release
+    //            the pointer being a lift; the tap's own call after its
+    //            apply): the noise's -inf release
     //            (GuiNoise::release_if_silent) and ONE config write
     //            (GuiSettingsEditor::persist_device_config) where the level
     //            moved. It carries no ctrl (the barrel binds nothing on a
@@ -9498,11 +9561,12 @@ inline bool folder_overlay_stands(const AppState& a) {
 // list (architect 2026-10-28: the page's row for a listed key swaps that
 // key's value list in under the same key, so the key that opened the page
 // closes either), PRESETS under the trim presets list (2026-10-28
-// night), BPM under the BPM form (2026-10-29). It is the one roster key a
-// standing overlay leaves live and lit
-// (redesign_button_enabled's overlay arm, redesign_button_selected) and the
-// one roster arm its veil lifts (finish_chrome_press_release's head); false
-// with nothing standing.
+// night), BPM under the BPM form (2026-10-29). It is the key a standing
+// overlay leaves live and lit as its own way out
+// (redesign_button_enabled's overlay arm, redesign_button_selected), its arm
+// lifted through the veil (finish_chrome_press_release's head) — the tooltip
+// lamp the one other roster key an overlay leaves live
+// (overlay_admits_button, below); false with nothing standing.
 inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
     switch (a.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -9544,11 +9608,45 @@ inline bool score_viewer_holds_engine(const AppState& a) {
 // IS `b` THE STANDING OVERLAY'S OPENER KEY? — the folder overlay's answer
 // (is_folder_overlay_opener, above) widened by THE SCORE VIEWER'S, the SCORE
 // key (architect 2026-10-26: the overlay class's one rule, the opener lit and
-// the way out). The roster's greying arm, the selected face and the lift's
-// veil read this family; false with nothing standing.
+// the way out). The roster's greying arm, the lit bit and the lift's veil
+// read this family through overlay_admits_button (below), which adds the
+// tooltip lamp; false with nothing standing.
 inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
     if (score_viewer_stands(a)) return b == RedesignButton::IconScore;
     return is_folder_overlay_opener(a, b);
+}
+
+// WHICH ROSTER KEYS ANSWER UNDER A STANDING OVERLAY — THE MEMBERSHIP'S ONE
+// OWNER (architect 2026-11-10): THE OVERLAY'S OPENER (is_overlay_opener, its
+// lift the overlay's close) AND THE TOOLTIP LAMP ("tips should remain open
+// in all situations": bare backslash, answered by every overlay's router).
+// Asked with an overlay standing — the render player, the picker's five
+// contents or the score viewer; its three readers ask it there:
+// redesign_button_enabled's overlay arm (the face), overlay_deadens_button
+// below (the lit bit) and finish_chrome_press_release's overlay term (the
+// lift, input_pointer.cpp). The struck clip lamp answers under an overlay
+// too, a lamp and no roster key (ChromePress's Lamp kind).
+inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
+    return is_overlay_opener(a, b) || b == RedesignButton::IconTooltips;
+}
+
+// DOES A STANDING OVERLAY LEAVE `b` DEAD? — THE ONE PREDICATE OF THE
+// OVERLAYS' PLAIN DISABLED FACE (architect 2026-11-10: "lamps that do not
+// respond show inactive under the overlays"): an overlay of the interface
+// class stands — the folder overlay under any of its contents, or the score
+// viewer — and `b` is not one of the keys it leaves live
+// (overlay_admits_button). Such a key is painted disabled
+// (redesign_button_enabled's overlay arm answers false for exactly these)
+// AND UNLIT, whatever its state: redesign_button_selected answers false
+// through this predicate, so the published face — the bits the painters,
+// the per-tick comparator and the band's fingerprint all read — carries the
+// decision, and the key wears the rest face under the dim glyph and legend.
+// THE OVERLAYS ONLY: outside them a dead checked key keeps its lit fill (a
+// locked tab, the `h` view; nothing behind a MODAL changes face at all —
+// materials.h's THE KEY). False with no overlay standing.
+inline bool overlay_deadens_button(const AppState& a, RedesignButton b) {
+    return (folder_overlay_stands(a) || score_viewer_stands(a)) &&
+           !overlay_admits_button(a, b);
 }
 
 // IS THERE NO PIECE TO DISPATCH ON — a load in flight, or no audio at all (a
@@ -9643,7 +9741,7 @@ struct RenderPlayerHintState {
 // the player's own act vocabulary: the word is the act's name alone, no key
 // named (architect 2026-10-30, redesign_button_tooltip's head — the player's
 // buttons dispatch their acts directly, and its key router binds the
-// opener's chord alone). EVERY WORD IS THE ACT THE PRESS WILL
+// opener's chord and the tooltip lamp's alone). EVERY WORD IS THE ACT THE PRESS WILL
 // RUN IN THE CURRENT STATE (architect 2026-09-01, the truthful-tooltips
 // ruling — "tooltips never lie: they update dynamically with the act"), read
 // off RenderPlayerHintState above, whose every bit is a predicate an act or a
@@ -12239,9 +12337,10 @@ inline MarkerCell iter_bound_editor_side(const text_editor::State& ed) {
 // columns' since 2026-09-09: a bound cell is addressed on either column's
 // eligible flags, so that arm asks no column. A bound cell's kind refusal
 // (an owner disabled after its cell was addressed) stays the act's own
-// card behind a live face, as the Up/Down pair's is. ONE READER since the
-// Edit Flag button's deletion (2026-09-29): the Return arm
-// (input_handler.cpp), whose refusal cards.
+// card behind a live face, as the Up/Down pair's is. ITS READERS: the Return
+// arm (input_handler.cpp), whose refusal cards; the Open Text Editor key's
+// face (redesign_button_enabled); and label_paste_actionable below, the
+// key's hold.
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
@@ -12260,6 +12359,34 @@ inline bool flag_editor_open_actionable(const AppState& app) {
         return !addressed_bound_cell_is_tie_follower(app);
     }
     return false;
+}
+
+// THE OPEN'S AND THE LABEL PASTE'S ONE REFUSAL SENTENCE (architect
+// 2026-08-30 for the open: the P column and an unfocused selection are the
+// same answer from the user's side — the act wants a warp marker and does
+// not have one): bare Return's card and Shift+Return's, the same fact in the
+// same words (the two arms, input_handler.cpp).
+inline constexpr const char* kSelectWarpMarkerToEditCard =
+    "Select a warp marker to edit its line";
+
+// SHIFT+RETURN'S REFUSAL PAST THE LOCKS, composed (architect 2026-11-10, the
+// label paste, the Open Text Editor key's hold: "admitted exactly where the
+// plain press is and the act has a target"): THE PLAIN OPEN'S OWN QUESTION
+// ON THE PAYLOAD AXIS — a focus standing in the warp column, the payload
+// cell addressed (flag_editor_open_actionable's payload arm; a bound cell is
+// addressed only under a lit grid-iterations lamp, where the lock's gate
+// has already refused the chord). The focus is a member of the selection
+// (the never-parked rule), so the paste's target, the selection, stands
+// wherever this answers true. THE CLIPBOARD IS NO TERM: an empty clipboard
+// is the act's silent nothing, never a face. ONE READER: the Shift+Return
+// arm (input_handler.cpp), which cards kSelectWarpMarkerToEditCard on false.
+// The key's FACE reads the plain open's predicate alone (the twin rule: the
+// plain condition is the weaker), and its tooltip drops the hold's line
+// under a lit lamp, where the lock refuses the paste and the plain press
+// still opens a bound cell (redesign_button_tooltip's overload).
+inline bool label_paste_actionable(const AppState& app) {
+    return app.addressed_cell == MarkerCell::Payload &&
+           flag_editor_open_actionable(app);
 }
 
 // Restore ascending time_frame order after a mutation that may have
@@ -15364,7 +15491,8 @@ inline bool redesign_button_enabled(const AppState& a,
     // or a load and also leave on their Close or Cancel and
     // on THEIR OPENER KEY — Play Renders, Open Project, Settings (the
     // page's and the value list's both), Presets and BPM, lit and live under them (the overlay arm
-    // below, redesign_button_selected), the rest of the roster grey and the
+    // below, redesign_button_selected), the rest of the roster grey AND
+    // UNLIT but the tooltip lamp (architect 2026-11-10, the arm below) and the
     // hint dwell suppressed ("overlays don't show hints … the only reason
     // they still show the one button lit is that you can exit by pressing
     // it"); and THE `h` HISTORY VIEW, which is A VIEW like Source or Phase,
@@ -15416,7 +15544,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // like what we do with history"; the menu row's File title, live
     // through Quit above the band, went with the row 2026-10-21), the view
     // pairs' four included, and the veil consumes every press on them.
-    // EACH OVERLAY'S OWN OPENER IS ITS ONE EXCEPTION (architect 2026-10-13
+    // EACH OVERLAY'S OWN OPENER IS AN EXCEPTION (architect 2026-10-13
     // for the player: "we should allow the media player button in media
     // player, so the user can quickly toggle it on/off by pressing the same
     // button twice"; 2026-10-25 for the picker: "that button should be
@@ -15443,9 +15571,16 @@ inline bool redesign_button_enabled(const AppState& a,
     // (architect 2026-10-26) is the same class and takes the same arm: the
     // whole roster grey under it but the SCORE key, lit, whose lift is bare
     // `m` and the viewer's own close (route_score_viewer_key) — the family's
-    // owner is_overlay_opener.
+    // owner is_overlay_opener. THE TOOLTIP LAMP IS EVERY OVERLAY'S SECOND
+    // LIVE KEY (architect 2026-11-10: "tips should remain open in all
+    // situations"): live and lit when on under the player, the picker's
+    // contents and the viewer alike, its lift bare backslash, which each
+    // overlay's router answers with the lamp's one setter — the membership's
+    // owner overlay_admits_button. EVERY KEY THIS ARM LEAVES DEAD IS ALSO
+    // UNLIT THERE (the same ruling: the plain disabled face, no lit fill —
+    // overlay_deadens_button, read by redesign_button_selected).
     if (folder_overlay_stands(a) || score_viewer_stands(a))
-        return is_overlay_opener(a, b);
+        return overlay_admits_button(a, b);
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -15715,7 +15850,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // 2026-09-29): bare backslash flips a chrome posture on any loaded
         // piece, authors nothing, and is admitted by the read-only lock, the
         // grid-iterations lock (its gate falls through to that list) and the
-        // `h` view's allowlist alike — so no arm and no partition greys it.
+        // `h` view's allowlist alike — so no arm and no partition greys it,
+        // and the overlay arm above leaves it live too (2026-11-10).
         case RedesignButton::IconTooltips:
             return true;
         // THE SCORE KEY IS LIVE WITH A SCORE LOADED AND DEAD WITHOUT ONE
@@ -15741,7 +15877,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // admit), and the `h` view's partition above answers LIVE for both
         // (history_mode_refuses_button_chord's explicit arm, input_pointer.cpp),
         // so the view neither greys nor hides them; a standing overlay's arm
-        // above greys them with the whole roster but the opener. A dead case
+        // above greys them with the whole roster but the opener and the
+        // tooltip lamp, the cases wearing their disabled look. A dead case
         // arms nothing (the painted bit, arm_level_case_press).
         case RedesignButton::IconAudioLevel:
             return true;
@@ -15945,9 +16082,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // in every session there, does not paint it at all
         // (history_mode_hides_button). The bound cell's kind refusal past the
         // gate (iter_bound_step_kind_refusal, a belt with no producer today)
-        // stays the key's card behind a lit face. It admits no modifier since
-        // 2026-10-24 (its ctrl presses, the propagate pair from 2026-10-21,
-        // went to the Copy Phase Resets key), so there is no twin to compose.
+        // stays the key's card behind a lit face. ITS HOLD, THE LABEL PASTE
+        // (Shift+Return, architect 2026-11-10), ADDS NOTHING HERE under the
+        // twin rule: the paste acts only where the plain open does, on the
+        // payload axis (label_paste_actionable), so the weaker, plain
+        // condition is the face's; under a lit lamp on a bound axis the
+        // long press reaches the lock's card behind the lit face. The
+        // clipboard's content is no face term.
         case RedesignButton::IconOpenTextEditor:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
@@ -16873,10 +17014,20 @@ inline bool redesign_button_enabled(const AppState& a,
 // pair into one button (its record is in the momentary arm below).
 // Each reads
 // THE SAME live fact its chord flips, so a lit button and the state it reports
-// can never drift. Two readers: the painter (which stashes what it painted)
-// and main.cpp's staleness comparator. (The lift's radio refusal, a lit view
-// pair member's press a consumed nothing, was a third until the pop of
-// 2026-10-23 night, kToolbarChords' NO RADIO COLUMN.)
+// can never drift. UNDER AN OVERLAY A KEY THAT DOES NOT RESPOND IS NEVER LIT
+// (architect 2026-11-10: "lamps that do not respond show inactive under the
+// overlays" — the plain disabled face, the rest face under the dim glyph
+// and legend, no lit fill): the body's second head term, the overlays' one
+// predicate (overlay_deadens_button), so the bit this publishes is THE
+// PAINTED LIT FACE and the state behind it returns to the face at the
+// overlay's close. The opener and the tooltip lamp, the keys an overlay
+// leaves live, keep their true bit. THE OVERLAYS ONLY: a key dead on a
+// locked tab, in the `h` view or behind a modal keeps its lit fill
+// (materials.h's THE KEY). Three readers: the painter (which stashes what it
+// painted), main.cpp's staleness comparator and the band's fingerprint
+// (GuiPaintHandler::upper_rows_fingerprint). (The lift's radio refusal, a
+// lit view pair member's press a consumed nothing, was one more until the
+// pop of 2026-10-23 night, kToolbarChords' NO RADIO COLUMN.)
 //
 // MOMENTARY BY DESIGN, and therefore false here: Copy, Paste,
 // Load-in-place —
@@ -16934,6 +17085,11 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
     // set's defaults (the S+W view pair) would name views no piece is shown
     // in. The one owner the roster's grey reads (no_audio_to_dispatch_on).
     if (no_audio_to_dispatch_on(a, total_frames)) return false;
+    // DEAD UNDER AN OVERLAY, UNLIT (architect 2026-11-10; the rule at this
+    // predicate's head and at overlay_deadens_button): the view pairs' lit
+    // members, the state lamps and the `h` view's opener under a picker over
+    // the view all read at rest while the overlay stands.
+    if (overlay_deadens_button(a, b)) return false;
     switch (b) {
         // THE VIEW PAIRS READ ONE AXIS EACH (architect 2026-10-14): Source and
         // Target the audio view, Warp and Phase Reset the markers view, so a
@@ -16982,7 +17138,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
         // shared key painter already handles: a disabled checked key keeps
-        // its lit fill, its glyph `text_on_lit` (materials.h).
+        // its lit fill, its glyph `text_on_lit` (materials.h) — outside the
+        // overlays, under which a dead key is unlit (the head term).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the
@@ -17052,8 +17209,9 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // form's (2026-10-29: Ctrl+B opens and closes it). So
         // the key stands lit (the checked key's fill, materials.h) while its
         // overlay stands — the
-        // history opener's face over its view — the one key the overlay
-        // leaves live (redesign_button_enabled's overlay arm). The per-tick
+        // history opener's face over its view — the key the overlay
+        // leaves live as its way out (redesign_button_enabled's overlay arm;
+        // the tooltip lamp the other live key, 2026-11-10). The per-tick
         // comparator carries the edge. (All three were momentary, no lamp,
         // until that day.) The five picker contents share the picker's bit,
         // so the tag says whose key is lit (is_folder_overlay_opener).
@@ -17504,19 +17662,25 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // pastes share one ladder, so the face ORs to that ladder and the line
 // never drops (redesign_button_tooltip's overload has no arm for it); COPY,
 // the duo's other key, admits nothing since that day.)
-// THE TWO LEVEL CASES ADMIT THE HOLD (architect 2026-11-05): their long press
-// SETS 0 dB — a twin act the glass reaches by the hold, named by their
-// tooltips' "Hold to set 0 dB" line — so they stand in this set and the hint
-// walk's equivalence (redesign_button_modifier_hint_agrees) holds of the
-// whole roster. The hold is MEASURED BY THEIR OWN ARM (ChromePress's Level
-// kind, finish_level_press_release: a motionless press held past
-// chrome_shift_hold_ms), never dispatched as a shifted chord — the cases
-// carry no chord, so the roster lift's chord build never asks this of them.
+// (OPEN TEXT EDITOR JOINED 2026-11-10 with SHIFT+RETURN, THE LABEL PASTE
+// (architect: "a long press on EDIT replaces the whole label on every
+// selected marker with the system clipboard's text, without opening the
+// editor"): its row is bare Return and its long press dispatches the row's
+// key under shift, no translation. AN ACT KEY, NO LAMP — its editor session
+// is a modal, not a lit state — so the twin is lawful under the rule above.
+// The face stays the plain open's (the twin rule, its arm at
+// redesign_button_enabled) and the line drops under a lit grid-iterations
+// lamp, where the lock refuses the paste (redesign_button_tooltip's
+// overload). It admitted nothing from 2026-10-24 until then.)
+// (THE TWO LEVEL CASES WERE MEMBERS from 2026-11-05 until 2026-11-10, their
+// long press setting 0 dB, measured by their own arm; the architect retired
+// it — "awkward on something that slides" — for the tap that toggles the
+// case off and back, which is no hold: a motionless press of any duration
+// is the tap (RedesignButton::IconAudioLevel's entry), so the cases admit
+// nothing and their tooltips carry one line.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::OpenProject ||
            b == RedesignButton::Save ||
-           b == RedesignButton::IconAudioLevel ||
-           b == RedesignButton::IconNoiseLevel ||
            b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
            b == RedesignButton::IconTrimPresets ||
@@ -17530,6 +17694,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconMarkerDisable ||
            b == RedesignButton::IconMarkerInherit ||
            b == RedesignButton::IconJumpToDefiningMarker ||
+           b == RedesignButton::IconOpenTextEditor ||
            b == RedesignButton::IconFlatten ||
            b == RedesignButton::IconPastePhaseResets ||
            b == RedesignButton::TransportSwitchTab;
@@ -17567,10 +17732,10 @@ static_assert(!redesign_button_shift_admits(RedesignButton::IconZoomOriginal),
 static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMarker),
     "Jump to Defining Marker (Ctrl+J) admits Shift, reaching Ctrl+Shift+J, "
     "Copy Resolved Value");
-static_assert(!redesign_button_shift_admits(RedesignButton::IconOpenTextEditor),
-    "Open Text Editor (Enter) admits no modifier since 2026-10-24: "
-    "Ctrl+Enter, Ctrl+Shift+Enter and Shift+Enter bind nothing, the "
-    "propagate family on its own keys");
+static_assert(redesign_button_shift_admits(RedesignButton::IconOpenTextEditor),
+    "Open Text Editor (Enter) admits Shift, reaching Shift+Enter, the label "
+    "paste (architect 2026-11-10); Ctrl+Enter and Ctrl+Shift+Enter bind "
+    "nothing, the propagate family on its own keys");
 static_assert(!redesign_button_shift_admits(RedesignButton::IconCopyPhaseResets) &&
                   redesign_button_shift_admits(RedesignButton::IconPastePhaseResets),
     "COPY (bare P) admits nothing; PASTE (Ctrl+P, Paste Phase Resets) admits "
@@ -17820,15 +17985,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconScore:
             return {"Score", nullptr};
         // THE TWO LEVEL CASES (architect 2026-11-05, IconAudioLevel's
-        // entry): line 1 names the level the slider sets, line 2 its one twin
-        // gesture, the long press that resets it to 0 dB ("Hold to …", the
-        // glass's own word for the hold; the hint walk's shift admission at
-        // redesign_button_shift_admits says why the line is lawful). No
-        // "Toggle": a slider toggles nothing.
+        // entry): the name of the level the slider sets, ALONE (architect
+        // 2026-11-10: the "Hold to set 0 dB" line went with the long press;
+        // the cases admit no hold, redesign_button_shift_admits, so the hint
+        // walk wants no second line, and the tap that toggles the case is
+        // its plain press, which a tooltip's name covers).
         case RedesignButton::IconAudioLevel:
-            return {"Audio Level", "Hold to set 0 dB"};
+            return {"Audio Level", nullptr};
         case RedesignButton::IconNoiseLevel:
-            return {"Noise Level", "Hold to set 0 dB"};
+            return {"Noise Level", nullptr};
         // SETTINGS (architect 2026-09-29), one line: the key opens the
         // settings page (2026-10-28). The name is the retired menu anchor's
         // own word (2026-10-21), the act being that menu's list again. The
@@ -18036,12 +18201,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Jump to Defining Marker",
                     "Hold to copy the resolved value"};
         // OPEN TEXT EDITOR (architect 2026-10-09, his name for the act), the
-        // verb group's sixth: the act's name as every row writes it. ONE
-        // LINE: it admits no modifier since 2026-10-24 (the propagate family
-        // is the COPY and PASTE keys'). The name holds on either axis — a
-        // bound cell's editor is a text editor as the payload's is.
+        // verb group's sixth: the act's name as every row writes it. ITS
+        // SECOND LINE (architect 2026-11-10) names the long press's twin,
+        // Shift+Return, the label paste — the clipboard's text onto every
+        // selected marker's label, the flag's line — the act and the gesture
+        // and not a key, this table's rule; the overload drops it under a
+        // lit grid-iterations lamp, where the lock refuses the paste. The
+        // name holds on either axis — a bound cell's editor is a text editor
+        // as the payload's is.
         case RedesignButton::IconOpenTextEditor:
-            return {"Open Text Editor", nullptr};
+            return {"Open Text Editor", "Hold to paste the label"};
         // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH
         // since 2026-10-09 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
@@ -18886,6 +19055,17 @@ inline RedesignTooltipText redesign_button_tooltip(
         // modified press does nothing the plain one does and the line drops.
         // The first line never forks.
         case RedesignButton::TransportSwitchTab:
+            if (a.iteration_mode_enabled)
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
+        // OPEN TEXT EDITOR'S PASTE LINE (architect 2026-11-10), Switch Tab's
+        // shape: its hold is the label paste, Shift+Return, which the
+        // grid-iterations lock refuses on its card (no admission of
+        // iteration_lock_key_blocked names it — the one Return it admits is
+        // the plain open on a bound axis), so under a lit lamp the modified
+        // press does nothing the plain one does and the line drops. The
+        // first line never forks.
+        case RedesignButton::IconOpenTextEditor:
             if (a.iteration_mode_enabled)
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;

@@ -27,7 +27,7 @@ struct GuiThemeTones {
     uint32_t text_on_lit;         // anything printed on a lit face (ControlForeground, = text, since the lamp rule 2026-11-10)
     uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
     uint32_t key_face;            // the key at rest, the time fields (SurfaceBackground)
-    uint32_t lit_fill;            // a checked key's whole face (THE LAMP RULE: the key face · mean(face) / mean(Desktop))
+    uint32_t lit_fill;            // a checked key's whole face, and the two level cases' fill (THE LAMP RULE: the key face · mean(face) / mean(Desktop))
     uint32_t lit_press_fill;      // a checked key's face while a press stands on it (Desktop, = key_press_face)
     uint32_t door_lit_fill;       // a checked OVERLAY OPENER's face, the seven doors (= lit_fill since the lamp rule 2026-11-10)
     uint32_t door_lit_press_fill; // a checked door's face while a press stands on it (Desktop, = lit_press_fill)
@@ -47,8 +47,6 @@ struct GuiThemeTones {
     uint32_t card_face;           // the cards' box and their ring; `card_ground` / `card_frame` (Alert)
     uint32_t card_ink;            // the cards' words and class glyph; `card_text` (Desktop)
     uint32_t clip_lamp;           // the logo lane's clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face
-    uint32_t level_audio_fill;    // the AUDIO level case's fill (RangeEditField), read by paint_level_case
-    uint32_t level_noise_fill;    // the NOISE level case's fill (ChosenPreListen), read by paint_level_case
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
@@ -121,8 +119,6 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0xE76942, // card_face
     0x2A2A2A, // card_ink
     0xFF0A0A, // clip_lamp
-    0x007383, // level_audio_fill
-    0x3C6AB6, // level_noise_fill
     0x393939, // waveform_canvas
     0x191919, // waveform_ink
     0x363636, // waveform_core

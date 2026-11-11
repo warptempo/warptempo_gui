@@ -35,10 +35,10 @@
 // the playhead line's static tone is derived, white 0.75 toward the head on
 // every theme, Default included (architect 2026-11-10, session 103, "no
 // special cases") — the static_asserts
-// at the foot are that proof in the build, every one of the thirty-nine
+// at the foot are that proof in the build, every one of the thirty-seven
 // words with its literal (the press arc's four, 2026-11-05, among them, the
-// lamp arc's three the same night — the clip lamp, the two level fills —
-// and the lamp rule's four of 2026-11-10: the lit pairs, the text on lit).
+// lamp arc's clip lamp the same night and the lamp rule's four of
+// 2026-11-10: the lit pairs, the text on lit).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -160,13 +160,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled `default` row
 // (kGuiDefaultThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the thirty-nine words with its literal, so
+// 2026-11-01..05 — every one of the thirty-seven words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_ask.h's head), which the
 // loader reproduces for every dropped file (the proof of 2026-11-06, on the
-// tablet). The lamp arc's three (2026-11-05 night) are Live's own words read
-// off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum),
-// the level fills 007383 (RangeEditField) and 3C6AB6 (ChosenPreListen).
+// tablet). The lamp arc's one (2026-11-05 night) is Live's own word read
+// off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum).
 // THE LAMP RULE'S FOUR (architect 2026-11-10, session 103, "universal"):
 // the lit faces, the lamps' and the doors' alike, 454545 (363636 × 54 / 42),
 // both lit presses 2A2A2A (Desktop, the press face), the text on lit B5B5B5
@@ -207,8 +206,6 @@ static_assert(kDefault.list_press_text == 0x070707);
 static_assert(kDefault.card_face       == 0xE76942);
 static_assert(kDefault.card_ink        == 0x2A2A2A);
 static_assert(kDefault.clip_lamp       == 0xFF0A0A);
-static_assert(kDefault.level_audio_fill == 0x007383);
-static_assert(kDefault.level_noise_fill == 0x3C6AB6);
 // THE PALETTE (the head's eleven).
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);

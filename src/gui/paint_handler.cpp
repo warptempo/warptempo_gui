@@ -336,7 +336,9 @@ namespace {
 // its own state at the lift or the slide-off (the press arc, architect
 // 2026-11-05: "press in skeumorphic is darker"; materials.h's head); a
 // DISABLED button keeps the face its state gives, a dead checked button
-// still lit (the roster's rule at paint_icon_row), its glyph and legend
+// still lit (the roster's rule at paint_icon_row; under an overlay the
+// roster publishes no lit bit for a dead key, so `lamp` arrives false
+// there, 2026-11-10), its glyph and legend
 // dimmed by the caller. NO HOT FACE. `face` is the key's FACE, the key itself (materials.h's
 // THE FACE AND ITS GAP, 2026-11-04). ON IT its caller paints the key's
 // Breeze glyph (paint_key_glyph) and UNDER IT its legend (paint_key_legend,
@@ -363,9 +365,12 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
 // cases"; a press face would read as a button's blink under a finger that
 // is setting a number) — UNDER A FILL FROM THE FACE'S LEFT EDGE,
 // nearbyint(t · face width) device px wide, the face's full height, NO
-// BORDER (his "agree on no border"), no inset: `level_audio_fill` (Live's
-// RangeEditField, Default 007383) for AUDIO, `level_noise_fill`
-// (ChosenPreListen, Default 3C6AB6) for NOISE, where t is the exact
+// BORDER (his "agree on no border"), no inset: THE LIT KEY'S FACE,
+// `lit_fill`, FOR BOTH CASES (architect 2026-11-10, "monochrome on the
+// front page": the lamp rule's tone, the key face a little lighter,
+// theme_ask.h's DERIVED block; the cases' own two fills, Live's
+// RangeEditField and ChosenPreListen of 2026-11-05 night, retired with
+// their roles), where t is the exact
 // level's travel fraction (level_travel_fraction, the square-law taper,
 // app_state.h: 0 dB the face full, -9 dB 0.596 of it, -60 dB two columns,
 // -inf none) — whole device-px cells, no antialiasing (paint_cell_rect).
@@ -377,11 +382,14 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
 // (Liberation Sans Bold 11 W, 22 device px on the tablet: the number is
 // read, so Body and not the legends' Regular 7 W), the text tone `text`
 // whatever is under it — the fill and the face alike, as m1 shows —
-// centered on the face by its cap band (redesign_baseline, the chrome
-// labels' rule) and horizontally by its ink (ink_left_px / ink_right_px,
-// the floor of the spare to the left); the run shaped through the memo
-// (memoized_run: a few dozen spellings). DISABLED (`enabled` false — the
-// NOISE case with no folder or a failed load, both under the roster's
+// AND AT -inf, THE CASE OFF, THE DISABLED TEXT TONE `text_dim` (architect
+// 2026-11-10: an enabled case standing at -inf prints its "-inf" dim, over
+// no fill — off reads off, the tap that toggles it there, IconAudioLevel's
+// entry); centered on the face by its cap band (redesign_baseline, the
+// chrome labels' rule) and horizontally by its ink (ink_left_px /
+// ink_right_px, the floor of the spare to the left); the run shaped through
+// the memo (memoized_run: a few dozen spellings). DISABLED (`enabled` false
+// — the NOISE case with no folder or a failed load, both under the roster's
 // blanket greys): the fill in `key_dim_ink`, THE NUMBER IN `text_dim`
 // (Live's TextDisabled, Default 757575, the inert rows' tone; architect
 // 2026-11-05 night, his pick m3 of tmp/s49 over the number in the ground,
@@ -391,15 +399,12 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
 // level damages its face rect explicitly (GuiInputHandler::apply_level_case)
 // — the per-tick comparator watches no level — and the enabled edge is the
 // comparator's as every key's.
-void paint_level_case(cairo_t* cr, const GuiRect& face, RedesignButton id,
-                      bool enabled, double level_db) {
+void paint_level_case(cairo_t* cr, const GuiRect& face, bool enabled,
+                      double level_db) {
     if (face.w <= 0 || face.h <= 0) return;
     paint_key(cr, face, KeyLook::Rest);
     const GuiPalette& p = palette();
-    const GuiColor fill_tone =
-        !enabled ? p.key_dim_ink
-        : id == RedesignButton::IconAudioLevel ? p.level_audio_fill
-                                               : p.level_noise_fill;
+    const GuiColor fill_tone = enabled ? p.lit_fill : p.key_dim_ink;
     const double t = level_travel_fraction(level_db);
     const int fill_w = static_cast<int>(std::nearbyint(t * face.w));
     if (fill_w > 0) {
@@ -424,7 +429,8 @@ void paint_level_case(cairo_t* cr, const GuiRect& face, RedesignButton id,
     cairo_save(cr);
     cairo_rectangle(cr, face.x, face.y, face.w, face.h);
     cairo_clip(cr);
-    set_palette_source(cr, enabled ? p.text : p.text_dim);
+    set_palette_source(cr, enabled && level_db != kLevelDbOff ? p.text
+                                                              : p.text_dim);
     text_shape::show_shaped_run(cr, *run, x, baseline);
     cairo_restore(cr);
 }
@@ -2119,7 +2125,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // (paint_roster_case). A dead CHECKED button (the grid-iterations
         // lamp on a locked tab, say) keeps its lit fill: the mode cannot
         // change that state, so hiding it would be a lie, and the dimmed
-        // legend says "true, but not yours right now". THE PRESS FACE
+        // legend says "true, but not yours right now". UNDER AN OVERLAY IT
+        // DOES NOT (architect 2026-11-10: "lamps that do not respond show
+        // inactive under the overlays"): a key the standing overlay leaves
+        // dead wears the plain disabled face, the rest face under the dim
+        // glyph and legend — decided at the predicate, not here
+        // (overlay_deadens_button through redesign_button_selected: the
+        // published `selected` bit this painter reads is already false, so
+        // the comparator and the press read the same face). THE PRESS FACE
         // (2026-11-05, the press arc) is gated on the painted enabled bit
         // rather than trusted: the claim never records a press on a disabled
         // button, but a button can go dead UNDER a held press with no
@@ -2134,7 +2147,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // glyph, no lit or press look (paint_level_case) — and the legend
         // under the face as every key's.
         if (redesign_button_is_level_case(def.id)) {
-            paint_level_case(cr, key, def.id, face.enabled,
+            paint_level_case(cr, key, face.enabled,
                              def.id == RedesignButton::IconAudioLevel
                                  ? app.device_config->audio_level
                                  : app.device_config->noise_level);

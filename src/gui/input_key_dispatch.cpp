@@ -108,7 +108,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // keyboard chord was the only save route the lock ever stopped.
 // WHAT STAYS BLOCKED, the authoring vocabulary, dropped here at the gate rather
 // than admitted for a deeper owner refusal: the marker drop / status-toggle /
-// position-nudge / Delete chords, the flag editor's and the BPM form's openers, `i`,
+// position-nudge / Delete chords, the flag editor's and the BPM form's openers,
+// the label paste (Shift+Return, the Open Text Editor key's hold, 2026-11-10), `i`,
 // undo/redo (Ctrl+Z / Ctrl+Shift+Z), the three propagate commands (the COPY,
 // bare P, explicitly — a copy is non-mutating, but it arms a paste that
 // is not, and the family travels together; the two PASTES, Ctrl+P and
@@ -7538,11 +7539,13 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
 
-    // THE OPENER ARMS ARE THE WHOLE VOCABULARY (architect 2026-10-30: the
+    // THE OPENER ARMS AND THE TOOLTIP LAMP'S ARE THE WHOLE VOCABULARY
+    // (architect 2026-10-30: the
     // roster and the on-screen keyboard are the two producers of every key;
     // no keyboard stands under a picker, every content's editor opening only
-    // after its close, and the roster's one lift the picker's veil admits is
-    // the content's own opener, is_folder_overlay_opener at
+    // after its close, and the roster's two lifts the picker's veil admits
+    // are the content's own opener's and the tooltip lamp's,
+    // overlay_admits_button at
     // finish_chrome_press_release). Every other act the picker has is its
     // row's tap or a controls-row button, reached through the pointer
     // (claim_folder_overlay_press, dispatch_modal_dialog_button), never here.
@@ -7559,6 +7562,18 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets;
     const bool bpm_form =
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::BpmForm;
+
+    // BARE BACKSLASH TOGGLES THE TOOLTIP LAMP UNDER EVERY CONTENT (architect
+    // 2026-11-10: "tips should remain open in all situations"): the TIPS
+    // key's lift under the picker — the project picker, the settings page,
+    // the value list, the trim presets list and the BPM form alike — runs
+    // the lamp's one setter (set_show_tooltips), the main window's own arm;
+    // the picker stays standing, its rows and highlight untouched, the lamp's
+    // face the per-tick comparator's.
+    if (is_tooltip_lamp_key(key, mods)) {
+        set_show_tooltips(!app.show_tooltips);
+        return;
+    }
 
     // CTRL+O CLOSES THE PROJECT PICKER (architect 2026-10-25: the key that
     // opens an overlay is the way out of it, as bare `l` is the player's):
@@ -8326,16 +8341,25 @@ void GuiInputHandler::open_render_player() {
     (void)render_player.open();
 }
 
-// THE PLAYER'S ONE CHORD IS ITS OPENER'S (architect 2026-10-30: the roster
+// THE PLAYER'S TWO CHORDS ARE ITS OPENER'S AND THE TOOLTIP LAMP'S (architect
+// 2026-10-30: the roster
 // and the on-screen keyboard are the two producers of every key; no keyboard
 // stands under the player, its opener refusing under every editor, and the
-// one roster lift its veil admits is Play Renders', bare `l`,
-// is_folder_overlay_opener at finish_chrome_press_release). Bare `l` closes
-// it (the opener key the way out, architect 2026-10-25). Every other act the
+// two roster lifts its veil admits are Play Renders', bare `l`, and the
+// tooltip lamp's, bare backslash,
+// overlay_admits_button at finish_chrome_press_release). Bare `l` closes
+// it (the opener key the way out, architect 2026-10-25); BARE BACKSLASH
+// TOGGLES THE TOOLTIP LAMP (architect 2026-11-10: "tips should remain open
+// in all situations" — the lamp's one setter, the player standing, so its
+// row's hints light and go out where they stand). Every other act the
 // player has is a row's tap or a controls-row button, reached through the
 // pointer (claim_folder_overlay_press, dispatch_modal_dialog_button), or the
 // car's (on_media_command), never here.
 void GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
+    if (is_tooltip_lamp_key(key, mods)) {
+        set_show_tooltips(!app.show_tooltips);
+        return;
+    }
     if (key == GuiKeys::L && !mods.ctrl && !mods.shift && !mods.alt)
         render_player.close();
 }
@@ -8343,12 +8367,20 @@ void GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
 // -- THE SCORE VIEWER'S KEYBOARD HALF (2026-10-26) ----------------------------
 //
 // The contract is at the declaration (input_handler.h); the acts are
-// GuiScoreViewer's (score_viewer.h). THE VIEWER'S ONE CHORD IS ITS OPENER'S,
+// GuiScoreViewer's (score_viewer.h). THE VIEWER'S TWO CHORDS ARE ITS
+// OPENER'S AND THE TOOLTIP LAMP'S,
 // the player's reasons (route_render_player_key, above; architect
-// 2026-10-30): bare `m`, the SCORE key's lift, the one roster arm the
-// viewer's veil admits, closes it. Every other act is a controls-row key's
+// 2026-10-30): bare `m`, the SCORE key's lift, closes it, and BARE
+// BACKSLASH, the TIPS key's lift, TOGGLES THE TOOLTIP LAMP (architect
+// 2026-11-10: "tips should remain open in all situations"; the lamp's one
+// setter, the viewer standing) — the two roster arms the viewer's veil
+// admits. Every other act is a controls-row key's
 // (dispatch_modal_dialog_button) or the page scrub's.
 void GuiInputHandler::route_score_viewer_key(GuiKey key, GuiInputState mods) {
+    if (is_tooltip_lamp_key(key, mods)) {
+        set_show_tooltips(!app.show_tooltips);
+        return;
+    }
     if (score_viewer == nullptr) return;
     if (key == GuiKeys::M && !mods.ctrl && !mods.shift && !mods.alt)
         score_viewer->close();
@@ -9201,9 +9233,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // The one bare form reaches here (is_tooltip_lamp_key, the caller
         // having gated on no modifiers). Silent: the lamp's face shows the new
         // state. The setter is GuiInputHandler::set_show_tooltips, shared with
-        // the icon-row button's synthesized chord and with the folder
-        // overlay's two routers, which answer the same key in their own
-        // arms while their contents stand.
+        // the icon-row button's synthesized chord and with the three
+        // overlays' routers (the render player's, the picker's, the score
+        // viewer's), which answer the same key in their own
+        // arms while their contents stand (2026-11-10).
         // History-less, one-shot, legal on a locked tab, under the
         // grid-iterations lock and in the `h` view (all three allowlists
         // admit it — the `h` view's claim above this dispatch does not own

@@ -342,18 +342,18 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S TWENTY-THREE (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-ONE (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the four press tones the
-    // press arc's, the same day; the doors' two, the clip lamp and the two
-    // level fills the lamp arc's, the same night; the lit pairs and the text
-    // on lit THE LAMP RULE's since 2026-11-10).
+    // press arc's, the same day; the doors' two and the clip lamp the lamp
+    // arc's, the same night; the lit pairs and the text on lit THE LAMP
+    // RULE's since 2026-11-10).
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor text_on_lit;     // anything printed on a lit face
     GuiColor key_dim_ink;     // a disabled key's glyph and legend, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
     GuiColor key_face;        // the key at rest, the time fields, the two lamps at rest
-    GuiColor lit_fill;        // a checked key's whole face, the key face lightened (the lamp rule)
+    GuiColor lit_fill;        // a checked key's whole face, the key face lightened (the lamp rule); the two level cases' fill (paint_level_case, 2026-11-10)
     GuiColor lit_press_fill;  // a checked key's face under a standing press (= key_press_face)
     GuiColor door_lit_fill;   // a checked OVERLAY OPENER's face, the seven doors (= lit_fill; materials.h's THE KEY)
     GuiColor door_lit_press_fill; // a checked door's face under a standing press (= lit_press_fill)
@@ -369,8 +369,6 @@ struct GuiPalette {
     GuiColor list_press_fill; // a list row's fill under a standing press
     GuiColor list_press_text; // that row's text and glyph
     GuiColor clip_lamp;       // the logo lane's clip lamp, lit and not struck (THE TWO LAMPS, the logo lane block; the limiter lamp lit wears card_ground)
-    GuiColor level_audio_fill; // the AUDIO level case's fill, Live's RangeEditField (paint_level_case, paint_handler.cpp; 2026-11-05)
-    GuiColor level_noise_fill; // the NOISE level case's fill, Live's ChosenPreListen (paint_level_case; 2026-11-05)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -2763,8 +2761,9 @@ inline int tooltip_chain_reach_px() {
 // always-show model of 2026-11-07, which restarts nothing on motion) — ITS
 // ONE READER IS THE LEVEL CASES' PRESS (update_level_press_motion,
 // input_pointer.cpp): until a motion carries a level case's press MORE than
-// this from where it landed on EITHER axis, the press is still a tap or a
-// long press and moves no level, so a hovering or pressing pen's jitter
+// this from where it landed on EITHER axis, the press is still a tap (the
+// case's toggle at the lift, whatever its duration) and moves no level by
+// motion, so a hovering or pressing pen's jitter
 // cannot nudge it. The number is ANDROID'S OWN for jitter: AOSP View's hover
 // tooltip ignores a HOVER_MOVE within ViewConfiguration.getScaledHoverSlop()
 // of its anchor on both axes (View.TooltipInfo.updateAnchorPos, "filters out

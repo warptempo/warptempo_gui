@@ -405,8 +405,9 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // — a MISSED CARD, never a wrong act.
 //
 // THE OVERLAY ROUTERS ARE NOT, and that is the line: while an overlay stands
-// its router IS the whole vocabulary (its opener's chord alone since
-// 2026-10-30) and the dispatch below it never runs. THE EDITORS ARE THE SAME
+// its router IS the whole vocabulary (its opener's chords and, since
+// 2026-11-10, the tooltip lamp's bare backslash) and the dispatch below it
+// never runs. THE EDITORS ARE THE SAME
 // KIND OF WORLD and, being modals, ask nothing since 2026-10-25: an editor's
 // own keys (Backspace, its ctrl-exact clipboard chords, its printable
 // insertion) are consumed by the editor itself, and every chord it does not
@@ -667,10 +668,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Escape: return bare;
         // BARE RETURN opens the addressed cell's editor on the focused marker
         // (the Open Text Editor key's), and is the editors' commit under the
-        // on-screen keyboard's Enter. EVERY MODIFIED RETURN BINDS NOTHING
-        // since 2026-10-24: its ctrl forms carried the phase-reset propagate
-        // pair from 2026-10-21 until the family moved to the letter P.
-        case GuiKeys::Return: return bare;
+        // on-screen keyboard's Enter. SHIFT+RETURN IS THE LABEL PASTE
+        // (architect 2026-11-10, that key's hold: the clipboard's text onto
+        // every selected marker's line, is_label_paste_key). EVERY OTHER
+        // MODIFIED RETURN BINDS NOTHING: its ctrl forms carried the
+        // phase-reset propagate pair from 2026-10-21 until the family moved
+        // to the letter P, 2026-10-24.
+        case GuiKeys::Return: return bare || sh;
         // DELETE the selected markers, and SHIFT+DELETE (architect
         // 2026-10-29) them with every reference to every selected label
         // definition — the Delete button's long press. The
@@ -989,22 +993,23 @@ static_assert(letter_p_binds_the_propagate(),
               "the letter P binds bare (copy phase resets), Ctrl (paste them) "
               "and Ctrl+Shift (paste their state); Shift+P and the alt "
               "spellings bind nothing");
-// RETURN BINDS BARE ALONE (2026-10-24): the editor's open; its ctrl forms,
-// the propagate pair from 2026-10-21, left for the letter P.
+// RETURN BINDS BARE AND SHIFT (2026-11-10): the editor's open and the label
+// paste, the Open Text Editor key's press and hold; its ctrl forms, the
+// propagate pair from 2026-10-21, left for the letter P 2026-10-24.
 static_assert(chord_is_bound(GuiKeys::Return, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Return,
+                                 GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Return,
-                                  GuiInputState{false, true, false}, false) &&
-                  !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{true, false, true}, false) &&
                   !chord_is_bound(GuiKeys::Return,
                                   GuiInputState{false, false, true}, false),
-              "Enter binds bare alone (open the editor); Ctrl+Enter, "
-              "Ctrl+Shift+Enter, Shift+Enter and the alt spellings bind "
-              "nothing");
+              "Enter binds bare (open the editor) and Shift (paste the "
+              "label); Ctrl+Enter, Ctrl+Shift+Enter and the alt spellings "
+              "bind nothing");
 // THE PUBLISH CHORD (architect 2026-10-10) binds in both modes; its Alt
 // spelling does not.
 static_assert(chord_is_bound(GuiKeys::S,
@@ -1332,17 +1337,32 @@ inline bool is_phase_reset_state_paste_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::P && mods.ctrl && mods.shift && !mods.alt;
 }
 
+// True for SHIFT+RETURN, THE LABEL PASTE (architect 2026-11-10: the Open Text
+// Editor key's hold — the system clipboard's text onto every selected
+// marker's line, no editor opened): shift-exact, no ctrl, no alt. One
+// producer, that key's long press (redesign_button_shift_admits, app_state.h;
+// the on-screen keyboard's Enter carries no shift). One-shot. ONE READER:
+// the dispatch arm below bare Return's (on_key, input_handler.cpp). No
+// allowlist names it — the read-only lock and the `h` view refuse it as they
+// refuse the editor's open, and the iteration lock, whose one Return
+// admission is the plain open on a bound axis, refuses it on its card.
+inline bool is_label_paste_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Return && mods.shift && !mods.ctrl && !mods.alt;
+}
+
 // True for the chord that toggles THE TOOLTIP LAMP (architect 2026-09-29,
 // Enable Tooltips): the BARE BACKSLASH exactly — no ctrl, no shift, no alt.
 // It arrives as its level-0 keysym (GuiKeys::Backslash), so a shifted press is
 // the backslash plus the shift bit and this predicate refuses it. A chrome
-// posture that authors nothing. One-shot (a held toggle would flicker). THREE
+// posture that authors nothing. One-shot (a held toggle would flicker). ITS
 // READERS: the read-only allowlist (read_only_key_blocked, which ADMITS it,
 // and the grid-iterations lock's gate falls through to that list), the `h`
 // view's allowlist (history_mode_key_blocked, which admits it — the lamp is
-// chrome, not that view's business) and the dispatch arm (Backslash's case in
+// chrome, not that view's business), the dispatch arm (Backslash's case in
 // handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
-// reaches).
+// reaches) and, since 2026-11-10, the three overlays' routers
+// (route_render_player_key, route_picker_key, route_score_viewer_key: the
+// lamp stays live under every overlay).
 inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
 }

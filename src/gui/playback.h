@@ -249,7 +249,7 @@ public:
     // head). Main thread only, any time, playing or not: the render body
     // reads the gain once per fill, so the change sounds at the next fill.
     // Seated by run_project from the config before init, written live by the
-    // band's AUDIO case at every drag motion and its long press
+    // band's AUDIO case at every drag motion and its tap
     // (GuiInputHandler::apply_level_case, input_pointer.cpp), its one road
     // (no Settings row since 2026-11-05 night, kSettingsEditorKeys).
     void set_audio_level_db(double db);

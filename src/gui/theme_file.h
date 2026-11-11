@@ -39,17 +39,19 @@
 // owns what each role paints) and the theme tone that fills it. The first
 // eight are Windows' own element names (ButtonFace, ButtonText, Hilight /
 // HilightText, WindowText, InfoWindow / InfoText and the tooltip's border),
-// the chrome's painters written against them; the TWENTY-THREE after them
+// the chrome's painters written against them; the TWENTY-ONE after them
 // are the flat look's tones (materials.h's head, 2026-11-01..05: the
 // fourteen of the look, the press arc's four, 2026-11-05 — the three of its
 // first landing and the lit press fill of its second — and the lamp arc's
-// five the same night: the doors' lit pair, the clip lamp and the two level
-// fills), members since the theme arc so every painter reads palette() —
+// three the same night: the doors' lit pair and the clip lamp), members
+// since the theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
 // clock pair retired 2026-11-02 with the overlays' flat pass; the two level
-// fills are read by `paint_level_case`, paint_handler.cpp). TWO ROLES MAY
-// SHARE A TONE — a
+// fills, `level_audio_fill` and `level_noise_fill`, retired 2026-11-10 on
+// the architect's "monochrome on the front page" — the level cases' fill is
+// the lit key's `lit_fill`, paint_level_case, paint_handler.cpp). TWO ROLES
+// MAY SHARE A TONE — a
 // role is what it paints, not its value: `label`, `field_text` and `text`
 // all read the theme's text; `card_ground` and `card_frame` its card face.
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15), as the
@@ -57,11 +59,11 @@
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's thirty-one (the eight of
+// 2026-10-04), in GuiPalette's order: the chrome's twenty-nine (the eight of
 // 2026-10-04 — the caption's six, 2026-10-05..10-21, left with the captions;
 // the seven unread ones, 2026-11-02, with the overlays' rings — and the
-// twenty-three flat-look tones, 2026-11-05, the press arc's four and the
-// lamp arc's five among them). The program's roles are the
+// twenty-one flat-look tones, 2026-11-05, the press arc's four and the
+// lamp arc's three among them). The program's roles are the
 // palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
 // palette_file.cpp's coverage proof walks it, so a role cannot be valued and
@@ -83,10 +85,9 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"card_ground",     &GuiPalette::card_ground,     &GuiThemeTones::card_face},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
     {"card_frame",      &GuiPalette::card_frame,      &GuiThemeTones::card_face},
-    // THE FLAT LOOK'S TWENTY-THREE (materials.h's head: the text tones, the
+    // THE FLAT LOOK'S TWENTY-ONE (materials.h's head: the text tones, the
     // key, its press face, its lit press fill and the doors' lit pair, the
-    // well's tones, the panes, the lists' press pair, the clip lamp, the two
-    // level fills).
+    // well's tones, the panes, the lists' press pair, the clip lamp).
     {"text",            &GuiPalette::text,            &GuiThemeTones::text},
     {"text_dim",        &GuiPalette::text_dim,        &GuiThemeTones::text_dim},
     {"text_on_lit",     &GuiPalette::text_on_lit,     &GuiThemeTones::text_on_lit},
@@ -108,8 +109,6 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"list_press_fill", &GuiPalette::list_press_fill, &GuiThemeTones::list_press_fill},
     {"list_press_text", &GuiPalette::list_press_text, &GuiThemeTones::list_press_text},
     {"clip_lamp",       &GuiPalette::clip_lamp,       &GuiThemeTones::clip_lamp},
-    {"level_audio_fill", &GuiPalette::level_audio_fill, &GuiThemeTones::level_audio_fill},
-    {"level_noise_fill", &GuiPalette::level_noise_fill, &GuiThemeTones::level_noise_fill},
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);
 

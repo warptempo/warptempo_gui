@@ -538,8 +538,8 @@ struct GuiSettingsEditor {
     // way. Returns whether the file was written. TWO READERS: every device
     // key's commit (apply_device_setting's persist) and, since 2026-11-05,
     // the two level cases' end (GuiInputHandler::settle_level_case: one
-    // write at a drag's lift or its button-lost end, and at the long press's
-    // 0 dB — the two levels' one write, their Settings rows gone since
+    // write at a drag's lift or its button-lost end, and at the tap's
+    // toggle — the two levels' one write, their Settings rows gone since
     // 2026-11-05 night).
     bool persist_device_config();
 

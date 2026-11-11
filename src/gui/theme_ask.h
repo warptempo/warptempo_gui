@@ -149,18 +149,6 @@
 //   even, clamped):
 //     ink                    191919 = WaveformColor over DetailViewBackground
 //     canvas                 393939 = DetailGridTiles over DetailViewBackground
-//     level audio fill       007383 = RangeEditField over SurfaceBackground
-//                                     (Live's volume mini-slider, "green") —
-//                                     the AUDIO level case's fill on the key
-//                                     face (paint_level_case); 8-digit on SB
-//                                     Viridian (F26000AF over 333333 = B65210)
-//                                     and SB Red Greys (7B0000B3 over 3A3A3A =
-//                                     681111), architect 2026-11-06, session 81
-//     level noise fill       3C6AB6 = ChosenPreListen over SurfaceBackground
-//                                     (Live's cue mini-slider, "blue") — the
-//                                     NOISE level case's fill; 6-digit
-//                                     everywhere, composited with AUDIO's for
-//                                     symmetry (the two cases one road)
 //     center                 = ink (a role is what it paints: the zero line IS
 //                                   the ink, palette_file.h)
 //     score pane             = ink (modal_box.h's score pane: "from ableton
@@ -210,7 +198,15 @@
 //                                     Where a theme's Desktop is lighter than
 //                                     its face the lit face comes out darker,
 //                                     and where the ratio is steep a channel
-//                                     clips at FF — Live's numbers, no rule
+//                                     clips at FF — Live's numbers, no rule.
+//                                     THE TWO LEVEL CASES' FILL TOO, AUDIO's
+//                                     and NOISE's alike (architect 2026-11-10:
+//                                     "monochrome on the front page"; the fill
+//                                     over the key face, paint_level_case) —
+//                                     their own two roles, RangeEditField and
+//                                     ChosenPreListen composited over the face
+//                                     (2026-11-05 night), retired with it and
+//                                     gone from the roles read
 //     lit press fill, door lit press fill
 //                            2A2A2A = Desktop, the press face itself (the same
 //                                     ruling: "Pressing a lit key, I think,

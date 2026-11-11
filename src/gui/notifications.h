@@ -467,6 +467,15 @@
 // (input_handler.cpp).
 inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 
+// THE PASTE'S OVER-CAPACITY SENTENCE (architect 2026-08-30, the head's
+// refused-field list): the one incoming filter refused a paste that would
+// grow the field past its byte cap (text_editor::replace_selection's false).
+// TWO READERS since 2026-11-10, one sentence: the editors' paste
+// (GuiInputHandler::apply_editor_clipboard) and the label paste, the EDIT
+// key's hold (GuiFlagEditor::paste_payload_onto_selection).
+inline constexpr const char* kPasteTooLongCard =
+    "The pasted text is too long for this field";
+
 // THE SAME LOCK'S SENTENCE WITH THE ACT IN IT, composed once — "<Act> is
 // not available on a read-only tab" (architect 2026-10-30: a card never
 // names a key, so the refused press is named by its ACT, the roster's own

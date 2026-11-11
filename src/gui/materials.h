@@ -65,7 +65,8 @@
 // Drag, Add to Selection), the view pairs' lit members, the on-screen
 // keyboard's latched Shift and symbols key — wears `lit_fill` /
 // `lit_press_fill`. (THE TWO LEVEL CASES, AUDIO and NOISE, are never checked
-// and never pressed-faced: sliders, their fill their value —
+// and never pressed-faced: sliders, their fill their value, the fill itself
+// `lit_fill` on the rest face since 2026-11-10 —
 // paint_level_case, paint_handler.cpp; architect 2026-11-05.) What is
 // printed on a lit face, a lamp's or a door's, is `text_on_lit` (key_ink:
 // lit is lit), the text tone since the lamp rule. THE PAINTER LEARNS THE
@@ -101,9 +102,19 @@
 // itself, a stateful key's glyph showing the act its next press runs, the
 // typed character, the selection pair landing on a row. A DISABLED key
 // keeps the face its state gives, its glyph and its legend in
-// `key_dim_ink`, so a checked-but-inert key under an overlay keeps its lit
-// fill (architect 2026-11-01, M6) — its glyph on the lit face
-// `text_on_lit`. Anything printed ON a lit face is `text_on_lit`, Default's
+// `key_dim_ink`, so a checked-but-inert key — the grid-iterations lamp on a
+// locked tab, a lamp left on in the `h` view — keeps its lit fill, its
+// glyph on the lit face `text_on_lit`. UNDER AN OVERLAY A DEAD KEY IS
+// UNLIT (architect 2026-11-10, reversing 2026-11-01's M6 for the overlays
+// alone: "lamps that do not respond show inactive under the overlays"):
+// while the render player, a picker content or the score viewer stands,
+// every roster key it leaves dead wears THE PLAIN DISABLED FACE — the rest
+// face, the glyph and the legend `key_dim_ink`, no lit fill — the roster
+// publishing no lit bit for it (overlay_deadens_button, app_state.h, the
+// one predicate; redesign_button_selected), the state returning to the face
+// at the overlay's close; the overlay's opener and the tooltip lamp, live
+// there, keep their true faces. A MODAL changes no face behind it.
+// Anything printed ON a lit face is `text_on_lit`, Default's
 // B5B5B5 — THE TEXT TONE (ControlForeground) since the lamp rule
 // (2026-11-10: a dark ink would vanish on the lighter face; the keys'
 // Breeze glyphs, the on-screen keyboard's caps); on a resting or pressed

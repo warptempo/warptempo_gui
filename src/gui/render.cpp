@@ -2368,7 +2368,7 @@ WaveformPlateInks waveform_plate_inks() {
 void install_palette(const GuiTheme& theme) {
     // The contract and the apply shape the live caller owes are at the
     // declaration (render.h). THE PROGRAM'S ELEVEN off the palette's role
-    // table (palette_file.h), THE CHROME'S THIRTY-ONE off the chrome's
+    // table (palette_file.h), THE CHROME'S TWENTY-NINE off the chrome's
     // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
     // theme's ground (the flat look, materials.h's head) — the tables
     // covering the struct exactly (palette_file.cpp), so a role cannot be

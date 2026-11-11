@@ -75,6 +75,29 @@ struct GuiFlagEditor {
     void enter_top_flag_edit(int idx);
     void commit_top_flag_edit();
 
+    // THE LABEL PASTE — THE EDIT KEY'S HOLD, Shift+Return (architect
+    // 2026-11-10: "a long press on EDIT replaces the whole label on every
+    // selected marker with the system clipboard's text, without opening the
+    // editor, through the editor's own validation"). THE LABEL IS THE FLAG'S
+    // WHOLE LINE, the payload the editor above opens on — tempo, scale,
+    // labels — and never the position or the disabled bit, which stay each
+    // marker's own. For every member of the live selection, in the store's
+    // order, `clipboard_text` replaces that line as select-all, paste and OK
+    // in the marker's own editor would: through the one incoming filter and
+    // the kind's byte cap (text_editor::replace_selection on a scratch
+    // session) and through the commit's one judgment and write (the body
+    // commit_top_flag_edit runs), each marker judged against the store as
+    // the paste's earlier markers left it. ALL OR NOTHING — the first
+    // refusal cards (kPasteTooLongCard, or the commit's "Edit rejected: …")
+    // and nothing is written; an empty `clipboard_text` is a silent nothing;
+    // a paste that moves no serialized field writes nothing and pushes
+    // nothing. Otherwise ONE UNDO ENTRY, the changed commit's stop and tail;
+    // the selection, the focus and the playhead stand. No editor opens.
+    // THE CALLER OWNS THE GATES (the Shift+Return arm, input_handler.cpp:
+    // both locks at the lock's gate, label_paste_actionable past it) and the
+    // clipboard read.
+    void paste_payload_onto_selection(const std::string& clipboard_text);
+
     // THE ITERATION BOUND EDITOR'S ONE ENTRY (the seventh text_editor Kind,
     // architect 2026-09-05: "each should be like a mini flag with its own
     // double-click"). `column` is 'P' for the phase-reset store and anything
@@ -157,6 +180,13 @@ struct GuiFlagEditor {
     void wipe_bpm_state();
 
   private:
+    // THE PAYLOAD WRITE'S TWO SHARED TAILS (2026-11-10, the editor's commit
+    // and the label paste one road each): the refusal's one sentence on
+    // stderr and the card, and the changed write's tail — the dirty mark,
+    // the lanes' repaint, the target-view re-warp and the re-land on
+    // `reland_idx`, the render trigger.
+    void card_payload_refusal(const std::string& err);
+    void payload_commit_tail(int reland_idx);
     // The phase-reset arm of commit_iter_bound_edit above, split out so the
     // two columns' walls and grammars each read straight through. Called with
     // the session's target, side and pending; every belt, refusal and tail is
