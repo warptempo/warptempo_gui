@@ -383,11 +383,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // three allowlists admit it, so the derived partition leaves it lit).
     // No modifier, no repeat.
     {RedesignButton::IconTooltips, GuiKeys::Backslash, false, false, false}, // bare backslash
-    // (THE TWO LEVEL CASES, IconAudioLevel and IconNoiseLevel, behind the
-    // tooltip lamp, the third run's last two since 2026-11-05, HAVE NO ROW:
-    // sliders, pressed by their own arm, arm_level_case_press, not by a
-    // chord — the one pair of roster members off this table, which the
-    // static_assert below counts out. THE NOISE lamp's row stood here
+    // (THE LEVEL CASE, IconNoiseLevel, behind the tooltip lamp, the third
+    // run's last since 2026-11-05, HAS NO ROW: a slider, pressed by its own
+    // arm, arm_level_case_press, not by a chord — the one roster member off
+    // this table, which the static_assert below counts out; the AUDIO case
+    // beside it, no row either, retired 2026-11-11. THE NOISE lamp's row stood here
     // 2026-10-28 to 2026-11-05; its letter is the TRIM arm lamp's since
     // 2026-11-07, above.)
     // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like
@@ -805,12 +805,13 @@ constexpr ToolbarChord kToolbarChords[] = {
 // bookkeeping — history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
 // live face in the `h` view while its press claimed nothing. This makes that
-// drift a build error instead. THE TWO LEVEL CASES ARE THE ADDEND (architect
-// 2026-11-05): sliders with no chord, pressed by their own arm
+// drift a build error instead. THE LEVEL CASE IS THE ADDEND (architect
+// 2026-11-05): a slider with no chord, pressed by its own arm
 // (arm_level_case_press) and answered LIVE in the `h` view by an explicit
 // arm of that walk (history_mode_refuses_button_chord), so the table covers
-// the roster less exactly those two (redesign_button_is_level_case, the
-// count's one owner). (An addend walked the menu anchors' count, + 2 to
+// the roster less exactly that one (redesign_button_is_level_case, the
+// count's one owner; two from 2026-11-05 until the AUDIO case's retirement,
+// 2026-11-11). (An addend walked the menu anchors' count, + 2 to
 // + 5, from 2026-08-13 until they left with the menu row, 2026-10-21.)
 constexpr int kLevelCaseCount = [] {
     int n = 0;
@@ -820,8 +821,8 @@ constexpr int kLevelCaseCount = [] {
 }();
 static_assert(std::size(kToolbarChords) + kLevelCaseCount ==
                   static_cast<std::size_t>(kRedesignButtonCount),
-              "kToolbarChords must cover every RedesignButton but the two "
-              "level cases");
+              "kToolbarChords must cover every RedesignButton but the "
+              "level case");
 
 // (THE MODAL-TRAP REACH-THROUGH IS RETIRED — architect 2026-08-13, "we can
 // drop the Save reach through". From 2026-08-11 a plain left press on a roster
@@ -1268,10 +1269,10 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x,
 //   begins with),
 //   ZOOM IN AND ZOOM OUT (2026-10-27; `=` / `-` and their shifted forms on
 //   the allowlist through is_zoom_step_key),
-//   THE TWO LEVEL CASES (2026-11-05, in the NOISE lamp's seat; the lamp's
+//   THE LEVEL CASE (2026-11-05, in the NOISE lamp's seat; the lamp's
 //   bare `w` was on the allowlist 2026-10-28 to then — device state the view
-//   has no reason to refuse; the cases carry no chord, so the walk below
-//   answers them LIVE by an explicit arm),
+//   has no reason to refuse; the case carries no chord, so the walk below
+//   answers it LIVE by an explicit arm),
 //   ZOOM TO FIT (Full Zoom Out until 2026-10-24) AND CENTER since the
 //   2026-08-12 relayout (bare `0` is the allowlist's own zoom admission,
 //   Shift+0's frame beside it, and bare `c` is the mode's vocabulary —
@@ -1434,14 +1435,14 @@ static bool history_mode_refuses_button_chord(const AppState* state,
                                               RedesignButton b) {
     // (THE THREE MENU ANCHORS, which carried no chord for this walk, answered
     // false here until the menu row went, 2026-10-21.)
-    // THE TWO LEVEL CASES ANSWER LIVE OUTRIGHT (architect 2026-11-05, the
-    // sliders in the NOISE lamp's seat; the lamp's bare `w` was on the
+    // THE LEVEL CASE ANSWERS LIVE OUTRIGHT (architect 2026-11-05, the
+    // slider in the NOISE lamp's seat; the lamp's bare `w` was on the
     // view's allowlist 2026-10-28 to 2026-11-05, the planner's call the
     // architect agreed to, Tooltips' class — the letter is the TRIM arm
     // lamp's since 2026-11-07 and on no allowlist of the view): DEVICE
     // STATE the view has no reason to
-    // refuse — the two levels touch nothing the view froze — and the cases
-    // carry no chord for the allowlist to walk, so the answer is stated here
+    // refuse — the level touches nothing the view froze — and the case
+    // carries no chord for the allowlist to walk, so the answer is stated here
     // rather than defaulted below: never greyed, never hidden, in every
     // session.
     if (redesign_button_is_level_case(b)) return false;
@@ -4870,9 +4871,9 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // for the player, 2026-10-25 for the picker, 2026-10-26 for the score
     // viewer), to the tooltip lamp (architect 2026-11-10, live under every
     // overlay) and to the struck clip lamp (architect 2026-11-05 night).
-    // THE TWO LEVEL CASES ARE THE CLAIM'S SECOND HALF (architect 2026-11-05):
-    // where no chord row's face holds the press, a level case's face may —
-    // the sliders, armed by their own kind (arm_level_case_press). THE
+    // THE LEVEL CASE IS THE CLAIM'S SECOND HALF (architect 2026-11-05):
+    // where no chord row's face holds the press, the level case's face may —
+    // the slider, armed by its own kind (arm_level_case_press). THE
     // STRUCK CLIP LAMP IS ITS THIRD (architect 2026-11-05 night, session 49:
     // "the strike + the tap"; render.h's THE TWO LAMPS' STRIKE): where
     // neither claimed it, a press on the clip lamp's square while the strike
@@ -7051,8 +7052,7 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
     // follows in finish_level_press_release on a press that moved nothing,
     // so the two writes are never both owed.
     if (arm.kind == AppState::ChromePress::Kind::Level)
-        settle_level_case(static_cast<RedesignButton>(arm.index),
-                          arm.level_changed);
+        settle_level_case(arm.level_changed);
     return arm;
 }
 
@@ -7068,38 +7068,32 @@ void GuiInputHandler::invalidate_roster_press_face(int index) {
         viewport.invalidate_top_strip();
 }
 
-// -- THE TWO LEVEL CASES' ARM (architect 2026-11-05; the contract at
+// -- THE LEVEL CASE'S ARM (architect 2026-11-05; the contract at
 //    AppState::ChromePress's Level kind, the declarations' comment,
 //    input_handler.h) ---------------------------------------------------------
 
 // THE PRESS: the band claim's second half (claim_button_row_press, after
 // arm_redesign_press found no chord row's face under the press). A press on
-// a level case's PAINTED face — the published rect, point_on_key through
+// the level case's PAINTED face — the published rect, point_on_key through
 // `contains` — arms the Level kind with the press's x, y, the level's travel
 // fraction and the clock (the stamp every arm takes; this kind's lift
 // measures no hold); A DISABLED CASE'S PRESS IS A CONSUMED NOTHING,
 // read as the roster's is, off the painted bit (RedesignButtonFace::enabled,
 // strictly as-painted). No face damage: a slider has no press look.
 bool GuiInputHandler::arm_level_case_press(int x, int y) {
-    for (const RedesignButton id :
-         {RedesignButton::IconAudioLevel, RedesignButton::IconNoiseLevel}) {
-        const AppState::RedesignButtonFace& face =
-            app.redesign_buttons[static_cast<size_t>(redesign_button_index(id))];
-        if (!face.contains(x, y)) continue;
-        if (!face.enabled) return true;
-        const double db = id == RedesignButton::IconAudioLevel
-                              ? app.device_config->audio_level
-                              : app.device_config->noise_level;
-        app.chrome_press = AppState::ChromePress{
-            .kind     = AppState::ChromePress::Kind::Level,
-            .index    = redesign_button_index(id),
-            .press_ms = monotonic_ms(),
-            .x0       = x,
-            .y0       = y,
-            .t0       = level_travel_fraction(db)};
-        return true;
-    }
-    return false;
+    const RedesignButton id = RedesignButton::IconNoiseLevel;
+    const AppState::RedesignButtonFace& face =
+        app.redesign_buttons[static_cast<size_t>(redesign_button_index(id))];
+    if (!face.contains(x, y)) return false;
+    if (!face.enabled) return true;
+    app.chrome_press = AppState::ChromePress{
+        .kind     = AppState::ChromePress::Kind::Level,
+        .index    = redesign_button_index(id),
+        .press_ms = monotonic_ms(),
+        .x0       = x,
+        .y0       = y,
+        .t0       = level_travel_fraction(app.device_config->noise_level)};
+    return true;
 }
 
 // THE DRAG (on_motion, under a standing Level arm, the button held): until a
@@ -7128,12 +7122,8 @@ void GuiInputHandler::update_level_press_motion(int x, int y) {
     if (t < 0.0) t = 0.0;
     if (t > 1.0) t = 1.0;
     const double db = level_db_from_travel(t);
-    const RedesignButton id = static_cast<RedesignButton>(arm.index);
-    const double standing = id == RedesignButton::IconAudioLevel
-                                ? app.device_config->audio_level
-                                : app.device_config->noise_level;
-    if (db == standing) return;
-    apply_level_case(id, db);
+    if (db == app.device_config->noise_level) return;
+    apply_level_case(static_cast<RedesignButton>(arm.index), db);
     arm.level_changed = true;
 }
 
@@ -7141,17 +7131,17 @@ void GuiInputHandler::update_level_press_motion(int x, int y) {
 // A PRESS THAT NEVER LEFT THE SLOP, LIFTED ON THE CASE'S FACE (the published
 // rect, the derive doctrine), IS THE TAP, AND THE TAP TOGGLES THE CASE OFF
 // AND BACK (architect 2026-11-10, "like the fit recall"; the rule at
-// RedesignButton::IconAudioLevel) — WHATEVER THE PRESS'S DURATION: the long
+// RedesignButton::IconNoiseLevel) — WHATEVER THE PRESS'S DURATION: the long
 // press that set 0 dB (2026-11-05) is retired ("awkward on something that
-// slides"), so no hold is measured here. ON A CASE STANDING AT A FINITE
+// slides"), so no hold is measured here. ON THE CASE STANDING AT A FINITE
 // LEVEL the tap REMEMBERS that level (GuiLevelRecall, the app's, through
 // AppState::level_recall — the tap its one writer: a drag that ends at -inf
-// remembers nothing and no drag clears it) and sets -inf; ON A CASE STANDING
+// remembers nothing and no drag clears it) and sets -inf; ON THE CASE STANDING
 // AT -inf it sets the remembered level, 0 dB WITH NOTHING REMEMBERED (his
 // ruling; empty at the launch). THE LEVEL GOES THE DRAG'S OWN ROAD:
 // apply_level_case (the live struct, the voice, the face's damage), then
-// settle_level_case with the level moved (one config write; the NOISE
-// case's -inf frees its bank there, as a drag's lift on -inf does, and its
+// settle_level_case with the level moved (one config write; the case's
+// -inf frees the bed's bank there, as a drag's lift on -inf does, and its
 // recall from -inf is GuiNoise::set_level_db's RISE — the loader started
 // afresh on its own thread, the freed bank's state Idle, the bed fading in
 // when the load lands; nothing on that road asks for a motion before it).
@@ -7163,18 +7153,15 @@ void GuiInputHandler::finish_level_press_release(
     if (arm.moved) return;
     const RedesignButton id = static_cast<RedesignButton>(arm.index);
     if (!redesign_button_hit(app, id, x, y)) return;
-    const bool audio_case = id == RedesignButton::IconAudioLevel;
-    const double standing = audio_case ? app.device_config->audio_level
-                                       : app.device_config->noise_level;
-    std::optional<double>& remembered =
-        audio_case ? app.level_recall->audio : app.level_recall->noise;
+    const double standing = app.device_config->noise_level;
+    std::optional<double>& remembered = app.level_recall->noise;
     double db = kLevelDbOff;
     if (standing != kLevelDbOff)
         remembered = standing;
     else
         db = remembered.value_or(0.0);
     apply_level_case(id, db);
-    settle_level_case(id, /*level_changed=*/true);
+    settle_level_case(/*level_changed=*/true);
 }
 
 // -- THE STRUCK CLIP LAMP'S ARM (architect 2026-11-05 night, session 49; the
@@ -7232,29 +7219,22 @@ void GuiInputHandler::finish_clip_lamp_press_release(int x, int y) {
                              kPlaybackDeviceUnavailableCard);
 }
 
-// THE LIVE APPLY, ONE BODY FOR THE DRAG AND THE TAP (the cases are
-// the two levels' one road: no Settings row since 2026-11-05 night,
-// kSettingsEditorKeys): the live struct takes the level, its voice takes it
-// at the next fill —
-// GuiPlayback::set_audio_level_db (0 at -inf, the mute) for AUDIO,
-// GuiNoise::set_level_db for NOISE (the gain, the level plus the fixed
-// attenuation, and the switch: a rise from -inf lights the voice and starts
-// the loader, a fall to -inf fades it out; nothing freed here, noise.h) —
-// and THE CASE'S FACE RECT IS DAMAGED, the
+// THE LIVE APPLY, ONE BODY FOR THE DRAG AND THE TAP (the case is
+// the level's one road: no Settings row since 2026-11-05 night,
+// kSettingsEditorKeys): the live struct takes the level, the bed's voice
+// takes it at the next fill — GuiNoise::set_level_db (the gain, the level
+// plus the fixed attenuation, and the switch: a rise from -inf lights the
+// voice and starts the loader, a fall to -inf fades it out; nothing freed
+// here, noise.h) — and THE CASE'S FACE RECT IS DAMAGED, the
 // published face (the number and the fill both inside it; the legend on the
 // ground does not change): THE LEVEL'S ONE DAMAGE — the per-tick comparator
 // watches enabled, selected, glyph and drawing, no level, so every edge of
-// a case's value pays its own damage here, as the press arc's
-// invalidate_roster_press_face pays the press's. A case not standing (an
+// the case's value pays its own damage here, as the press arc's
+// invalidate_roster_press_face pays the press's. The case not standing (an
 // empty rect, no pixel to be stale) damages nothing.
 void GuiInputHandler::apply_level_case(RedesignButton id, double db) {
-    if (id == RedesignButton::IconAudioLevel) {
-        app.device_config->audio_level = db;
-        playback.set_audio_level_db(db);
-    } else {
-        app.device_config->noise_level = db;
-        if (app.noise != nullptr) app.noise->set_level_db(db);
-    }
+    app.device_config->noise_level = db;
+    if (app.noise != nullptr) app.noise->set_level_db(db);
     const GuiRect& face =
         app.redesign_buttons[static_cast<size_t>(redesign_button_index(id))]
             .rect;
@@ -7263,15 +7243,13 @@ void GuiInputHandler::apply_level_case(RedesignButton id, double db) {
 
 // THE END'S TAIL, every road's (take_chrome_press for the lift and the two
 // clears, finish_level_press_release after the tap's apply): THE
-// NOISE'S -inf RELEASE — a NOISE case left at -inf frees the bank behind
+// NOISE'S -inf RELEASE — the case left at -inf frees the bed's bank behind
 // the fence (GuiNoise::release_if_silent, a no-op above -inf or with
 // nothing loaded; never per motion, noise.h's head) — and ONE CONFIG WRITE
 // where the level moved (persist_device_config, the device keys' one
 // persist: a failure cards, the live value standing).
-void GuiInputHandler::settle_level_case(RedesignButton id,
-                                        bool level_changed) {
-    if (id == RedesignButton::IconNoiseLevel && app.noise != nullptr)
-        app.noise->release_if_silent();
+void GuiInputHandler::settle_level_case(bool level_changed) {
+    if (app.noise != nullptr) app.noise->release_if_silent();
     if (level_changed) (void)settings_editor.persist_device_config();
 }
 

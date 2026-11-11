@@ -110,9 +110,10 @@ struct GuiInputHandler;
 // tooltip's gap's tuning key tooltip_gap, editable for session 90 of
 // 2026-11-07, left with its key in session 91, the gap settled at 1 W
 // (render.h's kTooltipGapW); the
-// two levels audio_level and noise_level, editable 2026-10-28 / 10-31 night
-// to 2026-11-05 night, left the editor for the band's two cases, their one
-// road — the main-page rule at kSettingsEditorKeys; the
+// two levels, noise_level and the project voice's (retired 2026-11-11 with
+// its AUDIO case), editable 2026-10-28 / 10-31 night to 2026-11-05 night,
+// left the editor for the band's cases — the main-page rule at
+// kSettingsEditorKeys; the
 // strip pad's key, editable 2026-10-22..10-23, left with it, the pad
 // settled at a constant, 19 W since 2026-11-04 night (render.h's
 // strip_pad_px); the
@@ -234,7 +235,7 @@ struct GuiInputHandler;
 // 2026-10-31, after `true_colors` as the config writes it; the color key
 // `waveform` gone 2026-11-01 with the presets; the window's `theme`
 // 2026-11-05, after `true_colors` as the config writes it; the two levels
-// `audio_level` and `noise_level` gone 2026-11-05 night and the noise's
+// (`noise_level` and the project voice's) gone 2026-11-05 night and the noise's
 // attenuation `noise_attenuation_level` joined after `noise`, as the config
 // writes it; the lamps' hold `lamp_hold_ms` the same night, at the device
 // keys' tail; the key's face width `key_width` 2026-11-06, after
@@ -250,7 +251,7 @@ struct GuiInputHandler;
 // folder, architect 2026-10-26), then the DEVICE
 // CONFIG's seventeen editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
-// no editor, nor have the two levels, below). The other keys this editor
+// no editor, nor has the level, below). The other keys this editor
 // commits (`scale`, `bpm`,
 // the view and per-tab band keys, the score's range and positions, which
 // the score viewer writes) are typed whole, Tab recalling their
@@ -264,11 +265,11 @@ struct GuiInputHandler;
 // out of this table, so neither Tab nor the page's rows ever offer them to
 // the line editor; kSettingsPagePieceKeys below). A KEY SHOWN AND EDITED ON
 // THE MAIN PAGE GETS NO SETTINGS ROW (architect 2026-11-05 night, session
-// 49): the two levels, `audio_level` and `noise_level`, are seen and set on
-// the band's AUDIO and NOISE cases (RedesignButton::IconAudioLevel,
-// app_state.h), so they are not here — no row, no typed arm, no recall, no
-// Tab — and stay REQUIRED in the config, persisted by the cases' lift and
-// written by the config's writer with every key.
+// 49): the level, `noise_level`, is seen and set on the band's NOISE case
+// (RedesignButton::IconNoiseLevel, app_state.h), so it is not here — no
+// row, no typed arm, no recall, no Tab — and stays REQUIRED in the config,
+// persisted by the case's lift and written by the config's writer with
+// every key.
 // GuiInputHandler::build_settings_page_rows lists the device keys under a
 // "DEVICE" group row in this table's order, the split at
 // kSettingsEditorPieceKeyCount, and then the PIECE group's rows in
@@ -327,8 +328,8 @@ static_assert(settings_page_piece_keys_pinned());
 // THE KEYS WITH A VALUE LIST — ONE TABLE, THE FIVE (architect 2026-10-28
 // night for four, 2026-10-31 for `waveform_grow`, 2026-11-05 for `theme`;
 // the first, `waveform`'s presets of 2026-10-25, went with the presets
-// 2026-11-01; `audio_level` and `noise_level`, listed 2026-10-31 night and
-// 2026-10-28 night, LEFT 2026-11-05 with the two level cases — their domain
+// 2026-11-01; the two levels, listed 2026-10-31 night and 2026-10-28 night,
+// LEFT 2026-11-05 with the level cases — their domain
 // a decimal in [-60.0, 0.0] or -inf, no short list — and their rows that
 // night, the band's sliders their one road): the settings
 // page's row for one of these swaps the folder overlay's content to THE
@@ -537,9 +538,9 @@ struct GuiSettingsEditor {
     // the diagnostic and cards the display, the live value standing either
     // way. Returns whether the file was written. TWO READERS: every device
     // key's commit (apply_device_setting's persist) and, since 2026-11-05,
-    // the two level cases' end (GuiInputHandler::settle_level_case: one
+    // the level case's end (GuiInputHandler::settle_level_case: one
     // write at a drag's lift or its button-lost end, and at the tap's
-    // toggle — the two levels' one write, their Settings rows gone since
+    // toggle — the level's one write, its Settings row gone since
     // 2026-11-05 night).
     bool persist_device_config();
 

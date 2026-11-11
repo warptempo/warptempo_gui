@@ -189,11 +189,6 @@ void playback_render_block(GuiPlaybackState& state,
         ? 0.0
         : static_cast<double>(state.source_rate) / static_cast<double>(output_rate);
     const int64_t total = state.total_frames;
-    // THE AUDIO LEVEL, read ONCE PER FILL (the field's comment): the gain
-    // multiplies each sample after its float conversion, so at 0 dB, where
-    // the gain is exactly 1.0f, every sample is bit-identical to the
-    // unscaled block (x * 1.0f == x in IEEE float).
-    const float audio_gain = state.audio_gain.load(std::memory_order_relaxed);
 
     if (increment == 0.0) {
         playback_write_silence(channel_buffers, channel_count, stride, 0, frame_count);
@@ -330,7 +325,7 @@ void playback_render_block(GuiPlaybackState& state,
                 const double a = unit_of(sp_floor[c]);
                 const double b = unit_of(sp_ceil[c]);
                 channel_buffers[c][n * stride] =
-                    static_cast<float>((1.0 - frac) * a + frac * b) * audio_gain;
+                    static_cast<float>((1.0 - frac) * a + frac * b);
             }
 
             pos += increment;

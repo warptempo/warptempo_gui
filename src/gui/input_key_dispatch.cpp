@@ -3096,8 +3096,8 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // (THE NOISE LAMP — BARE `w` — was admitted here 2026-10-28 to
     // 2026-11-05, the planner's call the architect agreed to, Tooltips'
     // class: device state the view has no reason to refuse. The lamp went
-    // with the band's two level cases, which carry no chord: the `h` chord
-    // walk answers them LIVE by its own arm, history_mode_refuses_button_
+    // with the band's level case, which carries no chord: the `h` chord
+    // walk answers it LIVE by its own arm, history_mode_refuses_button_
     // chord, input_pointer.cpp, on the same reason.)
     return !(is_zoom_step || is_zero || is_play_renders ||
              is_view_selector || is_add_to_selection || is_ctrl_tab ||
@@ -6746,7 +6746,7 @@ void GuiInputHandler::open_settings_page(std::string_view seat_key) {
 
 // THE LIST: kSettingsEditorKeys exactly (architect 2026-10-28: the per-tab
 // keys and every key with a GUI lever stay off — "I won't set it
-// manually"; the two levels, shown and edited on the band's two cases, too
+// manually"; the level, shown and edited on the band's NOISE case, too
 // since 2026-11-05 night, the main-page rule) EXCEPT the two the BPM key
 // writes, `scale` and `bpm`, listed
 // as DISABLED rows (architect 2026-10-29: "bpm and scale should be viewable
@@ -6821,8 +6821,8 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // (settings_key_has_value_list — `true_colors`, `theme`,
 // `waveform_grow`, `noise`, `noise_crossfade_s`; the two levels' lists left
 // 2026-11-05 with the decimal grammar and their rows that night under the
-// main-page rule (kSettingsEditorKeys), the band's cases their one editing
-// surface) THAT
+// main-page rule (kSettingsEditorKeys), the band's case the noise's one
+// editing surface) THAT
 // KEY'S VALUE LIST IS SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
 // sub-page whose commit and Cancel return to this page

@@ -199,11 +199,11 @@
 //                                     its face the lit face comes out darker,
 //                                     and where the ratio is steep a channel
 //                                     clips at FF — Live's numbers, no rule.
-//                                     THE TWO LEVEL CASES' FILL TOO, AUDIO's
-//                                     and NOISE's alike (architect 2026-11-10:
-//                                     "monochrome on the front page"; the fill
-//                                     over the key face, paint_level_case) —
-//                                     their own two roles, RangeEditField and
+//                                     THE LEVEL CASE'S FILL TOO, NOISE's
+//                                     (architect 2026-11-10: "monochrome on
+//                                     the front page"; the fill over the key
+//                                     face, paint_level_case) — the cases'
+//                                     own two roles, RangeEditField and
 //                                     ChosenPreListen composited over the face
 //                                     (2026-11-05 night), retired with it and
 //                                     gone from the roles read

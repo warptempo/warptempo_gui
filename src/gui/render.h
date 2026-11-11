@@ -353,7 +353,7 @@ struct GuiPalette {
     GuiColor text_on_lit;     // anything printed on a lit face
     GuiColor key_dim_ink;     // a disabled key's glyph and legend, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
     GuiColor key_face;        // the key at rest, the time fields, the two lamps at rest
-    GuiColor lit_fill;        // a checked key's whole face, the key face lightened (the lamp rule); the two level cases' fill (paint_level_case, 2026-11-10)
+    GuiColor lit_fill;        // a checked key's whole face, the key face lightened (the lamp rule); the level case's fill (paint_level_case, 2026-11-10)
     GuiColor lit_press_fill;  // a checked key's face under a standing press (= key_press_face)
     GuiColor door_lit_fill;   // a checked OVERLAY OPENER's face, the seven doors (= lit_fill; materials.h's THE KEY)
     GuiColor door_lit_press_fill; // a checked door's face under a standing press (= lit_press_fill)
@@ -1727,10 +1727,11 @@ inline int icon_row_h_px() {
 // program_run_gap_px is THE ONE READER of the key: one key for every gap.
 // A TOO-LARGE GAP is the band's overflow rule's, as a too-wide key is (THE
 // FIT at paint_icon_row's width math, paint_handler.cpp): on the tablet at
-// 200 % and key_width 35 the band holds whole up to 41 W, and from 42 W the
-// left runs are clipped one run gap short of the history opener, the third
-// run's keys cut or published empty from its tail (NOISE cut from 42, the
-// right run whole); row 8's block grows leftward over its state line, and
+// 200 % and key_width 35 the band holds whole across the key's whole range
+// (2200 of the well's 2256 at its 44 W ceiling), a wider key bringing the
+// overflow back — the left runs clipped one run gap short of the history
+// opener, the third run's keys cut or published empty from its tail, the
+// right run whole; row 8's block grows leftward over its state line, and
 // the player's and the score viewer's rows take the gap from the scrub's
 // channel, which their floor of two thumbs drops whole when too little is
 // left.
@@ -2759,8 +2760,8 @@ inline int tooltip_chain_reach_px() {
 
 // THE HOVER SLOP (architect 2026-09-29; the tooltip's wait read it until the
 // always-show model of 2026-11-07, which restarts nothing on motion) — ITS
-// ONE READER IS THE LEVEL CASES' PRESS (update_level_press_motion,
-// input_pointer.cpp): until a motion carries a level case's press MORE than
+// ONE READER IS THE LEVEL CASE'S PRESS (update_level_press_motion,
+// input_pointer.cpp): until a motion carries the level case's press MORE than
 // this from where it landed on EITHER axis, the press is still a tap (the
 // case's toggle at the lift, whatever its duration) and moves no level by
 // motion, so a hovering or pressing pen's jitter
@@ -2786,7 +2787,7 @@ inline int hover_slop_px() {
     return scaled_px(kHoverSlopW, 1);
 }
 
-// THE LEVEL SLIDERS' TRAVEL (architect 2026-11-05, the two level cases,
+// THE LEVEL SLIDER'S TRAVEL (architect 2026-11-05, the level case,
 // AppState::ChromePress's Level kind): the pointer motion that carries a
 // case's travel fraction across its whole range 0..1 — kLevelTravelW = 800 W
 // through scaled_px, 1600 device px on the tablet at 200 %, 800 at 100 %;

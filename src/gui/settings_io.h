@@ -170,8 +170,7 @@ std::string format_settings_text(
 // same
 // "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is
-// the program's own; nor do the two levels, `audio_level` and
-// `noise_level`, since 2026-11-05 night: set on the band's two cases alone,
-// kSettingsEditorKeys.)
+// the program's own; nor does the level, `noise_level`, since 2026-11-05
+// night: set on the band's NOISE case alone, kSettingsEditorKeys.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

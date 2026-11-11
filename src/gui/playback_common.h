@@ -45,15 +45,16 @@ struct GuiNoiseVoice;   // noise.h — the second voice the callback sums
 // same thing and never was: AAudio may hand the engine a rate the source is not
 // recorded at, and that has to be rescaled whatever the speed.
 //
-// THE SECOND VOICE AND THE CLIP (architect 2026-10-28, the noise; the audio
-// level 2026-10-31 night). THE ORDER, per callback: the project voice — the
-// render body's block, scaled by THE AUDIO LEVEL (the `audio_level` device
-// key's linear gain, GuiPlaybackState::audio_gain below, applied at the render
-// body's one sample write) — then the noise summed at its own level, then the
-// clip. The two levels are the two voices' balance, set so their sum stays
-// clear of the clip, the tablet's own volume then setting the loudness
-// (architect: "audio out versus noise ... adjust them to avoid clipping. So
-// then I can turn up the volume on the tablet itself"). Every
+// THE SECOND VOICE AND THE CLIP (architect 2026-10-28, the noise). THE
+// ORDER, per callback: the project voice — the render body's block, AT 0 dB,
+// the files as they are — then the noise summed at its own level, then the
+// clip; the tablet's own volume sets the loudness. THE VOICE IS UNSCALED
+// (architect 2026-11-11, session 104, the AUDIO case and its key retired:
+// "realistically it's not clipping, and when it does clip, it's very
+// subtle"): the audio level that scaled it from 2026-10-31 night was a
+// float gain multiplied at the render body's one sample write, exactly
+// 1.0f at its 0 dB, so its removal is byte-identical at the level the
+// tablet ran (x * 1.0f == x in IEEE float). Every
 // callback, on BOTH of its arms — the silence arm between
 // plays and the render body's — SUMS the app's one noise voice into the block
 // the engine just wrote (noise_mix_block, noise.h: its own bank, its own rate
@@ -115,16 +116,6 @@ struct GuiPlaybackState {
     // pointer, no atomic. Null mixes nothing. bind and clear leave it alone:
     // it is the engine's attachment, not the binding's.
     GuiNoiseVoice* noise = nullptr;
-
-    // THE AUDIO LEVEL (2026-10-31 night, the head's paragraph): the project
-    // voice's linear gain, 10^(audio_level/20), written by the main thread
-    // (GuiPlayback::set_audio_level_db: run_project's seat from the device
-    // config, the band's AUDIO case's live drag) and read by the render body
-    // ONCE PER FILL, relaxed — a level change applies at the next fill, and
-    // a fill never sees two. 1.0f, 0 dB, is the construction state: the
-    // files as they are. bind and clear leave it alone, as
-    // the noise: it is the engine's level, not the binding's.
-    std::atomic<float> audio_gain{1.0f};
 
     // THE CLIP LAMP'S COUNTER (architect 2026-11-05; render.h's THE TWO
     // LAMPS): the number of callback blocks the clip clamped at least one
@@ -484,8 +475,8 @@ bool playback_clip_block(float* const* channel_buffers, int64_t stride,
 // (the vDSO's steady_clock, at the fill's top), one no-retry seqlock read of
 // the packet while the fill's generation is unseated, one compare-exchange at
 // a natural end, the stamp seqlock's stores — no lock, no allocation, no
-// syscall. Every sample written from the bound buffer is scaled by the audio
-// level (`audio_gain`, read once at the fill's top); the silence it writes
+// syscall. Every sample written from the bound buffer is written as it is,
+// unscaled (the voice at 0 dB, the head's paragraph); the silence it writes
 // stays zero.
 void playback_render_block(GuiPlaybackState& state,
                            uint64_t session_word,

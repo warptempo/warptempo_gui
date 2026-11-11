@@ -23,7 +23,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY keys since 2026-11-07, session 91,
+// REQUIRED SET, every one of them (NINETEEN keys since 2026-11-11, the
+// project voice's level `audio_level` retired with the AUDIO case — the
+// voice at 0 dB (architect, session 104); TWENTY from 2026-11-07, session 91,
 // the tooltip's gap `tooltip_gap` retired, settled at 1 W, render.h's
 // kTooltipGapW; TWENTY-ONE from session 90, that key appended at the end;
 // TWENTY earlier that day, the tooltip's delay `tooltip_delay_ms` appended
@@ -95,15 +97,11 @@ namespace {
 // scaling concession (device_config.h's head), so it stands among the
 // permanent keys and not with the tuning keys at the end.
 //
-// THE PROJECT VOICE'S LEVEL (architect 2026-10-31 night): `audio_level`
-// FOLLOWS `waveform_grow` and stands immediately BEFORE the noise's FOUR —
-// "audio out versus noise", the two voices' levels side by side on the
-// band's two cases (AUDIO, then NOISE), audio out first; a permanent key.
-//
 // THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05
 // night): `noise`, `noise_level`, `noise_attenuation_level` and
-// `noise_crossfade_s` FOLLOW `audio_level`, the permanent keys' end, the
-// folder before its loudness, the loudness's fixed attenuation under it,
+// `noise_crossfade_s` FOLLOW `waveform_grow` (the project voice's level
+// stood between them 2026-10-31 night to 2026-11-11), the permanent keys'
+// end, the folder before its loudness, the loudness's fixed attenuation under it,
 // and its crossfade.
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
@@ -138,7 +136,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "true_colors",
     "theme",
     "waveform_grow",
-    "audio_level",
     "noise",
     "noise_level",
     "noise_attenuation_level",
@@ -325,9 +322,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "waveform_grow") {
             // The grow's canonical decimal (format_waveform_grow).
             s += format_waveform_grow(cfg.waveform_grow_quarters);
-        } else if (k == "audio_level") {
-            // The project voice's canonical decimal or -inf (format_level_db).
-            s += format_level_db(cfg.audio_level);
         } else if (k == "noise") {
             // The folder's name verbatim (is_noise_folder_name's grammar).
             s += cfg.noise;
@@ -495,20 +489,13 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.waveform_grow_quarters = *quarters;
             return {};
         }
-        // THE TWO LEVELS (the project voice's, 2026-10-31 night, and the
-        // noise's, 2026-10-28; permanent keys) AND THE NOISE'S ATTENUATION
-        // (2026-11-05 night): under their one grammar owner (parse_level_db,
-        // device_config.h — the decimal of any fractional length and -inf,
-        // the attenuation's parser refusing -inf), required like every key;
-        // any other spelling the launch's hard fail.
-        if (key == "audio_level") {
-            const std::optional<double> db = parse_level_db(value);
-            if (!db) {
-                return bad_value(ln, key, value, kLevelGrammarReason);
-            }
-            out.audio_level = *db;
-            return {};
-        }
+        // THE NOISE'S LEVEL (2026-10-28; a permanent key) AND ITS
+        // ATTENUATION (2026-11-05 night): under their one grammar owner
+        // (parse_level_db, device_config.h — the decimal of any fractional
+        // length and -inf, the attenuation's parser refusing -inf), required
+        // like every key; any other spelling the launch's hard fail. (The
+        // project voice's `audio_level` read here 2026-10-31 night to
+        // 2026-11-11; an old line is the unknown-key refusal below.)
         if (key == "noise_level") {
             const std::optional<double> db = parse_level_db(value);
             if (!db) {

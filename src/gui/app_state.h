@@ -1753,10 +1753,10 @@ struct TrimBarPressSeed {
 //
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
-// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 BUT THE TWO
-// LEVEL CASES (53 chord rows + the two cases = 55 = kRedesignButtonCount
-// since 2026-11-08, the count's own statement below; the cases are sliders,
-// IconAudioLevel's entry): row
+// below). EVERY ROSTER BUTTON CARRIES A CHORD since 2026-10-21 BUT THE
+// LEVEL CASE (53 chord rows + the one case = 54 = kRedesignButtonCount
+// since 2026-11-11, the count's own statement below; the case is a slider,
+// IconNoiseLevel's entry): row
 // 1's menu anchors — File, Edit and Settings, the roster's non-chord
 // entries, each press toggling its own dropdown — went with the menu row.
 //
@@ -1781,9 +1781,10 @@ enum class RedesignButton {
     // layout: the active tab's name stands in row 8 right of the clock, and
     // the switch is Ctrl+Tab and the Switch Tab key. Their
     // record is git history.)
-    // THE TWO LEVEL CASES, IconAudioLevel and IconNoiseLevel, are the band's
-    // third run's last two since 2026-11-05 (their entry below, after the
-    // tooltip lamp; the NOISE lamp's seat, 2026-10-28 to 2026-11-05).
+    // THE LEVEL CASE, IconNoiseLevel, is the band's third run's last since
+    // 2026-11-05 (its entry below, after the tooltip lamp; the NOISE lamp's
+    // seat, 2026-10-28 to 2026-11-05; the AUDIO case beside it retired
+    // 2026-11-11).
     // Row 4, the icon row, in painted order: OPEN PROJECT alone at its head
     // (architect 2026-10-07, below), then the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP from the
@@ -1805,7 +1806,7 @@ enum class RedesignButton {
     // (2026-10-26; between the padlock and Settings, architect 2026-11-10),
     // SETTINGS and ENABLE TOOLTIPS (2026-09-29; in that order since
     // 2026-10-01: help comes after settings) and
-    // THE TWO LEVEL CASES closing it since 2026-11-05 (the NOISE lamp's seat,
+    // THE LEVEL CASE closing it since 2026-11-05 (the NOISE lamp's seat,
     // 2026-10-28 to 2026-11-05) — and THE HISTORY GROUP — the
     // HISTORY OPENER leading its WALK LAMP, its four companions and (since
     // 2026-09-01) the LOAD IN PLACE, which left the render-entry group for
@@ -2228,7 +2229,8 @@ enum class RedesignButton {
     IconReadOnly,
     // THE SCORE (architect 2026-10-26), the band's third run's THIRD,
     // directly after the padlock and ahead of Settings (architect
-    // 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS AUDIO NOISE):
+    // 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS NOISE since
+    // the AUDIO case's retirement, 2026-11-11):
     // BARE `m`, wearing SCORE, opens THE SCORE VIEWER
     // (score_viewer.h) — the movement's sheet music one page at a time in
     // the modal family's box. IT IS AN OVERLAY'S OPENER: lit while the viewer
@@ -2260,8 +2262,8 @@ enum class RedesignButton {
     // pattern, redesign_button_selected).
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), directly after Settings
-    // since 2026-10-01 (architect: help comes after settings), the two level
-    // cases behind it: THE TOOLTIP
+    // since 2026-10-01 (architect: help comes after settings), the level
+    // case behind it: THE TOOLTIP
     // LAMP on bare backslash, wearing Tooltips. A per-project session lamp in the magnification lamp's
     // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
     // settings vocabulary and not carried by `'` — and while it is DARK NO
@@ -2285,37 +2287,39 @@ enum class RedesignButton {
     // every key (a prompt, an editor, the progress modal). It admits no
     // modifier and does not repeat.
     IconTooltips,
-    // THE TWO LEVEL CASES (architect 2026-11-05, session 46, his "yes" on
-    // mock s46_m1 of tmp/s46), the band's third run's LAST TWO, directly
-    // after the tooltip lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28
-    // to 2026-11-05, RETIRED with its chord and its raindrop glyph; the run
-    // one pitch longer): AUDIO then NOISE, the `audio_level` and
-    // `noise_level` device keys' SLIDERS (device_config.h's THE LEVEL
-    // GRAMMAR). THEY ARE SLIDERS: no glyph, NO CHORD (no kToolbarChords row —
-    // the one pair of roster members without one, the table's static_assert
-    // counts them out), no lit look, no press face (a slider shows its
-    // value; its fill is the feedback — confirmed by the architect
-    // 2026-11-05 night, "no press face on the cases", paint_level_case,
-    // paint_handler.cpp), no hold-repeat, no hold twin, no barrel. THE FACE:
-    // the key at rest under a FILL FROM ITS LEFT EDGE IN THE LIT KEY'S FACE,
-    // `lit_fill`, both cases alike (architect 2026-11-10, "monochrome on the
-    // front page"; the cases' own two fill roles of 2026-11-05 retired) —
-    // nearbyint(t · face width)
+    // THE LEVEL CASE, NOISE (architect 2026-11-05, session 46, his "yes" on
+    // mock s46_m1 of tmp/s46), the band's third run's LAST, directly after
+    // the tooltip lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28 to
+    // 2026-11-05, RETIRED with its chord and its raindrop glyph): the
+    // `noise_level` device key's SLIDER (device_config.h's THE LEVEL
+    // GRAMMAR). (THE AUDIO CASE, the project voice's level slider
+    // beside it from 2026-11-05, RETIRED 2026-11-11 with its key, architect
+    // session 104: "realistically it's not clipping, and when it does clip,
+    // it's very subtle" — the voice plays at 0 dB, playback_common.h's
+    // head.) IT IS A SLIDER: no glyph, NO CHORD (no kToolbarChords row —
+    // the one roster member without one, the table's static_assert counts
+    // it out), no lit look, no press face (a slider shows its value; its
+    // fill is the feedback — confirmed by the architect 2026-11-05 night,
+    // "no press face on the cases", paint_level_case, paint_handler.cpp), no
+    // hold-repeat, no hold twin, no barrel. THE FACE: the key at rest under a
+    // FILL FROM ITS LEFT EDGE IN THE LIT KEY'S FACE, `lit_fill` (architect
+    // 2026-11-10, "monochrome on the front page"; the cases' own fill roles
+    // of 2026-11-05 retired) — nearbyint(t · face width)
     // device px wide, the face's full height, no border, no inset, where t is
     // the level's TRAVEL FRACTION (level_travel_fraction below, the
     // square-law taper); THE NUMBER over it, the level to one decimal
     // ("0.0", "-9.0", "-inf", format_level_db_face; the file keeps the exact
     // value) in the Body face, the text tone on the fill and the face alike
     // and AT -inf THE DISABLED TEXT TONE (architect 2026-11-10: off reads
-    // off), centered by its cap band and its ink; its printed legend AUDIO /
-    // NOISE under the face as every key's. THE CASES ARE THE TWO LEVELS' ONE
-    // ROAD: no Settings row (architect 2026-11-05 night, a key shown and
-    // edited on the main page gets none, kSettingsEditorKeys).
+    // off), centered by its cap band and its ink; its printed legend NOISE
+    // under the face as every key's. THE CASE IS THE LEVEL'S ONE ROAD: no
+    // Settings row (architect 2026-11-05 night, a key shown and edited on
+    // the main page gets none, kSettingsEditorKeys).
     // THE DRAG IS RELATIVE on the travel (AppState::ChromePress's Level kind,
     // the arm; GuiInputHandler::arm_level_case_press, input_pointer.cpp),
-    // applied live at every motion (GuiPlayback::set_audio_level_db,
-    // GuiNoise::set_level_db) and persisted once at the lift. A TAP TOGGLES
-    // THE CASE OFF AND BACK (architect 2026-11-10, "like the fit recall";
+    // applied live at every motion (GuiNoise::set_level_db) and persisted
+    // once at the lift. A TAP TOGGLES THE CASE OFF AND BACK (architect
+    // 2026-11-10, "like the fit recall";
     // reversing 2026-11-05's "ableton has no sliders that also act as
     // buttons" on his own word, and retiring that day's long press to 0 dB,
     // "awkward on something that slides"): a press that never left the hover
@@ -2323,20 +2327,19 @@ enum class RedesignButton {
     // a finite level remembers that level and sets -inf; on a case standing
     // at -inf it sets the remembered level, 0 dB with nothing remembered
     // (GuiLevelRecall below, the session's memory, in no file;
-    // GuiInputHandler::finish_level_press_release). THE AUDIO CASE IS NEVER
-    // DISABLED (every project has a voice) but for the roster's blanket greys
-    // (no audio to dispatch on, a standing overlay), which it takes like
-    // every key; THE NOISE CASE GREYS AS THE LAMP DID, with no folder the
-    // `noise` key names or a failed load (GuiNoise::available): its fill in
-    // the disabled key ink and its number in the dim text tone (his pick m3,
-    // 2026-11-05 night, paint_level_case), the face unchanged, the slider
-    // inert.
-    // BOTH ARE DEVICE STATE, NOT THE PIECE, and LIVE EVERYWHERE THE LAMP WAS:
+    // GuiInputHandler::finish_level_press_release). THE CASE GREYS AS THE
+    // LAMP DID, with no folder the `noise` key names or a failed load
+    // (GuiNoise::available), and with the roster's blanket greys (no audio to
+    // dispatch on, a standing overlay), which it takes like every key: its
+    // fill in the disabled key ink and its number in the dim text tone (his
+    // pick m3, 2026-11-05 night, paint_level_case), the face unchanged, the
+    // slider inert.
+    // IT IS DEVICE STATE, NOT THE PIECE, and LIVE EVERYWHERE THE LAMP WAS:
     // on a locked tab, under grid iterations and in the `h` view (no chord,
-    // so no allowlist walk reaches them: their arms at redesign_button_enabled
+    // so no allowlist walk reaches it: its arms at redesign_button_enabled
     // and history_mode_refuses_button_chord state it outright); under a
-    // standing overlay they are dead as every roster key but the opener and
-    // the tooltip lamp, and wear the disabled look there — the fill
+    // standing overlay it is dead as every roster key but the opener and
+    // the tooltip lamp, and wears the disabled look there — the fill
     // `key_dim_ink`, the number `text_dim` — the press reading that painted
     // bit (the inherited rule, redesign_button_enabled's overlay arm). THE
     // NOISE
@@ -2348,7 +2351,6 @@ enum class RedesignButton {
     // case's face, law and tap untouched, noise.h's head). THE SOUND
     // IS CHOSEN BY THE `noise` KEY ALONE (a folder's name,
     // Settings' Tab completing it; no picker, closed 2026-10-28).
-    IconAudioLevel,
     IconNoiseLevel,
     // THE HISTORY GROUP — its own again since 2026-08-18
     // (architect: "place a separator before the history button, and place
@@ -2949,7 +2951,7 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-11-08):
-// THIRTY-FOUR in row 4's enum block and TWENTY-ONE in the bottom row's — 55
+// THIRTY-THREE in row 4's enum block and TWENTY-ONE in the bottom row's — 54
 // (the menu row's three anchors left 2026-10-21, the tab strip's two
 // 2026-10-22; the two skips and Copy Phase Resets came 2026-10-24, Copy
 // moving up to the band 2026-10-25 and back down to row 8 2026-11-07;
@@ -2958,15 +2960,15 @@ enum class RedesignButton {
 // In and Zoom Out returned 2026-10-27; the NOISE lamp came 2026-10-28 and
 // the Trim Presets key that night; the RESTRICT lamp 2026-10-29; the two
 // level cases replaced the NOISE lamp 2026-11-05; the TRIM arm lamp came
-// 2026-11-07; PASTE 2026-11-08).
-// PAINTED, the split is 32 + 23: HistoryOlder and HistoryNewer, enumerated
+// 2026-11-07; PASTE 2026-11-08; the AUDIO level case left 2026-11-11).
+// PAINTED, the split is 31 + 23: HistoryOlder and HistoryNewer, enumerated
 // in row 4's block, paint in row 8 (kTransportHistoryStandIns). EVERY ONE
-// BUT THE TWO LEVEL CASES carries a chord in kToolbarChords, which the chord
-// table's own static_assert checks (the table's rows plus the two).
+// BUT THE LEVEL CASE carries a chord in kToolbarChords, which the chord
+// table's own static_assert checks (the table's rows plus the one).
 // The count's succession (every addition and deletion since the 2026-08-12
 // grand relayout) is in git history; adding or deleting a button restates
 // these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 55;
+inline constexpr int kRedesignButtonCount = 54;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3069,19 +3071,19 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // (redesign_button_is_tab — the tab strip's two tabs, which painted no
 // pressed face — left with the strip, 2026-10-22.)
 
-// THE TWO LEVEL CASES — THE SLIDERS AMONG THE ROSTER (architect 2026-11-05;
-// the ruling at IconAudioLevel's entry): AUDIO and NOISE, each a key face
+// THE LEVEL CASE — THE SLIDER AMONG THE ROSTER (architect 2026-11-05;
+// the ruling at IconNoiseLevel's entry): NOISE alone since the AUDIO case's
+// retirement (2026-11-11), a key face
 // carrying a fill and a number instead of a glyph, pressed by its own arm
 // (AppState::ChromePress's Level kind) and not by a chord. ITS READERS: the
 // band's painter (paint_icon_row forks to paint_level_case and skips the
 // glyph), the band's press claim (arm_level_case_press, asked where
 // arm_redesign_press found no chord row), the `h` view's chord walk
 // (history_mode_refuses_button_chord: LIVE, no chord to refuse) and the
-// chord table's static_assert (kToolbarChords covers the roster less these
-// two). The membership is this predicate's alone.
+// chord table's static_assert (kToolbarChords covers the roster less this
+// one). The membership is this predicate's alone.
 inline constexpr bool redesign_button_is_level_case(RedesignButton b) {
-    return b == RedesignButton::IconAudioLevel ||
-           b == RedesignButton::IconNoiseLevel;
+    return b == RedesignButton::IconNoiseLevel;
 }
 
 // THE SLIDERS' TAPER — THE SQUARE LAW (architect 2026-11-05, "accept square
@@ -3114,22 +3116,22 @@ inline double level_db_from_travel(double t) {
     return db + 0.0;   // -0.0 to 0.0
 }
 
-// THE LEVEL CASES' RECALL — THE TAP'S MEMORY (architect 2026-11-10: a tap on
-// a level case toggles it off and back, "like the fit recall", the recall
-// "session only"; the tap's rule at RedesignButton::IconAudioLevel): per
-// case, the finite level the last tap turned off, EMPTY AT THE LAUNCH and
-// until that case's first tap from a finite level. ONLY THE TAP WRITES IT: a
+// THE LEVEL CASE'S RECALL — THE TAP'S MEMORY (architect 2026-11-10: a tap on
+// the level case toggles it off and back, "like the fit recall", the recall
+// "session only"; the tap's rule at RedesignButton::IconNoiseLevel): the
+// finite level the last tap turned off, EMPTY AT THE LAUNCH and
+// until the case's first tap from a finite level. ONE LEVEL since the AUDIO
+// case's retirement (2026-11-11), NOISE's. ONLY THE TAP WRITES IT: a
 // drag that ends at -inf remembers nothing and no drag clears it. EMPTY, THE
 // TAP FROM -inf RECALLS 0 dB (his ruling). IN NO FILE AND NO DEVICE KEY: it
-// dies with the process. IT IS THE APP'S, NOT A PROJECT'S: the two levels
-// are device state the loop's one config struct carries from project to
-// project (main.cpp's run_project seats them), so the level a tap turned
+// dies with the process. IT IS THE APP'S, NOT A PROJECT'S: the level is
+// device state the loop's one config struct carries from project to
+// project (main.cpp's run_project seats it), so the level a tap turned
 // off in one project is the level a tap restores in the next — one object
 // owned by gui_main beside the config and the noise, reached through
 // AppState::level_recall. Its one reader and writer:
 // GuiInputHandler::finish_level_press_release (input_pointer.cpp).
 struct GuiLevelRecall {
-    std::optional<double> audio;
     std::optional<double> noise;
 };
 
@@ -3176,7 +3178,7 @@ struct GuiLevelRecall {
 // the TRIM arm lamp since 2026-11-07 and the Presets key), the
 // iteration group (the BPM opener, grid iterations, Flatten —
 // the group the walk lamp and Cumulative replace, since 2026-10-26 again)
-// and the render-entry group (Play Renders .. the two level cases). The right
+// and the render-entry group (Play Renders .. the level case). The right
 // run's leaders — the history opener and the view pairs' Source and Warp —
 // are named for the roster's order alone: the right run is not walked
 // (kIconRowHistoryOpener), so nothing asks them here.
@@ -5030,13 +5032,13 @@ struct AppState {
     // release_if_silent, set_crossfade_s).
     GuiNoise* noise = nullptr;
 
-    // THE LEVEL CASES' RECALL (architect 2026-11-10; GuiLevelRecall's head):
+    // THE LEVEL CASE'S RECALL (architect 2026-11-10; GuiLevelRecall's head):
     // the app's ONE, owned by gui_main and reached by pointer like the
-    // device config and the noise above — the levels it remembers are device
+    // device config and the noise above — the level it remembers is device
     // state that outlives every project, so it cannot live in this
     // per-project struct. Seated at each AppState's construction by
     // run_project and never null while the GUI runs. Its one reader and
-    // writer: the level cases' tap (GuiInputHandler::
+    // writer: the level case's tap (GuiInputHandler::
     // finish_level_press_release).
     GuiLevelRecall* level_recall = nullptr;
 
@@ -6835,8 +6837,8 @@ struct AppState {
     //            face, no burst and no gate; while it stands the card's clock
     //            is paused (GuiNotifications::press_hold_edge — the hover's
     //            one bank, a second reason).
-    //   Level  — A PRESS ON ONE OF THE TWO LEVEL CASES (architect 2026-11-05,
-    //            the sliders, IconAudioLevel's entry; the arm
+    //   Level  — A PRESS ON THE LEVEL CASE (architect 2026-11-05,
+    //            the slider, IconNoiseLevel's entry; the arm
     //            arm_level_case_press, input_pointer.cpp, asked by the band
     //            claim where no chord row claimed the press). `index` the
     //            case's roster index; THE DRAG'S WORDS: `x0` the press's x
@@ -7102,7 +7104,7 @@ struct AppState {
     //     face, the strip pad under it that carries its legend, and half the
     //     key gap on each side, so a run's columns tile with no hole and the pen
     //     sliding along a run never leaves one. The same column on every
-    //     tooltip-bearing key surface — the band (the level cases among it),
+    //     tooltip-bearing key surface — the band (the level case among it),
     //     row 8 (Play's clock field an owner's rect beside its column), the
     //     dialogs' and overlays' controls rows. PRESSES STAY FACE-ONLY
     //     (point_on_key): the column is the tooltip's hover target alone.
@@ -15866,25 +15868,22 @@ inline bool redesign_button_enabled(const AppState& a,
         // arm above keeps it lit as the way out.
         case RedesignButton::IconScore:
             return a.score.has_value();
-        // THE TWO LEVEL CASES (architect 2026-11-05; IconAudioLevel's entry):
-        // AUDIO IS NEVER DISABLED — every project has a voice — but for the
-        // head gates above (no audio to dispatch on, a standing overlay),
-        // which it takes like every key; THE NOISE CASE IS LIVE WITH A FOLDER
-        // THE `noise` KEY NAMES UNDER noise/ AND DEAD WITHOUT ONE (the lamp's
-        // rule of 2026-10-28): GuiNoise::available, the probe's answer — no
-        // such folder beside the device config, a folder with no `.wav`, a
-        // `.wav` out of shape, or a load that failed (GuiNoise::tick darkens
-        // the voice and drops the answer). DEVICE STATE: no lock greys either
-        // (neither arm reads the read-only bit or the grid-iterations lamp,
-        // stated here because the cases carry no chord for an allowlist to
-        // admit), and the `h` view's partition above answers LIVE for both
+        // THE LEVEL CASE (architect 2026-11-05; IconNoiseLevel's entry): LIVE
+        // WITH A FOLDER THE `noise` KEY NAMES UNDER noise/ AND DEAD WITHOUT
+        // ONE (the lamp's rule of 2026-10-28): GuiNoise::available, the
+        // probe's answer — no such folder beside the device config, a folder
+        // with no `.wav`, a `.wav` out of shape, or a load that failed
+        // (GuiNoise::tick darkens the voice and drops the answer); the head
+        // gates above (no audio to dispatch on, a standing overlay) it takes
+        // like every key. DEVICE STATE: no lock greys it (the arm reads
+        // neither the read-only bit nor the grid-iterations lamp, stated here
+        // because the case carries no chord for an allowlist to admit), and
+        // the `h` view's partition above answers LIVE for it
         // (history_mode_refuses_button_chord's explicit arm, input_pointer.cpp),
-        // so the view neither greys nor hides them; a standing overlay's arm
-        // above greys them with the whole roster but the opener and the
-        // tooltip lamp, the cases wearing their disabled look. A dead case
+        // so the view neither greys nor hides it; a standing overlay's arm
+        // above greys it with the whole roster but the opener and the
+        // tooltip lamp, the case wearing its disabled look. A dead case
         // arms nothing (the painted bit, arm_level_case_press).
-        case RedesignButton::IconAudioLevel:
-            return true;
         case RedesignButton::IconNoiseLevel:
             return a.noise != nullptr && a.noise->available();
         // THE HISTORY BUTTON MIRRORS TWO REFUSALS, BOTH OF THE ENTRY: the
@@ -17166,14 +17165,13 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // tooltips' presence cannot drift.
         case RedesignButton::IconTooltips:
             return a.show_tooltips;
-        // THE TWO LEVEL CASES ARE NEVER LIT (architect 2026-11-05,
-        // IconAudioLevel's entry): a slider has no checked state — its fill
+        // THE LEVEL CASE IS NEVER LIT (architect 2026-11-05,
+        // IconNoiseLevel's entry): a slider has no checked state — its fill
         // is its value, painted by paint_level_case off the live level and
         // damaged explicitly at every change (GuiInputHandler::
         // apply_level_case), so the comparator watches no level here. (THE
         // NOISE LAMP read GuiNoise::lit in this seat, 2026-10-28 to
         // 2026-11-05.)
-        case RedesignButton::IconAudioLevel:
         case RedesignButton::IconNoiseLevel:
             return false;
         // THE CUMULATIVE READING'S LAMP (2026-08-08; reinstated architect
@@ -17675,12 +17673,12 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // redesign_button_enabled) and the line drops under a lit grid-iterations
 // lamp, where the lock refuses the paste (redesign_button_tooltip's
 // overload). It admitted nothing from 2026-10-24 until then.)
-// (THE TWO LEVEL CASES WERE MEMBERS from 2026-11-05 until 2026-11-10, their
+// (THE LEVEL CASES WERE MEMBERS from 2026-11-05 until 2026-11-10, their
 // long press setting 0 dB, measured by their own arm; the architect retired
 // it — "awkward on something that slides" — for the tap that toggles the
 // case off and back, which is no hold: a motionless press of any duration
-// is the tap (RedesignButton::IconAudioLevel's entry), so the cases admit
-// nothing and their tooltips carry one line.)
+// is the tap (RedesignButton::IconNoiseLevel's entry), so the case admits
+// nothing and its tooltip carries one line.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::OpenProject ||
            b == RedesignButton::Save ||
@@ -17987,14 +17985,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the standing viewer being the same key's close.
         case RedesignButton::IconScore:
             return {"Score", nullptr};
-        // THE TWO LEVEL CASES (architect 2026-11-05, IconAudioLevel's
+        // THE LEVEL CASE (architect 2026-11-05, IconNoiseLevel's
         // entry): the name of the level the slider sets, ALONE (architect
         // 2026-11-10: the "Hold to set 0 dB" line went with the long press;
-        // the cases admit no hold, redesign_button_shift_admits, so the hint
+        // the case admits no hold, redesign_button_shift_admits, so the hint
         // walk wants no second line, and the tap that toggles the case is
         // its plain press, which a tooltip's name covers).
-        case RedesignButton::IconAudioLevel:
-            return {"Audio Level", nullptr};
         case RedesignButton::IconNoiseLevel:
             return {"Noise Level", nullptr};
         // SETTINGS (architect 2026-09-29), one line: the key opens the
@@ -18364,7 +18360,6 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconScore:                 return "SCORE";
         case RedesignButton::IconSettings:              return "SETUP";
         case RedesignButton::IconTooltips:              return "TIPS";
-        case RedesignButton::IconAudioLevel:            return "AUDIO";
         case RedesignButton::IconNoiseLevel:            return "NOISE";
         case RedesignButton::IconHistory:               return "HISTORY";
         case RedesignButton::SessionHistory:            return "SESSION";
@@ -18495,13 +18490,12 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::IconScore:                 return Icon::ViewMediaLyrics;
         case RedesignButton::IconSettings:              return Icon::SettingsConfigure;
         case RedesignButton::IconTooltips:              return Icon::HelpWhatsthis;
-        // THE TWO LEVEL CASES PAINT NO GLYPH (sliders; IconAudioLevel's
-        // entry): paint_icon_row skips paint_key_glyph for a level case
+        // THE LEVEL CASE PAINTS NO GLYPH (a slider; IconNoiseLevel's
+        // entry): paint_icon_row skips paint_key_glyph for the level case
         // (redesign_button_is_level_case), and this constant word only
         // keeps the face's stash (RedesignButtonFace::icon) and the per-tick
         // comparator's drawing term defined — it never changes and reaches no
         // pixel. (The NOISE lamp's Raindrop went with the lamp, 2026-11-05.)
-        case RedesignButton::IconAudioLevel:            return Icon::EditClear;
         case RedesignButton::IconNoiseLevel:            return Icon::EditClear;
         case RedesignButton::IconHistory:               return Icon::ShallowHistory;
         case RedesignButton::SessionHistory:            return Icon::DeepHistory;

@@ -14,7 +14,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Twenty keys live here and nowhere else,
+// piece (architect 2026-08-27). Nineteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -112,27 +112,6 @@
 //                            before it, the 2026-10-30 reasoning its reason:
 //                            neighboring pixels spread the weight exactly
 //                            at .5)
-//   audio_level=<dB>         THE PROJECT VOICE'S LEVEL (architect
-//                            2026-10-31 night: "it should be audio out
-//                            versus noise, and I should be able to adjust
-//                            them to avoid clipping. So then I can turn up
-//                            the volume on the tablet itself"): everything
-//                            the program itself plays — the source and the
-//                            target, the A/B audition, the render player,
-//                            the score's audio — scaled by one level, a
-//                            decimal dB in [-60.0, 0.0] or `-inf` (THE LEVEL
-//                            GRAMMAR below, shared with noise_level since
-//                            2026-11-05), applied to the files as they are,
-//                            the noise summed after it at its own level and
-//                            the clip last (playback_common.h's head); live
-//                            at every motion of the band's AUDIO case (the
-//                            slider, RedesignButton::IconAudioLevel,
-//                            app_state.h; GuiPlayback::set_audio_level_db),
-//                            its ONE ROAD: no Settings row (a key shown and
-//                            edited on the main page gets none, architect
-//                            2026-11-05 night, kSettingsEditorKeys);
-//                            PERMANENT and REQUIRED; the first-run value the
-//                            defaults file's (0 there, the files as they are)
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
@@ -318,6 +297,18 @@
 //                            which settles into a constexpr once he rules
 //                            the number, its key, grammar and row going
 //                            then; the first-run value the defaults file's
+//   (audio_level=<dB>, THE PROJECT VOICE'S LEVEL, everything the program
+//                            itself played scaled by one level under THE
+//                            LEVEL GRAMMAR, set by the band's AUDIO case, a
+//                            required key 2026-10-31 night to 2026-11-11,
+//                            RETIRED with the case (architect 2026-11-11,
+//                            session 104: "realistically it's not clipping,
+//                            and when it does clip, it's very subtle"): the
+//                            voice plays at 0 dB, the files as they are
+//                            (playback_common.h's head); an old
+//                            `audio_level=` line is the ordinary unknown-key
+//                            hard fail, the sync script's setup removing it
+//                            on the tablet)
 //   (tooltip_gap=<w>, THE TOOLTIP'S GAP, the ground between the box and its
 //                            owner's face in W, a tuning key in [0, 12] with
 //                            a Settings row, required for session 90 of
@@ -442,9 +433,9 @@
 // evening, and the keyboard's cap size `osk_font_px` after them that
 // night; the plate's grow `waveform_grow` placed after `true_colors`
 // 2026-10-31, the display keys' end, a permanent key before the noise's
-// three; the project voice's level `audio_level` placed before the noise's
-// three 2026-10-31 night, the two voices' levels read together, audio out
-// then the noise; `waveform_column_px` appended at the end and gone within
+// three; the project voice's level placed before the noise's three
+// 2026-10-31 night and gone 2026-11-11 with the AUDIO case;
+// `waveform_column_px` appended at the end and gone within
 // 2026-11-01, `waveform` gone 2026-11-01, `true_colors` after
 // `last_project` since; `theme` placed after `true_colors` 2026-11-05, the
 // display keys together — true_colors, theme, waveform_grow; the noise's
@@ -602,7 +593,7 @@
 // (architect 2026-11-08, session 95: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all nineteen lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -621,7 +612,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the defaults file and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the twenty
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nineteen
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
@@ -663,9 +654,9 @@
 // tuning keys `run_gap` and `tooltip_delay_ms`, among them
 // (kSettingsEditorKeys) — then a key's current
 // value, then a closed value's words, and committing each through this
-// file's writer under the key's own grammar below. THE TWO LEVELS,
-// `audio_level` and `noise_level`, are edited on the main page alone, the
-// band's AUDIO and NOISE cases, whose lift writes through the same writer
+// file's writer under the key's own grammar below. THE LEVEL,
+// `noise_level`, is edited on the main page alone, the band's NOISE case,
+// whose lift writes through the same writer
 // (architect 2026-11-05 night: a key shown and edited on the main page gets
 // no Settings row, kSettingsEditorKeys). (The Settings popup's rows opened it prefilled, one per key,
 // 2026-09-02..10-21.) Until
@@ -717,10 +708,6 @@ struct DeviceConfig {
     // head's list; a permanent key): required; the construction state is
     // 1 px (kWaveformGrowDefaultQuarters below).
     int         waveform_grow_quarters = 4;
-    // THE PROJECT VOICE'S LEVEL in dB (2026-10-31 night, the head's list; a
-    // permanent key; a double under THE LEVEL GRAMMAR since 2026-11-05, -inf
-    // the mute): required; the construction state is 0.0.
-    double      audio_level       = 0.0;
     // THE NOISE'S FOLDER NAME, its level in dB (a double, -inf off, THE
     // LEVEL GRAMMAR, 2026-11-05), its fixed attenuation in dB under that
     // level (a double, never -inf, 2026-11-05 night) and its crossfade in
@@ -801,8 +788,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: past a width or a
 // scale the icon row — the
-// toolbar band, its twenty-eight standing members in three left runs and one
-// right run of the program's key (nineteen in the view, its history
+// toolbar band, its twenty-seven standing members in three left runs and one
+// right run of the program's key (eighteen in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
 // runs the simple layout's, 2026-10-22) — no longer fits, and its
 // right-anchored run covers the runs to its left (the overflow rule at
@@ -957,10 +944,11 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
     return neg ? -n : n;
 }
 
-// THE LEVEL GRAMMAR — `audio_level`, `noise_level` AND, LESS `-inf`,
-// `noise_attenuation_level`, ONE OWNER (architect 2026-11-05, the two level
-// cases; "i plan to use stable values for both", so both keys stay and
-// persist; the two integer grammars of 2026-10-28 and 2026-10-31 night,
+// THE LEVEL GRAMMAR — `noise_level` AND, LESS `-inf`,
+// `noise_attenuation_level`, ONE OWNER (architect 2026-11-05, the level
+// cases; "i plan to use stable values for both"; the project voice's level
+// beside them until the AUDIO case's retirement, 2026-11-11, the voice at
+// 0 dB since; the two integer grammars of 2026-10-28 and 2026-10-31 night,
 // [-30, 0] in whole dB, are this one since; THE EXACT DOUBLE since
 // 2026-11-05 night, his "single decimal is what ableton does" — the face
 // shows one decimal, the file keeps the value whole): the value is `-inf`,
@@ -975,19 +963,19 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
 // text, the range checked on the value; "-0", "-0.0", "-0.00…" are refused
 // (zero is unsigned), as every other spelling is. THE FACE PRINTS ONE
 // DECIMAL (format_level_db_face: the level rounded to the tenth, "0.0",
-// "-9.0", "-inf"), the band's two cases' number alone. THE RANGE IS THE
-// SLIDERS' FLOOR: the case reads -60.0 at its last step and -inf below it
+// "-9.0", "-inf"), the band's NOISE case's number alone. THE RANGE IS THE
+// SLIDER'S FLOOR: the case reads -60.0 at its last step and -inf below it
 // ("-60 then -inf"; the taper at level_db_from_travel, app_state.h). -inf
-// is the infinity (kLevelDbOff), the audio's mute and the noise's one off
-// switch (noise.h's head); THE ATTENUATION refuses it
+// is the infinity (kLevelDbOff), the noise's one off switch (noise.h's
+// head); THE ATTENUATION refuses it
 // (parse_noise_attenuation_db: the bed's switch is noise_level's alone).
-// The readers: the config's reader and writer, the two cases' lift (the
-// drag persists through the writer) and their painter (the face's
+// The readers: the config's reader and writer, the case's lift (the
+// drag persists through the writer) and its painter (the face's
 // formatter); the attenuation's typed arm and its recall
-// (apply_device_setting, recall_gui_setting_value). 0 dB is the files as
-// they are; the audio level scales the project voice before the noise is
-// summed (playback_common.h's head), so the two levels together keep the
-// sum clear of the clip and the tablet's own volume sets the loudness.
+// (apply_device_setting, recall_gui_setting_value). 0 dB is the recordings
+// as they are; the project voice plays at 0 dB, summed unscaled with the bed
+// before the clip (playback_common.h's head), and the tablet's own volume
+// sets the loudness.
 inline constexpr double kLevelDbMin = -60.0;
 inline constexpr double kLevelDbMax = 0.0;
 inline constexpr double kLevelDbOff = -std::numeric_limits<double>::infinity();
@@ -1108,7 +1096,7 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // template's until 2026-11-09. The width alone moves: the glyph follows
 // key_height (paint_key_glyph), the legend never widens the face (a
 // narrower face lets the widest legends overhang onto the ground, accepted
-// while tuning; MAGNIFY below 32 W). Past 37 W on the tablet at 200 % (and
+// while tuning; MAGNIFY below 32 W). Past 38 W on the tablet at 200 % (and
 // run_gap 22, below) the band no longer fits and its overflow rule answers — the left runs
 // clipped short of the right run, the third run's keys gone from its tail,
 // SETUP itself from 44 W (THE FIT at paint_icon_row's width math,
@@ -1144,11 +1132,10 @@ inline std::optional<int> parse_key_width(std::string_view v) {
 // is the constexpr kRunGapW of 2026-11-04 night, the template's until
 // 2026-11-09. One key for every reader (render.h's
 // program_run_gap_px): the band's runs, row 8's groups, the render player's
-// and every controls row's group spaces. Past 41 W on the tablet at 200 %
-// and key_width 35 the band no longer fits and its overflow rule answers —
-// the left runs clipped one run gap short of the history opener, NOISE cut
-// from its tail at 42 to 44 (THE FIT at paint_icon_row's width math,
-// paint_handler.cpp). The settings page opens the LINE EDITOR on it, not a
+// and every controls row's group spaces. On the tablet at 200 % and
+// key_width 35 the band fits whole across the key's whole range (THE FIT at
+// paint_icon_row's width math, paint_handler.cpp: 2200 of the well's 2256
+// at 44 W); a wider key brings the overflow rule back. The settings page opens the LINE EDITOR on it, not a
 // value list (43 values is no short domain, kSettingsValueListKeys' rule). A
 // TUNING KEY: when he rules the number, the key, these functions and its
 // Settings row go, and the value becomes a constexpr behind render.h's
@@ -1499,10 +1486,10 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // `run_gap=` (its live act GuiInputHandler::apply_run_gap) and
 // `tooltip_delay_ms=` (no live act: the tooltip's writer and clock read the
 // live struct, note_tooltip_hover / tick_tooltip) —
-// and the band's two level cases' end (GuiInputHandler::settle_level_case,
-// since 2026-11-05: `audio_level=` and `noise_level=`, their live acts
-// GuiPlayback::set_audio_level_db and GuiNoise::set_level_db, the typed
-// lines that wrote them too until 2026-11-05 night gone with their rows)
+// and the band's level case's end (GuiInputHandler::settle_level_case,
+// since 2026-11-05: `noise_level=`, its live act GuiNoise::set_level_db,
+// the typed line that wrote it too until 2026-11-05 night gone with its
+// row; the project voice's level beside it until 2026-11-11)
 // (the
 // noise's latter two `rain_level=` and
 // `rain_crossfade_ms=` earlier that day and the crossfade

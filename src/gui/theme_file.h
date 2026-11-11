@@ -49,7 +49,7 @@
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
 // clock pair retired 2026-11-02 with the overlays' flat pass; the two level
 // fills, `level_audio_fill` and `level_noise_fill`, retired 2026-11-10 on
-// the architect's "monochrome on the front page" — the level cases' fill is
+// the architect's "monochrome on the front page" — the level case's fill is
 // the lit key's `lit_fill`, paint_level_case, paint_handler.cpp). TWO ROLES
 // MAY SHARE A TONE — a
 // role is what it paints, not its value: `label`, `field_text` and `text`

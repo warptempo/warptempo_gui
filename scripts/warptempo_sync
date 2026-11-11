@@ -194,7 +194,7 @@ shopt -s nocaseglob
 #      VALUES) but gui_scale, projects_repo, projects_path and last_project
 #      is added where its key has no line (ADDED_LINES below, read from that
 #      file at every run) -- A LINE ALREADY THERE IS KEPT, so an
-#      existing tablet keeps every value as it tuned it, the two levels
+#      existing tablet keeps every value as it tuned it, the levels
 #      whatever their spelling (the app reads 0.0 and -9.0 as well as 0 and
 #      -9, and rewrites them canonical at its next commit) -- and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
@@ -209,8 +209,9 @@ shopt -s nocaseglob
 #      noise_crossfade_ms, made noise_crossfade_s in seconds that night,
 #      role, which left 2026-10-30 with the laptop GUI (one device, no mirror),
 #      waveform_column_px, retired 2026-11-01 night, waveform and its older name
-#      chrome, which left 2026-11-01 with the color presets (one palette), and
-#      tooltip_gap, settled 2026-11-07 at 1 W
+#      chrome, which left 2026-11-01 with the color presets (one palette),
+#      tooltip_gap, settled 2026-11-07 at 1 W, and audio_level, the project
+#      voice's level, retired 2026-11-11 with the AUDIO case
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
 #   6. THE NOISE AND THEMES FOLDERS (2026-10-28, 2026-11-06): the laptop's
@@ -278,7 +279,7 @@ PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 #     clone lives, and last_project the piece THIS tablet opened (a snapshot's
 #     name may be one it lacks).
 # A value tuned on the tablet is kept: a line already there is never touched
-# — the two levels' lines among them, whatever their spelling (0.0 and -9.0
+# — the levels' lines among them, whatever their spelling (0.0 and -9.0
 # read as well as 0 and -9), which the app rewrites canonical at its next
 # commit. (Until 2026-11-09 the lines were spelled here, each key's value
 # beside the record of when it joined; src/gui/device_config.h records each
@@ -323,7 +324,9 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # column width, a tuning key retired 2026-11-01 night; and tooltip_gap, the
 # ground between a tooltip and the button it stands above, a tuning key of
 # 2026-11-07's session 90, settled in session 91 at 1 W and a constant in the
-# program since (src/gui/render.h's kTooltipGapW). A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
+# program since (src/gui/render.h's kTooltipGapW); and audio_level, the
+# project voice's level, retired 2026-11-11 with the AUDIO case: the voice
+# plays at 0 dB. A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level line (the defaults
 # file's) takes its place, so the planner renames the two lines by hand at the
 # install, on both devices, the program not running; a crossfade in ms comes
@@ -341,7 +344,7 @@ RETIRED_KEYS=(sync_path theme_level
               rain_level rain_crossfade_ms
               noise_crossfade_ms role
               waveform_column_px waveform chrome
-              tooltip_gap)
+              tooltip_gap audio_level)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE slider plays.
@@ -1320,8 +1323,8 @@ apply_setup() {
     # colour keys, caption, the bevel pair, strip_pad, the cues' tuning
     # keys, the LED glow's, the noise's two fades, the level's and the
     # crossfade's first names, the crossfade's ms key, role, the column
-    # width's key, the color preset's waveform and chrome, and the tooltip's
-    # gap, RETIRED_KEYS),
+    # width's key, the color preset's waveform and chrome, the tooltip's
+    # gap and the project voice's level, RETIRED_KEYS),
     # the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the

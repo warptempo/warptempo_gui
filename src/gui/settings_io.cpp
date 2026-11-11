@@ -395,9 +395,9 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // file formatter (format_level_db, device_config.h: the shortest
     // round-trip decimal — a config loaded as "-9.0" recalls as "-9") and
     // the crossfade through its own (format_noise_crossfade_s), the writer's
-    // own spelling. (The two levels, `audio_level` and `noise_level`, recall
-    // nothing since 2026-11-05 night: no Settings row, the band's cases
-    // their one road, kSettingsEditorKeys.)
+    // own spelling. (The level, `noise_level`, recalls nothing since
+    // 2026-11-05 night: no Settings row, the band's NOISE case its one road,
+    // kSettingsEditorKeys.)
     if (key == "noise" && app.device_config != nullptr)
         return app.device_config->noise;
     if (key == "noise_attenuation_level" && app.device_config != nullptr)

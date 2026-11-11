@@ -427,7 +427,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // Backspace, and every letter the ladder never tests (A, E, X, Y — T
 // left the class 2026-10-28 night for the Trim Presets list's opener; W
 // left the class 2026-10-28 for the NOISE lamp's toggle, came BACK
-// 2026-11-05 with the lamp's retirement for the band's two level cases,
+// 2026-11-05 with the lamp's retirement for the band's level cases,
 // sliders with no chord, and left again 2026-11-07 for the TRIM arm
 // lamp's toggle; E
 // left the class 2026-10-10 for Alt+E, the Edit title's access key, and came

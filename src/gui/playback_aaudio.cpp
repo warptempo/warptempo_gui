@@ -1,14 +1,12 @@
 #include "playback.h"
 
 #include "playback_common.h"
-#include "device_config.h"  // kLevelDbOff — the audio level's mute
 #include "noise.h"  // noise_mix_block — the second voice the callback sums
 
 #include <aaudio/AAudio.h>
 
 #include <atomic>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <thread>
@@ -230,8 +228,8 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     }
     // THE SECOND VOICE AND THE CLIP, ON BOTH ARMS (2026-10-28,
     // playback_common.h's head): the noise summed under what the arm wrote
-    // (the render arm's block already scaled by the audio level) —
-    // the stream runs between plays, so the bed plays there too — then every
+    // (the render arm's block the project voice, unscaled at 0 dB) — the
+    // stream runs between plays, so the bed plays there too — then every
     // sample clamped. A BLOCK THAT CLAMPED COUNTS (2026-11-05, the clip
     // lamp: GuiPlaybackState::clipped_blocks, one release increment the GUI
     // tick reads with acquire; no allocation, no syscall).
@@ -640,16 +638,6 @@ GuiPlayback::~GuiPlayback() { shutdown(); }
 // callback exists to race the store.
 void GuiPlayback::attach_noise(GuiNoiseVoice* voice) {
     impl_->state.noise = voice;
-}
-
-// The forward (contract at the declaration): one relaxed store the render
-// body reads at its next fill (GuiPlaybackState::audio_gain); 0 at -inf, the
-// mute (std::pow(10, -inf) is 0, spelled out all the same).
-void GuiPlayback::set_audio_level_db(double db) {
-    const float gain = db == kLevelDbOff
-                           ? 0.0f
-                           : static_cast<float>(std::pow(10.0, db / 20.0));
-    impl_->state.audio_gain.store(gain, std::memory_order_relaxed);
 }
 
 bool GuiPlayback::init(int sample_rate, int channels, const float* samples,

@@ -32,7 +32,7 @@ namespace {
 // A file lacking one is left out (the head). THE LIST NAMES EXACTLY THE
 // ROLES A TONE READS: RangeEditField and ChosenPreListen, the level cases'
 // two fills of 2026-11-05 night, left it 2026-11-10 with those fills (the
-// cases wear the lit key's face, the head's DERIVED block), so a file
+// case wears the lit key's face, the head's DERIVED block), so a file
 // lacking either is no longer left out for it.
 constexpr std::string_view kAskRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",

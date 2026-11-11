@@ -64,8 +64,8 @@
 // Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
 // Drag, Add to Selection), the view pairs' lit members, the on-screen
 // keyboard's latched Shift and symbols key — wears `lit_fill` /
-// `lit_press_fill`. (THE TWO LEVEL CASES, AUDIO and NOISE, are never checked
-// and never pressed-faced: sliders, their fill their value, the fill itself
+// `lit_press_fill`. (THE LEVEL CASE, NOISE, is never checked
+// and never pressed-faced: a slider, its fill its value, the fill itself
 // `lit_fill` on the rest face since 2026-11-10 —
 // paint_level_case, paint_handler.cpp; architect 2026-11-05.) What is
 // printed on a lit face, a lamp's or a door's, is `text_on_lit` (key_ink:

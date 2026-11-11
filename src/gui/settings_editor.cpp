@@ -1212,9 +1212,9 @@ void GuiSettingsEditor::commit() {
 // live, no card — its arm below; `waveform_grow` (2026-10-31) the same, its arm after
 // that, `noise` and `noise_crossfade_s` (2026-10-28) and
 // `noise_attenuation_level` (2026-11-05 night) the same, at once and no
-// card, their arms after it (the two levels, `audio_level` and
-// `noise_level`, have no arm since 2026-11-05 night: no Settings row, the
-// band's two cases their one road, kSettingsEditorKeys), and the
+// card, their arms after it (the level, `noise_level`, has no arm since
+// 2026-11-05 night: no Settings row, the band's NOISE case its one road,
+// kSettingsEditorKeys), and the
 // tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
 // `osk_font_px` (2026-10-29) and the key's face width `key_width`
 // (2026-11-06, its arm after key_height's) and the run gap `run_gap`

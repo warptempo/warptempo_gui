@@ -27,7 +27,7 @@ struct GuiThemeTones {
     uint32_t text_on_lit;         // anything printed on a lit face (ControlForeground, = text, since the lamp rule 2026-11-10)
     uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
     uint32_t key_face;            // the key at rest, the time fields (SurfaceBackground)
-    uint32_t lit_fill;            // a checked key's whole face, and the two level cases' fill (THE LAMP RULE: the key face · mean(face) / mean(Desktop))
+    uint32_t lit_fill;            // a checked key's whole face, and the level case's fill (THE LAMP RULE: the key face · mean(face) / mean(Desktop))
     uint32_t lit_press_fill;      // a checked key's face while a press stands on it (Desktop, = key_press_face)
     uint32_t door_lit_fill;       // a checked OVERLAY OPENER's face, the seven doors (= lit_fill since the lamp rule 2026-11-10)
     uint32_t door_lit_press_fill; // a checked door's face while a press stands on it (Desktop, = lit_press_fill)

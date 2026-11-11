@@ -1507,7 +1507,7 @@ void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
 // contract is at platform.h; gui_main below is the loop). The window, the
-// input core, the device config, the noise, the level cases' recall, the
+// input core, the device config, the noise, the level case's recall, the
 // held display width and the render cache are the caller's and outlive
 // every call.
 GuiProjectOutcome run_project(GuiPlatform&            gui,
@@ -1528,14 +1528,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // app's, so it survives this project's end and the next engine's init
     // picks the voice up where it stood (GuiNoiseVoice's thread note).
     playback.attach_noise(noise.voice());
-    // THE AUDIO LEVEL, SEATED FROM THE LIVE CONFIG (2026-10-31 night; the
-    // `audio_level` device key, playback_common.h's head): this project's
-    // engine scales everything it plays by the level the loop's one struct
-    // holds now — a value set in an earlier project carries over — and the
-    // band's AUDIO case sets it
-    // live from here on (GuiInputHandler::apply_level_case,
-    // GuiPlayback::set_audio_level_db).
-    playback.set_audio_level_db(device_config.audio_level);
     WaveformCache wf_cache;
     // Top-strip flag rects live on their own surface, rebuilt
     // synchronously from on_tick. Constructed alongside wf_cache so they share
@@ -1557,7 +1549,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (AppState::noise): the NOISE case's face, its drag and tap and
     // the settings editor's three noise arms read it.
     app.noise         = &noise;
-    // THE LEVEL CASES' RECALL, the app's one, the same way (architect
+    // THE LEVEL CASE'S RECALL, the app's one, the same way (architect
     // 2026-11-10; GuiLevelRecall, app_state.h): the level a tap turned off
     // in an earlier project is the one a tap restores in this one.
     app.level_recall  = &level_recall;
@@ -3756,9 +3748,9 @@ int gui_main() {
     noise.set_level_db(device_config.noise_level);
     noise.set_crossfade_s(device_config.noise_crossfade_s);
 
-    // THE LEVEL CASES' RECALL (architect 2026-11-10: the tap's memory,
+    // THE LEVEL CASE'S RECALL (architect 2026-11-10: the tap's memory,
     // "session only"; GuiLevelRecall, app_state.h): EMPTY AT THE LAUNCH,
-    // one for the process — the levels it remembers are the config's, device
+    // one for the process — the level it remembers is the config's, device
     // state every project shares — handed to every project's session and
     // written to no file.
     GuiLevelRecall level_recall;

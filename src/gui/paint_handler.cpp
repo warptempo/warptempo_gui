@@ -355,48 +355,47 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, bool lamp,
                                           : KeyLitClass::Lamp);
 }
 
-// THE TWO LEVEL CASES' PAINTER (architect 2026-11-05, session 46, his "yes"
-// on mock s46_m1 of tmp/s46; the ruling at RedesignButton::IconAudioLevel,
-// app_state.h): AUDIO and NOISE, the `audio_level` and `noise_level`
-// SLIDERS in the band's third run, each ON A KEY FACE. THE FACE: the key at
-// rest (paint_key's Rest, the theme's `key_face`) — NEVER LIT, NEVER
+// THE LEVEL CASE'S PAINTER (architect 2026-11-05, session 46, his "yes"
+// on mock s46_m1 of tmp/s46; the ruling at RedesignButton::IconNoiseLevel,
+// app_state.h): NOISE, the `noise_level` SLIDER at the band's third run's
+// tail, ON A KEY FACE (the AUDIO case beside it retired 2026-11-11). THE
+// FACE: the key at rest (paint_key's Rest, the theme's `key_face`) — NEVER LIT, NEVER
 // PRESSED: a slider shows its value, and ITS FILL IS THE FEEDBACK
 // (confirmed by the architect 2026-11-05 night, "no press face on the
 // cases"; a press face would read as a button's blink under a finger that
 // is setting a number) — UNDER A FILL FROM THE FACE'S LEFT EDGE,
 // nearbyint(t · face width) device px wide, the face's full height, NO
 // BORDER (his "agree on no border"), no inset: THE LIT KEY'S FACE,
-// `lit_fill`, FOR BOTH CASES (architect 2026-11-10, "monochrome on the
-// front page": the lamp rule's tone, the key face a little lighter,
-// theme_ask.h's DERIVED block; the cases' own two fills, Live's
-// RangeEditField and ChosenPreListen of 2026-11-05 night, retired with
-// their roles), where t is the exact
+// `lit_fill` (architect 2026-11-10, "monochrome on the front page": the
+// lamp rule's tone, the key face a little lighter, theme_ask.h's DERIVED
+// block; the cases' own two fills, Live's RangeEditField and
+// ChosenPreListen of 2026-11-05 night, retired with their roles), where t
+// is the exact
 // level's travel fraction (level_travel_fraction, the square-law taper,
 // app_state.h: 0 dB the face full, -9 dB 0.596 of it, -60 dB two columns,
 // -inf none) — whole device-px cells, no antialiasing (paint_cell_rect).
 // THE NUMBER over it: the level TO ONE DECIMAL, "0.0", "-9.0", "-inf"
 // (format_level_db_face, THE LEVEL GRAMMAR, device_config.h: his "single
 // decimal is what ableton does", 2026-11-05 night; the file keeps the exact
-// value), the NOISE case's its own `noise_level` alone (the bed's fixed
+// value), the case's own `noise_level` alone (the bed's fixed
 // attenuation under it is not printed, noise.h's head), in the BODY face
 // (Liberation Sans Bold 11 W, 22 device px on the tablet: the number is
 // read, so Body and not the legends' Regular 7 W), the text tone `text`
 // whatever is under it — the fill and the face alike, as m1 shows —
 // AND AT -inf, THE CASE OFF, THE DISABLED TEXT TONE `text_dim` (architect
 // 2026-11-10: an enabled case standing at -inf prints its "-inf" dim, over
-// no fill — off reads off, the tap that toggles it there, IconAudioLevel's
+// no fill — off reads off, the tap that toggles it there, IconNoiseLevel's
 // entry); centered on the face by its cap band (redesign_baseline, the
 // chrome labels' rule) and horizontally by its ink (ink_left_px /
 // ink_right_px, the floor of the spare to the left); the run shaped through
 // the memo (memoized_run: a few dozen spellings). DISABLED (`enabled` false
-// — the NOISE case with no folder or a failed load, both under the roster's
-// blanket greys): the fill in `key_dim_ink`, THE NUMBER IN `text_dim`
+// — no folder or a failed load, and the roster's blanket greys): the fill in `key_dim_ink`, THE NUMBER IN `text_dim`
 // (Live's TextDisabled, Default 757575, the inert rows' tone; architect
 // 2026-11-05 night, his pick m3 of tmp/s49 over the number in the ground,
 // m1, in the key face, m2, and in the text tone, m4), the face unchanged,
 // the slider inert. The legend under the face is the caller's
-// (paint_key_legend, as every key's). THE REPAINT: every change of a case's
-// level damages its face rect explicitly (GuiInputHandler::apply_level_case)
+// (paint_key_legend, as every key's). THE REPAINT: every change of the
+// case's level damages its face rect explicitly (GuiInputHandler::apply_level_case)
 // — the per-tick comparator watches no level — and the enabled edge is the
 // comparator's as every key's.
 void paint_level_case(cairo_t* cr, const GuiRect& face, bool enabled,
@@ -1093,9 +1092,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // toggle's does.
     {RedesignButton::IconReadOnly},
     // THE SCORE (architect 2026-10-26), between the padlock and Settings
-    // (architect 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS AUDIO
-    // NOISE): bare `m`, the score viewer's opener and, while it stands,
-    // its closer (RedesignButton::IconScore). One case on the walk, no run
+    // (architect 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS
+    // NOISE since the AUDIO case left, 2026-11-11): bare `m`, the score
+    // viewer's opener and, while it stands, its closer (RedesignButton::IconScore). One case on the walk, no run
     // moving.
     {RedesignButton::IconScore},
     // SETTINGS (architect 2026-09-29), right after the Score key (architect
@@ -1106,19 +1105,18 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconSettings},
     // ENABLE TOOLTIPS (architect 2026-09-29, evening), behind Settings
     // since 2026-10-01 (architect: help
-    // comes after settings), the two level cases behind it: the bare backslash's LAMP. Dark at every open, and while dark no tooltip shows
+    // comes after settings), the level case behind it: the bare backslash's LAMP. Dark at every open, and while dark no tooltip shows
     // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
     // walk, no separator moving.
     {RedesignButton::IconTooltips},
-    // THE TWO LEVEL CASES (architect 2026-11-05), the third run's last two,
-    // in the NOISE lamp's seat (2026-10-28 to 2026-11-05): AUDIO then NOISE,
-    // the `audio_level` and `noise_level` sliders (RedesignButton::
-    // IconAudioLevel, app_state.h; paint_level_case below). Two cases onto
-    // the walk, the run one pitch longer than the lamp's, no run moving: on
+    // THE LEVEL CASE (architect 2026-11-05), the third run's last, in the
+    // NOISE lamp's seat (2026-10-28 to 2026-11-05): NOISE, the `noise_level`
+    // slider (RedesignButton::IconNoiseLevel, app_state.h; paint_level_case
+    // above). The AUDIO case before it, the project voice's slider, retired
+    // 2026-11-11 with its key, the run one pitch shorter, no run moving: on
     // the tablet at the defaults the left walk ends short of the left runs'
     // limit (the right run's first face less the run gap, icon_row_seats;
     // THE FIT at paint_icon_row's width math).
-    {RedesignButton::IconAudioLevel},
     {RedesignButton::IconNoiseLevel},
     // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
     // right-anchored since, kIconRowHistoryOpener below.)
@@ -1147,7 +1145,7 @@ constexpr IconRowDef kIconRowButtons[] = {
 // and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). No other group is
 // refused whole in the view: the zoom group keeps Zoom In, Zoom Out and Zoom
 // to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders (bare `l`, admitted 2026-10-25),
-// the tooltip lamp (bare backslash) and the two level cases (no chord, LIVE
+// the tooltip lamp (bare backslash) and the level case (no chord, LIVE
 // by the walk's own arm since 2026-11-05; the NOISE lamp's bare `w`
 // admitted 2026-10-28 until then).
 //
@@ -1164,8 +1162,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // (kTransportHistoryStandIns). The zoom group stands on the four members the
 // view does not refuse in every session (Zoom In and Zoom Out since
 // 2026-10-27, Zoom to Fit and, since 2026-10-12, Waveform Magnification) and
-// the render-entry group on four (Play Renders,
-// since 2026-10-25, Enable Tooltips, and the two level cases since
+// the render-entry group on three (Play Renders,
+// since 2026-10-25, Enable Tooltips, and the level case since
 // 2026-11-05 — the NOISE lamp 2026-10-28 until then), their others hidden
 // (history_mode_hides_button, paint_icon_row's walk).
 // The history opener and the view pairs are right-anchored and do not move
@@ -1255,7 +1253,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // pixels on screen (on screen is as painted; paint_icon_row's walks). The
 // widths and scales at which the band holds every run are THE FIT at
 // paint_icon_row's width math, its one statement; the tablet does not reach
-// the rule at its 200 % and the keys' defaults (a key_width past 37 W does).
+// the rule at its 200 % and the keys' defaults (a key_width past 38 W does).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource},
      {RedesignButton::ViewTarget}},
@@ -1869,7 +1867,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
     // READ-ONLY toggle, the SCORE key — between the padlock and Settings,
     // architect 2026-11-10 — SETTINGS, ENABLE TOOLTIPS and since 2026-11-05
-    // the two level cases, AUDIO and NOISE,
+    // the level case, NOISE (AUDIO beside it until 2026-11-11),
     // in the NOISE lamp's seat of 2026-10-28) the third — then,
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
     // (kIconRowRightRun). IN THE `h` VIEW the history group's four icon-row
@@ -1889,7 +1887,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // admits since
     // 2026-10-12, architect: he wants to magnify while walking history), and
     // the padlock, the Score key (2026-10-26) and Settings between Play
-    // Renders (admitted 2026-10-25) and Enable Tooltips, the two level cases
+    // Renders (admitted 2026-10-25) and Enable Tooltips, the level case
     // behind it standing — its
     // neighbors
     // closing up and its run standing
@@ -1909,55 +1907,55 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (key_group_w_px: 70n + 2(n − 1)), 44 of ground (the run gap) between
     // two runs' faces; the right run 5 · 70 + 4 · 2 = 358, its last FACE
     // ending on the well's last column. Outside the `h` view the LEFT WALK is
-    // twenty-three members in three runs of 5, 11 and 7 (COPY gone to row 8
-    // and the TRIM lamp joined the second run, 2026-11-07),
-    //   358 + 44 + 790 + 44 + 502 = 1738,
-    // and inside it fourteen in three (Open, Save, Revert, Load in Place |
+    // twenty-two members in three runs of 5, 11 and 6 (COPY gone to row 8
+    // and the TRIM lamp joined the second run, 2026-11-07; the AUDIO case
+    // gone from the third, 2026-11-11),
+    //   358 + 44 + 790 + 44 + 430 = 1666,
+    // and inside it thirteen in three (Open, Save, Revert, Load in Place |
     // Zoom In, Zoom Out, Zoom to Fit, the lamp, Cumulative, Session | Play
-    // Renders, Enable Tooltips, Audio, Noise — Restrict and the Trim Presets
+    // Renders, Enable Tooltips, Noise — Restrict and the Trim Presets
     // key hidden there with Follow),
-    //   286 + 44 + 430 + 44 + 286 = 1090;
+    //   286 + 44 + 430 + 44 + 214 = 1018;
     // with one run gap of bare ground before the right run the band holds every
     // run at
-    //   1738 + 44 + 358 = 2140
-    // device px outside the view (1492 inside it) — the faces' span the
-    // well's 2256 on the tablet, with 116 px (58 W) of ground between the
+    //   1666 + 44 + 358 = 2068
+    // device px outside the view (1420 inside it) — the faces' span the
+    // well's 2256 on the tablet, with 188 px (94 W) of ground between the
     // left runs and the right run beyond the run gap. Off the painted walk
     // (the face scaled_px(key_width), the key gap scaled_px(1), the run gap
     // scaled_px(run_gap), the ends well_columns'): at the tablet's 200 % (faces
-    // 70, the well 24 .. 2279) the left runs' faces on x 24..1761, the right
+    // 70, the well 24 .. 2279) the left runs' faces on x 24..1689, the right
     // run's 1922..2279 (its last face ending on 2279); at 100 % on a 1920-px
     // window (faces 35, the key gap 1, the run gap 22, the well 16 .. 1903)
-    // the left runs' faces on x 16..884, the right run's 1725..1903. A roster
+    // the left runs' faces on x 16..848, the right run's 1725..1903. A roster
     // move restates these numbers.
-    // THE FIT, the one statement every other site points to: the band is 28
-    // faces, 24 key gaps and three run gaps outside the view (19, 15 and
-    // three inside it) against the well — 1070 W outside, 746 W inside at
-    // key_width 35 — so the tablet's 2304 holds it whole up to about 210 %
-    // outside the view and about 300 % inside it, and at 100 % a window down
-    // to about 1100 device px outside the view and 780 inside it; past either
+    // THE FIT, the one statement every other site points to: the band is 27
+    // faces, 23 key gaps and three run gaps outside the view (18, 14 and
+    // three inside it) against the well — 1034 W outside, 710 W inside at
+    // key_width 35 — so the tablet's 2304 holds it whole up to about 215 %
+    // outside the view and about 310 % inside it, and at 100 % a window down
+    // to about 1070 device px outside the view and 740 inside it; past either
     // the overflow rule (kIconRowViewPairs) answers. ON THE TABLET AT 200 %
-    // THE WIDTH TUNES THE FIT: outside the view the band is 56 · key_width +
-    // 180 device px against the well's 2256, so it holds whole up to
-    // key_width 37 W (2252) and from 38 W (2308) the overflow rule answers —
+    // THE WIDTH TUNES THE FIT: outside the view the band is 54 · key_width +
+    // 178 device px against the well's 2256, so it holds whole up to
+    // key_width 38 W (2230) and from 39 W (2284) the overflow rule answers —
     // the left runs clipped one run gap short of the history opener (x
     // 2228 − 10 · key_width), the third run's faces cut or published empty
-    // from its tail, the right run whole: NOISE cut from 38 W and gone from
-    // 39, AUDIO gone from 40, TIPS from 42, SETUP (the
+    // from its tail, the right run whole: NOISE cut from 39 W and gone from
+    // 40, TIPS from 42, SETUP (the
     // settings page's one opener on glass) from 44, SCORE from 46 (the run's
     // order of 2026-11-10), LOCK from 48, PLAYER at
     // the grammar's ceiling, 50 (the first two runs whole up to it). THE RUN
     // GAP TUNES IT TOO (the `run_gap` tuning key, architect 2026-11-07,
     // session 87; render.h's run gap paragraph): the three run gaps of the
     // walk and the one before the history opener all read it, so outside the
-    // view the band is 56 · key_width + 48 + 6 · run_gap device px against
-    // the well's 2256 — at key_width 35 whole up to run_gap 41 W (2254), and
-    // from 42 W (2260) the overflow rule answers the same way, the left
-    // runs' limit 1922 − 2 · run_gap and the third run's tail cut: NOISE
-    // cut from 42 W (54 of its 70 columns standing at the grammar's ceiling,
-    // 44), gone from 53, AUDIO cut from 54 — past the ceiling. The gap
+    // view the band is 54 · key_width + 46 + 6 · run_gap device px against
+    // the well's 2256 — at key_width 35 whole across the key's whole range,
+    // 2200 at its ceiling, 44 W (the left runs' limit 1922 − 2 · run_gap
+    // never reached; until the AUDIO case's retirement, 2026-11-11, the
+    // overflow answered from 42 W). The gap
     // before the history opener stays exactly one run gap of clip; the
-    // ground beyond it (116 px at the defaults) is what the left runs leave.
+    // ground beyond it (188 px at the defaults) is what the left runs leave.
     // No assert stands on the fit: the clip and the cut
     // publication are the whole answer at every width.
     //
@@ -1968,7 +1966,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // faces stand): the rest face, the press face under a standing press
     // (2026-11-05, the press arc), the lit fill for a CHECKED one — the live
     // fact its chord flips (redesign_button_selected), the view pairs' lit
-    // members among them — and no hot face; THE TWO LEVEL CASES their own
+    // members among them — and no hot face; THE LEVEL CASE its own
     // painter (paint_level_case: the rest face under the level's fill and
     // number, never lit, never pressed). The pointer walk finds the
     // tooltip's button (recompute_redesign_button_hover).
@@ -2082,7 +2080,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // standing in their slots (since 2026-10-05; the iteration group's
         // again since 2026-10-26, kIconRowHistoryStandIns). The view pairs, Zoom In,
         // Zoom Out, Zoom to Fit, the magnification lamp, the tooltip lamp, the
-        // two level cases (2026-11-05; the NOISE lamp 2026-10-28 until then)
+        // level case (2026-11-05; the NOISE lamp 2026-10-28 until then)
         // and the history opener stay live, as do the history
         // COMPANIONS — each
         // on the derivation's own answer, which is not one reason but two:
@@ -2144,15 +2142,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // gate reads the painted extent, so a damage confined to the bottom
         // pad, which the ground erases, still reprints the legend.
         if (!clip_meets(cr, painted)) return;
-        // THE TWO LEVEL CASES (architect 2026-11-05): the sliders' own
+        // THE LEVEL CASE (architect 2026-11-05): the slider's own
         // painter — the rest face, the level's fill and its number, no
         // glyph, no lit or press look (paint_level_case) — and the legend
         // under the face as every key's.
         if (redesign_button_is_level_case(def.id)) {
             paint_level_case(cr, key, face.enabled,
-                             def.id == RedesignButton::IconAudioLevel
-                                 ? app.device_config->audio_level
-                                 : app.device_config->noise_level);
+                             app.device_config->noise_level);
             paint_key_legend(cr, key, legend, face.enabled);
             return;
         }

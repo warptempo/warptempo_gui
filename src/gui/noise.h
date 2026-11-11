@@ -5,7 +5,7 @@
 // VOICE mixed under everything the playback engine plays — work playback,
 // the A/B audition, the render player, the score's soundtrack — and over its
 // silence between plays, AT ONE LEVEL, NEVER DUCKED and never paused by any
-// of them. THE LEVEL IS THE SWITCH (architect 2026-11-05, the two level
+// of them. THE LEVEL IS THE SWITCH (architect 2026-11-05, the level
 // cases, mock s46_m1:
 // "the only off switch is -inf, and that should actually shut it off so
 // reduce footprint"): the `noise_level` device key — a decimal dB or -inf,

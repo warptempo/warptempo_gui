@@ -5,7 +5,6 @@ last_project=550 - 1
 true_colors=on
 theme=default
 waveform_grow=1
-audio_level=0
 noise=rain
 noise_level=0
 noise_attenuation_level=-12
