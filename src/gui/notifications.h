@@ -101,7 +101,8 @@
 //     home-view binding ("Markers are placed in source view", "Markers are
 //     moved in source view", Shift+S's "Already in phase reset view" and its
 //     group drop's "The selected markers already have their phase resets",
-//     2026-11-10); the
+//     2026-11-10); the drops' occupied place (kPhaseResetDropOccupiedCard /
+//     kMarkerDropOccupiedCard below, 2026-11-11); the
 //     subject refusals ("Select a marker to …", "Select a warp marker to …");
 //     the column ("Phase resets carry no tempo to inherit"); the value facts
 //     (the GROUP step's "One of the selected markers cannot take this tempo
@@ -601,6 +602,32 @@ inline constexpr const char* kMarkerNudgeOffEdgeCard =
     "The marker would move past the edge at this zoom";
 inline constexpr const char* kMarkerDropOffEdgeCard =
     "The marker would sit past the edge at this zoom";
+
+// THE OCCUPIED PLACE'S TWO SENTENCES (architect 2026-11-11, THE DROP
+// COINCIDENCE RULE: "coincident markers are always unintentional" — every
+// drop refuses a place already taken; the two tests' owners are
+// phase_reset_seeds_in_window_of and warp_marker_stands_on_frame,
+// warp_frame_map_view.h). One per column, each naming what already stands
+// where the drop would put its marker, a disabled one included:
+//   * THE PHASE RESET'S — a reset already seeds in the window of the frame
+//     the lead-in drop would author. TWO RAISERS: the P column's drop body
+//     through its reason channel (bare `s`, the empty-lane double-click;
+//     GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead) and
+//     Shift+S's single form from the warp column, which refuses whole on it
+//     before its column switch (GuiInputHandler::drop_phase_reset_crossing).
+//     The group form's every-place-skipped sentence is its own ("The
+//     selected markers already have their phase resets").
+//   * THE WARP MARKER'S — a marker already stands on the playhead's exact
+//     frame. ONE RAISER: the W column's drop body through its reason channel
+//     (GuiWarpMarkersOps::drop_copy_previous_at_playhead).
+// Where both this and the painted edge would refuse a drop, this is the
+// sentence: no zoom frees an occupied place. The Drop key greys where
+// neither of its forms would act (redesign_button_enabled), so a lift
+// reaches these only while its other form is live.
+inline constexpr const char* kPhaseResetDropOccupiedCard =
+    "A phase reset already stands here";
+inline constexpr const char* kMarkerDropOccupiedCard =
+    "A marker already stands here";
 
 // THE `h` VIEW'S ARROW REFUSAL (architect 2026-09-26), the marker lane's
 // sentence in the history view: with a diff flag focused (or selected) bare

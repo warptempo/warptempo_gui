@@ -1151,7 +1151,9 @@ inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
 // IT IS BARE `s`'s ACT WITH THE COLUMN SWITCH IN FRONT, not a second one:
 // from the W column the difference is exactly the column writer Shift+S
 // runs first, and then the same one drop body (the act is
-// GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp). IN
+// GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp), which
+// refuses a place whose seed window already holds a phase reset as bare `s`
+// does there — the chord before its switch (architect 2026-11-11). IN
 // THE P COLUMN THE CHORD REFUSES WHOLE since 2026-08-30 (architect): the
 // command IS the crossing from warp view, so with phase resets already
 // showing — S+P or T+P — there is nothing to cross and the act answers

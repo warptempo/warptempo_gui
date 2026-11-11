@@ -576,17 +576,16 @@ constexpr ToolbarChord kToolbarChords[] = {
     // since the architect moved them down here on 2026-08-18: drop, delete,
     // disable toggle and inherit/collapse (FLATTEN stood among them for the
     // hours of 2026-09-19 and its row is in the icon row's iteration group
-    // now) — authoring
-    // chords whose refusals (read-only, the home view, an empty selection, an
-    // occupied frame) are the chords' own
-    // consumed no-ops, inherited whole through on_key. NOTHING IN THESE ROWS
-    // CHANGED WITH THE LANE, AND THE GROUP TAKES ONE PAIR OF GATES WHATEVER
-    // ITS MEMBERSHIP: the `h` view consumes every one of these chords outright
-    // — none of them is on history_mode_key_blocked's allowlist — and greys
-    // them through the derived partition, and the READ-ONLY lock greys them
-    // too (2026-08-15). Both are the BUTTONS'
-    // gates rather than the row's, so they are what makes this row's
-    // otherwise-unconditional face policy have an exception at all.
+    // now) — authoring chords that OWN THEIR REFUSALS AND CARDS (read-only,
+    // the home view, an empty selection, the drop's occupied place,
+    // architect 2026-11-11), inherited whole through on_key; EACH BUTTON'S
+    // PUBLISHED FACE IS ITS OWN ARM in redesign_button_enabled (app_state.h)
+    // — the Drop key greying where neither of its forms would act, the
+    // occupied place included. NOTHING IN THESE ROWS CHANGED WITH THE LANE:
+    // the `h` view consumes every one of these chords outright — none of
+    // them is on history_mode_key_blocked's allowlist — and answers their
+    // faces dead through the derived partition, and the READ-ONLY lock greys
+    // them too (2026-08-15), both the BUTTONS' gates rather than the row's.
     {RedesignButton::IconMarkerDrop,    GuiKeys::S,      false, false, false}, // bare s
     // DELETE AND DISABLE ADMIT SHIFT (architect 2026-10-29,
     // redesign_button_shift_admits): the long press
@@ -2897,9 +2896,12 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // no dialog button under the pointer and such a wait or box standing,
     // this walk hands nothing — every caller runs the roster walk right
     // after this one, and that walk answers for its own owner (under a
-    // dialog its veil or the no-wait rule hands "none" itself; the color
-    // picker's card, 2026-10-07..14, was the one surface where both walks
-    // found buttons). Without this, the dialog walk's "none" would
+    // dialog its veil or the no-wait rule hands "none" itself — or, under
+    // an overlay, the overlay's opener or the tooltip lamp where the pointer
+    // is on one, 2026-11-11: the two walks' buttons are disjoint, the
+    // roster's in the band and the dialog's on the controls row; the color
+    // picker's card, 2026-10-07..14, was the one surface before it where
+    // both walks found buttons). Without this, the dialog walk's "none" would
     // restart the rows' wait at every motion and no button-row hint would
     // ever ripen.
     int     tip = -1;
@@ -6098,12 +6100,20 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // drops legal there alone) and P in both audio views (S+P and T+P, each
     // with the lead-in, architect 2026-10-12), so the
     // view dispatch below needs no extra audio-view guard on either column.
-    // The drops' reason channel carries one sentence, the off-edge refusal
-    // (kMarkerDropOffEdgeCard), which this road cannot meet: the playhead was
+    // The drops' reason channel carries two refusals. THE OCCUPIED PLACE
+    // (architect 2026-11-11, the drop coincidence rule;
+    // kPhaseResetDropOccupiedCard / kMarkerDropOccupiedCard) this road CAN
+    // meet on the P column: the lead-in reset lands kN/2 output samples left
+    // of the clicked column, so the stretch right of a reset is empty lane,
+    // and a second double-click where the first just dropped asks for a
+    // reset in the window that one now seeds in — refused, on its card, the
+    // playhead left where the click seated it. On the W column a marker on
+    // the clicked column's exact frame paints its cue on that column, so the
+    // press is ordinarily the cue's and not the empty lane's. THE OFF-EDGE
+    // REFUSAL (kMarkerDropOffEdgeCard) this road cannot meet: the playhead was
     // just seated on a painted column (< area.w on the painted viewport, so at
     // or left of it at the right wall), and the lead-in lies further left
-    // still. Raised anyway, the channel's contract being that every caller
-    // says what comes back.
+    // still. Whatever comes back is raised, the channel's contract.
     const GuiOpRefusal refusal =
         app.active_markers_view == 'P'
             ? phase_resets.drop_phase_reset_lead_in_at_playhead()
@@ -6643,21 +6653,25 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // `under_pointer` below rather than spelled as an early return so the
     // walk's tail still runs.
     const bool under_card = notification_card_at(app, mx, my) != 0;
-    // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — read before the
-    // walk because the walk below is what finds the tooltip's button (the only
-    // route that starts a roster wait); the rule is stated at the walk's tail.
-    const bool modal_owns_the_keyboard = tooltip_dwell_suppressed();
+    // NO CUE'S WAIT RUNS UNDER A MODAL OR AN OVERLAY — the no-wait rule asked
+    // for an owner that is no roster key (tooltip_dwell_suppressed, the
+    // rule's one expression; the tail's cue arm reads this). A KEY is asked
+    // the same owner by its own index inside the walk, at the column the
+    // pointer is on: under an overlay the keys it leaves live answer false.
+    const bool cue_wait_refused =
+        tooltip_dwell_suppressed(/*roster_key=*/-1);
     // THE MODALS' VEIL (2026-08-12; every editor since 2026-10-25): under a
     // PROMPT, ANY EDITOR or THE PROGRESS MODAL the WHOLE roster is refused —
     // nothing behind the modal is pressable, so no roster button is under
     // the pointer for a hint either (keyboard_modal_editor_active, the one
     // predicate for a keyboard-taking modal; the lane editors raised no veil
     // until then, their roster presses never blocked).
-    // THE FOLDER OVERLAY'S TWO OWNERS ARE DELIBERATELY NOT TERMS HERE
-    // (2026-09-03 evening): each leaves its opener key live (Play Renders,
-    // Open Project — redesign_button_enabled's overlay arm), and under them
-    // the hint is refused by the no-wait rule (tooltip_dwell_suppressed)
-    // alone.
+    // THE OVERLAYS ARE DELIBERATELY NOT TERMS HERE (2026-09-03 evening):
+    // each leaves its opener key and the tooltip lamp live
+    // (overlay_admits_button — redesign_button_enabled's overlay arm), and
+    // under them a key's hint is the no-wait rule's to refuse or admit, key
+    // by key (tooltip_dwell_suppressed: those two keep their hints, architect
+    // 2026-11-11; every other key is dead and silent).
     const bool modal_veil =
         app.prompt.active || keyboard_modal_editor_active() ||
         app.batch_progress.active;
@@ -6694,10 +6708,20 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // in goes to the writer with the owner (the bypass chain measures
         // from it at the leave). The columns of a run tile, so the walk's
         // first hit is the only one.
-        if (modal_veil || under_card || modal_owns_the_keyboard) continue;
+        if (modal_veil || under_card) continue;
         const GuiRect column = tooltip_column_rect(f.rect);
         const bool on_column = rect_contains(column, mx, my);
         if (!on_column && !rect_contains(f.field, mx, my)) continue;
+        // THE NO-WAIT RULE, ASKED OF THE KEY THE POINTER IS ON (architect
+        // 2026-11-11: under an overlay the live band keys show their
+        // tooltips): refused under a modal — the veil above already said so
+        // — and under an overlay for every key but the two it leaves live,
+        // its opener and the tooltip lamp (tooltip_dwell_suppressed, on
+        // overlay_admits_button — the face's, the lit bit's and the lift's
+        // one membership, so the key that answers a press there is the key
+        // that explains itself). Asked after the column test, so one key a
+        // walk at most reaches it.
+        if (tooltip_dwell_suppressed(i)) continue;
         // MEMBERSHIP IS THE CONSTANT TABLE'S (2026-09-01): this asks only
         // whether the button HAS a tooltip — a null line 1 (the menu row's
         // exclusion until 2026-10-21; every roster button has one since); the
@@ -6769,7 +6793,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // with no gesture standing (main.cpp), so the writer sees the pointer
     // leave a column and the chain's lapse is asked off the band as on it.
     //
-    // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT, and this refusal
+    // NO WAIT RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — NOR UNDER AN
+    // OVERLAY BUT FOR THE KEYS IT LEAVES LIVE (its opener and the tooltip
+    // lamp, architect 2026-11-11; tooltip_dwell_suppressed) — and this refusal
     // is what makes "a tooltip never floats over a modal" hold rather than merely
     // start out true. The modal branches of on_motion still call this walk
     // (the dialog owner's liveness below is a pointer fact a modal does not
@@ -6824,11 +6850,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // walk's hide lands on the tick after it, so no hint of the wrong surface
     // is ever painted.
     // Under the veil `hovered_tip` is -1 by construction (the veil and the
-    // no-wait rule above), so the veil needs no branch of its own. Under the
-    // FOLDER OVERLAY, whose two owners are not veil terms, `hovered_tip` is
-    // -1 through the no-wait rule alone, and the "surface stands" arm is what
+    // no-wait rule above), so the veil needs no branch of its own. Under AN
+    // OVERLAY, which is no veil term, `hovered_tip` is -1 through the no-wait
+    // rule wherever the pointer is not on one of the two keys the overlay
+    // leaves live, and the "surface stands" arm is what
     // keeps the player's and the picker's button hints alive: handing "none" to the writer there would stop the dialog's wait
-    // on every tick.
+    // on every tick. ON ONE OF THOSE TWO KEYS the walk falls through to the
+    // roster's own arrival below, as on the main page: the writer takes a
+    // standing dialog box down (another owner) and the dialog walk, finding
+    // none of its buttons under the pointer and a roster owner standing,
+    // hands nothing (update_modal_dialog_hover's tail).
     if (hovered_tip < 0) {
         AppState::RedesignTooltip& t = app.redesign_tooltip;
         const bool dialog_surface_live =
@@ -6858,12 +6889,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // the published rects (marker_cue_hit) — is the owner when the value
         // copy would act on it (marker_tooltip_value non-empty), the rect
         // handed to the chain its face. Under the same gates as a key: no
-        // veil, no card over it, the no-wait rule; the `h` view and the P
+        // veil, no card over it, the no-wait rule (a cue's under every
+        // overlay, the lane covered there); the `h` view and the P
         // column answer no cue through the two owners. Asked only while the
         // TIPS lamp is lit — dark, the writer holds the wait clear anyway, so
         // the lane's hit and the value are not composed for nothing.
         if (app.show_tooltips && !modal_veil && !under_card &&
-            !modal_owns_the_keyboard) {
+            !cue_wait_refused) {
             GuiRect face{0, 0, 0, 0};
             const int cue = marker_cue_hit(app, mx, my, &face);
             if (cue >= 0 && !marker_tooltip_value(app, audio, cue).empty()) {
@@ -8203,19 +8235,35 @@ void GuiInputHandler::tick_tooltip() {
     }
 }
 
-// NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's one
-// expression, read by the roster's hover walk and on_key's modal-opening
-// tooltip end. SIX TERMS, re-derived 2026-10-29: the prompt, every editor
-// (keyboard_modal_editor_active, the one predicate for a keyboard-taking
-// modal, the lane editors among them), the progress modal, and THE THREE
-// OVERLAYS, the render player, the picker and the score viewer — "overlays don't show hints …
-// the only reason they still show the one button lit is that you can exit
-// by pressing it" (architect 2026-10-25). The `h` view keeps its hints: a
-// view, not an overlay.
-bool GuiInputHandler::tooltip_dwell_suppressed() const {
-    return app.prompt.active || keyboard_modal_editor_active() ||
-           app.render_player.active || app.picker.active ||
-           app.score_viewer.active || app.batch_progress.active;
+// THE NO-WAIT RULE — the rule's one expression, read by the roster's hover
+// walk and on_key's modal-opening tooltip end, each for the owner it holds:
+// `roster_key` the roster index of a key, or negative for an owner that is
+// no key (a marker lane cue). TWO CLASSES OF SURFACE, re-derived 2026-11-11:
+//   * THE MODALS VEIL EVERYTHING — the prompt, every editor
+//     (keyboard_modal_editor_active, the one predicate for a keyboard-taking
+//     modal, the lane editors among them) and the progress modal: no key's
+//     and no cue's wait runs under one, an overlay standing behind it or
+//     not.
+//   * THE THREE OVERLAYS — the render player, the picker's contents and the
+//     score viewer — REFUSE EVERY OWNER BUT THE KEYS THEY LEAVE LIVE
+//     (architect 2026-11-11: under an overlay the live band keys show their
+//     tooltips, "yes" — narrowing 2026-10-25's "overlays don't show hints"
+//     to the keys that are dead there): the overlay's opener and the tooltip
+//     lamp, overlay_admits_button's membership (app_state.h) and no second
+//     list — the face's, the lit bit's and the lift's own, so a key explains
+//     itself exactly where it answers. A cue is refused: the lane is covered.
+// The `h` view keeps its hints: a view, not an overlay. The overlay term is
+// the lift's own spelling (finish_chrome_press_release's overlay_refuses).
+bool GuiInputHandler::tooltip_dwell_suppressed(int roster_key) const {
+    if (app.prompt.active || keyboard_modal_editor_active() ||
+        app.batch_progress.active)
+        return true;
+    if (!(app.render_player.active || app.picker.active ||
+          app.score_viewer.active))
+        return false;
+    return roster_key < 0 || roster_key >= kRedesignButtonCount ||
+           !overlay_admits_button(app,
+                                  static_cast<RedesignButton>(roster_key));
 }
 
 // THE ARMED CHROME PRESS, dropped — the pointer-leave hook's clear (main.cpp),
@@ -8451,7 +8499,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // player's, the picker's and the dialog editors' below) all call it —
     // because what it answers is not frozen by a modal: the tail's hard end
     // of a DIALOG tooltip owner whose surface has gone. What it must NOT do under a modal is start a
-    // roster TOOLTIP dwell, and that refusal lives in the walk itself (the
+    // roster TOOLTIP dwell — but for the two keys an overlay leaves live
+    // (2026-11-11) — and that refusal lives in the walk itself (the
     // veil and the no-wait rule). The dialog's own buttons take their walk
     // through update_modal_dialog_hover in the same branches. What DOES
     // freeze the walk is an active pointer GESTURE — the branches below all
@@ -8485,7 +8534,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // THE RENDER PLAYER'S MOTION (2026-08-28): a standing scrub drag moves
     // the marker, and otherwise the modal buttons' walk and the roster walk
-    // run (no roster hint under the player — the no-wait rule) — nothing
+    // run (a roster hint under the player for its two live keys alone, the
+    // opener and the tooltip lamp — the no-wait rule, 2026-11-11) — nothing
     // below this branch does.
     if (app.render_player.active) {
         if (app.render_player.scrub.armed) {
@@ -8517,7 +8567,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // THE PICKER'S MOTION (2026-08-28): the modal buttons' walk and the
-    // roster walk (no roster hint, the no-wait rule), nothing else — no
+    // roster walk (a roster hint for the content's opener and the tooltip
+    // lamp alone, the no-wait rule), nothing else — no
     // field, no drag, no scrub; the overlay's own arm ran above.
     if (app.picker.active) {
         update_modal_dialog_hover(mouse_x, mouse_y);

@@ -10,6 +10,7 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -199,31 +200,49 @@ uint64_t waveform_gain_fingerprint(const AppState& app) {
 }
 
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
-    const AppState& app) {
+    const AppState& app, int sample_rate, long total_frames) {
     PhaseResetRedFlagCache& c = app.phase_reset_red_flag_cache;
     const long long gen = app.phaseresetmarkers.generation();
-    if (c.valid && c.markers_gen == gen) return c;
+    // THE KEY'S TWO FIELDS (the declaration's contract): the store's
+    // generation and the LIVE map's hash — the lattice the seed index reads.
+    // The map is asked first, through its own memo (a key compare on a hit).
+    const TargetWarpFrameMapCache& live =
+        target_view_warp_frame_map_cached(app, sample_rate, total_frames);
+    if (c.valid && c.markers_gen == gen && c.map_hash == live.hash) return c;
 
     c.red.clear();
-    // Participation-blind coincidence, the warp set's pass 3 on this column:
-    // redden every member of a run of 2+ resets sharing one frame, disabled
+    // Participation-blind coincidence BY SEED WINDOW (architect 2026-11-11),
+    // the warp set's pass 3 under this column's definition: redden every
+    // member of a run of 2+ resets seeding at one schedule index, disabled
     // rows counted. It contains the render's exact-frame collapse
     // (build_phase_reset_source_frames skips disabled resets and collapses a
-    // run of 2+ enabled ones to one event), so no separate enabled count is
-    // needed for the cue. The store is time-sorted, so a coincident group is a
-    // run of adjacent equal frames.
+    // run of 2+ enabled ones on ONE frame to one event) — equal frames seed
+    // alike — and is wider than it. The store is time-sorted and the seed
+    // index monotone in the frame, so a window's resets are a run of adjacent
+    // rows: one seed search a reset.
     const std::vector<GuiPhaseResetMarker>& pr = app.phaseresetmarkers.markers();
+    const std::vector<WarpFrameMapSegment>& map = live.warp_frame_map;
     const int n = static_cast<int>(pr.size());
     int i = 0;
+    int64_t seed_i =
+        n > 0 ? phase_reset_seed_frame_index(pr[0].time_frame, map) : 0;
     while (i < n) {
         int j = i + 1;
-        while (j < n && pr[j].time_frame == pr[i].time_frame) ++j;
+        int64_t seed_j = 0;
+        while (j < n) {
+            seed_j = phase_reset_seed_frame_index(
+                pr[static_cast<size_t>(j)].time_frame, map);
+            if (seed_j != seed_i) break;
+            ++j;
+        }
         if (j - i >= 2)
             for (int k = i; k < j; ++k) c.red.insert(k);
         i = j;
+        seed_i = seed_j;
     }
 
     c.markers_gen = gen;
+    c.map_hash    = live.hash;
     c.valid       = true;
     return c;
 }
@@ -309,16 +328,73 @@ bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio) {
         a, audio, drop_at_playhead_source_frame(a, audio));
 }
 
+// THE DROP COINCIDENCE RULE'S TWO TESTS (architect 2026-11-11; the rule, the
+// cost and the readers are at the declarations, warp_frame_map_view.h).
+namespace {
+// DOES A RESET OF `pr` SEED AT SCHEDULE WINDOW `m` under `map` — `frame` a
+// source frame seeding there, the caller's own search handed in. The store is
+// ascending by time_frame (GuiMarkerStore) and the seed index is monotone in
+// the frame, so a reset in `frame`'s window is the store's nearest row on one
+// side of `frame` or the other: one lower_bound, at most two seed searches.
+// The compare is the seed index itself, the strike's own
+// (phase_reset_red_flag_set_cached), so a refused drop and a struck reset
+// cannot disagree about a window.
+bool phase_reset_store_seeds_at(const std::vector<GuiPhaseResetMarker>& pr,
+                                const std::vector<WarpFrameMapSegment>& map,
+                                int64_t frame, int64_t m) {
+    const auto at = std::lower_bound(
+        pr.begin(), pr.end(), frame,
+        [](const GuiPhaseResetMarker& r, int64_t f) {
+            return r.time_frame < f;
+        });
+    if (at != pr.end() &&
+        phase_reset_seed_frame_index(at->time_frame, map) == m)
+        return true;
+    return at != pr.begin() &&
+           phase_reset_seed_frame_index(std::prev(at)->time_frame, map) == m;
+}
+} // namespace
+
+bool phase_reset_seeds_in_window_of(const AppState& app, const GuiAudio& audio,
+                                    int64_t source_frame) {
+    const std::vector<WarpFrameMapSegment>& map =
+        live_warp_frame_map(app, audio);
+    return phase_reset_store_seeds_at(
+        app.phaseresetmarkers.markers(), map, source_frame,
+        phase_reset_seed_frame_index(source_frame, map));
+}
+
+bool warp_marker_stands_on_frame(const AppState& app, int64_t source_frame) {
+    // The store is ascending by time_frame (GuiMarkerStore).
+    const std::vector<GuiWarpMarker>& wv = app.warpmarkers.markers();
+    const auto at = std::lower_bound(
+        wv.begin(), wv.end(), source_frame,
+        [](const GuiWarpMarker& m, int64_t f) { return m.time_frame < f; });
+    return at != wv.end() && at->time_frame == source_frame;
+}
+
+bool drop_at_playhead_coincides(const AppState& a, const GuiAudio& audio) {
+    // The rule is at the declaration (app_state.h).
+    const int64_t frame = drop_at_playhead_source_frame(a, audio);
+    return a.active_markers_view == 'P'
+               ? phase_reset_seeds_in_window_of(a, audio, frame)
+               : warp_marker_stands_on_frame(a, frame);
+}
+
 // THE CROSSING'S GROUP DROP, ONE SELECTED WARP MARKER'S PLACE (the rule is
 // at phase_reset_crossing_group_drops' declaration, app_state.h): the frame
 // the single drop authors with the playhead standing on the marker — the
 // marker's position in the standing audio view's domain, as a click lands
-// the playhead on it, through the lead-in drop's one frame — and the two
-// reasons it is skipped: a phase reset already standing on that frame, or
-// the single drop's own painted-edge refusal asked of that frame.
+// the playhead on it, through the lead-in drop's one frame — THE SEED WINDOW
+// that frame falls in under the live map, and the two reasons the place is
+// skipped: a phase reset already seeding in that window (architect
+// 2026-11-11, the drop coincidence rule — the single drop's own test, handed
+// the window found here), or the single drop's own painted-edge refusal asked
+// of that frame.
 namespace {
 struct CrossingDropPlace {
     int64_t frame    = 0;
+    int64_t window   = 0;
     bool    held     = false;
     bool    off_edge = false;
     bool drops() const { return !held && !off_edge; }
@@ -328,19 +404,22 @@ CrossingDropPlace crossing_drop_place(const AppState& a, const GuiAudio& audio,
     CrossingDropPlace p;
     p.frame = phase_reset_lead_in_source_frame(
         a, audio, source_frame_to_active_domain(a, audio, marker_frame));
-    // The store is ascending by time_frame (GuiMarkerStore).
-    const std::vector<GuiPhaseResetMarker>& pr = a.phaseresetmarkers.markers();
-    const auto at = std::lower_bound(
-        pr.begin(), pr.end(), p.frame,
-        [](const GuiPhaseResetMarker& m, int64_t f) {
-            return m.time_frame < f;
-        });
-    p.held = at != pr.end() && at->time_frame == p.frame;
+    const std::vector<WarpFrameMapSegment>& map = live_warp_frame_map(a, audio);
+    p.window = phase_reset_seed_frame_index(p.frame, map);
+    p.held = phase_reset_store_seeds_at(a.phaseresetmarkers.markers(), map,
+                                        p.frame, p.window);
     // A held place wants no drop, so the edge is asked only of a place the
-    // act would write.
+    // act would write — the single drop's own order, the occupied place
+    // before the painted edge.
     p.off_edge = !p.held && source_frame_off_right_edge(a, audio, p.frame);
     return p;
 }
+// One dropping place of the plan, before the windows are merged.
+struct CrossingDropCandidate {
+    int64_t window = 0;
+    int64_t frame  = 0;
+    bool    focus  = false;
+};
 } // namespace
 
 PhaseResetCrossingDrops phase_reset_crossing_group_drops(
@@ -348,6 +427,8 @@ PhaseResetCrossingDrops phase_reset_crossing_group_drops(
     PhaseResetCrossingDrops out;
     const std::vector<GuiWarpMarker>& wv = a.warpmarkers.markers();
     const int n = static_cast<int>(wv.size());
+    std::vector<CrossingDropCandidate> places;
+    places.reserve(a.selected_markers.size());
     for (const int idx : a.selected_markers) {
         // The stale-index belt, the selection verbs' one policy: skipped.
         if (idx < 0 || idx >= n) continue;
@@ -355,13 +436,33 @@ PhaseResetCrossingDrops phase_reset_crossing_group_drops(
             a, audio, wv[static_cast<std::size_t>(idx)].time_frame);
         if (p.off_edge) out.off_edge = true;
         if (!p.drops()) continue;
-        out.frames.push_back(p.frame);
-        if (idx == a.last_selected_marker) out.focus_frame = p.frame;
+        places.push_back(CrossingDropCandidate{
+            p.window, p.frame, idx == a.last_selected_marker});
     }
-    // Two selected markers whose places coincide share one reset.
-    std::sort(out.frames.begin(), out.frames.end());
-    out.frames.erase(std::unique(out.frames.begin(), out.frames.end()),
-                     out.frames.end());
+    // ONE RESET A WINDOW (architect 2026-11-11: no drop makes a coincidence,
+    // the plan's own places included): selected markers whose places share a
+    // seed window drop ONE reset there, AT THE WARP FOCUS'S PLACE where the
+    // focus is among them — so `focus_frame` names a created reset and the
+    // focus and the playhead land on it — else at the earliest. Sorted by
+    // window, the focus first inside one, then by frame; the first of each
+    // window is kept. Windows ascend with frames (the seed index is monotone),
+    // so `frames` comes out ascending and distinct.
+    std::sort(places.begin(), places.end(),
+              [](const CrossingDropCandidate& l,
+                 const CrossingDropCandidate& r) {
+                  if (l.window != r.window) return l.window < r.window;
+                  if (l.focus != r.focus) return l.focus;
+                  return l.frame < r.frame;
+              });
+    bool    have_window = false;
+    int64_t last_window = 0;
+    for (const CrossingDropCandidate& c : places) {
+        if (have_window && c.window == last_window) continue;
+        have_window = true;
+        last_window = c.window;
+        out.frames.push_back(c.frame);
+        if (c.focus) out.focus_frame = c.frame;
+    }
     return out;
 }
 

@@ -1461,9 +1461,11 @@ struct GuiInputHandler {
     // painted rect (the box hangs outside the strip; the argument is at the
     // definition).
     // NO ROSTER WAIT RUNS UNDER A MODAL SURFACE: the roster's walk refuses one
-    // while a prompt, a keyboard-modal editor or one of the two list owners
-    // is up, through tooltip_dwell_suppressed (the rule is stated at the
-    // walk's tail), so a roster tooltip cannot come back under one. THE
+    // while a prompt, a keyboard-modal editor or the progress modal is up,
+    // and under an overlay for every key but the two it leaves live — its
+    // opener and the tooltip lamp, which keep their hints there (architect
+    // 2026-11-11) — through tooltip_dwell_suppressed (the rule is stated at
+    // the predicate), so a dead key's tooltip cannot come back under one. THE
     // MODAL'S OWN BUTTONS DO carry hints since 2026-08-13 — a different
     // surface in the same one state, armed by that dialog's hover walk.
     void hide_shift_tooltip();
@@ -1492,13 +1494,17 @@ struct GuiInputHandler {
     // lies in (tooltip_damage_band).
     void tick_tooltip();
 
-    // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's
-    // ONE expression, asked by the roster's pointer walk
-    // (recompute_redesign_button_hover), the only route that starts a roster
-    // wait, and by on_key's modal-opening end, which takes a standing roster
-    // hint down under a modal the key raised. The full rationale is at the
-    // walk's tail; the predicate names the rule's membership in one place.
-    bool tooltip_dwell_suppressed() const;
+    // THE NO-WAIT RULE — its ONE expression, asked by the roster's pointer
+    // walk (recompute_redesign_button_hover), the only route that starts a
+    // roster or a cue wait, and by on_key's modal-opening end, which takes a
+    // standing roster or cue hint down under a surface the key raised.
+    // `roster_key` is the owner asked about: a key's roster index, or
+    // negative for an owner that is no key (a cue). True under a prompt, an
+    // editor or the progress modal for every owner; under an overlay for
+    // every owner BUT THE KEYS IT LEAVES LIVE, its opener and the tooltip
+    // lamp (architect 2026-11-11; overlay_admits_button, app_state.h). The
+    // membership and its reasons are at the definition.
+    bool tooltip_dwell_suppressed(int roster_key) const;
 
     // THE CHROME ACT'S TWO HALVES (architect 2026-08-13, act-at-release — the
     // authoritative rule, the arm state and its contract are at
@@ -3666,15 +3672,20 @@ private:
     // `s` runs there, so it is bare `s` with a column switch in front of it
     // and never a second drop body; the drop takes the kN/2 lead-in in either
     // audio view (drop_at_playhead_source_frame, app_state.h). In the P
-    // column it refuses whole as already crossed.
+    // column it refuses whole as already crossed. AND IT REFUSES WHOLE,
+    // BEFORE ANY SWITCH, WHERE ITS PLACE IS TAKEN (architect 2026-11-11, the
+    // drop coincidence rule): a phase reset already seeding in the window of
+    // the playhead's lead-in frame
+    // (phase_reset_crossing_single_drop_coincides, app_state.h).
     //
     // OVER A MULTI-SELECTION IT IS THE GROUP DROP (architect 2026-11-10):
     // with two or more markers selected in the warp column each selected
     // marker gets a reset at its own place — the single drop's computation
-    // with the playhead on that marker — a place already holding a phase
-    // reset skipped; the act refuses, before any switch, only where every
-    // place is skipped (phase_reset_crossing_group_drops, app_state.h; the
-    // body's head).
+    // with the playhead on that marker — a place whose seed window already
+    // holds a phase reset skipped and places sharing a window dropping one
+    // reset (2026-11-11); the act refuses, before any switch, only where
+    // every place is skipped (phase_reset_crossing_group_drops, app_state.h;
+    // the body's head).
     //
     // WHAT IT LEAVES BEHIND: the new reset SELECTED and the playhead ON it —
     // both the drop's own doing, which is why the column switch (whose
@@ -3689,7 +3700,10 @@ private:
     // the read-only lock (read_only_key_blocked drops Shift+S beside bare `s`
     // — a phase reset is authored content), the `h` view (its allowlist admits
     // neither), a standing modal (on_key's ranked dispatch above the arm) and
-    // a blank session. The drop's own refusals stay its.
+    // a blank session. The drop's own refusals stay its (the painted edge,
+    // asked after the switch); the occupied window is this act's leading
+    // refusal above. BOTH FORMS SPEND THE ADD TO SELECTION LAMP on their
+    // accepted path (selection_consumed's inventory, app_state.h).
     //
     // THE HOME-VIEW BINDING IS NOT INVOLVED and this is not a sixth exception
     // to it: the act authors in the P column, which authors in both audio
@@ -4102,8 +4116,9 @@ private:
     // (arm_clip_lamp_press). (The caption was an
     // exemption 2026-10-05 to 2026-10-24, the menu row's live File anchor
     // 2026-09-03 to 2026-10-21.) The
-    // roster's hint dwell is suppressed, an overlay showing no hints
-    // (tooltip_dwell_suppressed), the modal buttons' own standing. A
+    // roster's hint dwell is suppressed for every dead key — the opener and
+    // the tooltip lamp, the two live ones, keep their hints (architect
+    // 2026-11-11, tooltip_dwell_suppressed) — the modal buttons' own standing. A
     // CTRL PRESS IS CONSUMED; the modal row's two skips reach their shifted
     // twin by the LONG PRESS at the lift (modal_dialog_press_shifted), the
     // roster's own road over this surface. THE KEY MODALITY is the key

@@ -2283,7 +2283,10 @@ enum class RedesignButton {
     // (finish_chrome_press_release's head) and its chord answered by each
     // overlay's router through the same setter (route_render_player_key,
     // route_picker_key, route_score_viewer_key), so an overlay's own row
-    // hints can be lit and put out where they stand. THE MODALS VEIL IT as
+    // hints can be lit and put out where they stand — AND ITS OWN HINT SHOWS
+    // THERE, as the overlay's opener's does (architect 2026-11-11: the two
+    // keys an overlay leaves live keep their tooltips under it,
+    // GuiInputHandler::tooltip_dwell_suppressed). THE MODALS VEIL IT as
     // every key (a prompt, an editor, the progress modal). It admits no
     // modifier and does not repeat.
     IconTooltips,
@@ -2665,9 +2668,13 @@ enum class RedesignButton {
     // focus (inherit_toggle_actionable, the op's own leading return). THE
     // DROP IS THE ONE THAT DOES NOT GREY OFF HOME, and its arm says why: its
     // shift twin drops from either warp view, and that twin is the long press — glass's
-    // only road to it (it greys in T+W only over a multi-selection whose
-    // every place the group drop would skip, 2026-11-10). The occupied-frame refusal stays a consumed no-op
-    // (a frame fact the lane shows). They keep their Icon* names: a roster id
+    // only road to it (it greys in T+W only where the hold would not act
+    // either: over a multi-selection whose every place the group drop would
+    // skip, 2026-11-10, or over one selected marker or none with the
+    // playhead's lead-in window already holding a reset, 2026-11-11). AN
+    // OCCUPIED PLACE REFUSES THE DROP ON A CARD (architect 2026-11-11, the
+    // drop coincidence rule) and greys the key where neither form would act
+    // (the arm's head, redesign_button_enabled). They keep their Icon* names: a roster id
     // names the button, not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // JUMP TO DEFINING MARKER (architect 2026-09-29) — the verb group's FIFTH
@@ -5184,9 +5191,10 @@ struct AppState {
     // a TOOL POSTURE, not a per-selection posture: it says what the POINTER
     // does to a flag and to the next waveform drag, so nothing about the
     // selection's own CONTENT can end it. A Tab walk, `p`, Ctrl+Tab, a
-    // waveform click, a marker drop, an undo restore and a LOAD IN PLACE all
+    // waveform click, an undo restore and a LOAD IN PLACE all
     // leave it lit, and the plain flag press keeps taking the ctrl branch
-    // until an act consumes what was built. ITS OFF EDGES ARE FOUR: the
+    // until an act consumes what was built (a marker drop among those acts
+    // since 2026-11-11, selection_consumed's inventory). ITS OFF EDGES ARE FOUR: the
     // toggle; selection_consumed (the acts that spend a selection, below);
     // THE SWEEP'S COMMIT — a sweep that moved past the slop is the act the
     // lamp armed and spends it, TRIM's one-shot rule (commit_region_sweep;
@@ -5235,8 +5243,8 @@ struct AppState {
     // (selection_consumed, below — its caller inventory, the placement rule and
     // the non-callers live there). The reasoning is the posture's own read
     // twice: this bit says "I am BUILDING a selection", and a tempo step, a
-    // delete, a disable, an inherit toggle, a copy, a paste or a BPM sweep says
-    // the building is over.
+    // delete, a disable, an inherit toggle, a copy, a paste, a drop or a BPM
+    // sweep says the building is over.
     //
     // IT HAS NO EXCLUSION LEFT (architect 2026-09-19). GRID ITERATIONS WAS
     // THE LAST ONE, a refusal in exactly one direction: bare `k` was REFUSED
@@ -5332,13 +5340,17 @@ struct AppState {
 
     // Memoized red-flag sets — `red` (both caches) is the marker lane's PAINT
     // cue, painted whether or not the row is selected: the render's own
-    // normalization plus any row sharing its exact frame with another row of
-    // its own store, disabled rows included (warp_frame_map_view.h carries the
+    // normalization plus any row COINCIDENT with another row of its own
+    // store, disabled rows included — a warp marker sharing its exact frame,
+    // a phase reset sharing its seed window of the analysis lattice
+    // (architect 2026-11-11; warp_frame_map_view.h carries the
     // full contract, including the participation-blind coincidence). Act and
     // face readers that ask whether the render normalizes a marker read the
     // warp cache's `collapsed` subset instead — `red`'s widened, paint-only
     // membership has no such reader. Mutable: refreshed from the const
-    // flag-cache build. Keyed on the respective store generation, so the
+    // flag-cache build. Each keyed on its store's generation and what else
+    // its count reads (the warp set the audio identity, the phase-reset set
+    // the live map's hash), so the
     // classification runs once per change, not per tick, and freezes through a
     // marker drag (the store mutates only at commit).
     mutable WarpRedFlagCache warp_red_flag_cache;
@@ -7243,6 +7255,24 @@ struct AppState {
     // cues (2026-11-09), update_modal_dialog_hover for a standing dialog,
     // each reading its targets off its surface's published faces. No other
     // route starts a wait: the tooltip is the hovering pointer's alone.
+    //
+    // UNDER A MODAL NO ROSTER OR CUE WAIT RUNS; UNDER AN OVERLAY THE KEYS IT
+    // LEAVES LIVE KEEP THEIRS (architect 2026-11-11: under an overlay the
+    // live band keys show their tooltips): the overlay's opener and the
+    // tooltip lamp — overlay_admits_button, the one membership — arrive,
+    // wait, show and chain there as on the main page, the box in its one
+    // seat off the key's face (the band's box in the logo lane, which no
+    // overlay covers: the folder overlay and the modal family's box start
+    // under the band), painted last, over the overlay; its words the
+    // stateful overload's, read at paint time under whatever stands. Every
+    // other roster key is dead there and silent, and a cue's lane is
+    // covered. The rule's one expression is
+    // GuiInputHandler::tooltip_dwell_suppressed. The overlay's CLOSE needs
+    // no end of its own: a close by a press — the opener's lift, a
+    // controls-row button — is a hard end already, and any other leaves the
+    // pointer on the same key's column, the same owner on the main page:
+    // its box stands, its words held against the live ones by the per-tick
+    // comparator (main.cpp) as under any state change.
     //
     // A DIALOG OWNER CARRIES THE STASH THAT ARMED IT: `dialog_owner` and
     // `dialog_session` are the modal stash's owner tag and session
@@ -9614,9 +9644,9 @@ inline bool score_viewer_holds_engine(const AppState& a) {
 // IS `b` THE STANDING OVERLAY'S OPENER KEY? — the folder overlay's answer
 // (is_folder_overlay_opener, above) widened by THE SCORE VIEWER'S, the SCORE
 // key (architect 2026-10-26: the overlay class's one rule, the opener lit and
-// the way out). The roster's greying arm, the lit bit and the lift's veil
-// read this family through overlay_admits_button (below), which adds the
-// tooltip lamp; false with nothing standing.
+// the way out). The roster's greying arm, the lit bit, the lift's veil and
+// the tooltip's gate read this family through overlay_admits_button (below),
+// which adds the tooltip lamp; false with nothing standing.
 inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
     if (score_viewer_stands(a)) return b == RedesignButton::IconScore;
     return is_folder_overlay_opener(a, b);
@@ -9627,10 +9657,12 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // lift the overlay's close) AND THE TOOLTIP LAMP ("tips should remain open
 // in all situations": bare backslash, answered by every overlay's router).
 // Asked with an overlay standing — the render player, the picker's five
-// contents or the score viewer; its three readers ask it there:
+// contents or the score viewer; its four readers ask it there:
 // redesign_button_enabled's overlay arm (the face), overlay_deadens_button
-// below (the lit bit) and finish_chrome_press_release's overlay term (the
-// lift, input_pointer.cpp). The struck clip lamp answers under an overlay
+// below (the lit bit), finish_chrome_press_release's overlay term (the
+// lift, input_pointer.cpp) and GuiInputHandler::tooltip_dwell_suppressed
+// (the tooltip's gate, input_pointer.cpp — the keys that answer there keep
+// their hints, architect 2026-11-11). The struck clip lamp answers under an overlay
 // too, a lamp and no roster key (ChromePress's Lamp kind).
 inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
     return is_overlay_opener(a, b) || b == RedesignButton::IconTooltips;
@@ -10977,9 +11009,11 @@ inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
 // audio views (architect 2026-10-12: in source view the point goes forward
 // through the live map to its whole target frame, takes the subtraction and
 // comes back, one calculation at the drop). Defined in
-// warp_frame_map_view.cpp. TWO READERS: the at-playhead drop's frame below
-// (the point the playhead) and the crossing's group drop
-// (phase_reset_crossing_group_drops, the point each selected warp marker).
+// warp_frame_map_view.cpp. THREE READERS: the at-playhead drop's frame below
+// (the point the playhead), the crossing's group drop
+// (phase_reset_crossing_group_drops, the point each selected warp marker)
+// and the crossing's single form asked from the warp column
+// (phase_reset_crossing_single_drop_coincides, the point the playhead).
 int64_t phase_reset_lead_in_source_frame(const AppState& a,
                                          const GuiAudio& audio, int64_t point);
 
@@ -10990,6 +11024,7 @@ int64_t phase_reset_lead_in_source_frame(const AppState& a,
 // W column the playhead's own source frame. Defined in
 // warp_frame_map_view.cpp. READERS: the two drop bodies
 // (drop_copy_previous_at_playhead, drop_phase_reset_lead_in_at_playhead) and
+// the two refusals asked of it, drop_at_playhead_coincides and
 // drop_at_playhead_off_edge below.
 int64_t drop_at_playhead_source_frame(const AppState& a,
                                       const GuiAudio& audio);
@@ -11008,13 +11043,19 @@ inline bool phase_reset_crossing_drop_is_group(const AppState& a) {
 // PLACE is the frame the single drop authors with the playhead standing on
 // that marker: the marker's position in the standing audio view's domain
 // through phase_reset_lead_in_source_frame, the single drop's own
-// computation. A PLACE IS SKIPPED where a phase reset already stands on that
-// frame (enabled or disabled alike), or where the single drop's own
-// validation refuses it — the painted edge, source_frame_off_right_edge
-// asked of the frame (`off_edge` records that one was). `frames` is what the
-// act authors, ascending and distinct (two markers whose places coincide
-// share one reset); `focus_frame` the place of the warp focus
-// (last_selected_marker) where that place is dropped, else -1. THE ACT
+// computation. A PLACE IS SKIPPED where a phase reset ALREADY SEEDS IN ITS
+// WINDOW of the analysis lattice under the live map (architect 2026-11-11,
+// the drop coincidence rule: the single drop's own test,
+// phase_reset_seeds_in_window_of, warp_frame_map_view.h — enabled or
+// disabled alike, and a reset on the exact frame among them), or where the
+// single drop's own validation refuses it — the painted edge,
+// source_frame_off_right_edge asked of the frame (`off_edge` records that
+// one was). `frames` is what the act authors, ascending, ONE A WINDOW:
+// selected markers whose places share a seed window drop one reset there, at
+// the warp focus's place where the focus (last_selected_marker) is among
+// them, else at the earliest — no drop makes a coincidence, the plan's own
+// places included. `focus_frame` is the place of the warp focus where that
+// place is dropped, else -1. THE ACT
 // REFUSES ONLY WHEN `frames` IS EMPTY — every selected marker skipped — and
 // the face greys on the same emptiness through the twin rule
 // (phase_reset_drop_crossing_would_act below). A stale selection index is
@@ -11031,18 +11072,58 @@ PhaseResetCrossingDrops phase_reset_crossing_group_drops(
 bool phase_reset_crossing_group_would_drop(const AppState& a,
                                            const GuiAudio& audio);
 
+// THE HOLD'S SINGLE FORM, IS ITS PLACE TAKEN (architect 2026-11-11, the drop
+// coincidence rule): Shift+S from the warp column over one selected marker
+// or none authors the lead-in reset of the playhead, and it refuses where a
+// phase reset already seeds in that frame's window
+// (phase_reset_seeds_in_window_of, warp_frame_map_view.h). Asked FROM THE
+// WARP COLUMN, before the switch — which is why it spells the lead-in frame
+// itself: drop_at_playhead_source_frame answers the W column's frame while
+// the W column stands. It is the frame the P body asks
+// drop_at_playhead_coincides of after the switch (the column writer moves no
+// playhead, no store and no map), so the two answers cannot differ. TWO
+// READERS: the act's refusal ahead of its switch
+// (GuiInputHandler::drop_phase_reset_crossing) and the composed answer
+// below.
+inline bool phase_reset_crossing_single_drop_coincides(const AppState& a,
+                                                       const GuiAudio& audio) {
+    return phase_reset_seeds_in_window_of(
+        a, audio,
+        phase_reset_lead_in_source_frame(a, audio, a.playhead_cursor_sample));
+}
+
 // WOULD SHIFT+S ACT — the crossing's whole answer for the Drop key's face
-// and its tooltip's second line (architect 2026-11-10): the crossing is
-// live (phase_reset_drop_crossing_actionable) and, over a multi-selection,
-// at least one selected marker's place would take a reset. Over one or no
-// selected marker it is the crossing's bit alone: the at-playhead drop's own
-// refusals stay the chord's card, as they were.
+// and its tooltip's second line (architect 2026-11-10; the single form's
+// term 2026-11-11): the crossing is live
+// (phase_reset_drop_crossing_actionable) and its form would drop — over a
+// multi-selection, at least one selected marker's place would take a reset;
+// over one or no selected marker, no phase reset already seeds in the
+// window of the playhead's lead-in frame
+// (phase_reset_crossing_single_drop_coincides). The single form's
+// painted-edge refusal is NOT a term: it is asked after the switch and stays
+// the chord's card, as it was.
 inline bool phase_reset_drop_crossing_would_act(const AppState& a,
                                                 const GuiAudio& audio) {
     if (!phase_reset_drop_crossing_actionable(a)) return false;
-    return !phase_reset_crossing_drop_is_group(a) ||
-           phase_reset_crossing_group_would_drop(a, audio);
+    if (phase_reset_crossing_drop_is_group(a))
+        return phase_reset_crossing_group_would_drop(a, audio);
+    return !phase_reset_crossing_single_drop_coincides(a, audio);
 }
+
+// DOES THE AT-PLAYHEAD DROP'S PLACE ALREADY HOLD A MARKER OF ITS COLUMN
+// (architect 2026-11-11, THE DROP COINCIDENCE RULE: "coincident markers are
+// always unintentional"; every drop refuses a coincident place) — the
+// column's own test asked of the frame above: on the P column a phase reset
+// already seeding in that frame's window, on the W column a warp marker
+// already standing on that exact frame, disabled ones counted in both
+// (phase_reset_seeds_in_window_of / warp_marker_stands_on_frame,
+// warp_frame_map_view.h, which own the two definitions). Defined in
+// warp_frame_map_view.cpp. THREE READERS, the off-edge refusal's own: the
+// two drop bodies, which refuse on it AHEAD of the edge with
+// kPhaseResetDropOccupiedCard / kMarkerDropOccupiedCard (notifications.h),
+// and the Drop marker button's face (redesign_button_enabled), whose plain
+// form greys on it.
+bool drop_at_playhead_coincides(const AppState& a, const GuiAudio& audio);
 
 // WOULD THE AT-PLAYHEAD DROP AUTHOR A MARKER PAST THE LAST COLUMN AT THIS
 // ZOOM (architect 2026-09-26, strictly as painted) — the off-edge owner
@@ -11052,8 +11133,8 @@ inline bool phase_reset_drop_crossing_would_act(const AppState& a,
 // column and Shift+S's lead-in drop past its crossing), and the Drop marker
 // button's face (redesign_button_enabled), whose PLAIN form greys on it — so
 // the face greys where the plain drop would refuse and the crossing is not
-// live (the P column, S+P and T+P), and stays lit in S+W, where the shifted
-// press still crosses.
+// live (the P column, S+P and T+P), and stays lit in S+W while the shifted
+// press would still act (phase_reset_drop_crossing_would_act above).
 bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio);
 
 // THE TEMPO CENT STEP'S COLUMN GATE — Up / Down on the PAYLOAD author TEMPO,
@@ -13723,6 +13804,20 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     multi-selection in the warp column, a phase reset at each selected
 //     marker's place — GuiInputHandler::drop_phase_reset_crossing, past its
 //     every-place-skipped refusal and ahead of the column switch);
+//   * THE AT-PLAYHEAD MARKER DROP, IN BOTH ITS FORMS (architect 2026-11-11,
+//     "single drop should also, for symmetry" — the group drop's rule on
+//     the drop over one selected marker or none): the plain drop in either
+//     column (bare `s`, the Drop key, the empty-lane double-click) and the
+//     hold's single form (Shift+S from the warp column). The write sits IN
+//     THE TWO CREATE BODIES, past their last refusal and ahead of the insert
+//     (GuiWarpMarkersOps::drop_marker, warpmarkers_ops.cpp;
+//     GuiPhaseResetMarkersOps::drop_phase_reset_at_position,
+//     phaseresetmarkers_ops.cpp), and not at the three dispatch roads: the
+//     bodies' silent returns hand their dispatcher the same empty answer an
+//     accepted drop does, so only the body knows the press was accepted —
+//     and each road reaches exactly one body, once. A refused drop (the
+//     home-view card, the painted edge, an occupied place) leaves the lamp
+//     lit;
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -13761,10 +13856,10 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     axis from this bit), so what the step acts on is a singleton, which is
 //     not a selection that was built;
 //   * BARE `j` and Ctrl+J — they read the FOCUS and write no store;
-//   * THE AT-PLAYHEAD MARKER DROP (bare `s`, and Shift+S over one selected
-//     marker or none), the FOUR marker-lane EDITORS and the TAB WALK — none
-//     of them consumes a selection: the drop makes one, the editors edit one
-//     marker and the walk is how a selection is navigated.
+//   * THE FOUR marker-lane EDITORS and the TAB WALK — neither consumes a
+//     selection: the editors edit one marker and the walk is how a selection
+//     is navigated. (The at-playhead marker drop stood beside them until
+//     2026-11-11; it is a caller now, above.)
 // AND NO SELECTION MUTATOR PUTS IT OUT (architect 2026-09-10): a mutator runs
 // while the user is still SELECTING. This list is ACTS, the other end of the
 // same pass.
@@ -13920,10 +14015,14 @@ inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
 //           front-to-back, so with k rows at frame F before and k+1 after it
 //           names the LAST row of the group — while insert_marker places by
 //           lower_bound (marker_store.h) and so lands a new marker FIRST in it,
-//           the exact opposite. Coincident drops are legal on every column, so
-//           the two drops hint their inserted row on the LIVE side (their
+//           the exact opposite. The drops hint their inserted rows on the
+//           LIVE side (their
 //           snapshot side is empty by construction — the row does not exist
-//           there — and takes the removal arm), the two deletes
+//           there — and takes the removal arm) — AS THE EXACT ANSWER RATHER
+//           THAN A NEEDED ONE since 2026-11-11: no drop lands on an occupied
+//           frame any more (the drop coincidence rule), so a dropped row is
+//           alone on its frame in the state a redo restores and the grown arm
+//           would name the same row — the two deletes
 //           (delete_selected_marker, delete_selected_phase_reset — the warp
 //           body serving Shift+Delete too, its carried references among the
 //           hinted rows, 2026-10-29) hint their deleted rows on the SNAPSHOT side (their live side is empty for the
@@ -15499,10 +15598,12 @@ inline bool redesign_button_enabled(const AppState& a,
     // on THEIR OPENER KEY — Play Renders, Open Project, Settings (the
     // page's and the value list's both), Presets and BPM, lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey AND
-    // UNLIT but the tooltip lamp (architect 2026-11-10, the arm below) and the
-    // hint dwell suppressed ("overlays don't show hints … the only reason
-    // they still show the one button lit is that you can exit by pressing
-    // it"); and THE `h` HISTORY VIEW, which is A VIEW like Source or Phase,
+    // UNLIT but the tooltip lamp (architect 2026-11-10, the arm below) and
+    // EVERY DEAD KEY'S HINT SUPPRESSED, the two live keys keeping theirs
+    // (architect 2026-11-11, narrowing 2026-10-25's "overlays don't show
+    // hints … the only reason they still show the one button lit is that you
+    // can exit by pressing it": the opener and the tooltip lamp explain
+    // themselves there — GuiInputHandler::tooltip_dwell_suppressed); and THE `h` HISTORY VIEW, which is A VIEW like Source or Phase,
     // left by its own key alone, its hints shown and its partition below
     // greying what it refuses.
     //
@@ -15993,43 +16094,41 @@ inline bool redesign_button_enabled(const AppState& a,
         // be reflected here by hand; that is the accepted cost of the two
         // classes the walk cannot see.
         //
-        // THE DROP DOES NOT GREY PAST THE LOCK ON THE HOME-VIEW REFUSAL
-        // ALONE (architect 2026-08-30, the S+P
-        // opening's own consequence — no face edit was needed, the twin
-        // rule's arm inverting by the predicate alone): bare `s` refuses
-        // only in T+W (active_column_authoring_allowed — the P column drops
-        // in both audio views, S+P and T+P since S+P's return, 2026-10-12),
-        // and exactly there Shift+S, the crossing from the warp column, is
-        // live (phase_reset_drop_crossing_actionable), so one form
-        // acts and the plain press's refusal stays the chord's own card —
-        // but for the group drop's one dead pair, T+W over a multi-selection
-        // whose every place is skipped (the last paragraph below). The
-        // arm greyed exactly in S+P for the hours the twin rule and the closed
-        // P column coexisted — bare `s` off home and the crossing already
-        // crossed. The
-        // composition stays: it is the twin rule's one spelling here, and it
-        // is what greys again if either predicate ever narrows. (An earlier
-        // reading here named an "occupied-frame refusal" as a second reason
-        // not to mirror: the drop HAS NO SUCH REFUSAL — `drop_marker`'s only
-        // early returns are a bad sample rate and the past-EOF wall, a
-        // coincident frame being the resolver's and the red flag's business —
-        // so the sentence is deleted rather than inherited, 2026-09-02.)
-        // THE PLAIN FORM ALSO REFUSES PAST THE PAINTED EDGE (architect
-        // 2026-09-26, drop_at_playhead_off_edge): in T+P, where the crossing
-        // is not live, the face greys there; in S+W the shifted press still
-        // crosses, so the face stays lit and the plain lift reaches the
-        // drop's own card.
-        // THE CROSSING'S TERM IS ITS WHOLE ANSWER SINCE 2026-11-10
-        // (architect, the group drop; phase_reset_drop_crossing_would_act):
-        // over a multi-selection in the warp column the shifted press drops
-        // a reset at each selected marker's place and refuses only where
-        // EVERY place is skipped, so the term is false exactly there — and
-        // the face greys where the plain form refuses too (T+W, where bare
-        // `s` is off home), staying lit in S+W on the plain drop.
+        // THE DROP GREYS PAST THE LOCK WHERE NEITHER FORM WOULD ACT (the
+        // twin rule: the face is live while either the tap or the hold
+        // acts), each form's term its own refusals composed:
+        //   * THE PLAIN FORM (bare `s`, the tap) acts where the column
+        //     authors in this audio view (active_column_authoring_allowed:
+        //     everywhere but T+W — the P column drops in both audio views
+        //     since S+P's return, 2026-10-12), the drop's frame paints at
+        //     this zoom (architect 2026-09-26, drop_at_playhead_off_edge)
+        //     AND ITS PLACE IS FREE (architect 2026-11-11, the drop
+        //     coincidence rule, drop_at_playhead_coincides: a phase reset
+        //     already seeding in that frame's window on the P column, a warp
+        //     marker already on that exact frame on the W column, disabled
+        //     ones counted);
+        //   * THE HOLD (Shift+S, the crossing from the warp column) acts
+        //     where its whole answer says so
+        //     (phase_reset_drop_crossing_would_act: the warp column
+        //     standing, and over a multi-selection a place that would take
+        //     a reset — architect 2026-11-10 — or, over one selected marker
+        //     or none, the playhead's lead-in window free, 2026-11-11).
+        // So the face stays lit over a plain refusal exactly while the hold
+        // still acts — T+W, where bare `s` is off home and its lift reaches
+        // the chord's own card; S+W with the playhead on a warp marker or
+        // past the painted edge while a hold place is free — and greys where
+        // both are dead: the P column past the edge or on an occupied
+        // window (the crossing not live there); T+W with one selected
+        // marker whose reset exists; S+W with the playhead on a warp marker
+        // and every hold place taken. THE HOLD'S SINGLE FORM'S PAINTED-EDGE
+        // REFUSAL IS NO TERM: it is asked after the column switch and stays
+        // the chord's card. The composition is the twin rule's one spelling
+        // here, and it is what greys again if either predicate narrows.
         case RedesignButton::IconMarkerDrop:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    ((active_column_authoring_allowed(a) &&
+                     !drop_at_playhead_coincides(a, audio) &&
                      !drop_at_playhead_off_edge(a, audio)) ||
                     phase_reset_drop_crossing_would_act(a, audio));
         // DELETE AND DISABLE GREY ON THEIR ARMS' OWN REFUSAL (2026-08-30): an
@@ -18151,7 +18250,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE OVERLOAD TOUCHES THE SECOND LINE ALONE (2026-09-01): in the P
         // column the shifted press refuses as already crossed, so the line
         // drops, as it does over a multi-selection whose every place the
-        // group drop would skip (2026-11-10). (On the T+W refusal the
+        // group drop would skip (2026-11-10) and over one selected marker or
+        // none whose lead-in window already holds a reset (2026-11-11). (On the T+W refusal the
         // button stays lit under the twin rule while the shifted press
         // would act, so the plain lift reaches the chord and the chord
         // cards.)
@@ -18945,9 +19045,13 @@ inline RedesignTooltipText redesign_button_tooltip(
         // own line has no arm — its two pastes share one ladder, the constant
         // table's record.)
         // DROP MARKER: in the P column the shifted press refuses as already
-        // crossed, and over a multi-selection whose every place is skipped it
-        // refuses too (phase_reset_drop_crossing_would_act, the shift act's
-        // own answer), so its line drops. OVER A MULTI-SELECTION THAT WOULD
+        // crossed, over a multi-selection whose every place is skipped it
+        // refuses too, and over one selected marker or none it refuses where
+        // a phase reset already seeds in the playhead's lead-in window
+        // (architect 2026-11-11, the drop coincidence rule) — the one
+        // composed answer the face's hold term reads
+        // (phase_reset_drop_crossing_would_act, the shift act's own) — so
+        // its line drops on each. OVER A MULTI-SELECTION THAT WOULD
         // DROP the line names the group drop (architect 2026-11-10: a reset
         // at each selected marker's place). (In T+W the
         // plain press raises its own card — the button stays lit on that

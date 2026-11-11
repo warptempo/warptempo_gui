@@ -45,7 +45,8 @@ dropped; the path data and each drawing's own viewBox are kept verbatim. The imp
 literal color, a class or a style block, or a shape with no fill on it or an ancestor (resvg's default black). So
 `currentColor` resolves against the color THE PROGRAM SUPPLIES: each file is parsed per color with resvg's user
 stylesheet `svg { color: #RRGGBB; }` (`svg_icon::parse`; the road at `src/gui/icons.h`'s head), the color one of the
-text tones (`src/gui/materials.h`): B5B5B5 at rest, 5D5D5D on a disabled key, 111111 on a lit key or a list's lit row,
+text tones and the accent (`src/gui/materials.h`, `key_ink`): B5B5B5 at rest, 5D5D5D on a disabled key, the accent FFAD56
+on a lit key and 83592C on a lit disabled one (the lamp look on two axes, 2026-11-11), 070707 on a list's highlighted row,
 2A2A2A on a notification card (Live's orange, since 2026-11-04 night).
 What the colors told apart is lost, as the ruling accepts: Render's red disc, the two deletes' red and the battery's red
 and green are the glyph's one color (the two cards, whose marks only a second color told apart, are cut out instead,

@@ -2677,7 +2677,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the resting label agree on it — disabled or not, as there; the FIELD
     // itself never strikes (show_cue_label's head).
     const bool struck =
-        phase ? phase_reset_red_flag_set_cached(app).red.count(idx) > 0
+        phase ? phase_reset_red_flag_set_cached(
+                    app, audio.sample_rate(),
+                    static_cast<long>(audio.total_frames()))
+                        .red.count(idx) > 0
               : warp_red_flag_set_cached(
                     app, audio.sample_rate(),
                     static_cast<long>(audio.total_frames()))

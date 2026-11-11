@@ -5089,8 +5089,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // contortion and renders exactly where its cells put the resets, in
         // swapped order; a cell where two enabled resets land on ONE frame
         // renders them as one reset, the parser's exact-coincidence collapse
-        // with its stderr line — the same answer a coincident drop at rest
-        // gets. What the sort protects is the SORT INVARIANT every consumer
+        // with its stderr line — the same answer two resets resting on one
+        // frame get. What the sort protects is the SORT INVARIANT every consumer
         // reads: the load parser rejects decreasing times as a corruption
         // tripwire, so an unsorted per-cell sidecar would be unloadable, and
         // the engine's phase reset validator (strictly ascending) is the

@@ -163,26 +163,53 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Phase-reset sibling (the now-resolved naming symmetry): a group of 2+ phase
-// resets sharing one exact frame reddens every member, WHATEVER THEIR DISABLED
-// BITS — the warp set's participation-blind coincidence (3) on this column
-// (architect 2026-09-13: coincidence is never intentional). It contains the
-// render normalization, build_phase_reset_source_frames' exact-equal collapse
-// of 2+ ENABLED resets (one stderr line per group at render); phase resets
-// carry no tempo, labels, or inheritance, so collapse is their ONLY
-// normalization — there is no marker_effective analog. No `collapsed` subset
-// is kept here, asymmetric with the warp set by reader count: `red`'s one
-// reader is the phase-reset flag pass, a painter, and no act or face on this
-// column asks whether the render collapses a reset. Keyed on the phase-reset
-// store generation alone (the same-frame count is independent of sample rate
-// and length); the same committed-store / drag-freeze rule as the warp set.
+// resets SEEDING IN ONE WINDOW of the engine's analysis lattice under the live
+// map reddens every member, WHATEVER THEIR DISABLED BITS — the warp set's
+// participation-blind coincidence (3) on this column, by THIS COLUMN'S
+// DEFINITION OF COINCIDENT (architect 2026-11-11: "since phase resets are on a
+// lattice the definition of coincident there is really in the same quantum
+// step on the lattice"; coincidence is never intentional, 2026-09-13): two
+// resets are coincident when phase_reset_seed_frame_index (below) answers one
+// schedule index for both, the test the drops refuse on
+// (phase_reset_seeds_in_window_of, below) — a strike is exactly a state no
+// drop makes any more, and a nudge, a drag, a paste or a bound cell still can.
+// It contains the render normalization and IS WIDER THAN IT:
+// build_phase_reset_source_frames collapses only an EXACT-EQUAL frame group of
+// 2+ ENABLED resets (one stderr line per group at render), and resets sharing
+// one frame share its window; two resets a few frames apart inside one window
+// are struck here and reach the engine as two events seeding one schedule
+// frame. Phase resets carry no tempo, labels, or inheritance, so collapse is
+// their ONLY normalization — there is no marker_effective analog. No
+// `collapsed` subset is kept here, asymmetric with the warp set by reader
+// count: `red` has only painters for readers — the phase-reset flag pass
+// (waveform_cache.cpp's P arm) and the open marker-lane field's riding
+// segments (render.cpp) — and no act or face on this column asks whether the
+// render collapses a reset.
+//
+// KEYED ON THE PHASE-RESET STORE'S GENERATION AND THE LIVE MAP'S HASH
+// (TargetWarpFrameMapCache::hash, the FNV-1a of the segment list): the seed
+// index is a pure function of the frame and the map's segments, so the pair
+// names every input — a warp edit, a scale change or a load that moves the
+// lattice moves the hash, and a warp edit that leaves the segments as they
+// were rebuilds nothing, where the map cache's own four-field key (warp
+// generation, scale, sample rate, length) would rebuild on every warp
+// generation. The failed build's empty map and a legitimately
+// empty one both hash 0 and both read as the identity, one lattice. THE FLAG
+// CACHE REPAINTS ON THE SAME PAIR (FlagCache::fp_phase_reset_generation and
+// fp_phase_reset_lattice_hash, paint_handler.h), so a strike that moved is
+// painted in the frame the map moved. The same committed-store / drag-freeze
+// rule as the warp set. The rebuild is one seed search a reset: the store is
+// ascending and the seed index monotone in the frame, so a window's resets are
+// adjacent rows.
 struct PhaseResetRedFlagCache {
     bool      valid       = false;
     long long markers_gen = -1;
+    uint64_t  map_hash    = 0;
     std::set<int> red;   // red phase-reset store indices — PAINT readers only
 };
 
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
-    const AppState& app);
+    const AppState& app, int sample_rate, long total_frames);
 
 // WHETHER THE WAVEFORM PICTURE IS MAGNIFIED, AND THE ONE GAIN GATE. The gain
 // itself is the continuous curve derived from the source at load — the
@@ -807,6 +834,45 @@ int64_t phase_reset_hop_step_frame(
 const std::vector<WarpFrameMapSegment>& live_warp_frame_map(
     const AppState& app, const GuiAudio& audio);
 
+// THE DROP COINCIDENCE RULE'S TWO TESTS, ONE OWNER EACH (architect 2026-11-11:
+// "coincident markers are always unintentional, and since phase resets are on
+// a lattice the definition of coincident there is really in the same quantum
+// step on the lattice. we should unify behavior"; "coincident (exact frame)
+// warp marker drops are never intentional and the phase reset coincident test
+// should also apply"). NO DROP MAKES A COINCIDENCE: every drop asks one of
+// these of the frame it would author and refuses a place already taken.
+//
+// A PHASE RESET'S PLACE IS ITS SEED WINDOW: does a reset of the store seed in
+// the same schedule window as `source_frame` under the LIVE map
+// (live_warp_frame_map above — the render's lattice, not the picture's), the
+// seed index the one owner's (phase_reset_seed_frame_index above; the frames
+// of window m are [C(m), C(m+1) − 1], phase_reset_window_centre_frame). A
+// WARP MARKER'S PLACE IS ITS EXACT FRAME: does a marker of the store stand on
+// `source_frame`. A DISABLED MARKER OCCUPIES ITS PLACE in both (his "agree"):
+// neither test reads a disabled bit, as the strike counts disabled rows.
+//
+// COST, because the Drop key's face asks every tick: each store is ascending
+// by time_frame and the seed index is monotone in the frame, so the phase test
+// is one lower_bound and at most three seed searches (the frame's and its two
+// store neighbors'), the warp test one lower_bound; no list is built and no
+// map rebuilt (the live map is memoized on its own key).
+//
+// THE READERS: the at-playhead drop's answer in the active column
+// (drop_at_playhead_coincides, app_state.h — the two drop bodies and the Drop
+// key's plain term), the hold's single form asked from the warp column
+// (phase_reset_crossing_single_drop_coincides, app_state.h) and — through the
+// same seed compare, handed the window it already holds — the hold's group
+// plan's per-place skip (phase_reset_crossing_group_drops). THE PHASE-RESET
+// STRIKE IS THE SAME DEFINITION over the store itself
+// (phase_reset_red_flag_set_cached above): a reset is struck exactly where
+// this test would refuse a drop onto its window. NOT ASKED BY: the nudges,
+// the drags, the pastes and the bound cells, which may still author a
+// coincidence the strike then shows; the render, whose own collapse stays
+// exact-equal frames (the frozen parser's).
+bool phase_reset_seeds_in_window_of(const AppState& app, const GuiAudio& audio,
+                                    int64_t source_frame);
+bool warp_marker_stands_on_frame(const AppState& app, int64_t source_frame);
+
 // THE LEGAL HOP INTERVAL for the phase reset at `idx`. k_min <= 0 <= k_max
 // ALWAYS: the identity cell renders the resting store, so 0 is inside the
 // window whatever else is around, exactly as the warp bracket's clamp window
@@ -847,8 +913,8 @@ struct PhaseHopWindow {
 // doing it deliberately — the ear catches the contortion, the same latitude
 // coincident markers have at rest, with git and the session history the way
 // back. A cell where two enabled resets land on ONE frame renders them as one
-// reset (the parser's exact-coincidence collapse and its stderr line, what a
-// coincident drop at rest gets); a cell where they CROSS renders both where
+// reset (the parser's exact-coincidence collapse and its stderr line, what two
+// resets resting on one frame get); a cell where they CROSS renders both where
 // the cells put them, in swapped order — which is why the SWEEP SORTS each
 // cell's vector by time_frame before the request (input_key_dispatch.cpp): the
 // store's sort is the invariant every consumer reads, the load parser

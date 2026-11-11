@@ -4,7 +4,8 @@
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
 #include "notifications.h"      // kTabReadOnlyCard (the value steps' lock),
-                                // the off-edge nudge and drop cards
+                                // the off-edge nudge and drop cards, the
+                                // drop's occupied-frame card
 #include "input_handler.h"      // land_playhead_on_marker (the Ctrl+N collapse)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
@@ -120,11 +121,14 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // Structural warp wall: a warp marker's segment runs to the next
     // breakpoint (or to total_frames for the last marker), and
     // build_warp_frame_map refuses sub-frame segments, so a warp position
-    // needs at least one source frame of headroom before EOF. That is the
-    // only placement bound — markers may sit arbitrarily close to or
-    // exactly on an existing marker; ordering degeneracy is the render
-    // boundary's to collapse (exact-frame ties merge to one 1.00 owner),
-    // not this drop's.
+    // needs at least one source frame of headroom before EOF. That is this
+    // body's only placement bound — a marker may sit arbitrarily close to
+    // another. AN OCCUPIED FRAME IS ITS ONE CALLER'S REFUSAL (architect
+    // 2026-11-11, the drop coincidence rule: drop_copy_previous_at_playhead
+    // refuses a frame a warp marker already stands on before calling), so no
+    // drop builds an exact-frame tie; a tie a nudge, a drag or a load left in
+    // the store is still the render boundary's to collapse (to one 1.00
+    // owner).
     // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30 under the
     // strictness ruling, which is why no card composes here): both drop roads
     // author AT the playhead — the `s` key through
@@ -141,6 +145,16 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // Every drop road (bare `s`, the Drop button, the empty-lane double-click)
     // reaches this body.
     playback_lifecycle.stop_playback_if_playing();
+    // THE DROP SPENDS THE SELECTION POSTURE (architect 2026-11-11, "single
+    // drop should also, for symmetry" — the group drop's rule on the
+    // at-playhead drop): the Add to Selection lamp goes out HERE, on the
+    // accepted path alone — past this body's two silent returns and its one
+    // caller's carded refusals (drop_copy_previous_at_playhead: the occupied
+    // frame, the painted edge), ahead of the insert — so every road into the
+    // warp drop (bare `s`, the Drop key, the empty-lane double-click) meets
+    // it exactly once and a refused drop leaves the lamp lit. The class and
+    // its inventory are at selection_consumed (app_state.h).
+    selection_consumed(app);
     const auto& mv = app.warpmarkers.markers();
     GuiWarpMarker nm;
     nm.time_frame    = drop_frame;
@@ -165,12 +179,14 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // does not exist in the entry's snapshot, so the UNDO side names nothing
     // and falls to the removal arm's empty answer — which is exactly right, an
     // undone drop resting no selection. touched_live names the inserted row, so
-    // the counter-entry's swap hands the REDO the right index. It has to: a
-    // drop onto an OCCUPIED frame is legal, insert_marker places by lower_bound
-    // (marker_store.h) and so lands the new marker FIRST in its coincident
-    // group, while the diff matcher's grown arm consumes by time_frame alone
-    // front-to-back and would name the LAST row of that group — the
-    // pre-existing twin, silently, both painting at one column.
+    // the counter-entry's swap hands the REDO the right index. It is the
+    // exact answer rather than a needed one since 2026-11-11: the drop's one
+    // caller refuses an occupied frame, so the new marker is alone on its
+    // frame and the diff matcher's grown arm would name the same row. (Inside
+    // a coincident group the two differ — insert_marker places by lower_bound,
+    // marker_store.h, and lands a new row FIRST, while the grown arm consumes
+    // by time_frame alone front-to-back and names the LAST — which is the
+    // deletes' reason for their hint still.)
     undo.push_undo_warp(std::move(pre_state),
                         /*touched_snapshot=*/{}, /*touched_live=*/{new_idx});
     undo.recompute_dirty();
@@ -257,13 +273,29 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // visits survives by construction (find_immediate_prior and the loop's own
 // survival test), so one OTHER surviving index at its frame makes the group.
 //
+// AN OCCUPIED FRAME REFUSES WITH A CARD (architect 2026-11-11, THE DROP
+// COINCIDENCE RULE: "coincident (exact frame) warp marker drops are never
+// intentional"): where a warp marker — enabled or disabled — already stands
+// on the playhead's exact frame (drop_at_playhead_coincides, app_state.h;
+// the test's owner warp_marker_stands_on_frame, warp_frame_map_view.h), the
+// drop returns kMarkerDropOccupiedCard for its dispatcher to raise, ahead of
+// any write. Asked here, in the body, so both roads into the warp drop meet
+// it (bare `s` and the empty-lane double-click). So the copy-previous walk
+// below never runs for a frame a marker holds: find_immediate_prior looks
+// strictly before a frame that is free.
+//
 // THE PAINTED EDGE REFUSES WITH A CARD (architect 2026-09-26, strictly as
 // painted): a playhead in the song's last half-column — End at the whole-song
 // zoom — would author a marker no viewport paints at this zoom
 // (drop_at_playhead_off_edge, app_state.h), so the drop returns
 // kMarkerDropOffEdgeCard for its dispatcher to raise, ahead of any write.
+// THE OCCUPIED FRAME IS ASKED FIRST, the phase-reset drop's order and
+// reason (drop_phase_reset_lead_in_at_playhead): the edge's "at this zoom"
+// promises a place zooming in would free, and an occupied frame is not one.
 GuiOpRefusal GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     if (audio.sample_rate() <= 0) return std::nullopt;
+    if (drop_at_playhead_coincides(app, audio))
+        return GuiOpRefusal{kMarkerDropOccupiedCard};
     if (drop_at_playhead_off_edge(app, audio))
         return GuiOpRefusal{kMarkerDropOffEdgeCard};
     const int64_t src_frame = drop_at_playhead_source_frame(app, audio);

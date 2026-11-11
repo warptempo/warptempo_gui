@@ -124,8 +124,10 @@ struct GuiWarpMarkersOps {
 
     void drop_marker(double time_frame, bool inherit,
                       int64_t tempo_cents, std::optional<double> scale);
-    // Returns the off-edge refusal's sentence for the dispatcher to card
-    // (kMarkerDropOffEdgeCard; GuiOpRefusal above), else std::nullopt.
+    // Returns its refusal's sentence for the dispatcher to card — the
+    // occupied frame's (kMarkerDropOccupiedCard, 2026-11-11), else the
+    // painted edge's (kMarkerDropOffEdgeCard); GuiOpRefusal above — else
+    // std::nullopt.
     GuiOpRefusal drop_copy_previous_at_playhead();
     void delete_selected_marker();
     // SHIFT+DELETE (architect 2026-10-29): the plain delete's body, plus
