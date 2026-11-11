@@ -3088,7 +3088,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // 2026-10-25, "admit both": the player opens over the view as the picker
     // does on Ctrl+O, beside it above). It authors nothing the view froze;
     // the overlay stands over the view, its router ahead of this gate and its
-    // veil over the view's presses, and its Close leaves the view as it
+    // veil over the view's presses, and its close leaves the view as it
     // stood — while the player's LOAD IN PLACE tears the view down as a
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
@@ -7247,7 +7247,6 @@ bool trim_presets_button_enabled(const AppState& a,
         case Act::HighlightUp:
             return folder_overlay::move_highlight_actionable(a, -1);
         case Act::SaveAs:
-        case Act::Close:
             return true;
         case Act::Save: {
             if (!seated) return true;

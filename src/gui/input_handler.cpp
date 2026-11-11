@@ -778,7 +778,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // touch — the gate above). No roster button spells Esc, so no Esc reaches this line, and
     // every surface that answered it outside the editors answers its own
     // buttons instead: the prompts and the progress modal their word buttons,
-    // the overlays their Close or Cancel and their opener keys, a running
+    // the overlays their opener keys and the two that ask a choice their
+    // Cancel (the plain Closes left the rows 2026-11-11), a running
     // render the RENDER key's Cancel face, the notification stack its cards'
     // own long press.
 

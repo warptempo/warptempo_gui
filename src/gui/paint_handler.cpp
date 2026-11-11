@@ -460,12 +460,11 @@ KeyLegendSeat key_legend_seat(const GuiRect& face, double run_w) {
 // THE RENDER PLAYER'S LEGENDS (architect 2026-10-23, on the approved
 // player frame: PREV PLAY NEXT … REFRESH DOWN UP
 // FOLDER LOAD CANCEL; back 2026-11-03), by the act each key runs; the
-// root's sixth slot, Delete, its own word. THE REPEAT KEY READS REPEAT
+// root's fifth slot, Delete, its own word. THE REPEAT KEY READS REPEAT
 // (architect 2026-10-23, "player repeat btn is mislabeled refresh"): its
-// act is Toggle Repeat One, the mock's REFRESH a misprint. THE LAST KEY
-// READS CLOSE (architect 2026-10-28 night, "agree all"): the player asks
-// nothing, and a button's word says what leaving does (the rule at
-// kModalCancelLabel); its tooltip, "Close", says the same.
+// act is Toggle Repeat One, the mock's REFRESH a misprint. The row carries
+// no leaving key since 2026-11-11 (architect, session 106: the lit PLAYER
+// key is the way out, PlayerButtonAct's head).
 const char* render_player_button_legend(AppState::PlayerButtonAct act) {
     using Act = AppState::PlayerButtonAct;
     switch (act) {
@@ -478,7 +477,6 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act) {
         case Act::Up:            return "FOLDER";
         case Act::LoadInPlace:   return "LOAD";
         case Act::Delete:        return "DELETE";
-        case Act::Close:         return "CLOSE";
         case Act::None:          return "";
     }
     return "";
@@ -508,11 +506,9 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act,
 // R14's transport rule: "two arrows with a bar" on every to-the-end step);
 // REPEAT MediaRepeatSingle (the row's one lamp); DOWN / UP GoDown / GoUp;
 // FOLDER GoParentFolder; LOAD DialogOkApply (the band's LOAD key's and the
-// word buttons' OK / YES, the same act, modal_word_icon); DELETE EditDelete; CLOSE WindowClose (the leaving key's act is
-// Close since 2026-10-28 night: the player asks nothing, and a button's
-// word says what leaving does, the rule at kModalCancelLabel; the key is the
-// left cluster's last since 2026-11-10, the row's last seat the
-// transport's). THE PLAY
+// word buttons' OK / YES, the same act, modal_word_icon); DELETE
+// EditDelete. (CLOSE's WindowClose left with the key, architect 2026-11-11,
+// session 106.) THE PLAY
 // KEY'S GLYPH NAMES ITS NEXT PRESS (architect 2026-10-25; the roster's rule
 // at redesign_button_icon's stateful overload) BY ITS FACE
 // (render_player_play_face, the owner the tooltip reads too): PAUSE
@@ -539,7 +535,6 @@ std::optional<icons::Icon> render_player_button_icon(
         case Act::Up:            return Icon::GoParentFolder;
         case Act::LoadInPlace:   return Icon::DialogOkApply;
         case Act::Delete:        return Icon::EditDelete;
-        case Act::Close:         return Icon::WindowClose;
         case Act::None:          break;
     }
     return std::nullopt;
@@ -2654,11 +2649,12 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // what the fixed terms leave (player_row_layout), the two fields and their
 // gap 123 + 8 + 123 = 254 device px on the tablet, so at the defaults —
 // the 70-px face of key_width 35, the one-W key gap and the 44-px run gap
-// of run_gap 22 (2026-11-04 night) — the scrub's channel is 1226 device px (2304 wide, x
-// 282 .. 1507), the fields x 1552 .. 1674 and 1683 .. 1805; each W of
-// key_width takes 18 device px from the channel (nine faces), 956 at the
-// grammar's ceiling, 50 W; each W of run_gap 6 (the row's three group
-// spaces), 1094 at its ceiling, 44 W.
+// of run_gap 22 (2026-11-04 night), the left cluster five faces since its
+// Close left (2026-11-11) — the scrub's channel is 1298 device px (2304
+// wide, x 426 .. 1723), the fields x 1768 .. 1890 and 1899 .. 2021; each W
+// of key_width takes 16 device px from the channel (eight faces), 1058 at
+// the grammar's ceiling, 50 W; each W of run_gap 6 (the row's three group
+// spaces), 1166 at its ceiling, 44 W.
 //
 // ONE ORIGIN RULE FOR EVERY TIME FIELD (architect 2026-11-05): THE RUN
 // STARTS AT `field_x + pad - ink_l`, a whole pixel (every term an int, so
@@ -5438,10 +5434,11 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
-// (the fourth, the same day: its one-word row, Cancel or Close by content,
-// kModalCancelLabel's rule — under the trim presets list since 2026-10-28
-// night the player's shape, the highlight pair and four words ending in
-// Close, under the BPM form since 2026-10-29 RENDER and Cancel), THE PROGRESS MODAL (the fifth, 2026-10-14: a
+// (the fourth, the same day: its one-word row, Cancel, kModalCancelLabel's
+// rule — under the settings page EMPTY since 2026-11-11, its Close gone, the
+// row still the picker's; under the trim presets list since 2026-10-28
+// night the player's shape, the highlight pair and three words, under the
+// BPM form since 2026-10-29 RENDER and Cancel), THE PROGRESS MODAL (the fifth, 2026-10-14: a
 // batch's Cancel alone, AppState::BatchProgress) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional, a modal
 // since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
@@ -5757,46 +5754,38 @@ namespace {
 // (closed_questions.md).
 
 // THE WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel, and
-// the field-less owners' one button (the picker's, the progress modal's) —
-// the painter's plans read these.
-// A BUTTON'S WORD SAYS WHAT LEAVING DOES (architect 2026-10-28 night, "agree
-// all"). CANCEL leaves a question unanswered: the PROJECT PICKER, the
-// VALUE LIST and THE BPM FORM (2026-10-29, its RENDER the answer, its Cancel
-// the mode's end) ask for a choice and Cancel declines it, and the PROGRESS
-// MODAL's Cancel cancels the render. OK AND CANCEL belong to the EDITORS,
-// where a typed line is pending. CLOSE leaves a surface that asked nothing:
-// the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER (its
-// left cluster's last key, PlayerButtonAct::Close — the row's last seat is
-// the transport's since 2026-11-10) and THE TRIM PRESETS LIST
-// (2026-10-28 night: its acts return to it, only Close and its opener leave;
-// its last word button). The words are plain, no letter underlined
-// (architect 2026-10-30: the buttons are the dialogs' one road, no keyboard
-// standing under them), and the word buttons' layout reads their count
-// alone (modal_word_buttons), so the word changes no geometry.
+// the field-less owners' one button (the project picker's and the value
+// list's, the progress modal's) — the painter's plans read these. A
+// BUTTON'S WORD SAYS WHAT LEAVING DOES: the rule and the two leave words,
+// kModalCancelLabel and kModalCloseLabel, are app_state.h's (the lit
+// opener's tooltip under its overlay reads them there, overlay_leave_word;
+// architect 2026-11-11, session 106, Close on no button since). OK is the
+// editors' alone, and lives here.
 constexpr std::string_view kModalOkLabel     = "OK";
-constexpr std::string_view kModalCancelLabel = "Cancel";
-constexpr std::string_view kModalCloseLabel  = "Close";
 
 // THE WORD BUTTONS' GLYPHS (architect 2026-11-01 / 2026-11-02, Breeze's
 // roster: a word button is a key, so it carries a glyph over its
 // printed word) — BY THE WORD, the one vocabulary every word row shares:
 // the prompts' answer tables (kPromptAnswerTables, app_state.h), the
 // editors' and the field-less owners' words above, the trim presets list's
-// four and the BPM form's two (the roster as ruled, architect 2026-11-02,
+// three and the BPM form's two (the roster as ruled, architect 2026-11-02,
 // R12 / R14). OK and YES DialogOkApply, LOAD's plain checkmark (architect
 // 2026-11-03: the affirmative answer is the same act as LOAD, and the
 // notebook-with-check read too small and awkward for a basic command; a
 // deliberate share, the band's LOAD, the player's LOAD, OK and YES one
-// drawing); CANCEL DialogCancel; CLOSE WindowClose; SAVE DocumentSave; SAVE AS DocumentSaveAs; DISCARD
+// drawing); CANCEL DialogCancel; SAVE DocumentSave; SAVE AS DocumentSaveAs; DISCARD
 // EditClear; RETRY ViewRefresh; DELETE EditDelete; RENDER MediaRecord (the
-// band's RENDER key's: the word follows the key). A word outside the
+// band's RENDER key's: the word follows the key). CLOSE IS ON NO WORD
+// BUTTON since 2026-11-11 (architect, session 106: every plain Close left
+// its row, the lit opener the way out), so it has no glyph here; its
+// drawing, WindowClose, stays in the roster (icons.h) with no painter. A
+// word outside the
 // vocabulary is a program bug (a new answer table's word not added here):
 // no glyph, and the debug build's assert.
 std::optional<icons::Icon> modal_word_icon(std::string_view word) {
     using icons::Icon;
     if (word == kModalOkLabel || word == "Yes") return Icon::DialogOkApply;
     if (word == kModalCancelLabel)              return Icon::DialogCancel;
-    if (word == kModalCloseLabel)               return Icon::WindowClose;
     if (word == "Save")                         return Icon::DocumentSave;
     if (word == "Save As")                      return Icon::DocumentSaveAs;
     if (word == "Discard")                      return Icon::EditClear;
@@ -5841,14 +5830,14 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 } // namespace
 
 // THE RENDER PLAYER'S ROW LAYOUT (2026-10-21: lifted out of the modal
-// painter's player branch): each of the nine cases' left
+// painter's player branch): each of the eight cases' left
 // column in the plan's order, the clock's two fields and the scrub's span,
 // on the controls row's seats (modal_controls_seats). The row's arrangement
 // and its rulings are at the painter's player branch. THE TRANSPORT STANDS
 // FLUSH RIGHT AND EVERYTHING ELSE AT THE LEFT (architect 2026-11-10), the
 // scrub and then the clock between the two clusters.
 struct PlayerRowLayout {
-    std::array<int, 9> x{};
+    std::array<int, 8> x{};
     int field_w = 0, field_gap = 0;
     int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
 };
@@ -5883,17 +5872,19 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 
     // -- The walk (architect 2026-11-10: the transport to the right,
     //    everything else to the left, the scrub and the clock where they
-    //    stand between the two): THE LEFT CLUSTER, the six keys that are not
-    //    the transport — the lamp, the highlight pair, Up a Folder, the
-    //    Load in Place / Delete slot and Close — one run from the row's
+    //    stand between the two): THE LEFT CLUSTER, the five keys that are not
+    //    the transport — the lamp, the highlight pair, Up a Folder and the
+    //    Load in Place / Delete slot (no Close since 2026-11-11, architect,
+    //    session 106: the lit PLAYER key is the way out, the scrub taking the
+    //    seat's pitch) — one run from the row's
     //    first face; THE TRANSPORT'S THREE right-flushed where THE CONTROLS
     //    ROW'S FACES END, the last face's right edge the pane's last column
     //    (the well's; modal_controls_seats' cases_right); the scrub and the
     //    clock's two fields between them, the scrub taking what is left. --
     const int cx0 = seats.cases_left;
-    for (int i = 0; i < 6; ++i)
-        l.x[i] = cx0 + i * pitch;          // Repeat one .. Close
-    l.scrub_x0 = cx0 + key_group_w_px(6) + group;
+    for (int i = 0; i < 5; ++i)
+        l.x[i] = cx0 + i * pitch;          // Repeat one .. Load in Place
+    l.scrub_x0 = cx0 + key_group_w_px(5) + group;
 
     const int transport_x0 =
         std::max(cx0, seats.cases_right - key_group_w_px(3));
@@ -5910,16 +5901,18 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
-    l.x[6] = transport_x0;                 // Home (skip back)
-    l.x[7] = transport_x0 + pitch;         // Play / Pause
-    l.x[8] = transport_x0 + 2 * pitch;     // End (skip forward)
+    l.x[5] = transport_x0;                 // Home (skip back)
+    l.x[6] = transport_x0 + pitch;         // Play / Pause
+    l.x[7] = transport_x0 + 2 * pitch;     // End (skip forward)
     return l;
 }
 
 // THE SCORE VIEWER'S PAGE ROAD ROW LAYOUT (architect 2026-10-26,
 // score_viewer.h's head, the face with no soundtrack): THE PLAYER'S SEATS
-// (the transport flush right since 2026-11-10, architect) — RESET, START,
-// END and CLOSE one key gap apart from the row's first face, the page scrub
+// (the transport flush right since 2026-11-10, architect) — RESET, START
+// and END one key gap apart from the row's first face (no CLOSE since
+// 2026-11-11, architect, session 106: the lit SCORE key is the way out, the
+// scrub taking the seat's pitch), the page scrub
 // after the group space, THE PAGE CELL where the player's clock stands, and
 // PREV and NEXT one key gap apart flush right (the transport's seats), the
 // last key's right edge the row's — the scrub taking what is
@@ -5928,7 +5921,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 // "<count> / <count>" at the table's page count's digits, so nothing moves
 // as the pages turn or the range changes.
 struct ScoreRowLayout {
-    std::array<int, 6> x{};
+    std::array<int, 5> x{};
     int scrub_x0 = 0, scrub_w = 0;
     int cell_x0 = 0, cell_w = 0, cell_pad = 0;
 };
@@ -5956,29 +5949,30 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
         text_shape::memoized_run(cfont, digits + " / " + digits)->width_px)));
     const int pitch = key_group_pitch_px();
     const int cx0 = seats.cases_left;
-    for (int i = 0; i < 4; ++i) l.x[i] = cx0 + i * pitch;   // RESET .. CLOSE
-    l.scrub_x0 = cx0 + key_group_w_px(4) + group;
+    for (int i = 0; i < 3; ++i) l.x[i] = cx0 + i * pitch;   // RESET .. END
+    l.scrub_x0 = cx0 + key_group_w_px(3) + group;
     const int pages_x0 =
         std::max(cx0, seats.cases_right - key_group_w_px(2));
     l.scrub_w = pages_x0 - (group + l.cell_w + group) - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.cell_x0 = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
-    l.x[4] = pages_x0;                     // PREV
-    l.x[5] = pages_x0 + pitch;             // NEXT
+    l.x[3] = pages_x0;                     // PREV
+    l.x[4] = pages_x0 + pitch;             // NEXT
     return l;
 }
 
 // THE SCORE VIEWER'S MEDIA PLAYER ROW (architect 2026-10-26 night, the
 // soundtrack's face, score_viewer.h's head; the transport flush right since
-// 2026-11-10, architect): RESET, START, END and CLOSE one key gap apart from
-// the row's first face, the scrub after the group space, THE
+// 2026-11-10, architect): RESET, START and END one key gap apart from
+// the row's first face (no CLOSE since 2026-11-11, the page road's
+// reason), the scrub after the group space, THE
 // CLOCK — the render player's two time
 // fields, measured and spaced as its are (player_row_layout) — and BACK,
 // PLAY / PAUSE and FWD one key gap apart flush right (the skips architect
 // 2026-10-27, the render player's three transport seats), the scrub taking
 // what is left, floored at two thumbs as the player's is.
 struct ScoreMediaRowLayout {
-    std::array<int, 7> x{};
+    std::array<int, 6> x{};
     int field_w = 0, field_gap = 0;
     int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
 };
@@ -5990,17 +5984,17 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     const int clock_w = l.field_w + l.field_gap + l.field_w;
     const int pitch = key_group_pitch_px();
     const int cx0 = seats.cases_left;
-    for (int i = 0; i < 4; ++i) l.x[i] = cx0 + i * pitch;   // RESET .. CLOSE
-    l.scrub_x0 = cx0 + key_group_w_px(4) + group;
+    for (int i = 0; i < 3; ++i) l.x[i] = cx0 + i * pitch;   // RESET .. END
+    l.scrub_x0 = cx0 + key_group_w_px(3) + group;
     const int transport_x0 =
         std::max(cx0, seats.cases_right - key_group_w_px(3));
     l.scrub_w = transport_x0 - (group + clock_w + group) - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
-    l.x[4] = transport_x0;                 // BACK
-    l.x[5] = transport_x0 + pitch;         // PLAY / PAUSE
-    l.x[6] = transport_x0 + 2 * pitch;     // FWD
+    l.x[3] = transport_x0;                 // BACK
+    l.x[4] = transport_x0 + pitch;         // PLAY / PAUSE
+    l.x[5] = transport_x0 + 2 * pitch;     // FWD
     return l;
 }
 
@@ -6008,7 +6002,9 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // PLAYER'S SHAPE; his glass on 852a28d9: "up/down are in the bottom right for
 // the player, so they should be there for the trim presets also"): ONE
 // ABUTTING CLUSTER FLUSH RIGHT — THE HIGHLIGHT PAIR, the player's DOWN and UP
-// keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
+// keys, then the three word keys SAVE, SAVE AS and DELETE (no CLOSE since
+// 2026-11-11, architect, session 106: the lit PRESETS key is the way out,
+// the cluster one pitch shorter at its left) — the last
 // key's right edge the row's (every word row's alignment rule), nothing at
 // the row's left. A DELIBERATE ASYMMETRY WITH THE PLAYER since 2026-11-10
 // (architect: the player's transport took its row's right, its pair and the
@@ -6262,14 +6258,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // (render_player_button_hint) — the transport
     // triple, the REPEAT ONE lamp, the HIGHLIGHT PAIR (architect 2026-10-10,
     // Highlight Next and Highlight Previous, the band walk's two keys on
-    // glass), UP A FOLDER, LOAD IN PLACE (or DELETE at the root) and CLOSE —
+    // glass), UP A FOLDER and LOAD IN PLACE (or DELETE at the root) —
     // while a word button is a key whose glyph is its word's
     // (modal_word_icon), whose legend is the word in capitals
     // (key_legend_word) and whose tooltip is the word. The word kind is the other three owners' alone: a
     // prompt's answers, the dialog editors' OK / Cancel and the picker's one
-    // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
-    // the trim presets list, its four words SAVE, SAVE AS, DELETE and
-    // CLOSE after its two keys, the player's highlight pair, or under the
+    // word, Cancel (kModalCancelLabel's rule; NONE under the settings page,
+    // architect 2026-11-11, session 106) — or, under
+    // the trim presets list, its three words SAVE, SAVE AS and DELETE
+    // after its two keys, the player's highlight pair, or under the
     // BPM form its two, RENDER and CANCEL. `lit` is
     // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
@@ -6284,8 +6281,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // legends score_viewer_button_legend's.
         AppState::ScoreButtonAct  score_act  = AppState::ScoreButtonAct::None;
         // The trim presets list's (2026-10-28 night): its highlight pair are
-        // `glyph` keys wearing the player's glyphs and legends, its other four word
-        // buttons.
+        // `glyph` keys wearing the player's glyphs and legends, its other three
+        // word buttons.
         AppState::TrimPresetsButtonAct trim_act =
             AppState::TrimPresetsButtonAct::None;
         // The BPM form's (2026-10-29): two word buttons.
@@ -6297,10 +6294,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         PlayerPlayFace play_face = PlayerPlayFace::Play;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
-        // below. FOUR OWNERS WRITE IT, re-grepped 2026-10-29: the
-        // player's nine through render_player_button_enabled, the score
+        // below. FOUR OWNERS WRITE IT, re-grepped 2026-11-11: the
+        // player's eight through render_player_button_enabled, the score
         // viewer's keys through score_viewer_button_enabled, the trim
-        // presets list's six through trim_presets_button_enabled and the
+        // presets list's five through trim_presets_button_enabled and the
         // BPM form's two through bpm_form_button_enabled; true on every
         // other owner's buttons.
         bool        enabled      = true;
@@ -6310,9 +6307,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // WHERE IT PAINTS. The single cluster every other owner
         // lays out is written into this field by the walk below; THE PLAYER'S
         // ROW IS NOT ONE CLUSTER (the lamp, the highlight pair, the Up a
-        // Folder button, Load in Place and Close at the left, then the scrub
+        // Folder button and Load in Place at the left, then the scrub
         // and the clock, then the transport FLUSH RIGHT; architect
-        // 2026-11-10), so its own branch writes all nine
+        // 2026-11-10), so its own branch writes all eight
         // and the walk simply paints where it is told.
         int         x            = 0;
     };
@@ -6330,16 +6327,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // 2026-11-10, each cluster keeping its own order): the REPEAT ONE
         // lamp, the HIGHLIGHT PAIR (Highlight Next, Highlight Previous: the
         // bare Down / Up keys' band walk on a button, architect 2026-10-10),
-        // the UP A FOLDER button, Load in place and Close from the row's
+        // the UP A FOLDER button and Load in place from the row's
         // first face — then the scrub and the clock (both laid out in the
         // player's own branch below, the separators either side of them
         // retired 2026-10-02), then, FLUSH RIGHT, THE TRANSPORT (THE MAIN
         // WINDOW'S OWN TRIPLE since 2026-09-01): the two SKIPS around
         // Play/Pause, on Home and End since 2026-08-31.
-        // A DELIBERATE ASYMMETRY (architect 2026-11-10, the swap's own
-        // consequence): CLOSE CLOSES THE LEFT CLUSTER, beside the scrub, and
-        // is NOT the row's last seat here as Cancel is every prompt's and
-        // Close every word row's — the row's last seat is the transport's. No
+        // NO CLOSE (architect 2026-11-11, session 106: "places like score
+        // and the player can lose their close button since the button used
+        // to enter that mode is also now the close button, and the tooltip
+        // will say as much"): the lit PLAYER key is the way out
+        // (PlayerButtonAct's head). No
         // key reaches the player (architect 2026-10-30), so the row has no
         // ring and no Tab walks it. A STOP BUTTON SAT AFTER PLAY/PAUSE from 2026-08-28
         // (Audacious's own order) until the act retired.
@@ -6441,12 +6439,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — behind the pair,
-        // ahead of the cluster's last two. It greys at the root through the
+        // ahead of the cluster's last key. It greys at the root through the
         // act's own wall.
         glyph_button(AppState::PlayerButtonAct::Up);
-        // THE CLUSTER'S LAST TWO: Load in Place (the icon row's history
-        // group runs the same act one surface over) and Close, Close the
-        // cluster's last (the asymmetry recorded at this branch's head).
+        // THE CLUSTER'S LAST KEY: Load in Place (the icon row's history
+        // group runs the same act one surface over).
         // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
         // listing is batch folders, where a load has nothing to name, so the
         // fifth button deletes the highlighted folder, and its shift press
@@ -6458,7 +6455,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             glyph_button(AppState::PlayerButtonAct::Delete);
         else
             glyph_button(AppState::PlayerButtonAct::LoadInPlace);
-        glyph_button(AppState::PlayerButtonAct::Close);
         // THE TRANSPORT, FLUSH RIGHT (architect 2026-11-10), the row's last
         // three seats: Home, Play / Pause, End.
         glyph_button(AppState::PlayerButtonAct::Home);
@@ -6472,8 +6468,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order, ON
         // ITS TWO FACES (score_viewer.h's head, 2026-10-26 night), THE
         // TRANSPORT TO THE RIGHT AND EVERYTHING ELSE TO THE LEFT as the
-        // render player's row (architect 2026-11-10): RESET, START, END and
-        // CLOSE from the row's first face — then (the scrub and the page
+        // render player's row (architect 2026-11-10): RESET, START and END
+        // from the row's first face — then (the scrub and the page
         // cell or the clock between, laid out in the branch below), flush
         // right, the page
         // road's PREV and NEXT, or the media player's BACK, PLAY / PAUSE and
@@ -6482,9 +6478,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // with its modifier line (score_viewer_button_shift_hint); PLAY's
         // glyph and its word the render player's Play key's by the face
         // (score_viewer_play_face) — each a key with its glyph and its
-        // legend, its face the act's own truthful answer. CLOSE closes the
-        // left cluster, not the row (the player's recorded asymmetry, its
-        // branch above).
+        // legend, its face the act's own truthful answer. NO CLOSE
+        // (architect 2026-11-11, session 106, the player's ruling, its
+        // branch above): the lit SCORE key is the way out.
         using Act = AppState::ScoreButtonAct;
         const PlayerPlayFace face = score_viewer_play_face(app);
         const auto key = [&](Act act) {
@@ -6497,8 +6493,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.tooltip2  = score_viewer_button_shift_hint(app, playback, act);
             plan.push_back(std::move(b));
         };
-        for (const Act act : {Act::Reset, Act::SetStart, Act::SetEnd,
-                              Act::Close})
+        for (const Act act : {Act::Reset, Act::SetStart, Act::SetEnd})
             key(act);
         if (score_viewer_has_soundtrack(app)) {
             key(Act::SkipBack);
@@ -6513,8 +6508,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // PLAYER'S SHAPE), in painted order, one cluster flush right
         // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
         // and UP, its glyphs, legends and words, the band walk without applying
-        // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE (the
-        // Close word kModalCloseLabel's rule), CLOSE LAST. No Apply: the
+        // — then THREE WORD BUTTONS, SAVE, SAVE AS and DELETE, DELETE LAST
+        // (no Close since 2026-11-11, architect, session 106: the lit PRESETS
+        // key is the way out, TrimPresetsButtonAct's head). No Apply: the
         // row's tap is the act. Each face is the act's own truthful answer
         // (trim_presets_button_enabled).
         using Act = AppState::TrimPresetsButtonAct;
@@ -6537,7 +6533,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         word(Act::Save, "Save");
         word(Act::SaveAs, "Save As");
         word(Act::Delete, "Delete");
-        word(Act::Close, kModalCloseLabel);
     } else if (bpm_up) {
         // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the
         // trim list's cluster flush right (key_cluster_row_layout): RENDER,
@@ -6562,10 +6557,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // claim), button-is-its-chord.
         // THE PICKER'S ROW IS ONE BUTTON (architect 2026-08-29): a click on a
         // row opens it, so there is nothing for an OK to add. ITS WORD IS WHAT LEAVING DOES (the rule at
-        // kModalCancelLabel, architect 2026-10-28 night): CANCEL under the
-        // project picker and the value list, CLOSE under the settings page —
-        // the act the same body by content (dispatch_modal_dialog_button's
-        // picker arm), the word alone moving.
+        // kModalCancelLabel, app_state.h, architect 2026-10-28 night): CANCEL
+        // under the project picker and the value list — the act by content
+        // (dispatch_modal_dialog_button's picker arm: the picker's close, the
+        // list's return to the page). UNDER THE SETTINGS PAGE THE ROW IS
+        // EMPTY (architect 2026-11-11, session 106, "remove every plain
+        // close": its Close left, the lit SETUP key the way out); THE ROW
+        // ITSELF STAYS, its ground and its rows the box's as under the value
+        // list and the line editor, so no list row moves as the page and its
+        // sub-pages swap (modal_box.h's controls row stands on row 8's rows
+        // whatever it carries; an empty plan publishes no button, and every
+        // reader of the stash bounds its index on the list's size).
         // THE PROGRESS MODAL'S ROW IS **Cancel** ALONE TOO (architect
         // 2026-10-14): the batch's one act a user owns is stopping it, and its
         // lift is the batch's cancel road (dispatch_modal_dialog_button's
@@ -6576,16 +6578,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             ok.editor_ok = true;
             plan.push_back(std::move(ok));
         }
-        DialogButtonPlan last;
-        last.word = std::string(
-            picker_up && app.folder_overlay.owner ==
-                             AppState::FolderOverlay::Owner::SettingsPage
-                ? kModalCloseLabel
-                : kModalCancelLabel);
-        plan.push_back(std::move(last));
+        if (!(picker_up && app.folder_overlay.owner ==
+                               AppState::FolderOverlay::Owner::SettingsPage)) {
+            DialogButtonPlan last;
+            last.word = std::string(kModalCancelLabel);
+            plan.push_back(std::move(last));
+        }
     }
     // EVERY BUTTON'S BOX: a glyph button the PROGRAM'S CASE at row 8's width
-    // (the player's alone, its nine the plan's only glyph buttons, placed by
+    // (the player's eight and the score viewer's keys, placed by
     // its own branch below); every other owner's row ONE CLUSTER OF WORD
     // BUTTONS, laid out whole — widths, the flush-right start and each x —
     // by modal_word_buttons, the one layout the painter and the press read.
@@ -6615,8 +6616,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every owner's
     // row — a prompt's answers, an editor's OK and Cancel, the picker's one
-    // word (Cancel or Close by content, kModalCancelLabel's rule) and the
-    // trim presets list's four (its highlight pair, the player's, directly
+    // word (Cancel, kModalCancelLabel's rule; none under the settings page
+    // since 2026-11-11) and the
+    // trim presets list's three (its highlight pair, the player's, directly
     // before them in the one cluster) and the BPM form's two — the last
     // one's face ending on the pane's last column (x 2279 on the tablet, the
     // well's last; its cell on the box's outer column, 2280), today's button
@@ -6784,7 +6786,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    row; THE TRANSPORT KEYS TO THE RIGHT, EVERYTHING ELSE TO THE
         //    LEFT, architect 2026-11-10, the scrub and the timestamps
         //    between them in their order): REPEAT ONE · DOWN · UP
-        //    · UP A FOLDER · LOAD IN PLACE · CLOSE · SCRUB · CLOCK ·
+        //    · UP A FOLDER · LOAD IN PLACE · SCRUB · CLOCK ·
         //    TRANSPORT, the transport flush right. The items are
         //    Audacious-Qt's under Breeze Dark, which is what the architect
         //    ruled off his own screen — "not the screenshot as a whole, just
@@ -6809,9 +6811,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (a zero rect contains no point and damages nothing) rather than a
         //    track too small to seat a handle.
         //
-        //    THE PLAN IS NINE ITEMS — the left cluster's six (the lamp, THE
+        //    THE PLAN IS EIGHT ITEMS — the left cluster's five (the lamp, THE
         //    HIGHLIGHT PAIR of 2026-10-10 behind it, Up a Folder of
-        //    2026-09-01, Load in Place and Close) and the transport's three —
+        //    2026-09-01 and Load in Place; no Close since 2026-11-11) and the
+        //    transport's three —
         //    every one of them a box of the same width and the whole row is fixed
         //    except the scrub. THE BOXES ARE ROW 8'S CASES (architect
         //    2026-10-05, bottom_row_seats; the program's since 2026-10-09):
@@ -6958,7 +6961,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
         if (media) {
             // -- THE MEDIA PLAYER'S ROW (2026-10-26 night; the transport
-            //    flush right since 2026-11-10): the four keys at the left,
+            //    flush right since 2026-11-10): the three keys at the left,
             //    the scrub over the range's
             //    frames, the clock — the render
             //    player's items, painted by its own helpers and rules — and
@@ -7087,9 +7090,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
     } else if (picker_up) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
-        //    2026-08-29): **Cancel**, or **Close** under the settings page
-        //    (kModalCancelLabel's rule, 2026-10-28 night), and NOTHING ELSE —
-        //    no label, no field, no OK. The list in the
+        //    2026-08-29): **Cancel** (kModalCancelLabel's rule, 2026-10-28
+        //    night), and NOTHING ELSE — no label, no field, no OK; under the
+        //    settings page NOTHING AT ALL, the row standing empty (architect
+        //    2026-11-11, session 106; the plan builder's picker arm). The list in the
         //    band above is the whole question, a click on a row is the answer,
         //    and the prompt's `<projects_path>/` prefix went with the field it
         //    labelled.
@@ -7105,7 +7109,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (x 2279 on the tablet, the well's last; its cell on the box's outer
         //    column).
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
-        //    shape instead — the highlight pair and four words, one cluster
+        //    shape instead — the highlight pair and three words, one cluster
         //    flush right — laid out with the widths above
         //    (key_cluster_row_layout), and THE BPM FORM'S (2026-10-29) the
         //    same cluster of two, RENDER and CANCEL; nothing else stands on
@@ -7337,7 +7341,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
     //    player's relaid row): the word cluster's x's are modal_word_buttons'
     //    (written with the widths, above), and the PLAYER's branch above has
-    //    written all nine of its own — one walk, two arrangements, and no
+    //    written all eight of its own — one walk, two arrangements, and no
     //    second painter. --
     for (size_t i = 0; i < plan.size(); ++i) {
         const int x = plan[i].x;
@@ -7368,7 +7372,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (update_modal_dialog_hover) drives the tooltip and that row's hot
         // button.
         // THE RENDER PLAYER'S ROW IS ROW 8'S CASES (architect 2026-10-05;
-        // the program's since 2026-10-09): its nine boxes take the roster's
+        // the program's since 2026-10-09): its eight boxes take the roster's
         // face through the one painter, paint_roster_case — NO HOT FACE
         // (program_spec.h's case_hot_face) — and no separators.
         // THE DISABLED RUNG, on the four rows that publish a stateful bit

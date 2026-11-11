@@ -95,8 +95,9 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // of 2026-09-12, until the car became an interface of its own and took that
 // walk with it) FLUSH RIGHT since 2026-11-10 (architect: the transport keys
 // to the right, everything else to the left) — the Repeat one lamp, the
-// highlight pair, the UP button, Load in place and Close at the row's left,
-// then the play-scrub and the
+// highlight pair, the UP button and Load in place at the row's left (no
+// Close since 2026-11-11, architect, session 106: the lit PLAYER key is the
+// way out), then the play-scrub and the
 // clock — the row's order and faces are the painter's, ruled 2026-08-28).
 //
 // THE PLAYER LIVES INSIDE `tmp/` AND NEVER RISES ABOVE IT (architect
@@ -363,10 +364,11 @@ struct GuiRenderPlayer {
     bool open();
     // THE CLOSER (the contract above). A no-op when the mode is down.
     //
-    // ITS CAUSES, SIX CALL SITES (re-grepped 2026-10-30): the modal row's
-    // Close button; bare `l` in the mode's key router, which the icon row's
-    // Play renders lift spells (the player's one chord, architect
-    // 2026-10-30); the `l` toggle's own close arm; the load road's success;
+    // ITS CAUSES, FOUR CALL SITES (re-grepped 2026-11-11; the modal row's
+    // Close button left with its act that day, architect, session 106):
+    // bare `l` in the mode's key router (route_render_player_key), which the
+    // icon row's Play renders lift spells (the player's one chord, architect
+    // 2026-10-30, its one way out on glass); the load road's success;
     // the root's delete leaving no folder
     // (delete_batch_folders, architect 2026-10-01); and THE CLOSE ROAD — GuiPrompt::request_close, which
     // takes the mode down at its head, so the platform's close

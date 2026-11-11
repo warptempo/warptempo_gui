@@ -6039,14 +6039,13 @@ struct AppState {
     // one stash on one surface, compared where the stash is already read.
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
     // the Repeat one lamp, the highlight pair (Highlight Next / Previous,
-    // architect 2026-10-10), the Up a Folder button, Load in place and Close
-    // at the row's left, the play-scrub, the clock and, flush right, the two
+    // architect 2026-10-10), the Up a Folder button and Load in place at the
+    // row's left, the play-scrub, the clock and, flush right, the two
     // skips around Play-Pause (Home / Play-Pause / End, the main window's own
     // triple since 2026-09-01) — the transport to the right and everything
     // else to the left since 2026-11-10 (architect); glyphs since
-    // 2026-09-01, when the architect gave Load in place and Close the
-    // checkmark and the window-close X; nine buttons since the highlight
-    // pair — is
+    // 2026-09-01; eight buttons since the row's Close left it (architect
+    // 2026-11-11, session 106: the lit PLAYER key is the way out) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation takes the box and the
@@ -6089,7 +6088,7 @@ struct AppState {
     enum class ModalDialogOwner {
         None, Prompt, Editor, Player, Picker, Progress, Score
     };
-    // THE PLAYER'S NINE BUTTONS, the third dispatch vocabulary beside a
+    // THE PLAYER'S EIGHT BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and the other two vocabularies are zero/false
@@ -6148,7 +6147,7 @@ struct AppState {
     // UP IS THE `..` ROW'S ACT, LIFTED ONTO THE ROW (architect 2026-09-01,
     // with the player's move inside `tmp/`): the listings carry no `..` row
     // any more, so going up is a BUTTON — after the highlight pair (2026-10-10), ahead of
-    // Load in Place and Close — whose act is GuiRenderPlayer::up() and whose key twin is
+    // Load in Place — whose act is GuiRenderPlayer::up() and whose key twin is
     // Backspace, unchanged. It greys at the root, which is `tmp/` itself
     // (render_player_up_actionable, the wall's one owner, read by the act and
     // by the face alike).
@@ -6160,9 +6159,18 @@ struct AppState {
     // shift press every batch folder the listing shows; inside a batch folder
     // the slot is Load in Place, unchanged. The acts are
     // GuiInputHandler::render_player_delete and its confirmation.
+    //
+    // THE ROW CARRIES NO CLOSE (architect 2026-11-11, session 106: "places
+    // like score and the player can lose their close button since the button
+    // used to enter that mode is also now the close button, and the tooltip
+    // will say as much"): the way out is the lit PLAYER key, live under the
+    // player (overlay_admits_button), its lift bare `l` and the player's own
+    // close (route_render_player_key), its tooltip reading Close there
+    // (overlay_leave_word). The act left with its button, no other producer
+    // having named it.
     enum class PlayerButtonAct {
         None, Home, PlayPause, NextTrack, RepeatOne, HighlightDown,
-        HighlightUp, Up, LoadInPlace, Delete, Close
+        HighlightUp, Up, LoadInPlace, Delete
     };
     // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
     // session's own Enter / Esc. The picker shared it for a day, its OK being
@@ -6171,18 +6179,21 @@ struct AppState {
     // dispatch_modal_dialog_button's picker arm reads no bit at all and forks
     // on the LIVE owner as it always did.
     // THE SCORE VIEWER'S BUTTONS (architect 2026-10-26), its dispatch
-    // vocabulary beside the player's, on its two faces: RESET, START, END
-    // and CLOSE at the row's left; then, flush right (the transport's side
+    // vocabulary beside the player's, on its two faces: RESET, START and END
+    // at the row's left; then, flush right (the transport's side
     // since 2026-11-10, architect),
     // the page road's PREV / NEXT pair, or the media player's
     // BACK, PLAY / PAUSE and FWD (2026-10-26 night; THE SKIPS, architect
     // 2026-10-27: 3 s back / forward, their Shift-press or long press 10 s —
     // GuiScoreViewer::skip, the row's shift-admitting pair,
     // score_button_shift_admits) (score_viewer.h owns each act;
-    // dispatch_modal_dialog_button reads it under the Score owner).
+    // dispatch_modal_dialog_button reads it under the Score owner). NO
+    // CLOSE (architect 2026-11-11, session 106, the player's ruling above):
+    // the lit SCORE key is the way out, its lift bare `m`
+    // (route_score_viewer_key), its tooltip Close there.
     enum class ScoreButtonAct {
         None, PrevPage, NextPage, SkipBack, PlayPause, SkipForward, Reset,
-        SetStart, SetEnd, Close
+        SetStart, SetEnd
     };
     // THE TRIM PRESETS LIST'S BUTTONS (architect 2026-10-28 night, THE
     // PLAYER'S SHAPE, his word: "we would be breaking symmetry if we did it
@@ -6196,19 +6207,21 @@ struct AppState {
     // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their glyphs and
     // words the player's (render_player_button_icon,
     // render_player_button_hint) and their act the band walk alone, no apply
-    // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE. THE WORDS
+    // — then THREE WORD BUTTONS, SAVE, SAVE AS and DELETE. THE WORDS
     // ARE WINDOWS' DIALOG
     // VOCABULARY (the same glass): SAVE writes the active tab's trim into
     // THE HIGHLIGHTED preset, its name kept, after its question — and with no
     // preset to save into it is Save As ("with no presets yet, both create a
-    // new preset") — SAVE AS names a new one, Save standing left of Save As;
-    // the Close word kModalCloseLabel's rule (the list asks nothing, an act
-    // returns to it, only the opener and Close leave). No Apply: a row's tap
-    // is the act. The acts are the input handler's
-    // (trim_presets_save, trim_presets_save_as, trim_presets_delete,
-    // close_picker); the faces trim_presets_button_enabled's.
+    // new preset") — SAVE AS names a new one, Save standing left of Save As.
+    // NO CLOSE (architect 2026-11-11, session 106, "remove every plain
+    // close"): the list asks nothing and an act returns to it, so the one
+    // way out is the lit PRESETS key, its lift bare `t` (route_picker_key's
+    // close_picker), its tooltip Close there (overlay_leave_word). No Apply:
+    // a row's tap is the act. The acts are the input handler's
+    // (trim_presets_save, trim_presets_save_as, trim_presets_delete); the
+    // faces trim_presets_button_enabled's.
     enum class TrimPresetsButtonAct {
-        None, HighlightDown, HighlightUp, Save, SaveAs, Delete, Close
+        None, HighlightDown, HighlightUp, Save, SaveAs, Delete
     };
     // THE BPM FORM'S BUTTONS (architect 2026-10-29), its dispatch
     // vocabulary, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT as
@@ -8440,7 +8453,7 @@ struct AppState {
     // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
     // and bare `t`; the piece's named trim windows, a row's tap applying its
     // pair to the active tab's trim with the list standing, the player's
-    // controls row — the highlight pair, Save, Save As, Delete, Close);
+    // controls row — the highlight pair, Save, Save As, Delete);
     // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
     // the sweep's ladder; one inert group row and the three `key=value`
     // lines `beats=`, `low=` and `high=`, the open act the line editor
@@ -8461,16 +8474,18 @@ struct AppState {
     // opens it, so the row needs no OK — "if I'm using the picker my hand
     // stays on the right", and the one button sits flush right), its word
     // what leaving does — Cancel under the project picker and the value
-    // list, Close under the settings page (kModalCancelLabel's rule,
-    // paint_handler.cpp, architect 2026-10-28 night); THE TRIM PRESETS
-    // LIST'S ROW IS THE PLAYER'S SHAPE instead, the highlight pair and four
-    // words, its last Close (TrimPresetsButtonAct). The opener
+    // list (kModalCancelLabel's rule, architect 2026-10-28 night) — and
+    // UNDER THE SETTINGS PAGE NO BUTTON AT ALL, the row standing empty
+    // (architect 2026-11-11, session 106: its plain Close left, the lit
+    // SETUP key the way out); THE TRIM PRESETS LIST'S ROW IS THE PLAYER'S
+    // SHAPE instead, the highlight pair and three words
+    // (TrimPresetsButtonAct), no Close either. The opener
     // refuses under a prompt, an editor,
     // a standing picker and a load — the render player's arm is RETIRED
     // (2026-09-03: the player's router consumes Ctrl+O and the Open
     // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
-    // GuiInputHandler::close_picker (the one button, the opener's
+    // GuiInputHandler::close_picker (the project picker's Cancel, the opener's
     // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
     // value list, `t` under the trim presets list, Ctrl+B under the BPM form
@@ -9652,6 +9667,66 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
     return is_folder_overlay_opener(a, b);
 }
 
+// THE LEAVE WORDS — A BUTTON'S WORD SAYS WHAT LEAVING DOES (architect
+// 2026-10-28 night, "agree all"). CANCEL leaves a question unanswered: the
+// PROJECT PICKER, the VALUE LIST and THE BPM FORM (2026-10-29, its RENDER
+// the answer, its Cancel the mode's end) ask for a choice and Cancel
+// declines it, and the PROGRESS MODAL's Cancel cancels the render (OK AND
+// CANCEL belong to the EDITORS, where a typed line is pending; their OK is
+// paint_handler.cpp's kModalOkLabel). CLOSE leaves a surface that asked
+// nothing — the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER,
+// THE TRIM PRESETS LIST (its acts return to it) and THE SCORE VIEWER — AND
+// NO BUTTON CARRIES IT (architect 2026-11-11, session 106: "places like
+// score and the player can lose their close button since the button used to
+// enter that mode is also now the close button, and the tooltip will say as
+// much"; his "agree, remove every plain close"): those four rows hold no
+// leave button, the lit opener their way out, and the word lives on as THAT
+// KEY'S TOOLTIP under its overlay (overlay_leave_word below). ONE OWNER FOR
+// BOTH WORDS, here, where the tooltip's arm (app_state.h) and the word
+// buttons' builder and glyph table (paint_modal_dialog, modal_word_icon,
+// paint_handler.cpp) both read them. The words are plain, no letter
+// underlined (architect 2026-10-30: the buttons are the dialogs' one road,
+// no keyboard standing under them), and the word buttons' layout reads
+// their count alone (modal_word_buttons), so a word changes no geometry.
+inline constexpr const char* kModalCancelLabel = "Cancel";
+inline constexpr const char* kModalCloseLabel  = "Close";
+
+// THE WORD THE STANDING OVERLAY'S LEAVE ACT CARRIES — the lit opener's
+// tooltip line 1 under its own overlay (architect 2026-11-11, session 106,
+// send B's handoff item 12, his "agree"; redesign_button_tooltip's stateful
+// overload its one reader), in place of the key's ordinary name, the key's
+// lift there being the overlay's leave act (is_overlay_opener):
+//   the RENDER PLAYER (PLAYER)            Close
+//   the PROJECT PICKER (OPEN PROJECT)     Cancel, its controls row's word
+//   the SETTINGS PAGE and its VALUE LIST  Close: the SETUP key closes the
+//     (SETUP)                             WHOLE panel from the list too,
+//                                         nothing applied (route_picker_key),
+//                                         where the list's own Cancel returns
+//                                         to the page — the page's word, not
+//                                         the list's
+//   the TRIM PRESETS LIST (PRESETS)       Close, the list asking nothing
+//   the BPM FORM (BPM)                    Cancel, its controls row's word
+//   the SCORE VIEWER (SCORE)              Close
+// The line editor the page opens is a modal, no overlay standing under it,
+// so no tooltip shows there (tooltip_dwell_suppressed). nullptr with nothing
+// standing; the score viewer answers first, is_overlay_opener's order.
+inline const char* overlay_leave_word(const AppState& a) {
+    if (score_viewer_stands(a)) return kModalCloseLabel;
+    switch (a.folder_overlay.owner) {
+        case AppState::FolderOverlay::Owner::None:
+            return nullptr;
+        case AppState::FolderOverlay::Owner::Player:
+        case AppState::FolderOverlay::Owner::SettingsPage:
+        case AppState::FolderOverlay::Owner::ValueList:
+        case AppState::FolderOverlay::Owner::TrimPresets:
+            return kModalCloseLabel;
+        case AppState::FolderOverlay::Owner::ProjectPicker:
+        case AppState::FolderOverlay::Owner::BpmForm:
+            return kModalCancelLabel;
+    }
+    return nullptr;
+}
+
 // WHICH ROSTER KEYS ANSWER UNDER A STANDING OVERLAY — THE MEMBERSHIP'S ONE
 // OWNER (architect 2026-11-10): THE OVERLAY'S OPENER (is_overlay_opener, its
 // lift the overlay's close) AND THE TOOLTIP LAMP ("tips should remain open
@@ -9847,7 +9922,6 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in Place";
         // DELETE (architect 2026-09-29), Load in Place's slot at the root.
         case AppState::PlayerButtonAct::Delete:      return "Delete Folder";
-        case AppState::PlayerButtonAct::Close:       return "Close";
         case AppState::PlayerButtonAct::None:        break;
     }
     return std::string();
@@ -9921,7 +9995,6 @@ inline std::string render_player_button_shift_hint(
         case AppState::PlayerButtonAct::HighlightUp:
         case AppState::PlayerButtonAct::Up:
         case AppState::PlayerButtonAct::LoadInPlace:
-        case AppState::PlayerButtonAct::Close:
         case AppState::PlayerButtonAct::None:
             break;
     }
@@ -9943,8 +10016,7 @@ static_assert(
     !player_button_shift_admits(AppState::PlayerButtonAct::HighlightUp) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Up) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
-    player_button_shift_admits(AppState::PlayerButtonAct::Delete) &&
-    !player_button_shift_admits(AppState::PlayerButtonAct::Close),
+    player_button_shift_admits(AppState::PlayerButtonAct::Delete),
     "the player's shift-admitting set is the two skips and Delete, and the "
     "hint's second line exists on exactly them (dropping only where the "
     "shifted press would reach what the plain one reaches)");
@@ -9969,8 +10041,7 @@ static_assert(
     !score_button_shift_admits(AppState::ScoreButtonAct::PlayPause) &&
     !score_button_shift_admits(AppState::ScoreButtonAct::Reset) &&
     !score_button_shift_admits(AppState::ScoreButtonAct::SetStart) &&
-    !score_button_shift_admits(AppState::ScoreButtonAct::SetEnd) &&
-    !score_button_shift_admits(AppState::ScoreButtonAct::Close),
+    !score_button_shift_admits(AppState::ScoreButtonAct::SetEnd),
     "the score viewer's shift-admitting set is the two skips, and the "
     "hint's second line exists on exactly them");
 
@@ -10083,8 +10154,7 @@ int render_player_highlight_act_row(const AppState& a);
 //   no row is lit: the walk starts FROM row 0 there (walk_origin_row) and
 //   applies its delta, as the keys do — Down lands on row 1, Up on row 0. The
 //   keys stay silent at the walls and the grey is the buttons' whole message.
-//   REPEAT ONE and CLOSE never grey (the lamp always toggles; Close is the
-//   escape sentinel).
+//   REPEAT ONE never greys (the lamp always toggles).
 // TWO READER CLASSES: the plan builder (paint_modal_dialog, publishing the
 // bit per frame beside the rects) and main.cpp's per-tick comparator, which
 // holds the published bit against this live predicate and damages the
@@ -10127,7 +10197,7 @@ bool render_player_button_enabled(const AppState& a,
 // As's act) and with a highlight whose pair is not the active tab's trim,
 // GREYING only where the highlighted pair already is the tab's trim (the
 // no-op a tap leaves behind; his glass on 852a28d9, 2026-10-28 night); SAVE
-// AS always, while the list stands; DELETE with a highlight; CLOSE always.
+// AS always, while the list stands; DELETE with a highlight.
 // Defined beside the list's acts (input_key_dispatch.cpp); Save's and
 // Delete's bodies ask it too, for their roads that are not the painted face
 // (the Delete key's card).
@@ -15595,9 +15665,12 @@ inline bool redesign_button_enabled(const AppState& a,
     // OVERLAYS, the render player and the picker's five contents (the
     // project picker, the settings page and the value list it swaps in, the
     // trim presets list and the BPM form), which end at a pick, a row's open
-    // or a load and also leave on their Close or Cancel and
-    // on THEIR OPENER KEY — Play Renders, Open Project, Settings (the
-    // page's and the value list's both), Presets and BPM, lit and live under them (the overlay arm
+    // or a load and also leave on THEIR OPENER KEY — Play Renders, Open
+    // Project, Settings (the page's and the value list's both), Presets and
+    // BPM — and the two that ask a choice on their Cancel too (the project
+    // picker's and the BPM form's; the plain Closes left the rows, architect
+    // 2026-11-11, session 106, the opener's tooltip naming the leave act
+    // there, overlay_leave_word), the openers lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey AND
     // UNLIT but the tooltip lamp (architect 2026-11-10, the arm below) and
     // EVERY DEAD KEY'S HINT SUPPRESSED, the two live keys keeping theirs
@@ -18822,7 +18895,9 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 //   Play reads "Stop" while the transport is live, Zoom to Fit reads "Back to
 //   Previous View" while its whole-song state stands, Center
 //   reads "Center on Playhead" with nothing focused, the Up/Down pair
-//   reads the ADDRESSED CELL's own name. Each of those names what a
+//   reads the ADDRESSED CELL's own name, and a lit overlay opener under its
+//   own overlay reads THE OVERLAY'S LEAVE WORD, Close or Cancel (the wrapper
+//   below, overlay_leave_word). Each of those names what a
 //   press would do in that state — which is what a name is for.
 //
 //   (2) DROP A MODIFIER LINE the constant table carries, where the modified
@@ -18880,10 +18955,13 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // UNREAD "for the shape", and both left the same day: the rule says an object
 // arrives WITH the arm that reads it, and a fork that comes to need one adds
 // it back in the one edit that adds the fork.
-// THE ONE READER is the tooltip painter (paint_shift_tooltip,
-// paint_handler.cpp); the dwell writer (recompute_redesign_button_hover,
-// input_pointer.cpp) asks membership alone and reads the constant table.
-inline RedesignTooltipText redesign_button_tooltip(
+// ITS ONE CALLER IS THE STATEFUL OVERLOAD BELOW, which lays the overlay
+// opener's leave word over its first line; the overload's readers are the
+// tooltip painter (paint_shift_tooltip, paint_handler.cpp) and the per-tick
+// words comparator (main.cpp); the dwell writer
+// (recompute_redesign_button_hover, input_pointer.cpp) asks membership alone
+// and reads the constant table.
+inline RedesignTooltipText redesign_button_tooltip_forks(
         const AppState& a, const GuiAudio& audio, int64_t total_frames,
         RedesignButton b) {
     // THE SAVE BUTTON'S OVERRIDES: inside the `h` view the button IS the
@@ -19209,6 +19287,31 @@ inline RedesignTooltipText redesign_button_tooltip(
             break;
     }
     return redesign_button_tooltip(b);
+}
+
+// THE STATEFUL OVERLOAD — the forks above, and THE LIT OPENER UNDER ITS OWN
+// OVERLAY (architect 2026-11-11, session 106, send B's handoff item 12, his
+// "agree"): there the key's lift is the overlay's leave act, so its LINE 1
+// IS THAT ACT'S WORD (overlay_leave_word: Close under the render player,
+// the settings page and its value list, the trim presets list and the score
+// viewer; Cancel under the project picker and the BPM form) in place of the
+// key's ordinary name — the rows of the four Close overlays carrying no
+// leave button since the same ruling, the key the way out. ITS SECOND LINE
+// IS UNTOUCHED, whatever the forks answer there (OPEN PROJECT's "Hold to
+// revert" under the picker, PRESETS' "Hold to reset the trim" under its
+// list, dropping where the reset would not act): the hold's act under the
+// overlay is the one it names. A rename of a name, rule (1) at the forks'
+// head; no line is added. The tooltip shows under an overlay for its opener
+// and the tooltip lamp alone (tooltip_dwell_suppressed), and the lamp is no
+// opener, so its words stand. THE HISTORY VIEW is a view, not an overlay,
+// and its key's words stand too.
+inline RedesignTooltipText redesign_button_tooltip(
+        const AppState& a, const GuiAudio& audio, int64_t total_frames,
+        RedesignButton b) {
+    const RedesignTooltipText t =
+        redesign_button_tooltip_forks(a, audio, total_frames, b);
+    if (is_overlay_opener(a, b)) return {overlay_leave_word(a), t.line2};
+    return t;
 }
 
 // (A BUTTON'S LABEL OVERRIDE — redesign_button_label — IS DELETED PRODUCER-LESS

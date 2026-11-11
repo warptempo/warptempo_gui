@@ -47,10 +47,11 @@
 // if there's audio. Everything — the playback, the scrub — should be frame
 // and/or time based. No pages. Pages are only kept in the background"):
 //   * THE MEDIA PLAYER'S, with the soundtrack (THE TRANSPORT FLUSH RIGHT
-//     AND THE OTHER FOUR KEYS AT THE LEFT on both faces, the render
+//     AND THE OTHER THREE KEYS AT THE LEFT on both faces, the render
 //     player's row's sides, architect 2026-11-10; in the row's order RESET,
-//     START, END and CLOSE, the scrub, the clock or the page cell, the
-//     transport): BACK, PLAY / PAUSE and FWD
+//     START and END, the scrub, the clock or the page cell, the
+//     transport — NO CLOSE since 2026-11-11, architect, session 106: the lit
+//     SCORE key is the way out, its tooltip Close there): BACK, PLAY / PAUSE and FWD
 //     flush right, a deck's order (the render player's transport seats, PLAY
 //     its key, its glyph and its legend — score_viewer_play_face — in the second as the
 //     player's stands between its two skips), THE SKIPS (architect
@@ -71,7 +72,7 @@
 //     verbatim: the elapsed time within the range and the range's length;
 //     UNDER A HELD SCRUB THE ELAPSED FIELD SHOWS THE TIME THE DROP WOULD
 //     LAND AT, architect 2026-11-10, score_scrub_drop_frame, the cursor
-//     itself untouched until the lift), and RESET, START, END and CLOSE at the
+//     itself untouched until the lift), and RESET, START and END at the
 //     row's left. The keys are the acts' one road (architect 2026-10-30: no
 //     keyboard stands under the viewer).
 //   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
@@ -85,7 +86,7 @@
 //     under it shown as the thumb crosses into it, and the lift writes the
 //     position), THE PAGE CELL where the player's clock stands ("7 / 15", the
 //     shown page's ordinal within the range and the range's count) and the
-//     same four keys at the row's left.
+//     same three keys at the row's left.
 //
 // THE TRANSPORT (the media player's face) is the render player's model,
 // simplified — IDLE (the engine not on the soundtrack), PAUSED, LIVE
@@ -120,7 +121,8 @@
 // instead while the soundtrack is still loading or a render run stands (the
 // close's re-express would kill the run: load_in_place_render_blocked, the
 // render player's own refusal, here a grey PLAY until it ends), the PLAY
-// press binding then. THE CLOSE takes the render player's close road
+// press binding then. THE CLOSE (the SCORE key's lift, bare `m`; the row
+// carries no Close since 2026-11-11) takes the render player's close road
 // verbatim where the engine was the viewer's: the stop body's fence, the
 // transport down, the mode bit down, the source bound first, then the S/T
 // flip's re-express.
@@ -404,7 +406,7 @@ inline bool score_viewer_skip_actionable(const AppState& a,
 // one that went away), and while the engine is not yet the viewer's under a
 // render run (the head's THE OPEN); START at the range's first page, END at
 // its last, RESET when the range already is every page, all three under the
-// lock; CLOSE never. The act asks the same.
+// lock. The act asks the same.
 inline bool score_viewer_button_enabled(const AppState& a,
                                         const GuiPlayback& playback,
                                         AppState::ScoreButtonAct act) {
@@ -433,7 +435,6 @@ inline bool score_viewer_button_enabled(const AppState& a,
             return !score_viewer_range_locked(a) && p != r.first;
         case Act::SetEnd:
             return !score_viewer_range_locked(a) && p != r.last;
-        case Act::Close: return true;
         case Act::None:  break;
     }
     return false;
@@ -456,7 +457,6 @@ inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
         case Act::Reset:       return "RESET";
         case Act::SetStart:    return "START";
         case Act::SetEnd:      return "END";
-        case Act::Close:       return "CLOSE";
         case Act::None:        break;
     }
     return "";
@@ -466,8 +466,8 @@ inline const char* score_viewer_button_legend(AppState::ScoreButtonAct act) {
 // 2026-11-02), on each key's face, its legend (above) under it and the act's
 // name the tooltip's (score_viewer_button_hint below): PREV / NEXT GoPreviousViewPage /
 // GoNextViewPage (the page road), BACK / FWD MediaSeekBackward /
-// MediaSeekForward, RESET EditReset, START ZoneIn, END ZoneOut, CLOSE
-// WindowClose (architect 2026-11-02, R15: the viewer's icons stay as they
+// MediaSeekForward, RESET EditReset, START ZoneIn, END ZoneOut (architect
+// 2026-11-02, R15: the viewer's icons stay as they
 // are; the page PREV / NEXT keep the chevrons LEFT / RIGHT wear, a
 // deliberate share — "the left/right arrows mean 'step 1'"). PLAY / PAUSE's is the render player's Play key's, by its
 // face (render_player_button_icon, paint_handler.cpp, which the painter
@@ -487,7 +487,6 @@ inline std::optional<icons::Icon> score_viewer_button_icon(
         case Act::Reset:       return Icon::EditReset;
         case Act::SetStart:    return Icon::ZoneIn;
         case Act::SetEnd:      return Icon::ZoneOut;
-        case Act::Close:       return Icon::WindowClose;
         case Act::None:        break;
     }
     return std::nullopt;
@@ -516,7 +515,6 @@ inline const char* score_viewer_button_hint(AppState::ScoreButtonAct act,
         case Act::Reset:    return "Reset Range";
         case Act::SetStart: return "Set as Start";
         case Act::SetEnd:   return "Set as End";
-        case Act::Close:    return "Close";
         case Act::None:     break;
     }
     return "";
@@ -548,7 +546,6 @@ inline const char* score_viewer_button_shift_hint(
         case Act::Reset:
         case Act::SetStart:
         case Act::SetEnd:
-        case Act::Close:
         case Act::None:
             break;
     }
@@ -708,7 +705,8 @@ struct GuiScoreViewer {
     // PAUSED, where it can be: the head's THE OPEN), asks the decoder for
     // what the gray store lacks and damages the window.
     bool open();
-    // THE ONE CLOSER — CLOSE, the SCORE key (its lift, bare `m`), and the exit
+    // THE ONE CLOSER — the SCORE key (its lift, bare `m`; the row's CLOSE
+    // retired 2026-11-11, architect, session 106), and the exit
     // road's teardown (GuiPrompt::request_close): the render player's close
     // road where the engine was the viewer's (the head's THE CLOSE), the
     // cursor's frame written through, the scrub's arm dropped, the gray store

@@ -351,7 +351,7 @@ void GuiRenderPlayer::delete_batch_folders(
     enter(Folder::Root, {}, {});
     // THE LAST FOLDER GONE CLOSES THE PLAYER (architect 2026-10-01): a root
     // listing with no folder left has nothing to play or open, so the player
-    // takes itself down through its own close act — the Close button's road,
+    // takes itself down through its own close act — the PLAYER key's road,
     // the same unload and the same restore — rather than standing over an
     // empty band. The root lists folders and nothing else (rebuild_rows), so
     // an empty row list IS "no folder left".
@@ -634,7 +634,6 @@ bool render_player_button_enabled(const AppState& a,
         case AppState::PlayerButtonAct::Delete:
             return render_player_delete_actionable(a);
         case AppState::PlayerButtonAct::RepeatOne:
-        case AppState::PlayerButtonAct::Close:
             return true;
         case AppState::PlayerButtonAct::None:
             return false;
