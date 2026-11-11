@@ -1086,9 +1086,9 @@ private:
     // overlay: on every published entry, a SOLID ONE-W `cue_outline` line
     // down the canvas's whole height (render.h's marker-lane paragraph; the
     // `h` view's cues alike, each at its own column). The painter publishes
-    // an entry for every SELECTED ENABLED cue (resolve_flag_face's `stem`);
-    // an unselected or DISABLED marker stems never, the playhead on it or
-    // not. The stem paints OVER the playhead's line (architect 2026-11-04),
+    // an entry for every SELECTED cue, enabled or disabled (resolve_flag_face's
+    // `stem`; architect 2026-11-11, session 106); an unselected marker stems
+    // never, the playhead on it or not. The stem paints OVER the playhead's line (architect 2026-11-04),
     // so the dark stem is what shows on a selected marker the playhead
     // rests on.
     //

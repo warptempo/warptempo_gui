@@ -1329,8 +1329,8 @@ enum class GuiFlagSide { Live, Added, Removed };
 // The resolved paint of ONE cue (the palette block's marker-lane paragraph,
 // render.h, owns the look): THE CHIP'S fill and outline (CueTrianglePass,
 // the outline's staircase under the fill's), whether the cue PUBLISHES ITS
-// STEM ENTRY (every selected enabled cue, MarkerStem: the stem is the
-// selection's), and whether its label is STRUCK (show_cue_label's bar). The
+// STEM ENTRY (every selected cue, enabled or disabled, MarkerStem: the stem
+// is the selection's), and whether its label is STRUCK (show_cue_label's bar). The
 // label's other look is the segment's own (inert, or the text tone,
 // materials.h's `text`); the selection never reaches it.
 struct FlagFace {
@@ -1351,23 +1351,24 @@ struct FlagFace {
 // agree" — the history's removed half struck). THE TABLE, the ladder read
 // top to bottom, the first matching row wins ("stem" the publication of the
 // cue's stem entry, MarkerStem, painted wherever it is published):
-//   flag                     fill            outline       stem  label
-//   DISABLED (any kind)      inactive_cue    cue_outline   no    inactive
-//   SELECTED                 cue             cue_outline   yes   text tone
-//   UNSELECTED               cue             cue_outline   no    text tone
+//   flag                     fill            outline       stem      label
+//   DISABLED (any kind)      inactive_cue    cue_outline   selected  inactive
+//   ENABLED                  cue             cue_outline   selected  text tone
 // — warp or phase reset, whatever the side (a live lane's cue or either
 // `h` half), the label struck as below in every row. EVERY ENABLED CHIP IS
 // THE `cue` FFAD56 in THE OUTLINE, Live's dark line 111111, selected or
-// not. A SELECTED ENABLED CUE ADDS THE STEM — a solid one-W `cue_outline`
-// line from the chip's apex row down the canvas's whole height on the
-// cue's column, over the playhead's line (paint_marker_stems), the
-// playhead on it or not; no other stem exists (Live paints none at rest).
-// A DISABLED CHIP IS SOLID GREY (architect 2026-11-05, "disabled marker
-// gets dim label"): the `inactive_cue` 5D5D5D fill in the same
-// `cue_outline`, no stem, the playhead on it or not; so A SELECTED
-// DISABLED CUE SHOWS NOTHING OF THE SELECTION (architect 2026-11-02, "3
-// accept"), the playhead standing on it after the arming press its only
-// mark. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect
+// not. EVERY SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
+// 2026-11-11, session 106: "disabled markers also get the dark stem, same as
+// enabled ones") — a solid one-W `cue_outline` line from the chip's apex
+// row down the canvas's whole height on the cue's column, over the
+// playhead's line (paint_marker_stems), the playhead on it or not; no
+// other stem exists (Live paints none at rest). THE DISABLED AXIS IS THE
+// CHIP'S AND THE LABEL'S ALONE, THE SELECTION THE STEM'S ALONE: the two
+// never cross, so the stem stands through a disable toggle of a selected
+// marker while its chip flips. A DISABLED CHIP IS SOLID GREY (architect
+// 2026-11-05, "disabled marker gets dim label"): the `inactive_cue` 5D5D5D
+// fill in the same `cue_outline` (2026-11-11: "leave the outline as is"),
+// the playhead on it or not. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect
 // 2026-11-05: "only 1 playhead onscreen ever"): the focused member has no
 // paint of its own — every click and toggle lands the playhead on it
 // (land_playhead_on_marker) — and THE RESOLVER NEVER SEES THE PLAYHEAD.
@@ -1393,9 +1394,8 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
                            bool selected) {
     const GuiPalette& p = palette();
     const bool struck = red || side == GuiFlagSide::Removed;
-    if (disabled)
-        return FlagFace{p.inactive_cue, p.cue_outline, false, struck};
-    return FlagFace{p.cue, p.cue_outline, selected, struck};
+    return FlagFace{disabled ? p.inactive_cue : p.cue, p.cue_outline, selected,
+                    struck};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
@@ -1497,8 +1497,8 @@ static CuePassScratch g_cue_pass_scratch;
 // (resolve_flag_face, 2026-11-04); then the
 // publication — one FlagHitRect per cue (its label box as painted and its
 // chip, both clipped to the waveform's columns, and the cue's diff half),
-// and one MarkerStem per cue whose face says `stem` — every SELECTED
-// ENABLED cue — whose column is a waveform column (a selected nudged `h`
+// and one MarkerStem per cue whose face says `stem` — every SELECTED cue,
+// enabled or disabled — whose column is a waveform column (a selected nudged `h`
 // pair's two cues each their own; paint_marker_stems paints every entry,
 // architect 2026-11-05). `lane` is the
 // marker lane, `x0` / `w` the waveform's columns the pass is clipped to (the
@@ -1821,9 +1821,9 @@ void render_flag_boxes_impl(
             const bool red = red_set.count(i) > 0;
             const bool sel = selected_set.count(i) > 0;
             // THE SELECTION IS THE CHIP'S AND THE STEM'S (architect
-            // 2026-11-05, resolve_flag_face's table): every selected enabled
-            // marker publishes its stem entry (MarkerStem); no segment of
-            // the label carries the selection.
+            // 2026-11-05, resolve_flag_face's table): every selected marker,
+            // enabled or disabled (2026-11-11), publishes its stem entry
+            // (MarkerStem); no segment of the label carries the selection.
             c.face = resolve_flag_face(GuiFlagSide::Live, dis, red, sel);
 
             // THE SEGMENTS: the payload label (the column's composer, the cut
@@ -2181,9 +2181,9 @@ void render_history_diff_flags(
             // (resolve_flag_face) by its half's side — the plain cue, its
             // label struck on a removed line; THE CHIP READS THE DISABLED
             // AXIS (architect 2026-08-22): a single half whose one side is
-            // disabled wears the grey chip and publishes no stem entry, the
-            // live lane's rule (its selection shows nothing there, as on the
-            // live lane, 2026-11-02).
+            // disabled wears the grey chip, and while its item is selected it
+            // publishes its stem entry as an enabled half does — the live
+            // lane's rule (architect 2026-11-11, session 106).
             if (!f.added) {
                 push_cue(col_left, HistoryDiffHalf::Removed,
                          face_for(GuiFlagSide::Removed, removed_disabled),

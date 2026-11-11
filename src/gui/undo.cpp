@@ -1119,7 +1119,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // keeps its fill (selection moves the stem alone) and the
                 // top-strip / full-waveform invalidates below repaint the
                 // lane. Its stem, which
-                // stands on every selected enabled marker, needs none either:
+                // stands on every selected marker, enabled or disabled, needs
+                // none either:
                 // the restore's sync kick below rebuilds the flag cache
                 // before any frame (the post-restore rules'
                 // replace_selection already rebuilt it once,

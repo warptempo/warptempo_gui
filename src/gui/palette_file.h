@@ -96,8 +96,9 @@
 //                            for the chip and the lamps)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
 //                            one-W outline round every chip, THE SELECTION
-//                            STEM down the canvas (every selected enabled
-//                            marker, architect 2026-11-05), the phase-reset
+//                            STEM down the canvas (every selected marker,
+//                            architect 2026-11-05; enabled or disabled,
+//                            2026-11-11), the phase-reset
 //                            lead-in ring and the nudged pairs' ring runs
 //                            (render.h's THE STATES) (ControlContrastFrame)
 //   inactive_cue     5D5D5D  THE DISABLED MARKER (architect 2026-11-02, the
@@ -105,7 +106,8 @@
 //                            2026-11-05, "disabled marker gets dim label"):
 //                            LIVE'S INACTIVE WARP MARKER, measured on its own
 //                            303030 lane — ONE ROLE, no blend: a disabled
-//                            chip's fill (in the `cue_outline`, no stem,
+//                            chip's fill (in the `cue_outline`, the stem
+//                            the selection's as on an enabled chip,
 //                            resolve_flag_face) and every INERT LABEL
 //                            — a disabled cue's segments and a tie
 //                            follower's cells — and its strike bar. "The

@@ -96,7 +96,7 @@ void Selection::damage_overlay_on_subject_change(
 // PUBLISH A SELECTION CHANGE (architect 2026-11-05, his blink: "saw the
 // blink twice in about a dozen or two selects"). A SELECTION CHANGE MOVES THE
 // STEMS: since 2026-11-05 the stem is the selection's (render.h's THE STATES;
-// MarkerStem published per selected enabled cue by the flag cache's
+// MarkerStem published per selected cue, enabled or disabled, by the flag cache's
 // rebuild), so a select takes the stem off the old members and stands it on
 // the new. The mutators' own damage stays the top strip's plus the overlay
 // owner's above; the WAVEFORM damage and the stem stash are the flag cache

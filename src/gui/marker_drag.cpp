@@ -571,8 +571,9 @@ void MarkerDragOps::commit_drag() {
     }
     // The dragged marker's STEM moves at commit under the full-waveform
     // invalidate_waveform_area above: the drag shifts its frame, so its
-    // always-on stem repaints at the committed column (every enabled marker
-    // stems since row 5 — nothing here keys on selection).
+    // stem repaints at the committed column (every selected marker stems,
+    // enabled or disabled, 2026-11-11 — the full-waveform damage covers it,
+    // so nothing here keys on selection or the disabled bit).
     // NO REGION WORK OWED HERE: the region is the trim, which a marker drag
     // never writes.
     // The extent re-derive that used to snap a live-tracked group span back to its

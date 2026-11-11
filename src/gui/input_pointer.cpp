@@ -1786,8 +1786,8 @@ static void seat_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
 // IS NEVER PARKED). Nothing stashes a selection any more, so a route that ENTERS
 // a column or a tab re-acquires one from the PLAYHEAD: scan the active column's
 // store and single-select the marker the playhead is already sitting exactly on.
-// The payoff is the lane model — with that marker selected, its stem (an
-// enabled marker's; a disabled chip stays grey and publishes none) and the
+// The payoff is the lane model — with that marker selected, its stem (every
+// selected marker's, enabled or disabled, 2026-11-11) and the
 // cursor standing on it say the same thing, which is precisely the
 // state the entry's stored cursor
 // describes — and the price is nothing, because a selection recovered this way is
@@ -5289,7 +5289,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
         // waiting for — marker work happens in the flag lane, and the
         // waveform is purely trim / playhead / pan / zoom. The stem still
         // PAINTS on every selected marker (2026-11-05: the selection
-        // stem), disabled-no-stem.
+        // stem), a disabled one's too (2026-11-11).
         // The plain DRAG never selects markers either
         // (SELECTION FLOWS DOWNWARD ONLY, architect 2026-07-23 — the region no
         // longer selects its contents; it leaves the selection empty).
@@ -5801,8 +5801,8 @@ void GuiInputHandler::arm_selection_sweep_at(int anchor_col, int x, int y) {
 //     inclusive, either direction. PULLING BACK drops only what this sweep
 //     added, never a prior member; the sweep ADDS ONLY (removal stays the
 //     marker click's toggle). DISABLED MARKERS ARE INCLUDED ("they might be
-//     the target"; a disabled chip shows nothing of its selection — accepted
-//     by the ruling).
+//     the target"; a selected disabled marker stands the selection's stem
+//     as an enabled one does, 2026-11-11).
 //   * THE COLUMN IS THE PAINTER'S (ON SCREEN IS AS PAINTED): the marker's
 //     source frame through painted_column_of_source_frame_on_basis on the
 //     ITEM basis over the displayed map (displayed_or_live_target_map,

@@ -591,7 +591,8 @@ void install_true_colors(bool on);
 // dots on the trim bar"), the marker lane and the row of ground under it it
 // draws nothing. IT MAY STAND ON A MARKER — NO SNAP, NO AVOIDANCE
 // (architect 2026-10-09): the head and a cue's chip stand in different
-// lanes, and ON A SELECTED ENABLED MARKER the marker's `cue_outline` stem
+// lanes, and ON A SELECTED MARKER, enabled or disabled, the marker's
+// `cue_outline` stem
 // paints OVER the line (the paint order playhead, stems, scanner; THE
 // MARKER LANE's selection stem, below), so the dark stem is what shows
 // there and the ruler's head marks the playhead; on any other marker the
@@ -656,7 +657,8 @@ void install_true_colors(bool on);
 // marker_lane_h_px: the x-height band centered in the lane, 13 rows from
 // its top and 14 from its bottom at 200 %) — `show_cue_label`, render.cpp,
 // the one painter of every label look on the face; and THE STEM, ON EVERY
-// SELECTED ENABLED MARKER — a SOLID ONE-W LINE in the `cue_outline`, on
+// SELECTED MARKER, ENABLED OR DISABLED (architect 2026-11-11, session 106)
+// — a SOLID ONE-W LINE in the `cue_outline`, on
 // the column (straddling the frame, the line rule at waveform_line_px),
 // FROM THE CHIP'S APEX ROW (the
 // lane's last) through the row of ground under the lane down the canvas's
@@ -720,12 +722,15 @@ void install_true_colors(bool on);
 // neighbour's text and chip. The press follows the picture (topmost_flag_rect, app_state.cpp):
 // the rightmost chip, then the rightmost label box, under the point.
 //
-// THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
-// then the live cue by its selection; the strike rides every row):
+// THE STATES (resolve_flag_face, render.cpp, the one table: the disabled
+// axis picks the chip's fill and the label's ink, the selection alone the
+// stem — the two never cross (architect 2026-11-11, session 106); the strike
+// rides every row):
 //   UNSELECTED  the `cue` FFAD56 fill in the `cue_outline` 111111 outline,
 //             the label in the text tone (materials.h's `text`); no stem,
 //             the playhead on it or not (architect 2026-11-05);
-//   SELECTED  a member of the selection set: the same chip, and A SOLID
+//   SELECTED  a member of the selection set, enabled or disabled: its own
+//             chip as at rest (the `cue` fill, or the disabled grey), and A SOLID
 //             ONE-W `cue_outline` STEM on its column FROM THE CHIP'S APEX
 //             ROW (the lane's last) THROUGH THE ROW OF GROUND UNDER THE LANE
 //             TO THE CANVAS'S LAST ROW (mock j1, 2026-11-04: no gap under
@@ -758,13 +763,14 @@ void install_true_colors(bool on);
 //             arrow needs to be legible for me, but the text doesn't …
 //             since it's disabled, it's inert"): the `inactive_cue` 5D5D5D
 //             fill in the `cue_outline`, the label in the `inactive_cue`,
-//             NO STEM, the playhead on it or not; the same inert label on
-//             a tie follower's cells (one look for inert cue text);
-//   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
-//             selectable): IT SHOWS NOTHING OF THE SELECTION (architect
-//             2026-11-02, "3 accept"): the grey chip and the inactive
-//             label as at rest, no stem — the playhead standing on it after
-//             the arming press (the ruler's head) its only mark.
+//             the playhead on it or not; the same inert label on a tie
+//             follower's cells (one look for inert cue text). A disabled
+//             marker is selectable (architect 2026-10-07 ~15:10), and
+//             SELECTED IT STANDS THE SELECTED ROW'S STEM (architect
+//             2026-11-11, session 106: "disabled markers also get the dark
+//             stem, same as enabled ones"; "leave the outline as is"), its
+//             chip and label unchanged — so a disable toggle of a selected
+//             marker flips the chip and the label and leaves the stem.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE: the
 // press look of 2026-11-05 is the keys' and the lists' rows' alone
 // (materials.h's head), never a marker's.
@@ -3686,8 +3692,8 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 
 // (The cached marker-stem renderers render_markers / render_phaseresetmarkers
 // are retired: marker stems are a live overlay,
-// GuiPaintHandler::paint_marker_stems — EVERY selected enabled marker's
-// column, painted from the flag painter's stash. Trim below is live too — the view bar in
+// GuiPaintHandler::paint_marker_stems — EVERY selected marker's column,
+// enabled or disabled, painted from the flag painter's stash. Trim below is live too — the view bar in
 // GuiPaintHandler::paint_trim, ahead of the playheads; trim has had no stem
 // since render_trim_stems died, and no stem is cached anywhere.)
 
@@ -3904,8 +3910,9 @@ struct FlagLaneRects {
 
 // ONE MARKER'S STEM ENTRY, as the flag painter publishes it: the window x of
 // the column it stands on (the chip's apex column, a drag's moving column
-// included). The painters publish one for EVERY SELECTED ENABLED LIVE CUE
-// AND DIFF FLAG they walk whose column is a waveform column
+// included). The painters publish one for EVERY SELECTED LIVE CUE AND DIFF
+// FLAG, ENABLED OR DISABLED (architect 2026-11-11, session 106), they walk
+// whose column is a waveform column
 // (resolve_flag_face's `stem`; a selected nudged `h` pair's two cues each
 // at its own column), and THE ONE READER, GuiPaintHandler::paint_marker_
 // stems, paints THE SELECTION STEM — a solid one-W `cue_outline` line down
@@ -3914,8 +3921,8 @@ struct FlagLaneRects {
 // stem and its chip can never disagree about a column. The flag PAINTERS
 // are the only producers — the two live columns', and the `h` view's diff
 // lane, which replaces them wholesale while the mode stands. An UNSELECTED
-// or DISABLED marker publishes NO ENTRY AT ALL (no stem, the playhead on it
-// or not); a changed `h` pair is a live edit and publishes as a live cue
+// marker publishes NO ENTRY AT ALL (no stem, the playhead on it or not); the
+// disabled axis never decides an entry; a changed `h` pair is a live edit and publishes as a live cue
 // (the ruling at render_history_diff_flags). Stems are pointer-inert (the
 // seventh glass ruling), so the stash is paint-only and `marker_index`
 // serves the painter's identity bookkeeping alone.
@@ -4012,16 +4019,16 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // numbers and are not this marker's to author).
 //
 // `selected_set` GIVES THE SELECTED LOOK (architect 2026-11-05;
-// resolve_flag_face's table): every selected enabled marker publishes its
-// stem entry (MarkerStem); its chip is every enabled chip, the label paints
-// as at rest.
+// resolve_flag_face's table): every selected marker, enabled or disabled
+// (2026-11-11), publishes its stem entry (MarkerStem); its chip is its
+// resting chip, the label paints as at rest.
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted cue, left to right (the hit walk follows the paint order:
 // triangles first, read backwards — the right one on top — then labels,
 // read backwards likewise — the right one on top, the labels painting left
 // to right; topmost_flag_rect, app_state.cpp), and `out_stems` one entry per
-// SELECTED ENABLED cue whose column is a waveform column. A derived width cannot be recomputed
+// SELECTED cue, enabled or disabled, whose column is a waveform column. A derived width cannot be recomputed
 // without shaping, so the pixels' own pass is the single owner of both.
 // Either pointer may be null.
 //
@@ -4452,8 +4459,8 @@ struct HistoryDiffFlag {
 // HistoryMode::focus_half, is the walk's and the press's, not the paint's).
 // THE CHIP READS THE DISABLED AXIS (architect 2026-08-22): a SINGLE
 // flag — added-only or removed-only — whose one side is EFFECTIVELY disabled
-// wears the grey chip and publishes NO STEM ENTRY, the live lane's rule
-// verbatim, while a CHANGED PAIR KEEPS ITS LIVE CHIP whichever halves are
+// wears the grey chip — its stem entry still the item's selection's, the
+// live lane's rule verbatim (architect 2026-11-11, session 106) — while a CHANGED PAIR KEEPS ITS LIVE CHIP whichever halves are
 // disabled, because the pair as a whole is a live EDIT being displayed
 // rather than a line in a switched-off state.
 // NO CELLS AND NO ADDRESSED CELL ON THIS LANE: a bracket is session-only and

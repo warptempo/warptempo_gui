@@ -355,8 +355,9 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // (b) recompute_dirty;
 // (c) invalidate_waveform_area — this full-waveform damage also OWNS the
 //     nudged marker's STEM move: a nudge shifts that marker's frame, and its
-//     always-on stem repaints at the new column here. Every ENABLED marker stems
-//     since row 5, so this covers the moved one whatever the selection is;
+//     stem repaints at the new column here. Every SELECTED marker stems,
+//     enabled or disabled (2026-11-11), and the full-waveform damage covers
+//     the moved one whatever its state;
 // (d) invalidate_clock_area — the unified bottom row's clock cell, through
 //     the playhead move at (e). (It was TWO calls until 2026-08-29, the second
 //     for the RESOLVED READOUT this tail's selection used to move; that

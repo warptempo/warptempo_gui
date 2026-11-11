@@ -5075,7 +5075,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // reversing 2026-11-04's coincidence stem — "dropped, along with the rest
 // of cool edit stuff except a few details like the triangle playhead"; the
 // full contract at the declaration): on EVERY published entry — every
-// selected enabled cue on a waveform column (MarkerStem, render.h) — a
+// selected cue, enabled or disabled (2026-11-11), on a waveform column
+// (MarkerStem, render.h) — a
 // SOLID ONE-W line in the `cue_outline` from the chip's apex row down the
 // canvas's whole height (the head segment, below), the stereo divider's
 // row crossed (architect 2026-11-02: "the divider is just another grid

@@ -5300,10 +5300,10 @@ struct AppState {
     // THE STEM IS THE SELECTION'S, THE PLAYHEAD THE FOCUS'S (architect
     // 2026-11-05, his pick a2 of tmp/s42, reversing 2026-11-04's
     // coincidence stem; "only 1 playhead onscreen ever"): every selected
-    // enabled marker wears a solid one-W `cue_outline` stem down the canvas
-    // over the playhead's line (GuiPaintHandler::paint_marker_stems, off the
-    // marker painter's stash); an unselected or disabled one never, the
-    // playhead on it or not. The focused member has no paint of its own: a
+    // marker, enabled or disabled (architect 2026-11-11, session 106), wears
+    // a solid one-W `cue_outline` stem down the canvas over the playhead's
+    // line (GuiPaintHandler::paint_marker_stems, off the marker painter's
+    // stash); an unselected one never, the playhead on it or not. The focused member has no paint of its own: a
     // landing puts the playhead on its frame (render.h's THE STATES).
 
     // Active markers view — THE COLUMN AXIS, two letters: 'W' = warp markers,
@@ -5818,11 +5818,11 @@ struct AppState {
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
-    // carries one entry per SELECTED ENABLED cue, which on the two LIVE
-    // columns means every selected enabled marker whose column is a waveform
-    // column in [0, w) (the producers' gate, stem_column_on_waveform in
+    // carries one entry per SELECTED cue, enabled or disabled (2026-11-11),
+    // which on the two LIVE columns means every selected marker whose column
+    // is a waveform column in [0, w) (the producers' gate, stem_column_on_waveform in
     // render.cpp; a flag hanging into view from past either edge publishes no
-    // entry) — an unselected or disabled marker has no stem, expressed as an
+    // entry) — an unselected marker has no stem, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode every selected
     // live diff cue on a waveform column, a nudged pair two; the painter
     // paints every entry (2026-11-05). Since
