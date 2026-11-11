@@ -128,8 +128,8 @@ namespace warpmarkers_internal {
 //
 // THE LINE IS THE CANONICAL LINE WHOLE. Every caller — the whole-file loop,
 // the revert's warp reconstitution (input_key_dispatch.cpp), the history
-// delta's extract_warp_entry and warp_side_effective_disabled
-// (history_diff.cpp), and the flag editor's candidate parse — reads the same
+// delta's extract_warp_entry (history_diff.cpp), the tempo-bracket cell
+// check (app_state.h), and the flag editor's candidate parse — reads the same
 // grammar, and the no-whitespace refusal is what rejects any suffix: a ` //`
 // on a sidecar line is adversarial and load-fatal, and one typed into the
 // payload field is a grammar error that refuses at the commit.

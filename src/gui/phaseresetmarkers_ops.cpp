@@ -618,7 +618,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
                                    std::move(touched_live));
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
-    // the nudged reset's always-on stem), playhead follow (committed_f is
+    // the nudged reset's selection stem), playhead follow (committed_f is
     // reorder-independent; T+P maps, S+P is the identity), the point command's region
     // collapse, and the view-independent target trigger. Ordering rationale at the
     // declaration.

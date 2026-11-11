@@ -886,8 +886,10 @@ void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
 // bar paints from its source-frame bounds every frame. (The group arm's own
 // extent re-derive died with the SPAN FORM on 2026-07-30.)
 //
-// NO SELECTION-DRIVEN STEM WORK EITHER: stems are class-coloured and always
-// on, so no selection change moves one, and the kick below repaints the moved
+// NO SELECTION-DRIVEN STEM WORK EITHER: the stem is the selection's alone
+// (every selected marker, enabled or disabled, stands one; render.h's cue
+// block, resolve_flag_face in render.cpp), so a tempo write changes no
+// selection and moves no stem's entry, and the kick below repaints the moved
 // images with their stems.
 void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
                            Viewport& viewport,
@@ -1173,11 +1175,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     // (A tempo step can move a marker in or out of the RED set — a value that
-    // normalizes to the 1.00 fallback — which turns its flag and its stem to
-    // the removed pair or back (resolve_flag_face, render.cpp). The flag
-    // cache's rebuild on the store's new generation damages the strip and the
-    // waveform together, maybe_rebuild_flag_cache, so the stem's repaint is
-    // owed no damage of its own here.)
+    // normalizes to the 1.00 fallback — which strikes its label or lifts the
+    // strike (resolve_flag_face, render.cpp; the chip's fill and the stem do
+    // not follow the red set). The flag cache's rebuild on the store's new
+    // generation damages the strip and the waveform together,
+    // maybe_rebuild_flag_cache, so the repaint is owed no damage of its own
+    // here.)
     // THE TAIL IS ONE BODY (warp_tempo_write_tail, above — the re-warp, the
     // re-land and the trigger, with the whole argument at its definition): the
     // Up/Down step is a warp authoring gesture reachable off its source home
@@ -1185,7 +1188,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // re-warp sites, and the VALUE DRAG's commit writes this same field with a
     // pointer and calls this same body, which is what keeps the two hands from
     // drifting.
-    // In SOURCE view nothing moves at all, so the marker's always-on stem needs
+    // In SOURCE view nothing moves at all, so the marker's selection stem needs
     // no repaint there; in target view the tail's synchronous re-warp repaints
     // the waveform area and carries the stem to its new column with the image.
     warp_tempo_write_tail(app, audio, viewport, target_render);
@@ -1599,11 +1602,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     // (A tempo step can move a marker in or out of the RED set — a value that
-    // normalizes to the 1.00 fallback — which turns its flag and its stem to
-    // the removed pair or back (resolve_flag_face, render.cpp). The flag
-    // cache's rebuild on the store's new generation damages the strip and the
-    // waveform together, maybe_rebuild_flag_cache, so the stem's repaint is
-    // owed no damage of its own here.)
+    // normalizes to the 1.00 fallback — which strikes its label or lifts the
+    // strike (resolve_flag_face, render.cpp; the chip's fill and the stem do
+    // not follow the red set). The flag cache's rebuild on the store's new
+    // generation damages the strip and the waveform together,
+    // maybe_rebuild_flag_cache, so the repaint is owed no damage of its own
+    // here.)
     // Target-view synchronous re-warp tail (the plate must re-warp when authoring
     // off source home), THEN re-land the playhead on the FOCUSED marker's
     // post-step image: the marker lane owns the playhead (the rule is stated in
@@ -1985,7 +1989,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
                             std::move(touched_live));
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
-    // the nudged marker's always-on stem), playhead follow (committed_f is
+    // the nudged marker's selection stem), playhead follow (committed_f is
     // reorder-independent, and hiding the overlay through the movement owner
     // it writes with), and the
     // view-independent target trigger (no synchronous re-warp — source-view warp

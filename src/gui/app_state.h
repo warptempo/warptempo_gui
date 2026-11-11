@@ -5190,7 +5190,7 @@ struct AppState {
     // 2026-09-12 for the acts, 2026-11-10 for the sweep and the radio). It is
     // a TOOL POSTURE, not a per-selection posture: it says what the POINTER
     // does to a flag and to the next waveform drag, so nothing about the
-    // selection's own CONTENT can end it. A Tab walk, `p`, Ctrl+Tab, a
+    // selection's own CONTENT can end it. A Tab walk, Ctrl+Tab, a
     // waveform click, an undo restore and a LOAD IN PLACE all
     // leave it lit, and the plain flag press keeps taking the ctrl branch
     // until an act consumes what was built (a marker drop among those acts

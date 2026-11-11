@@ -44,8 +44,7 @@
 // the lit lamp ... during the press, it's darkened. So depending on the
 // state, if it's an unlit lamp, it gets darkened as it does now. And if
 // it's a lit lamp, it gets darkened based on the starting point of the
-// accent color"; superseding the same day's look on two axes, the lit state
-// on the glyph alone). THE FACES: AT REST `key_face`, Default's 363636
+// accent color"). THE FACES: AT REST `key_face`, Default's 363636
 // (SurfaceBackground); UNDER PRESS `key_press_face`, Default's 2A2A2A
 // (Desktop) — DARKER THAN THE FACE, the push in; LIT — A CHECKED KEY, its
 // whole face — THE ACCENT, `cue`, Default's FFAD56

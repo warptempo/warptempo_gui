@@ -324,9 +324,11 @@ namespace {
 // roster's keys, 2026-10-22. Its face
 // answer, ButtonBoxFace and the glyph's shift it carried, went 2026-10-23.)
 
-// THE ROSTER'S KEY — the band's and row 8's every button, the render
-// player's and the dialogs' word buttons: THE FLAT LOOK'S KEY (architect
-// 2026-11-01; paint_key, materials.h, where its faces stand). `look` is key_look's answer off the roster's checked bit
+// THE ROSTER'S KEY — the band's and row 8's every button: THE FLAT LOOK'S
+// KEY (architect 2026-11-01; paint_key, materials.h, where its faces stand,
+// is the one face painter, and this is its roster-facing name, a call
+// through). The modal controls row (the render player's, the score viewer's
+// and the dialogs' word buttons) calls paint_key itself, the same face. `look` is key_look's answer off the roster's checked bit
 // (`selected`) and the live press, `enabled` the roster's painted enabled
 // bit: AN UNCHECKED BUTTON THE REST FACE, Default's 363636, or THE PRESS
 // FACE, Default's 2A2A2A, for as long as a press stands on the key, the
@@ -2113,23 +2115,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // derived, for reasons recorded there. This painter decides none of
         // the three.
         //
-        // THE DEAD LOOK IS THE GLYPH'S AND THE LEGEND'S (architect
-        // 2026-10-02, the AB set; the flat look 2026-11-01, M6; the key's
-        // dim tone 2026-11-02): dimmed (`key_dim_ink`, paint_key_glyph and
-        // paint_key_legend), the key the rest face
-        // (paint_roster_case) — AND A DEAD CHECKED BUTTON'S FACE DIMS WITH
-        // ITS GLYPH (the grid-iterations lamp on a locked tab, say): it
-        // keeps its lit face, in the dimmed accent (`lit_dim_fill`), under
-        // the glyph dimmed by the same ratio (`text_on_lit_dim`; architect
-        // 2026-11-11, session 106, "so both read as a unit"): the mode
-        // cannot change that state, so hiding it would be a lie, and the
-        // dimmed face, glyph and legend say "true, but not yours right
-        // now". UNDER AN
-        // OVERLAY IT
-        // DOES NOT (architect 2026-11-10: "lamps that do not respond show
-        // inactive under the overlays"): a key the standing overlay leaves
-        // dead wears the plain disabled face, the rest face under the dim
-        // glyph and legend — decided at the predicate, not here
+        // THE DEAD LOOK (architect 2026-10-02, the AB set; the flat look
+        // 2026-11-01, M6; the key's dim tone 2026-11-02): an UNLIT dead key
+        // wears the rest face (paint_key) under its glyph and legend dimmed
+        // (`key_dim_ink`, paint_key_glyph and paint_key_legend) — AND A
+        // LIT-BUT-INERT KEY (the grid-iterations lamp on a locked tab, say)
+        // keeps its lit face, in the dimmed accent `lit_dim_fill`, its glyph
+        // `text_on_lit_dim` (materials.h's paint_key and key_ink; architect
+        // 2026-11-11, session 106, "so both read as a unit"), its legend
+        // dimmed as every dead key's: the mode cannot change that state, so
+        // hiding it would be a lie, and the dimmed face and print say "true,
+        // but not yours right now". UNDER AN OVERLAY THE LIT FACE IS NOT KEPT
+        // (architect 2026-11-10: "lamps that do not respond show inactive
+        // under the overlays"): every key the standing overlay leaves dead
+        // arrives UNLIT AND DISABLED, the rest face under the dim glyph and
+        // legend — decided at the predicate, not here
         // (overlay_deadens_button through redesign_button_selected: the
         // published `selected` bit this painter reads is already false, so
         // the comparator and the press read the same face). THE PRESS FACE
@@ -7324,7 +7324,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // two (2026-11-04).
         const GuiRect key{x, btn_y, plan[i].w, btn_h};
         // THE FACE IS THE KEY ON EVERY OWNER'S ROW (architect 2026-10-23;
-        // paint_roster_case, the one painter): at rest, word button and
+        // paint_key below, the roster's own face painter too): at rest, word button and
         // player key alike; LIT for the row's one checked button (Repeat
         // One, `lit`) alone, its face the accent, darkened by the press
         // ratio while a press stands on it (key_look's LitPress;
@@ -7345,7 +7345,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // button.
         // THE RENDER PLAYER'S ROW IS ROW 8'S CASES (architect 2026-10-05;
         // the program's since 2026-10-09): its eight boxes take the roster's
-        // face through the one painter, paint_roster_case — NO HOT FACE
+        // face through paint_key, the roster's face painter — NO HOT FACE
         // (program_spec.h's case_hot_face) — and no separators.
         // THE DISABLED RUNG, on the four rows that publish a stateful bit
         // (AppState::ModalDialogButton::enabled, the one statement of its
@@ -7371,7 +7371,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // rid of that"): the focused button — Enter's target
         // (AppState::modal_dialog_focus) — wears nothing; the press face
         // under a standing press is the only sign.
-        // THE KEY (2026-10-23, paint_roster_case), flat, lit for the row's
+        // THE KEY (2026-10-23, paint_key), flat, lit for the row's
         // one checked button; THE LEGEND UNDER IT (paint_key_legend's one
         // seat, back 2026-11-03): a glyph button's the player's own legend
         // (render_player_button_legend, the Play key's naming its next press,

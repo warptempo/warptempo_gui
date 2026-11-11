@@ -2030,10 +2030,11 @@ struct GuiInputHandler {
     // The empty marker-lane double-click marker CREATE, run at the SECOND
     // PRESS (2026-08-17) from the lane's consume in on_button_press: the
     // bare-`s`
-    // drop equivalent at the clicked column — the AUGMENTED drop in both
-    // columns, exactly as bare `s` performs it, the drop's own single-select
-    // and playhead land included (create + select + land, the eighth glass
-    // ruling's words) — home-view and read-only gated silently.
+    // drop equivalent at the clicked column — the copy-previous drop in W,
+    // the lead-in reset in P, exactly as bare `s` performs them, the drop's
+    // own single-select and playhead land included (create + select + land,
+    // the eighth glass ruling's words) — home-view and read-only gated
+    // silently, the drops' refusal cards raised.
     // Places the playhead on the clicked column first, then drops through the
     // standing _at_playhead paths so the create takes the full path (walls, undo,
     // selection, the lead-in offset) unchanged.

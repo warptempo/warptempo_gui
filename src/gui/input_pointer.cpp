@@ -6056,9 +6056,10 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // nothing after the create).
     // CREATE the marker, SELECT it, LAND
     // the playhead on it (the architect's words, eighth glass ruling) — the
-    // bare-`s` drop equivalent, and like bare `s` it is the AUGMENTED drop on
-    // every column — the copy-previous owner in W, the lead-in reset in P, and
-    // since 2026-09-15 the level-in-force copy in M.
+    // bare-`s` drop equivalent: in the W column the copy-previous drop
+    // (drop_copy_previous_at_playhead, the previous owner's value), in the P
+    // column the lead-in reset (drop_phase_reset_lead_in_at_playhead, kN/2
+    // output samples before the playhead in either audio view).
     // The select and the land are the DROP'S OWN acts (drop_marker /
     // drop_phase_reset_at_position single-select what they create and re-seat
     // the playhead), so one body serves the key and the click with no
@@ -6070,10 +6071,7 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // press whose placement was
     // undone in between. The standing _at_playhead drops then author at that
     // playhead, taking the full create path (walls, undo, selection, and the
-    // movement the drop's own playhead seat carries) — the
-    // phase-reset drop seeding per its own view fork (kN/2 before the
-    // playhead in target view, at the playhead exactly in source view) and
-    // landing the playhead per that drop's rule.
+    // movement the drop's own playhead seat carries).
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
     // THE LOCK, both reasons (authoring_locked, app_state.h): a drop is
