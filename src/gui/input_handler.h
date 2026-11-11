@@ -3863,7 +3863,7 @@ private:
     //
     // What it does: writes the named band's bit, and invalidates the top strip
     // when that band is the active one. The damage is for the icon row's
-    // Read-Only button, whose lit glyph (its one Lock drawing never swaps) moves
+    // Read-Only button, whose lit face (its one Lock glyph never swaps) moves
     // with the flag: it rides the tick comparator's stashed
     // bit (redesign_button_selected), and the damage
     // repaints it with the write rather than a tick after, the toolbar

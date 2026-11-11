@@ -49,9 +49,10 @@
 // alike — its hue kept (89.7), its chroma scaled by 78.8 / L0, each channel
 // clipped, encoded, rounded and clamped (`shade`): D6B762.
 // ViewCheckControlEnabledOn is THE ACCENT (`cue`): the markers' chip and a
-// lit key's glyph (architect 2026-11-11), and the dimmed accent is derived
-// from it, so the shaded gold reaches those three; every other tone is
-// Immaterial's. Listed only when that file is present and usable.
+// lit key's face (architect 2026-11-11, session 106), and the lit press
+// fill and the lit-but-inert face are derived from it, so the shaded gold
+// reaches those four; every other tone is Immaterial's. Listed only when
+// that file is present and usable.
 //
 // A FILE IS LEFT OUT, WITH ONE stderr LINE naming its path and why, the
 // launch going on: unreadable; a name that spells no slug (a stem of no
@@ -96,21 +97,27 @@
 //                                     "press in skeumorphic is darker")
 //     key face, ruler face, pane, time field, magnify core
 //                            363636 = SurfaceBackground (the core below)
-//     cue outline            111111 = ControlContrastFrame
+//     cue outline, text on lit
+//                            111111 = ControlContrastFrame — THE PRINT ON A
+//                                     LIT KEY'S FACE too, its glyph and the
+//                                     on-screen keyboard's lit cap, near-black
+//                                     on the accent (architect 2026-11-11,
+//                                     session 106: the text tone on the accent
+//                                     is about 1.1 : 1; key_ink, materials.h)
 //     text                   B5B5B5 = ControlForeground
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
 //     cue                    FFAD56 = ViewCheckControlEnabledOn, THE
 //                                     ACCENT: every enabled marker's chip AND
-//                                     A LIT KEY'S GLYPH, the on-screen
-//                                     keyboard's lit cap too (architect
-//                                     2026-11-11, sessions 104 / 105: "a real
-//                                     button in a hifi style case, whose case
-//                                     gets darker as the button is pushed in,
-//                                     but whose led lights up" — one accent
-//                                     for both; materials.h's THE KEY;
-//                                     immaterial_mod reads its shaded
+//                                     A LIT KEY'S WHOLE FACE, the lamps', the
+//                                     seven doors' and the on-screen
+//                                     keyboard's two lit keys alike (architect
+//                                     2026-11-11, session 106: "we should go
+//                                     back to where the accent color is the
+//                                     background of the lit lamp" — one accent
+//                                     for both, Live's "on"; materials.h's THE
+//                                     KEY; immaterial_mod reads its shaded
 //                                     SearchIndication instead, above)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
@@ -193,28 +200,50 @@
 //                                     all, no special cases" — the line-as-head
 //                                     look's lower contrast liked, a little
 //                                     too dark; Gunmetal_mod 5D6170 -> 868894)
-//     lit dim ink            83592C = THE DIMMED ACCENT: the accent (cue) ·
-//                                     (mean(key dim ink) / mean(text)) per
-//                                     channel, the means over the three sRGB
-//                                     bytes, ONE SCALAR for the three channels
-//                                     so the accent keeps its hue (93 / 181 on
-//                                     Default: FFAD56 -> 83592C), rounded half
-//                                     to even and clamped — the glyph of A
+//     lit press fill         C68743 = THE ACCENT DARKENED BY THE PRESS RATIO:
+//                                     the accent (cue) · (mean(press face) /
+//                                     mean(key face)) per channel, the means
+//                                     over the three sRGB bytes, rounded half
+//                                     to even and clamped (42 / 54 = 0.778 on
+//                                     Default: FFAD56 -> C68743) — A CHECKED
+//                                     KEY'S FACE UNDER A STANDING PRESS
+//                                     (architect 2026-11-11, session 106: "if
+//                                     it's a lit lamp, it gets darkened based
+//                                     on the starting point of the accent
+//                                     color"; the press arc's ruling of
+//                                     2026-11-05, his "ratio" on mocks d1 / i1
+//                                     of tmp/s45). THE RATIO, NOT THE
+//                                     DIFFERENCE: the ratio keeps the theme's
+//                                     lit hue and scales with its own press
+//                                     step. A theme whose key face is black
+//                                     (no divisor) keeps the accent whole,
+//                                     ratio 1; where the press face is lighter
+//                                     than the key face the lit press comes
+//                                     out lighter — Live's numbers, no rule
+//     lit dim fill, text on lit dim
+//                            83592C, 090909 = THE LIT-BUT-INERT PAIR: the
+//                                     accent (cue) and the print on it (text
+//                                     on lit), EACH · (mean(key dim ink) /
+//                                     mean(text)) per channel, the means over
+//                                     the three sRGB bytes, ONE SCALAR for
+//                                     both tones and their three channels so
+//                                     each keeps its hue (93 / 181 on Default:
+//                                     FFAD56 -> 83592C, 111111 -> 090909),
+//                                     rounded half to even and clamped — the
+//                                     face and the glyph of A
 //                                     CHECKED-BUT-DISABLED KEY (a lamp on a
 //                                     locked tab, under grid iterations, in
-//                                     the `h` view), the accent dimmed as the
-//                                     disabled glyph is dimmed against the
-//                                     resting one (architect 2026-11-11,
-//                                     session 105, his pick "a"; key_ink,
+//                                     the `h` view), dimmed as the disabled
+//                                     glyph is dimmed against the resting one
+//                                     (architect 2026-11-11, session 106: "dim
+//                                     the accent and the glyph so both read as
+//                                     a unit"; paint_key and key_ink,
 //                                     materials.h). A theme whose text is
-//                                     black (no divisor) keeps the accent
-//                                     whole, ratio 1; where the disabled ink
-//                                     is lighter than the text the dimmed
-//                                     accent comes out lighter, a channel
-//                                     clipping at FF — Live's numbers, no rule
-//   (The lit key's lighter face and its own press and print tones, the lamp
-//   rule of 2026-11-10, retired 2026-11-11 with their five tones: a lit key
-//   wears the key's two faces, its state on the glyph.)
+//                                     black (no divisor) keeps both whole,
+//                                     ratio 1; where the disabled ink is
+//                                     lighter than the text both come out
+//                                     lighter, a channel clipping at FF —
+//                                     Live's numbers, no rule
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,

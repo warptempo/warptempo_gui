@@ -27,18 +27,20 @@
 // read) IS THE 2026-11-01..05 MEASURED PALETTE TO THE BYTE but the selection
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
 // SurfaceBackground, since 2026-11-07), the playhead line (2026-11-10), the
-// dimmed accent and the level fill (2026-11-11; all at the foot) — the numbers
+// level fill and the lit-but-inert key's pair (2026-11-11; all at the foot)
+// — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
-// playhead's triangle, the orange of Live's markers;
+// playhead's triangle, the orange of Live's markers and lit buttons;
 // 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line);
 // the playhead line's static tone is derived, white 0.75 toward the head on
 // every theme, Default included (architect 2026-11-10, session 103, "no
 // special cases") — the static_asserts
-// at the foot are that proof in the build, every one of the thirty-four
-// words with its literal (the press arc's key press face and list press
-// pair, 2026-11-05, among them, the lamp arc's clip lamp the same night and
-// the two of 2026-11-11: the dimmed accent, the level fill).
+// at the foot are that proof in the build, every one of the thirty-seven
+// words with its literal (the press arc's four, 2026-11-05, among them —
+// the key press face, the list press pair and the lit press fill — the lamp
+// arc's clip lamp the same night and the three of 2026-11-11: the level
+// fill, the lit-but-inert key's face and its glyph).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -87,9 +89,11 @@
 //                            and phase reset alike, both halves of the `h`
 //                            view's items (resolve_flag_face), the orange
 //                            of Live's start marker
-//                            (ViewCheckControlEnabledOn) — THE ACCENT: a
-//                            lit key's glyph wears the same tone as a word
-//                            (key_ink, materials.h; architect 2026-11-11)
+//                            (ViewCheckControlEnabledOn) — THE ACCENT: A
+//                            LIT KEY'S WHOLE FACE IS THIS ROLE TOO, read
+//                            by the key's painter (paint_key, materials.h;
+//                            architect 2026-11-11, session 106: one accent
+//                            for the chip and the lamps)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
 //                            one-W outline round every chip, THE SELECTION
 //                            STEM down the canvas (every selected enabled
@@ -128,9 +132,11 @@
 //                            that are related to the controls should be
 //                            white"; kept 2026-11-01; white in every theme)
 // The stereo divider between the channels wears the panel's tones; nothing
-// else in the well has a role. A LIT KEY HAS NO FILL OF ITS OWN (architect
-// 2026-11-11): its glyph wears the accent, `cue`'s tone, on the key's own
-// two faces (materials.h's THE KEY).
+// else in the well has a role. THE LIT KEY'S FACE IS `cue` (architect
+// 2026-11-11, session 106): the one program role a chrome painter reads,
+// the accent being one for the markers and the lamps; the lit key's press
+// and inert faces are the chrome's (`lit_press_fill`, `lit_dim_fill`,
+// theme_file.h), derived from it (materials.h's THE KEY).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -161,18 +167,23 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled `default` row
 // (kGuiDefaultThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the thirty-four words with its literal, so
+// 2026-11-01..05 — every one of the thirty-seven words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_ask.h's head), which the
 // loader reproduces for every dropped file (the proof of 2026-11-06, on the
 // tablet). The lamp arc's one (2026-11-05 night) is Live's own word read
 // off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum).
-// THE TWO OF 2026-11-11 (architect, sessions 104 / 105; theme_ask.h's
-// head): THE DIMMED ACCENT 83592C, a checked-but-disabled key's glyph — the
-// accent FFAD56 × 93 / 181, the ratio mean(key dim ink 5D5D5D) / mean(text
-// B5B5B5), per channel, rounded (the DERIVED block) — and THE LEVEL FILL
-// 007383, Default's RangeEditField, Live's volume color (the COMPOSITED
-// block). THE SELECTION PAIR'S TEXT 070707 is Default's
+// THE LEVEL FILL 007383 is Default's RangeEditField, Live's volume color
+// (architect 2026-11-11, session 105; theme_ask.h's COMPOSITED block). THE
+// LIT KEY'S FOUR (architect 2026-11-11, session 106: a lit key's face is
+// the accent, `cue` FFAD56; theme_ask.h's head): THE PRINT ON A LIT FACE
+// 111111, Default's ControlContrastFrame; THE LIT PRESS FILL C68743, the
+// accent × 42 / 54, the ratio mean(press face 2A2A2A) / mean(key face
+// 363636); and THE LIT-BUT-INERT PAIR, a checked-but-disabled key's face
+// 83592C and its glyph 090909 — the accent and the print on it × 93 / 181,
+// the ratio mean(key dim ink 5D5D5D) / mean(text B5B5B5) — each per
+// channel, rounded half to even (the DERIVED block). THE SELECTION PAIR'S
+// TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
 // ControlContrastFrame, until then — our mispairing). THE MAGNIFY CORE
@@ -186,10 +197,13 @@ inline constexpr GuiThemeTones kDefault = kGuiDefaultThemeTones;
 static_assert(kDefault.ground          == 0x242424);
 static_assert(kDefault.text            == 0xB5B5B5);
 static_assert(kDefault.text_dim        == 0x757575);
+static_assert(kDefault.text_on_lit     == 0x111111);
 static_assert(kDefault.key_dim_ink     == 0x5D5D5D);
-static_assert(kDefault.lit_dim_ink     == 0x83592C);
+static_assert(kDefault.text_on_lit_dim == 0x090909);
 static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
+static_assert(kDefault.lit_press_fill  == 0xC68743);
+static_assert(kDefault.lit_dim_fill    == 0x83592C);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x363636);
 static_assert(kDefault.ruler_tick      == 0x919191);

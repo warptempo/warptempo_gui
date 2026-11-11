@@ -5176,7 +5176,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // LEAVING THE MODE PUTS THE VALUE DRAG LAMP OUT (architect 2026-10-11
     // ~01:50, "it's simpler that way"; AppState::value_drag_lamp): this tail
     // is the mode's second exit road beside bare `i`'s toggle, which clears it
-    // at both edges. The bottom lane is damaged so the button's lit glyph (the
+    // at both edges. The bottom lane is damaged so the button's lit face (the
     // mode's, value_drag_armed) goes dark in this frame.
     app.value_drag_lamp = false;
     viewport.invalidate_rect(bottom_row_area(app));

@@ -9,7 +9,7 @@
 // theme, the 22-px folders), RECOLORED to `currentColor` by
 // tools/icons/import_breeze.py (the README's RECOLOR RULE; its one table is
 // the enumerator -> source list) and PAINTED IN THE TEXT TONES — a lit
-// key's in the accent — (materials.h)
+// key's in the print of its accent face — (materials.h)
 // at ONE ROAD, THE INK BOX (below), each seat naming its own ink length:
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
 //   visual size; its printed legend under the key again since 2026-11-03,
@@ -19,9 +19,9 @@
 //   rest shared drawings) —
 //   centered on its face (paint_key_glyph, paint_handler.cpp), `text`
 //   B5B5B5 at rest and pressed, `key_dim_ink` (Default's 5D5D5D) on a disabled key,
-//   THE ACCENT `cue` (Default's FFAD56) on a lit one, pressed or not, and
-//   the dimmed accent `lit_dim_ink` (Default's 83592C) on a lit disabled one
-//   (materials.h's key_ink; architect 2026-11-11).
+//   `text_on_lit` (Default's 111111) on a lit one's accent face, pressed or
+//   not, and `text_on_lit_dim` (Default's 090909) on a lit disabled one's
+//   dimmed face (materials.h's key_ink; architect 2026-11-11, session 106).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note
 //   (MusicNote16th, BPM's glyph too) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_logo_lane), the list rows'
@@ -51,7 +51,7 @@
 // THE BOUND DRAWING (architect 2026-11-02; the road of 2026-10-10 restored):
 // a file that paints in `currentColor` — every file here — WEARS THE COLOR
 // ITS CALLER PASSES, a 0xRRGGBB value (one of the theme row's words — the
-// text tones, a lit key's accent and its dimmed tone; no role
+// text tones, a lit key's print and its dimmed tone; no role
 // table): its bytes are kept and parsed per color with resvg's user
 // stylesheet `svg { color: #RRGGBB; }` (svg_icon::parse), which
 // `currentColor` resolves against — the file never edited at run time. The
@@ -161,7 +161,7 @@ std::optional<std::string> load_set();
 // color, which neither change moves), AND ON A THEME COMMIT
 // (GuiInputHandler::apply_theme: a raster keys on its sRGB color, which the
 // theme moves, render.h's install_palette). A key's lit edge drops nothing:
-// the accent is one more color key beside the text tones.
+// the print on a lit face is one more color key beside the text tones.
 void drop_rasters();
 
 // -- THE INK BOX: one road for every seat (architect 2026-11-01, M4 / M5:

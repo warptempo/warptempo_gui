@@ -226,7 +226,7 @@ Rgb mix(const Rgb& a, const Rgb& b, double t) {
                clamp_byte(a.b + t * (b.b - a.b))};
 }
 
-// c · ratio, per channel, rounded and clamped (the dimmed accent).
+// c · ratio, per channel, rounded and clamped (the lit key's derived tones).
 Rgb scale(const Rgb& c, double ratio) {
     return Rgb{clamp_byte(c.r * ratio), clamp_byte(c.g * ratio),
                clamp_byte(c.b * ratio)};
@@ -328,8 +328,8 @@ uint32_t packed(const Rgb& c) {
 constexpr double kPlayheadLineToHead = 0.75;
 
 // One theme's tones (the head's DERIVATION). Total: every tone is a role, a
-// composite or a mix, and the one ratio's zero divisor has its own answer
-// (the dimmed accent, below).
+// composite, a mix or a scaled role, and each of the two ratios' zero
+// divisor has its own answer (the lit key's derived tones, below).
 GuiThemeTones derive(const AskRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
     const Rgb desktop  = opaque(roles["Desktop"]);
@@ -363,20 +363,33 @@ GuiThemeTones derive(const AskRoles& roles) {
                                 rgba(roles["Desktop"]));
     const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), face_a);
     const Rgb white    = Rgb{255, 255, 255};
-    // THE DIMMED ACCENT (the head's DERIVED block): the accent scaled by the
-    // one ratio the disabled key's ink bears to the text, mean over mean; a
-    // black text (no divisor) leaves the accent as it is.
-    const double text_mean = mean(text);
-    const Rgb lit_dim  =
-        scale(on, text_mean == 0.0 ? 1.0 : mean(dim_ink) / text_mean);
+    // THE LIT KEY'S DERIVED TONES (the head's DERIVED block; architect
+    // 2026-11-11, session 106). THE LIT PRESS FILL: the accent scaled by the
+    // ratio the press face bears to the key face, mean over mean; a black
+    // key face (no divisor) leaves the accent as it is. THE LIT-BUT-INERT
+    // PAIR: the accent and the print on it, both scaled by the one ratio
+    // the disabled key's ink bears to the text, mean over mean; a black
+    // text (no divisor) leaves both as they are.
+    const double face_mean   = mean(face);
+    const double press_ratio =
+        face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
+    const double text_mean   = mean(text);
+    const double dim_ratio   =
+        text_mean == 0.0 ? 1.0 : mean(dim_ink) / text_mean;
+    const Rgb lit_press  = scale(on, press_ratio);
+    const Rgb lit_dim    = scale(on, dim_ratio);
+    const Rgb on_lit_dim = scale(contrast, dim_ratio);
     GuiThemeTones t{};
     t.ground              = packed(ground);
     t.text                = packed(text);
     t.text_dim            = packed(dim);
+    t.text_on_lit         = packed(contrast);
     t.key_dim_ink         = packed(dim_ink);
-    t.lit_dim_ink         = packed(lit_dim);
+    t.text_on_lit_dim     = packed(on_lit_dim);
     t.key_face            = packed(face);
     t.key_press_face      = packed(desktop);
+    t.lit_press_fill      = packed(lit_press);
+    t.lit_dim_fill        = packed(lit_dim);
     t.well_frame          = packed(dim);
     t.ruler_face          = packed(face);
     t.ruler_tick          = packed(tick_role);

@@ -39,20 +39,26 @@
 // owns what each role paints) and the theme tone that fills it. The first
 // eight are Windows' own element names (ButtonFace, ButtonText, Hilight /
 // HilightText, WindowText, InfoWindow / InfoText and the tooltip's border),
-// the chrome's painters written against them; the SEVENTEEN after them
+// the chrome's painters written against them; the NINETEEN after them
 // are the flat look's tones (materials.h's head, 2026-11-01..05: the
 // twelve of the look, the press arc's three, 2026-11-05 — the key's press
-// face and the lists' press pair — the lamp arc's clip lamp the same night
-// and the level case's fill, `level_fill`, 2026-11-11), members
+// face and the lists' press pair — the lamp arc's clip lamp the same night,
+// the level case's fill, `level_fill`, 2026-11-11, and the lit key's two
+// the same day, session 106 — `lit_press_fill` and `lit_dim_fill`, its
+// face under a press and its face when inert), members
 // since the theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
-// clock pair retired 2026-11-02 with the overlays' flat pass; the lit key's
-// five — `lit_fill`, `lit_press_fill`, the doors' pair and `text_on_lit` —
-// retired 2026-11-11, architect: a lit key wears the key's own two faces,
-// its state on the glyph, materials.h's THE KEY; the glyph's tones are the
-// theme row's WORDS, read by key_ink off installed_theme() and no role
-// here — the accent `cue`'s, the dimmed accent `lit_dim_ink`'s). TWO ROLES
+// clock pair retired 2026-11-02 with the overlays' flat pass). THE LIT KEY
+// (architect 2026-11-11, session 106, materials.h's THE KEY): ITS FACE AT
+// REST HAS NO ROLE HERE — paint_key reads the palette's `cue`, THE ACCENT,
+// one role for the markers' chip and the lamps, so no `lit_fill` stands
+// beside it holding the same tone; its two other faces are the two roles
+// above; WHAT IS PRINTED ON IT has none either — the glyph road takes the
+// theme row's WORD, so `text_on_lit` and `text_on_lit_dim` are read by
+// key_ink off installed_theme(), as `text` and `key_dim_ink` are for a
+// glyph. No door class: the seven overlay openers light as the lamps do.
+// TWO ROLES
 // MAY SHARE A TONE — a
 // role is what it paints, not its value: `label`, `field_text` and `text`
 // all read the theme's text; `card_ground` and `card_frame` its card face.
@@ -61,11 +67,11 @@
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's twenty-five (the eight of
+// 2026-10-04), in GuiPalette's order: the chrome's twenty-seven (the eight of
 // 2026-10-04 — the caption's six, 2026-10-05..10-21, left with the captions;
 // the seven unread ones, 2026-11-02, with the overlays' rings — and the
-// seventeen flat-look tones, the press arc's three, the clip lamp and the
-// level fill among them). The program's roles are the
+// nineteen flat-look tones, the press arc's three, the clip lamp, the
+// level fill and the lit key's two among them). The program's roles are the
 // palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
 // palette_file.cpp's coverage proof walks it, so a role cannot be valued and
@@ -87,14 +93,17 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"card_ground",     &GuiPalette::card_ground,     &GuiThemeTones::card_face},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
     {"card_frame",      &GuiPalette::card_frame,      &GuiThemeTones::card_face},
-    // THE FLAT LOOK'S SEVENTEEN (materials.h's head: the text tones, the
-    // key and its press face, the well's tones, the panes, the lists' press
-    // pair, the clip lamp, the level case's fill).
+    // THE FLAT LOOK'S NINETEEN (materials.h's head: the text tones, the
+    // key and its press face, the lit key's press and inert faces, the
+    // well's tones, the panes, the lists' press pair, the clip lamp, the
+    // level case's fill).
     {"text",            &GuiPalette::text,            &GuiThemeTones::text},
     {"text_dim",        &GuiPalette::text_dim,        &GuiThemeTones::text_dim},
     {"key_dim_ink",     &GuiPalette::key_dim_ink,     &GuiThemeTones::key_dim_ink},
     {"key_face",        &GuiPalette::key_face,        &GuiThemeTones::key_face},
     {"key_press_face",  &GuiPalette::key_press_face,  &GuiThemeTones::key_press_face},
+    {"lit_press_fill",  &GuiPalette::lit_press_fill,  &GuiThemeTones::lit_press_fill},
+    {"lit_dim_fill",    &GuiPalette::lit_dim_fill,    &GuiThemeTones::lit_dim_fill},
     {"well_frame",      &GuiPalette::well_frame,      &GuiThemeTones::well_frame},
     {"ruler_face",      &GuiPalette::ruler_face,      &GuiThemeTones::ruler_face},
     {"ruler_tick",      &GuiPalette::ruler_tick,      &GuiThemeTones::ruler_tick},

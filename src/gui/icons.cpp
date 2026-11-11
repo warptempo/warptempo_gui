@@ -26,7 +26,7 @@ namespace {
 //
 // THE BOUND PARSES: per (drawing, color) the tree resvg built under that
 // color, made the first time a draw asks — at most the tones a glyph's
-// caller passes per drawing (the text tones, a lit key's accent and its
+// caller passes per drawing (the text tones, a lit key's print and its
 // dimmed tone, per theme installed) — and held for the session.
 //
 // THE CACHES: per (drawing, ink px) a FIT, and per (drawing, ink px, color)

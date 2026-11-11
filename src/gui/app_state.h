@@ -1995,7 +1995,7 @@ enum class RedesignButton {
     // the touch region hold retired for it), directly after Restrict and
     // ahead of the presets key: BARE `w`, wearing TRIM and the scissors
     // (Icon::EditCut, the presets key's glyph until that day), A LAMP —
-    // the lamps' lit glyph — over AppState::trim_armed,
+    // the lamps' lit face — over AppState::trim_armed,
     // whose record holds the whole rule: lit, the next single-contact drag on
     // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
     // its down point instead of the pan; only a second press, a committed
@@ -9165,7 +9165,7 @@ struct AppState {
         // THE SIX CONTENTS. The tag IS the standing predicate
         // (folder_overlay_stands, below), and it is the one thing the open act
         // forks on — and, between the five picker contents, the router's
-        // opener arms, the controls row and the opener key's lit glyph
+        // opener arms, the controls row and the opener key's lit face
         // (is_folder_overlay_opener).
         // Everything else about the panel — the band, the scroll, the walk —
         // is the widget's and knows nothing about which content fills it.
@@ -9679,9 +9679,10 @@ inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
 // through this predicate, so the published face — the bits the painters,
 // the per-tick comparator and the band's fingerprint all read — carries the
 // decision, and the key wears the rest face under the dim glyph and legend.
-// THE OVERLAYS ONLY: outside them a dead checked key keeps its lit glyph,
-// in the dimmed accent (a locked tab, the `h` view; nothing behind a MODAL
-// changes at all — materials.h's THE KEY). False with no overlay standing.
+// THE OVERLAYS ONLY: outside them a dead checked key keeps its lit face,
+// the accent dimmed and its glyph with it (a locked tab, the `h` view;
+// nothing behind a MODAL changes at all — materials.h's THE KEY). False
+// with no overlay standing.
 inline bool overlay_deadens_button(const AppState& a, RedesignButton b) {
     return (folder_overlay_stands(a) || score_viewer_stands(a)) &&
            !overlay_admits_button(a, b);
@@ -13131,7 +13132,7 @@ inline bool authoring_locked(const AppState& a) {
 //     fourth, S+P, since 2026-10-12): bare
 //     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
 //     disabled face (2026-10-01) — the glyph dimmed, the selected view's
-//     lit glyph, in the dimmed accent, still saying where you stand — and
+//     lit face, in the dimmed accent, still saying where you stand — and
 //     the KEY's card
 //     carries the sentence.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
@@ -13273,7 +13274,7 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // the lamp lit (AppState::value_drag_lamp), or GRID ITERATIONS STANDING, under
 // which the lamp is permanently lit ("the lamp becomes permanent in grid
 // iterations mode") and the stored bit is not read. Every reader asks this,
-// never the bit: the posture below and the button's lit glyph
+// never the bit: the posture below and the button's lit face
 // (redesign_button_selected); the bit's writers are listed at it.
 //
 // THE PHASE RESET VIEW HOLDS THE LAMP DARK OUTSIDE GRID ITERATIONS (architect
@@ -15685,7 +15686,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // contents and the viewer alike, its lift bare backslash, which each
     // overlay's router answers with the lamp's one setter — the membership's
     // owner overlay_admits_button. EVERY KEY THIS ARM LEAVES DEAD IS ALSO
-    // UNLIT THERE (the same ruling: the plain disabled look, no accent —
+    // UNLIT THERE (the same ruling: the plain disabled face, no accent —
     // overlay_deadens_button, read by redesign_button_selected).
     if (folder_overlay_stands(a) || score_viewer_stands(a))
         return overlay_admits_button(a, b);
@@ -16791,7 +16792,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // GRID ITERATIONS, LIT (architect 2026-10-11 ~01:45: the lamp is
         // permanent there, value_drag_armed): the press could change nothing,
         // so the face is the view selectors' under the same mode — the
-        // lit glyph, in the dimmed accent, still saying the drag is armed
+        // lit face, in the dimmed accent, still saying the drag is armed
         // (iteration_lock_greys' account) — and bare `[`, which the
         // iteration gate admits (its delta (b)), cards the reason at its own
         // arm (kValueDragIterationsCard). THE `h` VIEW greys and
@@ -17119,13 +17120,13 @@ inline bool redesign_button_enabled(const AppState& a,
 // THE SAME live fact its chord flips, so a lit button and the state it reports
 // can never drift. UNDER AN OVERLAY A KEY THAT DOES NOT RESPOND IS NEVER LIT
 // (architect 2026-11-10: "lamps that do not respond show inactive under the
-// overlays" — the plain disabled look, the rest face under the dim glyph
+// overlays" — the plain disabled face, the rest face under the dim glyph
 // and legend, no accent): the body's second head term, the overlays' one
 // predicate (overlay_deadens_button), so the bit this publishes is THE
-// PAINTED LIT GLYPH and the state behind it returns to the glyph at the
+// PAINTED LIT FACE and the state behind it returns to the face at the
 // overlay's close. The opener and the tooltip lamp, the keys an overlay
 // leaves live, keep their true bit. THE OVERLAYS ONLY: a key dead on a
-// locked tab, in the `h` view or behind a modal keeps its lit glyph, in
+// locked tab, in the `h` view or behind a modal keeps its lit face, in
 // the dimmed accent when the key is dead
 // (materials.h's THE KEY). Three readers: the painter (which stashes what it
 // painted), main.cpp's staleness comparator and the band's fingerprint
@@ -17153,12 +17154,12 @@ inline std::string view_pair_label(char audio, char column) {
 }
 
 // THE DOORS — THE SEVEN OVERLAY OPENERS, THE ONE OWNER OF THE CLASS
-// (architect 2026-11-05; materials.h's THE KEY): the keys whose lit state
+// (architect 2026-11-05; materials.h's THE KEY): the keys whose lit face
 // says A SURFACE STANDS rather than A MODE IS ON — each sits lit while its
 // overlay stands and closes it (redesign_button_selected's overlay arms
-// below). THEY LIGHT AS THE LAMPS DO (architect 2026-11-11, his "yes"): the
-// glyph in the accent on the key's own two faces, no look of the class's
-// own, so no painter asks this. Exactly the seven: the history opener (the
+// below). THEY LIGHT AS THE LAMPS DO (architect 2026-11-11, session 106):
+// the whole face the accent, darkened under a press, no fill of the
+// class's own, so no painter asks this. Exactly the seven: the history opener (the
 // `h` view), Open Project (the picker), Play Renders (the render player),
 // Settings (the settings page and its value list), Presets (the trim
 // presets list), BPM (the BPM form) and Score (the score viewer). The class
@@ -17217,7 +17218,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
             return a.restrict;
         // THE TRIM ARM LAMP (architect 2026-11-07, session 87): the same
         // toggle pattern, reading the live bit bare `w` flips and a committed
-        // sweep puts out (AppState::trim_armed), so the lit glyph and the arm
+        // sweep puts out (AppState::trim_armed), so the lit face and the arm
         // cannot drift; the per-tick comparator repaints the sweep's put-out.
         case RedesignButton::IconTrimArm:
             return a.trim_armed;
@@ -17228,7 +17229,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
             return a.show_waveform_magnification;
         // GRID ITERATION MODE'S LAMP (2026-08-01, away with its button
         // 2026-08-27 to 2026-09-04 and back with it): the same toggle pattern
-        // once more, reading the live bit bare `i` flips, so the lit glyph and
+        // once more, reading the live bit bare `i` flips, so the lit face and
         // the mode cannot drift. It is the state cue the MENU ROW could not
         // give the mode — this product's dropdowns carry no checkboxes by
         // ruling — which is one of the things the button's return puts back.
@@ -17236,20 +17237,20 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // ADD TO SELECTION IS ONE OF THE BOTTOM ROW'S TWO LAMPS (2026-08-18;
         // Toggle Value Drag the other since 2026-10-11, below), on the
         // same toggle pattern as the two above: it reads the live bit bare `k`
-        // flips, so the lit glyph and the sticky ctrl cannot drift. IT IS THE
+        // flips, so the lit face and the sticky ctrl cannot drift. IT IS THE
         // ONLY CUE THE MODE GETS, by ruling — the selected chips (render.h's
         // THE STATES) already say which markers are selected, so there is no badge and no
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
         // shared key painter already handles: a disabled checked key keeps
-        // its lit glyph, in the dimmed accent (materials.h's key_ink) —
-        // outside the overlays, under which a dead key is unlit (the head
-        // term).
+        // its lit face, in the dimmed accent under its dimmed glyph
+        // (materials.h's paint_key and key_ink) — outside the overlays,
+        // under which a dead key is unlit (the head term).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the
         // bit bare `[` flips and the drag it armed puts out, or grid
-        // iterations standing, ~01:45), so the lit glyph and the posture cannot
+        // iterations standing, ~01:45), so the lit face and the posture cannot
         // drift; the per-tick face comparator (main.cpp) repaints the spend.
         case RedesignButton::IconValueDrag: return value_drag_armed(a);
         // The iteration button's pattern exactly: a TOGGLE reading the live bit
@@ -17257,14 +17258,14 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         case RedesignButton::IconHistory: return a.history_mode.active;
         // THE READ-ONLY LAMP (2026-08-14), the same toggle pattern over the
         // ACTIVE TAB's own bit — which is exactly what bare `o` flips, so the
-        // lamp and the lock cannot drift. The lit glyph says the bit, as every
+        // lamp and the lock cannot drift. The lit face says the bit, as every
         // toggle's does, and the key wears one Lock glyph in both states
         // (redesign_button_icon; the open / closed pair of 2026-10-14 was
         // reversed 2026-10-21).
         case RedesignButton::IconReadOnly:
             return active_view_state(a).read_only;
         // THE TOOLTIP LAMP (architect 2026-09-29): the same toggle pattern,
-        // reading the live bit bare backslash flips, so the lit glyph and the
+        // reading the live bit bare backslash flips, so the lit face and the
         // tooltips' presence cannot drift.
         case RedesignButton::IconTooltips:
             return a.show_tooltips;
@@ -17541,7 +17542,7 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // strip's lit tab until then), so the glyph no longer does. Its swap to
         // TabDetachB on tab B stood 2026-10-12 to 2026-10-18.)
         // (THE READ-ONLY TOGGLE WEARS ONE GLYPH, ReadOnly, in both states
-        // since 2026-10-21 — the lock is the lamp's lit glyph alone,
+        // since 2026-10-21 — the lock is the lamp's lit face alone,
         // redesign_button_selected, as every toggle's; the padlock pair of
         // 2026-10-14 reversed, architect: the padlock "is not supposed to
         // have an open and closed state".)
@@ -17589,7 +17590,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // the act at all — the panel has no Shift and no Space.
 //
 // A LAMP CARRIES NO SECOND OR THIRD ACTION; A DOOR MAY (architect 2026-11-08,
-// session 93). A lamp — a toggle, its lit glyph its state — admits
+// session 93). A lamp — a toggle, its lit face its state — admits
 // nothing; a door — an overlay opener (redesign_button_is_door) — may
 // carry a twin on its hold, his reason: "the fact that they're modal
 // guarantees that the lamp or their on state doesn't conflict with the
@@ -18046,7 +18047,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // button's iteration hint, the batches' counted nouns and the cards
         // that name a mode all read the same words. THE BPM OPENER'S LINE IS A
         // NAME because it opens an overlay (the form is the state, its lit
-        // glyph the overlay openers' rule), while the
+        // face the overlay openers' rule), while the
         // MODE'S reads "Toggle <Mode>", the lamp rule at this table's head:
         // "Grid Iterations" alone would lie on the lit key.
         case RedesignButton::IconBpm:
@@ -18649,7 +18650,7 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
 // caption because they still are toggling"): every Toggle-named key
 // (MAGNIFY, FOLLOW, TIPS, LOCK, DRAG, ADD SEL, DISABLE, INHERIT outside the
 // grid lamp, SESSION and CUMUL in the `h` view), the lamps (NOISE among
-// them) and the two radio pairs keep their drawing, its accent being the
+// them) and the two radio pairs keep their drawing, the lit face being the
 // state. A key whose next press is a different act than its last wears
 // that act's drawing, each arm reading the predicate the face or the
 // tooltip already reads, never a second derivation:

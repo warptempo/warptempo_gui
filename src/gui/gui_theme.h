@@ -24,10 +24,13 @@ struct GuiThemeTones {
     uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea)
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
+    uint32_t text_on_lit;         // what is printed on a lit key's face, its glyph and the on-screen keyboard's lit cap (ControlContrastFrame); a word alone, read by key_ink (materials.h)
     uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
-    uint32_t lit_dim_ink;         // a checked-but-disabled key's glyph: the accent dimmed (cue · mean(key_dim_ink) / mean(text)); a word alone, read by key_ink (materials.h)
-    uint32_t key_face;            // the key at rest, checked or not; the time fields (SurfaceBackground)
-    uint32_t key_press_face;      // a key's face while a press stands on it, checked or not (Desktop)
+    uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face (text_on_lit · mean(key_dim_ink) / mean(text)); a word alone, read by key_ink
+    uint32_t key_face;            // an unchecked key at rest; the time fields (SurfaceBackground)
+    uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
+    uint32_t lit_press_fill;      // a checked key's face while a press stands on it: the accent darkened (cue · mean(key_press_face) / mean(key_face))
+    uint32_t lit_dim_fill;        // a checked-but-disabled key's face: the accent dimmed (cue · mean(key_dim_ink) / mean(text))
     uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;          // the ruler (SurfaceBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the face)
@@ -49,7 +52,7 @@ struct GuiThemeTones {
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
     uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
-    uint32_t cue;                 // THE ACCENT: every enabled marker's chip and a checked key's glyph, the on-screen keyboard's lit cap too (ViewCheckControlEnabledOn)
+    uint32_t cue;                 // THE ACCENT: every enabled marker's chip and a checked key's whole face, the on-screen keyboard's lit keys too (ViewCheckControlEnabledOn)
     uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
@@ -85,18 +88,22 @@ inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
 // StandbySelectionBackground bar; the 111111 of ControlContrastFrame before
 // it was our mispairing) AND THE PLAYHEAD LINE 42D2E0 (architect
 // 2026-11-10, session 103, "no special cases": white 0.75 toward the head)
-// AND THE TWO OF 2026-11-11 (architect, sessions 104 / 105): the dimmed
-// accent 83592C, a checked-but-disabled key's glyph (FFAD56 × 93 / 181,
-// theme_ask.h's DERIVED block), and the level case's fill 007383
-// (RangeEditField). palette_file.h's static_asserts pin every word.
+// AND THE LEVEL CASE'S FILL 007383 (RangeEditField; architect 2026-11-11,
+// session 105) AND THE LIT-BUT-INERT PAIR (architect 2026-11-11, session
+// 106; theme_ask.h's DERIVED block): a checked-but-disabled key's face
+// 83592C and its glyph 090909, the accent FFAD56 and the print on it
+// 111111 × 93 / 181. palette_file.h's static_asserts pin every word.
 inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x242424, // ground
     0xB5B5B5, // text
     0x757575, // text_dim
+    0x111111, // text_on_lit
     0x5D5D5D, // key_dim_ink
-    0x83592C, // lit_dim_ink
+    0x090909, // text_on_lit_dim
     0x363636, // key_face
     0x2A2A2A, // key_press_face
+    0xC68743, // lit_press_fill
+    0x83592C, // lit_dim_fill
     0x757575, // well_frame
     0x363636, // ruler_face
     0x919191, // ruler_tick

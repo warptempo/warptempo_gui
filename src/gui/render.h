@@ -111,9 +111,10 @@ struct TrimRange {
 // session 75, the compiled group and the .ask files read at launch,
 // theme_ask.h — the compiled Default row that measured palette to the byte
 // but the selection pair's text, gui_theme.h); A
-// LIT KEY has no fill of its own — its glyph wears the accent, the cue's
-// tone, on the key's two faces (architect 2026-11-11, materials.h's THE
-// KEY); THE
+// LIT KEY'S FACE IS THE ACCENT, the cues' own role `cue` — one accent for
+// the markers' chip and the lamps — its press and its inert faces the
+// chrome's `lit_press_fill` and `lit_dim_fill` (architect 2026-11-11,
+// session 106, materials.h's THE KEY); THE
 // PANEL'S FACE is the flat ground (the theme's `ground`, Default's 242424,
 // the flat look, architect 2026-11-01), and THE CHROME'S ROLES are the
 // theme's tones, one per role (theme_file.h's role table, the one owner;
@@ -132,22 +133,24 @@ struct TrimRange {
 // DERIVATION).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — the chrome's flat-look tones among them
-// (materials.h, 2026-11-01: the ground, the key's two faces (rest and
-// press), the
+// (materials.h, 2026-11-01: the ground, the key's faces (rest and press;
+// a lit key's press and inert faces, its lit face the palette's `cue`), the
 // text tones, the well's tones — the trim bar, its frame, the ruler, its
 // ticks, the marker lane — the panes and the selection pair; members of the
 // struct since 2026-11-05) — or
 // THE BREEZE GLYPHS (architect 2026-11-01, M7: every drawing a Breeze glyph):
 // each file is recolored to `currentColor` and painted in THE TONE the
 // caller passes as the installed theme's sRGB word (installed_theme():
-// `text`, `key_dim_ink` on a disabled key, the accent `cue` on a lit key
-// and the dimmed accent `lit_dim_ink` on a lit disabled one, materials.h's
-// key_ink; icons.h's THE BOUND DRAWING) — the one place an antialiased
-// picture is copied whole.
+// `text`, `key_dim_ink` on a disabled key, `text_on_lit` on a lit key's
+// accent face and `text_on_lit_dim` on a lit disabled one's dimmed face,
+// materials.h's key_ink; icons.h's THE BOUND DRAWING) — the one place an
+// antialiased picture is copied whole.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
-// role: the text tone over the ground, the field, the keys' two faces and the
-// selection's grey; a lit key's glyph, and the on-screen keyboard's lit cap,
-// the accent on those same faces (architect 2026-11-11).
+// role: the text tone over the ground, the field, an unlit key's two faces
+// and the selection's grey; `text_on_lit` over a lit key's accent face, lit
+// or lit under press, a glyph and the on-screen keyboard's lit cap alike,
+// and `text_on_lit_dim` over a lit-but-inert key's (architect 2026-11-11,
+// session 106).
 // STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
 // HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
 // never had one; the lists' lit rows are a selection, not a button face.
@@ -282,10 +285,12 @@ struct TrimRange {
 // 2026-11-02).
 //
 // THE DISABLED FACES (2026-10-23; the key's own dim tone, Default's 5D5D5D,
-// since 2026-11-02): a dead key DIMS ITS GLYPH (`key_dim_ink`, paint_key_glyph; a
-// glyph on a dead lit key is the dimmed accent, `lit_dim_ink`, architect
-// 2026-11-11; no key prints a word since
-// 2026-11-02), its face the rest face; a CUE'S inert label is the
+// since 2026-11-02): a dead key DIMS ITS GLYPH (`key_dim_ink`, paint_key_glyph;
+// no key prints a word since
+// 2026-11-02), its face the rest face — A DEAD LIT KEY DIMS FACE AND GLYPH
+// TOGETHER, the dimmed accent `lit_dim_fill` under `text_on_lit_dim`
+// (architect 2026-11-11, session 106; materials.h's THE KEY; under an
+// overlay a dead key is unlit and wears the plain dead look); a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (`text_dim` (Default's 757575), paint_folder_overlay,
 // 2026-10-28); the STRUCK CLIP LAMP is its whole square in `key_dim_ink`
@@ -346,16 +351,19 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S SEVENTEEN (materials.h's head owns each rule;
+    // THE FLAT LOOK'S NINETEEN (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the three press tones the
     // press arc's, the same day; the clip lamp the lamp arc's, the same
-    // night; the level fill 2026-11-11).
+    // night; the level fill and the lit key's press and inert faces
+    // 2026-11-11).
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor key_dim_ink;     // a disabled key's glyph and legend, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
-    GuiColor key_face;        // the key at rest, checked or not; the time fields, the two lamps at rest
-    GuiColor key_press_face;  // a key's face under a standing press, checked or not
+    GuiColor key_face;        // an unchecked key at rest; the time fields, the two lamps at rest
+    GuiColor key_press_face;  // an unchecked key's face under a standing press
+    GuiColor lit_press_fill;  // a checked key's face under a standing press, the accent darkened (its face at rest is `cue`, below)
+    GuiColor lit_dim_fill;    // a checked-but-disabled key's face, the accent dimmed
     GuiColor well_frame;      // the scrub's channel, the tooltip's border
     GuiColor ruler_face;      // the ruler
     GuiColor ruler_tick;      // the ruler's ticks
