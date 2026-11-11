@@ -262,13 +262,6 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     return MarkerCell::Payload;
 }
 
-HistoryDiffHalf hit_test_history_diff_half(const AppState& app, int mouse_x,
-                                           int mouse_y) {
-    // The rule is at the declaration (app_state.h).
-    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
-    return r ? r->diff_half : HistoryDiffHalf::Removed;
-}
-
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
     (void)audio;
@@ -521,10 +514,21 @@ int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out) {
     return r->marker_index;
 }
 
-// The topmost rect in the LIVE stash naming store index `idx`, or null (and
-// null in the `h` view, whose indices are the diff flags').
-static const FlagHitRect* live_cue_rect(const AppState& app, int idx) {
-    if (app.history_mode.active || idx < 0) return nullptr;
+int history_cue_hit(const AppState& app, int x, int y, GuiRect* face_out) {
+    if (!app.history_mode.active) return -1;
+    const FlagHitRect* r = topmost_flag_rect(app, x, y);
+    if (!r || r->marker_index < 0) return -1;
+    if (face_out) *face_out = flag_hit_rect_face(*r);
+    return r->marker_index;
+}
+
+// The topmost rect in the LIVE stash naming index `idx` in ONE INDEX SPACE —
+// the warp store's while the `h` view is down (`history` false), the diff
+// flags' while it stands (`history` true) — or null where the stash is the
+// other space's or no rect names `idx`.
+static const FlagHitRect* published_cue_rect(const AppState& app, int idx,
+                                             bool history) {
+    if (app.history_mode.active != history || idx < 0) return nullptr;
     for (auto it = app.flag_hit_rects.rbegin();
          it != app.flag_hit_rects.rend(); ++it) {
         if (it->marker_index == idx) return &*it;
@@ -533,13 +537,18 @@ static const FlagHitRect* live_cue_rect(const AppState& app, int idx) {
 }
 
 GuiRect marker_cue_face(const AppState& app, int idx) {
-    const FlagHitRect* r = live_cue_rect(app, idx);
+    const FlagHitRect* r = published_cue_rect(app, idx, /*history=*/false);
     return r ? flag_hit_rect_face(*r) : GuiRect{0, 0, 0, 0};
 }
 
-GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
-                                int w, int h) {
-    const FlagHitRect* r = live_cue_rect(app, idx);
+GuiRect history_cue_face(const AppState& app, int idx) {
+    const FlagHitRect* r = published_cue_rect(app, idx, /*history=*/true);
+    return r ? flag_hit_rect_face(*r) : GuiRect{0, 0, 0, 0};
+}
+
+// THE CUE'S BOX SEAT over one published rect, both index spaces' one body.
+static GuiRect cue_tooltip_box_rect(const AppState& app, const FlagHitRect* r,
+                                    int text_inset, int w, int h) {
     if (!r) return GuiRect{0, 0, 0, 0};
     // THE ANCHOR: the cue's face for the rows (above it, the gap), its x
     // moved so the box's text origin — its left plus `text_inset` — stands
@@ -550,6 +559,40 @@ GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
     if (r->has_text_x)
         anchor.x = static_cast<int>(std::nearbyint(r->text_x)) - text_inset;
     return tooltip_box_rect(app, anchor, w, h);
+}
+
+GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
+                                int w, int h) {
+    return cue_tooltip_box_rect(
+        app, published_cue_rect(app, idx, /*history=*/false), text_inset, w, h);
+}
+
+GuiRect history_tooltip_box_rect(const AppState& app, int idx,
+                                 int text_inset, int w, int h) {
+    return cue_tooltip_box_rect(
+        app, published_cue_rect(app, idx, /*history=*/true), text_inset, w, h);
+}
+
+// ONE SIDE'S WORDS on a history item's box: the flag text, and the disable
+// bit named in words where it is set (the contract at the declaration).
+static std::string history_side_words(const std::string& text,
+                                      bool disabled) {
+    return disabled ? text + " (Disabled)" : text;
+}
+
+HistoryCueTooltipText history_cue_tooltip_text(const AppState& app,
+                                               int idx) {
+    if (!app.history_mode.active) return {};
+    const std::vector<HistoryDiffFlag>& flags = app.history_mode.flags;
+    if (idx < 0 || idx >= static_cast<int>(flags.size())) return {};
+    const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
+    if (f.added && f.removed)
+        return {history_side_words(f.now_text, f.now_disabled),
+                history_side_words(f.then_text, f.then_disabled)};
+    if (f.added) return {history_side_words(f.now_text, f.now_disabled), {}};
+    if (f.removed)
+        return {history_side_words(f.then_text, f.then_disabled), {}};
+    return {};
 }
 
 // THE VALUE'S SOURCE MARKER — the contract and the two readers are at the

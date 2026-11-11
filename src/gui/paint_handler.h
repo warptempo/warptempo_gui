@@ -97,28 +97,30 @@ LogoLampRects logo_lamp_rects(const AppState& app, const GuiLogoLegend& legend);
 // — architect 2026-08-28; the picker's row is Cancel alone since 2026-08-29 and
 // wears no label.)
 
-// THE `h` HISTORY LANE'S ONE LABEL SPELLING — THE LINE'S OWN TEXT AS THE
-// LIVE LANE SHOWS IT, NO SIGN (architect 2026-10-26 ~15:30: "we could also
-// remove the brackets plus minus, because that becomes redundant at that
-// point. And those are always hard to see anyways at the font size. A
-// strike through is easier to see"): the removed half tells itself by its
-// STRUCK label (resolve_flag_face's table), the added by its plain one. The
-// disable byte `#` leads where the line's own '#' is set, the line's own
-// byte. Defined in waveform_cache.cpp beside its one caller. THE FOUR LINE
+// THE `h` HISTORY LANE'S FLAG TEXT, ONE OWNER — THE LINE'S LABEL BYTES AS THE
+// LANE PAINTS THEM, NO SIGN AND NO DISABLE PREFIX (architect 2026-10-26 ~15:30:
+// "we could also remove the brackets plus minus, because that becomes
+// redundant at that point. And those are always hard to see anyways at the
+// font size. A strike through is easier to see"; 2026-11-11, session 106:
+// the '#' is the line's disable bit, not its text — the history's styles say
+// removed / added, the strike says the text changed, and the cue tooltip
+// names the bit in words). It is what a changed item's two sides are
+// compared by (HistoryDiffFlag::text_changed, render.h) and what the label
+// paints. Defined in waveform_cache.cpp beside its one caller. THE TWO LINE
 // KINDS:
-//   * a WARP line's payload is its tempo token: `1.05` live, `#1.05`
-//     disabled;
+//   * a WARP line's text is its payload token past the '|', verbatim:
+//     `1.05` whether or not the line is disabled;
 //   * a PHASE RESET has no payload — its frame is its whole identity — so it
-//     reads the live lane's display token (kPhaseResetLaneToken, render.h):
-//     `reset` live, `#reset` disabled. A phase-reset same-frame CHANGED pair
-//     IS a disable toggle, so `#reset` (struck) beside `reset` — or the
-//     reverse — is the toggle in the file's own spelling.
+//     reads the live lane's display token (kPhaseResetLaneToken, render.h),
+//     `reset`, and `warp_token` is unread: a phase-reset change is a disable
+//     toggle and its text never differs.
 // (Row 8's walk line spells its own `Scale: [-]<then> [+]<now>`,
 // history_walk_line in paint_handler.cpp: a struck run has no road there.)
 //
 // A warp token is rest-of-line, the whole payload. ASCII by construction:
 // every token comes from a sidecar grammar that is ASCII-only.
-std::string history_diff_label(bool disabled, std::string_view token);
+std::string history_diff_flag_text(bool phase_reset,
+                                   std::string_view warp_token);
 
 // -- The waveform plate's cache ------------------------------------------
 //
@@ -522,10 +524,6 @@ struct FlagCache {
     // walk's SIZE needs no field beside them: it is built from the two undo
     // stacks' sizes, captured at entry and frozen for the visit, unlike the
     // commit walk's streaming one.
-    // (NO FOCUSED HALF: a nudged pair's two cues paint alike whichever the
-    // focus stands on — both chips selected, both stems where the item is
-    // focused, architect 2026-11-04; HistoryMode::focus_half is the walk's
-    // and the press's alone.)
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
@@ -1113,9 +1111,6 @@ private:
     std::vector<GuiRect> standing_stem_rects(const GuiRect& area, int y0,
                                              int y1) const;
 
-    // The nudged pairs' rings (MarkerStemRun, render.h; the body owns the
-    // form), painted before the playhead's line (build_canvas_list).
-    void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
     // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W
     // opaque line in the palette's static `playhead_line`, Default's 42D2E0

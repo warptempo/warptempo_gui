@@ -889,14 +889,13 @@ uint64_t hash_selection(const std::set<int>& s,
 // remains in the fingerprint (a trim edit repaints through its own mutation
 // damage, no cache rebuild).
 
-// ONE DIFF FLAG'S LABEL, both columns, both sides. The contract and the four
-// shapes it produces are at the declaration (paint_handler.h): the disable
-// byte where the line's own is set, then the line's token, no sign.
-std::string history_diff_label(bool disabled, std::string_view token) {
-    std::string out;
-    if (disabled) out += '#';
-    out += token;
-    return out;
+// ONE LINE'S FLAG TEXT, both columns, both sides. The contract and the two
+// line kinds are at the declaration (paint_handler.h): the warp line's token,
+// the phase reset's display token, never the disable byte.
+std::string history_diff_flag_text(bool phase_reset,
+                                   std::string_view warp_token) {
+    return phase_reset ? std::string(kPhaseResetLaneToken)
+                       : std::string(warp_token);
 }
 
 void GuiPaintHandler::rebuild_history_diff_flags() {
@@ -908,10 +907,10 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // the COMMIT walk or the LOCAL one, read iteratively forward against the
     // next-newer item or cumulatively against the frozen live now side. The
     // lane's shapes, colors and text are identical in all four — the newer
-    // side's (ADDED) label plain and the older side's (REMOVED) struck
-    // everywhere — so nothing below this line knows which walk or
-    // which reading it is drawing, nor that the two readings coincide at the
-    // newest index of either.
+    // side is the ADDED one and the older the REMOVED one everywhere — so
+    // nothing below this line knows which walk or which reading it is
+    // drawing, nor that the two readings coincide at the newest index of
+    // either.
     const GuiHistoryCommitDelta* d =
         app.history_mode.displayed_delta(app.history_compare());
     if (!d) return;
@@ -920,122 +919,77 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // the live lane walks: warp entries where warp flags paint, phase-reset
     // entries where phase resets paint. The other column's delta is not shown —
     // one lane, one column, and the mode is a view onto that lane.
-    // THE THEN SIDE'S VALUE RIDES ALONG WITH ITS LABEL (2026-08-05) on every
-    // flag that HAS a then side — the removed ones and the changed pairs — for
-    // the REVERT act, which restores exactly that value (the fields' contract is
-    // at HistoryDiffFlag, render.h). The label and the value come off the SAME
-    // delta entry here, so the flag cannot show one thing and restore another.
-    //
-    // THE DISABLED AXIS IS FILLED PER HALF, TEXT AND FACE APART (architect
-    // 2026-08-22): the
-    // LABEL's '#' composes from each side's VERBATIM LOCAL bit and the revert's
-    // `then_disabled` carries that same byte, while the PAINT bits —
-    // `then_effective_disabled` on every flag with a REMOVED half,
-    // `now_effective_disabled` on every flag with an ADDED one — take the
-    // delta's per-side EFFECTIVE verdicts (the participation owner resolved
-    // within each side's own commit — the line's own flag since 2026-10-29;
-    // on the phase column local IS effective). Text, revert byte and dim all come off the SAME delta
-    // entry, so they can never describe different lines — they simply answer
-    // the line's two different questions, its bytes and its live-lane face. A
-    // half a flag does not
-    // have leaves its bits at the struct's false, which no painter or act reads:
-    // each is meaningful exactly when its own half's bool is set.
-    //
-    // A WARP token is the payload past the '|'; a phase reset has no payload,
-    // so the phase fills pass the live lane's display token
-    // (kPhaseResetLaneToken; history_diff_label's four line kinds).
-    //
-    // EACH HALF'S ORDINAL RIDES ALONG TOO (2026-09-16): a changed pair copies
-    // both sides', a removed flag its then side's, an added flag its now
-    // side's — off the same delta entry, so the row the flag shows is the row
-    // the revert addresses (the contract is at HistoryDiffFlag, render.h).
-    // AND EACH HALF'S OWN FRAME (2026-10-11, the nudged pair): `then_frame`
-    // and `now_frame` off the same entry, `time_frame` the left cue's —
-    // a changed pair's smaller frame, which on a same-frame pair is the one.
-    if (app.active_markers_view == 'P') {
+    // ONE ITEM PER DELTA ENTRY (architect 2026-11-11, session 106; the three
+    // kinds at HistoryDiffFlag, render.h): a change is one item at its one
+    // frame, a removal and an addition one each — a moved marker two. Each
+    // item takes its sides' FLAG TEXT (history_diff_flag_text), their LOCAL
+    // disable bytes (the revert's and the tooltip's; the paint reads none)
+    // and their ordinals (the revert's row identity) off the SAME delta
+    // entry, so the item cannot show one line and restore another.
+    const bool phase = (app.active_markers_view == 'P');
+    if (phase) {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
             HistoryDiffFlag f;
-            f.time_frame   = std::min(c.then_frame, c.now_frame);
-            f.then_frame   = c.then_frame;
-            f.now_frame    = c.now_frame;
-            f.removed      = true;
-            f.added        = true;
-            f.removed_text =
-                history_diff_label(c.then_disabled, kPhaseResetLaneToken);
-            f.added_text =
-                history_diff_label(c.now_disabled, kPhaseResetLaneToken);
-            f.then_ordinal            = c.then_ordinal;
-            f.now_ordinal             = c.now_ordinal;
-            f.then_disabled           = c.then_disabled;
-            f.then_effective_disabled = c.then_disabled;
-            f.now_effective_disabled  = c.now_disabled;
+            f.time_frame    = c.frame;
+            f.removed       = true;
+            f.added         = true;
+            f.then_text     = history_diff_flag_text(true, {});
+            f.now_text      = history_diff_flag_text(true, {});
+            f.then_ordinal  = c.then_ordinal;
+            f.now_ordinal   = c.now_ordinal;
+            f.then_disabled = c.then_disabled;
+            f.now_disabled  = c.now_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_removed) {
             HistoryDiffFlag f;
-            f.time_frame   = e.frame;
-            f.then_frame   = e.frame;
-            f.removed      = true;
-            f.removed_text =
-                history_diff_label(e.disabled, kPhaseResetLaneToken);
-            f.then_ordinal            = e.ordinal;
-            f.then_disabled           = e.disabled;
-            f.then_effective_disabled = e.disabled;
+            f.time_frame    = e.frame;
+            f.removed       = true;
+            f.then_text     = history_diff_flag_text(true, {});
+            f.then_ordinal  = e.ordinal;
+            f.then_disabled = e.disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_added) {
             HistoryDiffFlag f;
-            f.time_frame = e.frame;
-            f.now_frame  = e.frame;
-            f.added      = true;
-            f.added_text =
-                history_diff_label(e.disabled, kPhaseResetLaneToken);
-            f.now_ordinal            = e.ordinal;
-            f.now_effective_disabled = e.disabled;
+            f.time_frame   = e.frame;
+            f.added        = true;
+            f.now_text     = history_diff_flag_text(true, {});
+            f.now_ordinal  = e.ordinal;
+            f.now_disabled = e.disabled;
             out.push_back(std::move(f));
         }
     } else {
-        // The WARP column — 'W', the one letter left after the two arms above.
+        // The WARP column — 'W', the one letter left after the arm above.
         for (const GuiHistoryWarpChange& c : d->warp_changed) {
             HistoryDiffFlag f;
-            f.time_frame   = std::min(c.then_frame, c.now_frame);
-            f.then_frame   = c.then_frame;
-            f.now_frame    = c.now_frame;
-            f.removed      = true;
-            f.added        = true;
-            f.removed_text =
-                history_diff_label(c.then_disabled, c.then_tempo_token);
-            f.added_text =
-                history_diff_label(c.now_disabled, c.now_tempo_token);
-            f.then_token    = c.then_tempo_token;
-            f.then_ordinal            = c.then_ordinal;
-            f.now_ordinal             = c.now_ordinal;
-            f.then_disabled           = c.then_disabled;
-            f.then_effective_disabled = c.then_effective_disabled;
-            f.now_effective_disabled  = c.now_effective_disabled;
+            f.time_frame    = c.frame;
+            f.removed       = true;
+            f.added         = true;
+            f.then_text     = history_diff_flag_text(false, c.then_tempo_token);
+            f.now_text      = history_diff_flag_text(false, c.now_tempo_token);
+            f.then_ordinal  = c.then_ordinal;
+            f.now_ordinal   = c.now_ordinal;
+            f.then_disabled = c.then_disabled;
+            f.now_disabled  = c.now_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_removed) {
             HistoryDiffFlag f;
-            f.time_frame   = e.frame;
-            f.then_frame   = e.frame;
-            f.removed      = true;
-            f.removed_text =
-                history_diff_label(e.disabled, e.tempo_token);
-            f.then_token    = e.tempo_token;
-            f.then_ordinal            = e.ordinal;
-            f.then_disabled           = e.disabled;
-            f.then_effective_disabled = e.effective_disabled;
+            f.time_frame    = e.frame;
+            f.removed       = true;
+            f.then_text     = history_diff_flag_text(false, e.tempo_token);
+            f.then_ordinal  = e.ordinal;
+            f.then_disabled = e.disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_added) {
             HistoryDiffFlag f;
-            f.time_frame = e.frame;
-            f.now_frame  = e.frame;
-            f.added      = true;
-            f.added_text = history_diff_label(e.disabled, e.tempo_token);
-            f.now_ordinal            = e.ordinal;
-            f.now_effective_disabled = e.effective_disabled;
+            f.time_frame   = e.frame;
+            f.added        = true;
+            f.now_text     = history_diff_flag_text(false, e.tempo_token);
+            f.now_ordinal  = e.ordinal;
+            f.now_disabled = e.disabled;
             out.push_back(std::move(f));
         }
     }
@@ -1380,10 +1334,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // blits that surface (the stage bit is raised at the tail below). The
     // active view supplies its own column's stash and the other column's is
     // not retained — hit tests and the stem pass are both active-column-only.
-    // THE RUNS' STAGED HALF IS EMPTIED HERE, above the three arms: the
-    // history arm alone writes it (clearing it first itself), and a live arm
-    // must stage none (AppState::marker_stem_runs).
-    app.staged_marker_stem_runs.clear();
     if (history_active) {
         // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
         // marker paints. (The lane is not the whole of that suppression — the
@@ -1403,7 +1353,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.history_mode.selection,
             &app.staged_flag_hit_rects,
             &app.staged_marker_stems,
-            &app.staged_marker_stem_runs,
             // THE SAME MAP ARGUMENT the live columns take — a diff flag's frame
             // is an authored SOURCE frame exactly as a marker's is, in both
             // stores, so target view translates it through the same segments and

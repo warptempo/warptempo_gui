@@ -1394,7 +1394,7 @@ static constexpr const char* kSegmentSeparator = " | ";
 // Scale: [-]1.0 [+]1.1`, `03/14 | GitHub: behind`, `007/114`. The same shape
 // on BOTH walks. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
 // token and `[+]` before the now one, spelled here: the lane's labels lost
-// theirs to the strike (architect 2026-10-26; history_diff_label), and this
+// theirs to the strike (architect 2026-10-26; history_diff_flag_text), and this
 // line, a plain run, has no strike to carry the side. (The "bottom-left corner" of the mode's record read
 // bottom-RIGHT from the 2026-08-12 unification, TOP-RIGHT while the status
 // chain sat in the tab row, bottom-LEFT on the one-day status bar, and reads
@@ -3500,19 +3500,33 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const AppState::RedesignTooltip::Owner owner = app.redesign_tooltip.owner;
     if (owner.index < 0) return;
 
-    // THE THREE SURFACES (the encoding is at the field): a ROSTER owner reads
+    // THE FOUR SURFACES (the encoding is at the field): a ROSTER owner reads
     // the roster's constant/stateful hint table and the roster's painted rect;
     // a DIALOG owner reads the modal stash the painter itself publishes — its
     // composed hint and its button rect, both written by paint_modal_dialog,
     // which runs BEFORE this body precisely so the rect the box stands above
     // is the one this frame draws; a MARKER owner (2026-11-09) reads its cue's
-    // recomposed value and the cue's published face.
+    // recomposed value and the cue's published face; a HISTORY owner
+    // (2026-11-11) its item's recomposed words and the item's published face.
     const char* line1 = nullptr;
     const char* line2 = nullptr;
     GuiRect     btn{0, 0, 0, 0};
     // A MARKER OWNER'S ONE LINE, held here so line1 can point into it.
     std::string marker_value;
-    if (owner.surface == AppState::RedesignTooltip::Surface::Marker) {
+    // A HISTORY OWNER'S LINES, held likewise.
+    HistoryCueTooltipText history_text;
+    if (owner.surface == AppState::RedesignTooltip::Surface::History) {
+        // THE ITEM'S DIFF (architect 2026-11-11, session 106; the History
+        // owner at AppState::RedesignTooltip): the words through the one
+        // owner (history_cue_tooltip_text — the newer or only side's words
+        // in the name line, a changed item's older side's in the hint line),
+        // the face the item's in the live stash (history_cue_face).
+        history_text = history_cue_tooltip_text(app, owner.index);
+        if (history_text.line1.empty()) return;
+        line1 = history_text.line1.c_str();
+        if (!history_text.line2.empty()) line2 = history_text.line2.c_str();
+        btn   = history_cue_face(app, owner.index);   // the vertical seat
+    } else if (owner.surface == AppState::RedesignTooltip::Surface::Marker) {
         // THE CUE'S RESOLVED VALUE (architect 2026-11-09, session 100; the
         // Marker owner at AppState::RedesignTooltip): ONE LINE, the value
         // copy's payload verbatim, recomposed through the one owner
@@ -3642,10 +3656,13 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // left of the tooltip should align horizontally with the first char of
     // the marker") seats its TEXT ORIGIN, x + inset below, on the label's
     // pen as the cue pass drew it — marker_tooltip_box_rect, app_state.h,
-    // over the same rule; `btn` stays its vertical seat.
+    // over the same rule, and a history item's the same
+    // (history_tooltip_box_rect); `btn` stays its vertical seat.
     const GuiRect box =
         owner.surface == AppState::RedesignTooltip::Surface::Marker
             ? marker_tooltip_box_rect(app, owner.index, inset, w, h)
+        : owner.surface == AppState::RedesignTooltip::Surface::History
+            ? history_tooltip_box_rect(app, owner.index, inset, w, h)
             : tooltip_box_rect(app, btn, w, h);
     const int x = box.x;
     const int y = box.y;
@@ -5193,52 +5210,6 @@ void GuiPaintHandler::paint_marker_stem_heads(cairo_t* cr) {
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     for (const GuiRect& r : rs) paint_cell_rect(cr, r, palette().cue_outline);
     cairo_restore(cr);
-}
-
-// THE NUDGED PAIRS' RINGS (MarkerStemRun, render.h, owns the look;
-// architect 2026-10-10 → 2026-10-26, solid 2026-11-04): each `h`-view
-// nudged pair's ring, FOUR SOLID ONE-W `cue_outline` LINES — THE
-// PHASE-RESET LEAD-IN RING'S FORM EXACTLY (paint_phase_reset_overlay_ring,
-// the model): its two sides on the pair's two columns down the canvas's
-// whole height, and its top and bottom runs on the canvas's first and last
-// t rows from the left side's line's first column through the right side's
-// line's last, aliased integer rects clipped to the area (a side off the
-// area paints nothing there). Painted before the playhead's line and the
-// selection stems (paint_marker_stems), a selected pair's stem on either
-// cue standing on its side in the same color.
-// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): every pair's sides
-// and runs, one rects call.
-void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
-                                             const GuiRect& area) {
-    if (app.marker_stem_runs.empty()) return;
-    const int t      = waveform_line_px();
-    const int y_top  = area.y;
-    const int y_bot  = area.y + area.h - t;
-    const int clip_lo = area.x;
-    const int clip_hi = area.x + area.w;   // one past the area's last column
-    std::vector<GuiRect> rs;
-    rs.reserve(4 * app.marker_stem_runs.size());
-    for (const MarkerStemRun& run : app.marker_stem_runs) {
-        const int x0 = static_cast<int>(std::nearbyint(run.x0));
-        const int x1 = static_cast<int>(std::nearbyint(run.x1));
-        // From the left side's line's first column through the right side's
-        // line's last (each t wide, on its column by the line rule: the even
-        // line straddles its frame, render.h's waveform_line_first_col), cut
-        // to the area's columns.
-        const int lo = std::max(waveform_line_first_col(x0, t), clip_lo);
-        const int hi = std::min(waveform_line_first_col(x1, t) + t,
-                                clip_hi);   // exclusive
-        if (hi > lo) {
-            rs.push_back(GuiRect{lo, y_top, hi - lo, t});
-            rs.push_back(GuiRect{lo, y_bot, hi - lo, t});
-        }
-        for (const int col : {x0 - area.x, x1 - area.x}) {
-            const WaveformLineCols c = waveform_line_cols(area.w, col);
-            if (c.w > 0)
-                rs.push_back(GuiRect{area.x + c.x0, area.y, c.w, area.h});
-        }
-    }
-    sink.rects(rs, palette().cue_outline);
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -8374,7 +8345,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     if (app.flag_stash_staged) {
         std::swap(app.flag_hit_rects, app.staged_flag_hit_rects);
         std::swap(app.marker_stems, app.staged_marker_stems);
-        std::swap(app.marker_stem_runs, app.staged_marker_stem_runs);
         app.flag_stash_staged = false;
     }
 
@@ -8817,7 +8787,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      the bar, ~14:30).
         //   6. the CURSOR's CANVAS LINE (paint_playheads, solid, the
         //      palette's static `playhead_line` — the head is the ruler
-        //      pass's, step 9), the `h` view's nudged-pair rings under it.
+        //      pass's, step 9).
         //   7. the MARKER STEMS (waveform): the selection stems, over the
         //      cursor's line (2026-11-05).
         //   8. the SCANNER (waveform), solid.
@@ -8888,8 +8858,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // THE CANVAS PASSES ARE NOT PAINTED HERE: the frame's list carries
         // them, built once, whole, in this order (build_canvas_list) — the
         // plate, the center lines, the stereo divider, the lead-in ring, the
-        // nudged-pair rings, the cursor's line, the selection stems, the
-        // scanner, the zoom anchor.
+        // cursor's line, the selection stems, the scanner, the zoom anchor.
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
         // pixels (the view bar whole).
@@ -9025,7 +8994,6 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
     render_center_lines(sink, area);
     render_waveform_divider(sink, area);
     paint_phase_reset_overlay_ring(sink, area);
-    paint_marker_stem_runs(sink, area);
     paint_playheads(sink, area);
     paint_marker_stems(sink, area);
     paint_scanner(sink, area);

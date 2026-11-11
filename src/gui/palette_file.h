@@ -86,8 +86,9 @@
 //   cue              FFAD56  THE ENABLED MARKER'S FILL (architect
 //                            2026-11-05, his pick a2 of tmp/s42): the chip
 //                            of every enabled cue, selected or not, warp
-//                            and phase reset alike, both halves of the `h`
-//                            view's items (resolve_flag_face), the orange
+//                            and phase reset alike, and the `h` view's
+//                            added and changed items (resolve_flag_face),
+//                            the orange
 //                            of Live's start marker
 //                            (ViewCheckControlEnabledOn) — THE ACCENT: A
 //                            LIT KEY'S WHOLE FACE IS THIS ROLE TOO, read
@@ -98,9 +99,9 @@
 //                            one-W outline round every chip, THE SELECTION
 //                            STEM down the canvas (every selected marker,
 //                            architect 2026-11-05; enabled or disabled,
-//                            2026-11-11), the phase-reset
-//                            lead-in ring and the nudged pairs' ring runs
-//                            (render.h's THE STATES) (ControlContrastFrame)
+//                            2026-11-11) and the phase-reset
+//                            lead-in ring (render.h's THE STATES)
+//                            (ControlContrastFrame)
 //   inactive_cue     5D5D5D  THE DISABLED MARKER (architect 2026-11-02, the
 //                            color sweep, mock C3; the solid chip since
 //                            2026-11-05, "disabled marker gets dim label"):
@@ -108,9 +109,11 @@
 //                            303030 lane — ONE ROLE, no blend: a disabled
 //                            chip's fill (in the `cue_outline`, the stem
 //                            the selection's as on an enabled chip,
-//                            resolve_flag_face) and every INERT LABEL
-//                            — a disabled cue's segments and a tie
-//                            follower's cells — and its strike bar. "The
+//                            resolve_flag_face) — the `h` view's removed
+//                            items' too (2026-11-11) — and every INERT
+//                            LABEL — a disabled cue's segments, a tie
+//                            follower's cells and a removed history
+//                            item's label — and its strike bar. "The
 //                            arrow needs to be legible for me, but the text
 //                            doesn't … since it's disabled, it's inert"
 //                            (architect 2026-10-10): Live's grey shows the

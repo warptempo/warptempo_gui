@@ -16,8 +16,7 @@
 // chrome on the canvas, 2026-10-16, render.h's waveform_divider — over the
 // plate, so a plate from before a resize never crosses it, and under every
 // vertical line after it, each crossing it, 2026-11-02), the
-// phase-reset lead-in ring, the nudged pairs' runs,
-// the nudged pairs' rings, the cursor's line, the selection stems over it,
+// phase-reset lead-in ring, the cursor's line, the selection stems over it,
 // the scanner and the zoom
 // anchor's stem, in that order (build_canvas_list, paint_handler.cpp, after
 // on_redraw's paint-order block). Each but the plate is a solid converted

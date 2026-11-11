@@ -1315,16 +1315,16 @@ static CueSegmentBoxes cue_segment_boxes(const int (&w)[3],
     return b;
 }
 
-// THE FLAG'S SIDE: a live lane's cue, or one of the `h` view's ADDED and
-// REMOVED diff halves. No side colors a cue (architect 2026-10-26 ~15:30,
-// the invalid color retired): ADDED against REMOVED reads from THE STRIKE
-// alone — a removed half's label struck (resolve_flag_face's table). Nor
-// does the axis: WARP and PHASE RESET, co-equal, wear one cue, the axis
+// THE FLAG'S SIDE: a live lane's cue, or one of the `h` view's three kinds of
+// item — REMOVED, ADDED, CHANGED (HistoryDiffFlag, render.h; architect
+// 2026-11-11, session 106). The history's sides pick the chip's style and
+// the strike's meaning of their own (resolve_flag_face's history rows). The
+// axis colors nothing: WARP and PHASE RESET, co-equal, wear one cue, the axis
 // reading from the view the lane lists (the lane paints the active
 // column's markers alone, the Warp and Phase Reset views, and the `h` view
 // that column's half of the delta) and from the label (his one-label
 // rule), so the resolver takes no kind.
-enum class GuiFlagSide { Live, Added, Removed };
+enum class GuiFlagSide { Live, Added, Removed, Changed };
 
 // The resolved paint of ONE cue (the palette block's marker-lane paragraph,
 // render.h, owns the look): THE CHIP'S fill and outline (CueTrianglePass,
@@ -1347,15 +1347,17 @@ struct FlagFace {
 // the triangle playhead"; 2026-10-26 ~15:10–15:30, THE STRIKE: "It's very
 // odd having anything but red mean invalid. So I think what we should do is
 // have coincident markers be shown as a strike through, which is actually
-// effective because that's what happens to them. They become one"; "Two,
-// agree" — the history's removed half struck). THE TABLE, the ladder read
-// top to bottom, the first matching row wins ("stem" the publication of the
-// cue's stem entry, MarkerStem, painted wherever it is published):
-//   flag                     fill            outline       stem      label
-//   DISABLED (any kind)      inactive_cue    cue_outline   selected  inactive
-//   ENABLED                  cue             cue_outline   selected  text tone
-// — warp or phase reset, whatever the side (a live lane's cue or either
-// `h` half), the label struck as below in every row. EVERY ENABLED CHIP IS
+// effective because that's what happens to them. They become one").
+// THE TABLE ("stem" the publication of the cue's stem entry, MarkerStem,
+// painted wherever it is published; "label" the label's ink, the segment's
+// `inert` on the history rows):
+//   side      flag        fill          outline      stem      label      strike
+//   LIVE      DISABLED    inactive_cue  cue_outline  selected  inactive   `strike`
+//   LIVE      ENABLED     cue           cue_outline  selected  text tone  `strike`
+//   REMOVED   any         inactive_cue  cue_outline  selected  inactive   always
+//   ADDED     any         cue           cue_outline  selected  text tone  never
+//   CHANGED   any         cue           cue_outline  selected  text tone  `strike`
+// — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
 // THE `cue` FFAD56 in THE OUTLINE, Live's dark line 111111, selected or
 // not. EVERY SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
 // 2026-11-11, session 106: "disabled markers also get the dark stem, same as
@@ -1372,30 +1374,47 @@ struct FlagFace {
 // 2026-11-05: "only 1 playhead onscreen ever"): the focused member has no
 // paint of its own — every click and toggle lands the playhead on it
 // (land_playhead_on_marker) — and THE RESOLVER NEVER SEES THE PLAYHEAD.
-// THE STRIKE, whatever the row: a live cue in its column's red set (`red`,
-// warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
+// A LIVE CUE'S STRIKE: `strike` is its column's red set
+// (warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
 // coincident run, and on the warp column a label ref the render falls back
-// from and the definitions of a label two live definitions hold, 2026-10-29)
-// and the history's REMOVED half; an ADDED half never. An inert label's
-// text and its bar are the inactive label (CueSegment); the bar is part of the
-// text (show_cue_label).
+// from and the definitions of a label two live definitions hold, 2026-10-29).
+// THE HISTORY ROWS (architect 2026-11-11, session 106: "disabled style and
+// strike take on a different meaning in history — disabled means a marker
+// was removed, and strike means a text was changed. a removed flag always
+// has its text struck by definition"; "the diff should show as enabled"):
+// `disabled` is unread there — a REMOVED item wears the disabled style
+// struck, an ADDED item the enabled style plain, a CHANGED item the enabled
+// style struck exactly when its text changed (`strike`,
+// HistoryDiffFlag::text_changed); the stem the selection's as on the live
+// rows. An inert label's text and its bar are the inactive label
+// (CueSegment); the bar is part of the text (show_cue_label).
 // THE INERT LABEL (architect 2026-11-02, mock C3; the inert look's reason
 // 2026-10-10 ~12:20, "the arrow needs to be legible for me, but the text
 // doesn't … since it's disabled, it's inert"): the one constant
 // `inactive_cue` 5D5D5D (palette_file.h), the disabled chip's fill too.
-// Every INERT label — a disabled cue's segments and a tie follower's
-// cells — wears it, one look for inert cue text, selected or not. A
+// Every INERT label — a disabled cue's segments, a tie follower's cells and
+// a removed history item's label — wears it, one look for inert cue text,
+// selected or not. A
 // DISABLED STRUCK CUE — the red set counts disabled rows
 // (warp_red_flag_set_cached's (3)) — is the grey chip with its inactive
 // label struck. "Text tone" is materials.h's `text` (Default's B5B5B5), the words'
 // and the flags' one ink — every label on the lane's face with no fill,
 // selected or not.
-FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool red,
+FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
                            bool selected) {
     const GuiPalette& p = palette();
-    const bool struck = red || side == GuiFlagSide::Removed;
-    return FlagFace{disabled ? p.inactive_cue : p.cue, p.cue_outline, selected,
-                    struck};
+    switch (side) {
+        case GuiFlagSide::Live:
+            return FlagFace{disabled ? p.inactive_cue : p.cue, p.cue_outline,
+                            selected, strike};
+        case GuiFlagSide::Removed:
+            return FlagFace{p.inactive_cue, p.cue_outline, selected, true};
+        case GuiFlagSide::Added:
+            return FlagFace{p.cue, p.cue_outline, selected, false};
+        case GuiFlagSide::Changed:
+            return FlagFace{p.cue, p.cue_outline, selected, strike};
+    }
+    return FlagFace{p.cue, p.cue_outline, selected, strike};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
@@ -1456,15 +1475,10 @@ struct CueDraw {
     int                       index = -1;
     int                       col   = 0;
     FlagFace                  face{};
+    // Segments 1 and 2 are the marker's bound cells where they paint (the
+    // live lanes); a history item paints segment 0 alone (no bracket lives in
+    // a commit), so its label publishes no cell boundary.
     std::array<CueSegment, 3> seg{};
-    // Whether segments 1 and 2 are the marker's bound cells (the live lanes)
-    // or plain halves of one item (the history's same-frame pair, whose
-    // label publishes no cell boundary: no bracket lives in a commit).
-    bool                      segments_are_cells = true;
-    // WHICH CUE OF ITS `h`-VIEW DIFF FLAG this is (render_history_diff_flags,
-    // 2026-10-26): a nudged pair's two cues each their own half, published
-    // on the hit rect (FlagHitRect::diff_half); the live lanes leave it.
-    HistoryDiffHalf           half = HistoryDiffHalf::Removed;
 };
 
 // THE CUE PASS'S SCRATCH (2026-10-13, a cost cut that paints the same
@@ -1496,11 +1510,11 @@ static CuePassScratch g_cue_pass_scratch;
 // the chips LEFT TO RIGHT, each in its face's fill and outline
 // (resolve_flag_face, 2026-11-04); then the
 // publication — one FlagHitRect per cue (its label box as painted and its
-// chip, both clipped to the waveform's columns, and the cue's diff half),
+// chip, both clipped to the waveform's columns),
 // and one MarkerStem per cue whose face says `stem` — every SELECTED cue,
-// enabled or disabled — whose column is a waveform column (a selected nudged `h`
-// pair's two cues each their own; paint_marker_stems paints every entry,
-// architect 2026-11-05). `lane` is the
+// enabled or disabled, an `h` item one cue — whose column is a waveform
+// column (paint_marker_stems paints every entry, architect 2026-11-05).
+// `lane` is the
 // marker lane, `x0` / `w` the waveform's columns the pass is clipped to (the
 // caller set the clip). Cues arrive in store order and are ordered here by
 // column (stable).
@@ -1655,7 +1669,6 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         if (out_hit_rects) {
             FlagHitRect r;
             r.marker_index = c.index;
-            r.diff_half    = c.half;
             // The label's box as painted; each boundary its segment's box
             // start, collapsing onto the box's right edge where the segment
             // did not paint.
@@ -1671,11 +1684,10 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             r.w = label_on ? label.w : 0.0;
             r.h = label_on ? label.h : 0.0;
             const double right = static_cast<double>(b);
-            const bool cells = c.segments_are_cells;
-            r.iter_lower_boundary_x = cells && c.seg[1].present
+            r.iter_lower_boundary_x = c.seg[1].present
                                           ? static_cast<double>(c.seg[1].x0)
                                           : right;
-            r.iter_upper_boundary_x = cells && c.seg[2].present
+            r.iter_upper_boundary_x = c.seg[2].present
                                           ? static_cast<double>(c.seg[2].x0)
                                           : right;
             // The label's text origin: the first painted segment's pen x,
@@ -1994,15 +2006,12 @@ void render_history_diff_flags(
         const std::set<int>& selected,
         std::vector<FlagHitRect>* out_hit_rects,
         std::vector<MarkerStem>* out_stems,
-        std::vector<MarkerStemRun>* out_runs,
         const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     // The same clear-first contract the two marker painters carry: this pass is
     // the SOLE producer of both stashes while the history mode stands, so a
-    // frame that paints nothing must leave nothing claimable behind — and of
-    // the runs (MarkerStemRun) always.
+    // frame that paints nothing must leave nothing claimable behind.
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
-    if (out_runs)      out_runs->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
 
@@ -2022,7 +2031,7 @@ void render_history_diff_flags(
     // from the marker lane's own worst case, because THESE LABELS ARE NOT CUT.
     // The live lane truncates because a marker label is free text the user types
     // and a runaway one would swamp its neighbours; a diff flag's label is the
-    // SIDECAR'S OWN TOKEN (history_diff_label), and cutting it would throw
+    // SIDECAR'S OWN TOKEN (history_diff_flag_text), and cutting it would throw
     // away the one thing the flag exists to show — a `chorus=1.05` cut at six
     // bytes would read `chorus...`, which names the label and not the value.
     // So the text prints whole and the bound follows
@@ -2031,51 +2040,15 @@ void render_history_diff_flags(
     // an over-estimate is exactly what a cull bound must be.
     double widest_bytes = 0.0;
     for (const HistoryDiffFlag& f : flags) {
-        const double n = static_cast<double>(f.removed_text.size() +
-                                             f.added_text.size());
+        const double n = static_cast<double>(f.label().size());
         if (n > widest_bytes) widest_bytes = n;
     }
     const double cull_width_px =
         widest_bytes * gui_font_advance_bound_px(font) +
-        // The label's lead, both segments' pads and the gap between a
-        // same-frame pair's halves. A bound must never under-state, and the
-        // widest flag in a commit may be a pair.
-        static_cast<double>(cue_fill_lead_px() + 4 * cue_fill_pad_px() +
-                            cue_segment_gap_px());
+        // The label's lead and its segment's two pads. A bound must never
+        // under-state.
+        static_cast<double>(cue_fill_lead_px() + 2 * cue_fill_pad_px());
 
-    // THE NUDGED PAIR'S COLUMNS. The iterator maps a flag's time_frame — the
-    // LEFT cue's (HistoryDiffFlag) — and the pair's RIGHT cue is mapped
-    // here by the iterator's own two steps (frame_to_paint_sample, then
-    // displayed_column_at over the same samples-per-pixel), so both cues
-    // land where a live marker at either frame would. THE CULL WIDENS BY THE
-    // WIDEST PAIR'S SPAN: the iterator culls on the left frame, and a pair
-    // whose left cue is far off the left edge may still stand its right
-    // cue and its ring in view.
-    const double spp =
-        static_cast<double>(viewport_end_sample - viewport_start_sample) /
-        static_cast<double>(waveform_width);
-    const auto paint_col = [&](int64_t frame) {
-        return lanes.columns_x +
-               displayed_column_at(
-                   frame_to_paint_sample(static_cast<double>(frame),
-                                         warp_frame_map),
-                   static_cast<double>(viewport_start_sample), spp,
-                   viewport_lattice_origin);
-    };
-    double widest_pair_px = 0.0;
-    if (spp > 0.0) {
-        for (const HistoryDiffFlag& f : flags) {
-            if (!f.nudged()) continue;
-            const double span =
-                std::fabs(frame_to_paint_sample(
-                              static_cast<double>(f.then_frame),
-                              warp_frame_map) -
-                          frame_to_paint_sample(
-                              static_cast<double>(f.now_frame),
-                              warp_frame_map)) / spp + 1.0;
-            if (span > widest_pair_px) widest_pair_px = span;
-        }
-    }
     // The pass's kept scratch (CuePassScratch), emptied for this pass.
     std::vector<CueDraw>& cues = g_cue_pass_scratch.cues;
     cues.clear();
@@ -2089,160 +2062,47 @@ void render_history_diff_flags(
         // marker drag can be in flight while this pass runs — and a diff flag is
         // not a marker in any store, so nothing could index it anyway.
         /*drag_overlay=*/nullptr,
-        cull_width_px + widest_pair_px,
+        cull_width_px,
         [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
-            // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
-            // either SELECTS the flag (the declaration says why), and BOTH
-            // HALVES of a changed pair take the selected look together — a
-            // double flag is one item, so it shows as one (architect
-            // 2026-11-04; resolve_flag_face's table): each cue of a selected
-            // item publishes its stem entry at its own column (MarkerStem,
-            // architect 2026-11-05).
-            const bool flag_selected =
-                (i == focus_index) || (selected.count(i) != 0);
-            const auto face_for = [&](GuiFlagSide side, bool disabled) {
-                return resolve_flag_face(side, disabled, /*red=*/false,
-                                         flag_selected);
-            };
-            // A flag with neither half is not constructible by the resolver
-            // above; the guard keeps a degenerate one from publishing a
-            // zero-width claim.
+            // A flag with neither half is not constructible by the builder
+            // (rebuild_history_diff_flags); the guard keeps a degenerate one
+            // from publishing a zero-width claim.
             if (!f.removed && !f.added) return;
-
-            // THE DISABLED AXIS, ONE EFFECTIVE BIT PER COMMIT SIDE (architect
-            // 2026-08-22). Each half asks its OWN side's EFFECTIVE verdict —
-            // the removed half `then_effective_disabled`, the added half
-            // `now_effective_disabled`, each resolved within its own side's
-            // full warp set at the delta through the one participation owner
-            // (the line's own flag since 2026-10-29; phase resets fill theirs
-            // verbatim) — so the DIM is the live lane's truth per commit,
-            // while the '#' in the LABEL text stays the line's verbatim local
-            // byte (the text/face split at HistoryDiffFlag). A disable TOGGLE paints
-            // one inactive half beside one live one and the direction of the
-            // toggle reads straight off the label. Each bit is meaningful
-            // exactly when its half is painted, so a bit resting at false on
-            // a half that does not exist is never consulted.
-            const bool removed_disabled = f.then_effective_disabled;
-            const bool added_disabled   = f.now_effective_disabled;
-
-            // ONE HALF'S SEGMENT: its text, its side and its disabled bit.
-            struct Half {
-                const std::string* text;
-                GuiFlagSide        side;
-                bool               disabled;
-            };
-            const Half removed_half{&f.removed_text, GuiFlagSide::Removed,
-                                    removed_disabled};
-            const Half added_half{&f.added_text, GuiFlagSide::Added,
-                                  added_disabled};
-            // ONE CUE at `col`, the flag's `half` for its hit rect, wearing
-            // `face`, its label the given halves as segments in their order —
-            // the box layout the live lane's one (cue_segment_boxes); every
-            // segment as at rest whatever the selection (render.h's SELECTED
-            // row), inert on its own half's bit, STRUCK on its own half's
-            // side (resolve_flag_face's table: the removed half's label
-            // alone).
-            const auto push_cue = [&](int col, HistoryDiffHalf half,
-                                      const FlagFace& face, const Half* halves,
-                                      int count) {
-                CueDraw c;
-                c.index = i;
-                c.col   = col;
-                c.face  = face;
-                c.half  = half;
-                c.segments_are_cells = false;
-                CueRun runs[2];
-                bool present[3] = {false, false, false};
-                int  widths[3]  = {0, 0, 0};
-                for (int s = 0; s < count; ++s) {
-                    runs[s] = text_shape::memoized_run(font, *halves[s].text);
-                    present[s] = true;
-                    widths[s] =
-                        static_cast<int>(std::nearbyint(runs[s]->width_px));
-                }
-                const CueSegmentBoxes boxes = cue_segment_boxes(widths, present);
-                for (int s = 0; s < count; ++s) {
-                    CueSegment& seg = c.seg[static_cast<std::size_t>(s)];
-                    seg.present  = true;
-                    seg.run      = runs[s];
-                    seg.x0       = col + boxes.x0[s];
-                    seg.x1       = col + boxes.x1[s];
-                    seg.inert    = halves[s].disabled;
-                    seg.struck   = face_for(halves[s].side,
-                                            /*disabled=*/false)
-                                       .struck;
-                }
-                cues.push_back(std::move(c));
-            };
-
-            const int col_left = static_cast<int>(std::nearbyint(left_x));
-            // A SINGLE FLAG through the live lane's one resolver
-            // (resolve_flag_face) by its half's side — the plain cue, its
-            // label struck on a removed line; THE CHIP READS THE DISABLED
-            // AXIS (architect 2026-08-22): a single half whose one side is
-            // disabled wears the grey chip, and while its item is selected it
-            // publishes its stem entry as an enabled half does — the live
-            // lane's rule (architect 2026-11-11, session 106).
-            if (!f.added) {
-                push_cue(col_left, HistoryDiffHalf::Removed,
-                         face_for(GuiFlagSide::Removed, removed_disabled),
-                         &removed_half, 1);
-                return;
-            }
-            if (!f.removed) {
-                push_cue(col_left, HistoryDiffHalf::Added,
-                         face_for(GuiFlagSide::Added, added_disabled),
-                         &added_half, 1);
-                return;
-            }
-            // A CHANGED PAIR ALWAYS KEEPS ITS LIVE CHIP whichever halves are
-            // disabled (2026-08-22): the pair is a live EDIT being displayed,
-            // not a line in a switched-off state; the label's segments carry
-            // each half's disabled bit.
-            // A SAME-FRAME PAIR IS ONE CUE (architect 2026-10-26, "Three"):
-            // its two halves as two segments, the removed (struck) first and
-            // then the added, one chip, one stem entry, no ring.
-            if (!f.nudged()) {
-                const Half both[2] = {removed_half, added_half};
-                push_cue(col_left, HistoryDiffHalf::Removed,
-                         face_for(GuiFlagSide::Added, /*disabled=*/false),
-                         both, 2);
-                return;
-            }
-            // A NUDGED PAIR IS TWO CUES JOINED BY THE RING (architect
-            // 2026-10-26 ~15:30: "both markers represented with their stems,
-            // because one of them will have the strike through and that'll
-            // be obvious which one is removed, and they should be joined by
-            // the overlay ring"): the removed cue at its own then_frame's
-            // column, its label struck, the added at its now_frame's, plain —
-            // each the plain cue, its own chip and label box. The
-            // iterator's column is the LEFT cue's (time_frame, the smaller
-            // frame); the other's is mapped here by the iterator's own two
-            // steps (paint_col above), so each stands where a live marker at
-            // its frame would. Both cues take the item's selection, each
-            // its own stem while it is selected (architect 2026-11-05).
-            const bool added_left = f.added_left();
-            const int then_col = added_left ? paint_col(f.then_frame) : col_left;
-            const int now_col  = added_left ? col_left : paint_col(f.now_frame);
-            push_cue(then_col, HistoryDiffHalf::Removed,
-                     face_for(GuiFlagSide::Added, /*disabled=*/false),
-                     &removed_half, 1);
-            push_cue(now_col, HistoryDiffHalf::Added,
-                     face_for(GuiFlagSide::Added, /*disabled=*/false),
-                     &added_half, 1);
-            // THE RING between the two cues' columns, its four sides
-            // (MarkerStemRun, render.h): published whenever any of it reaches
-            // the waveform's columns and the cues stand on two columns, the
-            // painter clipping it there.
-            const int col_lo = std::min(then_col, now_col);
-            const int col_hi = std::max(then_col, now_col);
-            if (out_runs && col_hi > col_lo &&
-                col_hi >= lanes.columns_x &&
-                col_lo < lanes.columns_x + waveform_width)
-                out_runs->push_back(MarkerStemRun{
-                    i, static_cast<double>(col_lo),
-                    static_cast<double>(col_hi)});
+            // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
+            // either SELECTS the item (the declaration says why), and a
+            // selected item publishes its stem entry at its one column
+            // (resolve_flag_face's table, the live lane's rule).
+            const bool selected_item =
+                (i == focus_index) || (selected.count(i) != 0);
+            // THE ITEM'S STYLE (architect 2026-11-11, session 106;
+            // resolve_flag_face's history rows): removed, added or changed —
+            // never its lines' disable bits.
+            const GuiFlagSide side = !f.added   ? GuiFlagSide::Removed
+                                     : !f.removed ? GuiFlagSide::Added
+                                                  : GuiFlagSide::Changed;
+            // ONE CUE, ONE LABEL (HistoryDiffFlag::label): one segment, the
+            // live lane's box layout (cue_segment_boxes), INERT on a removed
+            // item (the disabled style's dim label), STRUCK as the face says.
+            CueDraw c;
+            c.index = i;
+            c.col   = static_cast<int>(std::nearbyint(left_x));
+            c.face  = resolve_flag_face(side, /*disabled=*/false,
+                                        /*strike=*/f.text_changed(),
+                                        selected_item);
+            const CueRun run = text_shape::memoized_run(font, f.label());
+            const int  widths[3]  = {
+                static_cast<int>(std::nearbyint(run->width_px)), 0, 0};
+            const bool present[3] = {true, false, false};
+            const CueSegmentBoxes boxes = cue_segment_boxes(widths, present);
+            CueSegment& seg = c.seg[0];
+            seg.present = true;
+            seg.run     = run;
+            seg.x0      = c.col + boxes.x0[0];
+            seg.x1      = c.col + boxes.x1[0];
+            seg.inert   = (side == GuiFlagSide::Removed);
+            seg.struck  = c.face.struck;
+            cues.push_back(std::move(c));
         });
 
     paint_cues(cr, lane, lanes.columns_x, waveform_width, cues, out_hit_rects,

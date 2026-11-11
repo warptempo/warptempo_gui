@@ -1661,8 +1661,8 @@ bool history_view_hides_button(RedesignButton b) {
 // seat_playhead_on_source_frame, whose domain-shaped tail
 // (seat_playhead_on_domain_frame) is the write a caller holding a DISPLAYED
 // frame that belongs to NO store entry — the `h` history mode's diff flags,
-// whose removed lines exist in no store at all and whose nudged pair lands
-// between its two mapped stems — seats through instead of a second copy of
+// whose removed lines exist in no store at all — seats through instead of a
+// second copy of
 // it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
 // The shared write, defined below the two entry points that share it.
@@ -6808,9 +6808,10 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     //
     // A STANDING DIALOG'S WAIT IS THE DIALOG'S (2026-08-13, when the modal's
     // buttons took tooltips): this walk answers for the ROSTER's index space
-    // and, since 2026-11-09, the marker lane's cues only, IN EVERY STATE, so
+    // and, since 2026-11-09, the marker lane's cues only (the `h` view's
+    // items since 2026-11-11), IN EVERY STATE, so
     // with neither under the pointer it hands "none" to the writer (a soft
-    // end for a standing ROSTER or MARKER box),
+    // end for a standing ROSTER, MARKER or HISTORY box),
     // HARD-ENDS a DIALOG owner — the wait's or the standing box's — whose
     // surface is gone or replaced, and leaves a DIALOG wait whose surface
     // stands and still wears the stash that armed it: the modal's own walk
@@ -6886,18 +6887,35 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // copy would act on it (marker_tooltip_value non-empty), the rect
         // handed to the chain its face. Under the same gates as a key: no
         // veil, no card over it, the no-wait rule (a cue's under every
-        // overlay, the lane covered there); the `h` view and the P
-        // column answer no cue through the two owners. Asked only while the
-        // TIPS lamp is lit — dark, the writer holds the wait clear anyway, so
-        // the lane's hit and the value are not composed for nothing.
+        // overlay, the lane covered there); the P column answers no live
+        // cue through the two owners. IN THE `h` VIEW THE ITEM UNDER THE PEN
+        // IS THE HISTORY OWNER (architect 2026-11-11, session 106: TIPS shows
+        // the diff; history_cue_hit, history_cue_tooltip_text — every item,
+        // either column), the live owners answering nothing there. Asked
+        // only while the TIPS lamp is lit — dark, the writer holds the wait
+        // clear anyway, so the lane's hit and the words are not composed for
+        // nothing.
         if (app.show_tooltips && !modal_veil && !under_card &&
             !cue_wait_refused) {
             GuiRect face{0, 0, 0, 0};
-            const int cue = marker_cue_hit(app, mx, my, &face);
-            if (cue >= 0 && !marker_tooltip_value(app, audio, cue).empty()) {
-                note_tooltip_hover(
-                    {AppState::RedesignTooltip::Surface::Marker, cue}, face);
-                return;
+            if (app.history_mode.active) {
+                const int item = history_cue_hit(app, mx, my, &face);
+                if (item >= 0 &&
+                    !history_cue_tooltip_text(app, item).line1.empty()) {
+                    note_tooltip_hover(
+                        {AppState::RedesignTooltip::Surface::History, item},
+                        face);
+                    return;
+                }
+            } else {
+                const int cue = marker_cue_hit(app, mx, my, &face);
+                if (cue >= 0 &&
+                    !marker_tooltip_value(app, audio, cue).empty()) {
+                    note_tooltip_hover(
+                        {AppState::RedesignTooltip::Surface::Marker, cue},
+                        face);
+                    return;
+                }
             }
         }
         note_tooltip_hover(AppState::RedesignTooltip::Owner{},
@@ -7774,10 +7792,8 @@ bool GuiInputHandler::handle_history_mode_press(
                 // box claims the press whole — so its identity is certain and
                 // the one-day lift deferral of 2026-08-15 is inverted): the
                 // toggle, the focus move, the land and the region clear run
-                // HERE, on the live hit, on the cue it hit (a nudged pair's
-                // two each their own, 2026-10-26).
-                select_history_diff_flags_modified(
-                    hit, hit_test_history_diff_half(app, x, y));
+                // HERE, on the live hit.
+                select_history_diff_flags_modified(hit);
             }
         }
         return true;
@@ -7857,9 +7873,8 @@ bool GuiInputHandler::handle_history_mode_press(
         // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
         // painter's stash holds the diff flags' rects, published by the same
         // pass that built app.history_mode.flags, so the index it returns is an
-        // index into that list — a same-frame pair claiming as the one rect it
-        // is painted as, a nudged pair's two cues each the pair's index with
-        // its own half (hit_test_history_diff_half, read beside it below). A
+        // index into that list — every item claiming as the one rect it is
+        // painted as (one item, one cue, 2026-11-11). A
         // cold stash answers -1, which is the
         // empty-stretch answer and is correct: nothing is clickable that is not
         // drawn. A FLAG runs the focus click AT THE PRESS (2026-08-17, like
@@ -7892,11 +7907,10 @@ bool GuiInputHandler::handle_history_mode_press(
             // here. THE EMPTY-LANE STRETCH IS UNTOUCHED, the lamp governing
             // FLAG presses alone as it does on the live lane
             // (AppState::add_to_selection's scope rule).
-            const HistoryDiffHalf half = hit_test_history_diff_half(app, x, y);
             if (app.add_to_selection)
-                select_history_diff_flags_modified(hit, half);
+                select_history_diff_flags_modified(hit);
             else
-                focus_history_diff_flag(hit, half);
+                focus_history_diff_flag(hit);
         } else {
             arm_placement_press(x, y, /*history=*/true,
                                 /*seed_empty_lane=*/false);
@@ -7953,7 +7967,7 @@ bool GuiInputHandler::handle_history_mode_press(
 // 2026-09-22.)
 // The rest of the minimalism STANDS: no store selection, no live focus, no
 // auto-select, no playback stop.
-void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
+void GuiInputHandler::focus_history_diff_flag(int hit) {
     const int was = app.history_mode.focus;
     const bool had_selection = !app.history_mode.selection.empty();
     // THROUGH THE ONE PAIR CLEARER (2026-08-06, closing the one route that
@@ -7963,8 +7977,7 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
     // unread — the damage decision below is finer than "anything stood".
     clear_history_mode_focus(app.history_mode);
     if (hit >= 0 && hit < static_cast<int>(app.history_mode.flags.size())) {
-        app.history_mode.focus      = hit;
-        app.history_mode.focus_half = half;
+        app.history_mode.focus = hit;
     }
     // THE STEMS IN THIS EVENT (2026-11-05, paint_marker_stems' ONE-STATE
     // RULE): the mode's focus and selection are the diff lane's selected
@@ -7973,24 +7986,20 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
     // (Viewport::refresh_flag_cache, fingerprint-guarded).
     viewport.refresh_flag_cache();
     if (app.history_mode.focus >= 0) {
-        // THE CUE THE PRESS HIT is the landing (a nudged pair's two cues each
-        // their own, 2026-10-26).
+        // THE ITEM THE PRESS HIT is the landing, at its one frame.
         land_playhead_on_domain_frame(
             app, audio, viewport,
             history_diff_flag_landing_domain_frame(
                 app, audio,
                 app.history_mode.flags[
-                    static_cast<std::size_t>(app.history_mode.focus)],
-                app.history_mode.focus_half));
+                    static_cast<std::size_t>(app.history_mode.focus)]));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
     // (the selected look moves — the stems, the chips keeping their fill,
     // render.h's THE STATES; the columns stay put), and none when it
     // did not — a re-click on the focused flag re-lands a playhead that is
-    // already there, and the land owner is itself idempotent; a press on a
-    // nudged pair's other cue moves focus_half alone, which paints nothing
-    // (both cues wear the item's look, 2026-11-04) — its landing moves the
-    // playhead, whose own damage repaints it. A DROPPED SELECTION is that
+    // already there, and the land owner is itself idempotent. A DROPPED
+    // SELECTION is that
     // same stem change over more flags, so it damages too.
     if (was != app.history_mode.focus || had_selection) viewport.invalidate_all();
 }
@@ -8027,8 +8036,7 @@ void GuiInputHandler::focus_history_diff_flag(int hit, HistoryDiffHalf half) {
 //
 // DAMAGE IS THE FOCUS CLICK'S: full-window, unconditional here, because the
 // toggle always flips the clicked flag's face.
-void GuiInputHandler::select_history_diff_flags_modified(int hit,
-                                                         HistoryDiffHalf half) {
+void GuiInputHandler::select_history_diff_flags_modified(int hit) {
     const int n = static_cast<int>(app.history_mode.flags.size());
     if (hit < 0 || hit >= n) return;
     std::set<int>& sel = app.history_mode.selection;
@@ -8037,8 +8045,7 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit,
         if (it != sel.end()) sel.erase(it);
         else                 sel.insert(hit);
     }
-    app.history_mode.focus      = hit;
-    app.history_mode.focus_half = half;
+    app.history_mode.focus = hit;
     // THE STEMS IN THIS EVENT (2026-11-05, paint_marker_stems' ONE-STATE
     // RULE): the mode's focus and selection are the diff lane's selected
     // look, its stems among it, so the flag cache is rebuilt here, before the
@@ -8048,8 +8055,7 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit,
     land_playhead_on_domain_frame(
         app, audio, viewport,
         history_diff_flag_landing_domain_frame(
-            app, audio, app.history_mode.flags[static_cast<std::size_t>(hit)],
-            half));
+            app, audio, app.history_mode.flags[static_cast<std::size_t>(hit)]));
     viewport.invalidate_all();
 }
 

@@ -781,7 +781,8 @@ GuiRect tooltip_box_rect(const AppState& a, const GuiRect& face, int w,
 
 // The owner's painted face, read as the painter reads it (the stash's button
 // for a dialog owner, the roster face the show chose for a roster owner, the
-// cue's face in the live flag stash for a marker owner, marker_cue_face) —
+// cue's face in the live flag stash for a marker owner, marker_cue_face, and
+// the item's for a history owner, history_cue_face) —
 // without the painter's stash-session and value refusals, which only ever
 // empty a box, so the damage stays the wider of the two.
 static GuiRect tooltip_owner_face(const AppState& a) {
@@ -789,6 +790,8 @@ static GuiRect tooltip_owner_face(const AppState& a) {
     const AppState::RedesignTooltip::Owner& o = t.owner;
     if (o.surface == AppState::RedesignTooltip::Surface::Marker)
         return marker_cue_face(a, o.index);
+    if (o.surface == AppState::RedesignTooltip::Surface::History)
+        return history_cue_face(a, o.index);
     if (o.surface == AppState::RedesignTooltip::Surface::Dialog) {
         if (a.modal_dialog.valid && o.index >= 0 &&
             o.index < static_cast<int>(a.modal_dialog.buttons.size()))
@@ -2754,6 +2757,26 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 if (!live.empty() &&
                     (app.redesign_tooltip.painted_line1 != live ||
                      !app.redesign_tooltip.painted_line2.empty())) {
+                    viewport.invalidate_rect(app.redesign_tooltip.rect);
+                    viewport.invalidate_rect(tooltip_damage_band(app));
+                }
+            }
+            // A STANDING HISTORY ITEM'S BOX, the same words test (architect
+            // 2026-11-11, session 106; the History owner at AppState::
+            // RedesignTooltip): its one or two lines recomposed off the
+            // painted list (history_cue_tooltip_text) and held against the
+            // painted pair — a step or a switch that rebuilt the list under
+            // a resting pen changes them — the same two damages on a drift;
+            // an empty live line 1 owes nothing here, the walk's next pass
+            // ending the box.
+            if (app.redesign_tooltip.visible &&
+                app.redesign_tooltip.owner.surface ==
+                    AppState::RedesignTooltip::Surface::History) {
+                const HistoryCueTooltipText live = history_cue_tooltip_text(
+                    app, app.redesign_tooltip.owner.index);
+                if (!live.line1.empty() &&
+                    (app.redesign_tooltip.painted_line1 != live.line1 ||
+                     app.redesign_tooltip.painted_line2 != live.line2)) {
                     viewport.invalidate_rect(app.redesign_tooltip.rect);
                     viewport.invalidate_rect(tooltip_damage_band(app));
                 }

@@ -501,8 +501,8 @@ uint64_t palette_generation();
 // each frame — the chrome's flat ground, keys and words, the canvas, its
 // grid and its center lines (render_canvas), the
 // selection stems (paint_marker_stems), the playhead's head and line,
-// the open flag editor (render_flag_editor_box), the lead-in ring and the
-// `h` view's nudged-pair rings, the zoom anchor's stem and the scanner.
+// the open flag editor (render_flag_editor_box), the lead-in ring, the zoom
+// anchor's stem and the scanner.
 void install_true_colors(bool on);
 
 // -- THE CANVAS COLUMN: THE VIEW BAR, THE RULER, THE PLAYHEAD -------------------
@@ -699,10 +699,9 @@ void install_true_colors(bool on);
 //
 // THE LABEL'S SEGMENTS: the marker's payload label, then — while grid
 // iterations paint them — its LOWER and UPPER bound cells, each a segment of
-// the same label standing the segment gap past the one before it (the
-// history's same-frame pair likewise: its removed half, struck, then its
-// added half), every segment's text the label face on the lane's
-// baseline.
+// the same label standing the segment gap past the one before it (a
+// history item paints the payload segment alone, its one label, 2026-11-11),
+// every segment's text the label face on the lane's baseline.
 //
 // THE OVERLAP RULE: LATER WINS BY OCCLUSION, NEVER BY CUTTING (architect
 // 2026-10-09, settled on five overlap captures; 2026-10-10
@@ -748,15 +747,17 @@ void install_true_colors(bool on);
 //             small to click"): the box is geometry, not paint. THE EDITOR
 //             is where the selected pair's fill appears: it opens with the
 //             whole text selected in the selection pair inside its field
-//             (EDITING, below). The history's changed pair, one item, takes
-//             the selected look on both halves, each cue its own stem
-//             (render_history_diff_flags);
+//             (EDITING, below). A history item is one cue and stands one
+//             stem the same way (render_history_diff_flags);
 //   STRUCK    the red-flag class (warp_red_flag_set_cached and its
 //             phase-reset twin — the coincident run, a warp label ref
 //             the render falls back from, and the definitions of a label
-//             two live definitions hold, 2026-10-29) and the history's
-//             REMOVED half: its label STRUCK — the bar part of the text, in
-//             its ink, in every look (the inactive label's too);
+//             two live definitions hold, 2026-10-29): its label STRUCK —
+//             the bar part of the text, in its ink, in every look (the
+//             inactive label's too). IN THE HISTORY VIEW THE STRIKE MEANS
+//             THE TEXT CHANGED and THE DISABLED STYLE MEANS REMOVED
+//             (architect 2026-11-11, session 106; render_history_diff_flags
+//             and resolve_flag_face's history rows own them);
 //   DISABLED  A SOLID GREY CHIP (architect 2026-11-05, "disabled marker
 //             gets dim label"; Live's inactive marker's grey, mock C3,
 //             2026-11-02; the inert look's reason 2026-10-10 ~12:20, "the
@@ -823,19 +824,17 @@ void install_true_colors(bool on);
 // (text_editor::refuse), so the first keystroke replaces it, and the
 // refusing owner's CARD says why. No glyph marks it.
 //
-// THE HISTORY VIEW'S DIFF FLAGS are cues of their own two kinds (architect
-// 2026-10-04; THE STRIKE 2026-10-26 ~15:30, "Two, agree"): both halves THE
-// PLAIN CUE — the chip of the live lane's table — a REMOVED line's label
-// STRUCK and an ADDED line's plain, the label
-// the line's own text with no sign (history_diff_label, paint_handler.h; the
-// brackets `[+]` / `[-]` of 2026-08-05 retired the same day: "those are
-// always hard to see anyways at the font size. A strike through is easier to
-// see"). A same-frame changed pair is one cue, its label the two halves as
-// two segments; a nudged pair two cues joined by the ring
-// (render_history_diff_flags owns the pair). The view's focus or selection
-// gives the whole item the live lane's SELECTED row — both halves' chips
-// the `cue` fill, each cue its own stem, the labels as at rest
-// (render_history_diff_flags).
+// THE HISTORY VIEW'S DIFF FLAGS are cues of their own three kinds, ONE CUE AN
+// ITEM (architect 2026-11-11, session 106; HistoryDiffFlag, render_history_-
+// diff_flags own the rule): a REMOVED item in the disabled style, its label
+// struck; an ADDED item in the enabled style, plain; a CHANGED item in the
+// enabled style, its label the newer text, struck when the text changed —
+// the label the flag text with no sign and no '#' (history_diff_flag_text,
+// paint_handler.h; the brackets `[+]` / `[-]` of 2026-08-05 retired
+// 2026-10-26: "those are always hard to see anyways at the font size. A
+// strike through is easier to see"). The view's focus or selection gives the
+// item the live lane's SELECTED row — its stem, its chip and label as at
+// rest.
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
 //
@@ -877,7 +876,7 @@ void install_true_colors(bool on);
 // two inks alone); then THE STEREO DIVIDER'S ROW between the two
 // wells (architect 2026-10-16, chrome on the canvas, waveform_divider;
 // render_waveform_divider, over the plate so a plate from before a resize
-// never crosses them); then the lead-in ring, the nudged pairs' rings, the
+// never crosses them); then the lead-in ring, the
 // playhead's line, the selection stems over it, the scanner and the zoom
 // anchor (build_canvas_list's order). THE PICTURE IS ONE THING — the
 // canvas, the grid, the ink if any, the center lines — SO THE CENTER LINES
@@ -1575,7 +1574,7 @@ inline int logo_lane_h_px() {
 // flag editor's carets (paint_modal_dialog, render.cpp's flag editor) — AND
 // EVERY LINE ON THE CANVAS, waveform_line_px below being this one (the
 // grid, the center lines, the stems, the cursor, the scanner, the anchor,
-// the lead-in ring, the nudged pairs' runs, the ruler's ticks; the lit
+// the lead-in ring, the ruler's ticks; the lit
 // core an area of the plate's, render.h's THE CORE). The
 // ground between two keys is its own length of the same number
 // (key_gap_px, the case block below). Everything else keeps scaled_px,
@@ -2399,8 +2398,7 @@ inline int scrub_channel_above_px() {
 // line since 2026-11-04) — the scanner and the resting cursor
 // (render_playhead), the selection stems (paint_marker_stems), the
 // zoom anchor's stem (render_strip_anchor_stem), the phase-reset lead-in
-// ring's four sides (paint_phase_reset_overlay_ring), the nudged pairs'
-// rings (paint_marker_stem_runs), the canvas's GRID
+// ring's four sides (paint_phase_reset_overlay_ring), the canvas's GRID
 // AND CENTER LINES (render_canvas, render_center_lines: a t-thick line
 // keeping its top row on its row, canvas_hline: the horizontal's deliberate
 // asymmetry, recorded there) and THE STEREO DIVIDER (chrome
@@ -2497,9 +2495,8 @@ static_assert(kWaveformSubcells % 4 == 0,
 // waveform_line_px's block, architect 2026-11-06: the frame is the boundary
 // at column col's left edge, so an even line takes the column left of it
 // and col itself; an odd line is centered on col). The one spelling of the
-// rule: waveform_line_cols below, and the two rings' runs, which span from a
-// side's first column (paint_phase_reset_overlay_ring,
-// paint_marker_stem_runs).
+// rule: waveform_line_cols below, and the phase-reset lead-in ring's runs,
+// which span from a side's first column (paint_phase_reset_overlay_ring).
 inline int waveform_line_first_col(int col, int t = waveform_line_px()) {
     return col - t / 2;
 }
@@ -2933,20 +2930,10 @@ inline int level_travel_px() {
 // flag_hit_rect_contains below; the two boundaries are the label's
 // segments' box edges.
 //
-// THE `h` VIEW'S RECTS NAME THEIR CUE'S HALF too (`diff_half`, architect
-// 2026-10-26: "every marker gets a tab"): a nudged pair paints two cues and
-// publishes two rects, both naming the flag's index, each its own half, so
-// a click focuses the flag on the cue it hit (HistoryMode::focus_half;
-// hit_test_history_diff_half, app_state.h). A single flag's rect names its
-// one half, a same-frame pair's the removed (one cue, one landing); the live
-// lanes leave the default, read by nothing.
-// WHICH CUE OF AN `h`-VIEW DIFF FLAG (HistoryDiffFlag below): the removed
-// line's, at then_frame, or the added line's, at now_frame. Two cues exist
-// only on a nudged pair; on every other flag the one cue stands for both.
-enum class HistoryDiffHalf : uint8_t { Removed, Added };
+// THE `h` VIEW'S RECTS are one per item (architect 2026-11-11, session 106:
+// one item, one cue), `marker_index` the index into history_mode.flags.
 struct FlagHitRect {
     int    marker_index = -1;
-    HistoryDiffHalf diff_half = HistoryDiffHalf::Removed;
     double x            = 0.0;
     double y            = 0.0;
     double w            = 0.0;
@@ -3085,7 +3072,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // BEING JUST ANOTHER GRID LINE (architect 2026-11-02: "the divider is just
 // another grid line now"; "going below was a bevel metaphor - the line is
 // now just a line") — the selection stems, the cursor, the lead-in
-// ring's and the nudged pairs' sides, the scanner and the zoom anchor's
+// ring's sides, the scanner and the zoom anchor's
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). On the tablet at 200 % and
 // key_height 17 (its default) the canvas is 1085 rows, 243-1327 (main.cpp's
@@ -3913,8 +3900,7 @@ struct FlagLaneRects {
 // included). The painters publish one for EVERY SELECTED LIVE CUE AND DIFF
 // FLAG, ENABLED OR DISABLED (architect 2026-11-11, session 106), they walk
 // whose column is a waveform column
-// (resolve_flag_face's `stem`; a selected nudged `h` pair's two cues each
-// at its own column), and THE ONE READER, GuiPaintHandler::paint_marker_
+// (resolve_flag_face's `stem`; an `h` item is one cue), and THE ONE READER, GuiPaintHandler::paint_marker_
 // stems, paints THE SELECTION STEM — a solid one-W `cue_outline` line down
 // the canvas's whole height — on every entry (architect 2026-11-05, his
 // pick a2 of tmp/s42, reversing 2026-11-04's coincidence stem), so the
@@ -3922,35 +3908,13 @@ struct FlagLaneRects {
 // are the only producers — the two live columns', and the `h` view's diff
 // lane, which replaces them wholesale while the mode stands. An UNSELECTED
 // marker publishes NO ENTRY AT ALL (no stem, the playhead on it or not); the
-// disabled axis never decides an entry; a changed `h` pair is a live edit and publishes as a live cue
-// (the ruling at render_history_diff_flags). Stems are pointer-inert (the
+// disabled axis never decides an entry, nor does an `h` item's style (the
+// ruling at render_history_diff_flags). Stems are pointer-inert (the
 // seventh glass ruling), so the stash is paint-only and `marker_index`
 // serves the painter's identity bookkeeping alone.
 struct MarkerStem {
     int     marker_index;
     double  x;
-};
-
-// THE NUDGED PAIR'S RING (architect 2026-10-10 ~18:55 → 2026-10-26; solid
-// 2026-11-04): the `h` view's changed pair whose two halves stand apart is
-// TWO CUES JOINED BY THE RING ("they should be joined by the overlay ring"),
-// its four sides SOLID ONE-W `cue_outline` LINES — the left side on the left
-// cue's column `x0`, the right on the right cue's `x1`, both down the
-// canvas's whole height, and the top and bottom runs along the canvas's
-// first and last W of rows from the left side's line's first column through
-// the right side's line's last (paint_marker_stem_runs; the phase-reset
-// lead-in ring's form, paint_phase_reset_overlay_ring). Always shown,
-// selected or not; a selected pair's stem on either cue stands on its side
-// in the same color. The history lane's painter is the one producer
-// (render_history_diff_flags; the live lanes publish none),
-// paint_marker_stem_runs the one reader; a ring reaching past either edge of
-// the waveform's columns is published and clipped at paint, its sides
-// possibly off screen. It is promoted and dropped with the stem stash
-// (AppState::marker_stems).
-struct MarkerStemRun {
-    int    marker_index;
-    double x0;
-    double x1;
 };
 
 // WHICH ONE SEGMENT OF WHICH ONE MARKER'S LABEL THE FLAG PASS DOES NOT PAINT,
@@ -4275,122 +4239,89 @@ void render_phase_reset_flags(cairo_t* cr,
                             // gates, while the bound editor is both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
 
-// ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
-// painted and published. The caller (maybe_rebuild_flag_cache) resolves the
-// commit's delta into these; this file only paints what it is handed, so the
-// diff model's types never reach the renderer.
+// ONE PREPARED DIFF FLAG — ONE ITEM — for the `h` history mode's lane, in the
+// ORDER it is painted and published. The caller (maybe_rebuild_flag_cache)
+// resolves the commit's delta into these; this file only paints what it is
+// handed, so the diff model's types never reach the renderer.
+//
+// ONE ITEM, ONE CUE, ONE FRAME (architect 2026-11-11, session 106, retiring
+// the nudged pair: "the purpose of the history coalesce was to prevent a
+// small move from creating two entries in history, the later of which
+// obscure the former — we have essentially recreated the same situation"):
+// THREE KINDS, read off the two bools — REMOVED ONLY (the older side had the
+// line, the newer dropped it), ADDED ONLY (the newer side has it, the older
+// did not), and CHANGED (both: a marker changed in place at one frame, its
+// payload edited or its disable bit toggled, GuiHistoryWarpChange). A MOVED
+// marker is two items, a removed one at its old frame and an added one at
+// its new; each is selected, walked, landed on and reverted on its own.
 //
 // THE FRAME FIELD IS NAMED time_frame ON PURPOSE: it is what the shared column
 // mapper iterate_visible_flags_impl reads off a marker, so a diff flag rides the
 // EXACT expression a live marker rides — same map, same viewport, same width,
-// same nearbyint — rather than a second spelling of it. IT IS THE LEFT
-// CUE'S FRAME: a single half's own, and on a changed pair the smaller of
-// the two halves' frames (architect 2026-10-10 / 2026-10-11, the nudged
-// pair), the pair's right cue mapped from its own frame by the same
-// expression (render_history_diff_flags). `then_frame` and `now_frame` are
-// each half's OWN frame, meaningful exactly when its half's bool is set —
-// equal on a same-frame pair, apart by at most the nudge window on a NUDGED
-// one (kHistoryNudgeWindowMs, history_diff.h) — and they are what the revert
-// addresses (the now row at now_frame, the then line back at then_frame)
-// and, on a nudged pair, what each of its two cues paints and lands on
-// (HistoryDiffHalf; history_diff_flag_landing_domain_frame, app_state.h).
+// same nearbyint — rather than a second spelling of it. It is the item's one
+// frame, both halves' on a changed item, and what the revert addresses (the
+// now row and the then line both at it) and the landing lands on
+// (history_diff_flag_landing_domain_frame, app_state.h).
 //
-// The two halves are independent bools rather than an enum because the CHANGED
-// case is exactly "both": one flag, ONE ITEM for selection and revert —
-// painted as ONE CUE whose label carries both halves on a same-frame pair
-// (the removed half's segment first, struck, then the added: before, then
-// after, the planner's reading of his "whichever one comes first",
-// 2026-10-11), and as TWO CUES joined by the ring on a nudged one (architect
-// 2026-10-26), each at its own frame.
-// THE THEN SIDE'S VALUE RIDES ALONG (2026-08-05), for the REVERT act rather than
-// for the paint: `then_token` is the removed line's payload past the '|' —
-// VERBATIM, the same slice the label is built from — and `then_disabled` its
-// disable bit, both meaningful exactly when `removed` is set (an added-only flag
-// has no then side to restore). The act reconstitutes the sidecar LINE from them
-// and hands it to the frozen parser, so the value travels as text the loader
-// itself judges and no second grammar is written anywhere
-// (GuiInputHandler::run_history_revert). Phase resets carry no token — their
-// line is frame plus the disable bit — so `then_token` stays empty on that
-// column.
+// THE FLAG TEXT, ONE OWNER (history_diff_flag_text, paint_handler.h): each
+// side's label bytes as the lane paints them — a warp line's payload token
+// past the '|', VERBATIM, a phase reset's display token — WITHOUT the disable
+// prefix: the '#' is the line's disable bit, not its text, and travels as
+// `then_disabled` / `now_disabled`. `then_text` is meaningful exactly when
+// `removed` is set and `now_text` when `added` is. On the WARP column
+// `then_text` IS the revert's value too: the act reconstitutes the sidecar
+// LINE from the frame, the then bit and this token and hands it to the
+// frozen parser, so the value travels as text the loader itself judges and
+// no second grammar is written anywhere (GuiInputHandler::run_history_revert);
+// the phase column's line is frame plus the bit, and its text is never read
+// back.
+//
+// THE LANE'S LOOK IS THE HISTORY'S OWN (architect 2026-11-11, session 106:
+// "disabled style and strike take on a different meaning in history —
+// disabled means a marker was removed, and strike means a text was changed. a
+// removed flag always has its text struck by definition"; the rows are
+// resolve_flag_face's, render.cpp): a REMOVED item wears the disabled style
+// with its label struck, an ADDED or CHANGED item the enabled style — "the
+// diff should show as enabled" — whatever its line's own disable bit. ONE
+// CUE, ONE LABEL (`label`): the newer side's text where it has one, the
+// removed line's own otherwise, and a changed item's label struck exactly
+// when its text differs between the sides (`text_changed`) — a bit-only
+// toggle stays plain. The words of both sides are the cue tooltip's (TIPS;
+// marker_tooltip_value, app_state.h).
 //
 // EACH HALF NAMES ITS OWN ROW (2026-09-16): `then_ordinal`
 // is the removed line's row within its frame's run on the then side,
 // `now_ordinal` the added line's on the now side — each meaningful exactly
-// when its half's bool is set, both copied off the delta entry the label is
-// built from (the contract is at GuiHistoryWarpEntry::ordinal,
+// when its half's bool is set, both copied off the delta entry the text is
+// taken from (the contract is at GuiHistoryWarpEntry::ordinal,
 // history_diff.h). IDENTITY IS DATA, NOT A FACE: the painter reads neither,
-// the hit rects and the walk are unchanged, and the revert is their one
-// reader — it deletes the exact now-side row and re-seats the then line at
-// its then-side ordinal, so a flag on the second of two coincident rows
-// reverts that row and not the run's first.
+// and the revert is their one reader — it deletes the exact now-side row and
+// re-seats the then line at its then-side ordinal, so a flag on the second of
+// two coincident rows reverts that row and not the run's first.
 //
-// THE LANE'S DISABLED AXIS IS EFFECTIVE, PER COMMIT SIDE (architect
-// 2026-08-22). The PAINT bits are the two `*_effective_disabled` fields —
-// each half's participation verdict resolved within its OWN side's commit
-// (GuiHistoryWarpEntry::effective_disabled owns the resolution contract; the
-// verdict is the line's own flag since 2026-10-29, and phase resets fill
-// these verbatim) — each meaningful exactly when its own half's bool is set.
-// `then_disabled` stays the VERBATIM LOCAL byte and is back to the revert's
-// field alone: the revert act reconstitutes the then line from it, and the
-// label's '#' text is composed from the delta's local bits at the cache fill —
-// the painter no longer reads it. The former `now_disabled` was the added
-// half's paint bit and had exactly that one reader, so it is RENAMED to say
-// what it now holds rather than kept beside a twin. The paint the effective
-// pair drives is the live lane's own disabled treatment applied to this
-// lane's diff inks, per half; the full ruling is at render_history_diff_flags
-// below.
+// THE DISABLE BITS are each side's local '#' byte, read by the revert (the
+// then bit, the restored line's prefix) and the tooltip's words; the paint
+// reads neither. NO COINCIDENT CLASS TRAVELS HERE either (recorded
+// 2026-09-02): the live lane's red-set strike is a verdict over the whole
+// resolved store, and a diff line has no store around it to resolve against.
 struct HistoryDiffFlag {
-    int64_t     time_frame = 0;       // the left marker's (the paragraph above)
-    int64_t     then_frame = 0;       // the removed half's own
-    int64_t     now_frame  = 0;       // the added half's own
-    bool        removed    = false;   // the commit had this line
-    bool        added      = false;   // the session has this line
-    std::string removed_text;
-    std::string added_text;
-    std::string then_token;
-    int         then_ordinal = 0;   // the removed half's row within its run
-    int         now_ordinal  = 0;   // the added half's row within its run
-    bool        then_disabled = false;           // verbatim local: the revert's
-    bool        then_effective_disabled = false; // the removed half's paint
-    bool        now_effective_disabled  = false; // the added half's paint
-    // NO COINCIDENT CLASS TRAVELS HERE, and that is deliberate (recorded
-    // 2026-09-02, the disabled axis's sibling): the live lane's strike — the
-    // class a coincident stack or a dangling reference earns — is a verdict
-    // over the WHOLE resolved store, and a diff half is a line from one
-    // side's sidecar with no store around it to resolve against. So a
-    // checkpoint's collapsed stack paints as ordinary added/removed halves in
-    // the view and strikes as coincident only once its lines are back in the
-    // live store; here the strike is the REMOVED half's alone.
-    // The disabled axis DOES travel (the two effective bits above, 2026-08-22)
-    // because it is a property of the line itself.
+    int64_t     time_frame = 0;       // the item's one frame
+    bool        removed    = false;   // the older side had this line
+    bool        added      = false;   // the newer side has this line
+    std::string then_text;            // the removed line's flag text
+    std::string now_text;             // the added line's flag text
+    int         then_ordinal = 0;     // the removed half's row within its run
+    int         now_ordinal  = 0;     // the added half's row within its run
+    bool        then_disabled = false;   // local bytes: the revert's and
+    bool        now_disabled  = false;   // the tooltip's
 
-    // A CHANGED PAIR whose two halves stand apart — the nudged pair, drawn as
-    // two cues joined by the ring (render_history_diff_flags).
-    bool nudged() const {
-        return removed && added && then_frame != now_frame;
-    }
-    // THE ADDED HALF IS THE LEFT CUE: a nudged pair moved earlier, its added
-    // cue left of its removed one — the Tab walk's order within the pair
-    // (history_diff_cycle_target, app_state.h).
-    bool added_left() const { return nudged() && now_frame < then_frame; }
-    // THE FRAME OF ONE CUE, in source frames: on a nudged pair the half's own
-    // (then_frame or now_frame), on every other flag its one cue's,
-    // time_frame.
-    int64_t cue_frame(HistoryDiffHalf half) const {
-        if (!nudged()) return time_frame;
-        return half == HistoryDiffHalf::Added ? now_frame : then_frame;
-    }
-    // THE LEFT AND RIGHT CUE'S HALVES, in column order: on a nudged pair the
-    // two in their frames' order; on every other flag its one cue (both
-    // answers the same, so a walk visits it once).
-    HistoryDiffHalf left_half() const {
-        if (!nudged()) return removed ? HistoryDiffHalf::Removed
-                                      : HistoryDiffHalf::Added;
-        return added_left() ? HistoryDiffHalf::Added : HistoryDiffHalf::Removed;
-    }
-    HistoryDiffHalf right_half() const {
-        if (!nudged()) return left_half();
-        return added_left() ? HistoryDiffHalf::Removed : HistoryDiffHalf::Added;
+    // THE CUE'S ONE LABEL: the newer side's text where the item has one, the
+    // removed line's own otherwise.
+    const std::string& label() const { return added ? now_text : then_text; }
+    // THE TEXT CHANGED: a changed item whose two sides' flag texts differ —
+    // its label's strike. A bit-only toggle answers false.
+    bool text_changed() const {
+        return removed && added && then_text != now_text;
     }
 };
 
@@ -4401,68 +4332,29 @@ struct HistoryDiffFlag {
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
 // THE ANATOMY IS THE LIVE CUE'S (the palette block's marker-lane paragraph):
-// every cue THE PLAIN CUE, the live lane's chip by its selection (THE
-// STATES), both halves alike (architect 2026-10-26 ~15:30, "Two, agree": the history
-// in the cue color, the invalid color retired) — and the label
-// in the label face, its resting text the text tone. THE STRIKE TELLS THE
-// HALVES APART: a REMOVED line's label struck (show_cue_label's bar), an
-// ADDED line's plain (resolve_flag_face's table). THE LABEL IS THE LINE'S
-// OWN TEXT, no sign ("we could also remove the brackets plus minus, because
-// that becomes redundant at that point. And those are always hard to see
-// anyways at the font size. A strike through is easier to see";
-// history_diff_label, paint_handler.h).
-//
-// A CHANGED PAIR IS ONE ITEM (the two pairings are GuiHistoryWarpChange's,
-// history_diff.h): one HistoryDiffFlag, one selection, one revert. A
-// SAME-FRAME pair is ONE CUE — its label the two halves as two segments, the
-// removed (struck) first, then the added, the segment gap between them; one
-// chip, one stem entry, no ring. A NUDGED pair (the halves apart) is TWO CUES
-// JOINED BY THE RING (architect 2026-10-26 ~15:30: "both markers represented
-// with their stems, because one of them will have the strike through and
-// that'll be obvious which one is removed, and they should be joined by the
-// overlay ring"): the removed cue at then_frame, struck, the added at
-// now_frame, plain, each its own chip and label box, and the ring between
-// their two columns on the canvas (MarkerStemRun), always, its four sides
-// solid `cue_outline` lines. EACH CUE IS ITS OWN
-// HIT RECT AND TAB STOP ("it's accurate that every marker gets a tab — next
-// marker, previous marker tab"): both rects name the flag's index, each its
-// own half (FlagHitRect::diff_half), and the focus stands on one half
-// (AppState::HistoryMode::focus_half).
-//
-// EVERY HALF IS SIZED BY ITS OWN SHAPED TEXT, so the halves of a same-frame
-// pair are routinely ASYMMETRIC and its one hit rect composes off the two
-// measured widths. THESE LABELS ARE NEVER TRUNCATED (the cull bound follows the
-// commit's own widest text; the reasoning is at the paint site).
-//
-// THE LANE CARRIES THE DISABLED AXIS, PER COMMIT SIDE (architect 2026-08-22,
-// closing a state-axis gap the view shipped with: a `#` line and a live one
-// painted the same flag, so the delta showed the position and hid the state).
-// A HALF whose line is EFFECTIVELY disabled within ITS OWN side's commit — the
-// participation verdict resolved over that side's full warp set (the
-// effective pair at HistoryDiffFlag above, the own flag since 2026-10-29; the
-// '#' in the TEXT stays the local byte) — paints its segment in the LIVE LANE'S
-// INACTIVE LABEL, and a single disabled half's chip the grey one
-// (resolve_flag_face). IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes
-// its own bit, so a disable TOGGLE paints one inactive half beside one live
-// half and the direction of the toggle is readable off the label itself.
+// every item ONE CUE at its one frame — the live lane's chip and outline, its
+// label in the label face — in THE HISTORY'S STYLES (HistoryDiffFlag's
+// paragraph above; resolve_flag_face's Removed / Added / Changed rows): a
+// REMOVED item the disabled style, the `inactive_cue` chip and the inactive
+// label, ITS LABEL STRUCK; an ADDED item the enabled style, the `cue` chip and
+// the text tone, plain; a CHANGED item the enabled style, its label the newer
+// side's text, struck when the text changed. THE LABEL IS THE FLAG TEXT, no
+// sign ("we could also remove the brackets plus minus, because that becomes
+// redundant at that point. And those are always hard to see anyways at the
+// font size. A strike through is easier to see", 2026-10-26) and no '#'.
+// EVERY LABEL IS SIZED BY ITS OWN SHAPED TEXT AND NEVER TRUNCATED (the cull
+// bound follows the commit's own widest text; the reasoning is at the paint
+// site).
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none)
 // and `selected` the mode's OWN
-// multi-selection (ordinals into the same list, 2026-08-05): THE LIVE LANE'S
-// SELECTED LOOK ON THE CHIP (architect 2026-11-04; resolve_flag_face's
-// table). The focus or membership SELECTS the flag — the focus is the
-// selection's singleton when the set is empty, and the revert act reads them
-// the same way — and A PAIR'S HALVES ARE ONE ITEM: a selected item wears the
-// SELECTED look on BOTH halves, each cue its own stem (a nudged pair's two
-// cues each at its own column; MarkerStem, architect 2026-11-05). The
-// labels paint as at rest (a nudged pair's focused half,
-// HistoryMode::focus_half, is the walk's and the press's, not the paint's).
-// THE CHIP READS THE DISABLED AXIS (architect 2026-08-22): a SINGLE
-// flag — added-only or removed-only — whose one side is EFFECTIVELY disabled
-// wears the grey chip — its stem entry still the item's selection's, the
-// live lane's rule verbatim (architect 2026-11-11, session 106) — while a CHANGED PAIR KEEPS ITS LIVE CHIP whichever halves are
-// disabled, because the pair as a whole is a live EDIT being displayed
-// rather than a line in a switched-off state.
+// multi-selection (ordinals into the same list, 2026-08-05). The focus or
+// membership SELECTS the item — the focus is the selection's singleton when
+// the set is empty, and the revert act reads them the same way — and a
+// selected item stands THE STEM, the live lane's rule (resolve_flag_face's
+// table: every selected cue, whatever its style; architect 2026-11-11,
+// session 106: no history-only stem, one item one cue at most one stem), its
+// chip and label as at rest. NO RING: nothing on the canvas joins two items.
 // NO CELLS AND NO ADDRESSED CELL ON THIS LANE: a bracket is session-only and
 // in no commit, so a diff flag carries no bound cells, and the view's focus is
 // its own diff-flag cycle's with nothing for AppState::addressed_cell to
@@ -4479,7 +4371,6 @@ void render_history_diff_flags(cairo_t* cr,
                                const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,
                                std::vector<MarkerStem>* out_stems,
-                               std::vector<MarkerStemRun>* out_runs,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical

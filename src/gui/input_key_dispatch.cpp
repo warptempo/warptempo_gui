@@ -1210,10 +1210,8 @@ void GuiInputHandler::close_history_mode() {
 void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.flag_hit_rects.clear();
     app.marker_stems.clear();
-    app.marker_stem_runs.clear();
     app.staged_flag_hit_rects.clear();
     app.staged_marker_stems.clear();
-    app.staged_marker_stem_runs.clear();
     app.flag_stash_staged = false;
     app.history_mode.flags.clear();
 }
@@ -1351,7 +1349,7 @@ void GuiInputHandler::open_history_mode_fresh() {
     // the deferred one.
     kick_history_prefetch_if_stale();
     AppState::HistoryMode fresh;
-    if (!fresh.session.init(app, history_prefetch, audio.sample_rate())) {
+    if (!fresh.session.init(app, history_prefetch)) {
         // THE FALLBACK, IN ONE ASSIGNMENT. The session keeps the verdict and
         // its reason (GuiHistoryDiff::available), so every surface that needs
         // git reads one stored answer for the visit's whole life and nothing
@@ -1385,7 +1383,7 @@ void GuiInputHandler::open_history_mode_fresh() {
     // HEADER'S OWN REFUSAL OPENS TOO, on this walk alone, which is what makes
     // `h` a working key where there is no git at all — the fallback's ruling is
     // at the head of this owner.
-    fresh.local.init(app, fresh.session.now_side(), audio.sample_rate());
+    fresh.local.init(app, fresh.session.now_side());
     // AND IT OPENS WHERE THE SESSION STANDS (architect 2026-08-08), which is the
     // one place the two walks' entry positions differ. The commit walk opens at
     // 0 because its newest member is where the session is; the LOCAL walk's 0 is
@@ -2005,17 +2003,15 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // its ctrl form (the tab switch) keeping it lit wherever the roster is.
     // The seed, the walls and the empty arm are stated there; each is a
     // silent consumed no-op here.
-    const HistoryDiffStop there = history_diff_cycle_target(app, audio, forward);
-    if (there.flag < 0) return;
+    const int there = history_diff_cycle_target(app, audio, forward);
+    if (there < 0) return;
     playback_lifecycle.stop_playback_if_playing();
     // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
     // shape: the set clears and the focus alone stands, which is the plain
     // click's rest too. Ordered so the clearer cannot undo the focus it
-    // writes. THE STOP IS A CUE (2026-10-26): the flag and the half of it
-    // the focus stands on, a nudged pair's two cues two stops.
+    // writes. THE STOP IS AN ITEM, ONE CUE (2026-11-11).
     clear_history_mode_focus(app.history_mode);
-    app.history_mode.focus      = there.flag;
-    app.history_mode.focus_half = there.half;
+    app.history_mode.focus = there;
     // THE STEMS IN THIS EVENT (2026-11-05, paint_marker_stems' ONE-STATE
     // RULE): the mode's focus and selection are the diff lane's selected
     // look, its stems among it, so the flag cache is rebuilt here, before the
@@ -2027,8 +2023,7 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
         app, audio, viewport,
         history_diff_flag_landing_domain_frame(
             app, audio,
-            app.history_mode.flags[static_cast<std::size_t>(there.flag)],
-            there.half));
+            app.history_mode.flags[static_cast<std::size_t>(there)]));
     // THE CAMERA IS THE CALLER'S STATEMENT, the live walk's own
     // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker),
     // and THE LIVE FAMILY'S LANDING IS MIRRORED ARM FOR ARM (architect
@@ -3187,7 +3182,7 @@ void GuiInputHandler::run_publish_chord() {
                               app.history_mode.head_delta_empty};
     if (!in_view) {
         kick_history_prefetch_if_stale();
-        transient.init(app, history_prefetch, audio.sample_rate());
+        transient.init(app, history_prefetch);
         session = &transient;
         delta   = read_head_delta(transient);
     }
@@ -3810,14 +3805,11 @@ namespace {
 // EVERY FLAG NAMES ITS OWN ROW — (frame, ordinal within the frame's run),
 // HistoryDiffFlag::then_ordinal / now_ordinal, render.h; the contract at
 // GuiHistoryWarpEntry::ordinal, history_diff.h — and the two passes address
-// by those identities so that no earlier edit can shift a later target:
-// EACH HALF AT ITS OWN FRAME (2026-10-11): the added half at `now_frame`, the
-// removed half at `then_frame` — one frame on a same-frame pair, two on a
-// NUDGED one (HistoryDiffFlag, render.h), which so reverts AS ONE, the added
-// marker removed and the removed one restored at its own frame with its own
-// payload, under the act's one undo entry.
+// by those identities so that no earlier edit can shift a later target,
+// every item at its one frame (HistoryDiffFlag::time_frame, render.h; one
+// item, one frame since 2026-11-11, session 106):
 //   1. DELETIONS. Every flag with an ADDED half (an added-only flag, a changed
-//      pair) names the now-side row (now_frame, now_ordinal). Each resolves
+//      item) names the now-side row (time_frame, now_ordinal). Each resolves
 //      against the store AS IT STOOD WHEN THE ACT BEGAN — the run's first
 //      index by lower_bound plus the ordinal, present iff that index still
 //      carries the frame (an absent row — the live run shorter than the
@@ -3826,7 +3818,7 @@ namespace {
 //      DESCENDING order, so each erase shifts only rows above it, which
 //      nothing left to erase names.
 //   2. RESTORES. Every flag with a REMOVED half puts its then line back at
-//      (then_frame, then_ordinal) within the frame's run as it stands after the
+//      (time_frame, then_ordinal) within the frame's run as it stands after the
 //      deletions — the run's first index plus min(then_ordinal, run length) —
 //      applied in ASCENDING (frame, then_ordinal). Ascending is what makes a
 //      whole-delta revert reproduce the checkpoint's run byte for byte: after
@@ -3868,9 +3860,9 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
         const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
         if (!f.added) continue;
         const std::size_t at =
-            static_cast<std::size_t>(run_begin(f.now_frame) - mv.begin()) +
+            static_cast<std::size_t>(run_begin(f.time_frame) - mv.begin()) +
             static_cast<std::size_t>(f.now_ordinal);
-        if (at < mv.size() && mv[at].time_frame == f.now_frame) {
+        if (at < mv.size() && mv[at].time_frame == f.time_frame) {
             doomed.push_back(at);
         }
     }
@@ -3893,7 +3885,7 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
         if (!f.removed) continue;
         std::optional<GuiM> nm = restore(f);
         if (!nm) continue;
-        restores.push_back({f.then_frame, f.then_ordinal, std::move(*nm)});
+        restores.push_back({f.time_frame, f.then_ordinal, std::move(*nm)});
     }
     std::stable_sort(restores.begin(), restores.end(),
                      [](const Restored& a, const Restored& b) {
@@ -3959,13 +3951,18 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 //   * REMOVED ONLY (a struck label, the older side had it and the newer
 //     dropped it) →
 //     PUT THE THEN SIDE BACK at (frame, then_ordinal) within the live run.
-//   * CHANGED (the double flag) → BOTH: delete the now row, put the then line
-//     back at its own ordinal. It is not an in-place write, because the two
-//     halves may sit at different ordinals of one run, and only the two
-//     inverses composed put the then line where the checkpoint had it. A
-//     NUDGED pair (2026-10-11) is the same act across two frames: the added
-//     marker deleted at its now_frame, the removed one restored at its
-//     then_frame with its own payload.
+//   * CHANGED (a marker changed in place) → BOTH: delete the now row, put the
+//     then line back at its own ordinal. It is not an in-place write, because
+//     the two halves may sit at different ordinals of one run, and only the
+//     two inverses composed put the then line where the checkpoint had it.
+//   A MOVED marker is two items (architect 2026-11-11, session 106): its
+//   removed item restores the then line at the old frame and its added item
+//   deletes the now row at the new frame, each its own act, in either order —
+//   each resolves against the store as that act finds it, the restore's seat
+//   clamped to the run it finds: reverting both (one act over both, or two
+//   acts) puts the marker back at its old frame alone; reverting the removed
+//   item alone leaves a marker at both frames, the added item alone at
+//   neither, as asked (the act always forces).
 //
 // ONE FLAG IS ONE LINE, AND COINCIDENT LINES ARE LEGAL, which is what the
 // ordinal is for: the frame alone reached a run's FIRST pre-act row whichever
@@ -4034,8 +4031,8 @@ void GuiInputHandler::run_history_revert() {
     // session's `total - 1` exactly as a whole checkpoint load can. THE ACT
     // REFUSES WHOLE rather than skipping the offender: a revert applies a
     // delta, and a partially applied one leaves a state the user did not ask
-    // for and cannot name. THE FRAME IS THE REMOVED HALF'S OWN — the phase arm
-    // copies f.then_frame into the fresh marker and the warp arm re-spells it with
+    // for and cannot name. THE FRAME IS THE ITEM'S ONE — the phase arm
+    // copies f.time_frame into the fresh marker and the warp arm re-spells it with
     // format_authored_frame, so the parsed line lands on exactly this value —
     // which is what lets the check run before the loop parses anything.
     // The refusal is a notification card beside its stderr line (2026-08-29;
@@ -4051,11 +4048,11 @@ void GuiInputHandler::run_history_revert() {
             if (!f.removed) continue;   // an added flag DELETES; it lands none
             if (phase) {
                 GuiPhaseResetMarker nm;
-                nm.time_frame = f.then_frame;
+                nm.time_frame = f.time_frame;
                 restored_phase.push_back(nm);
             } else {
                 GuiWarpMarker nm;
-                nm.time_frame = f.then_frame;
+                nm.time_frame = f.time_frame;
                 restored_warp.push_back(nm);
             }
         }
@@ -4118,7 +4115,7 @@ void GuiInputHandler::run_history_revert() {
             proposed_phase, flags, subject,
             [](const HistoryDiffFlag& f) -> std::optional<GuiPhaseResetMarker> {
                 GuiPhaseResetMarker nm;
-                nm.time_frame = f.then_frame;
+                nm.time_frame = f.time_frame;
                 nm.disabled   = f.then_disabled;
                 return nm;
             });
@@ -4129,13 +4126,14 @@ void GuiInputHandler::run_history_revert() {
                 // The sidecar line this flag's then side came off, rebuilt:
                 // the disable prefix, the canonical frame spelling
                 // (format_authored_frame, the one serializer), the '|' and the
-                // verbatim payload token, which is rest-of-line — so the
+                // verbatim payload token — the warp line's flag text
+                // (history_diff_flag_text), which is rest-of-line — so the
                 // rebuilt line is the sidecar's line byte for byte.
                 std::string line;
                 if (f.then_disabled) line += '#';
-                line += format_authored_frame(f.then_frame);
+                line += format_authored_frame(f.time_frame);
                 line += '|';
-                line += f.then_token;
+                line += f.then_text;
                 auto parsed =
                     warpmarkers_internal::parse_single_canonical_line(line);
                 if (!parsed) {
