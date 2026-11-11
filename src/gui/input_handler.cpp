@@ -1218,8 +1218,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // selection.cpp).
         // THE LETTER CARRIES FOUR CHORDS: bare `s` is the drop above, Ctrl+S
         // saves, Shift+S (2026-08-28) drops a phase reset from the warp
-        // column's either view — the same lead-in drop with the trip to T+P
-        // in front of it (in the P column it refuses whole since 2026-08-30
+        // column's either view — the same lead-in drop with the column
+        // switch in front of it, or over a multi-selection one reset at
+        // each selected marker's place (2026-11-10) (in the P column it
+        // refuses whole since 2026-08-30
         // as already crossed; the act's head) — and CTRL+SHIFT+S PUBLISHES
         // (2026-10-10, below). Every
         // other modifier combination on `s` is unbound and FALLS OUT OF THIS
@@ -3303,6 +3305,28 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //     new selection's flag in the same frame (the paste's reason,
 //     land_paste_in_phase_reset_view — the paste stays in its audio view
 //     too since 2026-10-14, this act's symmetry).
+//
+// OVER A MULTI-SELECTION THE ACT IS THE GROUP DROP (architect 2026-11-10: in
+// the warp view with several markers selected, each selected warp marker
+// gets a phase reset dropped at its corresponding place). With two or more
+// markers selected in the warp column (phase_reset_crossing_drop_is_group)
+// the playhead is not the subject: THE PLAN is asked FIRST, in the warp
+// column, where the selection still stands (phase_reset_crossing_group_drops,
+// app_state.h — each marker's place the single drop's own computation, a
+// place already holding a phase reset skipped, the single drop's
+// painted-edge refusal skipping its place), and THE ACT REFUSES WHOLE,
+// BEFORE ANY SWITCH, ONLY WHERE EVERY PLACE IS SKIPPED — the answer the
+// Drop key's face greys on (phase_reset_drop_crossing_would_act) — on one
+// card: the drop's own off-edge sentence where the edge refused a place,
+// else that the resets are already there. Otherwise the column switch, then
+// the one group create (GuiPhaseResetMarkersOps::drop_phase_resets_at_frames:
+// ONE UNDO ENTRY for the whole act, the created resets selected, the focus
+// and the playhead on the warp focus's reset by the single drop's landing),
+// then the kick — the single act's three steps in its order, behind the
+// spent selection's lamp edge (selection_consumed: the group drop acts on a
+// selection that was built, where the at-playhead drop reads none). A skipped
+// place beside a dropped one says nothing. One selected marker, or none, is
+// the at-playhead drop below, untouched.
 void GuiInputHandler::drop_phase_reset_crossing() {
     // The blank/loading guard near the top of on_key already covers this; the
     // helper is defensive for the same reason the S/T chokepoint's own copy is
@@ -3320,6 +3344,28 @@ void GuiInputHandler::drop_phase_reset_crossing() {
     if (!phase_reset_drop_crossing_actionable(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              "Already in phase reset view");
+        return;
+    }
+    // THE GROUP DROP (architect 2026-11-10; the head's last paragraph).
+    if (phase_reset_crossing_drop_is_group(app)) {
+        const PhaseResetCrossingDrops drops =
+            phase_reset_crossing_group_drops(app, audio);
+        if (drops.frames.empty()) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                drops.off_edge
+                    ? kMarkerDropOffEdgeCard
+                    : "The selected markers already have their phase resets");
+            return;
+        }
+        // THE ACT SPENDS THE SELECTION IT WAS BUILT FOR, so the Add to
+        // Selection lamp goes out on its accepted path, past the refusal
+        // (selection_consumed, app_state.h, the class and its inventory).
+        selection_consumed(app);
+        active_views.switch_active_markers_view_to('P');
+        phase_resets.drop_phase_resets_at_frames(drops.frames,
+                                                 drops.focus_frame);
+        viewport.kick_waveform_sync();
         return;
     }
     active_views.switch_active_markers_view_to('P');

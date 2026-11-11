@@ -93,10 +93,11 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // right one became the NEXT TRACK (home() / next_track(), the pair's contract
 // at their declarations; the outer two walked the BAND at rest for the one day
 // of 2026-09-12, until the car became an interface of its own and took that
-// walk with it) — then the
-// play-scrub, the
-// clock, the Repeat one lamp, the UP button, and Load in place / Close flush
-// right — the row's order and faces are the painter's, ruled 2026-08-28).
+// walk with it) FLUSH RIGHT since 2026-11-10 (architect: the transport keys
+// to the right, everything else to the left) — the Repeat one lamp, the
+// highlight pair, the UP button, Load in place and Close at the row's left,
+// then the play-scrub and the
+// clock — the row's order and faces are the painter's, ruled 2026-08-28).
 //
 // THE PLAYER LIVES INSIDE `tmp/` AND NEVER RISES ABOVE IT (architect
 // 2026-09-01). HIS RATIONALE: the deliverable in `render/` is a

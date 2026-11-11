@@ -28,14 +28,17 @@ struct Selection {
     // REPLACE THE WHOLE MEMBERSHIP WITH A SET, focus `focus` (2026-08-29).
     // set_single_selection's own body one arity up (the STICKY CTRL is a tool
     // posture no Selection body writes; the contract is at
-    // AppState::add_to_selection). FOUR CALLERS,
+    // AppState::add_to_selection). FIVE CALLERS,
     // re-grepped 2026-11-10, in four classes. THE PASTE LANDING installs a
     // set it just created: the phase-reset propagate's landing in the P column
     // (PhaseResetPropagate::land_paste_in_phase_reset_view), for which this arity
     // was added — it wrote the two fields directly until 2026-08-29, leaning
     // on the column switch two lines above it to clear them (behaviour-neutral
     // — the paste is W-gated, so that switch always fires — but a property of
-    // the paste's entry gate rather than of the replace). THE UNDO RESTORE is
+    // the paste's entry gate rather than of the replace) — AND THE CROSSING'S
+    // GROUP DROP is of its class (architect 2026-11-10,
+    // GuiPhaseResetMarkersOps::drop_phase_resets_at_frames: the resets it
+    // created, focused on the warp focus's reset). THE UNDO RESTORE is
     // the second (apply_post_restore_rules_impl, undo.cpp): it installs the
     // TOUCHED set rather than a created one, and its own comment carries why
     // the mutator rather than a hand-written pair. THE BPM FORM'S OPEN
@@ -52,7 +55,8 @@ struct Selection {
     // markers to their new indices).
     // `focus` must be a member (the paste hands the earliest created marker
     // and the restore the earliest touched one, the programmatic group's own
-    // rule; the sweep a swept or the prior focus); an EMPTY set with focus -1 degenerates to clear_selection's
+    // rule; the group drop the warp focus's reset, else the earliest; the
+    // sweep a swept or the prior focus); an EMPTY set with focus -1 degenerates to clear_selection's
     // state.
     void replace_selection(std::set<int> members, int focus);
     void clear_selection();

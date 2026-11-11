@@ -45,8 +45,12 @@
 // like the render player's. The page numbers should not be included at all
 // if there's audio. Everything — the playback, the scrub — should be frame
 // and/or time based. No pages. Pages are only kept in the background"):
-//   * THE MEDIA PLAYER'S, with the soundtrack: BACK, PLAY / PAUSE and FWD
-//     at the left, a deck's order (the render player's transport seats, PLAY
+//   * THE MEDIA PLAYER'S, with the soundtrack (THE TRANSPORT FLUSH RIGHT
+//     AND THE OTHER FOUR KEYS AT THE LEFT on both faces, the render
+//     player's row's sides, architect 2026-11-10; in the row's order RESET,
+//     START, END and CLOSE, the scrub, the clock or the page cell, the
+//     transport): BACK, PLAY / PAUSE and FWD
+//     flush right, a deck's order (the render player's transport seats, PLAY
 //     its key, its glyph and its legend — score_viewer_play_face — in the second as the
 //     player's stands between its two skips), THE SKIPS (architect
 //     2026-10-27): BACK and FWD skip the soundtrack 3 s back / forward at its
@@ -63,9 +67,11 @@
 //     and playing on from where the thumb dropped at the lift — architect
 //     2026-10-26 ~23:00, "it wouldn't start playing until I commit by
 //     dropping the thumb"), THE CLOCK (the render player's two time fields,
-//     verbatim: the elapsed time within the range and the range's length,
-//     unmoved under a held scrub), then RESET, START, END and CLOSE flush
-//     right. The keys are the acts' one road (architect 2026-10-30: no
+//     verbatim: the elapsed time within the range and the range's length;
+//     UNDER A HELD SCRUB THE ELAPSED FIELD SHOWS THE TIME THE DROP WOULD
+//     LAND AT, architect 2026-11-10, score_scrub_drop_frame, the cursor
+//     itself untouched until the lift), and RESET, START, END and CLOSE at the
+//     row's left. The keys are the acts' one road (architect 2026-10-30: no
 //     keyboard stands under the viewer).
 //   * THE PAGE ROAD'S, with no soundtrack (no readable audio.wav beside
 //     pages.txt — always so on the PDF road, tools/score_extract.py's PDF
@@ -78,7 +84,7 @@
 //     under it shown as the thumb crosses into it, and the lift writes the
 //     position), THE PAGE CELL where the player's clock stands ("7 / 15", the
 //     shown page's ordinal within the range and the range's count) and the
-//     same four keys flush right.
+//     same four keys at the row's left.
 //
 // THE TRANSPORT (the media player's face) is the render player's model,
 // simplified — IDLE (the engine not on the soundtrack), PAUSED, LIVE
@@ -605,6 +611,23 @@ inline int64_t score_scrub_frame_at(const AppState& a, int x) {
     return fr.begin + static_cast<int64_t>(std::nearbyint(
                           t * static_cast<double>(fr.length())));
 }
+// WHERE THE HELD SOUNDTRACK SCRUB'S DROP LANDS — THE ONE DERIVATION
+// (architect 2026-11-10, the timestamp follows the thumb; the render
+// player's render_player_scrub_drop_frame, app_state.h): the frame a lift
+// with the thumb at column `thumb_x` hands the seek, and NOTHING where the
+// lift seeks nothing — a motionless tap on the thumb. TWO READERS: THE LIFT
+// (finish_score_scrub_release, the carried column) and THE CLOCK'S PAINTER,
+// whose elapsed field shows this frame's time within the range while the
+// drag stands and the cursor's where this answers nothing. The seek's own
+// end clamp (play_from, score_viewer_seek_landing) stays the seek's. The
+// page road has no clock: its page cell reads the shown page, which the
+// drag already moves (display_page).
+inline std::optional<int64_t> score_scrub_drop_frame(
+        const AppState& a, const AppState::ScoreViewer::ScrubDrag& drag,
+        int thumb_x) {
+    if (drag.on_thumb && !drag.moved) return std::nullopt;
+    return score_scrub_frame_at(a, thumb_x);
+}
 
 // THE PAGE UNDER A DRAGGED THUMB'S CARRIED COLUMN, the one answer of both
 // faces (architect 2026-10-27 ~19:45, "the picture follows the thumb, the
@@ -704,7 +727,8 @@ struct GuiScoreViewer {
     // and damages the interior and the row, returning whether it changed,
     // nothing written, nothing seeked — the held scrub's on BOTH FACES, under
     // the soundtrack the page holding the frame under the thumb, the cursor
-    // and the clock untouched; write_page_position writes the shown page's
+    // untouched (the clock's elapsed field shows the drop's time off the
+    // drag itself, score_scrub_drop_frame); write_page_position writes the shown page's
     // begin as the active tab's remembered position, through to the file —
     // the page road's lift alone.
     bool display_page(int index);

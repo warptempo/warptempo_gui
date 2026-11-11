@@ -355,8 +355,18 @@ constexpr ToolbarChord kToolbarChords[] = {
     // its chord with no exception now, which is exactly why the padlock moved
     // here (the roster record is at RedesignButton::IconReadOnly).
     {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false},   // bare o
-    // SETTINGS (architect 2026-09-29), between the padlock and the
-    // tooltip lamp since 2026-10-01: bare
+    // THE SCORE (architect 2026-10-26), between the padlock and Settings
+    // (architect 2026-11-10): bare `m`,
+    // the score viewer's opener through on_key like every row, so the `h`
+    // view refuses the lift as it refuses the key (the face hidden there by
+    // the derived partition, Settings' own answer) while a locked tab and
+    // grid iterations admit both (read_only_key_blocked). Under the standing
+    // viewer the key is lit and its lift is the viewer's own router's close
+    // (route_score_viewer_key). No modifier, no repeat.
+    {RedesignButton::IconScore, GuiKeys::M, false, false, false},      // bare m
+    // SETTINGS (architect 2026-09-29), between the Score key and the
+    // tooltip lamp (architect 2026-11-10; ahead of the lamp since
+    // 2026-10-01): bare
     // `;`, the settings page (2026-10-28), through on_key like every row, so
     // the `h` view refuses the lift exactly as it refuses the key, the face
     // greying there first (redesign_button_enabled); a locked tab and grid
@@ -366,23 +376,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // while the page or the value list it swaps in stands, its lift the
     // close (redesign_button_selected, route_picker_key).
     {RedesignButton::IconSettings, GuiKeys::Semicolon, false, false, false}, // bare ;
-    // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's
-    // last since 2026-10-01, behind Settings: the bare BACKSLASH, a TOGGLE with a lamp (AppState::
+    // ENABLE TOOLTIPS (architect 2026-09-29), behind Settings since
+    // 2026-10-01: the bare BACKSLASH, a TOGGLE with a lamp (AppState::
     // show_tooltips) and NOT a radio — it presses through both ways. Live on a
     // locked tab, under the grid-iterations lock and in the `h` view (all
     // three allowlists admit it, so the derived partition leaves it lit).
     // No modifier, no repeat.
     {RedesignButton::IconTooltips, GuiKeys::Backslash, false, false, false}, // bare backslash
-    // THE SCORE (architect 2026-10-26), behind Enable Tooltips: bare `m`,
-    // the score viewer's opener through on_key like every row, so the `h`
-    // view refuses the lift as it refuses the key (the face hidden there by
-    // the derived partition, Settings' own answer) while a locked tab and
-    // grid iterations admit both (read_only_key_blocked). Under the standing
-    // viewer the key is lit and its lift is the viewer's own router's close
-    // (route_score_viewer_key). No modifier, no repeat.
-    {RedesignButton::IconScore, GuiKeys::M, false, false, false},      // bare m
     // (THE TWO LEVEL CASES, IconAudioLevel and IconNoiseLevel, behind the
-    // Score key, the third run's last two since 2026-11-05, HAVE NO ROW:
+    // tooltip lamp, the third run's last two since 2026-11-05, HAVE NO ROW:
     // sliders, pressed by their own arm, arm_level_case_press, not by a
     // chord — the one pair of roster members off this table, which the
     // static_assert below counts out. THE NOISE lamp's row stood here
@@ -3705,12 +3707,15 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
 // or the crossing's.
 //
 // THE ARM IS UNCONDITIONAL BY SHAPE. Every gate the set meets — the
-// strictly-inside refusal, the degenerate-geometry returns — lives INSIDE the
+// on-its-own-cap no-op, the partner wall, the degenerate-geometry returns —
+// lives INSIDE the
 // act and is therefore re-asked LIVE at the lift, which is the chrome lift's
 // own rule: a gate may change under a held button and the LIFT decides.
-// Nothing is carried but the press POINT and the press's STAMP: which bound
-// the click writes is decided where the act runs (pending_click_writes_begin
-// below, architect 2026-10-27).
+// Nothing is carried but the press POINT: which bound the click writes is
+// decided where the act runs, the end cap nearest the press column on the
+// painted columns
+// (trim_bound_click, input_trim.cpp; architect 2026-11-10 — no clock is
+// read, a long press meaning nothing on the trim bar).
 // THE POINT'S BASIS DOES NOT MOVE UNDER IT: the armed record is a member of
 // the displayed-basis freeze (displayed_basis_frozen, app_state.h —
 // architect 2026-09-24), because the lift and the crossing both convert the
@@ -3722,17 +3727,6 @@ void GuiInputHandler::arm_pending_click_act(int x, int y) {
     app.pending_click.kind     = PendingClickKind::TrimBoundSet;
     app.pending_click.press_x  = x;
     app.pending_click.press_y  = y;
-    app.pending_click.press_ms = monotonic_ms();
-}
-
-// WHICH BOUND THE ARMED CLICK WRITES, decided where the act runs (architect
-// 2026-10-27; the rule is at PendingClickAct, app_state.h): the BEGIN unless
-// the press has been held past chrome_shift_hold_ms() — the roster lift's own
-// hold term, measured against the record's stamp. TWO CALLERS, the two
-// places the act runs: run_pending_click_act (the motionless lift) and
-// on_motion's grab-gate crossing.
-static bool pending_click_writes_begin(const PendingClickAct& press) {
-    return monotonic_ms() - press.press_ms < chrome_shift_hold_ms();
 }
 
 // RUN THE ARMED ACT — the motionless lift's whole body. Its ONE caller is
@@ -3751,17 +3745,17 @@ static bool pending_click_writes_begin(const PendingClickAct& press) {
 // shape exists for.
 void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
     if (press.kind != PendingClickKind::TrimBoundSet) return;
-    // The ctrl bound set — the BEGIN, or the END when the press was held past
-    // the hold delay (pending_click_writes_begin, read here at the
-    // lift) — WHOLE AND UNSPLIT: set_trim_bound_at_click owns every refusal (a degenerate
-    // audio/geometry state, and above all the STRICTLY-INSIDE guard —
-    // a click landing a bound on or past its partner writes nothing,
-    // deselects nothing and stops nothing), the playback stop that sits
+    // The barrel bound set — the END CAP NEAREST THE PRESS COLUMN, the
+    // act's own verdict (architect 2026-11-10) — WHOLE AND UNSPLIT:
+    // set_trim_bound_at_click owns every refusal (a degenerate
+    // audio/geometry state, a click exactly on its cap and the partner
+    // wall, each of which writes
+    // nothing, deselects nothing and stops nothing), the playback stop that sits
     // past those refusals, the write, the commit tail (the crossed
     // reset, the repaint and the target trigger; no playhead write) and the
     // setter's deselect.
     // Moving the act meant moving that unit, never a piece of it.
-    set_trim_bound_at_click(pending_click_writes_begin(press), press.press_x);
+    (void)set_trim_bound_at_click(press.press_x);
 }
 
 // -- THE ON-SCREEN KEYBOARD'S TWO EDGES (2026-08-27) -------------------------
@@ -4357,6 +4351,24 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // at the lift, nothing seeked, a no-op in effect. A PAUSED item arms as it
 // stands, the lift's seek moving its resume point, and stays paused; a hard
 // end owes nothing, the item left PAUSED (clear_player_scrub_drag).
+// THE TIMESTAMP FOLLOWS THE THUMB (architect 2026-11-10, both scrubs): while
+// the drag stands the clock's position field shows THE TIME THE DROP WOULD
+// LAND AT — the lift's own derivation (render_player_scrub_drop_frame,
+// app_state.h, which the lift below and the painter both ask; the score's
+// score_scrub_drop_frame), the item's position under a motionless grab of
+// the thumb — and nothing else changes: no sound, no seek. EVERY EDGE THAT
+// MOVES THAT ANSWER DAMAGES THE CLOCK'S RECT beside the slider's
+// (invalidate_scrub_clock): the press (an off-thumb press's jump), each
+// motion that moves the thumb, the lift, and the hard end, where the field
+// returns to the item's position.
+
+// THE CLOCK'S RECT AS PUBLISHED (AppState::ModalDialogGeometry::clock, the
+// tick's own per-position damage; zero on the score's page road, whose row
+// has no clock), damaged for the held scrub's timestamp (the block above).
+static void invalidate_scrub_clock(Viewport& viewport, const AppState& app) {
+    const GuiRect clock = app.modal_dialog.clock;
+    if (clock.w > 0 && clock.h > 0) viewport.invalidate_rect(clock);
+}
 
 // THE DRAG'S CARRIED COLUMN, clamped onto the HANDLE'S TRAVEL — the one
 // expression its two writers (the press's arm, the motion) share, so the
@@ -4429,6 +4441,7 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
                     AppState::RenderPlayer::Transport::Live;
     if (drag.was_live) render_player.pause();
     viewport.invalidate_rect(track);
+    invalidate_scrub_clock(viewport, app);
     return true;
 }
 
@@ -4442,6 +4455,8 @@ void GuiInputHandler::update_player_scrub_motion(int x) {
     drag.marker_x = mx;
     drag.moved    = true;
     viewport.invalidate_rect(track);
+    // The timestamp follows the thumb (the block head).
+    invalidate_scrub_clock(viewport, app);
 }
 
 bool GuiInputHandler::finish_player_scrub_release(int x, int y) {
@@ -4452,13 +4467,19 @@ bool GuiInputHandler::finish_player_scrub_release(int x, int y) {
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
+    // The position field leaves the drop's time for the item's position
+    // (the block head).
+    invalidate_scrub_clock(viewport, app);
     // A MOTIONLESS TAP ON THE THUMB SEEKS NOTHING: the thumb was taken where
     // it stood and never moved, and re-seeking its own column would round the
     // position to that column's frame. THE COMMIT otherwise is the thumb's
     // column at the lift — the lift's x less the grab offset, clamped onto
     // the travel by the mapping, which is the column the motion last painted
-    // the thumb at.
-    const bool seeks = !(ended.on_thumb && !ended.moved);
+    // the thumb at. BOTH ARE THE DROP'S ONE DERIVATION
+    // (render_player_scrub_drop_frame, app_state.h), the answer the clock's
+    // position field showed under the drag.
+    const std::optional<int64_t> drop =
+        render_player_scrub_drop_frame(app, ended, x - ended.grab_dx);
     // THE SOUND PLAYS ON FROM THE DROP where the press paused a live item
     // (the block head): resume_at, the item the press paused LIVE again from
     // the dropped frame — or from the pause's own point under a motionless
@@ -4475,12 +4496,10 @@ bool GuiInputHandler::finish_player_scrub_release(int x, int y) {
     // nothing sets the score's soundtrack sounding under a held scrub.
     if (ended.was_live && app.render_player.transport !=
                               AppState::RenderPlayer::Transport::Live) {
-        render_player.resume_at(
-            seeks ? render_player_scrub_frame_at(app, x - ended.grab_dx)
-                  : app.render_player.resume_frame);
-    } else if (seeks) {
-        render_player.seek_to(
-            render_player_scrub_frame_at(app, x - ended.grab_dx));
+        render_player.resume_at(drop ? *drop
+                                     : app.render_player.resume_frame);
+    } else if (drop) {
+        render_player.seek_to(*drop);
     }
     return true;
 }
@@ -4491,10 +4510,12 @@ void GuiInputHandler::clear_player_scrub_drag() {
     // A LOST LIFT IS NOT A COMMIT (architect 2026-10-26 ~23:15, the score
     // scrub's own choice, the two scrubs one rule): nothing seeked and
     // nothing resumed — a live item the press paused stays PAUSED where the
-    // press left it, the key reading PLAY.
+    // press left it, the key reading PLAY, and the clock's position field
+    // returns from the drop's time to the item's position (its rect damaged).
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
+    invalidate_scrub_clock(viewport, app);
 }
 
 // -- THE SCORE VIEWER'S SCRUB (2026-10-26; the contract at the declaration,
@@ -4509,8 +4530,12 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    PAGE UNDER THE CARRIED COLUMN IS SHOWN LIVE, DISPLAY ONLY
 //    (score_scrub_page_under, the one mapping per face; GuiScoreViewer::
 //    display_page): at an off-thumb press and at every motion, nothing
-//    seeked, nothing written, the clock unmoved — a press on the thumb takes
-//    it at the shown page and shows nothing new. On the page road the pages
+//    seeked, nothing written — a press on the thumb takes
+//    it at the shown page and shows nothing new. UNDER THE SOUNDTRACK THE
+//    CLOCK'S ELAPSED FIELD SHOWS THE TIME THE DROP WOULD LAND AT (architect
+//    2026-11-10; score_scrub_drop_frame, the lift's own derivation, the
+//    play-scrub's block head), the cursor untouched; the page road's cell
+//    reads the shown page. On the page road the pages
 //    are the steps (architect 2026-10-27: "the thumb follows the pen
 //    continuously, the page under it changes in steps; the lift commits the
 //    page under the thumb"); under the soundtrack the page is the one holding
@@ -4588,6 +4613,7 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     if (!on_thumb)
         score_viewer->display_page(score_scrub_page_under(app, drag.marker_x));
     viewport.invalidate_rect(track);
+    invalidate_scrub_clock(viewport, app);
     return true;
 }
 
@@ -4601,6 +4627,8 @@ void GuiInputHandler::update_score_scrub_motion(int x) {
     drag.marker_x = mx;
     drag.moved    = true;
     viewport.invalidate_rect(track);
+    // The soundtrack's timestamp follows the thumb (the block head).
+    invalidate_scrub_clock(viewport, app);
     // THE PAGE UNDER THE CARRIED COLUMN IS SHOWN (the block head), display
     // only on both faces — nothing written, nothing seeked until the lift; a
     // column inside the shown page changes nothing but the thumb.
@@ -4614,6 +4642,7 @@ bool GuiInputHandler::finish_score_scrub_release() {
     drag = AppState::ScoreViewer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
+    invalidate_scrub_clock(viewport, app);
     if (score_viewer == nullptr) return true;
     // THE PAGE ROAD'S LIFT COMMITS (architect 2026-10-27, the block head):
     // the page under the thumb's last column is already the shown page (the
@@ -4635,8 +4664,11 @@ bool GuiInputHandler::finish_score_scrub_release() {
     // the frame at that column, which is the frame whose page the press or
     // the last motion showed (score_scrub_page_under) — play_from's clamp to
     // one short of the range's end moving it only inside the range's last
-    // page — and a motionless tap showed nothing and seeks nothing.
-    const bool seeks = !(ended.on_thumb && !ended.moved);
+    // page — and a motionless tap showed nothing and seeks nothing. BOTH ARE
+    // THE DROP'S ONE DERIVATION (score_scrub_drop_frame, score_viewer.h),
+    // the answer the clock's elapsed field showed under the drag.
+    const std::optional<int64_t> drop =
+        score_scrub_drop_frame(app, ended, ended.marker_x);
     // THE SOUND PLAYS ON FROM THE DROP where the press paused a live
     // soundtrack (the block head): play_from, the soundtrack LIVE again from
     // the dropped frame — or from the pause's cursor under a motionless tap
@@ -4650,10 +4682,9 @@ bool GuiInputHandler::finish_score_scrub_release() {
     // under a held scrub.)
     if (ended.was_live) {
         score_viewer->play_from(
-            seeks ? score_scrub_frame_at(app, ended.marker_x)
-                  : active_view_state(app).score_position);
-    } else if (seeks) {
-        score_viewer->seek_to(score_scrub_frame_at(app, ended.marker_x));
+            drop ? *drop : active_view_state(app).score_position);
+    } else if (drop) {
+        score_viewer->seek_to(*drop);
     }
     return true;
 }
@@ -4672,6 +4703,8 @@ void GuiInputHandler::clear_score_scrub_drag() {
     if (score_viewer != nullptr) score_viewer->display_page(ended.press_page);
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
+    // The clock's elapsed field returns to the cursor's time.
+    invalidate_scrub_clock(viewport, app);
 }
 
 
@@ -5277,8 +5310,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
         // REFUSE goes one step further (architect 2026-07-27): its stop sits
         // INSIDE the refusal gate, at the latest point before the mutation, so
         // a claimed-but-refused press (a bound set over a
-        // degenerate audio/geometry state, or at a column not STRICTLY INSIDE the
-        // partner bound — the 2026-08-01 guard)
+        // degenerate audio/geometry state, on its own end cap or at its
+        // partner wall)
         // is as playback-inert as an unclaimed one. That covers a ctrl press
         // off a flag and off the trim bar and the inter-lane gaps — all of
         // which end at an inert return below.
@@ -5344,11 +5377,13 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
             }
             // Markerless top-strip ctrl press: the TRIM BAR sets a trim bound
             // at the click (REINSTATED architect 2026-08-01, homed on the
-            // redesigned bar's whole band; the BEGIN, or the END for a press
-            // held past the hold delay, architect 2026-10-27 — below);
-            // set_trim_bound_at_click refuses any value not STRICTLY
-            // INSIDE its partner — the clicks ADJUST the window that always
-            // rests, they never create one — and, being
+            // redesigned bar's whole band; THE END CAP NEAREST THE PEN,
+            // architect 2026-11-10 — below);
+            // set_trim_bound_at_click moves that cap to the click — inward
+            // from inside the trim, outward from outside it, a click on the
+            // cap itself, or one that would land it on or past its partner,
+            // a no-op; the click ADJUSTS the window that always
+            // rests, it never creates one — and, being
             // a SETTER, deselects past its refusals. IT NO LONGER REFUSES A
             // READ-ONLY TAB: trim is band, not authored content, and that gate
             // was deleted 2026-08-07). EVERY other lane is a
@@ -5380,14 +5415,15 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                     // the PRESS column. A
                     // CROSSING runs that same set and then hands the gesture to
                     // the single-bound endcap drag on the bound it just wrote.
-                    // THE BOUND IS THE HOLD'S (architect 2026-10-27): the
-                    // BEGIN when the lift or the crossing comes before the hold
-                    // delay, the END past it — which is how the S Pen's side
-                    // button (the Ctrl bit on glass) reaches the end; the
-                    // verdict is pending_click_writes_begin's.
+                    // THE BOUND IS THE NEAREST END CAP (architect 2026-11-10):
+                    // whichever cap is nearest the press column on the
+                    // painted columns, a tie the
+                    // begin's, decided where the set runs (trim_bound_click,
+                    // input_trim.cpp); a held press means nothing more than
+                    // a tap.
                     // NO stop here, for the reason it was never here: the bound
                     // set has its own refusals (a degenerate audio/geometry
-                    // state, a value not strictly inside its partner), and a
+                    // state, a click on its own cap, the partner wall), and a
                     // refused click changes nothing, so there is nothing for a
                     // stop to protect. The stop lives INSIDE
                     // set_trim_bound_at_click, past every refusal and
@@ -6337,9 +6373,8 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
         // bar's ctrl bound set (the contract is at PendingClickAct,
         // app_state.h; the 2026-08-17 ruling took the record's other four
         // kinds back to the press). The act runs on the PRESS column,
-        // re-asking every gate live inside set_trim_bound_at_click, and the
-        // hold's verdict on which bound is taken there, at this lift
-        // (pending_click_writes_begin).
+        // re-asking every gate live inside set_trim_bound_at_click, where
+        // the nearest end cap is chosen too (architect 2026-11-10).
         // THE RELEASE BODIES' STANDING SHAPE: read the pending, DISARM, then
         // act, so the act runs with no gesture live.
         // (A crossed pending is spent at the crossing — it ran its set and
@@ -8615,25 +8650,24 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // at the PRESS column, then the
         // gesture it was always the prologue to. set_trim_bound_at_click_then_
         // arm_drag is the one owner of that pair — its arm RIDES the set's
-        // verdict, so a refused set (a degenerate audio/geometry state, a value
-        // not strictly inside its partner) arms nothing and the crossing is a
+        // verdict, so a refused set (a degenerate audio/geometry state, a
+        // click on its own cap, the partner wall) arms nothing and the
+        // crossing is a
         // consumed nothing, exactly as the motionless lift would have been.
-        // A drag's outcome is therefore byte-for-byte what it was under the
-        // press-time set: the bound is written at the press column, the drag
+        // The bound is written at the press column, the drag
         // anchors there, and begin_trim_drag's orig_* capture is the click-set
-        // value it always was.
-        // WHICH BOUND IS THE HOLD'S VERDICT AT THIS CROSSING (architect
-        // 2026-10-27, pending_click_writes_begin): a crossing before the hold
-        // delay sets and drags the BEGIN, one after it the END, a shifted
-        // press the END either way.
+        // value.
+        // WHICH BOUND IS THE NEAREST RULE'S, AT THE DOWN'S COLUMN (architect
+        // 2026-11-10): the set picks the end cap nearest the press column
+        // and the drag takes the bound the set moved, however long the press
+        // was held before it crossed.
         // FALL THROUGH (no return) so the pending trim drag armed just now
         // crosses on this same event and applies its first delta, folding the
         // whole press->crossing travel.
-        set_trim_bound_at_click_then_arm_drag(pending_click_writes_begin(press),
-                                              press.press_x, press.press_y);
+        set_trim_bound_at_click_then_arm_drag(press.press_x, press.press_y);
     }
     // Pending trim drag (armed by a plain trim-bar press, or by the crossing of
-    // a ctrl / ctrl+shift bound set just above): the trim reposition
+    // a barrel bound set just above): the trim reposition
     // begins only once the pointer travels past the GRAB GATE
     // (grab_moved_threshold_px, twice the sweeps' and pans' drag gate — an
     // endcap or the bridge is a thing the press grabs; 2026-09-29).

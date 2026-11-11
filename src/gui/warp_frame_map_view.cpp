@@ -271,34 +271,112 @@ bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
     return col >= area.w;
 }
 
-int64_t drop_at_playhead_source_frame(const AppState& a,
-                                      const GuiAudio& audio) {
+int64_t phase_reset_lead_in_source_frame(const AppState& a,
+                                         const GuiAudio& audio,
+                                         int64_t point) {
     // The rule is at the declaration (app_state.h).
-    int64_t ph = a.playhead_cursor_sample;
-    if (a.active_markers_view != 'P')
-        return active_domain_to_source_frame(a, audio, ph);
     if (a.active_audio_view == 'T') {
-        ph = std::max<int64_t>(0, ph - kPhaseResetLeadInSamples);
-        return active_domain_to_source_frame(a, audio, ph);
+        const int64_t lead_in =
+            std::max<int64_t>(0, point - kPhaseResetLeadInSamples);
+        return active_domain_to_source_frame(a, audio, lead_in);
     }
-    // S+P: forward to the target image through the live map, rounded to a
-    // whole target frame as the S -> T switch rounds the playhead, the same
-    // subtraction, and back to a whole source frame. An empty map (a build
-    // the tripwire class refused) is the identity both ways.
+    // SOURCE VIEW: forward to the target image through the live map, rounded
+    // to a whole target frame as the S -> T switch rounds the playhead, the
+    // same subtraction, and back to a whole source frame. An empty map (a
+    // build the tripwire class refused) is the identity both ways.
     const auto& map = target_view_warp_frame_map_cached(
         a, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).warp_frame_map;
     const double t = std::nearbyint(map_source_to_target(
-        static_cast<double>(std::max<int64_t>(0, ph)), map));
+        static_cast<double>(std::max<int64_t>(0, point)), map));
     const double lead_in = std::max(
         0.0, t - static_cast<double>(kPhaseResetLeadInSamples));
     return snap_authored_frame(map_target_to_source(lead_in, map));
+}
+
+int64_t drop_at_playhead_source_frame(const AppState& a,
+                                      const GuiAudio& audio) {
+    // The rule is at the declaration (app_state.h).
+    const int64_t ph = a.playhead_cursor_sample;
+    if (a.active_markers_view != 'P')
+        return active_domain_to_source_frame(a, audio, ph);
+    return phase_reset_lead_in_source_frame(a, audio, ph);
 }
 
 bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio) {
     // The rule is at the declaration (app_state.h).
     return source_frame_off_right_edge(
         a, audio, drop_at_playhead_source_frame(a, audio));
+}
+
+// THE CROSSING'S GROUP DROP, ONE SELECTED WARP MARKER'S PLACE (the rule is
+// at phase_reset_crossing_group_drops' declaration, app_state.h): the frame
+// the single drop authors with the playhead standing on the marker — the
+// marker's position in the standing audio view's domain, as a click lands
+// the playhead on it, through the lead-in drop's one frame — and the two
+// reasons it is skipped: a phase reset already standing on that frame, or
+// the single drop's own painted-edge refusal asked of that frame.
+namespace {
+struct CrossingDropPlace {
+    int64_t frame    = 0;
+    bool    held     = false;
+    bool    off_edge = false;
+    bool drops() const { return !held && !off_edge; }
+};
+CrossingDropPlace crossing_drop_place(const AppState& a, const GuiAudio& audio,
+                                      int64_t marker_frame) {
+    CrossingDropPlace p;
+    p.frame = phase_reset_lead_in_source_frame(
+        a, audio, source_frame_to_active_domain(a, audio, marker_frame));
+    // The store is ascending by time_frame (GuiMarkerStore).
+    const std::vector<GuiPhaseResetMarker>& pr = a.phaseresetmarkers.markers();
+    const auto at = std::lower_bound(
+        pr.begin(), pr.end(), p.frame,
+        [](const GuiPhaseResetMarker& m, int64_t f) {
+            return m.time_frame < f;
+        });
+    p.held = at != pr.end() && at->time_frame == p.frame;
+    // A held place wants no drop, so the edge is asked only of a place the
+    // act would write.
+    p.off_edge = !p.held && source_frame_off_right_edge(a, audio, p.frame);
+    return p;
+}
+} // namespace
+
+PhaseResetCrossingDrops phase_reset_crossing_group_drops(
+        const AppState& a, const GuiAudio& audio) {
+    PhaseResetCrossingDrops out;
+    const std::vector<GuiWarpMarker>& wv = a.warpmarkers.markers();
+    const int n = static_cast<int>(wv.size());
+    for (const int idx : a.selected_markers) {
+        // The stale-index belt, the selection verbs' one policy: skipped.
+        if (idx < 0 || idx >= n) continue;
+        const CrossingDropPlace p = crossing_drop_place(
+            a, audio, wv[static_cast<std::size_t>(idx)].time_frame);
+        if (p.off_edge) out.off_edge = true;
+        if (!p.drops()) continue;
+        out.frames.push_back(p.frame);
+        if (idx == a.last_selected_marker) out.focus_frame = p.frame;
+    }
+    // Two selected markers whose places coincide share one reset.
+    std::sort(out.frames.begin(), out.frames.end());
+    out.frames.erase(std::unique(out.frames.begin(), out.frames.end()),
+                     out.frames.end());
+    return out;
+}
+
+bool phase_reset_crossing_group_would_drop(const AppState& a,
+                                           const GuiAudio& audio) {
+    const std::vector<GuiWarpMarker>& wv = a.warpmarkers.markers();
+    const int n = static_cast<int>(wv.size());
+    for (const int idx : a.selected_markers) {
+        if (idx < 0 || idx >= n) continue;
+        if (crossing_drop_place(
+                a, audio, wv[static_cast<std::size_t>(idx)].time_frame)
+                .drops())
+            return true;
+    }
+    return false;
 }
 
 int64_t authored_frame_at_column_on_basis(

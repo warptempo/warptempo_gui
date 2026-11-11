@@ -1111,7 +1111,7 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // while tuning; MAGNIFY below 32 W). Past 37 W on the tablet at 200 % (and
 // run_gap 22, below) the band no longer fits and its overflow rule answers — the left runs
 // clipped short of the right run, the third run's keys gone from its tail,
-// SETUP itself from 46 W (THE FIT at paint_icon_row's width math,
+// SETUP itself from 44 W (THE FIT at paint_icon_row's width math,
 // paint_handler.cpp). The settings page opens
 // the LINE EDITOR on it, not a value list (41 values is no short domain,
 // kSettingsValueListKeys' rule). A TUNING KEY: when he rules the number,

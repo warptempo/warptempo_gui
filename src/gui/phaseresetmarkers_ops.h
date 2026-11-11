@@ -38,6 +38,15 @@ struct GuiPhaseResetMarkersOps {
           target_render(target_render_) {}
 
     void drop_phase_reset_at_position(double time_frame);
+    // THE GROUP DROP'S CREATE PATH (architect 2026-11-10, Shift+S over a
+    // multi-selection — GuiInputHandler::drop_phase_reset_crossing): one
+    // reset at each of `frames` (source frames, the plan's,
+    // phase_reset_crossing_group_drops), ONE undo entry for the whole act,
+    // the created resets selected, the focus and the playhead on the reset
+    // at `focus_frame` (else the earliest created). The body's comment owns
+    // the rest.
+    void drop_phase_resets_at_frames(const std::vector<int64_t>& frames,
+                                     int64_t focus_frame);
     // Returns the off-edge refusal's sentence for the dispatcher to card
     // (kMarkerDropOffEdgeCard; GuiOpRefusal, warpmarkers_ops.h), else
     // std::nullopt.

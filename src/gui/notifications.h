@@ -99,7 +99,9 @@
 //     product is the on-screen keyboard's own caps.)
 //   * THE VERBS' OWN REFUSALS, naming a subject or a view, never a chord: the
 //     home-view binding ("Markers are placed in source view", "Markers are
-//     moved in source view", Shift+S's "Already in phase reset view"); the
+//     moved in source view", Shift+S's "Already in phase reset view" and its
+//     group drop's "The selected markers already have their phase resets",
+//     2026-11-10); the
 //     subject refusals ("Select a marker to …", "Select a warp marker to …");
 //     the column ("Phase resets carry no tempo to inherit"); the value facts
 //     (the GROUP step's "One of the selected markers cannot take this tempo
@@ -117,9 +119,7 @@
 //     is unavailable[: <reason>]" (the press that asks for git where the
 //     remote walk could not bootstrap — bare `g` at set_history_delta and the
 //     publish chord, Ctrl+Shift+S, at run_publish_chord — plus the failed-scan
-//     arrival; the entry opens on the local walk and raises none); the trim bar's "A trim
-//     bound must stay inside its partner" (the act's, never
-//     trim_bound_click_frame's); playback's kPlaybackDeviceUnavailableCard
+//     arrival; the entry opens on the local walk and raises none); playback's kPlaybackDeviceUnavailableCard
 //     (playback_lifecycle.h — the one launch body, the two pre-launch gates
 //     and the A/B audition's own tick) and the audition's "One of the two
 //     tabs has nothing to play from here"; kNoRenderRunningCard (the painted
@@ -584,7 +584,9 @@ inline constexpr const char* kTrimFallbackCard =
 // group's after its collapse); the
 // DROP's by the two at-playhead drop bodies through theirs (bare `s` in
 // either column and Shift+S's lead-in drop; the empty-lane double-click
-// seats the playhead on a painted column first and cannot meet it). "At this
+// seats the playhead on a painted column first and cannot meet it), and by
+// Shift+S's group drop where it refuses whole and the edge skipped a place
+// (GuiInputHandler::drop_phase_reset_crossing, 2026-11-10). "At this
 // zoom" is the sentence's truth: zooming in brings the column on screen.
 inline constexpr const char* kMarkerNudgeOffEdgeCard =
     "The marker would move past the edge at this zoom";

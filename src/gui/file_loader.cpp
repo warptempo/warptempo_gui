@@ -754,8 +754,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // THIS ARM HAS NO GUI PRODUCER LEFT, AND IS KEPT ANYWAY (architect
     // 2026-08-02). No gesture can write a crossed pair into a .settings any
     // more: every trim commit route runs auto_clear_crossed_trim before it
-    // rests, the bound-set clicks refuse a click on or past the partner
-    // outright, the SWEEP orders its pair and floors its width, and since
+    // rests, the bound-set click moves the end cap nearest it and refuses a
+    // frame that would land that bound on or past its partner (its partner
+    // wall, trim_bound_click), the SWEEP orders its pair and floors its width, and since
     // 2026-08-02 the
     // single-bound drag CLAMPS INCLUSIVELY AT ITS PARTNER, so a drag hands the
     // commit tail begin == end and never a crossing. What reaches here is

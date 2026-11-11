@@ -635,11 +635,12 @@ bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
 //     write, idempotently across the gesture's later events — the drag arms'
 //     own arrangement below. (This list's first member was the SET-FROM-REGION
 //     act, which retired with the free scratch span it committed.);
-//   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar — a
-//     ctrl press held past the hold delay the END too (2026-10-27) — ONE
-//     function (set_trim_bound_at_click) and so one deselect — REINSTATED
-//     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
-//     ahead of the same deselect, and run AT THE LIFT since 2026-08-15 (the act
+//   * the barrel's BOUND-SET click on the trim bar, the nearest end cap
+//     moved to the click (architect 2026-11-10) — ONE
+//     function (set_trim_bound_at_click) and so one deselect, past its
+//     refusals (a degenerate geometry, a click on its own cap, the partner
+//     wall), and run AT
+//     THE LIFT since 2026-08-15 (the act
 //     moved whole, this deselect with it);
 //   * the trim endcap/bridge DRAG — update_trim_drag's two motion arms and
 //     commit_trim_drag — which also carries the drag's PLAYBACK STOP, relocated
@@ -660,7 +661,8 @@ bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
 //     the engine-key commit — write no trim bound and are not members.)
 // Each deselects PAST ITS OWN REFUSALS (the refusal-gating rule these routes
 // already hold their playback stop under):
-// degenerate geometry, a bound-set click not strictly inside its partner, a drag
+// degenerate geometry, a bound-set click on its own cap or at its partner
+// wall, a drag
 // event that moved no bound, and
 // a settings commit rejected for an out-of-wall value / an
 // unchanged value all write no bound and so deselect nothing. (The read-only
@@ -1349,8 +1351,8 @@ struct GuiInputHandler {
     //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
     //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow,
     //   Restrict, the TRIM arm lamp and Presets;
-    //   BPM, Iteration and Flatten; Listen, the padlock, Settings, Enable
-    //   Tooltips, the Score key and the two level cases, AUDIO and NOISE —
+    //   BPM, Iteration and Flatten; Listen, the padlock, the Score key,
+    //   Settings, Enable Tooltips and the two level cases, AUDIO and NOISE —
     //   sliders with no chord, pressed by their own arm, arm_level_case_press),
     //   the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
@@ -1668,7 +1670,9 @@ struct GuiInputHandler {
     // page is the one holding the column's frame, and THE LIFT SEEKS that
     // frame, the thumb's last painted column's (architect 2026-10-26, "no
     // scrubbing"), the position written with it and the page the drag showed
-    // standing — a motionless tap on the thumb seeks nothing. THE SOUND
+    // standing — a motionless tap on the thumb seeks nothing; the clock's
+    // elapsed field shows that frame's time while the drag stands (architect
+    // 2026-11-10, score_scrub_drop_frame). THE SOUND
     // PAUSES WHILE THE SCRUB IS HELD (architect 2026-10-26 ~23:00, the one
     // rule of both scrubs since ~23:15): a LIVE transport is paused at the
     // press and played on from the dropped column at the lift. A modified
@@ -1997,12 +2001,12 @@ struct GuiInputHandler {
     // THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl bound set
     // (2026-08-17: its press IS the endcap drag's arm, the one genuinely
     // ambiguous click; the record's other four kinds went back to the press
-    // with that ruling). The arm writes PendingClickAct — the point and the
-    // press stamp — and NOTHING ELSE; the act is
+    // with that ruling). The arm writes PendingClickAct — the press point —
+    // and NOTHING ELSE; the act is
     // taken BY VALUE so the caller can disarm before running it, the release
     // bodies' standing shape. Every gate the set meets is re-asked inside it,
     // live at the lift, and which bound it writes is decided there too: the
-    // begin, or the end when held past the hold delay (architect 2026-10-27).
+    // end cap nearest the press column (architect 2026-11-10).
     // Contract at PendingClickAct (app_state.h), reasoning at the
     // definitions (input_pointer.cpp).
     void arm_pending_click_act(int x, int y);
@@ -3502,61 +3506,63 @@ private:
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
 
-    // Set ONE trim bound (begin or end) at the clicked column, REINSTATED on the
-    // redesigned TRIM BAR (architect 2026-08-01, after a one-day retirement) —
-    // the trim-drag release-snap basis (authored_frame_at_column_on_basis over
-    // the displayed paint map on the item viewport basis), walls [0, total-1],
-    // then the shared commit tail.
-    // ADJUST-ONLY is now a statement about what the click DOES — it moves one
-    // bound of the window that always rests — rather than a condition it tests,
-    // the pair gate having died with the unset state (2026-07-30).
-    // THE STRICTLY-INSIDE GUARD is the new half (architect 2026-08-01): a value
-    // resting EQUAL TO or PAST its partner is a CONSUMED NO-OP — no write, no
-    // deselect, no stop, no drag — so this route never produces a crossed pair
-    // and never hands one to auto_clear_crossed_trim. History-less like every
-    // trim mutation; repaint + target_render.trigger() like the drag release.
-    // READ-ONLY DOES NOT REFUSE (architect 2026-08-07 — trim is band, not
-    // authored content; the gate this line used to name was deleted with that
-    // reclassification, and the stale claim is corrected here 2026-08-15). OWNS
-    // the click's playback
-    // stop, placed past those refusals and just ahead of the bound write, so the
-    // ctrl press carries none of its own and a refused click leaves a live
-    // audition playing. RETURNS whether a bound was written (the wrapper's arm
-    // gate). is_begin picks the bound, decided by the caller where the act
-    // runs: a ctrl press sets the begin, a ctrl press held past the hold delay
-    // the end (pending_click_writes_begin, 2026-10-27).
+    // THE BARREL'S BOUND SET ON THE TRIM BAR: move WHICHEVER END CAP IS
+    // NEAREST the clicked column to it (architect 2026-11-10; a begin click
+    // and a held end click until then) — the trim-drag release-snap basis
+    // (authored_frame_at_column_on_basis over the displayed paint map on the
+    // item viewport basis), walls [0, total-1], then the shared commit tail.
+    // NEAREST is the decider's verdict, ON THE PAINTED COLUMNS (the caps'
+    // columns as the trim bar's painter draws them, on the click's own
+    // basis), a tie the begin's;
+    // a click outside the trim moves the near cap outward; NO LONG PRESS
+    // MEANS ANYTHING HERE. A click exactly on its cap is a CONSUMED NO-OP —
+    // no write, no deselect, no stop, no drag, no card — and so is THE
+    // PARTNER WALL, a click whose frame would land the nearest bound on or
+    // past its partner (a trim narrower than a column or two), so this
+    // route never
+    // hands a crossed pair to auto_clear_crossed_trim. History-less like
+    // every trim mutation; repaint + target_render.trigger() like the drag
+    // release. READ-ONLY DOES NOT REFUSE (architect 2026-08-07 — trim is
+    // band, not authored content). OWNS the click's playback stop, placed
+    // past its refusals and just ahead of the bound write, so the barrel
+    // press carries none of its own and a refused click leaves a live
+    // audition playing. RETURNS THE CLICK IT COMMITTED, or nothing where it
+    // wrote nothing (the wrapper's arm gate and its drag's bound).
     // IT RUNS AT THE LIFT (2026-08-15, the act-at-lift sweep): the press arms
     // PendingClickAct, the motionless lift calls this at the PRESS column, and a
-    // crossing calls it and hands over to the drag. The body is unchanged.
+    // crossing calls it and hands over to the drag.
     // The full derivation lives at the definition, input_trim.cpp.
-    bool set_trim_bound_at_click(bool is_begin, int mouse_x);
+    struct TrimBoundClick {
+        bool    is_begin;   // the nearest bound: the begin, else the end
+        int64_t frame;      // the source frame the click writes
+    };
+    std::optional<TrimBoundClick> set_trim_bound_at_click(int mouse_x);
 
     // WHAT THAT CLICK WOULD WRITE, or nullopt when it refuses — the whole of the
     // decision half of set_trim_bound_at_click above (its
     // degenerate-geometry gate, the column clamp, the map + item basis +
-    // authored_frame_at_column_on_basis derivation, the absolute walls, and the
-    // STRICTLY-INSIDE guard), leaving that
+    // authored_frame_at_column_on_basis derivation, the absolute walls, THE
+    // NEAREST-CAP VERDICT on the painted columns, the on-its-own-cap no-op
+    // and the partner wall), leaving that
     // function nothing but the write and its tail. Const, because deciding is
     // not acting: the answer is a pure function of the store, the audio and the
     // painted geometry.
-    std::optional<int64_t> trim_bound_click_frame(bool is_begin,
-                                                  int mouse_x) const;
+    std::optional<TrimBoundClick> trim_bound_click(int mouse_x) const;
 
-    // The ctrl trim-bar bound set's THRESHOLD CROSSING (a PRESS
-    // until 2026-08-15, when the set moved to the lift): sets the bound at the
+    // The barrel trim-bar bound set's THRESHOLD CROSSING (a PRESS
+    // until 2026-08-15, when the set moved to the lift): sets the nearest
+    // bound at the
     // PRESS column (set_trim_bound_at_click, above) AND arms the EXISTING
     // single-bound trim drag on it through arm_pending_trim_drag — the same
     // pending an ENDCAP press arms, so the gesture continues under the drag's own
-    // unchanged rules and its outcome is byte-for-byte the press-time model's.
+    // unchanged rules.
     // NOTHING is stashed: the click-set is committed when made
     // (trim is history-less) and pointer gestures have no cancel. A REFUSED set
     // arms nothing at all, the arm riding the setter's return value rather than a
-    // second copy of its guard ladder.
-    // is_begin picks the bound, the hold's verdict at the crossing
-    // (pending_click_writes_begin, 2026-10-27): a ctrl press crossing before
-    // the hold delay the begin; ctrl+shift, or ctrl crossing after it, the end.
-    void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
-                                               int mouse_y);
+    // second copy of its guard ladder — and the bound the drag takes is the
+    // bound that return names, the nearest cap at the down's column
+    // (architect 2026-11-10).
+    void set_trim_bound_at_click_then_arm_drag(int mouse_x, int mouse_y);
 
     // One scrub ACT at an active-domain frame: THE SCRUB ALWAYS PLAYS
     // (architect 2026-09-21, superseding the 2026-07-27 stop-then-start, which
@@ -3644,10 +3650,22 @@ private:
     // audio view (drop_at_playhead_source_frame, app_state.h). In the P
     // column it refuses whole as already crossed.
     //
+    // OVER A MULTI-SELECTION IT IS THE GROUP DROP (architect 2026-11-10):
+    // with two or more markers selected in the warp column each selected
+    // marker gets a reset at its own place — the single drop's computation
+    // with the playhead on that marker — a place already holding a phase
+    // reset skipped; the act refuses, before any switch, only where every
+    // place is skipped (phase_reset_crossing_group_drops, app_state.h; the
+    // body's head).
+    //
     // WHAT IT LEAVES BEHIND: the new reset SELECTED and the playhead ON it —
     // both the drop's own doing, which is why the column switch (whose
     // selection clear would undo them) has to run first. ONE undo entry, the
-    // drop's, tagged the standing audio view / P / the standing tab.
+    // drop's, tagged the standing audio view / P / the standing tab. THE
+    // GROUP DROP leaves every created reset selected, the focus and the
+    // playhead on the reset of the marker the warp selection was focused on
+    // (the earliest created where that place was skipped), and ONE undo
+    // entry for the whole act.
     //
     // THE REFUSALS ARE EVERY GATE THE CHORD ALREADY PASSES, none of them new:
     // the read-only lock (read_only_key_blocked drops Shift+S beside bare `s`
@@ -4140,9 +4158,14 @@ private:
     // armed nothing. THE SOUND PAUSES WHILE THE SCRUB IS HELD (architect
     // 2026-10-26 ~23:15, the score scrub's rule, the two scrubs one): a LIVE
     // item is paused at the press and resumed at the lift from the seeked
-    // point. The hard end — the pointer-leave hook, the button-lost edge and
+    // point. THE CLOCK'S POSITION FIELD SHOWS THE TIME THE DROP WOULD LAND AT
+    // while the drag stands (architect 2026-11-10; the lift's own
+    // derivation, render_player_scrub_drop_frame, every edge of the drag
+    // damaging the clock's rect). The hard end — the pointer-leave hook, the
+    // button-lost edge and
     // the force-end finalizer — drops the arm and commits nothing, a live
-    // item the press paused staying PAUSED.
+    // item the press paused staying PAUSED, the field back on the item's
+    // position.
     bool claim_player_scrub_press(int x, int y, GuiInputState mods);
     bool finish_player_scrub_release(int x, int y);
     void update_player_scrub_motion(int x);
@@ -4428,9 +4451,8 @@ private:
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once — OPENING ON THE
-    //     COMMIT WALK'S MEMBER THE LAST VISIT WAS VIEWING (architect
-    //     2026-10-26, AppState::history_viewed_commit_sha), at once where the
-    //     walk holds it, else by the prefetch drain's one pending landing. ONE CALLER since
+    //     MOST RECENT COMMIT AT EVERY ENTRY (architect 2026-11-10; no viewed
+    //     member is remembered across visits). ONE CALLER since
     //     2026-08-05 — bare `h` — the commit act having stopped re-entering when
     //     it began closing the view instead. IT ALWAYS OPENS since 2026-09-04:
     //     a bootstrap the REMOTE walk refuses lands the visit on the LOCAL one
@@ -4459,10 +4481,7 @@ private:
     //     when the reading left the row for row 4's own toggle). A switch is a MODE EDGE with the `,` / `.` step's own
     //     shape, and the owner is idempotent, which is what makes a step onto
     //     the walk already shown a consumed nothing at its call site. IT
-    //     MOVES NEITHER WALK'S POSITION, so it writes no remembered member
-    //     (AppState::history_viewed_commit_sha, 2026-10-26, which the exit
-    //     owner writes); a switch that lands CANCELS the entry's pending
-    //     landing on that member, as a `,` / `.` step does.
+    //     MOVES NEITHER WALK'S POSITION.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * the PUBLISH CHORD'S ACT forks in front of it (run_publish_chord,

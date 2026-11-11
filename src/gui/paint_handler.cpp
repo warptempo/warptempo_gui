@@ -1084,22 +1084,24 @@ constexpr IconRowDef kIconRowButtons[] = {
     // The read-only toggle: its lit face says read-only, as every
     // toggle's does.
     {RedesignButton::IconReadOnly},
-    // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
+    // THE SCORE (architect 2026-10-26), between the padlock and Settings
+    // (architect 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS AUDIO
+    // NOISE): bare `m`, the score viewer's opener and, while it stands,
+    // its closer (RedesignButton::IconScore). One case on the walk, no run
+    // moving.
+    {RedesignButton::IconScore},
+    // SETTINGS (architect 2026-09-29), right after the Score key (architect
+    // 2026-11-10) and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
     // `;`, the settings page (2026-10-28) — the key's pointer spelling, one box and one 2px gap onto the walk
     // and no separator moving.
     {RedesignButton::IconSettings},
-    // ENABLE TOOLTIPS (architect 2026-09-29, evening), CLOSING the
-    // render-entry group behind Settings since 2026-10-01 (architect: help
-    // comes after settings): the bare backslash's LAMP. Dark at every open, and while dark no tooltip shows
+    // ENABLE TOOLTIPS (architect 2026-09-29, evening), behind Settings
+    // since 2026-10-01 (architect: help
+    // comes after settings), the two level cases behind it: the bare backslash's LAMP. Dark at every open, and while dark no tooltip shows
     // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
     // walk, no separator moving.
     {RedesignButton::IconTooltips},
-    // THE SCORE (architect 2026-10-26), the third run's last but one since
-    // 2026-10-28: bare `m`, the score viewer's opener and, while it stands,
-    // its closer (RedesignButton::IconScore). One case onto the walk, no run
-    // moving.
-    {RedesignButton::IconScore},
     // THE TWO LEVEL CASES (architect 2026-11-05), the third run's last two,
     // in the NOISE lamp's seat (2026-10-28 to 2026-11-05): AUDIO then NOISE,
     // the `audio_level` and `noise_level` sliders (RedesignButton::
@@ -1857,8 +1859,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // MAGNIFICATION LAMP, FOLLOW, RESTRICT and TRIM PRESETS (the viewport
     // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
     // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
-    // READ-ONLY toggle, SETTINGS, ENABLE TOOLTIPS, since 2026-10-26 the
-    // SCORE key and since 2026-11-05 the two level cases, AUDIO and NOISE,
+    // READ-ONLY toggle, the SCORE key — between the padlock and Settings,
+    // architect 2026-11-10 — SETTINGS, ENABLE TOOLTIPS and since 2026-11-05
+    // the two level cases, AUDIO and NOISE,
     // in the NOISE lamp's seat of 2026-10-28) the third — then,
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
     // (kIconRowRightRun). IN THE `h` VIEW the history group's four icon-row
@@ -1877,9 +1880,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // In, Zoom Out, Zoom to Fit and the magnification lamp (which the view
     // admits since
     // 2026-10-12, architect: he wants to magnify while walking history), and
-    // the padlock and Settings between Play Renders (admitted 2026-10-25)
-    // and Enable Tooltips, and the Score key after it (2026-10-26), the NOISE
-    // lamp behind it standing (admitted 2026-10-28) — its
+    // the padlock, the Score key (2026-10-26) and Settings between Play
+    // Renders (admitted 2026-10-25) and Enable Tooltips, the two level cases
+    // behind it standing — its
     // neighbors
     // closing up and its run standing
     // while any member does. What the view refuses only BY STATE (Save with
@@ -1932,8 +1935,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the left runs clipped one run gap short of the history opener (x
     // 2228 − 10 · key_width), the third run's faces cut or published empty
     // from its tail, the right run whole: NOISE cut from 38 W and gone from
-    // 39, AUDIO gone from 40, SCORE from 42, TIPS from 44, SETUP (the
-    // settings page's one opener on glass) from 46, LOCK from 48, PLAYER at
+    // 39, AUDIO gone from 40, TIPS from 42, SETUP (the
+    // settings page's one opener on glass) from 44, SCORE from 46 (the run's
+    // order of 2026-11-10), LOCK from 48, PLAYER at
     // the grammar's ceiling, 50 (the first two runs whole up to it). THE RUN
     // GAP TUNES IT TOO (the `run_gap` tuning key, architect 2026-11-07,
     // session 87; render.h's run gap paragraph): the three run gaps of the
@@ -2064,7 +2068,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // arm, redesign_button_enabled); what the view refuses in EVERY session does not
         // stand in it since 2026-10-07 (history_mode_hides_button: the zoom
         // group behind Zoom In, Zoom Out, Zoom to Fit and the magnification
-        // lamp, the read-only toggle, Settings, the Score key), and the two
+        // lamp, the read-only toggle, the Score key, Settings), and the two
         // groups it consumes WHOLE,
         // Undo's and the iteration group, have the history companions
         // standing in their slots (since 2026-10-05; the iteration group's
@@ -5721,8 +5725,8 @@ namespace {
 // 2026-10-23 — is not painted, architect 2026-10-23: the button walk's NO
 // FOCUS FRAME.)
 // THE PLAYER ROW'S GROUP SPACE IS THE RUN GAP (architect 2026-11-03, on
-// mock dec7b): between its groups (transport → scrub, scrub → the clock's
-// two fields, the fields → the right cluster) stands render.h's
+// mock dec7b): between its groups (the left cluster → scrub, scrub → the
+// clock's two fields, the fields → the transport) stands render.h's
 // program_run_gap_px, the band's run gap (the `run_gap` tuning key's W since
 // 2026-11-07, 22 its default, the 22 W of 2026-11-04 night; the hi-fi's gap
 // again since the retrofit, 2026-11-03); the score viewer's two
@@ -5820,7 +5824,9 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 // painter's player branch): each of the nine cases' left
 // column in the plan's order, the clock's two fields and the scrub's span,
 // on the controls row's seats (modal_controls_seats). The row's arrangement
-// and its rulings are at the painter's player branch.
+// and its rulings are at the painter's player branch. THE TRANSPORT STANDS
+// FLUSH RIGHT AND EVERYTHING ELSE AT THE LEFT (architect 2026-11-10), the
+// scrub and then the clock between the two clusters.
 struct PlayerRowLayout {
     std::array<int, 9> x{};
     int field_w = 0, field_gap = 0;
@@ -5855,56 +5861,48 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     l.field_gap = scaled_px(kTimeFieldGapW);
     const int clock_w = l.field_w + l.field_gap + l.field_w;
 
-    // -- The walk: the fixed left run, the right-flushed PAIR (word
-    //    buttons until 2026-09-01, glyph boxes since), and the scrub
-    //    taking what is between them. --
+    // -- The walk (architect 2026-11-10: the transport to the right,
+    //    everything else to the left, the scrub and the clock where they
+    //    stand between the two): THE LEFT CLUSTER, the six keys that are not
+    //    the transport — the lamp, the highlight pair, Up a Folder, the
+    //    Load in Place / Delete slot and Close — one run from the row's
+    //    first face; THE TRANSPORT'S THREE right-flushed where THE CONTROLS
+    //    ROW'S FACES END, the last face's right edge the pane's last column
+    //    (the well's; modal_controls_seats' cases_right); the scrub and the
+    //    clock's two fields between them, the scrub taking what is left. --
     const int cx0 = seats.cases_left;
-    l.x[0] = cx0;                          // Home (skip back)
-    l.x[1] = cx0 + pitch;                  // Play / Pause
-    l.x[2] = cx0 + 2 * pitch;              // End (skip forward)
-    l.scrub_x0 = cx0 + key_group_w_px(3) + group;
+    for (int i = 0; i < 6; ++i)
+        l.x[i] = cx0 + i * pitch;          // Repeat one .. Close
+    l.scrub_x0 = cx0 + key_group_w_px(6) + group;
 
-    // THE RIGHT-FLUSHED CLUSTER IS TWO GLYPH BOXES since 2026-09-01 (it
-    // was Load in place · Close as WORDS, measured runs in label boxes):
-    // both are the program's key now, so the cluster is two faces one key
-    // gap apart — right-flushed where THE CONTROLS ROW'S FACES END, the last
-    // face's right edge the pane's last column (the well's; architect
-    // 2026-10-14, modal_controls_seats' cases_right; row 8's last case's from
-    // 2026-10-05; the faces' since 2026-11-03).
-    const int words_w  = key_group_w_px(2);
-    const int words_x0 = std::max(cx0, seats.cases_right - words_w);
-    // What the row owes AFTER the scrub: the group space, the clock
-    // cell, the group space, the lamp, THE HIGHLIGHT PAIR AND THE UP A
-    // FOLDER BUTTON, the four faces one key gap apart, and the right-flushed
-    // pair one key gap after them, the six one run (the 2026-08-29 spacing
-    // ruling, the word buttons' own gap there, spent with the words on
-    // 2026-09-01) — four pitches.
-    const int after_scrub =
-        group + clock_w + group + 4 * pitch;
+    const int transport_x0 =
+        std::max(cx0, seats.cases_right - key_group_w_px(3));
+    // What the row owes AFTER the scrub, ahead of the transport: the group
+    // space, the clock's two fields, the group space.
+    const int after_scrub = group + clock_w + group;
     // THE FLOOR IS TWO THUMBS (2026-10-25; two 14-W handle boxes until
     // then) — a channel shorter than two of the thumbs that ride it is not a
     // channel. `scrub_w` is the CHANNEL's width; the thumb's center runs its
     // first column to its last and half the thumb overhangs each end, over
     // the group space either side (render.h's scrub block).
-    l.scrub_w = words_x0 - after_scrub - l.scrub_x0;
+    l.scrub_w = transport_x0 - after_scrub - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
 
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
-    l.x[3] = l.clock_end + group;          // Repeat one
-    l.x[4] = l.x[3] + pitch;               // Highlight Next (Down)
-    l.x[5] = l.x[4] + pitch;               // Highlight Previous (Up)
-    l.x[6] = l.x[5] + pitch;               // Up a Folder
-    l.x[7] = words_x0;                     // Load in place
-    l.x[8] = words_x0 + pitch;             // Close
+    l.x[6] = transport_x0;                 // Home (skip back)
+    l.x[7] = transport_x0 + pitch;         // Play / Pause
+    l.x[8] = transport_x0 + 2 * pitch;     // End (skip forward)
     return l;
 }
 
 // THE SCORE VIEWER'S PAGE ROAD ROW LAYOUT (architect 2026-10-26,
-// score_viewer.h's head, the face with no soundtrack): THE PLAYER'S SEATS — PREV and NEXT one key gap apart at the row's left (the
-// transport's), the page scrub after the group space, THE PAGE CELL where
-// the player's clock stands, and RESET, START, END and CLOSE one key gap apart flush
-// right, the last key's right edge the row's — the scrub taking what is
+// score_viewer.h's head, the face with no soundtrack): THE PLAYER'S SEATS
+// (the transport flush right since 2026-11-10, architect) — RESET, START,
+// END and CLOSE one key gap apart from the row's first face, the page scrub
+// after the group space, THE PAGE CELL where the player's clock stands, and
+// PREV and NEXT one key gap apart flush right (the transport's seats), the
+// last key's right edge the row's — the scrub taking what is
 // left, floored at two thumbs as the player's is. THE CELL'S WIDTH is fixed
 // for the table: a time field round the widest-digit specimen of
 // "<count> / <count>" at the table's page count's digits, so nothing moves
@@ -5938,26 +5936,27 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
         text_shape::memoized_run(cfont, digits + " / " + digits)->width_px)));
     const int pitch = key_group_pitch_px();
     const int cx0 = seats.cases_left;
-    l.x[0] = cx0;                          // PREV
-    l.x[1] = cx0 + pitch;                  // NEXT
-    l.scrub_x0 = cx0 + key_group_w_px(2) + group;
-    const int words_x0 =
-        std::max(cx0, seats.cases_right - key_group_w_px(4));
-    l.scrub_w = words_x0 - (group + l.cell_w + group) - l.scrub_x0;
+    for (int i = 0; i < 4; ++i) l.x[i] = cx0 + i * pitch;   // RESET .. CLOSE
+    l.scrub_x0 = cx0 + key_group_w_px(4) + group;
+    const int pages_x0 =
+        std::max(cx0, seats.cases_right - key_group_w_px(2));
+    l.scrub_w = pages_x0 - (group + l.cell_w + group) - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.cell_x0 = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
-    for (int i = 0; i < 4; ++i) l.x[2 + i] = words_x0 + i * pitch;  // RESET .. CLOSE
+    l.x[4] = pages_x0;                     // PREV
+    l.x[5] = pages_x0 + pitch;             // NEXT
     return l;
 }
 
 // THE SCORE VIEWER'S MEDIA PLAYER ROW (architect 2026-10-26 night, the
-// soundtrack's face, score_viewer.h's head): BACK, PLAY / PAUSE and FWD
-// one key gap apart at the row's left (the skips architect 2026-10-27, the render
-// player's three transport seats), the scrub after the group space, THE
+// soundtrack's face, score_viewer.h's head; the transport flush right since
+// 2026-11-10, architect): RESET, START, END and CLOSE one key gap apart from
+// the row's first face, the scrub after the group space, THE
 // CLOCK — the render player's two time
-// fields, measured and spaced as its are (player_row_layout) — and RESET,
-// START, END and CLOSE one key gap apart flush right, the scrub taking what is left,
-// floored at two thumbs as the player's is.
+// fields, measured and spaced as its are (player_row_layout) — and BACK,
+// PLAY / PAUSE and FWD one key gap apart flush right (the skips architect
+// 2026-10-27, the render player's three transport seats), the scrub taking
+// what is left, floored at two thumbs as the player's is.
 struct ScoreMediaRowLayout {
     std::array<int, 7> x{};
     int field_w = 0, field_gap = 0;
@@ -5971,17 +5970,17 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     const int clock_w = l.field_w + l.field_gap + l.field_w;
     const int pitch = key_group_pitch_px();
     const int cx0 = seats.cases_left;
-    l.x[0] = cx0;                          // BACK
-    l.x[1] = cx0 + pitch;                  // PLAY / PAUSE
-    l.x[2] = cx0 + 2 * pitch;              // FWD
-    l.scrub_x0 = cx0 + key_group_w_px(3) + group;
-    const int words_x0 =
-        std::max(cx0, seats.cases_right - key_group_w_px(4));
-    l.scrub_w = words_x0 - (group + clock_w + group) - l.scrub_x0;
+    for (int i = 0; i < 4; ++i) l.x[i] = cx0 + i * pitch;   // RESET .. CLOSE
+    l.scrub_x0 = cx0 + key_group_w_px(4) + group;
+    const int transport_x0 =
+        std::max(cx0, seats.cases_right - key_group_w_px(3));
+    l.scrub_w = transport_x0 - (group + clock_w + group) - l.scrub_x0;
     if (l.scrub_w < 2 * scrub_thumb_w_px()) l.scrub_w = 0;
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
-    for (int i = 0; i < 4; ++i) l.x[3 + i] = words_x0 + i * pitch;  // RESET .. CLOSE
+    l.x[4] = transport_x0;                 // BACK
+    l.x[5] = transport_x0 + pitch;         // PLAY / PAUSE
+    l.x[6] = transport_x0 + 2 * pitch;     // FWD
     return l;
 }
 
@@ -5991,7 +5990,10 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // ABUTTING CLUSTER FLUSH RIGHT — THE HIGHLIGHT PAIR, the player's DOWN and UP
 // keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
 // key's right edge the row's (every word row's alignment rule), nothing at
-// the row's left, as the player seats its pair in its right cluster. Every
+// the row's left. A DELIBERATE ASYMMETRY WITH THE PLAYER since 2026-11-10
+// (architect: the player's transport took its row's right, its pair and the
+// rest the left; that ruling named the player and the score viewer alone):
+// this list keeps its pair and its words in the one cluster flush right. Every
 // key the row's key (seats.case_w), the faces one key gap apart
 // (key_group_pitch_px, materials.h); on a row too narrow for the keys,
 // the cluster starts at the row's first face, the buttons whole (THE BUTTONS
@@ -6285,11 +6287,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         std::string tooltip;     // the player's own; empty = the composer's
         std::string tooltip2;    // the modifier line; empty = the one-line form
         int         w            = 0;
-        // WHERE IT PAINTS. The single left-flushed cluster every other owner
+        // WHERE IT PAINTS. The single cluster every other owner
         // lays out is written into this field by the walk below; THE PLAYER'S
-        // ROW IS NOT ONE CLUSTER (transport, separator, scrub, clock,
-        // separator, the lamp, the highlight pair, the Up a Folder button —
-        // then the last two FLUSH RIGHT), so its own branch writes all nine
+        // ROW IS NOT ONE CLUSTER (the lamp, the highlight pair, the Up a
+        // Folder button, Load in Place and Close at the left, then the scrub
+        // and the clock, then the transport FLUSH RIGHT; architect
+        // 2026-11-10), so its own branch writes all nine
         // and the walk simply paints where it is told.
         int         x            = 0;
     };
@@ -6302,17 +6305,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             plan.push_back(std::move(b));
         }
     } else if (player_up) {
-        // THE PLAYER'S ROW, in painted order (architect 2026-08-28; the
-        // transport is THE MAIN WINDOW'S OWN TRIPLE since 2026-09-01): the
-        // two SKIPS around Play/Pause, on Home and End since 2026-08-31 —
-        // then the scrub and the clock (both laid out in the player's own
-        // branch below, the separators either side of them retired
-        // 2026-10-02), then the REPEAT ONE
+        // THE PLAYER'S ROW, in painted order (architect 2026-08-28; THE
+        // TRANSPORT TO THE RIGHT AND EVERYTHING ELSE TO THE LEFT, architect
+        // 2026-11-10, each cluster keeping its own order): the REPEAT ONE
         // lamp, the HIGHLIGHT PAIR (Highlight Next, Highlight Previous: the
         // bare Down / Up keys' band walk on a button, architect 2026-10-10),
-        // the UP A FOLDER button, and the last two FLUSH RIGHT: Load in place ·
-        // Close.
-        // Close LAST, the row's last seat, as Cancel is every prompt's. No
+        // the UP A FOLDER button, Load in place and Close from the row's
+        // first face — then the scrub and the clock (both laid out in the
+        // player's own branch below, the separators either side of them
+        // retired 2026-10-02), then, FLUSH RIGHT, THE TRANSPORT (THE MAIN
+        // WINDOW'S OWN TRIPLE since 2026-09-01): the two SKIPS around
+        // Play/Pause, on Home and End since 2026-08-31.
+        // A DELIBERATE ASYMMETRY (architect 2026-11-10, the swap's own
+        // consequence): CLOSE CLOSES THE LEFT CLUSTER, beside the scrub, and
+        // is NOT the row's last seat here as Cancel is every prompt's and
+        // Close every word row's — the row's last seat is the transport's. No
         // key reaches the player (architect 2026-10-30), so the row has no
         // ring and no Tab walks it. A STOP BUTTON SAT AFTER PLAY/PAUSE from 2026-08-28
         // (Audacious's own order) until the act retired.
@@ -6399,13 +6406,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (THE `word_button` LAMBDA IS DELETED — 2026-09-01: the player's
         // row is keys alone and no word button. The other three owners' word
         // buttons are built in their own branches below.)
-        glyph_button(AppState::PlayerButtonAct::Home);
-        // PLAY/PAUSE: its glyph follows the play face (above); this is a
-        // player's transport, where a pause is a resumable rest. The roster's
-        // transport button is untouched — bare Space over the project's audio
-        // is one toggle with no pause state.
-        glyph_button(AppState::PlayerButtonAct::PlayPause);
-        glyph_button(AppState::PlayerButtonAct::NextTrack);
+        // THE LEFT CLUSTER (architect 2026-11-10), in its own order: the
+        // lamp first.
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
                      app.render_player.repeat_one);
         // THE HIGHLIGHT PAIR (architect 2026-10-10): the render player on
@@ -6418,16 +6420,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::HighlightUp);
         // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
-        // more, so the way out of a batch folder is here — beside the lamp,
-        // ahead of the right-flushed pair. It greys at the root through the
+        // more, so the way out of a batch folder is here — behind the pair,
+        // ahead of the cluster's last two. It greys at the root through the
         // act's own wall.
         glyph_button(AppState::PlayerButtonAct::Up);
-        // THE LAST TWO, FLUSH RIGHT: Load in Place (the icon row's history
-        // group runs the same act one surface over) and Close. Close stays
-        // LAST, the row's last seat.
+        // THE CLUSTER'S LAST TWO: Load in Place (the icon row's history
+        // group runs the same act one surface over) and Close, Close the
+        // cluster's last (the asymmetry recorded at this branch's head).
         // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
         // listing is batch folders, where a load has nothing to name, so the
-        // sixth button deletes the highlighted folder, and its shift press
+        // fifth button deletes the highlighted folder, and its shift press
         // every folder listed; its shift line stands only where "all" is more
         // than the highlighted one. Inside a batch folder the slot is Load in
         // Place, unchanged.
@@ -6437,18 +6439,32 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         else
             glyph_button(AppState::PlayerButtonAct::LoadInPlace);
         glyph_button(AppState::PlayerButtonAct::Close);
+        // THE TRANSPORT, FLUSH RIGHT (architect 2026-11-10), the row's last
+        // three seats: Home, Play / Pause, End.
+        glyph_button(AppState::PlayerButtonAct::Home);
+        // PLAY/PAUSE: its glyph follows the play face (above); this is a
+        // player's transport, where a pause is a resumable rest. The roster's
+        // transport button is untouched — bare Space over the project's audio
+        // is one toggle with no pause state.
+        glyph_button(AppState::PlayerButtonAct::PlayPause);
+        glyph_button(AppState::PlayerButtonAct::NextTrack);
     } else if (score_up) {
         // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order, ON
-        // ITS TWO FACES (score_viewer.h's head, 2026-10-26 night): the page
+        // ITS TWO FACES (score_viewer.h's head, 2026-10-26 night), THE
+        // TRANSPORT TO THE RIGHT AND EVERYTHING ELSE TO THE LEFT as the
+        // render player's row (architect 2026-11-10): RESET, START, END and
+        // CLOSE from the row's first face — then (the scrub and the page
+        // cell or the clock between, laid out in the branch below), flush
+        // right, the page
         // road's PREV and NEXT, or the media player's BACK, PLAY / PAUSE and
         // FWD — a deck's order, the render player's transport triple (Home,
         // PlayPause, NextTrack above), the skips architect 2026-10-27, each
         // with its modifier line (score_viewer_button_shift_hint); PLAY's
         // glyph and its word the render player's Play key's by the face
-        // (score_viewer_play_face) — then (the scrub and the page cell or the
-        // clock between, laid out in the branch below) RESET, START, END and
-        // CLOSE — each a key with its glyph and its legend, its face the act's own
-        // truthful answer.
+        // (score_viewer_play_face) — each a key with its glyph and its
+        // legend, its face the act's own truthful answer. CLOSE closes the
+        // left cluster, not the row (the player's recorded asymmetry, its
+        // branch above).
         using Act = AppState::ScoreButtonAct;
         const PlayerPlayFace face = score_viewer_play_face(app);
         const auto key = [&](Act act) {
@@ -6461,6 +6477,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.tooltip2  = score_viewer_button_shift_hint(app, playback, act);
             plan.push_back(std::move(b));
         };
+        for (const Act act : {Act::Reset, Act::SetStart, Act::SetEnd,
+                              Act::Close})
+            key(act);
         if (score_viewer_has_soundtrack(app)) {
             key(Act::SkipBack);
             key(Act::PlayPause);
@@ -6469,9 +6488,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             key(Act::PrevPage);
             key(Act::NextPage);
         }
-        for (const Act act : {Act::Reset, Act::SetStart, Act::SetEnd,
-                              Act::Close})
-            key(act);
     } else if (trim_up) {
         // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28 night, THE
         // PLAYER'S SHAPE), in painted order, one cluster flush right
@@ -6584,9 +6600,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // before them in the one cluster) and the BPM form's two — the last
     // one's face ending on the pane's last column (x 2279 on the tablet, the
     // well's last; its cell on the box's outer column, 2280), today's button
-    // gap between them; the render player's row
-    // reads from the left, its transport first and its right pair flush
-    // right (its branch below). (From 2026-08-13 a prompt's message and an
+    // gap between them; the render player's row and the score viewer's
+    // read from the left, their other keys first and their transport flush
+    // right (architect 2026-11-10; their branches below). (From 2026-08-13 a prompt's message and an
     // editor's label and field sat FLUSH LEFT on the bottom row with their
     // buttons after them — "your eyes have to go the whole distance of the
     // screen" — and from 2026-08-29 the picker's list kept its button flush
@@ -6745,8 +6761,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         paint_first_row_line(app.batch_progress.sentence());
     } else if (player_up) {
         // -- THE RENDER PLAYER'S ROW (architect 2026-08-28 — the relaid
-        //    row): TRANSPORT · SCRUB · CLOCK · REPEAT ONE · UP ......... LOAD
-        //    IN PLACE · CLOSE, the last two flush right. The arrangement is
+        //    row; THE TRANSPORT KEYS TO THE RIGHT, EVERYTHING ELSE TO THE
+        //    LEFT, architect 2026-11-10, the scrub and the timestamps
+        //    between them in their order): REPEAT ONE · DOWN · UP
+        //    · UP A FOLDER · LOAD IN PLACE · CLOSE · SCRUB · CLOCK ·
+        //    TRANSPORT, the transport flush right. The items are
         //    Audacious-Qt's under Breeze Dark, which is what the architect
         //    ruled off his own screen — "not the screenshot as a whole, just
         //    the layout: transport, separator, scrub, then the time, then
@@ -6756,8 +6775,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    2026-10-06 did not reach this row): the groups stand the run
         //    gap of bare face apart (program_run_gap_px, the `run_gap`
         //    tuning key, 22 W its default;
-        //    architect 2026-11-03, mock dec7b, and the retrofit) — transport → scrub, scrub →
-        //    clock, clock → the lamp. THE CLOCK IS TWO TIME FIELDS since
+        //    architect 2026-11-03, mock dec7b, and the retrofit) — the left
+        //    cluster → scrub, scrub → clock, clock → the transport. THE
+        //    CLOCK IS TWO TIME FIELDS since
         //    2026-10-05 (architect: Sound Recorder's Position and Length
         //    panels, ACID's separate fields), kTimeFieldGapW apart — the
         //    position, then the length.
@@ -6769,12 +6789,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (a zero rect contains no point and damages nothing) rather than a
         //    track too small to seat a handle.
         //
-        //    THE ROW GAINED THE UP BUTTON on 2026-09-01, between the lamp
-        //    and the right-flushed pair, so the fixed run after the scrub
-        //    carried TWO glyph boxes then — and LATER THAT DAY THE PAIR ITSELF
-        //    BECAME GLYPHS. THE HIGHLIGHT PAIR (architect 2026-10-10) stands
-        //    between the lamp and Up a Folder, so the fixed run after the
-        //    scrub carries FOUR glyph boxes now and the plan is nine items,
+        //    THE PLAN IS NINE ITEMS — the left cluster's six (the lamp, THE
+        //    HIGHLIGHT PAIR of 2026-10-10 behind it, Up a Folder of
+        //    2026-09-01, Load in Place and Close) and the transport's three —
         //    every one of them a box of the same width and the whole row is fixed
         //    except the scrub. THE BOXES ARE ROW 8'S CASES (architect
         //    2026-10-05, bottom_row_seats; the program's since 2026-10-09):
@@ -6790,9 +6807,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    THE ROW IS THE MODAL FAMILY'S CONTROLS ROW (architect
         //    2026-10-14, modal_box.h; row 8's own from 2026-10-05): the
         //    buttons stand at row 8's case seat on row 8's rows, the
-        //    transport's
+        //    left cluster's
         //    first face on the pane's first column (the well's, its cell on
-        //    the box's outer column) and the right-flushed pair's last
+        //    the box's outer column) and the right-flushed transport's last
         //    face ending on the pane's last (no
         //    focus-frame reserve inside it; modal_controls_seats), today's
         //    gaps between the groups, and the scrub fills whatever lies
@@ -6806,8 +6823,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner  = AppState::ModalDialogOwner::Player;
 
         // THE ROW'S LAYOUT is player_row_layout's (the runs of keys, the
-        // group space, the clock's two fields measured first, the fixed left run,
-        // the right-flushed pair and the scrub taking what is between them —
+        // group space, the clock's two fields measured first, the fixed left
+        // cluster, the right-flushed transport and the scrub taking what is
+        // between them —
         // the rules stated there). THE CLOCK'S FACE IS ROW 8'S CLOCK'S, THE
         // PROGRAM FACE (architect 2026-10-26 ~12:10, "yes" to symmetry; the
         // body face until then), the face its fields were measured in.
@@ -6857,7 +6875,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    seat, the time field and the text tone (paint_ce_time_field) —
         //    the fields row 8's clock is, said twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
         //    tick's per-position damage, beside the scrub's, and the two CLIP
-        //    at the lane's right pad on a narrow window. --
+        //    at the lane's right pad on a narrow window. WHILE THE SCRUB IS
+        //    HELD THE POSITION FIELD SHOWS THE TIME THE DROP WOULD LAND AT
+        //    (architect 2026-11-10): the lift's own derivation over the
+        //    thumb's carried column (render_player_scrub_drop_frame,
+        //    app_state.h), the item's position where the lift would seek
+        //    nothing; the held scrub's edges damage dlg.clock
+        //    (input_pointer.cpp's play-scrub block). --
         const int sr = audio.sample_rate();
         auto seconds_of = [sr](int64_t frames) {
             return sr > 0 ? static_cast<double>(frames) / static_cast<double>(sr)
@@ -6869,7 +6893,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             cairo_rectangle(cr, clock_x0, content.y, clock_right - clock_x0,
                             content.h);
             cairo_clip(cr);
-            const int64_t shown[2] = {pos, rp.frames};
+            const int64_t at =
+                rp.scrub.armed
+                    ? render_player_scrub_drop_frame(app, rp.scrub,
+                                                     rp.scrub.marker_x)
+                          .value_or(pos)
+                    : pos;
+            const int64_t shown[2] = {at, rp.frames};
             for (int i = 0; i < 2; ++i) {
                 const int field_x = clock_x0 + i * (field_w + field_gap);
                 const GuiRect field = time_field_rect(
@@ -6907,11 +6937,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // screen, which the tick reads (GuiScoreViewer::take_gpu_page_report).
 
         if (media) {
-            // -- THE MEDIA PLAYER'S ROW (2026-10-26 night): BACK, PLAY /
-            //    PAUSE and FWD (2026-10-27), the scrub over the range's
+            // -- THE MEDIA PLAYER'S ROW (2026-10-26 night; the transport
+            //    flush right since 2026-11-10): the four keys at the left,
+            //    the scrub over the range's
             //    frames, the clock — the render
             //    player's items, painted by its own helpers and rules — and
-            //    the four keys flush right. --
+            //    BACK, PLAY / PAUSE and FWD (2026-10-27) flush right. --
             const ScoreMediaRowLayout ml = score_media_row_layout(seats);
             assert(plan.size() == ml.x.size());
             for (std::size_t i = 0; i < ml.x.size(); ++i) plan[i].x = ml.x[i];
@@ -6931,7 +6962,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             }
             // THE CLOCK, the render player's two time fields verbatim: the
             // elapsed time within the range, then the range's length, at
-            // the soundtrack's own rate.
+            // the soundtrack's own rate; WHILE THE SCRUB IS HELD the elapsed
+            // field shows the time the drop would land at (architect
+            // 2026-11-10; score_scrub_drop_frame, the lift's own derivation
+            // over the carried column), the cursor's where the lift would
+            // seek nothing.
             const GuiFont cfont = gui_font(GuiFace::Program);
             const int sr = app.score_audio.rate();
             auto seconds_of = [sr](int64_t frames) {
@@ -6945,7 +6980,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 cairo_rectangle(cr, ml.clock_x0, content.y,
                                 clock_right - ml.clock_x0, content.h);
                 cairo_clip(cr);
-                const int64_t shown[2] = {pos - fr.begin, fr.length()};
+                const AppState::ScoreViewer::ScrubDrag& sd =
+                    app.score_viewer.scrub;
+                const int64_t at =
+                    sd.armed ? score_scrub_drop_frame(app, sd, sd.marker_x)
+                                   .value_or(pos)
+                             : pos;
+                const int64_t shown[2] = {at - fr.begin, fr.length()};
                 for (int i = 0; i < 2; ++i) {
                     const int field_x =
                         ml.clock_x0 + i * (ml.field_w + ml.field_gap);
@@ -7042,7 +7083,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
         //    ALONE, FLUSH RIGHT, ITS FACE ENDING ON THE PANE'S LAST COLUMN
         //    (x 2279 on the tablet, the well's last; its cell on the box's outer
-        //    column), as the player's Close ends there.
+        //    column).
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
         //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above

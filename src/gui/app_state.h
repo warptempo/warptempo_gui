@@ -1071,8 +1071,8 @@ struct PendingMarkerPress {
 
 // Pending trim cap/bridge drag, armed by a PLAIN (unmodified) left press in the
 // top-strip TRIM BAR lane (an endcap rect, or the bar's inter-cap bridge span)
-// and by the ctrl / ctrl+shift bound-set clicks, which arm the single-bound
-// drag on the bound they just set — AT THEIR THRESHOLD CROSSING since 2026-08-15
+// and by the barrel's bound-set click, which arms the single-bound
+// drag on the bound it just set — AT ITS THRESHOLD CROSSING since 2026-08-15
 // rather than at their press, the bound set having moved to the lift as the
 // ONE surviving deferred click (PendingClickAct below owns that hand-over,
 // and the drag it hands to is byte-for-byte the one it always was: the set runs
@@ -1101,7 +1101,7 @@ struct PendingMarkerPress {
 // pair (bridge) drag, for which is_begin is Begin by construction.
 // FIVE FIELDS AND NO CAPTURES (2026-07-29): the set_click flag, the pre-press pair
 // (preset_*_frame) and the pre-gesture selection + region were all an Esc-restore
-// origin for the ctrl / ctrl+shift bound-set press, and POINTER GESTURES HAVE NO
+// origin for the barrel's bound-set press, and POINTER GESTURES HAVE NO
 // CANCEL (the rule at on_key's drag-modal statement, input_handler.cpp). A bound-set press's
 // click-set is committed the moment it is made — trim is history-less, so nothing
 // takes it back — which is why the pending no longer needs to distinguish itself
@@ -1122,11 +1122,11 @@ struct PendingTrimDrag {
 // Which act a PendingClickAct is holding. None = nothing armed.
 enum class PendingClickKind {
     None,
-    TrimBoundSet,     // the trim bar's ctrl bound set (begin; end if held)
+    TrimBoundSet,     // the trim bar's barrel bound set (the nearest end cap)
 };
 
-// THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl bound-set click, its
-// held form included, and nothing else (architect 2026-08-17: CONTENT ACTS THE MOMENT ITS
+// THE ONE SURVIVING DEFERRED CLICK — the trim bar's barrel bound-set click
+// and nothing else (architect 2026-08-17: CONTENT ACTS THE MOMENT ITS
 // IDENTITY IS CERTAIN — the pointer's lift-deferral is justified ONLY by
 // genuine press ambiguity, a press that routinely starts a drag, and the
 // bound-set press IS the endcap drag's arm, so it is exactly that. The
@@ -1139,7 +1139,7 @@ enum class PendingClickKind {
 // at all).
 //
 // THE SHAPE IS THE PRODUCT'S: the press ARMS a record carrying what the act
-// will need (its press POINT and its press STAMP); a
+// will need (its press POINT); a
 // MOTIONLESS
 // release runs the set, RE-ASKING every live gate (they all live inside
 // set_trim_bound_at_click); a CROSSING of grab_moved_threshold_px() (the trim
@@ -1154,25 +1154,25 @@ enum class PendingClickKind {
 // user aimed at, sub-threshold travel being jitter).
 //
 // WHICH BOUND THE CLICK WRITES IS A VERDICT AT THE ACT, NOT A PRESS-TIME FACT
-// (architect 2026-10-27): the lift or the crossing writes the BEGIN unless the
-// press has been HELD PAST chrome_shift_hold_ms() — `is_begin = !held`, the
-// chrome long press's own term, measured against this record's own
-// monotonic_ms() stamp where the act runs, with no timer and no tick. So a
-// Ctrl press lifted or crossed before the hold delay sets the begin and one
-// held past it the END: the S Pen's side button is the Ctrl bit
-// (platform_android.cpp), so a tap with the button held sets the begin and a
-// long press the end. A crossing before the delay sets and then drags the
-// begin, a crossing after it the end. THE HOLD HAS NO VISUAL ANNOUNCEMENT
-// (architect 2026-09-29): nothing marks the delay's passing and no tooltip
-// rises under the press. The one owner of the verdict is
-// pending_click_writes_begin (input_pointer.cpp).
+// (architect 2026-11-10): the lift or the crossing moves WHICHEVER END CAP IS
+// NEAREST THE PRESS COLUMN ON THE PAINTED COLUMNS (the caps as the trim bar
+// shows them, on screen is as painted), a tie the begin's, a click outside
+// the trim
+// moving the near cap outward — the S Pen's side button is the Ctrl bit
+// (platform_android.cpp), so a tap with the button held is the click. NO
+// LONG PRESS MEANS ANYTHING ON THE TRIM BAR: the record carries no stamp
+// and the verdict reads no clock (the begin for a tap and the end for a
+// press held past the hold delay, 2026-10-27, "doesn't work very well"). A
+// crossing sets and then drags the bound the set moved. The one owner of
+// the verdict is GuiInputHandler::trim_bound_click (input_trim.cpp).
 //
 // THE CROSSING IS THE POINT OF THE DEFERRAL: it RUNS THE SET at the press
-// column and then hands over to the endcap drag on the bound it just set, so a
-// ctrl-press-and-drag is byte-for-byte the gesture it has always been (set at
-// the click, then drag that bound live) and only the timing of a motionless
+// column and then hands over to the endcap drag on the bound it just set
+// (set at the click, then drag that bound live), and only the timing of a
+// motionless
 // click is the lift's. The set's whole tail travels as one unit — the
-// strictly-inside refusal, the playback stop, the commit tail, the setter's
+// on-its-own-cap no-op and the partner wall, the playback stop, the commit
+// tail, the setter's
 // deselect — because they are one act
 // (set_trim_bound_at_click).
 //
@@ -1184,8 +1184,6 @@ struct PendingClickAct {
     PendingClickKind kind = PendingClickKind::None;
     int  press_x  = 0;   // press position (window px): the gate + the act's column
     int  press_y  = 0;
-    // The press's own monotonic_ms() stamp, the hold's origin.
-    int64_t press_ms = 0;
 
     bool active() const { return kind != PendingClickKind::None; }
 };
@@ -1784,7 +1782,7 @@ enum class RedesignButton {
     // record is git history.)
     // THE TWO LEVEL CASES, IconAudioLevel and IconNoiseLevel, are the band's
     // third run's last two since 2026-11-05 (their entry below, after the
-    // Score key; the NOISE lamp's seat, 2026-10-28 to 2026-11-05).
+    // tooltip lamp; the NOISE lamp's seat, 2026-10-28 to 2026-11-05).
     // Row 4, the icon row, in painted order: OPEN PROJECT alone at its head
     // (architect 2026-10-07, below), then the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP from the
@@ -1802,9 +1800,10 @@ enum class RedesignButton {
     // THE PRESETS KEY closing it (2026-11-07; the presets key since
     // 2026-10-28 night) — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
-    // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
-    // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
-    // 2026-10-01: help comes after settings), THE SCORE KEY (2026-10-26) and
+    // render-entry group — Listen, THE READ-ONLY TOGGLE, THE SCORE KEY
+    // (2026-10-26; between the padlock and Settings, architect 2026-11-10),
+    // SETTINGS and ENABLE TOOLTIPS (2026-09-29; in that order since
+    // 2026-10-01: help comes after settings) and
     // THE TWO LEVEL CASES closing it since 2026-11-05 (the NOISE lamp's seat,
     // 2026-10-28 to 2026-11-05) — and THE HISTORY GROUP — the
     // HISTORY OPENER leading its WALK LAMP, its four companions and (since
@@ -2225,7 +2224,22 @@ enum class RedesignButton {
     // of read_only beside the key. Recorded so the harder variant is not
     // revived.
     IconReadOnly,
-    // SETTINGS (architect 2026-09-29), right after the padlock and AHEAD of
+    // THE SCORE (architect 2026-10-26), the band's third run's THIRD,
+    // directly after the padlock and ahead of Settings (architect
+    // 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS AUDIO NOISE):
+    // BARE `m`, wearing SCORE, opens THE SCORE VIEWER
+    // (score_viewer.h) — the movement's sheet music one page at a time in
+    // the modal family's box. IT IS AN OVERLAY'S OPENER: lit while the viewer
+    // stands and its press then CLOSES it (is_overlay_opener, the folder
+    // overlay's openers' family), the one roster key the viewer leaves live.
+    // It greys with no score loaded (redesign_button_enabled's arm) and in
+    // the `h` view (off that mode's allowlist, through the derived
+    // partition, Settings' shape), and stays lit on a locked tab and under
+    // grid iterations — viewing authors nothing; the viewer's range keys
+    // carry the locks themselves. No modifier, no repeat.
+    IconScore,
+    // SETTINGS (architect 2026-09-29), right after the Score key (architect
+    // 2026-11-10) and AHEAD of
     // the tooltip lamp (architect 2026-10-01: help comes after settings):
     // bare `;`, THE SETTINGS PAGE (architect 2026-10-28: the editor's keys
     // as `key=value` rows in the folder overlay, a row opening the settings
@@ -2242,8 +2256,9 @@ enum class RedesignButton {
     // swaps in stands, its press the close (the overlay openers'
     // pattern, redesign_button_selected).
     IconSettings,
-    // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
-    // since 2026-10-01 (architect: help comes after settings): THE TOOLTIP
+    // ENABLE TOOLTIPS (architect 2026-09-29), directly after Settings
+    // since 2026-10-01 (architect: help comes after settings), the two level
+    // cases behind it: THE TOOLTIP
     // LAMP on bare backslash, wearing Tooltips. A per-project session lamp in the magnification lamp's
     // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
     // settings vocabulary and not carried by `'` — and while it is DARK NO
@@ -2260,24 +2275,10 @@ enum class RedesignButton {
     // routers each answer bare backslash through the same setter (architect 2026-09-29), so the player row's hints can be lit and
     // put out where they stand. It admits no modifier and does not repeat.
     IconTooltips,
-    // THE SCORE (architect 2026-10-26), the band's third run's last but two
-    // since 2026-11-05 (the two level cases after it; the NOISE lamp alone
-    // after it 2026-10-28 to 2026-11-05), directly after Enable
-    // Tooltips: BARE `m`, wearing SCORE, opens THE SCORE VIEWER
-    // (score_viewer.h) — the movement's sheet music one page at a time in
-    // the modal family's box. IT IS AN OVERLAY'S OPENER: lit while the viewer
-    // stands and its press then CLOSES it (is_overlay_opener, the folder
-    // overlay's openers' family), the one roster key the viewer leaves live.
-    // It greys with no score loaded (redesign_button_enabled's arm) and in
-    // the `h` view (off that mode's allowlist, through the derived
-    // partition, Settings' shape), and stays lit on a locked tab and under
-    // grid iterations — viewing authors nothing; the viewer's range keys
-    // carry the locks themselves. No modifier, no repeat.
-    IconScore,
     // THE TWO LEVEL CASES (architect 2026-11-05, session 46, his "yes" on
     // mock s46_m1 of tmp/s46; "ableton has no sliders that also act as
-    // buttons"), the band's third run's LAST TWO, directly after the Score
-    // key, in the NOISE lamp's seat (bare `w`, 2026-10-28 to 2026-11-05,
+    // buttons"), the band's third run's LAST TWO, directly after the tooltip
+    // lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28 to 2026-11-05,
     // RETIRED with its chord and its raindrop glyph; the run one pitch
     // longer): AUDIO then NOISE, the `audio_level` and `noise_level` device
     // keys' SLIDERS (device_config.h's THE LEVEL GRAMMAR). THEY ARE SLIDERS,
@@ -2614,7 +2615,9 @@ enum class RedesignButton {
     // LONG PRESS switches to the P column in the standing
     // audio view (S+W to S+P, T+W to T+P — architect 2026-10-12) and drops
     // the lead-in reset there — bare `s`'s own act with the column switch in
-    // front of it (drop_phase_reset_crossing, input_handler.cpp; the
+    // front of it — or, OVER A MULTI-SELECTION, a reset at each selected
+    // warp marker's place (architect 2026-11-10,
+    // phase_reset_crossing_group_drops) (drop_phase_reset_crossing, input_handler.cpp; the
     // membership is redesign_button_shift_admits below, and the tooltip's
     // second line is bound to it by the static_assert). THE LOCK STILL
     // REFUSES IT — the button is one of the marker verbs this arm greys on a
@@ -2637,7 +2640,8 @@ enum class RedesignButton {
     // focus (inherit_toggle_actionable, the op's own leading return). THE
     // DROP IS THE ONE THAT DOES NOT GREY OFF HOME, and its arm says why: its
     // shift twin drops from either warp view, and that twin is the long press — glass's
-    // only road to it. The occupied-frame refusal stays a consumed no-op
+    // only road to it (it greys in T+W only over a multi-selection whose
+    // every place the group drop would skip, 2026-11-10). The occupied-frame refusal stays a consumed no-op
     // (a frame fact the lane shows). They keep their Icon* names: a roster id
     // names the button, not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
@@ -3267,8 +3271,8 @@ inline int double_click_slack_px() {
 // redesign_button_shift_admits alone, never a count) before its lift
 // dispatches the SHIFTED twin instead of the plain act. It is what gives glass
 // the shift acts: the road rig has no keyboard, so a finger could reach only
-// half of each shifted pair. FOUR READ SITES since 2026-10-27, each a
-// LIFT (or, for the last, a lift or a crossing) measuring the hold against
+// half of each shifted pair. THREE READ SITES, each a
+// LIFT measuring the hold against
 // its own arm's press stamp: the roster's
 // chord build (finish_chrome_press_release, input_pointer.cpp, against
 // AppState::ChromePress::press_ms), the RENDER PLAYER'S MODAL ROW since
@@ -3277,13 +3281,10 @@ inline int double_click_slack_px() {
 // modal buttons to admit a modified press — and THE NOTIFICATION CARD'S LIFT
 // since 2026-10-01 (finish_notification_release, the same file, against the
 // same ChromePress stamp on its Card arm), where the shifted act is
-// dismissing EVERY card, and
-// THE TRIM BAR'S CTRL BOUND SET since 2026-10-27 (pending_click_writes_begin,
-// the same file, against PendingClickAct::press_ms), where a barrel press held
-// past the delay writes the END — read at the
-// motionless lift and at the grab gate's crossing alike, the two places that
-// act runs. Same hold, same term, same reason: the pointer carries no shift
-// (architect 2026-10-30).
+// dismissing EVERY card. Same hold, same term, same reason: the pointer
+// carries no shift (architect 2026-10-30). (THE TRIM BAR'S BARREL BOUND SET
+// read it from 2026-10-27 to 2026-11-10; a long press means nothing on the
+// trim bar since, PendingClickAct.)
 //
 // IT READS THE HOLD DELAY (kHoldDelayMs, gui_input.h — 300 ms, architect
 // 2026-09-29), the value both deliberate holds in the product cross their
@@ -3426,8 +3427,8 @@ inline int drag_moved_threshold_px() {
 //     flag's drags, the horizontal reposition drag and the value drag
 //     (value_drag_posture, the lamp's), so both begin at this distance;
 //   * PendingTrimDrag — the trim bar's endcap / bridge drag;
-//   * PendingClickAct — the trim bar's deferred ctrl bound-set click (begin,
-//     or end when shifted or held past the hold delay), the one member that latches NO `moved` of its own: its crossing
+//   * PendingClickAct — the trim bar's deferred barrel bound-set click (the
+//     nearest end cap), the one member that latches NO `moved` of its own: its crossing
 //     RESOLVES the arm outright, running the set and handing over to the
 //     endcap drag above on the same event. THE TRIM BAR IS ONE SURFACE WITH
 //     ONE GATE, so the set and the drag it hands to cross at the same
@@ -3761,7 +3762,8 @@ struct PromptState {
 // plain integer compares, the load guard's own comparison — so past-EOF cannot
 // be gestured. PARTNER WALLS ARE PER-ROUTE (architect 2026-08-02; the one
 // statement is input_trim.cpp's header — the single-bound drag clamps
-// inclusively at its partner, the bound-set clicks refuse, the typed and loaded
+// inclusively at its partner, the bound-set click moves the nearest cap and
+// refuses at its partner, the typed and loaded
 // routes cross freely) — but crossed or equal bounds can no longer REST
 // anywhere: every trim commit RESETS a pair left with end_frame <= begin_frame
 // back to the full window (GuiInputHandler::auto_clear_crossed_trim, the trim
@@ -5536,7 +5538,7 @@ struct AppState {
     PendingTrimDrag pending_trim_drag;
 
     // THE ONE SURVIVING DEFERRED CLICK (2026-08-17; the contract is at the
-    // type's declaration): the trim bar's two bound sets, whose press IS the
+    // type's declaration): the trim bar's barrel bound set, whose press IS the
     // endcap drag's arm — it becomes that drag past the
     // threshold. Cleared on the threshold
     // crossing, on button release / lost button, by the force-end finalizer, and
@@ -5962,15 +5964,15 @@ struct AppState {
     // whose geometry could disagree for a whole frame. This is one integer in
     // one stash on one surface, compared where the stash is already read.
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
-    // the two skips around Play-Pause (Home / Play-Pause / End, the main
-    // window's own triple since 2026-09-01), the play-scrub, the clock, the
-    // Repeat one lamp, the highlight pair (Highlight Next / Previous, architect
-    // 2026-10-10), the Up a Folder button and the right-flushed pair Load in
-    // place / Close (the order of 2026-08-28; that day's Stop sat after the two-faced
-    // button until it retired 2026-09-01, and Up took its place beside the lamp
-    // — the pair were WORD buttons until later that same day, when the
-    // architect gave them the checkmark and the window-close X and the row
-    // became glyphs; nine buttons since the highlight pair) — is
+    // the Repeat one lamp, the highlight pair (Highlight Next / Previous,
+    // architect 2026-10-10), the Up a Folder button, Load in place and Close
+    // at the row's left, the play-scrub, the clock and, flush right, the two
+    // skips around Play-Pause (Home / Play-Pause / End, the main window's own
+    // triple since 2026-09-01) — the transport to the right and everything
+    // else to the left since 2026-11-10 (architect); glyphs since
+    // 2026-09-01, when the architect gave Load in place and Close the
+    // checkmark and the window-close X; nine buttons since the highlight
+    // pair — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation takes the box and the
@@ -6062,7 +6064,8 @@ struct AppState {
     // row and NOTHING ELSE — no load, no play, no change to the transport's
     // item, in every transport state — the bare Down / Up keys' own act
     // (GuiRenderPlayer::move_highlight(+1 / -1)), so a file can be picked
-    // silently and then loaded in place or played. They sit after Repeat One,
+    // silently and then loaded in place or played. They sit after Repeat One
+    // in the row's left cluster (architect 2026-11-10),
     // DOWN THEN UP as row 8's own pair (TransportDown, TransportUp) stands,
     // ahead of Up a Folder. Each greys exactly where its walk would not move
     // the highlight (folder_overlay::move_highlight_actionable, the step's
@@ -6071,14 +6074,14 @@ struct AppState {
     // UP IS THE `..` ROW'S ACT, LIFTED ONTO THE ROW (architect 2026-09-01,
     // with the player's move inside `tmp/`): the listings carry no `..` row
     // any more, so going up is a BUTTON — after the highlight pair (2026-10-10), ahead of
-    // the right-flushed pair — whose act is GuiRenderPlayer::up() and whose key twin is
+    // Load in Place and Close — whose act is GuiRenderPlayer::up() and whose key twin is
     // Backspace, unchanged. It greys at the root, which is `tmp/` itself
     // (render_player_up_actionable, the wall's one owner, read by the act and
     // by the face alike).
     //
     // DELETE TAKES LOAD IN PLACE'S SLOT AT THE ROOT (architect 2026-09-29):
     // at `tmp/`'s own listing — batch folders, where a load has nothing to
-    // name — the row's sixth button is Delete (edit-delete, the key Delete),
+    // name — the row's fifth button is Delete (edit-delete, the key Delete),
     // which deletes the highlighted batch folder behind a question, and its
     // shift press every batch folder the listing shows; inside a batch folder
     // the slot is Load in Place, unchanged. The acts are
@@ -6094,14 +6097,15 @@ struct AppState {
     // dispatch_modal_dialog_button's picker arm reads no bit at all and forks
     // on the LIVE owner as it always did.
     // THE SCORE VIEWER'S BUTTONS (architect 2026-10-26), its dispatch
-    // vocabulary beside the player's, in the row's order on its two faces:
-    // the page road's PREV / NEXT pair at the left, or the media player's
+    // vocabulary beside the player's, on its two faces: RESET, START, END
+    // and CLOSE at the row's left; then, flush right (the transport's side
+    // since 2026-11-10, architect),
+    // the page road's PREV / NEXT pair, or the media player's
     // BACK, PLAY / PAUSE and FWD (2026-10-26 night; THE SKIPS, architect
     // 2026-10-27: 3 s back / forward, their Shift-press or long press 10 s —
     // GuiScoreViewer::skip, the row's shift-admitting pair,
-    // score_button_shift_admits); then RESET, START, END and CLOSE flush
-    // right (score_viewer.h owns each act; dispatch_modal_dialog_button
-    // reads it under the Score owner).
+    // score_button_shift_admits) (score_viewer.h owns each act;
+    // dispatch_modal_dialog_button reads it under the Score owner).
     enum class ScoreButtonAct {
         None, PrevPage, NextPage, SkipBack, PlayPause, SkipForward, Reset,
         SetStart, SetEnd, Close
@@ -6111,7 +6115,10 @@ struct AppState {
     // differently"), its dispatch vocabulary beside the player's and the
     // score viewer's, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT
     // (his glass on 852a28d9: "up/down are in the bottom right for the
-    // player, so they should be there for the trim presets also"): THE
+    // player, so they should be there for the trim presets also"; the
+    // player's own pair stands at its row's left since 2026-11-10, a
+    // deliberate asymmetry recorded at key_cluster_row_layout,
+    // paint_handler.cpp): THE
     // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their glyphs and
     // words the player's (render_player_button_icon,
     // render_player_button_hint) and their act the band walk alone, no apply
@@ -7591,23 +7598,12 @@ struct AppState {
         // newer (-1), each clamping at its wall as a consumed no-op. It is the
         // commit walk's alone since 2026-08-07 — the local walk keeps its own
         // position in `local_index` below, and the two survive each other's
-        // visits within one session of the view. THE ENTRY OPENS IT ON THE
-        // REMEMBERED MEMBER (AppState::history_viewed_commit_sha, architect
-        // 2026-10-26), at 0 when none is remembered or delivered.
+        // visits within one session of the view. EVERY ENTRY OPENS IT AT 0,
+        // THE MOST RECENT COMMIT (architect 2026-11-10, "more intuitive"):
+        // no visit inherits the member the last one viewed, this plain
+        // member initializer applied by the whole-struct reset at both edges
+        // (GuiInputHandler::open_history_mode_fresh).
         std::size_t index  = 0;
-        // THE LANDING ON THE REMEMBERED MEMBER IS PENDING (2026-10-26): the
-        // entry found AppState::history_viewed_commit_sha not yet delivered by
-        // a scan still running (a checkpoint makes the store stale, and the
-        // re-walk streams newest first, the new head ahead of the remembered
-        // member), opened at 0, and set this. The prefetch drain
-        // (GuiInputHandler::on_history_prefetch_ready) lands on the member ONCE
-        // when it arrives, through the step's own shape, and clears it; the
-        // scan finishing without it clears it with the index left at 0. ANY
-        // STEP OR SWITCH BY THE USER CANCELS IT (the `,` / `.` arm and
-        // set_history_delta's switch), so a landing never moves a walk the
-        // user has already moved. Per visit, so the whole-struct reset clears
-        // it at both edges.
-        bool        remembered_landing_pending = false;
         // WHICH WALK THE LANE IS READING (architect 2026-08-07) — selected by
         // the icon row's walk lamp on bare `g` since 2026-08-18, a pair of
         // radios until the 2026-09-04 collapse (row 3's tabs carried it before
@@ -8141,43 +8137,6 @@ struct AppState {
                                   : GuiHistoryCompare::Iterative;
     }
 
-    // THE COMMIT WALK'S VIEWED MEMBER, REMEMBERED BY SHA ACROSS VISITS
-    // (architect 2026-10-26: "history should remember the x/y that we are
-    // viewing, for toggle comparison. after commit, y should update but x
-    // should stay"). x is the viewed walk member — the older side of the
-    // shown delta, HistoryMode::index on the COMMIT walk — and y its forward
-    // partner (GuiHistoryDiff::delta_at's pairing: the next newer member in
-    // the iterative reading, the live now side in the cumulative one and at
-    // the newest index). The full 40-character SHA (GuiHistoryDiff::sha_at);
-    // empty until a visit has viewed a member of this piece's commit walk.
-    //
-    // IT LIVES OUT HERE FOR history_cumulative's REASON: HistoryMode is reset
-    // whole at both mode edges, and this has to outlive a visit. Its scope is
-    // the loaded piece's: run_project (main.cpp) constructs one AppState per
-    // piece, so A PIECE LOAD CLEARS IT, and it is NEVER SERIALIZED.
-    //
-    // WRITTEN AT THE ONE EXIT OWNER (GuiInputHandler::close_history_mode),
-    // the SHA at the commit walk's index as the visit leaves it — whichever
-    // walk the lane was reading, the local walk's position never being
-    // remembered — and NOT WRITTEN where that index names no delivered
-    // member (an unavailable visit, an empty walk) or while the visit's
-    // landing on the remembered member is still pending (HistoryMode's
-    // remembered_landing_pending). The index's only writers are the entry,
-    // the `,` / `.` step and that landing, so the exit's reading is the
-    // member the visit last viewed, however it got there.
-    //
-    // READ AT THE ENTRY (GuiInputHandler::open_history_mode_fresh): the visit
-    // opens on the remembered member's index where the walk has delivered it,
-    // else at 0 with the landing pending until the prefetch delivers it. Y
-    // UPDATES BY CONSTRUCTION: every entry captures a fresh now side and the
-    // forward partner is index − 1, so after a checkpoint (the re-walk
-    // delivering the new head first) the remembered member
-    // stands one index deeper and is compared against the new checkpoint in
-    // the iterative reading and against now in the cumulative. A REMEMBERED
-    // SHA THE FINISHED WALK DOES NOT HOLD (a rewritten projects repository —
-    // adversarial) opens at 0 silently: no card, no stderr line.
-    std::string history_viewed_commit_sha;
-
     // (WINDOW ACTIVATION'S MIRROR, `window_activated`, retired 2026-10-03:
     // its one reader was the folder overlay's highlighted row, whose inactive
     // face retired with ONE SELECTED PAIR, FOCUSED OR NOT — render.h's
@@ -8309,7 +8268,7 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a band authored purely by the ENDCAP / BRIDGE pointer drags on
-    // the trim bar, the ctrl bound-set click (the begin, or the end held),
+    // the trim bar, the barrel's bound-set click (the nearest end cap),
     // the SWEEP (the TRIM arm lamp's touch sweep, which writes the
     // pair in one stroke under no width rule at all; it replaced the
     // set-from-region arm when the region became the trim), the
@@ -9239,7 +9198,11 @@ struct AppState {
     //              thumb's own travel, never the item's ends — with nothing
     //              seeked, the seek committing at the release (the product's
     //              deferred-click shape; a motionless tap on the thumb,
-    //              `on_thumb` and not `moved`, seeks nothing); and
+    //              `on_thumb` and not `moved`, seeks nothing), THE CLOCK'S
+    //              POSITION FIELD SHOWING THE TIME THE DROP WOULD LAND AT
+    //              while it stands (architect 2026-11-10; the lift's own
+    //              derivation, render_player_scrub_drop_frame, each motion
+    //              and each end damaging the clock's rect); and
     //              `was_live`, the press having paused a LIVE item, which the
     //              release resumes at the dropped point (architect 2026-10-26
     //              ~23:15, THE SOUND PAUSES WHILE THE SCRUB IS HELD, the
@@ -9407,7 +9370,10 @@ struct AppState {
     //              differs from `press_page`. UNDER THE MEDIA PLAYER'S FACE
     //              nothing is seeked under the drag, THE SEEK IS AT THE LIFT
     //              to the carried column's frame, whose page the drag showed
-    //              (architect 2026-10-26, "no scrubbing"), and `was_live`
+    //              (architect 2026-10-26, "no scrubbing"), THE CLOCK'S
+    //              ELAPSED FIELD SHOWING THAT FRAME'S TIME while the drag
+    //              stands (architect 2026-11-10; the lift's own derivation,
+    //              score_scrub_drop_frame, score_viewer.h), and `was_live`
     //              records the press having paused a LIVE soundtrack
     //              (architect 2026-10-26 ~23:00): the lift plays on from the
     //              drop through the live seek's clamp (GuiScoreViewer::
@@ -10297,6 +10263,25 @@ inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
         static_cast<int64_t>(std::nearbyint(t * static_cast<double>(frames)));
     return f < 0 ? 0 : (f > frames ? frames : f);
 }
+// WHERE THE HELD SCRUB'S DROP LANDS — THE ONE DERIVATION (architect
+// 2026-11-10, the timestamp follows the thumb): the frame a lift with the
+// thumb's center at column `thumb_x` hands the seek (the mapping above), and
+// NOTHING where the lift seeks nothing — a motionless tap on the thumb
+// (`on_thumb` and not `moved`), which re-seeking would round to its
+// column's frame. TWO READERS, so the time shown is the time landed at: THE
+// LIFT (finish_player_scrub_release, the lift's x less the grab offset —
+// the column the motion last painted the thumb at) and THE CLOCK'S PAINTER,
+// whose position field shows this frame's time while the drag stands (the
+// carried column, ScrubDrag::marker_x; paint_modal_dialog's player branch)
+// and the item's position where this answers nothing. The seek's own end
+// clamps (a live target stops short of the item's last frame so the natural
+// end takes over, GuiRenderPlayer::seek_to / resume_at) stay the seek's.
+inline std::optional<int64_t> render_player_scrub_drop_frame(
+        const AppState& a, const AppState::RenderPlayer::ScrubDrag& drag,
+        int thumb_x) {
+    if (drag.on_thumb && !drag.moved) return std::nullopt;
+    return render_player_scrub_frame_at(a, thumb_x);
+}
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared
 // here so viewport.cpp can call them.
@@ -10868,31 +10853,92 @@ inline bool center_command_lands_on_focus(const AppState& a) {
 // (architect 2026-10-12: S+W to S+P, T+W to T+P), so with the P
 // column already standing — S+P or T+P — there is nothing to cross and the
 // act refuses WHOLE — "Already in phase reset view", before any switch; bare
-// `s` is untouched. THREE READERS: the act's head
-// (GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp), the
-// Drop marker button's face (redesign_button_enabled — the twin rule's arm,
-// which never greys past the lock since the P column opened 2026-08-30: one
-// form is always live), and since 2026-09-01 the button's tooltip
-// (redesign_button_tooltip's stateful overload), whose shift line drops
-// exactly where this refuses.
+// `s` is untouched. TWO READERS: the act's head
+// (GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp) and
+// phase_reset_drop_crossing_would_act below, the composed answer the Drop
+// marker button's face (redesign_button_enabled — the twin rule's arm) and
+// its tooltip (redesign_button_tooltip's stateful overload, whose shift
+// line drops exactly where the chord would refuse) ask since 2026-11-10,
+// when the chord's group drop gained a refusal of its own.
 inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
     return a.active_markers_view != 'P';
 }
 
+// THE LEAD-IN DROP'S AUTHORED FRAME FOR A PROTECTED POINT, the phase-reset
+// drop's one place computation: `point` is a position in the standing audio
+// view's domain (the playhead's own unit), and the answer is the source
+// frame kPhaseResetLeadInSamples output samples before it, floored at 0 (the
+// derivation's prose home is at
+// GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead) — in BOTH
+// audio views (architect 2026-10-12: in source view the point goes forward
+// through the live map to its whole target frame, takes the subtraction and
+// comes back, one calculation at the drop). Defined in
+// warp_frame_map_view.cpp. TWO READERS: the at-playhead drop's frame below
+// (the point the playhead) and the crossing's group drop
+// (phase_reset_crossing_group_drops, the point each selected warp marker).
+int64_t phase_reset_lead_in_source_frame(const AppState& a,
+                                         const GuiAudio& audio, int64_t point);
+
 // THE AT-PLAYHEAD DROP'S AUTHORED FRAME in the ACTIVE column, one owner so the
 // drop bodies and the off-edge refusal below ask of the same frame: on the P
-// column the LEAD-IN — kPhaseResetLeadInSamples output samples before the
-// playhead, floored at 0, mapped to source (the derivation's prose home is at
-// GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead) — in BOTH
-// audio views (architect 2026-10-12: in S+P the source playhead goes forward
-// through the live map to its whole target frame, takes the subtraction and
-// comes back, one calculation at the drop) — and on the
+// column the LEAD-IN before the playhead (phase_reset_lead_in_source_frame
+// above, in both audio views) — and on the
 // W column the playhead's own source frame. Defined in
 // warp_frame_map_view.cpp. READERS: the two drop bodies
 // (drop_copy_previous_at_playhead, drop_phase_reset_lead_in_at_playhead) and
 // drop_at_playhead_off_edge below.
 int64_t drop_at_playhead_source_frame(const AppState& a,
                                       const GuiAudio& audio);
+
+// SHIFT+S OVER A MULTI-SELECTION IS THE GROUP DROP (architect 2026-11-10:
+// in the warp view with several markers selected, each selected warp marker
+// gets a phase reset dropped at its corresponding place). THE GROUP IS TWO
+// OR MORE SELECTED MARKERS IN THE WARP COLUMN; with one or none the chord is
+// the at-playhead crossing drop, unchanged.
+inline bool phase_reset_crossing_drop_is_group(const AppState& a) {
+    return a.active_markers_view == 'W' && a.selected_markers.size() >= 2;
+}
+
+// THE GROUP DROP'S PLAN — the ONE derivation the act, the Drop key's face
+// and its tooltip all ask (defined in warp_frame_map_view.cpp). A MARKER'S
+// PLACE is the frame the single drop authors with the playhead standing on
+// that marker: the marker's position in the standing audio view's domain
+// through phase_reset_lead_in_source_frame, the single drop's own
+// computation. A PLACE IS SKIPPED where a phase reset already stands on that
+// frame (enabled or disabled alike), or where the single drop's own
+// validation refuses it — the painted edge, source_frame_off_right_edge
+// asked of the frame (`off_edge` records that one was). `frames` is what the
+// act authors, ascending and distinct (two markers whose places coincide
+// share one reset); `focus_frame` the place of the warp focus
+// (last_selected_marker) where that place is dropped, else -1. THE ACT
+// REFUSES ONLY WHEN `frames` IS EMPTY — every selected marker skipped — and
+// the face greys on the same emptiness through the twin rule
+// (phase_reset_drop_crossing_would_act below). A stale selection index is
+// skipped in silence, the selection verbs' one policy.
+struct PhaseResetCrossingDrops {
+    std::vector<int64_t> frames;
+    int64_t              focus_frame = -1;
+    bool                 off_edge    = false;
+};
+PhaseResetCrossingDrops phase_reset_crossing_group_drops(
+        const AppState& a, const GuiAudio& audio);
+// DOES THE PLAN HOLD A FRAME — the plan's own walk stopped at its first
+// dropped place, so the per-tick face builds no list.
+bool phase_reset_crossing_group_would_drop(const AppState& a,
+                                           const GuiAudio& audio);
+
+// WOULD SHIFT+S ACT — the crossing's whole answer for the Drop key's face
+// and its tooltip's second line (architect 2026-11-10): the crossing is
+// live (phase_reset_drop_crossing_actionable) and, over a multi-selection,
+// at least one selected marker's place would take a reset. Over one or no
+// selected marker it is the crossing's bit alone: the at-playhead drop's own
+// refusals stay the chord's card, as they were.
+inline bool phase_reset_drop_crossing_would_act(const AppState& a,
+                                                const GuiAudio& audio) {
+    if (!phase_reset_drop_crossing_actionable(a)) return false;
+    return !phase_reset_crossing_drop_is_group(a) ||
+           phase_reset_crossing_group_would_drop(a, audio);
+}
 
 // WOULD THE AT-PLAYHEAD DROP AUTHOR A MARKER PAST THE LAST COLUMN AT THIS
 // ZOOM (architect 2026-09-26, strictly as painted) — the off-edge owner
@@ -13539,6 +13585,10 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //   * THE TWO PROPAGATE PASTES — the phase family's confirmed placement
 //     paste and its state paste (PhaseResetPropagate::paste_apply,
 //     ::paste_state_apply), each past its own last refusal;
+//   * THE CROSSING'S GROUP DROP (architect 2026-11-10: Shift+S over a
+//     multi-selection in the warp column, a phase reset at each selected
+//     marker's place — GuiInputHandler::drop_phase_reset_crossing, past its
+//     every-place-skipped refusal and ahead of the column switch);
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -13577,7 +13627,8 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     axis from this bit), so what the step acts on is a singleton, which is
 //     not a selection that was built;
 //   * BARE `j` and Ctrl+J — they read the FOCUS and write no store;
-//   * THE MARKER DROP, the FOUR marker-lane EDITORS and the TAB WALK — none
+//   * THE AT-PLAYHEAD MARKER DROP (bare `s`, and Shift+S over one selected
+//     marker or none), the FOUR marker-lane EDITORS and the TAB WALK — none
 //     of them consumes a selection: the drop makes one, the editors edit one
 //     marker and the walk is how a selection is navigated.
 // AND NO SELECTION MUTATOR PUTS IT OUT (architect 2026-09-10): a mutator runs
@@ -15808,11 +15859,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // only in T+W (active_column_authoring_allowed — the P column drops
         // in both audio views, S+P and T+P since S+P's return, 2026-10-12),
         // and exactly there Shift+S, the crossing from the warp column, is
-        // live (phase_reset_drop_crossing_actionable), so one form always
-        // acts and the plain press's refusal stays the chord's own card. The
+        // live (phase_reset_drop_crossing_actionable), so one form
+        // acts and the plain press's refusal stays the chord's own card —
+        // but for the group drop's one dead pair, T+W over a multi-selection
+        // whose every place is skipped (the last paragraph below). The
         // arm greyed exactly in S+P for the hours the twin rule and the closed
         // P column coexisted — bare `s` off home and the crossing already
-        // crossed — and no dead pair is left. The
+        // crossed. The
         // composition stays: it is the twin rule's one spelling here, and it
         // is what greys again if either predicate ever narrows. (An earlier
         // reading here named an "occupied-frame refusal" as a second reason
@@ -15825,12 +15878,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // is not live, the face greys there; in S+W the shifted press still
         // crosses, so the face stays lit and the plain lift reaches the
         // drop's own card.
+        // THE CROSSING'S TERM IS ITS WHOLE ANSWER SINCE 2026-11-10
+        // (architect, the group drop; phase_reset_drop_crossing_would_act):
+        // over a multi-selection in the warp column the shifted press drops
+        // a reset at each selected marker's place and refuses only where
+        // EVERY place is skipped, so the term is false exactly there — and
+        // the face greys where the plain form refuses too (T+W, where bare
+        // `s` is off home), staying lit in S+W on the plain drop.
         case RedesignButton::IconMarkerDrop:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    ((active_column_authoring_allowed(a) &&
                      !drop_at_playhead_off_edge(a, audio)) ||
-                    phase_reset_drop_crossing_actionable(a));
+                    phase_reset_drop_crossing_would_act(a, audio));
         // DELETE AND DISABLE GREY ON THEIR ARMS' OWN REFUSAL (2026-08-30): an
         // empty selection — the one refusal left in every column and every
         // view the column exists in — through
@@ -18126,9 +18186,9 @@ inline constexpr const char* redesign_button_legend(RedesignButton b) {
         case RedesignButton::IconFlatten:               return "FLATTEN";
         case RedesignButton::IconListen:                return "PLAYER";
         case RedesignButton::IconReadOnly:              return "LOCK";
+        case RedesignButton::IconScore:                 return "SCORE";
         case RedesignButton::IconSettings:              return "SETUP";
         case RedesignButton::IconTooltips:              return "TIPS";
-        case RedesignButton::IconScore:                 return "SCORE";
         case RedesignButton::IconAudioLevel:            return "AUDIO";
         case RedesignButton::IconNoiseLevel:            return "NOISE";
         case RedesignButton::IconHistory:               return "HISTORY";
@@ -18257,9 +18317,9 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::IconFlatten:               return Icon::Merge;
         case RedesignButton::IconListen:                return Icon::AudioHeadphones;
         case RedesignButton::IconReadOnly:              return Icon::Lock;
+        case RedesignButton::IconScore:                 return Icon::ViewMediaLyrics;
         case RedesignButton::IconSettings:              return Icon::SettingsConfigure;
         case RedesignButton::IconTooltips:              return Icon::HelpWhatsthis;
-        case RedesignButton::IconScore:                 return Icon::ViewMediaLyrics;
         // THE TWO LEVEL CASES PAINT NO GLYPH (sliders; IconAudioLevel's
         // entry): paint_icon_row skips paint_key_glyph for a level case
         // (redesign_button_is_level_case), and this constant word only
@@ -18712,15 +18772,22 @@ inline RedesignTooltipText redesign_button_tooltip(
         // own line has no arm — its two pastes share one ladder, the constant
         // table's record.)
         // DROP MARKER: in the P column the shifted press refuses as already
-        // crossed (phase_reset_drop_crossing_actionable, the shift act's own
-        // head), so its line drops — the one thing this arm does. (In T+W the
-        // plain press raises its own card — the button never greys on that
-        // refusal under the twin rule, so its plain lift reaches the chord and
+        // crossed, and over a multi-selection whose every place is skipped it
+        // refuses too (phase_reset_drop_crossing_would_act, the shift act's
+        // own answer), so its line drops. OVER A MULTI-SELECTION THAT WOULD
+        // DROP the line names the group drop (architect 2026-11-10: a reset
+        // at each selected marker's place). (In T+W the
+        // plain press raises its own card — the button stays lit on that
+        // refusal under the twin rule while the crossing would act, so its
+        // plain lift reaches the chord and
         // the chord answers — while the shift line stays, the crossing being
         // live exactly there.)
         case RedesignButton::IconMarkerDrop:
-            if (!phase_reset_drop_crossing_actionable(a))
+            if (!phase_reset_drop_crossing_would_act(a, audio))
                 return {redesign_button_tooltip(b).line1, nullptr};
+            if (phase_reset_crossing_drop_is_group(a))
+                return {redesign_button_tooltip(b).line1,
+                        "Hold to drop a phase reset at each selected marker"};
             break;
         // FLATTEN DROPS ITS LINE WHERE THE COLLAPSE WOULD NOT ACT
         // (2026-09-19), the same shape the drop's arm and the jump's copy line
@@ -19172,11 +19239,11 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // pending-window rebase was reachable). THE BOUND-SET CLICK IS THE SAME
 // ARGUMENT (architect 2026-09-24, strictly as-painted): both of its ends
 // convert its stored press_x — the lift's set and the crossing's set through
-// trim_bound_click_frame on the displayed map, and the crossing then arms
+// trim_bound_click on the displayed map, and the crossing then arms
 // pending_trim_drag at that same press_x — so the epoch it was aimed in must
 // survive to either end exactly as a pending drag's must. Its GATES are still
-// re-asked LIVE at the lift (the strictly-inside partner test above all, a
-// state question the lift decides); what the freeze holds is the GEOMETRY of
+// re-asked LIVE at the lift (the nearest-cap verdict and the partner wall
+// above all, state questions the lift decides); what the freeze holds is the GEOMETRY of
 // its aim, which is every aimed press's. THE DELIBERATE NON-MEMBERS: the
 // nav/grab-pan family stays OUT because it WRITES the viewport itself rather
 // than reading a painted snapshot of it — live-basis by ruling, and it renders
@@ -19259,7 +19326,7 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // (trim_mouse_x_to_active_frame, which trim_mouse_x_to_source_frame rides) and
 // release snap (commit_trim_drag); the sweep's TRIM half
 // (sweep_trim_frame_at_column); the trim bar's bound-set click
-// (trim_bound_click_frame); and both nudges' column step
+// (trim_bound_click); and both nudges' column step
 // (stepped_anchor_frame). The CLICK-PLACEMENT family joined it (architect
 // 2026-09-24, "reality to the face" reads the same for a click as for a
 // drag): its one conversion, playhead_frame_at_click_column — the nav click,

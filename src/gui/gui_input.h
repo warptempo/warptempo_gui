@@ -81,15 +81,15 @@ namespace GuiKeys {
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
 // thing before the rest crosses into its held meaning. It is the delay of
 // THE ONE HOLD and of nothing else, THE CHROME SHIFT LONG PRESS
-// (chrome_shift_hold_ms, app_state.h), at all four of its read sites — the
+// (chrome_shift_hold_ms, app_state.h), at all three of its read sites — the
 // roster lift, the RENDER PLAYER'S MODAL ROW, which joined 2026-08-28 (its
 // skips and Delete admit a modified press, and their long press reaches it),
-// THE NOTIFICATION CARD'S LIFT, which joined 2026-10-01 (a long press on any
-// card dismisses every card), and THE TRIM BAR'S CTRL BOUND SET, which joined
-// 2026-10-27 (a barrel press held past the delay sets the END;
-// PendingClickAct, app_state.h) — one value and one term. It has NO VISUAL
-// ANNOUNCEMENT: the span is measured where the act runs (the lift, and the
-// trim set's grab-gate crossing too) and nothing on screen marks the moment
+// and THE NOTIFICATION CARD'S LIFT, which joined 2026-10-01 (a long press on
+// any card dismisses every card) — one value and one term (the trim bar's
+// barrel bound set left 2026-11-10: a long press means nothing there,
+// PendingClickAct, app_state.h). It has NO VISUAL
+// ANNOUNCEMENT: the span is measured where the act runs (the lift) and
+// nothing on screen marks the moment
 // it is crossed. (The touch pan zone's region hold, its second reader, is
 // retired, architect 2026-11-07, session 87: the waveform's sweep is the
 // TRIM arm lamp's, GuiInputCore's touch state block.)
@@ -1136,7 +1136,10 @@ inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
 // (architect 2026-10-12: S+W lands in S+P, T+W in T+P; it tripped to T+P
 // until then) and drops the lead-in reset kN/2 output samples before the
 // playhead there, so the reset the architect wants while he is looking at
-// the warp column costs one key instead of a view trip and back. Ctrl+S is
+// the warp column costs one key instead of a view trip and back. OVER A
+// MULTI-SELECTION in the warp column it drops one at each selected marker's
+// place instead (architect 2026-11-10, the group drop;
+// GuiInputHandler::drop_phase_reset_crossing). Ctrl+S is
 // the save on this letter and Shift+S was the strict rule's consumed no-op
 // until this date; the shifted `s` is the only decoration on it that binds.
 //

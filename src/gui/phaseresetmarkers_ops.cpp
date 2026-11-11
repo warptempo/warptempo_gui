@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -18,17 +20,14 @@
 // operations on the phase reset store, reaching undo, selection, viewport,
 // and playback_lifecycle through the struct's reference members.
 
-// Drop a phase reset marker at `time_frame`. Placement is bounded only
-// by the absolute range; arbitrarily close and exactly-coincident drops
-// are legal (the render boundary collapses an exact-equal group to one
-// event). Selection collapses to the freshly-inserted index. Frame-0
-// phase alignment is implicit by definition and needs no marker to
-// assert it.
-void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
-    if (audio.sample_rate() <= 0) return;
+// THE CREATE PATH'S FRAME, the two drop bodies' one funnel and wall (the
+// single drop and the group drop below): the snapped frame, or nothing past
+// the EOF wall.
+static std::optional<int64_t> walled_drop_frame(const GuiAudio& audio,
+                                                double time_frame) {
     // Marker creation is a commit: the position funnels through
     // snap_authored_frame like every other gesture commit (mirrors warp
-    // drop_marker — every current caller passes an integer-valued playhead
+    // drop_marker — every current caller passes an integer-valued
     // frame, so the snap is the uniformity funnel, not a rounding step).
     // The wall check below IS the load guard's comparison, exactly,
     // applied to the snapped value.
@@ -41,13 +40,30 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // total-1 keeps every marker inside the playhead's [0, total-1] domain
     // so marker gestures and playhead syncs agree exactly.
     // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30, the warp twin's
-    // finding): every drop road authors at or BEFORE the playhead — the
+    // finding): every drop road authors at or BEFORE the playhead or a
+    // marker — the
     // lead-in drop subtracts kN/2 output samples in either audio view, and the
-    // playhead rests in [0, total-1] by every writer's clamp — so no press
+    // playhead and every marker rest in [0, total-1] by every writer's
+    // clamp — so no press
     // can reach this wall.
     // An error arm exists iff a producer exists: a silent breach wall.
     if (drop_frame > audio.total_frames() - 1)
-        return;
+        return std::nullopt;
+    return drop_frame;
+}
+
+// Drop a phase reset marker at `time_frame`. Placement is bounded only
+// by the absolute range; arbitrarily close and exactly-coincident drops
+// are legal (the render boundary collapses an exact-equal group to one
+// event). Selection collapses to the freshly-inserted index. Frame-0
+// phase alignment is implicit by definition and needs no marker to
+// assert it.
+void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
+    if (audio.sample_rate() <= 0) return;
+    // The snap and the EOF wall (walled_drop_frame above).
+    const std::optional<int64_t> walled = walled_drop_frame(audio, time_frame);
+    if (!walled) return;
+    const int64_t drop_frame = *walled;
     // A DROP IS A MARKER MUTATION AND STOPS (architect 2026-10-14), the warp
     // drop's clause: past both refusals, ahead of the insert.
     playback_lifecycle.stop_playback_if_playing();
@@ -93,6 +109,75 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // sample-rate test return before this runs, and this function's two refusals
     // — no sample rate, a drop_frame past the EOF wall — return above, before the
     // insert, so a refused drop never reaches the seat.
+    target_render.trigger();
+}
+
+// THE GROUP DROP (architect 2026-11-10: Shift+S in the warp view with
+// several markers selected drops a phase reset at each selected marker's
+// place — the plan and its skips are phase_reset_crossing_group_drops',
+// app_state.h, and the act is GuiInputHandler::drop_phase_reset_crossing,
+// which has switched the column to P before this runs). THE SINGLE DROP'S
+// CREATE PATH, ONE ARITY UP, in its order: each frame through the one funnel
+// and wall (walled_drop_frame), the stop, the pre-state, the inserts, the
+// selection, ONE UNDO ENTRY FOR THE WHOLE ACT, the damage, the playhead's
+// seat and the render's trigger.
+//   * THE SELECTION IS WHAT THE ACT CREATED, as the single drop
+//     single-selects its reset: every created reset, through the whole-set
+//     replace (Selection::replace_selection, the paste landing's class).
+//   * THE FOCUS AND THE PLAYHEAD FOLLOW THE WARP FOCUS: the reset created at
+//     `focus_frame` — the place of the marker the warp selection was focused
+//     on, where the playhead stood — takes the focus, and the playhead seats
+//     on it by the single drop's own landing (Viewport::seat_playhead_on_drop);
+//     where that place was skipped (`focus_frame` names no created reset)
+//     the earliest created reset takes both, the programmatic group's rule
+//     (the paste landing's, phase_reset_propagate.cpp).
+//   * THE IDENTITY HINT is the single drop's: the new rows are absent from
+//     the entry's snapshot, and touched_live names every created row, so a
+//     redo re-selects what the act selected.
+void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
+        const std::vector<int64_t>& frames, int64_t focus_frame) {
+    if (audio.sample_rate() <= 0) return;
+    std::vector<int64_t> admitted;
+    admitted.reserve(frames.size());
+    for (const int64_t f : frames) {
+        if (const std::optional<int64_t> walled =
+                walled_drop_frame(audio, static_cast<double>(f)))
+            admitted.push_back(*walled);
+    }
+    // Nothing to create: no stop, no snapshot, no undo entry, no damage.
+    if (admitted.empty()) return;
+    // A DROP IS A MARKER MUTATION AND STOPS (architect 2026-10-14).
+    playback_lifecycle.stop_playback_if_playing();
+    std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
+    // Each created row's FINAL index, adjusted as later inserts land ahead
+    // of it (the paste's own bookkeeping, phase_reset_propagate.cpp).
+    std::vector<int> created;
+    created.reserve(admitted.size());
+    int focus_idx = -1;
+    for (const int64_t f : admitted) {
+        GuiPhaseResetMarker nm;
+        nm.time_frame = f;
+        const int new_idx = app.phaseresetmarkers.insert_marker(std::move(nm));
+        for (int& ci : created)
+            if (ci >= new_idx) ++ci;
+        if (focus_idx >= new_idx) ++focus_idx;
+        created.push_back(new_idx);
+        if (f == focus_frame) focus_idx = new_idx;
+    }
+    std::set<int> members(created.begin(), created.end());
+    if (focus_idx < 0) focus_idx = *members.begin();
+    selection.replace_selection(std::move(members), focus_idx);
+    undo.push_undo_phase_reset(std::move(pre_state),
+                               /*touched_snapshot=*/{},
+                               /*touched_live=*/std::move(created));
+    undo.recompute_dirty();
+    viewport.invalidate_waveform_area();
+    // The single drop's seat, on the focused reset as the column shows it.
+    const int64_t seat_frame =
+        app.phaseresetmarkers.markers()[static_cast<std::size_t>(focus_idx)]
+            .time_frame;
+    viewport.seat_playhead_on_drop(
+        source_frame_to_active_domain(app, audio, seat_frame));
     target_render.trigger();
 }
 
