@@ -131,8 +131,11 @@ public:
     // (load_gui_themes, gui_main), IN PLACE, through the same reader and
     // manager as the icons above. STATIC, asked before any window exists.
     // THE ERROR ARM'S PRODUCER IS IO (an asset that will not open), carried
-    // to the launch's hard fail; a group the APK lacks lists empty, which
-    // the load answers as the build defect it is.
+    // to the launch's hard fail; an absent asset directory lists empty
+    // (read_asset_dir). An empty `system` fails the load as the build defect
+    // it is (default_dark_cool_medium is missing); an empty `extra` loads
+    // silently with no EXTRA rows. The packaging gate is build_apk.sh's
+    // asset step, which refuses either group empty.
     struct BundledThemeFiles {
         std::map<std::string, std::string> system;
         std::map<std::string, std::string> extra;
