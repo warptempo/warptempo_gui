@@ -130,17 +130,19 @@ shopt -s nocaseglob
 # tablet's old files/warptempo_gui/sounds/ is not this script's business and
 # is never read or deleted.
 #
-# tt AND setup MIRROR THE THEMES FOLDER THE SAME WAY (2026-11-06, mirror_themes:
-# the noise mirror's one body, mirror_folder). The laptop's
-# $WARPTEMPO_TABLET_HOME/themes holds one subfolder per GROUP (its name the
-# Settings page's group row, lowercase: extra, sonic_bloom), each holding
-# Live's `.ask` theme files as he drops them (the app reads them at its
-# launch; the derivation and the rules are src/gui/'s). Every `.ask` directly
-# in a group goes to files/warptempo_gui/themes/<group>/<name> unless the
-# tablet holds it unchanged; a `.ask` or a group the laptop lacks is deleted
-# from the tablet by name, the emptied group by rmdir (app_rm_mirrored,
-# app_rmdir_mirrored). Absent or empty, one line says so and nothing is placed
-# or deleted. A sync while the app runs shows at its next launch.
+# tt AND setup MIRROR THE THEMES FOLDER, FLAT (2026-11-11, mirror_themes;
+# the format and the app's rules are src/gui/theme_roles.h's). The app ships
+# its own themes in the APK; the laptop's $WARPTEMPO_TABLET_HOME/themes holds
+# only HIS OWN theme files, `<slug>.theme` (the app's USER-DEFINED group),
+# DIRECTLY in it. Every regular `*.theme` directly there (lowercase `.theme`
+# exactly, the app's own rule) is copied AS THE APP into
+# files/warptempo_gui/themes/<name> (put_as_app, mode 644) unless the
+# tablet's file has the same sha256; then every `*.theme` directly in the
+# tablet's folder that the laptop's lacks is deleted by its own name
+# (app_rm_flat). A SUBFOLDER ON EITHER SIDE IS NEVER READ, COPIED OR DELETED,
+# and no other file is. Absent, or holding no `.theme`, one line says so and
+# nothing is placed or deleted. A sync while the app runs shows at its next
+# launch.
 #
 # setup SHOWS ITS PLAN AND ASKS FIRST (architect 2026-09-28: "add y/n confirm, and
 # that's enough insurance"). THERE IS NO BACKUP: what the plan lists as deleted or
@@ -214,10 +216,10 @@ shopt -s nocaseglob
 #      voice's level, retired 2026-11-11 with the AUDIO case
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
-#   6. THE NOISE AND THEMES FOLDERS (2026-10-28, 2026-11-06): the laptop's
-#      noise/ and themes/ mirrored to the tablet's files/warptempo_gui/noise/
-#      and themes/, exactly as tt does it (the noise and themes paragraphs
-#      above, mirror_noise, mirror_themes). The
+#   6. THE NOISE AND THEMES FOLDERS (2026-10-28; the themes flat since
+#      2026-11-11): the laptop's noise/ and themes/ mirrored to the tablet's
+#      files/warptempo_gui/noise/ and themes/, exactly as tt does it (the
+#      noise and themes paragraphs above, mirror_noise, mirror_themes). The
 #      plan lists every file the real pass would copy or delete and every
 #      folder it would remove; the real pass does it.
 #   7. the audio and the score folders, exactly as `warptempo_sync tt all`.
@@ -349,8 +351,8 @@ TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE slider plays.
 NOISE_FAR="$APPCFG/noise"
-# THE THEMES FOLDER on the tablet, beside it (mirror_themes): the .ask files the
-# app reads at its launch, one subfolder per group.
+# THE THEMES FOLDER on the tablet, beside it (mirror_themes): his own theme
+# files, flat, which the app reads at its launch.
 THEMES_FAR="$APPCFG/themes"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
@@ -691,18 +693,32 @@ far_rm_file() {                         # $1 = absolute far path of one file
     run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
     far_gone "$1"
 }
-# THE MIRRORS' TWO SHAPES tt and setup DELETE (2026-10-28 for the noise,
-# 2026-11-06 for the themes; mirror_folder), the two-shapes rule above extended
-# to them, in the app's private folder under a mirrored root ($NOISE_FAR,
-# $THEMES_FAR): ONE FILE, <root>/<sub>/<name>.<ext>, by its own name — two
-# path components under the root, each a plain name (non-empty, no `/`, not
-# `.` or `..`), the second ending .<ext> — and nothing else (app_rm_mirrored);
-# and ONE EMPTIED SUBFOLDER, <root>/<sub> alone, one plain component, removed
-# by rmdir, which refuses a folder that is not empty (app_rmdir_mirrored). The
-# root must be one of the two. Any other path is refused before adb is asked.
+# THE MIRRORS' SHAPES tt and setup DELETE (2026-10-28 for the noise,
+# mirror_folder; 2026-11-11 for the themes, mirror_themes), the two-shapes
+# rule above extended to them, in the app's private folder. UNDER THE NOISE'S
+# ROOT ($NOISE_FAR): ONE FILE, <root>/<sub>/<name>.<ext>, by its own name —
+# two path components under the root, each a plain name (non-empty, no `/`,
+# not `.` or `..`), the second ending .<ext> — and nothing else
+# (app_rm_mirrored); and ONE EMPTIED SUBFOLDER, <root>/<sub> alone, one plain
+# component, removed by rmdir, which refuses a folder that is not empty
+# (app_rmdir_mirrored). UNDER THE THEMES' ROOT ($THEMES_FAR): ONE FILE,
+# <root>/<name>.theme, one plain component, by its own name (app_rm_flat),
+# and never a folder. Any other path is refused before adb is asked.
 mirrored_root() {                       # $1 = the root a deletion names
-    [[ "$1" == "$NOISE_FAR" || "$1" == "$THEMES_FAR" ]] || \
+    [[ "$1" == "$NOISE_FAR" ]] || \
         die "refusing to delete under '$1': not a mirrored folder"
+}
+app_rm_flat() {                         # $1 = path relative to run-as's home
+    local name
+    case "$1" in
+        "$THEMES_FAR/"?*.theme) ;;
+        *) die "refusing to delete '$1': not a theme file of $THEMES_FAR" ;;
+    esac
+    name="${1#"$THEMES_FAR/"}"
+    [[ -n "$name" && "$name" != */* && "$name" != "." && "$name" != ".." ]] || \
+        die "refusing to delete '$1': not a theme file of $THEMES_FAR"
+    run app_sh 'rm -f "$1"' "$1" || die "could not delete $1 on the tablet: stopping here"
+    far_gone "$1"
 }
 app_rm_mirrored() {                     # $1 = root, $2 = extension, $3 = path relative to run-as's home
     local root="$1" ext="$2" rest sub name
@@ -915,12 +931,13 @@ push_audio() {
     done
 }
 
-# THE MIRROR (the head's noise and themes paragraphs own the rule), tt's after
-# push_audio and setup's step 6, ONE BODY FOR BOTH FOLDERS (2026-11-06): $1 the
-# kind (noise, themes: the folder's name on both sides and the step lines'
+# THE FOLDER MIRROR (the head's noise paragraph owns the rule), tt's after
+# push_audio and setup's step 6, the noise's body (a folder of subfolders;
+# the themes' flat mirror is mirror_themes, below): $1 the
+# kind (noise: the folder's name on both sides and the step lines'
 # word), $2 the laptop's folder, $3 the tablet's (relative to run-as's home),
-# $4 the files' extension (wav, ask), $5 / $6 a subfolder's and a file's word
-# (sound / recording, group / theme), $7 what stands when nothing is mirrored,
+# $4 the files' extension (wav), $5 / $6 a subfolder's and a file's word
+# (sound / recording), $7 what stands when nothing is mirrored,
 # $8 the first-copy note (empty, or ending ", "). Sets `mirrored` to 1 when
 # the laptop holds a file to mirror (the done line's count). Copies first,
 # then the deletions, each file by its own name, then the emptied folders. The
@@ -937,7 +954,7 @@ mirror_folder() {
         printf 'no %s: the laptop has no %s; nothing placed or deleted, %s\n' "$kind" "$near" "$stands"
         return 0
     fi
-    # THE LAPTOP'S SUBFOLDERS (a sound, a theme group; a link to a folder counts, as the
+    # THE LAPTOP'S SUBFOLDERS (a sound; a link to a folder counts, as the
     # app's probe follows one; a dot-name too, the key's grammar admitting
     # one — never `.` or `..`, which the glob does not match), sorted by the
     # glob; a name the app's grammar refuses skipped with one line.
@@ -1042,11 +1059,81 @@ mirror_noise() {
         "the NOISE slider as it stands" "about 400 MB and a few minutes the first time, "
     noise_mirrored=$mirrored
 }
+# THE THEMES' FLAT MIRROR (the head's themes paragraph owns the rule), tt's
+# after the noise and setup's step 6, in mirror_folder's shape one level
+# shallower: copies first, then the deletions, each file by its own name; the
+# sums are readings, so a dry run lists exactly what the real pass would copy
+# or delete. Sets `themes_mirrored` to 1 when the laptop holds a file to
+# mirror (the done line's count).
 themes_mirrored=0
 mirror_themes() {
-    mirror_folder themes "$THEMES_NEAR" "$THEMES_FAR" ask group theme \
-        "the Settings page's themes as they stand" ""
-    themes_mirrored=$mirrored
+    local near="$THEMES_NEAR" far="$THEMES_FAR" f name near_sum far_sum kept=0
+    local listing="$scratch/themes_listing" rec end=0
+    local -a near_list=() far_files=() gone_files=()
+    local -A near_file=()
+    themes_mirrored=0
+    if [[ ! -d "$near" ]]; then
+        printf "no themes: the laptop has no %s; nothing placed or deleted, the Settings page's themes as they stand\n" "$near"
+        return 0
+    fi
+    # THE LAPTOP'S FILES: every regular file directly in it whose name ends
+    # `.theme` exactly, lowercase (the app's rule; the glob, under
+    # nocaseglob, matches any case, so the test below decides), dotfiles
+    # included as the app includes them; a subfolder never.
+    shopt -s nullglob dotglob
+    local -a fs=( "$near"/*.theme )
+    shopt -u nullglob dotglob
+    for f in "${fs[@]}"; do
+        name="${f##*/}"
+        [[ "$name" == ?*.theme && -f "$f" ]] || continue
+        near_list+=( "$name" ); near_file["$name"]=1
+    done
+    if [[ "${#near_list[@]}" -eq 0 ]]; then
+        printf "no themes: %s holds no .theme file; nothing placed or deleted, the Settings page's themes as they stand\n" "$near"
+        return 0
+    fi
+
+    # THE TABLET'S FOLDER, READ CHECKED (push_score's listing shape): the
+    # `.theme` files directly in it, NUL-separated, then the end record; a
+    # folder not there yet lists nothing; a subfolder is not listed.
+    app_sh 'if [ -d "$1" ]; then cd "$1" && find . -mindepth 1 -maxdepth 1 -type f -name "*.theme" -print0 || exit 1; fi; printf "warptempo_sync-end\0"' "$far" > "$listing" || \
+        die "could not list the tablet's $far: nothing more was copied or deleted"
+    rec=""
+    while IFS= read -r -d '' rec; do
+        (( end )) && die "the tablet's listing of $far runs on past its end: nothing more was copied or deleted"
+        if [[ "$rec" == "warptempo_sync-end" ]]; then end=1; continue; fi
+        [[ "$rec" == ./?* && "${rec#./}" != */* ]] || die "the tablet's listing of $far holds a malformed name ('$rec'): nothing more was copied or deleted"
+        far_files+=( "${rec#./}" )
+        rec=""
+    done < "$listing"
+    [[ "$end" -eq 1 && -z "$rec" ]] || die "the tablet's listing of $far is incomplete: nothing more was copied or deleted"
+    for name in "${far_files[@]}"; do
+        [[ "$name" == ?*.theme && -z "${near_file[$name]:-}" ]] && gone_files+=( "$name" )
+    done
+
+    themes_mirrored=1
+    head_step "bring the tablet's themes folder to the laptop's ($near: $(plural "${#near_list[@]}" theme), $(du -shL -- "$near" | cut -f1); a file the tablet holds unchanged skipped, a subfolder on either side never touched):"
+    run app_sh 'mkdir -p "$1"' "$far" || die "could not make $far on the tablet"
+    for name in "${near_list[@]}"; do
+        f="$near/$name"
+        near_sum="$(sha256sum < "$f" | cut -c1-64)"
+        # NOT A CHECKED READING, AND NEED NOT BE (the deploy key's own
+        # rule): a reading that fails counts as "differs", and the answer is
+        # the laptop's file placed again, verified by sum (put_as_app).
+        far_sum="$(app_sh 'sha256sum "$1" 2>/dev/null; true' "$far/$name" | cut -c1-64)"
+        if [[ "$near_sum" == "$far_sum" ]]; then
+            kept=$((kept + 1))
+        else
+            step "copy themes/$name to the tablet ($(du -hL -- "$f" | cut -f1))"
+            put_as_app "$f" "$far/$name" 644 || die "themes/$name did not arrive intact on the tablet"
+        fi
+    done
+    [[ "$kept" -gt 0 ]] && step "leave $(plural "$kept" theme) of themes/: the tablet holds them unchanged"
+    for name in "${gone_files[@]}"; do
+        step "DELETE themes/$name from the tablet (the laptop's themes folder has no such file)"
+        app_rm_flat "$far/$name"
+    done
+    return 0
 }
 
 # The pieces push_audio skipped, said again at the end of the run, where they

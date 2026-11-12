@@ -1,0 +1,25 @@
+# Angst Robot.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=221746
+Desktop=2A1E54
+SurfaceBackground=372C6D
+ControlContrastFrame=060313
+ControlForeground=E5E6E8
+TextDisabled=ACBAD3
+BackgroundClip=647CBC
+ViewCheckControlEnabledOn=B5FF63
+RangeDefault=FFC421
+StandbySelectionBackground=3C7296
+StandbySelectionForeground=000001
+SelectionBackground=79C9FF
+SelectionForeground=000001
+Alert=FF0B0A
+WaveformColor=100726EF
+DetailViewBackground=3F357D
+DetailGridTiles=00000019
+ScaleAwareness=B595FC
+RangeEditField=9A6C00
+TakeLaneTrackNotHighlighted=312561
+ViewCheckControlDisabledOff=647CBC
+ScrollbarInnerHandle=859CC9
+DetailViewRulerMarkings=D2D7DF
+StandardVuMeter/Maximum=FF0A0A

@@ -10,13 +10,13 @@
 
 // THE CHROME'S COLORS (architect 2026-10-04; COMPILED IN 2026-10-08;
 // INHERITED FROM COOL EDIT 2026-10-10; OFF THE MATERIALS 2026-10-21; THE
-// INSTALLED THEME'S since 2026-11-05, the theme read from Live's .ask files
-// at launch since 2026-11-06, theme_ask.h) — every color the flat
+// INSTALLED THEME'S since 2026-11-05, a theme file read at launch since
+// 2026-11-11, theme_roles.h) — every color the flat
 // CHROME paints, as ROLES. THE PROGRAM'S COLORS ARE THE PALETTE's (the
 // waveform, the flags, the playhead's line and the scanner; palette_file.h,
 // whose head owns the rule that parts the two) — the two tables fill ONE
 // struct off ONE theme row (GuiThemeTones, gui_theme.h — a row of the
-// themes' list, theme_ask.h; install_palette, render.cpp).
+// themes' list, theme_roles.h; install_palette, render.cpp).
 //
 // THE CHROME INHERITS COOL EDIT (architect 2026-10-10: "the chrome color
 // should just be the Cool Edit theme color … we're getting rid of chrome
@@ -146,5 +146,5 @@ static_assert(every_chrome_role_decided());
 // colours by name — was the theme files' and then the preset files' value
 // grammar, 2026-10-03..10-14, and left with the preset files, architect
 // 2026-10-14. The `theme` key of 2026-11-05 names a row of the themes' list
-// by slug — since 2026-11-06 the compiled group and the .ask files read at
-// launch, theme_ask.h's find_gui_theme — and spells no color.)
+// by slug — the theme files read at launch, theme_roles.h's find_gui_theme
+// — and spells no color.)

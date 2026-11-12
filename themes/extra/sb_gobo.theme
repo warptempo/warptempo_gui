@@ -1,0 +1,25 @@
+# SB Gobo.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=221C17
+Desktop=2A231D
+SurfaceBackground=3B332B
+ControlContrastFrame=0C0806
+ControlForeground=E2D7C7
+TextDisabled=A09281
+BackgroundClip=7B6E60
+ViewCheckControlEnabledOn=C6ECAE
+RangeDefault=94C9A9
+StandbySelectionBackground=6F8462
+StandbySelectionForeground=040202
+SelectionBackground=A7BF99
+SelectionForeground=040202
+Alert=D5573B
+WaveformColor=D5EAC7
+DetailViewBackground=483E35
+DetailGridTiles=0A000019
+ScaleAwareness=077187
+RangeEditField=4C7F60
+TakeLaneTrackNotHighlighted=322B23
+ViewCheckControlDisabledOff=7B6E60
+ScrollbarInnerHandle=8E8171
+DetailViewRulerMarkings=C3B5A3
+StandardVuMeter/Maximum=FF0A0A

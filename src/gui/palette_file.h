@@ -1,7 +1,7 @@
 #pragma once
 
 #include "render.h"         // GuiPalette, GuiColor: the role table's members
-#include "gui_theme.h"      // GuiThemeTones, kGuiDefaultThemeTones: the words
+#include "gui_theme.h"      // GuiThemeTones, kGuiReferenceThemeTones: the words
 
 #include <cstddef>
 #include <cstdint>
@@ -14,17 +14,19 @@
 // design, the layout from CoolEdit, and I think that's enough"): Live 12's
 // own themes, whole — chrome and well together — selectable through ONE
 // device key, `theme` (device_config.h), its value a slug of the themes'
-// list (theme_ask.h): SINCE 2026-11-06 (architect, session 75) THE APP READS
-// LIVE'S .ASK FILES ITSELF at launch, from `themes/<group>/` beside the
-// device config — the files never enter the repository — through the one
-// derivation (theme_ask.h's head), after the COMPILED GROUP, `default` and
-// the immaterial_mod rule. No per-color key, no Settings row for a color.
+// list (theme_roles.h): SINCE 2026-11-11 (architect, session 110) THE
+// APP'S OWN THEME FILES, Live's raw role values in our keyed format, shipped
+// in the APK (SYSTEM, EXTRA) or dropped beside the device config
+// (USER-DEFINED), each through the one derivation (theme_roles.h's head),
+// `default` Live's Default Dark Cool Medium. No per-color key, no Settings
+// row for a color.
 // Cool Edit Pro 2.1 keeps THE CANVAS GRAMMAR — the view
 // bar, the ruler, the marker lane, the grid and center lines, the cues, the
 // playhead, the stereo divider and their lengths (program_spec.h) — and
-// gives no color. THE DEFAULT ROW (`default`, Live's "Default Dark Neutral
-// Medium", COMPILED: kGuiDefaultThemeTones, gui_theme.h; its .ask never
-// read) IS THE 2026-11-01..05 MEASURED PALETTE TO THE BYTE but the selection
+// gives no color. THE REFERENCE ROW (Live's Default, "Default Dark Neutral
+// Medium", COMPILED: kGuiReferenceThemeTones, gui_theme.h, listed as
+// `default_dark_neutral_medium`; no file ships it) IS THE 2026-11-01..05
+// MEASURED PALETTE TO THE BYTE but the selection
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
 // SurfaceBackground, since 2026-11-07), the level fill, the lit-but-inert
 // key's pair and the radio keys' three (2026-11-11; all at the foot) — the
@@ -36,7 +38,7 @@
 // his own pick, the playhead
 // line's static tone, 2026-11-04 night: white 0.483 toward the head, every
 // other theme derived at the same ratio, ruling 4 of 2026-11-05 (the mix
-// gives his pick exactly; theme_ask.h's DERIVED block) — the static_asserts
+// gives his pick exactly; theme_roles.h's DERIVED block) — the static_asserts
 // at the foot are that proof in the build, every one of the forty
 // words with its literal (the press arc's four, 2026-11-05, among them —
 // the key press face, the list press pair and the lit press fill — the lamp
@@ -61,7 +63,7 @@
 // the palette's program roles are exactly the ELEVEN below (TWO ROLES MAY
 // SHARE A NUMBER — the ink and `center` share Default's 191919: a role is
 // what it paints, not its value). Each role's Default word and its Live
-// source (the derivation, theme_ask.h's head):
+// source (the derivation, theme_roles.h's head):
 //   waveform_canvas  393939  the canvas, Live's darker band (DetailGridTiles
 //                            over DetailViewBackground)
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
@@ -175,18 +177,19 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
-// THE DEFAULT PROOF (the head): the compiled `default` row
-// (kGuiDefaultThemeTones, gui_theme.h) pins the measured palette of
+// THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
+// (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
 // 2026-11-01..05 — every one of the forty words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
-// Default file through the one derivation (theme_ask.h's head), which the
-// loader reproduces for every dropped file (the proof of 2026-11-06, on the
-// tablet). The lamp arc's one (2026-11-05 night) is Live's own word read
+// Default file through the one derivation (theme_roles.h's head), which the
+// loader runs for every theme file (the proof of 2026-11-06, on the tablet;
+// the theme files' of 2026-11-11, every row equal to the .ask reader's).
+// The lamp arc's one (2026-11-05 night) is Live's own word read
 // off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum).
 // THE LEVEL FILL 007383 is Default's RangeEditField, Live's volume color
-// (architect 2026-11-11, session 105; theme_ask.h's COMPOSITED block). THE
+// (architect 2026-11-11, session 105; theme_roles.h's COMPOSITED block). THE
 // LIT KEY'S FOUR (architect 2026-11-11, session 106: a lit key's face is
-// the accent, `cue` FFAD56; theme_ask.h's head): THE PRINT ON A LIT FACE
+// the accent, `cue` FFAD56; theme_roles.h's head): THE PRINT ON A LIT FACE
 // 111111, Default's ControlContrastFrame; THE LIT PRESS FILL C68743, the
 // accent × 42 / 54, the ratio mean(press face 2A2A2A) / mean(key face
 // 363636); and THE LIT-BUT-INERT PAIR, a checked-but-disabled key's face
@@ -205,7 +208,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // session 83, his pick i4 of tmp/s83; 1E1E1E, his pick of 2026-11-04 night
 // and ControlBackground's number, until then — render.h's THE CORE).
 namespace gui_default_theme_proof {
-inline constexpr GuiThemeTones kDefault = kGuiDefaultThemeTones;
+inline constexpr GuiThemeTones kDefault = kGuiReferenceThemeTones;
 // THE CHROME (materials.h's head: the ground, the text tones, the key, the
 // well's tones, the selection pair, the panes, the cards, the lamps).
 static_assert(kDefault.ground          == 0x242424);

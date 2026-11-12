@@ -1,0 +1,25 @@
+# SB Bronze.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=191919
+Desktop=1E1E1E
+SurfaceBackground=333333
+ControlContrastFrame=0D0D0D
+ControlForeground=DBD0B1
+TextDisabled=847D68
+BackgroundClip=5B5954
+ViewCheckControlEnabledOn=AD583C
+RangeDefault=718C71
+StandbySelectionBackground=8C7E56
+StandbySelectionForeground=040404
+SelectionBackground=FFE7A0
+SelectionForeground=040404
+Alert=E76942
+WaveformColor=141414EF
+DetailViewBackground=3A3A3A
+DetailGridTiles=0A0A0A19
+ScaleAwareness=7C9E7C
+RangeEditField=455645
+TakeLaneTrackNotHighlighted=3D3B37
+ViewCheckControlDisabledOff=5B5954
+ScrollbarInnerHandle=6B675E
+DetailViewRulerMarkings=DBD0B1
+StandardVuMeter/Maximum=FF0A0A

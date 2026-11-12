@@ -1,0 +1,46 @@
+# Immaterial.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# IMMATERIAL_MOD: Immaterial with ONE ROLE CHANGED, THE ACCENT
+# (ViewCheckControlEnabledOn) D6B762 in place of Immaterial's pink FF91C3
+# (architect 2026-11-05, session 56, his pick m1 of tmp/s56: a separate
+# theme, `immaterial` unchanged -- "lowest overhead, most honest, and least
+# churn if reversed"; THE SHADE 2026-11-06, session 62, his pick x2 of
+# tmp/s62, "my eye was biased by the small diffs"; the `_mod` suffix marks a
+# theme modified by hand or by rule, session 86, 2026-11-07).
+#
+# THE RECIPE: Immaterial's own SearchIndication ECCA6D, its muted gold,
+# SHADED IN OKLCH (Bjorn Ottosson's matrices): its lightness set to L 78.8,
+# the lightness of the FF91C3 it replaces, so the accent sits over the ground
+# at the ~55 L Live gives Default and Immaterial alike; its hue kept (89.7);
+# its chroma scaled by 78.8 / its own L; each linear channel clipped to
+# [0, 1], sRGB-encoded, rounded half to even and clamped: D6B762. The plain
+# ECCA6D read "too bright" (+61 L over the ground). The accent is the
+# markers' chip and a lit key's face, and the lit press fill and the
+# lit-but-inert face derive from it; every other role is Immaterial's, its
+# ScaleAwareness (the radio keys' purple) among them. The shade was the app's
+# own rule over Immaterial.ask 2026-11-05 .. 11-11 (src/gui/theme_ask.cpp,
+# git history); since 2026-11-11, session 110, it is this file's one baked
+# word.
+SurfaceArea=1D1F23
+Desktop=22242A
+SurfaceBackground=2F3138
+ControlContrastFrame=0C0D10
+ControlForeground=CBCBCD
+TextDisabled=7D8088
+BackgroundClip=5C6069
+ViewCheckControlEnabledOn=D6B762
+RangeDefault=47E2F4
+StandbySelectionBackground=6A7C82
+StandbySelectionForeground=040506
+SelectionBackground=BBDBE3
+SelectionForeground=040506
+Alert=E76942
+WaveformColor=121417EF
+DetailViewBackground=373A41
+DetailGridTiles=0A0A0A19
+ScaleAwareness=B595FC
+RangeEditField=008493
+TakeLaneTrackNotHighlighted=282B31
+ViewCheckControlDisabledOff=5C6069
+ScrollbarInnerHandle=6D7079
+DetailViewRulerMarkings=A1A3A9
+StandardVuMeter/Maximum=FF0A0A

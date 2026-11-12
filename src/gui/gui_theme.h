@@ -6,27 +6,28 @@
 
 // THE THEME'S SHAPE (architect 2026-11-05, the theme arc: "i'd like to
 // implement all" — Ableton Live 12's own themes selectable whole, chrome and
-// well together, through the one `theme` device key; architect 2026-11-06,
-// session 75: THE APP READS LIVE'S .ASK FILES ITSELF). A theme is one row of
-// sRGB words, GuiThemeTones, under a slug the config spells and a group the
-// Settings page's value list heads it with. THE LIST — the compiled group
-// first, then the .ask files dropped into `themes/<group>/` beside the device
-// config, each through THE DERIVATION — is theme_ask.h's, whose head owns the
-// walk, the order, the left-out files and the derivation. This header holds
-// what needs no file: the row's shape, the compiled `default` row, the
-// compiled group's name and THE SLUG RULE.
+// well together, through the one `theme` device key; architect 2026-11-11,
+// session 110: THE THEME FILES, our own keyed format of Live's raw roles,
+// shipped in the APK). A theme is one row of sRGB words, GuiThemeTones,
+// under a slug the config spells and a group the Settings page's value list
+// heads it with. THE LIST — SYSTEM (`default` first), EXTRA, USER-DEFINED,
+// each theme file through THE DERIVATION — is theme_roles.h's, whose head
+// owns the format, the groups, the order, the left-out files and the
+// derivation. This header holds what needs no file: the row's shape, the
+// compiled reference row, the list's own slugs, the groups' headings and
+// THE SLUG RULE.
 
 // Every sRGB word the GUI paints, one theme's (0xRRGGBB). Beside each member
 // what reads it and the Live role it comes from (the one owners: materials.h's
 // head, palette_file.h's role list, render.h's palette block; the derivation,
-// theme_ask.h's head).
+// theme_roles.h's head).
 struct GuiThemeTones {
     uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea)
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
     uint32_t text_on_lit;         // what is printed on a lit key's face, its glyph and the on-screen keyboard's lit cap (ControlContrastFrame); a word alone, read by key_ink (materials.h)
     uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
-    uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face (text_on_lit by the dim scalar, theme_ask.h's DERIVED block: · mean(key_dim_ink) / mean(text) on a dark theme, toward white on a light one); a word alone, read by key_ink
+    uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face (text_on_lit by the dim scalar, theme_roles.h's DERIVED block: · mean(key_dim_ink) / mean(text) on a dark theme, toward white on a light one); a word alone, read by key_ink
     uint32_t key_face;            // an unchecked key at rest; the time fields (SurfaceBackground)
     uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
     uint32_t lit_press_fill;      // a checked key's face (not a radio key's) while a press stands on it: the accent darkened (cue · mean(key_press_face) / mean(key_face))
@@ -63,41 +64,54 @@ struct GuiThemeTones {
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
-// One row of the list (theme_ask.h): the slug the config spells and the value
-// list shows, the group it is listed under — the compiled group's name or its
-// folder's, lowercase as the folder spells it (the value list prints it ALL
-// CAPS) — and its tones.
+// One row of the list (theme_roles.h): the slug the config spells and the
+// value list shows, the heading of the group it is listed under (one of the
+// three below, printed as it is spelled) and its tones.
 struct GuiTheme {
     std::string   slug;
     std::string   group;
     GuiThemeTones tones;
 };
 
-// THE COMPILED GROUP (architect 2026-11-06, session 75): listed first, under
-// the heading WARPTEMPO — `default`, compiled, and `immaterial_mod`, a
-// compiled rule over a dropped Immaterial.ask (theme_ask.h's head). Its two
-// slugs are reserved: a dropped file slugging to either is left out.
-inline constexpr std::string_view kGuiCompiledThemeGroup = "warptempo";
-inline constexpr std::string_view kGuiDefaultThemeSlug   = "default";
-inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
+// THE GROUPS' HEADINGS, exactly as the value list prints them (architect
+// 2026-11-11, session 110, D4; theme_roles.h's THE LIST): the shipped
+// themes of `themes/system/` with the reference row, the shipped themes of
+// `themes/extra/`, and his own files beside the config.
+inline constexpr std::string_view kGuiThemeGroupSystem = "SYSTEM";
+inline constexpr std::string_view kGuiThemeGroupExtra  = "EXTRA";
+inline constexpr std::string_view kGuiThemeGroupUser   = "USER-DEFINED";
 
-// THE DEFAULT ROW, COMPILED (architect 2026-11-06, session 75: `default`
-// stays compiled — the no-folder launch, the missing-theme fallback, the
-// launcher icon's numbers, palette_file.h's pinned row; Default's .ask is
-// not read). Live's "Default Dark Neutral Medium" through the derivation
-// (theme_ask.h's head), the measured palette of 2026-11-01..05 to the byte
-// but THE SELECTION PAIR'S TEXT 070707, Default's StandbySelectionForeground
-// (architect 2026-11-06, session 75: Live's own partner of the
+// THE LIST'S OWN SLUGS (theme_roles.h's head). `default` is THE OPENING
+// THEME, the first row: a copy of the shipped Live's Default Dark Cool Medium
+// (`default_dark_cool_medium`, kGuiDefaultThemeSourceSlug; architect
+// 2026-11-11, session 110, D4: "i plan to use cool medium a lot more").
+// `default_dark_neutral_medium` is the compiled reference row below. A
+// shipped file slugging to either is a build defect, a user file left out.
+inline constexpr std::string_view kGuiDefaultThemeSlug       = "default";
+inline constexpr std::string_view kGuiDefaultThemeSourceSlug = "default_dark_cool_medium";
+inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neutral_medium";
+
+// THE REFERENCE ROW, COMPILED (architect 2026-11-06, session 75; THE
+// REFERENCE since 2026-11-11, session 110, D4: `default` became Cool Medium,
+// this row staying compiled and listed in SYSTEM as
+// `default_dark_neutral_medium`, no file shipping it). Live's "Default Dark
+// Neutral Medium" — LIVE'S DEFAULT, whose numbers every "Default N" in the
+// code's comments names — through the derivation (theme_roles.h's head),
+// the measured palette of 2026-11-01..05 to the byte but THE SELECTION
+// PAIR'S TEXT 070707, Default's StandbySelectionForeground (architect
+// 2026-11-06, session 75: Live's own partner of the
 // StandbySelectionBackground bar; the 111111 of ControlContrastFrame before
-// it was our mispairing) AND THE LEVEL CASE'S FILL 007383 (RangeEditField; architect 2026-11-11,
-// session 105) AND THE LIT-BUT-INERT PAIR (architect 2026-11-11, session
-// 106; theme_ask.h's DERIVED block): a checked-but-disabled key's face
-// 83592C and its glyph 090909, the accent FFAD56 and the print on it
-// 111111 × 93 / 181 AND THE RADIO KEYS' THREE (architect 2026-11-11,
-// session 107; theme_ask.h's head): a checked radio key's face B595FC,
-// Default's ScaleAwareness, its press 8D74C4 (× 42 / 54) and its inert face
-// 5D4D81 (× 93 / 181). palette_file.h's static_asserts pin every word.
-inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
+// it was our mispairing) AND THE LEVEL CASE'S FILL 007383 (RangeEditField;
+// architect 2026-11-11, session 105) AND THE LIT-BUT-INERT PAIR (architect
+// 2026-11-11, session 106; theme_roles.h's DERIVED block): a
+// checked-but-disabled key's face 83592C and its glyph 090909, the accent
+// FFAD56 and the print on it 111111 × 93 / 181 AND THE RADIO KEYS' THREE
+// (architect 2026-11-11, session 107; theme_roles.h's head): a checked
+// radio key's face B595FC, Default's ScaleAwareness, its press 8D74C4
+// (× 42 / 54) and its inert face 5D4D81 (× 93 / 181). palette_file.h's
+// static_asserts pin every word. The pre-install palette's row too
+// (render.cpp's construction state, never painted).
+inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x242424, // ground
     0xB5B5B5, // text
     0x757575, // text_dim
@@ -161,10 +175,9 @@ inline std::string theme_slug_of_stem(std::string_view stem) {
 
 // THE SLUG'S SHAPE — exactly the words the slug rule spells: one or more runs
 // of [a-z0-9] joined by single `_`s. THE ONE GRAMMAR OWNER of a theme's
-// spelling and of a group folder's name (theme_ask.h's walk: `extra`,
-// `sonic_bloom`), read by the device config's reader (its `theme` line, a
-// shape and nothing more since 2026-11-06 — a slug no row bears loads and
-// opens in default, theme_ask.h's head) and by the walk.
+// spelling, read by the device config's reader (its `theme` line, a shape
+// and nothing more since 2026-11-06 — a slug no row bears loads and opens in
+// `default`, theme_roles.h's head).
 constexpr bool is_theme_slug(std::string_view s) {
     if (s.empty() || s.front() == '_' || s.back() == '_') return false;
     char prev = 0;
@@ -177,5 +190,5 @@ constexpr bool is_theme_slug(std::string_view s) {
     return true;
 }
 static_assert(is_theme_slug(kGuiDefaultThemeSlug));
-static_assert(is_theme_slug(kGuiImmaterialModSlug));
-static_assert(is_theme_slug(kGuiCompiledThemeGroup));
+static_assert(is_theme_slug(kGuiDefaultThemeSourceSlug));
+static_assert(is_theme_slug(kGuiReferenceThemeSlug));

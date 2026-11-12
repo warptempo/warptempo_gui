@@ -15,8 +15,8 @@
 // palette_file.h's head) — every painter reads palette()'s member for the
 // role (render.h's GuiPalette; the chrome's role table, theme_file.h), and
 // every number quoted below is DEFAULT'S, Live's "Default Dark Neutral
-// Medium" (the compiled row, gui_theme.h), with the Live role it comes from
-// (the derivation, theme_ask.h's head). The constants that held them
+// Medium" (the compiled reference row, gui_theme.h), with the Live role it
+// comes from (the derivation, theme_roles.h's head). The constants that held them
 // (kGround, kKeyFace, kTextInk and the rest, 2026-11-01..05) are retired:
 // nothing outside the installed palette names a color.
 //
@@ -53,7 +53,7 @@
 // role: ONE ACCENT FOR BOTH, no fill of the lit key's own beside it; LIT
 // UNDER PRESS `lit_press_fill`, Default's C68743 — the accent scaled by the
 // press face's ratio to the resting face (42 / 54 = 0.778 on Default; the
-// derivation, theme_ask.h's head), the same push in from the accent's own
+// derivation, theme_roles.h's head), the same push in from the accent's own
 // starting point; LIT BUT INERT `lit_dim_fill`, Default's 83592C — a
 // checked key that is disabled (below).
 // THE RADIO KEYS WEAR THE PURPLE (architect 2026-11-11, session 107: "when
@@ -69,7 +69,7 @@
 // in the Ableton screenshots"); LIT UNDER PRESS `radio_lit_press_fill`,
 // Default's 8D74C4, the purple by the same press ratio; LIT BUT INERT
 // `radio_lit_dim_fill`, Default's 5D4D81, the purple by the same dim
-// scalar (the derivation, theme_ask.h's DERIVED block). Every theme reads its own ScaleAwareness,
+// scalar (the derivation, theme_roles.h's DERIVED block). Every theme reads its own ScaleAwareness,
 // so "the purple" is that theme's role. What is printed on it is the
 // accent's print, `text_on_lit` / `text_on_lit_dim` (key_ink below parts no
 // class). THE PAINTER LEARNS THE CLASS AT ONE SITE: paint_key's
@@ -137,7 +137,7 @@
 // RATIO the dim glyph bears to the resting one, toward black on a dark
 // theme, mean(key dim ink) / mean(text) (Default 93 / 181: FFAD56 ->
 // 83592C, 111111 -> 090909), toward white on a light one (architect
-// 2026-11-11, session 109; the derivation, theme_ask.h's DERIVED block) —
+// 2026-11-11, session 109; the derivation, theme_roles.h's DERIVED block) —
 // a radio key's face
 // `radio_lit_dim_fill`, the purple by the same scalar (B595FC -> 5D4D81),
 // under the same glyph — still the lamp's hue, so the
@@ -199,7 +199,7 @@
 // (Desktop) on Live's orange (THE CARDS, below; 2026-11-04 night). A
 // DISABLED KEY'S glyph and legend take their own tone, `key_dim_ink`,
 // Default's 5D5D5D (ViewCheckControlDisabledOff over the key face, Live's
-// own number on every theme since 2026-11-07, theme_ask.h's head; architect
+// own number on every theme since 2026-11-07, theme_roles.h's head; architect
 // 2026-11-02, on mock b3: "the disabled icons are too similar to enabled
 // ones", 757575 reading too close to B5B5B5 at a key's size), darker than
 // Live's dim text so a dead key reads dead at a glance; the lists' and the
@@ -238,7 +238,7 @@
 // named for what it paints as `pane_face` is `key_face`'s; `trim_span_face`
 // is Live's ScrollbarInnerHandle over Desktop (the bar's outside), the ruler's
 // ticks Live's DetailViewRulerMarkings over the ruler face, on every theme
-// (architect 2026-11-07, session 82; theme_ask.h's head).
+// (architect 2026-11-07, session 82; theme_roles.h's head).
 //
 // THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
 // selection): a flat bar in `selection_fill`, Default's 637E86

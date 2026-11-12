@@ -14,13 +14,14 @@ drawings written by `tools/icons/import_breeze.py`, their provenance table in `a
 
 ## The themes
 
-The window's one compiled theme, `default` (`src/gui/gui_theme.h`'s `kGuiDefaultThemeTones`, the `theme` device key),
-is NUMBERS: a table of colors derived from Ableton AG's Live 12 theme file Default Dark Neutral Medium (`.ask`, Ableton's
-theme XML; its `Resources/Themes`) through the derivation at `src/gui/theme_ask.h`'s head. Every other theme is read at
-the program's launch from `.ask` files the user places beside the device config (`themes/<group>/`); NO THEME FILE IS
-DISTRIBUTED with the program or kept in this repository (since 2026-11-06; the numbers of Live's other stock themes and of
-third-party packs are no longer compiled in). `immaterial_mod` is a compiled rule over the user's own copy of Live's
-Immaterial file (its SearchIndication role as the accent, shaded darker in OKLCH), no extra file.
+The themes are NUMBERS. The repository's `themes/system/` and `themes/extra/` files (`<slug>.theme`, packed into the
+APK) are role color values read from Ableton AG's Live 12 stock theme files (`.ask`, Ableton's theme XML; Live's
+`Resources/Themes`) and from the Sonic Bloom theme pack, converted once by `tools/themes/ask_to_theme.py`; six of the
+Sonic Bloom files (`…_mod`) and `immaterial_mod` (Live's Immaterial with one color shaded) are hand-edited, each file's
+header saying what changed. NO `.ask` FILE IS IN THIS REPOSITORY OR THE APK. One theme is compiled in as the reference,
+`default_dark_neutral_medium` (`src/gui/gui_theme.h`'s `kGuiReferenceThemeTones`): a table of colors derived from Live
+12's Default Dark Neutral Medium. Every theme's tones come from its values through the derivation at
+`src/gui/theme_roles.h`'s head; files the user places beside the device config (`themes/*.theme`) are read the same way.
 
 ## The tablet's APK
 

@@ -129,6 +129,24 @@ shopt -u nullglob
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
+# THE BUNDLED THEMES (architect 2026-11-11, session 110, THE THEME FILES;
+# src/gui/theme_roles.h's head): every `.theme` of the repository's
+# themes/system/ and themes/extra/ copied into the package's
+# assets/themes/system/ and assets/themes/extra/, which aapt2 link's -A packs
+# as the APK's `themes/system/` and `themes/extra/` asset directories. The
+# app reads them in place at launch (GuiPlatform::bundled_theme_files,
+# platform_android.cpp; load_gui_themes). An empty folder is a build defect
+# and stops the script here.
+THEME_DIR="$APPDIR/../themes"
+for group in system extra; do
+    shopt -s nullglob
+    THEME_FILES=("$THEME_DIR/$group"/*.theme)
+    shopt -u nullglob
+    [ "${#THEME_FILES[@]}" -gt 0 ] || wt_die "no .theme files under $THEME_DIR/$group"
+    mkdir -p "$ASSETS/themes/$group"
+    cp -f "${THEME_FILES[@]}" "$ASSETS/themes/$group/"
+    wt_say "assets: themes/$group, ${#THEME_FILES[@]} files"
+done
 # THE DEVICE CONFIG'S FIRST-RUN VALUES: the repository's tracked
 # assets/device_config_defaults (the tablet's own config as last snapshotted
 # by tools/snapshot_device_defaults.sh; src/gui/device_config.h's THE
@@ -200,11 +218,13 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # viewBox's (the note's 22 x 22: a 52 dp square), never rasterised small and
 # upscaled (magick's own delegate renders the SVG at its user size and
 # blurs at -resize) -- centered on the transparent 108 dp canvas; the
-# BACKGROUND that canvas FLAT IN THE DEFAULT THEME'S GROUND #242424 (Live's
-# SurfaceArea, materials.h's head; architect 2026-11-02: the icon wears the
-# window's own ground — THE DEFAULT THEME'S, whatever `theme` the tablet runs:
-# the icon is one picture, the themes are the window's, 2026-11-05; owned by
-# LAUNCHER_GROUND below alone), one color over the whole
+# BACKGROUND that canvas FLAT IN THE `default` THEME'S GROUND (Live's
+# SurfaceArea; architect 2026-11-02: the icon wears the window's own ground
+# — THE `default` THEME'S, whatever `theme` the tablet runs: the icon is one
+# picture, the themes are the window's, 2026-11-05; since 2026-11-11,
+# session 110, D7, Live's Default Dark Cool Medium, 22242D: "i plan to use
+# cool medium a lot more"; LAUNCHER_GROUND below, read from the theme file),
+# one color over the whole
 # square, which the launcher's mask cuts to its shape. Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
 # Byte-stable: -strip drops the date chunks. Cairo paints the
@@ -214,8 +234,23 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
-LAUNCHER_GROUND="#242424"   # the Default theme's ground (the compiled `default` row, kGuiDefaultThemeTones in src/gui/gui_theme.h; materials.h's head); the one owner of the color here
-LAUNCHER_INK="#B5B5B5"      # the note's ink, the Default theme's text tone (the logo lane's `text`)
+# THE ICON'S TWO COLORS ARE READ, NEVER SPELLED HERE: the `default` theme's
+# file, themes/system/default_dark_cool_medium.theme (Live's Default Dark
+# Cool Medium; src/gui/theme_roles.h's THE FORMAT), is their one owner — the
+# ground its SurfaceArea (the window's `ground`), the note's ink its
+# ControlForeground (the logo lane's `text`). A line missing, or not 6 hex
+# digits, stops the script here.
+LAUNCHER_THEME="$THEME_DIR/system/default_dark_cool_medium.theme"
+launcher_role() {                     # $1 = role name -> "#RRGGBB"
+    local word
+    word=$(sed -n "s/^$1=\([0-9A-Fa-f]*\)\r\{0,1\}\$/\1/p" "$LAUNCHER_THEME" | head -n 1)
+    [[ "$word" =~ ^[0-9A-Fa-f]{6}$ ]] \
+        || wt_die "no 6-digit $1 line in $LAUNCHER_THEME (the launcher icon's colors)"
+    printf '#%s' "${word^^}"
+}
+LAUNCHER_GROUND=$(launcher_role SurfaceArea)
+LAUNCHER_INK=$(launcher_role ControlForeground)
+wt_say "launcher icon: ground $LAUNCHER_GROUND, ink $LAUNCHER_INK ($(basename "$LAUNCHER_THEME"))"
 # THE INK IS GIVEN AS resvg's USER STYLESHEET, the app's own road
 # (svg_icon::parse): the drawing paints in `currentColor` and the one-rule
 # sheet sets the root's `color`. The sheet is a build product under the

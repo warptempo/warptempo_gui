@@ -2244,10 +2244,10 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     // The installed theme's row, a copy (installed_theme, render.h): the
-    // compiled Default row until the first install.
-    GuiTheme          g_theme{std::string(kGuiDefaultThemeSlug),
-                              std::string(kGuiCompiledThemeGroup),
-                              kGuiDefaultThemeTones};
+    // compiled reference row until the first install.
+    GuiTheme          g_theme{std::string(kGuiReferenceThemeSlug),
+                              std::string(kGuiThemeGroupSystem),
+                              kGuiReferenceThemeTones};
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }

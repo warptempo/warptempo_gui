@@ -1,0 +1,25 @@
+# Default Light Neutral Medium.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=6E6E6E
+Desktop=818181
+SurfaceBackground=A5A5A5
+ControlContrastFrame=4F4F4F
+ControlForeground=121212
+TextDisabled=6E6E6E
+BackgroundClip=898989
+ViewCheckControlEnabledOn=FFB901
+RangeDefault=00EEFF
+StandbySelectionBackground=ABC6CB
+StandbySelectionForeground=121212
+SelectionBackground=CDF8FF
+SelectionForeground=121212
+Alert=FF7D43
+WaveformColor=222222EF
+DetailViewBackground=C6C6C6
+DetailGridTiles=0F0F0F11
+ScaleAwareness=BE98FF
+RangeEditField=00CADB
+TakeLaneTrackNotHighlighted=9C9C9C
+ViewCheckControlDisabledOff=6E6E6E
+ScrollbarInnerHandle=5B5B5B
+DetailViewRulerMarkings=3D3D3D
+StandardVuMeter/Maximum=FF0A0A

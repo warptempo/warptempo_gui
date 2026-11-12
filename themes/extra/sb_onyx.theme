@@ -1,0 +1,25 @@
+# SB Onyx.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=1F2021
+Desktop=060B0C
+SurfaceBackground=3E3F3F
+ControlContrastFrame=1E1E1E
+ControlForeground=D2D2D2
+TextDisabled=7F7F7F
+BackgroundClip=6C6C6C
+ViewCheckControlEnabledOn=0D5566
+RangeDefault=FFB238
+StandbySelectionBackground=7C7C7C
+StandbySelectionForeground=D2D2D2
+SelectionBackground=677B7F
+SelectionForeground=2D2D2D
+Alert=BF442B
+WaveformColor=000000DC
+DetailViewBackground=3E3F3F
+DetailGridTiles=00000021
+ScaleAwareness=BF4D33
+RangeEditField=BC604D
+TakeLaneTrackNotHighlighted=545454
+ViewCheckControlDisabledOff=D3D3D340
+ScrollbarInnerHandle=828282
+DetailViewRulerMarkings=D2D2D2
+StandardVuMeter/Maximum=FF0A0A

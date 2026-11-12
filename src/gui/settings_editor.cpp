@@ -3,7 +3,7 @@
 #include "input_handler.h"
 #include "render_output_naming.h"
 #include "device_config.h"
-#include "theme_ask.h"         // the themes' list: the `theme` value list, the commit's find
+#include "theme_roles.h"       // the themes' list: the `theme` value list, the commit's find
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -364,7 +364,7 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     if (key == "true_colors") {
         for (const char* word : kTrueColorsWords) out.emplace_back(word);
     } else if (key == "theme") {
-        // The list's own order, the compiled group first (theme_ask.h).
+        // The list's own order, `default` first (theme_roles.h).
         for (const GuiTheme& t : gui_themes()) out.push_back(t.slug);
     } else if (key == "noise") {
         const std::filesystem::path home = noise_home();
@@ -392,8 +392,8 @@ std::vector<GuiSettingsEditor::ValueListGroup>
 GuiSettingsEditor::value_list_groups(const std::string& key) const {
     // The contract is at the declaration (settings_editor.h): `theme` one
     // headed group per run of the list's group, in the list's order (the
-    // list keeps each group's rows together, theme_ask.h), the heading the
-    // group's name ALL CAPS; every other key one headless group of
+    // list keeps each group's rows together, theme_roles.h), the heading the
+    // group's own as it is spelled; every other key one headless group of
     // value_choices.
     std::vector<ValueListGroup> out;
     if (key == "theme") {
@@ -401,11 +401,7 @@ GuiSettingsEditor::value_list_groups(const std::string& key) const {
         for (const GuiTheme& t : gui_themes()) {
             if (current == nullptr || t.group != *current) {
                 current = &t.group;
-                std::string heading = t.group;
-                for (char& c : heading)
-                    c = static_cast<char>(
-                        std::toupper(static_cast<unsigned char>(c)));
-                out.push_back(ValueListGroup{std::move(heading), {}});
+                out.push_back(ValueListGroup{t.group, {}});
             }
             out.back().values.push_back(t.slug);
         }
@@ -1316,7 +1312,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     }
 
     // THE THEME (architect 2026-11-05, the theme arc; palette_file.h's head):
-    // the slug of a row of the themes' list (find_gui_theme, theme_ask.h —
+    // the slug of a row of the themes' list (find_gui_theme, theme_roles.h —
     // the list as the launch read it; a slug no row bears, which only a typed
     // line can name, refused with kThemeGrammarReason, device_config.h: the
     // reader's shape test is not this commit's, architect 2026-11-06),
@@ -1327,7 +1323,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // CARD: the colors on screen are the answer; a failed write keeps the
     // live value for the session, the card saying the persist failed, and
     // the slug already in force is the unchanged no-op. The page opens its
-    // VALUE LIST (the slugs under their groups' headings, WARPTEMPO first,
+    // VALUE LIST (the slugs under their groups' headings, SYSTEM first,
     // kSettingsValueListKeys); Tab completes a typed prefix against the slugs
     // (complete_closed_value); stage 2's recall is the slug verbatim
     // (recall_gui_setting_value).

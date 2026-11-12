@@ -1,0 +1,26 @@
+# SB Fandango_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# Modified by hand from the pack's SB Fandango: WaveformColor 110E0C -> 1C1815, TakeLaneTrackNotHighlighted 352E2A -> 29231F (architect 2026-11-07..11)
+SurfaceArea=191513
+Desktop=2F2925
+SurfaceBackground=3A332E
+ControlContrastFrame=14100D
+ControlForeground=BEB3A5
+TextDisabled=7E7469
+BackgroundClip=645B53
+ViewCheckControlEnabledOn=BF601C
+RangeDefault=AA2A86
+StandbySelectionBackground=6A8462
+StandbySelectionForeground=080605
+SelectionBackground=AEDBA0
+SelectionForeground=080605
+Alert=FF8026
+WaveformColor=1C1815
+DetailViewBackground=3C342F
+DetailGridTiles=0D0D0D27
+ScaleAwareness=77966D
+RangeEditField=AA2A86
+TakeLaneTrackNotHighlighted=29231F
+ViewCheckControlDisabledOff=645B53
+ScrollbarInnerHandle=72685E
+DetailViewRulerMarkings=BEB3A5
+StandardVuMeter/Maximum=FF0A0A

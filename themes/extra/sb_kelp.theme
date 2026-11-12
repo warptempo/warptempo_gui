@@ -1,0 +1,25 @@
+# SB Kelp.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=28261F
+Desktop=2D2B24
+SurfaceBackground=3A372E
+ControlContrastFrame=11100B
+ControlForeground=BCB6A4
+TextDisabled=7C7768
+BackgroundClip=635F53
+ViewCheckControlEnabledOn=AAA338
+RangeDefault=568203
+StandbySelectionBackground=788462
+StandbySelectionForeground=070604
+SelectionBackground=D6EAAF
+SelectionForeground=070604
+Alert=E57642
+WaveformColor=050403EF
+DetailViewBackground=423E35
+DetailGridTiles=0A0A0A19
+ScaleAwareness=F9E495
+RangeEditField=436603
+TakeLaneTrackNotHighlighted=333028
+ViewCheckControlDisabledOff=645B53
+ScrollbarInnerHandle=706B5D
+DetailViewRulerMarkings=999280
+StandardVuMeter/Maximum=FF0A0A

@@ -1,0 +1,26 @@
+# SB Viridian_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# Modified by hand from the pack's SB Viridian: ViewCheckControlDisabledOff 191919 -> 5A5A5A, ScrollbarInnerHandle 000000 -> 454545 (architect 2026-11-07..11)
+SurfaceArea=171918
+Desktop=070707
+SurfaceBackground=333333
+ControlContrastFrame=000000
+ControlForeground=F0F0F0
+TextDisabled=AAAAAA
+BackgroundClip=8D8D8D
+ViewCheckControlEnabledOn=FF7B07
+RangeDefault=A3D1AA
+StandbySelectionBackground=3B4C3E
+StandbySelectionForeground=E5E5E5
+SelectionBackground=637F68
+SelectionForeground=E5E5E5
+Alert=A30606
+WaveformColor=000000
+DetailViewBackground=333333
+DetailGridTiles=0000000F
+ScaleAwareness=0062C4
+RangeEditField=F26000AF
+TakeLaneTrackNotHighlighted=3F3F3F
+ViewCheckControlDisabledOff=5A5A5A
+ScrollbarInnerHandle=454545
+DetailViewRulerMarkings=E5E5E5
+StandardVuMeter/Maximum=FF0A0A

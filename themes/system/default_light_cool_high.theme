@@ -1,0 +1,25 @@
+# Default Light Cool High.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=575B67
+Desktop=737782
+SurfaceBackground=A4A8B1
+ControlContrastFrame=313541
+ControlForeground=020308
+TextDisabled=575B67
+BackgroundClip=7E828D
+ViewCheckControlEnabledOn=FFB901
+RangeDefault=00EEFF
+StandbySelectionBackground=ABC6CB
+StandbySelectionForeground=020308
+SelectionBackground=CDF8FF
+SelectionForeground=020308
+Alert=FF7D43
+WaveformColor=070B14EF
+DetailViewBackground=CBCED4
+DetailGridTiles=00000F11
+ScaleAwareness=BE98FF
+RangeEditField=00CADB
+TakeLaneTrackNotHighlighted=989CA6
+ViewCheckControlDisabledOff=575B67
+ScrollbarInnerHandle=3F434F
+DetailViewRulerMarkings=1E222D
+StandardVuMeter/Maximum=FF0A0A

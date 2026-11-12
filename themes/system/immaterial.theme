@@ -1,0 +1,25 @@
+# Immaterial.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=1D1F23
+Desktop=22242A
+SurfaceBackground=2F3138
+ControlContrastFrame=0C0D10
+ControlForeground=CBCBCD
+TextDisabled=7D8088
+BackgroundClip=5C6069
+ViewCheckControlEnabledOn=FF91C3
+RangeDefault=47E2F4
+StandbySelectionBackground=6A7C82
+StandbySelectionForeground=040506
+SelectionBackground=BBDBE3
+SelectionForeground=040506
+Alert=E76942
+WaveformColor=121417EF
+DetailViewBackground=373A41
+DetailGridTiles=0A0A0A19
+ScaleAwareness=B595FC
+RangeEditField=008493
+TakeLaneTrackNotHighlighted=282B31
+ViewCheckControlDisabledOff=5C6069
+ScrollbarInnerHandle=6D7079
+DetailViewRulerMarkings=A1A3A9
+StandardVuMeter/Maximum=FF0A0A

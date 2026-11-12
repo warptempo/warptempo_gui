@@ -1,0 +1,26 @@
+# SB Elegance_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# Modified by hand from the pack's SB Elegance: ScrollbarInnerHandle 000000 -> 767676 (architect 2026-11-07..11)
+SurfaceArea=343D3D
+Desktop=474747
+SurfaceBackground=333333
+ControlContrastFrame=070707
+ControlForeground=FFF9EA
+TextDisabled=BFBAAF
+BackgroundClip=8D8D8D
+ViewCheckControlEnabledOn=FFD87F
+RangeDefault=CC6933
+StandbySelectionBackground=4B5454
+StandbySelectionForeground=FFF9EA
+SelectionBackground=496868
+SelectionForeground=FFF9EA
+Alert=CC3507
+WaveformColor=191816
+DetailViewBackground=333333
+DetailGridTiles=00000008
+ScaleAwareness=6932FF
+RangeEditField=7F623F
+TakeLaneTrackNotHighlighted=3F3F3F
+ViewCheckControlDisabledOff=444C54
+ScrollbarInnerHandle=767676
+DetailViewRulerMarkings=FFFFFF
+StandardVuMeter/Maximum=FF0A0A

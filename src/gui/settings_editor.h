@@ -73,7 +73,7 @@ struct GuiInputHandler;
 //      (format_engine_setting_value, recall_gui_setting_value).
 //   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
 //      short closed list — `true_colors`'s `on` / `off` (2026-10-21), `theme`'s
-//      slugs (2026-11-05, the themes' list's order, theme_ask.h) — the
+//      slugs (2026-11-05, the themes' list's order, theme_roles.h) — the
 //      prefix completes
 //      against those words by the same rule as the keys
 //      (complete_closed_value); `projects_path=<prefix>` completes against the
@@ -342,9 +342,8 @@ static_assert(settings_page_piece_keys_pinned());
 // folders under `noise/`, the crossfade's 30 whole seconds, the grow's
 // 9 quarters and the themes' slugs. A LIST IS A SEQUENCE OF GROUPS
 // (value_list_groups below; 2026-11-05): `theme`'s one per group of the
-// themes' list (architect 2026-11-06, session 75: WARPTEMPO, the compiled
-// group — `default` and immaterial_mod — then each folder under `themes/`
-// alphabetically, EXTRA and SONIC_BLOOM on his devices; theme_ask.h), each
+// themes' list (architect 2026-11-11, session 110: SYSTEM — `default`
+// first — then EXTRA, then USER-DEFINED; theme_roles.h), each
 // under an inert Group row like the settings page's own DEVICE / PIECE;
 // every other key one headless group. The typed line still names every one
 // of them, its arms and completers unchanged (the list is a second door).
@@ -450,7 +449,7 @@ struct GuiSettingsEditor {
     // domains' Tab completer's words (complete_closed_value); the list's
     // rows are value_list_groups' below: `true_colors`
     // kTrueColorsWords (`on`, `off`); `theme` (2026-11-05) the slugs of
-    // the themes' list in its order (theme_ask.h), `default` first; `noise`
+    // the themes' list in its order (theme_roles.h), `default` first; `noise`
     // the folders under `noise/` beside the device config, sorted by byte —
     // the names the noise completer lists for an empty prefix
     // (complete_noise_value's listing, settings_editor.cpp's folder_names:
@@ -469,10 +468,10 @@ struct GuiSettingsEditor {
     // (value_choices' spelling), the heading printed as an inert Group row
     // (GuiInputHandler::build_value_list_rows, the settings page's own
     // shape) or EMPTY for no heading row. `theme` answers one group per
-    // group of the themes' list in its order (theme_ask.h: "WARPTEMPO", the
-    // compiled group, first, then each `themes/` folder alphabetically), the
-    // heading the group's name ALL CAPS (`sonic_bloom` -> "SONIC_BLOOM"), its
-    // rows by slug; every other listed key answers ONE HEADLESS GROUP holding
+    // group of the themes' list in its order (theme_roles.h: SYSTEM, EXTRA,
+    // USER-DEFINED; a group with no row has no heading), the heading the
+    // group's own (kGuiThemeGroup*, gui_theme.h) as it is spelled, its rows
+    // in the list's order; every other listed key answers ONE HEADLESS GROUP holding
     // value_choices whole, so its list is the flat list it was.
     struct ValueListGroup {
         std::string              heading;

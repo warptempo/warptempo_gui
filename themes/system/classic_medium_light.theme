@@ -1,0 +1,25 @@
+# Classic Medium Light.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=565656
+Desktop=565656
+SurfaceBackground=929292
+ControlContrastFrame=383838
+ControlForeground=000000
+TextDisabled=565656
+BackgroundClip=727272
+ViewCheckControlEnabledOn=FFB901
+RangeDefault=00EEFF
+StandbySelectionBackground=ABC6CB
+StandbySelectionForeground=000000
+SelectionBackground=CDF8FF
+SelectionForeground=000000
+Alert=FF7D43
+WaveformColor=191919EF
+DetailViewBackground=AFAFAF
+DetailGridTiles=00000011
+ScaleAwareness=BE98FF
+RangeEditField=00CADB
+TakeLaneTrackNotHighlighted=878787
+ViewCheckControlDisabledOff=696969
+ScrollbarInnerHandle=424242
+DetailViewRulerMarkings=292929
+StandardVuMeter/Maximum=FF0A0A

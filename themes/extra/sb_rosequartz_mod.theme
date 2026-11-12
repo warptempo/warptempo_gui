@@ -1,0 +1,26 @@
+# SB Rosequartz_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# Modified by hand from the pack's SB Rosequartz: ViewCheckControlDisabledOff 333333 -> 5A5A5A, ScrollbarInnerHandle 000000 -> 454545 (architect 2026-11-07..11)
+SurfaceArea=191919
+Desktop=111111
+SurfaceBackground=353535
+ControlContrastFrame=070707
+ControlForeground=FFF9EA
+TextDisabled=A8A8A8
+BackgroundClip=8D8D8D
+ViewCheckControlEnabledOn=9B6896
+RangeDefault=CC88C5
+StandbySelectionBackground=444047
+StandbySelectionForeground=E5E5E5
+SelectionBackground=554C5E
+SelectionForeground=E5E5E5
+Alert=7F0072
+WaveformColor=0F0A14
+DetailViewBackground=383838
+DetailGridTiles=00000021
+ScaleAwareness=0096CC
+RangeEditField=1C2226
+TakeLaneTrackNotHighlighted=4C4C4C
+ViewCheckControlDisabledOff=5A5A5A
+ScrollbarInnerHandle=454545
+DetailViewRulerMarkings=D9DCE0
+StandardVuMeter/Maximum=FF0A0A

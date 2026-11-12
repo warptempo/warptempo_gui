@@ -9148,8 +9148,8 @@ struct AppState {
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
     // words, and under `theme` one Group heading per group of the themes'
-    // list, WARPTEMPO first (2026-11-05; the folders' since 2026-11-06,
-    // theme_ask.h); the trim presets list Plain rows alone
+    // list, SYSTEM first (2026-11-05; SYSTEM, EXTRA and USER-DEFINED since
+    // 2026-11-11, theme_roles.h); the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
     // preset's name alone (architect 2026-10-28 night); the BPM form a Group
     // row and three Plain rows (build_bpm_form_rows), row f + 1 the field f

@@ -1,0 +1,25 @@
+# Default Light Warm High.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=65594F
+Desktop=80756B
+SurfaceBackground=B0A69E
+ControlContrastFrame=3E3328
+ControlForeground=060200
+TextDisabled=65594F
+BackgroundClip=8B8077
+ViewCheckControlEnabledOn=FFB901
+RangeDefault=00EEFF
+StandbySelectionBackground=ABC6CB
+StandbySelectionForeground=060200
+SelectionBackground=CDF8FF
+SelectionForeground=060200
+Alert=FF7D43
+WaveformColor=100903EF
+DetailViewBackground=D4CCC7
+DetailGridTiles=00000011
+ScaleAwareness=BE98FF
+RangeEditField=00CADB
+TakeLaneTrackNotHighlighted=A59991
+ViewCheckControlDisabledOff=65594F
+ScrollbarInnerHandle=4C4137
+DetailViewRulerMarkings=2A1F15
+StandardVuMeter/Maximum=FF0A0A

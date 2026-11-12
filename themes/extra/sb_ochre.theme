@@ -1,0 +1,25 @@
+# SB Ochre.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=191919
+Desktop=1E1E1E
+SurfaceBackground=333333
+ControlContrastFrame=0D0D0D
+ControlForeground=DDC9B1
+TextDisabled=877A6A
+BackgroundClip=5E5A56
+ViewCheckControlEnabledOn=AF893D
+RangeDefault=72728E
+StandbySelectionBackground=8E7557
+StandbySelectionForeground=040404
+SelectionBackground=FFD4A0
+SelectionForeground=040404
+Alert=E76942
+WaveformColor=141414EF
+DetailViewBackground=3A3A3A
+DetailGridTiles=0A0A0A19
+ScaleAwareness=7C9E7C
+RangeEditField=474759
+TakeLaneTrackNotHighlighted=3F3C39
+ViewCheckControlDisabledOff=5E5A56
+ScrollbarInnerHandle=6D675F
+DetailViewRulerMarkings=DDC9B1
+StandardVuMeter/Maximum=FF0A0A

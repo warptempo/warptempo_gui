@@ -1,0 +1,25 @@
+# SB Cielo.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=282828
+Desktop=1B1718
+SurfaceBackground=414141
+ControlContrastFrame=1E1E1E
+ControlForeground=D8D8D8
+TextDisabled=A8A8A8
+BackgroundClip=6C6C6C
+ViewCheckControlEnabledOn=A63D40
+RangeDefault=90A959
+StandbySelectionBackground=46768C
+StandbySelectionForeground=D8D8D8
+SelectionBackground=869DA8
+SelectionForeground=111111
+Alert=FF6446
+WaveformColor=000000DC
+DetailViewBackground=414141
+DetailGridTiles=0000000A
+ScaleAwareness=D17D21
+RangeEditField=496C7C
+TakeLaneTrackNotHighlighted=7E7E7E
+ViewCheckControlDisabledOff=D3D3D340
+ScrollbarInnerHandle=828282
+DetailViewRulerMarkings=D8D8D8
+StandardVuMeter/Maximum=FF0A0A

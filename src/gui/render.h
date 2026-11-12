@@ -107,10 +107,10 @@ struct TrimRange {
 // NUMBERS (architect 2026-11-01: the Cool Edit presets and their `waveform`
 // key dropped, the canvas grammar kept, Live's measured default compiled
 // in; architect 2026-11-05, the theme arc: Live 12's own themes, whole, the
-// `theme` device key naming one row of the themes' list — since 2026-11-06,
-// session 75, the compiled group and the .ask files read at launch,
-// theme_ask.h — the compiled Default row that measured palette to the byte
-// but the selection pair's text, gui_theme.h); A
+// `theme` device key naming one row of the themes' list — the theme files
+// read at launch since 2026-11-11, theme_roles.h — the compiled reference
+// row, Live's Default, that measured palette to the byte but the selection
+// pair's text, gui_theme.h); A
 // LIT KEY'S FACE IS THE ACCENT, the cues' own role `cue` — one accent for
 // the markers' chip and the lamps — its press and its inert faces the
 // chrome's `lit_press_fill` and `lit_dim_fill` (architect 2026-11-11,
@@ -131,7 +131,7 @@ struct TrimRange {
 // any look made official, would be a chrome variant of its own
 // (2026-10-08) — and is, since 2026-11-05, a theme of its own. The app
 // computes no color at paint time: every one is a theme row's word, the
-// derived tones computed once at the launch's read (theme_ask.h's head, THE
+// derived tones computed once at the launch's read (theme_roles.h's head, THE
 // DERIVATION).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — the chrome's flat-look tones among them
@@ -413,7 +413,7 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE INSTALLED THEME'S ROW (a copy of the list's row, theme_ask.h) — the
+// THE INSTALLED THEME'S ROW (a copy of the list's row, theme_roles.h) — the
 // sRGB WORDS behind palette(), for the few readers that need the word rather
 // than a GuiColor: the Breeze glyph road's tone (icons::draw_glyph; key_ink,
 // materials.h), the plate's two inks (waveform_plate_inks below). Every other
@@ -441,7 +441,7 @@ enum class GuiSurface {
 GuiColor surface_text(GuiSurface surface);
 
 // Install every color off ONE THEME'S ROW (`theme`, a row of the themes'
-// list, theme_ask.h; architect 2026-11-05, the theme arc): THE PROGRAM'S
+// list, theme_roles.h; architect 2026-11-05, the theme arc): THE PROGRAM'S
 // members off the palette's role table (kGuiPaletteRoles, palette_file.h),
 // THE CHROME'S off the chrome's (kGuiThemeRoles, theme_file.h), the panel's
 // `face` off the theme's ground — the tables covering the struct exactly
@@ -3449,7 +3449,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // `waveform_core` role, LIVE'S SurfaceBackground, THE KEY FACE, on every
 // theme (architect 2026-11-07, session 83, his pick i4 of tmp/s83 on real
 // MAGNIFY-lit captures, Default and Immaterial judged; the one owner
-// theme_ask.h's DERIVATION): his ask a lighter core from a tone the palette
+// theme_roles.h's DERIVATION): his ask a lighter core from a tone the palette
 // already holds, with no antialiasing halo — the candidates mocked the ground
 // (SurfaceArea), the lane (Desktop), the grid, the key face and the canvas.
 // On Default 363636 over the 191919 ink, ONE STEP UNDER THE 393939 CANVAS,
@@ -3666,7 +3666,7 @@ struct GuiPlateColumns {
 // four lossless one-px samples of Live's line, 4AD3E0, 59D7E3, 85E2EA and
 // DBF6F9, lie on the byte line from FFFFFF toward 03C3D5); every other
 // theme its own head at the same ratio, white 0.483 toward it (ruling 4,
-// 2026-11-05; theme_ask.h's DERIVED block) — its own pixel
+// 2026-11-05; theme_roles.h's DERIVED block) — its own pixel
 // the same over the ink and over the canvas, stopped or playing; the
 // ruler's head keeps its own `playhead_head` 03C3D5, the scanner its
 // FFFFFF. NOTHING IS DAMAGED AT REST: the line moves only with the cursor,

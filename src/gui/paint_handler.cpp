@@ -374,7 +374,7 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
 // `level_fill`, the theme's RangeEditField over the key face, Default's
 // 007383 (architect 2026-11-11: "give noise the volume color from the ask
 // ... so at 0 it wears the full vol color, and at -inf it wears the button
-// case color"; theme_ask.h's COMPOSITED block), where t
+// case color"; theme_roles.h's COMPOSITED block), where t
 // is the exact
 // level's travel fraction (level_travel_fraction, the square-law taper,
 // app_state.h: 0 dB the face full, -9 dB 0.596 of it, -60 dB two columns,

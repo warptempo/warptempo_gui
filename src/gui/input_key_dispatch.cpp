@@ -6863,7 +6863,7 @@ void GuiInputHandler::settings_page_commit(int index) {
 // the domains' one owner through value_choices): each group's heading, when
 // it has one, an inert Group row — the settings page's own shape, its
 // "DEVICE" / "PIECE" (build_settings_page_rows); `theme`'s one per group,
-// "WARPTEMPO" first, architect 2026-11-05 / 2026-11-06 — never seated and
+// "SYSTEM" first, architect 2026-11-05 / 2026-11-11 — never seated and
 // opening nothing
 // (folder_overlay::row_is_inert), then one glyph-less Plain row per value,
 // the value both what the row shows and what the tap commits; the overlay
@@ -6875,7 +6875,7 @@ void GuiInputHandler::settings_page_commit(int index) {
 // value is in its list by the load wall's own grammars but `noise`'s, whose
 // live name may have no folder (the absent-folder rule, noise.h), and
 // `theme`'s, whose live slug may name no row of the list (the window in
-// default, theme_ask.h's head; 2026-11-06): the first value row stands then,
+// `default`, theme_roles.h's head; 2026-11-06): the first value row stands then,
 // and a list with no rows seats nothing
 // (set_highlight's -1; a heading row is never the seat).
 void GuiInputHandler::build_value_list_rows(const std::string& key) {

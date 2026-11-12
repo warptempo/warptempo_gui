@@ -122,6 +122,22 @@ public:
     // to the launch's hard fail.
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
+    // THE BUNDLED THEMES' FILES (architect 2026-11-11, session 110, THE
+    // THEME FILES; theme_roles.h's head) — the repository's themes/system/
+    // and themes/extra/, each a map from FILE NAME (`<slug>.theme`, no
+    // folder) to the file's whole text, every `.theme` of the APK's
+    // `themes/system/` and `themes/extra/` assets, which build_apk.sh's
+    // asset step packs. Read by the launch's theme load alone
+    // (load_gui_themes, gui_main), IN PLACE, through the same reader and
+    // manager as the icons above. STATIC, asked before any window exists.
+    // THE ERROR ARM'S PRODUCER IS IO (an asset that will not open), carried
+    // to the launch's hard fail; a group the APK lacks lists empty, which
+    // the load answers as the build defect it is.
+    struct BundledThemeFiles {
+        std::map<std::string, std::string> system;
+        std::map<std::string, std::string> extra;
+    };
+    static std::expected<BundledThemeFiles, std::string> bundled_theme_files();
     // THE WINDOW TITLE HAS NO SURFACE: the activity is fullscreen and
     // landscape-only with no system titlebar, so this setter stores nothing
     // and paints nothing (the app paints no caption, 2026-10-24). It stays on

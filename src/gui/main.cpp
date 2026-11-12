@@ -51,7 +51,7 @@
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
-#include "theme_ask.h"     // the themes' list: the launch's read and install
+#include "theme_roles.h"   // the themes' list: the launch's read and install
 #include "phaseresetmarkers_ops.h"
 #include "prompt.h"
 #include "undo.h"
@@ -3637,9 +3637,9 @@ int gui_main() {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     // (The chromes and captions folders were read ahead of it 2026-10-07..14,
-    // the preset files the color picker wrote; only the Default theme is
-    // compiled in, and the others are Live's .ask files read once at launch
-    // by the theme load below, theme_ask.h's head.)
+    // the preset files the color picker wrote; the themes are the APK's
+    // own theme files and the user's, read once at launch by the theme load
+    // below, theme_roles.h's head.)
     // THE TEMPLATE IS THE SHIPPED DEFAULTS FILE (device_config.h's THE
     // FIRST-RUN VALUES, 2026-11-09), read and parsed at every launch: a file
     // the reader refuses is a build defect, answered here exactly as a bad
@@ -3711,27 +3711,43 @@ int gui_main() {
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
     // THE THEMES' LIST, ONCE PER PROCESS (architect 2026-11-06, session 75;
-    // theme_ask.h's head): the compiled group, then Live's .ask files in the
-    // group folders of `themes/` beside the config (the noise's composition)
-    // read now, after the config and before the palette's first install; a
-    // sync while the app runs shows at the next launch. THE PALETTE, before
-    // there is a window: THE CONFIG'S THEME (the `theme` key, architect
-    // 2026-11-05 — one of Live 12's own, palette_file.h's head), its row
-    // found in the list (find_gui_theme), and every member of the palette
-    // installed off it, the program's and the chrome's alike
-    // (install_palette, render.h). A SLUG NO ROW BEARS (the reader judged the
-    // shape alone: a file removed and mirrored away) OPENS IN DEFAULT with
-    // one stderr line, the config's line left as written — the struct keeps
-    // the string, so the next persist writes it back unchanged — until he
-    // picks another (architect 2026-11-06, the noise's absent-folder shape).
-    // The other road is the settings editor's `theme=` commit and its value
-    // list's tap (GuiInputHandler::apply_theme), which owes the caches'
-    // apply shape this launch call does not. Every painter reads it through
-    // palette() (render.h's palette block).
+    // the theme files 2026-11-11, session 110; theme_roles.h's head): the
+    // APK's shipped files (GuiPlatform::bundled_theme_files, SYSTEM and
+    // EXTRA) and the user's flat `themes/` beside the config (the noise's
+    // composition), read now, after the config and before the palette's
+    // first install; a file dropped while the app runs shows at the next
+    // launch. A SHIPPED FILE'S FAULT IS A BUILD DEFECT, the validation
+    // doctrine's class (1) as the icons' above: one line naming the file and
+    // the error, and no window. THE PALETTE, before there is a window: THE
+    // CONFIG'S THEME (the `theme` key, architect 2026-11-05 — one of Live
+    // 12's own, palette_file.h's head), its row found in the list
+    // (find_gui_theme), and every member of the palette installed off it,
+    // the program's and the chrome's alike (install_palette, render.h). A
+    // SLUG NO ROW BEARS (the reader judged the shape alone: a user file
+    // removed) OPENS IN `default`, Live's Default Dark Cool Medium (architect
+    // 2026-11-11, session 110, D6), with one stderr line, the config's line
+    // left as written — the struct keeps the string, so the next persist
+    // writes it back unchanged — until he picks another (architect
+    // 2026-11-06, the noise's absent-folder shape). The other road is the
+    // settings editor's `theme=` commit and its value list's tap
+    // (GuiInputHandler::apply_theme), which owes the caches' apply shape
+    // this launch call does not. Every painter reads it through palette()
+    // (render.h's palette block).
     {
+        auto bundled = GuiPlatform::bundled_theme_files();
+        if (!bundled) {
+            std::fprintf(stderr, "warptempo_gui: themes: %s\n",
+                         bundled.error().c_str());
+            return 1;
+        }
         const std::filesystem::path config = device_config_path();
-        load_gui_themes(config.empty() ? std::filesystem::path()
-                                       : config.parent_path() / "themes");
+        if (const std::optional<std::string> err = load_gui_themes(
+                bundled->system, bundled->extra,
+                config.empty() ? std::filesystem::path()
+                               : config.parent_path() / "themes")) {
+            std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+            return 1;
+        }
         const GuiTheme* theme = find_gui_theme(device_config.theme);
         if (theme == nullptr) {
             std::fprintf(stderr,

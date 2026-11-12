@@ -1,0 +1,26 @@
+# SB Dash_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# Modified by hand from the pack's SB Dash: WaveformColor FFFFFF -> EAEAEA, TakeLaneTrackNotHighlighted 262626 -> 181919, ScrollbarInnerHandle 000000 -> 666666 (architect 2026-11-07..11)
+SurfaceArea=111111
+Desktop=232323
+SurfaceBackground=191B1C
+ControlContrastFrame=070707
+ControlForeground=FFF9EA
+TextDisabled=BFBFBF
+BackgroundClip=8D8D8D
+ViewCheckControlEnabledOn=328462
+RangeDefault=FF4B2D
+StandbySelectionBackground=4B5154
+StandbySelectionForeground=FFFFFF
+SelectionBackground=328764
+SelectionForeground=FFFFFF
+Alert=A81E00
+WaveformColor=EAEAEA
+DetailViewBackground=181919
+DetailGridTiles=FFFFFF0A
+ScaleAwareness=E5934B
+RangeEditField=AA321E
+TakeLaneTrackNotHighlighted=181919
+ViewCheckControlDisabledOff=2D3D3B
+ScrollbarInnerHandle=666666
+DetailViewRulerMarkings=CCCCCC
+StandardVuMeter/Maximum=FF0A0A

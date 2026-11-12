@@ -1,0 +1,25 @@
+# Riparian.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=0F2026
+Desktop=16282E
+SurfaceBackground=26383F
+ControlContrastFrame=000A0F
+ControlForeground=D6CDA8
+TextDisabled=82918F
+BackgroundClip=607175
+ViewCheckControlEnabledOn=FFC658
+RangeDefault=00CCB7
+StandbySelectionBackground=698676
+StandbySelectionForeground=000102
+SelectionBackground=B4ECCD
+SelectionForeground=000102
+Alert=E76942
+WaveformColor=031117EF
+DetailViewBackground=31434A
+DetailGridTiles=00000019
+ScaleAwareness=B595FC
+RangeEditField=007969
+TakeLaneTrackNotHighlighted=1E2F36
+ViewCheckControlDisabledOff=607175
+ScrollbarInnerHandle=728283
+DetailViewRulerMarkings=B0B5A3
+StandardVuMeter/Maximum=FF0A0A

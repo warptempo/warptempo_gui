@@ -1,92 +1,105 @@
 #pragma once
 
-#include "gui_theme.h"   // GuiTheme, GuiThemeTones, the compiled row, the slug rule
+#include "gui_theme.h"   // GuiTheme, GuiThemeTones, the reference row, the slug rule
 
 #include <filesystem>
+#include <map>
+#include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
 
-// THE THEMES' LIST AND THE .ASK READER (architect 2026-11-05, the theme arc;
-// 2026-11-06, session 75, THE DROPPED THEMES: this file the derivation's one
-// owner). The app reads Ableton Live's theme files itself: `.ask`, Ableton's theme XML, a
-// `<Theme>` holding one `<RoleName Value="#rrggbb" />` or `#rrggbbaa` per
-// role. THE .ASK FILES NEVER ENTER THE REPOSITORY (Ableton's and the authors'
-// files, THIRD_PARTY.md); the APK carries none; he drops them on the device.
+// THE THEMES' LIST, THE THEME FILE AND THE DERIVATION (architect 2026-11-05,
+// the theme arc; 2026-11-06, session 75: this file the derivation's one
+// owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
+// FORMAT, the files in the repository and the APK). A theme is one file of
+// LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
+// own role names, never a derived tone — and the derivation, this file's,
+// turns each into a row of GuiThemeTones at the launch's read.
 //
-// THE FOLDER IS `themes/` BESIDE THE DEVICE CONFIG (device_config_path()'s
-// parent, the noise's composition), READ ONCE AT LAUNCH (load_gui_themes,
-// gui_main, after the config and before the palette's first install): a sync
-// while the app runs shows at the next launch, and the list is immutable for
-// the process after the load.
+// THE FORMAT (its one owner here). A theme file is `<slug>.theme`, ASCII
+// text (UTF-8 in a comment), a line ending `\n` — a `\r` before it is
+// stripped, so a file saved with CRLF reads the same — and the last line's
+// `\n` optional. A line is EMPTY, A COMMENT (its first byte `#`, the rest
+// anything), or A ROLE LINE `Name=HEX` exactly: no space anywhere, Name one
+// of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
+// flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
+// the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask),
+// HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
+// an 8-digit word's last byte its straight alpha — kept raw, the derivation
+// compositing it (the COMPOSITED block). Every role of the table exactly
+// once, in any order (the converter writes the table's). THE SLUG is the
+// file's stem through THE SLUG RULE (theme_slug_of_stem, gui_theme.h), and a
+// shipped file is named by its own slug (`default_dark_cool_medium.theme`,
+// `sb_dash_mod.theme`): the slugs are the ones the `theme` key spelled when
+// the app read Live's .ask files itself (2026-11-06 .. 11-11), so every
+// config line keeps working.
 //
-// THE WALK. Each SUBFOLDER of `themes/` is A GROUP, its name lowercase in the
-// slug's shape (is_theme_slug: `extra`, `sonic_bloom`), the value list's
-// heading its name ALL CAPS (EXTRA, SONIC_BLOOM). Each regular `*.ask` file
-// directly in a group folder is one theme, its slug THE SLUG RULE's
-// (theme_slug_of_stem, gui_theme.h: "SB Red Greys.ask" -> `sb_red_greys`).
-// Anything else in a group folder — a subfolder, a file not ending `.ask` —
-// is ignored silently, and so is a file at the top of `themes/`.
+// A FILE IS LEFT OUT, with one stderr line naming its path (its name, for a
+// bundled file) and the first error, its line number where it has one, for:
+// unreadable; a stem that spells no slug (no letter or digit); a malformed
+// line; a role name the table lacks; a role twice; a role missing.
 //
-// THE ORDER — the value list's. THE COMPILED GROUP FIRST, WARPTEMPO
-// (kGuiCompiledThemeGroup): `default` (kGuiDefaultThemeTones, gui_theme.h —
-// compiled, Default's .ask never read), then `immaterial_mod` when a dropped
-// Immaterial.ask stands; then THE FOLDERS ALPHABETICALLY by name; within every
-// group BY SLUG.
+// THE FILES. The SHIPPED files are the repository's `themes/system/` and
+// `themes/extra/`, packed by apk/build_apk.sh as the APK's `themes/system/`
+// and `themes/extra/` assets and read in place at launch
+// (GuiPlatform::bundled_theme_files) — each converted ONCE on the laptop
+// from Live's or the pack's `.ask` (Ableton's theme XML) by
+// tools/themes/ask_to_theme.py, never by hand but for the `_mod` files'
+// recorded edits; NO .ASK FILE IS IN THE REPOSITORY OR THE APK, and the app
+// reads none. THE USER'S files are `themes/*.theme` FLAT beside the device
+// config (device_config_path()'s parent / "themes", the noise's
+// composition): each regular file directly there whose name ends `.theme`;
+// a subfolder, or any other file, is ignored silently; a MISSING OR
+// UNLISTABLE folder is the ordinary state and silent (empty on his tablet).
+// READ ONCE AT LAUNCH (load_gui_themes, gui_main, after the config and
+// before the palette's first install): a file dropped while the app runs
+// shows at the next launch, and the list is immutable for the process after
+// the load.
 //
-// IMMATERIAL_MOD, A COMPILED RULE OVER A DROPPED FILE (architect 2026-11-05,
-// session 56, his pick m1 of tmp/s56 — a separate theme, `immaterial`
-// unchanged: "lowest overhead, most honest, and least churn if reversed";
-// THE SHADE 2026-11-06, session 62, his pick x2 of tmp/s62; THE SLUG
-// `immaterial_mod` since 2026-11-07, session 86 — the `_mod` suffix marks a
-// theme modified by hand or by rule, the device's hand-fixed Sonic Bloom
-// copies following the same suffix as files, `SB <Name>_mod.ask`): the first
-// file of the walk whose slug is `immaterial` (the first group folder holding one)
-// read through THE DERIVATION below with ViewCheckControlEnabledOn read from
-// the same file's SearchIndication (ECCA6D, Immaterial's muted gold) SHADED
-// IN OKLCH (Ottosson's matrices, `oklch` / `from_oklch` in theme_ask.cpp): its
-// lightness set to L 78.8 — the lightness of the FF91C3 it replaces, so the
-// accent sits over the ground at the ~55 L Live gives Default and Immaterial
-// alike — its hue kept (89.7), its chroma scaled by 78.8 / L0, each channel
-// clipped, encoded, rounded and clamped (`shade`): D6B762.
-// ViewCheckControlEnabledOn is THE ACCENT (`cue`): the markers' chip and a
-// lit key's face (architect 2026-11-11, session 106), and the lit press
-// fill and the lit-but-inert face are derived from it, so the shaded gold
-// reaches those four; every other tone is Immaterial's — THE RADIO KEYS'
-// PURPLE among them, Immaterial's own ScaleAwareness, which the rule leaves
-// untouched (the purple is not the accent). Listed only when that file is
-// present and usable.
+// THE LIST — the value list's order, under THREE GROUPS, the headings exact
+// (gui_theme.h's kGuiThemeGroup*):
+//   SYSTEM        `default` FIRST — LIVE'S DEFAULT DARK COOL MEDIUM (architect
+//                 2026-11-11, session 110, D4: "i plan to use cool medium a
+//                 lot more"): a copy of `default_dark_cool_medium`'s row
+//                 under the slug `default`, the opening theme — then BY SLUG
+//                 every file of `themes/system/` (Live's stock themes and
+//                 `immaterial_mod`, D5: alphabetical, so right after
+//                 `immaterial`) AND THE COMPILED REFERENCE ROW as
+//                 `default_dark_neutral_medium` (kGuiReferenceThemeTones,
+//                 gui_theme.h: Live's Default Dark Neutral Medium, compiled,
+//                 no file shipping it). Cool Medium is listed twice, as
+//                 `default` and under its own slug.
+//   EXTRA         every file of `themes/extra/` by slug: the Sonic Bloom
+//                 pack as he curated it (2026-11-07), the six `_mod` files
+//                 his hand edits, each recorded in its header comment.
+//   USER-DEFINED  his own files beside the config, by slug (then by file
+//                 name). A user file whose slug a shipped row bears
+//                 (`default`, `default_dark_neutral_medium` and every SYSTEM
+//                 and EXTRA slug) or an earlier user file bears is LEFT OUT
+//                 with its line (D9: the earlier group wins).
+// A heading shows only over rows (settings_editor.h's value_list_groups).
 //
-// A FILE IS LEFT OUT, WITH ONE stderr LINE naming its path and why, the
-// launch going on: unreadable; a name that spells no slug (a stem of no
-// letter or digit); a ROLE of kAskRoles missing (a Live 11 theme); the
-// nested role missing; its slug already taken — the compiled group's two
-// counting first (a dropped file slugging to `default` or `immaterial_mod`
-// is left out), then earlier groups, then the same group's earlier file.
-// A group folder whose name is not a slug, or is the compiled group's name,
-// is left out with one line too. A MISSING OR UNLISTABLE `themes/` FOLDER,
-// or a group folder that cannot be listed, is the ordinary state and silent:
-// the list is the compiled group, `default` alone. Nothing more is checked
-// (NO BACKSTOPS FOR ADVERSARIAL USE, CLAUDE.md): no XML validation, no size
-// limit, no recovery.
+// A BUNDLED FILE IS THE PROGRAM'S OWN, so its fault is A BUILD DEFECT, the
+// validation doctrine's class (1) as icons::load_set's: a shipped file left
+// out by the rules above, a shipped file not named by its own slug, two
+// shipped files of one slug, a shipped file slugging to `default` or
+// `default_dark_neutral_medium`, or no `default_dark_cool_medium` among
+// SYSTEM's files makes the load answer the error, and gui_main prints one
+// line and opens no window.
 //
-// A CONFIG NAMING A SLUG NO ROW BEARS (a file removed on the laptop and
-// mirrored away) OPENS IN DEFAULT with one stderr line, the config's line
-// untouched until he picks another (gui_main; the reader judges the shape
-// alone, device_config.h's THE theme GRAMMAR).
-//
-// THE ROLES READ (kAskRoles, theme_ask.cpp): a flat role is the FIRST
-// `<Name Value="#rrggbb" />` (or 8 digits) of that name anywhere in the file,
-// the hex case-blind; THE ONE NESTED ROLE, StandardVuMeter / Maximum, is the
-// first `Maximum` inside the FIRST `<StandardVuMeter>` … `</StandardVuMeter>`
-// block — a `Maximum` stands in every VU meter block (Overload, Disabled,
-// Headphones, Sends …), so it is never read by the flat walk.
+// A CONFIG NAMING A SLUG NO ROW BEARS (a user file removed) OPENS IN
+// `default` with one stderr line, the config's line untouched until he picks
+// another (gui_main; the reader judges the shape alone, device_config.h's
+// THE theme GRAMMAR).
 //
 // THE DERIVATION — our Default tone = Live's role, each Default number the
-// compiled row's (palette_file.h's static_asserts). A ROLE-NAMED role is
-// read FLAT, its alpha byte dropped: each is 6-digit in every file he drops
-// (audited 2026-11-06, session 81). A role found carrying alpha is
-// COMPOSITED over the surface it paints on, never stripped (architect
-// 2026-11-06, session 81, his "ok to implement"): the COMPOSITED block.
+// reference row's (Live's Default Dark Neutral Medium; palette_file.h's
+// static_asserts). A ROLE-NAMED role is read FLAT, its alpha byte dropped:
+// each is 6-digit in every shipped file (audited 2026-11-06, session 81). A
+// role found carrying alpha is COMPOSITED over the surface it paints on,
+// never stripped (architect 2026-11-06, session 81, his "ok to implement"):
+// the COMPOSITED block.
 //
 //   ROLE-NAMED (one Live role each):
 //     ground                 242424 = SurfaceArea (ruling 2, 2026-11-05: the
@@ -119,9 +132,10 @@
 //                                     back to where the accent color is the
 //                                     background of the lit lamp" — one accent
 //                                     for both, Live's "on"; materials.h's THE
-//                                     KEY; immaterial_mod reads its shaded
-//                                     SearchIndication instead, above) — every
-//                                     lit key but the radio keys' (below)
+//                                     KEY; immaterial_mod's file carries its
+//                                     shaded gold here, its header the recipe)
+//                                     — every lit key but the radio keys'
+//                                     (below)
 //     radio lit fill         B595FC = ScaleAwareness, THE PURPLE: A LIT RADIO
 //                                     KEY'S WHOLE FACE, the eight of
 //                                     redesign_button_is_radio — SOURCE /
@@ -133,8 +147,8 @@
 //                                     perfectly fine in my peripheral field of
 //                                     vision"; materials.h's THE RADIO KEYS).
 //                                     Every theme's own role, immaterial_mod's
-//                                     Immaterial's (the gold rule, above,
-//                                     rewrites the accent alone)
+//                                     Immaterial's (its file changes the
+//                                     accent alone)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
 //     selection text         070707 = StandbySelectionForeground (architect
@@ -148,7 +162,7 @@
 //     card face              E76942 = Alert (the cards; THE LIMITER LAMP too,
 //                                     architect 2026-11-05: "orange for limiter
 //                                     and red for clipper" — a warning)
-//     clip lamp              FF0A0A = StandardVuMeter / Maximum, the one NESTED
+//     clip lamp              FF0A0A = StandardVuMeter/Maximum, the one NESTED
 //                                     role: Live's own meter clip box — THE
 //                                     CLIP LAMP's lit face (architect
 //                                     2026-11-05, his d6 "yes": a fault).
@@ -191,7 +205,7 @@
 //                                     canvas (the quarter lines)
 //     key dim ink            5D5D5D = ViewCheckControlDisabledOff over
 //                                     SurfaceBackground (the key face; 8-digit
-//                                     D3D3D340 on SB Cielo / Morea / Onyx) — a
+//                                     D3D3D340 on SB Cielo / Onyx) — a
 //                                     disabled key's glyph and legend, the
 //                                     struck clip lamp's square
 //     trim span              696969 = ScrollbarInnerHandle over Desktop (the
@@ -203,7 +217,7 @@
 //   hex on Default is the faithful reading, so every theme now reads Live's own
 //   number (architect 2026-11-07, session 82). Default's key dim ink 5D5D5D
 //   equals inactive cue's BackgroundClip — Live's own number, accepted. The four
-//   are present in all 31 files he drops and in Default.
+//   are present in every shipped file and in Default.
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
 //   (b − a) per channel, rounded half to even and clamped):
 //     playhead line          85E2EB = FFFFFF + 0.483 · (head − FFFFFF)
@@ -306,34 +320,39 @@
 // THE SONIC BLOOM FILES' UNDEFINED ROLES: a pack file may carry a role it does
 // not use as 000000 (ScrollbarInnerHandle black on 12 SB files,
 // DetailViewRulerMarkings on 4). NO RULE CORRECTS IT: he edits the individual
-// .ask file by hand (architect 2026-11-07, session 82: "i'd rather manually fix
-// individual sb themes than make rules around their missing colors").
+// theme by hand, a `_mod` file of themes/extra/ (architect 2026-11-07,
+// session 82: "i'd rather manually fix individual sb themes than make rules
+// around their missing colors").
 //
-// immaterial_mod is not listed over an Immaterial.ask whose SearchIndication
-// is black (the chroma ratio's divisor zero), with its line: no stock or
-// pack file is, the arm only keeps the arithmetic defined. The derivation
-// itself is total and leaves no file out.
-//
-// THE ARITHMETIC IS PYTHON'S, BIT FOR BIT (the derivation was first written
-// in Python, and the proof of 2026-11-06 diffed every row on the tablet
-// against its numbers): doubles in its operation order, Python's round() as
-// nearbyint under the default rounding mode (half to even), a pow-based cube
-// root, CPython's degrees / radians factors and its float modulo
-// (theme_ask.cpp).
+// The derivation is total and leaves no file out. ITS ARITHMETIC IS
+// PYTHON'S, BIT FOR BIT (the derivation was first written in Python, and the
+// proof of 2026-11-06 diffed every row on the tablet against its numbers):
+// doubles in its operation order, Python's round() as nearbyint under the
+// default rounding mode (half to even; theme_roles.cpp).
 
-// Build THE LIST from `themes_dir` (the head's walk and order), once per
-// process, before the palette's first install. An empty path is the absent
-// folder (no config home).
-void load_gui_themes(const std::filesystem::path& themes_dir);
+// Build THE LIST (the head's groups and order), once per process, before
+// the palette's first install: `system_files` and `extra_files` the shipped
+// files, each a map from FILE NAME (`<slug>.theme`, no folder) to the file's
+// whole text — the APK's `themes/system/` and `themes/extra/` assets
+// (GuiPlatform::bundled_theme_files), or any host's reading of the
+// repository's folders — and `user_dir` the user's flat folder (an empty
+// path is the absent folder: no config home). THE ERROR ARM is the head's
+// build defect (a shipped file's fault), the message naming the file;
+// nothing is listed then. A user file's fault is its stderr line alone.
+std::optional<std::string> load_gui_themes(
+    const std::map<std::string, std::string>& system_files,
+    const std::map<std::string, std::string>& extra_files,
+    const std::filesystem::path& user_dir);
 
-// THE LIST in the value list's order, the compiled group first. Before the
-// load it is `default` alone.
+// THE LIST in the value list's order, `default` first. Empty before the
+// load.
 const std::vector<GuiTheme>& gui_themes();
 
 // THE ROW WHOSE SLUG IS `slug`, or nullptr when no row bears it: the
 // settings editor's `theme` commit refuses such a slug (only a typed line
-// can name one), the launch opens in default (the head).
+// can name one), the launch opens in `default` (the head).
 const GuiTheme* find_gui_theme(std::string_view slug);
 
-// The compiled `default` row (the list's first).
+// The `default` row, Live's Default Dark Cool Medium (the list's first; the
+// load must have answered no error).
 const GuiTheme& default_gui_theme();

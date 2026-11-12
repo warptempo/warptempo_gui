@@ -596,7 +596,8 @@ std::expected<DeviceConfig, std::string> GuiPlatform::device_config_defaults() {
 // THE ICON BUNDLE IS THE APK'S ASSET DIRECTORY (contract at the
 // declaration, bundled_icon_files): build_apk.sh copies the repository's
 // assets/icons/*.svg (each symlink as the file it names, icons.h's
-// kIconNames) into assets/icons/, and one reader lists an asset directory
+// kIconNames) into assets/icons/ — and its themes/system/ and themes/extra/
+// into assets/themes/ (bundled_theme_files) — and one reader lists an asset directory
 // (AAssetManager_openDir lists FILES only) and reads every name ending one of
 // `suffixes` whole. The manager is the activity's, off the
 // file-scope pointer android_main parks before gui_main asks (the road
@@ -643,6 +644,17 @@ read_asset_dir(const std::string& dir_name,
 std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files() {
     return read_asset_dir("icons", {".svg"});
+}
+
+// The two theme groups, read as the icons are (contract at the declaration,
+// bundled_theme_files).
+std::expected<GuiPlatform::BundledThemeFiles, std::string>
+GuiPlatform::bundled_theme_files() {
+    auto system = read_asset_dir("themes/system", {".theme"});
+    if (!system) return std::unexpected(std::move(system.error()));
+    auto extra = read_asset_dir("themes/extra", {".theme"});
+    if (!extra) return std::unexpected(std::move(extra.error()));
+    return BundledThemeFiles{std::move(*system), std::move(*extra)};
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

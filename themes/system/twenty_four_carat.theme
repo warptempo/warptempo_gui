@@ -1,0 +1,25 @@
+# Twenty-Four Carat.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+SurfaceArea=222222
+Desktop=282828
+SurfaceBackground=343434
+ControlContrastFrame=0D0D0D
+ControlForeground=E1C69C
+TextDisabled=8C7F6C
+BackgroundClip=63605A
+ViewCheckControlEnabledOn=FFAD56
+RangeDefault=03C3D5
+StandbySelectionBackground=927E58
+StandbySelectionForeground=040404
+SelectionBackground=FFDD9F
+SelectionForeground=040404
+Alert=E76942
+WaveformColor=141414EF
+DetailViewBackground=3D3D3C
+DetailGridTiles=0A0A0A19
+ScaleAwareness=B595FC
+RangeEditField=007383
+TakeLaneTrackNotHighlighted=2E2E2E
+ViewCheckControlDisabledOff=63605A
+ScrollbarInnerHandle=726C63
+DetailViewRulerMarkings=C9AB7C
+StandardVuMeter/Maximum=FF0A0A
