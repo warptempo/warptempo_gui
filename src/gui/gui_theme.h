@@ -59,7 +59,7 @@ struct GuiThemeTones {
     uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
-    uint32_t playhead_line;       // the playhead's canvas line (white + 0.75 toward the head, since 2026-11-10)
+    uint32_t playhead_line;       // the playhead's canvas line (white + 0.483 toward the head)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
@@ -89,9 +89,7 @@ inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
 // but THE SELECTION PAIR'S TEXT 070707, Default's StandbySelectionForeground
 // (architect 2026-11-06, session 75: Live's own partner of the
 // StandbySelectionBackground bar; the 111111 of ControlContrastFrame before
-// it was our mispairing) AND THE PLAYHEAD LINE 42D2E0 (architect
-// 2026-11-10, session 103, "no special cases": white 0.75 toward the head)
-// AND THE LEVEL CASE'S FILL 007383 (RangeEditField; architect 2026-11-11,
+// it was our mispairing) AND THE LEVEL CASE'S FILL 007383 (RangeEditField; architect 2026-11-11,
 // session 105) AND THE LIT-BUT-INERT PAIR (architect 2026-11-11, session
 // 106; theme_ask.h's DERIVED block): a checked-but-disabled key's face
 // 83592C and its glyph 090909, the accent FFAD56 and the print on it
@@ -138,7 +136,7 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
     0x03C3D5, // playhead_head
-    0x42D2E0, // playhead_line
+    0x85E2EB, // playhead_line
     0xFFFFFF, // scanner
 };
 

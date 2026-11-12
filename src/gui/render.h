@@ -250,10 +250,9 @@ struct TrimRange {
 //                 its chip's fill and the inert label; the playhead's two
 //                 roles,
 //                 `playhead_head` — its triangle in the ruler — and
-//                 `playhead_line` — its static tone in the canvas, Default's
-//                 42D2E0, white 0.75 toward the head (architect 2026-11-04
-//                 night, the static line; 2026-11-10, the quarter; THE
-//                 PLAYHEAD, below); and the
+//                 `playhead_line` — its static light cyan 85E2EB in the
+//                 canvas, the mid tone of Live's fade (architect 2026-11-04
+//                 night; THE PLAYHEAD, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
@@ -592,7 +591,7 @@ void install_true_colors(bool on);
 // cue_triangle_reach_right_px); IN THE
 // CANVAS A SOLID LINE, ONE W, on its column (architect 2026-11-04:
 // Live's playhead line, measured; canvas_line_rect, the scanner's form) in
-// THE PALETTE'S `playhead_line` (Default's 42D2E0), down the area's whole height,
+// THE PALETTE'S `playhead_line` (85E2EB), down the area's whole height,
 // the stereo divider's row included (architect 2026-11-02) — ONE STATIC
 // TONE, opaque, the same over the ink and over the canvas (architect
 // 2026-11-04 night, mock n1, after the measured cost of a fading line; the
@@ -620,9 +619,8 @@ void install_true_colors(bool on);
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
 // history.)
 // THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head, Live's
-// cyan 03C3D5, and `playhead_line` its line, Default's 42D2E0 (architect
-// 2026-11-04 night, the static line; 2026-11-10, session 103: the head
-// lightened a quarter of the way to white on every theme); neither is
+// cyan 03C3D5, and `playhead_line` its line, 85E2EB (architect 2026-11-04
+// night: the mid tone of Live's fade, the playhead's two tones); neither is
 // lent to a marker (the selection is the
 // chip's, THE MARKER LANE below). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
@@ -3636,12 +3634,12 @@ struct GuiPlateColumns {
 // pick n1 of four static tones, after the measured cost of a fading line —
 // ~46 % app / ~53 % SurfaceFlinger at 90 presents a second, the present
 // itself the cost: "seems like it's unavoidable"): a solid one-W OPAQUE line
-// in the palette's `playhead_line`, Default's sRGB 42D2E0 — white 0.75 of
-// the way toward the head's cyan, on the byte line from FFFFFF toward
-// 03C3D5 that the four lossless one-px samples of Live's line (4AD3E0,
-// 59D7E3, 85E2EA and DBF6F9) lie on; the head lightened a quarter of the
-// way to white, every theme alike (architect 2026-11-10, session 103:
-// "lets do 1/4 ... the new rule for all, no special cases") — its own pixel
+// in the palette's `playhead_line`, sRGB 85E2EB — the mid tone of Live's
+// fade between white and the head's cyan, the triangle wave's mean (the
+// four lossless one-px samples of Live's line, 4AD3E0, 59D7E3, 85E2EA and
+// DBF6F9, lie on the byte line from FFFFFF toward 03C3D5); every other
+// theme its own head at the same ratio, white 0.483 toward it (ruling 4,
+// 2026-11-05; theme_ask.h's DERIVED block) — its own pixel
 // the same over the ink and over the canvas, stopped or playing; the
 // ruler's head keeps its own `playhead_head` 03C3D5, the scanner its
 // FFFFFF. NOTHING IS DAMAGED AT REST: the line moves only with the cursor,

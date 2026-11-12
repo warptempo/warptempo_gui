@@ -327,10 +327,6 @@ uint32_t packed(const Rgb& c) {
            (static_cast<uint32_t>(c.g) << 8) | static_cast<uint32_t>(c.b);
 }
 
-// THE PLAYHEAD LINE'S MIX (the head's DERIVED block): white three quarters of
-// the way to the head.
-constexpr double kPlayheadLineToHead = 0.75;
-
 // One theme's tones (the head's DERIVATION). Total: every tone is a role, a
 // composite, a mix or a scaled role, and each of the two ratios' zero
 // divisor has its own answer (the lit key's derived tones, below).
@@ -427,7 +423,7 @@ GuiThemeTones derive(const AskRoles& roles) {
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
     t.playhead_head       = packed(range);
-    t.playhead_line       = packed(mix(white, range, kPlayheadLineToHead));
+    t.playhead_line       = packed(mix(white, range, 0.483));
     t.scanner             = packed(white);
     return t;
 }
