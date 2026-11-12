@@ -519,8 +519,9 @@ const char* render_player_button_legend(AppState::PlayerButtonAct act,
 // REPEAT MediaRepeatSingle (the row's one lamp); DOWN / UP GoDown / GoUp;
 // FOLDER GoParentFolder; LOAD DialogOkApply (the band's LOAD key's and the
 // word buttons' OK / YES, the same act, modal_word_icon); DELETE
-// EditDelete. (CLOSE's WindowClose left with the key, architect 2026-11-11,
-// session 106.) THE PLAY
+// EditDelete. (The player has no Close key, architect 2026-11-11, session
+// 106; the WindowClose drawing serves the word buttons' Close, the settings
+// page's and the trim presets list's, session 107, modal_word_icon.) THE PLAY
 // KEY'S GLYPH NAMES ITS NEXT PRESS (architect 2026-10-25; the roster's rule
 // at redesign_button_icon's stateful overload) BY ITS FACE
 // (render_player_play_face, the owner the tooltip reads too): PAUSE
@@ -5697,10 +5698,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE FLAT LOOK'S KEYS (architect 2026-11-01): the
 // program's case, laid out by modal_word_buttons and player_row_layout, each
-// painted by the roster's key painter (paint_roster_case) — at rest, lit
-// in the accent for the row's one checked button alone (2026-11-11, session
-// 106), the darker face of its state under a standing press (the press arc,
-// 2026-11-05) — its glyph on it (paint_key_glyph) and its legend under it
+// painted by paint_key (materials.h) in the Lamp class (no overlay's row
+// holds a radio key) — at rest, lit in the accent for the row's one checked
+// button alone (2026-11-11, session 106), the darker face of its state under
+// a standing press (the press arc, 2026-11-05) — its glyph on it (paint_key_glyph) and its legend under it
 // (paint_key_legend, back 2026-11-03: a word button's word in capitals, its
 // tooltip the word and its glyph the word's, modal_word_icon).
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
