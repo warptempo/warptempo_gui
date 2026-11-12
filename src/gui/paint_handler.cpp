@@ -342,9 +342,9 @@ namespace {
 // wears the rest face, its glyph and legend dimmed by the caller; A DEAD
 // CHECKED BUTTON THE DIMMED ACCENT, `lit_dim_fill`, Default's 83592C (a
 // radio key's dimmed purple, `radio_lit_dim_fill`, Default's 5D4D81), its
-// glyph dimmed with it (materials.h's key_ink) — under an overlay the
-// roster publishes no lit bit for a dead key, so `look` arrives unlit
-// there (2026-11-10) and the face is the rest face. NO HOT FACE. `face` is
+// glyph dimmed with it (materials.h's key_ink) — under an overlay too, the
+// roster publishing a dead key's own lit bit there (2026-11-11, session
+// 107). NO HOT FACE. `face` is
 // the key's FACE, the key itself (materials.h's THE FACE AND ITS GAP,
 // 2026-11-04). ON IT its caller paints the key's Breeze glyph
 // (paint_key_glyph) and UNDER IT its legend (paint_key_legend, 2026-11-03).
@@ -2131,21 +2131,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // 2026-11-01, M6; the key's dim tone 2026-11-02): an UNLIT dead key
         // wears the rest face (paint_key) under its glyph and legend dimmed
         // (`key_dim_ink`, paint_key_glyph and paint_key_legend) — AND A
-        // LIT-BUT-INERT KEY (the grid-iterations lamp on a locked tab, say)
+        // LIT-BUT-INERT KEY (the value drag lamp on a locked tab, the chosen
+        // view pair under grid iterations, any lit key under an overlay)
         // keeps its lit face, in the dimmed accent `lit_dim_fill` (a radio
         // key's dimmed purple, `radio_lit_dim_fill`), its glyph
         // `text_on_lit_dim` (materials.h's paint_key and key_ink; architect
         // 2026-11-11, session 106, "so both read as a unit"), its legend
         // dimmed as every dead key's: the mode cannot change that state, so
         // hiding it would be a lie, and the dimmed face and print say "true,
-        // but not yours right now". UNDER AN OVERLAY THE LIT FACE IS NOT KEPT
-        // (architect 2026-11-10: "lamps that do not respond show inactive
-        // under the overlays"): every key the standing overlay leaves dead
-        // arrives UNLIT AND DISABLED, the rest face under the dim glyph and
-        // legend — decided at the predicate, not here
-        // (overlay_deadens_button through redesign_button_selected: the
-        // published `selected` bit this painter reads is already false, so
-        // the comparator and the press read the same face). THE PRESS FACE
+        // but not yours right now". UNDER AN OVERLAY THE LIT FACE IS KEPT
+        // TOO (architect 2026-11-11, session 107; redesign_button_selected's
+        // head): every key the standing overlay leaves dead arrives
+        // disabled with its own lit bit, so this composition is the one
+        // dead look everywhere. THE PRESS FACE
         // (2026-11-05, the press arc) is gated on the painted enabled bit
         // rather than trusted: the claim never records a press on a disabled
         // button, but a button can go dead UNDER a held press with no

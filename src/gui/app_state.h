@@ -9650,8 +9650,8 @@ inline bool score_viewer_holds_engine(const AppState& a) {
 // IS `b` THE STANDING OVERLAY'S OPENER KEY? — the folder overlay's answer
 // (is_folder_overlay_opener, above) widened by THE SCORE VIEWER'S, the SCORE
 // key (architect 2026-10-26: the overlay class's one rule, the opener lit and
-// the way out). The roster's greying arm, the lit bit, the lift's veil and
-// the tooltip's gate read this family through overlay_admits_button (below),
+// the way out). The roster's greying arm, the lift's veil and the tooltip's
+// gate read this family through overlay_admits_button (below),
 // which adds the tooltip lamp; false with nothing standing.
 inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
     if (score_viewer_stands(a)) return b == RedesignButton::IconScore;
@@ -9723,36 +9723,17 @@ inline const char* overlay_leave_word(const AppState& a) {
 // lift the overlay's close) AND THE TOOLTIP LAMP ("tips should remain open
 // in all situations": bare backslash, answered by every overlay's router).
 // Asked with an overlay standing — the render player, the picker's five
-// contents or the score viewer; its four readers ask it there:
-// redesign_button_enabled's overlay arm (the face), overlay_deadens_button
-// below (the lit bit), finish_chrome_press_release's overlay term (the
-// lift, input_pointer.cpp) and GuiInputHandler::tooltip_dwell_suppressed
-// (the tooltip's gate, input_pointer.cpp — the keys that answer there keep
-// their hints, architect 2026-11-11). The struck clip lamp answers under an overlay
-// too, a lamp and no roster key (ChromePress's Lamp kind).
+// contents or the score viewer; its three readers ask it there:
+// redesign_button_enabled's overlay arm (the face: every other roster key
+// disabled, a lit one keeping its lit bit and so wearing the lit-but-inert
+// look, architect 2026-11-11, session 107 — redesign_button_selected's
+// head), finish_chrome_press_release's overlay term (the lift,
+// input_pointer.cpp) and GuiInputHandler::tooltip_dwell_suppressed (the
+// tooltip's gate, input_pointer.cpp — the keys that answer there keep
+// their hints, architect 2026-11-11). The struck clip lamp answers under an
+// overlay too, a lamp and no roster key (ChromePress's Lamp kind).
 inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
     return is_overlay_opener(a, b) || b == RedesignButton::IconTooltips;
-}
-
-// DOES A STANDING OVERLAY LEAVE `b` DEAD? — THE ONE PREDICATE OF THE
-// OVERLAYS' PLAIN DISABLED FACE (architect 2026-11-10: "lamps that do not
-// respond show inactive under the overlays"): an overlay of the interface
-// class stands — the folder overlay under any of its contents, or the score
-// viewer — and `b` is not one of the keys it leaves live
-// (overlay_admits_button). Such a key is painted disabled
-// (redesign_button_enabled's overlay arm answers false for exactly these)
-// AND UNLIT, whatever its state: redesign_button_selected answers false
-// through this predicate, so the published face — the bits the painters,
-// the per-tick comparator and the band's fingerprint all read — carries the
-// decision, and the key wears the rest face under the dim glyph and legend.
-// THE OVERLAYS ONLY: outside them a dead checked key keeps its lit face,
-// the accent (a radio key's purple) dimmed and its glyph with it (a locked
-// tab, the `h` view;
-// nothing behind a MODAL changes at all — materials.h's THE KEY). False
-// with no overlay standing.
-inline bool overlay_deadens_button(const AppState& a, RedesignButton b) {
-    return (folder_overlay_stands(a) || score_viewer_stands(a)) &&
-           !overlay_admits_button(a, b);
 }
 
 // IS THERE NO PIECE TO DISPATCH ON — a load in flight, or no audio at all (a
@@ -15624,8 +15605,9 @@ inline bool redesign_button_enabled(const AppState& a,
     // picker's and the BPM form's; the plain Closes left the rows, architect
     // 2026-11-11, session 106, the opener's tooltip naming the leave act
     // there, overlay_leave_word), the openers lit and live under them (the overlay arm
-    // below, redesign_button_selected), the rest of the roster grey AND
-    // UNLIT but the tooltip lamp (architect 2026-11-10, the arm below) and
+    // below, redesign_button_selected), the rest of the roster grey but the
+    // tooltip lamp (architect 2026-11-10, the arm below) — a lit one
+    // keeping its lit face, dimmed (architect 2026-11-11, session 107) — and
     // EVERY DEAD KEY'S HINT SUPPRESSED, the two live keys keeping theirs
     // (architect 2026-11-11, narrowing 2026-10-25's "overlays don't show
     // hints … the only reason they still show the one button lit is that you
@@ -15711,9 +15693,11 @@ inline bool redesign_button_enabled(const AppState& a,
     // situations"): live and lit when on under the player, the picker's
     // contents and the viewer alike, its lift bare backslash, which each
     // overlay's router answers with the lamp's one setter — the membership's
-    // owner overlay_admits_button. EVERY KEY THIS ARM LEAVES DEAD IS ALSO
-    // UNLIT THERE (the same ruling: the plain disabled face, no accent —
-    // overlay_deadens_button, read by redesign_button_selected).
+    // owner overlay_admits_button. A KEY THIS ARM LEAVES DEAD KEEPS ITS LIT
+    // BIT (architect 2026-11-11, session 107: redesign_button_selected
+    // answers the state's own fact under an overlay), so a lit one wears the
+    // lit-but-inert look and an unlit one the rest face, both under the dim
+    // glyph and legend (materials.h's THE KEY).
     if (folder_overlay_stands(a) || score_viewer_stands(a))
         return overlay_admits_button(a, b);
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
@@ -17145,17 +17129,20 @@ inline bool redesign_button_enabled(const AppState& a,
 // pair into one button (its record is in the momentary arm below).
 // Each reads
 // THE SAME live fact its chord flips, so a lit button and the state it reports
-// can never drift. UNDER AN OVERLAY A KEY THAT DOES NOT RESPOND IS NEVER LIT
-// (architect 2026-11-10: "lamps that do not respond show inactive under the
-// overlays" — the plain disabled face, the rest face under the dim glyph
-// and legend, no accent): the body's second head term, the overlays' one
-// predicate (overlay_deadens_button), so the bit this publishes is THE
-// PAINTED LIT FACE and the state behind it returns to the face at the
-// overlay's close. The opener and the tooltip lamp, the keys an overlay
-// leaves live, keep their true bit. THE OVERLAYS ONLY: a key dead on a
-// locked tab, in the `h` view or behind a modal keeps its lit face, in
-// the dimmed accent (a radio key's dimmed purple) when the key is dead
-// (materials.h's THE KEY). Three readers: the painter (which stashes what it
+// can never drift. UNDER AN OVERLAY A LIT KEY STAYS LIT (architect
+// 2026-11-11, session 107: "those lit keys, they just go blank, or they
+// just look like they're resting keys if I enter, for example, score. But I
+// would think that for consistency, they should keep that look of darkened.
+// But lit." — reversing 2026-11-10's unlit half, "lamps that do not respond
+// show inactive under the overlays"): no term here asks the overlays, so
+// the bit is the state's own under every overlay, and a key the overlay
+// leaves dead (redesign_button_enabled's overlay arm) wears THE
+// LIT-BUT-INERT LOOK — the dimmed accent, or a radio key's dimmed purple,
+// under the dimmed print, its legend dim (materials.h's THE KEY) — exactly
+// as a key dead on a locked tab or under grid iterations does: ONE RULE for a
+// dead checked key everywhere. The opener and the tooltip lamp, the keys an
+// overlay leaves live, wear their live looks. A MODAL changes no key behind
+// it. Three readers: the painter (which stashes what it
 // painted), main.cpp's staleness comparator and the band's fingerprint
 // (GuiPaintHandler::upper_rows_fingerprint). (The lift's radio refusal, a
 // lit view pair member's press a consumed nothing, was one more until the
@@ -17265,11 +17252,6 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
     // set's defaults (the S+W view pair) would name views no piece is shown
     // in. The one owner the roster's grey reads (no_audio_to_dispatch_on).
     if (no_audio_to_dispatch_on(a, total_frames)) return false;
-    // DEAD UNDER AN OVERLAY, UNLIT (architect 2026-11-10; the rule at this
-    // predicate's head and at overlay_deadens_button): the view pairs' lit
-    // members, the state lamps and the `h` view's opener under a picker over
-    // the view all read at rest while the overlay stands.
-    if (overlay_deadens_button(a, b)) return false;
     switch (b) {
         // THE VIEW PAIRS READ ONE AXIS EACH (architect 2026-10-14): Source and
         // Target the audio view, Warp and Phase Reset the markers view, so a
@@ -17315,13 +17297,14 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // flips, so the lit face and the sticky ctrl cannot drift. IT IS THE
         // ONLY CUE THE MODE GETS, by ruling — the selected chips (render.h's
         // THE STATES) already say which markers are selected, so there is no badge and no
-        // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
-        // the `h` view (a mode left on, then the view opened), which the
-        // shared key painter already handles: a disabled checked key keeps
-        // its lit face, in the dimmed purple, ADD SEL being a radio key
-        // (redesign_button_is_radio), under its dimmed glyph
-        // (materials.h's paint_key and key_ink) — outside the overlays,
-        // under which a dead key is unlit (the head term).
+        // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE
+        // under an overlay (the mode left on, then the render player, a
+        // picker content or the score viewer opened — the one state that
+        // greys it lit, the enum's ITS GATES ARE ITS OWN), which the shared key
+        // painter already handles: a disabled checked key keeps its lit
+        // face, in the dimmed purple, ADD SEL being a radio key
+        // (redesign_button_is_radio), under its dimmed glyph (materials.h's
+        // paint_key and key_ink; the head, 2026-11-11, session 107).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the

@@ -248,8 +248,9 @@
 //                                     rounded half to even and clamped — the
 //                                     face and the glyph of A
 //                                     CHECKED-BUT-DISABLED KEY (a lamp on a
-//                                     locked tab, under grid iterations, in
-//                                     the `h` view), dimmed as the disabled
+//                                     locked tab or under grid iterations,
+//                                     a lit key under an overlay, 2026-11-11,
+//                                     session 107), dimmed as the disabled
 //                                     glyph is dimmed against the resting one
 //                                     (architect 2026-11-11, session 106: "dim
 //                                     the accent and the glyph so both read as

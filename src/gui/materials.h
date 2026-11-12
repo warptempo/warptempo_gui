@@ -128,8 +128,9 @@
 // itself, a stateful key's glyph showing the act its next press runs, the
 // typed character, the selection pair landing on a row. A DISABLED key
 // wears the rest face, its glyph and its legend in `key_dim_ink`, Default's
-// 5D5D5D. A LIT-BUT-INERT KEY — checked and disabled: the grid-iterations
-// lamp on a locked tab, a lamp left on in the `h` view — DIMS ITS FACE AND
+// 5D5D5D. A LIT-BUT-INERT KEY — checked and disabled: the value drag lamp
+// on a locked tab or under grid iterations, the chosen view pair under grid
+// iterations, any lit key an overlay leaves dead — DIMS ITS FACE AND
 // ITS GLYPH AS ONE (architect 2026-11-11, session 106: "dim the accent and
 // the glyph so both read as a unit"): the face `lit_dim_fill`, the accent,
 // and the glyph `text_on_lit_dim`, the print on it, BOTH SCALED BY THE ONE
@@ -140,17 +141,17 @@
 // under the same glyph — still the lamp's hue, so the
 // state reads true, dimmed as every dead glyph is; its legend `key_dim_ink`
 // as every dead key's; no press stands on a dead key, so the pair has no
-// pressed look. UNDER AN OVERLAY A DEAD KEY IS
-// UNLIT (architect 2026-11-10, reversing 2026-11-01's M6 for the overlays
-// alone: "lamps that do not respond show inactive under the overlays"):
+// pressed look. UNDER AN OVERLAY A DEAD LIT KEY STAYS LIT, DIMMED
+// (architect 2026-11-11, session 107: "for consistency, they should keep
+// that look of darkened. But lit."):
 // while the render player, a picker content or the score viewer stands,
-// every roster key it leaves dead wears THE PLAIN DISABLED LOOK — the rest
-// face, the glyph and the legend `key_dim_ink`, no accent — the roster
-// publishing no lit bit for it (overlay_deadens_button, app_state.h, the
-// one predicate; redesign_button_selected), the state returning to the
-// face at the overlay's close; the overlay's opener and the tooltip lamp,
-// live there, keep their true looks, lit in the accent. A MODAL changes no
-// key behind it.
+// every roster key it leaves dead is disabled with its lit bit kept
+// (redesign_button_enabled's overlay arm; redesign_button_selected,
+// app_state.h, whose head owns the rule), so a lit one wears the lit-but-inert look
+// above and an unlit one the rest face, both under the dim glyph and
+// legend — ONE RULE for a dead checked key wherever it is dead; the
+// overlay's opener and the tooltip lamp, live there, keep their live looks,
+// lit in the accent. A MODAL changes no key behind it.
 // UNDER EVERY KEY ITS
 // PRINTED LEGEND (architect 2026-11-03, the retrofit, reversing the legends'
 // retirement of 2026-11-02): on the ground in the strip's bottom pad, never

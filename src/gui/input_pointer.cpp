@@ -6712,9 +6712,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // tooltips): refused under a modal — the veil above already said so
         // — and under an overlay for every key but the two it leaves live,
         // its opener and the tooltip lamp (tooltip_dwell_suppressed, on
-        // overlay_admits_button — the face's, the lit bit's and the lift's
-        // one membership, so the key that answers a press there is the key
-        // that explains itself). Asked after the column test, so one key a
+        // overlay_admits_button — the face's and the lift's one
+        // membership, so the key that answers a press there is the key that
+        // explains itself). Asked after the column test, so one key a
         // walk at most reaches it.
         if (tooltip_dwell_suppressed(i)) continue;
         // MEMBERSHIP IS THE CONSTANT TABLE'S (2026-09-01): this asks only

@@ -296,7 +296,7 @@ struct TrimRange {
 // TOGETHER, the dimmed accent `lit_dim_fill` (a radio key's dimmed purple,
 // `radio_lit_dim_fill`) under `text_on_lit_dim`
 // (architect 2026-11-11, session 106; materials.h's THE KEY; under an
-// overlay a dead key is unlit and wears the plain dead look); a CUE'S inert label is the
+// overlay too, session 107); a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (`text_dim` (Default's 757575), paint_folder_overlay,
 // 2026-10-28); the STRUCK CLIP LAMP is its whole square in `key_dim_ink`
