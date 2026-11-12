@@ -26,14 +26,14 @@ struct GuiThemeTones {
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
     uint32_t text_on_lit;         // what is printed on a lit key's face, its glyph and the on-screen keyboard's lit cap (ControlContrastFrame); a word alone, read by key_ink (materials.h)
     uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
-    uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face (text_on_lit · mean(key_dim_ink) / mean(text)); a word alone, read by key_ink
+    uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face (text_on_lit by the dim scalar, theme_ask.h's DERIVED block: · mean(key_dim_ink) / mean(text) on a dark theme, toward white on a light one); a word alone, read by key_ink
     uint32_t key_face;            // an unchecked key at rest; the time fields (SurfaceBackground)
     uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
     uint32_t lit_press_fill;      // a checked key's face (not a radio key's) while a press stands on it: the accent darkened (cue · mean(key_press_face) / mean(key_face))
-    uint32_t lit_dim_fill;        // a checked-but-disabled key's face (not a radio key's): the accent dimmed (cue · mean(key_dim_ink) / mean(text))
+    uint32_t lit_dim_fill;        // a checked-but-disabled key's face (not a radio key's): the accent dimmed (cue by the dim scalar, as text_on_lit_dim)
     uint32_t radio_lit_fill;      // a checked RADIO key's whole face, the purple (ScaleAwareness); materials.h's THE RADIO KEYS
     uint32_t radio_lit_press_fill; // a checked radio key's face while a press stands on it (radio_lit_fill · mean(key_press_face) / mean(key_face))
-    uint32_t radio_lit_dim_fill;  // a checked-but-disabled radio key's face (radio_lit_fill · mean(key_dim_ink) / mean(text))
+    uint32_t radio_lit_dim_fill;  // a checked-but-disabled radio key's face (radio_lit_fill by the dim scalar, as text_on_lit_dim)
     uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;          // the ruler (SurfaceBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the face)

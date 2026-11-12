@@ -236,6 +236,14 @@ Rgb scale(const Rgb& c, double ratio) {
                clamp_byte(c.b * ratio)};
 }
 
+// 255 − (255 − c) · ratio, per channel, rounded and clamped as `scale`: the
+// lit-but-inert tones on a light theme, scaled toward white (derive).
+Rgb scale_toward_white(const Rgb& c, double ratio) {
+    return Rgb{clamp_byte(255.0 - (255 - c.r) * ratio),
+               clamp_byte(255.0 - (255 - c.g) * ratio),
+               clamp_byte(255.0 - (255 - c.b) * ratio)};
+}
+
 double mean(const Rgb& c) { return (c.r + c.g + c.b) / 3.0; }
 
 double srgb_to_linear(int byte) {
@@ -368,22 +376,38 @@ GuiThemeTones derive(const AskRoles& roles) {
     // 2026-11-11, session 106). THE LIT PRESS FILL: the accent scaled by the
     // ratio the press face bears to the key face, mean over mean; a black
     // key face (no divisor) leaves the accent as it is. THE LIT-BUT-INERT
-    // PAIR: the accent and the print on it, both scaled by the one ratio
-    // the disabled key's ink bears to the text, mean over mean; a black
-    // text (no divisor) leaves both as they are. THE RADIO KEYS' PRESS AND
-    // INERT FACES (architect 2026-11-11, session 107): the purple by the
-    // same two ratios.
+    // PAIR: the accent and the print on it, both moved by the one ratio the
+    // disabled key's ink bears to the text, in the direction the disabled
+    // ink lies from the text (architect 2026-11-11, session 109, his pick
+    // (a): "the same rule in negative" on a light theme). Where mean(text)
+    // >= mean(dim ink), a dark theme, each tone is scaled toward black by
+    // mean(dim ink) / mean(text); the divisor is zero only when the text
+    // and the dim ink are both black, and that answer is ratio 1, both
+    // tones whole. Where mean(text) < mean(dim ink), a light theme, each
+    // tone is scaled toward white by (255 − mean(dim ink)) / (255 −
+    // mean(text)) on its distance from white; that divisor is never zero
+    // (mean(text) < mean(dim ink) <= 255). THE RADIO KEYS' PRESS AND INERT
+    // FACES (architect 2026-11-11, session 107): the purple by the same two
+    // ratios, the inert one on the same branch.
     const double face_mean   = mean(face);
     const double press_ratio =
         face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
     const double text_mean   = mean(text);
+    const double dim_mean    = mean(dim_ink);
+    const bool   dim_to_white = text_mean < dim_mean;
     const double dim_ratio   =
-        text_mean == 0.0 ? 1.0 : mean(dim_ink) / text_mean;
+        dim_to_white      ? (255.0 - dim_mean) / (255.0 - text_mean)
+        : text_mean == 0.0 ? 1.0
+                           : dim_mean / text_mean;
+    const auto dim_tone = [&](const Rgb& c) {
+        return dim_to_white ? scale_toward_white(c, dim_ratio)
+                            : scale(c, dim_ratio);
+    };
     const Rgb lit_press  = scale(on, press_ratio);
-    const Rgb lit_dim    = scale(on, dim_ratio);
-    const Rgb on_lit_dim = scale(contrast, dim_ratio);
+    const Rgb lit_dim    = dim_tone(on);
+    const Rgb on_lit_dim = dim_tone(contrast);
     const Rgb radio_press = scale(radio, press_ratio);
-    const Rgb radio_dim   = scale(radio, dim_ratio);
+    const Rgb radio_dim   = dim_tone(radio);
     GuiThemeTones t{};
     t.ground              = packed(ground);
     t.text                = packed(text);

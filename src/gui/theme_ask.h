@@ -238,14 +238,29 @@
 //     lit dim fill, text on lit dim
 //                            83592C, 090909 = THE LIT-BUT-INERT PAIR: the
 //                                     accent (cue) and the print on it (text
-//                                     on lit), EACH · (mean(key dim ink) /
-//                                     mean(text)) per channel, the means over
-//                                     the three sRGB bytes, ONE SCALAR for
+//                                     on lit), each moved by ONE SCALAR for
 //                                     both tones and their three channels so
-//                                     each keeps its hue (93 / 181 on Default:
-//                                     FFAD56 -> 83592C, 111111 -> 090909),
-//                                     rounded half to even and clamped — the
-//                                     face and the glyph of A
+//                                     each keeps its hue, the means over the
+//                                     three sRGB bytes, rounded half to even
+//                                     and clamped, IN THE DIRECTION THE
+//                                     DISABLED INK LIES FROM THE TEXT
+//                                     (architect 2026-11-11, session 109,
+//                                     his pick (a): "the same rule in
+//                                     negative" on a light theme). A DARK
+//                                     THEME, mean(text) >= mean(key dim ink):
+//                                     EACH · (mean(key dim ink) / mean(text)),
+//                                     toward black (93 / 181 on Default:
+//                                     FFAD56 -> 83592C, 111111 -> 090909); a
+//                                     theme whose text and key dim ink are
+//                                     both black (no divisor) keeps both
+//                                     whole, ratio 1. A LIGHT THEME,
+//                                     mean(text) < mean(key dim ink): toward
+//                                     white, 255 − (255 − tone) · ((255 −
+//                                     mean(key dim ink)) / (255 −
+//                                     mean(text))), the divisor never zero
+//                                     (150 / 255 on Classic Medium Light:
+//                                     FFB901 -> FFD66A, 383838 -> 8A8A8A).
+//                                     The face and the glyph of A
 //                                     CHECKED-BUT-DISABLED KEY (a lamp on a
 //                                     locked tab or under grid iterations,
 //                                     a lit key under an overlay, 2026-11-11,
@@ -254,12 +269,7 @@
 //                                     (architect 2026-11-11, session 106: "dim
 //                                     the accent and the glyph so both read as
 //                                     a unit"; paint_key and key_ink,
-//                                     materials.h). A theme whose text is
-//                                     black (no divisor) keeps both whole,
-//                                     ratio 1; where the disabled ink is
-//                                     lighter than the text both come out
-//                                     lighter, a channel clipping at FF —
-//                                     Live's numbers, no rule
+//                                     materials.h)
 //     radio lit press fill   8D74C4 = the radio lit fill · THE SAME PRESS
 //                                     RATIO, mean(press face) / mean(key
 //                                     face), per channel, one code path with
@@ -268,14 +278,17 @@
 //                                     key's face under a standing press
 //                                     (architect 2026-11-11, session 107),
 //                                     the black key face's ratio 1 as above
-//     radio lit dim fill     5D4D81 = the radio lit fill · THE SAME DIM
-//                                     SCALAR, mean(key dim ink) / mean(text),
-//                                     per channel, one code path with the lit
-//                                     dim fill (93 / 181 on Default: B595FC ->
-//                                     5D4D81) — a checked-but-disabled radio
+//     radio lit dim fill     5D4D81 = the radio lit fill moved by THE SAME
+//                                     DIM SCALAR on the same branch, per
+//                                     channel, one code path with the lit dim
+//                                     fill: toward black on a dark theme (93 /
+//                                     181 on Default: B595FC -> 5D4D81),
+//                                     toward white on a light one (150 / 255
+//                                     on Classic Medium Light: BE98FF ->
+//                                     D9C2FF) — a checked-but-disabled radio
 //                                     key's face, under the same
 //                                     `text_on_lit_dim` glyph (the same
-//                                     ruling), the black text's ratio 1 as
+//                                     rulings), the both-black ratio 1 as
 //                                     above
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,

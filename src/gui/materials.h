@@ -133,10 +133,12 @@
 // iterations, any lit key an overlay leaves dead — DIMS ITS FACE AND
 // ITS GLYPH AS ONE (architect 2026-11-11, session 106: "dim the accent and
 // the glyph so both read as a unit"): the face `lit_dim_fill`, the accent,
-// and the glyph `text_on_lit_dim`, the print on it, BOTH SCALED BY THE ONE
-// RATIO the dim glyph bears to the resting one, mean(key dim ink) /
-// mean(text) (Default 93 / 181: FFAD56 -> 83592C, 111111 -> 090909; the
-// derivation, theme_ask.h's DERIVED block) — a radio key's face
+// and the glyph `text_on_lit_dim`, the print on it, BOTH MOVED BY THE ONE
+// RATIO the dim glyph bears to the resting one, toward black on a dark
+// theme, mean(key dim ink) / mean(text) (Default 93 / 181: FFAD56 ->
+// 83592C, 111111 -> 090909), toward white on a light one (architect
+// 2026-11-11, session 109; the derivation, theme_ask.h's DERIVED block) —
+// a radio key's face
 // `radio_lit_dim_fill`, the purple by the same scalar (B595FC -> 5D4D81),
 // under the same glyph — still the lamp's hue, so the
 // state reads true, dimmed as every dead glyph is; its legend `key_dim_ink`
