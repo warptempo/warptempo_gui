@@ -111,8 +111,8 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // radio key's face B595FC, Default's ScaleAwareness, its press 8D74C4
 // (× 42 / 54) and its inert face 5D4D81 (× 93 / 181) AND THE PLAYHEAD'S
 // LINE 81E1EA, white half way to the head, and THE DISABLED CHIP'S OUTLINE
-// 111111, ControlContrastFrame — the two optional keys' fallbacks, no file
-// setting them (architect 2026-11-12, session 113; theme_roles.h's DERIVED
+// 111111, ControlContrastFrame — the two optional keys' fallbacks, Default's
+// file setting neither (architect 2026-11-12, session 113; theme_roles.h's DERIVED
 // block). palette_file.h's static_asserts pin every word. The pre-install palette's row too
 // (render.cpp's construction state, never painted).
 inline constexpr GuiThemeTones kGuiReferenceThemeTones = {

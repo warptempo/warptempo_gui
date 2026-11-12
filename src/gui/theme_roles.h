@@ -15,7 +15,8 @@
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
 // own role names, never a derived tone — plus at most TWO OPTIONAL KEYS OF
-// OUR OWN (THE FORMAT, 2026-11-12), which no shipped file sets; and the
+// OUR OWN (THE FORMAT, 2026-11-12), which one shipped file sets
+// (`sb_gunmetal_mod`, both, its header recording them); and the
 // derivation, this file's, turns each into a row of GuiThemeTones at the
 // launch's read.
 //
