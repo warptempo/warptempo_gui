@@ -573,26 +573,18 @@ GuiRect history_tooltip_box_rect(const AppState& app, int idx,
         app, published_cue_rect(app, idx, /*history=*/true), text_inset, w, h);
 }
 
-// ONE SIDE'S WORDS on a history item's box: the flag text, and the disable
-// bit named in words where it is set (the contract at the declaration).
-static std::string history_side_words(const std::string& text,
-                                      bool disabled) {
-    return disabled ? text + " (Disabled)" : text;
-}
-
+// THE ITEM'S RUNS: the older side's label struck where the item has one, the
+// newer side's plain where it has one (the contract at the declaration).
 HistoryCueTooltipText history_cue_tooltip_text(const AppState& app,
                                                int idx) {
     if (!app.history_mode.active) return {};
     const std::vector<HistoryDiffFlag>& flags = app.history_mode.flags;
     if (idx < 0 || idx >= static_cast<int>(flags.size())) return {};
     const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
-    if (f.added && f.removed)
-        return {history_side_words(f.now_text, f.now_disabled),
-                history_side_words(f.then_text, f.then_disabled)};
-    if (f.added) return {history_side_words(f.now_text, f.now_disabled), {}};
-    if (f.removed)
-        return {history_side_words(f.then_text, f.then_disabled), {}};
-    return {};
+    HistoryCueTooltipText t;
+    if (f.removed) t.struck = f.then_label;
+    if (f.added)   t.plain  = f.now_label;
+    return t;
 }
 
 // THE VALUE'S SOURCE MARKER — the contract and the two readers are at the

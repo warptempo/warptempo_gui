@@ -1407,7 +1407,7 @@ static constexpr const char* kSegmentSeparator = " | ";
 // Scale: [-]1.0 [+]1.1`, `03/14 | GitHub: behind`, `007/114`. The same shape
 // on BOTH walks. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
 // token and `[+]` before the now one, spelled here: the lane's labels lost
-// theirs to the strike (architect 2026-10-26; history_diff_flag_text), and this
+// theirs to the strike (architect 2026-10-26; history_diff_label), and this
 // line, a plain run, has no strike to carry the side. (The "bottom-left corner" of the mode's record read
 // bottom-RIGHT from the 2026-08-12 unification, TOP-RIGHT while the status
 // chain sat in the tab row, bottom-LEFT on the one-day status bar, and reads
@@ -3525,20 +3525,24 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const char* line1 = nullptr;
     const char* line2 = nullptr;
     GuiRect     btn{0, 0, 0, 0};
+    // THE STRUCK RUN LEADING LINE 1 — a History owner's alone; null for
+    // every other owner and for a history item with no older side.
+    const char* struck = nullptr;
     // A MARKER OWNER'S ONE LINE, held here so line1 can point into it.
     std::string marker_value;
-    // A HISTORY OWNER'S LINES, held likewise.
+    // A HISTORY OWNER'S RUNS, held likewise.
     HistoryCueTooltipText history_text;
     if (owner.surface == AppState::RedesignTooltip::Surface::History) {
-        // THE ITEM'S DIFF (architect 2026-11-11, session 106; the History
-        // owner at AppState::RedesignTooltip): the words through the one
-        // owner (history_cue_tooltip_text — the newer or only side's words
-        // in the name line, a changed item's older side's in the hint line),
-        // the face the item's in the live stash (history_cue_face).
+        // THE ITEM'S DIFF (architect 2026-11-11, sessions 106 / 107; the
+        // History owner at AppState::RedesignTooltip): EXACTLY WHAT THE FLAG
+        // SHOWS, ON ONE LINE, through the one owner (history_cue_tooltip_text
+        // — the older side's label as the struck run, the newer side's as
+        // line 1's plain run, either possibly empty), no hint line; the face
+        // the item's in the live stash (history_cue_face).
         history_text = history_cue_tooltip_text(app, owner.index);
-        if (history_text.line1.empty()) return;
-        line1 = history_text.line1.c_str();
-        if (!history_text.line2.empty()) line2 = history_text.line2.c_str();
+        if (history_text.empty()) return;
+        if (!history_text.struck.empty()) struck = history_text.struck.c_str();
+        line1 = history_text.plain.c_str();
         btn   = history_cue_face(app, owner.index);   // the vertical seat
     } else if (owner.surface == AppState::RedesignTooltip::Surface::Marker) {
         // THE CUE'S RESOLVED VALUE (architect 2026-11-09, session 100; the
@@ -3634,6 +3638,17 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // so a descender hangs into the pad below it. On the tablet at 200 % a
     // one-line box is 2 + 12 + 15 + 12 + 2 = 43 device rows, a two-line one
     // 2 + 12 + 15 + 12 + 12 + 12 + 2 = 67 (the Hint face's cap 12.38).
+    //
+    // A HISTORY ITEM'S ONE LINE (architect 2026-11-11, session 107: "both in
+    // one line with the old one struck and the old one listed first") is two
+    // runs in the name line's face and ink: the STRUCK run first, its bar the
+    // lane's own geometry (struck_run_bar, render.h — the cue labels' strike,
+    // the face's stroke on its strikeout rows across the run's advance) in
+    // the same ink, then the PLAIN run, its pen the struck run's rounded
+    // advance and the lane's segment step past it (cue_segment_text_gap_px:
+    // pad, gap, pad — where the lane's second segment's text stands from the
+    // first's). A run that is absent takes no room and no step; line 1's
+    // extent is the runs' with the step between.
     const GuiFont name_font = gui_font(GuiFace::Program);
     const GuiFont hint_font = gui_font(GuiFace::Hint);
     const bool two_line = (line2 != nullptr);
@@ -3641,6 +3656,17 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         text_shape::shape_text_run(name_font, line1);
     const int cap1 =
         static_cast<int>(std::nearbyint(gui_font_cap_px(name_font)));
+    text_shape::ShapedRun rs;
+    double line1_w  = r1.width_px;
+    double plain_dx = 0.0;   // the plain run's pen past line 1's
+    if (struck != nullptr) {
+        rs = text_shape::shape_text_run(name_font, struck);
+        const int ws = static_cast<int>(std::nearbyint(rs.width_px));
+        plain_dx = static_cast<double>(ws + cue_segment_text_gap_px());
+        line1_w  = line1[0] != '\0'
+                       ? plain_dx + std::nearbyint(r1.width_px)
+                       : static_cast<double>(ws);
+    }
 
     int cap2 = 0;
     double w2 = 0.0;
@@ -3654,7 +3680,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const int frame = hairline_px();
     const int pad   = time_field_pad_px();
     const int inset = frame + pad;
-    const int w = static_cast<int>(std::nearbyint(std::max(r1.width_px, w2))) +
+    const int w = static_cast<int>(std::nearbyint(std::max(line1_w, w2))) +
                   2 * inset;
     const int h = 2 * inset + cap1 + (two_line ? pad + cap2 : 0);
 
@@ -3691,6 +3717,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         app.redesign_tooltip.rect          = box;
         app.redesign_tooltip.painted_line1 = line1;
         app.redesign_tooltip.painted_line2 = line2 != nullptr ? line2 : "";
+        app.redesign_tooltip.painted_struck = struck != nullptr ? struck : "";
     } else {
         app.redesign_tooltip.rect =
             (prev_rect.w > 0 && prev_rect.h > 0) ? union_rect(prev_rect, box)
@@ -3706,9 +3733,15 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // THE BASELINES (the box above): the name's on its cap's bottom row
     // under the frame and the pad, the hint's one pad and its own cap lower.
     const double base1 = static_cast<double>(y + inset + cap1);
+    const double pen1  = static_cast<double>(x + inset);
+    if (struck != nullptr) {
+        set_palette_source(cr, p.text);
+        text_shape::show_shaped_run(cr, rs, pen1, base1);
+        paint_ink_rect(cr, struck_run_bar(name_font, pen1, rs.width_px, base1),
+                       p.text);
+    }
     set_palette_source(cr, p.text);
-    text_shape::show_shaped_run(cr, r1, static_cast<double>(x + inset),
-                                base1);
+    text_shape::show_shaped_run(cr, r1, pen1 + plain_dx, base1);
     if (two_line) {
         set_palette_source(cr, p.text_dim);
         text_shape::show_shaped_run(cr, r2, static_cast<double>(x + inset),

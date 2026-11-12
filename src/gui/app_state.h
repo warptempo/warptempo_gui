@@ -7192,17 +7192,18 @@ struct AppState {
     // the seat keeps — whether the show found the pointer on row 8's clock
     // field, Play's second rect, rather than on Play's column, which face the
     // box stands over (RedesignButtonFace::tooltip_face; false for every
-    // other owner, whose field is empty). `rect` and the
-    // two `painted_line` strings are AS PAINTED (2026-09-29):
+    // other owner, whose field is empty). `rect`, the
+    // two `painted_line` strings and `painted_struck` are AS PAINTED (2026-09-29):
     // the painter runs on every frame, under whatever clip that frame's
     // damage gave it, so a frame whose clip does not cover the new box
     // leaves the old pixels standing — it publishes the UNION of the old
     // rect and the new one (a later hide then erases both) and keeps the
     // words it last really drew; a covering frame publishes the box and its
-    // words exactly. The words are what main.cpp's three comparators hold
+    // words exactly. The words are what main.cpp's four comparators hold
     // against the live ones — a roster button's stateful overload
-    // (redesign_button_tooltip), a modal button's recomposed hint and a cue's
-    // recomposed value (marker_tooltip_value) — since each can move with
+    // (redesign_button_tooltip), a modal button's recomposed hint, a cue's
+    // recomposed value (marker_tooltip_value) and a history item's struck
+    // and plain runs (history_cue_tooltip_text) — since each can move with
     // state under a still pointer.
     //
     // THE WAIT: `hovered` is the tooltip-bearing button whose column holds the
@@ -7260,13 +7261,15 @@ struct AppState {
     // resting pen comes only through a press — a hard end — and the readers
     // range-check the index all the same.
     // A HISTORY OWNER'S BOX (architect 2026-11-11, session 106: TIPS shows
-    // the diff): the item's words, one line or two (history_cue_tooltip_text,
-    // app_state.h — every item raises one), seated as a cue's
+    // the diff): EXACTLY WHAT THE FLAG SHOWS, ON ONE LINE (session 107) — a
+    // struck run then a plain run (history_cue_tooltip_text, app_state.h —
+    // every item raises one), seated as a cue's
     // (history_tooltip_box_rect), its target the item's published rects
     // (history_cue_hit). The list is rebuilt under a resting pen by the
     // view's own steps and switches; the words comparator (main.cpp) holds
-    // the painted lines against the live ones, and an index the pen no
-    // longer rests on is a new arrival at the walk's next pass.
+    // the painted runs (`painted_struck`, `painted_line1`) against the live
+    // ones, and an index the pen no longer rests on is a new arrival at the
+    // walk's next pass.
     //
     // WHO WRITES THE WAIT: the two hover walks, each through
     // note_tooltip_hover — recompute_redesign_button_hover for the roster's
@@ -7317,6 +7320,10 @@ struct AppState {
         GuiRect rect{0, 0, 0, 0};
         std::string painted_line1;
         std::string painted_line2;
+        // THE STRUCK RUN LEADING LINE 1, as painted: a History owner's older
+        // side's label (history_cue_tooltip_text), empty for every other
+        // owner and for a history item with no older side.
+        std::string painted_struck;
         bool    shown_on_field = false;
         // The wait.
         Owner   hovered{};
@@ -7343,8 +7350,10 @@ struct AppState {
     // 106): a line the session has and that commit did not (the enabled
     // style, its label plain), a line that commit had and the session dropped
     // (the disabled style, its label struck), and a marker changed in place at
-    // one frame (the enabled style, the newer text, struck when the text
-    // changed); a moved marker is a removed item and an added one. The flags sit at their
+    // one frame (the enabled style, the older text struck and the newer text
+    // plain beside it, architect 2026-11-11, session 107; each label carries
+    // the `#` where its line is disabled); a moved marker is a removed item
+    // and an added one. The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
     // marker stands exactly where it stood. Row 8's state cell, beside the
     // clock, carries the walk line: the member's position, then the
@@ -19869,23 +19878,30 @@ GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
 // by the same four readers (the hover walk, paint_shift_tooltip, main.cpp's
 // words comparator and tooltip_owner_face):
 //
-// history_cue_tooltip_text — THE WORDS: every item raises a box (the
-// membership is the item's existence), in the box's two-line form —
-//   REMOVED  line 1 the removed line's words;
-//   ADDED    line 1 the added line's words;
-//   CHANGED  line 1 the NEWER side's words, line 2 (the hint face, dim) the
-//            OLDER side's — so a bit-only toggle reads its two lines apart by
-//            the bit alone.
-// A SIDE'S WORDS are its FLAG TEXT (history_diff_flag_text, paint_handler.h:
-// the warp payload, verbatim; a phase reset's `reset`) followed by
-// " (Disabled)" where that line's disable bit is set — the bit in a word,
-// never the file's '#'. No key is spelled and no sentence written (a
-// tooltip names). Empty line 1 — no box — with the mode down or an index
-// out of range. Read off the painted list, so no memo: the list is rebuilt
-// with the lane, the composition a string or two.
+// history_cue_tooltip_text — THE WORDS: EXACTLY WHAT THE FLAG SHOWS, ON ONE
+// LINE (architect 2026-11-11, session 107: "the hover should show the exact
+// same thing that you see on the flag ... it's only there so that if a marker
+// is obscured I can read what it says ... both in one line with the old one
+// struck and the old one listed first"): every item raises a box (the
+// membership is the item's existence), its one line a STRUCK RUN and then a
+// PLAIN RUN, either possibly empty —
+//   REMOVED  the removed line's label struck, no plain run;
+//   ADDED    no struck run, the added line's label plain;
+//   CHANGED  the OLDER side's label struck, then the NEWER side's plain.
+// The texts are the lane's own labels (HistoryDiffFlag::then_label /
+// now_label, render.h — history_diff_label's spelling, the `#` where a line
+// is disabled), so the box and the flag cannot read apart. No second line,
+// no prefix word, no state word; no key is spelled and no sentence written
+// (a tooltip names). Both runs empty — no box — with the mode down or an
+// index out of range. Read off the painted list, so no memo: the list is
+// rebuilt with the lane, the composition a string copy or two.
+// paint_shift_tooltip lays the two runs by the lane's segment step
+// (cue_segment_text_gap_px) and strikes the first by the lane's geometry
+// (struck_run_bar, render.h).
 struct HistoryCueTooltipText {
-    std::string line1;
-    std::string line2;   // empty: the box's one-line form
+    std::string struck;   // the older side's label, struck; empty: none
+    std::string plain;    // the newer side's label, plain; empty: none
+    bool empty() const { return struck.empty() && plain.empty(); }
 };
 HistoryCueTooltipText history_cue_tooltip_text(const AppState& app, int idx);
 // history_cue_hit — THE TARGET: the item under (x, y) by the press's own walk

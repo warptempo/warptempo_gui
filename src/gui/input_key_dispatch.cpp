@@ -4126,9 +4126,10 @@ void GuiInputHandler::run_history_revert() {
                 // The sidecar line this flag's then side came off, rebuilt:
                 // the disable prefix, the canonical frame spelling
                 // (format_authored_frame, the one serializer), the '|' and the
-                // verbatim payload token — the warp line's flag text
-                // (history_diff_flag_text), which is rest-of-line — so the
-                // rebuilt line is the sidecar's line byte for byte.
+                // verbatim payload token — `then_text`, the bare token the
+                // label (`then_label`, its `#` already composed) is built
+                // beside and never this line's source, which is rest-of-line —
+                // so the rebuilt line is the sidecar's line byte for byte.
                 std::string line;
                 if (f.then_disabled) line += '#';
                 line += format_authored_frame(f.time_frame);

@@ -285,8 +285,9 @@ struct GuiHistoryWarpEntry {
     // `then_ordinal` / `now_ordinal`.
     int         ordinal  = 0;
     std::string tempo_token;
-    // The line's own local '#' byte — the revert's and the tooltip's truth.
-    // The lane's face reads no disabled bit off a history line (architect
+    // The line's own local '#' byte — the revert's truth and the label's `#`
+    // (history_diff_label, paint_handler.h; architect 2026-11-11, session
+    // 107). The chip reads no disabled bit off a history line (architect
     // 2026-11-11, session 106: removed is the disabled style, added and
     // changed the enabled one, whatever the line's bit).
     bool        disabled = false;

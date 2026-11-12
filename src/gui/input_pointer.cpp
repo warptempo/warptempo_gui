@@ -6900,7 +6900,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             if (app.history_mode.active) {
                 const int item = history_cue_hit(app, mx, my, &face);
                 if (item >= 0 &&
-                    !history_cue_tooltip_text(app, item).line1.empty()) {
+                    !history_cue_tooltip_text(app, item).empty()) {
                     note_tooltip_hover(
                         {AppState::RedesignTooltip::Surface::History, item},
                         face);

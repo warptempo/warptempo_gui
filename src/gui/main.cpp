@@ -2763,20 +2763,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
             // A STANDING HISTORY ITEM'S BOX, the same words test (architect
             // 2026-11-11, session 106; the History owner at AppState::
-            // RedesignTooltip): its one or two lines recomposed off the
+            // RedesignTooltip): its one line's two runs, the struck and the
+            // plain (architect 2026-11-11, session 107), recomposed off the
             // painted list (history_cue_tooltip_text) and held against the
-            // painted pair — a step or a switch that rebuilt the list under
-            // a resting pen changes them — the same two damages on a drift;
-            // an empty live line 1 owes nothing here, the walk's next pass
+            // painted pair (`painted_struck`, `painted_line1`; the box has
+            // no line 2) — a step or a switch that rebuilt the list under a
+            // resting pen changes them, and a struck run moving to the plain
+            // side or back is a drift too — the same two damages on a drift;
+            // an empty live pair owes nothing here, the walk's next pass
             // ending the box.
             if (app.redesign_tooltip.visible &&
                 app.redesign_tooltip.owner.surface ==
                     AppState::RedesignTooltip::Surface::History) {
                 const HistoryCueTooltipText live = history_cue_tooltip_text(
                     app, app.redesign_tooltip.owner.index);
-                if (!live.line1.empty() &&
-                    (app.redesign_tooltip.painted_line1 != live.line1 ||
-                     app.redesign_tooltip.painted_line2 != live.line2)) {
+                if (!live.empty() &&
+                    (app.redesign_tooltip.painted_struck != live.struck ||
+                     app.redesign_tooltip.painted_line1 != live.plain ||
+                     !app.redesign_tooltip.painted_line2.empty())) {
                     viewport.invalidate_rect(app.redesign_tooltip.rect);
                     viewport.invalidate_rect(tooltip_damage_band(app));
                 }

@@ -97,30 +97,32 @@ LogoLampRects logo_lamp_rects(const AppState& app, const GuiLogoLegend& legend);
 // — architect 2026-08-28; the picker's row is Cancel alone since 2026-08-29 and
 // wears no label.)
 
-// THE `h` HISTORY LANE'S FLAG TEXT, ONE OWNER — THE LINE'S LABEL BYTES AS THE
-// LANE PAINTS THEM, NO SIGN AND NO DISABLE PREFIX (architect 2026-10-26 ~15:30:
-// "we could also remove the brackets plus minus, because that becomes
-// redundant at that point. And those are always hard to see anyways at the
-// font size. A strike through is easier to see"; 2026-11-11, session 106:
-// the '#' is the line's disable bit, not its text — the history's styles say
-// removed / added, the strike says the text changed, and the cue tooltip
-// names the bit in words). It is what a changed item's two sides are
-// compared by (HistoryDiffFlag::text_changed, render.h) and what the label
-// paints. Defined in waveform_cache.cpp beside its one caller. THE TWO LINE
-// KINDS:
-//   * a WARP line's text is its payload token past the '|', verbatim:
-//     `1.05` whether or not the line is disabled;
+// THE `h` HISTORY LANE'S ONE LABEL SPELLING — THE LINE'S OWN TEXT AS THE
+// LIVE LANE SHOWS IT, NO SIGN (architect 2026-10-26 ~15:30: "we could also
+// remove the brackets plus minus, because that becomes redundant at that
+// point. And those are always hard to see anyways at the font size. A
+// strike through is easier to see"): the removed side tells itself by its
+// STRUCK label (resolve_flag_face's table), the added by its plain one. The
+// disable byte `#` leads where the line's own '#' is set, the line's own
+// byte (architect 2026-11-11, session 107: "Disabled is supposed to be shown
+// by a hash mark. In the history. There should not be a parenthesis
+// disabled attribute"). Each side's label text (HistoryDiffFlag::then_label /
+// now_label, render.h), which the lane paints and the cue tooltip shows
+// (history_cue_tooltip_text, app_state.h). Defined in waveform_cache.cpp
+// beside its one caller. THE FOUR LINE KINDS:
+//   * a WARP line's payload is its tempo token: `1.05` live, `#1.05`
+//     disabled;
 //   * a PHASE RESET has no payload — its frame is its whole identity — so it
-//     reads the live lane's display token (kPhaseResetLaneToken, render.h),
-//     `reset`, and `warp_token` is unread: a phase-reset change is a disable
-//     toggle and its text never differs.
+//     reads the live lane's display token (kPhaseResetLaneToken, render.h):
+//     `reset` live, `#reset` disabled. A phase-reset same-frame CHANGED item
+//     IS a disable toggle, so `reset` (struck) beside `#reset` — or the
+//     reverse — is the toggle in the file's own spelling.
 // (Row 8's walk line spells its own `Scale: [-]<then> [+]<now>`,
 // history_walk_line in paint_handler.cpp: a struck run has no road there.)
 //
 // A warp token is rest-of-line, the whole payload. ASCII by construction:
 // every token comes from a sidecar grammar that is ASCII-only.
-std::string history_diff_flag_text(bool phase_reset,
-                                   std::string_view warp_token);
+std::string history_diff_label(bool disabled, std::string_view token);
 
 // -- The waveform plate's cache ------------------------------------------
 //

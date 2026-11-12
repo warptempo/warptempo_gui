@@ -1815,8 +1815,9 @@ GuiHistoryCommitDelta compute_commit_delta(
     // own optional shape, not a leniency arm — there is no unparseable line
     // to drop and no counter for one (both died with the gate, 2026-08-04).
     // Each entry's disable bit is its line's own local '#' byte (`disabled`),
-    // the revert's and the tooltip's; the lane's face no longer reads it
-    // (architect 2026-11-11, session 106: the history's styles are its own).
+    // the revert's and the label's `#` (history_diff_label, architect
+    // 2026-11-11, session 107); the chip no longer reads it (architect
+    // 2026-11-11, session 106: the history's styles are its own).
 
     // EVERY ENTRY CARRIES ITS ROW WITHIN ITS FRAME'S RUN (2026-09-16): each
     // side's ordinals are taken once over the side's whole line list through

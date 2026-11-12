@@ -833,14 +833,15 @@ void install_true_colors(bool on);
 // refusing owner's CARD says why. No glyph marks it.
 //
 // THE HISTORY VIEW'S DIFF FLAGS are cues of their own three kinds, ONE CUE AN
-// ITEM (architect 2026-11-11, session 106; HistoryDiffFlag, render_history_-
-// diff_flags own the rule): a REMOVED item in the disabled style, its label
-// struck; an ADDED item in the enabled style, plain; a CHANGED item in the
-// enabled style, its label the newer text, struck when the text changed —
-// the label the flag text with no sign and no '#' (history_diff_flag_text,
-// paint_handler.h; the brackets `[+]` / `[-]` of 2026-08-05 retired
-// 2026-10-26: "those are always hard to see anyways at the font size. A
-// strike through is easier to see"). The view's focus or selection gives the
+// ITEM (architect 2026-11-11, sessions 106 / 107; HistoryDiffFlag,
+// render_history_diff_flags own the rule): a REMOVED item in the disabled
+// style, its label struck; an ADDED item in the enabled style, plain; a
+// CHANGED item in the enabled style, its older text struck and its newer
+// text plain beside it — each side's label its flag text with the `#` where
+// that line is disabled and no sign (history_diff_label, paint_handler.h;
+// the brackets `[+]` / `[-]` of 2026-08-05 retired 2026-10-26: "those are
+// always hard to see anyways at the font size. A strike through is easier
+// to see"). The view's focus or selection gives the
 // item the live lane's SELECTED row — its stem, its chip and label as at
 // rest.
 
@@ -2035,6 +2036,17 @@ inline int cue_fill_pad_px() {
 inline int cue_segment_gap_px() {
     return scaled_px(kCueSegmentGapW, 1);
 }
+// FROM ONE SEGMENT'S TEXT END TO THE NEXT SEGMENT'S TEXT START: the first's
+// right pad, the segment gap, the second's left pad — the run-to-run step
+// the segment boxes lay (cue_segment_boxes, render.cpp: a box is the text's
+// rounded advance plus a pad either side). Its one other reader is the `h`
+// view's cue tooltip, which lays a changed item's struck run and plain run
+// on one line by the same step (architect 2026-11-11, session 107: "both in
+// one line with the old one struck and the old one listed first";
+// paint_shift_tooltip, paint_handler.cpp).
+inline int cue_segment_text_gap_px() {
+    return 2 * cue_fill_pad_px() + cue_segment_gap_px();
+}
 // THE LABEL'S LEAD from the marker's column to its text IS THE FILL'S
 // REACH RIGHT, THE OUTLINE'S W AND THE GAP (architect 2026-10-26 ~12:40, on
 // the glass at nine rows: "It seems the lead-in was not scaled — increasing
@@ -3016,6 +3028,21 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // or a word's own cells. The same fill as paint_cell_rect, its path built
 // after the source.
 void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
+// THE STRIKE'S BAR OVER ONE STRUCK RUN — THE ONE GEOMETRY (architect
+// 2026-10-26 ~15:10: "just the strike through on the text"; ~15:30, "the
+// same thickness as the regular — for example, a T would have the same
+// thickness"): the run's own face's stroke on that face's own strikeout rows
+// (gui_font_strike_band, gui_font.h) — [nearbyint(baseline) + dy, + h) —
+// across the run's whole advance, the cells [nearbyint(x), nearbyint(x +
+// width_px)), the cells the flag editor's selection band covers over the
+// same run. `font` is the run's face, `x` its pen, `baseline` its baseline.
+// The caller paints it as one ink rect in the run's own ink. TWO READERS:
+// the cue labels' text painter (show_cue_label, render.cpp — the live lane
+// and the `h` view's lane) and the `h` view's cue tooltip (paint_shift_tooltip,
+// paint_handler.cpp; architect 2026-11-11, session 107: "draw the strike as
+// the lane's label strike is drawn").
+GuiRect struck_run_bar(const GuiFont& font, double x, double width_px,
+                       double baseline);
 
 // THE DIRECT ROAD (2026-10-13): the context's own target as pixel words, and
 // the clip it holds in device pixels, for a painter that writes the words
@@ -4271,18 +4298,24 @@ void render_phase_reset_flags(cairo_t* cr,
 // now row and the then line both at it) and the landing lands on
 // (history_diff_flag_landing_domain_frame, app_state.h).
 //
-// THE FLAG TEXT, ONE OWNER (history_diff_flag_text, paint_handler.h): each
-// side's label bytes as the lane paints them — a warp line's payload token
-// past the '|', VERBATIM, a phase reset's display token — WITHOUT the disable
-// prefix: the '#' is the line's disable bit, not its text, and travels as
-// `then_disabled` / `now_disabled`. `then_text` is meaningful exactly when
-// `removed` is set and `now_text` when `added` is. On the WARP column
-// `then_text` IS the revert's value too: the act reconstitutes the sidecar
-// LINE from the frame, the then bit and this token and hands it to the
-// frozen parser, so the value travels as text the loader itself judges and
-// no second grammar is written anywhere (GuiInputHandler::run_history_revert);
-// the phase column's line is frame plus the bit, and its text is never read
-// back.
+// THE LABEL TEXT OF A SIDE, ONE OWNER (history_diff_label, paint_handler.h;
+// architect 2026-11-11, session 107: "Disabled is supposed to be shown by a
+// hash mark. In the history"): the line's flag text — a warp line's payload
+// token past the '|', VERBATIM, a phase reset's display token — WITH THE
+// DISABLE BYTE `#` LEADING where that side's line is disabled, the file's own
+// spelling. `then_label` is meaningful exactly when `removed` is set and
+// `now_label` when `added` is; the lane paints them and the cue tooltip shows
+// them (history_cue_tooltip_text, app_state.h), the one composition for both.
+//
+// THE REVERT'S VALUE TRAVELS BESIDE THE LABEL, never parsed back out of it:
+// `then_text` is the removed WARP line's payload token past the '|',
+// verbatim and WITHOUT the '#', and `then_disabled` that line's local '#'
+// byte; the act reconstitutes the sidecar LINE from the frame, the bit and
+// this token and hands it to the frozen parser, so the value travels as
+// text the loader itself judges and no second grammar is written anywhere
+// (GuiInputHandler::run_history_revert). `then_text` is empty on the phase
+// column, whose line is frame plus the bit (the revert's phase arm reads
+// `then_disabled` alone).
 //
 // THE LANE'S LOOK IS THE HISTORY'S OWN (architect 2026-11-11, session 106:
 // "disabled style and strike take on a different meaning in history —
@@ -4290,12 +4323,15 @@ void render_phase_reset_flags(cairo_t* cr,
 // removed flag always has its text struck by definition"; the rows are
 // resolve_flag_face's, render.cpp): a REMOVED item wears the disabled style
 // with its label struck, an ADDED or CHANGED item the enabled style — "the
-// diff should show as enabled" — whatever its line's own disable bit. ONE
-// CUE, ONE LABEL (`label`): the newer side's text where it has one, the
-// removed line's own otherwise, and a changed item's label struck exactly
-// when its text differs between the sides (`text_changed`) — a bit-only
-// toggle stays plain. The words of both sides are the cue tooltip's (TIPS;
-// marker_tooltip_value, app_state.h).
+// diff should show as enabled" — whatever its lines' own disable bits, which
+// the label's `#` shows. ONE CUE AN ITEM; ITS LABEL ITS SIDES' TEXTS
+// (architect 2026-11-11, session 107: "What I should see is the label
+// reference with a line through it, and then pass next to that. That's how
+// it used to work"): a removed item one segment, `then_label`, struck; an
+// added item one segment, `now_label`, plain; a CHANGED item TWO SEGMENTS,
+// `then_label` struck first and `now_label` plain beside it — always both,
+// a disable toggle alone reading `1.05` struck beside `#1.05`. The cue
+// tooltip (TIPS) shows the same runs on one line.
 //
 // EACH HALF NAMES ITS OWN ROW (2026-09-16): `then_ordinal`
 // is the removed line's row within its frame's run on the then side,
@@ -4307,30 +4343,20 @@ void render_phase_reset_flags(cairo_t* cr,
 // re-seats the then line at its then-side ordinal, so a flag on the second of
 // two coincident rows reverts that row and not the run's first.
 //
-// THE DISABLE BITS are each side's local '#' byte, read by the revert (the
-// then bit, the restored line's prefix) and the tooltip's words; the paint
-// reads neither. NO COINCIDENT CLASS TRAVELS HERE either (recorded
+// THE DISABLE BITS reach the picture through the labels' `#` alone; the
+// chip reads none. NO COINCIDENT CLASS TRAVELS HERE either (recorded
 // 2026-09-02): the live lane's red-set strike is a verdict over the whole
 // resolved store, and a diff line has no store around it to resolve against.
 struct HistoryDiffFlag {
     int64_t     time_frame = 0;       // the item's one frame
     bool        removed    = false;   // the older side had this line
     bool        added      = false;   // the newer side has this line
-    std::string then_text;            // the removed line's flag text
-    std::string now_text;             // the added line's flag text
+    std::string then_label;           // the removed line's label text
+    std::string now_label;            // the added line's label text
+    std::string then_text;            // the removed warp token (the revert's)
     int         then_ordinal = 0;     // the removed half's row within its run
     int         now_ordinal  = 0;     // the added half's row within its run
-    bool        then_disabled = false;   // local bytes: the revert's and
-    bool        now_disabled  = false;   // the tooltip's
-
-    // THE CUE'S ONE LABEL: the newer side's text where the item has one, the
-    // removed line's own otherwise.
-    const std::string& label() const { return added ? now_text : then_text; }
-    // THE TEXT CHANGED: a changed item whose two sides' flag texts differ —
-    // its label's strike. A bit-only toggle answers false.
-    bool text_changed() const {
-        return removed && added && then_text != now_text;
-    }
+    bool        then_disabled = false;   // the removed line's '#' (the revert's)
 };
 
 // THE HISTORY MODE'S MARKER LANE. Replaces render_flags / render_phase_reset_-
@@ -4344,15 +4370,21 @@ struct HistoryDiffFlag {
 // label in the label face — in THE HISTORY'S STYLES (HistoryDiffFlag's
 // paragraph above; resolve_flag_face's Removed / Added / Changed rows): a
 // REMOVED item the disabled style, the `inactive_cue` chip and the inactive
-// label, ITS LABEL STRUCK; an ADDED item the enabled style, the `cue` chip and
-// the text tone, plain; a CHANGED item the enabled style, its label the newer
-// side's text, struck when the text changed. THE LABEL IS THE FLAG TEXT, no
-// sign ("we could also remove the brackets plus minus, because that becomes
-// redundant at that point. And those are always hard to see anyways at the
-// font size. A strike through is easier to see", 2026-10-26) and no '#'.
+// label, its one segment STRUCK; an ADDED item the enabled style, the `cue`
+// chip and the text tone, its one segment plain; a CHANGED item the enabled
+// style, TWO SEGMENTS in the text tone — the older side's label struck, then
+// the newer side's plain, the segment gap between their boxes (the live
+// lane's box layout, cue_segment_boxes; architect 2026-11-11, session 107,
+// restoring the same-frame label of 2026-10-26). THE LABEL IS THE SIDE'S
+// TEXT, its `#` where the line is disabled, no sign ("we could also remove
+// the brackets plus minus, because that becomes redundant at that point. And
+// those are always hard to see anyways at the font size. A strike through is
+// easier to see", 2026-10-26; history_diff_label, paint_handler.h).
 // EVERY LABEL IS SIZED BY ITS OWN SHAPED TEXT AND NEVER TRUNCATED (the cull
 // bound follows the commit's own widest text; the reasoning is at the paint
-// site).
+// site). A changed item's two segments publish no cell boundary (no bracket
+// lives in a commit): its hit rect's label box spans both, and
+// hit_test_flag_cell answers Payload over the whole of it.
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none)
 // and `selected` the mode's OWN

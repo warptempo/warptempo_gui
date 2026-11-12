@@ -889,13 +889,14 @@ uint64_t hash_selection(const std::set<int>& s,
 // remains in the fingerprint (a trim edit repaints through its own mutation
 // damage, no cache rebuild).
 
-// ONE LINE'S FLAG TEXT, both columns, both sides. The contract and the two
-// line kinds are at the declaration (paint_handler.h): the warp line's token,
-// the phase reset's display token, never the disable byte.
-std::string history_diff_flag_text(bool phase_reset,
-                                   std::string_view warp_token) {
-    return phase_reset ? std::string(kPhaseResetLaneToken)
-                       : std::string(warp_token);
+// ONE DIFF FLAG'S LABEL, both columns, both sides. The contract and the four
+// shapes it produces are at the declaration (paint_handler.h): the disable
+// byte where the line's own is set, then the line's token, no sign.
+std::string history_diff_label(bool disabled, std::string_view token) {
+    std::string out;
+    if (disabled) out += '#';
+    out += token;
+    return out;
 }
 
 void GuiPaintHandler::rebuild_history_diff_flags() {
@@ -922,10 +923,16 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // ONE ITEM PER DELTA ENTRY (architect 2026-11-11, session 106; the three
     // kinds at HistoryDiffFlag, render.h): a change is one item at its one
     // frame, a removal and an addition one each — a moved marker two. Each
-    // item takes its sides' FLAG TEXT (history_diff_flag_text), their LOCAL
-    // disable bytes (the revert's and the tooltip's; the paint reads none)
-    // and their ordinals (the revert's row identity) off the SAME delta
-    // entry, so the item cannot show one line and restore another.
+    // item takes its sides' LABEL TEXT (history_diff_label: the `#` from each
+    // side's LOCAL disable byte, then the line's token — architect
+    // 2026-11-11, session 107), the removed side's REVERT VALUE beside it
+    // (`then_text`, the warp line's bare token, and `then_disabled`, its
+    // byte) and their ordinals (the revert's row identity) off the SAME delta
+    // entry, so the item cannot show one line and restore another. A warp
+    // token is the payload past the '|'; a phase reset has no payload, so the
+    // phase fills pass the live lane's display token (kPhaseResetLaneToken)
+    // and leave `then_text` empty (the revert's phase arm reads the bit
+    // alone).
     const bool phase = (app.active_markers_view == 'P');
     if (phase) {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
@@ -933,30 +940,32 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame    = c.frame;
             f.removed       = true;
             f.added         = true;
-            f.then_text     = history_diff_flag_text(true, {});
-            f.now_text      = history_diff_flag_text(true, {});
+            f.then_label    =
+                history_diff_label(c.then_disabled, kPhaseResetLaneToken);
+            f.now_label     =
+                history_diff_label(c.now_disabled, kPhaseResetLaneToken);
             f.then_ordinal  = c.then_ordinal;
             f.now_ordinal   = c.now_ordinal;
             f.then_disabled = c.then_disabled;
-            f.now_disabled  = c.now_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_removed) {
             HistoryDiffFlag f;
             f.time_frame    = e.frame;
             f.removed       = true;
-            f.then_text     = history_diff_flag_text(true, {});
+            f.then_label    =
+                history_diff_label(e.disabled, kPhaseResetLaneToken);
             f.then_ordinal  = e.ordinal;
             f.then_disabled = e.disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_added) {
             HistoryDiffFlag f;
-            f.time_frame   = e.frame;
-            f.added        = true;
-            f.now_text     = history_diff_flag_text(true, {});
-            f.now_ordinal  = e.ordinal;
-            f.now_disabled = e.disabled;
+            f.time_frame  = e.frame;
+            f.added       = true;
+            f.now_label   =
+                history_diff_label(e.disabled, kPhaseResetLaneToken);
+            f.now_ordinal = e.ordinal;
             out.push_back(std::move(f));
         }
     } else {
@@ -966,30 +975,32 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame    = c.frame;
             f.removed       = true;
             f.added         = true;
-            f.then_text     = history_diff_flag_text(false, c.then_tempo_token);
-            f.now_text      = history_diff_flag_text(false, c.now_tempo_token);
+            f.then_label    =
+                history_diff_label(c.then_disabled, c.then_tempo_token);
+            f.now_label     =
+                history_diff_label(c.now_disabled, c.now_tempo_token);
+            f.then_text     = c.then_tempo_token;
             f.then_ordinal  = c.then_ordinal;
             f.now_ordinal   = c.now_ordinal;
             f.then_disabled = c.then_disabled;
-            f.now_disabled  = c.now_disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_removed) {
             HistoryDiffFlag f;
             f.time_frame    = e.frame;
             f.removed       = true;
-            f.then_text     = history_diff_flag_text(false, e.tempo_token);
+            f.then_label    = history_diff_label(e.disabled, e.tempo_token);
+            f.then_text     = e.tempo_token;
             f.then_ordinal  = e.ordinal;
             f.then_disabled = e.disabled;
             out.push_back(std::move(f));
         }
         for (const GuiHistoryWarpEntry& e : d->warp_added) {
             HistoryDiffFlag f;
-            f.time_frame   = e.frame;
-            f.added        = true;
-            f.now_text     = history_diff_flag_text(false, e.tempo_token);
-            f.now_ordinal  = e.ordinal;
-            f.now_disabled = e.disabled;
+            f.time_frame  = e.frame;
+            f.added       = true;
+            f.now_label   = history_diff_label(e.disabled, e.tempo_token);
+            f.now_ordinal = e.ordinal;
             out.push_back(std::move(f));
         }
     }
