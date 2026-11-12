@@ -9,7 +9,7 @@
 // theme, the 22-px folders), RECOLORED to `currentColor` by
 // tools/icons/import_breeze.py (the README's RECOLOR RULE; its one table is
 // the enumerator -> source list) and PAINTED IN THE TEXT TONES — a lit
-// key's in the print of its accent face — (materials.h)
+// key's in the print of its accent or purple face — (materials.h)
 // at ONE ROAD, THE INK BOX (below), each seat naming its own ink length:
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
 //   visual size; its printed legend under the key again since 2026-11-03,
@@ -19,7 +19,8 @@
 //   rest shared drawings) —
 //   centered on its face (paint_key_glyph, paint_handler.cpp), `text`
 //   B5B5B5 at rest and pressed, `key_dim_ink` (Default's 5D5D5D) on a disabled key,
-//   `text_on_lit` (Default's 111111) on a lit one's accent face, pressed or
+//   `text_on_lit` (Default's 111111) on a lit one's accent face (a radio
+//   key's purple, 2026-11-11, session 107), pressed or
 //   not, and `text_on_lit_dim` (Default's 090909) on a lit disabled one's
 //   dimmed face (materials.h's key_ink; architect 2026-11-11, session 106).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note

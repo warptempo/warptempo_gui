@@ -51,8 +51,10 @@
 // ViewCheckControlEnabledOn is THE ACCENT (`cue`): the markers' chip and a
 // lit key's face (architect 2026-11-11, session 106), and the lit press
 // fill and the lit-but-inert face are derived from it, so the shaded gold
-// reaches those four; every other tone is Immaterial's. Listed only when
-// that file is present and usable.
+// reaches those four; every other tone is Immaterial's — THE RADIO KEYS'
+// PURPLE among them, Immaterial's own ScaleAwareness, which the rule leaves
+// untouched (the purple is not the accent). Listed only when that file is
+// present and usable.
 //
 // A FILE IS LEFT OUT, WITH ONE stderr LINE naming its path and why, the
 // launch going on: unreadable; a name that spells no slug (a stem of no
@@ -118,7 +120,21 @@
 //                                     background of the lit lamp" — one accent
 //                                     for both, Live's "on"; materials.h's THE
 //                                     KEY; immaterial_mod reads its shaded
-//                                     SearchIndication instead, above)
+//                                     SearchIndication instead, above) — every
+//                                     lit key but the radio keys' (below)
+//     radio lit fill         B595FC = ScaleAwareness, THE PURPLE: A LIT RADIO
+//                                     KEY'S WHOLE FACE, the eight of
+//                                     redesign_button_is_radio — SOURCE /
+//                                     TARGET, WARP / PHASE, FOLLOW / RESTR,
+//                                     TRIM / ADD SEL (architect 2026-11-11,
+//                                     session 107: two always-lit keys in the
+//                                     accent read too bright at the top right
+//                                     of his field of vision, "the purple is
+//                                     perfectly fine in my peripheral field of
+//                                     vision"; materials.h's THE RADIO KEYS).
+//                                     Every theme's own role, immaterial_mod's
+//                                     Immaterial's (the gold rule, above,
+//                                     rewrites the accent alone)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
 //     selection text         070707 = StandbySelectionForeground (architect
@@ -244,6 +260,23 @@
 //                                     lighter than the text both come out
 //                                     lighter, a channel clipping at FF —
 //                                     Live's numbers, no rule
+//     radio lit press fill   8D74C4 = the radio lit fill · THE SAME PRESS
+//                                     RATIO, mean(press face) / mean(key
+//                                     face), per channel, one code path with
+//                                     the lit press fill (42 / 54 on Default:
+//                                     B595FC -> 8D74C4) — a checked radio
+//                                     key's face under a standing press
+//                                     (architect 2026-11-11, session 107),
+//                                     the black key face's ratio 1 as above
+//     radio lit dim fill     5D4D81 = the radio lit fill · THE SAME DIM
+//                                     SCALAR, mean(key dim ink) / mean(text),
+//                                     per channel, one code path with the lit
+//                                     dim fill (93 / 181 on Default: B595FC ->
+//                                     5D4D81) — a checked-but-disabled radio
+//                                     key's face, under the same
+//                                     `text_on_lit_dim` glyph (the same
+//                                     ruling), the black text's ratio 1 as
+//                                     above
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,

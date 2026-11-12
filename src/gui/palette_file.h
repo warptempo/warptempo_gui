@@ -27,7 +27,8 @@
 // read) IS THE 2026-11-01..05 MEASURED PALETTE TO THE BYTE but the selection
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
 // SurfaceBackground, since 2026-11-07), the playhead line (2026-11-10), the
-// level fill and the lit-but-inert key's pair (2026-11-11; all at the foot)
+// level fill, the lit-but-inert key's pair and the radio keys' three
+// (2026-11-11; all at the foot)
 // — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
@@ -36,11 +37,12 @@
 // the playhead line's static tone is derived, white 0.75 toward the head on
 // every theme, Default included (architect 2026-11-10, session 103, "no
 // special cases") — the static_asserts
-// at the foot are that proof in the build, every one of the thirty-seven
+// at the foot are that proof in the build, every one of the forty
 // words with its literal (the press arc's four, 2026-11-05, among them —
 // the key press face, the list press pair and the lit press fill — the lamp
-// arc's clip lamp the same night and the three of 2026-11-11: the level
-// fill, the lit-but-inert key's face and its glyph).
+// arc's clip lamp the same night and the six of 2026-11-11: the level
+// fill, the lit-but-inert key's face and its glyph, and the radio keys'
+// three faces).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -94,7 +96,9 @@
 //                            LIT KEY'S WHOLE FACE IS THIS ROLE TOO, read
 //                            by the key's painter (paint_key, materials.h;
 //                            architect 2026-11-11, session 106: one accent
-//                            for the chip and the lamps)
+//                            for the chip and the lamps), a radio key's
+//                            but (the chrome's `radio_lit_fill`, session
+//                            107)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
 //                            one-W outline round every chip, THE SELECTION
 //                            STEM down the canvas (every selected marker,
@@ -141,7 +145,10 @@
 // 2026-11-11, session 106): the one program role a chrome painter reads,
 // the accent being one for the markers and the lamps; the lit key's press
 // and inert faces are the chrome's (`lit_press_fill`, `lit_dim_fill`,
-// theme_file.h), derived from it (materials.h's THE KEY).
+// theme_file.h), derived from it (materials.h's THE KEY). A LIT RADIO KEY'S
+// THREE FACES are the chrome's alone (`radio_lit_fill`,
+// `radio_lit_press_fill`, `radio_lit_dim_fill`; architect 2026-11-11,
+// session 107): the purple is no program color.
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -172,7 +179,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled `default` row
 // (kGuiDefaultThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the thirty-seven words with its literal, so
+// 2026-11-01..05 — every one of the forty words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_ask.h's head), which the
 // loader reproduces for every dropped file (the proof of 2026-11-06, on the
@@ -187,7 +194,11 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // 363636); and THE LIT-BUT-INERT PAIR, a checked-but-disabled key's face
 // 83592C and its glyph 090909 — the accent and the print on it × 93 / 181,
 // the ratio mean(key dim ink 5D5D5D) / mean(text B5B5B5) — each per
-// channel, rounded half to even (the DERIVED block). THE SELECTION PAIR'S
+// channel, rounded half to even (the DERIVED block). THE RADIO KEYS' THREE
+// (architect 2026-11-11, session 107: a lit radio key wears the purple):
+// the face B595FC, Default's ScaleAwareness; its press 8D74C4, the purple
+// × 42 / 54; its inert face 5D4D81, the purple × 93 / 181 — the lit key's
+// two ratios on one code path (the DERIVED block). THE SELECTION PAIR'S
 // TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
@@ -209,6 +220,9 @@ static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.lit_press_fill  == 0xC68743);
 static_assert(kDefault.lit_dim_fill    == 0x83592C);
+static_assert(kDefault.radio_lit_fill  == 0xB595FC);
+static_assert(kDefault.radio_lit_press_fill == 0x8D74C4);
+static_assert(kDefault.radio_lit_dim_fill   == 0x5D4D81);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x363636);
 static_assert(kDefault.ruler_tick      == 0x919191);

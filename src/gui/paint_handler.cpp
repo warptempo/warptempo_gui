@@ -336,18 +336,28 @@ namespace {
 // 2026-11-05: "press in skeumorphic is darker"; materials.h's head); A
 // CHECKED BUTTON LIT — ITS WHOLE FACE THE ACCENT, Default's FFAD56, a lamp
 // and a door alike, darkened to `lit_press_fill`, Default's C68743, while a
-// press stands on it (architect 2026-11-11, session 106). A DISABLED button
+// press stands on it (architect 2026-11-11, session 106) — A RADIO KEY'S
+// THE PURPLE, `radio_lit_fill`, Default's B595FC, darkened to
+// `radio_lit_press_fill`, Default's 8D74C4 (session 107). A DISABLED button
 // wears the rest face, its glyph and legend dimmed by the caller; A DEAD
-// CHECKED BUTTON THE DIMMED ACCENT, `lit_dim_fill`, Default's 83592C, its
+// CHECKED BUTTON THE DIMMED ACCENT, `lit_dim_fill`, Default's 83592C (a
+// radio key's dimmed purple, `radio_lit_dim_fill`, Default's 5D4D81), its
 // glyph dimmed with it (materials.h's key_ink) — under an overlay the
 // roster publishes no lit bit for a dead key, so `look` arrives unlit
 // there (2026-11-10) and the face is the rest face. NO HOT FACE. `face` is
 // the key's FACE, the key itself (materials.h's THE FACE AND ITS GAP,
 // 2026-11-04). ON IT its caller paints the key's Breeze glyph
 // (paint_key_glyph) and UNDER IT its legend (paint_key_legend, 2026-11-03).
+// THE RADIO KEYS (architect 2026-11-11, session 107, materials.h's THE
+// RADIO KEYS WEAR THE PURPLE): the roster's two key walks — the band's
+// (its `h` view stand-ins included) and row 8's — hand paint_key the class
+// `id` belongs to (redesign_button_is_radio, app_state.h, the one owner),
+// so the class is never decided by lane.
 void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
-                       bool enabled) {
-    paint_key(cr, face, look, enabled);
+                       bool enabled, RedesignButton id) {
+    paint_key(cr, face, look, enabled,
+              redesign_button_is_radio(id) ? KeyLitClass::Radio
+                                           : KeyLitClass::Lamp);
 }
 
 // THE LEVEL CASE'S PAINTER (architect 2026-11-05, session 46, his "yes"
@@ -397,7 +407,7 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
 void paint_level_case(cairo_t* cr, const GuiRect& face, bool enabled,
                       double level_db) {
     if (face.w <= 0 || face.h <= 0) return;
-    paint_key(cr, face, KeyLook::Rest, enabled);
+    paint_key(cr, face, KeyLook::Rest, enabled, KeyLitClass::Lamp);
     const GuiPalette& p = palette();
     const GuiColor fill_tone = enabled ? p.level_fill : p.key_dim_ink;
     const double t = level_travel_fraction(level_db);
@@ -588,7 +598,7 @@ KeyLegendLayout key_legend_layout(const GuiRect& face, std::string_view word) {
 // the key's state, in the text tone `text` or, `enabled` false, the
 // disabled key's `key_dim_ink` (Default's 5D5D5D) (materials.h's text tones).
 // IT READS NO LIT BIT (architect 2026-11-03; 2026-11-11, his "agree"): a
-// lit key's legend stays B5B5B5, the face above it carrying the accent, and
+// lit key's legend stays B5B5B5, the face above it carrying the lit color, and
 // a lit disabled key's legend is `key_dim_ink` as every dead key's. No letter
 // of it is underlined (architect 2026-10-30: no keyboard
 // stands under a dialog, so an access key has no producer).
@@ -646,9 +656,9 @@ std::string key_legend_word(std::string_view word) {
 // size of its own, every key glyph keeping the one ink size. ITS TONE
 // FOLLOWS THE FACE (materials.h's key_ink; architect 2026-11-11, session
 // 106): `text_on_lit` (Default's 111111) when the key paints LIT (`look`,
-// key_look's answer: checked), on the accent and on its darkened press
-// face alike, or `text_on_lit_dim` (Default's 090909) on a lit key that is
-// disabled, its face dimmed with it; else `text` (Default's B5B5B5) on a
+// key_look's answer: checked), on the accent or a radio key's purple and on
+// their darkened press faces alike, or `text_on_lit_dim` (Default's 090909)
+// on a lit key that is disabled, its face dimmed with it; else `text` (Default's B5B5B5) on a
 // resting or pressed face, or `key_dim_ink` (Default's 5D5D5D) when the
 // key is disabled. The glyph is
 // clipped to the face: a face smaller than the ink box keeps its glyph
@@ -1235,8 +1245,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // "building a suction on the other one is the right way to go"; the consumed
 // nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
 // on_key) — never greyed for it — the key staying lit under the hold, its
-// accent face darkened by the press ratio (paint_roster_case: key_look's
-// LitPress, materials.h).
+// face THE PURPLE (the view pairs are radio keys, redesign_button_is_radio;
+// architect 2026-11-11, session 107) darkened by the press ratio
+// (paint_roster_case: key_look's LitPress, materials.h).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
@@ -1961,9 +1972,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE FACES ARE THE PROGRAM'S CASE (paint_roster_case, above, where the
     // faces stand): the rest face, the press face under a standing press
     // (2026-11-05, the press arc), the accent face for a CHECKED one
-    // (2026-11-11, session 106) — the live
-    // fact its chord flips (redesign_button_selected), the view pairs' lit
-    // members among them — and no hot face; THE LEVEL CASE its own
+    // (2026-11-11, session 106), THE PURPLE for a checked radio key — the
+    // view pairs, FOLLOW / RESTR, TRIM (session 107,
+    // redesign_button_is_radio) — the live fact its chord flips
+    // (redesign_button_selected) — and no hot face; THE LEVEL CASE its own
     // painter (paint_level_case: the rest face under the level's fill and
     // number, never lit, never pressed). The pointer walk finds the
     // tooltip's button (recompute_redesign_button_hover).
@@ -2120,7 +2132,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // wears the rest face (paint_key) under its glyph and legend dimmed
         // (`key_dim_ink`, paint_key_glyph and paint_key_legend) — AND A
         // LIT-BUT-INERT KEY (the grid-iterations lamp on a locked tab, say)
-        // keeps its lit face, in the dimmed accent `lit_dim_fill`, its glyph
+        // keeps its lit face, in the dimmed accent `lit_dim_fill` (a radio
+        // key's dimmed purple, `radio_lit_dim_fill`), its glyph
         // `text_on_lit_dim` (materials.h's paint_key and key_ink; architect
         // 2026-11-11, session 106, "so both read as a unit"), its legend
         // dimmed as every dead key's: the mode cannot change that state, so
@@ -2155,7 +2168,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const KeyLook look = key_look(face.selected, pressed);
-        paint_roster_case(cr, key, look, face.enabled);
+        paint_roster_case(cr, key, look, face.enabled, def.id);
 
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled): redesign_button_icon's stateful overload — the
@@ -3020,10 +3033,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // One button, the band's face logic verbatim (paint_roster_case). THE
     // CHECKED FACE'S SUBJECT ON THIS ROW IS ADD TO SELECTION (2026-08-18),
     // the sticky-ctrl mode that closes the marker-verb group: it wears the
-    // checked face, the accent, while the mode stands, which is the roster's
-    // standing rule for a mode. A checked button a mode greys keeps its lit
-    // face in the dimmed accent (`lit_dim_fill`), its glyph dimmed with it
-    // (`text_on_lit_dim`) and its legend dimmed, the band's own composition.
+    // checked face while the mode stands, which is the roster's standing
+    // rule for a mode — THE PURPLE, ADD SEL being a radio key with TRIM
+    // (redesign_button_is_radio; architect 2026-11-11, session 107) — and
+    // TOGGLE VALUE DRAG beside it the accent. A checked button a mode greys
+    // keeps its lit face dimmed (`lit_dim_fill`, a radio key's
+    // `radio_lit_dim_fill`), its glyph dimmed with it (`text_on_lit_dim`)
+    // and its legend dimmed, the band's own composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         const GuiRect key{x, btn_y, btn_w, btn_h};   // the face
         // The legend names the next press's act (2026-10-25, the band's
@@ -3044,7 +3060,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const KeyLook look = key_look(face.selected, pressed);
-        paint_roster_case(cr, key, look, face.enabled);
+        paint_roster_case(cr, key, look, face.enabled, def.id);
         // THE GLYPH ON THE KEY, ITS LEGEND UNDER IT (the band's rule,
         // 2026-11-02 / 2026-11-03: the stateful glyph and the stateful
         // legend through their one seats, the tones the face's and the
@@ -7384,9 +7400,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // its legend (THE DISABLED RUNG above owns the bit and which owners
         // publish it), and the face reads it for a lit key alone
         // (paint_key: a dead checked button the dimmed accent — the row's
-        // one checked button, Repeat One, is never dead).
+        // one checked button, Repeat One, is never dead). THE CLASS IS LAMP:
+        // no overlay's row holds a radio key (materials.h's THE RADIO KEYS),
+        // Repeat One lighting in the accent.
         const KeyLook look = key_look(plan[i].lit, pressed);
-        paint_key(cr, key, look, enabled);
+        paint_key(cr, key, look, enabled, KeyLitClass::Lamp);
         // THE GLYPH ON THE KEY (architect 2026-11-01 / 2026-11-02, Breeze's
         // roster as ruled; paint_key_glyph's one seat, in the face's tone): by
         // the act vocabulary's own owner — the player's keys
@@ -7643,9 +7661,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // page), darkened by the press ratio under the finger
             // (key_look's LitPress), else the press face under the finger,
             // else at rest, the cap printed ON its face in the face's ink
-            // (enabled: no key here is ever disabled).
+            // (enabled: no key here is ever disabled; Lamp: the latch and
+            // the page are lamps, no radio key, so the accent).
             const KeyLook look = key_look(lit, pressed);
-            paint_key(cr, r, look, /*enabled=*/true);
+            paint_key(cr, r, look, /*enabled=*/true, KeyLitClass::Lamp);
 
             // THE GLYPH KEYS (onscreen_keyboard::cap_icon, 2026-11-08): the
             // program keys' own glyph painter, so the ink size is theirs

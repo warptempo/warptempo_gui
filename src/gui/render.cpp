@@ -9,7 +9,7 @@
 #include "palette_file.h"   // kGuiPaletteRoles (the program's roles)
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "theme_file.h"     // kGuiThemeRoles (the chrome's roles)
-#include "materials.h"      // paint_key, KeyLook
+#include "materials.h"      // paint_key, KeyLook, KeyLitClass
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -405,14 +405,14 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
 
 // THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key on
 // its box (materials.h's paint_key) — never lit (it is dragged, not turned
-// on or off), so the enabled bit, which parts a lit key's faces alone, has
-// nothing to say here — the press face while `pressed`, the owner's grab on
-// the thumb (the press arc, architect 2026-11-05; the rule at the
-// declaration).
+// on or off), so the enabled bit and the lit class, which part a lit key's
+// faces alone, have nothing to say here (Lamp, every non-roster surface's
+// class) — the press face while `pressed`, the owner's grab on the thumb
+// (the press arc, architect 2026-11-05; the rule at the declaration).
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box, bool pressed) {
     if (box.w <= 0 || box.h <= 0) return;
     paint_key(cr, box, key_look(/*checked=*/false, pressed),
-              /*enabled=*/true);
+              /*enabled=*/true, KeyLitClass::Lamp);
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
@@ -2231,7 +2231,7 @@ WaveformPlateInks waveform_plate_inks() {
 void install_palette(const GuiTheme& theme) {
     // The contract and the apply shape the live caller owes are at the
     // declaration (render.h). THE PROGRAM'S ELEVEN off the palette's role
-    // table (palette_file.h), THE CHROME'S TWENTY-SEVEN off the chrome's
+    // table (palette_file.h), THE CHROME'S THIRTY off the chrome's
     // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
     // theme's ground (the flat look, materials.h's head) — the tables
     // covering the struct exactly (palette_file.cpp), so a role cannot be

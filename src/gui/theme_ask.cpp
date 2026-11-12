@@ -35,6 +35,10 @@ namespace {
 // present in every file he drops — it was read here 2026-11-05 to
 // 2026-11-10 too), so a file lacking it is left out; ChosenPreListen, the
 // second level fill of that week, is read by no tone and is not listed.
+// ScaleAwareness, THE RADIO KEYS' PURPLE (architect 2026-11-11, session
+// 107; the head's ROLE-NAMED block), was read here 2026-11-05 to 2026-11-10
+// for the doors and checked present in every stock and Sonic Bloom file
+// then; a file lacking it is left out.
 constexpr std::string_view kAskRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -42,7 +46,7 @@ constexpr std::string_view kAskRoles[] = {
     "StandbySelectionForeground",
     "SelectionBackground", "SelectionForeground",
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
-    "RangeEditField",
+    "ScaleAwareness", "RangeEditField",
     "SearchIndication",
     "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
@@ -339,6 +343,7 @@ GuiThemeTones derive(const AskRoles& roles) {
     const Rgb dim      = opaque(roles["TextDisabled"]);
     const Rgb clip     = opaque(roles["BackgroundClip"]);
     const Rgb on       = opaque(roles["ViewCheckControlEnabledOn"]);
+    const Rgb radio    = opaque(roles["ScaleAwareness"]);
     const Rgb range    = opaque(roles["RangeDefault"]);
     const Rgb standby  = opaque(roles["StandbySelectionBackground"]);
     const Rgb standby_text = opaque(roles["StandbySelectionForeground"]);
@@ -369,7 +374,9 @@ GuiThemeTones derive(const AskRoles& roles) {
     // key face (no divisor) leaves the accent as it is. THE LIT-BUT-INERT
     // PAIR: the accent and the print on it, both scaled by the one ratio
     // the disabled key's ink bears to the text, mean over mean; a black
-    // text (no divisor) leaves both as they are.
+    // text (no divisor) leaves both as they are. THE RADIO KEYS' PRESS AND
+    // INERT FACES (architect 2026-11-11, session 107): the purple by the
+    // same two ratios.
     const double face_mean   = mean(face);
     const double press_ratio =
         face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
@@ -379,6 +386,8 @@ GuiThemeTones derive(const AskRoles& roles) {
     const Rgb lit_press  = scale(on, press_ratio);
     const Rgb lit_dim    = scale(on, dim_ratio);
     const Rgb on_lit_dim = scale(contrast, dim_ratio);
+    const Rgb radio_press = scale(radio, press_ratio);
+    const Rgb radio_dim   = scale(radio, dim_ratio);
     GuiThemeTones t{};
     t.ground              = packed(ground);
     t.text                = packed(text);
@@ -390,6 +399,9 @@ GuiThemeTones derive(const AskRoles& roles) {
     t.key_press_face      = packed(desktop);
     t.lit_press_fill      = packed(lit_press);
     t.lit_dim_fill        = packed(lit_dim);
+    t.radio_lit_fill      = packed(radio);
+    t.radio_lit_press_fill = packed(radio_press);
+    t.radio_lit_dim_fill  = packed(radio_dim);
     t.well_frame          = packed(dim);
     t.ruler_face          = packed(face);
     t.ruler_tick          = packed(tick_role);

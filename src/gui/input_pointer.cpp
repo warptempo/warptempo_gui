@@ -95,8 +95,9 @@ struct ToolbarChord {
     // roster button, and the selector's arm in GuiInputHandler::on_key
     // resolves a press on the standing value to its axis's other value, so
     // the button and its key are one rule with no flag here. A hold on the
-    // lit member keeps it lit, its accent face darkened by the press
-    // ratio (materials.h's key_look, LitPress).)
+    // lit member keeps it lit, its purple face (a radio key,
+    // redesign_button_is_radio, 2026-11-11) darkened by the press ratio
+    // (materials.h's key_look, LitPress).)
     // REPEATS: a held press on this button synthesizes its own chord over and
     // over — the hold-repeat.
     //

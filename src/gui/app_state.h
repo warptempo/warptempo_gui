@@ -1995,7 +1995,8 @@ enum class RedesignButton {
     // the touch region hold retired for it), directly after Restrict and
     // ahead of the presets key: BARE `w`, wearing TRIM and the scissors
     // (Icon::EditCut, the presets key's glyph until that day), A LAMP —
-    // the lamps' lit face — over AppState::trim_armed,
+    // lit in the radio keys' purple, a radio with ADD SEL
+    // (redesign_button_is_radio, 2026-11-11) — over AppState::trim_armed,
     // whose record holds the whole rule: lit, the next single-contact drag on
     // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
     // its down point instead of the pan; only a second press, a committed
@@ -9745,7 +9746,8 @@ inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
 // the per-tick comparator and the band's fingerprint all read — carries the
 // decision, and the key wears the rest face under the dim glyph and legend.
 // THE OVERLAYS ONLY: outside them a dead checked key keeps its lit face,
-// the accent dimmed and its glyph with it (a locked tab, the `h` view;
+// the accent (a radio key's purple) dimmed and its glyph with it (a locked
+// tab, the `h` view;
 // nothing behind a MODAL changes at all — materials.h's THE KEY). False
 // with no overlay standing.
 inline bool overlay_deadens_button(const AppState& a, RedesignButton b) {
@@ -13192,7 +13194,8 @@ inline bool authoring_locked(const AppState& a) {
 //     fourth, S+P, since 2026-10-12): bare
 //     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
 //     disabled face (2026-10-01) — the glyph dimmed, the selected view's
-//     lit face, in the dimmed accent, still saying where you stand — and
+//     lit face, in the dimmed purple (radio keys, redesign_button_is_radio),
+//     still saying where you stand — and
 //     the KEY's card
 //     carries the sentence.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
@@ -16814,8 +16817,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // allowlist, the gate carding the lock's sentence. AND IT GREYS UNDER
         // GRID ITERATIONS, LIT (architect 2026-10-11 ~01:45: the lamp is
         // permanent there, value_drag_armed): the press could change nothing,
-        // so the face is the view selectors' under the same mode — the
-        // lit face, in the dimmed accent, still saying the drag is armed
+        // so the face is the view selectors' look under the same mode — the
+        // lit face dimmed (the dimmed accent; theirs the dimmed purple, being
+        // radio keys), still saying the drag is armed
         // (iteration_lock_greys' account) — and bare `[`, which the
         // iteration gate admits (its delta (b)), cards the reason at its own
         // arm (kValueDragIterationsCard). THE `h` VIEW greys and
@@ -17150,7 +17154,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // overlay's close. The opener and the tooltip lamp, the keys an overlay
 // leaves live, keep their true bit. THE OVERLAYS ONLY: a key dead on a
 // locked tab, in the `h` view or behind a modal keeps its lit face, in
-// the dimmed accent when the key is dead
+// the dimmed accent (a radio key's dimmed purple) when the key is dead
 // (materials.h's THE KEY). Three readers: the painter (which stashes what it
 // painted), main.cpp's staleness comparator and the band's fingerprint
 // (GuiPaintHandler::upper_rows_fingerprint). (The lift's radio refusal, a
@@ -17182,8 +17186,10 @@ inline std::string view_pair_label(char audio, char column) {
 // overlay stands and closes it (redesign_button_selected's overlay arms
 // below). THEY LIGHT AS THE LAMPS DO (architect 2026-11-11, session 106):
 // the whole face the accent, darkened under a press, no fill of the
-// class's own, so no painter asks this. Exactly the seven: the history opener (the
-// `h` view), Open Project (the picker), Play Renders (the render player),
+// class's own, so no painter asks this (the one lit class a painter asks is
+// the radio keys', redesign_button_is_radio below). Exactly the seven: the
+// history opener (the `h` view), Open Project (the picker), Play Renders (the
+// render player),
 // Settings (the settings page and its value list), Presets (the trim
 // presets list), BPM (the BPM form) and Score (the score viewer). The class
 // is the twin rule's (redesign_button_shift_admits' head: a lamp carries no
@@ -17199,6 +17205,52 @@ inline constexpr bool redesign_button_is_door(RedesignButton b) {
         case RedesignButton::IconTrimPresets:
         case RedesignButton::IconBpm:
         case RedesignButton::IconScore:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// THE RADIO KEYS — THE ONE OWNER OF THE MEMBERSHIP (architect 2026-11-11,
+// session 107; materials.h's THE KEY): the keys that stand in a RADIO GROUP,
+// two keys of which at most one is lit, A LIT ONE WEARING THE PURPLE —
+// Live's ScaleAwareness, `radio_lit_fill`, Default's B595FC, darkened under
+// a press and dimmed on a dead key by the accent's own ratios — in place of
+// the accent every other lit key wears. His reason: "the top [right]
+// buttons are always on, and there's two of them, and when you double up on
+// the orange or any accent color, it starts looking too bright, and it's in
+// the top right of my field of vision. ... If we give that to radio
+// buttons, then the problem goes away, because the purple is perfectly fine
+// in my peripheral field of vision." Exactly the four groups, each one's
+// exclusion at its own site:
+//   SOURCE / TARGET and WARP / PHASE — the view pairs: each pair reads ONE
+//     AXIS (redesign_button_selected's view arms: `active_audio_view` 'S' /
+//     'T', `active_markers_view` 'W' / 'P'), so exactly one member of each
+//     is lit, by construction;
+//   FOLLOW / RESTR — GuiPlaybackLifecycle::toggle_follow puts
+//     AppState::restrict out at FOLLOW's lit edge, toggle_restrict puts
+//     AppState::follow out at RESTR's (playback_lifecycle.cpp);
+//   TRIM / ADD SEL — GuiInputHandler::set_trim_armed puts
+//     AppState::add_to_selection out at TRIM's lit edge (input_handler.cpp),
+//     bare `k`'s arm puts the trim arm out through that setter at ADD SEL's
+//     (input_key_dispatch.cpp) — his words: "trim and add selection are
+//     radio buttons because they toggle each other off, so they would be
+//     purple as well under this rule".
+// Every other key lights in the accent: the doors, MAGNIFY, ITER, DRAG,
+// TIPS, LOCK, CUMUL, the walk lamp, and off the roster the render player's
+// Repeat One and the on-screen keyboard's latched Shift and symbols key.
+// One reader: the roster's key painter (paint_roster_case, paint_handler.cpp),
+// which hands paint_key the class (KeyLitClass, materials.h).
+inline constexpr bool redesign_button_is_radio(RedesignButton b) {
+    switch (b) {
+        case RedesignButton::ViewSource:
+        case RedesignButton::ViewTarget:
+        case RedesignButton::ViewWarp:
+        case RedesignButton::ViewPhase:
+        case RedesignButton::IconFollow:
+        case RedesignButton::IconRestrict:
+        case RedesignButton::IconTrimArm:
+        case RedesignButton::IconAddToSelection:
             return true;
         default:
             return false;
@@ -17266,7 +17318,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
         // shared key painter already handles: a disabled checked key keeps
-        // its lit face, in the dimmed accent under its dimmed glyph
+        // its lit face, in the dimmed purple, ADD SEL being a radio key
+        // (redesign_button_is_radio), under its dimmed glyph
         // (materials.h's paint_key and key_ink) — outside the overlays,
         // under which a dead key is unlit (the head term).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;

@@ -29,8 +29,11 @@ struct GuiThemeTones {
     uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face (text_on_lit · mean(key_dim_ink) / mean(text)); a word alone, read by key_ink
     uint32_t key_face;            // an unchecked key at rest; the time fields (SurfaceBackground)
     uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
-    uint32_t lit_press_fill;      // a checked key's face while a press stands on it: the accent darkened (cue · mean(key_press_face) / mean(key_face))
-    uint32_t lit_dim_fill;        // a checked-but-disabled key's face: the accent dimmed (cue · mean(key_dim_ink) / mean(text))
+    uint32_t lit_press_fill;      // a checked key's face (not a radio key's) while a press stands on it: the accent darkened (cue · mean(key_press_face) / mean(key_face))
+    uint32_t lit_dim_fill;        // a checked-but-disabled key's face (not a radio key's): the accent dimmed (cue · mean(key_dim_ink) / mean(text))
+    uint32_t radio_lit_fill;      // a checked RADIO key's whole face, the purple (ScaleAwareness); materials.h's THE RADIO KEYS
+    uint32_t radio_lit_press_fill; // a checked radio key's face while a press stands on it (radio_lit_fill · mean(key_press_face) / mean(key_face))
+    uint32_t radio_lit_dim_fill;  // a checked-but-disabled radio key's face (radio_lit_fill · mean(key_dim_ink) / mean(text))
     uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;          // the ruler (SurfaceBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the face)
@@ -52,7 +55,7 @@ struct GuiThemeTones {
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
     uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
-    uint32_t cue;                 // THE ACCENT: every enabled marker's chip and a checked key's whole face, the on-screen keyboard's lit keys too (ViewCheckControlEnabledOn)
+    uint32_t cue;                 // THE ACCENT: every enabled marker's chip and a checked key's whole face but a radio key's, the on-screen keyboard's lit keys too (ViewCheckControlEnabledOn)
     uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
@@ -92,7 +95,10 @@ inline constexpr std::string_view kGuiImmaterialModSlug  = "immaterial_mod";
 // session 105) AND THE LIT-BUT-INERT PAIR (architect 2026-11-11, session
 // 106; theme_ask.h's DERIVED block): a checked-but-disabled key's face
 // 83592C and its glyph 090909, the accent FFAD56 and the print on it
-// 111111 × 93 / 181. palette_file.h's static_asserts pin every word.
+// 111111 × 93 / 181 AND THE RADIO KEYS' THREE (architect 2026-11-11,
+// session 107; theme_ask.h's head): a checked radio key's face B595FC,
+// Default's ScaleAwareness, its press 8D74C4 (× 42 / 54) and its inert face
+// 5D4D81 (× 93 / 181). palette_file.h's static_asserts pin every word.
 inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x242424, // ground
     0xB5B5B5, // text
@@ -104,6 +110,9 @@ inline constexpr GuiThemeTones kGuiDefaultThemeTones = {
     0x2A2A2A, // key_press_face
     0xC68743, // lit_press_fill
     0x83592C, // lit_dim_fill
+    0xB595FC, // radio_lit_fill
+    0x8D74C4, // radio_lit_press_fill
+    0x5D4D81, // radio_lit_dim_fill
     0x757575, // well_frame
     0x363636, // ruler_face
     0x919191, // ruler_tick

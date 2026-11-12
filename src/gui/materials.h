@@ -39,7 +39,8 @@
 // THE KEY (paint_key below; every key alike — the band's, row 8's, the
 // controls rows', the word buttons, the scrub's thumb, the on-screen
 // keyboard's): A FLAT BOX, NO OUTLINE, NO LED, NO GLOW, NO DEPTH, AND A LIT
-// KEY IS ITS WHOLE FACE IN THE ACCENT (architect 2026-11-11, session 106:
+// KEY IS ITS WHOLE FACE IN THE ACCENT — A RADIO KEY'S IN THE PURPLE (THE
+// RADIO KEYS, below) — (architect 2026-11-11, session 106:
 // "I think we should go back to where the accent color is the background of
 // the lit lamp ... during the press, it's darkened. So depending on the
 // state, if it's an unlit lamp, it gets darkened as it does now. And if
@@ -55,20 +56,41 @@
 // derivation, theme_ask.h's head), the same push in from the accent's own
 // starting point; LIT BUT INERT `lit_dim_fill`, Default's 83592C — a
 // checked key that is disabled (below).
+// THE RADIO KEYS WEAR THE PURPLE (architect 2026-11-11, session 107: "when
+// you double up on the orange or any accent color, it starts looking too
+// bright, and it's in the top right of my field of vision. ... If we give
+// that to radio buttons, then the problem goes away, because the purple is
+// perfectly fine in my peripheral field of vision"): A LIT KEY OF A RADIO
+// GROUP — the eight of redesign_button_is_radio (app_state.h, the
+// membership's one owner, where each group's exclusion is named): SOURCE /
+// TARGET, WARP / PHASE, FOLLOW / RESTR and TRIM / ADD SEL — wears THE SAME
+// THREE LIT FACES IN LIVE'S ScaleAwareness in place of the accent: LIT
+// `radio_lit_fill`, Default's B595FC (his "the flat sharp key that you see
+// in the Ableton screenshots"); LIT UNDER PRESS `radio_lit_press_fill`,
+// Default's 8D74C4, the purple by the same press ratio; LIT BUT INERT
+// `radio_lit_dim_fill`, Default's 5D4D81, the purple by the same dim
+// scalar (the derivation, theme_ask.h's DERIVED block). Every theme reads its own ScaleAwareness,
+// so "the purple" is that theme's role. What is printed on it is the
+// accent's print, `text_on_lit` / `text_on_lit_dim` (key_ink below parts no
+// class). THE PAINTER LEARNS THE CLASS AT ONE SITE: paint_key's
+// `KeyLitClass` (below), read for a lit key alone, the roster's painter
+// passing the predicate's answer (paint_roster_case, paint_handler.cpp);
+// every other key surface — the controls rows, the on-screen keyboard, the
+// level case, the scrub's thumb — says Lamp.
 // WHAT IS PRINTED ON A LIT FACE IS NEAR-BLACK: `text_on_lit`, Default's
 // 111111 (ControlContrastFrame) — the key's Breeze glyph and the on-screen
 // keyboard's cap — on the accent and on the darkened accent alike (the text
-// tone on the accent, B5B5B5 on FFAD56, is about 1.1 : 1; his "agree"); on
-// a resting or pressed unlit face `text` (key_ink below).
-// EVERY CHECKED KEY ALIKE: the state lamps (FOLLOW, RESTRICT, TRIM, MAGNIFY,
-// Read Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
-// Drag, Add to Selection), the view pairs' lit members, the render player's
-// Repeat One, AND THE DOORS, the seven overlay openers
-// (redesign_button_is_door, app_state.h — the class names the keys that may
-// carry a twin on their hold and parts no look: no door fill, no painter
-// asks it), AND ON THE ON-SCREEN KEYBOARD a latched Shift and the symbols
-// page's key, the accent face under the `text_on_lit` cap. (THE LEVEL CASE,
-// NOISE, is never checked and never pressed-faced:
+// tone on the accent, B5B5B5 on FFAD56, is about 1.1 : 1; his "agree"), and
+// on the purple's faces alike; on a resting or pressed unlit face `text`
+// (key_ink below).
+// EVERY OTHER CHECKED KEY WEARS THE ACCENT: the state lamps (MAGNIFY, Read
+// Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
+// Drag), the render player's Repeat One, AND THE DOORS, the seven overlay
+// openers (redesign_button_is_door, app_state.h — the class names the keys
+// that may carry a twin on their hold and parts no look: no door fill, no
+// painter asks it), AND ON THE ON-SCREEN KEYBOARD a latched Shift and the
+// symbols page's key, the accent face under the `text_on_lit` cap. (THE
+// LEVEL CASE, NOISE, is never checked and never pressed-faced:
 // a slider, its fill its value, the fill a tone of its own, `level_fill`,
 // on the rest face — paint_level_case, paint_handler.cpp.) The legend
 // under a lit key stays the text tone (below).
@@ -88,8 +110,9 @@
 // back; the on-screen keyboard's key and the scrub's thumb, which act at
 // the press or carry the finger, from the press to the lift): an unchecked
 // key the press face, A LIT KEY THE ACCENT DARKENED BY THE SAME RATIO — the
-// accent times mean(press face) / mean(resting face), per channel, the one
-// derived word `lit_press_fill`, computed at the theme's read and not at
+// accent times mean(press face) / mean(resting face), per channel, the
+// derived word `lit_press_fill` (a radio key's purple by the same ratio,
+// `radio_lit_press_fill`), computed at the theme's read and not at
 // paint time; the ratio rather than the difference because it keeps the
 // theme's lit hue and scales with the theme's own press step. A DISABLED
 // KEY UNDER PRESS IS
@@ -112,7 +135,9 @@
 // and the glyph `text_on_lit_dim`, the print on it, BOTH SCALED BY THE ONE
 // RATIO the dim glyph bears to the resting one, mean(key dim ink) /
 // mean(text) (Default 93 / 181: FFAD56 -> 83592C, 111111 -> 090909; the
-// derivation, theme_ask.h's DERIVED block) — still the lamp's hue, so the
+// derivation, theme_ask.h's DERIVED block) — a radio key's face
+// `radio_lit_dim_fill`, the purple by the same scalar (B595FC -> 5D4D81),
+// under the same glyph — still the lamp's hue, so the
 // state reads true, dimmed as every dead glyph is; its legend `key_dim_ink`
 // as every dead key's; no press stands on a dead key, so the pair has no
 // pressed look. UNDER AN OVERLAY A DEAD KEY IS
@@ -265,16 +290,17 @@
 // paint_scrub_thumb, render.cpp) — and its two readers each take the look
 // and the key's ENABLED bit, which parts the lit-but-inert key (architect
 // 2026-11-11, session 106): paint_key answers the FACE, key_ink the PRINT
-// on it.
+// on it — paint_key alone also taking the lit class (KeyLitClass below,
+// session 107).
 enum class KeyLook { Rest, Press, Lit, LitPress };
 inline constexpr KeyLook key_look(bool checked, bool pressed) {
     return checked ? (pressed ? KeyLook::LitPress : KeyLook::Lit)
          : pressed ? KeyLook::Press
                    : KeyLook::Rest;
 }
-// A LIT KEY, pressed or not: its face the accent — darkened under the
-// press, dimmed on a dead key — and what is printed on it `text_on_lit`'s
-// (paint_key and key_ink below).
+// A LIT KEY, pressed or not: its face the accent, or a radio key's purple
+// (KeyLitClass below) — darkened under the press, dimmed on a dead key —
+// and what is printed on it `text_on_lit`'s (paint_key and key_ink below).
 inline constexpr bool key_look_lit(KeyLook look) {
     return look == KeyLook::Lit || look == KeyLook::LitPress;
 }
@@ -283,6 +309,17 @@ inline constexpr bool key_look_lit(KeyLook look) {
 inline constexpr bool key_look_pressed(KeyLook look) {
     return look == KeyLook::Press || look == KeyLook::LitPress;
 }
+// WHICH LIT COLOR A CHECKED KEY WEARS (the head's THE RADIO KEYS WEAR THE
+// PURPLE, architect 2026-11-11, session 107): Lamp — the accent, `cue`, with
+// `lit_press_fill` / `lit_dim_fill`, every lit key but the radio keys';
+// Radio — the purple, `radio_lit_fill`, with `radio_lit_press_fill` /
+// `radio_lit_dim_fill`, the eight of redesign_button_is_radio (app_state.h,
+// the one owner of the roster's membership). Read by paint_key for a lit
+// look alone; an unlit key's faces are one for both classes, and key_ink
+// reads no class (the print on both is `text_on_lit`'s). A REQUIRED
+// ARGUMENT, so every key surface says its class: the roster's painter the
+// predicate's answer, every other surface Lamp.
+enum class KeyLitClass { Lamp, Radio };
 
 // THE INK OF WHAT A KEY CARRIES ON ITS FACE — its Breeze glyph, or the
 // on-screen keyboard's cap (the head's THE KEY and THE TEXT TONES; architect
@@ -302,19 +339,23 @@ inline uint32_t key_ink(KeyLook look, bool enabled) {
 
 // ONE KEY on `r`, ITS PAINTED FACE — the key itself (the head's THE KEY and
 // THE FACE AND ITS GAP), off the look (key_look, the caller's checked and
-// pressed bits) and the key's enabled bit: AN UNLIT KEY palette().key_face,
-// or palette().key_press_face while a press stands on it; A LIT KEY THE
-// ACCENT, palette().cue, or palette().lit_press_fill while a press stands
-// on it, or — `enabled` false, the lit-but-inert key —
-// palette().lit_dim_fill, which no press moves (a dead key arms none). The
-// enabled bit parts the lit faces alone: an unlit key's face is the same
-// dead or live, its glyph and legend saying so. Nothing else is painted.
+// pressed bits), the key's enabled bit and its lit class: AN UNLIT KEY
+// palette().key_face, or palette().key_press_face while a press stands on
+// it; A LIT LAMP-CLASS KEY THE ACCENT, palette().cue, or
+// palette().lit_press_fill while a press stands on it, or — `enabled`
+// false, the lit-but-inert key — palette().lit_dim_fill, which no press
+// moves (a dead key arms none); A LIT RADIO-CLASS KEY THE PURPLE,
+// palette().radio_lit_fill, radio_lit_press_fill or radio_lit_dim_fill on
+// the same terms (KeyLitClass above). The enabled bit and the class part
+// the lit faces alone: an unlit key's face is the same dead or live and in
+// either class, its glyph and legend saying so. Nothing else is painted.
 // What a key carries is its caller's — the roster's and the
 // controls rows' Breeze glyph on the face and its legend under it
 // (paint_key_glyph and paint_key_legend, paint_handler.cpp), the on-screen
 // keyboard's caps — the glyph and the cap in key_ink's tone, the same look
 // and the same enabled bit.
-void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look, bool enabled);
+void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look, bool enabled,
+               KeyLitClass cls);
 
 // THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key
 // gap — the step from a key's face to the next one's in its group, every
