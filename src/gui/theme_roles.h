@@ -14,8 +14,10 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — and the derivation, this file's,
-// turns each into a row of GuiThemeTones at the launch's read.
+// own role names, never a derived tone — plus at most TWO OPTIONAL KEYS OF
+// OUR OWN (THE FORMAT, 2026-11-12), which no shipped file sets; and the
+// derivation, this file's, turns each into a row of GuiThemeTones at the
+// launch's read.
 //
 // THE FORMAT (its one owner here). A theme file is `<slug>.theme`, ASCII
 // text (UTF-8 in a comment), a line ending `\n` — a `\r` before it is
@@ -28,7 +30,19 @@
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
 // an 8-digit word's last byte its straight alpha — kept raw, the derivation
 // compositing it (the COMPOSITED block). Every role of the table exactly
-// once, in any order (the converter writes the table's). THE SLUG is the
+// once, in any order (the converter writes the table's).
+// TWO OPTIONAL KEYS OF OUR OWN (architect 2026-11-12, session 113: "no need
+// to update the themes at all") — `PlayheadLine` (the playhead's canvas
+// line) and `ControlContrastFrameDisabled` (the disabled chip's outline),
+// kThemeOptionalKeys (theme_roles.cpp), named in Live's style but NOT LIVE
+// ROLES, so no .ask carries them and the converter never writes them (it
+// reads kThemeRoles' initializer alone): a `Name=HEX` line like a role's,
+// HEX EXACTLY 6 hex digits (an opaque tone; 8 digits on one of them is a
+// malformed line), each key AT MOST ONCE, in any order among the roles; a
+// file that leaves one out takes its FALLBACK (the DERIVED block): the
+// playhead's line white half way to the head, the disabled outline
+// ControlContrastFrame. A file that sets either names it in its header
+// comment (a hand edit, as the `_mod` files' are). THE SLUG is the
 // file's stem through THE SLUG RULE (theme_slug_of_stem, gui_theme.h), and a
 // shipped file is named by its own slug (`default_dark_cool_medium.theme`,
 // `sb_dash_mod.theme`): the slugs are the ones the `theme` key spelled when
@@ -38,7 +52,9 @@
 // A FILE IS LEFT OUT, with one stderr line naming its path (its name, for a
 // bundled file) and the first error, its line number where it has one, for:
 // unreadable; a stem that spells no slug (no letter or digit); a malformed
-// line; a role name the table lacks; a role twice; a role missing.
+// line (an optional key's 8-digit word among them); a name neither table
+// holds; a role or an optional key twice; a role missing (A MISSING ROLE IS
+// AN ERROR, a missing optional key its fallback).
 //
 // THE FILES. The SHIPPED files are the repository's `themes/system/` and
 // `themes/extra/`, packed by apk/build_apk.sh as the APK's `themes/system/`
@@ -113,7 +129,13 @@
 //     key face, ruler face, pane, time field, magnify core
 //                            363636 = SurfaceBackground (the core below)
 //     cue outline, text on lit
-//                            111111 = ControlContrastFrame — THE PRINT ON A
+//                            111111 = ControlContrastFrame — THE ENABLED
+//                                     CHIP'S OUTLINE (a disabled chip's is
+//                                     the DERIVED block's inactive cue
+//                                     outline, its fallback this role), THE
+//                                     SELECTION STEM on every selected chip,
+//                                     the rings, the ruler head's outline;
+//                                     THE PRINT ON A
 //                                     LIT KEY'S FACE too, its glyph and the
 //                                     on-screen keyboard's lit cap, near-black
 //                                     on the accent (architect 2026-11-11,
@@ -220,15 +242,31 @@
 //   are present in every shipped file and in Default.
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
 //   (b − a) per channel, rounded half to even and clamped):
-//     playhead line          85E2EB = FFFFFF + 0.483 · (head − FFFFFF)
-//                                     (ruling 4: Default keeps his pick, every
-//                                     other theme the same ratio, white toward
-//                                     the head — not the mean; the mix gives
-//                                     Default's pick exactly; architect
-//                                     2026-11-11, session 107: back to the
-//                                     half, the quarter of 2026-11-10
-//                                     superseded — "I would take the playhead
-//                                     back up to the half")
+//     playhead line          81E1EA = THE FILE'S `PlayheadLine` where it sets
+//                                     one, else FFFFFF + 0.5 · (head −
+//                                     FFFFFF), white EXACTLY HALF WAY to the
+//                                     head on every theme (architect
+//                                     2026-11-12, session 113): Live's
+//                                     measured fade FFFFFF <-> 03C3D5 is
+//                                     linear in sRGB bytes, its true mean the
+//                                     half (closed_questions.md records the
+//                                     mix it replaced). HIS RULE: THE LINE IS
+//                                     NEVER DARKER THAN ITS HEAD — the half
+//                                     mix toward white guarantees it on every
+//                                     derived row; a file's own PlayheadLine
+//                                     is his authoring, kept as written, no
+//                                     check (NO BACKSTOPS FOR ADVERSARIAL USE)
+//     inactive cue outline   111111 = THE FILE'S `ControlContrastFrameDisabled`
+//                                     where it sets one, else
+//                                     ControlContrastFrame — THE DISABLED
+//                                     CHIP'S OUTLINE, the `h` view's removed
+//                                     items' too (resolve_flag_face; architect
+//                                     2026-11-12, session 113), so a theme
+//                                     leaving the key out keeps one outline
+//                                     for every chip. The selection stem of a
+//                                     selected disabled chip, the ruler
+//                                     head's outline and the lead-in ring
+//                                     stay the cue outline
 //     lit press fill         C68743 = THE ACCENT DARKENED BY THE PRESS RATIO:
 //                                     the accent (cue) · (mean(press face) /
 //                                     mean(key face)) per channel, the means

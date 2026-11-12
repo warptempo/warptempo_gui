@@ -47,6 +47,18 @@ constexpr std::string_view kThemeRoles[] = {
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
+// THE OPTIONAL KEYS (architect 2026-11-12, session 113; the head's THE
+// FORMAT): two tones of the app's own a file MAY set, each at most once,
+// each 6 hex digits — OUR keys in Live's naming style, never Live roles, so a
+// SEPARATE table the converter never reads (its regex anchors on
+// kThemeRoles' own initializer) and never writes. A key a file leaves out
+// takes its fallback in derive(). In OptionalKey's order.
+constexpr std::string_view kThemeOptionalKeys[] = {
+    "PlayheadLine", "ControlContrastFrameDisabled",
+};
+constexpr std::size_t kThemeOptionalKeyCount = std::size(kThemeOptionalKeys);
+enum class OptionalKey : std::size_t { PlayheadLine, ControlContrastFrameDisabled };
+
 constexpr std::string_view kThemeSuffix = ".theme";
 
 constexpr std::size_t role_index(std::string_view name) {
@@ -55,14 +67,33 @@ constexpr std::size_t role_index(std::string_view name) {
     return kThemeRoleCount;
 }
 
+constexpr std::size_t optional_key_index(std::string_view name) {
+    for (std::size_t i = 0; i < kThemeOptionalKeyCount; ++i)
+        if (kThemeOptionalKeys[i] == name) return i;
+    return kThemeOptionalKeyCount;
+}
+// The enum names the table's rows, and no optional key is a role's name.
+static_assert(kThemeOptionalKeys[static_cast<std::size_t>(
+                  OptionalKey::PlayheadLine)] == "PlayheadLine");
+static_assert(kThemeOptionalKeys[static_cast<std::size_t>(
+                  OptionalKey::ControlContrastFrameDisabled)] ==
+              "ControlContrastFrameDisabled");
+static_assert(role_index("PlayheadLine") == kThemeRoleCount &&
+              role_index("ControlContrastFrameDisabled") == kThemeRoleCount);
+
 // One file's roles: each an uppercase hex word of 6 or 8 digits, in
-// kThemeRoles' order.
+// kThemeRoles' order; and its optional keys, each an uppercase 6-digit word
+// or EMPTY where the file leaves the key out, in kThemeOptionalKeys' order.
 struct ThemeRoles {
     std::string words[kThemeRoleCount];
+    std::string optional_words[kThemeOptionalKeyCount];
     const std::string& operator[](std::string_view name) const {
         const std::size_t i = role_index(name);
         assert(i < kThemeRoleCount);
         return words[i];
+    }
+    const std::string& operator[](OptionalKey key) const {
+        return optional_words[static_cast<std::size_t>(key)];
     }
 };
 
@@ -76,6 +107,7 @@ bool is_hex(char c) {
 std::expected<ThemeRoles, std::string> parse_theme_file(std::string_view text) {
     ThemeRoles roles;
     bool found[kThemeRoleCount] = {};
+    bool found_optional[kThemeOptionalKeyCount] = {};
     std::size_t at = 0;
     for (int line_no = 1; at < text.size(); ++line_no) {
         std::size_t end = text.find('\n', at);
@@ -99,17 +131,30 @@ std::expected<ThemeRoles, std::string> parse_theme_file(std::string_view text) {
         if ((hex.size() != 6 && hex.size() != 8) ||
             !std::all_of(hex.begin(), hex.end(), is_hex))
             return fail("the value is not 6 or 8 hex digits");
+        std::string word(hex);
+        for (char& c : word)
+            if (c >= 'a' && c <= 'f') c = static_cast<char>(c - 'a' + 'A');
+        const std::size_t k = optional_key_index(name);
+        if (k != kThemeOptionalKeyCount) {
+            if (hex.size() != 6)
+                return fail("the value of '" + std::string(name) +
+                            "' is not 6 hex digits");
+            if (found_optional[k])
+                return fail("the key '" + std::string(name) +
+                            "' a second time");
+            roles.optional_words[k] = std::move(word);
+            found_optional[k] = true;
+            continue;
+        }
         const std::size_t i = role_index(name);
         if (i == kThemeRoleCount)
             return fail("no role '" + std::string(name) + "'");
         if (found[i])
             return fail("the role '" + std::string(name) + "' a second time");
-        std::string word(hex);
-        for (char& c : word)
-            if (c >= 'a' && c <= 'f') c = static_cast<char>(c - 'a' + 'A');
         roles.words[i] = std::move(word);
         found[i] = true;
     }
+    // A missing ROLE is an error; a missing optional key is its fallback's.
     std::string missing;
     for (std::size_t i = 0; i < kThemeRoleCount; ++i) {
         if (found[i]) continue;
@@ -188,7 +233,8 @@ uint32_t packed(const Rgb& c) {
 }
 
 // One theme's tones (the head's DERIVATION). Total: every tone is a role, a
-// composite, a mix or a scaled role, and each of the two ratios' zero
+// composite, a mix, a scaled role or an optional key's word (its fallback
+// where the file leaves the key out), and each of the two ratios' zero
 // divisor has its own answer (the lit key's derived tones, below).
 GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
@@ -298,8 +344,19 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.cue                 = packed(on);
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
+    // THE TWO OPTIONAL KEYS (the head's DERIVED block; architect 2026-11-12,
+    // session 113): the file's word, else the fallback — the disabled chip's
+    // outline ControlContrastFrame, the playhead's line white half way to
+    // the head.
+    t.inactive_cue_outline = packed(
+        roles[OptionalKey::ControlContrastFrameDisabled].empty()
+            ? contrast
+            : opaque(roles[OptionalKey::ControlContrastFrameDisabled]));
     t.playhead_head       = packed(range);
-    t.playhead_line       = packed(mix(white, range, 0.483));
+    t.playhead_line       = packed(
+        roles[OptionalKey::PlayheadLine].empty()
+            ? mix(white, range, 0.5)
+            : opaque(roles[OptionalKey::PlayheadLine]));
     t.scanner             = packed(white);
     return t;
 }
