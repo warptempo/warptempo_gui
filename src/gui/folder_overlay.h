@@ -26,9 +26,8 @@
 // (build_trim_presets_rows), a row's tap applying
 // its pair to the active tab's trim and framing it with the list standing,
 // its controls row the render player's shape — the highlight pair, Save,
-// Save As and Delete, one cluster flush right (his word: "we would be
-// breaking symmetry if we did it differently"; its Close retired 2026-11-11,
-// architect, session 106, the lit PRESETS key the way out); and THE BPM FORM (architect
+// Save As, Delete and Close, one cluster flush right (his word: "we would be
+// breaking symmetry if we did it differently"); and THE BPM FORM (architect
 // 2026-10-29: "since settings has a multiline page, we should make bpm a
 // form like settings"), the settings page's shape — one group row and the
 // sweep's three `key=value` lines, `beats=`, `low=` and `high=`, a row's tap

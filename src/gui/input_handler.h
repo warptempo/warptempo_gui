@@ -2628,11 +2628,9 @@ private:
     // session id; the overlay's owner tag says WHICH content stands), the
     // fourth ModalDialogOwner and never an editor: the band is the whole
     // state, the row is one button since 2026-08-29 (a click on a row is
-    // the open act), Cancel under the project picker and the value list (a
-    // button's word says what leaving does, kModalCancelLabel, app_state.h,
-    // architect 2026-10-28 night) and NO BUTTON under the settings page
-    // (architect 2026-11-11, session 106: its plain Close left the row, the
-    // lit SETUP key the way out) —
+    // the open act), Cancel under the project picker and the value list and
+    // Close under the settings page (a button's word says what leaving does,
+    // kModalCancelLabel, app_state.h, architect 2026-10-28 night) —
     // the trim presets list's row the player's shape instead, the BPM
     // form's RENDER and Cancel in that cluster — and route_picker_key below is its whole
     // key vocabulary, its opener's chords and the tooltip lamp's. FIVE CONTENTS — the project picker, the settings
@@ -2798,10 +2796,9 @@ private:
     //   SHAPE (his word: "we would be breaking symmetry if we did it
     //   differently"): a row's tap and Enter APPLY with the list standing,
     //   the highlight pair walks without applying, and the controls row is
-    //   ONE CLUSTER FLUSH RIGHT, the pair, then Save, Save As and Delete
-    //   (AppState::TrimPresetsButtonAct; the faces
-    //   trim_presets_button_enabled) — no Close since 2026-11-11 (architect,
-    //   session 106: the lit PRESETS key, bare `t`, is the way out).
+    //   ONE CLUSTER FLUSH RIGHT, the pair, then Save, Save As, Delete and
+    //   Close (AppState::TrimPresetsButtonAct; the faces
+    //   trim_presets_button_enabled).
     //     open_trim_presets: the opener, open_project_picker's own guards
     //       (a prompt, a standing picker, a load) and its modal stop; the
     //       file read into the overlay (AppState::FolderOverlay::
@@ -2910,15 +2907,15 @@ private:
     //       the row click's first half (folder_overlay_highlight_row's picker
     //       arm) and the trim presets list's highlight pair's walk.
     //     close_picker: THE ONE CLOSE BODY — the one button
-    //       under the project picker (Cancel; under a value list Cancel
-    //       returns to the page, return_to_settings_page, and the settings
-    //       page's row holds no button since 2026-11-11), Ctrl+O
+    //       under the project picker (Cancel) and the settings page (Close;
+    //       under a value list Cancel returns to the page,
+    //       return_to_settings_page), Ctrl+O
     //       (the Open Project key's lift) under the project picker,
     //       `;` (the Settings key's lift) under the settings page and the
     //       value list, the
     //       platform's close road (GuiPrompt::request_close, at its head
     //       beside the player's close, on the exit road alone), the page's
-    //       row open ahead of its editor, under the trim presets list
+    //       row open ahead of its editor, the trim presets list's Close,
     //       `t` (the PRESETS key's lift) and Save As ahead of its name editor,
     //       the BPM form's close_bpm_form, its row open ahead of its line
     //       editor and its RENDER ahead of the sweep, and the

@@ -7246,6 +7246,7 @@ bool trim_presets_button_enabled(const AppState& a,
         case Act::HighlightUp:
             return folder_overlay::move_highlight_actionable(a, -1);
         case Act::SaveAs:
+        case Act::Close:
             return true;
         case Act::Save: {
             if (!seated) return true;

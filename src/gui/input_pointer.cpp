@@ -3005,9 +3005,9 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
     // the user pointed at this button, which is not the deliberate keyboard
     // walk that earns the active strength. Every dialog's buttons arm here —
     // the prompt's, the editors' OK / Cancel, the player's and the score
-    // viewer's keys, the picker's one word (Cancel, kModalCancelLabel's
-    // rule; none under the settings page) or, under the trim presets list,
-    // its pair and three words, under the BPM form its two words — so this is the
+    // viewer's keys, the picker's one word (Cancel or Close by content,
+    // kModalCancelLabel's rule) or, under the trim presets list, its pair
+    // and four words, under the BPM form its two words — so this is the
     // rule's one site. ONLY A DIALOG EDITOR READS WHAT IT WRITES (the
     // on-screen keyboard's ring, AppState::modal_dialog_focus): on every
     // other surface the write is the shared road's and nothing reads it
@@ -3249,19 +3249,17 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     // because a click on a row is the open act now — so this arm reads no
     // bit. Its word is what leaving does (kModalCancelLabel's rule,
     // app_state.h, architect 2026-10-28 night): Cancel under the project
-    // picker and the value list; the settings page's row is EMPTY since
-    // 2026-11-11 (architect, session 106: its Close left, the lit SETUP key
-    // the way out), so no press reaches here under it (the trim presets
-    // list's row is its own arm, below). Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
+    // picker and the value list, Close under the settings page (the trim
+    // presets list's row is its own arm, below). Under a VALUE LIST it RETURNS TO THE SETTINGS PAGE, seated on
     // the list's key, nothing applied (return_to_settings_page, architect
-    // 2026-10-28 night: the list is the page's sub-page); under the project
-    // picker it runs the one close body.
+    // 2026-10-28 night: the list is the page's sub-page); under every other
+    // content it runs the one close body.
     // THE TRIM PRESETS LIST'S ROW IS THE PLAYER'S SHAPE (architect
     // 2026-10-28 night): its published face decides as the player's does — a
     // key painted dead is consumed — and each act is the list's own: the
     // highlight pair the band walk alone (picker_move_highlight), Save,
-    // Save As and Delete their bodies; no Close since 2026-11-11 (the lit
-    // PRESETS key's lift is the list's close). No member admits a modifier.
+    // Save As and Delete their bodies, Close the one close body. No member
+    // admits a modifier.
     if (app.picker.active &&
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets) {
         if (!b.enabled) return true;
@@ -3280,6 +3278,9 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
                 return true;
             case AppState::TrimPresetsButtonAct::Delete:
                 trim_presets_delete();
+                return true;
+            case AppState::TrimPresetsButtonAct::Close:
+                close_picker();
                 return true;
             case AppState::TrimPresetsButtonAct::None:
                 return false;
@@ -4927,8 +4928,8 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // THE PICKER'S VEIL (2026-08-28), the player's shape one mode over: while
     // a picker stands the pointer has TWO targets, the overlay's rows
     // (claimed above) and the modal row's buttons — Cancel under the project
-    // picker and the value list, the trim presets list's and the BPM form's
-    // clusters, none under the settings page since 2026-11-11 (the arm every
+    // picker and the value list, Close under the settings page, the trim
+    // presets list's and the BPM form's clusters (the arm every
     // dialog button takes; the app's caption a third, 2026-10-05 to
     // 2026-10-24), beside the icon row's band (below: the opener key, the
     // tooltip lamp, architect 2026-11-10, and

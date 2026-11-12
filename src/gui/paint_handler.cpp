@@ -5452,11 +5452,10 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
-// (the fourth, the same day: its one-word row, Cancel, kModalCancelLabel's
-// rule — under the settings page EMPTY since 2026-11-11, its Close gone, the
-// row still the picker's; under the trim presets list since 2026-10-28
-// night the player's shape, the highlight pair and three words, under the
-// BPM form since 2026-10-29 RENDER and Cancel), THE PROGRESS MODAL (the fifth, 2026-10-14: a
+// (the fourth, the same day: its one-word row, Cancel or Close by content,
+// kModalCancelLabel's rule — under the trim presets list since 2026-10-28
+// night the player's shape, the highlight pair and four words ending in
+// Close, under the BPM form since 2026-10-29 RENDER and Cancel), THE PROGRESS MODAL (the fifth, 2026-10-14: a
 // batch's Cancel alone, AppState::BatchProgress) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional, a modal
 // since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
@@ -5772,13 +5771,13 @@ namespace {
 // (closed_questions.md).
 
 // THE WORD ROWS NO PROMPT TABLE HOLDS: a dialog editor's OK and Cancel, and
-// the field-less owners' one button (the project picker's and the value
-// list's, the progress modal's) — the painter's plans read these. A
-// BUTTON'S WORD SAYS WHAT LEAVING DOES: the rule and the two leave words,
-// kModalCancelLabel and kModalCloseLabel, are app_state.h's (the lit
-// opener's tooltip under its overlay reads them there, overlay_leave_word;
-// architect 2026-11-11, session 106, Close on no button since). OK is the
-// editors' alone, and lives here.
+// the field-less owners' one button (the picker's, the progress modal's) —
+// the painter's plans read these. A BUTTON'S WORD SAYS WHAT LEAVING DOES:
+// the rule, the two leave words kModalCancelLabel and kModalCloseLabel and
+// which overlays carry a leave button (every one without a scrub, architect
+// 2026-11-11, session 107) are app_state.h's (the lit opener's tooltip
+// under its overlay reads the words there too, overlay_leave_word). OK is
+// the editors' alone, and lives here.
 constexpr std::string_view kModalOkLabel     = "OK";
 
 // THE WORD BUTTONS' GLYPHS (architect 2026-11-01 / 2026-11-02, Breeze's
@@ -5786,24 +5785,21 @@ constexpr std::string_view kModalOkLabel     = "OK";
 // printed word) — BY THE WORD, the one vocabulary every word row shares:
 // the prompts' answer tables (kPromptAnswerTables, app_state.h), the
 // editors' and the field-less owners' words above, the trim presets list's
-// three and the BPM form's two (the roster as ruled, architect 2026-11-02,
+// four and the BPM form's two (the roster as ruled, architect 2026-11-02,
 // R12 / R14). OK and YES DialogOkApply, LOAD's plain checkmark (architect
 // 2026-11-03: the affirmative answer is the same act as LOAD, and the
 // notebook-with-check read too small and awkward for a basic command; a
 // deliberate share, the band's LOAD, the player's LOAD, OK and YES one
-// drawing); CANCEL DialogCancel; SAVE DocumentSave; SAVE AS DocumentSaveAs; DISCARD
+// drawing); CANCEL DialogCancel; CLOSE WindowClose; SAVE DocumentSave; SAVE AS DocumentSaveAs; DISCARD
 // EditClear; RETRY ViewRefresh; DELETE EditDelete; RENDER MediaRecord (the
-// band's RENDER key's: the word follows the key). CLOSE IS ON NO WORD
-// BUTTON since 2026-11-11 (architect, session 106: every plain Close left
-// its row, the lit opener the way out), so it has no glyph here; its
-// drawing, WindowClose, stays in the roster (icons.h) with no painter. A
-// word outside the
+// band's RENDER key's: the word follows the key). A word outside the
 // vocabulary is a program bug (a new answer table's word not added here):
 // no glyph, and the debug build's assert.
 std::optional<icons::Icon> modal_word_icon(std::string_view word) {
     using icons::Icon;
     if (word == kModalOkLabel || word == "Yes") return Icon::DialogOkApply;
     if (word == kModalCancelLabel)              return Icon::DialogCancel;
+    if (word == kModalCloseLabel)               return Icon::WindowClose;
     if (word == "Save")                         return Icon::DocumentSave;
     if (word == "Save As")                      return Icon::DocumentSaveAs;
     if (word == "Discard")                      return Icon::EditClear;
@@ -6020,9 +6016,7 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // PLAYER'S SHAPE; his glass on 852a28d9: "up/down are in the bottom right for
 // the player, so they should be there for the trim presets also"): ONE
 // ABUTTING CLUSTER FLUSH RIGHT — THE HIGHLIGHT PAIR, the player's DOWN and UP
-// keys, then the three word keys SAVE, SAVE AS and DELETE (no CLOSE since
-// 2026-11-11, architect, session 106: the lit PRESETS key is the way out,
-// the cluster one pitch shorter at its left) — the last
+// keys, then the four word keys SAVE, SAVE AS, DELETE and CLOSE — the last
 // key's right edge the row's (every word row's alignment rule), nothing at
 // the row's left. A DELIBERATE ASYMMETRY WITH THE PLAYER since 2026-11-10
 // (architect: the player's transport took its row's right, its pair and the
@@ -6281,10 +6275,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // (modal_word_icon), whose legend is the word in capitals
     // (key_legend_word) and whose tooltip is the word. The word kind is the other three owners' alone: a
     // prompt's answers, the dialog editors' OK / Cancel and the picker's one
-    // word, Cancel (kModalCancelLabel's rule; NONE under the settings page,
-    // architect 2026-11-11, session 106) — or, under
-    // the trim presets list, its three words SAVE, SAVE AS and DELETE
-    // after its two keys, the player's highlight pair, or under the
+    // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
+    // the trim presets list, its four words SAVE, SAVE AS, DELETE and
+    // CLOSE after its two keys, the player's highlight pair, or under the
     // BPM form its two, RENDER and CANCEL. `lit` is
     // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
@@ -6299,8 +6292,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // legends score_viewer_button_legend's.
         AppState::ScoreButtonAct  score_act  = AppState::ScoreButtonAct::None;
         // The trim presets list's (2026-10-28 night): its highlight pair are
-        // `glyph` keys wearing the player's glyphs and legends, its other three
-        // word buttons.
+        // `glyph` keys wearing the player's glyphs and legends, its other four word
+        // buttons.
         AppState::TrimPresetsButtonAct trim_act =
             AppState::TrimPresetsButtonAct::None;
         // The BPM form's (2026-10-29): two word buttons.
@@ -6315,7 +6308,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // below. FOUR OWNERS WRITE IT, re-grepped 2026-11-11: the
         // player's eight through render_player_button_enabled, the score
         // viewer's keys through score_viewer_button_enabled, the trim
-        // presets list's five through trim_presets_button_enabled and the
+        // presets list's six through trim_presets_button_enabled and the
         // BPM form's two through bpm_form_button_enabled; true on every
         // other owner's buttons.
         bool        enabled      = true;
@@ -6526,9 +6519,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // PLAYER'S SHAPE), in painted order, one cluster flush right
         // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
         // and UP, its glyphs, legends and words, the band walk without applying
-        // — then THREE WORD BUTTONS, SAVE, SAVE AS and DELETE, DELETE LAST
-        // (no Close since 2026-11-11, architect, session 106: the lit PRESETS
-        // key is the way out, TrimPresetsButtonAct's head). No Apply: the
+        // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE (the
+        // Close word kModalCloseLabel's rule, app_state.h: the list has no
+        // scrub, so it keeps its leave button, architect 2026-11-11, session
+        // 107), CLOSE LAST. No Apply: the
         // row's tap is the act. Each face is the act's own truthful answer
         // (trim_presets_button_enabled).
         using Act = AppState::TrimPresetsButtonAct;
@@ -6551,6 +6545,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         word(Act::Save, "Save");
         word(Act::SaveAs, "Save As");
         word(Act::Delete, "Delete");
+        word(Act::Close, kModalCloseLabel);
     } else if (bpm_up) {
         // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the
         // trim list's cluster flush right (key_cluster_row_layout): RENDER,
@@ -6576,16 +6571,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE PICKER'S ROW IS ONE BUTTON (architect 2026-08-29): a click on a
         // row opens it, so there is nothing for an OK to add. ITS WORD IS WHAT LEAVING DOES (the rule at
         // kModalCancelLabel, app_state.h, architect 2026-10-28 night): CANCEL
-        // under the project picker and the value list — the act by content
-        // (dispatch_modal_dialog_button's picker arm: the picker's close, the
-        // list's return to the page). UNDER THE SETTINGS PAGE THE ROW IS
-        // EMPTY (architect 2026-11-11, session 106, "remove every plain
-        // close": its Close left, the lit SETUP key the way out); THE ROW
-        // ITSELF STAYS, its ground and its rows the box's as under the value
-        // list and the line editor, so no list row moves as the page and its
-        // sub-pages swap (modal_box.h's controls row stands on row 8's rows
-        // whatever it carries; an empty plan publishes no button, and every
-        // reader of the stash bounds its index on the list's size).
+        // under the project picker and the value list, CLOSE under the
+        // settings page (an overlay with no scrub keeps its leave button,
+        // architect 2026-11-11, session 107: "Settings doesn't hurt to have
+        // a close button and certainly looks better, I think, than having an
+        // empty row") — the act the same body by content
+        // (dispatch_modal_dialog_button's picker arm), the word alone moving.
         // THE PROGRESS MODAL'S ROW IS **Cancel** ALONE TOO (architect
         // 2026-10-14): the batch's one act a user owns is stopping it, and its
         // lift is the batch's cancel road (dispatch_modal_dialog_button's
@@ -6596,12 +6587,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             ok.editor_ok = true;
             plan.push_back(std::move(ok));
         }
-        if (!(picker_up && app.folder_overlay.owner ==
-                               AppState::FolderOverlay::Owner::SettingsPage)) {
-            DialogButtonPlan last;
-            last.word = std::string(kModalCancelLabel);
-            plan.push_back(std::move(last));
-        }
+        DialogButtonPlan last;
+        last.word = std::string(
+            picker_up && app.folder_overlay.owner ==
+                             AppState::FolderOverlay::Owner::SettingsPage
+                ? kModalCloseLabel
+                : kModalCancelLabel);
+        plan.push_back(std::move(last));
     }
     // EVERY BUTTON'S BOX: a glyph button the PROGRAM'S CASE at row 8's width
     // (the player's eight and the score viewer's keys, placed by
@@ -6634,9 +6626,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every owner's
     // row — a prompt's answers, an editor's OK and Cancel, the picker's one
-    // word (Cancel, kModalCancelLabel's rule; none under the settings page
-    // since 2026-11-11) and the
-    // trim presets list's three (its highlight pair, the player's, directly
+    // word (Cancel or Close by content, kModalCancelLabel's rule) and the
+    // trim presets list's four (its highlight pair, the player's, directly
     // before them in the one cluster) and the BPM form's two — the last
     // one's face ending on the pane's last column (x 2279 on the tablet, the
     // well's last; its cell on the box's outer column, 2280), today's button
@@ -7108,10 +7099,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         }
     } else if (picker_up) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
-        //    2026-08-29): **Cancel** (kModalCancelLabel's rule, 2026-10-28
-        //    night), and NOTHING ELSE — no label, no field, no OK; under the
-        //    settings page NOTHING AT ALL, the row standing empty (architect
-        //    2026-11-11, session 106; the plan builder's picker arm). The list in the
+        //    2026-08-29): **Cancel**, or **Close** under the settings page
+        //    (kModalCancelLabel's rule, 2026-10-28 night), and NOTHING ELSE —
+        //    no label, no field, no OK. The list in the
         //    band above is the whole question, a click on a row is the answer,
         //    and the prompt's `<projects_path>/` prefix went with the field it
         //    labelled.
@@ -7127,7 +7117,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (x 2279 on the tablet, the well's last; its cell on the box's outer
         //    column).
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
-        //    shape instead — the highlight pair and three words, one cluster
+        //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above
         //    (key_cluster_row_layout), and THE BPM FORM'S (2026-10-29) the
         //    same cluster of two, RENDER and CANCEL; nothing else stands on

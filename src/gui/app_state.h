@@ -6201,21 +6201,20 @@ struct AppState {
     // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their glyphs and
     // words the player's (render_player_button_icon,
     // render_player_button_hint) and their act the band walk alone, no apply
-    // — then THREE WORD BUTTONS, SAVE, SAVE AS and DELETE. THE WORDS
+    // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE. THE WORDS
     // ARE WINDOWS' DIALOG
     // VOCABULARY (the same glass): SAVE writes the active tab's trim into
     // THE HIGHLIGHTED preset, its name kept, after its question — and with no
     // preset to save into it is Save As ("with no presets yet, both create a
-    // new preset") — SAVE AS names a new one, Save standing left of Save As.
-    // NO CLOSE (architect 2026-11-11, session 106, "remove every plain
-    // close"): the list asks nothing and an act returns to it, so the one
-    // way out is the lit PRESETS key, its lift bare `t` (route_picker_key's
-    // close_picker), its tooltip Close there (overlay_leave_word). No Apply:
-    // a row's tap is the act. The acts are the input handler's
-    // (trim_presets_save, trim_presets_save_as, trim_presets_delete); the
-    // faces trim_presets_button_enabled's.
+    // new preset") — SAVE AS names a new one, Save standing left of Save As;
+    // the Close word kModalCloseLabel's rule (the list asks nothing, an act
+    // returns to it, only the opener and Close leave; the list has no scrub,
+    // so it keeps its leave button, architect 2026-11-11, session 107). No
+    // Apply: a row's tap is the act. The acts are the input handler's
+    // (trim_presets_save, trim_presets_save_as, trim_presets_delete,
+    // close_picker); the faces trim_presets_button_enabled's.
     enum class TrimPresetsButtonAct {
-        None, HighlightDown, HighlightUp, Save, SaveAs, Delete
+        None, HighlightDown, HighlightUp, Save, SaveAs, Delete, Close
     };
     // THE BPM FORM'S BUTTONS (architect 2026-10-29), its dispatch
     // vocabulary, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT as
@@ -8453,7 +8452,7 @@ struct AppState {
     // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
     // and bare `t`; the piece's named trim windows, a row's tap applying its
     // pair to the active tab's trim with the list standing, the player's
-    // controls row — the highlight pair, Save, Save As, Delete);
+    // controls row — the highlight pair, Save, Save As, Delete, Close);
     // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
     // the sweep's ladder; one inert group row and the three `key=value`
     // lines `beats=`, `low=` and `high=`, the open act the line editor
@@ -8474,18 +8473,16 @@ struct AppState {
     // opens it, so the row needs no OK — "if I'm using the picker my hand
     // stays on the right", and the one button sits flush right), its word
     // what leaving does — Cancel under the project picker and the value
-    // list (kModalCancelLabel's rule, architect 2026-10-28 night) — and
-    // UNDER THE SETTINGS PAGE NO BUTTON AT ALL, the row standing empty
-    // (architect 2026-11-11, session 106: its plain Close left, the lit
-    // SETUP key the way out); THE TRIM PRESETS LIST'S ROW IS THE PLAYER'S
-    // SHAPE instead, the highlight pair and three words
-    // (TrimPresetsButtonAct), no Close either. The opener
+    // list, Close under the settings page (kModalCancelLabel's rule,
+    // app_state.h, architect 2026-10-28 night); THE TRIM PRESETS LIST'S ROW
+    // IS THE PLAYER'S SHAPE instead, the highlight pair and four words, its
+    // last Close (TrimPresetsButtonAct). The opener
     // refuses under a prompt, an editor,
     // a standing picker and a load — the render player's arm is RETIRED
     // (2026-09-03: the player's router consumes Ctrl+O and the Open
     // Project button greys under the panel; the record is at the opener) — and
     // the one close body is
-    // GuiInputHandler::close_picker (the project picker's Cancel, the opener's
+    // GuiInputHandler::close_picker (the one button, the opener's
     // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
     // value list, `t` under the trim presets list, Ctrl+B under the BPM form
@@ -9675,16 +9672,24 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // CANCEL belong to the EDITORS, where a typed line is pending; their OK is
 // paint_handler.cpp's kModalOkLabel). CLOSE leaves a surface that asked
 // nothing — the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER,
-// THE TRIM PRESETS LIST (its acts return to it) and THE SCORE VIEWER — AND
-// NO BUTTON CARRIES IT (architect 2026-11-11, session 106: "places like
-// score and the player can lose their close button since the button used to
-// enter that mode is also now the close button, and the tooltip will say as
-// much"; his "agree, remove every plain close"): those four rows hold no
-// leave button, the lit opener their way out, and the word lives on as THAT
-// KEY'S TOOLTIP under its overlay (overlay_leave_word below). ONE OWNER FOR
-// BOTH WORDS, here, where the tooltip's arm (app_state.h) and the word
-// buttons' builder and glyph table (paint_modal_dialog, modal_word_icon,
-// paint_handler.cpp) both read them. The words are plain, no letter
+// THE TRIM PRESETS LIST (its acts return to it) and THE SCORE VIEWER.
+// AN OVERLAY WITH A SCRUB LEAVES BY ITS LIT OPENER ALONE; EVERY OTHER
+// OVERLAY KEEPS ITS LEAVE BUTTON (architect 2026-11-11, session 107: "overlays
+// that have a scrub shouldn't get a close ... the scrub overlays have a lot
+// of stuff going on and they don't need extra buttons like close. Settings
+// doesn't hurt to have a close button and certainly looks better, I think,
+// than having an empty row"; narrowing session 106's "places like score and
+// the player can lose their close button since the button used to enter that
+// mode is also now the close button, and the tooltip will say as much"): the
+// RENDER PLAYER and the SCORE VIEWER (both its roads) carry no Close, their
+// lit opener the way out; the SETTINGS PAGE's row is its one Close and THE
+// TRIM PRESETS LIST's ends on one (TrimPresetsButtonAct::Close); the project
+// picker, the value list and the BPM form keep their Cancel. Every
+// overlay's lit opener says its word too, as THAT KEY'S TOOLTIP under its
+// overlay (overlay_leave_word below), whether or not the row also carries
+// the button. ONE OWNER FOR BOTH WORDS AND THIS RULE, here, where the
+// tooltip's arm (app_state.h) and the word buttons' builder and glyph table
+// (paint_modal_dialog, modal_word_icon, paint_handler.cpp) both read them. The words are plain, no letter
 // underlined (architect 2026-10-30: the buttons are the dialogs' one road,
 // no keyboard standing under them), and the word buttons' layout reads
 // their count alone (modal_word_buttons), so a word changes no geometry.
@@ -9698,13 +9703,14 @@ inline constexpr const char* kModalCloseLabel  = "Close";
 // lift there being the overlay's leave act (is_overlay_opener):
 //   the RENDER PLAYER (PLAYER)            Close
 //   the PROJECT PICKER (OPEN PROJECT)     Cancel, its controls row's word
-//   the SETTINGS PAGE and its VALUE LIST  Close: the SETUP key closes the
-//     (SETUP)                             WHOLE panel from the list too,
-//                                         nothing applied (route_picker_key),
-//                                         where the list's own Cancel returns
-//                                         to the page — the page's word, not
-//                                         the list's
-//   the TRIM PRESETS LIST (PRESETS)       Close, the list asking nothing
+//   the SETTINGS PAGE and its VALUE LIST  Close, the page's row's word: the
+//     (SETUP)                             SETUP key closes the WHOLE panel
+//                                         from the list too, nothing applied
+//                                         (route_picker_key), where the
+//                                         list's own Cancel returns to the
+//                                         page — the page's word, not the
+//                                         list's
+//   the TRIM PRESETS LIST (PRESETS)       Close, its row's last word
 //   the BPM FORM (BPM)                    Cancel, its controls row's word
 //   the SCORE VIEWER (SCORE)              Close
 // The line editor the page opens is a modal, no overlay standing under it,
@@ -10179,7 +10185,7 @@ bool render_player_button_enabled(const AppState& a,
 // As's act) and with a highlight whose pair is not the active tab's trim,
 // GREYING only where the highlighted pair already is the tab's trim (the
 // no-op a tap leaves behind; his glass on 852a28d9, 2026-10-28 night); SAVE
-// AS always, while the list stands; DELETE with a highlight.
+// AS always, while the list stands; DELETE with a highlight; CLOSE always.
 // Defined beside the list's acts (input_key_dispatch.cpp); Save's and
 // Delete's bodies ask it too, for their roads that are not the painted face
 // (the Delete key's card).
@@ -15610,9 +15616,11 @@ inline bool redesign_button_enabled(const AppState& a,
     // trim presets list and the BPM form), which end at a pick, a row's open
     // or a load and also leave on THEIR OPENER KEY — Play Renders, Open
     // Project, Settings (the page's and the value list's both), Presets and
-    // BPM — and the two that ask a choice on their Cancel too (the project
-    // picker's and the BPM form's; the plain Closes left the rows, architect
-    // 2026-11-11, session 106, the opener's tooltip naming the leave act
+    // BPM — and every overlay without a scrub on its leave button too, the
+    // project picker's and the BPM form's Cancel, the settings page's and the
+    // trim presets list's Close (the render player, which has a scrub, leaving
+    // by its opener alone: the rule at kModalCancelLabel, architect
+    // 2026-11-11, session 107; the opener's tooltip naming the leave act
     // there, overlay_leave_word), the openers lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey but the
     // tooltip lamp (architect 2026-11-10, the arm below) — a lit one
@@ -19290,8 +19298,10 @@ inline RedesignTooltipText redesign_button_tooltip_forks(
 // IS THAT ACT'S WORD (overlay_leave_word: Close under the render player,
 // the settings page and its value list, the trim presets list and the score
 // viewer; Cancel under the project picker and the BPM form) in place of the
-// key's ordinary name — the rows of the four Close overlays carrying no
-// leave button since the same ruling, the key the way out. ITS SECOND LINE
+// key's ordinary name — whether or not the overlay's row also carries the
+// button (the render player's and the score viewer's carry none, the
+// settings page's and the trim presets list's a Close; the rule at
+// kModalCancelLabel, architect 2026-11-11, session 107). ITS SECOND LINE
 // IS UNTOUCHED, whatever the forks answer there (OPEN PROJECT's "Hold to
 // revert" under the picker, PRESETS' "Hold to reset the trim" under its
 // list, dropping where the reset would not act): the hold's act under the
