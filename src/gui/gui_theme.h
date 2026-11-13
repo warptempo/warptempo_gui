@@ -60,7 +60,7 @@ struct GuiThemeTones {
     uint32_t cue_outline;         // the chips' outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
-    uint32_t playhead_line;       // the playhead's canvas line (white + 0.483 toward the head)
+    uint32_t playhead_line;       // the playhead's canvas line (white half way to the head)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
@@ -108,8 +108,10 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // FFAD56 and the print on it 111111 × 93 / 181 AND THE RADIO KEYS' THREE
 // (architect 2026-11-11, session 107; theme_roles.h's head): a checked
 // radio key's face B595FC, Default's ScaleAwareness, its press 8D74C4
-// (× 42 / 54) and its inert face 5D4D81 (× 93 / 181). palette_file.h's
-// static_asserts pin every word. The pre-install palette's row too
+// (× 42 / 54) and its inert face 5D4D81 (× 93 / 181) AND THE PLAYHEAD'S
+// LINE 81E1EA, white half way to the head (architect 2026-11-12, session
+// 113; theme_roles.h's DERIVED block). palette_file.h's static_asserts pin
+// every word. The pre-install palette's row too
 // (render.cpp's construction state, never painted).
 inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x242424, // ground
@@ -150,7 +152,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
     0x03C3D5, // playhead_head
-    0x85E2EB, // playhead_line
+    0x81E1EA, // playhead_line
     0xFFFFFF, // scanner
 };
 

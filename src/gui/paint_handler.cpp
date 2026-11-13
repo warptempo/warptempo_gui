@@ -5386,8 +5386,8 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     //
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form at the resting cursor column whatever the selection is doing — a
-    // SOLID ONE-W OPAQUE LINE in the palette's `playhead_line` 85E2EB
-    // (architect 2026-11-04 night; render.h's playhead paragraph). It paints
+    // SOLID ONE-W OPAQUE LINE in the palette's `playhead_line` (Default
+    // 81E1EA, architect 2026-11-12; render.h's playhead paragraph). It paints
     // BEFORE paint_marker_stems, whose selection stem stands over it
     // (architect 2026-11-04; the stem the selection's since 2026-11-05),
     // and before the scanner.

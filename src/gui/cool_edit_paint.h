@@ -17,7 +17,7 @@
 // (materials.h's THE WELL) and the palette's, every one read from palette(). THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
 // 2026-11-01 — and `playhead_line` — the line's one static tone in the
-// canvas, 85E2EB since 2026-11-04 night —
+// canvas, Default's 81E1EA, white half way to the head (2026-11-12) —
 // palette_file.h's role table, as the
 // marker's chip is the palette's `cue` (a disabled one's `inactive_cue`)
 // in its `cue_outline` (2026-11-05).

@@ -299,7 +299,7 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
     t.playhead_head       = packed(range);
-    t.playhead_line       = packed(mix(white, range, 0.483));
+    t.playhead_line       = packed(mix(white, range, 0.5));
     t.scanner             = packed(white);
     return t;
 }

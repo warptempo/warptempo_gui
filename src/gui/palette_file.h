@@ -29,16 +29,15 @@
 // MEASURED PALETTE TO THE BYTE but the selection
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
 // SurfaceBackground, since 2026-11-07), the level fill, the lit-but-inert
-// key's pair and the radio keys' three (2026-11-11; all at the foot) — the
-// numbers
+// key's pair and the radio keys' three (2026-11-11) and the playhead's line
+// (2026-11-12; all at the foot) — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
-// 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) and
-// his own pick, the playhead
-// line's static tone, 2026-11-04 night: white 0.483 toward the head, every
-// other theme derived at the same ratio, ruling 4 of 2026-11-05 (the mix
-// gives his pick exactly; theme_roles.h's DERIVED block) — the static_asserts
+// 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) —
+// AND THE PLAYHEAD LINE'S STATIC TONE, white half way to the head on every
+// theme, the mean of Live's fade (81E1EA; architect 2026-11-12, session 113,
+// theme_roles.h's DERIVED block) — the static_asserts
 // at the foot are that proof in the build, every one of the forty
 // words with its literal (the press arc's four, 2026-11-05, among them —
 // the key press face, the list press pair and the lit press fill — the lamp
@@ -128,13 +127,14 @@
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
 //                            paragraph), the head's alone (RangeDefault)
-//   playhead_line    85E2EB  THE PLAYHEAD'S LINE IN THE CANVAS (architect
-//                            2026-11-04 night, mock n1, his pick of four
-//                            static tones after the measured cost of a
-//                            fading line): solid, one W, opaque, ONE STATIC
-//                            TONE — white 0.483 toward the head
-//                            (render_playhead's paragraph; ruling 4,
-//                            2026-11-05: the same ratio in every theme)
+//   playhead_line    81E1EA  THE PLAYHEAD'S LINE IN THE CANVAS (architect
+//                            2026-11-04 night, mock n1, a static tone after
+//                            the measured cost of a fading line): solid,
+//                            one W, opaque, ONE STATIC TONE — white half
+//                            way to the head, the mean of Live's fade, on
+//                            every theme (architect 2026-11-12, session
+//                            113; render_playhead's paragraph,
+//                            theme_roles.h's DERIVED block)
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems
@@ -199,8 +199,10 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // (architect 2026-11-11, session 107: a lit radio key wears the purple):
 // the face B595FC, Default's ScaleAwareness; its press 8D74C4, the purple
 // × 42 / 54; its inert face 5D4D81, the purple × 93 / 181 — the lit key's
-// two ratios on one code path (the DERIVED block). THE SELECTION PAIR'S
-// TEXT 070707 is Default's
+// two ratios on one code path (the DERIVED block). THE PLAYHEAD'S LINE
+// 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
+// to even (architect 2026-11-12, session 113; the DERIVED block).
+// THE SELECTION PAIR'S TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
 // ControlContrastFrame, until then — our mispairing). THE MAGNIFY CORE
@@ -250,6 +252,6 @@ static_assert(kDefault.cue             == 0xFFAD56);
 static_assert(kDefault.cue_outline     == 0x111111);
 static_assert(kDefault.inactive_cue    == 0x5D5D5D);
 static_assert(kDefault.playhead_head   == 0x03C3D5);
-static_assert(kDefault.playhead_line   == 0x85E2EB);
+static_assert(kDefault.playhead_line   == 0x81E1EA);
 static_assert(kDefault.scanner         == 0xFFFFFF);
 } // namespace gui_default_theme_proof

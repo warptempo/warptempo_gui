@@ -220,15 +220,15 @@
 //   are present in every shipped file and in Default.
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
 //   (b − a) per channel, rounded half to even and clamped):
-//     playhead line          85E2EB = FFFFFF + 0.483 · (head − FFFFFF)
-//                                     (ruling 4: Default keeps his pick, every
-//                                     other theme the same ratio, white toward
-//                                     the head — not the mean; the mix gives
-//                                     Default's pick exactly; architect
-//                                     2026-11-11, session 107: back to the
-//                                     half, the quarter of 2026-11-10
-//                                     superseded — "I would take the playhead
-//                                     back up to the half")
+//     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
+//                                     EXACTLY HALF WAY to the head on every
+//                                     theme (architect 2026-11-12, session
+//                                     113): Live's measured fade FFFFFF <->
+//                                     03C3D5 is linear in sRGB bytes, its true
+//                                     mean the half; a channel whose distance
+//                                     from 255 is odd lands on a .5, which
+//                                     rounds to the even byte like every mix
+//                                     here
 //     lit press fill         C68743 = THE ACCENT DARKENED BY THE PRESS RATIO:
 //                                     the accent (cue) · (mean(press face) /
 //                                     mean(key face)) per channel, the means
