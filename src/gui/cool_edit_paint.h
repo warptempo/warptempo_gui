@@ -17,10 +17,10 @@
 // (materials.h's THE WELL) and the palette's, every one read from palette(). THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
 // 2026-11-01 — and `playhead_line` — the line's one static tone in the
-// canvas, Default's 81E1EA, white half way to the head (2026-11-12) —
+// canvas, 85E2EB since 2026-11-04 night —
 // palette_file.h's role table, as the
-// marker's chip is the palette's `cue` in its `cue_outline` (2026-11-05), a
-// disabled one's `inactive_cue` in its `inactive_cue_outline` (2026-11-12).
+// marker's chip is the palette's `cue` (a disabled one's `inactive_cue`)
+// in its `cue_outline` (2026-11-05).
 // THE TRIANGLES ARE ALIASED AT 1:1 (architect 2026-10-26, "agree": "at this
 // size the staircase is the truthful drawing and the antialiasing only
 // blurs it"): the cue's chip and the playhead head's rows, their cells one
@@ -110,9 +110,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // (cue_triangle_half_w_px,
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads)
 // over [top − t·u, top + (rows + s)·u). The colors are resolve_flag_face's
-// for a cue (render.cpp, the one table: the fill `cue` in the `cue_outline`,
-// a disabled chip's `inactive_cue` in the `inactive_cue_outline`) and the
-// `playhead_head` in the `cue_outline`
+// for a cue (render.cpp, the one table: the fill `cue`, a disabled chip's
+// `inactive_cue`, in the `cue_outline`) and the `playhead_head` in the `cue_outline`
 // for the playhead's head (the same chip, mock k1, 2026-11-04). TWO
 // ROADS, ONE
 // DRAWING (CueTrianglePass below): the stamp writes the cells' words

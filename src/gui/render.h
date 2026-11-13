@@ -235,7 +235,7 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
@@ -247,14 +247,12 @@ struct TrimRange {
 //                 selected marker's stem and the two rings — warp and
 //                 phase reset alike (the strike is the invalid mark, THE
 //                 MARKER LANE below); the disabled cue's `inactive_cue`,
-//                 its chip's fill and the inert label, and its
-//                 `inactive_cue_outline`, the disabled chip's outline
-//                 (architect 2026-11-12, session 113); the playhead's two
+//                 its chip's fill and the inert label; the playhead's two
 //                 roles,
 //                 `playhead_head` — its triangle in the ruler — and
-//                 `playhead_line` — its static light cyan 81E1EA in the
-//                 canvas, white half way to the head (architect 2026-11-12,
-//                 session 113; THE PLAYHEAD, below); and the
+//                 `playhead_line` — its static light cyan 85E2EB in the
+//                 canvas, the mid tone of Live's fade (architect 2026-11-04
+//                 night; THE PLAYHEAD, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
@@ -397,7 +395,6 @@ struct GuiPalette {
     GuiColor cue;
     GuiColor cue_outline;
     GuiColor inactive_cue;
-    GuiColor inactive_cue_outline;
     GuiColor playhead_head;
     GuiColor playhead_line;
     GuiColor scanner;
@@ -594,7 +591,7 @@ void install_true_colors(bool on);
 // cue_triangle_reach_right_px); IN THE
 // CANVAS A SOLID LINE, ONE W, on its column (architect 2026-11-04:
 // Live's playhead line, measured; canvas_line_rect, the scanner's form) in
-// THE PALETTE'S `playhead_line` (81E1EA), down the area's whole height,
+// THE PALETTE'S `playhead_line` (85E2EB), down the area's whole height,
 // the stereo divider's row included (architect 2026-11-02) — ONE STATIC
 // TONE, opaque, the same over the ink and over the canvas (architect
 // 2026-11-04 night, mock n1, after the measured cost of a fading line; the
@@ -622,9 +619,8 @@ void install_true_colors(bool on);
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
 // history.)
 // THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head, Live's
-// cyan 03C3D5, and `playhead_line` its line, 81E1EA, white half way to the
-// head (architect 2026-11-12, session 113: the mean of Live's fade, the
-// playhead's two tones); neither is
+// cyan 03C3D5, and `playhead_line` its line, 85E2EB (architect 2026-11-04
+// night: the mid tone of Live's fade, the playhead's two tones); neither is
 // lent to a marker (the selection is the
 // chip's, THE MARKER LANE below). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
@@ -775,19 +771,14 @@ void install_true_colors(bool on);
 //             2026-11-02; the inert look's reason 2026-10-10 ~12:20, "the
 //             arrow needs to be legible for me, but the text doesn't …
 //             since it's disabled, it's inert"): the `inactive_cue` 5D5D5D
-//             fill in the `inactive_cue_outline` (architect 2026-11-12,
-//             session 113: a theme file's optional
-//             ControlContrastFrameDisabled, else ControlContrastFrame —
-//             Default's 111111, the enabled chip's), the label in the
-//             `inactive_cue`,
+//             fill in the `cue_outline`, the label in the `inactive_cue`,
 //             the playhead on it or not; the same inert label on a tie
 //             follower's cells (one look for inert cue text). A disabled
 //             marker is selectable (architect 2026-10-07 ~15:10), and
 //             SELECTED IT STANDS THE SELECTED ROW'S STEM (architect
 //             2026-11-11, session 106: "disabled markers also get the dark
-//             stem, same as enabled ones"), the stem the `cue_outline`
-//             whatever the chip's outline, its chip (the disabled outline
-//             too) and label unchanged — so a disable toggle of a selected
+//             stem, same as enabled ones"; "leave the outline as is"), its
+//             chip and label unchanged — so a disable toggle of a selected
 //             marker flips the chip and the label and leaves the stem.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE: the
 // press look of 2026-11-05 is the keys' and the lists' rows' alone
@@ -3670,13 +3661,12 @@ struct GuiPlateColumns {
 // pick n1 of four static tones, after the measured cost of a fading line —
 // ~46 % app / ~53 % SurfaceFlinger at 90 presents a second, the present
 // itself the cost: "seems like it's unavoidable"): a solid one-W OPAQUE line
-// in the palette's `playhead_line`, sRGB 81E1EA — THE MEAN OF LIVE'S FADE
-// between white and the head's cyan, white half way to the head on every
-// theme (architect 2026-11-12, session 113: the four lossless one-px
-// samples of Live's line, 4AD3E0, 59D7E3, 85E2EA and DBF6F9, lie on the
-// byte line from FFFFFF toward 03C3D5, so the triangle wave's mean is the
-// half), a theme file's own `PlayheadLine` where it sets one, NEVER DARKER
-// THAN THE HEAD by his rule (theme_roles.h's DERIVED block) — its own pixel
+// in the palette's `playhead_line`, sRGB 85E2EB — the mid tone of Live's
+// fade between white and the head's cyan, the triangle wave's mean (the
+// four lossless one-px samples of Live's line, 4AD3E0, 59D7E3, 85E2EA and
+// DBF6F9, lie on the byte line from FFFFFF toward 03C3D5); every other
+// theme its own head at the same ratio, white 0.483 toward it (ruling 4,
+// 2026-11-05; theme_roles.h's DERIVED block) — its own pixel
 // the same over the ink and over the canvas, stopped or playing; the
 // ruler's head keeps its own `playhead_head` 03C3D5, the scanner its
 // FFFFFF. NOTHING IS DAMAGED AT REST: the line moves only with the cursor,
@@ -4379,8 +4369,8 @@ struct HistoryDiffFlag {
 // every item ONE CUE at its one frame — the live lane's chip and outline, its
 // label in the label face — in THE HISTORY'S STYLES (HistoryDiffFlag's
 // paragraph above; resolve_flag_face's Removed / Added / Changed rows): a
-// REMOVED item the disabled style, the `inactive_cue` chip in the
-// `inactive_cue_outline` and the inactive label, its one segment STRUCK; an ADDED item the enabled style, the `cue`
+// REMOVED item the disabled style, the `inactive_cue` chip and the inactive
+// label, its one segment STRUCK; an ADDED item the enabled style, the `cue`
 // chip and the text tone, its one segment plain; a CHANGED item the enabled
 // style, TWO SEGMENTS in the text tone — the older side's label struck, then
 // the newer side's plain, the segment gap between their boxes (the live

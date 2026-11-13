@@ -34,17 +34,17 @@
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
-// 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) —
-// AND THE PLAYHEAD LINE'S STATIC TONE, white half way to the head on every
-// theme, the mean of Live's fade (81E1EA; architect 2026-11-12, session 113,
-// theme_roles.h's DERIVED block), and THE DISABLED CHIP'S OUTLINE, the
-// enabled chip's 111111 where no file sets it (the same session) — the
-// static_asserts at the foot are that proof in the build, every one of the
-// forty-one words with its literal (the press arc's four, 2026-11-05, among
-// them — the key press face, the list press pair and the lit press fill —
-// the lamp arc's clip lamp the same night, the six of 2026-11-11: the level
+// 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) and
+// his own pick, the playhead
+// line's static tone, 2026-11-04 night: white 0.483 toward the head, every
+// other theme derived at the same ratio, ruling 4 of 2026-11-05 (the mix
+// gives his pick exactly; theme_roles.h's DERIVED block) — the static_asserts
+// at the foot are that proof in the build, every one of the forty
+// words with its literal (the press arc's four, 2026-11-05, among them —
+// the key press face, the list press pair and the lit press fill — the lamp
+// arc's clip lamp the same night and the six of 2026-11-11: the level
 // fill, the lit-but-inert key's face and its glyph, and the radio keys'
-// three faces, and the disabled chip's outline of 2026-11-12).
+// three faces).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -60,7 +60,7 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // flag editor's field and selection band, the chrome's selected pair). So
-// the palette's program roles are exactly the TWELVE below (TWO ROLES MAY
+// the palette's program roles are exactly the ELEVEN below (TWO ROLES MAY
 // SHARE A NUMBER — the ink and `center` share Default's 191919: a role is
 // what it paints, not its value). Each role's Default word and its Live
 // source (the derivation, theme_roles.h's head):
@@ -102,10 +102,7 @@
 //                            but (the chrome's `radio_lit_fill`, session
 //                            107)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
-//                            one-W outline round every ENABLED chip (a
-//                            disabled one's `inactive_cue_outline`,
-//                            below) and round the ruler's head, THE
-//                            SELECTION
+//                            one-W outline round every chip, THE SELECTION
 //                            STEM down the canvas (every selected marker,
 //                            architect 2026-11-05; enabled or disabled,
 //                            2026-11-11) and the phase-reset
@@ -116,10 +113,9 @@
 //                            2026-11-05, "disabled marker gets dim label"):
 //                            LIVE'S INACTIVE WARP MARKER, measured on its own
 //                            303030 lane — ONE ROLE, no blend: a disabled
-//                            chip's fill (in the `inactive_cue_outline`,
-//                            the stem the selection's `cue_outline` as on
-//                            an enabled chip, resolve_flag_face) — the `h`
-//                            view's removed
+//                            chip's fill (in the `cue_outline`, the stem
+//                            the selection's as on an enabled chip,
+//                            resolve_flag_face) — the `h` view's removed
 //                            items' too (2026-11-11) — and every INERT
 //                            LABEL — a disabled cue's segments, a tie
 //                            follower's cells and a removed history
@@ -129,30 +125,16 @@
 //                            (architect 2026-10-10): Live's grey shows the
 //                            marker exists and reads as off, the label with
 //                            it (BackgroundClip)
-//   inactive_cue_outline
-//                    111111  THE DISABLED CHIP'S OUTLINE (architect
-//                            2026-11-12, session 113): the one-W outline
-//                            round a disabled chip, the `h` view's removed
-//                            items' too (resolve_flag_face) — a theme
-//                            file's optional key ControlContrastFrameDisabled
-//                            (ours, not a Live role), else
-//                            ControlContrastFrame, the enabled chip's own,
-//                            so a theme leaving the key out keeps one
-//                            outline for both (theme_roles.h's DERIVED
-//                            block). The selection stem of a selected
-//                            disabled chip stays the `cue_outline`
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
 //                            paragraph), the head's alone (RangeDefault)
-//   playhead_line    81E1EA  THE PLAYHEAD'S LINE IN THE CANVAS (architect
-//                            2026-11-04 night, mock n1, a static tone after
-//                            the measured cost of a fading line): solid,
-//                            one W, opaque, ONE STATIC TONE — white half
-//                            way to the head, the mean of Live's fade, on
-//                            every theme, or a theme file's optional key
-//                            PlayheadLine (architect 2026-11-12, session
-//                            113; render_playhead's paragraph,
-//                            theme_roles.h's DERIVED block)
+//   playhead_line    85E2EB  THE PLAYHEAD'S LINE IN THE CANVAS (architect
+//                            2026-11-04 night, mock n1, his pick of four
+//                            static tones after the measured cost of a
+//                            fading line): solid, one W, opaque, ONE STATIC
+//                            TONE — white 0.483 toward the head
+//                            (render_playhead's paragraph; ruling 4,
+//                            2026-11-05: the same ratio in every theme)
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems
@@ -189,7 +171,6 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::cue,              &GuiThemeTones::cue},
     {&GuiPalette::cue_outline,      &GuiThemeTones::cue_outline},
     {&GuiPalette::inactive_cue,     &GuiThemeTones::inactive_cue},
-    {&GuiPalette::inactive_cue_outline, &GuiThemeTones::inactive_cue_outline},
     {&GuiPalette::playhead_head,    &GuiThemeTones::playhead_head},
     {&GuiPalette::playhead_line,    &GuiThemeTones::playhead_line},
     {&GuiPalette::scanner,          &GuiThemeTones::scanner},
@@ -198,7 +179,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the forty-one words with its literal, so
+// 2026-11-01..05 — every one of the forty words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
@@ -218,12 +199,8 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // (architect 2026-11-11, session 107: a lit radio key wears the purple):
 // the face B595FC, Default's ScaleAwareness; its press 8D74C4, the purple
 // × 42 / 54; its inert face 5D4D81, the purple × 93 / 181 — the lit key's
-// two ratios on one code path (the DERIVED block). THE PLAYHEAD'S LINE
-// 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
-// to even, and THE DISABLED CHIP'S OUTLINE 111111 Default's
-// ControlContrastFrame — the two optional keys' fallbacks, Default's file
-// setting neither (architect 2026-11-12, session 113; the DERIVED block).
-// THE SELECTION PAIR'S TEXT 070707 is Default's
+// two ratios on one code path (the DERIVED block). THE SELECTION PAIR'S
+// TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
 // ControlContrastFrame, until then — our mispairing). THE MAGNIFY CORE
@@ -263,7 +240,7 @@ static_assert(kDefault.card_face       == 0xE76942);
 static_assert(kDefault.card_ink        == 0x2A2A2A);
 static_assert(kDefault.clip_lamp       == 0xFF0A0A);
 static_assert(kDefault.level_fill      == 0x007383);
-// THE PALETTE (the head's twelve).
+// THE PALETTE (the head's eleven).
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);
 static_assert(kDefault.waveform_core   == 0x363636);
@@ -272,8 +249,7 @@ static_assert(kDefault.center          == 0x191919);
 static_assert(kDefault.cue             == 0xFFAD56);
 static_assert(kDefault.cue_outline     == 0x111111);
 static_assert(kDefault.inactive_cue    == 0x5D5D5D);
-static_assert(kDefault.inactive_cue_outline == 0x111111);
 static_assert(kDefault.playhead_head   == 0x03C3D5);
-static_assert(kDefault.playhead_line   == 0x81E1EA);
+static_assert(kDefault.playhead_line   == 0x85E2EB);
 static_assert(kDefault.scanner         == 0xFFFFFF);
 } // namespace gui_default_theme_proof

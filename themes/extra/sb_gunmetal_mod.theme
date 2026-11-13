@@ -1,33 +1,14 @@
-# SB Gunmetal.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
-# SB_GUNMETAL_MOD: the pack's SB Gunmetal with four Live roles changed by --set
-# and our two optional keys appended by hand (architect 2026-11-07..12):
-#   WaveformColor 090A0C -> 151619: THE STEM-OVER-INK RULE, the ink lit above
-#     the selection stem (ControlContrastFrame 0B0D11) by SB Bronze's step,
-#     CIELAB L* 3.61, the hue kept by scaling linear RGB (session 98).
-#   ControlForeground BEB3A5 -> B3B4BD, TextDisabled 7E7469 -> 737581: Live's
-#     Cool Medium text pair in place of the pack's, which is Live's Warm
-#     Medium pair (2026-11-12, session 113).
-#   RangeDefault DFE2CF -> 535763: the playhead's head = the theme's own
-#     BackgroundClip; its fill thereby equals the disabled chips', the
-#     outlines and the lane telling them apart (2026-11-12, session 113, R2).
-#   PlayheadLine=7E818A: the head 535763 moved 25 % toward white
-#     (2026-11-12, session 113).
-#   ControlContrastFrameDisabled=1E2026: 75 % of the way from
-#     ControlContrastFrame 0B0D11 toward the marker lane's ground Desktop
-#     24262D, 29.75 / 31.75 / 38 rounded half to even (2026-11-12, his pick
-#     test7 over test6's 50 %).
-# PlayheadLine and ControlContrastFrameDisabled are OUR OPTIONAL KEYS, not
-# Live roles (src/gui/theme_roles.h's THE FORMAT): the converter writes Live
-# roles only, so the last two lines were appended by hand after its output.
+# SB Gunmetal_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# Modified by hand from the pack's SB Gunmetal: ControlForeground BEB3A5 -> BAB4AD, RangeDefault DFE2CF -> 5D6170, WaveformColor 090A0C -> 151619 (architect 2026-11-07..11)
 SurfaceArea=1F2128
 Desktop=24262D
 SurfaceBackground=2E313A
 ControlContrastFrame=0B0D11
-ControlForeground=B3B4BD
-TextDisabled=737581
+ControlForeground=BAB4AD
+TextDisabled=7E7469
 BackgroundClip=535763
 ViewCheckControlEnabledOn=71A2B6
-RangeDefault=535763
+RangeDefault=5D6170
 StandbySelectionBackground=637E86
 StandbySelectionForeground=040507
 SelectionBackground=B0DDEB
@@ -43,5 +24,3 @@ ViewCheckControlDisabledOff=535763
 ScrollbarInnerHandle=5D6170
 DetailViewRulerMarkings=808699
 StandardVuMeter/Maximum=FF0A0A
-PlayheadLine=7E818A
-ControlContrastFrameDisabled=1E2026
