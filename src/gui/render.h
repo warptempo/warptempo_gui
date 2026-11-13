@@ -3428,7 +3428,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // the core over it (row 6) — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
-// spanning the window being the whole inside-the-window signal now. Its
+// spanning the window being the inside-the-window signal at rest (the
+// sweep highlight's blend over the plate while a TRIM sweep's pointer is
+// down the one exception, paint_sweep_highlight, 2026-11-12). Its
 // alpha is the coverage: opaque inside the bars, fractional on the grown
 // fringe, transparent in the gaps (2026-10-30).
 // THE GAPS SHOW THE GROUND render_canvas lays under the plate: the plate
@@ -3887,7 +3889,9 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
                          const TrimBoundColumn& end, GuiRect row);
 
 // (render_trim_stems IS DELETED, architect 2026-08-01: the bar is the trim
-// window's whole display. The record is git history.)
+// window's whole resting display, the sweep's transient canvas highlight
+// the one exception, paint_sweep_highlight, 2026-11-12. The record is git
+// history.)
 
 // THE TRIM BAR'S HIT STASH (architect 2026-09-24, strictly as-painted): what
 // render_trim_flags last PAINTED as the view bar's span — its two end zones

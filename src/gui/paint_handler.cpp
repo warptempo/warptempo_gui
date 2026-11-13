@@ -5125,7 +5125,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // band it painted in as the stash's `lane` — the y-gate both trim hits
     // read — so the painted band and the clickable band are one value.
     // NO WAVEFORM STEMS (architect 2026-08-01): the view bar is the trim
-    // window's WHOLE display.
+    // window's WHOLE RESTING display — the sweep's transient canvas
+    // highlight the one exception (paint_sweep_highlight, 2026-11-12).
     // NO HELD FACE (2026-10-09): the view bar draws no caps, so a grab shows
     // nothing pressed (the held scroll arrow of 2026-10-03 went with them).
     // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "no dots on the

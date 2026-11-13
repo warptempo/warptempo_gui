@@ -915,9 +915,12 @@ private:
 
     // (The out-of-trim DIM and its two private helpers — compute_displayed_trim
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
-    // recolor model, architect 2026-07-26: TRIM recolors no plate pixel, the
-    // trim bar spanning the window being the whole inside-the-window signal.
-    // Neither helper had any other consumer, so both went with the pass.)
+    // recolor model, architect 2026-07-26: at rest TRIM recolors no plate
+    // pixel, the trim bar spanning the window being the inside-the-window
+    // signal; while a TRIM sweep's pointer is down the sweep highlight
+    // blends its span toward white over the plate (paint_sweep_highlight,
+    // architect 2026-11-12). Neither helper had any other consumer, so both
+    // went with the pass.)
 
     // The phase-reset overlay band's clipped screen-x span for this frame, or
     // valid == false when no band shows (wrong view, no eligible focused reset,
