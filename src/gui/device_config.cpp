@@ -23,7 +23,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (NINETEEN keys since 2026-11-11, the
+// REQUIRED SET, every one of them (TWENTY keys since 2026-11-12, the
+// sweep highlight's alpha `sweep_highlight` appended at the end — a tuning
+// key, the canvas highlight's blend toward white while a sweep's pointer is
+// down; NINETEEN from 2026-11-11, the
 // project voice's level `audio_level` retired with the AUDIO case — the
 // voice at 0 dB (architect, session 104); TWENTY from 2026-11-07, session 91,
 // the tooltip's gap `tooltip_gap` retired, settled at 1 W, render.h's
@@ -113,7 +116,8 @@ namespace {
 // 2026-10-29 evening, and the
 // keyboard's cap size, `osk_font_px`, after them since that night, and the
 // two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night, and the
-// tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07 (none
+// tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07, and the
+// sweep highlight's alpha, `sweep_highlight`, after it since 2026-11-12 (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
@@ -148,6 +152,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "osk_font_px",
     "lamp_hold_ms",
     "tooltip_delay_ms",
+    "sweep_highlight",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -259,6 +264,14 @@ std::string format_tooltip_delay_ms(int ms) {
     return std::string(buf);
 }
 
+// The sweep highlight's alpha's canonical spelling (2026-11-12): `%d`, the
+// noise integers' road.
+std::string format_sweep_highlight(int percent) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", percent);
+    return std::string(buf);
+}
+
 // The plate's grow's canonical spelling (2026-10-31; the grammar's words at
 // parse_waveform_grow's head, device_config.h): the quarters as the shortest
 // exact decimal — the integer part, then the fraction in hundredths with
@@ -361,6 +374,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The tooltip's delay's canonical integer
             // (format_tooltip_delay_ms).
             s += format_tooltip_delay_ms(cfg.tooltip_delay_ms);
+        } else if (k == "sweep_highlight") {
+            // The sweep highlight's alpha's canonical integer
+            // (format_sweep_highlight).
+            s += format_sweep_highlight(cfg.sweep_highlight);
         }
         s += '\n';
     }
@@ -597,6 +614,17 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kTooltipDelayGrammarReason);
             }
             out.tooltip_delay_ms = *ms;
+            return {};
+        }
+        // THE SWEEP HIGHLIGHT'S ALPHA (2026-11-12, a tuning key): under its
+        // one grammar owner (parse_sweep_highlight, device_config.h),
+        // required like every key; any other spelling the launch's hard fail.
+        if (key == "sweep_highlight") {
+            const std::optional<int> pct = parse_sweep_highlight(value);
+            if (!pct) {
+                return bad_value(ln, key, value, kSweepHighlightGrammarReason);
+            }
+            out.sweep_highlight = *pct;
             return {};
         }
         return warptempo_parse::prefix_line_error(

@@ -55,7 +55,7 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the twenty-two,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the twenty-three,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -86,7 +86,7 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// SEVENTEEN editable ones the per-device config carries — gui_scale and
+// EIGHTEEN editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only (the color key waveform, editable
@@ -104,7 +104,8 @@ struct GuiInputHandler;
 // lamp_hold_ms, and since 2026-11-06 (architect) the tuning key key_width,
 // the key case's face width, and since 2026-11-07 (architect) the tuning
 // key run_gap, the ground between two runs, and the same day the tooltip's
-// delay's tuning key tooltip_delay_ms (the
+// delay's tuning key tooltip_delay_ms, and since 2026-11-12 (architect) the
+// sweep highlight's alpha's tuning key sweep_highlight (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, then retired with the LED, 2026-11-01; the
 // tooltip's gap's tuning key tooltip_gap, editable for session 90 of
@@ -135,7 +136,8 @@ struct GuiInputHandler;
 // 1. The device keys other than the scale — projects_repo, projects_path,
 //    true_colors, theme, waveform_grow, noise, noise_attenuation_level,
 //    noise_crossfade_s, key_height, key_width, run_gap, osk_key_w,
-//    osk_key_h, osk_font_px, lamp_hold_ms and tooltip_delay_ms — in ONE body,
+//    osk_key_h, osk_font_px, lamp_hold_ms, tooltip_delay_ms and
+//    sweep_highlight — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
 //    owner in device_config.h
@@ -168,7 +170,10 @@ struct GuiInputHandler;
 //    lamps' hold stored and persisted alone, no live act and no card (the
 //    tick reads the live struct at its next refresh, refresh_logo_lamps);
 //    the tooltip's delay the same (the wait's writer and the tooltip's clock
-//    read the live struct, note_tooltip_hover / tick_tooltip).
+//    read the live struct, note_tooltip_hover / tick_tooltip); the sweep
+//    highlight's alpha the same (the painter reads the live struct at every
+//    list build, paint_sweep_highlight; no sweep stands under the Settings
+//    page, so the commit owes no damage).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -226,7 +231,7 @@ struct GuiInputHandler;
 // levels' lists left with the band's two sliders and their decimal grammar,
 // kSettingsValueListKeys below, and their rows that night.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE TWENTY-TWO (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE TWENTY-THREE (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
@@ -243,13 +248,14 @@ struct GuiInputHandler;
 // after `key_width` as the config writes it, and the tooltip's delay
 // `tooltip_delay_ms` the same day, at the device keys' tail; the tooltip's
 // gap `tooltip_gap` after it for session 90 that day, gone in session 91,
-// settled):
+// settled; the sweep highlight's alpha `sweep_highlight` 2026-11-12, at the
+// device keys' tail):
 // the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's seventeen editable keys in that file's
+// CONFIG's eighteen editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor, nor has the level, below). The other keys this editor
 // commits (`scale`, `bpm`,
@@ -279,7 +285,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "gui_scale", "projects_repo", "projects_path", "true_colors", "theme",
     "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
     "key_height", "key_width", "run_gap", "osk_key_w", "osk_key_h",
-    "osk_font_px", "lamp_hold_ms", "tooltip_delay_ms",
+    "osk_font_px", "lamp_hold_ms", "tooltip_delay_ms", "sweep_highlight",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two groups split the table here, and the asserts pin
@@ -353,7 +359,8 @@ static_assert(settings_page_piece_keys_pinned());
 // keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its
 // `osk_font_px`, 37; nor the noise's attenuation, a decimal, whose row
 // opens the line editor; nor the lamps' hold `lamp_hold_ms`, 981 values;
-// nor the tooltip's delay `tooltip_delay_ms`, 1001.)
+// nor the tooltip's delay `tooltip_delay_ms`, 1001; nor the sweep
+// highlight's alpha `sweep_highlight`, 101.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
 };
@@ -511,8 +518,9 @@ struct GuiSettingsEditor {
     // `osk_key_h=` and `osk_font_px=` (2026-10-29, the line's door alone,
     // having no value list), `lamp_hold_ms=` (2026-11-05 night, the
     // line's door alone), `key_width=` (2026-11-06, the line's door
-    // alone), `run_gap=` (2026-11-07, the line's door alone) and
-    // `tooltip_delay_ms=` (2026-11-07, the line's door alone) — ONE BODY,
+    // alone), `run_gap=` (2026-11-07, the line's door alone),
+    // `tooltip_delay_ms=` (2026-11-07, the line's door alone) and
+    // `sweep_highlight=` (2026-11-12, the line's door alone) — ONE BODY,
     // TWO DOORS
     // (architect 2026-10-25, 2026-10-28 night for the value lists' keys): the
     // typed line's commit (commit_device_setting, below, the editor's door)

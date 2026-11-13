@@ -1887,9 +1887,11 @@ struct GuiInputHandler {
     void arm_selection_sweep_at(int anchor_col, int x, int y);
 
     // THE ADD SEL SWEEP'S PER-MOTION BODY (architect 2026-11-10, session
-    // 101): the membership recomputed at the pen's column `pen_col` (clamped
-    // into [0, w) by the caller) through the Selection mutator, and only
-    // when the membership or the focus moved. The rule is at the definition
+    // 101): the pen's column stored first (RegionDragState::pen_col, the
+    // sweep highlight's moving end, architect 2026-11-12) with the canvas
+    // damage its move owes, then the membership recomputed at `pen_col`
+    // (clamped into [0, w) by the caller) through the Selection mutator, and
+    // only when the membership or the focus moved. The rule is at the definition
     // (input_pointer.cpp). ONE CALLER: apply_region_drag_motion past the
     // shared gate on the `select` former.
     void apply_selection_sweep_to_column(int pen_col);
@@ -1906,14 +1908,18 @@ struct GuiInputHandler {
     // carry of 2026-07-30); on the ADD SEL former (RegionDragState::select,
     // 2026-11-10) the selection's recompute at that column in the trim
     // write's place (apply_selection_sweep_to_column). Caller guards active. The write's
-    // own repaint is the trim bar's, mid-gesture, so the bar — the sweep's
-    // picture (RegionDragState, app_state.h) — tracks the stroke live. (No
+    // own repaint is the waveform area's, mid-gesture, so the bar and the
+    // canvas's sweep highlight — the sweep's picture (RegionDragState,
+    // app_state.h; architect 2026-11-12) — track the stroke live. (No
     // sweep runs in the `h` view since 2026-11-07, so no carve-out stands.)
     void apply_region_drag_motion(int mouse_x, int mouse_y);
 
     // THE SWEEP'S ONE END OWNER — every end path calls it (clean release,
     // button lost in on_motion, the touch hook's end, and the force-end
-    // finalizer), so the disarm and the commit cannot fork. A sweep that WROTE
+    // finalizer), so the disarm and the commit cannot fork. FIRST, either
+    // former, the standing sweep highlight's rect is damaged before the
+    // record resets (sweep_highlight_rect; architect 2026-11-12: the lift
+    // takes it away at once). A sweep that WROTE
     // a bound runs the shared trim commit tail (commit_trim_mutation: the
     // crossed/coincident reset, the repaint, the target-render trigger; no
     // playhead write) — AT THE END ONLY. A sweep that wrote nothing — motionless or refused by

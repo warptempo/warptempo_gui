@@ -378,9 +378,13 @@ void GuiInputHandler::handle_trim_clear_both() {
 // one entry is the TRIM arm lamp's touch sweep on the waveform (architect
 // 2026-11-07, session 87), which writes here per motion event, so a stroke
 // sets the trim
-// in one gesture, the trim bar being its live picture (architect 2026-10-03,
-// "the trim bar is enough": the bar is drawn at the view's scale, and this
-// write's own repaint covers it on every accepted event). THE SET-FROM-REGION
+// in one gesture, the trim bar and the canvas's sweep highlight being its
+// live picture (the bar drawn at the view's scale; the highlight on the
+// bar's span columns, architect 2026-11-12, sweep_highlight_rect, raised by
+// the first accepted write here): this write's own repaint,
+// invalidate_waveform_area — the rows from the viewport's lanes through the
+// canvas's foot, the window's whole width — covers the bar and the
+// highlight's old and new columns on every accepted event. THE SET-FROM-REGION
 // ACT was the old two-step's commit half — sweep a free span, then commit it —
 // and the step it named is gone. The maximizer is unchanged and is the
 // recovery route, trim having no undo.
@@ -467,7 +471,8 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
     // is idempotent.
     selection.clear_selection();
     // THE PLAYHEAD DOES NOT MOVE (the rule at this file's head) and nothing
-    // commits mid-gesture: the repaint is this event's whole tail, and the
+    // commits mid-gesture: the repaint is this event's whole tail (the bar
+    // and the sweep highlight on the canvas both inside it), and the
     // release runs the shared commit tail (the drag arms' own arrangement,
     // update_trim_drag below).
     viewport.invalidate_waveform_area();

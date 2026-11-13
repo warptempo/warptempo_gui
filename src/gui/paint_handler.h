@@ -1062,8 +1062,8 @@ private:
     // reason: it publishes geometry the pointer path reads.)
     // THE CANVAS PASSES PAINT THROUGH THE CANVAS SINK (2026-10-13,
     // canvas_sink.h): the plate, the ring, the stems and their runs, the
-    // cursor, the scanner and the anchor below — into the frame's draw list
-    // (build_canvas_list).
+    // cursor, the scanner, the anchor and the sweep highlight below — into
+    // the frame's draw list (build_canvas_list).
     void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
     // The overlay band's RING — the phase-reset overlay's whole visual, four
     // solid one-W lines in the `cue_outline` (architect 2026-11-04), its
@@ -1126,6 +1126,11 @@ private:
     // see the definition for the ruling.
     void paint_scanner(GuiCanvasSink& sink, const GuiRect& area);
     void paint_strip_drag_anchor(GuiCanvasSink& sink, const GuiRect& area);
+    // THE SWEEP HIGHLIGHT (architect 2026-11-12) — the canvas list's LAST
+    // record while a TRIM or ADD SEL sweep's pointer is down: one tint
+    // blending the swept span toward white over everything the list drew
+    // there. The rule at the definition.
+    void paint_sweep_highlight(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): every modal's controls on the modal family's
     // controls row, and a prompt's question or a dialog editor's line in the

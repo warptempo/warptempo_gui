@@ -37,6 +37,20 @@ void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
     }
 }
 
+// THE TINT'S RECORD (architect 2026-11-12, the sweep highlight): the word
+// the rects' own for the color, the alpha the whole percent the list
+// shader divides by 100 (kListFragmentShader's tint arm), at most 100 by
+// its one producer's grammar (parse_sweep_highlight, device_config.h).
+void GuiCanvasSink::tint(const GuiRect& r, GuiColor toward, int percent) {
+    if (r.w <= 0 || r.h <= 0 || percent <= 0) return;
+    GuiCanvasPrimitive p;
+    p.kind  = GuiCanvasKind::Tint;
+    p.r     = r;
+    p.word  = argb32_opaque_word(display_color(toward));
+    p.word2 = static_cast<uint32_t>(percent);
+    list_.prims.push_back(p);
+}
+
 // THE PLATE'S RECORDS: one per STORED band (GuiPlateColumns::Band: the
 // bands whose bounds are whole; the plate is transparent elsewhere), each
 // placed at the band's own columns and rows off the area's origin — at the

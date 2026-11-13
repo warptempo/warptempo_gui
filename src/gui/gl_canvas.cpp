@@ -24,10 +24,12 @@
 // key: the plate's bounds texture is re-sent only when its key moved
 // (upload_list, 2026-10-14). Two additions: the score viewer's page drawn by
 // the GPU (2026-10-27, the page program and its textures; the design record's
-// §3.13), and THE WAVEFORM'S ANTIALIASING (architect 2026-10-30): the plate's
+// §3.13), THE WAVEFORM'S ANTIALIASING (architect 2026-10-30): the plate's
 // fragment rasterizes the column tips at exact coverage and blends
-// source-over, the one blend the canvas does (kListFragmentShader's head;
-// the rule at render_waveform_columns' head, render.h).
+// source-over (kListFragmentShader's head; the rule at
+// render_waveform_columns' head, render.h), and THE TINT (architect
+// 2026-11-12, the sweep highlight), the canvas's second blend, a rect
+// blended source-over toward its word under the same blend function.
 
 namespace {
 
@@ -84,7 +86,14 @@ constexpr const char* kCanvasFragmentShader =
 // pixel — the column int(gl_FragCoord.x), the row H − 1 − int(gl_FragCoord.y)
 // (u_height the surface's height, H) — every comparison in highp int. A pixel
 // outside the instance's rect is discarded (the quad's float edges never
-// decide coverage); a RECT (kind 0) writes its word; THE PLATE (kind 1) is
+// decide coverage); a RECT (kind 0) writes its word; THE TINT (kind 2,
+// architect 2026-11-12, the sweep highlight) writes its word premultiplied
+// by its alpha a = word2 / 100 with alpha a, (word · a, a), so the blend
+// glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA) lays G · (1 − a) + word · a
+// on the pixel beneath, G — whatever the earlier records drew there, the
+// plate's ink and core included — rounded once to a byte, the canvas's
+// second blend and byte space like the first (the framebuffer is plain
+// RGBA, never sRGB); THE PLATE (kind 1) is
 // THE WAVEFORM'S ANTIALIASING (architect 2026-10-30;
 // the rule at render_waveform_columns' head, render.h; the grow's key
 // 2026-10-31, the 4x grid ruled for good that afternoon at render.h's
@@ -258,11 +267,12 @@ constexpr const char* kCanvasFragmentShader =
 //   grow 0 .. 8, 2026-10-31; the fast paths, each a subset of the rule,
 //   change no result the model computes.
 // A word is cairo's 0xAARRGGBB with A = 255, written as (R, G, B, 1) at
-// k / 255 per channel for every record but the plate's fringe, which the
-// RGBA8 framebuffer stores as k — the texture triangle's own channel order.
-// Primitives write in instance order (GL's primitive order within a draw), so a
-// later record overwrites an earlier one, the paint order; under the blend an
-// opaque record's word lands exactly (src · 1 + dst · 0).
+// k / 255 per channel for every record but the plate's fringe and the tint,
+// which the RGBA8 framebuffer stores as k — the texture triangle's own
+// channel order. Primitives write in instance order (GL's primitive order
+// within a draw), so a later record overwrites an earlier one, or blends
+// over it (the plate's fringe, the tint), the paint order; under the blend
+// an opaque record's word lands exactly (src · 1 + dst · 0).
 constexpr const char* kListVertexShader =
     "#version 300 es\n"
     "precision highp float;\n"
@@ -489,6 +499,13 @@ constexpr const char* kListFragmentShader =
     "        }\n"
     "        return;\n"
     "    }\n"
+    // THE TINT (the head's tint paragraph): the word at the whole-percent
+    // alpha, premultiplied, for the blend to lay over what lies beneath.
+    "    if (kind == 2) {\n"
+    "        float a = float(v_words.y) / 100.0;\n"
+    "        o_color = vec4(word_rgb(v_words.x) * a, a);\n"
+    "        return;\n"
+    "    }\n"
     "    o_color = vec4(word_rgb(v_words.x), 1.0);\n"
     "}\n";
 
@@ -651,8 +668,8 @@ void GuiGlCanvas::build_list_program(int grow) {
 // THE CONTEXT'S FIXED STATE, set at each make current (the platform's
 // surface road calls it right after its make current): nothing dithers or
 // tests, and THE BLEND IS OFF AT REST — its function set once here, the
-// premultiplied source-over the plate's fringe needs (kListFragmentShader's
-// composite), and enabled for the canvas list's draw alone (present_frame,
+// premultiplied source-over the plate's fringe and the tint need
+// (kListFragmentShader's composite and tint arm), and enabled for the canvas list's draw alone (present_frame,
 // 2026-10-30) — so a texel and an opaque list word reach the framebuffer as
 // written.
 void GuiGlCanvas::bind_fixed_state() {
@@ -823,8 +840,9 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // the framebuffer is plain RGBA (the passthrough colorspace encodes nothing
 // — never an sRGB framebuffer, which is what makes the plate's blend the
 // byte-space blend ruled); inside the clip it is the list's words, each a
-// chrome pixel's bytes for its color by the sink's construction, and on the
-// plate's fringe their coverage blend (kListFragmentShader).
+// chrome pixel's bytes for its color by the sink's construction, on the
+// plate's fringe their coverage blend, and under a tint the blend toward
+// its word (kListFragmentShader).
 //
 // THE REPAIR (2026-11-04, session 33; the Astra consult's (b),
 // tmp/codex_review.md; the platform's half at GuiPlatform::present): THE
@@ -839,9 +857,11 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // drawn by an earlier frame on the same passes. THE BYTES ARE THE WHOLE
 // DRAW'S: every pass is deterministic from the clear at the same absolute
 // coordinates on the same state, the plate's shader reads its column data
-// and never the framebuffer, and a scissor changes no fetch, coverage or
-// blend; an overlap of two rects is cleared again before it is drawn again,
-// so nothing blends twice. The texture's upload is still THIS frame's
+// and never the framebuffer, the blends (the plate's fringe, the tint) read
+// the framebuffer only through the GL blend over the records this same
+// pass drew there since the clear, and a scissor changes no fetch,
+// coverage or blend; an overlap of two rects is cleared again before it is
+// drawn again, so nothing blends twice. The texture's upload is still THIS frame's
 // damage alone (the texture is persistent, so every older repaired pixel is
 // already its own). IT STANDS ON THE DAMAGE CONTRACT: a canvas pixel the
 // list changes outside every declared damage rect is not redrawn, so every
@@ -1248,6 +1268,7 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
         in.words[1] = p.word2;
         switch (p.kind) {
         case GuiCanvasKind::Rect:
+        case GuiCanvasKind::Tint:
             break;
         case GuiCanvasKind::Plate:
             if (pack) {

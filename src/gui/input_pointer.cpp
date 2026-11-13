@@ -5767,8 +5767,9 @@ void GuiInputHandler::arm_region_drag_at(int anchor_col, int x, int y) {
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
     // THIS ARM WRITES NOTHING ELSE: the trim is written by the motion path
-    // from the first crossing on, and the trim bar, the sweep's picture
-    // (RegionDragState, app_state.h), shows each write as it lands.
+    // from the first crossing on, and the trim bar and the canvas highlight,
+    // the sweep's picture (RegionDragState, app_state.h), show each write as
+    // it lands.
     //
     // (The one-day RULER arm's deferred dissolve — RegionDragState::ruler and
     // the motion path's crossing act — died 2026-08-12 with the ruler former
@@ -5822,11 +5823,32 @@ void GuiInputHandler::arm_selection_sweep_at(int anchor_col, int x, int y) {
 //     With no such member the focus is the prior one (or none).
 //   * THE WRITE IS THE SELECTION MUTATOR'S (Selection::replace_selection, its
 //     publish the damage), and only when the membership or the focus moved,
-//     so a motion inside one column republishes nothing. No other paint: the
-//     stems appearing are the sweep's picture. The playhead and playback wait
-//     for the lift (commit_region_sweep).
+//     so a motion inside one column republishes nothing. THE SWEEP'S PICTURE
+//     is the stems appearing AND THE CANVAS HIGHLIGHT on the swept columns
+//     while the pointer is down (architect 2026-11-12: "the add selection
+//     relies on the marker stems, which are dark in color, and they don't
+//     show exactly the bound that's being swept"; RegionDragState's head,
+//     sweep_highlight_rect), on this same span, so a marker is selected iff
+//     its column is lit. The playhead and playback wait for the lift
+//     (commit_region_sweep), which takes the highlight away.
 void GuiInputHandler::apply_selection_sweep_to_column(int pen_col) {
     RegionDragState& d = app.region_drag;
+    // THE HIGHLIGHT'S MOVING END FIRST (RegionDragState::pen_col; the rect's
+    // one owner sweep_highlight_rect, app_state.h), ahead of the membership
+    // and its early return, with the damage its move owes on the canvas's
+    // rows (canvas_sink.h's damage contract): at the first crossing the
+    // whole new span, after it the columns from the old pen column to the
+    // new, both inclusive — the anchor fixed, they hold the spans'
+    // symmetric difference. A motion inside one column damages nothing.
+    if (pen_col != d.pen_col) {
+        const GuiRect area = waveform_area(app);
+        const int from = d.pen_col < 0 ? d.anchor_col : d.pen_col;
+        const int dlo  = std::min(from, pen_col);
+        const int dhi  = std::max(from, pen_col);
+        d.pen_col = pen_col;
+        viewport.invalidate_rect(
+            GuiRect{area.x + dlo, area.y, dhi - dlo + 1, area.h});
+    }
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return;
     const std::vector<WarpFrameMapSegment>& dmap =
@@ -5868,6 +5890,11 @@ void GuiInputHandler::apply_selection_sweep_to_column(int pen_col) {
 // unconditional call are all free.
 void GuiInputHandler::commit_region_sweep() {
     if (!app.region_drag.active) return;
+    // THE HIGHLIGHT GOES AT THE END (architect 2026-11-12: shown only while
+    // the sweep's pointer is down): its standing rect damaged BEFORE the
+    // record resets, both formers, read through its one owner
+    // (sweep_highlight_rect) while the record still answers it.
+    viewport.invalidate_rect(sweep_highlight_rect(app, audio));
     const bool wrote = app.region_drag.wrote_trim;
     const bool moved = app.region_drag.moved;
     const bool select = app.region_drag.select;

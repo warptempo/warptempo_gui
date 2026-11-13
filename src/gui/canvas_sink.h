@@ -17,24 +17,35 @@
 // plate, so a plate from before a resize never crosses it, and under every
 // vertical line after it, each crossing it, 2026-11-02), the
 // phase-reset lead-in ring, the cursor's line, the selection stems over it,
-// the scanner and the zoom
-// anchor's stem, in that order (build_canvas_list, paint_handler.cpp, after
-// on_redraw's paint-order block). Each but the plate is a solid converted
+// the scanner, the zoom
+// anchor's stem and LAST THE SWEEP HIGHLIGHT (paint_sweep_highlight,
+// architect 2026-11-12: "highlight should also [go] over stem from
+// marker/playhead (ie everything in waveform area)" — over every record
+// before it, nothing over it), in that order (build_canvas_list,
+// paint_handler.cpp, after
+// on_redraw's paint-order block). Each but the plate and the highlight is
+// a solid converted
 // color on whole device pixels (every line one W, waveform_line_px, the
 // unit of 2026-11-04; the divider's row chrome, a solid integral rect),
-// and the plate is the antialiased waveform (architect 2026-10-30,
-// render_waveform_columns' head), so the sink's vocabulary is two
-// records: a RECT and THE PLATE (the per-column quarter-row tips,
-// GuiPlateColumns, with its two inks and the grow) — EVERY LINE ON THE
+// the plate is the antialiased waveform (architect 2026-10-30,
+// render_waveform_columns' head), and the highlight a blend toward white
+// on whole device pixels, so the sink's vocabulary is three
+// records: a RECT, THE PLATE (the per-column quarter-row tips,
+// GuiPlateColumns, with its two inks and the grow) and THE TINT (a rect
+// blended toward a color at a whole-percent alpha, architect 2026-11-12)
+// — EVERY LINE ON THE
 // CANVAS IS SOLID since 2026-11-04 (the dotted stems and cursor retired,
 // render.h's marker-lane and playhead paragraphs), so the dotted run left
 // the vocabulary with them. A RECT PAINTS ITS OWN COLOR straight over
-// whatever lies under it, and THE PLATE'S FRINGE BLENDS SOURCE-OVER with
-// the ground and the grid beneath it — the GL blend's work
+// whatever lies under it, THE PLATE'S FRINGE BLENDS SOURCE-OVER with
+// the ground and the grid beneath it, and THE TINT BLENDS SOURCE-OVER with
+// whatever the earlier records drew under it — the GL blend's work
 // (kListFragmentShader, gl_canvas.cpp); no record reads the canvas on the
 // CPU. The lines over the plate keep their own color (architect
 // 2026-10-26, on the glass, closed_questions.md): opaque records drawn
-// over it.
+// over it — THE TINT ALONE BLENDS OVER THEM, by his word 2026-11-12 (the
+// highlight over "everything in waveform area"), so every line under a
+// standing highlight is lightened with the canvas beneath it.
 //
 // ONE SINK, ONE ROAD (architect 2026-10-30: the GL canvas the one road): the
 // sink appends each primitive to the frame's GuiCanvasDrawList in paint
@@ -88,8 +99,13 @@
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
 // producer; the algorithm kListFragmentShader's) and blended source-over
 // under the GL blend, exactly the word in the core and nothing where no bar
-// covers and the canvas shows; later
-// records overwrite earlier ones in list order, the paint order; the
+// covers and the canvas shows; THE TINT writes, per cell of its rect, the
+// premultiplied source of its word at its alpha a (word2 / 100), blended
+// source-over, so the cell beneath, G, becomes G · (1 − a) + word · a in
+// byte space, rounded once (architect 2026-11-12; kListFragmentShader's
+// tint arm); later
+// records overwrite (or, the plate's fringe and the tint, blend over)
+// earlier ones in list order, the paint order; the
 // scissor is the canvas paint area, the plate's area clip containing it; and
 // the texture over it places every overlay pixel exactly (Milestone 1). THE
 // LIST IS REBUILT WHOLE from the frame's state at every frame that meets the
@@ -102,9 +118,12 @@
 // antialiasing, render_waveform_columns' head) — `period` the index of r's
 // first column in the list's `columns`, `origin` the plate's row 0 (the
 // canvas's first row) — `word` the ink and `word2` the core, nothing where
-// no bar covers. The kinds' numbers are the list shader's (`kind == 1`,
+// no bar covers. THE TINT (architect 2026-11-12, the sweep highlight)
+// blends r toward `word` at the alpha `word2`, a WHOLE PERCENT in
+// [1, 100] (GuiCanvasSink::tint admits no 0), `period` and `origin` 0. The
+// kinds' numbers are the list shader's (`kind == 1`, `kind == 2`,
 // kListFragmentShader).
-enum class GuiCanvasKind : int { Rect = 0, Plate = 1 };
+enum class GuiCanvasKind : int { Rect = 0, Plate = 1, Tint = 2 };
 struct GuiCanvasPrimitive {
     GuiCanvasKind kind = GuiCanvasKind::Rect;
     GuiRect  r{};
@@ -243,13 +262,17 @@ GuiCanvasDrawList& gui_canvas_frame();
 // payload). rects append in `color` (an authored color,
 // display_color applied here); plate the cache's
 // published plate at `area` from its `columns` (not rendered: nothing),
-// `inks` the published inks, the grow the seat's (plate_grow).
+// `inks` the published inks, the grow the seat's (plate_grow); tint one
+// Tint record blending `r` toward `toward` (an authored color,
+// display_color applied here, the rects' word) at `percent` whole percent
+// (at most 100) — nothing for an empty rect or a percent <= 0.
 class GuiCanvasSink {
 public:
     explicit GuiCanvasSink(GuiCanvasDrawList& list);
     void rects(std::span<const GuiRect> rs, GuiColor color);
     void plate(const GuiRect& area, const GuiPlateColumns& columns,
                WaveformPlateInks inks);
+    void tint(const GuiRect& r, GuiColor toward, int percent);
 
 private:
     GuiCanvasDrawList& list_;

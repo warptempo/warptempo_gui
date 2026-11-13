@@ -887,7 +887,11 @@ void install_true_colors(bool on);
 // render_waveform_divider, over the plate so a plate from before a resize
 // never crosses them); then the lead-in ring, the
 // playhead's line, the selection stems over it, the scanner and the zoom
-// anchor (build_canvas_list's order). THE PICTURE IS ONE THING — the
+// anchor; and LAST, while a sweep's pointer is down, THE SWEEP HIGHLIGHT
+// (paint_sweep_highlight, architect 2026-11-12: a blend toward white over
+// everything in the waveform area — the canvas, the grid, the ink, the
+// core, the center lines and every line above them) (build_canvas_list's
+// order). THE PICTURE IS ONE THING — the
 // canvas, the grid, the ink if any, the center lines — SO THE CENTER LINES
 // PAINT WHENEVER THE GRID DOES: over the plate while audio is loaded (a
 // frame before the first plate included, its plate record absent), and with
@@ -3405,11 +3409,13 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // fringe, transparent in the gaps (2026-10-30).
 // THE GAPS SHOW THE GROUND render_canvas lays under the plate: the plate
 // carries no ground colour, so the canvas has that one painter and the cold
-// frame before the first plate shows the same ground. Nothing recolours a
-// plate pixel after the plate's record (the sweep's region highlight, which lifted the ground
-// in the gaps and the set pixels over its span, retired 2026-10-03, architect:
-// "the trim bar is enough"); no reason left needs the gaps over an opaque
-// canvas-coloured plate, and the plate stays as it is.
+// frame before the first plate shows the same ground. The one record that
+// recolours a plate pixel after the plate's is THE SWEEP HIGHLIGHT, the
+// list's last, while a sweep's pointer is down (paint_sweep_highlight,
+// architect 2026-11-12): a blend toward white over the gaps and the set
+// pixels alike, the GL blend's work, so it needs nothing of the plate; no
+// reason needs the gaps over an opaque canvas-coloured plate, and the plate
+// stays as it is.
 //
 // THE VISUAL MAGNIFICATION is `gain_or_null`, and the lit plate is TWO BARS
 // per column from ONE peak read, both through the expander, the outer
@@ -3800,6 +3806,21 @@ struct TrimBridgeGap {
 };
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
                               const TrimBoundColumn& end, int endcap_w);
+
+// THE SPAN'S DRAWN COLUMNS [lo, hi) (waveform-relative, half-open, EMPTY
+// when hi <= lo): the begin column through the end column inclusive, cut to
+// the effective width [0, wave_w) — the columns the trim bar paints its
+// `trim_span_face` on (render_trim_flags: THE TRIM REFLECTS THE WAVEFORM'S
+// COLUMNS, architect 2026-11-03), and THE SWEEP HIGHLIGHT'S on the TRIM
+// former (sweep_highlight_rect, app_state.h; architect 2026-11-12), so
+// the canvas's highlight stands under the bar's span column for column.
+// One owner, two readers.
+struct TrimSpanColumns {
+    int lo = 0;  // inclusive left column
+    int hi = 0;  // exclusive right column (empty when hi <= lo)
+};
+TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
+                                  const TrimBoundColumn& end, int wave_w);
 
 // The source-frame -> displayed-domain mapping of the live trim paint pass
 // (GuiPaintHandler::paint_trim), its one caller since the two HIT sites began

@@ -4629,14 +4629,15 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     // empty-waveform frame on screen until live_plate_published releases it
     // with the first complete picture.
     //
-    // DRAW-ONLY HERE, AND NOTHING RECOLORS IT AFTER: this call records the
+    // DRAW-ONLY HERE: this call records the
     // plate as the renderer produced it, drawn once over the plain
     // `waveform_canvas` ground render_canvas laid — the plate's transparent
-    // gaps show that ground, the canvas having that one painter — and its
-    // pixels are final. No pass recolours the waveform: the
-    // out-of-trim dim retired 2026-07-26 and the sweep's region highlight
-    // 2026-10-03 (architect, "the trim bar is enough"), the trim bar being
-    // the whole picture of the window, the sweep's included.
+    // gaps show that ground, the canvas having that one painter. No pass
+    // recolours the waveform at rest (the out-of-trim dim retired
+    // 2026-07-26, the trim bar the window's picture); WHILE A SWEEP'S
+    // POINTER IS DOWN the sweep highlight blends its span toward white over
+    // the plate and every line after it (paint_sweep_highlight, the list's
+    // last record, architect 2026-11-12).
     //
     // The clip is the AREA, the canvas's interior (2026-10-09: the canvas's
     // frame stands outside it), so a plate published at a stale size never
@@ -5328,6 +5329,40 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
     render_strip_anchor_stem(sink, area, col);
 }
 
+// -- GuiPaintHandler::paint_sweep_highlight ------------------------------
+
+// THE SWEEP HIGHLIGHT (architect 2026-11-12, session 114: "the add selection
+// relies on the marker stems, which are dark in color, and they don't show
+// exactly the bound that's being swept ... it could just be an alpha
+// overlay with a config key for tuning. And it would just be a blend
+// towards white, the same way that we do the playhead stem"; "highlight
+// should also [go] over stem from marker/playhead (ie everything in
+// waveform area)"). ONE LOOK FOR BOTH SWEEPS, TRIM's and ADD SEL's, SHOWN
+// ONLY WHILE THE SWEEP'S POINTER IS DOWN: one tint record (GuiCanvasSink::
+// tint) over the rect sweep_highlight_rect answers (app_state.h — the
+// columns, the formers and the empty states; its damage sites read the same
+// owner), blending it toward WHITE at the `sweep_highlight` device key's
+// whole percent (a tuning key, device_config.h; 0 paints nothing), read
+// here at every list build.
+// WHITE IS SPELLED HERE, no palette role and no theme tone: "a blend
+// towards white", the scanner's canonical white the precedent (render.h's
+// scanner paragraph).
+// THE LIST'S LAST RECORD (build_canvas_list): it blends over everything the
+// canvas list draws in the waveform area — the ground, the grid, the
+// plate's ink and magnify core, the center lines, the stereo divider, the
+// lead-in ring, the playhead's line, the selection stems, the scanner and
+// the zoom anchor's stem — so every line under it is lightened with the
+// canvas (the one exception to the lines' own color, canvas_sink.h's head),
+// and nothing in the list paints over it. A record that changes under it
+// owes the damage it always did: the repair recomposes each damaged rect
+// through the whole list, this tint included (present_frame's THE REPAIR).
+void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
+                                            const GuiRect& area) {
+    if (area.w <= 0 || area.h <= 0) return;
+    sink.tint(sweep_highlight_rect(app, audio), hex(0xFFFFFF),
+              app.device_config->sweep_highlight);
+}
+
 // -- GuiPaintHandler::paint_playheads ------------------------------------
 
 void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
@@ -5374,9 +5409,11 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 // ruling is at the paint-order block in on_redraw) and paints just before this
 // pass, still under the flags.
 //
-// SO THE SCANNER IS TOPMOST IN THE WAVEFORM AREA while it runs — over the
-// stems, over the cursor where they overlap, over the plate. Everything it
-// covers is a per-frame repaint anyway.
+// SO THE SCANNER STANDS OVER EVERY LINE IN THE WAVEFORM AREA while it runs —
+// over the stems, over the cursor where they overlap, over the plate; only
+// the zoom anchor's stem and a standing sweep highlight (which lightens it
+// with everything else, paint_sweep_highlight, architect 2026-11-12) come
+// after it. Everything it covers is a per-frame repaint anyway.
 //
 // THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
 // (architect 2026-10-05), WHITE (architect
@@ -8836,7 +8873,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      triangle on the ruler's bottom rows, opaque over the ticks and
         //      digits) and the MARKER LANE'S panel face under the cues.
         //  10. the FLAG BLIT — the cues.
-        //  11. the strip-drag anchor stem (waveform, mid-gesture only).
+        //  11. the strip-drag anchor stem (waveform, mid-gesture only), then
+        //      THE SWEEP HIGHLIGHT (paint_sweep_highlight, architect
+        //      2026-11-12; while a TRIM or ADD SEL sweep's pointer is down
+        //      only), the canvas list's LAST record: a blend toward white
+        //      over everything steps 2 through 11 put in the waveform area.
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
         //      since 2026-08-28, one tenant at a time), whose opaque ground
@@ -8878,9 +8919,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // overlaps none of these passes.)
         // Two structural rulings live in this sequence:
         //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight REPLACES
-        //     colors, it never washes over them; and since the sweep's region
-        //     highlight retired (architect 2026-10-03, "the trim bar is
-        //     enough") NO pass recolours the waveform at all. The phase-reset
+        //     colors, it never washes over them — WITH ONE EXCEPTION, THE
+        //     SWEEP HIGHLIGHT (architect 2026-11-12: "an alpha overlay ...
+        //     a blend towards white"), which washes the swept span toward
+        //     white over every canvas pass while the sweep's pointer is down
+        //     (step 11); no other pass recolours the waveform. The phase-reset
         //     overlay contributes no ground (architect 2026-07-27): its
         //     RING is its whole visual — four solid one-W lines in the
         //     `cue_outline` (2026-11-04) — painted AFTER the plate, over the
@@ -8898,7 +8941,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // THE CANVAS PASSES ARE NOT PAINTED HERE: the frame's list carries
         // them, built once, whole, in this order (build_canvas_list) — the
         // plate, the center lines, the stereo divider, the lead-in ring, the
-        // cursor's line, the selection stems, the scanner, the zoom anchor.
+        // cursor's line, the selection stems, the scanner, the zoom anchor,
+        // the sweep highlight.
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
         // pixels (the view bar whole).
@@ -9019,7 +9063,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 // canvas the GPU redraws (the whole, or the frame's repair region since
 // 2026-11-04: GuiGlCanvas::present_frame's THE REPAIR) is drawn from one
 // coherent state. The pixels a record changes owe damage of their own
-// (canvas_sink.h's head, the damage contract).
+// (canvas_sink.h's head, the damage contract). THE SWEEP HIGHLIGHT IS THE
+// PLATE BRANCH'S LAST RECORD (architect 2026-11-12, paint_sweep_highlight:
+// over everything in the waveform area); a frame with no audio has no
+// sweep (begin_touch_region refuses unloaded audio), so the other branch
+// has none.
 void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
                                         bool plate_branch) {
     GuiCanvasSink sink(frame);
@@ -9038,6 +9086,7 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
     paint_marker_stems(sink, area);
     paint_scanner(sink, area);
     paint_strip_drag_anchor(sink, area);
+    paint_sweep_highlight(sink, area);
 }
 
 void GuiPaintHandler::begin_canvas_frame() {

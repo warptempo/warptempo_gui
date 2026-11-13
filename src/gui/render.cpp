@@ -872,6 +872,18 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
     return g;
 }
 
+TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
+                                  const TrimBoundColumn& end, int wave_w) {
+    // Contract at the declaration. The end's +1 in 64 bits: an offscreen
+    // end keeps its raw column (trim_bound_column), which the cut to
+    // wave_w then holds.
+    TrimSpanColumns s;
+    s.lo = std::max(begin.col, 0);
+    s.hi = static_cast<int>(std::min<int64_t>(
+        static_cast<int64_t>(end.col) + 1, static_cast<int64_t>(wave_w)));
+    return s;
+}
+
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map) {
     double ms = static_cast<double>(frame);
@@ -971,21 +983,20 @@ void render_trim_flags(cairo_t* cr,
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
 
     // THE SPAN — the trim window's columns, the begin column through the end
-    // column inclusive, sliding off an edge like any content (the clip cuts
-    // it to the waveform's columns: THE TRIM REFLECTS THE WAVEFORM'S
-    // COLUMNS, even where the waveform is wrong (architect 2026-11-03) — the
-    // bar's columns are the waveform area's, nothing more, so a trim
-    // spanning the view fills the bar end to end; a side lying farther off
-    // than one hairline is held there, outside the clip, so the rect stays in
-    // cairo's range at any zoom): A
+    // column inclusive, sliding off an edge like any content, cut to the
+    // waveform's columns (trim_span_columns, the one owner the sweep
+    // highlight reads too: THE TRIM REFLECTS THE WAVEFORM'S COLUMNS, even
+    // where the waveform is wrong (architect 2026-11-03) — the bar's columns
+    // are the waveform area's, nothing more, so a trim spanning the view
+    // fills the bar end to end, and the rect stays in cairo's range at any
+    // zoom): A
     // FLAT `trim_span_face` FILL on the fill's rows, no outline of its own
     // (architect 2026-11-03, mock z2). NO PLAYHEAD IN THE BAR (architect
     // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
-    const int span_lo = std::max(bc.col, -px);
-    const int span_hi = std::min(ec.col + 1, lane_w + px);
-    if (span_hi > span_lo && fill_h > 0)
-        paint_cell_rect(cr, GuiRect{lane_x + span_lo, bar_y,
-                                    span_hi - span_lo, fill_h},
+    const TrimSpanColumns span = trim_span_columns(bc, ec, lane_w);
+    if (span.hi > span.lo && fill_h > 0)
+        paint_cell_rect(cr, GuiRect{lane_x + span.lo, bar_y,
+                                    span.hi - span.lo, fill_h},
                         palette().trim_span_face);
 
     // THE GRABS, as painted: the span's two end zones and the body between

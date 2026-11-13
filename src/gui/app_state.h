@@ -825,13 +825,21 @@ struct UndoHistory {
 // THE REGION IS THE TRIM (architect 2026-08-18): there is no "set trim from
 // region", because SETTING THE REGION IS SETTING THE TRIM, so the sweep is a
 // DIRECT TRIM WRITE and no span rests anywhere but in the trim. THE TRIM BAR
-// IS THE SWEEP'S PICTURE (architect 2026-10-03, "the trim bar is enough",
-// retiring the waveform highlight that stood exactly while a sweep drew): the
-// bar is drawn at the view's own scale, in the columns the stroke is drawn
-// in, and the sweep writes the moving pair straight into the trim per motion
-// event (write_trim_from_sweep, input_trim.cpp, whose write repaints the bar),
-// so the bar tracks the stroke live and nothing is raised, hidden or stored
-// for it. Read-only-legal, exactly as the trim bar's own gestures are: trim
+// TRACKS THE SWEEP LIVE: the bar is drawn at the view's own scale, in the
+// columns the stroke is drawn in, and the sweep writes the moving pair
+// straight into the trim per motion event (write_trim_from_sweep,
+// input_trim.cpp, whose write repaints the waveform area, the bar's lane
+// inside it). AND THE CANVAS HIGHLIGHT STANDS ON THE SWEPT SPAN WHILE
+// EITHER SWEEP'S POINTER IS DOWN (architect 2026-11-12: "it could just be
+// an alpha overlay with a config key for tuning ... a blend towards white";
+// one look for this former and the ADD SEL former below): a blend toward
+// white, the canvas list's LAST record, over everything the list draws in
+// the waveform area, every line included ("everything in waveform area";
+// the enumeration at paint_sweep_highlight, paint_handler.cpp), its columns
+// DERIVED, never stored for this former — the trim bar's own span columns
+// from the trim (sweep_highlight_rect below), raised at the first ACCEPTED
+// trim write (`wrote_trim`: before it the trim is the old one) and gone at
+// the end (commit_region_sweep). Read-only-legal, exactly as the trim bar's own gestures are: trim
 // is BAND, not authored content (the ruling at read_only_key_blocked). ONE
 // ENTRY, THE ARMED SWEEP on the NAVIGATION SURFACE — the WHOLE waveform and
 // nothing else (architect 2026-11-07, session 87: the TRIM arm lamp lit, a
@@ -850,8 +858,8 @@ struct UndoHistory {
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
 // there is no span field to extend: this holds the press column's authored
 // source frame (the field's own comment), the trim
-// holds the pair, and the bar paints from the trim on every frame including
-// the ones this gesture writes.
+// holds the pair, and the bar and the canvas highlight paint from the trim
+// on every frame including the ones this gesture writes.
 //
 // Under SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23) the TRIM sweep
 // does NOT select the span's markers — the selection stays EMPTY from the
@@ -923,13 +931,24 @@ struct RegionDragState {
     // fields above stay unread and unwritten on this former. Its rule —
     // membership live per motion, never clearing, the focus the last swept
     // member, the playhead at the lift, the lamp out at a moved commit — is
-    // at apply_selection_sweep_to_column (input_pointer.cpp).
+    // at apply_selection_sweep_to_column (input_pointer.cpp); its picture,
+    // beside the stems appearing, the canvas highlight on the swept columns
+    // (pen_col below; the head's highlight, architect 2026-11-12).
     bool          select       = false;
     // THE DOWN POINT'S COLUMN, offset from waveform_area's x, in [0, w): the
     // swept span's fixed end (the selection sweep reads the picture by
     // COLUMN, the frame as painted — no camera moves during the gesture: the
     // Region phase ignores a second finger and the gesture pauses follow).
     int           anchor_col   = 0;
+    // THE PEN'S COLUMN at the last motion past the gate, offset like
+    // anchor_col and clamped into [0, w) by the motion path; -1 before the
+    // first (architect 2026-11-12): THE SWEEP HIGHLIGHT'S MOVING END on this
+    // former, the highlight standing on anchor_col .. pen_col, both
+    // inclusive — the membership's own span, so a marker is selected iff its
+    // column is lit (sweep_highlight_rect below). Written at every motion
+    // past the gate ahead of the membership (apply_selection_sweep_to_column,
+    // which damages the columns the move changed).
+    int           pen_col      = -1;
     // THE SELECTION STANDING AT THE DOWN, snapshotted at the arm: the union's
     // fixed half, so pulling the span back drops only what this sweep added.
     std::set<int> prior_members;
@@ -8436,7 +8455,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the twenty-two keys the
+    // 2026-10-28: the Settings button and bare `;`; the twenty-three keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened PREFILLED on the row's line once
@@ -8996,7 +9015,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's twenty-two keys as
+    // (architect 2026-10-28), with the settings editor's twenty-three keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
@@ -9143,7 +9162,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its twenty-two editable key lines and the two
+    // rows (its two headings, its twenty-three editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
@@ -19778,6 +19797,27 @@ struct ItemViewportBasis {
 };
 ItemViewportBasis item_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio);
+
+// THE SWEEP HIGHLIGHT'S RECT (architect 2026-11-12; the picture at
+// RegionDragState's head, the painter paint_sweep_highlight): the ONE
+// answer to "which columns does the highlight stand on right now", read by
+// the painter and by every damage site, so the picture and its damage
+// cannot fork (ON SCREEN IS AS PAINTED). The rect is those columns over
+// waveform_area's whole rows (the canvas), EMPTY unless a sweep stands
+// MOVED (region_drag.active && .moved), and then:
+//   * THE ADD SEL FORMER (`select`): anchor_col .. pen_col, both inclusive
+//     — apply_selection_sweep_to_column's own lo .. hi, the membership's
+//     span — empty before the first motion past the gate (pen_col -1).
+//   * THE TRIM FORMER: empty until the first accepted trim write
+//     (`wrote_trim`); then the trim bar's own span columns, DERIVED from the
+//     trim on the bar's basis and owners — the item basis
+//     (item_viewport_basis, its effective width the column denominator),
+//     the displayed map (displayed_or_live_target_map through
+//     displayed_trim_ms), trim_bound_column and trim_span_columns, exactly
+//     paint_trim's chain — so the highlight stands under the bar's span
+//     column for column, the song's walls included.
+// A zero-width answer is the empty rect, which paints and damages nothing.
+GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio);
 
 // Promoted from a lambda in main(). Eligible iff the warp marker at `idx` has
 // a RESOLVED value worth reaching for — i.e. its flag does not already display

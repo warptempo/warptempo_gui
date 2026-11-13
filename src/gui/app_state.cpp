@@ -117,6 +117,50 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
     return b;
 }
 
+GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio) {
+    // Contract at the declaration (app_state.h).
+    const RegionDragState& d = app.region_drag;
+    if (!d.active || !d.moved) return GuiRect{};
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0 || area.h <= 0) return GuiRect{};
+    int lo = 0;
+    int hi = 0;
+    if (d.select) {
+        if (d.pen_col < 0) return GuiRect{};
+        lo = std::min(d.anchor_col, d.pen_col);
+        hi = std::max(d.anchor_col, d.pen_col) + 1;
+    } else {
+        if (!d.wrote_trim) return GuiRect{};
+        // paint_trim's chain and its gates (paint_handler.cpp,
+        // render_trim_flags): the item basis, the displayed map, each bound
+        // through displayed_trim_ms and the int64 round trip of TrimRange
+        // (exact: the mapping returns an integral-valued double), then the
+        // bound columns at the basis's effective width.
+        const ItemViewportBasis basis = item_viewport_basis(app, audio);
+        if (basis.area_w <= 0 || basis.spp <= 0.0 ||
+            basis.vp_end_frame <= basis.vp_start_frame)
+            return GuiRect{};
+        const std::vector<WarpFrameMapSegment>& dmap =
+            displayed_or_live_target_map(app, audio);
+        const std::vector<WarpFrameMapSegment>* map_arg =
+            dmap.empty() ? nullptr : &dmap;
+        const auto bound_column = [&](int64_t frame) {
+            const int64_t ms =
+                static_cast<int64_t>(displayed_trim_ms(frame, map_arg));
+            return trim_bound_column(static_cast<double>(ms),
+                                     basis.vp_start_frame, basis.vp_end_frame,
+                                     basis.lattice_origin, basis.area_w);
+        };
+        const TrimSpanColumns s =
+            trim_span_columns(bound_column(app.trim.begin_frame),
+                              bound_column(app.trim.end_frame), basis.area_w);
+        lo = s.lo;
+        hi = s.hi;
+    }
+    if (hi <= lo) return GuiRect{};
+    return GuiRect{area.x + lo, area.y, hi - lo, area.h};
+}
+
 TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly
     // as-painted; the contract is at AppState::trim_bar_hit). The grabs are

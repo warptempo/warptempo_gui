@@ -1218,7 +1218,9 @@ void GuiSettingsEditor::commit() {
 // them, and the
 // lamps' hold `lamp_hold_ms` (2026-11-05 night) the same but for a live act,
 // having none, its arm after them, and the tooltip's delay
-// `tooltip_delay_ms` (2026-11-07) the same, no live act, its arm last
+// `tooltip_delay_ms` (2026-11-07) the same, no live act, its arm after it,
+// and the sweep highlight's alpha `sweep_highlight` (2026-11-12) the same,
+// no live act, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1566,6 +1568,26 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE SWEEP HIGHLIGHT'S ALPHA (architect 2026-11-12, session 114, a
+    // tuning key; the picture at paint_sweep_highlight): an integer of whole
+    // percent under its one grammar owner (parse_sweep_highlight,
+    // device_config.h), STORED INTO THE LIVE STRUCT AND PERSISTED, so NO
+    // CARD — and NO LIVE ACT AND NO DAMAGE: the painter reads
+    // app.device_config->sweep_highlight at every list build, and no sweep
+    // stands under the Settings page (the folder overlay's veil refuses the
+    // sweep's begin), so nothing on screen wears the old number; the next
+    // sweep takes the new one. The page opens the line editor on it (no value
+    // list, 101 values no short domain); Tab completes no value; stage 2's
+    // recall is the writer's spelling (recall_gui_setting_value).
+    if (key == "sweep_highlight") {
+        const std::optional<int> pct = parse_sweep_highlight(value);
+        if (!pct) return reject(kSweepHighlightGrammarReason);
+        if (*pct == app.device_config->sweep_highlight) return unchanged();
+        app.device_config->sweep_highlight = *pct;
+        (void)persist();
+        return applied();
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1715,7 +1737,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty-two and
+        // one key does — any key the recall knows, the table's twenty-three and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

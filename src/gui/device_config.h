@@ -14,7 +14,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Nineteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Twenty keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -299,6 +299,24 @@
 //                            which settles into a constexpr once he rules
 //                            the number, its key, grammar and row going
 //                            then; the first-run value the defaults file's
+//   sweep_highlight=<pct>    THE SWEEP HIGHLIGHT'S ALPHA (architect
+//                            2026-11-12, session 114: "an alpha overlay
+//                            with a config key for tuning"; "using the
+//                            config key as the alpha blend that i can
+//                            tune"; paint_sweep_highlight): the whole
+//                            PERCENT of the way to white the canvas's
+//                            highlight blends the swept span while a TRIM
+//                            or ADD SEL sweep's pointer is down, an integer
+//                            in [0, 100] in canonical spelling
+//                            (parse_sweep_highlight below), 0 painting no
+//                            highlight; read LIVE by the painter at every
+//                            list build, so a commit at the settings
+//                            editor's OK takes effect at the next sweep with
+//                            no live act; A TUNING KEY with a Settings row,
+//                            REQUIRED like every key while it stands, which
+//                            settles into a constexpr once he rules the
+//                            number, its key, grammar and row going then;
+//                            the first-run value the defaults file's
 //   (audio_level=<dB>, THE PROJECT VOICE'S LEVEL, everything the program
 //                            itself played scaled by one level under THE
 //                            LEVEL GRAMMAR, set by the band's AUDIO case, a
@@ -450,7 +468,9 @@
 // band's lengths together; the tooltip's delay `tooltip_delay_ms` APPENDED
 // after `lamp_hold_ms` the same day, the tuning keys keeping the end, and
 // the tooltip's gap `tooltip_gap` appended after it in session 90 and gone
-// in session 91, settled at 1 W);
+// in session 91, settled at 1 W; the sweep highlight's alpha
+// `sweep_highlight` APPENDED after `tooltip_delay_ms` 2026-11-12, the
+// tuning keys keeping the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -595,7 +615,7 @@
 // (architect 2026-11-08, session 95: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all nineteen lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -614,7 +634,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the defaults file and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nineteen
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the twenty
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the writer emits
@@ -653,7 +673,8 @@
 // tuning keys `key_height`, `osk_key_w` and `osk_key_h` and that night
 // `osk_font_px`, since 2026-11-05 night the tuning key `lamp_hold_ms`, and
 // since 2026-11-06 the tuning key `key_width`, and since 2026-11-07 the
-// tuning keys `run_gap` and `tooltip_delay_ms`, among them
+// tuning keys `run_gap` and `tooltip_delay_ms`, and since 2026-11-12 the
+// tuning key `sweep_highlight`, among them
 // (kSettingsEditorKeys) — then a key's current
 // value, then a closed value's words, and committing each through this
 // file's writer under the key's own grammar below. THE LEVEL,
@@ -744,6 +765,9 @@ struct DeviceConfig {
     // THE TOOLTIP'S DELAY in ms (2026-11-07, the head's list; a tuning key):
     // required; the construction state is 100.
     int         tooltip_delay_ms  = 100;
+    // THE SWEEP HIGHLIGHT'S ALPHA in whole percent (2026-11-12, the head's
+    // list; a tuning key): required; the construction state is 10.
+    int         sweep_highlight   = 10;
 };
 
 // THE PROJECTS REPOSITORY AS CONSTRUCTED — AppState's `projects_repo`
@@ -1279,6 +1303,32 @@ inline std::optional<int> parse_tooltip_delay_ms(std::string_view v) {
     return n;
 }
 
+// THE sweep_highlight GRAMMAR (architect 2026-11-12, session 114) — an
+// integer of whole PERCENT in [0, 100] in canonical spelling ("10", never
+// "010" or "+10": the int tuning keys' grammar, lamp_hold_ms's), the one
+// owner the reader, the writer, the settings editor's commit and its recall
+// read (format_sweep_highlight, parse_sweep_highlight). The number is the
+// tint's alpha as it is (GuiCanvasSink::tint, word2): the highlight lays
+// G · (1 − p / 100) + FFFFFF · p / 100 on every canvas pixel G of the swept
+// span. THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES
+// above; 10, the planner's first number for him to tune). The range: 0
+// paints no highlight (the sink appends no record); 100 paints the span
+// white. The settings page opens the LINE EDITOR on it, not a value list
+// (101 values is no short domain, kSettingsValueListKeys' rule). A TUNING
+// KEY: when he rules the number, the key, these functions and its Settings
+// row go, and the value becomes a constexpr at paint_sweep_highlight.
+inline constexpr int kSweepHighlightMinPct = 0;
+inline constexpr int kSweepHighlightMaxPct = 100;
+inline constexpr const char* kSweepHighlightGrammarReason =
+    "must be an integer in [0, 100] in canonical spelling";
+std::string format_sweep_highlight(int percent);
+inline std::optional<int> parse_sweep_highlight(std::string_view v) {
+    const std::optional<int> n = parse_canonical_config_int(v);
+    if (!n || *n < kSweepHighlightMinPct || *n > kSweepHighlightMaxPct)
+        return std::nullopt;
+    return n;
+}
+
 // THE waveform_grow GRAMMAR (architect 2026-10-31; the lattice quarters
 // since that afternoon's 4x ruling, render.h's kWaveformSubcells) — a
 // multiple of 0.25 DEVICE PX in [0, 2] in canonical spelling, held as
@@ -1472,7 +1522,7 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — sixteen keys,
+// which serves its ONE device-key body — seventeen keys,
 // `projects_repo=`, `projects_path=`, since 2026-10-21
 // `true_colors=`, since 2026-11-05 `theme=` (its live act
 // GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
@@ -1487,7 +1537,10 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // (its live act GuiInputHandler::apply_key_width), and since 2026-11-07
 // `run_gap=` (its live act GuiInputHandler::apply_run_gap) and
 // `tooltip_delay_ms=` (no live act: the tooltip's writer and clock read the
-// live struct, note_tooltip_hover / tick_tooltip) —
+// live struct, note_tooltip_hover / tick_tooltip), and since 2026-11-12
+// `sweep_highlight=` (no live act: the painter reads the live struct at
+// every list build, paint_sweep_highlight; no sweep stands under the
+// Settings page, so a commit owes no damage) —
 // and the band's level case's end (GuiInputHandler::settle_level_case,
 // since 2026-11-05: `noise_level=`, its live act GuiNoise::set_level_db,
 // the typed line that wrote it too until 2026-11-05 night gone with its

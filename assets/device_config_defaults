@@ -17,3 +17,4 @@ osk_key_h=35
 osk_font_px=12
 lamp_hold_ms=85
 tooltip_delay_ms=100
+sweep_highlight=10

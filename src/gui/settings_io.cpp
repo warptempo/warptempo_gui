@@ -435,6 +435,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // formatter (format_tooltip_delay_ms, device_config.h).
     if (key == "tooltip_delay_ms" && app.device_config != nullptr)
         return format_tooltip_delay_ms(app.device_config->tooltip_delay_ms);
+    // THE SWEEP HIGHLIGHT'S ALPHA (2026-11-12, a tuning key): through its one
+    // formatter (format_sweep_highlight, device_config.h).
+    if (key == "sweep_highlight" && app.device_config != nullptr)
+        return format_sweep_highlight(app.device_config->sweep_highlight);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {
