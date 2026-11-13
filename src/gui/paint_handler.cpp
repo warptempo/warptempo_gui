@@ -5244,9 +5244,10 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 // (paint_marker_stems' head, the rule): the marker lane's last row and the
 // row of ground under the lane, on the standing stems' columns, in the
 // `cue_outline` — painted after the flag blit, so it stands over the chip's
-// apex row (the apex cell is the outline's already) and over the ground
-// line, and under every later surface (the flag editor's box, the keyboard
-// slot, the modal box).
+// apex row (an enabled chip's apex cell is the `cue_outline` already, a
+// disabled chip's the `inactive_cue_outline` the stem covers there) and over
+// the ground line, and under every later surface (the flag editor's box, the
+// keyboard slot, the modal box).
 void GuiPaintHandler::paint_marker_stem_heads(cairo_t* cr) {
     if (app.marker_stems.empty()) return;
     const GuiRect area = waveform_area(app);

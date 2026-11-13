@@ -29,21 +29,23 @@
 // MEASURED PALETTE TO THE BYTE but the selection
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
 // SurfaceBackground, since 2026-11-07), the level fill, the lit-but-inert
-// key's pair and the radio keys' three (2026-11-11) and the playhead's line
-// (2026-11-12; all at the foot) — the numbers
+// key's pair and the radio keys' three (2026-11-11), the playhead's line
+// and the disabled chip's outline (2026-11-12; all at the foot) — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
 // 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) —
 // AND THE PLAYHEAD LINE'S STATIC TONE, white half way to the head on every
 // theme, the mean of Live's fade (81E1EA; architect 2026-11-12, session 113,
-// theme_roles.h's DERIVED block) — the static_asserts
-// at the foot are that proof in the build, every one of the forty
-// words with its literal (the press arc's four, 2026-11-05, among them —
-// the key press face, the list press pair and the lit press fill — the lamp
-// arc's clip lamp the same night and the six of 2026-11-11: the level
+// theme_roles.h's DERIVED block), and THE DISABLED CHIP'S OUTLINE, the
+// enabled chip's 111111 moved 75 % of the way toward the lane's 2A2A2A
+// (242424; architect 2026-11-12, session 114, the same block) — the
+// static_asserts at the foot are that proof in the build, every one of the
+// forty-one words with its literal (the press arc's four, 2026-11-05, among
+// them — the key press face, the list press pair and the lit press fill —
+// the lamp arc's clip lamp the same night, the six of 2026-11-11: the level
 // fill, the lit-but-inert key's face and its glyph, and the radio keys'
-// three faces).
+// three faces, and the disabled chip's outline of 2026-11-12).
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -59,7 +61,7 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // flag editor's field and selection band, the chrome's selected pair). So
-// the palette's program roles are exactly the ELEVEN below (TWO ROLES MAY
+// the palette's program roles are exactly the TWELVE below (TWO ROLES MAY
 // SHARE A NUMBER — the ink and `center` share Default's 191919: a role is
 // what it paints, not its value). Each role's Default word and its Live
 // source (the derivation, theme_roles.h's head):
@@ -101,7 +103,10 @@
 //                            but (the chrome's `radio_lit_fill`, session
 //                            107)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
-//                            one-W outline round every chip, THE SELECTION
+//                            one-W outline round every ENABLED chip (a
+//                            disabled one's `inactive_cue_outline`,
+//                            below) and round the ruler's head, THE
+//                            SELECTION
 //                            STEM down the canvas (every selected marker,
 //                            architect 2026-11-05; enabled or disabled,
 //                            2026-11-11) and the phase-reset
@@ -112,9 +117,10 @@
 //                            2026-11-05, "disabled marker gets dim label"):
 //                            LIVE'S INACTIVE WARP MARKER, measured on its own
 //                            303030 lane — ONE ROLE, no blend: a disabled
-//                            chip's fill (in the `cue_outline`, the stem
-//                            the selection's as on an enabled chip,
-//                            resolve_flag_face) — the `h` view's removed
+//                            chip's fill (in the `inactive_cue_outline`,
+//                            the stem the selection's `cue_outline` as on
+//                            an enabled chip, resolve_flag_face) — the `h`
+//                            view's removed
 //                            items' too (2026-11-11) — and every INERT
 //                            LABEL — a disabled cue's segments, a tie
 //                            follower's cells and a removed history
@@ -124,6 +130,17 @@
 //                            (architect 2026-10-10): Live's grey shows the
 //                            marker exists and reads as off, the label with
 //                            it (BackgroundClip)
+//   inactive_cue_outline
+//                    242424  THE DISABLED CHIP'S OUTLINE (architect
+//                            2026-11-12, session 114): the one-W outline
+//                            round a disabled chip, the `h` view's removed
+//                            items' too (resolve_flag_face) — the
+//                            `cue_outline` moved 75 % of the way toward the
+//                            marker lane's Desktop, so the chip's edge
+//                            recedes into the lane it stands on
+//                            (theme_roles.h's DERIVED block). The selection
+//                            stem of a selected disabled chip stays the
+//                            `cue_outline`
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
 //                            paragraph), the head's alone (RangeDefault)
@@ -171,6 +188,7 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::cue,              &GuiThemeTones::cue},
     {&GuiPalette::cue_outline,      &GuiThemeTones::cue_outline},
     {&GuiPalette::inactive_cue,     &GuiThemeTones::inactive_cue},
+    {&GuiPalette::inactive_cue_outline, &GuiThemeTones::inactive_cue_outline},
     {&GuiPalette::playhead_head,    &GuiThemeTones::playhead_head},
     {&GuiPalette::playhead_line,    &GuiThemeTones::playhead_line},
     {&GuiPalette::scanner,          &GuiThemeTones::scanner},
@@ -179,7 +197,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the forty words with its literal, so
+// 2026-11-01..05 — every one of the forty-one words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
@@ -201,7 +219,10 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // × 42 / 54; its inert face 5D4D81, the purple × 93 / 181 — the lit key's
 // two ratios on one code path (the DERIVED block). THE PLAYHEAD'S LINE
 // 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
-// to even (architect 2026-11-12, session 113; the DERIVED block).
+// to even (architect 2026-11-12, session 113), and THE DISABLED CHIP'S
+// OUTLINE 242424 is 111111 + 0.75 · (Desktop 2A2A2A − 111111), per channel,
+// 35.75 rounded to 36 (architect 2026-11-12, session 114; both the DERIVED
+// block).
 // THE SELECTION PAIR'S TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
@@ -242,7 +263,7 @@ static_assert(kDefault.card_face       == 0xE76942);
 static_assert(kDefault.card_ink        == 0x2A2A2A);
 static_assert(kDefault.clip_lamp       == 0xFF0A0A);
 static_assert(kDefault.level_fill      == 0x007383);
-// THE PALETTE (the head's eleven).
+// THE PALETTE (the head's twelve).
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);
 static_assert(kDefault.waveform_core   == 0x363636);
@@ -251,6 +272,7 @@ static_assert(kDefault.center          == 0x191919);
 static_assert(kDefault.cue             == 0xFFAD56);
 static_assert(kDefault.cue_outline     == 0x111111);
 static_assert(kDefault.inactive_cue    == 0x5D5D5D);
+static_assert(kDefault.inactive_cue_outline == 0x242424);
 static_assert(kDefault.playhead_head   == 0x03C3D5);
 static_assert(kDefault.playhead_line   == 0x81E1EA);
 static_assert(kDefault.scanner         == 0xFFFFFF);

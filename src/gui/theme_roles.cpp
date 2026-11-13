@@ -298,6 +298,9 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.cue                 = packed(on);
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
+    // The disabled chip's outline: the enabled chip's moved 75 % of the way
+    // toward the marker lane it stands on (the head's DERIVED block).
+    t.inactive_cue_outline = packed(mix(contrast, desktop, 0.75));
     t.playhead_head       = packed(range);
     t.playhead_line       = packed(mix(white, range, 0.5));
     t.scanner             = packed(white);

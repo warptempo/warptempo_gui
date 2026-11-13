@@ -235,7 +235,7 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
@@ -247,7 +247,9 @@ struct TrimRange {
 //                 selected marker's stem and the two rings — warp and
 //                 phase reset alike (the strike is the invalid mark, THE
 //                 MARKER LANE below); the disabled cue's `inactive_cue`,
-//                 its chip's fill and the inert label; the playhead's two
+//                 its chip's fill and the inert label, and its
+//                 `inactive_cue_outline`, the disabled chip's outline
+//                 (architect 2026-11-12, session 114); the playhead's two
 //                 roles,
 //                 `playhead_head` — its triangle in the ruler — and
 //                 `playhead_line` — its static light cyan 81E1EA in the
@@ -395,6 +397,7 @@ struct GuiPalette {
     GuiColor cue;
     GuiColor cue_outline;
     GuiColor inactive_cue;
+    GuiColor inactive_cue_outline;
     GuiColor playhead_head;
     GuiColor playhead_line;
     GuiColor scanner;
@@ -772,15 +775,20 @@ void install_true_colors(bool on);
 //             2026-11-02; the inert look's reason 2026-10-10 ~12:20, "the
 //             arrow needs to be legible for me, but the text doesn't …
 //             since it's disabled, it's inert"): the `inactive_cue` 5D5D5D
-//             fill in the `cue_outline`, the label in the `inactive_cue`,
+//             fill in the `inactive_cue_outline` (architect 2026-11-12,
+//             session 114: the `cue_outline` moved 75 % of the way toward
+//             the lane's Desktop, Default's 242424 — theme_roles.h's
+//             DERIVED block), the label in the `inactive_cue`,
 //             the playhead on it or not; the same inert label on a tie
 //             follower's cells (one look for inert cue text). A disabled
 //             marker is selectable (architect 2026-10-07 ~15:10), and
 //             SELECTED IT STANDS THE SELECTED ROW'S STEM (architect
 //             2026-11-11, session 106: "disabled markers also get the dark
-//             stem, same as enabled ones"; "leave the outline as is"), its
-//             chip and label unchanged — so a disable toggle of a selected
-//             marker flips the chip and the label and leaves the stem.
+//             stem, same as enabled ones"), the stem the `cue_outline`
+//             whatever the chip's outline, its chip (the disabled outline
+//             too) and label unchanged — so a disable toggle of a selected
+//             marker flips the chip, its outline and the label and leaves
+//             the stem.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE: the
 // press look of 2026-11-05 is the keys' and the lists' rows' alone
 // (materials.h's head), never a marker's.
@@ -4391,8 +4399,9 @@ struct HistoryDiffFlag {
 // every item ONE CUE at its one frame — the live lane's chip and outline, its
 // label in the label face — in THE HISTORY'S STYLES (HistoryDiffFlag's
 // paragraph above; resolve_flag_face's Removed / Added / Changed rows): a
-// REMOVED item the disabled style, the `inactive_cue` chip and the inactive
-// label, its one segment STRUCK; an ADDED item the enabled style, the `cue`
+// REMOVED item the disabled style, the `inactive_cue` chip in the
+// `inactive_cue_outline` and the inactive label, its one segment STRUCK; an
+// ADDED item the enabled style, the `cue`
 // chip and the text tone, its one segment plain; a CHANGED item the enabled
 // style, TWO SEGMENTS in the text tone — the older side's label struck, then
 // the newer side's plain, the segment gap between their boxes (the live

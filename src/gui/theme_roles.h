@@ -113,7 +113,12 @@
 //     key face, ruler face, pane, time field, magnify core
 //                            363636 = SurfaceBackground (the core below)
 //     cue outline, text on lit
-//                            111111 = ControlContrastFrame — THE PRINT ON A
+//                            111111 = ControlContrastFrame — THE ENABLED
+//                                     CHIP'S OUTLINE (a disabled chip's is
+//                                     the DERIVED block's inactive cue
+//                                     outline), THE SELECTION STEM on every
+//                                     selected chip, the rings, the ruler
+//                                     head's outline; THE PRINT ON A
 //                                     LIT KEY'S FACE too, its glyph and the
 //                                     on-screen keyboard's lit cap, near-black
 //                                     on the accent (architect 2026-11-11,
@@ -229,6 +234,23 @@
 //                                     from 255 is odd lands on a .5, which
 //                                     rounds to the even byte like every mix
 //                                     here
+//     inactive cue outline   242424 = ControlContrastFrame + 0.75 ·
+//                                     (Desktop − ControlContrastFrame), THE
+//                                     DISABLED CHIP'S OUTLINE, the `h` view's
+//                                     removed items' too: the enabled chip's
+//                                     outline moved 75 % OF THE WAY TOWARD
+//                                     THE MARKER LANE it stands on, so a
+//                                     disabled chip's edge recedes into the
+//                                     lane (architect 2026-11-12, session 114:
+//                                     "the disable outline, I think, should be
+//                                     a different rule in the code, so no
+//                                     change to the themes needed"; 75 % his
+//                                     pick on the tablet over 50 %, SB
+//                                     Gunmetal_mod 0B0D11 toward 24262D ->
+//                                     1E2026). The selection stem of a
+//                                     selected disabled chip, the ruler head's
+//                                     outline and the lead-in ring stay the cue
+//                                     outline (resolve_flag_face, render.cpp)
 //     lit press fill         C68743 = THE ACCENT DARKENED BY THE PRESS RATIO:
 //                                     the accent (cue) · (mean(press face) /
 //                                     mean(key face)) per channel, the means

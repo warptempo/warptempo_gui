@@ -1374,12 +1374,12 @@ struct FlagFace {
 // THE TABLE ("stem" the publication of the cue's stem entry, MarkerStem,
 // painted wherever it is published; "label" the label's ink, the segment's
 // `inert` on the history rows):
-//   side      flag        fill          outline      stem      label      strike
-//   LIVE      DISABLED    inactive_cue  cue_outline  selected  inactive   `strike`
-//   LIVE      ENABLED     cue           cue_outline  selected  text tone  `strike`
-//   REMOVED   any         inactive_cue  cue_outline  selected  inactive   always
-//   ADDED     any         cue           cue_outline  selected  text tone  never
-//   CHANGED   any         cue           cue_outline  selected  text tone  per segment
+//   side      flag        fill          outline               stem      label      strike
+//   LIVE      DISABLED    inactive_cue  inactive_cue_outline  selected  inactive   `strike`
+//   LIVE      ENABLED     cue           cue_outline           selected  text tone  `strike`
+//   REMOVED   any         inactive_cue  inactive_cue_outline  selected  inactive   always
+//   ADDED     any         cue           cue_outline           selected  text tone  never
+//   CHANGED   any         cue           cue_outline           selected  text tone  per segment
 // — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
 // THE `cue` FFAD56 in THE OUTLINE, Live's dark line 111111, selected or
 // not. EVERY SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
@@ -1392,8 +1392,12 @@ struct FlagFace {
 // never cross, so the stem stands through a disable toggle of a selected
 // marker while its chip flips. A DISABLED CHIP IS SOLID GREY (architect
 // 2026-11-05, "disabled marker gets dim label"): the `inactive_cue` 5D5D5D
-// fill in the same `cue_outline` (2026-11-11: "leave the outline as is"),
-// the playhead on it or not. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect
+// fill in THE DISABLED OUTLINE, `inactive_cue_outline` (architect
+// 2026-11-12, session 114: the `cue_outline` moved 75 % of the way toward
+// the lane's Desktop, Default's 242424 — theme_roles.h's DERIVED block), the
+// playhead on it or not, selected or not; THE STEM STAYS `cue_outline` on
+// every selected cue, disabled too — the stem is the one mark of the
+// selection. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect
 // 2026-11-05: "only 1 playhead onscreen ever"): the focused member has no
 // paint of its own — every click and toggle lands the playhead on it
 // (land_playhead_on_marker) — and THE RESOLVER NEVER SEES THE PLAYHEAD.
@@ -1432,10 +1436,13 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
     const GuiPalette& p = palette();
     switch (side) {
         case GuiFlagSide::Live:
-            return FlagFace{disabled ? p.inactive_cue : p.cue, p.cue_outline,
-                            selected, strike};
+            return disabled
+                       ? FlagFace{p.inactive_cue, p.inactive_cue_outline,
+                                  selected, strike}
+                       : FlagFace{p.cue, p.cue_outline, selected, strike};
         case GuiFlagSide::Removed:
-            return FlagFace{p.inactive_cue, p.cue_outline, selected, true};
+            return FlagFace{p.inactive_cue, p.inactive_cue_outline, selected,
+                            true};
         case GuiFlagSide::Added:
             return FlagFace{p.cue, p.cue_outline, selected, false};
         case GuiFlagSide::Changed:
@@ -2284,7 +2291,7 @@ WaveformPlateInks waveform_plate_inks() {
 
 void install_palette(const GuiTheme& theme) {
     // The contract and the apply shape the live caller owes are at the
-    // declaration (render.h). THE PROGRAM'S ELEVEN off the palette's role
+    // declaration (render.h). THE PROGRAM'S TWELVE off the palette's role
     // table (palette_file.h), THE CHROME'S THIRTY off the chrome's
     // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
     // theme's ground (the flat look, materials.h's head) — the tables
