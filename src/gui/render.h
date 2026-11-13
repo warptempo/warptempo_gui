@@ -580,12 +580,12 @@ void install_true_colors(bool on);
 
 // THE PLAYHEAD IS COOL EDIT'S CURSOR (architect 2026-10-09) IN LIVE'S TONES:
 // ITS HEAD the cue's chip, THE SAME DRAWING (architect 2026-11-04, mock k1,
-// "4 accept overlap") — its rows (cue_triangle_rows, 5 W, 10 at 200 %) in whole
+// "4 accept overlap") — its rows (cue_triangle_rows, 4 W, 8 at 200 %) in whole
 // device cells, Cool Edit's aliased drawing (2026-10-26), the apex the
 // playhead's column (paint_ce_cue_triangle; the triangle's cell one device
 // px, architect 2026-10-26 ~10:10: "All triangles unscaled",
 // cue_triangle_unit_px), IN THE CHIP'S ONE-W `cue_outline` 111111 (the
-// outer 29 x 15 at 200 %) — its fill THE PALETTE'S `playhead_head`
+// outer 25 x 13 at 200 %) — its fill THE PALETTE'S `playhead_head`
 // (architect 2026-10-09 ~11:50; Live's playhead cyan 03C3D5 since
 // 2026-11-01, palette_file.h), NO SHADOW (2026-11-02), THE OUTLINED SHAPE
 // ON THE RULER'S LAST cue_chip_rows DEVICE ROWS, its apex on the ruler's
@@ -654,10 +654,10 @@ void install_true_colors(bool on);
 // THE CHIP — COOL EDIT'S TRIANGLE IN A ONE-W OUTLINE (architect 2026-11-04,
 // mock g1; render.h's cue_chip_rows owns the construction): the triangle
 // Cool Edit's staircase in whole device cells, its rows scaled (architect
-// 2026-10-26, paint_ce_cue_triangle's head; cue_triangle_rows: 5 W, 10 at
-// 200 %, 5 at 100 %; Cool Edit's own 9 by 5), Cool Edit's aliased drawing,
-// round it a second, larger staircase in the outline's tone (29 x 15 round
-// the fill's 19 x 10 at 200 %), on the lane's last rows, its apex the marker's
+// 2026-10-26, paint_ce_cue_triangle's head; cue_triangle_rows: 4 W, 8 at
+// 200 %, 4 at 100 %; Cool Edit's own 9 by 5), Cool Edit's aliased drawing,
+// round it a second, larger staircase in the outline's tone (25 x 13 round
+// the fill's 15 x 8 at 200 %), on the lane's last rows, its apex the marker's
 // column on the lane's last row, directly above the row of ground under
 // the lane, NO SHADOW (2026-11-02);
 // THE LABEL — the marker's one label, at rest in the text tone `text`
@@ -666,7 +666,7 @@ void install_true_colors(bool on);
 // LABEL FACE, BOLD Label 11 W, 22 device px at 200 % (gui_font.h's
 // kGuiFaceSizes; architect 2026-11-01 night, M5i; the retrofit's 22 device
 // px), starting the fill's reach right, the outline's W and a gap of 6 W
-// right of the column (cue_label_lead_px: 12 W, 24 device px at 200 %), ON
+// right of the column (cue_label_lead_px: 11 W, 22 device px at 200 %), ON
 // THE LANE'S ONE BASELINE
 // at rest and in the editor (cue_baseline_px, THE METRICS RULE at
 // marker_lane_h_px: the x-height band centered in the lane, 13 rows from
@@ -1868,7 +1868,7 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box, bool pressed);
 //              (marker_lane_h_px: the outline, the pad above, the legal
 //              set's band, the pad below, the outline, the x band centered):
 //              39 device rows (2 + 6 + 22 + 7 + 2); the cue's chip its last
-//              rows (cue_chip_rows, 15).
+//              rows (cue_chip_rows, 13).
 //   THE LINE   the row of ground between the lane and the canvas, one
 //              hairline (lane_foot_line_h_px, below): 2 device rows, 1 W.
 // THE TRIM BAR'S FIELD, 7 W on the one road (architect 2026-11-01 night,
@@ -1978,24 +1978,28 @@ inline int ruler_lane_h_px() {
 inline int cue_triangle_unit_px() {
     return 1;
 }
-// THE TRIANGLE'S ROWS, THE ONE ACCESSOR EVERY READER READS: 5 W through
-// scaled_px (10 device rows on the tablet at 200 %), rounded at the element
+// THE TRIANGLE'S ROWS, THE ONE ACCESSOR EVERY READER READS: 4 W through
+// scaled_px (8 device rows on the tablet at 200 %), rounded at the element
 // like every length off the canvas (architect 2026-10-26 ~13:40, on the row count as a per-device
 // number: "why density? why not just simple scale? tablet is only real
 // surface. later tablets may have higher dpi, but not lower" — "yes" to the
-// planner's proposal; 9 the 8 he tuned on the glass grown with the text
-// round's 24, architect 2026-11-03, kept by the retrofit the same day; 10
-// device rows, 5 W, since 2026-11-04 night, his pick on mock v4, "chip
-// 10"). THE CELL STAYS ONE DEVICE PX (cue_triangle_unit_px above) and the
-// staircase whole cells; only the count rides the scale: 10 rows at 200 %,
-// 5 at 100 %; at the scale's floor of 50 % (is_gui_scale_percent,
-// device_config.h) 2.5 rounds to 2 (banker's) — and the drawing holds: no
-// floor, no clamp. READERS: the fill's
+// planner's proposal). 4 W SINCE 2026-11-12 (architect, session 114:
+// "shorter triangles, yes, and then move labels one W left, yes"), one W
+// under the 5 W of his pick on mock v4, "chip 10", 2026-11-04 night: THE
+// SAME CONSTRUCTION, ITS APEX ON THE SAME ROW, so the chip is the 5 W one
+// cut at its top, every row it keeps the same cells ("it stays touching
+// the border ... they don't rise up as far by one Windows pixel"), and the
+// label's lead, which reads these rows, moves every label one W left with
+// it (cue_label_lead_px below). THE CELL STAYS ONE DEVICE PX
+// (cue_triangle_unit_px above) and the staircase whole cells; only the
+// count rides the scale: 8 rows at 200 %, 4 at 100 %, 2 at the scale's
+// floor of 50 % (is_gui_scale_percent, device_config.h) — and the drawing
+// holds: no floor, no clamp. READERS: the fill's
 // rows (cue_triangle_h_px), the chip's (cue_chip_rows below), the label's
 // lead (cue_label_lead_px, the fill's reach), the chip's widths
 // (cue_triangle_* below — every cull, hit and damage box) and the painter
 // (CueTrianglePass).
-inline constexpr double kCueTriangleRowsW = 5.0;
+inline constexpr double kCueTriangleRowsW = 4.0;
 inline int cue_triangle_rows() {
     return scaled_px(kCueTriangleRowsW);
 }
@@ -2011,15 +2015,15 @@ inline int cue_triangle_rows() {
 // sides is √2 W across a row), so the outer has rows + t + s rows
 // (cue_chip_rows), its top row 2 · (rows + t + s) − 1 cells wide, and on
 // every one of the fill's rows it reaches exactly s cells past the fill on
-// each side. ON THE TABLET AT 200 %: rows 10, t 2, s 3 (2.83) — the outer
-// 29 x 15, the fill 19 x 10; at 100 %: rows 5, t 1, s 1 — the outer 13 x 7,
-// the fill 9 x 5. THE CHIP'S APEX STANDS ON THE LANE'S LAST ROW
+// each side. ON THE TABLET AT 200 %: rows 8, t 2, s 3 (2.83) — the outer
+// 25 x 13, the fill 15 x 8; at 100 %: rows 4, t 1, s 1 — the outer 11 x 6,
+// the fill 7 x 4. THE CHIP'S APEX STANDS ON THE LANE'S LAST ROW
 // (cue_above_chip_h_px below), so the fill's top row is the lane's last row
-// less rows + s (at 200 %, lane rows 202 .. 240: the outer on 226 .. 240,
-// the fill on 228 .. 237). THE RULER'S HEAD IS THE SAME CHIP (architect
+// less rows + s − 1 (at 200 %, lane rows 202 .. 240: the outer on 228 .. 240,
+// the fill on 230 .. 237). THE RULER'S HEAD IS THE SAME CHIP (architect
 // 2026-11-04, mock k1, "4 accept overlap"): its outlined shape's apex on the
 // ruler's last row (200 %: ruler
-// rows 164 .. 199, the outer on 185 .. 199, the fill on 187 .. 196), so its
+// rows 164 .. 199, the outer on 187 .. 199, the fill on 189 .. 196), so its
 // top reaches into the ruler's digits
 // where it stands under a label — ACCEPTED ("timestamp not really
 // important for fine tune, just ballpark"): it paints over them as a chip
@@ -2079,9 +2083,14 @@ inline int cue_segment_text_gap_px() {
 // through scaled_px, rounded at the element —
 // so the label follows the rows and keeps the gap. THE GAP IS MEASURED FROM
 // THE OUTLINE'S NOMINAL ONE-W EDGE BESIDE THE FILL'S REACH, not from the
-// outer staircase's widest row (which reaches s − t cells further: the gap
-// from that row is 11 device px on the tablet). At 200 %: 10 + 2 + 12 = 24
-// device px; at 100 %: 5 + 1 + 6 = 12. The gap is
+// outer staircase's widest row beside the fill (which reaches s − t cells
+// further: the gap from that row is 11 device px on the tablet); the
+// outer's own top row, t rows higher, reaches t further still, so from it
+// to the text's origin stand gap − s cells, 9 on the tablet, AT EVERY ROW
+// COUNT — the lead and the chip's reach move together with the rows (the
+// triangles one W shorter, the labels one W left, architect 2026-11-12,
+// session 114: the chip's edge to the label's ink unchanged on his mock).
+// At 200 %: 8 + 2 + 12 = 22 device px; at 100 %: 4 + 1 + 6 = 11. The gap is
 // never negative, so the text never stands under the flag. THE FILL'S LEAD
 // IS THE LEAD LESS THE FILL'S PAD (cue_fill_lead_px): the text stands one
 // pad inside its fill (cue_segment_boxes, render.cpp). Readers: the segment
@@ -2171,7 +2180,7 @@ inline int time_field_h_px() {
 // 14 below), the band rows 8 .. 29, the baseline 25 rows under the lane's
 // top. A scale whose field is shorter than the box's minimum (2 · outline +
 // the band) takes that minimum, both pads 0. The chip's device rows are the
-// lane's bottom rows (cue_above_chip_h_px the remainder: 39 − 15 = 24 on
+// lane's bottom rows (cue_above_chip_h_px the remainder: 39 − 13 = 26 on
 // the tablet), under the band's descenders where no label stands beside it.
 inline constexpr double kCueEditorOutlineW = 1.0;
 inline int cue_editor_outline_px() {
@@ -2252,7 +2261,7 @@ inline int cue_baseline_px() {
 // points at the stem's right pixel — architect 2026-11-06, session 67, "it
 // should point at the right column") at every scale. ONE EXTENT, THE CHIP'S
 // (cue_triangle_half_w_px, cue_triangle_reach_right_px; R the chip's rows,
-// cue_chip_rows): 14 and 15 device px on the tablet at 200 %, 6 and 7 at
+// cue_chip_rows): 12 and 13 device px on the tablet at 200 %, 5 and 6 at
 // 100 % — the
 // outlined chip (architect 2026-11-04), the marker's and THE RULER'S HEAD'S
 // alike since the head wears the outline too (mock k1, the same evening),
@@ -2401,7 +2410,7 @@ inline int bottom_row_h_px() {
 // (clip_to_waveform_columns, render.cpp), the columns standing at the
 // canvas's own x since 2026-10-09 (waveform_area, the column's margin) — and
 // the flag iterator admits a marker whose triangle reaches into them (its
-// left edge cue_triangle_half_w_px left of its column, 14 device px on the
+// left edge cue_triangle_half_w_px left of its column, 12 device px on the
 // tablet at 200 %), so a marker just past the last
 // column shows the left half of its chip there, and no stem (the stem
 // stash is gated to [0, w)).

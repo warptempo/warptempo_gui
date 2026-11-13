@@ -60,8 +60,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // PAINTER: THE FILL, a staircase of `rows` rows of whole cells of one unit u
 // (cue_triangle_unit_px, render.h) from `top` — 2·rows − 1 cells on the top
 // row down to one, the apex row one cell and each row above it two cells
-// wider (19, 17, … 1 at the tablet's ten rows at 200 %; 9, 7, … 1 at
-// 100 %'s five) —
+// wider (15, 13, … 1 at the tablet's eight rows at 200 %; 7, 5, … 1 at
+// 100 %'s four) —
 // CENTRED ON THE STEM'S COLUMN `col` (architect 2026-10-09 ~14:35: "at every
 // scale, the marker triangle must be fully centered on the stem"; the stem
 // one W on that column since 2026-11-04, straddling the frame since
@@ -73,7 +73,7 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // outline's color painted first, from cue_chip_top_rows() rows above the
 // fill's top through cue_chip_apex_rows() rows below its apex (architect
 // 2026-11-04, mock g1, "a one-W 111111 outline"; render.h's cue_chip_rows
-// owns the construction: 29 x 15 round the fill's 19 x 10 on the tablet). NO
+// owns the construction: 25 x 13 round the fill's 15 x 8 on the tablet). NO
 // SHADOW
 // (architect 2026-11-02, the well's part of the flat look, "no shadow
 // anywhere").
@@ -93,12 +93,12 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // (architect 2026-10-26 ~13:40, on the row count as a per-device number:
 // "why density? why not just simple scale? tablet is only real surface.
 // later tablets may have higher dpi, but not lower" — and "yes" to the
-// planner's proposal): authored 5 W, 10 device rows on the tablet at 200 %
-// (architect 2026-11-04 night, mock v4 "chip 10"; 9 from the text round of
-// 2026-11-03, the 8 rows the tuning key left on the tablet grown, kept by
-// the retrofit the same day), rounded at the element like every length off
-// the canvas (render.h's cue_triangle_rows, the one accessor) — 10 rows at
-// 200 %, 5 at 100 %, 2 at the scale's floor of 50 %.
+// planner's proposal): authored 4 W, 8 device rows on the tablet at 200 %
+// (architect 2026-11-12, session 114, "shorter triangles, yes": one W under
+// mock v4's 5 W "chip 10" of 2026-11-04 night, the apex on the same row),
+// rounded at the element like every length off the canvas (render.h's
+// cue_triangle_rows, the one accessor) — 8 rows at 200 %, 4 at 100 %, 2 at
+// the scale's floor of 50 %.
 //
 // DRAWN ALIASED, COOL EDIT'S HARD STAIRCASE (architect 2026-10-26 ~10:40,
 // "agree" to "at this size the staircase is the truthful drawing and the

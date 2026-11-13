@@ -4508,8 +4508,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09; render.h's playhead
-    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 5 W,
-    // 10 on the tablet) in whole device cells, Cool Edit's aliased staircase
+    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 4 W,
+    // 8 on the tablet) in whole device cells, Cool Edit's aliased staircase
     // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
     // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
     // cue_triangle_unit_px, render.h), IN THE MARKER CHIP'S ONE-W
@@ -4519,7 +4519,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (2026-11-02), the head's own tone apart from the line's static
     // `playhead_line` (render_playhead), THE
     // OUTLINED SHAPE ON THE RULER'S LAST cue_chip_rows DEVICE ROWS (200 %:
-    // the outer on 185 .. 199, the fill on 187 .. 196), its apex — the
+    // the outer on 187 .. 199, the fill on 189 .. 196), its apex — the
     // bottom centre of the playhead's column — on the ruler's foot row,
     // over the ticks' feet (2026-10-09 ~21:00; the ruler's foot since the
     // flat well). It is OPAQUE over the ticks and digits the walk above

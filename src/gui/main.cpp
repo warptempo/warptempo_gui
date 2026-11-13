@@ -1258,13 +1258,13 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // covers, centred on the stem's column (cue_triangle_half_w_px and
 // cue_triangle_reach_right_px, render.h, the painter's own cells: the head
 // wears the chip's outline since 2026-11-04) — the chip's rows less one
-// left, its rows right: 14 + 15 = 29 device px on the tablet at 200 %, 6 +
-// 7 = 13 at 100 % (the cells one device px, the rows scaled, 2026-10-26; no shadow
+// left, its rows right: 12 + 13 = 25 device px on the tablet at 200 %, 5 +
+// 6 = 11 at 100 % (the cells one device px, the rows scaled, 2026-10-26; no shadow
 // since 2026-11-02) — its rows the whole band from the window's top below — which
 // also holds the one-W line of the scanner and the cursor, on the column
 // (col − t / 2 .. col − t / 2 + t − 1, waveform_line_px: the column left of
 // it and the column itself on the tablet, the line straddling its frame,
-// inside the box's 14 columns left), so a move repaints every column the
+// inside the box's 12 columns left), so a move repaints every column the
 // head and the line stood on.
 // `col` is the waveform's own column (offset from area.x, as every
 // playhead pixel is) — THE PAINTED COLUMN, playhead_pixel_x /

@@ -77,13 +77,13 @@
 // right pixel: architect 2026-11-06, session 67, "it should point at the
 // right column"); THE MARKER'S CHIP is that staircase in a one-W outline, a
 // second, larger staircase of the same cells (architect 2026-11-04, mock
-// g1; render.h's cue_chip_rows: 29 x 15 round 19 x 10 on the tablet at
-// 200 %, 13 x 7 round 9 x 5 at 100 %), the ruler's head the same chip. ITS
-// ROW COUNT IS NO FIELD HERE: it is a skin length, 5 W through scaled_px,
+// g1; render.h's cue_chip_rows: 25 x 13 round 15 x 8 on the tablet at
+// 200 %, 11 x 6 round 7 x 4 at 100 %), the ruler's head the same chip. ITS
+// ROW COUNT IS NO FIELD HERE: it is a skin length, 4 W through scaled_px,
 // rounded at the element (architect 2026-10-26 ~13:40, "why not just
 // simple scale? tablet is only real surface"; render.h's cue_triangle_rows
-// and kCueTriangleRowsW, the one owner — 10 rows at 200 %, 5 at 100 %: the
-// fill is a whole 5 W; its staircase's CELLS are one device px each,
+// and kCueTriangleRowsW, the one owner — 8 rows at 200 %, 4 at 100 %: the
+// fill is a whole 4 W; its staircase's CELLS are one device px each,
 // cue_triangle_unit_px, the distinct thing that does not scale). THE
 // LABEL'S LENGTHS ARE SKIN LENGTHS TOO, scaled with the text they place
 // (the text round, architect 2026-11-03): the fill's pad, the segment gap
@@ -91,8 +91,8 @@
 // cue_segment_gap_px, cue_editor_outline_px), and THE LABEL'S LEAD from the
 // column, THE BARE TRIANGLE'S REACH RIGHT, THE OUTLINE'S W AND A GAP OF 6 W
 // (render.h's cue_label_lead_px and kCueLabelGapW, architect 2026-10-26
-// ~12:40: the label follows the rows; the W 2026-11-04: 10 + 2 + 12 = 24
-// device px on the tablet). Every line down the canvas is
+// ~12:40: the label follows the rows; the W 2026-11-04: 8 + 2 + 12 = 22
+// device px on the tablet since the rows' 4 W, 2026-11-12). Every line down the canvas is
 // solid, one W (no dotted line since 2026-11-04). THE WELL'S
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
