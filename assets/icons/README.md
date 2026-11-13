@@ -26,8 +26,8 @@ deliberate share: "keep just one"); a normal card wears DialogInformation and a 
 cut-out transcriptions (below).
 
 THE LAUNCHER ICON is `AppIcon.svg`, a relative symlink to `MusicNote16th.svg` — the one symlink here — which
-`apk/build_apk.sh` renders at every build in the `default` theme's text tone over its flat ground — Live's Default Dark
-Cool Medium, B3B4BD over 22242D, read from `themes/system/default_dark_cool_medium.theme`
+`apk/build_apk.sh` renders at every build in the `default` theme's text tone over its flat ground — SB Gunmetal_mod,
+B3B4BD over 1F2128, read from `themes/system/sb_gunmetal_mod.theme`
 (`apk/res/mipmap-anydpi-v26/ic_launcher.xml`); the app itself does not read it.
 
 THE IMPORTER, `tools/icons/import_breeze.py` (standalone, stdlib only, no link path from any product target), holds the

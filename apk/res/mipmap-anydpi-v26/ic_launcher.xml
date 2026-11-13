@@ -7,12 +7,12 @@
      22 x 22 viewBox), rendered by resvg at the art's height in the
      `default` theme's text tone #B3B4BD (apk/build_apk.sh's LAUNCHER_INK,
      given as resvg's user stylesheet) and centered over THE APP'S GROUND,
-     FLAT: #22242D (architect 2026-11-02: the icon wears the window's own
+     FLAT: #1F2128 (architect 2026-11-02: the icon wears the window's own
      ground — the `default` theme's whatever theme the window runs,
-     2026-11-05; since 2026-11-11, session 110, D7, Live's Default Dark Cool
-     Medium: "i plan to use cool medium a lot more"; both READ by
-     apk/build_apk.sh from themes/system/default_dark_cool_medium.theme's
-     SurfaceArea and ControlForeground lines, that file the one owner),
+     2026-11-05; since 2026-11-12, session 114, SB Gunmetal_mod: "Gunmetal
+     as the default, yes"; both READ by apk/build_apk.sh from
+     themes/system/sb_gunmetal_mod.theme's SurfaceArea and
+     ControlForeground lines, that file the one owner),
      one color over the whole
      canvas, so the mask shows a dark shape carrying the note. An
      ADAPTIVE icon, the whole of it: minSdk is 30, so
@@ -21,7 +21,7 @@
      Two layers per density under res/mipmap-<density>/, BOTH RENDERED AT
      EVERY BUILD by apk/build_apk.sh's launcher step into its staged
      copy of res/:
-       ic_launcher_background.png  the full 108 dp canvas flat in #22242D;
+       ic_launcher_background.png  the full 108 dp canvas flat in #1F2128;
        ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
                                    the viewBox's (52 dp: the note's viewBox
                                    is square), centred on a transparent

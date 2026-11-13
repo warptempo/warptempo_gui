@@ -59,20 +59,24 @@
 //
 // THE LIST — the value list's order, under THREE GROUPS, the headings exact
 // (gui_theme.h's kGuiThemeGroup*):
-//   SYSTEM        `default` FIRST — LIVE'S DEFAULT DARK COOL MEDIUM (architect
-//                 2026-11-11, session 110, D4: "i plan to use cool medium a
-//                 lot more"): a copy of `default_dark_cool_medium`'s row
-//                 under the slug `default`, the opening theme — then BY SLUG
-//                 every file of `themes/system/` (Live's stock themes and
-//                 `immaterial_mod`, D5: alphabetical, so right after
-//                 `immaterial`) AND THE COMPILED REFERENCE ROW as
-//                 `default_dark_neutral_medium` (kGuiReferenceThemeTones,
-//                 gui_theme.h: Live's Default Dark Neutral Medium, compiled,
-//                 no file shipping it). Cool Medium is listed twice, as
-//                 `default` and under its own slug.
+//   SYSTEM        `default` FIRST — SB GUNMETAL_MOD (architect 2026-11-12,
+//                 session 114: "Gunmetal as the default, yes" — "with fresh
+//                 eyes, gunmetal is far and away more relaxing"; Live's
+//                 Default Dark Cool Medium from 2026-11-11, session 110, D4):
+//                 a copy of `sb_gunmetal_mod`'s row under the slug
+//                 `default`, the opening theme — then BY SLUG every file of
+//                 `themes/system/` (Live's stock themes, `immaterial_mod`,
+//                 D5: alphabetical, so right after `immaterial`, and
+//                 `sb_gunmetal_mod`, a SYSTEM file as the default's source,
+//                 so after `riparian`) AND THE COMPILED
+//                 REFERENCE ROW as `default_dark_neutral_medium`
+//                 (kGuiReferenceThemeTones, gui_theme.h: Live's Default Dark
+//                 Neutral Medium, compiled, no file shipping it). Gunmetal
+//                 is listed twice, as `default` and under its own slug.
 //   EXTRA         every file of `themes/extra/` by slug: the Sonic Bloom
-//                 pack as he curated it (2026-11-07), the six `_mod` files
-//                 his hand edits, each recorded in its header comment.
+//                 pack as he curated it (2026-11-07) less Gunmetal, the five
+//                 `_mod` files his hand edits, each recorded in its header
+//                 comment.
 //   USER-DEFINED  his own files beside the config, by slug (then by file
 //                 name). A user file whose slug a shipped row bears
 //                 (`default`, `default_dark_neutral_medium` and every SYSTEM
@@ -84,7 +88,7 @@
 // validation doctrine's class (1) as icons::load_set's: a shipped file left
 // out by the rules above, a shipped file not named by its own slug, two
 // shipped files of one slug, a shipped file slugging to `default` or
-// `default_dark_neutral_medium`, or no `default_dark_cool_medium` among
+// `default_dark_neutral_medium`, or no `sb_gunmetal_mod` among
 // SYSTEM's files makes the load answer the error, and gui_main prints one
 // line and opens no window.
 //
@@ -352,7 +356,7 @@
 // THE SONIC BLOOM FILES' UNDEFINED ROLES: a pack file may carry a role it does
 // not use as 000000 (ScrollbarInnerHandle black on 12 SB files,
 // DetailViewRulerMarkings on 4). NO RULE CORRECTS IT: he edits the individual
-// theme by hand, a `_mod` file of themes/extra/ (architect 2026-11-07,
+// theme by hand, a `_mod` file of the shipped themes (architect 2026-11-07,
 // session 82: "i'd rather manually fix individual sb themes than make rules
 // around their missing colors").
 //
@@ -385,6 +389,6 @@ const std::vector<GuiTheme>& gui_themes();
 // can name one), the launch opens in `default` (the head).
 const GuiTheme* find_gui_theme(std::string_view slug);
 
-// The `default` row, Live's Default Dark Cool Medium (the list's first; the
+// The `default` row, SB Gunmetal_mod's copy (the list's first; the
 // load must have answered no error).
 const GuiTheme& default_gui_theme();

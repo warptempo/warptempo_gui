@@ -84,19 +84,21 @@ inline constexpr std::string_view kGuiThemeGroupExtra  = "EXTRA";
 inline constexpr std::string_view kGuiThemeGroupUser   = "USER-DEFINED";
 
 // THE LIST'S OWN SLUGS (theme_roles.h's head). `default` is THE OPENING
-// THEME, the first row: a copy of the shipped Live's Default Dark Cool Medium
-// (`default_dark_cool_medium`, kGuiDefaultThemeSourceSlug; architect
-// 2026-11-11, session 110, D4: "i plan to use cool medium a lot more").
+// THEME, the first row: a copy of the shipped SB Gunmetal_mod
+// (`sb_gunmetal_mod`, kGuiDefaultThemeSourceSlug, a file of SYSTEM;
+// architect 2026-11-12, session 114: "Gunmetal as the default, yes" —
+// "with fresh eyes, gunmetal is far and away more relaxing").
 // `default_dark_neutral_medium` is the compiled reference row below. A
 // shipped file slugging to either is a build defect, a user file left out.
 inline constexpr std::string_view kGuiDefaultThemeSlug       = "default";
-inline constexpr std::string_view kGuiDefaultThemeSourceSlug = "default_dark_cool_medium";
+inline constexpr std::string_view kGuiDefaultThemeSourceSlug = "sb_gunmetal_mod";
 inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neutral_medium";
 
 // THE REFERENCE ROW, COMPILED (architect 2026-11-06, session 75; THE
-// REFERENCE since 2026-11-11, session 110, D4: `default` became Cool Medium,
-// this row staying compiled and listed in SYSTEM as
-// `default_dark_neutral_medium`, no file shipping it). Live's "Default Dark
+// REFERENCE since 2026-11-11, session 110, D4: `default` a shipped file's
+// copy — SB Gunmetal_mod's since 2026-11-12, session 114 — this row
+// staying compiled and listed in SYSTEM as `default_dark_neutral_medium`,
+// no file shipping it). Live's "Default Dark
 // Neutral Medium" — LIVE'S DEFAULT, whose numbers every "Default N" in the
 // code's comments names — through the derivation (theme_roles.h's head),
 // the measured palette of 2026-11-01..05 to the byte but THE SELECTION

@@ -221,9 +221,9 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # BACKGROUND that canvas FLAT IN THE `default` THEME'S GROUND (Live's
 # SurfaceArea; architect 2026-11-02: the icon wears the window's own ground
 # — THE `default` THEME'S, whatever `theme` the tablet runs: the icon is one
-# picture, the themes are the window's, 2026-11-05; since 2026-11-11,
-# session 110, D7, Live's Default Dark Cool Medium, 22242D: "i plan to use
-# cool medium a lot more"; LAUNCHER_GROUND below, read from the theme file),
+# picture, the themes are the window's, 2026-11-05; since 2026-11-12,
+# session 114, SB Gunmetal_mod's, 1F2128: "Gunmetal as the default, yes";
+# LAUNCHER_GROUND below, read from the theme file),
 # one color over the whole
 # square, which the launcher's mask cuts to its shape. Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
@@ -235,12 +235,12 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
 # THE ICON'S TWO COLORS ARE READ, NEVER SPELLED HERE: the `default` theme's
-# file, themes/system/default_dark_cool_medium.theme (Live's Default Dark
-# Cool Medium; src/gui/theme_roles.h's THE FORMAT), is their one owner — the
+# file, themes/system/sb_gunmetal_mod.theme (SB Gunmetal_mod;
+# src/gui/theme_roles.h's THE FORMAT and THE LIST), is their one owner — the
 # ground its SurfaceArea (the window's `ground`), the note's ink its
 # ControlForeground (the logo lane's `text`). A line missing, or not 6 hex
 # digits, stops the script here.
-LAUNCHER_THEME="$THEME_DIR/system/default_dark_cool_medium.theme"
+LAUNCHER_THEME="$THEME_DIR/system/sb_gunmetal_mod.theme"
 launcher_role() {                     # $1 = role name -> "#RRGGBB"
     local word
     word=$(sed -n "s/^$1=\([0-9A-Fa-f]*\)\r\{0,1\}\$/\1/p" "$LAUNCHER_THEME" | head -n 1)

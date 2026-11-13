@@ -3724,8 +3724,9 @@ int gui_main() {
     // (find_gui_theme), and every member of the palette installed off it,
     // the program's and the chrome's alike (install_palette, render.h). A
     // SLUG NO ROW BEARS (the reader judged the shape alone: a user file
-    // removed) OPENS IN `default`, Live's Default Dark Cool Medium (architect
-    // 2026-11-11, session 110, D6), with one stderr line, the config's line
+    // removed) OPENS IN `default`, SB Gunmetal_mod's copy (architect
+    // 2026-11-11, session 110, D6; Gunmetal the default since 2026-11-12,
+    // session 114), with one stderr line, the config's line
     // left as written — the struct keeps the string, so the next persist
     // writes it back unchanged — until he picks another (architect
     // 2026-11-06, the noise's absent-folder shape). The other road is the

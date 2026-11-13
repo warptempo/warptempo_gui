@@ -1,0 +1,40 @@
+# SB Gunmetal_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# SB_GUNMETAL_MOD: the pack's SB Gunmetal with four Live roles changed by hand
+# (architect 2026-11-07..12); THE `default` THEME since 2026-11-12 (session
+# 114, "with fresh eyes, gunmetal is far and away more relaxing"; the
+# `default` row a copy of this file's, src/gui/theme_roles.h's THE LIST):
+#   WaveformColor 090A0C -> 151619: THE STEM-OVER-INK RULE, the ink lit above
+#     the selection stem (ControlContrastFrame 0B0D11) by SB Bronze's step,
+#     CIELAB L* 3.61, the hue kept by scaling linear RGB (session 98).
+#   ControlForeground BEB3A5 -> B3B4BD, TextDisabled 7E7469 -> 737581: Live's
+#     Default Dark Cool Medium text pair in place of the pack's, which is
+#     Live's Default Dark Warm Medium pair (2026-11-12, session 113;
+#     confirmed session 114, "the cool medium text").
+#   RangeDefault DFE2CF -> B3B4BD: the playhead's head in the icon glyph
+#     color, this file's own ControlForeground, Gunmetal only; its line then
+#     the derived half toward white, D9DADE (2026-11-12, session 114, his
+#     pick on the tablet, "the stem at 50").
+SurfaceArea=1F2128
+Desktop=24262D
+SurfaceBackground=2E313A
+ControlContrastFrame=0B0D11
+ControlForeground=B3B4BD
+TextDisabled=737581
+BackgroundClip=535763
+ViewCheckControlEnabledOn=71A2B6
+RangeDefault=B3B4BD
+StandbySelectionBackground=637E86
+StandbySelectionForeground=040507
+SelectionBackground=B0DDEB
+SelectionForeground=040507
+Alert=F68E5F
+WaveformColor=151619
+DetailViewBackground=353842
+DetailGridTiles=0A0A0A19
+ScaleAwareness=94AA55
+RangeEditField=A03C4C
+TakeLaneTrackNotHighlighted=282B33
+ViewCheckControlDisabledOff=535763
+ScrollbarInnerHandle=5D6170
+DetailViewRulerMarkings=808699
+StandardVuMeter/Maximum=FF0A0A

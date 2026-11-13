@@ -53,12 +53,12 @@
 //                            SLUG of one row of the themes' list
 //                            (theme_roles.h, built at launch from theme
 //                            files since 2026-11-11: SYSTEM — `default`,
-//                            Live's "Default Dark Cool Medium", first, then
-//                            Live's stock themes, immaterial_mod and the
-//                            compiled default_dark_neutral_medium — EXTRA,
-//                            the APK's Sonic Bloom set, and USER-DEFINED,
-//                            the `themes/*.theme` files beside this file),
-//                            exactly as
+//                            SB Gunmetal_mod's copy, first, then Live's
+//                            stock themes, immaterial_mod, sb_gunmetal_mod
+//                            and the compiled default_dark_neutral_medium —
+//                            EXTRA, the APK's other Sonic Bloom files,
+//                            and USER-DEFINED, the `themes/*.theme` files
+//                            beside this file), exactly as
 //                            the slug rule spells it. THE READER JUDGES THE
 //                            SHAPE ALONE (is_theme_slug, gui_theme.h; THE
 //                            theme GRAMMAR below): any other word the

@@ -18,7 +18,7 @@
 // APP'S OWN THEME FILES, Live's raw role values in our keyed format, shipped
 // in the APK (SYSTEM, EXTRA) or dropped beside the device config
 // (USER-DEFINED), each through the one derivation (theme_roles.h's head),
-// `default` Live's Default Dark Cool Medium. No per-color key, no Settings
+// `default` SB Gunmetal_mod's copy. No per-color key, no Settings
 // row for a color.
 // Cool Edit Pro 2.1 keeps THE CANVAS GRAMMAR — the view
 // bar, the ruler, the marker lane, the grid and center lines, the cues, the
