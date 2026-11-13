@@ -1,5 +1,5 @@
 # SB Gunmetal_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
-# SB_GUNMETAL_MOD: the pack's SB Gunmetal with four Live roles changed by hand
+# SB_GUNMETAL_MOD: the pack's SB Gunmetal with three Live roles changed by hand
 # (architect 2026-11-07..12); THE `default` THEME since 2026-11-12 (session
 # 114, "with fresh eyes, gunmetal is far and away more relaxing"; the
 # `default` row a copy of this file's, src/gui/theme_roles.h's THE LIST):
@@ -10,10 +10,11 @@
 #     Default Dark Cool Medium text pair in place of the pack's, which is
 #     Live's Default Dark Warm Medium pair (2026-11-12, session 113;
 #     confirmed session 114, "the cool medium text").
-#   RangeDefault DFE2CF -> B3B4BD: the playhead's head in the icon glyph
-#     color, this file's own ControlForeground, Gunmetal only; its line then
-#     the derived half toward white, D9DADE (2026-11-12, session 114, his
-#     pick on the tablet, "the stem at 50").
+#   RangeDefault stays the pack's own DFE2CF, the playhead's head (2026-11-13,
+#     session 121, his glass: "the reversal on the playhead looks good"; the
+#     session-114 head B3B4BD, the icon glyph color, and its line D9DADE
+#     superseded); its line the derived half toward white, EFF0E7, before
+#     THE BRIGHT MIX (src/gui/theme_roles.h), which mixes the head first.
 SurfaceArea=1F2128
 Desktop=24262D
 SurfaceBackground=2E313A
@@ -22,7 +23,7 @@ ControlForeground=B3B4BD
 TextDisabled=737581
 BackgroundClip=535763
 ViewCheckControlEnabledOn=71A2B6
-RangeDefault=B3B4BD
+RangeDefault=DFE2CF
 StandbySelectionBackground=637E86
 StandbySelectionForeground=040507
 SelectionBackground=B0DDEB

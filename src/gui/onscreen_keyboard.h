@@ -21,7 +21,8 @@
 // `5` AND `6` ON THE WINDOW'S CENTER (architect 2026-11-08, block_x_px) in a
 // band that runs the window's width
 // on the window's foot, its top AT OR ABOVE THE LOWER CHANNEL'S CENTER LINE
-// (the height floor, 2026-11-08, edge_pad_px), on the flat ground, nothing
+// (the height floor, 2026-11-08, edge_pad_px; the pads never under a quarter
+// of osk_key_h, 2026-11-13), on the flat ground, nothing
 // beside the block (the
 // placement block below), no line of its own, row 8 and the waveform area's
 // lower part under it and nothing moved — the waveform's own passes then not
@@ -676,35 +677,51 @@ inline int block_x_px(const GuiRect& band) {
 // THE EDGE PAD — THE BAND'S TOP AND FOOT, EQUAL, AND THE HEIGHT FLOOR'S
 // ANSWER (architect 2026-11-08, sessions 95 / 96: "the keyboard band's top
 // stands AT OR ABOVE the canvas's LOWER channel's center line … plus 1 W if
-// necessary to make the padding symmetrical"). THE FLOOR IS A FORMULA, NEVER
-// A CONSTANT, RECOMPUTED AT EVERY LAYOUT — key_height and the lane table
-// move the line, osk_key_h moves the band, gui_scale moves both — so it is
-// asked of the live geometry on every read (no cache: every relayout road,
-// relayout_window behind apply_key_height / apply_key_width / apply_run_gap
-// / apply_osk_key_size / apply_gui_scale, damages the whole window):
-//   the natural band = 2 × kEdgePadW + five key rows + four gaps;
+// necessary to make the padding symmetrical"). THE PAD'S OWN FLOOR IS A
+// QUARTER OF THE KEYBOARD'S KEY HEIGHT (architect 2026-11-13, session 121:
+// "the run gap, but applied vertically" — his run_gap 9 to key_width 36 —
+// "more symmetric" as a quarter of the keyboard key's own height):
+// edge_pad_floor_w, osk_key_h / 4 ROUNDED TO THE NEAREST W through
+// std::nearbyint (the ruled off-grid rule; the default rounding mode takes
+// an exact half TO EVEN — 7.5 → 8, 8.5 → 8, 9.5 → 10). THE LINE'S FLOOR IS
+// A FORMULA, NEVER A CONSTANT, RECOMPUTED AT EVERY LAYOUT — key_height and
+// the lane table move the line, osk_key_h moves the band and its pads'
+// floor, gui_scale moves both — so it is asked of the live geometry on every
+// read (no cache: every relayout road, relayout_window behind
+// apply_key_height / apply_key_width / apply_run_gap / apply_osk_key_size /
+// apply_gui_scale, damages the whole window):
+//   the natural band = 2 × the pad floor + five key rows + four gaps;
 //   shortfall_px = (the window's foot − the natural band) − the line's top
 //     row (lower_center_line_top_row, render.h);
-//   shortfall_px ≤ 0: each pad 7 W;
+//   shortfall_px ≤ 0: each pad the floor;
 //   else extra_w = the shortfall in whole W ROUNDED UP (px over the device
 //     px per W), MADE EVEN by one W when odd, split equally — each pad
-//     7 + extra_w / 2 W through scaled_px.
+//     the floor + extra_w / 2 W through scaled_px.
 // THE KEYS KEEP THEIR OWN BOX; only the two pads grow. ONE BAND HEIGHT under
 // every editor (the flag editor's band and a dialog editor's alike; the
 // modal stack on the band under a dialog editor shortened by the same
 // amount, accepted). Across there is no pad: the block stands on its seat
 // (block_x_px) and the ground beside it is what the window's width leaves.
-// A canvas with no rows paints no line, so no floor (the pads 7 W).
+// A canvas with no rows paints no line, so no line's floor (the pads the
+// floor).
 // Worked on the tablet at 200 % (2304 x 1440):
-//   AT THE DEFAULTS (key_height 17, osk_key_h 30): the line on rows
-//     1056..1057, the natural band 14 + 300 + 8 + 14 = 336 rows from 1104 —
-//     48 px = 24 W short, even → each pad 7 + 12 = 19 W (38 px), the band
-//     384 rows from 1056, its first key row 1094.
-//   AT HIS TUNING (key_height 25, osk_key_h 35): the line on rows
-//     1048..1049, the natural band 14 + 350 + 8 + 14 = 386 rows from 1054 —
-//     6 px = 3 W short → 4 W → each pad 9 W (18 px), the band 394 rows from
-//     1046 (the session-96 capture's own), its first key row 1064.
-inline constexpr double kEdgePadW = 7.0;
+//   AT THE DEFAULTS (key_height 17, osk_key_h 30): the floor 7.5 → 8 W
+//     (16 px); the line on rows 1056..1057, the natural band
+//     16 + 300 + 8 + 16 = 340 rows from 1100 — 44 px = 22 W short, even →
+//     each pad 8 + 11 = 19 W (38 px), the band 384 rows from 1056, its
+//     first key row 1094.
+//   AT HIS TUNING (key_height 25, osk_key_h 35): the floor 8.75 → 9 W
+//     (18 px); the line on rows 1048..1049, the natural band
+//     18 + 350 + 8 + 18 = 394 rows from 1046 — above the line, no shortfall
+//     → each pad 9 W (18 px), the floor binding, the band 394 rows from 1046
+//     (the session-96 capture's own), its first key row 1064.
+//   THE FLOOR ALONE (key_height 17, osk_key_h 38): the floor 9.5 → 10 W
+//     (20 px); the natural band 20 + 380 + 8 + 20 = 428 rows from 1012,
+//     44 rows above the line on 1056 → each pad 10 W, the band 428 rows
+//     from 1012, its first key row 1032.
+inline double edge_pad_floor_w() {
+    return std::nearbyint(osk_key_height_w() / 4.0);
+}
 
 // The five key rows and the four gaps between them, the band less its pads.
 inline int key_rows_h_px() {
@@ -712,7 +729,8 @@ inline int key_rows_h_px() {
 }
 
 inline int edge_pad_px(const AppState& a) {
-    const int     natural_pad = scaled_px(kEdgePadW, 1);
+    const double  floor_w     = edge_pad_floor_w();
+    const int     natural_pad = scaled_px(floor_w, 1);
     const GuiRect lane        = bottom_row_area(a);
     const int     line_top    = lower_center_line_top_row(waveform_area(a));
     if (line_top < 0) return natural_pad;
@@ -723,7 +741,7 @@ inline int edge_pad_px(const AppState& a) {
     int extra_w = static_cast<int>(
         std::ceil(static_cast<double>(shortfall_px) / gui_scale_factor()));
     if (extra_w % 2 != 0) ++extra_w;
-    return scaled_px(kEdgePadW + extra_w / 2, 1);
+    return scaled_px(floor_w + extra_w / 2, 1);
 }
 
 // The band's whole height: the edge pad, five key rows and the four gaps

@@ -1088,7 +1088,9 @@ int  run_gap_w();
 // like a phone … chiclets, taller than wide"): the live box IN W
 // (scaled_px's axis), read by onscreen_keyboard.h's geometry and nothing
 // else (osk_key_h moving the band's height and so its height floor's pads,
-// onscreen_keyboard::edge_pad_px, 2026-11-08). The key_height seat's shape exactly — file-scope state in render.cpp,
+// onscreen_keyboard::edge_pad_px, 2026-11-08, and the pads' own floor, a
+// quarter of osk_key_h, edge_pad_floor_w, 2026-11-13). The key_height
+// seat's shape exactly — file-scope state in render.cpp,
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
 // (GuiInputHandler::apply_osk_key_size, which re-lays-out at once). The
