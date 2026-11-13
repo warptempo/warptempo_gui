@@ -257,27 +257,33 @@
 //                                     here. HALF WAY TO THE MIXED HEAD at the
 //                                     install (architect 2026-11-13, session
 //                                     119: "that rule should stay the same")
-//     inactive cue outline   1F1F1F = ControlContrastFrame + 0.75 ·
-//                                     (SurfaceArea − ControlContrastFrame),
+//     inactive cue outline   242424 = ControlContrastFrame + 0.75 ·
+//                                     (Desktop − ControlContrastFrame),
 //                                     THE DISABLED CHIP'S OUTLINE, the `h`
 //                                     view's removed items' too: the enabled
 //                                     chip's outline moved 75 % OF THE WAY
-//                                     TOWARD THE THEME'S GROUND, so a disabled
-//                                     chip's edge recedes (architect
-//                                     2026-11-12, session 114: "the disable
-//                                     outline, I think, should be a different
-//                                     rule in the code, so no change to the
-//                                     themes needed"; 75 % his pick on the
-//                                     tablet over 50 %; TOWARD THE GROUND, not
-//                                     the lane's Desktop, since 2026-11-13,
-//                                     session 119: "let's make all colors,
-//                                     including the outline of the disabled,
-//                                     tune towards actual ground" — SB
-//                                     Gunmetal_mod 0B0D11 toward 1F2128 ->
-//                                     1A1C22). Its 0.75 is its own number, not
-//                                     the bright mix's: the outline is dark
-//                                     and no bright tone. The selection stem
-//                                     of a selected disabled chip, the ruler
+//                                     TOWARD DESKTOP, THE MARKER LANE'S
+//                                     FLOOR the chip stands on, so a disabled
+//                                     chip's edge recedes as if blended into
+//                                     the lane (architect 2026-11-12, session
+//                                     114: "the disable outline, I think,
+//                                     should be a different rule in the code,
+//                                     so no change to the themes needed"; 75 %
+//                                     his pick on the tablet over 50 %;
+//                                     2026-11-13, session 121: "this will be
+//                                     marker lane ground ... this is supposed
+//                                     to be a sort of alpha effect, even
+//                                     though it's not truly an alpha" — SB
+//                                     Gunmetal_mod 0B0D11 toward 24262D ->
+//                                     1E2026). Its 0.75 is its own number, not
+//                                     the bright mix's, and THE BRIGHT MIX
+//                                     NEVER TOUCHES THIS TONE: it is read off
+//                                     the row's own roles, never a bright
+//                                     word, and is no bright tone itself (his
+//                                     "the disabled color wasn't brightness
+//                                     modulated by the ground"). The
+//                                     selection stem of a selected disabled
+//                                     chip, the ruler
 //                                     head's outline and the lead-in ring stay
 //                                     the cue outline (resolve_flag_face,
 //                                     render.cpp)

@@ -344,8 +344,8 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
     // The disabled chip's outline: the enabled chip's moved 75 % of the way
-    // toward the theme's ground (the head's DERIVED block).
-    t.inactive_cue_outline = packed(mix(contrast, ground, 0.75));
+    // toward Desktop, the marker lane's floor (the head's DERIVED block).
+    t.inactive_cue_outline = packed(mix(contrast, desktop, 0.75));
     t.playhead_head       = packed(range);
     t.scanner             = packed(white);
     fill_dependent_tones(t);

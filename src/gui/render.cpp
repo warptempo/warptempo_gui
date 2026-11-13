@@ -1399,9 +1399,9 @@ struct FlagFace {
 // marker while its chip flips. A DISABLED CHIP IS SOLID GREY (architect
 // 2026-11-05, "disabled marker gets dim label"): the `inactive_cue` 5D5D5D
 // fill in THE DISABLED OUTLINE, `inactive_cue_outline` (architect
-// 2026-11-12, session 114: the `cue_outline` moved 75 % of the way toward
-// the theme's ground, Default's 1F1F1F, since 2026-11-13, session 119 —
-// theme_roles.h's DERIVED block), the
+// 2026-11-12, session 114, and 2026-11-13, session 121: the `cue_outline`
+// moved 75 % of the way toward Desktop, the marker lane's floor, Default's
+// 242424 — theme_roles.h's DERIVED block), the
 // playhead on it or not, selected or not; THE STEM STAYS `cue_outline` on
 // every selected cue, disabled too — the stem is the one mark of the
 // selection. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect

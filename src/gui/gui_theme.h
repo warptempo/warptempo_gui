@@ -63,7 +63,7 @@ struct GuiThemeTones {
     uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (= the accent, cue)
     uint32_t cue_outline;         // an enabled chip's outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
-    uint32_t inactive_cue_outline; // a disabled chip's outline, the `h` view's removed items' too (ControlContrastFrame 75 % toward the ground)
+    uint32_t inactive_cue_outline; // a disabled chip's outline, the `h` view's removed items' too (ControlContrastFrame 75 % toward Desktop, the marker lane)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
     uint32_t playhead_line;       // the playhead's canvas line (white half way to the head)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
@@ -117,10 +117,10 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // radio key's face B595FC, Default's ScaleAwareness, its press 8D74C4
 // (× 42 / 54) and its inert face 5D4D81 (× 93 / 181) AND THE PLAYHEAD'S
 // LINE 81E1EA, white half way to the head (architect 2026-11-12, session
-// 113) AND THE DISABLED CHIP'S OUTLINE 1F1F1F, ControlContrastFrame 75 % of
-// the way toward the ground SurfaceArea (architect 2026-11-12, session 114;
-// toward the ground since 2026-11-13, session 119; both theme_roles.h's
-// DERIVED block) AND THE ENABLED CHIP'S FILL FFAD56, the accent
+// 113) AND THE DISABLED CHIP'S OUTLINE 242424, ControlContrastFrame 75 % of
+// the way toward Desktop, the marker lane's floor (architect 2026-11-12,
+// session 114, and 2026-11-13, session 121; theme_roles.h's DERIVED block)
+// AND THE ENABLED CHIP'S FILL FFAD56, the accent
 // (ViewCheckControlEnabledOn; architect 2026-11-13, session 119).
 // THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
 // 119): like every row of the list it holds the theme's own numbers,
@@ -168,7 +168,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0xFFAD56, // cue_fill
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
-    0x1F1F1F, // inactive_cue_outline
+    0x242424, // inactive_cue_outline
     0x03C3D5, // playhead_head
     0x81E1EA, // playhead_line
     0xFFFFFF, // scanner

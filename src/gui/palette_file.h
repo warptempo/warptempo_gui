@@ -30,8 +30,8 @@
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
 // SurfaceBackground, since 2026-11-07), the level fill, the lit-but-inert
 // key's pair and the radio keys' three (2026-11-11), the playhead's line
-// (2026-11-12), the disabled chip's outline (2026-11-12, toward the ground
-// 2026-11-13) and the enabled chip's fill (the accent, 2026-11-13; all at
+// (2026-11-12), the disabled chip's outline (2026-11-12, toward the marker
+// lane's Desktop, 2026-11-13) and the enabled chip's fill (the accent, 2026-11-13; all at
 // the foot) — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
@@ -40,9 +40,9 @@
 // AND THE PLAYHEAD LINE'S STATIC TONE, white half way to the head on every
 // theme, the mean of Live's fade (81E1EA; architect 2026-11-12, session 113,
 // theme_roles.h's DERIVED block), and THE DISABLED CHIP'S OUTLINE, the
-// enabled chip's 111111 moved 75 % of the way toward the ground's 242424
-// (1F1F1F; architect 2026-11-12, session 114, toward the ground since
-// 2026-11-13, session 119, the same block), and THE ENABLED CHIP'S FILL,
+// enabled chip's 111111 moved 75 % of the way toward the marker lane's
+// Desktop 2A2A2A (242424; architect 2026-11-12, session 114, and
+// 2026-11-13, session 121, the same block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
 // forty-two words with its literal (the press arc's four, 2026-11-05, among
@@ -157,15 +157,15 @@
 //                            marker exists and reads as off, the label with
 //                            it (BackgroundClip)
 //   inactive_cue_outline
-//                    1F1F1F  THE DISABLED CHIP'S OUTLINE (architect
-//                            2026-11-12, session 114): the one-W outline
-//                            round a disabled chip, the `h` view's removed
-//                            items' too (resolve_flag_face) — the
-//                            `cue_outline` moved 75 % of the way toward the
-//                            theme's ground (SurfaceArea since 2026-11-13,
-//                            session 119: "tune towards actual ground"), so
-//                            the chip's edge recedes (theme_roles.h's
-//                            DERIVED block). The selection stem of a
+//                    242424  THE DISABLED CHIP'S OUTLINE (architect
+//                            2026-11-12, session 114, and 2026-11-13,
+//                            session 121): the one-W outline round a
+//                            disabled chip, the `h` view's removed items'
+//                            too (resolve_flag_face) — the `cue_outline`
+//                            moved 75 % of the way toward Desktop, the
+//                            marker lane's floor the chip stands on, so the
+//                            chip's edge recedes (theme_roles.h's DERIVED
+//                            block). The selection stem of a
 //                            selected disabled chip stays the `cue_outline`
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
@@ -249,9 +249,9 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // two ratios on one code path (the DERIVED block). THE PLAYHEAD'S LINE
 // 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
 // to even (architect 2026-11-12, session 113), and THE DISABLED CHIP'S
-// OUTLINE 1F1F1F is 111111 + 0.75 · (ground 242424 − 111111), per channel,
-// 31.25 rounded to 31 (architect 2026-11-12, session 114; toward the ground
-// since 2026-11-13, session 119; both the DERIVED block). THE ENABLED
+// OUTLINE 242424 is 111111 + 0.75 · (Desktop 2A2A2A − 111111), per channel,
+// 35.75 rounded to 36 (architect 2026-11-12, session 114, and 2026-11-13,
+// session 121; both the DERIVED block). THE ENABLED
 // CHIP'S FILL FFAD56 is the accent, Default's ViewCheckControlEnabledOn
 // (architect 2026-11-13, session 119; the ROLE-NAMED block). Every word
 // here is the row's own number, k = 100 of THE BRIGHT MIX (theme_roles.h),
@@ -307,7 +307,7 @@ static_assert(kDefault.cue             == 0xFFAD56);
 static_assert(kDefault.cue_fill        == 0xFFAD56);
 static_assert(kDefault.cue_outline     == 0x111111);
 static_assert(kDefault.inactive_cue    == 0x5D5D5D);
-static_assert(kDefault.inactive_cue_outline == 0x1F1F1F);
+static_assert(kDefault.inactive_cue_outline == 0x242424);
 static_assert(kDefault.playhead_head   == 0x03C3D5);
 static_assert(kDefault.playhead_line   == 0x81E1EA);
 static_assert(kDefault.scanner         == 0xFFFFFF);
