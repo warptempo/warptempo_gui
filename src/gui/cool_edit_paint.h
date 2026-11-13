@@ -19,7 +19,8 @@
 // 2026-11-01 — and `playhead_line` — the line's one static tone in the
 // canvas, Default's 81E1EA, white half way to the head (2026-11-12) —
 // palette_file.h's role table, as the
-// marker's chip is the palette's `cue` in its `cue_outline` (2026-11-05), a
+// marker's chip is the palette's `cue_fill` (the text tone, 2026-11-12) in
+// its `cue_outline` (2026-11-05), a
 // disabled one's `inactive_cue` in its `inactive_cue_outline` (2026-11-12).
 // THE TRIANGLES ARE ALIASED AT 1:1 (architect 2026-10-26, "agree": "at this
 // size the staircase is the truthful drawing and the antialiasing only
@@ -110,7 +111,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // (cue_triangle_half_w_px,
 // cue_triangle_reach_right_px, render.h, the one owner every extent reads)
 // over [top − t·u, top + (rows + s)·u). The colors are resolve_flag_face's
-// for a cue (render.cpp, the one table: the fill `cue` in the `cue_outline`,
+// for a cue (render.cpp, the one table: the fill `cue_fill` in the
+// `cue_outline`,
 // a disabled chip's `inactive_cue` in the `inactive_cue_outline`) and the
 // `playhead_head` in the `cue_outline`
 // for the playhead's head (the same chip, mock k1, 2026-11-04). TWO

@@ -49,8 +49,9 @@
 // (SurfaceBackground); UNDER PRESS `key_press_face`, Default's 2A2A2A
 // (Desktop) — DARKER THAN THE FACE, the push in; LIT — A CHECKED KEY, its
 // whole face — THE ACCENT, `cue`, Default's FFAD56
-// (ViewCheckControlEnabledOn), Live's "on" and the markers' chip's own
-// role: ONE ACCENT FOR BOTH, no fill of the lit key's own beside it; LIT
+// (ViewCheckControlEnabledOn), Live's "on", no fill of the lit key's own
+// beside it (the markers' chips wear the text tone, `cue_fill`, since
+// 2026-11-12, session 114); LIT
 // UNDER PRESS `lit_press_fill`, Default's C68743 — the accent scaled by the
 // press face's ratio to the resting face (42 / 54 = 0.778 on Default; the
 // derivation, theme_roles.h's head), the same push in from the accent's own
@@ -281,8 +282,7 @@
 // columns stay in the layout, painted in the fill (the chrome's
 // `card_ground`, `card_text` and `card_frame`, theme_file.h; render.h's THE
 // CARD FACE) — Live's status-bar orange, a message rather than a state, not
-// the accent of the markers' chip and the lit keys (`cue`, Default's
-// FFAD56).
+// the accent of the lit keys (`cue`, Default's FFAD56).
 
 // THE KEY'S FOUR LOOKS (the head's THE KEY): LitPress when checked with a
 // press standing on the key; else Lit when checked; else Press while a

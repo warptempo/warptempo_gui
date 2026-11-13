@@ -124,20 +124,30 @@
 //                                     on the accent (architect 2026-11-11,
 //                                     session 106: the text tone on the accent
 //                                     is about 1.1 : 1; key_ink, materials.h)
-//     text                   B5B5B5 = ControlForeground
+//     text, cue fill         B5B5B5 = ControlForeground — THE ENABLED
+//                                     MARKER'S CHIP too, every enabled chip
+//                                     and the `h` view's added and changed
+//                                     items, the keys' glyph tone, so a chip
+//                                     and its label are one color (architect
+//                                     2026-11-12, session 114: "for all
+//                                     themes, the marker color should simply
+//                                     be the icon glyph color. This will
+//                                     unify"; on the light themes a
+//                                     near-black chip on a mid-grey lane,
+//                                     Live's own numbers, accepted)
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
 //     cue                    FFAD56 = ViewCheckControlEnabledOn, THE
-//                                     ACCENT: every enabled marker's chip AND
-//                                     A LIT KEY'S WHOLE FACE, the lamps', the
-//                                     seven doors' and the on-screen
-//                                     keyboard's two lit keys alike (architect
-//                                     2026-11-11, session 106: "we should go
-//                                     back to where the accent color is the
-//                                     background of the lit lamp" — one accent
-//                                     for both, Live's "on"; materials.h's THE
-//                                     KEY; immaterial_mod's file carries its
+//                                     ACCENT: A LIT KEY'S WHOLE FACE, the
+//                                     lamps', the seven doors' and the
+//                                     on-screen keyboard's two lit keys alike
+//                                     (architect 2026-11-11, session 106: "we
+//                                     should go back to where the accent color
+//                                     is the background of the lit lamp" —
+//                                     Live's "on"; materials.h's THE KEY) and
+//                                     NO MARKER since 2026-11-12 (the cue fill
+//                                     above); immaterial_mod's file carries its
 //                                     shaded gold here, its header the recipe)
 //                                     — every lit key but the radio keys'
 //                                     (below)

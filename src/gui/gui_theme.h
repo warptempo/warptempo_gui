@@ -56,7 +56,8 @@ struct GuiThemeTones {
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
     uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
-    uint32_t cue;                 // THE ACCENT: every enabled marker's chip and a checked key's whole face but a radio key's, the on-screen keyboard's lit keys too (ViewCheckControlEnabledOn)
+    uint32_t cue;                 // THE ACCENT: a checked key's whole face but a radio key's, the on-screen keyboard's lit keys too; no marker (ViewCheckControlEnabledOn)
+    uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (ControlForeground, = the text tone)
     uint32_t cue_outline;         // an enabled chip's outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
     uint32_t inactive_cue_outline; // a disabled chip's outline, the `h` view's removed items' too (ControlContrastFrame 75 % toward Desktop)
@@ -113,8 +114,10 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // LINE 81E1EA, white half way to the head (architect 2026-11-12, session
 // 113) AND THE DISABLED CHIP'S OUTLINE 242424, ControlContrastFrame 75 % of
 // the way toward Desktop (architect 2026-11-12, session 114; both
-// theme_roles.h's DERIVED block). palette_file.h's static_asserts pin every
-// word. The pre-install palette's row too
+// theme_roles.h's DERIVED block) AND THE ENABLED CHIP'S FILL B5B5B5, the
+// text tone (ControlForeground; architect 2026-11-12, session 114).
+// palette_file.h's static_asserts pin every word. The pre-install palette's
+// row too
 // (render.cpp's construction state, never painted).
 inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x242424, // ground
@@ -152,6 +155,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x303030, // grid
     0x191919, // center
     0xFFAD56, // cue
+    0xB5B5B5, // cue_fill
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
     0x242424, // inactive_cue_outline

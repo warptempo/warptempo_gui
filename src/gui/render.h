@@ -111,8 +111,9 @@ struct TrimRange {
 // read at launch since 2026-11-11, theme_roles.h — the compiled reference
 // row, Live's Default, that measured palette to the byte but the selection
 // pair's text, gui_theme.h); A
-// LIT KEY'S FACE IS THE ACCENT, the cues' own role `cue` — one accent for
-// the markers' chip and the lamps — its press and its inert faces the
+// LIT KEY'S FACE IS THE ACCENT, the palette's role `cue` (no marker's since
+// 2026-11-12: the chip wears `cue_fill`, the text tone) — its press and its
+// inert faces the
 // chrome's `lit_press_fill` and `lit_dim_fill` (architect 2026-11-11,
 // session 106, materials.h's THE KEY), A LIT RADIO KEY'S THE PURPLE, the
 // chrome's `radio_lit_fill`, `radio_lit_press_fill` and
@@ -235,15 +236,16 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's THIRTEEN (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
 //                 since 2026-10-25); THE CANVAS'S TWO LINES, Cool Edit's
 //                 grammar — `grid` under the waveform and `center` on each
 //                 channel's zero, over it (ROW 6); THE MARKER'S CHIP
-//                 (architect 2026-11-04; 2026-11-05) — `cue` every
-//                 enabled fill, `cue_outline` its one-W outline, the
+//                 (architect 2026-11-04; 2026-11-05) — `cue_fill` every
+//                 enabled fill (the text tone since 2026-11-12, session
+//                 114), `cue_outline` its one-W outline, the
 //                 selected marker's stem and the two rings — warp and
 //                 phase reset alike (the strike is the invalid mark, THE
 //                 MARKER LANE below); the disabled cue's `inactive_cue`,
@@ -395,6 +397,7 @@ struct GuiPalette {
     GuiColor grid;
     GuiColor center;
     GuiColor cue;
+    GuiColor cue_fill;
     GuiColor cue_outline;
     GuiColor inactive_cue;
     GuiColor inactive_cue_outline;
@@ -687,10 +690,13 @@ void install_true_colors(bool on);
 // selection": "we don't use ableton's rect above a marker and could
 // therefore allow the triangle chip to stand for selection/focus";
 // 2026-11-05, "only 1 playhead onscreen ever"): EVERY ENABLED CHIP'S FILL
-// the palette's `cue` (Live's orange FFAD56; architect 2026-11-01: "one
-// color for all markers" — every cue, the history's halves and a struck
-// marker's included), the OUTLINE its `cue_outline` (Live's dark line,
-// 111111), and THE SELECTED marker's mark THE STEM in the same
+// the palette's `cue_fill`, THE TEXT TONE (Default's B5B5B5, the keys'
+// glyphs' and the labels' own ink; architect 2026-11-12, session 114: "for
+// all themes, the marker color should simply be the icon glyph color. This
+// will unify"; 2026-11-01: "one color for all markers" — every cue, the
+// history's added and changed items and a struck marker's included; the
+// accent `cue` paints no marker), the OUTLINE its `cue_outline` (Live's
+// dark line, 111111), and THE SELECTED marker's mark THE STEM in the same
 // `cue_outline`. The focused member has no paint of its own: every click
 // and toggle lands the playhead on it (land_playhead_on_marker), and the
 // playhead is its mark.
@@ -737,11 +743,11 @@ void install_true_colors(bool on);
 // axis picks the chip's fill and the label's ink, the selection alone the
 // stem — the two never cross (architect 2026-11-11, session 106); the strike
 // rides every row):
-//   UNSELECTED  the `cue` FFAD56 fill in the `cue_outline` 111111 outline,
+//   UNSELECTED  the `cue_fill` B5B5B5 fill in the `cue_outline` 111111 outline,
 //             the label in the text tone (materials.h's `text`); no stem,
 //             the playhead on it or not (architect 2026-11-05);
 //   SELECTED  a member of the selection set, enabled or disabled: its own
-//             chip as at rest (the `cue` fill, or the disabled grey), and A SOLID
+//             chip as at rest (the `cue_fill` fill, or the disabled grey), and A SOLID
 //             ONE-W `cue_outline` STEM on its column FROM THE CHIP'S APEX
 //             ROW (the lane's last) THROUGH THE ROW OF GROUND UNDER THE LANE
 //             TO THE CANVAS'S LAST ROW (mock j1, 2026-11-04: no gap under
@@ -4401,7 +4407,7 @@ struct HistoryDiffFlag {
 // paragraph above; resolve_flag_face's Removed / Added / Changed rows): a
 // REMOVED item the disabled style, the `inactive_cue` chip in the
 // `inactive_cue_outline` and the inactive label, its one segment STRUCK; an
-// ADDED item the enabled style, the `cue`
+// ADDED item the enabled style, the `cue_fill`
 // chip and the text tone, its one segment plain; a CHANGED item the enabled
 // style, TWO SEGMENTS in the text tone — the older side's label struck, then
 // the newer side's plain, the segment gap between their boxes (the live

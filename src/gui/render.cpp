@@ -1376,13 +1376,17 @@ struct FlagFace {
 // `inert` on the history rows):
 //   side      flag        fill          outline               stem      label      strike
 //   LIVE      DISABLED    inactive_cue  inactive_cue_outline  selected  inactive   `strike`
-//   LIVE      ENABLED     cue           cue_outline           selected  text tone  `strike`
+//   LIVE      ENABLED     cue_fill      cue_outline           selected  text tone  `strike`
 //   REMOVED   any         inactive_cue  inactive_cue_outline  selected  inactive   always
-//   ADDED     any         cue           cue_outline           selected  text tone  never
-//   CHANGED   any         cue           cue_outline           selected  text tone  per segment
+//   ADDED     any         cue_fill      cue_outline           selected  text tone  never
+//   CHANGED   any         cue_fill      cue_outline           selected  text tone  per segment
 // — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
-// THE `cue` FFAD56 in THE OUTLINE, Live's dark line 111111, selected or
-// not. EVERY SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
+// THE `cue_fill`, THE TEXT TONE (Default's B5B5B5, the keys' glyphs' and the
+// label's own ink, so a chip and its label are one color; architect
+// 2026-11-12, session 114: "for all themes, the marker color should simply
+// be the icon glyph color. This will unify"), in THE OUTLINE, Live's dark
+// line 111111, selected or not; the accent `cue` paints no marker. EVERY
+// SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
 // 2026-11-11, session 106: "disabled markers also get the dark stem, same as
 // enabled ones") — a solid one-W `cue_outline` line from the chip's apex
 // row down the canvas's whole height on the cue's column, over the
@@ -1439,16 +1443,16 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
             return disabled
                        ? FlagFace{p.inactive_cue, p.inactive_cue_outline,
                                   selected, strike}
-                       : FlagFace{p.cue, p.cue_outline, selected, strike};
+                       : FlagFace{p.cue_fill, p.cue_outline, selected, strike};
         case GuiFlagSide::Removed:
             return FlagFace{p.inactive_cue, p.inactive_cue_outline, selected,
                             true};
         case GuiFlagSide::Added:
-            return FlagFace{p.cue, p.cue_outline, selected, false};
+            return FlagFace{p.cue_fill, p.cue_outline, selected, false};
         case GuiFlagSide::Changed:
-            return FlagFace{p.cue, p.cue_outline, selected, false};
+            return FlagFace{p.cue_fill, p.cue_outline, selected, false};
     }
-    return FlagFace{p.cue, p.cue_outline, selected, strike};
+    return FlagFace{p.cue_fill, p.cue_outline, selected, strike};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
@@ -2291,7 +2295,7 @@ WaveformPlateInks waveform_plate_inks() {
 
 void install_palette(const GuiTheme& theme) {
     // The contract and the apply shape the live caller owes are at the
-    // declaration (render.h). THE PROGRAM'S TWELVE off the palette's role
+    // declaration (render.h). THE PROGRAM'S THIRTEEN off the palette's role
     // table (palette_file.h), THE CHROME'S THIRTY off the chrome's
     // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
     // theme's ground (the flat look, materials.h's head) — the tables

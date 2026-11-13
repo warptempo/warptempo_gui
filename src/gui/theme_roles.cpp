@@ -296,6 +296,8 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.grid                = packed(grid_role);
     t.center              = packed(ink);
     t.cue                 = packed(on);
+    // The enabled chip wears the keys' glyph tone (the head's ROLE-NAMED).
+    t.cue_fill            = packed(text);
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
     // The disabled chip's outline: the enabled chip's moved 75 % of the way

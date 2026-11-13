@@ -54,8 +54,10 @@
 // clock pair retired 2026-11-02 with the overlays' flat pass). THE LIT KEY
 // (architect 2026-11-11, session 106, materials.h's THE KEY): ITS FACE AT
 // REST HAS NO ROLE HERE — paint_key reads the palette's `cue`, THE ACCENT,
-// one role for the markers' chip and the lamps, so no `lit_fill` stands
-// beside it holding the same tone; its two other faces are the two roles
+// the program role it has been since it was the markers' chip's too (the
+// chip wears `cue_fill`, the text tone, since 2026-11-12, session 114), so
+// no `lit_fill` stands beside it holding the same tone; its two other faces
+// are the two roles
 // above; WHAT IS PRINTED ON IT has none either — the glyph road takes the
 // theme row's WORD, so `text_on_lit` and `text_on_lit_dim` are read by
 // key_ink off installed_theme(), as `text` and `key_dim_ink` are for a
