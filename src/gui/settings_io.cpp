@@ -439,6 +439,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // formatter (format_sweep_highlight, device_config.h).
     if (key == "sweep_highlight" && app.device_config != nullptr)
         return format_sweep_highlight(app.device_config->sweep_highlight);
+    // THE BRIGHT TONES' MIX (2026-11-13, a tuning key): through its one
+    // formatter (format_bright_mix, device_config.h).
+    if (key == "bright_mix" && app.device_config != nullptr)
+        return format_bright_mix(app.device_config->bright_mix);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

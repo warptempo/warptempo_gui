@@ -19,7 +19,7 @@
 // 2026-11-01 — and `playhead_line` — the line's one static tone in the
 // canvas, Default's 81E1EA, white half way to the head (2026-11-12) —
 // palette_file.h's role table, as the
-// marker's chip is the palette's `cue_fill` (the text tone, 2026-11-12) in
+// marker's chip is the palette's `cue_fill` (the accent, 2026-11-13) in
 // its `cue_outline` (2026-11-05), a
 // disabled one's `inactive_cue` in its `inactive_cue_outline` (2026-11-12).
 // THE TRIANGLES ARE ALIASED AT 1:1 (architect 2026-10-26, "agree": "at this

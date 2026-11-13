@@ -3843,7 +3843,10 @@ private:
     // THE THEME'S ONE LIVE ACT (architect 2026-11-05, the theme arc;
     // palette_file.h's head): the settings editor's `theme=` commit and its
     // value list's tap (one body, apply_device_setting) reinstall the whole
-    // palette off the named row through install_palette and run the apply
+    // palette off the named row at the live `bright_mix`, and its
+    // `bright_mix=` commit off the installed row's list entry at the new
+    // percent (architect 2026-11-13, session 119; theme_roles.h's THE
+    // BRIGHT MIX), through install_palette, and run the apply
     // shape its declaration owes (render.h) — install_true_colors' own, for
     // the same two caches: the icon rasters dropped (a key glyph's raster
     // keys on its sRGB tone, which the theme moves), the plate kicked when
@@ -3855,8 +3858,9 @@ private:
     // job and its fingerprint, waveform_cache.cpp). It cards nothing: the
     // screen is the answer. The commit gates the no-op and writes the device
     // config; the launch installs the config's theme before the window exists
-    // (main.cpp), with nothing cached to rebuild.
-    void apply_theme(const GuiTheme& theme);
+    // (main.cpp), with nothing cached to rebuild. The bright mix moves no
+    // plate ink, so its commit refreshes the flag cache alone.
+    void apply_theme(const GuiTheme& theme, int bright_mix);
 
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the

@@ -110,9 +110,10 @@ struct TrimRange {
 // `theme` device key naming one row of the themes' list — the theme files
 // read at launch since 2026-11-11, theme_roles.h — the compiled reference
 // row, Live's Default, that measured palette to the byte but the selection
-// pair's text, gui_theme.h); A
-// LIT KEY'S FACE IS THE ACCENT, the palette's role `cue` (no marker's since
-// 2026-11-12: the chip wears `cue_fill`, the text tone) — its press and its
+// pair's text, gui_theme.h; every bright tone installed mixed toward the
+// ground at the `bright_mix` key, theme_roles.h's THE BRIGHT MIX); A
+// LIT KEY'S FACE IS THE ACCENT, the palette's role `cue` (the markers' chip
+// the same word, `cue_fill`, 2026-11-13) — its press and its
 // inert faces the
 // chrome's `lit_press_fill` and `lit_dim_fill` (architect 2026-11-11,
 // session 106, materials.h's THE KEY), A LIT RADIO KEY'S THE PURPLE, the
@@ -244,8 +245,8 @@ struct TrimRange {
 //                 grammar — `grid` under the waveform and `center` on each
 //                 channel's zero, over it (ROW 6); THE MARKER'S CHIP
 //                 (architect 2026-11-04; 2026-11-05) — `cue_fill` every
-//                 enabled fill (the text tone since 2026-11-12, session
-//                 114), `cue_outline` its one-W outline, the
+//                 enabled fill (the accent since 2026-11-13, session
+//                 119), `cue_outline` its one-W outline, the
 //                 selected marker's stem and the two rings — warp and
 //                 phase reset alike (the strike is the invalid mark, THE
 //                 MARKER LANE below); the disabled cue's `inactive_cue`,
@@ -419,7 +420,8 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE INSTALLED THEME'S ROW (a copy of the list's row, theme_roles.h) — the
+// THE INSTALLED THEME'S ROW (the list's row mixed at the `bright_mix` key,
+// install_palette below; theme_roles.h's THE BRIGHT MIX) — the
 // sRGB WORDS behind palette(), for the few readers that need the word rather
 // than a GuiColor: the Breeze glyph road's tone (icons::draw_glyph; key_ink,
 // materials.h), the plate's two inks (waveform_plate_inks below). Every other
@@ -447,17 +449,24 @@ enum class GuiSurface {
 GuiColor surface_text(GuiSurface surface);
 
 // Install every color off ONE THEME'S ROW (`theme`, a row of the themes'
-// list, theme_roles.h; architect 2026-11-05, the theme arc): THE PROGRAM'S
-// members off the palette's role table (kGuiPaletteRoles, palette_file.h),
-// THE CHROME'S off the chrome's (kGuiThemeRoles, theme_file.h), the panel's
-// `face` off the theme's ground — the tables covering the struct exactly
-// (palette_file.cpp) — and the row COPIED as installed_theme() (architect
-// 2026-11-06, session 75: the list is built once at launch and immutable, a
-// pointer into it would hold too; the copy needs no lifetime argument and
-// covers the construction state before the load). Its callers:
-// gui_main's startup, before the window exists (the config's `theme`), and
-// every `theme` commit through GuiInputHandler::apply_theme. It resolves and
-// never refuses, and it bumps palette_generation below, the flag cache's
+// list, theme_roles.h; architect 2026-11-05, the theme arc) MIXED AT
+// `bright_mix` (the device key's whole percent; architect 2026-11-13,
+// session 119, theme_roles.h's THE BRIGHT MIX: the row's bright tones toward
+// its ground, every tone derived from them recomputed, bright_mixed_tones;
+// the list keeps the own numbers, so the mix happens here and at no other
+// site): THE PROGRAM'S members off the palette's role table
+// (kGuiPaletteRoles, palette_file.h), THE CHROME'S off the chrome's
+// (kGuiThemeRoles, theme_file.h), the panel's `face` off the theme's ground
+// — the tables covering the struct exactly (palette_file.cpp) — and THE
+// MIXED ROW COPIED as installed_theme(), under the list row's slug and group
+// (architect 2026-11-06, session 75: the list is built once at launch and
+// immutable; the copy needs no lifetime argument and covers the
+// construction state before the load). Its callers: gui_main's startup,
+// before the window exists (the config's `theme` and `bright_mix`), and
+// GuiInputHandler::apply_theme, at every `theme` commit and every
+// `bright_mix` commit (the installed row's list entry again, found by
+// installed_theme().slug, at the new percent). It resolves and never
+// refuses, and it bumps palette_generation below, the flag cache's
 // fingerprint term.
 // THE APPLY SHAPE THE CALLER OWES after a live install (apply_theme; the
 // launch's call, before the window and every cache exist, owes none) IS
@@ -473,8 +482,8 @@ GuiColor surface_text(GuiSurface surface);
 // v_words.x / .y; no color uniform), and the plate's two inks ride
 // waveform_plate_inks into the worker's job (waveform_cache.cpp) and its
 // fingerprint, so a theme that moves them rebuilds the plate and one that
-// keeps them re-renders nothing.
-void install_palette(const GuiTheme& theme);
+// keeps them re-renders nothing (the bright mix moves neither ink).
+void install_palette(const GuiTheme& theme, int bright_mix);
 
 // THE PALETTE'S GENERATION — a counter the install family bumps, so a
 // cached surface whose pixels carry palette colors keys the palette BY
@@ -690,12 +699,13 @@ void install_true_colors(bool on);
 // selection": "we don't use ableton's rect above a marker and could
 // therefore allow the triangle chip to stand for selection/focus";
 // 2026-11-05, "only 1 playhead onscreen ever"): EVERY ENABLED CHIP'S FILL
-// the palette's `cue_fill`, THE TEXT TONE (Default's B5B5B5, the keys'
-// glyphs' and the labels' own ink; architect 2026-11-12, session 114: "for
-// all themes, the marker color should simply be the icon glyph color. This
-// will unify"; 2026-11-01: "one color for all markers" — every cue, the
-// history's added and changed items and a struck marker's included; the
-// accent `cue` paints no marker), the OUTLINE its `cue_outline` (Live's
+// the palette's `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys'
+// face, installed mixed toward the ground at the `bright_mix` key as the
+// keys' is; architect 2026-11-13, session 119: "we revert the rule so that
+// markers get accent color instead of icon glyph color, and we simply tune
+// the accent itself"; 2026-11-01: "one color for all markers" — every cue,
+// the history's added and changed items and a struck marker's included),
+// the OUTLINE its `cue_outline` (Live's
 // dark line, 111111), and THE SELECTED marker's mark THE STEM in the same
 // `cue_outline`. The focused member has no paint of its own: every click
 // and toggle lands the playhead on it (land_playhead_on_marker), and the
@@ -743,7 +753,7 @@ void install_true_colors(bool on);
 // axis picks the chip's fill and the label's ink, the selection alone the
 // stem — the two never cross (architect 2026-11-11, session 106); the strike
 // rides every row):
-//   UNSELECTED  the `cue_fill` B5B5B5 fill in the `cue_outline` 111111 outline,
+//   UNSELECTED  the `cue_fill` FFAD56 fill in the `cue_outline` 111111 outline,
 //             the label in the text tone (materials.h's `text`); no stem,
 //             the playhead on it or not (architect 2026-11-05);
 //   SELECTED  a member of the selection set, enabled or disabled: its own
@@ -783,8 +793,9 @@ void install_true_colors(bool on);
 //             since it's disabled, it's inert"): the `inactive_cue` 5D5D5D
 //             fill in the `inactive_cue_outline` (architect 2026-11-12,
 //             session 114: the `cue_outline` moved 75 % of the way toward
-//             the lane's Desktop, Default's 242424 — theme_roles.h's
-//             DERIVED block), the label in the `inactive_cue`,
+//             the theme's ground, Default's 1F1F1F, since 2026-11-13,
+//             session 119 — theme_roles.h's DERIVED block), the label in
+//             the `inactive_cue`,
 //             the playhead on it or not; the same inert label on a tie
 //             follower's cells (one look for inert cue text). A disabled
 //             marker is selectable (architect 2026-10-07 ~15:10), and
@@ -4420,8 +4431,8 @@ struct HistoryDiffFlag {
 // paragraph above; resolve_flag_face's Removed / Added / Changed rows): a
 // REMOVED item the disabled style, the `inactive_cue` chip in the
 // `inactive_cue_outline` and the inactive label, its one segment STRUCK; an
-// ADDED item the enabled style, the `cue_fill`
-// chip and the text tone, its one segment plain; a CHANGED item the enabled
+// ADDED item the enabled style, the `cue_fill` chip (the accent) and the
+// text tone, its one segment plain; a CHANGED item the enabled
 // style, TWO SEGMENTS in the text tone — the older side's label struck, then
 // the newer side's plain, the segment gap between their boxes (the live
 // lane's box layout, cue_segment_boxes; architect 2026-11-11, session 107,

@@ -23,7 +23,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY keys since 2026-11-12, the
+// REQUIRED SET, every one of them (TWENTY-ONE keys since 2026-11-13, the
+// bright tones' mix `bright_mix` appended at the end — a tuning key, how
+// much of itself each bright tone keeps toward the theme's ground; TWENTY
+// from 2026-11-12, the
 // sweep highlight's alpha `sweep_highlight` appended at the end — a tuning
 // key, the canvas highlight's blend toward white while a sweep's pointer is
 // down; NINETEEN from 2026-11-11, the
@@ -117,7 +120,8 @@ namespace {
 // keyboard's cap size, `osk_font_px`, after them since that night, and the
 // two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night, and the
 // tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07, and the
-// sweep highlight's alpha, `sweep_highlight`, after it since 2026-11-12 (none
+// sweep highlight's alpha, `sweep_highlight`, after it since 2026-11-12, and
+// the bright tones' mix, `bright_mix`, after it since 2026-11-13 (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
@@ -153,6 +157,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "lamp_hold_ms",
     "tooltip_delay_ms",
     "sweep_highlight",
+    "bright_mix",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -272,6 +277,14 @@ std::string format_sweep_highlight(int percent) {
     return std::string(buf);
 }
 
+// The bright tones' mix's canonical spelling (2026-11-13): `%d`, the noise
+// integers' road.
+std::string format_bright_mix(int percent) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", percent);
+    return std::string(buf);
+}
+
 // The plate's grow's canonical spelling (2026-10-31; the grammar's words at
 // parse_waveform_grow's head, device_config.h): the quarters as the shortest
 // exact decimal — the integer part, then the fraction in hundredths with
@@ -378,6 +391,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The sweep highlight's alpha's canonical integer
             // (format_sweep_highlight).
             s += format_sweep_highlight(cfg.sweep_highlight);
+        } else if (k == "bright_mix") {
+            // The bright tones' mix's canonical integer (format_bright_mix).
+            s += format_bright_mix(cfg.bright_mix);
         }
         s += '\n';
     }
@@ -625,6 +641,17 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kSweepHighlightGrammarReason);
             }
             out.sweep_highlight = *pct;
+            return {};
+        }
+        // THE BRIGHT TONES' MIX (2026-11-13, a tuning key): under its one
+        // grammar owner (parse_bright_mix, device_config.h), required like
+        // every key; any other spelling the launch's hard fail.
+        if (key == "bright_mix") {
+            const std::optional<int> pct = parse_bright_mix(value);
+            if (!pct) {
+                return bad_value(ln, key, value, kBrightMixGrammarReason);
+            }
+            out.bright_mix = *pct;
             return {};
         }
         return warptempo_parse::prefix_line_error(

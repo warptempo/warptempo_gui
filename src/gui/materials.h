@@ -50,8 +50,11 @@
 // (Desktop) — DARKER THAN THE FACE, the push in; LIT — A CHECKED KEY, its
 // whole face — THE ACCENT, `cue`, Default's FFAD56
 // (ViewCheckControlEnabledOn), Live's "on", no fill of the lit key's own
-// beside it (the markers' chips wear the text tone, `cue_fill`, since
-// 2026-11-12, session 114); LIT
+// beside it (the markers' chips wear the same word, `cue_fill`, since
+// 2026-11-13, session 119); EVERY LIT FACE BELOW INSTALLED MIXED TOWARD THE
+// GROUND at the `bright_mix` key, its press and inert faces derived from
+// the mixed word (theme_roles.h's THE BRIGHT MIX; the Default numbers here
+// the reference row's own); LIT
 // UNDER PRESS `lit_press_fill`, Default's C68743 — the accent scaled by the
 // press face's ratio to the resting face (42 / 54 = 0.778 on Default; the
 // derivation, theme_roles.h's head), the same push in from the accent's own

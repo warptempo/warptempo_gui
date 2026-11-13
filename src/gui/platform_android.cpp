@@ -386,6 +386,16 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
 // says so there; it reads no number.
 constexpr int kPanelRefreshHz = 90;
 
+// THE DISPLAY KEEP-ALIVE'S CLOCK (architect 2026-11-13, session 118): the
+// steady clock in ms, present()'s stamp and display_keep_alive_due's now —
+// the platform's two readings compare only with each other (the period,
+// GuiPlatform::kDisplayKeepAliveMs; the facts and the ruling at
+// kDisplayKeepAliveFastStopMs, playback_lifecycle.h).
+int64_t platform_monotonic_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 // THE VSYNC CALLBACK'S SINK (2026-10-14; the gate's rule at pump's tail).
 // The callback is posted with no data pointer and reaches its platform
 // through this pointer, which init() sets and shutdown() clears, because a
@@ -1598,7 +1608,26 @@ bool GuiPlatform::present() {
     repair_history_.insert(repair_history_.begin(), std::move(change));
     if (repair_history_.size() > kRepairHistoryDepth)
         repair_history_.resize(kRepairHistoryDepth);
+    // THE LAST PRESENT, the keep-alive's clock (display_keep_alive_due).
+    last_present_ms_ = platform_monotonic_ms();
     return true;
+}
+
+// THE DISPLAY KEEP-ALIVE'S QUESTION (the contract at the declaration; the
+// facts and the ruling at kDisplayKeepAliveFastStopMs, playback_lifecycle.h).
+// THE GATES BEFORE THE CLOCK: a window adopted and FOCUSED
+// (window_activated_: doze, a task switch and the notification shade all
+// take focus, and a window gone takes window_) with its first configure
+// done, the open's hold not standing (it withholds every paint; its release
+// frame presents), and NO DAMAGE WAITING — a frame already owed presents by
+// itself, so a play, a pan or the audition rest's every-tick clock damage is
+// never doubled. Asked by the GUI's tick at its head (main.cpp) and only
+// inside the brief window; the damage it owes posts the vsync callback at
+// the pass's tail like any other.
+bool GuiPlatform::display_keep_alive_due() const {
+    if (!window_ || !window_activated_ || !has_initial_configure_) return false;
+    if (presentation_held_ || !damage_.empty()) return false;
+    return platform_monotonic_ms() - last_present_ms_ >= kDisplayKeepAliveMs;
 }
 
 // THE OPEN'S HOLD'S ONE FRAME (the rule at platform.h's head): painted and

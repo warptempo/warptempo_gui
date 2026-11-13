@@ -66,6 +66,38 @@ struct GuiRenderPlayer;
 inline constexpr const char* kPlaybackDeviceUnavailableCard =
     "Playback is unavailable on this device";
 
+// THE DISPLAY KEEP-ALIVE, A BRIEF WINDOW AFTER A FAST STOP (architect
+// 2026-11-13, session 118) — THE ONE OWNER OF ITS FACTS AND ITS RULING.
+// THE FACTS: the tablet's panel (Galaxy Tab S10 FE) drops 90 -> 30 Hz once
+// no layer has presented for 250 ms (SurfaceFlinger's idle timer), and the
+// first frames after it land at 30 Hz cadence; neither the window's
+// frame-rate vote (adopt_window) nor a preferred display mode outranks the
+// timer, and `min_refresh_rate` is a System setting no app may write. The
+// architect saw it as a CATCH — the scanner's first beat stepping late —
+// only when tapping play and stop frantically on a transient: recorded in
+// session 118 over 127 plays, 14 late first frames (41..60 ms against a
+// 27 ms median), 13 of them 0.34..1.06 s after the previous Stop, 12 of
+// those after a play that ran under 0.15 s; calm use never showed one.
+// THE FORMS NOT TAKEN: a keep-alive at every vsync cost ~46 % app / ~53 %
+// SurfaceFlinger (session 33); a permanent sparse keep-alive (one frame
+// after GuiPlatform::kDisplayKeepAliveMs without a present, about five a
+// second at rest) held 90 Hz but cost about 11 % battery (session 117).
+// THE RULING: the sparse keep-alive, ARMED ONLY BRIEFLY — A STOP LANDING
+// WITHIN kDisplayKeepAliveFastStopMs OF ITS PLAY keeps the panel awake for
+// kDisplayKeepAliveWindowMs PAST THAT STOP, each such Stop re-arming it;
+// calm use never arms it, and the first tap after a rest stays uncovered,
+// accepted ("cover a little more than I can physically do ... comfortable
+// hitting it as hard and fast as I want"). TWO CONSTEXPRS, NO DEVICE KEY
+// ("I'm not going to be able to test this reliably": he recompiles with
+// either raised). The arming is GuiPlaybackLifecycle's (the stamp at the
+// user's launch entries, the window at the one stop body's project arm,
+// display_keep_alive_wanted), the period and the question the platform's
+// (GuiPlatform::display_keep_alive_due), the damage main.cpp's tick head.
+// The A/B audition's own rest keep-alive (main.cpp's "A REST KEEPS THE
+// PAINT CLOCK RUNNING") is another road and untouched.
+inline constexpr int64_t kDisplayKeepAliveFastStopMs = 1000;
+inline constexpr int64_t kDisplayKeepAliveWindowMs   = 1500;
+
 struct GuiPlaybackLifecycle {
     AppState&         app;
     const GuiAudio&   audio;
@@ -106,6 +138,29 @@ struct GuiPlaybackLifecycle {
     // stop in main.cpp's pre_paint_advance. Meaningful only while a project
     // play runs; its value at rest is never read.
     bool restrictable_play = false;
+    // THE DISPLAY KEEP-ALIVE'S TWO STAMPS (architect 2026-11-13, session 118;
+    // the facts and the ruling at kDisplayKeepAliveFastStopMs above), both
+    // monotonic_ms() (app_state.h, the application layer's one clock).
+    // `user_play_launched_ms` is THE USER'S PLAY'S START: written by the two
+    // user entries into the launch body on a launch that ran —
+    // launch_playback_from (bare Space's play edge, whoever produced the
+    // chord — the PLAY key's lift, the on-screen keyboard — and the scrub)
+    // and car_play_playback (the car's play) — set to -1 by the A/B
+    // audition's launch (the act's plays never arm), and CONSUMED (-1) by
+    // the one stop body's project arm, which is the one seat every stop of a
+    // project play crosses: there a stop landing within
+    // kDisplayKeepAliveFastStopMs of the stamp sets
+    // `display_keep_alive_until_ms` to that stop + kDisplayKeepAliveWindowMs.
+    // NOTHING ELSE WRITES THE DEADLINE, so once it passes the tick asks the
+    // platform nothing and the app presents nothing at rest. Per project
+    // session, as this cluster is: a reopen starts with neither standing.
+    int64_t user_play_launched_ms       = -1;
+    int64_t display_keep_alive_until_ms = 0;
+    // IS THE BRIEF WINDOW OPEN AT `now_ms` (monotonic_ms())? The tick head's
+    // one question before it asks the platform's (main.cpp).
+    bool display_keep_alive_wanted(int64_t now_ms) const {
+        return now_ms < display_keep_alive_until_ms;
+    }
 
     GuiPlaybackLifecycle(AppState&         app_,
                          const GuiAudio&   audio_,

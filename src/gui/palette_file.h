@@ -29,9 +29,10 @@
 // MEASURED PALETTE TO THE BYTE but the selection
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
 // SurfaceBackground, since 2026-11-07), the level fill, the lit-but-inert
-// key's pair and the radio keys' three (2026-11-11), the playhead's line,
-// the disabled chip's outline and the enabled chip's fill (2026-11-12; all
-// at the foot) — the numbers
+// key's pair and the radio keys' three (2026-11-11), the playhead's line
+// (2026-11-12), the disabled chip's outline (2026-11-12, toward the ground
+// 2026-11-13) and the enabled chip's fill (the accent, 2026-11-13; all at
+// the foot) — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
@@ -39,16 +40,27 @@
 // AND THE PLAYHEAD LINE'S STATIC TONE, white half way to the head on every
 // theme, the mean of Live's fade (81E1EA; architect 2026-11-12, session 113,
 // theme_roles.h's DERIVED block), and THE DISABLED CHIP'S OUTLINE, the
-// enabled chip's 111111 moved 75 % of the way toward the lane's 2A2A2A
-// (242424; architect 2026-11-12, session 114, the same block), and THE
-// ENABLED CHIP'S FILL, the text tone B5B5B5 (the same session) — the
+// enabled chip's 111111 moved 75 % of the way toward the ground's 242424
+// (1F1F1F; architect 2026-11-12, session 114, toward the ground since
+// 2026-11-13, session 119, the same block), and THE ENABLED CHIP'S FILL,
+// the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
 // forty-two words with its literal (the press arc's four, 2026-11-05, among
 // them — the key press face, the list press pair and the lit press fill —
 // the lamp arc's clip lamp the same night, the six of 2026-11-11: the level
 // fill, the lit-but-inert key's face and its glyph, and the radio keys'
 // three faces, and the disabled chip's outline and the enabled chip's fill
-// of 2026-11-12).
+// of 2026-11-12, both retold 2026-11-13).
+//
+// THE ROWS ARE THE THEMES' OWN NUMBERS; THE PALETTE INSTALLED IS THE ROW
+// MIXED (architect 2026-11-13, session 119; theme_roles.h's THE BRIGHT
+// MIX): install_palette fills every member off the row with its bright
+// tones — of this table `cue`, `cue_fill` and the playhead's two, of the
+// chrome's the radio keys', the lit key's press and inert faces, the
+// selection and list press fills, the cards, the clip lamp and the level
+// fill — mixed toward its ground at the `bright_mix` key. Every "Default N"
+// below is the reference row's own number, the record; at the key's 75 the
+// screen shows the accent C88B4A where it says FFAD56.
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -66,7 +78,7 @@
 // flag editor's field and selection band, the chrome's selected pair). So
 // the palette's program roles are exactly the THIRTEEN below (TWO ROLES MAY
 // SHARE A NUMBER — the ink and `center` share Default's 191919, and
-// `cue_fill` the chrome's `text` B5B5B5: a role is what it paints, not its
+// `cue_fill` the accent `cue`'s FFAD56: a role is what it paints, not its
 // value). Each role's Default word and its Live
 // source (the derivation, theme_roles.h's head):
 //   waveform_canvas  393939  the canvas, Live's darker band (DetailGridTiles
@@ -97,22 +109,25 @@
 //                            WHOLE FACE, read by the key's painter
 //                            (paint_key, materials.h; architect 2026-11-11,
 //                            session 106), a radio key's but (the chrome's
-//                            `radio_lit_fill`, session 107) — and NO
-//                            MARKER since 2026-11-12 (the chip's fill is
-//                            `cue_fill`, below), so no well painter reads
-//                            it (the head's last paragraph)
-//   cue_fill         B5B5B5  THE ENABLED MARKER'S FILL (architect
-//                            2026-11-05, his pick a2 of tmp/s42; THE TEXT
-//                            TONE since 2026-11-12, session 114: "for all
-//                            themes, the marker color should simply be the
-//                            icon glyph color. This will unify"): the chip
-//                            of every enabled cue, selected or not, warp
-//                            and phase reset alike, and the `h` view's
-//                            added and changed items (resolve_flag_face) —
-//                            the keys' glyphs' and legends' tone and the
-//                            markers' own labels', so a chip and its label
-//                            are one color (ControlForeground, the chrome's
-//                            `text`'s role)
+//                            `radio_lit_fill`, session 107); the markers
+//                            wear the same word as `cue_fill` (below), so
+//                            no well painter reads `cue` itself (the head's
+//                            last paragraph)
+//   cue_fill         FFAD56  THE ENABLED MARKER'S FILL (architect
+//                            2026-11-05, his pick a2 of tmp/s42; THE ACCENT
+//                            AGAIN since 2026-11-13, session 119: "we revert
+//                            the rule so that markers get accent color
+//                            instead of icon glyph color, and we simply tune
+//                            the accent itself ... so that the accent shows
+//                            up everywhere as slightly darker for the dark
+//                            themes" — the tuning the bright mix,
+//                            theme_roles.h): the chip of every enabled cue,
+//                            selected or not, warp and phase reset alike,
+//                            and the `h` view's added and changed items
+//                            (resolve_flag_face) — the lit keys' face, so
+//                            the markers and the lamps are one color
+//                            (ViewCheckControlEnabledOn, `cue`'s role, its
+//                            own member)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): the
 //                            one-W outline round every ENABLED chip (a
 //                            disabled one's `inactive_cue_outline`,
@@ -142,16 +157,16 @@
 //                            marker exists and reads as off, the label with
 //                            it (BackgroundClip)
 //   inactive_cue_outline
-//                    242424  THE DISABLED CHIP'S OUTLINE (architect
+//                    1F1F1F  THE DISABLED CHIP'S OUTLINE (architect
 //                            2026-11-12, session 114): the one-W outline
 //                            round a disabled chip, the `h` view's removed
 //                            items' too (resolve_flag_face) — the
 //                            `cue_outline` moved 75 % of the way toward the
-//                            marker lane's Desktop, so the chip's edge
-//                            recedes into the lane it stands on
-//                            (theme_roles.h's DERIVED block). The selection
-//                            stem of a selected disabled chip stays the
-//                            `cue_outline`
+//                            theme's ground (SurfaceArea since 2026-11-13,
+//                            session 119: "tune towards actual ground"), so
+//                            the chip's edge recedes (theme_roles.h's
+//                            DERIVED block). The selection stem of a
+//                            selected disabled chip stays the `cue_outline`
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
 //                            paragraph), the head's alone (RangeDefault)
@@ -171,8 +186,9 @@
 // The stereo divider between the channels wears the panel's tones; nothing
 // else in the well has a role. THE LIT KEY'S FACE IS `cue` (architect
 // 2026-11-11, session 106): the one program role a chrome painter reads —
-// and, since the chip took `cue_fill` (2026-11-12), the one no well painter
-// reads, kept in this table where it stood; the lit key's press
+// and the one no well painter reads, the chip reading `cue_fill`, the same
+// word (2026-11-13, session 119), kept in this table where it stood; the
+// lit key's press
 // and inert faces are the chrome's (`lit_press_fill`, `lit_dim_fill`,
 // theme_file.h), derived from it (materials.h's THE KEY). A LIT RADIO KEY'S
 // THREE FACES are the chrome's alone (`radio_lit_fill`,
@@ -233,10 +249,14 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // two ratios on one code path (the DERIVED block). THE PLAYHEAD'S LINE
 // 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
 // to even (architect 2026-11-12, session 113), and THE DISABLED CHIP'S
-// OUTLINE 242424 is 111111 + 0.75 · (Desktop 2A2A2A − 111111), per channel,
-// 35.75 rounded to 36 (architect 2026-11-12, session 114; both the DERIVED
-// block). THE ENABLED CHIP'S FILL B5B5B5 is Default's ControlForeground, the
-// text tone (architect 2026-11-12, session 114; the ROLE-NAMED block).
+// OUTLINE 1F1F1F is 111111 + 0.75 · (ground 242424 − 111111), per channel,
+// 31.25 rounded to 31 (architect 2026-11-12, session 114; toward the ground
+// since 2026-11-13, session 119; both the DERIVED block). THE ENABLED
+// CHIP'S FILL FFAD56 is the accent, Default's ViewCheckControlEnabledOn
+// (architect 2026-11-13, session 119; the ROLE-NAMED block). Every word
+// here is the row's own number, k = 100 of THE BRIGHT MIX (theme_roles.h),
+// which the install applies to this row as to every row: no assert pins a
+// mixed word.
 // THE SELECTION PAIR'S TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,
@@ -284,10 +304,10 @@ static_assert(kDefault.waveform_core   == 0x363636);
 static_assert(kDefault.grid            == 0x303030);
 static_assert(kDefault.center          == 0x191919);
 static_assert(kDefault.cue             == 0xFFAD56);
-static_assert(kDefault.cue_fill        == 0xB5B5B5);
+static_assert(kDefault.cue_fill        == 0xFFAD56);
 static_assert(kDefault.cue_outline     == 0x111111);
 static_assert(kDefault.inactive_cue    == 0x5D5D5D);
-static_assert(kDefault.inactive_cue_outline == 0x242424);
+static_assert(kDefault.inactive_cue_outline == 0x1F1F1F);
 static_assert(kDefault.playhead_head   == 0x03C3D5);
 static_assert(kDefault.playhead_line   == 0x81E1EA);
 static_assert(kDefault.scanner         == 0xFFFFFF);

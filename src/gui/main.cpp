@@ -1576,6 +1576,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // seeded from the `true_colors` key before the first session
         // (install_true_colors, gui_main).
         display_transform::set_window_display_p3(gui.window_is_display_p3());
+        // THE DISPLAY KEEP-ALIVE'S NUMBERS, announced once per process so a
+        // build carrying the brief window is confirmable in logcat (the
+        // ruling at kDisplayKeepAliveFastStopMs, playback_lifecycle.h). No
+        // line at an arming: it would print on every fast tap.
+        std::fprintf(stderr,
+                     "warptempo_gui: display keep-alive: a Stop within %lld ms "
+                     "of its Play keeps the panel awake for %lld ms past it, "
+                     "one frame after %lld ms without a present\n",
+                     static_cast<long long>(kDisplayKeepAliveFastStopMs),
+                     static_cast<long long>(kDisplayKeepAliveWindowMs),
+                     static_cast<long long>(GuiPlatform::kDisplayKeepAliveMs));
     }
 
     // -- Viewport + invalidation helpers ------------------------------------
@@ -2271,6 +2282,30 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // lamp owes its dark edge to the first tick past its hold.
         refresh_logo_legend(app, gui);
         refresh_logo_lamps(app, gui, audio, playback);
+
+        // THE DISPLAY KEEP-ALIVE (architect 2026-11-13, session 118; the
+        // facts and the ruling — a brief window after a fast Stop — at
+        // kDisplayKeepAliveFastStopMs, playback_lifecycle.h): ONLY INSIDE
+        // THE WINDOW the one stop body opened
+        // (GuiPlaybackLifecycle::display_keep_alive_wanted) is the platform
+        // asked whether a frame is due (GuiPlatform::display_keep_alive_due:
+        // focused, no hold, no damage waiting, kDisplayKeepAliveMs since the
+        // last present), and a yes damages THE CLOCK CELL, the audition
+        // rest's own road below ("A REST KEEPS THE PAINT CLOCK RUNNING", its
+        // reasoning): a cell that always paints and whose repaint changes no
+        // pixel. Past the window nothing is asked and nothing presents at
+        // rest. HERE, AT THE HEAD, ahead of every early return, so every mode
+        // reaches it — the render player, the score viewer, the blank window,
+        // a modal, an overlay (the open's hold answers no: it withholds every
+        // paint). THE RECT IS THE CLOCK'S OWN OWNER'S (clock_invalidate_rect):
+        // the published cell, or the whole lane while the row has yielded to
+        // a modal (the cell then reads zero); either way a rect on screen, so
+        // the present follows from the damage alone, whatever the forks below
+        // paint there. Under the score viewer every frame is drawn whole
+        // (GuiGlCanvas::repair_must_be_full), its keep-alive frames too.
+        if (playback_lifecycle.display_keep_alive_wanted(monotonic_ms()) &&
+            gui.display_keep_alive_due())
+            invalidate_clock_area();
 
         // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
         // 2026-11-04 night, render_playhead's paragraph, render.h — the
@@ -3722,7 +3757,9 @@ int gui_main() {
     // CONFIG'S THEME (the `theme` key, architect 2026-11-05 — one of Live
     // 12's own, palette_file.h's head), its row found in the list
     // (find_gui_theme), and every member of the palette installed off it,
-    // the program's and the chrome's alike (install_palette, render.h). A
+    // the program's and the chrome's alike, its bright tones mixed at the
+    // config's `bright_mix` (install_palette, render.h; theme_roles.h's THE
+    // BRIGHT MIX). A
     // SLUG NO ROW BEARS (the reader judged the shape alone: a user file
     // removed) OPENS IN `default`, SB Gunmetal_mod's copy (architect
     // 2026-11-11, session 110, D6; Gunmetal the default since 2026-11-12,
@@ -3757,7 +3794,7 @@ int gui_main() {
                          device_config.theme.c_str());
             theme = &default_gui_theme();
         }
-        install_palette(*theme);
+        install_palette(*theme, device_config.bright_mix);
     }
     // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
     // display_transform.h's head): the switch's bit seeded here, before the

@@ -168,7 +168,8 @@ std::string format_settings_text(
 // (`tooltip_delay_ms`, 2026-11-07, a tuning key, through
 // format_tooltip_delay_ms), or the sweep highlight's alpha
 // (`sweep_highlight`, 2026-11-12, a tuning key, through
-// format_sweep_highlight), the
+// format_sweep_highlight), or the bright tones' mix (`bright_mix`,
+// 2026-11-13, a tuning key, through format_bright_mix), the
 // same
 // "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is

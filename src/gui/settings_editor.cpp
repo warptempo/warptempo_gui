@@ -1220,7 +1220,9 @@ void GuiSettingsEditor::commit() {
 // having none, its arm after them, and the tooltip's delay
 // `tooltip_delay_ms` (2026-11-07) the same, no live act, its arm after it,
 // and the sweep highlight's alpha `sweep_highlight` (2026-11-12) the same,
-// no live act, its arm last
+// no live act, its arm after it, and the bright tones' mix `bright_mix`
+// (2026-11-13) at once and no card, the theme's live act at the new
+// percent, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1320,8 +1322,9 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // reader's shape test is not this commit's, architect 2026-11-06),
     // APPLIED LIVE AT THE COMMIT, which is the OK's (or Enter's) or the value
     // list's row tap, through the theme's own apply shape
-    // (GuiInputHandler::apply_theme — the palette reinstalled off the row,
-    // the icon rasters, the plate or the flag cache, the whole window), so NO
+    // (GuiInputHandler::apply_theme — the palette reinstalled off the row
+    // at the live `bright_mix`, the icon rasters, the plate or the flag
+    // cache, the whole window), so NO
     // CARD: the colors on screen are the answer; a failed write keeps the
     // live value for the session, the card saying the persist failed, and
     // the slug already in force is the unchanged no-op. The page opens its
@@ -1334,7 +1337,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         if (theme == nullptr) return reject(kThemeGrammarReason);
         if (value == app.device_config->theme) return unchanged();
         app.device_config->theme = value;
-        input->apply_theme(*theme);
+        input->apply_theme(*theme, app.device_config->bright_mix);
         (void)persist();
         return applied();
     }
@@ -1588,6 +1591,31 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE BRIGHT TONES' MIX (architect 2026-11-13, session 119, a tuning
+    // key; the rule at theme_roles.h's THE BRIGHT MIX): an integer of whole
+    // percent under its one grammar owner (parse_bright_mix,
+    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then
+    // THE THEME'S OWN LIVE ACT (GuiInputHandler::apply_theme: the palette
+    // reinstalled at the new percent, the icon rasters, the flag cache, the
+    // whole window) off THE INSTALLED ROW'S LIST ENTRY, found by the
+    // installed row's slug — not the config's `theme`, which a launch's
+    // fallback leaves naming no row while `default` is installed (main.cpp)
+    // — and persisted, so NO CARD: the colors on screen are the answer. The
+    // page opens the line editor on it (no value list, 101 values no short
+    // domain); Tab completes no value; stage 2's recall is the writer's
+    // spelling (recall_gui_setting_value).
+    if (key == "bright_mix") {
+        const std::optional<int> pct = parse_bright_mix(value);
+        if (!pct) return reject(kBrightMixGrammarReason);
+        if (*pct == app.device_config->bright_mix) return unchanged();
+        app.device_config->bright_mix = *pct;
+        const GuiTheme* own = find_gui_theme(installed_theme().slug);
+        assert(own != nullptr && "the installed row is the list's");
+        input->apply_theme(*own, *pct);
+        (void)persist();
+        return applied();
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1737,7 +1765,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty-three and
+        // one key does — any key the recall knows, the table's twenty-four and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");

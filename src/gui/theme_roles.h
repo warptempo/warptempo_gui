@@ -128,33 +128,35 @@
 //                                     on the accent (architect 2026-11-11,
 //                                     session 106: the text tone on the accent
 //                                     is about 1.1 : 1; key_ink, materials.h)
-//     text, cue fill         B5B5B5 = ControlForeground — THE ENABLED
-//                                     MARKER'S CHIP too, every enabled chip
-//                                     and the `h` view's added and changed
-//                                     items, the keys' glyph tone, so a chip
-//                                     and its label are one color (architect
-//                                     2026-11-12, session 114: "for all
-//                                     themes, the marker color should simply
-//                                     be the icon glyph color. This will
-//                                     unify"; on the light themes a
-//                                     near-black chip on a mid-grey lane,
-//                                     Live's own numbers, accepted)
+//     text                   B5B5B5 = ControlForeground (the keys' glyphs and
+//                                     legends, the markers' labels)
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
-//     cue                    FFAD56 = ViewCheckControlEnabledOn, THE
+//     cue, cue fill          FFAD56 = ViewCheckControlEnabledOn, THE
 //                                     ACCENT: A LIT KEY'S WHOLE FACE, the
 //                                     lamps', the seven doors' and the
 //                                     on-screen keyboard's two lit keys alike
 //                                     (architect 2026-11-11, session 106: "we
 //                                     should go back to where the accent color
 //                                     is the background of the lit lamp" —
-//                                     Live's "on"; materials.h's THE KEY) and
-//                                     NO MARKER since 2026-11-12 (the cue fill
-//                                     above); immaterial_mod's file carries its
-//                                     shaded gold here, its header the recipe)
-//                                     — every lit key but the radio keys'
-//                                     (below)
+//                                     Live's "on"; materials.h's THE KEY) —
+//                                     every lit key but the radio keys'
+//                                     (below) — AND EVERY ENABLED MARKER'S
+//                                     CHIP, the `h` view's added and changed
+//                                     items too: `cue_fill`, its own member,
+//                                     the same word (architect 2026-11-13,
+//                                     session 119: "we revert the rule so that
+//                                     markers get accent color instead of icon
+//                                     glyph color, and we simply tune the
+//                                     accent itself ... so that the accent
+//                                     shows up everywhere as slightly darker
+//                                     for the dark themes" — the tuning THE
+//                                     BRIGHT MIX below; filled beside the lit
+//                                     key's derived tones, so the install's
+//                                     chip is the mixed accent). immaterial_mod's
+//                                     file carries its shaded gold here, its
+//                                     header the recipe
 //     radio lit fill         B595FC = ScaleAwareness, THE PURPLE: A LIT RADIO
 //                                     KEY'S WHOLE FACE, the eight of
 //                                     redesign_button_is_radio — SOURCE /
@@ -238,7 +240,12 @@
 //   equals inactive cue's BackgroundClip — Live's own number, accepted. The four
 //   are present in every shipped file and in Default.
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
-//   (b − a) per channel, rounded half to even and clamped):
+//   (b − a) per channel, rounded half to even and clamped). The cue fill
+//   above and every tone below but the inactive cue outline are ONE BODY
+//   (fill_dependent_tones, theme_roles.cpp) reading the row's own words, so
+//   the install recomputes them off the mixed bright tones (THE BRIGHT MIX,
+//   below) — the text on lit dim among them, off the print on a lit face,
+//   which is never mixed, so it never moves:
 //     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
 //                                     EXACTLY HALF WAY to the head on every
 //                                     theme (architect 2026-11-12, session
@@ -247,24 +254,33 @@
 //                                     mean the half; a channel whose distance
 //                                     from 255 is odd lands on a .5, which
 //                                     rounds to the even byte like every mix
-//                                     here
-//     inactive cue outline   242424 = ControlContrastFrame + 0.75 ·
-//                                     (Desktop − ControlContrastFrame), THE
-//                                     DISABLED CHIP'S OUTLINE, the `h` view's
-//                                     removed items' too: the enabled chip's
-//                                     outline moved 75 % OF THE WAY TOWARD
-//                                     THE MARKER LANE it stands on, so a
-//                                     disabled chip's edge recedes into the
-//                                     lane (architect 2026-11-12, session 114:
-//                                     "the disable outline, I think, should be
-//                                     a different rule in the code, so no
-//                                     change to the themes needed"; 75 % his
-//                                     pick on the tablet over 50 %, SB
-//                                     Gunmetal_mod 0B0D11 toward 24262D ->
-//                                     1E2026). The selection stem of a
-//                                     selected disabled chip, the ruler head's
-//                                     outline and the lead-in ring stay the cue
-//                                     outline (resolve_flag_face, render.cpp)
+//                                     here. HALF WAY TO THE MIXED HEAD at the
+//                                     install (architect 2026-11-13, session
+//                                     119: "that rule should stay the same")
+//     inactive cue outline   1F1F1F = ControlContrastFrame + 0.75 ·
+//                                     (SurfaceArea − ControlContrastFrame),
+//                                     THE DISABLED CHIP'S OUTLINE, the `h`
+//                                     view's removed items' too: the enabled
+//                                     chip's outline moved 75 % OF THE WAY
+//                                     TOWARD THE THEME'S GROUND, so a disabled
+//                                     chip's edge recedes (architect
+//                                     2026-11-12, session 114: "the disable
+//                                     outline, I think, should be a different
+//                                     rule in the code, so no change to the
+//                                     themes needed"; 75 % his pick on the
+//                                     tablet over 50 %; TOWARD THE GROUND, not
+//                                     the lane's Desktop, since 2026-11-13,
+//                                     session 119: "let's make all colors,
+//                                     including the outline of the disabled,
+//                                     tune towards actual ground" — SB
+//                                     Gunmetal_mod 0B0D11 toward 1F2128 ->
+//                                     1A1C22). Its 0.75 is its own number, not
+//                                     the bright mix's: the outline is dark
+//                                     and no bright tone. The selection stem
+//                                     of a selected disabled chip, the ruler
+//                                     head's outline and the lead-in ring stay
+//                                     the cue outline (resolve_flag_face,
+//                                     render.cpp)
 //     lit press fill         C68743 = THE ACCENT DARKENED BY THE PRESS RATIO:
 //                                     the accent (cue) · (mean(press face) /
 //                                     mean(key face)) per channel, the means
@@ -341,6 +357,49 @@
 //                                     rulings), the both-black ratio 1 as
 //                                     above
 //
+// THE BRIGHT MIX (architect 2026-11-13, session 119, on real tablet captures
+// of Riparian and Gunmetal: "the whole point of it is that it dims ... the
+// supposedly low contrast Ableton themes are still very high contrast with
+// the buttons. Now, buttons in Ableton are tiny. Here they have to be a lot
+// larger for the pen tab"; "I like all 75"; "a universal rule of 75 should
+// work"). THE LIST'S ROWS ARE EACH THEME'S OWN NUMBERS — the blocks above,
+// the compiled reference row Live's measured ones, the files untouched ("we
+// don't have to modify the Ableton imports. We just make the rule") — and
+// THE INSTALL PAINTS EACH ROW MIXED (install_palette, render.h): EVERY
+// BRIGHT TONE moved toward THE THEME'S GROUND, SurfaceArea — the window
+// ground, NOT the lane's Desktop ("towards ground, actual ground, because
+// the buttons are the largest ones, and they're the ones that are the
+// bigger problem. The marker chips are small, and they should follow to
+// match the buttons") — KEEPING k % OF ITSELF: tone + (1 − k / 100) ·
+// (ground − tone) per channel, rounded half to even and clamped like every
+// mix here, k THE `bright_mix` DEVICE KEY (device_config.h: whole percent
+// in [0, 100], 100 the theme's own numbers, 0 every bright tone the ground
+// itself). ONE NUMBER FOR EVERY THEME, the light ones included, where the
+// mix lifts the tones toward a light ground (his "we can deal with that
+// when the time comes by just adjusting" the key; no per-theme value: "I
+// don't think it's worth redoing the presets so that each preset gets its
+// own value"). THE BRIGHT TONES, his list (kBrightTones, theme_roles.cpp):
+// the accent `cue`, the radio lit fill (ScaleAwareness), the playhead head
+// (RangeDefault), the level fill (the composite, mixed as it is painted),
+// the card face (Alert, the cards and the limiter lamp), the clip lamp
+// (StandardVuMeter/Maximum), the selection fill
+// (StandbySelectionBackground) and the list press fill
+// (SelectionBackground) — the two selection fills together ("standby
+// selection should get the rule. Otherwise, it's going to look odd next to
+// the selection background getting the rule"). EVERY TONE DERIVED FROM A
+// BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
+// body): the cue fill — the markers wear the mixed accent — the lit press
+// and lit dim fills, the radio press and dim fills, and the playhead line,
+// white half way to the mixed head. NEVER MIXED: the text tones ("never the
+// glyph color itself": the text, the dim text, the key dim ink — the keys'
+// glyphs and legends, the markers' labels), the print on a lit face and its
+// dim, the selection and list press texts, the faces, the lanes, the
+// waveform's tones, the cue outline, the inactive cue and its outline
+// (dark: "those weren't bright to begin with") and the scanner (below). At
+// 75 on the reference row: the accent FFAD56 -> C88B4A, the purple B595FC
+// -> 9179C6, the head 03C3D5 -> 0B9BA9 and its line 81E1EA -> 85CDD4
+// (bright_mixed_tones, the code).
+//
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,
 // Default and the built-in themes included, so no theme's file carries it
@@ -392,3 +451,10 @@ const GuiTheme* find_gui_theme(std::string_view slug);
 // The `default` row, SB Gunmetal_mod's copy (the list's first; the
 // load must have answered no error).
 const GuiTheme& default_gui_theme();
+
+// THE ROW AS INSTALLED (the head's THE BRIGHT MIX): `own`, a row of the list
+// at its own numbers, with its bright tones mixed toward its ground keeping
+// `percent` of themselves (the `bright_mix` key, an integer in [0, 100]) and
+// every tone derived from them recomputed. At 100 it returns `own` byte for
+// byte. Pure; install_palette (render.cpp) is its one product caller.
+GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent);

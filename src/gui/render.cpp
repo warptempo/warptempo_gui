@@ -9,6 +9,7 @@
 #include "palette_file.h"   // kGuiPaletteRoles (the program's roles)
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "theme_file.h"     // kGuiThemeRoles (the chrome's roles)
+#include "theme_roles.h"    // bright_mixed_tones (the install's mix)
 #include "materials.h"      // paint_key, KeyLook, KeyLitClass
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -1381,11 +1382,12 @@ struct FlagFace {
 //   ADDED     any         cue_fill      cue_outline           selected  text tone  never
 //   CHANGED   any         cue_fill      cue_outline           selected  text tone  per segment
 // — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
-// THE `cue_fill`, THE TEXT TONE (Default's B5B5B5, the keys' glyphs' and the
-// label's own ink, so a chip and its label are one color; architect
-// 2026-11-12, session 114: "for all themes, the marker color should simply
-// be the icon glyph color. This will unify"), in THE OUTLINE, Live's dark
-// line 111111, selected or not; the accent `cue` paints no marker. EVERY
+// THE `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys' face, mixed
+// toward the ground at the `bright_mix` key as the keys are; architect
+// 2026-11-13, session 119: "we revert the rule so that markers get accent
+// color instead of icon glyph color, and we simply tune the accent
+// itself"; theme_roles.h's THE BRIGHT MIX), in THE OUTLINE, Live's dark
+// line 111111, selected or not. EVERY
 // SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
 // 2026-11-11, session 106: "disabled markers also get the dark stem, same as
 // enabled ones") — a solid one-W `cue_outline` line from the chip's apex
@@ -1398,7 +1400,8 @@ struct FlagFace {
 // 2026-11-05, "disabled marker gets dim label"): the `inactive_cue` 5D5D5D
 // fill in THE DISABLED OUTLINE, `inactive_cue_outline` (architect
 // 2026-11-12, session 114: the `cue_outline` moved 75 % of the way toward
-// the lane's Desktop, Default's 242424 — theme_roles.h's DERIVED block), the
+// the theme's ground, Default's 1F1F1F, since 2026-11-13, session 119 —
+// theme_roles.h's DERIVED block), the
 // playhead on it or not, selected or not; THE STEM STAYS `cue_outline` on
 // every selected cue, disabled too — the stem is the one mark of the
 // selection. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect
@@ -2293,21 +2296,25 @@ WaveformPlateInks waveform_plate_inks() {
                              display_transform::display_rgb(t.waveform_core)};
 }
 
-void install_palette(const GuiTheme& theme) {
+void install_palette(const GuiTheme& theme, int bright_mix) {
     // The contract and the apply shape the live caller owes are at the
-    // declaration (render.h). THE PROGRAM'S THIRTEEN off the palette's role
-    // table (palette_file.h), THE CHROME'S THIRTY off the chrome's
-    // (theme_file.h), each member its row's tone, and THE PANEL'S FACE the
-    // theme's ground (the flat look, materials.h's head) — the tables
-    // covering the struct exactly (palette_file.cpp), so a role cannot be
-    // valued and not painted; the row copied for the word readers
-    // (installed_theme).
-    g_theme = theme;
+    // declaration (render.h). THE ROW MIXED FIRST (theme_roles.h's THE
+    // BRIGHT MIX: its bright tones toward its ground at `bright_mix`, every
+    // tone derived from them recomputed) and copied for the word readers
+    // (installed_theme), its slug and group the list row's; then THE
+    // PROGRAM'S THIRTEEN off the palette's role table (palette_file.h), THE
+    // CHROME'S THIRTY off the chrome's (theme_file.h), each member the mixed
+    // row's tone, and THE PANEL'S FACE the theme's ground (the flat look,
+    // materials.h's head) — the tables covering the struct exactly
+    // (palette_file.cpp), so a role cannot be valued and not painted.
+    g_theme = GuiTheme{theme.slug, theme.group,
+                       bright_mixed_tones(theme.tones, bright_mix)};
+    const GuiThemeTones& t = g_theme.tones;
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
-        g_palette.*(r.member) = hex(theme.tones.*(r.tone));
+        g_palette.*(r.member) = hex(t.*(r.tone));
     for (const GuiThemeRole& r : kGuiThemeRoles)
-        g_palette.*(r.member) = hex(theme.tones.*(r.tone));
-    g_palette.face = hex(theme.tones.ground);
+        g_palette.*(r.member) = hex(t.*(r.tone));
+    g_palette.face = hex(t.ground);
     ++g_palette_generation;
 }
 

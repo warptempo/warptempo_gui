@@ -185,6 +185,24 @@ public:
     void present_held_frame();
     void release_presentation();
 
+    // THE DISPLAY KEEP-ALIVE'S PERIOD (architect 2026-11-13, session 118;
+    // the facts and the ruling — the brief window after a fast Stop — at
+    // kDisplayKeepAliveFastStopMs, playback_lifecycle.h): 200 ms, under THIS
+    // PANEL'S 250 ms IDLE TIMER, so a window kept awake presents one frame
+    // after this long without a present and the panel never drops to 30 Hz.
+    static constexpr int64_t kDisplayKeepAliveMs = 200;
+
+    // IS A KEEP-ALIVE FRAME DUE NOW (architect 2026-11-13, session 118):
+    // true when the window stands in front — adopted and focused
+    // (window_activated_) and its first configure done — no hold withholds
+    // the paint, no damage already waits for its frame, and no frame has
+    // presented for kDisplayKeepAliveMs. The platform answers WHEN; the GUI
+    // decides WHETHER a keep-alive is wanted (it asks only inside the brief
+    // window, GuiPlaybackLifecycle::display_keep_alive_wanted) and owns WHAT
+    // is damaged (main.cpp's tick head, the clock cell), so a true answer
+    // owes one damage that changes no pixel, and the vsync gate presents it.
+    bool display_keep_alive_due() const;
+
     // THE COPY STAYS IN THIS PROCESS AND THE PASTE TAKES THE NEWER
     // (architect 2026-10-29): Android 13 and later show a system "Copied"
     // chip on every write to the system clipboard, which no app can turn
@@ -599,6 +617,11 @@ private:
     void*                 egl_swap_with_damage_   = nullptr;
     static constexpr std::size_t kRepairHistoryDepth = 8;
     std::vector<std::vector<GuiGlRect>> repair_history_;
+    // THE LAST SUCCESSFUL PRESENT, steady-clock ms (platform_monotonic_ms;
+    // present's tail, the one writer: every frame posts through it, the
+    // hold's one frame and the load's drain included); 0 before the first.
+    // display_keep_alive_due's one reading.
+    int64_t               last_present_ms_ = 0;
     // THE FIRST SURFACE'S DISPLAY-P3 ANSWER, the one gui_main read; a later
     // surface answering otherwise is fatal (ensure_gl_surface, 2026-10-13).
     std::optional<bool>   gl_first_display_p3_;

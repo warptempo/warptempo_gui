@@ -14,9 +14,9 @@
 #include <system_error>
 #include <utility>
 
-// The format, the groups, the order, the left-out files and THE DERIVATION
-// are at the declaration's head (theme_roles.h), the one owner; this file is
-// their code.
+// The format, the groups, the order, the left-out files, THE DERIVATION and
+// THE BRIGHT MIX are at the declaration's head (theme_roles.h), the one
+// owner; this file is their code.
 
 namespace {
 
@@ -187,9 +187,95 @@ uint32_t packed(const Rgb& c) {
            (static_cast<uint32_t>(c.g) << 8) | static_cast<uint32_t>(c.b);
 }
 
-// One theme's tones (the head's DERIVATION). Total: every tone is a role, a
+// A row's word back to its three bytes: exactly the Rgb `packed` was given,
+// so a tone recomputed off a row's words is the one derive() computed off
+// the roles (fill_dependent_tones).
+Rgb unpacked(uint32_t word) {
+    return Rgb{static_cast<int>((word >> 16) & 0xFFu),
+               static_cast<int>((word >> 8) & 0xFFu),
+               static_cast<int>(word & 0xFFu)};
+}
+
+// THE BRIGHT TONES, the head's BRIGHT MIX block's eight in the row's member
+// order: the one enumeration bright_mixed_tones walks.
+constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
+    &GuiThemeTones::radio_lit_fill,
+    &GuiThemeTones::selection_fill,
+    &GuiThemeTones::list_press_fill,
+    &GuiThemeTones::card_face,
+    &GuiThemeTones::clip_lamp,
+    &GuiThemeTones::level_fill,
+    &GuiThemeTones::cue,
+    &GuiThemeTones::playhead_head,
+};
+
+// THE TONES DERIVED FROM A ROW'S OWN WORDS (the head's DERIVED block: the
+// lit key's three and the print on its inert face, the radio keys' two, the
+// enabled chip's fill and the playhead's line), ONE BODY for both roads:
+// derive() fills them off the theme's own numbers, bright_mixed_tones off
+// the mixed bright tones, so each formula is written once. Every input is a
+// word of the row — the key face (SurfaceBackground), the press face
+// (Desktop), the text (ControlForeground), the key dim ink, the print on a
+// lit face (ControlContrastFrame), the accent, the purple and the head —
+// each the same bytes derive() reads off the roles, so the doubles and
+// their order are the derivation's own (Python's, bit for bit).
+void fill_dependent_tones(GuiThemeTones& t) {
+    const Rgb face     = unpacked(t.key_face);
+    const Rgb desktop  = unpacked(t.key_press_face);
+    const Rgb text     = unpacked(t.text);
+    const Rgb dim_ink  = unpacked(t.key_dim_ink);
+    const Rgb contrast = unpacked(t.text_on_lit);
+    const Rgb on       = unpacked(t.cue);
+    const Rgb radio    = unpacked(t.radio_lit_fill);
+    const Rgb range    = unpacked(t.playhead_head);
+    const Rgb white    = Rgb{255, 255, 255};
+    // THE LIT KEY'S DERIVED TONES (the head's DERIVED block; architect
+    // 2026-11-11, session 106). THE LIT PRESS FILL: the accent scaled by the
+    // ratio the press face bears to the key face, mean over mean; a black
+    // key face (no divisor) leaves the accent as it is. THE LIT-BUT-INERT
+    // PAIR: the accent and the print on it, both moved by the one ratio the
+    // disabled key's ink bears to the text, in the direction the disabled
+    // ink lies from the text (architect 2026-11-11, session 109, his pick
+    // (a): "the same rule in negative" on a light theme). Where mean(text)
+    // >= mean(dim ink), a dark theme, each tone is scaled toward black by
+    // mean(dim ink) / mean(text); the divisor is zero only when the text
+    // and the dim ink are both black, and that answer is ratio 1, both
+    // tones whole. Where mean(text) < mean(dim ink), a light theme, each
+    // tone is scaled toward white by (255 − mean(dim ink)) / (255 −
+    // mean(text)) on its distance from white; that divisor is never zero
+    // (mean(text) < mean(dim ink) <= 255). THE RADIO KEYS' PRESS AND INERT
+    // FACES (architect 2026-11-11, session 107): the purple by the same two
+    // ratios, the inert one on the same branch.
+    const double face_mean   = mean(face);
+    const double press_ratio =
+        face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
+    const double text_mean   = mean(text);
+    const double dim_mean    = mean(dim_ink);
+    const bool   dim_to_white = text_mean < dim_mean;
+    const double dim_ratio   =
+        dim_to_white      ? (255.0 - dim_mean) / (255.0 - text_mean)
+        : text_mean == 0.0 ? 1.0
+                           : dim_mean / text_mean;
+    const auto dim_tone = [&](const Rgb& c) {
+        return dim_to_white ? scale_toward_white(c, dim_ratio)
+                            : scale(c, dim_ratio);
+    };
+    t.lit_press_fill       = packed(scale(on, press_ratio));
+    t.lit_dim_fill         = packed(dim_tone(on));
+    t.text_on_lit_dim      = packed(dim_tone(contrast));
+    t.radio_lit_press_fill = packed(scale(radio, press_ratio));
+    t.radio_lit_dim_fill   = packed(dim_tone(radio));
+    // The enabled chip wears the accent (the head's ROLE-NAMED, cue).
+    t.cue_fill             = packed(on);
+    // The playhead's line, white exactly half way to the head (the head's
+    // DERIVED block).
+    t.playhead_line        = packed(mix(white, range, 0.5));
+}
+
+// One theme's tones AT ITS OWN NUMBERS (the head's DERIVATION; the bright
+// mix is the install's, bright_mixed_tones). Total: every tone is a role, a
 // composite, a mix or a scaled role, and each of the two ratios' zero
-// divisor has its own answer (the lit key's derived tones, below).
+// divisor has its own answer (fill_dependent_tones).
 GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
     const Rgb desktop  = opaque(roles["Desktop"]);
@@ -224,56 +310,15 @@ GuiThemeTones derive(const ThemeRoles& roles) {
                                 rgba(roles["Desktop"]));
     const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), face_a);
     const Rgb white    = Rgb{255, 255, 255};
-    // THE LIT KEY'S DERIVED TONES (the head's DERIVED block; architect
-    // 2026-11-11, session 106). THE LIT PRESS FILL: the accent scaled by the
-    // ratio the press face bears to the key face, mean over mean; a black
-    // key face (no divisor) leaves the accent as it is. THE LIT-BUT-INERT
-    // PAIR: the accent and the print on it, both moved by the one ratio the
-    // disabled key's ink bears to the text, in the direction the disabled
-    // ink lies from the text (architect 2026-11-11, session 109, his pick
-    // (a): "the same rule in negative" on a light theme). Where mean(text)
-    // >= mean(dim ink), a dark theme, each tone is scaled toward black by
-    // mean(dim ink) / mean(text); the divisor is zero only when the text
-    // and the dim ink are both black, and that answer is ratio 1, both
-    // tones whole. Where mean(text) < mean(dim ink), a light theme, each
-    // tone is scaled toward white by (255 − mean(dim ink)) / (255 −
-    // mean(text)) on its distance from white; that divisor is never zero
-    // (mean(text) < mean(dim ink) <= 255). THE RADIO KEYS' PRESS AND INERT
-    // FACES (architect 2026-11-11, session 107): the purple by the same two
-    // ratios, the inert one on the same branch.
-    const double face_mean   = mean(face);
-    const double press_ratio =
-        face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
-    const double text_mean   = mean(text);
-    const double dim_mean    = mean(dim_ink);
-    const bool   dim_to_white = text_mean < dim_mean;
-    const double dim_ratio   =
-        dim_to_white      ? (255.0 - dim_mean) / (255.0 - text_mean)
-        : text_mean == 0.0 ? 1.0
-                           : dim_mean / text_mean;
-    const auto dim_tone = [&](const Rgb& c) {
-        return dim_to_white ? scale_toward_white(c, dim_ratio)
-                            : scale(c, dim_ratio);
-    };
-    const Rgb lit_press  = scale(on, press_ratio);
-    const Rgb lit_dim    = dim_tone(on);
-    const Rgb on_lit_dim = dim_tone(contrast);
-    const Rgb radio_press = scale(radio, press_ratio);
-    const Rgb radio_dim   = dim_tone(radio);
     GuiThemeTones t{};
     t.ground              = packed(ground);
     t.text                = packed(text);
     t.text_dim            = packed(dim);
     t.text_on_lit         = packed(contrast);
     t.key_dim_ink         = packed(dim_ink);
-    t.text_on_lit_dim     = packed(on_lit_dim);
     t.key_face            = packed(face);
     t.key_press_face      = packed(desktop);
-    t.lit_press_fill      = packed(lit_press);
-    t.lit_dim_fill        = packed(lit_dim);
     t.radio_lit_fill      = packed(radio);
-    t.radio_lit_press_fill = packed(radio_press);
-    t.radio_lit_dim_fill  = packed(radio_dim);
     t.well_frame          = packed(dim);
     t.ruler_face          = packed(face);
     t.ruler_tick          = packed(tick_role);
@@ -296,16 +341,14 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.grid                = packed(grid_role);
     t.center              = packed(ink);
     t.cue                 = packed(on);
-    // The enabled chip wears the keys' glyph tone (the head's ROLE-NAMED).
-    t.cue_fill            = packed(text);
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
     // The disabled chip's outline: the enabled chip's moved 75 % of the way
-    // toward the marker lane it stands on (the head's DERIVED block).
-    t.inactive_cue_outline = packed(mix(contrast, desktop, 0.75));
+    // toward the theme's ground (the head's DERIVED block).
+    t.inactive_cue_outline = packed(mix(contrast, ground, 0.75));
     t.playhead_head       = packed(range);
-    t.playhead_line       = packed(mix(white, range, 0.5));
     t.scanner             = packed(white);
+    fill_dependent_tones(t);
     return t;
 }
 
@@ -493,4 +536,21 @@ const GuiTheme* find_gui_theme(std::string_view slug) {
 const GuiTheme& default_gui_theme() {
     assert(!themes_storage().empty() && "the themes are loaded at launch");
     return themes_storage().front();
+}
+
+GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent) {
+    // The rule, the eight and the number are the head's BRIGHT MIX block
+    // (theme_roles.h). Each bright tone moved toward the row's ground keeping
+    // `percent` of itself — mix(tone, ground, 1 − percent / 100), the
+    // derivation's own mix — then every tone derived from one recomputed off
+    // the mixed words (fill_dependent_tones, the one body). At 100 the mix
+    // moves no byte (a + 0 · (b − a) is a), so the row comes back as it is.
+    assert(percent >= 0 && percent <= 100);
+    GuiThemeTones t = own;
+    const Rgb ground = unpacked(own.ground);
+    const double toward_ground = 1.0 - percent / 100.0;
+    for (uint32_t GuiThemeTones::* m : kBrightTones)
+        t.*m = packed(mix(unpacked(own.*m), ground, toward_ground));
+    fill_dependent_tones(t);
+    return t;
 }

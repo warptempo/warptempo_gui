@@ -20,7 +20,10 @@
 // Every sRGB word the GUI paints, one theme's (0xRRGGBB). Beside each member
 // what reads it and the Live role it comes from (the one owners: materials.h's
 // head, palette_file.h's role list, render.h's palette block; the derivation,
-// theme_roles.h's head).
+// theme_roles.h's head). A row of the list holds the theme's own numbers; the
+// installed row its bright tones mixed toward its ground at the `bright_mix`
+// key and every tone derived from them recomputed (theme_roles.h's THE BRIGHT
+// MIX, bright_mixed_tones).
 struct GuiThemeTones {
     uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea)
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
@@ -56,11 +59,11 @@ struct GuiThemeTones {
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
     uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
-    uint32_t cue;                 // THE ACCENT: a checked key's whole face but a radio key's, the on-screen keyboard's lit keys too; no marker (ViewCheckControlEnabledOn)
-    uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (ControlForeground, = the text tone)
+    uint32_t cue;                 // THE ACCENT: a checked key's whole face but a radio key's, the on-screen keyboard's lit keys too (ViewCheckControlEnabledOn)
+    uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (= the accent, cue)
     uint32_t cue_outline;         // an enabled chip's outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
-    uint32_t inactive_cue_outline; // a disabled chip's outline, the `h` view's removed items' too (ControlContrastFrame 75 % toward Desktop)
+    uint32_t inactive_cue_outline; // a disabled chip's outline, the `h` view's removed items' too (ControlContrastFrame 75 % toward the ground)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
     uint32_t playhead_line;       // the playhead's canvas line (white half way to the head)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
@@ -114,12 +117,17 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // radio key's face B595FC, Default's ScaleAwareness, its press 8D74C4
 // (× 42 / 54) and its inert face 5D4D81 (× 93 / 181) AND THE PLAYHEAD'S
 // LINE 81E1EA, white half way to the head (architect 2026-11-12, session
-// 113) AND THE DISABLED CHIP'S OUTLINE 242424, ControlContrastFrame 75 % of
-// the way toward Desktop (architect 2026-11-12, session 114; both
-// theme_roles.h's DERIVED block) AND THE ENABLED CHIP'S FILL B5B5B5, the
-// text tone (ControlForeground; architect 2026-11-12, session 114).
-// palette_file.h's static_asserts pin every word. The pre-install palette's
-// row too
+// 113) AND THE DISABLED CHIP'S OUTLINE 1F1F1F, ControlContrastFrame 75 % of
+// the way toward the ground SurfaceArea (architect 2026-11-12, session 114;
+// toward the ground since 2026-11-13, session 119; both theme_roles.h's
+// DERIVED block) AND THE ENABLED CHIP'S FILL FFAD56, the accent
+// (ViewCheckControlEnabledOn; architect 2026-11-13, session 119).
+// THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
+// 119): like every row of the list it holds the theme's own numbers,
+// and the install mixes its bright tones at the `bright_mix` key as it mixes
+// every row's (theme_roles.h's THE BRIGHT MIX), so no number here is the
+// key's. palette_file.h's static_asserts pin every word. The pre-install
+// palette's row too
 // (render.cpp's construction state, never painted).
 inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x242424, // ground
@@ -157,10 +165,10 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x303030, // grid
     0x191919, // center
     0xFFAD56, // cue
-    0xB5B5B5, // cue_fill
+    0xFFAD56, // cue_fill
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
-    0x242424, // inactive_cue_outline
+    0x1F1F1F, // inactive_cue_outline
     0x03C3D5, // playhead_head
     0x81E1EA, // playhead_line
     0xFFFFFF, // scanner

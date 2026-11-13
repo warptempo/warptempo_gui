@@ -121,6 +121,26 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         return;
     }
     if (!playback.is_playing() && !app.playhead_scanner_active) return;
+    // THE DISPLAY KEEP-ALIVE'S ARMING (architect 2026-11-13, session 118;
+    // the facts and the ruling at kDisplayKeepAliveFastStopMs,
+    // playback_lifecycle.h): THIS ARM IS THE ONE SEAT EVERY STOP OF A
+    // PROJECT PLAY CROSSES — the user's own (bare Space's stop edge, the
+    // car's pause and Stop), the waveform's placement and marker clicks, the
+    // scrub's stop half ahead of its relaunch, the natural end and
+    // RESTRICT's edge (the tick's two), a modal open and every authoring
+    // stop of the keyboard stop rule above — and a stop of a play the user
+    // launched within kDisplayKeepAliveFastStopMs opens the brief window
+    // past it, whatever stopped it: the panel drops the same after any
+    // stop. The render player's and the score viewer's stops returned at
+    // their forks above and their plays never stamp; the A/B audition's
+    // plays clear the stamp. The stamp is consumed either way, so one play
+    // arms at most once.
+    if (user_play_launched_ms >= 0) {
+        const int64_t now = monotonic_ms();
+        if (now - user_play_launched_ms <= kDisplayKeepAliveFastStopMs)
+            display_keep_alive_until_ms = now + kDisplayKeepAliveWindowMs;
+        user_play_launched_ms = -1;
+    }
     playback.stop();
     app.playhead_scanner_active = false;
     // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
@@ -430,6 +450,9 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
                                                active_view_play_end(),
                                                kPlaybackNoLoop,
                                                LaunchCamera::PageIn);
+    // THE USER'S PLAY'S START, the display keep-alive's stamp (the two
+    // stamps' contract at the declaration): a launch that ran.
+    if (restrictable_play) user_play_launched_ms = monotonic_ms();
     return restrictable_play;
 }
 
@@ -505,9 +528,12 @@ void GuiPlaybackLifecycle::car_play_playback() {
     // the user's to ask for — lit, the launch pages in and the tick's
     // autopager takes over the paging the instant it succeeds
     // (AppState::follow).
-    launch_playback_window(begin, end, begin,
-                           app.follow ? LaunchCamera::PageIn
-                                      : LaunchCamera::Leave);
+    // THE USER'S PLAY'S START, the display keep-alive's stamp (the two
+    // stamps' contract at the declaration): a launch that ran.
+    if (launch_playback_window(begin, end, begin,
+                               app.follow ? LaunchCamera::PageIn
+                                          : LaunchCamera::Leave))
+        user_play_launched_ms = monotonic_ms();
 }
 
 // THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
@@ -540,6 +566,10 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     // THE AUDITION IS NEVER RESTRICTED (restrictable_play's exemptions): each
     // play is framed by its own `c` and ends at its own span.
     restrictable_play = false;
+    // NOR DOES IT ARM THE DISPLAY KEEP-ALIVE (the two stamps' contract at
+    // the declaration): its rests keep the panel awake on their own road
+    // (main.cpp's "A REST KEEPS THE PAINT CLOCK RUNNING").
+    user_play_launched_ms = -1;
     // PageIn: each of the act's four plays is framed by its own `c`
     // (GuiAbAudition), so the start is centred by construction and the term
     // is a no-op here — stated, not defaulted, because the body takes no
