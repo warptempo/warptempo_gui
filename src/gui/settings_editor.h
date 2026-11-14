@@ -107,8 +107,8 @@ struct GuiInputHandler;
 // delay's tuning key tooltip_delay_ms, and since 2026-11-12 (architect) the
 // sweep highlight's alpha's tuning key sweep_highlight, and since 2026-11-13
 // (architect) the bright tones' mix's tuning key bright_mix, and since
-// 2026-11-14 (architect) the plate's switch width's tuning key
-// waveform_switch_px (the
+// 2026-11-14 (architect) the plate's fade start's tuning key
+// waveform_fade_px (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, then retired with the LED, 2026-11-01; the
 // tooltip's gap's tuning key tooltip_gap, editable for session 90 of
@@ -140,7 +140,7 @@ struct GuiInputHandler;
 //    true_colors, theme, waveform_grow, noise, noise_attenuation_level,
 //    noise_crossfade_s, key_height, key_width, run_gap, osk_key_w,
 //    osk_key_h, osk_font_px, lamp_hold_ms, tooltip_delay_ms,
-//    sweep_highlight, bright_mix and waveform_switch_px — in ONE body,
+//    sweep_highlight, bright_mix and waveform_fade_px — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
 //    owner in device_config.h
@@ -179,8 +179,8 @@ struct GuiInputHandler;
 //    page, so the commit owes no damage); the bright tones' mix at once,
 //    the palette reinstalled off the installed row at the new percent and
 //    the window repainted (GuiInputHandler::apply_theme), no card; the
-//    plate's switch width at once, the plate re-rendered and the window
-//    repainted (GuiInputHandler::apply_waveform_switch_px), no card (the
+//    plate's fade start at once, the plate re-rendered and the window
+//    repainted (GuiInputHandler::apply_waveform_fade_px), no card (the
 //    waveform is the answer).
 //    gui_scale, the
 //    one other
@@ -258,7 +258,7 @@ struct GuiInputHandler;
 // gap `tooltip_gap` after it for session 90 that day, gone in session 91,
 // settled; the sweep highlight's alpha `sweep_highlight` 2026-11-12, at the
 // device keys' tail; the bright tones' mix `bright_mix` 2026-11-13, at the
-// device keys' tail; the plate's switch width `waveform_switch_px`
+// device keys' tail; the plate's fade start `waveform_fade_px`
 // 2026-11-14, at the device keys' tail):
 // the five
 // PIECE keys a hand edits (the
@@ -296,7 +296,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
     "key_height", "key_width", "run_gap", "osk_key_w", "osk_key_h",
     "osk_font_px", "lamp_hold_ms", "tooltip_delay_ms", "sweep_highlight",
-    "bright_mix", "waveform_switch_px",
+    "bright_mix", "waveform_fade_px",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two groups split the table here, and the asserts pin
@@ -372,7 +372,7 @@ static_assert(settings_page_piece_keys_pinned());
 // opens the line editor; nor the lamps' hold `lamp_hold_ms`, 981 values;
 // nor the tooltip's delay `tooltip_delay_ms`, 1001; nor the sweep
 // highlight's alpha `sweep_highlight`, 101; nor the bright tones' mix
-// `bright_mix`, 101; nor the plate's switch width `waveform_switch_px`,
+// `bright_mix`, 101; nor the plate's fade start `waveform_fade_px`,
 // 51.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
@@ -535,7 +535,7 @@ struct GuiSettingsEditor {
     // `tooltip_delay_ms=` (2026-11-07, the line's door alone),
     // `sweep_highlight=` (2026-11-12, the line's door alone),
     // `bright_mix=` (2026-11-13, the line's door alone) and
-    // `waveform_switch_px=` (2026-11-14, the line's door alone) — ONE BODY,
+    // `waveform_fade_px=` (2026-11-14, the line's door alone) — ONE BODY,
     // TWO DOORS
     // (architect 2026-10-25, 2026-10-28 night for the value lists' keys): the
     // typed line's commit (commit_device_setting, below, the editor's door)

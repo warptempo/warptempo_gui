@@ -162,8 +162,8 @@ struct WaveformCache {
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
     // vp_start, the LATTICE ORIGIN (fp_lattice_origin below, 2026-10-31),
-    // vp_end, area_w, area_h, divider_px, THE SWITCH WIDTH
-    // (fp_switch_hundredths below, 2026-11-14), the plate's two
+    // vp_end, area_w, area_h, divider_px, THE FADE'S START
+    // (fp_fade_hundredths below, 2026-11-14), the plate's two
     // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
     // an input the plate's PIXELS depend on (the inks through its
     // publication), and each is keyed BY FIELD rather than through whatever else happens
@@ -179,14 +179,16 @@ struct WaveformCache {
     // was rendered for — what the flag rebuild stages and every stem, flag,
     // playhead and hit test reads (plate_viewport_basis, the displayed
     // mirror) — never the bars. The bars' own geometry (the first stored
-    // bar, their width and count, the draw transform) is a pure function of
-    // those fields, the painter's step and the switch width (render.h's
-    // waveform_bar_geometry), so it is no field: the producer derives it and
+    // bar, their width and count, the draw transform and the fade band's
+    // weight) is a pure function of those fields, the painter's step, the
+    // working column and the fade's start (render.h's waveform_bar_geometry
+    // and waveform_fade_band), so it is no field: the producer derives it and
     // it rides the slot with the columns it describes
     // (GuiPlateColumns::first_bar and its neighbors), swapped and published
     // with them. THE PLATE IS STILL RENDERED AT EVERY VIEWPORT CHANGE, a
     // gesture's every frame included, on the publication sequence the
-    // freeze gates and the flag staging stand on; inside a level its
+    // freeze gates and the flag staging stand on; inside a level, out of
+    // the fade band, its
     // columns come out the same numbers, and no bar cache or interval reuse
     // sits in front of it (his "a common sense, good enough on performance
     // approach").
@@ -209,14 +211,15 @@ struct WaveformCache {
     // fingerprint field exists iff it is a render input (the type rule's
     // shape).
     int       fp_divider_px  = -1;
-    // THE SWITCH WIDTH the live plate's bars were chosen by, in hundredths
-    // of a device px (the `waveform_switch_px` key's seat,
-    // waveform_switch_hundredths, render.h; architect 2026-11-14, send G):
-    // the bars' width, count and tips are a function of it (render.h's
-    // waveform_bar_frames), so a commit of the key re-renders the plate BY
+    // THE FADE'S START the live plate was rendered under, in hundredths
+    // of a device px (the `waveform_fade_px` key's seat,
+    // waveform_fade_hundredths, render.h; architect 2026-11-14, send H):
+    // whether the plate stands in the fade band, and there its row's bars,
+    // their mixed tips and the weight, are a function of it (render.h's
+    // waveform_fade_band), so a commit of the key re-renders the plate BY
     // FIELD, keyed directly like the divider's height. 0 before the first
     // plate, a value the key's grammar never spells.
-    int       fp_switch_hundredths = 0;
+    int       fp_fade_hundredths = 0;
     // THE TWO INKS the live plate is published with (the `waveform_ink` and
     // `waveform_core` roles, waveform_plate_inks, render.h): the sink
     // writes their words (GuiCanvasSink::plate), so a change that moves
@@ -266,7 +269,7 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_divider_px  = -1;
-    int       pending_fp_switch_hundredths = 0;
+    int       pending_fp_fade_hundredths = 0;
     WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
@@ -291,7 +294,7 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_divider_px  = 0;   // GUI-captured divider height
-    int       supersede_switch_hundredths = 0;  // GUI-captured switch width
+    int       supersede_fade_hundredths = 0;  // GUI-captured fade start
     WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
@@ -915,15 +918,15 @@ private:
         // rung and placement — is defined in terms of it.
         // vp_end above stays: it is a FINGERPRINT input and unrelated to this.
         double   painter_spp   = 0.0;
-        // THE BARS' TWO OTHER INPUTS (architect 2026-11-14, send G;
-        // render.h's waveform_bar_frames), captured on the GUI thread like
-        // the rest: the audio's working column — fixed for the audio's
-        // life, so a render input and no fingerprint field — and the switch
-        // width in hundredths of a device px off its seat
-        // (waveform_switch_hundredths), both a render input and a
+        // THE BARS' TWO OTHER INPUTS (architect 2026-11-14, sends G and H;
+        // render.h's waveform_bar_frames and waveform_fade_band), captured
+        // on the GUI thread like the rest: the audio's working column —
+        // fixed for the audio's life, so a render input and no fingerprint
+        // field — and the fade's start in hundredths of a device px off its
+        // seat (waveform_fade_hundredths), both a render input and a
         // fingerprint field.
         int64_t  working_column    = 0;
-        int      switch_hundredths = 0;
+        int      fade_hundredths = 0;
         int      area_w        = 0;
         int      area_h        = 0;
         // The stereo divider's height (waveform_divider_px(), render.h),

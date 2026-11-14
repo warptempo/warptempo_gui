@@ -1222,8 +1222,8 @@ void GuiSettingsEditor::commit() {
 // and the sweep highlight's alpha `sweep_highlight` (2026-11-12) the same,
 // no live act, its arm after it, and the bright tones' mix `bright_mix`
 // (2026-11-13) at once and no card, the theme's live act at the new
-// percent, its arm after it, and the plate's switch width
-// `waveform_switch_px` (2026-11-14) at once and no card, the plate
+// percent, its arm after it, and the plate's fade start
+// `waveform_fade_px` (2026-11-14) at once and no card, the plate
 // re-rendered, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
@@ -1618,24 +1618,24 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE PLATE'S SWITCH WIDTH (architect 2026-11-14, send G, a tuning key;
-    // render.h's `waveform_switch_px` seat and THE PLATE'S BARS): a decimal
-    // of device px under its one grammar owner (parse_waveform_switch_px,
+    // THE PLATE'S FADE START (architect 2026-11-14, send H, a tuning key;
+    // render.h's `waveform_fade_px` seat and THE PLATE'S BARS): a decimal
+    // of device px under its one grammar owner (parse_waveform_fade_px,
     // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then
-    // the one live act (GuiInputHandler::apply_waveform_switch_px: the
-    // renderer's seat, the plate re-rendered — its bars are a function of
-    // the width — and the window repainted) — and persisted, so NO CARD:
+    // the one live act (GuiInputHandler::apply_waveform_fade_px: the
+    // renderer's seat, the plate re-rendered — its row of bars is a function
+    // of the start — and the window repainted) — and persisted, so NO CARD:
     // the waveform is the answer. The page opens the line editor on it (no
     // value list, its 51 values no short domain); Tab completes no value (a
     // number is typed); stage 2's recall is the writer's spelling
     // (recall_gui_setting_value).
-    if (key == "waveform_switch_px") {
-        const std::optional<int> hundredths = parse_waveform_switch_px(value);
-        if (!hundredths) return reject(kWaveformSwitchGrammarReason);
-        if (*hundredths == app.device_config->waveform_switch_hundredths)
+    if (key == "waveform_fade_px") {
+        const std::optional<int> hundredths = parse_waveform_fade_px(value);
+        if (!hundredths) return reject(kWaveformFadeGrammarReason);
+        if (*hundredths == app.device_config->waveform_fade_hundredths)
             return unchanged();
-        app.device_config->waveform_switch_hundredths = *hundredths;
-        input->apply_waveform_switch_px(*hundredths);
+        app.device_config->waveform_fade_hundredths = *hundredths;
+        input->apply_waveform_fade_px(*hundredths);
         (void)persist();
         return applied();
     }

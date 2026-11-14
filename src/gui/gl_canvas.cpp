@@ -27,7 +27,8 @@
 // §3.13), THE WAVEFORM'S ANTIALIASING (architect 2026-10-30): the plate's
 // fragment rasterizes the bars' tips at exact coverage — the bars stretched
 // at their pitch from a fourth, float instance attribute (architect
-// 2026-11-14, send G) — and blends
+// 2026-11-14, send G), and in the fade band before a level switch merged
+// pair by pair by that attribute's weight (send H) — and blends
 // source-over (kListFragmentShader's head; the rule at
 // render_waveform_columns' head, render.h), and THE TINT (architect
 // 2026-11-12, the sweep highlight), the canvas's second blend, a rect
@@ -101,7 +102,8 @@ constexpr const char* kCanvasFragmentShader =
 // 2026-10-31, the 4x grid ruled for good that afternoon at render.h's
 // kWaveformSubcells; THE CORE a solid fill of the grown inner since
 // 2026-11-04; THE BARS ANCHORED TO THE AUDIO AND DRAWN STRETCHED at their
-// pitch, architect 2026-11-14, send G, render.h's THE PLATE'S BARS), an
+// pitch, architect 2026-11-14, send G, render.h's THE PLATE'S BARS; THE
+// FADE BAND'S ROW DRAWN MERGED, send H, the merged arm below), an
 // INTEGER ALGORITHM over the bounds texture
 // (an isampler2D over GL_RGBA16I: row `period` holds, per BAR of the
 // record's row, the four QUARTER-ROW tips {o_top, o_bot, i_top, i_bot}, the
@@ -122,7 +124,7 @@ constexpr const char* kCanvasFragmentShader =
 //     standing program was compiled for and rebuilds before the draw
 //     (build_list_program), once per commit of the key, tens of ms, no
 //     frame-to-frame cost. WHY: every loop bound below is then a constant
-//     expression (GROW, 4, NO = 4 + 2 · GROW, NB), every disc condition a
+//     expression (GROW, 4, NO = 4 + 2 · GROW, NB, NM), every disc condition a
 //     comparison of constants and every array index a loop variable, so
 //     after unrolling no array is indexed by a runtime value and the masks
 //     are registers. A BAR IS A SCALAR FOR THE SAME REASON (architect
@@ -156,8 +158,15 @@ constexpr const char* kCanvasFragmentShader =
 //     v_bars.z texels, bar j's centre X_j = x0 + j · p device px from the
 //     rect's left edge (THE DRAW TRANSFORM: x0 = v_bars.x, the first bar's
 //     centre, and p = v_bars.y, the pitch, the fourth instance attribute's
-//     floats; p >= 3/4, the switch width's floor halved — the static_assert
-//     after the source). THE PICTURE IS MADE IN SCREEN SUBCOLUMNS: s = 4i +
+//     floats). THE ROW'S WEIGHT is that attribute's fourth float, v_bars.w
+//     (architect 2026-11-14, send H; render.h's THE FADE BAND), AND IT PICKS
+//     THE ARM. Exactly 1 is A UNIFORM ROW, drawn by THE UNIFORM ARM: this
+//     paragraph and every one below through THE COST are that arm's, each
+//     claim said of a uniform row; its bounds are proved for p >= 3/4 (the
+//     static_assert after the source), and a rung's own bars stand a px or
+//     more apart. Under 1 the row is the fade band's and THE MERGED ARM
+//     draws it (its paragraph after THE COST). THE PICTURE IS MADE IN
+//     SCREEN SUBCOLUMNS: s = 4i +
 //     m of the pixel i = px − rect.x (m = 0 .. 3; a neighbor's s is
 //     negative or past the rect at the plate's sides), its centre xs = (s +
 //     0.5) / 4 px. ITS PLACE AMONG THE BARS is u = (xs − x0) / p, EVALUATED
@@ -385,6 +394,124 @@ constexpr const char* kCanvasFragmentShader =
 //   morph / down at SS = 4) at every grow 0 .. 8, 2026-10-31, and are that
 //   text still; the fast paths, each a subset of the rule, change no
 //   result.
+//   * THE MERGED ARM (architect 2026-11-14, send H: the fade at the level
+//     switch, one pass; render.h's THE FADE BAND owns the band, the weight
+//     and the row). A row of weight w < 1 holds n fine bars, n even — bar
+//     2K and bar 2K + 1 the LEFT and RIGHT halves of pair K, their tips
+//     mixed toward their parent's on the CPU — and the instance's floats are
+//     {xc, p, n, w}: xc = v_bars.x THE FIRST PAIR'S PARENT CENTRE in device
+//     px from the rect's left edge, p the fine bars' pitch, in [3/4, 1).
+//     THE VERTICES: in PAIR COORDINATES U = (xs − xc) / P, P = 2p, pair K's
+//     parent centre is U = K, and with h = w / 4 its left half stands at K −
+//     h and its right at K + h — in px, the parent's centre ∓ w · p / 2: at
+//     w = 0 both on the parent's centre, toward w = 1 on their own. The
+//     gaps alternate w · p inside a pair and (2 − w) · p across pairs. THE
+//     PICTURE IS THE UNIFORM ARM'S RULE OVER THOSE VERTICES: the contour
+//     straight from vertex to vertex, each vertex's one-px core, then the
+//     dilation, the coverage and the composite, unchanged.
+//     THE BRACKET OF A SUBCOLUMN (pair_bracket, THE ONE FUNCTION every site
+//     of the arm calls; the picture is this arithmetic, ties included, every
+//     operation a highp float's): P = 2.0 · p, h = 0.25 · w, h2 = 2.0 · h
+//     (all exact); xs = (float(s) + 0.5) · 0.25 (exact); U = (xs − xc) / P;
+//     K = floor(U), g = U − floor(U) in [0, 1]. THREE CASES, in this order,
+//     both tests strict:
+//       LOW    g < h:        a = 2K,     f = (g + h) / h2,
+//                            G = h2 · P
+//       HIGH   (1 − g) < h:  a = 2K + 2, f = (h − (1 − g)) / h2,
+//                            G = h2 · P
+//       ACROSS otherwise:    a = 2K + 1, f = (g − h) / (1 − h2),
+//                            G = (1 − h2) · P
+//     THE BRACKETS are bars a and a + 1, f in [0, 1] the subcolumn's place
+//     between their two vertices and G that gap in device px. LOW is the
+//     right half of pair K's inner gap, HIGH the left half of pair K + 1's,
+//     ACROSS the whole gap from pair K's right half to pair K + 1's left; a
+//     is the last vertex at or left of the subcolumn, so it never steps back
+//     as s grows (each float step is monotone, and h < 1/4 keeps LOW and
+//     HIGH apart). At w = 0 (h = 0) only ACROSS fires, with f = g and G = P
+//     exactly: the uniform arm's bracket of the parents at pitch P.
+//     THE BASE is base_bits over bars a and a + 1 with f and G in the place
+//     of the uniform arm's f and p: the nearer rule (a where f < 0.5), the
+//     absent rules, the quantum fq = floor(f · 256 + 0.5), and THE
+//     BRACKETS' CORES ALONE — a's covers iff f · G < 0.5, a + 1's iff (1 −
+//     f) · G <= 0.5. NO OTHER BAR'S CORE IS JOINED, though a sibling just
+//     beyond a bracket stands within half a px while w · p < 1/2. WHAT THAT
+//     CUTS: while a pair is still parting, the taller half's body ends at
+//     its sibling's vertex on that side and the contour takes over there.
+//     Ruled cheap and simple inside the band (architect 2026-11-14: "The
+//     untruthfulness of the trough is accepted ... Everything else just
+//     needs to be almost overview level granularity"); both ends stay exact
+//     — at w = 0 the sibling is the same vertex with the same tips, toward w
+//     = 1 the gaps are p >= 3/4 and no third core reaches.
+//     AT THE TWO ENDS OF THE BAND: at w = 0 a pair's two entries hold the
+//     parent's tips, the brackets (2K + 1, 2K + 2) are the parents K and K +
+//     1 — existing exactly where those parents would in a row of n / 2 —
+//     and every float is the uniform arm's over the parents at x0 = xc and
+//     pitch 2p (2 · float(p) is float(P)): the main rung's picture, byte
+//     for byte. At the largest w under 1 the vertices are the fine bars'
+//     own centres to a part in 2^24: the fine rung's picture but for a
+//     decision on a float tie.
+//     THE ROW'S ENDS AND THE SITES. bar_at is the row's whole end rule: a
+//     bar outside [0, n) is the zero texel, absent in each family's test,
+//     and nothing outside the row is fetched; the base's absent cases then
+//     say what stands there (left of bar 0's vertex that bar alone, flat,
+//     where it is the nearer). UNLIKE THE UNIFORM ARM'S, THIS BASE IS NOT
+//     CONTINUOUS ACROSS A VERTEX whose sibling stands within half a px (the
+//     sibling's core is in on the pair's side and out beyond it), so no
+//     site may stand in for another: every site calls pair_bracket for ITS
+//     OWN subcolumn and reads only what it says — the support's ends are
+//     the walk's first and last subcolumns, aF the own loop's first, the
+//     own loop's four the walk's — and the walk fetches by the index the
+//     function returns, never by a count of steps.
+//     THE SUPPORT'S BARS: every bar the pixel's word depends on lies in aA
+//     .. aB, aA the first subcolumn's a and aB the last's a + 1 (a never
+//     steps back). THEY ARE AT MOST NM = 2 · ((NO − 1) / 6) + 4: the bars
+//     between are the vertices in the span of the NO subcolumns' centres,
+//     (NO − 1) / 4 px, a span of L = (NO − 1) / (8p) <= (NO − 1) / 6 pairs
+//     (p >= 3/4), which holds at most floor(L) + 1 left halves and as many
+//     right, and one bar stands beyond each end; NO − 1 = 3 + 2 · GROW is
+//     odd, so (NO − 1) / 6 is a sixth or more off a whole number, far past
+//     any float's rounding. One branch-free loop fetches bar min(aA + d,
+//     aB) for d < NM into the hulls, keeps the four from aF for the pixel's
+//     own subcolumns and its first two for the walk.
+//     THE CERTIFICATES are the uniform arm's predicates over this arm's
+//     brackets, each a statement about base_bits' own answer for the SAME
+//     subcolumn and the same {a, f, G}, so none leans on a gap being
+//     uniform. REACH: a base lies within the hull of its two brackets (the
+//     contour between them, a core within its own bar — the brackets'
+//     alone), and the dilation adds GROW subrows at most, so a pixel more
+//     than GROW outside the hull of aA .. aB's existing bars has no bit:
+//     the discard, and n_i = 0 past the inners' hull. HOLD and sub_full: a
+//     subcolumn is certainly full where both its brackets hold the pixel
+//     (the contour is a non-empty run from at most max(T) to at least
+//     min(B) − 1), or one that holds is the nearer with the farther absent
+//     (the contour is that bar), or one that holds covers it with its core
+//     (the base contains the bar); the dilation's dx = 0 column grows that
+//     base GROW rows, over the pixel's four. THE PIXEL IS FULL where its
+//     four subcolumns are; their lower brackets are aF .. aF + 2 (the four
+//     span 3/4 px, 3 / (8p) <= 1/2 pair: at most one left and one right
+//     half crossed), so their bars are the four from aF, and a lower
+//     bracket outside aF .. aF + 2 certifies nothing. The opaque words are
+//     the composite's own at cov_o = 1 and cov_i 0 or 1, as in the uniform
+//     arm. THE INTERIOR OF A SOLID PASSAGE IS FULL at every w: there every
+//     bar holds the pixel, whichever two a subcolumn's brackets are. WHAT
+//     THE CORES RULE COSTS THE FAST PATHS: beside a half that holds the
+//     pixel whose sibling does not, the subcolumns past the sibling's
+//     vertex are not certified by the tall half's core as a uniform row's
+//     would be — the rule itself does not fill them — so those fringe
+//     pixels, on the rows between a pair's two heights while w · p < 1/2,
+//     take the roads.
+//     THE ROLL: between two subcolumns U moves 1 / (8p) <= 1/6 of a pair,
+//     so a keeps, steps ONE bar, or steps TWO — a whole pair crossed in one
+//     quarter px, its inner gap w · p under 1/4 — and never three (three
+//     vertices span a gap across pairs, (2 − w) · p > 3/4 px). The walk's
+//     pair of scalars rolls on a one-step (the right becomes the left, one
+//     fetch) and is fetched whole on any other change, so it fetches
+//     exactly the bars aA + 2 .. aB, one a vertex crossed.
+//     THE COST, in fetches a fragment: NM on every fragment (the support's
+//     loop; the fast paths end there), and on a road one more a vertex the
+//     support's span crosses, aB − aA − 1 <= NM − 2. At GROW 4 NM is 6,
+//     the uniform arm's NB. Whether the band's frames hold 11 ms on the
+//     tablet is measured there.
 // A word is cairo's 0xAARRGGBB with A = 255, written as (R, G, B, 1) at
 // k / 255 per channel for every record but the plate's fringe and the tint,
 // which the RGBA8 framebuffer stores as k — the texture triangle's own
@@ -460,7 +587,7 @@ constexpr const char* kListFragmentShader =
     "uint grow1(uint m) { return m | (m << 1) | (m >> 1); }\n"
     // A SUBCOLUMN'S PLACE AMONG THE BARS (the head's bars paragraph): u for
     // the screen subcolumn s of the rect, xp the draw transform {x0, p} —
-    // the one expression every site evaluates.
+    // the one expression every site of the uniform arm evaluates.
     "float bar_u(int s, vec2 xp) {\n"
     "    return ((float(s) + 0.5) * 0.25 - xp.x) / xp.y;\n"
     "}\n"
@@ -470,6 +597,41 @@ constexpr const char* kListFragmentShader =
     "ivec4 bar_at(int j, int n, int row) {\n"
     "    ivec4 c = texelFetch(u_columns, ivec2(clamp(j, 0, n - 1), row), 0);\n"
     "    return (j >= 0 && j < n) ? c : ivec4(0);\n"
+    "}\n"
+    // A SUBCOLUMN'S BRACKET IN THE FADE BAND'S ROW (the head's merged arm):
+    // for the screen subcolumn s of the rect and the instance's floats
+    // {xc, p, n, w} it answers a, the lower bracket's bar (the upper is a +
+    // 1), and writes f, the subcolumn's place between the two vertices, and
+    // G, their gap in device px — the one evaluation every site of the
+    // merged arm calls, so every site holds the same three for a subcolumn.
+    // In pair coordinates U (pair K's parent centre at U = K, its halves at
+    // K − h and K + h, h = w / 4) the three cases, in this order, both tests
+    // strict: LOW, between the centre and the right half; HIGH, between the
+    // next pair's left half and its centre; ACROSS, the gap between pairs.
+    "int pair_bracket(int s, vec4 bars, out float f, out float G) {\n"
+    "    float P = 2.0 * bars.y;\n"
+    "    float h = 0.25 * bars.w;\n"
+    "    float h2 = 2.0 * h;\n"
+    "    float xs = (float(s) + 0.5) * 0.25;\n"
+    "    float U = (xs - bars.x) / P;\n"
+    "    float Kf = floor(U);\n"
+    "    int K = int(Kf);\n"
+    "    float g = U - Kf;\n"
+    "    int a;\n"
+    "    if (g < h) {\n"
+    "        a = 2 * K;\n"
+    "        f = (g + h) / h2;\n"
+    "        G = h2 * P;\n"
+    "    } else if ((1.0 - g) < h) {\n"
+    "        a = 2 * K + 2;\n"
+    "        f = (h - (1.0 - g)) / h2;\n"
+    "        G = h2 * P;\n"
+    "    } else {\n"
+    "        a = 2 * K + 1;\n"
+    "        f = (g - h) / (1.0 - h2);\n"
+    "        G = (1.0 - h2) * P;\n"
+    "    }\n"
+    "    return a;\n"
     "}\n"
     // THE BASE of one subcolumn for one family (the head's base paragraph):
     // a and b the brackets' {top, bottom} tips, fq f's quantum in 256ths,
@@ -520,6 +682,10 @@ constexpr const char* kListFragmentShader =
     // THE SUPPORT'S BARS AT MOST (the head's fast paths: the brackets of NO
     // subcolumns at a pitch of 3/4 px or more).
     "const int NB = (NO - 1) / 3 + 3;\n"
+    // THE MERGED ARM'S SUPPORT AT MOST (the head's merged arm: the vertices
+    // of NO subcolumns' span, two a pair and the pairs 3/2 px or more
+    // apart, and one bar beyond each end).
+    "const int NM = 2 * ((NO - 1) / 6) + 4;\n"
     "uint bo[NO];\n"
     "uint bi[NO];\n"
     // THE DISC DILATION of radius GROW (the Horner scheme of the head,
@@ -564,6 +730,146 @@ constexpr const char* kListFragmentShader =
     "    if (px < v_rect.x || px >= v_rect.x + v_rect.z ||\n"
     "        py < v_rect.y || py >= v_rect.y + v_rect.w) discard;\n"
     "    int kind = v_param.x;\n"
+    // THE MERGED ARM (the head's merged arm paragraph): a plate row of
+    // weight under 1, the fade band's. The uniform arm below, taken at
+    // exactly 1, shares none of this text but the functions.
+    "    if (kind == 1 && v_bars.w != 1.0) {\n"
+    "        int n = int(v_bars.z);\n"
+    "        int row = v_param.y;\n"
+    "        int i = px - v_rect.x;\n"
+    "        int y = py - v_param.z;\n"
+    "        int k0 = 4 * y - PIX0;\n"
+    "        int ylo = 4 * y;\n"
+    "        int yhi = ylo + 3;\n"
+    // THE SUPPORT'S BARS: aA .. aB bracket the subcolumns 4i − GROW .. 4i +
+    // 3 + GROW, and aF is the pixel's first subcolumn's lower bracket. One
+    // branch-free loop fetches them, each into the hulls, the four from aF
+    // kept for the pixel's own subcolumns and the first two, aA and aA + 1
+    // (aB >= aA + 1: the bracket never steps back), for the walk's seeds.
+    "        int s0 = 4 * i - GROW;\n"
+    "        float f;\n"
+    "        float G;\n"
+    "        int aA = pair_bracket(s0, v_bars, f, G);\n"
+    "        int aB = pair_bracket(s0 + NO - 1, v_bars, f, G) + 1;\n"
+    "        int aF = pair_bracket(4 * i, v_bars, f, G);\n"
+    "        ivec4 own0 = ivec4(0);\n"
+    "        ivec4 own1 = ivec4(0);\n"
+    "        ivec4 own2 = ivec4(0);\n"
+    "        ivec4 own3 = ivec4(0);\n"
+    "        ivec4 bl = ivec4(0);\n"
+    "        ivec4 br = ivec4(0);\n"
+    "        int tmin_o = 1 << 20;\n"
+    "        int bmax_o = -(1 << 20);\n"
+    "        int tmin_i = 1 << 20;\n"
+    "        int bmax_i = -(1 << 20);\n"
+    "        UNROLL for (int d = 0; d < NM; ++d) {\n"
+    "            int j = min(aA + d, aB);\n"
+    "            ivec4 c = bar_at(j, n, row);\n"
+    "            if (c.y > c.x) {\n"
+    "                tmin_o = min(tmin_o, c.x);\n"
+    "                bmax_o = max(bmax_o, c.y);\n"
+    "            }\n"
+    "            if (c.w > c.z) {\n"
+    "                tmin_i = min(tmin_i, c.z);\n"
+    "                bmax_i = max(bmax_i, c.w);\n"
+    "            }\n"
+    "            if (j == aF) own0 = c;\n"
+    "            if (j == aF + 1) own1 = c;\n"
+    "            if (j == aF + 2) own2 = c;\n"
+    "            if (j == aF + 3) own3 = c;\n"
+    "            if (d == 0) bl = c;\n"
+    "            if (d == 1) br = c;\n"
+    "        }\n"
+    "        bool reach_o = yhi >= tmin_o - GROW && ylo <= bmax_o - 1 + GROW;\n"
+    "        bool reach_i = yhi >= tmin_i - GROW && ylo <= bmax_i - 1 + GROW;\n"
+    // The fast paths in the uniform arm's order: the discard; the full
+    // inner, the core opaque; the full outer; the ink opaque.
+    "        if (!reach_o && !reach_i) discard;\n"
+    // The pixel's own four subcolumns, each by its own bracket: e the lower
+    // bracket from aF, 0 .. 2 (the four span at most one whole pair) —
+    // another certifies nothing.
+    "        bool full_o = true;\n"
+    "        bool full_i = true;\n"
+    "        UNROLL for (int m = 0; m < 4; ++m) {\n"
+    "            int e = pair_bracket(4 * i + m, v_bars, f, G) - aF;\n"
+    "            ivec4 a = (e == 0) ? own0 : ((e == 1) ? own1 : own2);\n"
+    "            ivec4 b = (e == 0) ? own1 : ((e == 1) ? own2 : own3);\n"
+    "            bool ok = e >= 0 && e <= 2;\n"
+    "            bool near_a = f < 0.5;\n"
+    "            bool core_a = f * G < 0.5;\n"
+    "            bool core_b = (1.0 - f) * G <= 0.5;\n"
+    "            full_o = full_o && ok &&\n"
+    "                     sub_full(a.xy, b.xy, near_a, core_a, core_b, ylo);\n"
+    "            full_i = full_i && ok &&\n"
+    "                     sub_full(a.zw, b.zw, near_a, core_a, core_b, ylo);\n"
+    "        }\n"
+    "        if (full_i) {\n"
+    "            o_color = vec4(word_rgb(v_words.y), 1.0);\n"
+    "            return;\n"
+    "        }\n"
+    "        if (full_o && !reach_i) {\n"
+    "            o_color = vec4(word_rgb(v_words.x), 1.0);\n"
+    "            return;\n"
+    "        }\n"
+    "        uint wo = full_o ? 0xFFFFu : 0u;\n"
+    "        uint wi = 0u;\n"
+    "        bool need_o = reach_o && !full_o;\n"
+    // THE BASES over 4i − GROW .. 4i + 3 + GROW, ONE WALK FOR BOTH FAMILIES:
+    // the brackets a rolling pair of scalars, bl and br, seeded with bars aA
+    // and aA + 1 out of the loop above; al the left's index. The bracket
+    // keeps, steps one bar (the right becomes the left, one fetch) or steps
+    // two, a whole pair crossed in one quarter px (both fetched); any other
+    // difference fetches both too, so the pair is the bracket's whatever
+    // the step.
+    "        int al = aA;\n"
+    "        UNROLL for (int t = 0; t < NO; ++t) {\n"
+    "            int a = pair_bracket(s0 + t, v_bars, f, G);\n"
+    "            if (a == al + 1) {\n"
+    "                bl = br;\n"
+    "                br = bar_at(a + 1, n, row);\n"
+    "            } else if (a != al) {\n"
+    "                bl = bar_at(a, n, row);\n"
+    "                br = bar_at(a + 1, n, row);\n"
+    "            }\n"
+    "            al = a;\n"
+    "            int fq = int(floor(f * 256.0 + 0.5));\n"
+    "            bool near_a = f < 0.5;\n"
+    "            bool core_a = f * G < 0.5;\n"
+    "            bool core_b = (1.0 - f) * G <= 0.5;\n"
+    "            if (need_o)\n"
+    "                bo[t] = base_bits(bl.xy, br.xy, fq, near_a, core_a, core_b, k0);\n"
+    "            if (reach_i)\n"
+    "                bi[t] = base_bits(bl.zw, br.zw, fq, near_a, core_a, core_b, k0);\n"
+    "        }\n"
+    // The dilations, the coverage and the composite: the uniform arm's,
+    // literally.
+    "        if (need_o) {\n"
+    "            UNROLL for (int m = 0; m < 4; ++m)\n"
+    "                wo |= pix4(dilate_o(m + GROW)) << (4 * m);\n"
+    "        }\n"
+    "        if (reach_i) {\n"
+    "            UNROLL for (int m = 0; m < 4; ++m) {\n"
+    "                uint i4 = pix4(dilate_i(m + GROW));\n"
+    "                wo |= i4 << (4 * m);\n"
+    "                wi |= i4 << (4 * m);\n"
+    "            }\n"
+    "        }\n"
+    "        int n_o = pop16(wo);\n"
+    "        int n_i = pop16(wi);\n"
+    "        if (n_o == 0) discard;\n"
+    "        float cov_o = float(n_o) / 16.0;\n"
+    "        float cov_i = float(n_i) / 16.0;\n"
+    "        if (n_i > 0 && n_o < 16) {\n"
+    "            o_color = vec4(word_rgb(v_words.x) * (cov_o - cov_i) +\n"
+    "                           word_rgb(v_words.y) * cov_i,\n"
+    "                           cov_o);\n"
+    "        } else {\n"
+    "        o_color = vec4(word_rgb(v_words.x) * (cov_o * (1.0 - cov_i)) +\n"
+    "                       word_rgb(v_words.y) * cov_i,\n"
+    "                       1.0 - (1.0 - cov_o) * (1.0 - cov_i));\n"
+    "        }\n"
+    "        return;\n"
+    "    }\n"
     "    if (kind == 1) {\n"
     "        int n = int(v_bars.z);\n"
     "        int row = v_param.y;\n"
@@ -743,10 +1049,14 @@ std::string list_fragment_source(int grow) {
 // this is the binding. kWaveformSubcells is the 4 of `4 * y` and `4 * i`,
 // the 0.25 and the 0.5 of a subcolumn's centre (bar_u), the pixel's nibble
 // and the 16 of the coverage; THE BARS' PITCH FLOOR, 3/4 px — half the
-// switch width's least (kWaveformSwitchMinHundredths, device_config.h; the
-// rung keeps p = b / q at T/2 or more, render.h's waveform_bar_frames) — is
-// the 3 of NB's (NO − 1) / 3 and what lets the brackets roll one bar a
-// step; the grow's disc is GROW's (disc_rows: the largest g
+// `waveform_fade_px` key's least (kWaveformFadeMinHundredths,
+// device_config.h: the fade band's fine row is drawn at half the main
+// rung's pitch, which is the key's value or more there; a rung's own
+// uniform row stands at a px or more, render.h's waveform_fade_band and
+// waveform_bar_frames) — is
+// the 3 of NB's (NO − 1) / 3 and what lets the uniform arm's brackets roll
+// one bar a step, and the 6 of NM's (NO − 1) / 6, the merged arm's pairs
+// standing twice it apart; the grow's disc is GROW's (disc_rows: the largest g
 // with g² + dx² <= r², the level the Horner scheme selects), its top
 // kWaveformGrowMaxQuarters = 8 what the one 32-bit window and the pixel's
 // seat in it, PIX0 = 14, were sized for — THE WINDOW HOLDS THE GROW'S 2 PX
@@ -769,9 +1079,10 @@ static_assert(kWaveformGrowMaxQuarters <= kPlatePixelBit &&
               "subrows honestly at the key's top grow");
 static_assert(disc_rows(kWaveformGrowMaxQuarters, kWaveformGrowMaxQuarters) == 0,
               "the dilation's Horner scheme ends with no final grow: g(r) = 0");
-static_assert(4 * kWaveformSwitchMinHundredths == 3 * 200,
-              "kListFragmentShader's NB and its rolling brackets spell the "
-              "bars' least pitch, half the switch width's floor, as 3/4 px");
+static_assert(4 * kWaveformFadeMinHundredths == 3 * 200,
+              "kListFragmentShader's NB, NM and its rolling brackets spell "
+              "the bars' least pitch, half the waveform_fade_px key's floor, "
+              "as 3/4 px");
 
 // THE PAGE PROGRAM (architect 2026-10-27, "1 a"; GuiCanvasPage,
 // canvas_sink.h): the texture triangle's vertex shader over the whole
@@ -815,11 +1126,13 @@ constexpr int kPageUploadsPerPresent = 1;
 // 0), {kind, period, origin, 0} (location 1), {word, word2} (location 2),
 // every coordinate in surface px (the GUI's own px: the app paints no window
 // frame since 2026-10-24, so the two are one), and THE PLATE'S BARS
-// (location 3, floats; architect 2026-11-14, send G): {x0, pitch, bars, 0}
-// — the centre of the row's first bar in device px from the rect's left
-// edge, the bars' pitch in device px and the row's bar count
-// (GuiCanvasPrimitive's bars_x0, bars_pitch and bars) — zero on every
-// record but a plate's.
+// (location 3, floats; architect 2026-11-14, sends G and H): {x, pitch,
+// bars, weight} — the bars' pitch in device px, the row's bar count and the
+// row's weight, and x in device px from the rect's left edge: the centre of
+// the row's first bar where the weight is 1, a uniform row, and the first
+// pair's parent centre where it is under 1, the fade band's
+// (GuiCanvasPrimitive's bars_x0, bars_pitch, bars and bars_weight) — zero
+// on every record but a plate's.
 struct CanvasInstance {
     GLint   rect[4];
     GLint   param[4];
@@ -1432,7 +1745,7 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // THE LIST'S UPLOAD (2026-10-13; present_frame's draw): every record one
 // instance in list order, its coordinates the surface's px as the GUI wrote
 // them (a rect, a plate's row 0 alike), a plate's draw transform beside them
-// as floats ({x0, pitch, bars, 0}; zero on every other record), the instance
+// as floats ({x, pitch, bars, weight}; zero on every other record), the instance
 // buffer rewritten whole — asked only when the list's generation moved, so
 // at every rebuild of the records (the scanner's and the cursor's among
 // them; the buffer is small).
@@ -1445,11 +1758,11 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // of a canvas far under 8191 rows, the tablet's 1072 giving 4288; the absent
 // inner is 0, 0).
 // THE TEXTURE IS CAPACITY-SIZED AND ONLY GROWS: a row's bar count moves with
-// the zoom on most gesture frames (the bars' pitch runs T/2 .. T device px),
+// the zoom on most gesture frames (the bars' pitch runs 3/4 .. 2 device px),
 // so a texture sized to the count would be reallocated every frame. Its
 // width is the widest row any pack has asked, rounded up to
 // kColumnsCapacityStep texels, and its height the most rows any has (the
-// tablet's plate, at most about 3020 bars at the switch width's floor,
+// tablet's plate, at most about 3020 bars at the fade band's least pitch,
 // settles at 3072 x 2); a growth reallocates with no data (glTexImage2D, a
 // handful of times in a context's life) inside the pack that asked it, and
 // every pack then writes, by one glTexSubImage2D, its rows by its own
@@ -1534,7 +1847,7 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
             in.bars[0]  = p.bars_x0;
             in.bars[1]  = p.bars_pitch;
             in.bars[2]  = static_cast<GLfloat>(p.bars);
-            in.bars[3]  = 0.0f;
+            in.bars[3]  = p.bars_weight;
             row += 1;
             break;
         }

@@ -3745,11 +3745,11 @@ int gui_main() {
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
-    // THE PLATE'S SWITCH WIDTH THE SAME (the `waveform_switch_px` tuning
-    // key, architect 2026-11-14, send G; render.h's seat): seeded before
+    // THE PLATE'S FADE START THE SAME (the `waveform_fade_px` tuning
+    // key, architect 2026-11-14, send H; render.h's seat): seeded before
     // the first plate's render inputs read it; the other road is the
-    // settings editor's commit (GuiInputHandler::apply_waveform_switch_px).
-    set_waveform_switch_hundredths(device_config.waveform_switch_hundredths);
+    // settings editor's commit (GuiInputHandler::apply_waveform_fade_px).
+    set_waveform_fade_hundredths(device_config.waveform_fade_hundredths);
     // THE THEMES' LIST, ONCE PER PROCESS (architect 2026-11-06, session 75;
     // the theme files 2026-11-11, session 110; theme_roles.h's head): the
     // APK's shipped files (GuiPlatform::bundled_theme_files, SYSTEM and

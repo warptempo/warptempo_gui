@@ -2217,10 +2217,10 @@ namespace {
     // `waveform_grow` seat, a permanent key), set by
     // set_waveform_grow_quarters from the same two application points.
     int    g_waveform_grow_quarters = kWaveformGrowDefaultQuarters;
-    // THE PLATE'S SWITCH WIDTH in hundredths of a device px (render.h's
-    // `waveform_switch_px` seat, a tuning key), set by
-    // set_waveform_switch_hundredths from the same two application points.
-    int    g_waveform_switch_hundredths = kWaveformSwitchDefaultHundredths;
+    // THE PLATE'S FADE START in hundredths of a device px (render.h's
+    // `waveform_fade_px` seat, a tuning key), set by
+    // set_waveform_fade_hundredths from the same two application points.
+    int    g_waveform_fade_hundredths = kWaveformFadeDefaultHundredths;
 } // namespace
 // A QUARTER OF A DEVICE PX IS ONE SUBCELL: the key's lattice is the grid's,
 // so the seat's number is the plate shader's GROW with no conversion.
@@ -2231,6 +2231,11 @@ static_assert(kWaveformGrowQuartersPerPx == kWaveformSubcells,
 // payload never depends on the live grow).
 static_assert(kWaveformBarHaloSubcells == kWaveformGrowMaxQuarters,
               "the plate's stored bars cover the waveform_grow key's top");
+// THE FADE KEY'S TOP IS THE SWITCH WIDTH (render.h's THE FADE BAND: the band
+// ends where the bars change level, so the key's top is a band of no
+// length, the fade off).
+static_assert(kWaveformFadeMaxHundredths == 100 * kWaveformSwitchPx,
+              "the waveform_fade_px key's top is the plate's switch width");
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 void   set_key_height_w(int w) {
@@ -2257,10 +2262,10 @@ void   set_waveform_grow_quarters(int quarters) {
     g_waveform_grow_quarters = quarters;
 }
 int    waveform_grow_quarters() { return g_waveform_grow_quarters; }
-void   set_waveform_switch_hundredths(int hundredths) {
-    g_waveform_switch_hundredths = hundredths;
+void   set_waveform_fade_hundredths(int hundredths) {
+    g_waveform_fade_hundredths = hundredths;
 }
-int    waveform_switch_hundredths() { return g_waveform_switch_hundredths; }
+int    waveform_fade_hundredths() { return g_waveform_fade_hundredths; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

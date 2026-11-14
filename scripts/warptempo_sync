@@ -212,8 +212,10 @@ shopt -s nocaseglob
 #      role, which left 2026-10-30 with the laptop GUI (one device, no mirror),
 #      waveform_column_px, retired 2026-11-01 night, waveform and its older name
 #      chrome, which left 2026-11-01 with the color presets (one palette),
-#      tooltip_gap, settled 2026-11-07 at 1 W, and audio_level, the project
-#      voice's level, retired 2026-11-11 with the AUDIO case
+#      tooltip_gap, settled 2026-11-07 at 1 W, audio_level, the project
+#      voice's level, retired 2026-11-11 with the AUDIO case, and
+#      waveform_switch_px, the plate's switch width, a tuning key for part of
+#      2026-11-14, fixed at 2 device px (waveform_fade_px in its seat)
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
 #   6. THE NOISE AND THEMES FOLDERS (2026-10-28; the themes flat since
@@ -328,7 +330,9 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # 2026-11-07's session 90, settled in session 91 at 1 W and a constant in the
 # program since (src/gui/render.h's kTooltipGapW); and audio_level, the
 # project voice's level, retired 2026-11-11 with the AUDIO case: the voice
-# plays at 0 dB. A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
+# plays at 0 dB; and waveform_switch_px, the waveform's switch width, a tuning
+# key of 2026-11-14 retired the same day: the width is 2 device px in the
+# program (src/gui/render.h's kWaveformSwitchPx). A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level line (the defaults
 # file's) takes its place, so the planner renames the two lines by hand at the
 # install, on both devices, the program not running; a crossfade in ms comes
@@ -346,7 +350,7 @@ RETIRED_KEYS=(sync_path theme_level
               rain_level rain_crossfade_ms
               noise_crossfade_ms role
               waveform_column_px waveform chrome
-              tooltip_gap audio_level)
+              tooltip_gap audio_level waveform_switch_px)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE slider plays.
@@ -1411,7 +1415,8 @@ apply_setup() {
     # keys, the LED glow's, the noise's two fades, the level's and the
     # crossfade's first names, the crossfade's ms key, role, the column
     # width's key, the color preset's waveform and chrome, the tooltip's
-    # gap and the project voice's level, RETIRED_KEYS),
+    # gap, the project voice's level and the waveform's switch width,
+    # RETIRED_KEYS),
     # the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the

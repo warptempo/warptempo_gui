@@ -3556,11 +3556,11 @@ void GuiInputHandler::apply_waveform_grow(int quarters) {
     viewport.invalidate_all();
 }
 
-void GuiInputHandler::apply_waveform_switch_px(int hundredths) {
+void GuiInputHandler::apply_waveform_fade_px(int hundredths) {
     // The contract is at the declaration (input_handler.h): the push, the
     // plate's synchronous rebuild owed, then the whole window's damage; the
     // commit's arm owns the persist.
-    set_waveform_switch_hundredths(hundredths);
+    set_waveform_fade_hundredths(hundredths);
     viewport.kick_waveform_sync();
     viewport.invalidate_all();
 }

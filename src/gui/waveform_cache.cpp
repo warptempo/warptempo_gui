@@ -8,6 +8,8 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -52,7 +54,12 @@ uint64_t next_plate_revision() {
 // THE PLATE'S BARS): the rung for the displayed step, the stored range with
 // its halo and the draw transform are derived here, once for both bands,
 // from the job's inputs, and written into `dest` beside the columns they
-// describe. A band is STORED exactly where its call returned the
+// describe. IN THE FADE BAND before a level switch (architect 2026-11-14,
+// send H; render.h's THE FADE BAND, waveform_fade_band) the row is the fine
+// rung's, each bar's tips mixed toward its parent's: the producer is asked
+// twice per band, the parents and the halves, and the mixed row is what is
+// stored. A band is STORED exactly where its call — in the fade band, both
+// its calls — returned the
 // band whole — a refused or partial call is a band the plate leaves
 // transparent — and every row outside both bands is transparent too: THE
 // PLATE IS TRANSPARENT where no bar covers, the canvas ground render_canvas
@@ -69,7 +76,7 @@ void render_waveform_to_plate_columns(
     int64_t lattice_origin,
     double  painter_spp,
     int64_t working_column,
-    int     switch_hundredths,
+    int     fade_hundredths,
     bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     dest.rendered = true;
@@ -79,6 +86,7 @@ void render_waveform_to_plate_columns(
     dest.bar_frames = 0.0;
     dest.bar_x0     = 0.0;
     dest.bar_pitch  = 0.0;
+    dest.bar_weight = 1.0f;
     dest.band[0].stored = false;
     dest.band[1].stored = false;
     if (area_w <= 0 || area_h <= 0) return;
@@ -109,19 +117,19 @@ void render_waveform_to_plate_columns(
     const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
     if (b0.h <= 0) return;
     // THE BARS (render.h's THE PLATE'S BARS, the one owner): the rung's
-    // width for the displayed step q and the switch width, then the stored
-    // range and the draw transform for the displayed viewport — published
-    // with the columns — and the producer's basis, the frame-0 lattice of
-    // step b from the first stored bar, `bars.n` columns: the full render
-    // IS that basis, global column 0 the first stored bar. A degenerate
-    // geometry (n = 0) is a row the producer refuses, both bands unstored.
+    // width for the displayed step q, then the stored range and the draw
+    // transform for the displayed viewport — published with the columns —
+    // and the producer's basis, the frame-0 lattice of step b from the
+    // first stored bar, `bars.n` columns: the full render IS that basis,
+    // global column 0 the first stored bar. A degenerate geometry (n = 0)
+    // is a row the producer refuses, both bands unstored. THE FADE BAND
+    // (waveform_fade_band, the one owner) is answered from the same step,
+    // the working column and the key's snapshot.
     const WaveformBarGeometry bars = waveform_bar_geometry(
         vp_start, lattice_origin, painter_spp, area_w,
-        waveform_bar_frames(painter_spp, working_column, switch_hundredths));
-    dest.first_bar  = bars.k_first;
-    dest.bar_frames = bars.b;
-    dest.bar_x0     = bars.x0;
-    dest.bar_pitch  = bars.p;
+        waveform_bar_frames(painter_spp, working_column));
+    const WaveformFadeBand fade =
+        waveform_fade_band(painter_spp, working_column, fade_hundredths);
     const WaveformBasis basis = waveform_bar_basis(bars);
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the divider's height does: the worker must read no live
@@ -139,13 +147,65 @@ void render_waveform_to_plate_columns(
     // the plate's rows.
     const GuiRect ch[2] = {GuiRect{0, b0.y, bars.n, b0.h},
                            GuiRect{0, b1.y, bars.n, b1.h}};
+    // OUT OF THE FADE BAND: the rung's own row, uniform bars at weight 1.
+    if (!fade.in_band) {
+        dest.first_bar  = bars.k_first;
+        dest.bar_frames = bars.b;
+        dest.bar_x0     = bars.x0;
+        dest.bar_pitch  = bars.p;
+        for (int c = 0; c < 2; ++c) {
+            GuiPlateColumns::Band& band = dest.band[c];
+            band.stored =
+                render_waveform_columns(ch[c], /*col0=*/0, audio, c, basis,
+                                        gain, /*plate_w=*/bars.n, area_h,
+                                        warp_frame_map_or_null,
+                                        band.columns) &&
+                band.columns.whole;
+        }
+        return;
+    }
+    // IN THE FADE BAND (architect 2026-11-14, send H; render.h's THE FADE
+    // BAND owns every number): THE ROW IS THE MAIN RUNG'S RANGE IN HALVES —
+    // the fine bars [2 · k_first, 2 · k_first + 2n), half as wide, the
+    // first a left half — its transform the first stored pair's PARENT
+    // CENTRE (the main geometry's own x0), half the main pitch and the
+    // weight. TWO QUERIES OF THE ONE PRODUCER A BAND, over the same rows:
+    // THE PARENTS, the main rung's row exactly as it is asked out of the
+    // band, into a scratch both bands share, and THE HALVES, the fine rung's
+    // row on its own bar basis, into the slot; a band is stored only where
+    // BOTH came back whole, and its stored columns are then the halves'
+    // MIXED toward their parents' (entry j's parent is row j >> 1;
+    // waveform_mix_column).
+    WaveformBarGeometry halves;
+    halves.b       = bars.b * 0.5;
+    halves.k_first = 2 * bars.k_first;
+    halves.n       = 2 * bars.n;
+    dest.first_bar  = halves.k_first;
+    dest.bar_frames = halves.b;
+    dest.bar_x0     = bars.x0;
+    dest.bar_pitch  = bars.p * 0.5;
+    dest.bar_weight = fade.wf;
+    const WaveformBasis halves_basis = waveform_bar_basis(halves);
+    WaveformBandColumns parents;
     for (int c = 0; c < 2; ++c) {
         GuiPlateColumns::Band& band = dest.band[c];
+        const GuiRect halves_area{0, ch[c].y, halves.n, ch[c].h};
         band.stored =
             render_waveform_columns(ch[c], /*col0=*/0, audio, c, basis, gain,
                                     /*plate_w=*/bars.n, area_h,
+                                    warp_frame_map_or_null, parents) &&
+            parents.whole &&
+            render_waveform_columns(halves_area, /*col0=*/0, audio, c,
+                                    halves_basis, gain,
+                                    /*plate_w=*/halves.n, area_h,
                                     warp_frame_map_or_null, band.columns) &&
             band.columns.whole;
+        if (!band.stored) continue;
+        std::vector<WaveformColumnRows>& cols = band.columns.cols;
+        assert(cols.size() == 2 * parents.cols.size());
+        for (std::size_t j = 0; j < cols.size(); ++j)
+            cols[j] = waveform_mix_column(parents.cols[j >> 1], cols[j],
+                                          fade.w);
     }
 }
 
@@ -198,11 +258,11 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.painter_spp   = painter_q;
     // THE BARS' TWO OTHER INPUTS (render.h's waveform_bar_frames), captured
     // here with the geometry so the worker reads no live state: the audio's
-    // working column, fixed for its life, and the switch width off its seat
-    // (the `waveform_switch_px` key) — the latter a fingerprint field, the
-    // plate's bars being a function of it.
-    in.working_column    = audio.working_column();
-    in.switch_hundredths = waveform_switch_hundredths();
+    // working column, fixed for its life, and the fade's start off its seat
+    // (the `waveform_fade_px` key) — the latter a fingerprint field, the
+    // fade band and its row being a function of it.
+    in.working_column  = audio.working_column();
+    in.fade_hundredths = waveform_fade_hundredths();
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.divider_px    = waveform_divider_px();
@@ -297,7 +357,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         int64_t fp_vp_s, int64_t fp_origin, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
         int     fp_div,
-        int     fp_switch,
+        int     fp_fade,
         WaveformPlateInks fp_ink,
         uint64_t fp_gain,
         bool    fp_t,
@@ -308,7 +368,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
         if (fp_div  != in.divider_px)      return true;
-        if (fp_switch != in.switch_hundredths) return true;
+        if (fp_fade != in.fade_hundredths) return true;
         if (fp_ink   != in.inks)           return true;
         if (fp_gain != in.gain_hash) return true;
         if (fp_t    != in.is_target)       return true;
@@ -323,7 +383,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_divider_px,
-        wf_cache.pending_fp_switch_hundredths,
+        wf_cache.pending_fp_fade_hundredths,
         wf_cache.pending_fp_inks,
         wf_cache.pending_fp_gain_hash,
         wf_cache.pending_fp_target,
@@ -344,7 +404,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_divider_px  = in.divider_px;
-        wf_cache.supersede_switch_hundredths = in.switch_hundredths;
+        wf_cache.supersede_fade_hundredths = in.fade_hundredths;
         wf_cache.supersede_inks        = in.inks;
         wf_cache.supersede_gain_hash = in.gain_hash;
         wf_cache.supersede_target      = in.is_target;
@@ -364,7 +424,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.vp_end         = in.vp_end;
     job.painter_spp    = in.painter_spp;
     job.working_column = in.working_column;
-    job.switch_hundredths = in.switch_hundredths;
+    job.fade_hundredths = in.fade_hundredths;
     job.area_w         = in.area_w;
     job.area_h         = in.area_h;
     job.divider_px     = in.divider_px;
@@ -387,7 +447,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_area_w      = in.area_w;
     wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_divider_px  = in.divider_px;
-    wf_cache.pending_fp_switch_hundredths = in.switch_hundredths;
+    wf_cache.pending_fp_fade_hundredths = in.fade_hundredths;
     wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
     wf_cache.pending_fp_target      = in.is_target;
@@ -449,7 +509,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_w              = wf_cache.fp_area_w;
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
         wf_cache.pending_fp_divider_px          = wf_cache.fp_divider_px;
-        wf_cache.pending_fp_switch_hundredths   = wf_cache.fp_switch_hundredths;
+        wf_cache.pending_fp_fade_hundredths     = wf_cache.fp_fade_hundredths;
         wf_cache.pending_fp_inks                = wf_cache.fp_inks;
         wf_cache.pending_fp_gain_hash   = wf_cache.fp_gain_hash;
         wf_cache.pending_fp_target              = wf_cache.fp_target;
@@ -495,7 +555,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         // The working column is the audio's, fixed for this cache's whole
         // lifetime like the audio the job reads, so the slot carries none.
         job.working_column = audio.working_column();
-        job.switch_hundredths = wf_cache.supersede_switch_hundredths;
+        job.fade_hundredths = wf_cache.supersede_fade_hundredths;
         job.area_w         = sw;
         job.area_h         = sh;
         job.divider_px     = wf_cache.supersede_divider_px;
@@ -519,8 +579,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_w      = sw;
         wf_cache.pending_fp_area_h      = sh;
         wf_cache.pending_fp_divider_px  = wf_cache.supersede_divider_px;
-        wf_cache.pending_fp_switch_hundredths =
-            wf_cache.supersede_switch_hundredths;
+        wf_cache.pending_fp_fade_hundredths =
+            wf_cache.supersede_fade_hundredths;
         wf_cache.pending_fp_inks     = wf_cache.supersede_inks;
         wf_cache.pending_fp_gain_hash = wf_cache.supersede_gain_hash;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
@@ -550,7 +610,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
     wf_cache.fp_divider_px   = wf_cache.pending_fp_divider_px;
-    wf_cache.fp_switch_hundredths = wf_cache.pending_fp_switch_hundredths;
+    wf_cache.fp_fade_hundredths = wf_cache.pending_fp_fade_hundredths;
     wf_cache.fp_inks     = wf_cache.pending_fp_inks;
     wf_cache.fp_gain_hash = wf_cache.pending_fp_gain_hash;
     wf_cache.fp_rendered     = true;
@@ -619,7 +679,7 @@ bool GuiPaintHandler::live_plate_published() const {
            wf_cache.fp_area_w              == in.area_w &&
            wf_cache.fp_area_h              == in.area_h &&
            wf_cache.fp_divider_px          == in.divider_px &&
-           wf_cache.fp_switch_hundredths   == in.switch_hundredths &&
+           wf_cache.fp_fade_hundredths     == in.fade_hundredths &&
            wf_cache.fp_inks                == in.inks &&
            wf_cache.fp_gain_hash           == in.gain_hash &&
            wf_cache.fp_target              == in.is_target &&
@@ -675,10 +735,12 @@ bool GuiPaintHandler::live_plate_published() const {
 //      at every zoom since 2026-10-13 through the curve's range-maximum
 //      index (WaveformRangeMaxIndex, waveform_gain.h; a plain loop before,
 //      its length growing with the source seconds per plate column). So the
-//      synchronous render is O(the plate's stored bars) — the area's width
-//      over the bars' pitch and a halo of a few, at most about four thirds
-//      of the width at the switch width's floor (render.h's THE PLATE'S
-//      BARS) — at every zoom level with the magnification lamp lit or dark.
+//      synchronous render is O(the bars it asks the producer) — the
+//      area's width over the bars' pitch and a halo of a few, at most the
+//      width out of the fade band; in it the fine row and its parents, up
+//      to twice the width at the `waveform_fade_px` key's floor (render.h's
+//      THE PLATE'S BARS and THE FADE BAND) — at every zoom level with the
+//      magnification lamp lit or dark.
 //
 //      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
 //      (ie, no special handling for during movement and at-standstill — ableton
@@ -781,7 +843,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.area_w, in.area_h, in.divider_px,
         *in.audio,
         in.vp_start, in.lattice_origin, in.painter_spp,
-        in.working_column, in.switch_hundredths, in.gain_hash != 0,
+        in.working_column, in.fade_hundredths, in.gain_hash != 0,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
     // The live slot rewritten in place is a new plate: a revision of its own
     // (the completion swap's rule).
@@ -799,7 +861,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_area_w       = in.area_w;
     wf_cache.fp_area_h       = in.area_h;
     wf_cache.fp_divider_px   = in.divider_px;
-    wf_cache.fp_switch_hundredths = in.switch_hundredths;
+    wf_cache.fp_fade_hundredths = in.fade_hundredths;
     wf_cache.fp_inks     = in.inks;
     wf_cache.fp_gain_hash = in.gain_hash;
     wf_cache.fp_rendered     = true;
@@ -812,7 +874,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_area_w       = in.area_w;
     wf_cache.pending_fp_area_h       = in.area_h;
     wf_cache.pending_fp_divider_px   = in.divider_px;
-    wf_cache.pending_fp_switch_hundredths = in.switch_hundredths;
+    wf_cache.pending_fp_fade_hundredths = in.fade_hundredths;
     wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
     wf_cache.pending_fp_target       = in.is_target;

@@ -31,7 +31,8 @@
 // render_waveform_columns' head), and the highlight a blend toward white
 // on whole device pixels, so the sink's vocabulary is three
 // records: a RECT, THE PLATE (the per-bar quarter-row tips,
-// GuiPlateColumns, with its draw transform, its two inks and the grow) and
+// GuiPlateColumns, with its draw transform and weight, its two inks and the
+// grow) and
 // THE TINT (a rect
 // blended toward a color at a whole-percent alpha, architect 2026-11-12)
 // — EVERY LINE ON THE
@@ -99,7 +100,9 @@
 // head the rule) —
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
 // producer: one pair of tips a BAR, the bars anchored to the audio and drawn
-// stretched by the record's draw transform, architect 2026-11-14, send G;
+// stretched by the record's draw transform, architect 2026-11-14, send G —
+// and, where the record's weight is under 1, the fade band's fine bars
+// drawn merged pair by pair, send H;
 // the algorithm kListFragmentShader's) and blended source-over
 // under the GL blend, exactly the word in the core and nothing where no bar
 // covers and the canvas shows; THE TINT writes, per cell of its rect, the
@@ -125,7 +128,11 @@
 // send G), `bars_x0` and `bars_pitch` THE DRAW TRANSFORM as floats — bar j
 // of the row has its centre bars_x0 + j · bars_pitch device px from r's
 // left edge (render.h's THE PLATE'S BARS owns it; the doubles are
-// GuiPlateColumns') — `origin` the plate's row 0 (the
+// GuiPlateColumns') — `bars_weight` THE ROW'S WEIGHT (architect 2026-11-14,
+// send H; GuiPlateColumns::bar_weight, render.h's THE FADE BAND): exactly 1
+// for that uniform row; under 1 the row is the fade band's, an even count
+// of fine bars with mixed tips, and `bars_x0` is its first pair's PARENT
+// CENTRE, `bars_pitch` the fine bars' — `origin` the plate's row 0 (the
 // canvas's first row), `word` the ink and `word2` the core, nothing where
 // no bar covers. A PLATE WHOSE TRANSFORM ALONE MOVED changes nearly every
 // pixel it draws, so it owes the canvas's damage like any other change of
@@ -148,6 +155,7 @@ struct GuiCanvasPrimitive {
     int      bars       = 0;
     float    bars_x0    = 0.0f;
     float    bars_pitch = 0.0f;
+    float    bars_weight = 0.0f;
 };
 
 // THE FRAME'S CANVAS (2026-10-13): the records in paint order, the plate

@@ -19,4 +19,4 @@ lamp_hold_ms=85
 tooltip_delay_ms=100
 sweep_highlight=3
 bright_mix=75
-waveform_switch_px=2
+waveform_fade_px=1.5

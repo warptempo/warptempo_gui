@@ -138,7 +138,7 @@ void GuiWaveformWorker::worker_loop() {
                 job.lattice_origin,
                 job.painter_spp,
                 job.working_column,
-                job.switch_hundredths,
+                job.fade_hundredths,
                 job.gain_hash != 0,
                 job.warp_frame_map.empty() ? nullptr : &job.warp_frame_map);
             ok = !cancel_flag_.load();

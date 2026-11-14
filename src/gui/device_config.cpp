@@ -24,8 +24,9 @@ namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
 // REQUIRED SET, every one of them (TWENTY-TWO keys since 2026-11-14, the
-// plate's switch width `waveform_switch_px` appended at the end — a tuning
-// key, the bar width in device px at which the waveform's bars change level;
+// plate's fade start `waveform_fade_px` appended at the end — a tuning key,
+// the bar width in device px at which the waveform's finer level starts to
+// appear;
 // TWENTY-ONE from 2026-11-13, the
 // bright tones' mix `bright_mix` appended at the end — a tuning key, how
 // much of itself each bright tone keeps toward the theme's ground; TWENTY
@@ -125,7 +126,7 @@ namespace {
 // tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07, and the
 // sweep highlight's alpha, `sweep_highlight`, after it since 2026-11-12, and
 // the bright tones' mix, `bright_mix`, after it since 2026-11-13, and the
-// plate's switch width, `waveform_switch_px`, after it since 2026-11-14 (none
+// plate's fade start, `waveform_fade_px`, after it since 2026-11-14 (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
@@ -162,7 +163,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "tooltip_delay_ms",
     "sweep_highlight",
     "bright_mix",
-    "waveform_switch_px",
+    "waveform_fade_px",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -290,12 +291,12 @@ std::string format_bright_mix(int percent) {
     return std::string(buf);
 }
 
-// The plate's switch width's canonical spelling (2026-11-14; the grammar's
-// words at parse_waveform_switch_px's head, device_config.h): the hundredths
+// The plate's fade start's canonical spelling (2026-11-14; the grammar's
+// words at parse_waveform_fade_px's head, device_config.h): the hundredths
 // as the shortest exact decimal — the integer part, then the two fraction
 // digits with a trailing zero cut, and no fraction at a whole number — the
 // grow's own shape below.
-std::string format_waveform_switch_px(int hundredths) {
+std::string format_waveform_fade_px(int hundredths) {
     char buf[32];
     const int whole    = hundredths / 100;
     const int fraction = hundredths % 100;
@@ -418,10 +419,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "bright_mix") {
             // The bright tones' mix's canonical integer (format_bright_mix).
             s += format_bright_mix(cfg.bright_mix);
-        } else if (k == "waveform_switch_px") {
-            // The switch width's canonical decimal
-            // (format_waveform_switch_px).
-            s += format_waveform_switch_px(cfg.waveform_switch_hundredths);
+        } else if (k == "waveform_fade_px") {
+            // The fade start's canonical decimal
+            // (format_waveform_fade_px).
+            s += format_waveform_fade_px(cfg.waveform_fade_hundredths);
         }
         s += '\n';
     }
@@ -682,16 +683,16 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.bright_mix = *pct;
             return {};
         }
-        // THE PLATE'S SWITCH WIDTH (2026-11-14, a tuning key): under its one
-        // grammar owner (parse_waveform_switch_px, device_config.h), required
+        // THE PLATE'S FADE START (2026-11-14, a tuning key): under its one
+        // grammar owner (parse_waveform_fade_px, device_config.h), required
         // like every key; any other spelling the launch's hard fail.
-        if (key == "waveform_switch_px") {
+        if (key == "waveform_fade_px") {
             const std::optional<int> hundredths =
-                parse_waveform_switch_px(value);
+                parse_waveform_fade_px(value);
             if (!hundredths) {
-                return bad_value(ln, key, value, kWaveformSwitchGrammarReason);
+                return bad_value(ln, key, value, kWaveformFadeGrammarReason);
             }
-            out.waveform_switch_hundredths = *hundredths;
+            out.waveform_fade_hundredths = *hundredths;
             return {};
         }
         return warptempo_parse::prefix_line_error(

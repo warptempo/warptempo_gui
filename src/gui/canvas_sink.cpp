@@ -61,7 +61,10 @@ void GuiCanvasSink::tint(const GuiRect& r, GuiColor toward, int percent) {
 // G; render.h's THE PLATE'S BARS): it carries the count of the band's row
 // of bars and the plate's draw transform — the centre of the row's first
 // bar and the bars' pitch, in device px from the rect's left edge, the
-// plate's doubles handed on as the floats the shader takes.
+// plate's doubles handed on as the floats the shader takes — and THE ROW'S
+// WEIGHT as the plate holds it (architect 2026-11-14, send H;
+// GuiPlateColumns::bar_weight): 1 for that uniform row, under 1 for the fade
+// band's, whose x is its first pair's parent centre.
 // THE BOUNDS ARE COPIED ONCE PER REVISION (2026-10-14; GuiCanvasDrawList's
 // plate payload): a plate whose revision the list already holds keeps the
 // held copy — the same bands' bounds, since the live slot changes only at a
@@ -93,11 +96,13 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
         p.word2  = core;
         // The row's first bar is the plate's stored bar col_lo (0 for a
         // stored band, which is whole), so its centre stands col_lo bars
-        // past the plate's first.
+        // past the plate's first (the fade band's x, a pair's parent
+        // centre, likewise: its first stored bar is a left half).
         p.bars       = n;
         p.bars_x0    = static_cast<float>(
             columns.bar_x0 + static_cast<double>(c.col_lo) * columns.bar_pitch);
         p.bars_pitch = static_cast<float>(columns.bar_pitch);
+        p.bars_weight = columns.bar_weight;
         if (copy)
             list_.columns.insert(list_.columns.end(), c.cols.begin(),
                                  c.cols.end());
