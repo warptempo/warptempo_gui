@@ -20,7 +20,8 @@ namespace {
 // tablet's 2304 px at 44.1 kHz, 50 at 48 kHz (the constants below were
 // measured at the laptop's 1920 px column, 55 at 44.1 kHz). At
 // the working zoom in source view a plate column then covers exactly one
-// analysis column, the viewport resting on the column's own multiples.
+// analysis column, the plate's columns standing on the column's own
+// multiples (the frame-0 lattice, render.h's THE PLATE'S BARS).
 
 // --- the fixed constants -----------------------------------------------------
 // THE ANALYSIS HOP is resolution only, and it is the EBU short-term

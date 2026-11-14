@@ -30,8 +30,9 @@
 // the plate is the antialiased waveform (architect 2026-10-30,
 // render_waveform_columns' head), and the highlight a blend toward white
 // on whole device pixels, so the sink's vocabulary is three
-// records: a RECT, THE PLATE (the per-column quarter-row tips,
-// GuiPlateColumns, with its two inks and the grow) and THE TINT (a rect
+// records: a RECT, THE PLATE (the per-bar quarter-row tips,
+// GuiPlateColumns, with its draw transform, its two inks and the grow) and
+// THE TINT (a rect
 // blended toward a color at a whole-percent alpha, architect 2026-11-12)
 // — EVERY LINE ON THE
 // CANVAS IS SOLID since 2026-11-04 (the dotted stems and cursor retired,
@@ -97,7 +98,9 @@
 // union's (2026-11-04; area-correct since 2026-11-07, kListFragmentShader's
 // head the rule) —
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
-// producer; the algorithm kListFragmentShader's) and blended source-over
+// producer: one pair of tips a BAR, the bars anchored to the audio and drawn
+// stretched by the record's draw transform, architect 2026-11-14, send G;
+// the algorithm kListFragmentShader's) and blended source-over
 // under the GL blend, exactly the word in the core and nothing where no bar
 // covers and the canvas shows; THE TINT writes, per cell of its rect, the
 // premultiplied source of its word at its alpha a (word2 / 100), blended
@@ -114,13 +117,24 @@
 
 // ONE LIST RECORD. `r` the cells it may write, device px of the
 // full-screen surface. A RECT writes `word` on r; THE PLATE blends, per
-// cell of r, the exact coverage of its columns' tips (the waveform's
-// antialiasing, render_waveform_columns' head) — `period` the index of r's
-// first column in the list's `columns`, `origin` the plate's row 0 (the
-// canvas's first row) — `word` the ink and `word2` the core, nothing where
-// no bar covers. THE TINT (architect 2026-11-12, the sweep highlight)
+// cell of r, the exact coverage of its bars' tips (the waveform's
+// antialiasing, render_waveform_columns' head) — r THE BAND'S DEVICE-PX
+// RECT, `bars` the count of its row of bars and `period` the index of the
+// row's first bar in the list's `columns` (the bars are the plate's
+// columns, MORE OR FEWER THAN r's device columns; architect 2026-11-14,
+// send G), `bars_x0` and `bars_pitch` THE DRAW TRANSFORM as floats — bar j
+// of the row has its centre bars_x0 + j · bars_pitch device px from r's
+// left edge (render.h's THE PLATE'S BARS owns it; the doubles are
+// GuiPlateColumns') — `origin` the plate's row 0 (the
+// canvas's first row), `word` the ink and `word2` the core, nothing where
+// no bar covers. A PLATE WHOSE TRANSFORM ALONE MOVED changes nearly every
+// pixel it draws, so it owes the canvas's damage like any other change of
+// the plate — every publication of a plate declares it (waveform_cache.cpp's
+// two publication roads), and the transform moves only with one.
+// THE TINT (architect 2026-11-12, the sweep highlight)
 // blends r toward `word` at the alpha `word2`, a WHOLE PERCENT in
 // [1, 100] (GuiCanvasSink::tint admits no 0), `period` and `origin` 0. The
+// bar members are 0 on every record but a Plate. The
 // kinds' numbers are the list shader's (`kind == 1`, `kind == 2`,
 // kListFragmentShader).
 enum class GuiCanvasKind : int { Rect = 0, Plate = 1, Tint = 2 };
@@ -131,6 +145,9 @@ struct GuiCanvasPrimitive {
     int      origin = 0;
     uint32_t word   = 0;
     uint32_t word2  = 0;
+    int      bars       = 0;
+    float    bars_x0    = 0.0f;
+    float    bars_pitch = 0.0f;
 };
 
 // THE FRAME'S CANVAS (2026-10-13): the records in paint order, the plate
@@ -155,7 +172,9 @@ struct GuiCanvasPrimitive {
 // revision arrives — a revision's bounds never change, so the kept copy is
 // the copy a rebuild would make. The list's Plate records, when it has any,
 // draw that plate, and the platform re-uploads its bounds texture only when
-// the revision or the records' spans moved (GuiGlCanvas::upload_list).
+// the revision or the records' spans — each its offset into `columns` and
+// its bar count — moved (GuiGlCanvas::upload_list). The transform is no part
+// of that payload: it rides the records, rebuilt with them every frame.
 // THE GPU PAGE (architect 2026-10-27, "1 a": THE PICTURE FOLLOWS THE THUMB,
 // THE SOUND WAITS FOR THE LIFT; design record §3.13). The score viewer's page
 // is not painted into the backbuffer: the box's interior is the frame's hole

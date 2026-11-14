@@ -199,6 +199,12 @@ struct Viewport {
     //    and the new flags land in the act's frame rather than a paint ahead
     //    of the next tick — a CONTENT change with no geometry behind it, the
     //    gain's shape.
+    //  - THE PLATE'S SWITCH WIDTH (architect 2026-11-14, send G): a
+    //    `waveform_switch_px` commit (GuiInputHandler::apply_waveform_switch_px)
+    //    moves the width the plate's bars are chosen by (render.h's THE
+    //    PLATE'S BARS), a plate fingerprint field, and kicks so the new
+    //    bars land in the commit's frame — a CONTENT change with no viewport
+    //    behind it, the gain's shape again.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries

@@ -40,14 +40,26 @@ struct WaveformJob {
     // are updated from these AT THE COMPLETION SWAP, not at dispatch.
     int64_t   vp_start         = 0;
     // The camera's lattice origin (AppState::viewport_lattice_origin),
-    // captured with the start it qualifies: the render cuts column c at
-    // origin + nearbyint((k0 + c)·q).
+    // captured with the start it qualifies: the displayed viewport's
+    // lattice, on which the render places the plate's bars (the draw
+    // transform and the stored range, render.h's THE PLATE'S BARS).
     int64_t   lattice_origin   = 0;
     int64_t   vp_end           = 0;
     // The painter's samples-per-pixel, captured on the GUI thread with the rest
-    // of the geometry: the render maps columns on the authoring lattice this
-    // defines, and the worker must not re-derive it from live state.
+    // of the geometry: the displayed viewport's step q, which chooses the
+    // bars' rung and stretches them (p = b / q); the worker must not
+    // re-derive it from live state.
     double    painter_spp      = 0.0;
+    // THE BARS' TWO OTHER INPUTS (architect 2026-11-14, send G; render.h's
+    // waveform_bar_frames), snapshots like the rest: the audio's WORKING
+    // COLUMN, the ladder's unit (GuiAudio::working_column, fixed for the
+    // audio's life), and THE SWITCH WIDTH in hundredths of a device px (the
+    // `waveform_switch_px` key's seat as the GUI thread read it — the
+    // settings commit moves that seat without draining a job, the scale's
+    // own hazard below), also a fingerprint field
+    // (WaveformCache::fp_switch_hundredths).
+    int64_t   working_column   = 0;
+    int       switch_hundredths = 0;
     int       area_w           = 0;
     int       area_h           = 0;
     // THE STEREO DIVIDER'S HEIGHT (waveform_divider_px(), render.h), a
@@ -183,9 +195,16 @@ private:
 
 // THE PLATE AS COLUMN BOUNDS (2026-10-13; GuiPlateColumns, render.h): the two
 // stereo bands of waveform_channel_band's layout through the one producer
-// (render_waveform_columns) at the plate's size, each band stored exactly
+// (render_waveform_columns), each band stored exactly
 // where its bounds cover it whole — stereo is structural, channels != 2
-// refuses at load (file_loader). The inks ride the paint instead (the
+// refuses at load (file_loader). THE COLUMNS ARE THE PLATE'S BARS (architect
+// 2026-11-14, send G; render.h's THE PLATE'S BARS): from the displayed
+// viewport (vp_start, lattice_origin, painter_spp, area_w), the working
+// column and the switch width this picks the rung, the stored range with
+// its halo and the draw transform (waveform_bar_frames,
+// waveform_bar_geometry), hands the producer the bar basis over a row of
+// that many bars, and writes the geometry into `dest` beside the columns
+// (`dest.width` x `dest.height` stays the plate's device-px size). The inks ride the paint instead (the
 // published fingerprint's, GuiCanvasSink::plate), so none is taken here.
 // Thread-agnostic: it runs either on the waveform worker thread (the async
 // dispatch) or synchronously on the GUI thread
@@ -213,5 +232,7 @@ void render_waveform_to_plate_columns(
     int64_t vp_start,
     int64_t lattice_origin,
     double  painter_spp,
+    int64_t working_column,
+    int     switch_hundredths,
     bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);

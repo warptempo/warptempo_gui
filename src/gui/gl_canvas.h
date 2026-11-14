@@ -128,14 +128,16 @@ private:
     // the program rebuilt at its draw, build_list_program), its own vertex
     // array over the instance buffer (independent of the program: the
     // attribute locations are the vertex shader's layout qualifiers, so a
-    // rebuild keeps it), the plate's bounds texture and its size — made with
+    // rebuild keeps it), the plate's bounds texture and its CAPACITY
+    // (columns_w_ x columns_h_, which only grows: upload_list's rule,
+    // architect 2026-11-14, send G) — made with
     // the texture program, living in the context — and the instances' count
     // and the list generation they were made from.
     // THE BOUNDS TEXTURE'S KEY (2026-10-14, upload_list's rule): whether its
     // texels are an upload's at all (false while it holds the seed, after
     // forget()), and the plate revision and the plate records' spans —
-    // each record's offset into the list's columns and its width, in list
-    // order — that upload packed.
+    // each record's offset into the list's columns and its bar count, in
+    // list order — that upload packed.
     unsigned int list_program_        = 0;
     int          list_size_uniform_   = -1;
     int          list_height_uniform_ = -1;

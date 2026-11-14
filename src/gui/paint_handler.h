@@ -129,7 +129,10 @@ std::string history_diff_label(bool disabled, std::string_view token);
 // Lives for the life of the project set (run_project, main.cpp); re-rendered
 // when any input to the plate's render (render_waveform_columns) has
 // changed. THE PLATE IS COLUMN BOUNDS (2026-10-13; GuiPlateColumns, render.h):
-// the two bands' per-column quarter-row tips, no pixel kept on the CPU — the
+// the two bands' quarter-row tips, one per BAR of the plate's stored row
+// (architect 2026-11-14, send G: the bars anchored to the audio, render.h's
+// THE PLATE'S BARS), with the bars' geometry and draw transform beside
+// them, no pixel kept on the CPU — the
 // frame's draw list carries them (GuiCanvasSink::plate) and the GPU
 // rasterizes the antialiased plate from them (kListFragmentShader,
 // 2026-10-30); the redraw path paints markers / flags /
@@ -159,7 +162,8 @@ struct WaveformCache {
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
     // vp_start, the LATTICE ORIGIN (fp_lattice_origin below, 2026-10-31),
-    // vp_end, area_w, area_h, divider_px, the plate's two
+    // vp_end, area_w, area_h, divider_px, THE SWITCH WIDTH
+    // (fp_switch_hundredths below, 2026-11-14), the plate's two
     // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
     // an input the plate's PIXELS depend on (the inks through its
     // publication), and each is keyed BY FIELD rather than through whatever else happens
@@ -169,13 +173,32 @@ struct WaveformCache {
     // halved (waveform_channel_band, render.h). (The inset was a field of its
     // own until 2026-10-09, and the measured MONOSPACE font size before row
     // 7, its proxy while it was font-derived.)
+    // THE VIEWPORT FIELDS ARE THE DISPLAYED VIEWPORT, IN DEVICE PX, AND THE
+    // BARS RIDE BESIDE THEM (architect 2026-11-14, send G): fp_vp_start,
+    // fp_vp_end, fp_area_w and fp_lattice_origin name the viewport the plate
+    // was rendered for — what the flag rebuild stages and every stem, flag,
+    // playhead and hit test reads (plate_viewport_basis, the displayed
+    // mirror) — never the bars. The bars' own geometry (the first stored
+    // bar, their width and count, the draw transform) is a pure function of
+    // those fields, the painter's step and the switch width (render.h's
+    // waveform_bar_geometry), so it is no field: the producer derives it and
+    // it rides the slot with the columns it describes
+    // (GuiPlateColumns::first_bar and its neighbors), swapped and published
+    // with them. THE PLATE IS STILL RENDERED AT EVERY VIEWPORT CHANGE, a
+    // gesture's every frame included, on the publication sequence the
+    // freeze gates and the flag staging stand on; inside a level its
+    // columns come out the same numbers, and no bar cache or interval reuse
+    // sits in front of it (his "a common sense, good enough on performance
+    // approach").
     int64_t   fp_vp_start    = 0;
-    // THE LATTICE the live pixels' columns were cut on (architect
-    // 2026-10-31; the rule at AppState::viewport_lattice_origin): column c's
-    // edges are origin + nearbyint((k0 + c)·q), so a camera that settles the
-    // same start on another lattice paints other columns and re-renders BY
-    // FIELD. Staged into the displayed mirror with the span (the flag
-    // rebuild's stage, AppState::displayed_lattice_origin).
+    // THE DISPLAYED VIEWPORT'S LATTICE ORIGIN (architect 2026-10-31; the
+    // rule at AppState::viewport_lattice_origin): pixel column c's left edge
+    // is the lattice point origin + nearbyint((k0 + c)·q), and the plate's
+    // bars are placed in those column coordinates (the draw transform and
+    // the stored range, render.h's THE PLATE'S BARS), so a camera that
+    // settles the same start on another lattice places the bars elsewhere
+    // and re-renders BY FIELD. Staged into the displayed mirror with the
+    // span (the flag rebuild's stage, AppState::displayed_lattice_origin).
     int64_t   fp_lattice_origin = 0;
     int64_t   fp_vp_end      = 0;
     int       fp_area_w      = 0;
@@ -186,6 +209,14 @@ struct WaveformCache {
     // fingerprint field exists iff it is a render input (the type rule's
     // shape).
     int       fp_divider_px  = -1;
+    // THE SWITCH WIDTH the live plate's bars were chosen by, in hundredths
+    // of a device px (the `waveform_switch_px` key's seat,
+    // waveform_switch_hundredths, render.h; architect 2026-11-14, send G):
+    // the bars' width, count and tips are a function of it (render.h's
+    // waveform_bar_frames), so a commit of the key re-renders the plate BY
+    // FIELD, keyed directly like the divider's height. 0 before the first
+    // plate, a value the key's grammar never spells.
+    int       fp_switch_hundredths = 0;
     // THE TWO INKS the live plate is published with (the `waveform_ink` and
     // `waveform_core` roles, waveform_plate_inks, render.h): the sink
     // writes their words (GuiCanvasSink::plate), so a change that moves
@@ -235,6 +266,7 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_divider_px  = -1;
+    int       pending_fp_switch_hundredths = 0;
     WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
@@ -259,6 +291,7 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_divider_px  = 0;   // GUI-captured divider height
+    int       supersede_switch_hundredths = 0;  // GUI-captured switch width
     WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
@@ -814,10 +847,11 @@ struct GuiPaintHandler {
     struct PlateViewportBasis {
         double  vp_start = 0.0;
         double  spp      = 0.0;
-        // THE LATTICE the plate's columns were cut on (wf_cache's
+        // THE LATTICE the plate was placed on (wf_cache's
         // fp_lattice_origin, published with fp_vp_start, cold 0 beside it):
         // the frame->column placement's third term (displayed_column_at),
-        // so a mark on this basis indexes the plate's own cells.
+        // so a mark on this basis stands in the pixel columns the plate's
+        // bars were placed in.
         int64_t lattice_origin = 0;
     };
     PlateViewportBasis plate_viewport_basis() const;
@@ -870,15 +904,26 @@ private:
     struct WaveformRenderInputs {
         int64_t  vp_start      = 0;
         // The camera's lattice origin (AppState::viewport_lattice_origin):
-        // a render input (the column edges) and a fingerprint field.
+        // a render input (the bars' placement and stored range) and a
+        // fingerprint field.
         int64_t  lattice_origin = 0;
         int64_t  vp_end        = 0;
         // The PAINTER's samples-per-pixel (painter_samples_per_pixel, the one
         // owner) — the same q clamp_viewport_start snaps the viewport onto. The
         // renderer needs the exact double, not a re-derivation from vp_end -
-        // vp_start, because the authoring lattice is defined in terms of it.
+        // vp_start, because the viewport's lattice — and with it the bars'
+        // rung and placement — is defined in terms of it.
         // vp_end above stays: it is a FINGERPRINT input and unrelated to this.
         double   painter_spp   = 0.0;
+        // THE BARS' TWO OTHER INPUTS (architect 2026-11-14, send G;
+        // render.h's waveform_bar_frames), captured on the GUI thread like
+        // the rest: the audio's working column — fixed for the audio's
+        // life, so a render input and no fingerprint field — and the switch
+        // width in hundredths of a device px off its seat
+        // (waveform_switch_hundredths), both a render input and a
+        // fingerprint field.
+        int64_t  working_column    = 0;
+        int      switch_hundredths = 0;
         int      area_w        = 0;
         int      area_h        = 0;
         // The stereo divider's height (waveform_divider_px(), render.h),

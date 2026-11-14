@@ -443,6 +443,11 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // formatter (format_bright_mix, device_config.h).
     if (key == "bright_mix" && app.device_config != nullptr)
         return format_bright_mix(app.device_config->bright_mix);
+    // THE PLATE'S SWITCH WIDTH (2026-11-14, a tuning key): through its one
+    // formatter (format_waveform_switch_px, device_config.h).
+    if (key == "waveform_switch_px" && app.device_config != nullptr)
+        return format_waveform_switch_px(
+            app.device_config->waveform_switch_hundredths);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -440,10 +440,12 @@ bool render_waveform_columns(GuiRect area,
     if (num_levels <= 0) return false;
     if (plate_w <= 0 || plate_h <= 0) return false;
 
-    // THE AUTHORING LATTICE (see WaveformBasis). Recover the viewport's lattice
-    // index on ITS OWN LATTICE, of origin basis.origin, with the SAME
-    // expression clamp_viewport_start uses to snap onto it
-    // (nearest_viewport_grid_point), so a resting viewport round-trips
+    // THE BASIS'S LATTICE (see WaveformBasis: the plate's caller hands THE
+    // BAR BASIS, the frame-0 lattice of step b, its start the first stored
+    // bar's left edge — architect 2026-11-14, send G). Recover the start's
+    // lattice index on ITS OWN LATTICE, of origin basis.origin, with the SAME
+    // expression clamp_viewport_start uses to snap a viewport onto its own
+    // (nearest_viewport_grid_point), so a start on the lattice round-trips
     // exactly. Columns are then indexed globally from k0, which is what makes
     // a pan a pure index shift — a column's frames depend on the origin and
     // k0+c and nothing else, never on which window drew it.
@@ -526,10 +528,11 @@ bool render_waveform_columns(GuiRect area,
     // THE NEVER-FADE FLOOR IS A QUARTER ROW (bar_tips, below;
     // kWaveformFloorSubcells, render.h): an interval under a quarter row
     // takes one subrow, which the GPU's grow (the disc dilation by the
-    // `waveform_grow` key, two subcells by default) makes a line of — at
-    // the default nonzero coverage over two device rows, about one and a
-    // quarter device px of summed coverage (20 of 16 subcells) whichever
-    // quarter-row phase the tip has — so flat or silent material draws a
+    // `waveform_grow` key, four subcells by default) makes a line of — 1 +
+    // 2 · GROW subrows, at the default nine: nonzero coverage over three
+    // device rows, two and a quarter device px of summed coverage (36 of 16
+    // subcells) whichever quarter-row phase the tip has (the numbers' owner
+    // kWaveformFloorSubcells, render.h) — so flat or silent material draws a
     // soft hairline instead of fading out.
 
     // Row bounds: this channel's band, intersected with the plate.
@@ -604,10 +607,9 @@ bool render_waveform_columns(GuiRect area,
     // B == T and an empty bar — digital silence at the zero row is the
     // archetype — and TAKES ONE SUBROW, B = T + 1, T pulled down one where it
     // sat on the band's last edge (T == 4 · y_hi) so the subrow lies inside
-    // the band; the GPU's grow then makes a line of it (at the default grow
-    // five subrows, nonzero coverage over two device rows and about one and
-    // a quarter device px of summed coverage at any tip phase, Ableton's
-    // measured silence line).
+    // the band; the GPU's grow then makes a line of it (1 + 2 · GROW
+    // subrows at any tip phase; the numbers at kWaveformFloorSubcells,
+    // render.h).
     // Nothing can fade out or vanish, and it holds for both bars AT BOTH LANE
     // EDGES: a bar clamped whole to the top edge is the band's first subrow,
     // one clamped whole to the bottom edge (both tips at -1) its last. The
@@ -773,13 +775,16 @@ void render_playhead(GuiCanvasSink& sink,
     // breaks in the lattice's coordinates, TO THE RIGHT (architect
     // 2026-11-06, session 69: the lattice point starts its pixel, so index K
     // owns [K − 0.5, K + 0.5), the reason at displayed_column_at), and the
-    // line translates rigidly with the plate's global cells under a pan.
+    // line translates rigidly with the lattice's global cells under a pan,
+    // as the plate's placement does (whole device px, render.h's THE
+    // PLATE'S BARS).
     // The playhead — and the marker stems, endcaps and flags, which all reach
     // their column through the same rule (frame_to_paint_sample's frame
     // rounding at the head of this file, then displayed_column_at) — paints
-    // AT a lattice point, while the bar drawn
-    // in that column covers the frames AFTER it, [g(c), g(c+1)) in the plate
-    // loop above. So a point and the bar under it can disagree by up to half a
+    // AT a lattice point, while the plate draws a frame where it lies: a bar
+    // [k·b, (k+1)·b) stands over its own frames — at a landing on a whole
+    // level the lattice column [g(c), g(c+1)), the frames AFTER its point.
+    // So a point and the bar under it can disagree by up to half a
     // column: invisible at the working zoom, and only at coarse zooms does the
     // line fall on the wrong side of a transient (up to ~0.47 s at the full
     // zoom-out of a 30-minute movement, where one column is nearly a second
@@ -2212,11 +2217,20 @@ namespace {
     // `waveform_grow` seat, a permanent key), set by
     // set_waveform_grow_quarters from the same two application points.
     int    g_waveform_grow_quarters = kWaveformGrowDefaultQuarters;
+    // THE PLATE'S SWITCH WIDTH in hundredths of a device px (render.h's
+    // `waveform_switch_px` seat, a tuning key), set by
+    // set_waveform_switch_hundredths from the same two application points.
+    int    g_waveform_switch_hundredths = kWaveformSwitchDefaultHundredths;
 } // namespace
 // A QUARTER OF A DEVICE PX IS ONE SUBCELL: the key's lattice is the grid's,
 // so the seat's number is the plate shader's GROW with no conversion.
 static_assert(kWaveformGrowQuartersPerPx == kWaveformSubcells,
               "the waveform_grow key counts the plate's subcells");
+// THE BARS' HALO IS SIZED FOR THE KEY'S TOP GROW (render.h's THE PLATE'S
+// BARS: the stored range covers every grow the key can name, so the plate's
+// payload never depends on the live grow).
+static_assert(kWaveformBarHaloSubcells == kWaveformGrowMaxQuarters,
+              "the plate's stored bars cover the waveform_grow key's top");
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 void   set_key_height_w(int w) {
@@ -2243,6 +2257,10 @@ void   set_waveform_grow_quarters(int quarters) {
     g_waveform_grow_quarters = quarters;
 }
 int    waveform_grow_quarters() { return g_waveform_grow_quarters; }
+void   set_waveform_switch_hundredths(int hundredths) {
+    g_waveform_switch_hundredths = hundredths;
+}
+int    waveform_switch_hundredths() { return g_waveform_switch_hundredths; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

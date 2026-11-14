@@ -4416,9 +4416,11 @@ struct AppState {
     // device and this device only" — the arithmetic on the delivered events,
     // not the physical gesture, input_core.h's head) — an integer frame of
     // the active display domain, beside the start it qualifies; camera
-    // state, NOT a per-tab mirror (no ViewState carries it). Column c of the
-    // waveform paints the frames from origin + nearbyint((k0 + c)·q) (render_waveform_columns'
-    // edge_at), q the painter step (painter_samples_per_pixel).
+    // state, NOT a per-tab mirror (no ViewState carries it). Pixel column c
+    // of the waveform area starts at the frame origin + nearbyint((k0 + c)·q),
+    // q the painter step (painter_samples_per_pixel): the lattice every stem,
+    // flag and hit test stands on, and the column coordinates the plate's
+    // bars are placed in (render.h's THE PLATE'S BARS, the draw transform).
     // THE INVARIANT, held by the one writer (clamp_viewport_start, main.cpp):
     // the live viewport_start_sample lies on THIS lattice, origin +
     // nearbyint(k·q) at the live q with k >= 0, and |origin| <= (q + 1) / 2,
@@ -4446,15 +4448,20 @@ struct AppState {
     //     lattice left it up to HALF A COLUMN off — a fresh residue every
     //     zoom frame (a sixteenth step of q moves s / q by hundreds of
     //     columns), measured on the tablet 2026-10-31 at ±half a column a
-    //     step, the peaks near the fingers bubbling up and down. Each zoom
+    //     step, the peaks near the fingers bubbling up and down (the plate
+    //     of that day was cut on this lattice; with its bars anchored to the
+    //     audio, architect 2026-11-14, the same residue would shake the
+    //     whole picture half a px a frame). Each zoom
     //     frame derives a fresh origin the same way.
     //   * KEEP — THE GESTURE'S PAN FRAMES (the level unchanged) and THE
     //     RE-VALIDATIONS THAT WRITE NO START (kick_waveform_sync, the tick's
     //     live-total backstop, the resize, the load-in-place's domain
     //     re-clamp, translate_playhead_to, and reseat_playhead_to when it
     //     pages nothing): the current origin, the start snapped onto ITS
-    //     lattice, so a pan is a pure index shift of k0 (byte-identical
-    //     column content, shifted), a pan after a pinch keeps the pinch's
+    //     lattice, so a pan is a pure index shift of k0 (the same lattice
+    //     columns, shifted: every mark by whole px, the plate's placement by
+    //     the same whole px with every bar's tips as they were), a pan after
+    //     a pinch keeps the pinch's
     //     lattice (no jump at the transition), and a re-validation moves
     //     nothing. An origin outside the bound at the settled q (a level the
     //     re-validation clamped) falls to 0.
@@ -8455,7 +8462,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the twenty-four keys the
+    // 2026-10-28: the Settings button and bare `;`; the twenty-five keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened PREFILLED on the row's line once
@@ -9015,7 +9022,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's twenty-four keys as
+    // (architect 2026-10-28), with the settings editor's twenty-five keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
@@ -9162,7 +9169,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its twenty-four editable key lines and the two
+    // rows (its two headings, its twenty-five editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same

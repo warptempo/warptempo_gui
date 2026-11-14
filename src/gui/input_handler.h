@@ -3817,6 +3817,25 @@ private:
     // the launch seeds the grow before the window exists (main.cpp).
     void apply_waveform_grow(int quarters);
 
+    // THE PLATE'S SWITCH WIDTH'S ONE LIVE ACT (the `waveform_switch_px`
+    // device key, architect 2026-11-14, send G; render.h's seat and THE
+    // PLATE'S BARS): push the hundredths to the renderer
+    // (set_waveform_switch_hundredths), KICK THE PLATE'S SYNCHRONOUS REBUILD
+    // (Viewport::kick_waveform_sync — the bars' width, their count and
+    // their tips are a function of T, so unlike the grow's commit the plate
+    // IS re-rendered; the width is a fingerprint field too,
+    // WaveformCache::fp_switch_hundredths, so no plate of another T is ever
+    // taken for the live one), then invalidate the whole window — the frame
+    // that pays the rebuild paints the new plate under the page that
+    // committed it. NO RELAYOUT, NO PROGRAM REBUILD AND NO OTHER CACHE: the
+    // width moves no lane, the shader reads the bars' pitch from the draw
+    // list's records, and the flags stand on the displayed viewport, which
+    // T does not move. The settings editor's `waveform_switch_px=` commit
+    // (apply_device_setting) is the sole caller; it gates the no-op,
+    // assigns the live config and persists it; the launch seeds the width
+    // before the window exists (main.cpp).
+    void apply_waveform_switch_px(int hundredths);
+
     // THE RELAYOUT TAIL, the five live layout acts' shared last steps
     // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29;
     // apply_key_width, 2026-11-06; apply_run_gap, 2026-11-07):

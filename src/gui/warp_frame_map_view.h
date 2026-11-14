@@ -428,8 +428,11 @@ inline double lattice_index_ties_right(double x) {
 // active display domain.
 //
 // SINGLE ROUNDING, ON THE PAINTED LATTICE (architect 2026-10-31): the one
-// nearbyint is HERE, on (m+col)*q alone, so the answer IS the painted
-// column's left edge, render_waveform_columns' edge_at to the bit (the origin
+// nearbyint is HERE, on (m+col)*q alone, so the answer IS the pixel
+// column's left edge on the displayed viewport's lattice — the column
+// coordinates the plate's bars are placed in (render.h's THE PLATE'S BARS),
+// and at a landing on a whole level the bar's own edge,
+// render_waveform_columns' edge_at to the bit (the origin
 // is added after the rounding, as there: a tie rounded after adding an odd
 // origin would land a frame off the edge) — a commit lands on the frame the
 // finger's painted column shows. At origin 0 it is byte for byte the value
@@ -504,10 +507,11 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // rounding keep nearbyint, and a landed lattice point is never near a
 // placement tie (its quotient is within 0.5 / q of a whole index).
 //
-// WHY THE GLOBAL INDEX: the plate's cells are the lattice's, global — column
-// c spans [g(m + c), g(m + c + 1)), render_waveform_columns' edge_at — so a
+// WHY THE GLOBAL INDEX: the waveform area's pixel columns are the lattice's
+// cells, global — column c spans [g(m + c), g(m + c + 1)) — and the plate is
+// placed in those columns' coordinates (render.h's THE PLATE'S BARS), so a
 // pan at a fixed q and origin translates the plate by whole columns, every
-// cell keeping its content. The viewport-local quotient that stood here,
+// bar keeping its tips. The viewport-local quotient that stood here,
 // nearbyint((displayed − vp_start) / spp), decided a tie (a point on a
 // half-column: every odd point of the q = 23 lattice seen at q = 46, an
 // ordinary fine-authored marker one level coarser) half to even in the

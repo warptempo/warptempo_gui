@@ -55,7 +55,7 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the twenty-four,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the twenty-five,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -86,7 +86,7 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// NINETEEN editable ones the per-device config carries — gui_scale and
+// TWENTY editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only (the color key waveform, editable
@@ -106,7 +106,9 @@ struct GuiInputHandler;
 // key run_gap, the ground between two runs, and the same day the tooltip's
 // delay's tuning key tooltip_delay_ms, and since 2026-11-12 (architect) the
 // sweep highlight's alpha's tuning key sweep_highlight, and since 2026-11-13
-// (architect) the bright tones' mix's tuning key bright_mix (the
+// (architect) the bright tones' mix's tuning key bright_mix, and since
+// 2026-11-14 (architect) the plate's switch width's tuning key
+// waveform_switch_px (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, then retired with the LED, 2026-11-01; the
 // tooltip's gap's tuning key tooltip_gap, editable for session 90 of
@@ -138,7 +140,7 @@ struct GuiInputHandler;
 //    true_colors, theme, waveform_grow, noise, noise_attenuation_level,
 //    noise_crossfade_s, key_height, key_width, run_gap, osk_key_w,
 //    osk_key_h, osk_font_px, lamp_hold_ms, tooltip_delay_ms,
-//    sweep_highlight and bright_mix — in ONE body,
+//    sweep_highlight, bright_mix and waveform_switch_px — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
 //    owner in device_config.h
@@ -176,7 +178,10 @@ struct GuiInputHandler;
 //    list build, paint_sweep_highlight; no sweep stands under the Settings
 //    page, so the commit owes no damage); the bright tones' mix at once,
 //    the palette reinstalled off the installed row at the new percent and
-//    the window repainted (GuiInputHandler::apply_theme), no card.
+//    the window repainted (GuiInputHandler::apply_theme), no card; the
+//    plate's switch width at once, the plate re-rendered and the window
+//    repainted (GuiInputHandler::apply_waveform_switch_px), no card (the
+//    waveform is the answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -234,7 +239,7 @@ struct GuiInputHandler;
 // levels' lists left with the band's two sliders and their decimal grammar,
 // kSettingsValueListKeys below, and their rows that night.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE TWENTY-FOUR (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE TWENTY-FIVE (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
@@ -253,13 +258,14 @@ struct GuiInputHandler;
 // gap `tooltip_gap` after it for session 90 that day, gone in session 91,
 // settled; the sweep highlight's alpha `sweep_highlight` 2026-11-12, at the
 // device keys' tail; the bright tones' mix `bright_mix` 2026-11-13, at the
-// device keys' tail):
+// device keys' tail; the plate's switch width `waveform_switch_px`
+// 2026-11-14, at the device keys' tail):
 // the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's nineteen editable keys in that file's
+// CONFIG's twenty editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor, nor has the level, below). The other keys this editor
 // commits (`scale`, `bpm`,
@@ -290,7 +296,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
     "key_height", "key_width", "run_gap", "osk_key_w", "osk_key_h",
     "osk_font_px", "lamp_hold_ms", "tooltip_delay_ms", "sweep_highlight",
-    "bright_mix",
+    "bright_mix", "waveform_switch_px",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two groups split the table here, and the asserts pin
@@ -366,7 +372,8 @@ static_assert(settings_page_piece_keys_pinned());
 // opens the line editor; nor the lamps' hold `lamp_hold_ms`, 981 values;
 // nor the tooltip's delay `tooltip_delay_ms`, 1001; nor the sweep
 // highlight's alpha `sweep_highlight`, 101; nor the bright tones' mix
-// `bright_mix`, 101.)
+// `bright_mix`, 101; nor the plate's switch width `waveform_switch_px`,
+// 51.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
 };
@@ -526,8 +533,9 @@ struct GuiSettingsEditor {
     // line's door alone), `key_width=` (2026-11-06, the line's door
     // alone), `run_gap=` (2026-11-07, the line's door alone),
     // `tooltip_delay_ms=` (2026-11-07, the line's door alone),
-    // `sweep_highlight=` (2026-11-12, the line's door alone) and
-    // `bright_mix=` (2026-11-13, the line's door alone) — ONE BODY,
+    // `sweep_highlight=` (2026-11-12, the line's door alone),
+    // `bright_mix=` (2026-11-13, the line's door alone) and
+    // `waveform_switch_px=` (2026-11-14, the line's door alone) — ONE BODY,
     // TWO DOORS
     // (architect 2026-10-25, 2026-10-28 night for the value lists' keys): the
     // typed line's commit (commit_device_setting, below, the editor's door)

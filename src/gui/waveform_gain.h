@@ -171,7 +171,8 @@
 //   on the inner (architect 2026-09-25: both stages on both bars) — before
 //   each bar's one clamp. At working zoom in source view that is exactly the
 //   column's own (the plate's column and the analysis column are one width,
-//   and the viewport rests on the column's multiples). Coarser, the bar is the raw min/max of every member, so
+//   and the plate's columns stand on the column's multiples, the frame-0
+//   lattice — render.h's THE PLATE'S BARS). Coarser, the bar is the raw min/max of every member, so
 //   the member carrying the extreme is not known without a second pyramid;
 //   the smallest reduction is the one choice under which the coarse bar is
 //   never SHORTER than any member's own expanded bar (raw peak times the
@@ -275,7 +276,9 @@
 // THE EXPANDER'S RANGE-MAXIMUM INDEX (2026-10-13, a cost cut that returns
 // the same float): the painter's rule asks, per plate column, for the
 // largest `expander_multiplier` over a run of working columns — one at
-// working zoom, a few hundred at full zoom-out, 2256 plate columns a channel
+// working zoom, a few hundred at full zoom-out, a couple of thousand plate
+// columns a channel (2256 when the profile was taken, one a device px; the
+// stored bars now, render.h's THE PLATE'S BARS)
 // at every pan or pinch step; the tablet's profile of a magnified pan put
 // 9.2 % of all CPU on the plain scan. A BLOCKED SPARSE TABLE answers it in
 // constant time: the array in blocks of kExpanderRangeBlock columns, a

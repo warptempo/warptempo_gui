@@ -214,8 +214,9 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // NEEDS THIS ARM: that column's left edge stands up to one column's span
 // before total-1, so a bound dragged as far as it goes would rest that far
 // short of the source's end. A column holds the last frame when its RIGHT edge — its
-// successor's authored time, the painter's own span end (edge_at through the
-// map, render_waveform_columns) — lies past it, in both views, the target
+// successor's authored time, the lattice column's own span end (the next
+// lattice point through the map, authored_frame_at_column_on_basis) — lies
+// past it, in both views, the target
 // view's columns read through the same displayed map the painter used; a
 // column past that one lands on the wall already. Either bound, the mirror of
 // the start's: an end landing in the column holding frame 0 lands on frame 0.

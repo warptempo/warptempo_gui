@@ -14,7 +14,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Twenty-one keys live here and nowhere else,
+// piece (architect 2026-08-27). Twenty-two keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -100,8 +100,10 @@
 //                            (GuiInputHandler::apply_waveform_grow, a
 //                            repaint: the tips do not move). PERMANENT and
 //                            REQUIRED: the plate is the one thing on the
-//                            canvas not scaled with gui_scale — its columns
-//                            and quarter-row tips are device px, while its
+//                            canvas not scaled with gui_scale — its bars
+//                            are counted in device px (one at the working
+//                            zoom, render.h's THE PLATE'S BARS) and its
+//                            quarter-row tips are device px, while its
 //                            lines are one W since 2026-11-04 (the
 //                            unit, render.h's waveform_line_px) — so the
 //                            waveform needs one tuning key of its own, and the grow
@@ -341,6 +343,29 @@
 //                            constexpr once he rules the number, its key,
 //                            grammar and row going then; the first-run
 //                            value the defaults file's
+//   waveform_switch_px=<px>  THE PLATE'S SWITCH WIDTH (architect 2026-11-14,
+//                            send G: the waveform's bars anchored to the
+//                            audio and stretched between levels; render.h's
+//                            THE PLATE'S BARS): T, the bar width in DEVICE
+//                            PX at which the bars change level — a bar is
+//                            drawn T/2 .. T px wide, and where the zoom
+//                            would stretch it to T the bars halve — a
+//                            decimal in [1.5, 2] with at most two
+//                            fractional digits in canonical spelling
+//                            (parse_waveform_switch_px below: `2`, `1.75`,
+//                            `1.5` — the integer part, then the fraction
+//                            only when it is not zero, with no trailing
+//                            zero), held as HUNDREDTHS; read at launch to
+//                            seat the width before the first plate and
+//                            applied LIVE at the settings editor's OK, the
+//                            plate re-rendered and the window repainted, no
+//                            card (GuiInputHandler::
+//                            apply_waveform_switch_px); A TUNING KEY with a
+//                            Settings row, REQUIRED like every key while it
+//                            stands, which settles into a constexpr once he
+//                            rules the number, its key, grammar and row
+//                            going then; the first-run value the defaults
+//                            file's
 //   (audio_level=<dB>, THE PROJECT VOICE'S LEVEL, everything the program
 //                            itself played scaled by one level under THE
 //                            LEVEL GRAMMAR, set by the band's AUDIO case, a
@@ -496,7 +521,9 @@
 // in session 91, settled at 1 W; the sweep highlight's alpha
 // `sweep_highlight` APPENDED after `tooltip_delay_ms` 2026-11-12, the
 // tuning keys keeping the end; the bright tones' mix `bright_mix` APPENDED
-// after `sweep_highlight` 2026-11-13, the tuning keys keeping the end);
+// after `sweep_highlight` 2026-11-13, the tuning keys keeping the end; the
+// plate's switch width `waveform_switch_px` APPENDED after `bright_mix`
+// 2026-11-14, the tuning keys keeping the end);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -641,7 +668,7 @@
 // (architect 2026-11-08, session 95: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty-one lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty-two lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -661,7 +688,7 @@
 // program-written — the first run stamps it from the defaults file and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the
-// twenty-one keys and each at most once, EVERY KEY REQUIRED (architect
+// twenty-two keys and each at most once, EVERY KEY REQUIRED (architect
 // 2026-10-12, deferred, his "yes" 2026-10-14: "if one of these lines is not
 // in place, it means something's wrong with the config or the setup" — the
 // writer emits every line and the defaults file spells every key, so an absent
@@ -701,7 +728,8 @@
 // since 2026-11-06 the tuning key `key_width`, and since 2026-11-07 the
 // tuning keys `run_gap` and `tooltip_delay_ms`, and since 2026-11-12 the
 // tuning key `sweep_highlight`, and since 2026-11-13 the tuning key
-// `bright_mix`, among them
+// `bright_mix`, and since 2026-11-14 the tuning key `waveform_switch_px`,
+// among them
 // (kSettingsEditorKeys) — then a key's current
 // value, then a closed value's words, and committing each through this
 // file's writer under the key's own grammar below. THE LEVEL,
@@ -798,6 +826,10 @@ struct DeviceConfig {
     // THE BRIGHT TONES' MIX in whole percent (2026-11-13, the head's list; a
     // tuning key): required; the construction state is 75.
     int         bright_mix        = 75;
+    // THE PLATE'S SWITCH WIDTH in hundredths of a device px (2026-11-14, the
+    // head's list; a tuning key): required; the construction state is 2 px
+    // (kWaveformSwitchDefaultHundredths below).
+    int         waveform_switch_hundredths = 200;
 };
 
 // THE PROJECTS REPOSITORY AS CONSTRUCTED — AppState's `projects_repo`
@@ -1426,6 +1458,47 @@ inline std::optional<int> parse_waveform_grow(std::string_view v) {
     return std::nullopt;
 }
 
+// THE waveform_switch_px GRAMMAR (architect 2026-11-14, send G, his ruling
+// on the switch width: a tuning key in DEVICE px, default 2, range about
+// 1.5 .. 2; the rule it feeds at render.h's THE PLATE'S BARS) — a decimal
+// of DEVICE PX in [1.5, 2] with at most two fractional digits in canonical
+// spelling, held as HUNDREDTHS in [150, 200], the one owner the reader, the
+// writer, the settings editor's commit and its recall read
+// (format_waveform_switch_px, parse_waveform_switch_px). THE CANONICAL
+// SPELLING is the grow's (parse_waveform_grow above), the shortest exact
+// decimal: the integer part, then `.` and the fraction only when it is not
+// zero, with no trailing zero — `1.5`, `1.57`, `1.75`, `2` — and the reader
+// admits exactly the fifty-one strings the writer spells (it formats each
+// hundredth and compares), so `2.0`, `1.50`, `1.755` and anything out of
+// range are the launch's hard fail, as every other key's off-spelling is.
+// THE RANGE: the number is T, the bar width at which the plate's bars change
+// level, a bar drawn T/2 .. T device px wide. 2 is the top the working zoom
+// admits — there one bar must be exactly one device px, so 1 has to lie in
+// [T/2, T) — and at 2 no bar is ever under a px, each whole level standing
+// exactly at a switch; below 2 the working zoom sits inside a level and the
+// bars run under a px (T/2) before each switch; 1.5 is his range's floor.
+// kWaveformSwitchDefaultHundredths IS CONSTRUCTION STATE ALONE —
+// render.cpp's seat's initializer, overwritten by gui_main's startup seeding
+// before the window exists; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE
+// FIRST-RUN VALUES above; 2, his ruling's default). The settings page opens
+// the LINE EDITOR on it, not a value list (51 values is no short domain,
+// kSettingsValueListKeys' rule). A TUNING KEY: when he rules the number, the
+// key, these functions and its Settings row go, and the value becomes a
+// constexpr at render.h's waveform_bar_frames.
+inline constexpr int kWaveformSwitchMinHundredths     = 150;
+inline constexpr int kWaveformSwitchMaxHundredths     = 200;
+inline constexpr int kWaveformSwitchDefaultHundredths = 200;
+inline constexpr const char* kWaveformSwitchGrammarReason =
+    "must be a decimal in [1.5, 2] with at most two fractional digits in "
+    "canonical spelling (1.5, 1.75, 2)";
+std::string format_waveform_switch_px(int hundredths);
+inline std::optional<int> parse_waveform_switch_px(std::string_view v) {
+    for (int n = kWaveformSwitchMinHundredths;
+         n <= kWaveformSwitchMaxHundredths; ++n)
+        if (format_waveform_switch_px(n) == v) return n;
+    return std::nullopt;
+}
+
 // (THE `waveform` KEY'S GRAMMAR, a built-in preset's key, left with the key
 // and the presets 2026-11-01; the `caption` key's, is_builtin_scheme_name,
 // left with the key 2026-10-21. The `theme_level` grammar and the program color grammar of the twelve keys
@@ -1580,7 +1653,7 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — eighteen keys,
+// which serves its ONE device-key body — nineteen keys,
 // `projects_repo=`, `projects_path=`, since 2026-10-21
 // `true_colors=`, since 2026-11-05 `theme=` (its live act
 // GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
@@ -1600,7 +1673,8 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // every list build, paint_sweep_highlight; no sweep stands under the
 // Settings page, so a commit owes no damage), and since 2026-11-13
 // `bright_mix=` (its live act GuiInputHandler::apply_theme, the installed
-// row at the new percent) —
+// row at the new percent), and since 2026-11-14 `waveform_switch_px=` (its
+// live act GuiInputHandler::apply_waveform_switch_px) —
 // and the band's level case's end (GuiInputHandler::settle_level_case,
 // since 2026-11-05: `noise_level=`, its live act GuiNoise::set_level_db,
 // the typed line that wrote it too until 2026-11-05 night gone with its

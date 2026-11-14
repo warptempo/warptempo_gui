@@ -23,7 +23,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY-ONE keys since 2026-11-13, the
+// REQUIRED SET, every one of them (TWENTY-TWO keys since 2026-11-14, the
+// plate's switch width `waveform_switch_px` appended at the end — a tuning
+// key, the bar width in device px at which the waveform's bars change level;
+// TWENTY-ONE from 2026-11-13, the
 // bright tones' mix `bright_mix` appended at the end — a tuning key, how
 // much of itself each bright tone keeps toward the theme's ground; TWENTY
 // from 2026-11-12, the
@@ -121,7 +124,8 @@ namespace {
 // two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night, and the
 // tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07, and the
 // sweep highlight's alpha, `sweep_highlight`, after it since 2026-11-12, and
-// the bright tones' mix, `bright_mix`, after it since 2026-11-13 (none
+// the bright tones' mix, `bright_mix`, after it since 2026-11-13, and the
+// plate's switch width, `waveform_switch_px`, after it since 2026-11-14 (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
@@ -158,6 +162,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "tooltip_delay_ms",
     "sweep_highlight",
     "bright_mix",
+    "waveform_switch_px",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -285,6 +290,25 @@ std::string format_bright_mix(int percent) {
     return std::string(buf);
 }
 
+// The plate's switch width's canonical spelling (2026-11-14; the grammar's
+// words at parse_waveform_switch_px's head, device_config.h): the hundredths
+// as the shortest exact decimal — the integer part, then the two fraction
+// digits with a trailing zero cut, and no fraction at a whole number — the
+// grow's own shape below.
+std::string format_waveform_switch_px(int hundredths) {
+    char buf[32];
+    const int whole    = hundredths / 100;
+    const int fraction = hundredths % 100;
+    if (fraction == 0) {
+        std::snprintf(buf, sizeof(buf), "%d", whole);
+        return std::string(buf);
+    }
+    std::snprintf(buf, sizeof(buf), "%d.%02d", whole, fraction);
+    std::string s(buf);
+    while (s.back() == '0') s.pop_back();
+    return s;
+}
+
 // The plate's grow's canonical spelling (2026-10-31; the grammar's words at
 // parse_waveform_grow's head, device_config.h): the quarters as the shortest
 // exact decimal — the integer part, then the fraction in hundredths with
@@ -394,6 +418,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "bright_mix") {
             // The bright tones' mix's canonical integer (format_bright_mix).
             s += format_bright_mix(cfg.bright_mix);
+        } else if (k == "waveform_switch_px") {
+            // The switch width's canonical decimal
+            // (format_waveform_switch_px).
+            s += format_waveform_switch_px(cfg.waveform_switch_hundredths);
         }
         s += '\n';
     }
@@ -652,6 +680,18 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kBrightMixGrammarReason);
             }
             out.bright_mix = *pct;
+            return {};
+        }
+        // THE PLATE'S SWITCH WIDTH (2026-11-14, a tuning key): under its one
+        // grammar owner (parse_waveform_switch_px, device_config.h), required
+        // like every key; any other spelling the launch's hard fail.
+        if (key == "waveform_switch_px") {
+            const std::optional<int> hundredths =
+                parse_waveform_switch_px(value);
+            if (!hundredths) {
+                return bad_value(ln, key, value, kWaveformSwitchGrammarReason);
+            }
+            out.waveform_switch_hundredths = *hundredths;
             return {};
         }
         return warptempo_parse::prefix_line_error(

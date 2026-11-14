@@ -53,15 +53,21 @@ void GuiCanvasSink::tint(const GuiRect& r, GuiColor toward, int percent) {
 
 // THE PLATE'S RECORDS: one per STORED band (GuiPlateColumns::Band: the
 // bands whose bounds are whole; the plate is transparent elsewhere), each
-// placed at the band's own columns and rows off the area's origin — at the
+// THE BAND'S DEVICE-PX RECT — the plate's own width (GuiPlateColumns::width)
+// from the area's left edge, the band's rows off the area's origin — at the
 // plate's own size, so a plate published at a stale size is drawn at that
 // size, the scissor (inside the area) cutting what overhangs.
+// THE RECORD'S BARS ARE NOT ITS DEVICE COLUMNS (architect 2026-11-14, send
+// G; render.h's THE PLATE'S BARS): it carries the count of the band's row
+// of bars and the plate's draw transform — the centre of the row's first
+// bar and the bars' pitch, in device px from the rect's left edge, the
+// plate's doubles handed on as the floats the shader takes.
 // THE BOUNDS ARE COPIED ONCE PER REVISION (2026-10-14; GuiCanvasDrawList's
 // plate payload): a plate whose revision the list already holds keeps the
 // held copy — the same bands' bounds, since the live slot changes only at a
 // publication and every publication takes a new revision — and each record's
-// offset into it is the running sum of the stored bands' widths either way,
-// the offsets the copy made.
+// offset into it is the running sum of the stored bands' bar counts either
+// way, the offsets the copy made.
 void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
                           WaveformPlateInks inks) {
     if (!columns.rendered) return;
@@ -74,17 +80,24 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
     for (const GuiPlateColumns::Band& b : columns.band) {
         if (!b.stored) continue;
         const WaveformBandColumns& c = b.columns;
-        const int w = c.col_hi - c.col_lo;
+        const int n = c.col_hi - c.col_lo;
         const int h = c.y_hi - c.y_lo;
-        if (w <= 0 || h <= 0) continue;
-        assert(static_cast<int>(c.cols.size()) == w);
+        if (n <= 0 || h <= 0 || columns.width <= 0) continue;
+        assert(static_cast<int>(c.cols.size()) == n);
         GuiCanvasPrimitive p;
         p.kind   = GuiCanvasKind::Plate;
-        p.r      = GuiRect{area.x + c.col_lo, area.y + c.y_lo, w, h};
+        p.r      = GuiRect{area.x, area.y + c.y_lo, columns.width, h};
         p.period = static_cast<int>(offset);
         p.origin = area.y;
         p.word   = ink;
         p.word2  = core;
+        // The row's first bar is the plate's stored bar col_lo (0 for a
+        // stored band, which is whole), so its centre stands col_lo bars
+        // past the plate's first.
+        p.bars       = n;
+        p.bars_x0    = static_cast<float>(
+            columns.bar_x0 + static_cast<double>(c.col_lo) * columns.bar_pitch);
+        p.bars_pitch = static_cast<float>(columns.bar_pitch);
         if (copy)
             list_.columns.insert(list_.columns.end(), c.cols.begin(),
                                  c.cols.end());

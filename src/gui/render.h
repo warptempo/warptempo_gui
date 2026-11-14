@@ -1140,6 +1140,25 @@ int  osk_font_em_w();
 void set_waveform_grow_quarters(int quarters);
 int  waveform_grow_quarters();
 
+// THE PLATE'S SWITCH WIDTH, THE `waveform_switch_px` KEY'S SEAT (architect
+// 2026-11-14, send G; the rule at waveform_bar_frames below, the grammar
+// device_config.h's parse_waveform_switch_px): T, the bar width in DEVICE PX
+// at which the plate's bars change level, held in HUNDREDTHS of a device px
+// (150 .. 200) — read on the GUI thread alone, by the plate's render inputs
+// (GuiPaintHandler::compute_waveform_render_inputs, waveform_cache.cpp),
+// which snapshot it for the render and key the plate's fingerprint on it,
+// so the worker never reads this seat. The grow's seat's shape exactly —
+// file-scope state in render.cpp, pushed by gui_main's startup read of the
+// device config before the window exists and by the settings editor's
+// `waveform_switch_px=` commit (GuiInputHandler::apply_waveform_switch_px,
+// which re-renders the plate and repaints at once: the bars are a function
+// of T). The construction state is 2 px (kWaveformSwitchDefaultHundredths),
+// the first-run value the shipped defaults file's. A TUNING KEY: it settles
+// into a constexpr at waveform_bar_frames once he rules the number, and
+// this pair goes.
+void set_waveform_switch_hundredths(int hundredths);
+int  waveform_switch_hundredths();
+
 // A FACE AT THE LIVE SCALE AND SIZE (gui_font.h): what every painter and
 // every seat asks for its text — each use at the face-size table's size
 // (gui_font_table_px), the Keys face at the live `osk_font_px` seat's above
@@ -2468,9 +2487,12 @@ inline int scrub_channel_above_px() {
 // LINE RULE'S ONE STATEMENT (architect 2026-11-06, session 66 / 67, "I like
 // your suggestion", superseding 2026-11-04 night's left-pixel rule — "the
 // leftmost pix should be the real frame"): A FRAME IS A PIXEL BOUNDARY, NOT
-// A PIXEL — the plate's column c spans the lattice points g(c) .. g(c + 1)
-// (render_waveform_columns' edge_at), so a frame on the lattice is the
-// boundary between device columns c − 1 and c, the left edge of column c —
+// A PIXEL — device column c of the waveform area spans the lattice points
+// g(c) .. g(c + 1) of the displayed viewport's lattice (the column
+// coordinates the plate's bars are placed in, THE PLATE'S BARS; at a
+// landing on a whole level each bar is its column), so a frame on the
+// lattice is the boundary between device columns c − 1 and c, the left
+// edge of column c —
 // AND A VERTICAL LINE OF WIDTH t STRADDLES IT: columns [col − t / 2,
 // col − t / 2 + t), integer division (waveform_line_first_col): at t = 2
 // the column LEFT of the frame and the frame's own, centered on the
@@ -2516,8 +2538,10 @@ inline int waveform_line_px() {
 // (architect 2026-10-31; device_config.h's grammar, the seat
 // waveform_grow_quarters above, the plate shader's GROW): a multiple of 1/4
 // device px in [0, 2], and it STAYS A KEY — THE PLATE IS THE ONE THING ON
-// THE CANVAS NOT SCALED WITH gui_scale (its columns and its quarter-row tips
-// are device px; the canvas's lines one W since 2026-11-04, the unit,
+// THE CANVAS NOT SCALED WITH gui_scale (its bars are counted in device px —
+// one at the working zoom, T/2 .. T across a level, architect 2026-11-14,
+// THE PLATE'S BARS — and its quarter-row tips are device px; the canvas's
+// lines one W since 2026-11-04, the unit,
 // waveform_line_px), so the waveform needs one tuning key of its own and the
 // grow is the appropriate one, kept for good because a replacement panel
 // may not come at this density: the grow is the device-px number whose
@@ -2544,8 +2568,18 @@ constexpr int kWaveformSubcells = 4;
 // on his glass against Ableton's measured silence line): a bar whose
 // interval holds less than this many subrows takes this many (bar_tips,
 // render.cpp; the paragraph at render_waveform_columns' head), so digital
-// silence is a one-subrow bar which the default grow makes a line of about
-// 1.25 px of summed coverage. A quarter of the grid, which must divide into
+// silence is a one-subrow bar which the grow makes a line of. THE LINE'S
+// NUMBERS, their one owner: a run of silent columns is one subrow in every
+// screen subcolumn, and the disc of GROW subcells stands GROW rows each way
+// over it (its dx = 0 column), so the line is 1 + 2 · GROW subrows in each
+// subcolumn — 4 · (1 + 2 · GROW) of a pixel column's subcells, (1 + 2 ·
+// GROW) / 4 device px of summed coverage whichever quarter-row phase the
+// tip has. AT THE DEFAULT GROW, 1 px (GROW 4): nine subrows, nonzero
+// coverage over three device rows, 36 of 16 subcells, 2.25 device px. AT
+// 0.5 px (GROW 2), the grow the floor was judged at and the default until
+// 2026-11-04 night: five subrows over two device rows, 20 of 16, 1.25
+// device px — Ableton's measured silence line. At grow 0 the one subrow
+// alone, a quarter px. A quarter of the grid, which must divide into
 // quarters: one subrow on the 4x grid, the constant kept as the floor's
 // own statement (the 8x grid of 2026-10-31's morning held it at two).
 constexpr int kWaveformFloorSubcells = kWaveformSubcells / 4;
@@ -3264,57 +3298,205 @@ inline bool point_on_waveform_divider(const GuiRect& area, int y) {
     return y >= w[0].y1 && y < w[1].y0;
 }
 
-// THE COLUMN MAPPING BASIS — the plate's viewport start, its LATTICE ORIGIN,
-// the PAINTER's samples-per-pixel, and the plate width.
+// THE COLUMN MAPPING BASIS — a lattice: its start, its ORIGIN, its step and
+// its column count, the arithmetic render_waveform_columns cuts its columns
+// by.
 //
-// Columns are mapped on THE AUTHORING LATTICE, not by interpolating between
-// integer viewport endpoints. `spp` is painter_samples_per_pixel's value (its
-// one owner) — the very q that clamp_viewport_start snaps the viewport onto,
-// and `origin` the camera's lattice origin (AppState::viewport_lattice_origin,
-// which owns the three rules), so every RESTING viewport is a point of its
-// lattice, grid(k) = origin + nearbyint(k*q). The renderer recovers that k
-// and maps global column c to the display-domain edge
+// Columns are mapped on A LATTICE, not by interpolating between integer
+// endpoints: the renderer recovers the start's lattice index and maps global
+// column c to the display-domain edge
 //     edge(c) = origin + nearbyint((k0 + c) * spp),
 //     k0 = nearbyint((vp_start − origin) / spp)
-// which is literally the chokepoint's own grid(k0 + c). Recovering k0 uses
-// the same expression the snap itself uses to produce the rest
-// (nearest_viewport_grid_point), so the two agree by construction rather than
-// by coincidence.
+// — the expression the viewport's own snap uses to produce a rest
+// (nearest_viewport_grid_point, warp_frame_map_view.h), so a start that lies
+// on the lattice round-trips exactly.
 //
-// THE ORIGIN, AND WHO SETS IT (architect 2026-10-31). EVERY LANDING rests at
-// origin 0 — the frame-0 lattice, the picture byte for byte what it was before
-// the origin existed. THE GESTURE'S ZOOM FRAMES (the pinch, the pen's
-// one-finger zoom) set the origin so the requested start IS the rest: the
-// pivot's held frame then sits at its held column to ONE FRAME, where the
-// frame-0 lattice left it up to half a column off with a fresh residue every
-// zoom frame (measured on the tablet 2026-10-31, ±half a column a step: the
-// peaks near the fingers bubbled up and down). THE GESTURE'S PAN FRAMES keep
-// the current origin, so the pan paragraph below holds on whichever lattice
-// the camera stands on, and a pan after a pinch keeps the pinch's lattice.
+// THE PLATE'S COLUMNS ARE ITS BARS (architect 2026-11-14, send G): the one
+// caller hands THE BAR BASIS (waveform_bar_basis below) — THE FRAME-0
+// LATTICE, origin 0, of step b, the bars' width (waveform_bar_frames), its
+// start the first stored bar's left edge and its count the stored bars' — so
+// a column's frames are a function of the bar's GLOBAL index and b alone,
+// never of the viewport that asked for it. THE DISPLAYED VIEWPORT'S OWN
+// LATTICE — the camera's start, its origin and the painter's q
+// (AppState::viewport_lattice_origin owns its three rules: every landing
+// rests at origin 0, a gesture's zoom frames set the origin so the pivot's
+// frame holds its column, a pan keeps the origin it stands on) — is the one
+// the stems, the flags, the playhead and every hit test stand on, and the
+// one a pan steps by: whole columns of it, one device px each, as Ableton
+// pans by whole columns. The plate registers with it through its draw
+// transform (WaveformBarGeometry below), which that step moves by the same
+// whole px, never through this basis.
 //
-// WHY IT MUST BE THE LATTICE (the shimmer fix). Interpolating edges as
-// vp_start + span*c/W from integer endpoints gives each column a rounding
-// residual that CHANGES when the viewport moves. A one-pixel pan therefore did
-// not hand each column its neighbour's exact span: nearbyint ties flipped,
-// pyramid-bin membership flipped with them, extrema jumped, and the tip
-// segments amplified every flip into both neighbours — two screenshots one
-// grab-pan pixel apart differed in most of their columns. On the lattice a pan
-// by n pixels moves k0 by exactly n at an unchanged origin, so column c simply
-// becomes what column c+n was: same k0+c, therefore the same double, therefore
-// the same nearbyint, the same bins and the same extrema. Bit-identical
-// shifted pixels, in both views — in target view the lattice lives in the
-// display domain and the map consumes the same doubles.
-//
-// Every viewport the plate is handed lies on its own lattice (the chokepoint
-// snaps every write, the invariant at AppState::viewport_lattice_origin), so
-// the recovery is exact; a pan moves by whole columns of its lattice, as
-// Ableton pans by whole columns too.
+// WHY IT MUST BE A LATTICE OF GLOBAL INDICES (the shimmer fix). Interpolating
+// edges as vp_start + span*c/W from integer endpoints gives each column a
+// rounding residual that CHANGES when the viewport moves: nearbyint ties
+// flip, the frames a column reads flip with them and its extrema jump — two
+// pictures one pan pixel apart differ in most of their columns. On the
+// lattice column k0 + c is the same double whatever window drew it,
+// therefore the same nearbyint, the same frames and the same extrema, in
+// both views — in target view the lattice lives in the display domain and
+// the map consumes the same doubles. So a pan, and a zoom inside one level,
+// re-read every bar they keep at the very tips it had.
 struct WaveformBasis {
-    long long vp_start   = 0;   // plate viewport start, display domain
-    long long origin     = 0;   // its lattice's origin (whole frames), 0 at every landing
-    double    spp        = 0.0; // painter_samples_per_pixel — the lattice step
-    int       full_width = 0;   // full-plate column count
+    long long vp_start   = 0;   // the lattice's start, display domain: column 0's left edge
+    long long origin     = 0;   // the lattice's origin (whole frames): 0 for the plate's bars
+    double    spp        = 0.0; // the lattice's step in frames: the plate's bar width b
+    int       full_width = 0;   // the call's column count: the plate's stored bars
 };
+
+// THE PLATE'S BARS (architect 2026-11-14, send G: Ableton's model as far as
+// possible — the waveform's bars ANCHORED TO THE AUDIO and STRETCHED between
+// levels, nothing re-cut inside a level, both lamps; no snap of any kind, the
+// placement continuous from the displayed viewport at every zoom). THE ONE
+// OWNER of the bars' geometry: the rung, the stored range and the draw
+// transform; the producer (render_waveform_columns) cuts and reads what this
+// names, and the GPU draws it stretched (kListFragmentShader, gl_canvas.cpp).
+//
+// THE LADDER: bar widths in display-domain frames b_m = column × 2^m, column
+// the audio's working column (GuiAudio::working_column) and m any integer
+// >= −1 — b_−1 half the column, the deepest level's step.
+//
+// THE RUNG for a painter step q (frames per device px,
+// painter_samples_per_pixel's exact value) and THE SWITCH WIDTH T (device
+// px, the `waveform_switch_px` key in hundredths, 1 < T <= 2): THE UNIQUE m
+// WITH T/2 <= b_m / q < T, so a bar is drawn p = b / q device px wide, p in
+// [T/2, T). The boundary b / q == T/2 belongs to that (finer) rung, and
+// b / q == T never occurs: the rung is the SMALLEST b of the ladder with
+// 200 · b >= h · q, h T's hundredths — the compare exact in doubles (b a
+// multiple of a half frame, q of a sixteenth, h whole). T = 2: p in [1, 2),
+// b the smallest rung >= q. At the working zoom (q = column) every legal T
+// gives b = column and p = 1: one bar a device px. Never finer than m = −1:
+// the zoom's own floor (q >= half the column, effective_min_zoom_level)
+// keeps the rule's m there, and a q under it takes b_−1 with p past T, no
+// error arm (waveform_bar_frames is total; 0 for a degenerate q or column).
+// WHY 1 < T <= 2: the working zoom must draw one bar a device px — its
+// column is the data's resolution there, the 2.4 s rule — so 1 has to lie in
+// [T/2, T). At T = 2 no bar is ever narrower than a px and every whole
+// level stands exactly at a switch (a hair out from the working zoom the
+// bars are the next rung's, 2 px wide); under 2 the working zoom sits
+// inside a level and the bars run down to T/2 px before each switch, two
+// sharing a pixel there. Live's own range, about 1.25 .. 2.5 px, would draw
+// the working zoom with 2-px bars. THE SWITCH IS AT ITS FIXED THRESHOLD, no
+// dead band (his "unnecessary and probably more distracting than helpful").
+// DETERMINISM HAS ONE SEAT (architect 2026-11-14, send G): THE WORKING ZOOM
+// REACHED BY A LANDING, AT REST — `c`, or any landing on a whole level. A
+// landing keeps lattice origin 0, so there q = b, the offset is whole and
+// the bars are one device px on the pixel grid: crisp and the same every
+// time, with no special case in this code (his habit of pressing `c` is the
+// determinism: "there's essentially no way that I can manually land at
+// working zoom … we should count on the working zoom level snap";
+// "maintaining determinism at working zoom is all that's required").
+// EVERYWHERE ELSE SMOOTHNESS AND PERFORMANCE OUTRANK ACCURACY: the same
+// whole viewport — start, origin and step — is the same picture, and a zoom
+// reached by a gesture rests on the gesture's own origin, its bars at a
+// fractional offset, soft.
+//
+// BAR k (a GLOBAL index, k >= 0) is the display-domain span [k · b,
+// (k + 1) · b) ON THE FRAME-0 LATTICE: its integer edges are the producer's
+// own edge(k) = nearbyint(k · b) under the bar basis (waveform_bar_basis:
+// the start the lattice point nearbyint(k_first · b) — b is a half-integer
+// only at m = −1 of an odd column — the origin 0, the step b, the count n;
+// the producer's index recovery nearbyint(start / b) answers k_first exactly
+// for every b of a frame or more). EVERY BAR IS QUERIED OVER ITS WHOLE SPAN,
+// never clipped by the viewport, so its tips, its centre gain and its
+// expander maximum are a function of (k, b, the map, the lamp) alone: inside
+// a level nothing statistical changes from frame to frame. Target view the
+// same, in the display (target) domain, each bar mapped to its source span
+// as a column always was.
+//
+// THE DRAW TRANSFORM (doubles; NO ROUNDING OF THE PLACEMENT at any zoom, no
+// re-seat at whole levels). The displayed viewport {vp_start, origin, q}
+// gives continuous column coordinates col(f) = (f − origin) / q − K0, K0 =
+// nearbyint((vp_start − origin) / q) — the viewport's own lattice index
+// (viewport_lattice_index, warp_frame_map_view.h, the stems' and the flags'
+// recovery), so pixel column c's left edge is col = c and the plate
+// registers with every mark on that lattice. Texel j of a band's row is
+// global bar k_first + j, its centre X_j = x0 + j · p device px FROM THE
+// PLATE'S LEFT EDGE, x0 = col((k_first + 0.5) · b) and p = b / q: x0's
+// numerator (k_first + 0.5) · b − origin − K0 · q is exact in doubles (every
+// term a multiple of a sixteenth of a frame far inside the mantissa), one
+// divide rounds it, and it is small — the halo's few bars — so the float the
+// shader takes loses nothing that shows. AT A LANDING ON A WHOLE LEVEL
+// (origin 0, q = b) X_j = (k_first + j − K0) + 0.5 and p = 1: bar K0 + c
+// sits exactly on pixel c.
+//
+// THE STORED RANGE [k_first, k_first + n) IS THE VIEWPORT'S BARS AND A HALO
+// BOTH SIDES: every bar the draw can read at ANY grow of the `waveform_grow`
+// key — kWaveformBarHaloSubcells, the key's top (render.cpp's static_assert
+// against kWaveformGrowMaxQuarters), never the live grow, so the payload
+// does not depend on it. A pixel's coverage reads the screen subcolumns
+// within the grow of its own four, so across the plate's device width W the
+// subcolumn centres run from −(halo − 0.5) / 4 to W + (halo − 0.5) / 4 device
+// px (1.875 px each side at the top grow), and each reads THE TWO BARS WHOSE
+// CENTRES BRACKET IT (the contour between two bar centres; a bar's own
+// one-px core reaches no further, p > 1/2): k_first is the lower bracket of
+// the leftmost centre, the last bar the upper bracket of the rightmost. At a
+// whole level that is three bars beyond each edge, n = W + 6; n <= (W +
+// 3.75) / p + 3 always, and p >= T/2 >= 3/4.
+// THE TWO ENDS. LEFT OF FRAME 0 NO BAR EXISTS: k_first clamps at 0, and the
+// draw finds no texel there (the plate's left edge at the song's start is
+// the bar's own flat shape, as it was). PAST THE DOMAIN'S END THE BARS ARE
+// STORED AND SILENT, the producer's standing end policy: a bar straddling
+// the end reads the frames inside it, a bar wholly past it reads nothing
+// (GuiAudio::get_peak_range clamps to the source) and is the never-fade
+// floor's one subrow at the zero row — the hairline a viewport wider than
+// the song has always shown past its last frame — so the range needs no
+// domain total and the helper takes none.
+// Pure and total: a degenerate q, b or width answers the empty geometry
+// (n = 0), which the producer refuses and the plate leaves transparent.
+inline constexpr int kWaveformBarHaloSubcells = 8;
+inline double waveform_bar_frames(double q, int64_t column,
+                                  int switch_hundredths) {
+    if (!(q > 0.0) || column <= 0) return 0.0;
+    double b = static_cast<double>(column) * 0.5;
+    const double want = static_cast<double>(switch_hundredths) * q;
+    while (200.0 * b < want) b *= 2.0;
+    return b;
+}
+struct WaveformBarGeometry {
+    double    b       = 0.0;   // the bars' width, display-domain frames
+    long long k_first = 0;     // the first stored bar's global index
+    int       n       = 0;     // the stored bars' count (a band's row)
+    double    x0      = 0.0;   // the first stored bar's centre, device px from the plate's left edge
+    double    p       = 0.0;   // device px per bar, b / q
+};
+inline WaveformBarGeometry waveform_bar_geometry(long long vp_start,
+                                                 long long origin, double q,
+                                                 int area_w, double b) {
+    WaveformBarGeometry g;
+    if (!(q > 0.0) || !(b > 0.0) || area_w <= 0) return g;
+    const double o  = static_cast<double>(origin);
+    const double k0 = std::nearbyint(
+        (static_cast<double>(vp_start) - o) / q);
+    // The bar-centre coordinate of the point x device px from the plate's
+    // left edge: a whole k at bar k's centre, so its floor is the lower of
+    // the two bars whose centres bracket x.
+    const auto centre_index = [&](double x) {
+        return (o + (k0 + x) * q) / b - 0.5;
+    };
+    const double reach =
+        (static_cast<double>(kWaveformBarHaloSubcells) - 0.5) /
+        static_cast<double>(kWaveformSubcells);
+    double first = std::floor(centre_index(-reach));
+    const double last =
+        std::floor(centre_index(static_cast<double>(area_w) + reach)) + 1.0;
+    if (first < 0.0) first = 0.0;
+    if (last < first) return g;
+    g.b       = b;
+    g.k_first = static_cast<long long>(first);
+    g.n       = static_cast<int>(last - first) + 1;
+    g.x0      = ((first + 0.5) * b - o - k0 * q) / q;
+    g.p       = b / q;
+    return g;
+}
+// THE BAR BASIS the producer is handed (the rule above): the frame-0
+// lattice of step b from the first stored bar's left edge, n columns.
+inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
+    return WaveformBasis{
+        static_cast<long long>(
+            std::nearbyint(static_cast<double>(g.k_first) * g.b)),
+        0, g.b, g.n};
+}
 
 
 // THE OPAQUE PIXEL WORD for a palette colour: cairo ARGB32 is a native-endian
@@ -3340,6 +3522,15 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // column `col0` — i.e. the column sub-range [col0, col0+area.w) of `basis`.
 // The one caller (render_waveform_to_plate_columns, waveform_cache.cpp) is a
 // full-plate render and passes col0 = 0 with area.w == basis.full_width.
+// ITS COLUMNS ARE THE PLATE'S BARS (architect 2026-11-14, send G; THE
+// PLATE'S BARS above owns the rule): the basis is the bar basis, `area.x` 0
+// and `area.w` the stored bars' count — the viewport's bars and their halo,
+// MORE OR FEWER THAN THE PLATE'S DEVICE COLUMNS — `plate_w` that same count,
+// and the rows (`area.y`, `area.h`, `plate_h`) the plate's own device rows.
+// A COLUMN, everywhere below, is one bar of that ladder: b display-domain
+// frames on the frame-0 lattice, drawn p = b / q device px wide; "the outer
+// bar" and "the inner bar" are a column's two vertical extents (THE VISUAL
+// MAGNIFICATION).
 // When `warp_frame_map` is null (source view) the basis viewport is
 // source-frame and each column reads `audio.get_peak_range`
 // directly. When non-null (target view) it is target-frame: each column's
@@ -3347,24 +3538,42 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // pyramid read, producing the deformed-waveform display.
 //
 // THE SILHOUETTE IS ONE FILLED CONTOUR THROUGH THE COLUMN CENTERS, WITH A
-// FULL-INK CORE (architect 2026-10-30, on his glass against Ableton). Each
+// FULL-INK CORE (architect 2026-10-30, on his glass against Ableton), DRAWN
+// STRETCHED AT THE COLUMNS' PITCH (architect 2026-11-14, send G: the columns
+// are anchored to the audio and their centres stand p device px apart, p in
+// [T/2, T), placed continuously from the displayed viewport — the draw
+// transform, THE PLATE'S BARS above). Each
 // column reduces to two TIPS in float rows — its raw maximum as the top
 // tip, its raw minimum as the bottom — QUANTIZED TO QUARTER ROWS (below):
-// the column's own extent [T, B) in subrows is its BAR, kept whole in full
-// ink (THE CORE: a lone spike stands flat-topped at its own height, never
-// shaved toward its neighbors' mean), and THE CONTOUR joins it to its
-// neighbors — at each of the column's four subcolumns the top and bottom
-// interpolate linearly between this column's tips and the NEARER
-// neighbor's, from center to center, so a steep rise is a diagonal between
-// the two bars rather than a gap. THE WHOLE SHAPE (the bars' union with the
-// contour) IS GROWN BY THE `waveform_grow` KEY on every side — a disc
-// dilation of that many quarters of a device px on the 4x grid, 0.5 by
-// default (architect 2026-10-31; the key's reason at kWaveformSubcells: the
+// the column's own extent [T, B) in subrows is its BAR. THE CORE keeps that
+// bar whole in full ink on A LINE ONE DEVICE PX WIDE AT THE COLUMN'S CENTRE,
+// whatever the pitch (send G, the first build's width; a quarter-px "point"
+// is a second build for his glass only if wanted): a lone spike stands
+// flat-topped at its own height, never shaved toward its neighbors' mean,
+// and is 1 + 2 · grow device px of ink at every zoom. THE CONTOUR joins the
+// columns — at every SCREEN subcolumn (four a device px) the top and bottom
+// interpolate linearly between the tips of the two columns whose centres
+// stand either side of it, from center to center, so a steep rise is a
+// diagonal between the two bars rather than a gap, and between two cores
+// more than a px apart the shape is the contour alone. THE WHOLE SHAPE (the
+// cores' union with the contour) IS GROWN BY THE `waveform_grow` KEY on
+// every side — a disc dilation of that many quarters of a device px on the
+// 4x grid (architect 2026-10-31; the key's reason at kWaveformSubcells: the
 // plate is the one thing on the canvas not scaled with gui_scale, so the
-// grow is its own device key for good) — and each device pixel takes EXACT
-// COVERAGE, its set subcells over sixteen; the lit inner bar is the grown
-// inner shape FILLED SOLID in the core (THE CORE, below), antialiased with
-// its shape.
+// grow is its own device key for good), IN SCREEN SPACE, AFTER THE STRETCH:
+// A CONSTANT SCREEN THICKNESS AT EVERY ZOOM (send G: the grow is the
+// waveform's proxy for the GUI scale, a property of the scale and not of a
+// column, so no stroke widens across a level and none jumps at a switch) —
+// and each device pixel takes EXACT COVERAGE, its set subcells over sixteen;
+// the lit inner bar is the grown inner shape FILLED SOLID in the core (THE
+// CORE, below), antialiased with its shape.
+// AT A LANDING ON A WHOLE LEVEL (origin 0, q = b: p = 1, every column
+// exactly on a device px) the core is the column's own pixel and the contour
+// reads the nearer neighbor in eighths: one column a device px, crisp, by
+// the same arithmetic — no special case, and no re-seat onto the pixel grid
+// anywhere else. Off a landing the columns' edges are soft, which is ruled
+// fine (his "Ableton has no problem with soft lines"; a snap of any kind is
+// not: "a visceral jarring impact").
 // The coverage is blended SOURCE-OVER IN BYTE SPACE with what lies beneath
 // (the GL blend, kListFragmentShader).
 // NO TIP RULE (his words: "I don't look at the tips, the troughs and their
@@ -3376,7 +3585,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // the canvas untouched (the grid, the center lines, the divider, the stem,
 // the playhead, the scanner, the anchor stay whole cells, one W since
 // 2026-11-04, waveform_line_px), so placement reads as before —
-// the full-ink core keeps every column its own extent. What the 2026-08-01
+// the full-ink core keeps every column its own height. What the 2026-08-01
 // deletion took (the Wu tip polylines, their max-coverage compositing, the
 // fractional boundary rows, the coverage table, the edge halos) stays in
 // git and in docs/engineering/waveform_antialiasing_retired.md; none of it
@@ -3390,24 +3599,42 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // the zero row is the archetype) TAKES ONE SUBROW (kWaveformFloorSubcells,
 // a quarter device px: its reason at that constant), B = T + 1, T pulled
 // down one where it sat on the band's last edge so the subrow lies inside
-// the band; the disc dilation then makes a line of it — at the default grow
-// five subrows, nonzero coverage over two device rows and about one and a
-// quarter device px of summed coverage (20 of 16 subcells) at any tip
-// phase, Ableton's measured silence line. Nothing can fade out or vanish.
+// the band; the disc dilation then makes a line of it — 1 + 2 · GROW
+// subrows: at the default grow, 1 px, nine subrows, nonzero coverage over
+// three device rows and two and a quarter device px of summed coverage (36
+// of 16 subcells) at any tip phase (kWaveformFloorSubcells owns the
+// arithmetic, and Ableton's measured line, which is the 0.5 px grow's).
+// Nothing can fade out or vanish.
 // The floor is needed because an interval under a quarter row holds no
 // subrow center and would otherwise rasterize to nothing; the contour needs
 // none, since it only ever joins two bars that exist.
 //
-// PAN INVARIANCE: a column's tips are a pure function of its own (k0+c)
-// span — the AUTHORING LATTICE below is what makes that span depend on the
-// global index alone — and its picture reads the tips of the columns
-// within three of it (the contour toward its two neighbors and the
-// dilation of up to two device px across them), so two full
-// renders of the same columns at the same basis agree exactly. At the plate's two side edges the missing
-// neighbor is the column itself for the contour (the shape runs flat to the
-// edge), so an edge column can differ from the same audio rendered
-// interior; every plate is a full render since the shift-and-strip pan's
-// retirement, so no plate ever stitches the two.
+// PAN AND ZOOM INVARIANCE: a column's tips are a pure function of its own
+// (k0+c) span — the lattice of global indices (WaveformBasis above) is what
+// makes that span depend on the column's index and width alone — so two
+// renders of the same column agree exactly whatever viewport asked.
+// INSIDE A LEVEL NOTHING STATISTICAL CHANGES (architect 2026-11-14, send G):
+// while the zoom moves within one rung every column's peaks, centre gain,
+// expander maximum and quarter-row tips are the same numbers frame after
+// frame, dark or lit, and only the placement — x0 and the pitch — moves. That
+// is what the columns are anchored for: a plate cut one column a device px
+// on the viewport's own lattice reads every column over new frames at each
+// zoom frame and re-rolls its narrow valleys, which read as bubbling, the
+// lit plate's the more for the leveler's gain. AT A LEVEL SWITCH (the fixed
+// threshold, the switch width; no dead band, his "unnecessary and probably
+// more distracting than helpful") each column splits in two or two join:
+// the children's extrema, centre gains and expander maxima are their own,
+// so the picture steps there once — accepted. A pan moves the placement by
+// whole device px, the stored range with it, and re-reads no column
+// differently. NOT PROMISED:
+// pixel-phase variation stays (a soft edge crossing the pixel grid), so the
+// shimmer has one cause fewer, not none.
+// THE EDGES: THE STORED ROW CARRIES A HALO past the plate's two side edges
+// (the stored range, THE PLATE'S BARS above), each edge column read over its
+// WHOLE span, so every pixel of the plate reads real neighbors. Left of
+// column 0 no column exists and the shape runs flat from the first; past the
+// domain's end the columns exist and are silent (the never-fade floor's
+// line, below).
 //
 // THE COLUMNS ARE THE PRODUCT (2026-10-13; the one road since 2026-10-30):
 // the function writes no pixel. Its product is each column's four
@@ -3523,7 +3750,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // static_assert, waveform_gain.cpp). Each channel's lane is its own shape;
 // the other channel's pixels are never a neighbour. THE ALGORITHM IS THE
 // SHADER'S (kListFragmentShader, gl_canvas.cpp), per pixel from the tips of
-// the columns within three of it, no 2D scan. A loud passage's outer clips
+// the few columns whose centres bracket its grown support's subcolumns, no
+// 2D scan. A loud passage's outer clips
 // flat at the lane's edges while the inner still shows its compressed
 // height inside it.
 //
@@ -3559,13 +3787,15 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // evaluation per plate column (waveform_gain_at, linear between the curve's
 // hops), and the compressor's scale takes the same centre frame
 // (waveform_inner_scale_at, linear in scale likewise). s0 and s1 are the same integers the peak read takes, pure functions
-// of the GLOBAL column index (the authoring lattice below) in both views —
-// target view maps the column through the warp map to its source span first —
-// so the lookup is pan-invariant by construction and nothing forks on the
+// of the GLOBAL column index and the column's width (the bar basis,
+// WaveformBasis above) in both views — target view maps the column through
+// the warp map to its source span first — so the lookup is pan-invariant and,
+// inside a level, zoom-invariant by construction, and nothing forks on the
 // view.
 //
 // THE CENTRE RULE IS AN APPROXIMATION AT THE COARSE ZOOMS. A coarse plate
-// column covers many working-zoom columns whose gains differ; it takes the
+// column — a bar of the ladder's upper rungs, the working column times a
+// power of two — covers many working-zoom columns whose gains differ; it takes the
 // curve's gain at its centre source frame and applies it to the min/max
 // reduced from RAW peaks, so where the gain changes inside the column (the
 // curve moves on the window's scale) the bar's height
@@ -3574,15 +3804,20 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // zoom (1920 columns, ~0.30 s per column) a column at 122.3 s paints 0.53 by
 // the centre rule against 0.87 gained-before-reduction, and at 640 columns
 // (~0.90 s per column) one paints 0.97 against 0.34 (normalized peak
-// estimates on the peak measure, measured 2026-09-23). The
+// estimates on the peak measure, measured 2026-09-23 on columns of those
+// widths; the error is a column width's, whichever rung gives it). The
 // exact alternative is a second pyramid reduced over the gained samples —
 // immutable with the source like the curve, so the lamp would select between
 // the two pyramids rather than rebuild one — at the memory of a second
 // pyramid. RULED (architect 2026-09-23): the centre rule stands and no gained
 // second pyramid is built — placement is never done at a coarse zoom, so the
 // approximation there costs nothing the plate is used for. At working zoom
-// (one working column per plate column against a hop of whole columns: 46
-// frames against 4416 on the tablet) the two agree.
+// (one working column per plate column at every switch width — b is the
+// column there — against a hop of whole columns: 46 frames against 4416 on
+// the tablet) the two agree. The centre is a column's own, so it holds
+// through a level and moves at a switch, where a column's two halves take
+// the gains at their own centres (the lit switch's step, PAN AND ZOOM
+// INVARIANCE above).
 //
 // THE EXPANDER'S MULTIPLIER rides the same pointer (the curve's
 // `expander_multiplier`, one per working-zoom column, waveform_gain.h owns
@@ -3592,7 +3827,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // curve's range-maximum index since 2026-10-13, no pow), and
 // both tips of BOTH lit bars take it beside the bar's own scale (the gain on
 // the outer, the compressor's on the inner) before each bar's one clamp. At working
-// zoom that is the column's own reduction; coarser, it is the one choice
+// zoom that is the column's own reduction (and at the deepest level, half
+// a working column wide, its working column's); coarser, it is the one choice
 // under which a bar is never shorter than any member's own expanded bar, so
 // an onset is never dimmed by the dip before it at any zoom. It applies
 // exactly where the gain does: NULL (the dark lamp, in either audio view) is
@@ -3612,14 +3848,16 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // carries only whether to apply it).
 // NULL is the untouched picture, gain 1.0 everywhere.
 
-// ONE PLATE COLUMN'S TIPS (2026-10-13; quarter rows since 2026-10-30), in
+// ONE PLATE COLUMN'S TIPS (2026-10-13; quarter rows since 2026-10-30) — a
+// column one bar of the plate's ladder (THE PLATE'S BARS above) — in
 // the plate's own rows times kWaveformSubcells
 // (subrow 0 the top of the canvas's first row): the outer (or dark) bar's
 // subrows [o_top, o_bot − 1] and the lit inner bar's [i_top, i_bot − 1] —
 // the inner ABSENT (the dark lamp) is i_top = i_bot = 0, and present iff
 // i_bot > i_top (a present bar always has bot >= top +
 // kWaveformFloorSubcells, the quarter-row floor). The GPU rasterizes them (kListFragmentShader, gl_canvas.cpp): the
-// contour toward the neighbors, the `waveform_grow` key's grow and each
+// stretch to the columns' pitch, the contour between column centres, the
+// one-px core, the `waveform_grow` key's grow and each
 // pixel's exact coverage are the fragment shader's, the
 // rule at render_waveform_columns' head.
 struct WaveformColumnRows {
@@ -3627,9 +3865,13 @@ struct WaveformColumnRows {
     int i_top, i_bot;
 };
 // ONE CHANNEL BAND'S COLUMNS as render_waveform_columns produced them: the
-// region the bounds cover, rows [y_lo, y_hi) and columns [col_lo, col_hi)
-// of the plate (the band clamped to it), `cols` one entry per column from
-// col_lo, and whether that region is the asked area whole (`whole`).
+// region the bounds cover, the plate's device rows [y_lo, y_hi) and THE
+// STORED ROW'S BARS [col_lo, col_hi) — indices into the band's row of bars,
+// 0 .. n for a whole band, bar col_lo + j the global bar
+// GuiPlateColumns::first_bar + col_lo + j, NOT device columns (architect
+// 2026-11-14, send G: the plate's columns are its bars, THE PLATE'S BARS
+// above) — `cols` one entry per bar from col_lo, and whether that region is
+// the asked area whole (`whole`).
 struct WaveformBandColumns {
     int  y_lo = 0, y_hi = 0;
     int  col_lo = 0, col_hi = 0;
@@ -3638,7 +3880,8 @@ struct WaveformBandColumns {
 };
 // THE COLUMN BOUNDS' ONE PRODUCER (2026-10-13; the contract is THE PLATE'S
 // RENDER above): `area`, `col0`, the basis, the gain and the map, and the
-// plate's size the band is clamped to (plate_w x plate_h). The core's
+// size the band is clamped to (plate_w columns — the stored bars' count,
+// send G — by plate_h device rows). The core's
 // color is no input: it rides the plate's publication (THE INKS above).
 // False where it refuses — a degenerate area, basis
 // or pyramid, or a band that misses the plate — `out` then unspecified.
@@ -3658,11 +3901,21 @@ bool render_waveform_columns(GuiRect area,
 
 // THE PLATE AS COLUMN BOUNDS (2026-10-13, the GL canvas; the cache's
 // slot at WaveformCache::columns, paint_handler.h): the two channel bands of
-// a plate width x height, each `stored` exactly where its bounds cover the
+// a plate width x height — ITS DEVICE-PX SIZE, the canvas area it was
+// rendered for — each `stored` exactly where its bounds cover the
 // band whole (WaveformBandColumns::whole) — a refused or partial band draws
 // nothing — and the plate transparent elsewhere (the rows outside both
 // bands, an odd plate's last, included). `rendered` stands once the producer
 // has filled the slot: set by the producer, cleared by the cache's destroy.
+// THE BARS' GEOMETRY AND THE DRAW TRANSFORM RIDE THE SLOT (architect
+// 2026-11-14, send G; THE PLATE'S BARS above owns every number): a band's
+// row is the global bars first_bar .. first_bar + n − 1, n its
+// `columns.cols.size()` (both bands' alike), each `bar_frames` display-domain
+// frames wide on the frame-0 lattice, and texel j's centre stands at
+// bar_x0 + j · bar_pitch device px from the plate's left edge — written by
+// the one producer (render_waveform_to_plate_columns) from the same job
+// inputs as the columns, so they swap and publish with them and a plate is
+// always drawn by the transform of the viewport it was rendered for.
 // THE PLATE'S OWN REVISION (2026-10-14): `revision` names the live slot's
 // bounds — a process-wide counter the GUI thread stamps at every PUBLICATION
 // of a plate (next_plate_revision, waveform_cache.cpp: the worker's
@@ -3680,6 +3933,10 @@ struct GuiPlateColumns {
     int      width  = 0;
     int      height = 0;
     uint64_t revision = 0;
+    long long first_bar  = 0;
+    double    bar_frames = 0.0;
+    double    bar_x0     = 0.0;
+    double    bar_pitch  = 0.0;
     struct Band {
         bool                stored = false;
         WaveformBandColumns columns;

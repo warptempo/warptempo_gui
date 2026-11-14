@@ -1222,7 +1222,9 @@ void GuiSettingsEditor::commit() {
 // and the sweep highlight's alpha `sweep_highlight` (2026-11-12) the same,
 // no live act, its arm after it, and the bright tones' mix `bright_mix`
 // (2026-11-13) at once and no card, the theme's live act at the new
-// percent, its arm last
+// percent, its arm after it, and the plate's switch width
+// `waveform_switch_px` (2026-11-14) at once and no card, the plate
+// re-rendered, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1616,6 +1618,28 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE PLATE'S SWITCH WIDTH (architect 2026-11-14, send G, a tuning key;
+    // render.h's `waveform_switch_px` seat and THE PLATE'S BARS): a decimal
+    // of device px under its one grammar owner (parse_waveform_switch_px,
+    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then
+    // the one live act (GuiInputHandler::apply_waveform_switch_px: the
+    // renderer's seat, the plate re-rendered — its bars are a function of
+    // the width — and the window repainted) — and persisted, so NO CARD:
+    // the waveform is the answer. The page opens the line editor on it (no
+    // value list, its 51 values no short domain); Tab completes no value (a
+    // number is typed); stage 2's recall is the writer's spelling
+    // (recall_gui_setting_value).
+    if (key == "waveform_switch_px") {
+        const std::optional<int> hundredths = parse_waveform_switch_px(value);
+        if (!hundredths) return reject(kWaveformSwitchGrammarReason);
+        if (*hundredths == app.device_config->waveform_switch_hundredths)
+            return unchanged();
+        app.device_config->waveform_switch_hundredths = *hundredths;
+        input->apply_waveform_switch_px(*hundredths);
+        (void)persist();
+        return applied();
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1765,7 +1789,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty-four and
+        // one key does — any key the recall knows, the table's twenty-five and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");
