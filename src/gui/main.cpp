@@ -3119,7 +3119,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // A REST KEEPS THE PAINT CLOCK RUNNING (2026-10-18): while a rest of
         // the act stands, every tick damages the CLOCK CELL, so a frame is
-        // presented at every vsync through the rest. THE DISPLAY HAS AN IDLE
+        // presented at every due vsync (every other refresh, one per 33 ms at the
+        // app's frame cadence, kAppFrameRateHz) through the rest. THE DISPLAY HAS AN IDLE
         // TIMER: the tablet's SurfaceFlinger drops the panel from its pinned
         // rate (60 Hz since 2026-11-14) to 30 Hz once no layer has presented
         // for 250 ms, and the first frame presented after that brings the

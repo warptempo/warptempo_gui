@@ -831,6 +831,12 @@ private:
     struct AChoreographer* choreographer_ = nullptr;
     bool vsync_pending_ = false;
     bool vsync_due_     = false;
+    // THE APP'S FRAME CADENCE (kAppFrameRateHz, platform_android.cpp, the
+    // rule): the frame time (CLOCK_MONOTONIC ns) of the vsync that set
+    // vsync_due_, and that of the vsync whose frame last presented through
+    // the gate (pump's tail its one writer); 0 = none yet.
+    int64_t due_vsync_frame_ns_    = 0;
+    int64_t last_painted_vsync_ns_ = 0;
 
     // -- Async renderer completion fd (owned by GuiAsyncRenderer; this is just
     // a watch handle, not a lifetime claim). -1 when none is registered.
@@ -898,8 +904,10 @@ private:
     void ensure_backbuffer(int w, int h);
     void destroy_backbuffer();
     // `held_frame` is the open's hold's one frame (present_held_frame), the
-    // one call the hold's gate lets through (platform.h's head).
-    void paint_one_frame(bool held_frame = false);
+    // one call the hold's gate lets through (platform.h's head). True iff
+    // the frame was presented (the app's frame cadence reads it, pump's
+    // tail).
+    bool paint_one_frame(bool held_frame = false);
     // Upload every rect of damage_ into the GL canvas's texture and swap the
     // whole frame (the definition). Silent false with no window, no
     // backbuffer or no EGL surface. TRUE MEANS THE PIXELS REACHED THE WINDOW

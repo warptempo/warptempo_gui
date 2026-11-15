@@ -386,6 +386,42 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
 // says so there; it reads no number.
 constexpr int kPanelRefreshHz = 60;
 
+// THE APP'S FRAME CADENCE (architect 2026-11-15, after his glass: "30 hertz
+// reminds me of Ableton. It's acceptable ... there's never like this sense of
+// where the frame rate could drop. It's almost better to just guarantee a low
+// frame rate than to occasionally get it"): the app presents at most
+// kAppFrameRateHz frames a second, a steady 30 whatever the panel's mode —
+// Ableton-like, half the drawing work. THE PANEL STAYS AT 60 (the vote
+// above): pinning it to 30 failed on glass, because the system's touch boost
+// lifts the panel to 60 Hz under any touch whatever the app votes, and the
+// picture then mixed 30 and 60. So the app paces itself to EVERY OTHER
+// REFRESH instead: the vsync callback (AndroidCallbacks::vsync) counts a
+// vsync as due only when its frame time is at least kAppFramePeriodNs less
+// kAppFrameToleranceNs past the frame time of the vsync that last PAINTED
+// (last_painted_vsync_ns_, pump's tail its one writer). A vsync not due
+// leaves the damage standing, and pump's tail re-posts the callback as for
+// any damage, so the frame lands on the next due vsync — no damage is
+// dropped and nothing spins (one callback per vsync, as before). After a
+// rest the first vsync is past the period and paints at once.
+//
+// THE TOLERANCE, 4 ms: the threshold 33.33 − 4 = 29.33 ms must fall strictly
+// between the vsync that is too early and the one that is due on every
+// panel rate — on 60 Hz between the first (16.67) and the second (33.33),
+// so every second one; on 30 Hz at or under the first (33.33), so every one;
+// on 90 Hz between the second (22.22) and the third (33.33), so every third;
+// on 120 Hz between the third (25.0) and the fourth (33.33), 4.17 ms clear
+// of both — the widest rate that still fits, which is what sets 4. A frame
+// time is the vsync's own timestamp (CLOCK_MONOTONIC), its jitter well under
+// a millisecond, so on 60 Hz the second vsync cannot read under 29.33 (4 ms
+// early) and the first cannot reach it (12.7 ms late): it never skips two
+// and never takes one. MEASURED on the tablet with the cadence (2026-11-15):
+// a swipe, pinches and a FOLLOW play present exactly every second vsync
+// (33.3 ms); during FOLLOW play the loop thread's CPU fell ~31 % (2.66 -> 1.84
+// s per 6 s) and the presents halved (361 -> 181).
+constexpr int     kAppFrameRateHz      = 30;
+constexpr int64_t kAppFramePeriodNs    = 1'000'000'000LL / kAppFrameRateHz;
+constexpr int64_t kAppFrameToleranceNs = 4'000'000LL;
+
 // THE DISPLAY KEEP-ALIVE'S CLOCK (architect 2026-11-13, session 118): the
 // steady clock in ms, present()'s stamp and display_keep_alive_due's now —
 // the platform's two readings compare only with each other (the period,
@@ -445,14 +481,21 @@ struct AndroidCallbacks {
     // inside drain_looper's ALooper_pollOnce, and its whole body is the two
     // bits: the post is spent (vsync_pending_) and a frame is due
     // (vsync_due_) — the paint itself waits for the pass's tail, so the frame
-    // carries every event the same drain delivers. The frame time is not
-    // kept: nothing reads it. No sink (after shutdown, g_vsync_sink's rule):
-    // nothing.
-    static void vsync(int64_t /*frame_time_ns*/, void* /*data*/) {
+    // carries every event the same drain delivers. THE APP'S FRAME CADENCE
+    // (kAppFrameRateHz's rule): the frame is due only when this frame time is
+    // a period, less the tolerance, past the last painted vsync's (none yet:
+    // due at once); a due vsync's frame time is kept for the tail to record
+    // if it paints. No sink (after shutdown, g_vsync_sink's rule): nothing.
+    static void vsync(int64_t frame_time_ns, void* /*data*/) {
         GuiPlatform* self = g_vsync_sink;
         if (!self) return;
         self->vsync_pending_ = false;
-        self->vsync_due_     = true;
+        if (self->last_painted_vsync_ns_ == 0 ||
+            frame_time_ns - self->last_painted_vsync_ns_ >=
+                kAppFramePeriodNs - kAppFrameToleranceNs) {
+            self->vsync_due_           = true;
+            self->due_vsync_frame_ns_  = frame_time_ns;
+        }
     }
 };
 
@@ -1320,6 +1363,8 @@ void GuiPlatform::shutdown() {
     choreographer_ = nullptr;
     vsync_pending_ = false;
     vsync_due_     = false;
+    due_vsync_frame_ns_    = 0;
+    last_painted_vsync_ns_ = 0;
     unwatch_fd(worker_completion_fd_);
     unwatch_fd(waveform_worker_completion_fd_);
     unwatch_fd(history_worker_completion_fd_);
@@ -1408,20 +1453,20 @@ void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
  * GL canvas uploads the damage list rect by rect and swaps the whole frame
  * (present).
  */
-void GuiPlatform::paint_one_frame(bool held_frame) {
+bool GuiPlatform::paint_one_frame(bool held_frame) {
     // BEFORE ANY PIXEL: the owed first resize, so the layout the frame is
     // painted from is the panel's and not the cold default. It runs ahead of
     // the guards below because the hook it fires declares its own damage.
     deliver_owed_resize();
 
-    if (!has_initial_configure_ || !window_ || !back_) return;
+    if (!has_initial_configure_ || !window_ || !back_) return false;
     // THE OPEN'S HOLD (platform.h's head): no paint and no post — the damage
     // waits for the release — but for the hold's one frame
     // (present_held_frame), which paints here, and THE RELEASE'S FRAME
     // (release_owed_, release_presentation), which paints here under the
     // hold and ends it at its post (the tail).
-    if (presentation_held_ && !held_frame && !release_owed_) return;
-    if (damage_.empty()) return;
+    if (presentation_held_ && !held_frame && !release_owed_) return false;
+    if (damage_.empty()) return false;
 
     // Pre-paint hook: gives the application a chance to update model state
     // (e.g. re-read the playback predictor) and declare additional damage
@@ -1464,13 +1509,13 @@ void GuiPlatform::paint_one_frame(bool held_frame) {
     // finished picture is on the glass, so the hold and the owed release
     // clear together and the GUI's open_unseen() gates open. A failed post
     // keeps both, as it keeps the damage, and the next vsync's frame retries.
-    if (present()) {
-        damage_.clear();
-        if (release_owed_) {
-            presentation_held_ = false;
-            release_owed_      = false;
-        }
+    if (!present()) return false;
+    damage_.clear();
+    if (release_owed_) {
+        presentation_held_ = false;
+        release_owed_      = false;
     }
+    return true;
 }
 
 bool GuiPlatform::present() {
@@ -1489,7 +1534,8 @@ bool GuiPlatform::present() {
     //
     // THE SWAP WOULD BLOCK with the queue full (swap interval 1), and the
     // paint's gate keeps the queue from filling: since 2026-10-14 a gated
-    // paint runs only at the vsync callback, one per display period (pump's
+    // paint runs only at the vsync callback, at most one per display period and at
+    // the app's frame cadence one per two refreshes on the 60 Hz panel (pump's
     // tail, where the reversal of the 2026-08-27 "one wakeup, no
     // Choreographer" ruling and its measurement are), so the unbuffered
     // pen's ~500 events a second cost drains and never an extra swap. No
@@ -1957,7 +2003,9 @@ void GuiPlatform::pump() {
     // frame; damage left after a paint (a failed present keeps its damage,
     // paint_one_frame's tail) or arriving later posts the next callback at
     // its own pass's tail, so the first damage after idle waits at most one
-    // vsync and a pan paints once per vsync. A CALLBACK WITH NO DAMAGE TO
+    // vsync and a pan paints on every due vsync (every second refresh at the
+    // app's frame cadence, kAppFrameRateHz). A vsync not due leaves its damage
+    // standing and the tail re-posts. A CALLBACK WITH NO DAMAGE TO
     // PAINT (none came) simply clears the bit: a vsync with nothing to show
     // is gone, and the next damage waits for its own. NOTHING ELSE IS GATED:
     // the open's hold's one frame (present_held_frame, painted and posted at
@@ -2005,13 +2053,17 @@ void GuiPlatform::pump() {
     // events a second cost drains and not frames.
     //
     // THE PAINT RUNS AT THE TAIL OF THE PASS THE CALLBACK WOKE, at most once
-    // per display period, invited, never by a clock — so the frame also
+    // per due vsync (kAppFrameRateHz), invited, never by a clock — so the frame also
     // carries the input the same drain delivered.
     if (damage_.empty()) {
         vsync_due_ = false;
     } else if (vsync_due_) {
         vsync_due_ = false;
-        paint_one_frame();
+        // THE APP'S FRAME CADENCE'S ONE WRITER (kAppFrameRateHz's rule): the
+        // due vsync's frame time is recorded only when its frame reached the
+        // window; a paint that presents nothing (the hold, no window, a
+        // failed post) leaves the next vsync due at once.
+        if (paint_one_frame()) last_painted_vsync_ns_ = due_vsync_frame_ns_;
     }
     // UNDER THE OPEN'S HOLD NO CALLBACK IS POSTED, but for the owed release's
     // frame (release_presentation), which is paced here like any damage.
