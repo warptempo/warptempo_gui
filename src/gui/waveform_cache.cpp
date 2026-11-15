@@ -37,8 +37,10 @@
 // process — a project set's cache is torn down with it, the GL canvas and its
 // draw list are not — advanced on the GUI thread at each of the live slot's
 // two writes, the completion swap (on_waveform_render_done) and the
-// synchronous rebuild (force_synchronous_waveform_rebuild). The first value
-// is 1, so 0 stays "never published".
+// synchronous rebuild (force_synchronous_waveform_rebuild), and at each
+// render of the ahead plate (maintain_ahead_plate, send M, 2026-11-15), which
+// publishes nothing but is a set of bounds of its own. The first value is 1,
+// so 0 stays "never published".
 namespace {
 uint64_t next_plate_revision() {
     static uint64_t revision = 0;
@@ -171,7 +173,9 @@ const std::vector<WaveformColumnRows>* kept_row(
 // plate and the canvas has one painter (the record is at
 // render_waveform_columns, render.h).
 // WITH THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
-// render.h): the synchronous route hands its store, and each band's rows —
+// render.h): the GUI thread's two calls hand the cache's store — the
+// synchronous route's and the ahead plate's (maintain_ahead_plate, send M,
+// 2026-11-15) — and each band's rows —
 // in the fade band its parents and its halves — come out of the kept rows,
 // the producer asked only for the bars a row lacks (kept_row above), the
 // mix redone from the kept rows each call; THE CLAIM: `dest` after a call
@@ -268,8 +272,9 @@ void render_waveform_to_plate_columns(
     const GuiRect ch[2] = {GuiRect{0, b0.y, bars.n, b0.h},
                            GuiRect{0, b1.y, bars.n, b1.h}};
     // THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
-    // render.h, owns the store's rule): with a store — the synchronous
-    // route's, the GUI thread's alone — each band's rows come out of the
+    // render.h, owns the store's rule): with a store — the cache's, handed
+    // by the GUI thread alone (the synchronous route and the ahead plate's
+    // maintenance) — each band's rows come out of the
     // kept rows, the producer asked only for the bars a row lacks, and
     // `dest` is written exactly as the store-less road below writes it, the
     // geometry above and every field of a stored band: its rows ch.y ..
@@ -428,6 +433,14 @@ void render_waveform_to_plate_columns(
 
 GuiPaintHandler::WaveformRenderInputs
 GuiPaintHandler::compute_waveform_render_inputs() const {
+    return compute_waveform_render_inputs_at(app.viewport_start_sample,
+                                             app.viewport_lattice_origin,
+                                             /*snapshot_map=*/true);
+}
+
+GuiPaintHandler::WaveformRenderInputs
+GuiPaintHandler::compute_waveform_render_inputs_at(
+    int64_t vp_start, int64_t lattice_origin, bool snapshot_map) const {
     WaveformRenderInputs in;
     if (app.loading || audio.total_frames() <= 0) return in;
 
@@ -439,7 +452,6 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     // which the render chooses the plate's bars and places them (render.h's
     // THE PLATE'S BARS). Distinct from `spp` above, which only derives vp_end.
     const double  painter_q = painter_samples_per_pixel(app, audio, area);
-    const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end   = viewport_end_sample(vp_start, spp, area.w);
     const int     sr       = audio.sample_rate();
 
@@ -450,13 +462,15 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
         const TargetWarpFrameMapCache& c =
             target_view_warp_frame_map_cached(app, sr,
                 static_cast<long>(audio.total_frames()));
-        target_warp_frame_map      = c.warp_frame_map;       // job needs an owned snapshot
+        // A job, a synchronous render or a publication needs an owned
+        // snapshot; a compare needs the hash alone.
+        if (snapshot_map) target_warp_frame_map = c.warp_frame_map;
         target_warp_frame_map_hash = c.hash;
     }
     const GuiAudio* audio_source = &audio;
 
     in.vp_start      = vp_start;
-    in.lattice_origin = app.viewport_lattice_origin;
+    in.lattice_origin = lattice_origin;
     in.vp_end        = vp_end;
     in.painter_spp   = painter_q;
     // THE BARS' TWO OTHER INPUTS (render.h's waveform_bar_frames), captured
@@ -485,6 +499,28 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.audio         = audio_source;
     in.valid         = true;
     return in;
+}
+
+// THE FINGERPRINT'S ONE COMPARE (the declaration, paint_handler.h; the
+// roster at WaveformCache's fp_ fields): each identity keyed by field.
+bool GuiPaintHandler::plate_fingerprint_differs(
+    const WaveformRenderInputs& in,
+    int64_t vp_start, int64_t lattice_origin, int64_t vp_end,
+    int area_w, int area_h, int divider_px, int fade_hundredths,
+    const WaveformPlateInks& inks, uint64_t gain_hash, bool is_target,
+    uint64_t warp_frame_map_hash) {
+    if (vp_start        != in.vp_start)            return true;
+    if (lattice_origin  != in.lattice_origin)      return true;
+    if (vp_end          != in.vp_end)              return true;
+    if (area_w          != in.area_w)              return true;
+    if (area_h          != in.area_h)              return true;
+    if (divider_px      != in.divider_px)          return true;
+    if (fade_hundredths != in.fade_hundredths)     return true;
+    if (inks            != in.inks)                return true;
+    if (gain_hash       != in.gain_hash)           return true;
+    if (is_target       != in.is_target)           return true;
+    if (warp_frame_map_hash != in.warp_frame_map_hash) return true;
+    return false;
 }
 
 void GuiPaintHandler::maybe_enqueue_waveform_render() {
@@ -556,30 +592,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // gui_scale where the area's height need not. (The inset was keyed as a
     // field of its own until 2026-10-09, and the measured MONOSPACE font size
     // before row 7, as a proxy for it while it was font-derived.)
-    auto fingerprint_differs = [&](
-        int64_t fp_vp_s, int64_t fp_origin, int64_t fp_vp_e,
-        int     fp_aw,   int     fp_ah,
-        int     fp_div,
-        int     fp_fade,
-        WaveformPlateInks fp_ink,
-        uint64_t fp_gain,
-        bool    fp_t,
-        uint64_t fp_h) -> bool {
-        if (fp_vp_s != in.vp_start)        return true;
-        if (fp_origin != in.lattice_origin) return true;
-        if (fp_vp_e != in.vp_end)          return true;
-        if (fp_aw   != in.area_w)          return true;
-        if (fp_ah   != in.area_h)          return true;
-        if (fp_div  != in.divider_px)      return true;
-        if (fp_fade != in.fade_hundredths) return true;
-        if (fp_ink   != in.inks)           return true;
-        if (fp_gain != in.gain_hash) return true;
-        if (fp_t    != in.is_target)       return true;
-        if (fp_h    != in.warp_frame_map_hash) return true;
-        return false;
-    };
-
-    const bool diff_vs_pending = fingerprint_differs(
+    const bool diff_vs_pending = plate_fingerprint_differs(
+        in,
         wf_cache.pending_fp_vp_start,
         wf_cache.pending_fp_lattice_origin,
         wf_cache.pending_fp_vp_end,
@@ -874,19 +888,24 @@ bool GuiPaintHandler::live_plate_published() const {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0 || area.h <= 0) return true;
     if (!wf_cache.fp_rendered || waveform_rebuild_owed) return false;
-    const WaveformRenderInputs in = compute_waveform_render_inputs();
+    return live_plate_is_live_view();
+}
+
+// THE LIVE PLATE IS THE LIVE VIEW'S: valid live inputs, and the published
+// fingerprint equal to them field by field (the compare alone, no map
+// copied). The caller has asked fp_rendered. Read by live_plate_published
+// above and by maintain_ahead_plate below.
+bool GuiPaintHandler::live_plate_is_live_view() const {
+    const WaveformRenderInputs in = compute_waveform_render_inputs_at(
+        app.viewport_start_sample, app.viewport_lattice_origin,
+        /*snapshot_map=*/false);
     if (!in.valid) return false;
-    return wf_cache.fp_vp_start            == in.vp_start &&
-           wf_cache.fp_lattice_origin      == in.lattice_origin &&
-           wf_cache.fp_vp_end              == in.vp_end &&
-           wf_cache.fp_area_w              == in.area_w &&
-           wf_cache.fp_area_h              == in.area_h &&
-           wf_cache.fp_divider_px          == in.divider_px &&
-           wf_cache.fp_fade_hundredths     == in.fade_hundredths &&
-           wf_cache.fp_inks                == in.inks &&
-           wf_cache.fp_gain_hash           == in.gain_hash &&
-           wf_cache.fp_target              == in.is_target &&
-           wf_cache.fp_warp_frame_map_hash == in.warp_frame_map_hash;
+    return !plate_fingerprint_differs(
+        in, wf_cache.fp_vp_start, wf_cache.fp_lattice_origin,
+        wf_cache.fp_vp_end, wf_cache.fp_area_w, wf_cache.fp_area_h,
+        wf_cache.fp_divider_px, wf_cache.fp_fade_hundredths, wf_cache.fp_inks,
+        wf_cache.fp_gain_hash, wf_cache.fp_target,
+        wf_cache.fp_warp_frame_map_hash);
 }
 
 // -- Synchronous waveform rebuild (THE user-driven render route) ---------
@@ -947,7 +966,13 @@ bool GuiPaintHandler::live_plate_published() const {
 //      whole row only where nothing is kept — the first render under a key
 //      (a lamp flip, an S/T switch, a map edit in target view), a new rung
 //      at a level switch, a jump to a disjoint range (a page turn keeps its
-//      overlap), a moved band height. Its cost without the store, the row
+//      overlap), a moved band height. DURING A PAGING PLAY the kept rows
+//      stand on the next page once the ahead plate has rendered it (send M,
+//      2026-11-15, maintain_ahead_plate): the turn then asks only the bars
+//      by which its page differs, and any other rebuild before the turn — a
+//      pan, which suspends the paging, or a kick that leaves the camera —
+//      asks the live page's bars the next page does not share, nearly the
+//      whole row. Its cost without the store, the row
 //      itself — the area's width over the bars' pitch and a halo of a few,
 //      at most the width out of the fade band; in it the fine row and its
 //      parents, N + 2N, up to three times the width just past a whole
@@ -1053,8 +1078,9 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 
     // Render into the LIVE slot directly, by the producer the worker runs,
     // WITH THE CACHE'S KEPT BARS (architect 2026-11-15, send L;
-    // WaveformKeptBars, render.h): this route is the GUI thread's, the one
-    // that reads and writes the store, keyed by the render inputs' own view,
+    // WaveformKeptBars, render.h): this route is the GUI thread's, one of
+    // the two that read and write the store (the ahead plate's render the
+    // other, maintain_ahead_plate), keyed by the render inputs' own view,
     // map and gain identities.
     render_waveform_to_plate_columns(
         wf_cache.columns,
@@ -1160,6 +1186,134 @@ void GuiPaintHandler::owe_waveform_rebuild() {
 
 void GuiPaintHandler::flush_owed_waveform_rebuild() {
     if (waveform_rebuild_owed) force_synchronous_waveform_rebuild();
+}
+
+// -- The ahead plate (send M, 2026-11-15) -----------------------------------
+//
+// THE NEXT PAGE'S PLATE RENDERED DURING THE CURRENT PAGE (architect
+// 2026-11-15: "do the next page, draw and ahead. Even if it's only as
+// insurance for a later future iteration of the project on a more powerful
+// tablet, where I may try to squeeze even more performance out of it"). A
+// page turn is one heavy frame on the loop thread — the whole page's bars
+// asked of the producer in the turn's own frame (9.7 ms dark, 10.1 lit,
+// against 4.5 between turns: his local planner's page-turn runs, send L's
+// return, 2026-11-15) — while nothing used the page's own playing time.
+// This renders the next page's plate (Viewport::next_page, viewport.cpp,
+// owns the term) once in the page WITH THE KEPT BARS (WaveformKeptBars,
+// render.h), so the kept rows leave it holding exactly the next page's bars
+// (kept_row leaves each row the range last asked) and the turn's synchronous
+// rebuild asks the producer only for the few bars by which the real page
+// differs (the turn pages on the scanner's own sample, up to one frame's
+// advance past the edge frame). THE PUBLISHED PLATE IS FIELD FOR FIELD WHAT
+// IT IS WITHOUT THIS: the store's own claim (render_waveform_to_plate_columns
+// above, "for every sequence of calls and any store state"), this a caller
+// like any other. The cost moves: one frame in a page carries the page's
+// bars with a near-empty GPU frame behind it.
+//
+// ONCE A FRAME, from the pre-paint hook (main.cpp) after the owed rebuild's
+// flush — so the live plate is the live viewport's — and before the owed
+// lane check:
+//   1. NOT WANTED — no next page (not THE PAGING PLAY, main.cpp's
+//      paging_play, or none at the right wall), or the live plate not the
+//      live viewport's (unpublished, or its fingerprint not the live
+//      inputs': a worker publication pending, a load): the ahead plate stops
+//      standing and the settle count is 0. Nothing is freed.
+//   2. WANTED: the settle count counts the consecutive frames the same next
+//      page (start, origin) has been wanted. Below kAheadSettleFrames
+//      nothing renders.
+//   3. At the count, where the ahead plate does not stand on that page's
+//      inputs (the eleven identities compared, the map by its hash: no map
+//      is copied) AND THE WORKER HOLDS NO JOB: ONE render into the ahead
+//      plate with that page's inputs and the cache's kept bars — the
+//      synchronous route's own arguments — then its revision, its
+//      fingerprint and `ahead_stands`. A busy worker is not waited for: the
+//      render is left to a later frame.
+// IT PUBLISHES NOTHING AND DECLARES NO DAMAGE: no slot of the plate's two is
+// written, no fp_* field, no flag rebuild runs, and no painter reads
+// WaveformCache::ahead_columns.
+//
+// THE THREAD RULE (the store's, WaveformKeptBars): this runs on the GUI
+// thread, the store's one thread. The worker's job reads its own snapshot
+// (the scalars and its owned map copy), the audio's pyramid (written by the
+// load alone, before any render) and the gain curve (immutable once ready,
+// and read only when lit, which needs ready), and writes the pending slot
+// alone (WaveformJob::columns); this render reads the same immutable audio
+// and curve and its own map copy, and writes the ahead slot and the store,
+// neither named by any job. So nothing either writes is read or written by
+// the other, and running beside a job would be safe; the busy worker defers
+// the render instead because a job in flight is a publication about to move
+// the live plate (the next page may then move with it) and because two
+// renders at once would share the frame's CPU.
+//
+// THE SETTLE (kAheadSettleFrames, 8 frames, 133 ms at the panel's 60 Hz):
+// the frames right after a launch or a turn are left alone — a launch's own
+// frame measured 15.9 ms on the loop thread, and a turn's GPU work runs
+// across the two frames after it — while a page at the working zoom plays
+// for about two seconds (26 to 27 turns in his planner's 60 s runs), so the
+// render lands early in the page whatever the zoom a play pages at.
+namespace {
+constexpr int kAheadSettleFrames = 8;
+}  // namespace
+
+void GuiPaintHandler::maintain_ahead_plate(
+    const std::optional<ViewportRest>& next_page) {
+    // 1. Not wanted.
+    if (!next_page || !wf_cache.fp_rendered || !live_plate_is_live_view()) {
+        wf_cache.ahead_stands = false;
+        ahead_settle_frames   = 0;
+        return;
+    }
+    // 2. The settle count, saturating at the count.
+    if (ahead_settle_frames > 0 &&
+        ahead_settle_start == next_page->start &&
+        ahead_settle_origin == next_page->lattice_origin) {
+        if (ahead_settle_frames < kAheadSettleFrames) ++ahead_settle_frames;
+    } else {
+        ahead_settle_frames = 1;
+        ahead_settle_start  = next_page->start;
+        ahead_settle_origin = next_page->lattice_origin;
+    }
+    if (ahead_settle_frames < kAheadSettleFrames) return;
+    // 3. The render, at most once per page.
+    WaveformRenderInputs in = compute_waveform_render_inputs_at(
+        next_page->start, next_page->lattice_origin, /*snapshot_map=*/false);
+    if (!in.valid) return;
+    if (wf_cache.ahead_stands &&
+        !plate_fingerprint_differs(
+            in, wf_cache.ahead_fp_vp_start, wf_cache.ahead_fp_lattice_origin,
+            wf_cache.ahead_fp_vp_end, wf_cache.ahead_fp_area_w,
+            wf_cache.ahead_fp_area_h, wf_cache.ahead_fp_divider_px,
+            wf_cache.ahead_fp_fade_hundredths, wf_cache.ahead_fp_inks,
+            wf_cache.ahead_fp_gain_hash, wf_cache.ahead_fp_target,
+            wf_cache.ahead_fp_warp_frame_map_hash))
+        return;
+    if (waveform_worker.is_busy()) return;
+    if (in.is_target)
+        in = compute_waveform_render_inputs_at(
+            next_page->start, next_page->lattice_origin,
+            /*snapshot_map=*/true);
+    render_waveform_to_plate_columns(
+        wf_cache.ahead_columns,
+        in.area_w, in.area_h, in.divider_px,
+        *in.audio,
+        in.vp_start, in.lattice_origin, in.painter_spp,
+        in.working_column, in.fade_hundredths, in.gain_hash != 0,
+        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map,
+        &wf_cache.kept_bars, in.is_target, in.warp_frame_map_hash,
+        in.gain_hash);
+    wf_cache.ahead_columns.revision = next_plate_revision();
+    wf_cache.ahead_stands                 = true;
+    wf_cache.ahead_fp_vp_start            = in.vp_start;
+    wf_cache.ahead_fp_lattice_origin      = in.lattice_origin;
+    wf_cache.ahead_fp_vp_end              = in.vp_end;
+    wf_cache.ahead_fp_area_w              = in.area_w;
+    wf_cache.ahead_fp_area_h              = in.area_h;
+    wf_cache.ahead_fp_divider_px          = in.divider_px;
+    wf_cache.ahead_fp_fade_hundredths     = in.fade_hundredths;
+    wf_cache.ahead_fp_inks                = in.inks;
+    wf_cache.ahead_fp_gain_hash           = in.gain_hash;
+    wf_cache.ahead_fp_target              = in.is_target;
+    wf_cache.ahead_fp_warp_frame_map_hash = in.warp_frame_map_hash;
 }
 
 // -- Flag-cache fingerprint hashes ---------------------------------------

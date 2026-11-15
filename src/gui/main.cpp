@@ -3350,6 +3350,27 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         ab_audition.advance_after_natural_end(ended_audition);
     });
 
+    // THE PAGING PLAY (send M, 2026-11-15): the state in which the advance's
+    // autopager below would page — a PROJECT play with the scanner active
+    // (no load in flight, audio present, neither the render player nor the
+    // score viewer standing: their plays are their items' and return ahead
+    // of the autopager) with FOLLOW lit and not suspended for this play, and
+    // no A/B audition standing (its plays are framed by their own `c`). ONE
+    // PREDICATE, read by the autopager's condition, where every term ahead
+    // of FOLLOW's already holds (the advance's returns; a playing engine is
+    // a raised scanner bit, the launch raising it and every stop lowering it
+    // with the engine), and by the ahead plate's maintenance in the hook
+    // below (GuiPaintHandler::maintain_ahead_plate). The autopager's two
+    // PAUSE terms — a pointer gesture, a touch contact — are its own and no
+    // part of this: a held pen pauses the turn, not the preparation.
+    const auto paging_play = [&]() {
+        return !app.loading && audio.total_frames() > 0 &&
+               !app.render_player.active && !score_viewer_stands(app) &&
+               app.playhead_scanner_active &&
+               app.follow && !app.follow_suspended &&
+               !audition_sequence_standing(app);
+    };
+
     // THE PRE-PAINT HOOK'S ADVANCE — everything the hook writes before a frame
     // paints; the hook below runs it, then the owed check.
     const auto pre_paint_advance = [&]() {
@@ -3530,9 +3551,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (AppState::follow_suspended), the play pages. THE A/B AUDITION IS
         // NOT PAGED: its bounded plays are each framed by their own `c`, so
         // the act's phase standing turns the page off (the render player
-        // never reaches here, its return above).
-        if (app.follow && !app.follow_suspended &&
-            !audition_sequence_standing(app) &&
+        // never reaches here, its return above). Those terms are THE PAGING
+        // PLAY's (paging_play above, the one predicate); the two pause terms
+        // beside it are this autopager's own.
+        if (paging_play() &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
     };
@@ -3550,6 +3572,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner's narrow damage above resolved on the plate it replaces,
         // and the rebuild's full rect covers both of its columns.
         paint_handler.flush_owed_waveform_rebuild();
+        // THE AHEAD PLATE (send M, 2026-11-15; the rule at
+        // GuiPaintHandler::maintain_ahead_plate): after the flush, so the live
+        // plate it checks is the live viewport's and a turn this frame has
+        // already paged, and ahead of the owed check, which it adds nothing
+        // to. The next page is asked only during THE PAGING PLAY.
+        std::optional<ViewportRest> ahead_page;
+        if (paging_play()) {
+            if (const std::optional<Viewport::NextPage> np =
+                    viewport.next_page())
+                ahead_page = np->rest;
+        }
+        paint_handler.maintain_ahead_plate(ahead_page);
         // THE OWED CHECK LAST (2026-10-13): the rows above the viewport's
         // lanes and the clock cell, which the narrowed routes owe a check
         // rather than a repaint, are compared after every write the advance

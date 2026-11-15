@@ -212,10 +212,12 @@ private:
 // published fingerprint's, GuiCanvasSink::plate), so none is taken here.
 // Thread-agnostic: it runs either on the waveform worker thread (the async
 // dispatch) or synchronously on the GUI thread
-// (force_synchronous_waveform_rebuild), touching only the supplied dest
+// (force_synchronous_waveform_rebuild into the live slot, and the ahead
+// plate's render, GuiPaintHandler::maintain_ahead_plate, send M, 2026-11-15),
+// touching only the supplied dest
 // slot, the audio handle's peak pyramid (read-only after load), the caller's
 // warp_frame_map snapshot, the job-captured geometry scalars
-// (area_w/area_h/divider_px) and, on the GUI thread's synchronous route
+// (area_w/area_h/divider_px) and, on the GUI thread's two calls
 // alone, the kept bars it is handed (below) — no other shared or
 // main-thread state.
 // The divider's height and the MAGNIFICATION are passed in rather than read off
@@ -234,8 +236,9 @@ private:
 // it the store's key — the render inputs' view bit, warp-map hash and gain
 // field. NULL IS THE ROAD ABOVE, every bar of the row asked of the producer:
 // the worker's call (waveform_worker.cpp), so no store is ever reachable
-// from the worker thread. A STORE — the synchronous route's, the cache's
-// one, force_synchronous_waveform_rebuild on the GUI thread — has the
+// from the worker thread. A STORE — the cache's one, handed on the GUI
+// thread by force_synchronous_waveform_rebuild and by the ahead plate's
+// render — has the
 // producer asked only for the bars its kept rows lack, and `dest` comes out
 // equal, field for field, to the store-less road's for every sequence of
 // calls and any store state: `rendered`, the size, the bars' geometry and

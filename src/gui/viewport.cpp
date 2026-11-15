@@ -986,9 +986,10 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
 //     body (center_viewport_on_playhead) and the landing owner's centre
 //     answer (land_subject);
 //   * paged_in_viewport_start — `target` the edge margin in from the LEFT
-//     edge: follow's page-in (follow_scroll_if_needed) and the landing
-//     owner's walk page-in at every zoom but the working one, finer or
-//     coarser (land_subject).
+//     edge: follow's page-in (follow_scroll_if_needed), its prediction one
+//     page ahead (next_page, send M, 2026-11-15) and the landing owner's
+//     walk page-in at every zoom but the working one, finer or coarser
+//     (land_subject).
 namespace {
 int64_t centred_viewport_start(int64_t target, int64_t visible) {
     return target - visible / 2;
@@ -1288,6 +1289,67 @@ void Viewport::follow_scroll_if_needed() {
             app.viewport_lattice_origin != old_origin)
             finish_discrete_viewport_move();
     }
+}
+
+// THE NEXT PAGE (send M, 2026-11-15; architect 2026-11-15: "do the next
+// page, draw and ahead. Even if it's only as insurance for a later future
+// iteration of the project on a more powerful tablet, where I may try to
+// squeeze even more performance out of it"). Two terms, owned here:
+//   * THE EDGE FRAME E of the live viewport (start, lattice origin, the live
+//     grid step q, the waveform area's width w): the least frame f >= start
+//     whose painted column displayed_column_at(f, start, q, origin) is >= w —
+//     the first frame that paints off screen to the right on the cameras'
+//     own test (displayed_frame_on_screen), so a scanner running right is
+//     paged by follow_scroll_if_needed above at the first frame it reaches
+//     at or past E. Found from the column formula — the column is
+//     K − m with K the quotient (f − origin) / q taken ties right
+//     (lattice_index_ties_right), so it reaches w where the quotient reaches
+//     m + w − 0.5 — and SETTLED BY TESTING displayed_column_at on the
+//     candidate and its left neighbor, the column being nondecreasing in f,
+//     so E is the painted rule's answer by construction whatever the
+//     formula's rounding. E > start: the start's own column is 0.
+//   * THE NEXT PAGE: the rest follow's page-in writes for a target standing
+//     on E — paged_in_viewport_start(E, visible) through the chokepoint's
+//     rest under the lattice rule follow's clamp passes (the plain
+//     clamp_viewport_start, ViewportLattice::Land: the frame-0 lattice, the
+//     walls), i.e. resting_viewport_start at the live zoom, the arithmetic
+//     the chokepoint's body runs after its level clamp, which at rest
+//     leaves the level as it stands (every zoom write has passed it). NONE
+//     where nothing is visible, q or w is not positive, or the rest is the
+//     live camera's (start and origin): at the right wall, where follow's
+//     page settles onto the wall it stands at.
+// PURE: it reads the live viewport and writes nothing. Its one reader is the
+// ahead plate's maintenance (GuiPaintHandler::maintain_ahead_plate, from
+// main.cpp's pre-paint hook during THE PAGING PLAY), which renders the next
+// page's plate during the current page so the turn's own rebuild finds its
+// bars kept (WaveformKeptBars, render.h). The turn itself pages on the
+// scanner's own sample, up to one frame's advance past E, so its page is
+// this one or a few bars right of it.
+std::optional<Viewport::NextPage> Viewport::next_page() const {
+    const int64_t visible = samples_visible(app, audio);
+    if (visible <= 0) return std::nullopt;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return std::nullopt;
+    const double q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0) return std::nullopt;
+    const double  start  = static_cast<double>(app.viewport_start_sample);
+    const int64_t origin = app.viewport_lattice_origin;
+    const auto column_of = [&](int64_t f) {
+        return displayed_column_at(static_cast<double>(f), start, q, origin);
+    };
+    const double m = viewport_lattice_index(start, q, origin);
+    int64_t e = static_cast<int64_t>(std::ceil(
+        static_cast<double>(origin) +
+        (m + static_cast<double>(area.w) - 0.5) * q));
+    while (column_of(e) < area.w) ++e;
+    while (column_of(e - 1) >= area.w) --e;
+    const ViewportRest rest = resting_viewport_start(
+        app, audio, paged_in_viewport_start(e, visible),
+        ViewportLattice::Land);
+    if (rest.start == app.viewport_start_sample &&
+        rest.lattice_origin == origin)
+        return std::nullopt;
+    return NextPage{e, rest};
 }
 
 // THE LANDING OWNER (architect 2026-09-24): ONE camera for every act that

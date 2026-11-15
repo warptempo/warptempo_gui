@@ -166,7 +166,9 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 // ITS READERS, grepped at the ruling — the one inventory of the class:
 //   * Viewport::follow_scroll_if_needed — follow's page-in, during playback
 //     and at a PageIn launch: an offscreen target lands the margin in from
-//     the LEFT edge;
+//     the LEFT edge; and its prediction, Viewport::next_page (send M,
+//     2026-11-15), the page-in of a target on the edge frame, through the
+//     same conversion;
 //   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
 //     audio views and the marker drop's landing, the undo/redo restore):
 //     its fit test
