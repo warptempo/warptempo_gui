@@ -214,8 +214,10 @@ private:
 // dispatch) or synchronously on the GUI thread
 // (force_synchronous_waveform_rebuild), touching only the supplied dest
 // slot, the audio handle's peak pyramid (read-only after load), the caller's
-// warp_frame_map snapshot, and the job-captured geometry scalars
-// (area_w/area_h/divider_px) — no other shared or main-thread state.
+// warp_frame_map snapshot, the job-captured geometry scalars
+// (area_w/area_h/divider_px) and, on the GUI thread's synchronous route
+// alone, the kept bars it is handed (below) — no other shared or
+// main-thread state.
 // The divider's height and the MAGNIFICATION are passed in rather than read off
 // live state so the render touches no gui_scale and no settings state: ALL
 // scale-dependent geometry is snapshotted on the GUI thread at dispatch,
@@ -227,6 +229,17 @@ private:
 // slot, and the completion handler discards the old bounds and
 // redispatches). When integer waveform geometry changed, dirty-detect drives
 // a replacement either way; otherwise none is needed.
+// THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars, render.h,
+// owns the rule): `kept_or_null` is the store or null, and the three after
+// it the store's key — the render inputs' view bit, warp-map hash and gain
+// field. NULL IS THE ROAD ABOVE, every bar of the row asked of the producer:
+// the worker's call (waveform_worker.cpp), so no store is ever reachable
+// from the worker thread. A STORE — the synchronous route's, the cache's
+// one, force_synchronous_waveform_rebuild on the GUI thread — has the
+// producer asked only for the bars its kept rows lack, and `dest` comes out
+// equal, field for field, to the store-less road's for every sequence of
+// calls and any store state: `rendered`, the size, the bars' geometry and
+// weight, each band's `stored`, and a stored band's columns whole.
 void render_waveform_to_plate_columns(
     GuiPlateColumns& dest,
     int area_w,
@@ -239,4 +252,8 @@ void render_waveform_to_plate_columns(
     int64_t working_column,
     int     fade_hundredths,
     bool    magnified,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);
+    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null,
+    WaveformKeptBars* kept_or_null,
+    bool     kept_is_target,
+    uint64_t kept_warp_frame_map_hash,
+    uint64_t kept_gain_hash);

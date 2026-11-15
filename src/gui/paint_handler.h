@@ -187,11 +187,12 @@ struct WaveformCache {
     // (GuiPlateColumns::first_bar and its neighbors), swapped and published
     // with them. THE PLATE IS STILL RENDERED AT EVERY VIEWPORT CHANGE, a
     // gesture's every frame included, on the publication sequence the
-    // freeze gates and the flag staging stand on; inside a level, out of
-    // the fade band, its
-    // columns come out the same numbers, and no bar cache or interval reuse
-    // sits in front of it (his "a common sense, good enough on performance
-    // approach").
+    // freeze gates and the flag staging stand on; inside a level its bars
+    // come out the same numbers, and on the synchronous route THE KEPT BARS
+    // (kept_bars below; architect 2026-11-15, send L) hand the render the
+    // ones it already holds, so the producer is asked only for the bars that
+    // enter — the plate published field for field as a render without them
+    // (WaveformKeptBars, render.h).
     int64_t   fp_vp_start    = 0;
     // THE DISPLAYED VIEWPORT'S LATTICE ORIGIN (architect 2026-10-31; the
     // rule at AppState::viewport_lattice_origin): pixel column c's left edge
@@ -305,6 +306,16 @@ struct WaveformCache {
     // the slot carries no audio pointer or keepalive — the deferred redispatch
     // just names &audio.
 
+    // THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
+    // render.h, owns the rule, the key, what is not keyed and why, and the
+    // thread rule): the producer's unmixed rows from one synchronous render
+    // to the next, read and written only inside
+    // force_synchronous_waveform_rebuild's call of
+    // render_waveform_to_plate_columns, on the GUI thread — never named in a
+    // worker's job. It lives and dies with this cache, which lives and dies
+    // with the project set's one GuiAudio; forget_plate empties it.
+    WaveformKeptBars kept_bars;
+
     void forget_plate() {
         columns.rendered         = false;
         pending_columns.rendered = false;
@@ -324,6 +335,7 @@ struct WaveformCache {
         supersede_warp_frame_map.clear();
         fp_warp_frame_map.clear();
         pending_fp_warp_frame_map.clear();
+        kept_bars.clear();
     }
 
     ~WaveformCache() { forget_plate(); }

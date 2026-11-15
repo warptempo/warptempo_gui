@@ -126,6 +126,11 @@ void GuiWaveformWorker::worker_loop() {
         // the render still gets reported (last_ok_=false) to the
         // completion handler.
         // The plate's slot is the job's column bounds (WaveformJob::columns).
+        // NO KEPT BARS ON THIS ROUTE (architect 2026-11-15, send L;
+        // WaveformKeptBars, render.h): the store is the GUI thread's alone,
+        // so the worker passes none and the render runs its store-less road,
+        // asking the producer for every bar of the row — this route serves
+        // the undriven changes, and nothing is shared across the threads.
         bool ok = false;
         if (!cancel_flag_.load() && job.columns && job.audio) {
             render_waveform_to_plate_columns(
@@ -140,7 +145,9 @@ void GuiWaveformWorker::worker_loop() {
                 job.working_column,
                 job.fade_hundredths,
                 job.gain_hash != 0,
-                job.warp_frame_map.empty() ? nullptr : &job.warp_frame_map);
+                job.warp_frame_map.empty() ? nullptr : &job.warp_frame_map,
+                /*kept_or_null=*/nullptr, /*kept_is_target=*/false,
+                /*kept_warp_frame_map_hash=*/0, /*kept_gain_hash=*/0);
             ok = !cancel_flag_.load();
         }
         last_ok_ = ok;

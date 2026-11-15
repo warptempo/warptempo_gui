@@ -44,6 +44,110 @@ uint64_t next_plate_revision() {
     static uint64_t revision = 0;
     return ++revision;
 }
+
+// -- kept_row (architect 2026-11-15, send L) --------------------------------
+//
+// THE ROW'S UPDATE (the store's rule at WaveformKeptBars, render.h): the
+// kept entries of the global bars [k, k + n) of rung b, channel `channel`,
+// the band's rows y, h and the clamp plate_h, under the store's key (the
+// caller's to have checked), or null where the producer refuses them.
+//   1. The row with that key; else that channel's least recently used row
+//      whose rung is not `keep_b` — the other rung the same render asks
+//      for, 0 for none — emptied and given the key.
+//   2. The row empty, or its range and [k, k + n) sharing no bar: ONE
+//      producer call over [k, k + n).
+//   3. Else the entries outside [k, k + n) dropped, the missing bars left of
+//      the kept range asked in one call and those right of it in one call,
+//      and the row is exactly [k, k + n).
+//   4. A call that refuses, or whose band is not whole, EMPTIES THE ROW and
+//      fails the request: nothing partial is ever kept.
+// Each call is on its own bar basis, waveform_bar_basis({b, k_a, count}) —
+// the sub-range's exactness at WaveformKeptBars — into the store's scratch,
+// whose capacity, like the rows', is reused, so a steady pan allocates
+// nothing here past the producer's own scratch for the bars that enter.
+const std::vector<WaveformColumnRows>* kept_row(
+    WaveformKeptBars& kept, const GuiAudio& audio, int channel, double b,
+    long long k, int n, int y, int h, int plate_h, double keep_b,
+    const WaveformGainCurve* gain,
+    const std::vector<WarpFrameMapSegment>* warp_frame_map) {
+    if (n <= 0) return nullptr;
+    const auto keyed_as = [&](const WaveformKeptRow& r, double rung) {
+        return r.keyed && r.b == rung && r.y == y && r.h == h &&
+               r.plate_h == plate_h;
+    };
+    WaveformKeptRow* row = nullptr;
+    for (WaveformKeptRow& r : kept.rows[channel])
+        if (keyed_as(r, b)) {
+            row = &r;
+            break;
+        }
+    if (!row) {
+        for (WaveformKeptRow& r : kept.rows[channel]) {
+            if (keyed_as(r, keep_b)) continue;
+            if (!row || (!r.keyed && row->keyed) ||
+                (r.keyed == row->keyed && r.used < row->used))
+                row = &r;
+        }
+        assert(row);
+        row->keyed   = true;
+        row->b       = b;
+        row->y       = y;
+        row->h       = h;
+        row->plate_h = plate_h;
+        row->k_lo    = k;
+        row->cols.clear();
+    }
+    row->used = ++kept.clock;
+
+    std::vector<WaveformColumnRows>& cols = row->cols;
+    const auto produce = [&](long long k_a, long long count) {
+        WaveformBarGeometry g;
+        g.b       = b;
+        g.k_first = k_a;
+        g.n       = static_cast<int>(count);
+        return render_waveform_columns(
+                   GuiRect{0, y, g.n, h}, /*col0=*/0, audio, channel,
+                   waveform_bar_basis(g), gain, /*plate_w=*/g.n, plate_h,
+                   warp_frame_map, kept.scratch) &&
+               kept.scratch.whole;
+    };
+    const long long want_lo = k;
+    const long long want_hi = k + n;
+    const long long lo      = row->k_lo;
+    const long long hi      = lo + static_cast<long long>(cols.size());
+    if (cols.empty() || hi <= want_lo || want_hi <= lo) {
+        if (!produce(want_lo, n)) {
+            cols.clear();
+            return nullptr;
+        }
+        cols.assign(kept.scratch.cols.begin(), kept.scratch.cols.end());
+        row->k_lo = want_lo;
+        return &cols;
+    }
+    const long long keep_lo = std::max(lo, want_lo);
+    const long long keep_hi = std::min(hi, want_hi);
+    cols.resize(static_cast<std::size_t>(keep_hi - lo));
+    cols.erase(cols.begin(), cols.begin() + (keep_lo - lo));
+    if (want_lo < keep_lo) {
+        if (!produce(want_lo, keep_lo - want_lo)) {
+            cols.clear();
+            return nullptr;
+        }
+        cols.insert(cols.begin(), kept.scratch.cols.begin(),
+                    kept.scratch.cols.end());
+    }
+    if (keep_hi < want_hi) {
+        if (!produce(keep_hi, want_hi - keep_hi)) {
+            cols.clear();
+            return nullptr;
+        }
+        cols.insert(cols.end(), kept.scratch.cols.begin(),
+                    kept.scratch.cols.end());
+    }
+    row->k_lo = want_lo;
+    assert(cols.size() == static_cast<std::size_t>(n));
+    return &cols;
+}
 } // namespace
 
 // -- render_waveform_to_plate_columns (2026-10-13) -------------------------
@@ -66,6 +170,18 @@ uint64_t next_plate_revision() {
 // lays under it showing through, so no ground color is ever carried by the
 // plate and the canvas has one painter (the record is at
 // render_waveform_columns, render.h).
+// WITH THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
+// render.h): the synchronous route hands its store, and each band's rows —
+// in the fade band its parents and its halves — come out of the kept rows,
+// the producer asked only for the bars a row lacks (kept_row above), the
+// mix redone from the kept rows each call; THE CLAIM: `dest` after a call
+// with the store equals `dest` after the same call without it, field for
+// field — `rendered`, the size, the bars' geometry and weight, each band's
+// `stored`, and a stored band's columns whole (an unstored band's columns
+// are read by nobody: GuiCanvasSink::plate skips them) — for every sequence
+// of calls and any store state, every kept entry being the producer's own
+// for its bar under the store's key and its row's. The store-less road,
+// the worker's, is the code after the store's branch, unchanged.
 void render_waveform_to_plate_columns(
     GuiPlateColumns& dest,
     int area_w,
@@ -78,7 +194,11 @@ void render_waveform_to_plate_columns(
     int64_t working_column,
     int     fade_hundredths,
     bool    magnified,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
+    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null,
+    WaveformKeptBars* kept_or_null,
+    bool     kept_is_target,
+    uint64_t kept_warp_frame_map_hash,
+    uint64_t kept_gain_hash) {
     dest.rendered = true;
     dest.width    = area_w;
     dest.height   = area_h;
@@ -147,6 +267,89 @@ void render_waveform_to_plate_columns(
     // the plate's rows.
     const GuiRect ch[2] = {GuiRect{0, b0.y, bars.n, b0.h},
                            GuiRect{0, b1.y, bars.n, b1.h}};
+    // THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
+    // render.h, owns the store's rule): with a store — the synchronous
+    // route's, the GUI thread's alone — each band's rows come out of the
+    // kept rows, the producer asked only for the bars a row lacks, and
+    // `dest` is written exactly as the store-less road below writes it, the
+    // geometry above and every field of a stored band: its rows ch.y ..
+    // ch.y + ch.h (a stored band is whole), its bars 0 .. the row's count,
+    // whole, and its entries the producer's (B-EQ: a sub-range's entries
+    // are the whole row's, and its refusal the whole row's). A key that
+    // differs from the store's drops every row first. IN THE FADE BAND the
+    // parents and the halves are two kept rows, unmixed, the halves asked
+    // only where the parents came back, and the stored entries mixed from
+    // them at the live weight here. The worker's route passes no store and
+    // runs the road below to the letter.
+    if (kept_or_null) {
+        WaveformKeptBars& kept = *kept_or_null;
+        if (!kept.keyed || kept.is_target != kept_is_target ||
+            kept.warp_frame_map_hash != kept_warp_frame_map_hash ||
+            kept.gain_hash != kept_gain_hash) {
+            kept.clear();
+            kept.keyed               = true;
+            kept.is_target           = kept_is_target;
+            kept.warp_frame_map_hash = kept_warp_frame_map_hash;
+            kept.gain_hash           = kept_gain_hash;
+        }
+        const auto store_band = [&](GuiPlateColumns::Band& band, int c,
+                                    int count) {
+            band.columns.y_lo   = ch[c].y;
+            band.columns.y_hi   = ch[c].y + ch[c].h;
+            band.columns.col_lo = 0;
+            band.columns.col_hi = count;
+            band.columns.whole  = true;
+        };
+        if (!fade.in_band) {
+            dest.first_bar  = bars.k_first;
+            dest.bar_frames = bars.b;
+            dest.bar_x0     = bars.x0;
+            dest.bar_pitch  = bars.p;
+            for (int c = 0; c < 2; ++c) {
+                GuiPlateColumns::Band& band = dest.band[c];
+                const std::vector<WaveformColumnRows>* row = kept_row(
+                    kept, audio, c, bars.b, bars.k_first, bars.n, ch[c].y,
+                    ch[c].h, area_h, /*keep_b=*/0.0, gain,
+                    warp_frame_map_or_null);
+                band.stored = row != nullptr;
+                if (!band.stored) continue;
+                store_band(band, c, bars.n);
+                band.columns.cols.assign(row->begin(), row->end());
+            }
+            return;
+        }
+        const double    halves_b = bars.b * 0.5;
+        const long long halves_k = 2 * bars.k_first;
+        const int       halves_n = 2 * bars.n;
+        dest.first_bar  = halves_k;
+        dest.bar_frames = halves_b;
+        dest.bar_x0     = bars.x0;
+        dest.bar_pitch  = bars.p * 0.5;
+        dest.bar_weight = fade.wf;
+        for (int c = 0; c < 2; ++c) {
+            GuiPlateColumns::Band& band = dest.band[c];
+            const std::vector<WaveformColumnRows>* parents = kept_row(
+                kept, audio, c, bars.b, bars.k_first, bars.n, ch[c].y,
+                ch[c].h, area_h, /*keep_b=*/halves_b, gain,
+                warp_frame_map_or_null);
+            const std::vector<WaveformColumnRows>* own =
+                parents ? kept_row(kept, audio, c, halves_b, halves_k,
+                                   halves_n, ch[c].y, ch[c].h, area_h,
+                                   /*keep_b=*/bars.b, gain,
+                                   warp_frame_map_or_null)
+                        : nullptr;
+            band.stored = own != nullptr;
+            if (!band.stored) continue;
+            store_band(band, c, halves_n);
+            std::vector<WaveformColumnRows>& cols = band.columns.cols;
+            cols.resize(own->size());
+            assert(own->size() == 2 * parents->size());
+            for (std::size_t j = 0; j < cols.size(); ++j)
+                cols[j] = waveform_mix_column((*parents)[j >> 1], (*own)[j],
+                                              fade.w);
+        }
+        return;
+    }
     // OUT OF THE FADE BAND: the rung's own row, uniform bars at weight 1.
     if (!fade.in_band) {
         dest.first_bar  = bars.k_first;
@@ -735,14 +938,23 @@ bool GuiPaintHandler::live_plate_published() const {
 //      at every zoom since 2026-10-13 through the curve's range-maximum
 //      index (WaveformRangeMaxIndex, waveform_gain.h; a plain loop before,
 //      its length growing with the source seconds per plate column). So the
-//      synchronous render is O(the bars it asks the producer) — the
-//      area's width over the bars' pitch and a halo of a few, at most the
-//      width out of the fade band; in it the fine row and its parents, N +
-//      2N, up to three times the width just past a whole level — and with
-//      the `waveform_fade_px` key at its floor, 1, every zoom between two
-//      whole levels is in it (render.h's THE PLATE'S BARS and THE FADE
-//      BAND) — at every zoom level with the magnification lamp lit or
-//      dark.
+//      synchronous render is O(the bars it asks the producer), AND WITH THE
+//      KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars, render.h)
+//      THAT IS THE BARS THAT ENTER: a pan's few at the edge it moves
+//      toward, a zoom inside a level's change of range at both edges, in
+//      the fade band the same of the parents' row and the halves', each
+//      row's mix redone over the row (a pass with no producer call); the
+//      whole row only where nothing is kept — the first render under a key
+//      (a lamp flip, an S/T switch, a map edit in target view), a new rung
+//      at a level switch, a jump to a disjoint range (a page turn keeps its
+//      overlap), a moved band height. Its cost without the store, the row
+//      itself — the area's width over the bars' pitch and a halo of a few,
+//      at most the width out of the fade band; in it the fine row and its
+//      parents, N + 2N, up to three times the width just past a whole
+//      level, and with the `waveform_fade_px` key at its floor, 1, every
+//      zoom between two whole levels is in it (render.h's THE PLATE'S BARS
+//      and THE FADE BAND) — is the worker's — at every zoom level with the
+//      magnification lamp lit or dark.
 //
 //      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
 //      (ie, no special handling for during movement and at-standstill — ableton
@@ -839,14 +1051,20 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.supersede = false;
     wf_cache.supersede_warp_frame_map.clear();
 
-    // Render into the LIVE slot directly, by the producer the worker runs.
+    // Render into the LIVE slot directly, by the producer the worker runs,
+    // WITH THE CACHE'S KEPT BARS (architect 2026-11-15, send L;
+    // WaveformKeptBars, render.h): this route is the GUI thread's, the one
+    // that reads and writes the store, keyed by the render inputs' own view,
+    // map and gain identities.
     render_waveform_to_plate_columns(
         wf_cache.columns,
         in.area_w, in.area_h, in.divider_px,
         *in.audio,
         in.vp_start, in.lattice_origin, in.painter_spp,
         in.working_column, in.fade_hundredths, in.gain_hash != 0,
-        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map,
+        &wf_cache.kept_bars, in.is_target, in.warp_frame_map_hash,
+        in.gain_hash);
     // The live slot rewritten in place is a new plate: a revision of its own
     // (the completion swap's rule).
     wf_cache.columns.revision = next_plate_revision();

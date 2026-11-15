@@ -412,8 +412,10 @@ bool render_waveform_columns(GuiRect area,
     if (plate_w <= 0 || plate_h <= 0) return false;
 
     // THE BASIS'S LATTICE (see WaveformBasis: the plate's caller hands THE
-    // BAR BASIS, the frame-0 lattice of step b, its start the first stored
-    // bar's left edge — architect 2026-11-14, send G). Recover the start's
+    // BAR BASIS, the frame-0 lattice of step b, its start the left edge of
+    // the call's first bar — the first stored bar's, or with the kept bars
+    // the first a kept row lacks — architect 2026-11-14, send G; 2026-11-15,
+    // send L). Recover the start's
     // lattice index on ITS OWN LATTICE, of origin basis.origin, with the SAME
     // expression clamp_viewport_start uses to snap a viewport onto its own
     // (nearest_viewport_grid_point), so a start on the lattice round-trips
@@ -624,8 +626,10 @@ bool render_waveform_columns(GuiRect area,
 
     // THE BARS' TIPS, one per column of this call: the dark bar or the lit
     // outer in `outer_tips`, the lit inner in `inner_tips`. The one caller
-    // renders the full plate, so this call's columns ARE the plate; the
-    // neighbors a column's picture reads are the GPU's business.
+    // renders a whole row of bars on its basis — the plate's, or with the
+    // kept bars the bars a kept row lacks (WaveformKeptBars, render.h;
+    // architect 2026-11-15, send L) — so this call's columns ARE its row;
+    // the neighbors a column's picture reads are the GPU's business.
     std::vector<BarTips> outer_tips(static_cast<size_t>(area.w));
     std::vector<BarTips> inner_tips;
     if (gain_or_null) inner_tips.resize(static_cast<size_t>(area.w));

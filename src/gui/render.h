@@ -3621,7 +3621,11 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // just past a landing N reaches W + 6 (W the plate's device width), the
 // row 2 · (W + 6) — and at F = 1 every zoom between two whole levels is
 // in the band (architect 2026-11-14, send K; the frame's cost measured on
-// the tablet).
+// the tablet). ON THE SYNCHRONOUS ROUTE THOSE TWO ROWS ARE KEPT (architect
+// 2026-11-15, send L; WaveformKeptBars below): unmixed, each a row of the
+// store, so a frame asks the producer for the bars that enter either row
+// and redoes the mix over the row; the worker's route asks for both rows
+// whole.
 // THE TIPS ARE MIXED ON THE CPU (waveform_mix_column below): each entry's
 // are (1 − w) · ITS PARENT's + w · ITS OWN, rounded half up to whole quarter
 // rows, the inner present iff present in both — the parent's the main rung's
@@ -3702,11 +3706,14 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE PLATE'S RENDER, render_waveform_columns (declared below): one channel's
 // waveform over `area`, which holds the `area.w` columns starting at GLOBAL
 // column `col0` — i.e. the column sub-range [col0, col0+area.w) of `basis`.
-// The one caller (render_waveform_to_plate_columns, waveform_cache.cpp) is a
-// full-plate render and passes col0 = 0 with area.w == basis.full_width —
-// once a channel band, and in the fade band twice, the main rung's row and
-// the fine rung's (THE PLATE'S BARS' fade band), each a whole row of its
-// own rung by this same contract.
+// The one caller (render_waveform_to_plate_columns, waveform_cache.cpp)
+// passes col0 = 0 with area.w == basis.full_width at every call — once a
+// channel band, and in the fade band twice, the main rung's row and the
+// fine rung's (THE PLATE'S BARS' fade band), each a whole row of its own
+// rung by this same contract; WITH THE KEPT BARS (architect 2026-11-15,
+// send L; WaveformKeptBars below) a call is instead the bars a kept row
+// lacks, a contiguous sub-range of the row on its own bar basis, which
+// writes for each of its bars what the whole row's call writes for it.
 // ITS COLUMNS ARE THE PLATE'S BARS (architect 2026-11-14, send G; THE
 // PLATE'S BARS above owns the rule): the basis is the bar basis, `area.x` 0
 // and `area.w` the row's count of bars — the viewport's bars and their halo,
@@ -3830,7 +3837,11 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // `waveform_fade_px` key at 1, over its last log2(2 / F) at F; with the key
 // at 2, off, the picture steps there once. A pan moves the placement by
 // whole device px, the stored range with it, and re-reads no column
-// differently. NOT PROMISED:
+// differently. SO A FRAME ASKS THE PRODUCER ONLY FOR THE BARS THAT ENTER
+// (architect 2026-11-15, send L): on the synchronous route the bars a
+// render already holds are kept to the next (WaveformKeptBars below), the
+// pure function's numbers needing no second reading; the worker's route
+// asks for its whole row. NOT PROMISED:
 // pixel-phase variation stays (a soft edge crossing the pixel grid), so the
 // shimmer has one cause fewer, not none.
 // THE EDGES: THE STORED ROW CARRIES A HALO past the plate's two side edges
@@ -4113,6 +4124,115 @@ struct WaveformBandColumns {
     int  col_lo = 0, col_hi = 0;
     bool whole = false;
     std::vector<WaveformColumnRows> cols;
+};
+// THE KEPT BARS (architect 2026-11-15, send L: "let's just go ahead and plan
+// to do the bar cut after or together with send L"): THE PRODUCER'S UNMIXED
+// ROWS KEPT FROM ONE RENDER TO THE NEXT, so a render asks
+// render_waveform_columns only for the bars it does not already hold. Inside
+// a level a bar's numbers never change (PAN AND ZOOM INVARIANCE above), so a
+// pan or a zoom inside a level asks for the few bars that enter and drops
+// the ones that leave; the fade band's mix (waveform_mix_column) is redone
+// every frame from the kept parents and halves at the live weight, the kept
+// rows staying unmixed. THE STORED PLATE IS TODAY'S, FIELD FOR FIELD, for
+// every sequence of renders: the use and the row's update are
+// render_waveform_to_plate_columns' (waveform_cache.cpp), which owns that
+// claim.
+// WHY A SUB-RANGE IS EXACT: a bar's WaveformColumnRows reads its global
+// index k and the width b (its two edges nearbyint(k · b) and
+// nearbyint((k + 1) · b), mapped through the warp map in target view), the
+// channel, the audio's pyramid, the gain curve where lit, the map, and the
+// band's rows (y, h) with the clamp plate_h — never the call's column range:
+// the producer seeds its running left edge at the first column's own edge
+// and carries each right edge to the next column, the same expression of the
+// global index either way, and recovers the first bar's index from the bar
+// basis's start as nearbyint(nearbyint(k_a · b) / b), EXACT FOR EVERY b OF A
+// FRAME OR MORE (an integer b divides its own multiple exactly; a
+// half-integer b = c / 2, c odd and at least 3, leaves a tie's half frame,
+// under a third of a bar). The ladder's least b is half the working column,
+// and the column (working_column_frames, app_state.h) is 2 or more on every
+// display at most 1.6 px wide per hertz of the source's rate (70 560 px at
+// 44.1 kHz), so b >= 1 wherever this product runs. So a producer call over
+// bars [k_a, k_a + count) on its own bar basis
+// (waveform_bar_basis({b, k_a, count}), area {0, y, count, h}, col0 0,
+// plate_w count) writes, for each of its bars, exactly what the whole row's
+// call writes for it, and refuses exactly when the whole row's call refuses
+// (no refusal arm reads the column range).
+// THE STORE'S KEY: {is_target, warp_frame_map_hash, gain_hash} — the plate
+// fingerprint's own identities for the view, the map and the lamp
+// (WaveformRenderInputs). A render whose key differs DROPS EVERY ROW first.
+// A ROW is kWaveformKeptRungs (2) a channel, each keyed by {b, channel, the
+// band's y and h, plate_h}, compared exactly (b a double, by ==), holding the
+// unmixed entries of the contiguous global bars [k_lo, k_lo + cols.size()).
+// Two a channel are what the fade band asks every frame, the parents and the
+// halves; a rung no row holds takes that channel's least recently used row
+// that the same render does not also ask for, so at a level switch the rung
+// that drops out is the one replaced and the new rung is computed whole,
+// once.
+// NOT IN ANY KEY, each for its reason: the viewport, the step q and the
+// plate's width (no bar reads them; they choose b and the range alone); the
+// working column (fixed for the audio's life; it only chooses b); the fade
+// key (the kept entries are unmixed, the mix redone from the live weight);
+// the inks (the publication's, never the producer's); THE AUDIO AND ITS GAIN
+// CURVE — the store is a member of the cache (WaveformCache::kept_bars),
+// which lives and dies with one project set's one GuiAudio (run_project,
+// main.cpp: the audio declared before the cache, so destroyed after it),
+// and no writer of the pyramid or the curve can run while a row stands: the
+// pyramid, the samples and the working column are written by GuiAudio::load
+// alone, whose one caller (GuiFileLoader::load_file, once per project set,
+// before the first plate: no render runs while the audio has no frames,
+// compute_waveform_render_inputs) publishes into a fresh GuiAudio
+// move-assigned into the set's before any row exists; the curve is written
+// by its derivation thread before `ready`, and a lit row needs the lamp,
+// which needs `ready` (waveform_magnification_toggle_actionable), after which
+// the curve is immutable — and a dark row (gain_hash 0) reads no curve. The
+// map hash is the plate fingerprint's own 64-bit content hash, trusted here
+// as there.
+// THE THREAD RULE: THE GUI THREAD'S ALONE. The synchronous route
+// (force_synchronous_waveform_rebuild) hands render_waveform_to_plate_columns
+// the cache's store; the worker's route hands it none (the worker's call,
+// waveform_worker.cpp) and runs the function's store-less road to the
+// letter, so nothing is shared with the worker — not even under
+// wait_until_idle's timeout arm, where a worker still running holds a job
+// that names no store.
+// Memory: THE LIVE ENTRIES are four rows' — a parents row at most W + 6
+// entries and a halves row at most 2 · (W + 6), W the plate's device width,
+// 16 bytes each — so at most 6 · (W + 6) entries in all: at the tablet's
+// 2256 px 13 572 entries, about 217 KB, and the scratch's live entries at
+// most one row's, 4 524 (about 72 KB). The allocation is not bounded by
+// that: each row's vector and the scratch keep their capacity (nothing
+// shrinks them, and a victim row is emptied and rekeyed with its
+// capacity), and std::vector's growth can leave a grown row's capacity
+// above its live size — a few hundred KB in all in ordinary use; no
+// worst-case allocation bound is claimed.
+// `scratch` is the producer's out for the bars a row lacks, kept so its
+// capacity is reused; `clock` stamps each row's last use.
+inline constexpr int kWaveformKeptRungs = 2;
+struct WaveformKeptRow {
+    bool      keyed   = false;   // the row holds a key (its entries may be empty)
+    double    b       = 0.0;
+    int       y       = 0;
+    int       h       = 0;
+    int       plate_h = 0;
+    long long k_lo    = 0;
+    uint64_t  used    = 0;
+    std::vector<WaveformColumnRows> cols;
+};
+struct WaveformKeptBars {
+    bool     keyed               = false;
+    bool     is_target           = false;
+    uint64_t warp_frame_map_hash = 0;
+    uint64_t gain_hash           = 0;
+    uint64_t clock               = 0;
+    WaveformKeptRow     rows[2][kWaveformKeptRungs];   // [channel][slot]
+    WaveformBandColumns scratch;
+    void clear() {
+        keyed = false;
+        for (auto& channel_rows : rows)
+            for (WaveformKeptRow& r : channel_rows) {
+                r.keyed = false;
+                r.cols.clear();
+            }
+    }
 };
 // THE COLUMN BOUNDS' ONE PRODUCER (2026-10-13; the contract is THE PLATE'S
 // RENDER above): `area`, `col0`, the basis, the gain and the map, and the
