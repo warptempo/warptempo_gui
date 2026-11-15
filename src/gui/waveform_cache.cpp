@@ -112,7 +112,7 @@ void render_waveform_to_plate_columns(
     // moves, so each bar's purity and both views' identity are untouched.
     // THE TWO BANDS' ONE LAYOUT is waveform_channel_band (render.h), which the
     // canvas's grid and center lines read too (render_canvas), so the lines
-    // stand on these bands' zero rows.
+    // stand on these bands' zeros.
     const WaveformChannelBand b0 = waveform_channel_band(area_h, divider_px, 0);
     const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
     if (b0.h <= 0) return;
@@ -1382,9 +1382,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     cairo_paint(ccr);
     cairo_restore(ccr);
     // CLIENT COORDINATES ON THE SURFACE (FlagCache's head): one integral
-    // translation, so every painter places its cells where it placed them on
-    // the whole-strip surface and the direct road (direct_pixel_target)
-    // still takes the context, carrying the translation and the clip list.
+    // translation, so every painter places its ink where it placed it on
+    // the whole-strip surface and the direct road (direct_pixel_target; the
+    // coverage stamp's, the chips' and the struck bars') still takes the
+    // context, carrying the translation and the clip list.
     cairo_translate(ccr, 0.0, -static_cast<double>(origin_y));
 
     // THE BAND THE SURFACE HOLDS, in client coordinates, handed to every pass

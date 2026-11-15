@@ -8,6 +8,8 @@ proof method. Current behavior and its rationale live at the owning symbols
 (`GuiPlatform` in `src/gui/platform_android.cpp`, the canvas sink in
 `src/gui/canvas_sink.h`); this is the record of how they came to be.
 
+*Note, 2026-11-14 (send J): every line on the canvas stands at its exact place and is drawn at exact coverage through the tint record with real edges; §2's "whole device pixels" is the 2026-10-13 state. The transparency invariant (§3.4) is unchanged: the CPU's pixels inside the canvas paint area are still alpha 0 or 255.*
+
 *Note, 2026-10-30: the cpu canvas, the cairo sink and the laptop's twin
 were dropped with the laptop GUI (the CLI the laptop's one product). The GL
 canvas is the one road on the one platform. §5's identity proofs compare

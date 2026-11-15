@@ -62,29 +62,20 @@
 // row 8's bars and the border under row 8 stood 2026-10-09 to 2026-10-22;
 // the program ring round the column 2026-10-22 to 2026-11-02; git history.)
 //
-// THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN ONE-DEVICE-PX CELLS AND SKIN
-// LENGTHS, NOT IN ROUNDED W (render.h's cue_triangle_unit_px and the
-// label's lengths beside it): THE TRIANGLE'S UNIT IS ONE DEVICE PX AT EVERY SCALE
-// (architect 2026-10-26: "I think we should make the triangle smaller …
-// Why not simply leave unscaled? That would preserve the stem/flag size
-// relation from CEP"; its own number since the stems became one W,
-// 2026-11-04, "untouched: the triangle's cell and the ruler's head"), so a
-// triangle's whole cells — Cool Edit's aliased staircase,
-// paint_ce_cue_triangle — stand beside the one-W stem, CENTERED ON THE
-// FRAME'S COLUMN, the apex the frame's column and every row centred on it
-// with no remainder (the stem straddling the frame, fill_waveform_line's
-// rule since 2026-11-06, so on the tablet the apex points at the stem's
-// right pixel: architect 2026-11-06, session 67, "it should point at the
-// right column"); THE MARKER'S CHIP is that staircase in a one-W outline, a
-// second, larger staircase of the same cells (architect 2026-11-04, mock
-// g1; render.h's cue_chip_rows: 25 x 13 round 15 x 8 on the tablet at
-// 200 %, 11 x 6 round 7 x 4 at 100 %), the ruler's head the same chip. ITS
+// THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN SKIN LENGTHS (render.h's cue
+// block and the label's lengths beside it): THE MARKER'S CHIP IS A
+// SMOOTH-EDGED TRIANGLE IN A ONE-W OUTLINE AT ITS MARK'S EXACT PLACE, its
+// apex on the stem's center (architect 2026-11-14 night, send J: "I think
+// the chips should also go anti-aliased", "Agree on both.";
+// cool_edit_paint.h's THE CUE'S CHIP), at the size the whole-cell chip had
+// (architect 2026-10-26: "I think we should make the triangle smaller";
+// the one-W outline 2026-11-04, mock g1; render.h's cue_chip_h_px: the
+// outer 13 device px tall and 26 wide on the tablet at 200 %, 6 and 12 at
+// 100 %), the ruler's head the same chip. ITS
 // ROW COUNT IS NO FIELD HERE: it is a skin length, 4 W through scaled_px,
 // rounded at the element (architect 2026-10-26 ~13:40, "why not just
 // simple scale? tablet is only real surface"; render.h's cue_triangle_rows
-// and kCueTriangleRowsW, the one owner — 8 rows at 200 %, 4 at 100 %: the
-// fill is a whole 4 W; its staircase's CELLS are one device px each,
-// cue_triangle_unit_px, the distinct thing that does not scale). THE
+// and kCueTriangleRowsW, the one owner — 8 px at 200 %, 4 at 100 %). THE
 // LABEL'S LENGTHS ARE SKIN LENGTHS TOO, scaled with the text they place
 // (the text round, architect 2026-11-03): the fill's pad, the segment gap
 // and the flag editor's outline (render.h's cue_fill_pad_px,
@@ -144,7 +135,7 @@ struct ProgramSpec {
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each
     // channel's half height divided into this many, a line at every inner
-    // division above and below the zero row (render_canvas, render.h's row-6
+    // division above and below the zero (render_canvas, render.h's row-6
     // canvas paragraph).
     int  grid_divisions;
     // THE TRIM BAR'S FIELD, IN W (architect 2026-11-01 night, M5c / M5h,

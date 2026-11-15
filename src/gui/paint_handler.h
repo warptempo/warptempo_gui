@@ -366,7 +366,7 @@ struct WaveformCache {
 // rectangles, each the lane's top row and cue_fill_h_px() tall (the marker
 // lane's composite height), so no cached label pixel leaves those rows
 // however far a glyph overshoots; the chips stand on the lane's own rows
-// under a clip of those rows (paint_ce_cue_triangle's cells,
+// under a clip of those rows (the chip's stamp, CoverageStampPass::chip,
 // cool_edit_paint.h; paint_cues); and the flag editor and its riding cells
 // paint later onto the frame, never into this surface. The ruler lane above
 // is in the band as its clean upper boundary, with margin, not because
@@ -970,23 +970,27 @@ private:
     // architect 2026-11-12). Neither helper had any other consumer, so both
     // went with the pass.)
 
-    // The phase-reset overlay band's clipped screen-x span for this frame, or
+    // The phase-reset overlay band's two edges for this frame, or
     // valid == false when no band shows (wrong view, no eligible focused reset,
     // a suppressing multi-selection, a sub-pixel width, or a span clipped
-    // wholly offscreen). Kept SEPARATE from its one consumer
+    // wholly offscreen — each decided on the edges' COLUMNS). Kept SEPARATE from its one consumer
     // (paint_phase_reset_overlay_ring): it owns every visibility gate as well as
     // the span, and Selection::phase_overlay_subject mirrors its selection-state
     // gates (never the geometry ones) for the damage owners and for Space's
     // lead-in audition — one rule, that mirror's readers enumerated at its own
     // declaration in selection.h.
     struct PhaseResetOverlayBand {
-        bool   valid  = false;
-        double x0     = 0.0;   // left screen x, clipped to the area
-        double x1     = 0.0;   // right screen x, exclusive, clipped
-        // The reset's own column in screen x, UNCLIPPED (left of x0 when the
-        // reset stands off the area's left edge): the ring's left side,
-        // painted only where it stands on the area.
-        double stem_x = 0.0;
+        bool   valid    = false;
+        // The reset's own column, counted from the area's first, UNCLIPPED
+        // (negative when the reset stands off the area's left edge): the
+        // gate of the ring's left side, painted only where the column is
+        // the area's.
+        int    left_col = 0;
+        // THE EXACT PLACES the ring is painted at (architect 2026-11-14,
+        // send J; displayed_x_at, device px from the area's left edge,
+        // UNCLIPPED): the reset's own and the seed grain's end.
+        double left_x   = 0.0;
+        double right_x  = 0.0;
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
 
@@ -997,9 +1001,11 @@ private:
     // bottom line, the timestamp ladder's ticks and digits and the playhead's
     // head (the `playhead_head` role) — and the MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
-    // every pan/zoom along with the strip content it is painted beside.
-    // PUBLISHES the head's hit as painted (AppState::playhead_head_hit, the
-    // head drag's target, 2026-10-09).
+    // every pan/zoom along with the strip content it is painted beside; the
+    // ticks, the head and the digits stand at their exact places (architect
+    // 2026-11-14, send J; the rules at the definition).
+    // PUBLISHES the head's hit on its column (AppState::playhead_head_hit,
+    // the head drag's target, 2026-10-09).
     void paint_ruler_row(cairo_t* cr);
     // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went
     // 2026-10-21) — the ICON ROW (top lane 1 since 2026-10-22, row 4: the
@@ -1117,8 +1123,9 @@ private:
     // the frame's draw list (build_canvas_list).
     void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
     // The overlay band's RING — the phase-reset overlay's whole visual, four
-    // solid one-W lines in the `cue_outline` (architect 2026-11-04), its
-    // left side on the reset's column — painted AFTER the plate and before
+    // solid one-W lines in the `cue_outline` (architect 2026-11-04), each at
+    // its exact place, its left side centered on the reset's frame
+    // (architect 2026-11-14, send J) — painted AFTER the plate and before
     // the stems, over the ink like every line on the canvas.
     void paint_phase_reset_overlay_ring(GuiCanvasSink& sink,
                                         const GuiRect& area);
@@ -1135,18 +1142,20 @@ private:
     // THE SELECTION STEM (architect 2026-11-05, his pick a2 of tmp/s42,
     // reversing 2026-11-04's coincidence stem) — the per-frame waveform
     // overlay: on every published entry, a SOLID ONE-W `cue_outline` line
-    // down the canvas's whole height (render.h's marker-lane paragraph; the
-    // `h` view's cues alike, each at its own column). The painter publishes
+    // down the canvas's whole height at the entry's exact place (render.h's
+    // marker-lane paragraph; the `h` view's cues alike, each at its own
+    // place). The painter publishes
     // an entry for every SELECTED cue, enabled or disabled (resolve_flag_face's
     // `stem`; architect 2026-11-11, session 106); an unselected marker stems
-    // never, the playhead on it or not. The stem paints OVER the playhead's line (architect 2026-11-04),
-    // so the dark stem is what shows on a selected marker the playhead
-    // rests on.
+    // never, the playhead on it or not. The stem stands in the playhead's
+    // line's place (architect 2026-11-04; the line under it not drawn,
+    // 2026-11-14), so the dark stem is what shows on a selected marker the
+    // playhead rests on.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
-    // than walking the store: the stem stands on its cue's apex column, and
-    // that column is the one the painter already resolved on the displayed
-    // basis, so stem and cue cannot land on different pixels during an async
+    // than walking the store: the stem stands under its cue's apex, at the
+    // exact place the painter already resolved on the displayed
+    // basis, so stem and cue cannot part during an async
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
@@ -1155,32 +1164,46 @@ private:
     // nothing.
     void paint_marker_stems(GuiCanvasSink& sink, const GuiRect& area);
     // THE STEM'S HEAD SEGMENT (2026-11-04, mock j1): the marker lane's last
-    // row and the ground line under it on the standing stems' columns, the
-    // chrome's half of the same stem, painted after the flag blit.
+    // row and the ground line under it on the standing stems' real spans of
+    // columns, the chrome's half of the same stem, stamped after the flag
+    // blit.
     void paint_marker_stem_heads(cairo_t* cr);
-    // THE ONE GEOMETRY both stem painters read: one rect per stash entry,
-    // over rows [y0, y1) on its one-W columns gated to `area`'s (the rule at
-    // paint_marker_stems).
-    std::vector<GuiRect> standing_stem_rects(const GuiRect& area, int y0,
-                                             int y1) const;
+    // THE ONE GEOMETRY both stem painters read (architect 2026-11-14, send
+    // J): one real span of window columns per DISTINCT EXACT PLACE among the
+    // stash's entries — the one-W line centered on that place, gated on the
+    // entry's column and cut to `area`'s columns (waveform_gated_line_span,
+    // render.h; the rule at paint_marker_stems), two entries on one exact x
+    // one span (the coincident lines) — so the stem's two halves paint one
+    // interval, once.
+    std::vector<WaveformLineSpan> standing_stem_spans(
+        const GuiRect& area) const;
+    // THE COINCIDENT LINES' TEST (architect 2026-11-14, send J; the rule at
+    // paint_playheads): whether a stem standing_stem_spans paints stands on
+    // THE SAME EXACT x (device px from the area's left edge, the doubles
+    // equal) — asked by the two lines that then yield to it, the playhead's
+    // and the lead-in ring's left side.
+    bool stem_stands_at(const GuiRect& area, double x) const;
 
     // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
     // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W
-    // opaque line in the palette's static `playhead_line` (Default 81E1EA,
-    // render_playhead's paragraph, 2026-11-12) — before the
-    // selection stems, which stand over it.
+    // line at the cursor's exact place in the palette's static
+    // `playhead_line` (Default 81E1EA, render_playhead's paragraph,
+    // 2026-11-12) — before the selection stems, and not drawn where one
+    // stands on its own exact place (THE COINCIDENT LINES, the definition).
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_playheads and paint_marker_stems: the scanner draws OVER the stems
     // (and over the cursor where they meet) instead of being erased by every
-    // marker it sweeps past. Waveform-only, gated on playhead_scanner_active —
+    // marker it sweeps past, at the predictor position's exact place.
+    // Waveform-only, gated on playhead_scanner_active —
     // see the definition for the ruling.
     void paint_scanner(GuiCanvasSink& sink, const GuiRect& area);
     void paint_strip_drag_anchor(GuiCanvasSink& sink, const GuiRect& area);
     // THE SWEEP HIGHLIGHT (architect 2026-11-12) — the canvas list's LAST
     // record while a TRIM or ADD SEL sweep's pointer is down: one tint
-    // blending the swept span toward white over everything the list drew
-    // there. The rule at the definition.
+    // blending the swept span — TRIM's on the trim bar's span's real edges —
+    // toward white over everything the list drew there. The rule at the
+    // definition.
     void paint_sweep_highlight(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): every modal's controls on the modal family's

@@ -1223,11 +1223,27 @@ int scanner_pixel_x(const AppState& a, int64_t vp_start, double spp,
     // per-frame viewport rescale during a strip-drag zoom slides the scanner
     // smoothly instead of jittering on integer-frame steps. The position stays
     // continuous until this one quantization, displayed_column_at's nearest
-    // lattice point on the basis's own lattice index; the line paints as a
-    // hard waveform_line_px()-wide rect on that column, straddling its frame
-    // (render_playhead, waveform_line_cols).
+    // lattice point on the basis's own lattice index — the line's gate and
+    // its damage box's seat; the line itself paints at the position's exact
+    // place (scanner_exact_x below; render_playhead).
     return displayed_column_at(a.playhead_scanner_precise,
                                static_cast<double>(vp_start), spp, origin);
+}
+
+// The exact places (the rule at the declarations, app_state.h): the column
+// siblings' own arguments through displayed_x_at.
+double playhead_exact_x(const AppState& a, int64_t vp_start, double spp,
+                        int64_t origin) {
+    if (spp <= 0.0) return -1.0;
+    return displayed_x_at(static_cast<double>(a.playhead_cursor_sample),
+                          static_cast<double>(vp_start), spp, origin);
+}
+
+double scanner_exact_x(const AppState& a, int64_t vp_start, double spp,
+                       int64_t origin) {
+    if (spp <= 0.0) return -1.0;
+    return displayed_x_at(a.playhead_scanner_precise,
+                          static_cast<double>(vp_start), spp, origin);
 }
 
 // Shrink-and-pad: produce a union rectangle covering both inputs. Used to
@@ -1253,19 +1269,20 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // invalidates what comes out; the tick's offscreen fallback in this file reads
 // only the WIDTH, as an emptiness test. Both are the narrow-on-plate shape,
 // reserved for the two per-frame scanner sites (the rule and the per-site table
-// are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
-// (2026-10-09, ON SCREEN IS AS PAINTED): the columns the head's triangle
-// covers, centred on the stem's column (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the painter's own cells: the head
-// wears the chip's outline since 2026-11-04) — the chip's rows less one
-// left, its rows right: 12 + 13 = 25 device px on the tablet at 200 %, 5 +
-// 6 = 11 at 100 % (the cells one device px, the rows scaled, 2026-10-26; no shadow
-// since 2026-11-02) — its rows the whole band from the window's top below — which
-// also holds the one-W line of the scanner and the cursor, on the column
-// (col − t / 2 .. col − t / 2 + t − 1, waveform_line_px: the column left of
-// it and the column itself on the tablet, the line straddling its frame,
-// inside the box's 12 columns left), so a move repaints every column the
-// head and the line stood on.
+// are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED REACH
+// (2026-10-09, ON SCREEN IS AS PAINTED; the reach architect 2026-11-14,
+// send J): the head is the chip's drawing at the playhead's exact x, so the
+// columns it can touch are [col − H − 1, col + H + 1), H the chip's height
+// (cue_chip_paint_reach_px, render.h: 14 each side, 28 device px on the
+// tablet at 200 %, 7 each side at 100 %) — its rows the whole band from the
+// window's top below — which also holds the one-W line of the scanner and
+// the cursor at its exact place: the line's x lies within half a px of
+// `col`, so the cells its real interval [x − t / 2, x + t / 2] touches lie
+// in [col − t / 2 − 1, col + t / 2 + 1), t waveform_line_px — two columns
+// either side of the column's left edge on the tablet, and inside the box
+// at every scale (H is the fill's two rows or more, t above and t or more
+// below, cue_chip_h_px, so the box reaches at least 2 t + 3 columns each
+// side) — so a move repaints every column the head and the line stood on.
 // `col` is the waveform's own column (offset from area.x, as every
 // playhead pixel is) — THE PAINTED COLUMN, playhead_pixel_x /
 // scanner_pixel_x's on the plate basis, the same number render_playhead
@@ -1276,9 +1293,9 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // side since 2026-10-09.
 GuiRect playhead_invalidate_rect(const GuiRect& area, int px_col) {
     const int col = area.x + px_col;
-    const int x0 = std::max(area.x, col - cue_triangle_half_w_px());
-    const int x1 = std::min(area.x + area.w,
-                            col + cue_triangle_reach_right_px());
+    const int reach = cue_chip_paint_reach_px();
+    const int x0 = std::max(area.x, col - reach);
+    const int x1 = std::min(area.x + area.w, col + reach);
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's line inside the waveform AND

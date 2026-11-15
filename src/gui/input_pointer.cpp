@@ -2036,11 +2036,13 @@ double GuiInputHandler::nav_drag_zoom_level(double dx) const {
 // A KNOWN LIMIT, ACCEPTED (architect 2026-11-06, session 68, Astra's
 // localization review): the column held after a wall re-seat is fractional
 // (A / q, e.g. 100.5), and reversing the zoom, the camera's whole-frame
-// rounding can carry the anchor frame's projection across that half-column
-// threshold, so the painted anchor stem (strip_anchor_stem_column, which
-// reprojects the frame each paint) may alternate by one device px. A held
-// raster tie choice or a subframe camera phase would remove it and is NOT
-// TAKEN: it needs a pan or zoom all the way out against a wall and back in.
+// rounding moves the anchor frame's projection by a fraction of a px, so
+// the painted anchor stem (strip_anchor_stem_x, warp_frame_map_view.h,
+// which reprojects the frame to its exact place each paint; architect
+// 2026-11-14, send J) may alternate by that fraction, never by a whole
+// device px: it stands on no rounded column. A held raster tie choice or a
+// subframe camera phase would remove it and is NOT TAKEN: it needs a pan
+// or zoom all the way out against a wall and back in.
 // Returns the pivot's (clamped) column; the caller guards a live waveform
 // and a positive spp.
 double GuiInputHandler::rebind_zoom_pivot_into_waveform(
@@ -2365,10 +2367,22 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // re-read from the live viewport through the edge trick's one owner,
         // which pins a frame the page carried off the waveform at the edge
         // pixel and rebinds it to that pixel's content.
+        // A REBIND THAT MOVES THE ANCHOR'S FRAME OWES THE STEM'S DAMAGE
+        // (architect 2026-11-14, send J; canvas_sink.h's damage contract):
+        // the stem is painted at the frame's exact place
+        // (paint_strip_drag_anchor), and the rebound frame's place can lie a
+        // fraction of a px off the edge the old frame's was clamped to (the
+        // start's rounding residue, at most 0.5 / q px), while this frame
+        // may apply nothing — the applier's true-no-op return — and so
+        // damage nothing of its own. Paint's debt alone: the gesture reads
+        // nothing of it.
         if (z.zoom_vp != app.viewport_start_sample ||
             z.zoom_origin != app.viewport_lattice_origin ||
-            z.zoom_level != app.zoom_level)
+            z.zoom_level != app.zoom_level) {
+            const double held = z.anchor_sample;
             z.anchor_col = rebind_zoom_pivot_into_waveform(z.anchor_sample);
+            if (z.anchor_sample != held) viewport.invalidate_waveform_area();
+        }
         anchor_col    = z.anchor_col;
         anchor_sample = z.anchor_sample;
     }
@@ -2468,8 +2482,14 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
                 std::nearbyint(anchor_sample - anchor_col * spp_now));
             if (nearest_viewport_grid_point(requested, spp_now,
                                             app.viewport_lattice_origin) !=
-                app.viewport_start_sample)
+                app.viewport_start_sample) {
+                // The stem's damage where the rebind moved the anchor's
+                // frame, re-seat (B)'s rule above.
+                const double held = z.anchor_sample;
                 z.anchor_col = rebind_zoom_pivot_into_waveform(z.anchor_sample);
+                if (z.anchor_sample != held)
+                    viewport.invalidate_waveform_area();
+            }
         }
         // The camera this frame settled, which re-seat (B) compares.
         z.zoom_vp     = app.viewport_start_sample;
@@ -5828,13 +5848,13 @@ void GuiInputHandler::arm_selection_sweep_at(int anchor_col, int x, int y) {
 //     while the pointer is down (architect 2026-11-12: "the add selection
 //     relies on the marker stems, which are dark in color, and they don't
 //     show exactly the bound that's being swept"; RegionDragState's head,
-//     sweep_highlight_rect), on this same span, so a marker is selected iff
+//     sweep_highlight_columns), on this same span, so a marker is selected iff
 //     its column is lit. The playhead and playback wait for the lift
 //     (commit_region_sweep), which takes the highlight away.
 void GuiInputHandler::apply_selection_sweep_to_column(int pen_col) {
     RegionDragState& d = app.region_drag;
-    // THE HIGHLIGHT'S MOVING END FIRST (RegionDragState::pen_col; the rect's
-    // one owner sweep_highlight_rect, app_state.h), ahead of the membership
+    // THE HIGHLIGHT'S MOVING END FIRST (RegionDragState::pen_col; the span's
+    // one owner sweep_highlight_columns, app_state.h), ahead of the membership
     // and its early return, with the damage its move owes on the canvas's
     // rows (canvas_sink.h's damage contract): at the first crossing the
     // whole new span, after it the columns from the old pen column to the

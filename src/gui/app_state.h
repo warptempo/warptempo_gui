@@ -836,8 +836,9 @@ struct UndoHistory {
 // white, the canvas list's LAST record, over everything the list draws in
 // the waveform area, every line included ("everything in waveform area";
 // the enumeration at paint_sweep_highlight, paint_handler.cpp), its columns
-// DERIVED, never stored for this former — the trim bar's own span columns
-// from the trim (sweep_highlight_rect below), raised at the first ACCEPTED
+// DERIVED, never stored for this former — the trim bar's own span, its two
+// real edges, from the trim (sweep_highlight_columns below; architect
+// 2026-11-14, send J), raised at the first ACCEPTED
 // trim write (`wrote_trim`: before it the trim is the old one) and gone at
 // the end (commit_region_sweep). Read-only-legal, exactly as the trim bar's own gestures are: trim
 // is BAND, not authored content (the ruling at read_only_key_blocked). ONE
@@ -945,7 +946,8 @@ struct RegionDragState {
     // first (architect 2026-11-12): THE SWEEP HIGHLIGHT'S MOVING END on this
     // former, the highlight standing on anchor_col .. pen_col, both
     // inclusive — the membership's own span, so a marker is selected iff its
-    // column is lit (sweep_highlight_rect below). Written at every motion
+    // column is lit (sweep_highlight_columns below: whole pen columns on
+    // this former). Written at every motion
     // past the gate ahead of the membership (apply_selection_sweep_to_column,
     // which damages the columns the move changed).
     int           pen_col      = -1;
@@ -4944,7 +4946,9 @@ struct AppState {
     // per-tab; the scanner is session-only and not persisted.
     int64_t playhead_scanner_sample = 0;
     // Continuous (sub-frame) sibling of playhead_scanner_sample: the scanner's
-    // DRAWN pixel is computed from this double (scanner_pixel_x) so a per-frame
+    // DRAWN PLACE is computed from this double (scanner_exact_x, its exact
+    // place since 2026-11-14, send J; scanner_pixel_x its column, the gate
+    // and the damage box's seat) so a per-frame
     // viewport rescale during a strip-drag zoom slides the scanner smoothly
     // instead of stepping on integer frames (smoothness over accuracy —
     // precision is judged at standstill). Written only on the active path: the
@@ -5854,8 +5858,10 @@ struct AppState {
     // item's one cue on a waveform column (2026-11-11); the painter
     // paints every entry (2026-11-05). Since
     // the stems-inert ruling (architect 2026-08-12) `marker_stems` is
-    // PAINT-ONLY: its one reader is the per-frame stem painter
-    // (GuiPaintHandler::paint_marker_stems), the pointer never reads it
+    // PAINT-ONLY: its readers are the per-frame stem painter's geometry
+    // (GuiPaintHandler::standing_stem_spans, both halves of the stem) and
+    // the coincident-lines test the playhead's line and the lead-in ring ask
+    // (stem_stands_at, architect 2026-11-14, send J), the pointer never reads it
     // (hit_test_marker_stem is deleted — the record is at its retired site
     // far below), and only `flag_hit_rects` still answers clicks.
     //
@@ -12770,6 +12776,21 @@ int     playhead_pixel_x(const AppState& a, int64_t vp_start, double spp,
 // contract, so every caller reads this behind that gate. Explicit-basis only,
 // for the reason given on playhead_pixel_x above.
 int     scanner_pixel_x(const AppState& a, int64_t vp_start, double spp,
+                        int64_t origin);
+// THE CURSOR'S AND THE SCANNER'S EXACT PLACE (architect 2026-11-14, send J:
+// "the anti-aliasing I would like to commit to that as well, the full
+// anti-aliasing"): displayed_x_at (warp_frame_map_view.h) of the very value
+// its column sibling above rounds — the resting cursor's frame, the
+// scanner's continuous predictor position — on the same explicit basis, in
+// device px from waveform_area.x: WHERE THE LINE IS PAINTED
+// (render_playhead), within half a px of the column. The column stays the
+// line's gate, the damage box's seat and every test over the playhead; -1
+// on a degenerate spp, as the column's (the gate refuses it there).
+// scanner_exact_x is meaningful only while playhead_scanner_active, as
+// scanner_pixel_x.
+double  playhead_exact_x(const AppState& a, int64_t vp_start, double spp,
+                         int64_t origin);
+double  scanner_exact_x(const AppState& a, int64_t vp_start, double spp,
                         int64_t origin);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the deformed total derived from the warp_frame_map cache
@@ -19805,25 +19826,38 @@ struct ItemViewportBasis {
 ItemViewportBasis item_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio);
 
-// THE SWEEP HIGHLIGHT'S RECT (architect 2026-11-12; the picture at
+// THE SWEEP HIGHLIGHT'S COLUMNS (architect 2026-11-12; the picture at
 // RegionDragState's head, the painter paint_sweep_highlight): the ONE
 // answer to "which columns does the highlight stand on right now", read by
 // the painter and by every damage site, so the picture and its damage
-// cannot fork (ON SCREEN IS AS PAINTED). The rect is those columns over
-// waveform_area's whole rows (the canvas), EMPTY unless a sweep stands
-// MOVED (region_drag.active && .moved), and then:
+// cannot fork (ON SCREEN IS AS PAINTED). THE COLUMNS ARE A REAL SPAN
+// [x0, x1] in window px (architect 2026-11-14, send J), over
+// waveform_area's whole rows (the canvas), EMPTY (x1 <= x0) unless a sweep
+// stands MOVED (region_drag.active && .moved), and then:
 //   * THE ADD SEL FORMER (`select`): anchor_col .. pen_col, both inclusive
 //     — apply_selection_sweep_to_column's own lo .. hi, the membership's
-//     span — empty before the first motion past the gate (pen_col -1).
+//     span, WHOLE COLUMNS (pen columns, no exact place) — empty before the
+//     first motion past the gate (pen_col -1).
 //   * THE TRIM FORMER: empty until the first accepted trim write
-//     (`wrote_trim`); then the trim bar's own span columns, DERIVED from the
-//     trim on the bar's basis and owners — the item basis
+//     (`wrote_trim`); then the trim bar's own span, ITS REAL EDGES, DERIVED
+//     from the trim on the bar's basis and owners — the item basis
 //     (item_viewport_basis, its effective width the column denominator),
 //     the displayed map (displayed_or_live_target_map through
 //     displayed_trim_ms), trim_bound_column and trim_span_columns, exactly
 //     paint_trim's chain — so the highlight stands under the bar's span
-//     column for column, the song's walls included.
-// A zero-width answer is the empty rect, which paints and damages nothing.
+//     edge for edge, the song's walls included.
+// THE PAINTER lays the span through the sink's blended rect at the
+// `sweep_highlight` key's percent; THE DAMAGE SITES take
+// sweep_highlight_rect, THE SPAN'S BOUNDING CELLS — its floor through its
+// ceiling over the canvas's rows, every cell the blend touches. An empty
+// span is the empty rect, which paints and damages nothing.
+struct SweepHighlightColumns {
+    double x0 = 0.0;
+    double x1 = 0.0;
+    bool empty() const { return x1 <= x0; }
+};
+SweepHighlightColumns sweep_highlight_columns(const AppState& app,
+                                              const GuiAudio& audio);
 GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio);
 
 // Promoted from a lambda in main(). Eligible iff the warp marker at `idx` has

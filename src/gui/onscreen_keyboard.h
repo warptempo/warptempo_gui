@@ -691,8 +691,11 @@ inline int block_x_px(const GuiRect& band) {
 // apply_key_height / apply_key_width / apply_run_gap / apply_osk_key_size /
 // apply_gui_scale, damages the whole window):
 //   the natural band = 2 × the pad floor + five key rows + four gaps;
-//   shortfall_px = (the window's foot − the natural band) − the line's top
-//     row (lower_center_line_top_row, render.h);
+//   shortfall_px = (the window's foot − the natural band) − the line's
+//     first row, THE FIRST ROW THE LINE TOUCHES (lower_center_line_top_row,
+//     render.h; architect 2026-11-14, send J: the line is centered on its
+//     band's exact zero, so on the tablet's odd band its first row is the
+//     half-covered one above the zero's row);
 //   shortfall_px ≤ 0: each pad the floor;
 //   else extra_w = the shortfall in whole W ROUNDED UP (px over the device
 //     px per W), MADE EVEN by one W when odd, split equally — each pad
@@ -706,19 +709,19 @@ inline int block_x_px(const GuiRect& band) {
 // floor).
 // Worked on the tablet at 200 % (2304 x 1440):
 //   AT THE DEFAULTS (key_height 17, osk_key_h 30): the floor 7.5 → 8 W
-//     (16 px); the line on rows 1056..1057, the natural band
-//     16 + 300 + 8 + 16 = 340 rows from 1100 — 44 px = 22 W short, even →
-//     each pad 8 + 11 = 19 W (38 px), the band 384 rows from 1056, its
-//     first key row 1094.
+//     (16 px); the line on rows 1055..1057 (half, whole, half), its first
+//     row 1055; the natural band 16 + 300 + 8 + 16 = 340 rows from 1100 —
+//     45 px = 22.5 W short, up to 23, made even 24 → each pad 8 + 12 = 20 W
+//     (40 px), the band 388 rows from 1052, its first key row 1092.
 //   AT HIS TUNING (key_height 25, osk_key_h 35): the floor 8.75 → 9 W
-//     (18 px); the line on rows 1048..1049, the natural band
-//     18 + 350 + 8 + 18 = 394 rows from 1046 — above the line, no shortfall
-//     → each pad 9 W (18 px), the floor binding, the band 394 rows from 1046
-//     (the session-96 capture's own), its first key row 1064.
+//     (18 px); the line on rows 1047..1049, its first row 1047; the natural
+//     band 18 + 350 + 8 + 18 = 394 rows from 1046 — above the line, no
+//     shortfall → each pad 9 W (18 px), the floor binding, the band 394 rows
+//     from 1046 (the session-96 capture's own), its first key row 1064.
 //   THE FLOOR ALONE (key_height 17, osk_key_h 38): the floor 9.5 → 10 W
 //     (20 px); the natural band 20 + 380 + 8 + 20 = 428 rows from 1012,
-//     44 rows above the line on 1056 → each pad 10 W, the band 428 rows
-//     from 1012, its first key row 1032.
+//     43 rows above the line's first row 1055 → each pad 10 W, the band 428
+//     rows from 1012, its first key row 1032.
 inline double edge_pad_floor_w() {
     return std::nearbyint(osk_key_height_w() / 4.0);
 }

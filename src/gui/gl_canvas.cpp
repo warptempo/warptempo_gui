@@ -32,7 +32,10 @@
 // source-over (kListFragmentShader's head; the rule at
 // render_waveform_columns' head, render.h), and THE TINT (architect
 // 2026-11-12, the sweep highlight), the canvas's second blend, a rect
-// blended source-over toward its word under the same blend function.
+// blended source-over toward its word under the same blend function — A
+// RECT WITH REAL EDGES (architect 2026-11-14, send J), each pixel's alpha
+// scaled by the exact area of it the rect covers, the canvas's lines at
+// their exact places its records at 100 percent.
 
 namespace {
 
@@ -90,13 +93,28 @@ constexpr const char* kCanvasFragmentShader =
 // (u_height the surface's height, H) — every comparison in highp int. A pixel
 // outside the instance's rect is discarded (the quad's float edges never
 // decide coverage); a RECT (kind 0) writes its word; THE TINT (kind 2,
-// architect 2026-11-12, the sweep highlight) writes its word premultiplied
-// by its alpha a = word2 / 100 with alpha a, (word · a, a), so the blend
-// glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA) lays G · (1 − a) + word · a
-// on the pixel beneath, G — whatever the earlier records drew there, the
-// plate's ink and core included — rounded once to a byte, the canvas's
-// second blend and byte space like the first (the framebuffer is plain
-// RGBA, never sRGB); THE PLATE (kind 1) is
+// architect 2026-11-12, the sweep highlight; its real edges architect
+// 2026-11-14, send J, the canvas's lines at their exact places) writes its
+// word premultiplied by its alpha a with alpha a, (word · a, a), so the
+// blend glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA) lays G · (1 − a) +
+// word · a on the pixel beneath, G — whatever the earlier records drew
+// there, the plate's ink and core included — rounded once to a byte, the
+// canvas's second blend and byte space like the first (the framebuffer is
+// plain RGBA, never sRGB). THE TINT'S ALPHA IS ITS PERCENT TIMES THE
+// PIXEL'S EXACT COVERAGE: the record's rect is the cells its real rect
+// touches and the fourth instance attribute's floats are that real rect's
+// edges e = {x0, y0, x1, y1} in device px from the rect's corner
+// (GuiCanvasSink::blended_rect, canvas_sink.cpp), and at the pixel (px,
+// py), every operation one highp float operation in this order,
+//     lx = float(px − rect.x), ly = float(py − rect.y)          (exact)
+//     cx = clamp(min(lx + 1, e.z) − max(lx, e.x), 0, 1)
+//     cy = clamp(min(ly + 1, e.w) − max(ly, e.y), 0, 1)
+//     a  = (float(word2) / 100) · (cx · cy)
+// — cx and cy the lengths of the pixel's column and row inside the edges,
+// their product the area. WHOLE EDGES GIVE cx = cy = 1 EXACTLY on every
+// pixel of the rect, so a tint on whole cells is word2 / 100 itself on
+// every one of them, and at 100 percent the word lands as an opaque rect's
+// does (src · 1 + dst · 0); THE PLATE (kind 1) is
 // THE WAVEFORM'S ANTIALIASING (architect 2026-10-30;
 // the rule at render_waveform_columns' head, render.h; the grow's key
 // 2026-10-31, the 4x grid ruled for good that afternoon at render.h's
@@ -178,8 +196,8 @@ constexpr const char* kCanvasFragmentShader =
 //     — THE MERGED ARM's invP, invI and invO, the second 1 where 2h is 0
 //     (the band's start has no gap inside a pair, nothing reads it there,
 //     and no 1 / 0 is formed), the products by 2 and by 0.25 exact; zero on
-//     every record but a plate's — a rect's and a tint's floats are zero,
-//     and no reciprocal of them is evaluated.
+//     every record but a plate's — a rect's floats are zero and a tint's
+//     are its edges, and no reciprocal of either is evaluated.
 //     THE PICTURE IS MADE IN SCREEN SUBCOLUMNS: s = 4i +
 //     m of the pixel i = px − rect.x (m = 0 .. 3; a neighbor's s is
 //     negative or past the rect at the plate's sides), its centre xs = (s +
@@ -622,7 +640,7 @@ constexpr const char* kCanvasFragmentShader =
 // channel order. Primitives write in instance order (GL's primitive order
 // within a draw), so a later record overwrites an earlier one, or blends
 // over it (the plate's fringe, the tint), the paint order; under the blend
-// an opaque record's word lands exactly (src · 1 + dst · 0).
+// a word written at alpha 1 lands exactly (src · 1 + dst · 0).
 constexpr const char* kListVertexShader =
     "#version 300 es\n"
     "precision highp float;\n"
@@ -1232,9 +1250,18 @@ constexpr const char* kListFragmentShader =
     "        return;\n"
     "    }\n"
     // THE TINT (the head's tint paragraph): the word at the whole-percent
-    // alpha, premultiplied, for the blend to lay over what lies beneath.
+    // alpha times the pixel's exact coverage by the record's real edges
+    // (v_bars, from the rect's corner), premultiplied, for the blend to lay
+    // over what lies beneath. Each statement is one operation of the head's
+    // list, in its order.
     "    if (kind == 2) {\n"
-    "        float a = float(v_words.y) / 100.0;\n"
+    "        float lx = float(px - v_rect.x);\n"
+    "        float ly = float(py - v_rect.y);\n"
+    "        float cx = clamp(min(lx + 1.0, v_bars.z) - max(lx, v_bars.x),\n"
+    "                         0.0, 1.0);\n"
+    "        float cy = clamp(min(ly + 1.0, v_bars.w) - max(ly, v_bars.y),\n"
+    "                         0.0, 1.0);\n"
+    "        float a = (float(v_words.y) / 100.0) * (cx * cy);\n"
     "        o_color = vec4(word_rgb(v_words.x) * a, a);\n"
     "        return;\n"
     "    }\n"
@@ -1304,6 +1331,18 @@ static_assert(4 * kWaveformFadeMinHundredths == 3 * 200,
               "kListFragmentShader's NM, the merged arm's four own bars and "
               "its rolling brackets spell the fade band's least pitch, half "
               "the waveform_fade_px key's floor, as 3/4 px");
+// THE RECORDS' KINDS ARE THE SHADERS' LITERALS (GuiCanvasKind,
+// canvas_sink.h): kListVertexShader takes a plate's reciprocals at `a_param.x
+// == 1`, kListFragmentShader its plate arms at `kind == 1` and the tint's at
+// `kind == 2`, a rect's the fall-through — and the tint's four edges fill
+// the one float attribute the plate's bars ride (CanvasInstance below).
+static_assert(static_cast<int>(GuiCanvasKind::Rect) == 0 &&
+                  static_cast<int>(GuiCanvasKind::Plate) == 1 &&
+                  static_cast<int>(GuiCanvasKind::Tint) == 2,
+              "the list shaders spell the records' kinds as literals");
+static_assert(sizeof(GuiCanvasPrimitive::edges) == 4 * sizeof(float),
+              "a tint's edges are the four floats of the instance's bars "
+              "attribute");
 
 // THE PAGE PROGRAM (architect 2026-10-27, "1 a"; GuiCanvasPage,
 // canvas_sink.h): the texture triangle's vertex shader over the whole
@@ -1352,8 +1391,10 @@ constexpr int kPageUploadsPerPresent = 1;
 // row's weight, and x in device px from the rect's left edge: the centre of
 // the row's first bar where the weight is 1, a uniform row, and the first
 // pair's parent centre where it is under 1, the fade band's
-// (GuiCanvasPrimitive's bars_x0, bars_pitch, bars and bars_weight) — zero
-// on every record but a plate's.
+// (GuiCanvasPrimitive's bars_x0, bars_pitch, bars and bars_weight) — on A
+// TINT THE SAME FOUR FLOATS ARE ITS REAL EDGES {x0, y0, x1, y1} in device px
+// from the rect's corner (architect 2026-11-14, send J;
+// GuiCanvasPrimitive's edges), and zero on a rect.
 struct CanvasInstance {
     GLint   rect[4];
     GLint   param[4];
@@ -1459,8 +1500,9 @@ void GuiGlCanvas::ensure_programs() {
     // rebuilt at its first draw (present_frame, build_list_program) — its
     // own vertex array — the instance attributes never touch
     // the default one the texture triangle draws from — over one instance
-    // buffer (three integer attributes and the plate's bars, a float one,
-    // CanvasInstance), and the plate's bounds texture on unit 1 (GL_RGBA16I,
+    // buffer (three integer attributes and a float one, the plate's bars or
+    // a tint's edges, CanvasInstance), and the plate's bounds texture on
+    // unit 1 (GL_RGBA16I,
     // NEAREST: an integer texture with a filtering minifier is incomplete),
     // seeded 1 x 1 so the sampler is complete before the first plate, its
     // capacity grown by the first pack (upload_list).
@@ -1580,8 +1622,12 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // the canvas clip, UNDER THE BLEND (GL_BLEND enabled for this draw alone
 // and disabled after, its function the fixed state's premultiplied
 // source-over, bind_fixed_state): the plate's antialiased fringe blends
-// with the ground and the grid drawn before it, and every other record,
-// alpha 1, lands exactly as it would unblended (2026-10-30) — its
+// with the ground and the grid drawn before it, a tint blends over what
+// lies beneath by its percent and each pixel's coverage (a line at its
+// exact place, the sweep highlight; architect 2026-11-14, send J), and
+// every pixel written at alpha 1 — an opaque rect's, a tint's at 100
+// percent where it covers the pixel whole — lands exactly as it would
+// unblended (2026-10-30) — its
 // instances re-made only when the list's generation moved, and the plate's
 // bounds texture, inside that, only when the plate's key moved
 // (upload_list). THE TEXTURE: one full-screen
@@ -1966,7 +2012,8 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // THE LIST'S UPLOAD (2026-10-13; present_frame's draw): every record one
 // instance in list order, its coordinates the surface's px as the GUI wrote
 // them (a rect, a plate's row 0 alike), a plate's draw transform beside them
-// as floats ({x, pitch, bars, weight}; zero on every other record), the instance
+// as floats ({x, pitch, bars, weight}), a tint's real edges in the same four
+// (zero on a rect), the instance
 // buffer rewritten whole — asked only when the list's generation moved, so
 // at every rebuild of the records (the scanner's and the cursor's among
 // them; the buffer is small).
@@ -2050,7 +2097,14 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
         in.words[1] = p.word2;
         switch (p.kind) {
         case GuiCanvasKind::Rect:
+            break;
         case GuiCanvasKind::Tint:
+            // The tint's real edges, from the rect's corner (the head's
+            // tint paragraph).
+            in.bars[0] = p.edges[0];
+            in.bars[1] = p.edges[1];
+            in.bars[2] = p.edges[2];
+            in.bars[3] = p.edges[3];
             break;
         case GuiCanvasKind::Plate:
             if (pack) {

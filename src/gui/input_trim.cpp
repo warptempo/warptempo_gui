@@ -381,8 +381,8 @@ void GuiInputHandler::handle_trim_clear_both() {
 // sets the trim
 // in one gesture, the trim bar and the canvas's sweep highlight being its
 // live picture (the bar drawn at the view's scale; the highlight on the
-// bar's span columns, architect 2026-11-12, sweep_highlight_rect, raised by
-// the first accepted write here): this write's own repaint,
+// bar's span, edge for edge, architect 2026-11-12, sweep_highlight_columns,
+// raised by the first accepted write here): this write's own repaint,
 // invalidate_waveform_area — the rows from the viewport's lanes through the
 // canvas's foot, the window's whole width — covers the bar and the
 // highlight's old and new columns on every accepted event. THE SET-FROM-REGION

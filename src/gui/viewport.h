@@ -779,8 +779,9 @@ struct Viewport {
     // check (GuiPaintHandler::settle_owed_lane_damage) — follows.
     void owe_clock_check();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given
-    // PAINTED COLUMNS' rects (playhead_invalidate_rect; scanner_pixel_x's
-    // columns, the ones the line paints at). The columns must be resolved on the PLATE basis — the
+    // COLUMNS' rects (playhead_invalidate_rect; scanner_pixel_x's
+    // columns, each holding the line and the head painted at the exact
+    // place within half a px of it). The columns must be resolved on the PLATE basis — the
     // playheads' pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule, and the table of which sites take this
     // narrow shape versus a full-area widening, live at playhead_pixel_x in

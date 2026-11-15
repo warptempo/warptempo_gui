@@ -4083,8 +4083,9 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //   LOOK, Cool Edit's FLIPPED RULER IN LIVE'S TONES (architect 2026-10-09,
 //     the program is Cool Edit; flat since 2026-11-01 night; render.h's well
 //     paragraph and its ruler block): flat `ruler_face` under the trim bar's
-//     frame, no line on its top, the ticks `ruler_tick` one W wide, on their
-//     columns (the line rule's straddle), STANDING ON ITS FOOT — majors 4
+//     frame, no line on its top, the ticks `ruler_tick` one W wide, each
+//     centered on its own exact time's place (architect 2026-11-14, send J;
+//     the line rule at its exact place), STANDING ON ITS FOOT — majors 4
 //     W, minors 1 W (8 and 2 device rows on the tablet), overlaying the
 //     ruler's bottom pad — and the digits Bold Small 8 W in the text tone,
 //     bare, their ink centered on the ruler; then a row of ground. (Kdenlive's
@@ -4140,13 +4141,13 @@ int64_t ruler_step_ms(double ms_per_px) {
     return kRulerLadderMs[std::size(kRulerLadderMs) - 1];
 }
 
-// THE COMB'S MAJORS — the ladder's step on a displayed basis and the one
-// expression that places a major on the screen grid, the ruler's walk's
-// (paint_ruler_row; the canvas draws no vertical grid on them, render.h's
-// row-6 canvas paragraph, 2026-10-09). `vp_ms` and `ms_per_px` the basis in
-// milliseconds (the ladder's and the walk's bounds), `vp_start`, `spp`,
-// `origin` and `sr` the same basis in frames (the majors' placement),
-// `wave_w` the columns the walk spans; `valid` false on a basis with no span.
+// THE COMB — the ladder's step on a displayed basis and the one expression
+// that places a tick, the ruler's walk's (paint_ruler_row; the canvas draws
+// no vertical grid on them, render.h's row-6 canvas paragraph, 2026-10-09).
+// `vp_ms` and `ms_per_px` the basis in milliseconds (the ladder's and the
+// walk's bounds), `vp_start`, `spp`, `origin` and `sr` the same basis in
+// frames (the ticks' placement), `wave_w` the columns the walk spans;
+// `valid` false on a basis with no span.
 struct RulerComb {
     bool    valid     = false;
     double  ms_per_px = 0.0;
@@ -4157,21 +4158,34 @@ struct RulerComb {
     int     sr        = 0;
     int64_t step      = 0;
     int     wave_w    = 0;
-    // A step index's own rounded column, waveform-relative: the ONE place a
-    // tick position meets the screen grid (the walk's rigid-comb rule). THE
-    // MAJOR IS PLACED AS EVERY FRAME IS (architect 2026-11-06, session 68):
-    // its step time in the displayed domain's frames, k·step·sr / 1000, on
-    // the basis's lattice through displayed_column_at — the nearest lattice
-    // point on the lattice's own index — so under a pan the majors, and the
-    // minors distributed between them, translate with the plate's global
-    // cells and the marks over them. (The local millisecond quotient that
-    // stood here, nearbyint((t − vp_ms) / ms_per_px), broke a near-tie by
-    // the viewport's own parity and residue, as the frame owner's did.)
-    int major_col(int64_t k) const {
-        const double t_ms = static_cast<double>(k) * static_cast<double>(step);
-        const double t_frames = t_ms * static_cast<double>(sr) / 1000.0;
-        return displayed_column_at(t_frames, vp_start, spp, origin);
+    // EVERY TICK AT ITS OWN EXACT TIME (architect 2026-11-14, send J: "I
+    // would expect snapping nothing to integers and leaving them rounding to
+    // yield decent results"): step k's major at k · step ms and its minors
+    // at (k + i / 8) · step, i = 1 .. 7 (kRulerMinorsPerStep) — the time in
+    // the displayed domain's frames, · sr / 1000, PLACED AS EVERY FRAME IS
+    // (architect 2026-11-06, session 68), on the basis's lattice: its EXACT
+    // PLACE through displayed_x_at, where the tick is painted, and its
+    // COLUMN through displayed_column_at (the nearest lattice point on the
+    // lattice's own index), the tick's gate and a major's label seat. Exact
+    // places are a function of the time and the lattice alone, so under a
+    // pan the whole comb translates rigidly with the plate by itself, and
+    // under a zoom every tick stays on its time. (i / 8 and the product by
+    // the step are exact in doubles; the major's time is k · step itself.)
+    double tick_frames(int64_t k, int i) const {
+        const double t_ms =
+            (static_cast<double>(k) +
+             static_cast<double>(i) / kRulerMinorsPerStep) *
+            static_cast<double>(step);
+        return t_ms * static_cast<double>(sr) / 1000.0;
     }
+    int tick_col(int64_t k, int i) const {
+        return displayed_column_at(tick_frames(k, i), vp_start, spp, origin);
+    }
+    double tick_x(int64_t k, int i) const {
+        return displayed_x_at(tick_frames(k, i), vp_start, spp, origin);
+    }
+    // A major's column, waveform-relative: its label's seat.
+    int major_col(int64_t k) const { return tick_col(k, 0); }
     // The walk's first step, whose major stands at or left of column 0.
     int64_t first_step() const {
         return static_cast<int64_t>(std::floor(vp_ms / step));
@@ -4332,17 +4346,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     const int64_t step   = comb.step;
     const double  end_ms = comb.end_ms();
-    // (There is no `minor` time step any more. It had two consumers — the float
-    // placement of each minor tick and the head's since-deleted float
-    // re-derivation of which columns carried one — and the rigid comb replaced
-    // both with integer
-    // distribution across a segment. The MINORS-PER-STEP count is still the
-    // ladder's own kRulerMinorsPerStep; only its expression as a duration is
-    // gone.)
 
     // THE TICKS STAND ON THE RULER'S FOOT (the flipped ruler; render.h's
     // ruler block): each ONE CANVAS LINE wide (waveform_line_px, one W since
-    // 2026-11-04, the unit), on its column (the line rule's straddle), in
+    // 2026-11-04, the unit), centered on its time's exact place (the line
+    // rule at its exact place, render.h's waveform_gated_line_span), in
     // `ruler_tick`, rising the major's 4 W or the minor's 1 W (8 and 2 device
     // rows on the tablet; scaled_px) from the foot into the ruler's bottom
     // pad, NO SHADOW.
@@ -4363,45 +4371,15 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const double baseline =
         static_cast<double>(lane.y + ruler_baseline_px());
 
-    // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
-    // shimmer at working zoom: the minor ticks visibly stepped at different
-    // moments, a breathing comb; the majors read fine).
-    //
-    // THE MECHANISM, verified in the code this replaces: every tick rounded its
-    // OWN float time->pixel position independently, `nearbyint((t - vp_ms) /
-    // ms_per_px)`. Tick spacing in pixels is minor/ms_per_px, which is not an
-    // integer in general, so each tick carries its own fractional phase; a pan
-    // shifts every phase by the same amount but each tick crosses ITS rounding
-    // boundary at a different viewport offset, so neighbours take their 1px step
-    // on different frames. The comb breathes even though nothing about the time
-    // grid moved.
-    //
-    // THE FIX: each MAJOR keeps its own rounded position (on the lattice's
-    // own index, RulerComb::major_col, so the majors themselves translate by
-    // whole columns with the plate, 2026-11-06), and its EIGHT MINORS
-    // are placed at integer offsets DISTRIBUTED ACROSS THE SEGMENT'S INTEGER
-    // WIDTH — offset(i) = nearbyint(i * seg_w / 8) from the major's rounded x,
-    // where seg_w is the distance between two rounded majors. A distribution of
-    // an integer width is a pure function of that width, so while the majors
-    // translate by whole columns the entire comb translates with them, rigidly:
-    // no minor rounds against the screen at all. Under ZOOM the widths change
-    // and the distribution re-derives, which is a real spacing change rather
-    // than jitter.
-    //
-    // THE TRADE, the architect's own ("the ticks are purely informative — I'd
-    // rather have smoothness than total precision"): a distributed minor can sit
-    // up to ONE PIXEL off its exact time position — half from its major's own
-    // anchor rounding and half from the distribution's — measured at 1.000px
-    // worst case over a swept zoom/rung/phase range, on segments the ladder
-    // keeps at least eight minimum minor pitches wide (108 W). It NEVER ACCUMULATES: every segment re-anchors
-    // on its own major, so the error is bounded inside one segment rather than
-    // walking across the ruler. One pixel on a countable informative line, in
-    // exchange for a comb that stops breathing under every pan.
+    // THE COMB IS RIGID UNDER PAN BY ITSELF (architect 2026-11-14, send J;
+    // the rule at RulerComb::tick_frames): every tick is painted at its own
+    // time's exact place at its exact coverage, so no tick rounds against
+    // the screen and a pan moves every one by the same real amount — the
+    // smoothness the comb was first made rigid for (architect 2026-08-01,
+    // the grab-pan shimmer: ticks rounded one by one stepped at different
+    // moments, "the ticks are purely informative — I'd rather have
+    // smoothness than total precision") with every tick on its exact time.
     const int64_t first_step = comb.first_step();
-    // A step index's own rounded column: the ONE place a tick position meets
-    // the screen grid (RulerComb::major_col). Majors anchor here; minors are
-    // distributed between them.
-    const auto major_col = [&](int64_t k) { return comb.major_col(k); };
     // THE LABELS ARE CLIPPED AT BOTH ENDS (architect 2026-10-22, "clip"): a
     // label is painted CENTERED on its major's column wherever it stands and
     // the walk's clip below cuts it at the canvas's columns [0, wave_w), so
@@ -4418,20 +4396,25 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // step at least 72 W), so one step each side is all there is.
     // THE TICK'S WIDTH IS THE CANVAS'S LINE, ONE W (hairline_px, the line
     // rule; architect 2026-11-04, the unit, reversing the one device px of
-    // 2026-11-01 night, M5b), ON ITS COLUMN STRADDLING ITS FRAME
-    // (fill_waveform_line; at t = 2 the columns col − 1 and col, centered on
-    // the boundary at col's left edge).
+    // 2026-11-01 night, M5b), CENTERED ON ITS TIME'S EXACT PLACE (architect
+    // 2026-11-14, send J; waveform_gated_line_span).
     const int t = hairline_px();
     // ONE MAJOR'S LABEL at its column `col` and its step time `step_ms`,
-    // CENTERED ON THE MAJOR'S TICK (the run from col − run_w / 2: an
-    // even-width run centered on the boundary at col's left edge, the even
-    // tick's own center; an odd-width run on col's center, its spare half
-    // column to the right). The
-    // label's TIME is still the exact step time — only
-    // tick PLACEMENT is distributed, and a major is at its own exact time
-    // anyway. Its x rides `col`, which for a major IS the rounded major, so
-    // number and line cannot drift apart.
-    const auto paint_major_label = [&](int col, double step_ms) {
+    // CENTERED ON THE MAJOR'S COLUMN (the run from col − run_w / 2: an
+    // even-width run centered on the boundary at col's left edge; an
+    // odd-width run on col's center, its spare half column to the right) —
+    // the column of the major's exact place (RulerComb::major_col), within
+    // half a px of the tick painted there. The label's TIME is the exact
+    // step time.
+    // THE DIGITS GLIDE WITH THEIR MAJOR, A TRIAL (architect 2026-11-14,
+    // send J: "The text is the one thing that is questionable, but I would
+    // say let's give it a try"): the run is shown at that whole-px seat
+    // plus `glide`, the major's exact place less its column (δ in
+    // [−0.5, 0.5), the walk's — THE TRIAL'S SEAT below), so the number
+    // stands centered on the tick painted at the exact place and moves with
+    // it; text_shape's placement is untouched.
+    const auto paint_major_label = [&](int col, double glide,
+                                       double step_ms) {
         // step_ms is INTEGRAL BY CONSTRUCTION (k * step, both int64, the
         // product exact in double at any ruler magnitude), so this is a
         // representation change, not a rounding: llrint reads the integer
@@ -4453,7 +4436,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int lx = col - run_w / 2;   // the walk's clip cuts it
         // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
         // colour to all the numbers"): the text tone, bare (the block above).
-        const double x = static_cast<double>(cx + lx);
+        const double x = static_cast<double>(cx + lx) + glide;
         set_palette_source(cr, palette().text);
         text_shape::show_shaped_run(cr, run, x, baseline);
     };
@@ -4463,76 +4446,83 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     cairo_save(cr);
     cairo_rectangle(cr, cx, lane.y, wave_w, ruler_bottom - lane.y);
     cairo_clip(cr);
-    for (int64_t k = first_step; ; ++k) {
-        const double step_ms = static_cast<double>(k) * static_cast<double>(step);
-        // One step past the end (the clip rule above): the major right of the
-        // last column is walked for its label, its tick culled below.
-        if (step_ms > end_ms + static_cast<double>(step)) break;
-        const int mx    = major_col(k);
-        const int seg_w = major_col(k + 1) - mx;
-        for (int i = 0; i < kRulerMinorsPerStep; ++i) {
-            // THE INTEGER COMB, and the only culling test there is: a tick is at
-            // its distributed column or it is offscreen. The old float-time
-            // pre-filter went with the float positions it filtered. THE TEST
-            // CULLS THE TICK ALONE: a major's label paints whether or not its
-            // tick is on the lane (the walk's start above), the clip cutting it.
-            const int col = (i == 0)
-                ? mx
-                : mx + static_cast<int>(std::nearbyint(
-                      static_cast<double>(i) * static_cast<double>(seg_w) /
-                      static_cast<double>(kRulerMinorsPerStep)));
-            const bool major = (i == 0);
-            const bool tick_on_lane = col >= 0 && col < wave_w;
-            if (!tick_on_lane && !major) continue;
-            // A MAJOR'S LABEL PAINTS BEFORE ITS TICK, so the tick stands whole
-            // over whatever of a label's ink could reach its rows (the pad
-            // keeps them apart today: on the tablet the ink ends 12 rows over the foot,
-            // the major rises 8). Only the label's own major can meet it: a
-            // minor rises a quarter as far, and the next major stands a whole
-            // step — at least eight minimum minor pitches — away.
-            if (major) paint_major_label(col, step_ms);
-            // ONE W wide (`t`), straddling its frame (columns col − 1 and col at t = 2,
-            // waveform_line_first_col), clipped at
-            // both edges, in `ruler_tick`, standing on the ruler's foot.
-            if (tick_on_lane) {
-                set_palette_source(cr, palette().ruler_tick);
-                fill_waveform_line(cr, cx, wave_w, col,
-                                   major ? major_top : minor_top,
-                                   ruler_bottom, t);
+    // THE WALK'S STEPS: from first_step through ONE STEP PAST THE END (the
+    // clip rule above): the major right of the last column is walked for
+    // its label, its tick gated out below.
+    const auto step_walked = [&](int64_t k) {
+        return static_cast<double>(k) * static_cast<double>(step) <=
+               end_ms + static_cast<double>(step);
+    };
+    // THE LABELS, EVERY WALKED MAJOR'S, BEFORE ANY TICK: a label paints
+    // whether or not its major's tick is on the lane (the walk's start
+    // above), the clip cutting it, and the ticks then stand over whatever
+    // of a label's ink could reach their rows (the pad keeps them apart
+    // today: on the tablet the ink ends 12 rows over the foot, the major
+    // rises 8). Cairo's pass whole, ahead of the stamp's (its contract: no
+    // cairo drawing between its shapes).
+    for (int64_t k = first_step; step_walked(k); ++k) {
+        // THE TRIAL'S SEAT — THE DIGITS' GLIDE (paint_major_label's head):
+        // the major's exact place less its column.
+        // THE WAY BACK FROM THE TRIAL IS THIS ONE LINE: `glide = 0.0`.
+        const double glide =
+            comb.tick_x(k, 0) - static_cast<double>(comb.major_col(k));
+        paint_major_label(
+            comb.major_col(k), glide,
+            static_cast<double>(k) * static_cast<double>(step));
+    }
+    // THE TICKS, THROUGH THE COVERAGE STAMP (architect 2026-11-14, send J:
+    // stamped directly at exact coverage, no cairo path per tick — the
+    // ruling at CoverageStampPass, cool_edit_paint.h): each tick
+    // one rect with real column edges — the one-W line centered on its own
+    // exact place, GATED ON ITS OWN COLUMN (a tick whose column is off the
+    // lane paints nothing, the only culling test there is) and cut at both
+    // edges (waveform_gated_line_span) — on its whole rows from its top to
+    // the ruler's foot, in `ruler_tick` over the ruler's face.
+    {
+        const GuiColor ink = palette().ruler_tick;
+        const double foot = static_cast<double>(ruler_bottom);
+        CoverageStampPass ticks;
+        ticks.begin(cr);
+        for (int64_t k = first_step; step_walked(k); ++k) {
+            for (int i = 0; i < kRulerMinorsPerStep; ++i) {
+                const WaveformLineSpan span = waveform_gated_line_span(
+                    cx, wave_w, comb.tick_col(k, i), comb.tick_x(k, i), t);
+                if (span.empty()) continue;
+                ticks.rect(span.x0,
+                           static_cast<double>(i == 0 ? major_top
+                                                      : minor_top),
+                           span.x1, foot, ink);
             }
         }
+        ticks.end();
     }
     cairo_restore(cr);
 
     // -- THE PLAYHEAD'S HEAD ---------------------------------------------------
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
-    // 2026-10-09; render.h's playhead
-    // paragraph): the cue's own triangle — its rows (cue_triangle_rows, 4 W,
-    // 8 on the tablet) in whole device cells, Cool Edit's aliased staircase
-    // (paint_ce_cue_triangle, 2026-10-26; its cells one device px with the
-    // cue's, architect 2026-10-26 ~10:10: "All triangles unscaled",
-    // cue_triangle_unit_px, render.h), IN THE MARKER CHIP'S ONE-W
-    // `cue_outline` 111111 — THE SAME DRAWING AS THE CHIP (architect
-    // 2026-11-04, mock k1, "4 accept overlap") — its fill the palette's
-    // `playhead_head` (Live's cyan 03C3D5 since 2026-11-01), NO SHADOW
-    // (2026-11-02), the head's own tone apart from the line's static
-    // `playhead_line` (render_playhead), THE
-    // OUTLINED SHAPE ON THE RULER'S LAST cue_chip_rows DEVICE ROWS (200 %:
-    // the outer on 187 .. 199, the fill on 189 .. 196), its apex — the
-    // bottom centre of the playhead's column — on the ruler's foot row,
-    // over the ticks' feet (2026-10-09 ~21:00; the ruler's foot since the
-    // flat well). It is OPAQUE over the ticks and digits the walk above
-    // laid down, covering whatever stands under it (every cell whole, no
-    // edge blended over them) — ITS TOP REACHES INTO THE DIGITS where it
-    // stands under a label, ACCEPTED (architect 2026-11-04: "timestamp not
-    // really important for fine tune, just ballpark"): no clipping, no
-    // avoidance, as a chip paints over a label. NO SNAP, NO
-    // AVOIDANCE: it may stand on a marker's column, the cue's chip being
-    // in the marker lane below (render.h's playhead paragraph). It draws NOTHING across the trim bar, the marker
-    // lane and the rows of ground; its canvas line is paint_playheads'. CENTRED ON THE PLAYHEAD'S COLUMN, its
-    // apex the column (architect 2026-10-09 ~14:35; paint_ce_cue_triangle) — over the line straddling the frame,
-    // the line's right pixel (architect 2026-11-06, session 67, "it should point at the right column").
+    // 2026-10-09; render.h's playhead paragraph) — THE SAME DRAWING AS THE
+    // MARKER'S CHIP (architect 2026-11-04, mock k1, "4 accept overlap"): A
+    // SMOOTH-EDGED TRIANGLE IN THE CHIP'S ONE-W `cue_outline`, AT THE
+    // PLAYHEAD'S EXACT x, ITS APEX ON THE PLAYHEAD LINE'S CENTER (architect
+    // 2026-11-14 night, send J: "I think the chips should also go
+    // anti-aliased", "Agree on both."; cool_edit_paint.h's THE CUE'S CHIP
+    // owns the drawing, render.h's cue block its lengths) — its fill the
+    // palette's `playhead_head` (Live's cyan 03C3D5 since 2026-11-01), NO
+    // SHADOW (2026-11-02), the head's own tone apart from the line's static
+    // `playhead_line` (render_playhead), THE OUTER ON THE RULER'S LAST
+    // cue_chip_h_px DEVICE ROWS (200 %: rows 187 .. 199), its apex on THE
+    // BOTTOM EDGE OF THE RULER'S FOOT ROW, over the ticks' feet (2026-10-09
+    // ~21:00; the ruler's foot since the flat well). It stands over the
+    // ticks and digits the walk above laid down, covering whatever lies
+    // under its whole-covered pixels and blending its edge over them — ITS
+    // TOP REACHES INTO THE DIGITS where it stands under a label, ACCEPTED
+    // (architect 2026-11-04: "timestamp not really important for fine tune,
+    // just ballpark"): no clipping, no avoidance, as a chip paints over a
+    // label. NO SNAP, NO AVOIDANCE: it may stand on a marker's column, the
+    // cue's chip being in the marker lane below (render.h's playhead
+    // paragraph). It draws NOTHING across the trim bar, the marker lane and
+    // the rows of ground; its canvas line is paint_playheads'.
     //
     // The whole head is the RESTING CURSOR'S: the `h` view, the render player
     // and the audition reach it through this one block, and the scanner keeps
@@ -4546,44 +4536,54 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (End's landing at the whole-song zoom), and the head's left half at the
     // edge keeps that playhead on screen at its true point.
     {
-        // The line's own painted column (playhead_pixel_x on the plate
-        // basis and its lattice origin), so the head stands on the column
-        // the line and the damage box are built on.
+        // The line's own column (playhead_pixel_x on the plate basis and
+        // its lattice origin) — the cull's, the hit's and the damage box's —
+        // and its exact place (playhead_exact_x on the same), where the head
+        // is painted, its apex on the line's center.
         const int col   = playhead_pixel_x(
             app, static_cast<int64_t>(basis.vp_start), basis.spp,
             basis.lattice_origin);
-        // The head's rows, the outlined chip's (render.h's cue_chip_rows).
+        const double x  = playhead_exact_x(
+            app, static_cast<int64_t>(basis.vp_start), basis.spp,
+            basis.lattice_origin);
+        // The head's rows, the chip's height (render.h's cue_chip_h_px).
         const int rows  = cue_chip_h_px();
-        // The head's painted columns [col − left, col + right) (render.h's
-        // one extent, the chip's — the damage box's too).
-        const int left  = cue_triangle_half_w_px();
-        const int right = cue_triangle_reach_right_px();
+        // THE TWO EXTENTS (render.h's cue block): the painted reach, the
+        // columns [col − reach, col + reach) the head can touch — the cull
+        // here and the damage box's — and the hit extent [col − left,
+        // col + right), the published hit's.
+        const int reach = cue_chip_paint_reach_px();
+        const int left  = cue_chip_hit_left_px();
+        const int right = cue_chip_hit_right_px();
         GuiRect head_hit{0, 0, 0, 0};
-        if (col + right - 1 >= 0 && col - left <= wave_w - 1) {
+        if (col + reach > 0 && col - reach < wave_w) {
             const int head_top = ruler_bottom - rows;
             // THE HEAD'S CLIP: the waveform's columns over the head's own
-            // rows, the ruler's last `rows`. Whole pixels, so the stamp's
-            // identity holds. The fill's top stands t rows under the
-            // outline's (cue_chip_top_rows), the painter's `top`.
+            // rows, the ruler's last `rows` — whole pixels, the stamp's clip
+            // box. The apex on the foot row's bottom edge, `ruler_bottom`.
             cairo_save(cr);
             cairo_rectangle(cr, cx, head_top, wave_w, rows);
             cairo_clip(cr);
-            paint_ce_cue_triangle(
-                cr, cx + col,
-                head_top + cue_chip_top_rows() * cue_triangle_unit_px(),
-                palette().playhead_head, palette().cue_outline);
+            paint_ce_cue_chip(cr, static_cast<double>(cx) + x,
+                              static_cast<double>(ruler_bottom),
+                              palette().playhead_head, palette().cue_outline);
             cairo_restore(cr);
             // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
-            // point_on_playhead_head, input_pointer.cpp): EXACTLY THE PAINTED
-            // HEAD — its triangle's columns [col − left, col + right) cut to
-            // the waveform's columns as the clip above cuts them, over the
-            // head's `rows` device rows of the ruler's — and
-            // nothing beyond it ("I don't think we should get in the habit of
-            // making invisible hitboxes"), published by the pass's rule
-            // (publish_head, the pass's head).
+            // point_on_playhead_head, input_pointer.cpp): THE HEAD ON ITS
+            // COLUMN — the columns [col − left, col + right) cut to the
+            // waveform's columns as the clip above cuts them, over the
+            // head's `rows` device rows of the ruler's — whole px, unmoved
+            // by the exact place (architect 2026-11-14, send J; render.h's
+            // THE CHIP'S TWO EXTENTS), the painted head within a px and a
+            // half of it
+            // and nothing beyond ("I don't think we should get in the habit
+            // of making invisible hitboxes"), published by the pass's rule
+            // (publish_head, the pass's head); none where the cut leaves no
+            // column (a head showing only its painted reach's last pixels
+            // at an edge).
             const int x0 = std::max(0, col - left);
             const int x1 = std::min(wave_w, col + right);
-            head_hit = GuiRect{cx + x0, head_top, x1 - x0, rows};
+            if (x1 > x0) head_hit = GuiRect{cx + x0, head_top, x1 - x0, rows};
         }
         publish_head(head_hit);
     }
@@ -4880,24 +4880,21 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     if (spp <= 0.0) return out;
     const double vp_start = basis.vp_start;
 
-    // Columns: BOTH EDGES ARE MAPPED COLUMNS, each taking its own column from
-    // the shared displayed_column_at rounding (warp_frame_map_view.h) —
-    // left_col from the marker's paint sample, which is the stem renderer's own
-    // placement, and right_col from the grain end, which is the lattice point
-    // the header derives. The two endpoints round independently and the band's
-    // painted WIDTH absorbs the difference, so the far edge sits on screen
-    // where its lattice point sits in samples: it stands still while the reset
-    // is nudged inside one hop cell and snaps a whole hop at the boundary,
-    // which is what the header's "STANDS STILL" sentence promises. (The
-    // fixed-width recipe that stood here — left_col plus the extent
-    // banker's-rounded to whole pixels — held the width rigid instead and so
-    // moved the far edge by a pixel as the marker moved inside a cell or as the
-    // view panned.)
+    // BOTH EDGES ARE MAPPED, EACH FROM ITS OWN VALUE — the left from the
+    // marker's paint sample, which is the stem renderer's own placement, the
+    // right from the grain end, which is the lattice point the header
+    // derives — so the far edge sits on screen where its lattice point sits
+    // in samples: it stands still while the reset is nudged inside one hop
+    // cell and snaps a whole hop at the boundary, which is what the header's
+    // "STANDS STILL" sentence promises. THE COLUMNS (displayed_column_at,
+    // warp_frame_map_view.h) ARE THE GATES; the ring is painted at the two
+    // values' exact places (displayed_x_at, below; architect 2026-11-14,
+    // send J).
+    const double right_ms = ms + static_cast<double>(width_samples);
     const int left_col = displayed_column_at(ms, vp_start, spp,
                                              basis.lattice_origin);
-    const int right_col = displayed_column_at(
-        ms + static_cast<double>(width_samples), vp_start, spp,
-        basis.lattice_origin);
+    const int right_col = displayed_column_at(right_ms, vp_start, spp,
+                                              basis.lattice_origin);
 
     // Too-zoomed-out: if the extent rounds below one pixel — both edges landing
     // on the same column — paint nothing at all: no sliver, no clamped minimum.
@@ -4905,21 +4902,21 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 
     // The band spans columns [left_col, right_col): the reset's own column
     // (left_col) is its left side (paint_phase_reset_overlay_ring).
-    double x0 = static_cast<double>(area.x + left_col);
-    double x1 = static_cast<double>(area.x + right_col);
-    const double stem_x = x0;
+    // Horizontal clip to the area's columns [0, area.w); the band shows
+    // whenever the intersection is non-empty even if the stem column is
+    // off-screen left (the tail can be visible while the stem is not).
+    // THE GATES ARE THE COLUMNS' (architect 2026-11-14, send J: the exact
+    // places below decide no visibility).
+    if (std::min(right_col, area.w) <= std::max(left_col, 0)) return out;
 
-    // Horizontal clip to [area.x, area.x + area.w); the band shows whenever the
-    // intersection is non-empty even if the stem column is off-screen left
-    // (the tail can be visible while the stem is not).
-    x0 = std::max(x0, static_cast<double>(area.x));
-    x1 = std::min(x1, static_cast<double>(area.x + area.w));
-    if (x1 <= x0) return out;
-
-    out.valid  = true;
-    out.x0     = x0;
-    out.x1     = x1;
-    out.stem_x = stem_x;
+    // THE EXACT PLACES the ring is painted at (displayed_x_at on the columns'
+    // own arguments, warp_frame_map_view.h), each within half a px of its
+    // column.
+    out.valid    = true;
+    out.left_col = left_col;
+    out.left_x   = displayed_x_at(ms, vp_start, spp, basis.lattice_origin);
+    out.right_x  = displayed_x_at(right_ms, vp_start, spp,
+                                  basis.lattice_origin);
     return out;
 }
 
@@ -4932,26 +4929,39 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // 2026-11-04: the dotted stems at rest retired, and the ring with them —
 // the ring and the cue one unit, 2026-09-17, so it wears the chip's dark
 // line, 111111), WHATEVER THE SELECTION, a coincident reset's too (its
-// struck label the mark, architect 2026-10-26):
-//   THE LEFT SIDE on the reset's own column (band.stem_x) and THE RIGHT
-//     SIDE on the band's last column, each a t-wide line on its column by
-//     the line rule (waveform_line_px, one W; waveform_line_first_col: the
-//     left side straddles the reset's frame, the right side on x1 − 2 and
-//     x1 − 1 at t = 2, flush inside the band) down the canvas's whole
-//     height, the stereo divider's row crossed (architect 2026-11-02;
-//     canvas_line_rect's form). The left side's column is the reset's own,
-//     unclipped, so a reset off the area's left edge paints no left side
-//     (the column gate);
-//     the right side's is the CLIPPED band's last column, so a band clipped
-//     at the area's right edge draws it there, flush, as the trim bar's
-//     clipped span reads.
+// struck label the mark, architect 2026-10-26),
+// EVERY SIDE AT ITS EXACT PLACE (architect 2026-11-14, send J: "the
+// anti-aliasing I would like to commit to that as well, the full
+// anti-aliasing"; the rule at render.h's waveform_gated_line_span), XL the
+// reset's own exact place and XR the grain end's CUT TO THE AREA'S RIGHT
+// EDGE, both in window px (the band's left_x and right_x off the area's x):
+//   THE LEFT SIDE the line centered on the reset's frame, [XL − t / 2,
+//     XL + t / 2] (waveform_line_px, one W), GATED ON THE RESET'S OWN
+//     COLUMN, unclipped, so a reset off the area's left edge paints no left
+//     side (the column gate), and cut to the area's columns; THE RIGHT SIDE
+//     [XR − t, XR], flush inside the band, so a band cut at the area's
+//     right edge draws it there, flush, as the trim bar's clipped span
+//     reads. BOTH ON THE ROWS BETWEEN THE RUNS — the canvas's rows less its
+//     first and last t, the stereo divider's row crossed (architect
+//     2026-11-02) — so no cell of a corner is blended twice.
 //   THE TOP RUN on the canvas's first t rows and THE BOTTOM RUN on its
-//     last t, from the left line's first column through the right line's
-//     last (each by the line rule), so the corners close at every t;
-//     the list's scissor cuts what passes the area's edges.
-// PURE PALETTE BYTES (the palette composites nothing): aliased integer
-// rects, no alpha and no half column. The band's edges are whole columns by
-// construction (displayed_column_at's integers off the area's x). No other
+//     last t, from the left side's outer edge XL − t / 2 (cut to the area's
+//     left edge) through XR, so the corners close at every t.
+// THE LEFT SIDE YIELDS TO ITS RESET'S SELECTION STEM (THE COINCIDENT LINES,
+// paint_playheads' paragraph the rule; stem_stands_at): where a published
+// stem stands on the reset's exact x the stem — a later record of the same
+// width and color over the same rows — is the left side, and this one is
+// not drawn, so no cell of the two is blended twice; the runs' ends under
+// that stem, on the canvas's first and last t rows, are. ON A BAND UNDER
+// 1.5 t WIDE the right side reaches back over the left side's interval and
+// the cells both cover are blended twice too — one color, a fringe a
+// little darker than its coverage; left as it falls (lines at different
+// places blend in list order).
+// THE PALETTE'S WORD AT EXACT COVERAGE: blended rects at 100 percent
+// (GuiCanvasSink::blended_rect), the word itself on every cell a side
+// covers whole — at the tablet's even t whole places are whole cells — and
+// the word over what lies beneath by the cell's coverage where an edge
+// crosses it. No other
 // reader takes the ring's cells: it is no hit target, and its damage is the
 // whole waveform area's (the flag cache's rebuild and
 // Selection::damage_overlay_on_subject_change), which holds it whole.
@@ -4960,40 +4970,38 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // fingerprint, whose rebuild damages the waveform with the strip
 // (maybe_rebuild_flag_cache, waveform_cache.cpp); a palette install damages
 // the whole window. A disabled reset paints no ring (the band's gate).
-// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): one rects call.
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): four records at most.
 void GuiPaintHandler::paint_phase_reset_overlay_ring(
     GuiCanvasSink& sink, const GuiRect& area) {
     const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
     if (!band.valid) return;
 
-    const int t      = waveform_line_px();
-    const int x1     = static_cast<int>(std::nearbyint(band.x1));
-    const int stem   = static_cast<int>(std::nearbyint(band.stem_x));
-    const int y_top  = area.y;
-    const int y_bot  = area.y + area.h - t;
-    // THE RUNS' COLUMNS, the two sides' lines' outer columns: from the left
-    // line's first column (the reset's column, unclipped, on the line rule:
-    // the even line straddles its frame, render.h's waveform_line_first_col)
-    // through the right line's last (x1 − 1's, so the right side's line
-    // stands on x1 − 2 and x1 − 1 at t = 2, flush inside the band), cut to
-    // the area's columns.
-    const int run_lo = std::max(waveform_line_first_col(stem, t), area.x);
-    const int run_hi = std::min(waveform_line_first_col(x1 - 1, t) + t,
-                                area.x + area.w);
-    GuiRect rs[4];
-    int n = 0;
-    if (run_hi > run_lo) {
-        rs[n++] = GuiRect{run_lo, y_top, run_hi - run_lo, t};
-        rs[n++] = GuiRect{run_lo, y_bot, run_hi - run_lo, t};
+    const int      t    = waveform_line_px();
+    const GuiColor ink  = palette().cue_outline;
+    const double   ax0  = static_cast<double>(area.x);
+    const double   ax1  = static_cast<double>(area.x + area.w);
+    const double   xl   = ax0 + band.left_x;
+    const double   xr   = std::min(ax0 + band.right_x, ax1);
+    // The canvas's rows: the runs' t at its head and foot, the sides between.
+    const double y0 = static_cast<double>(area.y);
+    const double y1 = static_cast<double>(area.y + area.h);
+    const double ya = y0 + static_cast<double>(t);
+    const double yb = y1 - static_cast<double>(t);
+    // THE RUNS, from the left side's outer edge through the right side's.
+    const double run_lo =
+        std::max(xl - static_cast<double>(t) / 2.0, ax0);
+    sink.blended_rect(run_lo, y0, xr, ya, ink, 100);
+    sink.blended_rect(run_lo, yb, xr, y1, ink, 100);
+    // THE LEFT SIDE, the line's column gate and edge cut — unless its
+    // reset's stem stands on it (the coincident lines).
+    if (!stem_stands_at(area, band.left_x)) {
+        const WaveformLineSpan left = waveform_gated_line_span(
+            area.x, area.w, band.left_col, band.left_x, t);
+        sink.blended_rect(left.x0, ya, left.x1, yb, ink, 100);
     }
-    // The two sides, the line's column gate and edge clip
-    // (waveform_line_cols).
-    for (const int col : {stem - area.x, x1 - 1 - area.x}) {
-        const WaveformLineCols c = waveform_line_cols(area.w, col);
-        if (c.w > 0) rs[n++] = GuiRect{area.x + c.x0, area.y, c.w, area.h};
-    }
-    sink.rects(std::span<const GuiRect>(rs, static_cast<std::size_t>(n)),
-               palette().cue_outline);
+    // THE RIGHT SIDE, flush inside the band.
+    sink.blended_rect(std::max(xr - static_cast<double>(t), ax0), ya, xr, yb,
+                      ink, 100);
 }
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
@@ -5147,23 +5155,26 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // SOLID ONE-W line in the `cue_outline` from the chip's apex row down the
 // canvas's whole height (the head segment, below), the stereo divider's
 // row crossed (architect 2026-11-02: "the divider is just another grid
-// line now"; canvas_line_rect's form, the line's column gate and edge
-// clip, waveform_line_cols), the playhead on it or not.
+// line now"), AT ITS EXACT PLACE (architect 2026-11-14, send J: the entry's
+// x, the line's column gate and edge cut, waveform_gated_line_span), the
+// playhead on it or not.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
-// store: the stem stands on its cue's APEX COLUMN, and that column was
+// store: the stem stands UNDER ITS CUE'S APEX, on the cue's exact place,
+// and that place and its column were
 // already resolved by the pass that painted the cue, on the displayed basis
 // those pixels were laid out against. So the DragOverlay substitution, the
 // source->target map walk, the per-marker cull and the resolver all happen
-// exactly once, in the painter, and a stem can never land a pixel away from
+// exactly once, in the painter, and a stem can never part from
 // its own chip (MarkerStem, render.h).
 //
-// Z-ORDER (architect 2026-11-04): THE STEM PAINTS OVER THE PLAYHEAD'S LINE,
-// which precedes this pass: both are one W on one column, so a stem under
-// the opaque line would never be seen; while the playhead rests on a
+// Z-ORDER (architect 2026-11-04): THE STEM STANDS IN THE PLAYHEAD'S LINE'S
+// PLACE, which precedes this pass: both are one W on one place, so while
+// the playhead rests on a
 // selected marker the dark stem is what shows and the ruler's head marks
-// the playhead. The scanner follows. The full sequence is the paint-order
-// block in on_redraw (build_canvas_list).
+// the playhead — the line under it is not drawn at all (THE COINCIDENT
+// LINES, paint_playheads). The scanner follows. The full sequence is the
+// paint-order block in on_redraw (build_canvas_list).
 // THE ONE-STATE RULE (architect 2026-11-04, after the drag's stutter on his
 // glass; the selection's half 2026-11-05, after his blink, "saw the blink
 // twice in about a dozen or two selects"): THE STEM AND THE LINE ALWAYS
@@ -5195,72 +5206,129 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // rule above) — and that rebuild damages the
 // window's rows from the viewport's lanes through the waveform area's foot
 // (maybe_rebuild_flag_cache's tail, damage_window_top_rows), which holds
-// every cell a stem stands on (the canvas's rows, and the lane's last row
-// and the ground line above them) at both the old stash's columns and the
-// new; the GL canvas's list is rebuilt whole at every frame that meets the
-// canvas paint area.
+// every cell a stem touches (the canvas's rows, and the lane's last row
+// and the ground line above them — whole rows, so the line's one column
+// more each side at an exact place is held) at both the old stash's places
+// and the new; the GL canvas's list is rebuilt whole at every frame that
+// meets the canvas paint area.
 //
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
 // row — THROUGH THE ONE-W ROW OF GROUND under the lane TO THE CANVAS'S LAST
-// ROW (200 %: rows 240 .. 1327 on the stem's two columns, the one left of
-// the marker's and the marker's own, straddling its frame), so no gap of ground stands between the apex and
+// ROW (200 %: rows 240 .. 1327, on the line's real span of columns: at a
+// whole place the column left of the marker's and the marker's own), so no
+// gap of ground stands between the apex and
 // the stem (his "small gap": the rows of ground under the lane, 241 .. 242,
 // the canvas-only stem left). TWO PAINTERS, ONE DECISION:
 // the canvas's rows are the GPU's (this pass, through the sink, whose list
 // is scissored to the canvas paint area), the lane's last row and the
 // ground line the chrome's (paint_marker_stem_heads, on the backbuffer after
-// the flag blit), and BOTH take their rects from standing_stem_rects, off
-// the one stash — so the two halves of one stem can never disagree. The
-// playhead's own line stays on the canvas's rows alone.
+// the flag blit), and BOTH take THE SAME REAL SPAN OF COLUMNS from
+// standing_stem_spans, off the one stash — each pixel at its exact
+// coverage by that span, the sink's blended rect on the canvas and the
+// coverage stamp in the chrome — so the two halves of one stem can never
+// disagree. The playhead's own line stays on the canvas's rows alone.
 //
-// THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): one rects call.
-std::vector<GuiRect> GuiPaintHandler::standing_stem_rects(const GuiRect& area,
-                                                          int y0,
-                                                          int y1) const {
-    std::vector<GuiRect> rs;
-    if (area.w <= 0 || y1 <= y0) return rs;
-    for (const MarkerStem& stem : app.marker_stems) {
-        // Column-gate exactly like render_playhead's line does. The producers
-        // already publish only columns in [0, w) (stem_column_on_waveform,
-        // render.cpp); the gate restates that against the area the painters
-        // are handed, so no entry can leak its column into the chrome beside
-        // the waveform.
-        const int col = static_cast<int>(std::nearbyint(
-            stem.x - static_cast<double>(area.x)));
-        const WaveformLineCols c = waveform_line_cols(area.w, col);
-        if (c.w > 0) rs.push_back(GuiRect{area.x + c.x0, y0, c.w, y1 - y0});
+// ONE SPAN PER DISTINCT EXACT x (architect 2026-11-14, send J — THE
+// COINCIDENT LINES' third case, paint_playheads' paragraph the rule): two
+// selected markers may stand on one frame — a drag may land a marker
+// field-identical at another's position (marker_drag.cpp's commit), the
+// coincident, struck pair, and an ADD SEL sweep or a select of both
+// publishes two entries whose x are the same double — and two lines blended
+// on one fractional place would darken its fringe (1 − (1 − a)² where one
+// line gives a). So of the gated entries on one exact x ONLY THE LAST
+// stands, the list's later line as the rule words it, here and so in both
+// halves of the stem; the stash and every publication keep every entry.
+// NOTHING LEANS ON THE STASH'S ORDER: equal x are found by sorting the
+// gated places (the cues arrive ordered by column, and nothing promises
+// that equal places are neighbors there — a drag's overlay and the `h`
+// view's items order them by their own rules), and the spans come out in
+// the stash's order, the survivors', so two stems on different places that
+// overlap blend in the order they always did.
+//
+// THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): one blended
+// rect a standing stem.
+std::vector<WaveformLineSpan> GuiPaintHandler::standing_stem_spans(
+    const GuiRect& area) const {
+    std::vector<WaveformLineSpan> spans;
+    if (area.w <= 0) return spans;
+    const std::vector<MarkerStem>& stems = app.marker_stems;
+    // Column-gate exactly like render_playhead's line does. The producers
+    // already publish only columns in [0, w) (stem_column_on_waveform,
+    // render.cpp); the gate restates that against the area the painters
+    // are handed, so no entry can leak its line into the chrome beside
+    // the waveform. THE GATED ENTRIES as (exact x, stash index), sorted, so
+    // each run of one x ends on its last entry — the one that stands.
+    std::vector<std::pair<double, std::size_t>> places;
+    places.reserve(stems.size());
+    for (std::size_t i = 0; i < stems.size(); ++i)
+        if (stems[i].col >= 0 && stems[i].col < area.w)
+            places.emplace_back(stems[i].x, i);
+    std::sort(places.begin(), places.end());
+    std::vector<std::size_t> standing;
+    standing.reserve(places.size());
+    for (std::size_t k = 0; k < places.size(); ++k)
+        if (k + 1 == places.size() || places[k + 1].first != places[k].first)
+            standing.push_back(places[k].second);
+    std::sort(standing.begin(), standing.end());
+    spans.reserve(standing.size());
+    for (const std::size_t i : standing) {
+        const WaveformLineSpan span = waveform_gated_line_span(
+            area.x, area.w, stems[i].col, stems[i].x);
+        if (!span.empty()) spans.push_back(span);
     }
-    return rs;
+    return spans;
+}
+
+// The test's gate is standing_stem_spans' own: an entry whose column is the
+// area's paints its line, and only a painted stem takes another line's
+// place.
+bool GuiPaintHandler::stem_stands_at(const GuiRect& area, double x) const {
+    for (const MarkerStem& stem : app.marker_stems)
+        if (stem.x == x && stem.col >= 0 && stem.col < area.w) return true;
+    return false;
 }
 
 void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
                                          const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    sink.rects(standing_stem_rects(area, area.y, area.y + area.h),
-               palette().cue_outline);
+    const GuiColor ink = palette().cue_outline;
+    for (const WaveformLineSpan& span : standing_stem_spans(area))
+        sink.blended_rect(span.x0, static_cast<double>(area.y), span.x1,
+                          static_cast<double>(area.y + area.h), ink, 100);
 }
 
 // THE STEM'S HEAD SEGMENT, the chrome's half of the selection stem
 // (paint_marker_stems' head, the rule): the marker lane's last row and the
-// row of ground under the lane, on the standing stems' columns, in the
-// `cue_outline` — painted after the flag blit, so it stands over the chip's
-// apex row (an enabled chip's apex cell is the `cue_outline` already, a
-// disabled chip's the `inactive_cue_outline` the stem covers there) and over
-// the ground line, and under every later surface (the flag editor's box, the
-// keyboard slot, the modal box).
+// row of ground under the lane, on the standing stems' real spans of
+// columns, in the `cue_outline` — painted after the flag blit, so it stands
+// over the chip's apex, which is on its center (the outer triangle's tip:
+// the `cue_outline` already on an enabled chip, a disabled chip's
+// `inactive_cue_outline` the stem covers there) and over the ground line,
+// and under every later
+// surface (the flag editor's box, the keyboard slot, the modal box).
+// THROUGH THE COVERAGE STAMP (architect 2026-11-14, send J;
+// CoverageStampPass, cool_edit_paint.h): each stem one rect with real
+// column edges — the very span its canvas half hands the sink — on these
+// whole rows, each pixel the outline's word blended over what the lane and
+// the ground line hold there by the pixel's exact coverage; a span on whole
+// columns writes the word itself on its cells.
 void GuiPaintHandler::paint_marker_stem_heads(cairo_t* cr) {
     if (app.marker_stems.empty()) return;
     const GuiRect area = waveform_area(app);
     const GuiRect lane = top_marker_row_area(app);
     if (lane.h <= 0) return;
-    const std::vector<GuiRect> rs =
-        standing_stem_rects(area, lane.y + lane.h - 1, area.y);
-    if (rs.empty()) return;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    for (const GuiRect& r : rs) paint_cell_rect(cr, r, palette().cue_outline);
-    cairo_restore(cr);
+    const double y0 = static_cast<double>(lane.y + lane.h - 1);
+    const double y1 = static_cast<double>(area.y);
+    if (y1 <= y0) return;
+    const std::vector<WaveformLineSpan> spans = standing_stem_spans(area);
+    if (spans.empty()) return;
+    const GuiColor ink = palette().cue_outline;
+    CoverageStampPass stamp;
+    stamp.begin(cr);
+    for (const WaveformLineSpan& span : spans)
+        stamp.rect(span.x0, y0, span.x1, y1, ink);
+    stamp.end();
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -5310,9 +5378,13 @@ void GuiPaintHandler::paint_marker_stem_heads(cairo_t* cr) {
 // Re-projecting is what makes the stem SLIDE WITH ITS CONTENT when a clamped
 // zoom keeps moving the song under it — the ruling made watchable on glass
 // and the reason the architect asked for the stem there.
-// strip_anchor_stem_column clamps the column to the visible edges (and
-// render_strip_anchor_stem's own clamp agrees) — an edge-pinned anchor draws
-// the clamp itself.
+// strip_anchor_stem_x clamps the exact place to the visible edges' columns —
+// an edge-pinned anchor draws the clamp itself.
+// DAMAGE: the stem's line at its exact place touches one column more each
+// side than its column's two, and every change of it is damaged whole — the
+// seat and the clear each damage the waveform area (above), and every
+// applied gesture frame rebuilds the plate, whose publication damages the
+// canvas.
 void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
                                               const GuiRect& area) {
     if (!app.touch_nav_zoom.seated) return;
@@ -5323,12 +5395,13 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 
     const double anchor_sample = app.touch_nav_zoom.anchor_sample;
 
-    // The stem's one column derivation (strip_anchor_stem_column over
-    // displayed_column_at, warp_frame_map_view.h), on the PLATE basis.
-    const int col = strip_anchor_stem_column(anchor_sample, basis.vp_start,
-                                             basis.spp, basis.lattice_origin,
-                                             area.w);
-    render_strip_anchor_stem(sink, area, col);
+    // The stem's one place derivation (strip_anchor_stem_x over
+    // displayed_x_at, warp_frame_map_view.h; architect 2026-11-14, send J),
+    // on the PLATE basis.
+    const double x = strip_anchor_stem_x(anchor_sample, basis.vp_start,
+                                         basis.spp, basis.lattice_origin,
+                                         area.w);
+    render_strip_anchor_stem(sink, area, x);
 }
 
 // -- GuiPaintHandler::paint_sweep_highlight ------------------------------
@@ -5341,9 +5414,10 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 // should also [go] over stem from marker/playhead (ie everything in
 // waveform area)"). ONE LOOK FOR BOTH SWEEPS, TRIM's and ADD SEL's, SHOWN
 // ONLY WHILE THE SWEEP'S POINTER IS DOWN: one tint record (GuiCanvasSink::
-// tint) over the rect sweep_highlight_rect answers (app_state.h — the
-// columns, the formers and the empty states; its damage sites read the same
-// owner), blending it toward WHITE at the `sweep_highlight` device key's
+// blended_rect) over the columns sweep_highlight_columns answers
+// (app_state.h — the real span, the formers and the empty states; its
+// damage sites read the same owner's bounding cells, sweep_highlight_rect),
+// blending it toward WHITE at the `sweep_highlight` device key's
 // whole percent (a tuning key, device_config.h; 0 paints nothing), read
 // here at every list build.
 // WHITE IS SPELLED HERE, no palette role and no theme tone: "a blend
@@ -5361,8 +5435,15 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
                                             const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    sink.tint(sweep_highlight_rect(app, audio), hex(0xFFFFFF),
-              app.device_config->sweep_highlight);
+    // THE SPAN'S REAL EDGES (architect 2026-11-14, send J;
+    // sweep_highlight_columns): TRIM's the trim bar's own span edge for
+    // edge, ADD SEL's whole pen columns — one blended rect over the canvas's
+    // rows, each cell an edge crosses lightened by its coverage's share of
+    // the percent.
+    const SweepHighlightColumns span = sweep_highlight_columns(app, audio);
+    sink.blended_rect(span.x0, static_cast<double>(area.y), span.x1,
+                      static_cast<double>(area.y + area.h), hex(0xFFFFFF),
+                      app.device_config->sweep_highlight);
 }
 
 // -- GuiPaintHandler::paint_playheads ------------------------------------
@@ -5381,6 +5462,11 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     const PlateViewportBasis basis = plate_viewport_basis();
     const int px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, basis.spp,
                                       basis.lattice_origin);
+    // THE LINE'S EXACT PLACE (architect 2026-11-14, send J), the column's
+    // own value on the same basis: where the line is painted, the column
+    // above its gate.
+    const double x = playhead_exact_x(app, wf_cache.fp_vp_start, basis.spp,
+                                      basis.lattice_origin);
     // THIS PASS IS THE CURSOR'S CANVAS LINE, nothing else: its HEAD is the
     // triangle in the ruler (paint_ruler_row); across the view bar
     // (architect 2026-10-09 ~14:30) and the marker lane the playhead draws
@@ -5388,16 +5474,45 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     //
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form at the resting cursor column whatever the selection is doing — a
-    // SOLID ONE-W OPAQUE LINE in the palette's `playhead_line` (Default
-    // 81E1EA, architect 2026-11-12; render.h's playhead paragraph). It paints
+    // SOLID ONE-W LINE in the palette's `playhead_line` (Default
+    // 81E1EA, architect 2026-11-12; render.h's playhead paragraph), opaque
+    // on every pixel it covers whole. It paints
     // BEFORE paint_marker_stems, whose selection stem stands over it
     // (architect 2026-11-04; the stem the selection's since 2026-11-05),
     // and before the scanner.
     //
+    // THE COINCIDENT LINES (architect 2026-11-14, send J, "Agree to all
+    // decisions." — the one rule about lines that overlap): A LINE IS NOT
+    // DRAWN WHERE A LATER LINE OF
+    // THE LIST, OF THE SAME WIDTH, STANDS ON THE SAME EXACT x (the doubles
+    // equal) over rows that hold its own. THREE CASES EXIST: this line under
+    // a selection stem — the common state, every select landing the
+    // playhead on its marker, the marker and the playhead parked on it one
+    // whole displayed frame and so one double through displayed_x_at — the
+    // lead-in ring's left side under its reset's stem
+    // (paint_phase_reset_overlay_ring), and a selection stem under another
+    // on the same frame, two selected markers coincident
+    // (standing_stem_spans, which answers one span a distinct x). WHY: each line is blended over what
+    // lies beneath by its coverage, so two lines on one fractional place
+    // would leave the lower one's color in the upper's fringe (at half
+    // coverage a quarter of it) — a light halo round the dark stem; at a
+    // whole place the lower line was hidden whole, so nothing changes
+    // there. Lines at different places blend in list order as they fall
+    // (accepted). The test is stem_stands_at, on the stems the stem pass
+    // will paint. THE TWO x ARE ONE EXPRESSION ON ONE BASIS AT REST: the
+    // stem's is the flag pass's, laid out on the plate's published span
+    // over its width (wf_cache.fp_* as the flag cache's rebuild read them),
+    // this line's the plate basis's (the same fields now), so the doubles
+    // are equal whenever the flags stand on the standing plate. Between a
+    // plate's publication and the flag cache's next rebuild (an async
+    // publish window, a resize) the two part, the test answers no and the
+    // line is drawn under its stem as any two lines fall.
+    if (stem_stands_at(area, x)) return;
+
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
-    render_playhead(sink, area, px_x, palette().playhead_line);
+    render_playhead(sink, area, px_x, x, palette().playhead_line);
 }
 
 // -- GuiPaintHandler::paint_scanner --------------------------------------
@@ -5419,11 +5534,17 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 //
 // THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
 // (architect 2026-10-05), WHITE (architect
-// 2026-10-07: "let's go back to a white scanner") — SOLID, ONE W wide,
-// on its column (architect 2026-11-04, the unit, waveform_line_px's rule,
-// render.h), the canvas's rows alone (Cool Edit's playback cursor is a
-// solid line, measured 2026-10-09), and NEVER BLINKING (the resting
-// cursor's line is a static tone of its own since 2026-11-04 night).
+// 2026-10-07: "let's go back to a white scanner") — SOLID, ONE W wide
+// (architect 2026-11-04, the unit, waveform_line_px's rule, render.h), AT
+// THE PREDICTOR POSITION'S EXACT PLACE (architect 2026-11-14, send J: the
+// line moves by the real distance the position moved, so at a coarse zoom
+// it glides a fraction of a px a frame where its rounded column ticked one
+// px every several frames — the jitter he saw there, "I can see clearly";
+// while it plays, every painted frame then differs and is presented, and
+// no gate is added to avoid it), the canvas's rows alone (Cool Edit's
+// playback cursor is a solid line, measured 2026-10-09), and NEVER BLINKING
+// (the resting cursor's line is a static tone of its own since 2026-11-04
+// night).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (render_playhead is shared with the cursor and cannot reach a strip lane at
@@ -5438,7 +5559,13 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
     const int scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp,
                         basis.lattice_origin);
-    render_playhead(sink, area, scan_px, palette().scanner);
+    // The predictor position's exact place (architect 2026-11-14, send J):
+    // the line moves by the real distance the position moved, the column
+    // above its gate.
+    const double scan_x =
+        scanner_exact_x(app, wf_cache.fp_vp_start, basis.spp,
+                        basis.lattice_origin);
+    render_playhead(sink, area, scan_px, scan_x, palette().scanner);
 }
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
@@ -8868,12 +8995,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      palette's static `playhead_line` — the head is the ruler
         //      pass's, step 9).
         //   7. the MARKER STEMS (waveform): the selection stems, over the
-        //      cursor's line (2026-11-05).
+        //      cursor's line (2026-11-05) — which is not drawn under a stem
+        //      on its own exact place (paint_playheads' THE COINCIDENT
+        //      LINES, architect 2026-11-14).
         //   8. the SCANNER (waveform), solid.
         //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
         //      digits — AND, in the same pass, the cursor's HEAD (the cyan
-        //      triangle on the ruler's bottom rows, opaque over the ticks and
-        //      digits) and the MARKER LANE'S panel face under the cues.
+        //      triangle on the ruler's bottom rows, over the ticks and
+        //      digits, its edge blended over them) and the MARKER LANE'S
+        //      panel face under the cues.
         //  10. the FLAG BLIT — the cues.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only), then
         //      THE SWEEP HIGHLIGHT (paint_sweep_highlight, architect
@@ -8934,7 +9064,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     program is Cool Edit): a SELECTION's mark is its members'
         //     stems (architect 2026-11-05), with the landed cursor on the
         //     focus; a selected marker the cursor stands on shows its solid
-        //     stem, painted over the cursor's line (2026-11-04), the ruler's
+        //     stem in the cursor's line's place (2026-11-04; the line under
+        //     it not drawn, 2026-11-14), the ruler's
         //     head marking the playhead; its head in the ruler and the cue's
         //     chip in the marker lane never meet. (2026-08-01 lifted the SCANNER above the
         //     stems, so the moving line does not blink out at every marker it

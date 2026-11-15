@@ -117,29 +117,31 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
     return b;
 }
 
-GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio) {
+SweepHighlightColumns sweep_highlight_columns(const AppState& app,
+                                              const GuiAudio& audio) {
     // Contract at the declaration (app_state.h).
     const RegionDragState& d = app.region_drag;
-    if (!d.active || !d.moved) return GuiRect{};
+    if (!d.active || !d.moved) return SweepHighlightColumns{};
     const GuiRect area = waveform_area(app);
-    if (area.w <= 0 || area.h <= 0) return GuiRect{};
-    int lo = 0;
-    int hi = 0;
+    if (area.w <= 0 || area.h <= 0) return SweepHighlightColumns{};
+    double lo = 0.0;
+    double hi = 0.0;
     if (d.select) {
-        if (d.pen_col < 0) return GuiRect{};
-        lo = std::min(d.anchor_col, d.pen_col);
-        hi = std::max(d.anchor_col, d.pen_col) + 1;
+        if (d.pen_col < 0) return SweepHighlightColumns{};
+        lo = static_cast<double>(std::min(d.anchor_col, d.pen_col));
+        hi = static_cast<double>(std::max(d.anchor_col, d.pen_col) + 1);
     } else {
-        if (!d.wrote_trim) return GuiRect{};
+        if (!d.wrote_trim) return SweepHighlightColumns{};
         // paint_trim's chain and its gates (paint_handler.cpp,
         // render_trim_flags): the item basis, the displayed map, each bound
         // through displayed_trim_ms and the int64 round trip of TrimRange
         // (exact: the mapping returns an integral-valued double), then the
-        // bound columns at the basis's effective width.
+        // bounds at the basis's effective width, and the span's real edges
+        // (trim_span_columns, the bar's own).
         const ItemViewportBasis basis = item_viewport_basis(app, audio);
         if (basis.area_w <= 0 || basis.spp <= 0.0 ||
             basis.vp_end_frame <= basis.vp_start_frame)
-            return GuiRect{};
+            return SweepHighlightColumns{};
         const std::vector<WarpFrameMapSegment>& dmap =
             displayed_or_live_target_map(app, audio);
         const std::vector<WarpFrameMapSegment>* map_arg =
@@ -157,8 +159,19 @@ GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio) {
         lo = s.lo;
         hi = s.hi;
     }
-    if (hi <= lo) return GuiRect{};
-    return GuiRect{area.x + lo, area.y, hi - lo, area.h};
+    if (hi <= lo) return SweepHighlightColumns{};
+    return SweepHighlightColumns{static_cast<double>(area.x) + lo,
+                                 static_cast<double>(area.x) + hi};
+}
+
+GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio) {
+    // The span's bounding cells over the canvas's rows (the declaration).
+    const SweepHighlightColumns s = sweep_highlight_columns(app, audio);
+    if (s.empty()) return GuiRect{};
+    const GuiRect area = waveform_area(app);
+    const int x0 = static_cast<int>(std::floor(s.x0));
+    const int x1 = static_cast<int>(std::ceil(s.x1));
+    return GuiRect{x0, area.y, x1 - x0, area.h};
 }
 
 TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
@@ -223,7 +236,7 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
 // walk with the same boundary idiom.
 //
 // A CUE IS TWO RECTS (FlagHitRect, render.h, 2026-10-09): its label's box and
-// its triangle — the outlined chip's box since 2026-11-04 (cue_chip_rows) —
+// its triangle — the outlined chip's hit box (cue_chip_hit_left_px) —
 // and the walk follows the cue painter's own order
 // (render.cpp's paint_cues, render.h's marker-lane paragraph): THE CHIPS
 // paint last, left to right, so a press on any chip answers the
@@ -326,8 +339,8 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // which is the honest answer: a flag with no pixels has no box to grab.
     //
     // THE SHAPE IS TWO RECTS (2026-10-09, architect: "the union of the
-    // triangle and the label's box as painted"): the cue's chip's box — the
-    // outlined staircase's widest row over its rows (2026-11-04) — and its
+    // triangle and the label's box as painted"): the cue's chip's box — its
+    // hit extent round its column over its rows (render.h's cue block) — and its
     // label's box. No slope test: the chip's box is its hit.
     //
     // Z-ORDER is the cue painter's (topmost_flag_rect above): chips over

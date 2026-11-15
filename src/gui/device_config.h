@@ -487,7 +487,7 @@
 // triangle's rows and antialiasing, the label's size and gap past the
 // triangle) settled ~13:05 at 8 rows authored in the tablet's device px, the staircase, 22
 // and a gap of 8 (render.h's cue_triangle_rows and cue_label_lead_px,
-// paint_ce_cue_triangle, gui_font.h's Label size since 2026-11-01 night,
+// cool_edit_paint.h's THE CUE'S CHIP, gui_font.h's Label size since 2026-11-01 night,
 // the gap 12 since 2026-11-02, the rows 9, the size 24 and the gap 13 on
 // 2026-11-03, today's numbers those owners' — the rows 4 W, 8 device rows
 // on the tablet, since 2026-11-12; an old line is the
@@ -1372,9 +1372,10 @@ inline std::optional<int> parse_tooltip_delay_ms(std::string_view v) {
 // "010" or "+10": the int tuning keys' grammar, lamp_hold_ms's), the one
 // owner the reader, the writer, the settings editor's commit and its recall
 // read (format_sweep_highlight, parse_sweep_highlight). The number is the
-// tint's alpha as it is (GuiCanvasSink::tint, word2): the highlight lays
-// G · (1 − p / 100) + FFFFFF · p / 100 on every canvas pixel G of the swept
-// span. THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES
+// tint's alpha as it is (GuiCanvasSink::blended_rect, word2): the highlight
+// lays G · (1 − p / 100) + FFFFFF · p / 100 on every canvas pixel G inside
+// the swept span, and the pixel's covered share of p on one the span's real
+// edge crosses (architect 2026-11-14, send J). THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES
 // above; 10, the planner's first number for him to tune). The range: 0
 // paints no highlight (the sink appends no record); 100 paints the span
 // white. The settings page opens the LINE EDITOR on it, not a value list

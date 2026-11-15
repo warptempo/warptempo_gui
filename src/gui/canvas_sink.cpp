@@ -1,6 +1,7 @@
 #include "canvas_sink.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 
 // The canvas sink (the rule, the invariant and what each record writes are
@@ -37,17 +38,39 @@ void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
     }
 }
 
-// THE TINT'S RECORD (architect 2026-11-12, the sweep highlight): the word
-// the rects' own for the color, the alpha the whole percent the list
-// shader divides by 100 (kListFragmentShader's tint arm), at most 100 by
-// its one producer's grammar (parse_sweep_highlight, device_config.h).
-void GuiCanvasSink::tint(const GuiRect& r, GuiColor toward, int percent) {
-    if (r.w <= 0 || r.h <= 0 || percent <= 0) return;
+// THE TINT'S RECORD (architect 2026-11-12, the sweep highlight; its real
+// edges architect 2026-11-14, send J): the word the rects' own for the
+// color, the alpha the whole percent the list shader divides by 100
+// (kListFragmentShader's tint arm) — the sweep highlight's key, at most 100
+// by its grammar (parse_sweep_highlight, device_config.h), and 100 for a
+// line — over THE REAL RECT [x0, x1) x [y0, y1) in surface px. THE RECORD'S
+// CELLS are the cells the real rect touches, r = its floor through its
+// ceiling, and ITS EDGES ride as floats FROM r's CORNER — the near two in
+// [0, 1), the far two at most the rect's own size, so a float holds each
+// far finer than a level of coverage wherever the rect stands on the
+// surface:
+//     r.x = floor(x0), r.y = floor(y0), r.w = ceil(x1) − r.x,
+//     r.h = ceil(y1) − r.y;
+//     edges = {x0 − r.x, y0 − r.y, x1 − r.x, y1 − r.y}, each cast once.
+// The shader takes each cell's coverage from them (its arm owns that
+// arithmetic). WHOLE EDGES GIVE {0, 0, w, h}, every cell's coverage exactly
+// 1: the percent alone on every cell, and at 100 percent the word itself,
+// an opaque rect's bytes. Nothing for an empty rect or a percent <= 0.
+void GuiCanvasSink::blended_rect(double x0, double y0, double x1, double y1,
+                                 GuiColor toward, int percent) {
+    if (x1 <= x0 || y1 <= y0 || percent <= 0) return;
     GuiCanvasPrimitive p;
     p.kind  = GuiCanvasKind::Tint;
-    p.r     = r;
+    p.r.x   = static_cast<int>(std::floor(x0));
+    p.r.y   = static_cast<int>(std::floor(y0));
+    p.r.w   = static_cast<int>(std::ceil(x1)) - p.r.x;
+    p.r.h   = static_cast<int>(std::ceil(y1)) - p.r.y;
     p.word  = argb32_opaque_word(display_color(toward));
     p.word2 = static_cast<uint32_t>(percent);
+    p.edges[0] = static_cast<float>(x0 - static_cast<double>(p.r.x));
+    p.edges[1] = static_cast<float>(y0 - static_cast<double>(p.r.y));
+    p.edges[2] = static_cast<float>(x1 - static_cast<double>(p.r.x));
+    p.edges[3] = static_cast<float>(y1 - static_cast<double>(p.r.y));
     list_.prims.push_back(p);
 }
 
