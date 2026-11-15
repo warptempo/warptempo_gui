@@ -10,11 +10,14 @@ struct GuiCanvasPage;
 
 // THE GL CANVAS'S OWNER (2026-10-14; the design record is
 // docs/engineering/gpu_canvas_2026_10.md): everything of the GPU canvas that
-// is GLES 3.0 and neither EGL nor a window — the three programs and their
+// is GLES 3.0 and neither EGL nor a window — the four programs and their
 // shaders, the backbuffer's texture, the canvas list's instance buffer, the
-// plate's bounds texture and the score viewer's page textures, the upload
-// walk and the frame's draw — in ONE platform-neutral object the
-// platform's present drives (the one canvas road, architect 2026-10-30).
+// plate's bounds texture and the score viewer's page textures, THE FRAME
+// TARGET (architect 2026-11-15, send L: the canvas keeps its own frame, an
+// offscreen RGBA8 target holding the whole picture of the last frame
+// composed), the upload walk, the frame's compose into the target and the
+// copy out of it into the window's buffer — in ONE platform-neutral object
+// the platform's present drives (the one canvas road, architect 2026-10-30).
 // THE PLATFORM KEEPS
 // WHAT IS ITS OWN: the display, the config, the context and the window's
 // surface, the make current, the swap interval, the swap and its failure
@@ -29,7 +32,8 @@ struct GuiCanvasPage;
 // for a render call.
 
 // THE LOG SEAM: the owner names no platform's log. A failure of its setup —
-// a shader that fails to compile, a program that fails to link — is fatal
+// a shader that fails to compile, a program that fails to link, a frame
+// target that is incomplete (ensure_texture, 2026-11-15) — is fatal
 // (the platform's gl_fatal rule: no fallback road at run time), and `fatal`
 // is handed the whole message, written as one line by the platform's own
 // fatal log and never returning (the owner aborts behind it all the same).
@@ -52,19 +56,24 @@ public:
     // (the premultiplied source-over of the plate's fringe and the tint,
     // enabled for the canvas list's draw alone, 2026-10-30).
     void bind_fixed_state();
-    // THE THREE PROGRAMS, built at the first make current (each a no-op once
+    // THE FOUR PROGRAMS, built at the first make current (each a no-op once
     // made): the texture triangle's, the canvas list's — at the plate's
     // default grow, the source being specialized per grow (build_list_program
     // below) — with its vertex array, its instance buffer and the plate's
-    // bounds texture, and the GPU page's (2026-10-27).
+    // bounds texture, the GPU page's (2026-10-27), and THE COPY's (architect
+    // 2026-11-15, send L; kCopyFragmentShader's head), its sampler on unit 3.
     void ensure_programs();
-    // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER (the definition): remade at
-    // a size of w x h it does not have.
+    // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER, AND THE FRAME TARGET WITH IT
+    // (the definition): both remade at a size of w x h the texture does not
+    // have, by the one size test; the default framebuffer bound at the
+    // return.
     void ensure_texture(int w, int h);
     // THE FRAME (the definition): the upload walk of `damage` out of `back`
     // into the texture, less the canvas clip; the page textures reconciled
-    // with the list's request; the clear; the list's draw — or the page's,
-    // while it stands — under the scissor; the texture's draw over it.
+    // with the list's request; THE COMPOSE into the frame target — the clear;
+    // the list's draw, or the page's while it stands, under the scissor; the
+    // texture's draw over it — then THE COPY of `repair` out of the target
+    // into the window's buffer (architect 2026-11-15, send L).
     // `list` the GUI's canvas frame (its px the surface's: the app paints no
     // window frame since 2026-10-24), null before the first, its page's
     // REPORT written here (GuiCanvasPage, canvas_sink.h); `surface_w` x
@@ -73,11 +82,15 @@ public:
     // says why not EGL's own answer). FALSE, with no GL call made, when there
     // is no texture yet or the backbuffer has no data: the platform then
     // swaps nothing and keeps its damage. The platform swaps on true.
-    // `repair` (2026-11-04, session 33; THE REPAIR at the definition): empty
-    // draws the whole frame; otherwise only its rects, each recomposed
-    // through the whole pass order under a scissor — the buffer's other
-    // pixels being an earlier frame's (the platform's buffer-age history).
+    // `compose` (THE COMPOSE at the definition): THIS FRAME'S OWN CHANGE —
+    // empty composes the whole frame; otherwise only its rects, each
+    // recomposed through the whole pass order under a scissor, the target's
+    // other pixels being the last frame's. `repair` (THE COPY at the
+    // definition): the region the window's buffer is missing (the platform's
+    // buffer-age history) — empty copies the whole surface; otherwise only
+    // its rects, the buffer's other pixels being an earlier frame's copy.
     bool present_frame(cairo_surface_t* back, std::span<const GuiGlRect> damage,
+                       std::span<const GuiGlRect> compose,
                        std::span<const GuiGlRect> repair,
                        GuiCanvasDrawList* list,
                        int surface_w, int surface_h);
@@ -85,11 +98,12 @@ public:
     // data): the platform asks before it names a frame's damage region to
     // EGL, so no region is set for a frame that draws nothing.
     bool ready(cairo_surface_t* back) const;
-    // THE REPAIR'S OWN VERDICT (the definition): true when this frame's
-    // change is not described by its damage — no walk yet on this texture,
-    // the canvas clip moved, the score viewer's page stands or stood last
-    // frame, the grow's program is to be rebuilt — so it is drawn whole.
-    bool repair_must_be_full(const GuiCanvasDrawList* list) const;
+    // THE COMPOSE'S VERDICT (the definition; architect 2026-11-15, send L):
+    // true when this frame's change is not described by its damage — no
+    // walk yet on this texture, the canvas clip moved, the score viewer's
+    // page stands or stood last frame, the grow's program is to be rebuilt —
+    // or the frame target holds no whole frame yet, so it is composed whole.
+    bool compose_must_be_whole(const GuiCanvasDrawList* list) const;
     // THE CONTEXT'S END (the platform's exit): every name forgotten, the
     // context's destruction having freed the objects themselves — no GL call
     // is made, so it is asked after the platform has released and destroyed
@@ -155,7 +169,7 @@ private:
     std::vector<std::pair<int, int>> columns_spans_;
     // THE GPU PAGE'S OBJECTS (architect 2026-10-27, "1 a"; the request and
     // the report at GuiCanvasPage, canvas_sink.h; the draw at present_frame):
-    // the page program and its uniforms, made with the other two, and
+    // the page program and its uniforms, made with the others, and
     // THE PAGE TEXTURES — one immutable R8 texture a wanted page, on unit 2,
     // named by the store entry's serial with its size. THEIR LIFETIME IS THE
     // REQUEST'S WANTED LIST: at every present a texture whose serial the
@@ -190,7 +204,20 @@ private:
     int          upload_clip_[4]      = {0, 0, 0, 0};
     bool         upload_floater_      = false;
     bool         upload_seeded_       = false;
-    // Whether the last frame drew the score viewer's page (THE REPAIR's
-    // verdict: the page's leaving is drawn whole too).
+    // Whether the last frame drew the score viewer's page (the compose's
+    // verdict: the page's leaving is composed whole too).
     bool         page_stood_          = false;
+    // THE FRAME TARGET (architect 2026-11-15, send L; the rule at
+    // present_frame's THE FRAME TARGET, gl_canvas.cpp): the framebuffer
+    // object and its one color attachment, an immutable RGBA8 texture of the
+    // backbuffer texture's size (ensure_texture makes and remakes both with
+    // texture_), bound to a texture unit — unit 3, its own — for the copy
+    // alone; and whether the target holds a whole composed frame (false at
+    // the make, the remake and forget(); set by a whole compose), the
+    // compose's verdict reading it. THE COPY'S PROGRAM: kCanvasVertexShader
+    // with kCopyFragmentShader, its sampler on unit 3 (ensure_programs).
+    unsigned int frame_fbo_           = 0;
+    unsigned int frame_texture_       = 0;
+    bool         frame_seeded_        = false;
+    unsigned int copy_program_        = 0;
 };

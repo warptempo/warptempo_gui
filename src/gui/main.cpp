@@ -2318,8 +2318,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the published cell, or the whole lane while the row has yielded to
         // a modal (the cell then reads zero); either way a rect on screen, so
         // the present follows from the damage alone, whatever the forks below
-        // paint there. Under the score viewer every frame is drawn whole
-        // (GuiGlCanvas::repair_must_be_full), its keep-alive frames too.
+        // paint there. Under the score viewer every frame is composed and
+        // copied whole (GuiGlCanvas::compose_must_be_whole), its keep-alive
+        // frames too.
         if (playback_lifecycle.display_keep_alive_wanted(monotonic_ms()) &&
             gui.display_keep_alive_due())
             invalidate_clock_area();
@@ -2327,7 +2328,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
         // 2026-11-04 night, render_playhead's paragraph, render.h — the
         // tick's per-frame damage of a fading line stood one day and went
-        // with the fade; the partial repair it was measured under stays,
+        // with the fade; the buffer-age road it was measured under stays,
         // GuiPlatform::present.)
 
         // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,

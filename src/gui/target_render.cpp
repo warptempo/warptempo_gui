@@ -244,7 +244,7 @@ void GuiTargetRender::trigger() {
         // Viewport::invalidate_clock_area (viewport.h).
         viewport.invalidate_clock_area();
         // THE SCANNER'S TEARDOWN OWES ITS OWN DAMAGE (2026-11-04, session
-        // 33: the GPU draws only the repair region since, canvas_sink.h's
+        // 33: the GPU recomposes only the damaged region, canvas_sink.h's
         // damage contract): the scanner's last line goes with this write,
         // so the canvas is damaged here, not left to whatever else the
         // triggering mutator damaged (the completion damages the status

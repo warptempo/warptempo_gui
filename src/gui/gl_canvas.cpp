@@ -35,7 +35,11 @@
 // blended source-over toward its word under the same blend function — A
 // RECT WITH REAL EDGES (architect 2026-11-14, send J), each pixel's alpha
 // scaled by the exact area of it the rect covers, the canvas's lines at
-// their exact places its records at 100 percent.
+// their exact places its records at 100 percent. And THE FRAME TARGET
+// (architect 2026-11-15, "Send L."): every pass above composes into the
+// canvas's own offscreen target over this frame's change alone, and each
+// window buffer is brought up to date by a copy out of it, the window's
+// bytes the target's, exactly (present_frame's THE FRAME TARGET).
 
 namespace {
 
@@ -82,6 +86,25 @@ constexpr const char* kCanvasFragmentShader =
     "    vec4 t = texelFetch(u_tex, p, 0);\n"
     "    if (t.a == 0.0) discard;\n"
     "    o_color = vec4(t.bgr, 1.0);\n"
+    "}\n";
+
+// THE COPY (architect 2026-11-15, send L; the rule at present_frame's THE
+// FRAME TARGET): with kCanvasVertexShader's triangle, the frame target's
+// texel at the fragment's own integer pixel, written as it is stored — all
+// four channels, no row flip (the target and the window are both the
+// framebuffer's own lower-left coordinates), no swizzle, no discard. The
+// sampler is highp on unit 3 and the target is RGBA8, so the fetched value
+// is the 8-bit UNORM texel exactly and k/255 written to the window's RGBA8
+// buffer, unblended and undithered, converts back to k
+// (kCanvasFragmentShader's argument).
+constexpr const char* kCopyFragmentShader =
+    "#version 300 es\n"
+    "precision highp float;\n"
+    "precision highp int;\n"
+    "uniform highp sampler2D u_frame;\n"
+    "out vec4 o_color;\n"
+    "void main() {\n"
+    "    o_color = texelFetch(u_frame, ivec2(gl_FragCoord.xy), 0);\n"
     "}\n";
 
 // THE CANVAS LIST'S PROGRAM (2026-10-13; the records at GuiCanvasPrimitive,
@@ -1448,7 +1471,7 @@ GLuint compile_canvas_shader(const GuiGlCanvasHost& host, GLenum kind,
 }
 
 // Link a program from two shader sources; a failure is fatal, the canvas
-// program's rule (both programs, ensure_programs).
+// program's rule (every program, ensure_programs).
 GLuint link_canvas_program(const GuiGlCanvasHost& host, const char* vs_source,
                            const char* fs_source) {
     const GLuint vs = compile_canvas_shader(host, GL_VERTEX_SHADER, vs_source);
@@ -1496,8 +1519,8 @@ void GuiGlCanvas::build_list_program(int grow) {
 // tests, and THE BLEND IS OFF AT REST — its function set once here, the
 // premultiplied source-over the plate's fringe and the tint need
 // (kListFragmentShader's composite and tint arm), and enabled for the canvas list's draw alone (present_frame,
-// 2026-10-30) — so a texel and an opaque list word reach the framebuffer as
-// written.
+// 2026-10-30) — so a texel, an opaque list word and the copy's texel
+// (architect 2026-11-15, send L) reach the framebuffer as written.
 void GuiGlCanvas::bind_fixed_state() {
     glDisable(GL_DITHER);
     glDisable(GL_BLEND);
@@ -1507,7 +1530,7 @@ void GuiGlCanvas::bind_fixed_state() {
     glDisable(GL_SCISSOR_TEST);
 }
 
-// THE THREE PROGRAMS, built at the first make current and kept with the
+// THE FOUR PROGRAMS, built at the first make current and kept with the
 // context.
 void GuiGlCanvas::ensure_programs() {
     if (!program_) {
@@ -1580,6 +1603,16 @@ void GuiGlCanvas::ensure_programs() {
         page_field_uniform_  = glGetUniformLocation(prog, "u_field");
         page_program_ = prog;
     }
+    // THE COPY'S PROGRAM (architect 2026-11-15, send L; kCopyFragmentShader's
+    // head): the texture triangle's vertex shader, its sampler on unit 3,
+    // the unit the frame target's texture is bound to for the copy alone.
+    if (!copy_program_) {
+        const GLuint prog =
+            link_canvas_program(host_, kCanvasVertexShader, kCopyFragmentShader);
+        glUseProgram(prog);
+        glUniform1i(glGetUniformLocation(prog, "u_frame"), 3);
+        copy_program_ = prog;
+    }
 }
 
 // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER: one GL_RGBA8 texture of its
@@ -1590,6 +1623,19 @@ void GuiGlCanvas::ensure_programs() {
 // adoption declares, the adoption being the one road a size moves by. Asked
 // with the context current on a surface (the platform's backbuffer, after
 // its surface is made: ensure_backbuffer, platform_android.cpp).
+// THE FRAME TARGET FOLLOWS THE TEXTURE (architect 2026-11-15, send L; the
+// rule at present_frame's THE FRAME TARGET): made and remade here, with
+// texture_ and by its size test — one rule, one site — a framebuffer object
+// whose one color attachment is an immutable GL_RGBA8 texture of the same
+// size, one level, NEAREST both ways (the copy's texelFetch reads no
+// filter), no depth, no stencil, never sRGB, never multisampled; its
+// texture made on unit 3 and unbound from it at once (it is bound to a unit
+// for the copy alone), so unit 0 holds texture_ at the return as it always
+// has. Its completeness is checked once, at the make: an incomplete target
+// is fatal by the host's rule (canvas_fatal; no fallback road). The new
+// target holds no frame (frame_seeded_ false), so the compose's verdict
+// draws the next frame whole. THE DEFAULT FRAMEBUFFER IS BOUND AT THE
+// RETURN, the rest state present_frame keeps too.
 void GuiGlCanvas::ensure_texture(int w, int h) {
     if (texture_ && texture_w_ == w && texture_h_ == h)
         return;
@@ -1605,6 +1651,32 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
     // damage rect whole, the canvas's clip included (present_frame's upload
     // rule).
     upload_seeded_ = false;
+
+    if (frame_fbo_) glDeleteFramebuffers(1, &frame_fbo_);
+    if (frame_texture_) glDeleteTextures(1, &frame_texture_);
+    glGenTextures(1, &frame_texture_);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, frame_texture_);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, w, h);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glGenFramebuffers(1, &frame_fbo_);
+    glBindFramebuffer(GL_FRAMEBUFFER, frame_fbo_);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D, frame_texture_, 0);
+    const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        char line[160];
+        std::snprintf(line, sizeof(line),
+                      "the GL canvas: the frame target %dx%d is incomplete "
+                      "(0x%x)",
+                      w, h, static_cast<unsigned>(status));
+        canvas_fatal(host_, line);
+    }
+    frame_seeded_ = false;
 }
 
 // THE FRAME (2026-10-13; the design record is
@@ -1641,7 +1713,8 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // names deleted, and while the page stands the first one not yet held
 // uploaded — and the report's held serials written.
 //
-// THE DRAW: the canvas list first, then the texture over it. THE LIST
+// THE DRAW, INTO THE FRAME TARGET (its paragraph below): the canvas list
+// first, then the texture over it. THE LIST
 // (kListVertexShader's head; GuiCanvasPrimitive, canvas_sink.h): its
 // records as instances in list order, one instanced draw, the scissor
 // the canvas clip, UNDER THE BLEND (GL_BLEND enabled for this draw alone
@@ -1661,7 +1734,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // shows wherever the backbuffer's interior is clear and every other
 // pixel is the backbuffer's (kCanvasFragmentShader). The frame is
 // cleared first, opaque black: with discards a pixel neither draw writes
-// would otherwise hold a recycled buffer's bytes, though by the
+// would otherwise keep the target's last frame's bytes, though by the
 // invariant none exists (the list's first record is the canvas's ground,
 // over the whole clip, and every texel outside it is opaque).
 // WHILE THE SCORE VIEWER'S PAGE STANDS the clip is the box's interior and
@@ -1672,42 +1745,89 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // under every overlay: an 8-bit UNORM texel
 // fetched without a filter round-trips to the same 8-bit value in the
 // RGBA8 framebuffer, dithering is off, the texture's draw is unblended, and
-// the framebuffer is plain RGBA (the passthrough colorspace encodes nothing
-// — never an sRGB framebuffer, which is what makes the plate's blend the
-// byte-space blend ruled); inside the clip it is the list's words, each a
-// chrome pixel's bytes for its color by the sink's construction, on the
+// the framebuffer is plain RGBA — the frame target a GL_RGBA8 texture, the
+// window's buffer, which the copy writes, in the passthrough colorspace
+// that encodes nothing — never an sRGB framebuffer, which is what makes the
+// plate's blend the byte-space blend ruled; inside the clip it is the
+// list's words, each a chrome pixel's bytes for its color by the sink's
+// construction, on the
 // plate's fringe their coverage blend, and under a tint the blend toward
 // its word (kListFragmentShader).
 //
-// THE REPAIR (2026-11-04, session 33; the Astra consult's (b),
-// tmp/codex_review.md; the platform's half at GuiPlatform::present): THE
-// FRAME IS DRAWN WHOLE OR ONLY ITS REPAIR REGION. `repair` empty is the
-// whole frame, as above. Otherwise `repair` is the region the platform's
-// buffer-age history says the acquired buffer is missing (this frame's
-// damage and the damage of the frames since the buffer was last drawn), in
-// surface px, top-left, and each of its rects is RECOMPOSED from its own
-// clear through the whole pass order — the clear, the list under the rect
-// ∩ the clip, the texture — under a scissor to the rect, one rect whole
-// before the next; every pixel outside the region is the buffer's own,
-// drawn by an earlier frame on the same passes. THE BYTES ARE THE WHOLE
-// DRAW'S: every pass is deterministic from the clear at the same absolute
-// coordinates on the same state, the plate's shader reads its column data
-// and never the framebuffer, the blends (the plate's fringe, the tint) read
-// the framebuffer only through the GL blend over the records this same
-// pass drew there since the clear, and a scissor changes no fetch,
-// coverage or blend; an overlap of two rects is cleared again before it is
-// drawn again, so nothing blends twice. The texture's upload is still THIS frame's
-// damage alone (the texture is persistent, so every older repaired pixel is
-// already its own). IT STANDS ON THE DAMAGE CONTRACT: a canvas pixel the
-// list changes outside every declared damage rect is not redrawn, so every
-// GPU-visible change of the list owes damage on its old and new pixels
-// (the audit of 2026-11-04 in tmp/s33/done2.md; the owners' damage at each
-// pass's comment). A change the damage cannot describe is drawn whole by
-// repair_must_be_full's verdict.
+// THE FRAME TARGET (architect 2026-11-15, "Send L."; the platform's half,
+// the buffer-age history and the measurement, at GuiPlatform::present):
+// THE CANVAS KEEPS ITS OWN FRAME. The draw above runs into one persistent
+// offscreen target (ensure_texture's: an RGBA8 texture of the surface's
+// size behind a framebuffer object), which holds THE WHOLE PICTURE OF THE
+// LAST FRAME COMPOSED, all four channels — the bytes a whole draw into the
+// target leaves — and the window's buffer is brought up to date by
+// COPYING out of it, never by drawing the passes again. (Measured on the
+// tablet 2026-11-15: those bytes are within one or two levels of a draw
+// straight into the window buffer on partly covered pixels alone, the
+// tablet's ANGLE rounding a blend into the target the other way there;
+// opaque pixels never differ. The architect accepted it 2026-11-15, the
+// new picture the reference since.) Two regions, both
+// in surface px, top-left:
+//   * THE COMPOSE, over `compose`, THIS FRAME'S OWN CHANGE (the platform's:
+//     its damage, or the whole surface where the damage does not describe
+//     it). Empty: the whole frame — the unscissored clear, the list or the
+//     page under the clip's scissor, the texture over the whole surface —
+//     after which the target holds a whole frame (frame_seeded_). Otherwise
+//     each of its rects is RECOMPOSED from its own clear through the whole
+//     pass order — the clear, the list under the rect ∩ the clip, the
+//     texture — under a scissor to the rect, one rect whole before the
+//     next; every pixel outside the region is the target's own, the last
+//     frame's on the same passes. THE TARGET'S BYTES ARE THE WHOLE DRAW'S:
+//     every pass is deterministic from the clear at the same absolute
+//     coordinates on the same state, the plate's shader reads its column
+//     data and never the framebuffer, the blends (the plate's fringe, the
+//     tint) read the framebuffer only through the GL blend over the records
+//     this same pass drew there since the clear, and a scissor changes no
+//     fetch, coverage or blend; an overlap of two rects is cleared again
+//     before it is drawn again, so nothing blends twice. A partial compose
+//     needs the target to hold the frame before it: the verdict
+//     (compose_must_be_whole) composes whole until a whole compose has
+//     seeded it, and a remade target is unseeded.
+//   * THE COPY, over `repair`, the region the platform's buffer-age history
+//     says the acquired window buffer is missing (this frame's change and
+//     the changes of the frames since the buffer was last written): with
+//     the default framebuffer bound, the copy program (kCopyFragmentShader)
+//     draws the texture triangle over it — one triangle with no scissor for
+//     an empty `repair`, else one scissored triangle a rect, each clamped to
+//     the surface — the target's texture bound on unit 3 for the copy alone
+//     and unbound after, no clear (every pixel of the region is written),
+//     the blend off. THE WINDOW'S BYTES ARE THE TARGET'S: each copied pixel
+//     is the target's texel fetched without a filter and written unblended
+//     and undithered to an RGBA8 buffer of the same format, and every other
+//     pixel of the buffer is an earlier frame's copy of the same target
+//     pixel, unchanged since (the history's rule).
+// THE ALPHA the copy carries is known: the clear writes 1, the list's blend
+// (GL_ONE, GL_ONE_MINUS_SRC_ALPHA on all four channels) over that 1 leaves
+// a + 1 · (1 − a) = 1 for every record's alpha a — an opaque rect's 1, a
+// plate fragment's coverage, a tint's percent times its coverage — the
+// texture's triangle and the page write 1 unblended, and a discard leaves
+// the 1 beneath; so the target's alpha, like a whole draw's, is 255, and no
+// RGB blend reads the destination's alpha at all.
+// NO FEEDBACK: the target's texture is bound to a unit only between the
+// copy's bind and its unbind, while the default framebuffer is bound; every
+// draw into the target runs with unit 3 empty. THE REST STATE at every
+// return of present_frame and ensure_texture: the default framebuffer
+// bound, unit 0 active, the scissor test and the blend off.
+// The texture's upload is still THIS frame's damage alone (the texture is
+// persistent, so every older pixel is already its own). IT STANDS ON THE
+// DAMAGE CONTRACT: a canvas pixel the list changes outside every declared
+// damage rect is not recomposed into the target, so every GPU-visible
+// change of the list owes damage on its old and new pixels (the audit of
+// 2026-11-04 in tmp/s33/done2.md; the owners' damage at each pass's
+// comment). A change the damage cannot describe is composed whole by
+// compose_must_be_whole's verdict, and its copy is whole (the platform).
+// A FRAME COSTS the passes over its own change, once, into the target, and
+// one fetch a pixel over the repair region: a page turn is one heavy frame
+// and the next buffers' copies; a frame at rest draws nothing.
 // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
 // 2026-10-24): an empty clip — no list yet, or a paint area the folder
 // overlay emptied — leaves nothing out of any upload and draws no list.
-// present_frame's and repair_must_be_full's one reading.
+// present_frame's and compose_must_be_whole's one reading.
 void GuiGlCanvas::frame_clip(const GuiCanvasDrawList* list, int clip[4],
                              bool& floater) {
     clip[0] = clip[1] = clip[2] = clip[3] = 0;
@@ -1726,17 +1846,22 @@ bool GuiGlCanvas::ready(cairo_surface_t* back) const {
            cairo_image_surface_get_data(back) != nullptr;
 }
 
-// THE REPAIR'S OWN VERDICT (2026-11-04, session 33; the rule at
-// present_frame's THE REPAIR): the frame must be drawn whole when the
-// change it shows is not described by the damage — the texture has had no
-// walk since it was made (a remade texture, the first frame), the canvas
+// THE COMPOSE'S VERDICT (architect 2026-11-15, send L; the rule at
+// present_frame's THE FRAME TARGET): the frame must be composed whole when
+// the change it shows is not described by the damage — the texture has had
+// no walk since it was made (a remade texture, the first frame), the canvas
 // clip differs from the last walk's (a keyboard, a folder overlay, a modal
 // box or the score viewer came or went: every pixel the clip gained or lost
 // changes its pass), the score viewer's page stands or stood at the last
 // frame (its textures arrive across presents with no damage of their own),
 // or the list's grow differs from the standing program's (the plate is
-// recompiled, so every fringe moves).
-bool GuiGlCanvas::repair_must_be_full(const GuiCanvasDrawList* list) const {
+// recompiled, so every fringe moves) — OR WHEN THE FRAME TARGET HOLDS NO
+// WHOLE FRAME YET (made or remade since the last whole compose), since a
+// partial compose keeps the target's other pixels as the frame before it.
+// The platform's one caller (GuiPlatform::present) then names the whole
+// surface as the frame's change, so the copy is whole too.
+bool GuiGlCanvas::compose_must_be_whole(const GuiCanvasDrawList* list) const {
+    if (!frame_seeded_) return true;
     if (!upload_seeded_) return true;
     int  clip[4];
     bool floater = false;
@@ -1752,6 +1877,7 @@ bool GuiGlCanvas::repair_must_be_full(const GuiCanvasDrawList* list) const {
 
 bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> damage,
+                                std::span<const GuiGlRect> compose,
                                 std::span<const GuiGlRect> repair,
                                 GuiCanvasDrawList* list,
                                 int surface_w, int surface_h) {
@@ -1825,14 +1951,14 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         // every list, so the grow moves only at a commit of the key and
         // the compare is false at every other frame — and a commit of the
         // key is then the next frame's picture with no upload (the tips
-        // do not move), drawn whole (repair_must_be_full).
+        // do not move), composed whole (compose_must_be_whole).
         if (list_instances_ > 0 && list->plate_grow != list_program_grow_) {
             glDeleteProgram(list_program_);
             build_list_program(list->plate_grow);
         }
     }
     // THE LIST'S DRAW under the scissor (x, y, w, h) in surface px, top-left
-    // — the canvas clip, or a repair rect's part of it.
+    // — the canvas clip, or a compose rect's part of it.
     const auto draw_list = [&](int x, int y, int w, int h) {
         if (w <= 0 || h <= 0 || list_instances_ <= 0) return;
         glEnable(GL_SCISSOR_TEST);
@@ -1857,23 +1983,30 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         glDrawArrays(GL_TRIANGLES, 0, 3);
     };
 
-    if (repair.empty()) {
-        // THE FULL REPAIR: the clear, the list or the page under the clip's
-        // scissor, the texture over the whole surface.
+    // THE COMPOSE, INTO THE FRAME TARGET (the rule at THE FRAME TARGET
+    // above; architect 2026-11-15, send L): every pass below draws into the
+    // target, over this frame's own change.
+    glBindFramebuffer(GL_FRAMEBUFFER, frame_fbo_);
+    if (compose.empty()) {
+        // THE WHOLE COMPOSE: the clear, the list or the page under the
+        // clip's scissor, the texture over the whole surface; the target
+        // then holds a whole frame.
         glClear(GL_COLOR_BUFFER_BIT);
         if (page_stands)
             draw_page(list->page, clip);
         else if (list_draws)
             draw_list(clip[0], clip[1], clip[2], clip[3]);
         draw_texture();
+        frame_seeded_ = true;
     } else {
-        // THE PARTIAL REPAIR (the rule at THE REPAIR above): every repair
-        // rect recomposed from its own clear through the same passes in the
-        // same order — the clear, the list under the rect ∩ the clip, the
-        // texture — each rect whole before the next, so a pixel two rects
-        // share is cleared again before it is drawn again and never blends
-        // twice. Never with the page standing (repair_must_be_full).
-        for (const GuiGlRect& r : repair) {
+        // THE PARTIAL COMPOSE (the rule at THE FRAME TARGET above): every
+        // compose rect recomposed from its own clear through the same
+        // passes in the same order — the clear, the list under the rect ∩
+        // the clip, the texture — each rect whole before the next, so a
+        // pixel two rects share is cleared again before it is drawn again
+        // and never blends twice. Never with the page standing, and never
+        // on a target that holds no whole frame (compose_must_be_whole).
+        for (const GuiGlRect& r : compose) {
             const int rx0 = std::max(r.x, 0);
             const int ry0 = std::max(r.y, 0);
             const int rx1 = std::min(r.x + r.w, surface_w);
@@ -1897,6 +2030,34 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         }
     }
     page_stood_ = page_stands;
+
+    // THE COPY, INTO THE WINDOW'S BUFFER (the rule at THE FRAME TARGET
+    // above): the default framebuffer bound again — the rest state — and
+    // `repair` copied out of the target, the target's texture on unit 3 for
+    // the copy alone; one triangle for the whole surface, else one under
+    // each rect's scissor, clamped to the surface as the compose's rects
+    // are. No clear: every pixel of the region is written.
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glUseProgram(copy_program_);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, frame_texture_);
+    if (repair.empty()) {
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    } else {
+        for (const GuiGlRect& r : repair) {
+            const int rx0 = std::max(r.x, 0);
+            const int ry0 = std::max(r.y, 0);
+            const int rx1 = std::min(r.x + r.w, surface_w);
+            const int ry1 = std::min(r.y + r.h, surface_h);
+            if (rx1 <= rx0 || ry1 <= ry0) continue;
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(rx0, texture_h_ - ry1, rx1 - rx0, ry1 - ry0);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+            glDisable(GL_SCISSOR_TEST);
+        }
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
     return true;
 }
 
@@ -1929,6 +2090,12 @@ void GuiGlCanvas::forget() {
     page_field_uniform_  = -1;
     pages_.clear();
     upload_seeded_       = false;
+    // The frame target and the copy's program (architect 2026-11-15, send
+    // L): their names forgotten with the rest, the target unseeded.
+    frame_fbo_           = 0;
+    frame_texture_       = 0;
+    frame_seeded_        = false;
+    copy_program_        = 0;
 }
 
 // THE PAGE TEXTURES' RECONCILIATION (2026-10-27; the rule at gl_canvas.h's

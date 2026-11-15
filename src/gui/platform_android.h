@@ -580,17 +580,20 @@ private:
     // -- THE GL CANVAS (2026-10-13; the one canvas road since the laptop
     // GUI's drop, architect 2026-10-30; the road at present) --
     // The window goes through EGL / GLES 3.0: the backbuffer above is
-    // uploaded into ONE texture by damage rect and drawn at every swap, whole
-    // or only the buffer's repair region (present's THE PARTIAL REPAIR,
-    // 2026-11-04).
+    // uploaded into ONE texture by damage rect, the frame composed over its
+    // own change into the canvas's frame target, and the window's buffer
+    // brought up to date at every swap by a copy out of the target, whole or
+    // only the buffer's repair region (present's THE BUFFER-AGE ROAD AND THE
+    // FRAME TARGET; architect 2026-11-15, send L).
     // The EGL handles are spelled void* (each EGL type is one on this
     // platform) so no EGL header reaches this file. THE DISPLAY, CONFIG,
     // CONTEXT AND PROGRAMS ARE THE PROCESS'S, made at the first adoption and
     // kept until shutdown; THE SURFACE IS THE WINDOW'S (egl_window_ names
     // the window it was made on): made at an adoption of a new window,
     // destroyed at the window's loss. EVERYTHING GLES AND NEITHER EGL NOR
-    // WINDOW — the programs, the texture that follows the backbuffer's size,
-    // the canvas list's objects, the upload walk and the frame's draw — is
+    // WINDOW — the programs, the texture that follows the backbuffer's size
+    // and the frame target with it, the canvas list's objects, the upload
+    // walk, the frame's compose and the copy — is
     // gl_canvas_'s (GuiGlCanvas, gl_canvas.h, 2026-10-14), the one owner
     // present drives; what stays here is the platform's.
     void*                 egl_display_ = nullptr;
@@ -600,7 +603,7 @@ private:
     struct ANativeWindow* egl_window_  = nullptr;
     // The one-time line naming the driver (adopt_window's road).
     bool                  gl_identity_logged_ = false;
-    // THE PARTIAL REPAIR'S EGL (2026-11-04, session 33; the road at
+    // THE BUFFER-AGE ROAD'S EGL (2026-11-04, session 33; the road at
     // present): the three extensions it stands on, read at the capability
     // line, and the two entry points resolved there by eglGetProcAddress
     // (spelled void* for this header's no-EGL rule; present casts them to
@@ -609,8 +612,10 @@ private:
     // changes, newest first, at most kRepairHistoryDepth — each a
     // successful present's damage on the surface (or the whole surface for
     // a change its damage does not describe) — emptied at a new surface, a
-    // new backbuffer size and a failed swap, so the next frame is drawn
-    // whole.
+    // new backbuffer size and a failed swap, so the next frame's copy is
+    // whole (the compose, into the canvas's frame target, needs no history:
+    // the target holds the last frame composed; architect 2026-11-15,
+    // send L).
     bool                  egl_buffer_age_ext_     = false;
     bool                  egl_partial_update_ext_ = false;
     bool                  egl_swap_damage_ext_    = false;
