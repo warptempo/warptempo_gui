@@ -1480,7 +1480,8 @@ inline std::optional<int> parse_waveform_grow(std::string_view v) {
 // 2, IS OFF: the band ends at the switch width, so a start there is a band
 // of no length (render.cpp's static_assert binds this top to the switch
 // width). THE FLOOR, 1.5: the band's bars are drawn F/2 device px wide at
-// its start, and the plate shader's bounds stand on a least pitch of 3/4 px
+// its start, and the plate shader's bounds for the band's row (its merged
+// arm) stand on a least pitch of 3/4 px
 // (gl_canvas.cpp's static_assert) — a longer fade needs narrower bars, a
 // wider reach and more fetches a fragment.
 // kWaveformFadeDefaultHundredths IS CONSTRUCTION STATE ALONE —

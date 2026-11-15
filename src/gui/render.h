@@ -3391,7 +3391,14 @@ struct WaveformBasis {
 // whole viewport — start, origin and step — is the same picture, and a zoom
 // reached by a gesture rests on the gesture's own origin, its bars at a
 // fractional offset, soft — and, where it rests inside the fade band, part
-// merged, the same every time for that viewport.
+// merged, the same every time for that viewport. THE DRAW'S ARITHMETIC
+// STANDS ON THE SAME SEAT (architect 2026-11-14, send I): the shader places
+// a bar among the screen's subcolumns by a multiply with the row's
+// reciprocal — at a landing exactly 1, the picture byte for byte the
+// one-bar-a-pixel plate; elsewhere the product stands a float's rounding
+// off the quotient, which can move one edge by a quarter px where a
+// decision sits near its boundary (kListFragmentShader's WHAT IS PROMISED,
+// gl_canvas.cpp: the rule and his words).
 //
 // BAR k (a GLOBAL index, k >= 0) is the display-domain span [k · b,
 // (k + 1) · b) ON THE FRAME-0 LATTICE: its integer edges are the producer's
@@ -3577,8 +3584,10 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // gl_canvas.cpp's head): pair K's left half stands at its parent's centre
 // less w · p / 2 and its right at as much more — both ON the parent's
 // centre at w = 0, on their own centres toward w = 1 — and the picture is
-// the uniform row's rule over those vertices, exact at both ends of the
-// band: rung B's picture at its start, rung b's at its end.
+// the uniform row's rule over those vertices, meeting both ends of the
+// band: at its start rung B's picture byte for byte, at its end rung b's
+// but for a float decision that sits near its boundary (architect
+// 2026-11-14, send I; kListFragmentShader's merged arm, AT THE TWO ENDS).
 // Pure and total: a degenerate q, column or key answers out of the band or
 // the weight 0, no error arm.
 inline constexpr float kWaveformFadeWeightTop = 0x1.fffffep-1f;
