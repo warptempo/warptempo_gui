@@ -68,9 +68,11 @@ inline constexpr const char* kPlaybackDeviceUnavailableCard =
 
 // THE DISPLAY KEEP-ALIVE, A BRIEF WINDOW AFTER A FAST STOP (architect
 // 2026-11-13, session 118) — THE ONE OWNER OF ITS FACTS AND ITS RULING.
-// THE FACTS: the tablet's panel (Galaxy Tab S10 FE) drops 90 -> 30 Hz once
-// no layer has presented for 250 ms (SurfaceFlinger's idle timer), and the
-// first frames after it land at 30 Hz cadence; neither the window's
+// THE FACTS (measured with the panel then pinned at 90 Hz; the 60 Hz pin
+// of 2026-11-14 is the same window vote, which the idle timer outranks, so
+// the window below stands unchanged): the tablet's panel (Galaxy Tab S10
+// FE) drops 90 -> 30 Hz once no layer has presented for 250 ms
+// (SurfaceFlinger's idle timer), and the first frames after it land at 30 Hz cadence; neither the window's
 // frame-rate vote (adopt_window) nor a preferred display mode outranks the
 // timer, and `min_refresh_rate` is a System setting no app may write. The
 // architect saw it as a CATCH — the scanner's first beat stepping late —

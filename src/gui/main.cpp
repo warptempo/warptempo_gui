@@ -1403,8 +1403,8 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // edges are owed whatever mode stands. THE HOLD (architect 2026-11-05 night,
 // session 49, REVERSING the same night's "no hold": the tick is the
 // platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms,
-// platform_android.cpp) while only the PRESENT waits for the 90 Hz vsync, an
-// 11.1 ms period, so a lamp lit for one 5 ms tick can be cleared before any
+// platform_android.cpp) while only the PRESENT waits for the 60 Hz vsync, a
+// 16.7 ms period, so a lamp lit for one 5 ms tick can be cleared before any
 // present and never be painted — the clip clamps a RUN of blocks and its
 // lamp spans ticks, but the limiter's engaged frames are POINTS, and its
 // one-tick lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD —
@@ -1414,7 +1414,7 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // now before the stamp. So an event re-arms the hold (a run of clamping
 // blocks keeps the lamp lit until the hold after its last block), the dark
 // edge lands on the first tick at or past the stamp, and 100 ms is about
-// nine presents at 90 Hz. NO TIMER OF ITS OWN: the tick is the clock, the
+// six presents at 60 Hz. NO TIMER OF ITS OWN: the tick is the clock, the
 // stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
 // (architect 2026-11-05 night, session 49): the clip lamp's third bit,
 // GuiPlayback::device_unavailable() read on every tick — the error
@@ -3102,10 +3102,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // A REST KEEPS THE PAINT CLOCK RUNNING (2026-10-18): while a rest of
         // the act stands, every tick damages the CLOCK CELL, so a frame is
         // presented at every vsync through the rest. THE DISPLAY HAS AN IDLE
-        // TIMER: the tablet's SurfaceFlinger drops the panel from 90 Hz to
-        // 30 Hz once no layer has presented for 250 ms, and the first frame
-        // presented after that brings 90 Hz back only a frame or two later —
-        // the app's explicit frame-rate vote does not outrank the idle timer.
+        // TIMER: the tablet's SurfaceFlinger drops the panel from its pinned
+        // rate (60 Hz since 2026-11-14) to 30 Hz once no layer has presented
+        // for 250 ms, and the first frame presented after that brings the
+        // pinned rate back only a frame or two later — the app's explicit
+        // frame-rate vote does not outrank the idle timer (observed with the
+        // panel then pinned at 90 Hz, as is the beat history below).
         // Inside the act a rest is the one silent gap, and the one the app can
         // keep awake itself: nothing is damaged during it (the scanner is
         // down, and the clock's own damage is the pre-paint hook's while

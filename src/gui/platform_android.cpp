@@ -384,7 +384,7 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
 // (2026-10-14; the paint's gate is the vsync callback now, pump's tail).
 // detect_refresh_rate_ms's 5-ms tick is a choice made against this rate and
 // says so there; it reads no number.
-constexpr int kPanelRefreshHz = 90;
+constexpr int kPanelRefreshHz = 60;
 
 // THE DISPLAY KEEP-ALIVE'S CLOCK (architect 2026-11-13, session 118): the
 // steady clock in ms, present()'s stamp and display_keep_alive_due's now —
@@ -857,15 +857,31 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // head). A re-adoption of the same window keeps its surface.
     ensure_gl_surface();
 
-    // PIN THE PANEL TO 90 Hz (architect 2026-08-27; kPanelRefreshHz, the
-    // number's one owner, this vote its one reader). One device, one rate —
-    // and the vsync callback that gates the paint (pump's tail, since
-    // 2026-10-14) arrives at the panel's rate, so the pin is also the paint's
-    // cadence: the
-    // Tab S10 FE's panel is variable-refresh and the system otherwise picks a
-    // rate from what it sees the app doing, which for a program that paints
-    // only on damage reads as "hardly ever" and lands on 60. The playhead and
-    // the waveform under a drag are the surfaces that show the difference.
+    // PIN THE PANEL TO 60 Hz (architect 2026-11-14, "Agree to all",
+    // replacing the 90 Hz pin of 2026-08-27; kPanelRefreshHz, the number's
+    // one owner, this vote its one reader). THE REASON IS THE PLATE'S
+    // SHADER, NOT A MISSED FRAME: send I's pans hold 90 with no missed
+    // frame, but the fade he wants next, the whole-doubling fade, puts the
+    // merged shader arm's lit cost on every frame that is not a landing, and
+    // that does not fit 90 Hz's 11.1 ms; 60 Hz's 16.7 ms gives the plate's
+    // shader the headroom — a smooth fade outranks the higher rate. One
+    // device, one rate — and the vsync callback that gates the paint (pump's
+    // tail, since 2026-10-14) arrives at the panel's rate, so the pin is also
+    // the paint's cadence: the Tab S10 FE's panel is variable-refresh and the
+    // system otherwise picks a rate from what it sees the app doing, which
+    // for a program that paints only on damage reads as "hardly ever" (it
+    // landed on 60 unpinned, 2026-08-27): within the system's range the vote
+    // makes the rate this decision rather than the system's guess, and with
+    // no touch down it holds 60. The playhead and the waveform under a drag
+    // are the surfaces that show the rate. UNDER A TOUCH THE VOTE DOES NOT
+    // DECIDE: the system's touch boost lifts the panel to the top of the
+    // system's range, which no app can lower, so the 60 Hz panel ALSO RESTS
+    // ON THE TABLET'S SETTING, Motion smoothness Standard
+    // (`refresh_rate_mode 0`, its top 60 Hz; the runbook, docs/INSTALL.md).
+    // MEASURED on the tablet (the planner, 2026-11-14): under Adaptive (range
+    // 30..90) an injected one-finger pan ran at 90 Hz whatever the vote, the
+    // window's touch-boost opt-out included; under Standard the same pans ran
+    // at 60.
     //
     // FIXED_SOURCE is the honest compatibility: this is not a video player with
     // frames arriving at a fixed cadence that the panel should divide into — it
@@ -1469,9 +1485,10 @@ bool GuiPlatform::present() {
     //
     // THE PARTIAL REPAIR (2026-11-04, session 33; the Astra consult's (b),
     // tmp/codex_review.md). MEASURED (2026-11-04, the planner's measurement
-    // on the tablet, a free fading line at rest): before, 90 presents a
-    // second, each the whole surface, per second of wall time the swap
-    // 160 ms, the present 30, cairo 15, the upload 3, the list 1.7, top ~50 %
+    // on the tablet, a free fading line at rest, the panel then pinned at
+    // 90 Hz): before, 90 presents a second, each the whole surface, per
+    // second of wall time the swap 160 ms, the present 30, cairo 15, the
+    // upload 3, the list 1.7, top ~50 %
     // app / ~50 % SurfaceFlinger; after, 3240 px repaired a frame and no
     // whole frame at rest, top ~46 % / ~53 % — THE PRESENT IS THE COST (the
     // swap ~1.7 ms of the loop thread a frame), the pixels were not, and the
@@ -1682,18 +1699,21 @@ int GuiPlatform::detect_refresh_rate_ms() {
     // damage asks for one, and the tick is the other cadence — it runs
     // whether or not anything paints — so it stays a number of its own.
     //
-    // IT IS THE PINNED 90 Hz PANEL'S HALF-PERIOD, ROUNDED DOWN. adopt_window
-    // asks the window for 90 Hz outright (the ruling and the call are there),
-    // so this loop's cadence and the panel's are two halves of one decision
-    // rather than a guess about the other: 90 Hz is an 11.1 ms period and 5 ms
-    // is under half of it. There is ONE DEVICE and it is pinned, which is what
-    // makes a hard-coded number honest here.
+    // IT IS UNDER THE PINNED 60 Hz PANEL'S HALF-PERIOD. adopt_window asks
+    // the window for 60 Hz outright (the ruling and the call are there), so
+    // this loop's cadence is chosen against the panel's rather than guessed
+    // at: 60 Hz is a 16.7 ms period, its half 8.3 ms, and 5 ms is under it.
+    // The number is the 90 Hz pin's (2026-08-27, 11.1 ms, 5 ms its half
+    // rounded down), KEPT at the 60 Hz pin of 2026-11-14 rather than raised:
+    // the direction below costs nothing. There is ONE DEVICE and it is
+    // pinned, which is what makes a hard-coded number honest here.
     //
-    // THE DIRECTION THAT COSTS NOTHING is still downward: the tick only POLLS
+    // THE DIRECTION THAT COSTS NOTHING is downward: the tick only POLLS
     // deadlines (key repeat, the audition's rests) and drives
     // the playback scanner, so a tick faster than half the refresh is wasted
     // work and never a wrong frame (the paint waits for the vsync callback
-    // either way), while a slower one would visibly step the playhead. It was 8 ms — 60 Hz's half-period — until the pin.
+    // either way), while a slower one would visibly step the playhead. It was
+    // 8 ms — 60 Hz's half-period — before the 90 Hz pin.
     return 5;
 }
 
@@ -1907,7 +1927,8 @@ void GuiPlatform::pump() {
     // object; shutdown clears them and the sink (g_vsync_sink's rule).
     //
     // WHY (measured 2026-10-14 ~19:15 on his glass with `dumpsys
-    // SurfaceFlinger --timestats`, the display's own per-layer record):
+    // SurfaceFlinger --timestats`, the display's own per-layer record, the
+    // panel then pinned at 90 Hz):
     // the present-per-vsync COALESCER that stood here for one commit
     // (5b303871) spaced the presents by a clock — at least 10.51 ms, the
     // pinned period less a 0.6-ms slack, measured from the previous

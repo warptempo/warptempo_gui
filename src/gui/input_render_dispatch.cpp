@@ -854,13 +854,14 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // written and taken down as before but stands behind the modal for the
     // batch's whole run; the mechanics below are unchanged.)
     // A SWEEP'S LINE IS STATE, WRITTEN STRAIGHT INTO THE SLOT (architect
-    // 2026-09-11, on the tablet's 90 Hz panel, where the line BLINKED once per
-    // cell). The single render's park/promote machinery is the wrong shape for
-    // a batch: each cell parked its own message, a cell that had synthesized
-    // had its message promoted, and the NEXT cell's park retracted it — so the
-    // cell went blank at every hand-off and stayed blank until the incoming
-    // cell crossed the synthesis boundary and the following tick observed it.
-    // That gap is a frame or more, and it is the blink.
+    // 2026-09-11, on the tablet's panel then pinned at 90 Hz, where the line
+    // BLINKED once per cell). The single render's park/promote machinery is
+    // the wrong shape for a batch: each cell parked its own message, a cell
+    // that had synthesized had its message promoted, and the NEXT cell's park
+    // retracted it — so the cell went blank at every hand-off and stayed
+    // blank until the incoming cell crossed the synthesis boundary and the
+    // following tick observed it. That gap is a frame or more, and it is the
+    // blink.
     //
     // The fix is the messaging split itself, not a clock: what a sweep's line
     // reports is STATE — which cell the sweep is at, true right now and

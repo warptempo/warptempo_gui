@@ -49,13 +49,14 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // and hands the core plain values.
 //
 // THE ONE GLASS HOST is the Galaxy Tab S10 FE (SM-X520): Android 16 / One UI
-// 8.0.5, 2304x1440 at 280 dpi (exactly 1.75x), the panel pinned to 90 Hz
-// (adopt_window) so the tick is 5 ms, PAGE_SIZE 4096 (the APK's 16 KB
-// alignment is headroom), `/storage` 0711 (traversable, never listable), one
-// USB-C port (cable and any OTG device exclusive; wireless adb for the rest),
-// and `block_usb_lock` blocking USB while locked (it reads like Auto Blocker
-// and is not). Every number this backend hard-codes was measured on it; the
-// provisioning log is the architect's, outside the repo.
+// 8.0.5, 2304x1440 at 280 dpi (exactly 1.75x), the panel pinned to 60 Hz
+// (adopt_window, 2026-11-14) and the tick 5 ms, under its half-period,
+// PAGE_SIZE 4096 (the APK's 16 KB alignment is headroom), `/storage` 0711
+// (traversable, never listable), one USB-C port (cable and any OTG device
+// exclusive; wireless adb for the rest), and `block_usb_lock` blocking USB
+// while locked (it reads like Auto Blocker and is not). Every number this
+// backend hard-codes was measured on it; the provisioning log is the
+// architect's, outside the repo.
 
 class GuiPlatform {
 public:

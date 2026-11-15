@@ -1443,7 +1443,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     "a hold on both lamps, lamp_hold_ms a tuning key with a Settings row
 //     (default 100)" — REVERSING the same night's "no hold": the tick is
 //     the platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms) while
-//     only the PRESENT waits for the 90 Hz vsync, an 11.1 ms period, so a
+//     only the PRESENT waits for the 60 Hz vsync, a 16.7 ms period, so a
 //     lamp lit for one 5 ms tick can be cleared before any present and
 //     never be painted; the clip clamps a RUN of blocks and its lamp spans
 //     ticks, but the limiter's engaged frames are POINTS, and its one-tick
@@ -1455,7 +1455,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     lamp lit on that tick and on every tick before the stamp: an event
 //     re-arms it (a run of clamping blocks keeps the lamp lit until the hold
 //     after its last block), the dark edge lands on the first tick at or
-//     past the stamp, and 100 ms is about nine presents at 90 Hz. NO TIMER OF
+//     past the stamp, and 100 ms is about six presents at 60 Hz. NO TIMER OF
 //     ITS OWN: the tick is the clock. The bits on AppState
 //     (clip_lamp_lit, limiter_lamp_lit) are written only by the tick's
 //     refresh_logo_lamps (main.cpp, beside refresh_logo_legend, on EVERY
@@ -2529,8 +2529,9 @@ inline int waveform_line_px() {
 // THE GRID IS 4x FOR GOOD (architect 2026-10-31 afternoon, "let's just
 // stick with 4x. any perf hit is not worth additional thickness"): the 8x
 // grid of that morning (one commit, 19657fb7, with the grow in eighths)
-// measured on the tablet, per plate frame against the 11 ms budget at
-// 90 Hz, ~300 ms with the grow a uniform and, with the shader specialized
+// measured on the tablet, per plate frame against the 11 ms budget of
+// the panel then pinned at 90 Hz, ~300 ms with the grow a uniform and,
+// with the shader specialized
 // per grow, ~16 ms at grow 0, ~36 ms at 0.5 and ~100 .. 110 ms at 0.625
 // and 0.75 (the two-word window), so the finer lattice went back the same
 // afternoon and the key steps in quarters.

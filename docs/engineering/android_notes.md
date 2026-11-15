@@ -800,28 +800,39 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 |---|---|
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
 | Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; from 2026-08-27 the WINDOW was the content rect the framework reports, which on an AWAKE panel EXCLUDED BOTH BARS — 60 px status bar, 96 px taskbar — LESS the 14 px of air added under the bar that evening, so **2304x1270 at (0,74)** under the architect's Screen zoom (override density 320); since 2026-10-01 the activity is full screen and the window is the whole surface again, §12.7) |
-| Panel refresh (active mode) | **90 Hz** (60 and 30 also supported), 280 dpi bucket / 248.8 real dpi |
+| Panel refresh (active mode) | **90 Hz** at most (60 and 30 also supported); the app pins **60 Hz** since 2026-11-14 (90 from 2026-08-27); 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
-| Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) |
+| Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) — measured under the 90 Hz pin |
 | WAV load (101 MB, 25.4 M frames) + 14-level peaks pyramid | 479 ms cold, **235–247 ms** with the peaks cache warm |
 | Full PGHI target render, 7:36 output | **~8.7 s** |
 | Stripped `.so` | 6.7 MB; APK 7.4 MB |
 | DT_NEEDED | `libdl libm libaaudio libandroid libnativewindow liblog libc` — nothing to ship beside the app, no `libc++_shared` (`libnativewindow` since the 90 Hz pin below: `ANativeWindow_setFrameRate` lives there, not in libandroid) |
 
-**The tick is 5 ms and the panel is pinned to 90 Hz (architect 2026-08-27),
-which closes the mismatch this section used to record.** The Wayland rule is
-"half the refresh period", which at 90 Hz is 5 ms; the backend now takes that
-number outright instead of the 60 Hz fallback's 8, and `adopt_window` asks the
-window for 90 Hz outright:
+**The tick is 5 ms and the panel is pinned to 60 Hz (architect 2026-11-14;
+90 Hz from 2026-08-27, which closed the mismatch this section used to
+record).** The Wayland rule is "half the refresh period": the 5 ms tick was
+90 Hz's, and stays under 60 Hz's 8.3 ms, so the number stands (a faster tick
+only polls deadlines and drives the scanner, never a wrong frame).
+`adopt_window` asks the window for the rate outright (`kPanelRefreshHz`):
 
 ```c
-ANativeWindow_setFrameRate(window, 90.0f,
+ANativeWindow_setFrameRate(window, 60.0f,
                            ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
 ```
 
-The two halves are one decision — the loop's cadence is the pinned panel's
-half-period — which is what makes a hard-coded number honest here: **there is
-one device and it is pinned.** `FIXED_SOURCE` is the compatibility that asks
+60 Hz, given up from 90 on his "Agree to all" of 2026-11-14: the plate shader's
+lit cost under the whole-doubling fade to come does not fit 90 Hz's 11.1 ms,
+and 16.7 ms gives it the headroom; a smooth fade outranks the higher rate.
+A hard-coded number is honest here: **there is one device and it is pinned.**
+**The vote holds 60 Hz only inside the system's range.** With no touch down the
+panel runs at the vote; under a touch SurfaceFlinger's touch boost lifts it to
+the top of DisplayModeDirector's range, which the system setting Motion
+smoothness sets (`settings secure refresh_rate_mode`: 1 Adaptive, range 30..90;
+0 Standard, top 60) and an app cannot lower. Measured 2026-11-14: under Adaptive
+an injected pan ran at 90 Hz with the 60 vote standing, and the window's
+`setFrameRateBoostOnTouchEnabled(false)` (API 35) changed nothing; under
+Standard the same pans ran at 60. So the tablet is set to Standard (INSTALL.md,
+A new tablet, step 7). `FIXED_SOURCE` is the compatibility that asks
 the display to run AT the rate rather than at a multiple it finds convenient;
 the panel is variable-refresh, and a program that paints only on damage
 otherwise reads to the system as "hardly ever" and lands on 60. The call's
@@ -859,7 +870,7 @@ present (`GuiPlatform::kDisplayKeepAliveMs`, `display_keep_alive_due`) — so a
 frantic play/stop tap does not start into a 30 Hz panel, and at rest the app
 still presents nothing. The forms not taken: a keep-alive at every vsync
 (~46 % app / ~53 % SurfaceFlinger, session 33) and the permanent sparse one
-(90 Hz held at rest for about 11 % battery, session 117). The facts and the
+(90 Hz held at rest for about 11 % battery, session 117, under the 90 Hz pin). The facts and the
 ruling live at `kDisplayKeepAliveFastStopMs` (playback_lifecycle.h).
 
 **`C.UTF-8` vs `C`.** bionic starts a process in `C.UTF-8`, so

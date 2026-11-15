@@ -135,7 +135,8 @@ constexpr const char* kCanvasFragmentShader =
 //     2026-10-31 morning road, 19657fb7, on the 8x grid: runtime bounds, a
 //     while that walked g(j), a continue guard over arrays of 56 and 24
 //     wide words) spilled the masks to scratch memory and measured ~300 ms
-//     of GPU time a plate frame on the tablet against the 11 ms budget; this
+//     of GPU time a plate frame on the tablet against the 11 ms budget of
+//     the panel then pinned at 90 Hz; this
 //     road replaced it the same day, and the grid went back to 4x that
 //     afternoon (the measurements at kWaveformSubcells, render.h: the
 //     specialized 8x shader still cost 16 .. 110 ms a frame).
@@ -434,13 +435,13 @@ constexpr const char* kCanvasFragmentShader =
 //   more, floor((NO − 1) / (4p)) or one over it — then the dilations of the
 //   family or families that reach. No erosion. At GROW 4 (NO 12): 3, 7 and
 //   19 places, NU 5.
-//   Whether the frame holds its 11 ms on the tablet is measured there
-//   (SurfaceFlinger's timestats), not argued here. The window and the
-//   level-indexed dilation schemes are modeled bit for bit in Python
-//   against the brief's forward model (tmp/grow/make_grow_mag.py's mask /
-//   morph / down at SS = 4) at every grow 0 .. 8, 2026-10-31, and are that
-//   text still; the fast paths, each a subset of the rule, change no
-//   result.
+//   Whether the frame holds its 16.7 ms (the 60 Hz pin) on the tablet is
+//   measured there (SurfaceFlinger's timestats), not argued here. The
+//   window and the level-indexed dilation schemes are modeled bit for bit
+//   in Python against the brief's forward model
+//   (tmp/grow/make_grow_mag.py's mask / morph / down at SS = 4) at every
+//   grow 0 .. 8, 2026-10-31, and are that text still; the fast paths, each
+//   a subset of the rule, change no result.
 //   * THE MERGED ARM (architect 2026-11-14, send H: the fade at the level
 //     switch, one pass; render.h's THE FADE BAND owns the band, the weight
 //     and the row). A row of weight w < 1 holds n fine bars, n even — bar
@@ -582,8 +583,8 @@ constexpr const char* kCanvasFragmentShader =
 //     bracket); in fetches a fragment, NM on every fragment (the support's
 //     loop; the fast paths end there), and on a road one more a vertex the
 //     support's span crosses, aB − aA − 1 <= NM − 2. At GROW 4 NM is 6
-//     against the uniform arm's NU of 5. Whether the band's frames hold 11
-//     ms on the tablet is measured there.
+//     against the uniform arm's NU of 5. Whether the band's frames hold
+//     16.7 ms (the 60 Hz pin) on the tablet is measured there.
 //   * WHAT IS PROMISED (architect 2026-11-14, send I). TRUTH IS REQUIRED AT
 //     THE WORKING ZOOM ALONE — his words: "I'm not really looking for
 //     truthfulness in anything beyond working Zoom level, so long as it's

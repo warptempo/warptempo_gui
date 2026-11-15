@@ -221,6 +221,10 @@ adb shell cmd media_session volume --stream 1 --set 0
 # 7. Settings > Display > Font size and style > Font style > Default (a custom style also
 #    replaces monospace). Software update: auto download OFF (an update can change audio and
 #    USB behaviour; update by hand when you can test). Screen timeout to taste. Pair Bluetooth.
+#    Settings > Display > Motion smoothness > Standard: the app runs the panel at 60 Hz, and
+#    under Adaptive a finger on the glass lifts the panel to 90 Hz whatever the app asks.
+#    The same from the laptop (0 = Standard, 1 = Adaptive):
+adb shell settings put secure refresh_rate_mode 0
 ```
 
 ```bash
