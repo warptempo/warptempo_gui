@@ -1165,7 +1165,7 @@ int  waveform_grow_quarters();
 // 2026-11-14, send H; the rule at waveform_fade_band below, THE PLATE'S
 // BARS' fade band, the grammar device_config.h's parse_waveform_fade_px):
 // F, the bar width in DEVICE PX at which the finer level starts to appear,
-// held in HUNDREDTHS of a device px (150 .. 200, 200 off) — read on the GUI
+// held in HUNDREDTHS of a device px (100 .. 200, 200 off) — read on the GUI
 // thread alone, by the plate's render inputs
 // (GuiPaintHandler::compute_waveform_render_inputs, waveform_cache.cpp),
 // which snapshot it for the render and key the plate's fingerprint on it,
@@ -1174,7 +1174,7 @@ int  waveform_grow_quarters();
 // device config before the window exists and by the settings editor's
 // `waveform_fade_px=` commit (GuiInputHandler::apply_waveform_fade_px,
 // which re-renders the plate and repaints at once: the band's row of bars
-// is a function of F). The construction state is 1.5 px
+// is a function of F). The construction state is 1 px
 // (kWaveformFadeDefaultHundredths), the first-run value the shipped
 // defaults file's. A TUNING KEY.
 void set_waveform_fade_hundredths(int hundredths);
@@ -3479,8 +3479,8 @@ struct WaveformBasis {
 // the leftmost centre, the last bar the upper bracket of the rightmost. At a
 // whole level that is three bars beyond each edge, n = W + 6; n <= (W +
 // 3.75) / p + 3 always, and p >= 1 (the fade band's row is this range in
-// halves, twice the count at half the pitch, never under 3/4 px:
-// waveform_fade_band below).
+// halves, twice the count at half the pitch, never under 1/2 px — up to
+// 2 · (W + 6) bars just past a landing: waveform_fade_band below).
 // THE TWO ENDS. LEFT OF FRAME 0 NO BAR EXISTS: k_first clamps at 0, and the
 // draw finds no texel there (the plate's left edge at the song's start is
 // the bar's own flat shape, as it was). PAST THE DOMAIN'S END THE BARS ARE
@@ -3550,31 +3550,53 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // (architect 2026-11-14, send H: THE FADE AT THE LEVEL SWITCH,
 // ONE PASS — on his glass send G's switch read as a pop at 90 Hz, "the
 // waveform sort of seems like it coalesces into that little mountain that in
-// Ableton I see fade and grow in and out gradually"). Inside a band of zoom
-// just before each split the plate holds THE FINER RUNG ALONE, each pair of
-// its bars MERGED toward the bar they came from by a weight that is a
-// function of THE ZOOM ALONE — no time, no animation, nothing at the lift:
-// hold still and the picture holds still, part merged. THE ONE OWNER of the
-// band, the weight and the band's stored row.
+// Ableton I see fade and grow in and out gradually"; send K: THE FADE OVER
+// THE WHOLE DOUBLING — on his glass with the band starting at 1.5 px, "if
+// I'm zooming in and out slowly, I guess I feel the steps, the fades.
+// Wouldn't it be better to have a continuous fade motion", an eased curve
+// over that shorter band declined: "generally cheap partials don't work
+// very well, and instead they get in the way of the true solution"; the
+// panel pinned to 60 Hz for its cost, kPanelRefreshHz). Inside a band of
+// zoom before each split — from the key's start width up to the switch, at
+// F = 1 the whole way from one whole level to the next — the plate holds
+// THE FINER RUNG ALONE, each pair of its bars MERGED toward the bar they
+// came from by a weight that is a function of THE ZOOM ALONE — no time, no
+// animation, nothing at the lift: hold still and the picture holds still,
+// part merged. THE ONE OWNER of the band, the weight and the band's stored
+// row.
 //
 // THE MAIN RUNG B for the step q is the rung above (waveform_bar_frames), its
 // pitch P = B / q in [1, 2). THE FINE RUNG b = B / 2 EXISTS iff B >= column
 // (B == column / 2 is the ladder's floor, where no finer level stands).
-// THE KEY F (device px; `waveform_fade_px`, whole hundredths Fh in [150,
+// THE KEY F (device px; `waveform_fade_px`, whole hundredths Fh in [100,
 // 200], the seat waveform_fade_hundredths above) is THE BAR WIDTH AT WHICH
-// THE FINER LEVEL STARTS TO APPEAR. THE PLATE IS IN THE BAND iff Fh < 200
-// AND the fine rung exists AND P >= F — exactly 100 · B >= Fh · q, the
-// compare exact in doubles as the rung's is (B a multiple of a half frame, q
-// of a sixteenth, Fh whole). OUT OF THE BAND the plate is rung B's uniform
-// bars in every respect — the row, the transform and the bytes — and Fh ==
-// 200 IS OFF for every q: the band ends at the switch width, so a start
-// there is a band of no length.
+// THE FINER LEVEL STARTS TO APPEAR; its floor 1 is THE WHOLE DOUBLING (a
+// rung's own bars are a px or more wide, so no band can start under it).
+// THE PLATE IS IN THE BAND iff Fh < 200 AND the fine rung exists AND P > F
+// — exactly 100 · B > Fh · q, STRICT (architect 2026-11-14, send K), the
+// compare exact in doubles as the rung's is (B a multiple of a half frame,
+// q of a sixteenth, Fh whole). AT P == F THE PLATE IS OUT OF THE BAND, at
+// every F: rung B's uniform row there is the picture the merged arm would
+// draw at w = 0, byte for byte, so the test moves which arm and which row
+// draw it and no pixel. WHY STRICT: at F = 1, P == 1 is A LANDING ON A
+// WHOLE LEVEL (q == B), and it stays the uniform one-bar-a-pixel plate —
+// one producer query and the cheaper arm, at rest, under playback and at
+// FOLLOW's page turns. So determinism's one seat (above) is unchanged, and
+// at F = 1 a whole level is the one zoom of each doubling off the band.
+// OUT OF THE BAND the plate is rung B's uniform bars in every
+// respect — the row, the transform and the bytes — and Fh == 200 IS OFF
+// for every q: the band ends at the switch width, so a start there is a
+// band of no length.
 // THE WEIGHT, how far the halves have parted: w = log2(P / F) / log2(2 / F),
 // LINEAR IN THE ZOOM'S LOGARITHM (an even pinch, an even fade; no key),
-// clamped at 0 from below (a rounding at P == F), in [0, 1): 0 at the
-// band's start, toward 1 as P reaches the switch at 2. At the default 1.5 a
-// level's detail opens over the last third of the approach to it (from q =
-// 4/3 · b down to q = b); from 1 to 1.5 px the bars are uniform.
+// clamped at 0 from below (a rounding of the quotient), in [0, 1): 0 at
+// the band's start, toward 1 as P reaches the switch at 2. The band spans
+// log2(2 / F) of each doubling in the zoom's logarithm, its last part. AT
+// F = 1 w = log2 P and a level's detail opens over THE WHOLE APPROACH TO
+// IT: from the landing on the coarser level (q = B, every pair merged
+// whole) the halves part as the zoom goes in — half way at P = √2 — and
+// reach their own centres at the switch (q = B / 2), past which the finer
+// level is the main rung, its own pairs merged whole again.
 // THE FLOAT THE DRAW TAKES is wf = min(float(w), the largest float under 1),
 // so IN THE BAND wf < 1 ALWAYS and OUT OF IT the draw is handed exactly 1 —
 // wf == 1 is the whole test for a uniform row (GuiPlateColumns::bar_weight).
@@ -3594,15 +3616,22 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // B's row exactly as it is asked out of the band (the bar basis of the
 // geometry above, N columns), and THE HALVES, rung b's row on its own bar
 // basis, {nearbyint(2 · K_first · b), origin 0, step b, 2N columns}; a
-// band of the plate is stored only where both came back whole.
+// band of the plate is stored only where both came back whole. SO THE
+// PRODUCER IS ASKED N + 2N BARS A FRAME IN THE BAND against N out of it —
+// just past a landing N reaches W + 6 (W the plate's device width), the
+// row 2 · (W + 6) — and at F = 1 every zoom between two whole levels is
+// in the band (architect 2026-11-14, send K; the frame's cost measured on
+// the tablet).
 // THE TIPS ARE MIXED ON THE CPU (waveform_mix_column below): each entry's
 // are (1 − w) · ITS PARENT's + w · ITS OWN, rounded half up to whole quarter
 // rows, the inner present iff present in both — the parent's the main rung's
 // REAL tips, from the producer's own query of rung B (a main bar's tips are
 // not the hull of its halves': the centre gain and the expander maximum are
 // per bar), so at w = 0 every pair holds its parent's tips twice and the
-// row is rung B's, and toward w = 1 it is rung b's own, which the next
-// frame past the switch draws uniform at P = 1. In between a pair's PEAK
+// row is rung B's, and toward w = 1 it is rung b's own — what the frame
+// past the switch draws with rung b as the main rung, its pairs merged
+// whole (uniform where F > 1, at w just over 0 at F = 1, the same picture
+// but for the mix's first quarter-row steps). In between a pair's PEAK
 // about holds (with the lamp dark the taller half is the parent's peak
 // already) and the LOWER half
 // sinks from the pair's height to its own, so inside the band the TROUGHS
@@ -3616,8 +3645,8 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // THE TRANSFORM THAT RIDES THE ROW: its x is THE FIRST STORED PAIR'S PARENT
 // CENTRE, xc — the main geometry's own x0, to the double — and its pitch p =
 // P / 2, the fine bars' (2 · float(p) == float(P): the draw is handed rung
-// B's own x0 and, doubled, its own pitch); p runs F / 2 .. 1, never
-// under 3/4 px. THE PLACE IS THE DRAW'S (kListFragmentShader's merged arm,
+// B's own x0 and, doubled, its own pitch); p lies in (F / 2, 1), never
+// under 1/2 px. THE PLACE IS THE DRAW'S (kListFragmentShader's merged arm,
 // gl_canvas.cpp's head): pair K's left half stands at its parent's centre
 // less w · p / 2 and its right at as much more — both ON the parent's
 // centre at w = 0, on their own centres toward w = 1 — and the picture is
@@ -3641,7 +3670,7 @@ inline WaveformFadeBand waveform_fade_band(double q, int64_t column,
     const double sw     = static_cast<double>(kWaveformSwitchPx);
     if (!(main_b > 0.0) || !(fh < 100.0 * sw)) return f;
     if (main_b < static_cast<double>(column)) return f;
-    if (100.0 * main_b < fh * q) return f;
+    if (100.0 * main_b <= fh * q) return f;
     const double start = fh / 100.0;
     double w = std::log2((main_b / q) / start) / std::log2(sw / start);
     if (!(w > 0.0)) w = 0.0;
@@ -3698,8 +3727,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // STRETCHED AT THE COLUMNS' PITCH (architect 2026-11-14, send G: the columns
 // are anchored to the audio and their centres stand p device px apart, p in
 // [1, 2) — in the fade band before a level switch the row is the finer
-// level's, p in [3/4, 1), its tips mixed toward the parents' (send H,
-// waveform_fade_band) — placed continuously from the displayed viewport,
+// level's, p in [1/2, 1], its tips mixed toward the parents' (send H, the
+// band over the whole doubling at F = 1 since send K; waveform_fade_band)
+// — placed continuously from the displayed viewport,
 // the draw transform, THE PLATE'S BARS above). Each
 // column reduces to two TIPS in float rows — its raw maximum as the top
 // tip, its raw minimum as the bottom — QUANTIZED TO QUARTER ROWS (below):
@@ -3796,8 +3826,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // the children's extrema, centre gains and expander maxima are their own,
 // and THE FADE BAND before the split (architect 2026-11-14, send H;
 // waveform_fade_band) carries each pair's tips from the parent's to its own
-// over the last stretch of zoom; with the `waveform_fade_px` key at 2, off,
-// the picture steps there once. A pan moves the placement by
+// as the zoom approaches it — over the whole doubling with the
+// `waveform_fade_px` key at 1, over its last log2(2 / F) at F; with the key
+// at 2, off, the picture steps there once. A pan moves the placement by
 // whole device px, the stored range with it, and re-reads no column
 // differently. NOT PROMISED:
 // pixel-phase variation stays (a soft edge crossing the pixel grid), so the

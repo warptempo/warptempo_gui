@@ -737,10 +737,12 @@ bool GuiPaintHandler::live_plate_published() const {
 //      its length growing with the source seconds per plate column). So the
 //      synchronous render is O(the bars it asks the producer) — the
 //      area's width over the bars' pitch and a halo of a few, at most the
-//      width out of the fade band; in it the fine row and its parents, up
-//      to twice the width at the `waveform_fade_px` key's floor (render.h's
-//      THE PLATE'S BARS and THE FADE BAND) — at every zoom level with the
-//      magnification lamp lit or dark.
+//      width out of the fade band; in it the fine row and its parents, N +
+//      2N, up to three times the width just past a whole level — and with
+//      the `waveform_fade_px` key at its floor, 1, every zoom between two
+//      whole levels is in it (render.h's THE PLATE'S BARS and THE FADE
+//      BAND) — at every zoom level with the magnification lamp lit or
+//      dark.
 //
 //      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
 //      (ie, no special handling for during movement and at-standstill — ableton

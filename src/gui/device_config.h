@@ -353,10 +353,13 @@
 //                            the plate draws the finer level's bars, each
 //                            pair merged toward the bar it came from by a
 //                            weight of the zoom alone; 2 = OFF, a band of
-//                            no length — a decimal in [1.5, 2] with at most
-//                            two fractional digits in canonical spelling
-//                            (parse_waveform_fade_px below: `2`, `1.75`,
-//                            `1.5` — the integer part, then the fraction
+//                            no length, 1, THE FLOOR, the whole doubling
+//                            from one level's landing to the next's switch
+//                            (architect 2026-11-14, send K) — a decimal in
+//                            [1, 2] with at most two fractional digits in
+//                            canonical spelling
+//                            (parse_waveform_fade_px below: `2`, `1.5`,
+//                            `1` — the integer part, then the fraction
 //                            only when it is not zero, with no trailing
 //                            zero), held as HUNDREDTHS; read at launch to
 //                            seat the start before the first plate and
@@ -829,8 +832,8 @@ struct DeviceConfig {
     int         bright_mix        = 75;
     // THE PLATE'S FADE START in hundredths of a device px (2026-11-14, the
     // head's list; a tuning key): required; the construction state is
-    // 1.5 px (kWaveformFadeDefaultHundredths below).
-    int         waveform_fade_hundredths = 150;
+    // 1 px (kWaveformFadeDefaultHundredths below).
+    int         waveform_fade_hundredths = 100;
 };
 
 // THE PROJECTS REPOSITORY AS CONSTRUCTED — AppState's `projects_repo`
@@ -1463,42 +1466,47 @@ inline std::optional<int> parse_waveform_grow(std::string_view v) {
 
 // THE waveform_fade_px GRAMMAR (architect 2026-11-14, send H, his ruling on
 // the fade at the level switch: the bar width in DEVICE px at which the
-// finer level starts to appear, default 1.5, 2 = off; the rule it feeds at
-// render.h's THE PLATE'S BARS, THE FADE BAND) — a decimal
-// of DEVICE PX in [1.5, 2] with at most two fractional digits in canonical
-// spelling, held as HUNDREDTHS in [150, 200], the one owner the reader, the
-// writer, the settings editor's commit and its recall read
+// finer level starts to appear, 2 = off; THE FLOOR AND THE DEFAULT 1, THE
+// WHOLE DOUBLING (architect 2026-11-14, send K: "Wouldn't it be better to
+// have a continuous fade motion"); the rule it feeds at render.h's THE
+// PLATE'S BARS, THE FADE BAND) — a decimal of DEVICE PX in [1, 2] with at
+// most two fractional digits in canonical spelling, held as HUNDREDTHS in
+// [100, 200], the one owner the reader, the writer, the settings editor's
+// commit and its recall read
 // (format_waveform_fade_px, parse_waveform_fade_px). THE CANONICAL
 // SPELLING is the grow's (parse_waveform_grow above), the shortest exact
 // decimal: the integer part, then `.` and the fraction only when it is not
-// zero, with no trailing zero — `1.5`, `1.57`, `1.75`, `2` — and the reader
-// admits exactly the fifty-one strings the writer spells (it formats each
-// hundredth and compares), so `2.0`, `1.50`, `1.755` and anything out of
-// range are the launch's hard fail, as every other key's off-spelling is.
+// zero, with no trailing zero — `1`, `1.5`, `1.57`, `2` — and the reader
+// admits exactly the hundred and one strings the writer spells (it formats
+// each hundredth and compares), so `1.0`, `2.0`, `1.50`, `1.755` and
+// anything out of range are the launch's hard fail, as every other key's
+// off-spelling is.
 // THE RANGE: the number is F, the bar width at which the fade band begins —
 // the plate's bars change level at a fixed 2 device px (render.h's
 // kWaveformSwitchPx), and from F to there the plate draws the finer level's
 // bars, half as wide, each pair merged toward the bar it came from. THE TOP,
 // 2, IS OFF: the band ends at the switch width, so a start there is a band
 // of no length (render.cpp's static_assert binds this top to the switch
-// width). THE FLOOR, 1.5: the band's bars are drawn F/2 device px wide at
-// its start, and the plate shader's bounds for the band's row (its merged
-// arm) stand on a least pitch of 3/4 px
-// (gl_canvas.cpp's static_assert) — a longer fade needs narrower bars, a
-// wider reach and more fetches a fragment.
-// kWaveformFadeDefaultHundredths IS CONSTRUCTION STATE ALONE —
-// render.cpp's seat's initializer, overwritten by gui_main's startup seeding
-// before the window exists; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE
-// FIRST-RUN VALUES above; 1.5, his ruling's default). The settings page opens
-// the LINE EDITOR on it, not a value list (51 values is no short domain,
+// width). THE FLOOR, 1, IS THE WHOLE DOUBLING: a main rung's bars are a
+// px or more wide (the switch at 2 px halves them there), so a start under
+// 1 would name a bar width no rung draws; at 1 the band runs from the
+// landing on one level to the switch to the next. The band's fine bars
+// then stand over F / 2 device px apart, 1/2 px or more, the least pitch
+// the plate shader's bounds for the band's row (its merged arm) stand on
+// (gl_canvas.cpp's static_assert).
+// kWaveformFadeDefaultHundredths, 1 px, IS CONSTRUCTION STATE ALONE —
+// render.cpp's seat's initializer, overwritten by gui_main's startup
+// seeding before the window exists; THE FIRST-RUN VALUE IS THE DEFAULTS
+// FILE'S (THE FIRST-RUN VALUES above). The settings page opens the LINE
+// EDITOR on it, not a value list (101 values is no short domain,
 // kSettingsValueListKeys' rule). A TUNING KEY.
 // (`waveform_switch_px` is retired, an unknown key: see kWaveformSwitchPx.)
-inline constexpr int kWaveformFadeMinHundredths     = 150;
+inline constexpr int kWaveformFadeMinHundredths     = 100;
 inline constexpr int kWaveformFadeMaxHundredths     = 200;
-inline constexpr int kWaveformFadeDefaultHundredths = 150;
+inline constexpr int kWaveformFadeDefaultHundredths = 100;
 inline constexpr const char* kWaveformFadeGrammarReason =
-    "must be a decimal in [1.5, 2] with at most two fractional digits in "
-    "canonical spelling (1.5, 1.75, 2)";
+    "must be a decimal in [1, 2] with at most two fractional digits in "
+    "canonical spelling (1, 1.5, 2)";
 std::string format_waveform_fade_px(int hundredths);
 inline std::optional<int> parse_waveform_fade_px(std::string_view v) {
     for (int n = kWaveformFadeMinHundredths;

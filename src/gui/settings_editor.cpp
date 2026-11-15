@@ -1626,7 +1626,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // renderer's seat, the plate re-rendered — its row of bars is a function
     // of the start — and the window repainted) — and persisted, so NO CARD:
     // the waveform is the answer. The page opens the line editor on it (no
-    // value list, its 51 values no short domain); Tab completes no value (a
+    // value list, its 101 values no short domain); Tab completes no value (a
     // number is typed); stage 2's recall is the writer's spelling
     // (recall_gui_setting_value).
     if (key == "waveform_fade_px") {

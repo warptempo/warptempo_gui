@@ -373,7 +373,7 @@ static_assert(settings_page_piece_keys_pinned());
 // nor the tooltip's delay `tooltip_delay_ms`, 1001; nor the sweep
 // highlight's alpha `sweep_highlight`, 101; nor the bright tones' mix
 // `bright_mix`, 101; nor the plate's fade start `waveform_fade_px`,
-// 51.)
+// 101.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
 };
