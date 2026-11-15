@@ -166,9 +166,12 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 // ITS READERS, grepped at the ruling — the one inventory of the class:
 //   * Viewport::follow_scroll_if_needed — follow's page-in, during playback
 //     and at a PageIn launch: an offscreen target lands the margin in from
-//     the LEFT edge; and its prediction, Viewport::next_page (send M,
-//     2026-11-15), the page-in of a target on the edge frame, through the
-//     same conversion;
+//     the LEFT edge, EXCEPT under ITS PAGE RULE (send M, 2026-11-15; the
+//     architect's "agree"), where a target less than one margin past the
+//     next page's edge frame lands between one and two margins in (the
+//     margin the rule's bound too); and its prediction, Viewport::next_page,
+//     the page-in of a target on the edge frame, through the same
+//     conversion;
 //   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
 //     audio views and the marker drop's landing, the undo/redo restore):
 //     its fit test
@@ -4700,7 +4703,9 @@ struct AppState {
     // (Viewport::follow_scroll_if_needed through main.cpp, which asks this
     // bit with playback live, follow_suspended below dark, the A/B audition
     // not standing and no pointer or touch aim held) pages the viewport so
-    // the scanner lands the edge margin in from the left edge, and the car's
+    // the scanner lands the edge margin in from the left edge — between one
+    // and two margins in under the page rule (send M, 2026-11-15; at
+    // Viewport::follow_scroll_if_needed) — and the car's
     // launch asks LaunchCamera::PageIn off it (car_play_playback). The A/B
     // audition and the render player ignore it — the autopager asks the
     // audition's phase and returns under the player.

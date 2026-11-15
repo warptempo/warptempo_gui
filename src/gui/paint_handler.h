@@ -325,16 +325,21 @@ struct WaveformCache {
     // definition, waveform_cache.cpp) WITH THE KEPT BARS above, so that the
     // kept rows hold the next page's bars when the turn's synchronous rebuild
     // asks for them. NOT A PUBLICATION: it is no slot of the plate's two
-    // (no swap, no fp_* write, no damage, no flag rebuild), and nothing
-    // painted reads it. `ahead_columns` takes a revision of its own at each
+    // (no swap, no fp_* write, no damage, no flag rebuild), and no pixel on
+    // the glass is drawn from it but through THE ADOPTION: while it stands
+    // the ahead list carries its prefix (build_canvas_list,
+    // gui_canvas_ahead), which the GL canvas composes into its ahead target
+    // and copies only where the frame's own prefix is equal to it, the
+    // plain road's bytes (gl_canvas.cpp's present_frame, THE AHEAD TARGET
+    // and THE ADOPTION). `ahead_columns` takes a revision of its own at each
     // render (next_plate_revision), so one revision still names one set of
     // bounds. `ahead_stands` is set by a render and cleared by the
     // maintenance wherever the ahead plate is not wanted, and by
     // forget_plate; the `ahead_fp_*` fields are the inputs it was rendered
     // from — every identity the live fingerprint compares, the fp_ roster
-    // above (the map's hash alone: the map itself is no part of a plate
-    // nothing paints). Its capacity is reused, never freed, while the cache
-    // lives.
+    // above (the map's hash alone: the plate's records are drawn from its
+    // bounds and transform, never from the map). Its capacity is reused,
+    // never freed, while the cache lives.
     GuiPlateColumns ahead_columns;
     bool      ahead_stands             = false;
     int64_t   ahead_fp_vp_start        = 0;
@@ -845,7 +850,7 @@ struct GuiPaintHandler {
     // settle_owed_lane_damage. `next_page` is THE NEXT PAGE's rest
     // (Viewport::next_page) during THE PAGING PLAY (main.cpp's
     // paging_play), none otherwise. It renders the ahead plate at most once
-    // per page and publishes, damages and paints nothing.
+    // per page and publishes and damages nothing.
     void maintain_ahead_plate(const std::optional<ViewportRest>& next_page);
 
     // THE PRE-PAINT CHECK OF WHAT THE NARROWED ROUTES OWE (2026-10-13): the
@@ -953,8 +958,19 @@ private:
     bool    canvas_clear_covered = false;
     bool    canvas_clear_floater = false;
     // The frame's draw list from the canvas passes, through the sink, in
-    // on_redraw's paint order (the definition, paint_handler.cpp).
-    void build_canvas_list(GuiCanvasDrawList& frame, bool plate_branch);
+    // on_redraw's paint order, and beside it the ahead list (send M,
+    // 2026-11-15; gui_canvas_ahead, canvas_sink.h) — the definition,
+    // paint_handler.cpp.
+    void build_canvas_list(GuiCanvasDrawList& frame, GuiCanvasDrawList& ahead,
+                           bool plate_branch);
+    // THE PREFIX'S ONE BUILDER (send M, 2026-11-15; GuiCanvasDrawList::
+    // prefix, canvas_sink.h): the plate branch's first four passes over AN
+    // EXPLICIT PLATE and its inks — the live plate for the frame's list, the
+    // ahead plate for the ahead list — so the two lists' records are equal
+    // wherever the two plates are.
+    void build_canvas_prefix(GuiCanvasSink& sink, const GuiRect& area,
+                             const GuiPlateColumns& plate,
+                             const WaveformPlateInks& inks);
 
     // The two as-painted fingerprints and the paint's half of their record
     // (settle_owed_lane_damage's block, paint_handler.cpp).
@@ -1212,8 +1228,11 @@ private:
     // THE CANVAS PASSES PAINT THROUGH THE CANVAS SINK (2026-10-13,
     // canvas_sink.h): the plate, the ring, the stems and their runs, the
     // cursor, the scanner, the anchor and the sweep highlight below — into
-    // the frame's draw list (build_canvas_list).
-    void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
+    // the frame's draw list (build_canvas_list). The plate pass draws the
+    // plate it is handed with its inks (build_canvas_prefix's two plates).
+    void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area,
+                              const GuiPlateColumns& plate,
+                              const WaveformPlateInks& inks);
     // The overlay band's RING — the phase-reset overlay's whole visual, four
     // solid one-W lines in the `cue_outline` (architect 2026-11-04), each at
     // its exact place, its left side centered on the reset's frame

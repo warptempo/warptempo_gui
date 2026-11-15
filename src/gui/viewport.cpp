@@ -1227,7 +1227,30 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
 // so the scanner lands THE EDGE MARGIN in from the new view's LEFT edge
 // (kViewportEdgeMarginFraction, app_state.h — 5 % since 2026-09-22, the
 // architect finding the old 10 % lead "starts way too late"; the class's
-// inventory is at that declaration), leaving the rest of the window ahead.
+// inventory is at that declaration), leaving the rest of the window ahead —
+// EXCEPT THE PAGE RULE below, under which a scanner just past the window's
+// right edge lands between one and two margins in.
+// THE PAGE RULE (send M, 2026-11-15; the architect's "agree" the same day,
+// on the planner's statement: the scanner landing between one and two edge
+// margins in, 5 % to 10 % of the window, typically within 8 W of the 5 %
+// mark, instead of exactly at 5 %, and a scanner further off paged in as
+// before): WHERE THE NEXT PAGE STANDS (next_page below, whose comment owns
+// the terms) AND THE TARGET t LIES LESS THAN ONE EDGE MARGIN PAST THE EDGE
+// FRAME E — E <= t and t − E < viewport_edge_margin_samples(visible) — THE
+// PAGE IS THE NEXT PAGE: the write is paged_in_viewport_start(E, visible)
+// through the same clamp, so the camera rests at the next page's start and
+// origin and t paints between one and two margins in. WHY: the pages of an
+// uninterrupted paging play are then a function of the page before, known a
+// page ahead, which is what lets the next page's plate and picture be made
+// during the current page (GuiPaintHandler::maintain_ahead_plate, and the
+// GL canvas's adoption, gl_canvas.cpp's present_frame) — the scanner is
+// sampled once a frame and reaches the edge up to one frame's advance past
+// E, which a page aligned on t would follow by those few bars. Everywhere
+// else — no next page (the right wall), a target further past E (a launch
+// off screen, a held pen that paused the page while the scanner ran on), a
+// target off screen to the LEFT — the page is aligned on t as above. Every
+// caller takes the one rule: the autopager, the launch's PageIn and the
+// lamp's lit edge.
 // OFF SCREEN IS AS PAINTED (architect 2026-09-28, displayed_frame_on_screen,
 // warp_frame_map_view.h): the page fires once the scanner's painted column
 // leaves [0, w), so the half-column before the right edge, where its column
@@ -1266,7 +1289,14 @@ void Viewport::follow_scroll_if_needed() {
             app.viewport_lattice_origin, area.w)) {
         const int64_t old_vp = app.viewport_start_sample;
         const int64_t old_origin = app.viewport_lattice_origin;
-        app.viewport_start_sample = paged_in_viewport_start(target, visible);
+        // THE PAGE RULE (above): the next page where the target lies less
+        // than one edge margin past its edge frame, else aligned on it.
+        const std::optional<NextPage> next = next_page();
+        const bool on_next_page =
+            next && next->edge_frame <= target &&
+            target - next->edge_frame < viewport_edge_margin_samples(visible);
+        app.viewport_start_sample = paged_in_viewport_start(
+            on_next_page ? next->edge_frame : target, visible);
         const bool suspended_before = app.follow_suspended;
         clamp_viewport_start(app, audio);
         app.follow_suspended = suspended_before;
@@ -1318,13 +1348,15 @@ void Viewport::follow_scroll_if_needed() {
 //     where nothing is visible, q or w is not positive, or the rest is the
 //     live camera's (start and origin): at the right wall, where follow's
 //     page settles onto the wall it stands at.
-// PURE: it reads the live viewport and writes nothing. Its one reader is the
-// ahead plate's maintenance (GuiPaintHandler::maintain_ahead_plate, from
-// main.cpp's pre-paint hook during THE PAGING PLAY), which renders the next
-// page's plate during the current page so the turn's own rebuild finds its
-// bars kept (WaveformKeptBars, render.h). The turn itself pages on the
-// scanner's own sample, up to one frame's advance past E, so its page is
-// this one or a few bars right of it.
+// PURE: it reads the live viewport and writes nothing. ITS TWO READERS:
+// follow_scroll_if_needed above, whose PAGE RULE writes this rest where the
+// target lies less than one edge margin past E — so an uninterrupted
+// paging play's turn lands on exactly this page — and the ahead plate's
+// maintenance (GuiPaintHandler::maintain_ahead_plate, from main.cpp's
+// pre-paint hook during THE PAGING PLAY), which renders this page's plate
+// during the current page so the turn's own rebuild finds its bars kept
+// (WaveformKeptBars, render.h) and the GL canvas composes its picture ahead
+// (gl_canvas.cpp's present_frame, THE AHEAD TARGET).
 std::optional<Viewport::NextPage> Viewport::next_page() const {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return std::nullopt;

@@ -1233,8 +1233,10 @@ void GuiPlatform::destroy_gl() {
 }
 
 // THE GL CANVAS'S FRAME, named (the declaration; read at present).
-void GuiPlatform::set_canvas_frame(GuiCanvasDrawList* frame) {
+void GuiPlatform::set_canvas_frame(GuiCanvasDrawList* frame,
+                                   GuiCanvasDrawList* ahead) {
     canvas_frame_ = frame;
+    canvas_ahead_ = ahead;
 }
 
 void GuiPlatform::destroy_backbuffer() {
@@ -1648,7 +1650,7 @@ bool GuiPlatform::present() {
             dpy, surf, v.data(), static_cast<EGLint>(repair.size()));
     }
     if (!gl_canvas_.present_frame(back_, damage_, compose, repair,
-                                  canvas_frame_, sw, sh))
+                                  canvas_frame_, canvas_ahead_, sw, sh))
         return false;
     bool swapped = false;
     if (egl_swap_damage_ext_) {

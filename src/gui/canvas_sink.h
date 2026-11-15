@@ -79,6 +79,17 @@
 // tmp/s33/done2.md). A CONCRETE CLASS, no virtual
 // interface: the painters name GuiCanvasSink& as their road, and the one
 // implementation is the list's.
+// THE NEXT PAGE DRAWN AHEAD (send M, 2026-11-15; architect 2026-11-15: "do
+// the next page, draw and ahead"): the frame's list marks its PREFIX — its
+// leading records that are the page's own picture, the plate branch's first
+// four passes (GuiCanvasDrawList::prefix) — and a second list, THE AHEAD
+// LIST (gui_canvas_ahead below), carries the same four passes over the
+// next page's plate while a paging play stands. The GL canvas composes the
+// ahead list into a target of its own a slice a frame and, in a frame whose
+// prefix equals what that target was composed from, copies the target's
+// pixels in the prefix's place and draws the rest of the list over them
+// (gl_canvas.cpp's present_frame, THE AHEAD TARGET and THE ADOPTION): the
+// bytes the plain road draws, so the damage contract above is unchanged.
 //
 // THE TRANSPARENCY INVARIANT (design record §3.4): the backbuffer's canvas
 // paint area is CLEARED (CAIRO_OPERATOR_CLEAR, on_redraw; skipped where it is
@@ -179,8 +190,9 @@ struct GuiCanvasPrimitive {
     float    edges[4]   = {0.0f, 0.0f, 0.0f, 0.0f};
 };
 
-// THE FRAME'S CANVAS (2026-10-13): the records in paint order, the plate
-// bands' columns behind them, and what the platform needs to place them —
+// THE FRAME'S CANVAS (2026-10-13): the records in paint order — THE PREFIX
+// first, the page's own picture (`prefix` below, send M, 2026-11-15) — the
+// plate bands' columns behind them, and what the platform needs to place them —
 // the clip (waveform_area ∩ waveform_paint_area: the GL draw's scissor and
 // the rect every upload leaves out; the modal box's interior instead while
 // the score viewer's page stands, `page` below, 2026-10-27) and whether a
@@ -295,6 +307,17 @@ struct GuiCanvasDrawList {
     // with it — so a commit of the key is a rebuild of the records and of
     // the program, nothing else.
     int      plate_grow = 0;
+    // THE PREFIX (send M, 2026-11-15; THE AHEAD LIST below): on the frame's
+    // list, the count of its leading records that are THE PAGE'S OWN PICTURE
+    // — the plate branch's first four passes, render_canvas, the plate,
+    // render_center_lines and render_waveform_divider
+    // (GuiPaintHandler::build_canvas_prefix), each a function of the plate,
+    // the area and the theme alone — written by build_canvas_list; 0 on the
+    // branch with no plate, on the ahead list and at every sink's
+    // construction. The GL canvas adopts the ahead target's picture for
+    // these records where they equal its kit's (present_frame's THE
+    // ADOPTION).
+    int      prefix = 0;
     std::vector<GuiCanvasPrimitive>  prims;
     std::vector<WaveformColumnRows>  columns;
     // THE GPU PAGE (above): while `page.stands` the clip is the box's
@@ -302,6 +325,21 @@ struct GuiCanvasDrawList {
     GuiCanvasPage page;
 };
 GuiCanvasDrawList& gui_canvas_frame();
+// THE AHEAD LIST (send M, 2026-11-15; architect 2026-11-15: "do the next
+// page, draw and ahead"): the process's SECOND list, the frame list's
+// lifetime rule (the platform reads it at present and it outlives every
+// project set), holding THE PREFIX OF THE NEXT PAGE — the same four passes
+// over THE AHEAD PLATE (WaveformCache::ahead_columns, maintain_ahead_plate)
+// with its inks, through the one builder the frame's prefix is built by
+// (GuiPaintHandler::build_canvas_prefix), so its records equal the frame's
+// prefix wherever the two plates are equal. Rebuilt WHOLE through a sink at
+// the frame list's own site and frames (build_canvas_list), EMPTY where the
+// ahead plate does not stand or the plate branch does not run; no
+// invalidation is tracked on the GUI's side beyond the ahead plate's own
+// fingerprint — the GL canvas compares content (present_frame's THE AHEAD
+// TARGET). Its clip, floater bit, prefix and page are never read: the
+// frame list's clip is the GL canvas's.
+GuiCanvasDrawList& gui_canvas_ahead();
 
 // THE SINK (the head's ONE SINK, ONE ROAD). Constructed over the frame's list,
 // it rebuilds the list's records from empty (the clip and the floater bit

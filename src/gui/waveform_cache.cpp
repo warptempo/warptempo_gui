@@ -968,8 +968,9 @@ bool GuiPaintHandler::live_plate_is_live_view() const {
 //      at a level switch, a jump to a disjoint range (a page turn keeps its
 //      overlap), a moved band height. DURING A PAGING PLAY the kept rows
 //      stand on the next page once the ahead plate has rendered it (send M,
-//      2026-11-15, maintain_ahead_plate): the turn then asks only the bars
-//      by which its page differs, and any other rebuild before the turn — a
+//      2026-11-15, maintain_ahead_plate): the turn, which under follow's
+//      page rule lands on that very page, then asks none, and any other
+//      rebuild before the turn — a
 //      pan, which suspends the paging, or a kick that leaves the camera —
 //      asks the live page's bars the next page does not share, nearly the
 //      whole row. Its cost without the store, the row
@@ -1202,13 +1203,20 @@ void GuiPaintHandler::flush_owed_waveform_rebuild() {
 // owns the term) once in the page WITH THE KEPT BARS (WaveformKeptBars,
 // render.h), so the kept rows leave it holding exactly the next page's bars
 // (kept_row leaves each row the range last asked) and the turn's synchronous
-// rebuild asks the producer only for the few bars by which the real page
-// differs (the turn pages on the scanner's own sample, up to one frame's
-// advance past the edge frame). THE PUBLISHED PLATE IS FIELD FOR FIELD WHAT
+// rebuild, which under follow's PAGE RULE lands on exactly that page
+// (Viewport::follow_scroll_if_needed), asks the producer for no bar at all.
+// THE PUBLISHED PLATE IS FIELD FOR FIELD WHAT
 // IT IS WITHOUT THIS: the store's own claim (render_waveform_to_plate_columns
 // above, "for every sequence of calls and any store state"), this a caller
 // like any other. The cost moves: one frame in a page carries the page's
-// bars with a near-empty GPU frame behind it.
+// bars with a near-empty GPU frame behind it. THE PICTURE TOO: the frame's
+// canvas list builds the ahead plate's records beside its own (the ahead
+// list, build_canvas_list) and the GL canvas composes them ahead and copies
+// them at the turn (gl_canvas.cpp's present_frame, THE AHEAD TARGET).
+// AFTER A TURN THE AHEAD PLATE KEEPS STANDING on the page just turned to
+// (step 2 returns with `ahead_stands` as it was) until the settle count
+// renders the page after it: its records are then the frame's own, so the
+// frames after the turn copy the same picture too.
 //
 // ONCE A FRAME, from the pre-paint hook (main.cpp) after the owed rebuild's
 // flush — so the live plate is the live viewport's — and before the owed
@@ -1229,8 +1237,10 @@ void GuiPaintHandler::flush_owed_waveform_rebuild() {
 //      fingerprint and `ahead_stands`. A busy worker is not waited for: the
 //      render is left to a later frame.
 // IT PUBLISHES NOTHING AND DECLARES NO DAMAGE: no slot of the plate's two is
-// written, no fp_* field, no flag rebuild runs, and no painter reads
-// WaveformCache::ahead_columns.
+// written, no fp_* field, no flag rebuild runs, and its one reader is the
+// ahead list's build (build_canvas_list), whose picture reaches the glass
+// only through the GL canvas's adoption, where it equals the frame's own
+// (gl_canvas.cpp's present_frame, THE ADOPTION) — so it owes no damage.
 //
 // THE THREAD RULE (the store's, WaveformKeptBars): this runs on the GUI
 // thread, the store's one thread. The worker's job reads its own snapshot

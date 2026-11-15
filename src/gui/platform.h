@@ -145,6 +145,9 @@
 // viewer's page while it stands (2026-10-27) — drawn under a scissor to the
 // clip, the clip left out of every upload unless the floater bit stands, and
 // the page's report written back into the list (GuiCanvasPage,
-// canvas_sink.h). The list outlives every project set (it is the process's),
-// so a run stop strands no pointer.
+// canvas_sink.h). The same call names THE AHEAD LIST (send M, 2026-11-15;
+// gui_canvas_ahead, canvas_sink.h), which the backend hands the GL canvas
+// beside the frame's (present_frame's THE AHEAD TARGET). Both lists outlive
+// every project set (they are the process's), so a run stop strands no
+// pointer.
 #include "platform_android.h"

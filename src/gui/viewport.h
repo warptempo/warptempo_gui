@@ -489,16 +489,20 @@ struct Viewport {
     void finish_discrete_viewport_move();
     // Follow's page-in (AppState::follow): an offscreen subject lands the
     // edge margin (kViewportEdgeMarginFraction, app_state.h) in from the LEFT
-    // edge. It suspends no follow with its own write
-    // (AppState::follow_suspended).
+    // edge — or, under THE PAGE RULE (send M, 2026-11-15; the rule at the
+    // definition), a subject less than one margin past the next page's edge
+    // frame lands on the next page, between one and two margins in. It
+    // suspends no
+    // follow with its own write (AppState::follow_suspended).
     void follow_scroll_if_needed();
     // THE NEXT PAGE of the live viewport (send M, 2026-11-15; the terms THE
     // EDGE FRAME and THE NEXT PAGE are defined at the definition,
     // viewport.cpp): the first frame that paints off screen to the right,
     // and the rest follow's page-in would settle a target standing on it —
     // or none where the geometry is degenerate or that rest is the live
-    // camera's (the right wall). PURE: it writes nothing. Its one reader is
-    // the ahead plate's maintenance (main.cpp's pre-paint hook,
+    // camera's (the right wall). PURE: it writes nothing. Its two readers
+    // are follow_scroll_if_needed's PAGE RULE (send M, 2026-11-15) and the
+    // ahead plate's maintenance (main.cpp's pre-paint hook,
     // GuiPaintHandler::maintain_ahead_plate).
     struct NextPage {
         int64_t      edge_frame = 0;
