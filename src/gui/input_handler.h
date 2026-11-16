@@ -1220,7 +1220,7 @@ struct GuiInputHandler {
     // AppState's. ITS LIT EDGE PUTS ADD SEL OUT (the radio's other half,
     // toggle_follow's shape), damaging that lamp's bottom-row face as bare
     // `k` does. Per-project, history-less. EVERY ACTUAL EDGE DAMAGES TRIM'S
-    // OWN FACE (its home strip, invalidate_roster_press_face's fork;
+    // OWN FACE (its painted extent, invalidate_roster_press_face;
     // 2026-11-10, session 102), so each caller's lamp moves in the frame it
     // was asked for, not at the next timer tick's comparator.
     void set_trim_armed(bool desired);
@@ -1637,10 +1637,16 @@ struct GuiInputHandler {
     // standing fork). The RELEASE does not come here — it consumes the arm
     // through take_chrome_press.
     void clear_redesign_button_press();
-    // THE PRESS FACE'S DAMAGE for one roster button — the key's home strip,
-    // the lit flip's own (the press arc, 2026-11-05; the body's comment,
-    // input_pointer.cpp): the arm's, the lift's and the walk's crossing's.
+    // THE PRESS FACE'S DAMAGE for one roster button — the key's own painted
+    // extent, its face and legend (architect 2026-11-16, the beats; the
+    // press arc, 2026-11-05; the body's comment, input_pointer.cpp): the
+    // arm's, the lift's and the walk's crossing's, and TRIM's lit edge.
     void invalidate_roster_press_face(int index);
+    // THE SAME FOR ONE DIALOG BUTTON of the published stash (architect
+    // 2026-11-16, the beats): its face as painted, in place of the modal's
+    // whole box — every edge of the pointer's and the keyboard's press bits
+    // (the body's comment, input_pointer.cpp).
+    void invalidate_modal_press_face(int index);
 
     // THE MODAL DIALOG'S ARMED BUTTON, dropped on that same edge (2026-08-13):
     // the dialog buttons act at the RELEASE, so a pointer that has left the

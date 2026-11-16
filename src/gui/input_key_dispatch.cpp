@@ -6215,12 +6215,16 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         if (mods.synthesized_repeat) return true;
         // THE ARM: the focused key wears its press face while it stands
         // (paint_modal_dialog's row; the press arc, architect 2026-11-05),
-        // so an edge damages the box.
+        // so an edge damages that key's face (invalidate_modal_press_face,
+        // 2026-11-16), and the face an earlier arm left pressed with it.
         if (app.modal_dialog_key_pressed != at ||
             app.modal_dialog_key_pressed_key != key) {
+            if (app.modal_dialog_key_pressed >= 0 &&
+                app.modal_dialog_key_pressed != at)
+                invalidate_modal_press_face(app.modal_dialog_key_pressed);
             app.modal_dialog_key_pressed     = at;
             app.modal_dialog_key_pressed_key = key;
-            viewport.invalidate_rect(dlg.box);
+            invalidate_modal_press_face(at);
         }
         return true;
     } else {
@@ -6286,9 +6290,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
     if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
-    // The press face's un-press (2026-11-05).
-    if (app.modal_dialog.valid)
-        viewport.invalidate_rect(app.modal_dialog.box);
+    // The press face's un-press (2026-11-05), the key's own face.
+    invalidate_modal_press_face(armed);
     dispatch_modal_dialog_button(armed);
 }
 
@@ -8245,7 +8248,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // FOLLOW's puts RESTRICT out (toggle_follow) — each lamp now arms the
     // next waveform drag, the two sweeps one drag apart; TRIM's face darkens
     // in this frame too, through its setter's own damage (set_trim_armed
-    // damages TRIM's home strip on every edge). The off edge puts nothing
+    // damages TRIM's own face on every edge). The off edge puts nothing
     // out. In the `h` view the edge still puts TRIM out (the bit
     // survives the view).
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {

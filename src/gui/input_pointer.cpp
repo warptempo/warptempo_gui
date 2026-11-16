@@ -2894,7 +2894,8 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // WHOLE HOLD, and this walk only answers whether the pointer is inside it —
 // the armed button's inside bit (AppState::modal_dialog_press_inside), which
 // the press face reads (paint_modal_dialog's row; the press arc, 2026-11-05),
-// damaging the box on every crossing; the release re-hits the armed button
+// damaging the armed button's face on every crossing
+// (invalidate_modal_press_face); the release re-hits the armed button
 // at its own coordinates (take_modal_dialog_release), reading no bit. THE
 // FOCUS IS NOT THIS WALK'S: the press already moved it onto the
 // armed button (architect 2026-10-03, Windows' rule;
@@ -2907,8 +2908,7 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     const bool inside = armed >= 0 && armed == hit;
     if (app.modal_dialog_press_inside != inside) {
         app.modal_dialog_press_inside  = inside;
-        if (app.modal_dialog.valid)
-            viewport.invalidate_rect(app.modal_dialog.box);
+        invalidate_modal_press_face(armed);
     }
     // THE PLAYER'S HOT BUTTON: the hit on the player's row while the
     // program's case has a hot face (program_spec.h's case_hot_face — none
@@ -2992,11 +2992,43 @@ void GuiInputHandler::set_player_hot(int index) {
 // un-press damages the box (2026-11-05).
 void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
+    const int armed = app.modal_dialog_pressed;
     app.modal_dialog_pressed      = -1;
     app.modal_dialog_press_inside = false;
     app.modal_dialog_press_ms     = 0;
-    if (app.modal_dialog.valid)
-        viewport.invalidate_rect(app.modal_dialog.box);
+    invalidate_modal_press_face(armed);
+}
+
+// THE PRESS FACE'S DAMAGE for the dialog button at `index` of the published
+// stash (architect 2026-11-16, the beats: the face, not the whole box, every
+// key press and release) — the roster's rule on this surface
+// (invalidate_roster_press_face): THE BUTTON'S FACE AS PAINTED
+// (AppState::ModalDialogButton::rect, the rect the row's painter last filled
+// and the press was hit against). A press edge changes that face's fill and
+// the glyph repainted over it, both inside the face, and nothing else the
+// modal paints reads the press bits (paint_modal_dialog's row: `pressed`).
+// THE LEGEND IS NOT IN THIS RECT, unlike the roster's: the stash holds no
+// extent for it, it does not change with a press, and the stateful rows'
+// as-painted `enabled` bit needs no covering clip here — a run whose clip
+// misses a key's extent keeps the bit that key was last painted with
+// (paint_modal_dialog's carry), so the comparator still reads what is on
+// screen. EVERY EDGE OF THE TWO PRESS BITS COMES THROUGH HERE: the pointer
+// arm, its feint and return, its clear and its lift, and the keyboard arm's
+// press, release and cancel. THE FOCUS'S MOVE KEEPS THE BOX
+// (arm_modal_dialog_press: a dialog editor's field reads it). With no stash
+// standing, or an index it does not hold, the box as before.
+void GuiInputHandler::invalidate_modal_press_face(int index) {
+    if (!app.modal_dialog.valid) return;
+    const std::vector<AppState::ModalDialogButton>& buttons =
+        app.modal_dialog.buttons;
+    if (index >= 0 && index < static_cast<int>(buttons.size())) {
+        const GuiRect face = buttons[static_cast<size_t>(index)].rect;
+        if (face.w > 0 && face.h > 0) {
+            viewport.invalidate_rect(face);
+            return;
+        }
+    }
+    viewport.invalidate_rect(app.modal_dialog.box);
 }
 
 // THE KEYBOARD ARM'S HARD END, the twin of the one above: an act that has not
@@ -3006,10 +3038,10 @@ void GuiInputHandler::clear_modal_dialog_press() {
 // AppState::modal_dialog_key_pressed.
 void GuiInputHandler::clear_modal_dialog_key_press() {
     if (app.modal_dialog_key_pressed < 0) return;
+    const int armed = app.modal_dialog_key_pressed;
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
-    if (app.modal_dialog.valid)
-        viewport.invalidate_rect(app.modal_dialog.box);
+    invalidate_modal_press_face(armed);
 }
 
 // A dialog button's PRESS: arm the index, painting and dispatching nothing.
@@ -3040,9 +3072,13 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
     // THE ARM, and its press face's damage (2026-11-05): a press is inside
     // what it hit, by construction — the feint's bit starts true.
     if (app.modal_dialog_pressed != hit || !app.modal_dialog_press_inside) {
+        // A face an earlier arm left pressed (none, by the one pointer) is
+        // un-pressed by the same edge.
+        if (app.modal_dialog_pressed >= 0 && app.modal_dialog_pressed != hit)
+            invalidate_modal_press_face(app.modal_dialog_pressed);
         app.modal_dialog_pressed      = hit;
         app.modal_dialog_press_inside = true;
-        viewport.invalidate_rect(app.modal_dialog.box);
+        invalidate_modal_press_face(hit);
     }
     // THE PRESS TAKES THE KEYBOARD FOCUS (architect 2026-10-03, "as few
     // exceptions as possible to the Windows 95 rule"): Windows moves the
@@ -3109,9 +3145,8 @@ int GuiInputHandler::take_modal_dialog_release(int x, int y) {
     // The arm's shifted-twin stamp dies with it (the verdict is read BEFORE
     // this call, modal_dialog_press_shifted).
     app.modal_dialog_press_ms     = 0;
-    // The press face's un-press (2026-11-05).
-    if (app.modal_dialog.valid)
-        viewport.invalidate_rect(app.modal_dialog.box);
+    // The press face's un-press (2026-11-05), the armed button's own face.
+    invalidate_modal_press_face(armed);
     return modal_dialog_button_hit(x, y) == armed ? armed : -1;
 }
 
@@ -6890,8 +6925,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // key down while the pointer stays on the clock. The bit serves the
     // paint alone — the RELEASE re-hits the armed target's rect at its own
     // coordinates, so a slide off the key runs nothing at the lift without
-    // this walk's help — and a crossing damages the key's home strip, the
-    // lit flip's own damage (main.cpp's comparator; row 8's fork). A CARD
+    // this walk's help — and a crossing damages the key's own painted
+    // extent (invalidate_roster_press_face). A CARD
     // ARM IS NOT WALKED: the card paints no pressed face.
     if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster) {
         const bool inside =
@@ -7079,8 +7114,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // press-time — the disabled consume — and then ARMS: the index and the press
 // stamp the long press is measured against (no modifier: a press carrying
 // the barrel's ctrl never reaches here, the band gate's consume, architect
-// 2026-11-08) — and damages the key's home strip for its press face (the
-// press arc, 2026-11-05; invalidate_roster_press_face). The lift runs the
+// 2026-11-08) — and damages the key's own painted extent for its press
+// face (the press arc, 2026-11-05; invalidate_roster_press_face). The lift
+// runs the
 // act through
 // finish_chrome_press_release below, which re-asks every gate, the face's
 // bits as painted (architect 2026-09-24).
@@ -7240,11 +7276,34 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 }
 
 // THE PRESS FACE'S DAMAGE for the roster button at `index` — the arm, the
-// lift and the walk's inside crossing (the press arc, architect 2026-11-05):
-// the key's HOME STRIP, the damage the lit flip's comparator pays for the
-// same pixels (main.cpp) — row 8's fork, a transport-row face damaging its
-// own bottom-strip lane, every other face the top strip.
+// lift and the walk's inside crossing (the press arc, architect 2026-11-05)
+// — IS THE KEY'S OWN PAINTED EXTENT (architect 2026-11-16, the beats: the
+// face and its legend, not the whole strip, every key press and release):
+// RedesignButtonFace::painted, the face united with its legend's line box
+// as the row's painter last laid them out (key_legend_layout's extent,
+// whole px). WHAT A PRESS EDGE CHANGES IS INSIDE IT: the face's fill, a
+// whole-W box (paint_key's four looks), and the glyph repainted over it,
+// centered inside the face; the legend, print on the ground under the face,
+// changes nothing and is in the rect FOR THE STASH — publish_button_face
+// refreshes a key's as-painted bits only under a clip that covers its
+// painted extent, so a rect that is that extent keeps this frame a
+// publishing one and the tick's comparator reading what is on screen. The
+// rect holds the face, the glyph and the legend's box each whole; whatever
+// else of the strip it meets (the ground round the key, a neighbor's
+// overhanging legend) repaints as it stands, the rows' painters being
+// clip-driven. A KEY WITH NO PAINTED EXTENT (never painted, or not standing:
+// hidden, yielded, overflowed) takes ITS HOME STRIP — row 8's fork, a
+// transport-row face its own bottom-strip lane, every other face the top
+// strip — the damage the lit flip's comparator pays (main.cpp).
+// TRIM's lit edge takes this rect too (set_trim_armed): a lit flip moves the
+// face and the glyph's ink, never the legend.
 void GuiInputHandler::invalidate_roster_press_face(int index) {
+    const GuiRect painted =
+        app.redesign_buttons[static_cast<size_t>(index)].painted;
+    if (painted.w > 0 && painted.h > 0) {
+        viewport.invalidate_rect(painted);
+        return;
+    }
     if (redesign_button_in_transport_row(static_cast<RedesignButton>(index)))
         viewport.invalidate_rect(bottom_row_area(app));
     else

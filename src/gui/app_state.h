@@ -6634,7 +6634,9 @@ struct AppState {
     // clear_modal_dialog_press drops it
     // on the pointer-leave edge (main.cpp's hook, beside the
     // roster's own clear), and paint_modal_dialog drops it with the stash
-    // whenever the dialog closes or CHANGES. Every write damages the box.
+    // whenever the dialog closes or CHANGES. Every write damages the armed
+    // button's face (GuiInputHandler::invalidate_modal_press_face,
+    // 2026-11-16).
     int modal_dialog_pressed = -1;
 
     // IS THE POINTER INSIDE THE ARMED BUTTON — the feint's other half, written
@@ -6772,7 +6774,8 @@ struct AppState {
     // Its edges: the ring's press arms write it; on_key_release reads and
     // clears it; the three focus moves above cancel it; the painter drops it
     // with the rest of the face state on every edge that changes the dialog.
-    // Every write damages the box (the press face, 2026-11-05).
+    // Every write damages the pressed button's face (the press face,
+    // 2026-11-05; GuiInputHandler::invalidate_modal_press_face, 2026-11-16).
     int    modal_dialog_key_pressed     = -1;
     GuiKey modal_dialog_key_pressed_key = 0;
 
