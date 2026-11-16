@@ -464,14 +464,15 @@ bool render_waveform_columns(GuiRect area,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // THE VISUAL MAGNIFICATION, a function of source time: each column's
-    // OUTER scale is the derived curve's gain at the column's centre source
-    // frame, its INNER scale the compressor's scale times the foreground
-    // gain's half at the same frame (folded together at the derivation), and
-    // both take the expander's multiplier over the column's working columns.
-    // The contract (the two bars' order and inks, the coarse-zoom centre rule
-    // and the expander's smallest-reduction rule) is at this function's
-    // declaration; the arithmetic is one multiply and ONE clamp per tip.
+    // THE VISUAL MAGNIFICATION, a function of source time, its scale
+    // constant over a WORKING COLUMN: the column's OUTER scale is the derived
+    // curve's gain at the column's centre frame, its INNER scale the
+    // compressor's scale times the foreground gain's half at the same frame
+    // (folded together at the derivation), both times the column's own
+    // expander multiplier (waveform_column_scales). The contract (the two
+    // bars' order and inks, THE EXACT FORM: a bar the hull of its working
+    // columns' magnified samples) is at this function's declaration; the
+    // arithmetic is one multiply and ONE clamp per tip a piece.
     // IT SCALES PIXELS ONLY — nothing this function touches is audio.
     const auto magnified_tip = [](double raw, double scale) {
         double v = raw * scale;
@@ -644,34 +645,87 @@ bool render_waveform_columns(GuiRect area,
         long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
-        const int level = level_for_column(g1 - g0);
-        const auto mm = audio.get_peak_range(channel, level, s0, s1);
-
-        // LIT: THE OUTER, the column's raw extremes times the curve's gain at
-        // the column's centre source frame and the expander's largest
-        // multiplier over the working columns [s0, s1) spans; THE INNER, the
-        // same extremes times the inner scale (the compressor's times the
-        // foreground gain's half) at the same frame and the same multiplier. Each is clamped to the sample domain [-1, 1]
-        // BEFORE it becomes rows: the clamp is what makes a magnified forte
-        // clip flat against the lane's edges instead of running off into row
-        // arithmetic (the inner's scale, c x 1/2, is at most 1/2, so its
-        // clamp is a no-op kept for the one shape). A PICTURE gain: the samples
-        // themselves are untouched, here and everywhere.
-        // DARK: the raw bar at scale 1.0, where the clamp is a no-op (raw
-        // peaks already rest in range).
+        // LIT: THE EXACT FORM (architect 2026-11-15, send O; the definition
+        // and the pieces at this function's declaration): the bar's tips are
+        // the least and the greatest magnified sample over [s0, s1) clamped
+        // to the source, each working column at its own two scales
+        // (waveform_column_scales: THE OUTER the gain at the column's centre
+        // times its expander multiplier, THE INNER the inner scale — the
+        // compressor's times the foreground gain's half — at the same centre
+        // times the same multiplier). A bar inside one working column is the
+        // full span's one read times that column's scales; across several, a
+        // partial column at either end is a piece read directly (at the level
+        // of its own width, a cost choice as every level is) at its column's
+        // scales and every whole column between is ONE QUERY of THE LIT
+        // SUMMARY, the tips the pieces' hull; the full span is not read.
+        // Each tip is clamped to the
+        // sample domain [-1, 1] BEFORE it becomes rows: the clamp is what
+        // makes a magnified forte clip flat against the lane's edges instead
+        // of running off into row arithmetic (the inner's scale, c x 1/2, is
+        // at most 1/2, so its clamp is a no-op kept for the one shape). A
+        // PICTURE gain: the samples themselves are untouched, here and
+        // everywhere.
+        // DARK: the full span's one read, the raw bar at scale 1.0, where the
+        // clamp is a no-op (raw peaks already rest in range).
         if (gain_or_null) {
-            const int64_t centre = (s0 + s1) / 2;
-            const double e = static_cast<double>(
-                waveform_expander_multiplier_over(*gain_or_null, s0, s1));
-            const double outer = waveform_gain_at(*gain_or_null, centre) * e;
-            const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
-            outer_tips[static_cast<size_t>(i)] =
-                bar_tips(magnified_tip(mm.first, outer),
-                         magnified_tip(mm.second, outer));
-            inner_tips[static_cast<size_t>(i)] =
-                bar_tips(magnified_tip(mm.first, inner),
-                         magnified_tip(mm.second, inner));
+            const WaveformGainCurve& curve = *gain_or_null;
+            const int64_t col   = curve.column_frames;
+            const int64_t total = audio.total_frames();
+            // A curve with no column is a zero-frame source's, which never
+            // reaches here (num_levels() is 0 there, refused above).
+            assert(col >= 1);
+            const int64_t a = std::max<int64_t>(s0, 0);
+            const int64_t b = std::min<int64_t>(s1, total);
+            double olo = 0.0, ohi = 0.0, ilo = 0.0, ihi = 0.0;
+            if (a < b) {
+                const int64_t ka = a / col;
+                const int64_t kb = (b - 1) / col;
+                if (ka == kb) {
+                    const int  level = level_for_column(g1 - g0);
+                    const auto mm = audio.get_peak_range(channel, level, s0, s1);
+                    const WaveformColumnScales sc = waveform_column_scales(curve, ka);
+                    olo = magnified_tip(mm.first,  sc.outer);
+                    ohi = magnified_tip(mm.second, sc.outer);
+                    ilo = magnified_tip(mm.first,  sc.inner);
+                    ihi = magnified_tip(mm.second, sc.inner);
+                } else {
+                    olo = ilo =  std::numeric_limits<double>::infinity();
+                    ohi = ihi = -std::numeric_limits<double>::infinity();
+                    const auto piece = [&](int64_t p0, int64_t p1, int64_t k) {
+                        const auto pm = audio.get_peak_range(
+                            channel, audio.level_for_span(static_cast<double>(p1 - p0)),
+                            p0, p1);
+                        const WaveformColumnScales sc = waveform_column_scales(curve, k);
+                        olo = std::min(olo, magnified_tip(pm.first,  sc.outer));
+                        ohi = std::max(ohi, magnified_tip(pm.second, sc.outer));
+                        ilo = std::min(ilo, magnified_tip(pm.first,  sc.inner));
+                        ihi = std::max(ihi, magnified_tip(pm.second, sc.inner));
+                    };
+                    int64_t wa = ka;
+                    int64_t wb = kb;
+                    if (a != ka * col) {
+                        piece(a, (ka + 1) * col, ka);
+                        wa = ka + 1;
+                    }
+                    if (b != std::min((kb + 1) * col, total)) {
+                        piece(kb * col, b, kb);
+                        wb = kb - 1;
+                    }
+                    if (wa <= wb) {
+                        const WaveformLitHull h =
+                            waveform_lit_summary_hull(curve, channel, wa, wb);
+                        olo = std::min(olo, h.outer_min);
+                        ohi = std::max(ohi, h.outer_max);
+                        ilo = std::min(ilo, h.inner_min);
+                        ihi = std::max(ihi, h.inner_max);
+                    }
+                }
+            }
+            outer_tips[static_cast<size_t>(i)] = bar_tips(olo, ohi);
+            inner_tips[static_cast<size_t>(i)] = bar_tips(ilo, ihi);
         } else {
+            const int  level = level_for_column(g1 - g0);
+            const auto mm = audio.get_peak_range(channel, level, s0, s1);
             outer_tips[static_cast<size_t>(i)] =
                 bar_tips(magnified_tip(mm.first, 1.0),
                          magnified_tip(mm.second, 1.0));

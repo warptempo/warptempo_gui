@@ -3444,9 +3444,10 @@ struct WaveformBasis {
 // only at m = −1 of an odd column — the origin 0, the step b, the count n;
 // the producer's index recovery nearbyint(start / b) answers k_first exactly
 // for every b of a frame or more). EVERY BAR IS QUERIED OVER ITS WHOLE SPAN,
-// never clipped by the viewport, so its tips, its centre gain and its
-// expander maximum are a function of (k, b, the map, the lamp) alone: inside
-// a level nothing statistical changes from frame to frame. Target view the
+// never clipped by the viewport, so its tips (lit, the hull of its working
+// columns' magnified samples, each column at its own scales: THE EXACT FORM
+// at render_waveform_columns) are a function of (k, b, the map, the lamp)
+// alone: inside a level nothing statistical changes from frame to frame. Target view the
 // same, in the display (target) domain, each bar mapped to its source span
 // as a column always was.
 //
@@ -3630,8 +3631,9 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // are (1 − w) · ITS PARENT's + w · ITS OWN, rounded half up to whole quarter
 // rows, the inner present iff present in both — the parent's the main rung's
 // REAL tips, from the producer's own query of rung B (a main bar's tips are
-// not the hull of its halves': the centre gain and the expander maximum are
-// per bar), so at w = 0 every pair holds its parent's tips twice and the
+// the hull of its halves' by the definition, dark and lit, but to the reads'
+// int16 slack, not bit for bit: THE EXACT FORM at render_waveform_columns),
+// so at w = 0 every pair holds its parent's tips twice and the
 // row is rung B's, and toward w = 1 it is rung b's own — what the frame
 // past the switch draws with rung b as the main rung, its pairs merged
 // whole (uniform where F > 1, at w just over 0 at F = 1, the same picture
@@ -3819,8 +3821,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // makes that span depend on the column's index and width alone — so two
 // renders of the same column agree exactly whatever viewport asked.
 // INSIDE A LEVEL NOTHING STATISTICAL CHANGES (architect 2026-11-14, send G):
-// while the zoom moves within one rung every column's peaks, centre gain,
-// expander maximum and quarter-row tips are the same numbers frame after
+// while the zoom moves within one rung every column's peaks, its working
+// columns' scales and its quarter-row tips are the same numbers frame after
 // frame, dark or lit, and only the placement — x0 and the pitch — moves (in
 // the fade band the stored tips are those numbers of the two rungs mixed by
 // the zoom's weight, waveform_mix_column: they move with the zoom alone). That
@@ -3830,8 +3832,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // lit plate's the more for the leveler's gain. AT A LEVEL SWITCH (the fixed
 // threshold, kWaveformSwitchPx; no dead band, his "unnecessary and probably
 // more distracting than helpful") each column splits in two or two join:
-// the children's extrema, centre gains and expander maxima are their own,
-// and THE FADE BAND before the split (architect 2026-11-14, send H;
+// the children's extrema are their own (lit, each the hull of its own
+// working columns' magnified samples, so the parent is their hull: THE
+// EXACT FORM), and THE FADE BAND before the split (architect 2026-11-14, send H;
 // waveform_fade_band) carries each pair's tips from the parent's to its own
 // as the zoom approaches it — over the whole doubling with the
 // `waveform_fade_px` key at 1, over its last log2(2 / F) at F; with the key
@@ -3899,7 +3902,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // stays as it is.
 //
 // THE VISUAL MAGNIFICATION is `gain_or_null`, and the lit plate is TWO BARS
-// per column from ONE peak read, both through the expander, the outer
+// per column from the same reads, both through the expander, the outer
 // through the leveler and the inner through the compressor (architect
 // 2026-09-25):
 //
@@ -3908,13 +3911,14 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 //   INNER (painted over)  = raw x c x 1/2 x E, a solid fill in the core —
 //                           the source's bar DOWNWARD-COMPRESSED.
 //
-// g is the leveler's gain at the column's centre source frame
+// — each sample at the scales of THE WORKING COLUMN it lies in (THE EXACT
+// FORM below): g the leveler's gain at that working column's centre frame
 // (waveform_gain_at), c x 1/2 the inner bar's scale there
 // (waveform_inner_scale_at: c the compressor's, the inner bar's stage on the
 // window loudness L, and 1/2 the flat foreground gain folded into it at the
-// derivation — waveform_gain.h owns them all), and E the expander's largest
-// multiplier over the working columns the column spans
-// (waveform_expander_multiplier_over) — ON BOTH BARS, so the gap between
+// derivation — waveform_gain.h owns them all), and E that working column's
+// own expander multiplier (`expander_multiplier`), the products its two
+// scales (waveform_column_scales) — ON BOTH BARS, so the gap between
 // them is g / (c x 1/2), a pure function of L, and the inner never stands
 // out of the outer IN HEIGHT ABOUT THE CENTRE ROW (in pixels a column wholly
 // on one side of zero is the exception: THE ALIGNMENT, below). Each bar's
@@ -3986,72 +3990,124 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // device_config.h).
 //
 // THE ALIGNMENT IS EXACT BY CONSTRUCTION: the two bars share the lattice, the
-// column's [s0, s1), the pyramid level and the one read. THE OUTER IS A
+// column's [s0, s1) and every read (each piece's one read, or the summary's
+// one query, serves both — THE EXACT FORM below). THE OUTER IS A
 // DILATION ABOUT THE CENTRE ROW, NOT A HALO ROUND THE INNER: a column straddling zero has
 // its outer containing the inner; a column wholly on one side of zero (low
 // material at working zoom) has its outer pushed outward, with a gap between
 // it and the inner. Intended — that is what a true magnification looks like.
-// THE COST is one extra bar's rows and one lookup (the scale) per column — the read, the map walk and the gain lookup are shared; no second pyramid, no second
-// plate and no new cache field (waveform_gain_fingerprint flips with the
-// lamp). The core adds nothing here: the inner's two tips ride the same
-// record and the GPU fills them.
+// THE COST: one extra bar's rows per column, and the reads below — at the
+// working zoom in the source view one read and two scales a bar, as the dark
+// bar's read; above it in the source view ONE SUMMARY QUERY a bar and no
+// read (but the last bar, when its extent clamped to [a, total) lies inside
+// one working column: the ka == kb arm below, that column's one read); in
+// the target view at most two partial reads and one query.
+// Measured 2026-11-15 on the Mac over ten minutes of synthetic music-like
+// audio (one frame's plate, both channels): a zoomed-out lit frame 0.18 ms
+// against 0.29 for one raw read a bar, and in the target view at the working
+// zoom, where a bar lies across two working columns and pays two small
+// reads, 0.84 ms against 0.58 for one; the worst fade-band frame 3.8 ms. No
+// second plate and no new cache field (waveform_gain_fingerprint flips with
+// the lamp and the derivation's version). The core adds nothing here: the
+// inner's two tips ride the same record and the GPU fills them.
 //
-// THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
-// source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).
-// A COLUMN TAKES THE GAIN AT ITS CENTRE SOURCE FRAME, (s0 + s1) / 2 — one
-// evaluation per plate column (waveform_gain_at, linear between the curve's
-// hops), and the compressor's scale takes the same centre frame
-// (waveform_inner_scale_at, linear in scale likewise). s0 and s1 are the same integers the peak read takes, pure functions
-// of the GLOBAL column index and the column's width (the bar basis,
-// WaveformBasis above) in both views — target view maps the column through
-// the warp map to its source span first — so the lookup is pan-invariant and,
-// inside a level, zoom-invariant by construction, and nothing forks on the
-// view.
+// THE EXACT FORM — THE ONE DEFINITION, EVERY BAR, EVERY ZOOM, BOTH VIEWS
+// (architect 2026-11-15, send O, "Agree to all."): THE MAGNIFIED SOURCE IS A
+// FUNCTION OF SOURCE TIME, ITS SCALE CONSTANT OVER A WORKING COLUMN (the
+// curve, WaveformGainCurve, waveform_gain.h, owns the derivation).
+// WORKING COLUMN k is the source frames [k · col, (k + 1) · col) ∩ [0,
+// total), col the curve's `column_frames`; its CENTRE is k · col + col / 2
+// (integer division, unclamped: the bar [k · col, (k + 1) · col)'s own
+// (s0 + s1) / 2); ITS TWO SCALES (waveform_column_scales, the one function
+// the producer and THE LIT SUMMARY share) are the gain at that centre times
+// the column's expander multiplier (the outer) and the inner scale at that
+// centre times the same multiplier (the inner). THE MAGNIFIED SAMPLE of a
+// channel at frame n of column k is x(n) times a scale, clamped to [-1, 1],
+// the outer and the inner each. A BAR'S TIPS ARE THE LEAST AND THE GREATEST
+// MAGNIFIED SAMPLE OVER [s0, s1) ∩ [0, total) — s0 and s1 the integers the
+// read takes (s1 <= s0 taking s0 + 1), pure functions of the GLOBAL column
+// index and the column's width (the bar basis, WaveformBasis above) in both
+// views, the target view mapping the column through the warp map to its
+// source span first; an empty intersection reads (0, 0) — then the rows
+// (bar_tips: the clamp to the band, the quarter rows, the never-fade
+// floor). "The least and the greatest" is get_peak_range's: exact up to the
+// pyramid's int16 bins, as the dark picture is. SO A COARSE BAR IS THE HULL
+// OF THE WORKING ZOOM'S OWN BARS under it — in the source view exactly that,
+// lit as dark — AND THE TARGET VIEW IS THE SOURCE'S LIT PICTURE MOVED
+// THROUGH THE MAP: every piece of source keeps the height the source view
+// gives it, wherever the map puts it (a target bar lying across two working
+// columns gives each part its own column's multiplier, so the relief before
+// an onset is the source view's own, at the working zoom too). The scale is
+// the working column's and not the sample's because the gain's unit is the
+// working column by its own definition (waveform_gain.h: the leveler reads
+// at working zoom; the expander is one number a working column, read with
+// the gain at the column's centre): a per-sample gain would move the working
+// zoom's own bytes and agree with nothing the derivation defines. Nothing
+// forks on the view, and the scales a bar reads are pan-invariant and,
+// inside a level, zoom-invariant by construction. It applies exactly where
+// the gain does: NULL (the dark lamp, in either audio view) is raw.
+// WHY EXACT (his 2026-09-23 ruling that a coarse bar takes one gain, at its
+// centre, and that no gained second pyramid is built, REOPENED by him
+// 2026-11-15): one scale for a coarse bar stands far from its columns' own
+// picture — measured 2026-09-23 on the 40th at whole-piece zoom (1920
+// columns, ~0.30 s a column) a column at 122.3 s painted 0.53 by its centre
+// gain against 0.87 gained before the reduction, and at 640 columns one
+// painted 0.97 against 0.34; measured 2026-11-15 on the Mac's synthetic
+// audio with the span's largest multiplier beside the centre gain, 43..86 %
+// of zoomed-out bars took other rows, the largest by a tenth of the lane's
+// half height and more (the multiplier over a silence-to-onset edge).
 //
-// THE CENTRE RULE IS AN APPROXIMATION AT THE COARSE ZOOMS. A coarse plate
-// column — a bar of the ladder's upper rungs, the working column times a
-// power of two — covers many working-zoom columns whose gains differ; it takes the
-// curve's gain at its centre source frame and applies it to the min/max
-// reduced from RAW peaks, so where the gain changes inside the column (the
-// curve moves on the window's scale) the bar's height
-// differs from the height a per-working-column gain applied before the
-// reduction would give. The error is not small: on the 40th at whole-piece
-// zoom (1920 columns, ~0.30 s per column) a column at 122.3 s paints 0.53 by
-// the centre rule against 0.87 gained-before-reduction, and at 640 columns
-// (~0.90 s per column) one paints 0.97 against 0.34 (normalized peak
-// estimates on the peak measure, measured 2026-09-23 on columns of those
-// widths; the error is a column width's, whichever rung gives it). The
-// exact alternative is a second pyramid reduced over the gained samples —
-// immutable with the source like the curve, so the lamp would select between
-// the two pyramids rather than rebuild one — at the memory of a second
-// pyramid. RULED (architect 2026-09-23): the centre rule stands and no gained
-// second pyramid is built — placement is never done at a coarse zoom, so the
-// approximation there costs nothing the plate is used for. At working zoom
-// (one working column per plate column — b is the
-// column there — against a hop of whole columns: 46 frames against 4416 on
-// the tablet) the two agree. The centre is a column's own, so it holds
-// through a level and moves at a switch, where a column's two halves take
-// the gains at their own centres (the lit switch's step, which the fade
-// band spreads over the approach by mixing the two rungs' tips, PAN AND ZOOM
-// INVARIANCE above).
-//
-// THE EXPANDER'S MULTIPLIER rides the same pointer (the curve's
-// `expander_multiplier`, one per working-zoom column, waveform_gain.h owns
-// the stage): a plate column spanning source frames [s0, s1) takes the
-// LARGEST multiplier — the smallest reduction — over the working columns the
-// span covers (waveform_expander_multiplier_over, constant time through the
-// curve's range-maximum index since 2026-10-13, no pow), and
-// both tips of BOTH lit bars take it beside the bar's own scale (the gain on
-// the outer, the compressor's on the inner) before each bar's one clamp. At working
-// zoom that is the column's own reduction (and at the deepest level, half
-// a working column wide, its working column's); coarser, it is the one choice
-// under which a bar is never shorter than any member's own expanded bar, so
-// an onset is never dimmed by the dip before it at any zoom. It applies
-// exactly where the gain does: NULL (the dark lamp, in either audio view) is
-// raw, and an empty array is the identity. In target view [s0, s1) is the
-// plate column's MAPPED source span, so a tempo-compressed column covering
-// several working columns takes the largest multiplier among them, as a
-// coarse source-view column does.
+// HOW A BAR IS COMPUTED, THE PIECES: scale and clamp are monotone, so over a
+// run of frames inside ONE working column the extremes are the run's raw
+// extremes times that column's scales, clamped; a bar is the hull of its
+// pieces. With the span clamped to [0, total), ka = s0 / col and
+// kb = (s1 − 1) / col:
+// - ka == kb, A BAR INSIDE ONE WORKING COLUMN: the full span's one read (the
+//   dark arm's call: its level, its s0 and s1) times that column's scales.
+//   At the working zoom in the source view a bar IS a column, and this is
+//   the column's own arithmetic. At the deepest level (b = col / 2; with an
+//   odd column too, its even edges whole multiples of the column, so each
+//   half lies inside its column) each half takes ITS COLUMN'S scales, so a
+//   column is exactly the hull of its two halves in the extremes and the
+//   rows they round to, before the never-fade floor (the consequence below
+//   names the floor's one exception) (architect 2026-11-15,
+//   send O, his ruling on the deepest level within "Agree to all.": the
+//   gain read up to col / 4 frames from the half's own centre, at most a
+//   quarter row on some bars where the gain is moving).
+// - ka < kb: a partial working column at either end is a piece read
+//   directly (at the level of its own width) times its own column's scales,
+//   and every whole working column between them — the end columns too when
+//   the span covers them whole, the short last column whole when the span
+//   reaches the source's end — is ONE QUERY of THE LIT SUMMARY
+//   (WaveformGainCurve::lit_summary, waveform_lit_summary_hull; waveform_gain.h
+//   owns its structure, its build and its memory). In the source view above
+//   the working zoom (b = col · 2^m, every edge a whole multiple of the
+//   column) a bar is whole columns alone: one query, no read and no gain
+//   lookup — but the source's last bar, when its extent clamped to
+//   [a, total) lies inside a single working column, which takes the
+//   ka == kb arm, that column's one read; in the target view at most two
+//   partial reads and one query.
+// THE SUMMARY IS NEVER READ FOR A BAR INSIDE ONE COLUMN: its entry is the
+// column's exact float extreme scaled and then rounded to int16, a pyramid
+// read is the int16 bin then scaled, so the two agree to that slack and not
+// bit for bit, and the working zoom keeps its direct read and its bytes.
+// THE CONSEQUENCE AT A LEVEL SWITCH: a parent is the hull of its two
+// children by the definition, lit as dark, so what the fade band spreads is
+// the split the dark picture has. In rows it is EXACT between two rungs
+// that both read the summary (in the source view, every rung from twice the
+// working column up) — in the extremes and the rows they round to, BEFORE
+// THE NEVER-FADE FLOOR (kWaveformFloorSubcells, applied in render.cpp's
+// bar_tips after the reduction): a flat child (digital silence, its two
+// tips 0) is floored to one subrow and can stand that one quarter row
+// outside a parent whose own least sample is exactly 0 (silence, then an
+// onset column with no negative sample; measured 2026-11-15, a parent's
+// outer [885, 1086) against its children's hull [885, 1087)) — the floor
+// ruled, the quarter row accepted; elsewhere it holds to the reads' int16
+// slack — ACROSS THE WORKING ZOOM'S BOUNDARY (a working-zoom bar a pyramid
+// read, its parent a summary entry) TO ONE QUARTER ROW, the bin scaled by
+// up to 16 flipping a quarter-row decision on a few percent of bars
+// (2..4 %, measured 2026-11-15 on the Mac between the two whole-column
+// forms): a quarter of a device px inside a fade.
 //
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
 // function is audio: the plate is pixels, playback

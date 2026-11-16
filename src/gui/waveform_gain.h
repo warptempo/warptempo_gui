@@ -46,16 +46,21 @@
 //   linear IN GAIN. That is the whole derivation (the RULED-OUT list below
 //   names what it deliberately is not).
 //
-//   THE PAINTER multiplies each plate column's raw min/max by its gain and
-//   the expander's multiplier and clamps the pair to [-1, 1]
-//   (render_waveform_columns): THE OUTER BAR, the levelled, expanded one, painted
+//   THE PAINTER multiplies each working column's samples by THE COLUMN'S
+//   TWO SCALES (waveform_column_scales below: the gain and the inner scale
+//   at the column's centre frame, each times the column's own expander
+//   multiplier) and clamps them to [-1, 1]; a plate bar's tips are the least
+//   and the greatest of those magnified samples over its span, whatever
+//   working columns it crosses (architect 2026-11-15, send O, "Agree to
+//   all."; render_waveform_columns' contract, THE EXACT FORM, owns the
+//   definition): THE OUTER BAR, the levelled, expanded one, painted
 //   first in the plate's own ink (the `waveform_ink` role). Over it the lit
 //   lamp paints
 //   THE INNER BAR, the source's own bar through the same expander, THE
 //   COMPRESSOR and THE FOREGROUND GAIN below instead of the gain, raw x c x
 //   1/2 x E, a solid fill in the `waveform_core` role over the outer's ink
-//   (architect 2026-11-04, render.h's THE CORE) — both bars from ONE peak
-//   read (architect 2026-09-25), the inks render.h's row-6 block's. The
+//   (architect 2026-11-04, render.h's THE CORE) — both bars from the same
+//   reads (architect 2026-09-25), the inks render.h's row-6 block's. The
 //   gain decides
 //   the outer's height and
 //   never a colour.
@@ -101,9 +106,11 @@
 // the relief wanted) — the ruling stands for the OUTER bar; THE COMPRESSOR
 // below (2026-09-25) is a different stage, slow on the window's L, on the
 // INNER bar alone, with no make-up, and reopens nothing else here: smoothing,
-// hysteresis, a second window and a gained second pyramid stay out (the
-// inner is one more per-hop multiplier on the ONE peak read, as the expander
-// is one more per-column one), and the upward compressor's per-oscillation
+// hysteresis and a second window stay out (the inner is one more per-hop
+// multiplier on the same reads, as the expander is one more per-column one)
+// — the gained second pyramid, ruled out here 2026-09-23, is REOPENED by the
+// architect 2026-11-15 (send O) and built at the working column as THE LIT
+// SUMMARY below — and the upward compressor's per-oscillation
 // fault cannot arise, c reading L and never the column; LOOKAHEAD and A NONZERO ATTACK
 // in the expander; HYSTERESIS; a separate envelope window (Hold and Release
 // were the envelope; since their deletion the expander has none). Ruled out
@@ -164,24 +171,22 @@
 //   multiplier is 10^(-reduction / 20), stored as a float in [0, 1], so
 //   THE PAINTER DOES NO POW.
 //
-//   THE PAINTER'S RULE: a plate column takes the LARGEST multiplier — the
-//   SMALLEST reduction — over the working columns its source span covers
-//   (waveform_expander_multiplier_over), and multiplies it into both tips
-//   of BOTH lit bars — beside the gain on the outer, beside the compressor
-//   on the inner (architect 2026-09-25: both stages on both bars) — before
-//   each bar's one clamp. At working zoom in source view that is exactly the
-//   column's own (the plate's column and the analysis column are one width,
-//   and the plate's columns stand on the column's multiples, the frame-0
-//   lattice — render.h's THE PLATE'S BARS). Coarser, the bar is the raw min/max of every member, so
-//   the member carrying the extreme is not known without a second pyramid;
-//   the smallest reduction is the one choice under which the coarse bar is
-//   never SHORTER than any member's own expanded bar (raw peak times the
-//   largest multiplier bounds every member's peak times its own), so an
-//   onset inside a coarse column is never dimmed by the dip before it and
-//   the rule holds at every zoom — erring, where it errs, toward the
-//   leveler's plain picture, never toward a hole. It applies exactly
-//   where the gain applies (render_waveform_columns' `gain_or_null`): the dark
-//   lamp stays raw, in both audio views.
+//   THE PAINTER'S RULE (architect 2026-11-15, send O, "Agree to all."):
+//   EVERY WORKING COLUMN TAKES ITS OWN MULTIPLIER, into both tips of BOTH
+//   lit bars — beside the gain on the outer, beside the compressor on the
+//   inner (architect 2026-09-25: both stages on both bars) — before each
+//   bar's one clamp: one factor of the column's two scales
+//   (waveform_column_scales). A plate bar over several working columns is
+//   the hull of their own magnified samples, each column at its own
+//   multiplier, so a coarse bar is the outline of the working zoom's own
+//   bars: an onset inside it keeps the height the working zoom gives it and
+//   the dip before it keeps its own depth, at every zoom and in both views
+//   (THE LIT SUMMARY below stores the whole columns' hull; the definition is
+//   render_waveform_columns', THE EXACT FORM). At working zoom in source view
+//   a bar is one working column (the plate's columns stand on the column's
+//   multiples, the frame-0 lattice — render.h's THE PLATE'S BARS). It
+//   applies exactly where the gain applies (render_waveform_columns'
+//   `gain_or_null`): the dark lamp stays raw, in both audio views.
 //
 //   THE CRITERION, the architect's: the SWELL before an onset — the dip in
 //   the 300 ms before a local envelope maximum — roughly DOUBLES from the
@@ -273,37 +278,57 @@
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
 
-// THE EXPANDER'S RANGE-MAXIMUM INDEX (2026-10-13, a cost cut that returns
-// the same float): the painter's rule asks, per plate column, for the
-// largest `expander_multiplier` over a run of working columns — one at
-// working zoom, a few hundred at full zoom-out, a couple of thousand plate
-// columns a channel (2256 when the profile was taken, one a device px; the
-// stored bars now, render.h's THE PLATE'S BARS)
-// at every pan or pinch step; the tablet's profile of a magnified pan put
-// 9.2 % of all CPU on the plain scan. A BLOCKED SPARSE TABLE answers it in
-// constant time: the array in blocks of kExpanderRangeBlock columns, a
-// sparse table over the WHOLE blocks' maxima (level j's entry b the largest
-// over blocks [b, b + 2^j)), a query the two overlapping power-of-two block
-// runs covering its whole blocks plus a scan of its two partial end blocks
-// (a query inside one or two neighbouring blocks is scanned whole, at most
-// 2 x kExpanderRangeBlock - 2 entries). BIT-EXACT by construction: max is
-// idempotent, so the overlap counts nothing twice, and on these floats it is
-// exact in any order — every multiplier is a pow of a positive base cast to
-// float, never NaN and never -0, so the largest is one stored value
-// whichever way the comparisons run. Memory: levels x blocks floats, the
-// array's own size times (floor(log2(n / 16)) + 1) / 16 — exactly one float
-// per working column at a million columns (16 levels over 62,500 blocks),
-// so the 2.2 MB of multipliers of an 8-minute piece carry about 2.2 MB of
-// index, never more than the array itself under 2^20 working columns.
-// IT STORES MULTIPLIERS, NEVER GAINED PEAKS: the gained second pyramid stays
-// ruled out (the list above; render.h's centre rule) and the picture is
-// unchanged — the index only reaches the same maximum the scan reached.
-struct WaveformRangeMaxIndex {
-    int64_t            blocks = 0;  // whole blocks of kExpanderRangeBlock columns
-    int                levels = 0;  // table levels, 0 when there is no whole block
-    std::vector<float> table;       // level j's `blocks` entries at offset j * blocks
+// THE LIT SUMMARY (architect 2026-11-15, send O, "Agree to all." — the
+// gained second pyramid, ruled out 2026-09-23, REOPENED by him and built at
+// the working column): THE LIT PICTURE OF EVERY WORKING COLUMN, STORED, with
+// a range structure over it, so a plate bar over many working columns reads
+// their hull in a bounded number of entries instead of a read and two scales
+// a column (render_waveform_columns' contract, THE EXACT FORM, owns what a
+// bar is and when the summary is read).
+//
+//   THE BASE, per channel per working column, FOUR NUMBERS: the outer's
+//   least and greatest magnified sample and the inner's — the column's exact
+//   float sample extremes of that channel (the derivation's own column pass,
+//   which reads every sample once for the peaks and the mean squares and
+//   keeps these beside them), each times THE COLUMN'S TWO SCALES
+//   (waveform_column_scales: the one function the producer reads too, so the
+//   arithmetic cannot fork) in double, clamped to [-1, 1] and quantized as
+//   the peak pyramid quantizes (audio.cpp's quantize_unit: nearbyint of
+//   v x 32767, in double).
+//   THE LEVELS, FACTOR 4 (the peak pyramid's shape): level j's entry i is the
+//   hull — the least of the minima, the greatest of the maxima — of level
+//   j - 1's entries [4i, 4i + 4) that exist, up to the level of one entry.
+//   THE QUERY (waveform_lit_summary_hull) walks bottom-up over a run of
+//   whole working columns, at most three entries a side a level, and is
+//   EXACT: every entry it takes lies inside the run, they cover it, and min
+//   and max are idempotent and order-free on int16.
+//   BUILT INSIDE derive_waveform_gain after the expander (the scales need
+//   it), a member of the curve: pure, immutable with it, standing before the
+//   derivation's `ready` (GuiAudio::gain_curve), so the lamp cannot be lit
+//   without it. NOTHING REBUILDS IT: it is a function of the source and the
+//   ten constants; one per GuiAudio, both views reading it (the target view
+//   draws the source through the map), the lamp choosing whether it is read.
+//   WHY int16: a step is 1/32767 of the lane's half height, about 0.016 of a
+//   quarter row on the tablet's band, under the pyramid's own slack.
+//   MEMORY: 8 bytes a channel a working column at the base, about 4/3 of
+//   that with the levels — measured 2026-11-15 on the Mac at the tablet's
+//   46-frame column, 12.3 MB for a ten-minute piece at 44.1 kHz (575 218
+//   columns; its decoded samples are 212 MB, its peak pyramid about 18 MB)
+//   and 3.7 MB for three minutes. THE BUILD, on the gain thread
+//   off the load path: as a separate pass on the Mac it cost what the
+//   derivation itself costs (94 against 95 ms for ten minutes); inside the
+//   column pass the sample read is shared (not measured apart). The column
+//   pass's transient extremes (16 bytes a working column) are freed with the
+//   call.
+struct WaveformLitEntry {
+    int16_t outer_min = 0, outer_max = 0;
+    int16_t inner_min = 0, inner_max = 0;
 };
-inline constexpr int64_t kExpanderRangeBlock = 16;
+inline constexpr int64_t kWaveformLitSummaryFactor = 4;
+struct WaveformLitSummary {
+    std::vector<int64_t>          level_begin;  // level j is entries [level_begin[j], level_begin[j + 1]); level 0 one entry per working column
+    std::vector<WaveformLitEntry> entries[2];   // per channel, every level, level 0 first
+};
 
 // The picture's continuous magnification, derived from the source once per
 // load (off the load path — GuiAudio::gain_curve).
@@ -312,8 +337,8 @@ struct WaveformGainCurve {
     std::vector<double> gain;            // per hop, each in [kGainMin, kGainMax]; empty for a zero-frame source
     std::vector<double> inner_scale;     // THE COMPRESSOR x THE FOREGROUND GAIN, per hop beside `gain`, each in (0, 1/2]
     int64_t             column_frames = 0;    // the working column's width in source frames; column k is [k * column_frames, (k + 1) * column_frames)
-    std::vector<float>  expander_multiplier;  // THE EXPANDER, per working column, each in [0, 1]; empty is the identity
-    WaveformRangeMaxIndex expander_range_max; // over `expander_multiplier`, built with it (the index's head above)
+    std::vector<float>  expander_multiplier;  // THE EXPANDER, per working column, each in [0, 1]; empty for a zero-frame source
+    WaveformLitSummary  lit_summary;          // THE LIT SUMMARY over the working columns (its head above); empty for a zero-frame source
 };
 
 // `interleaved` is stereo float32, `total_frames` frames (2 * total_frames
@@ -333,17 +358,39 @@ double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
 // nearest hops, the ends held. 1.0 for an empty curve.
 double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame);
 
-// THE PAINTER'S EXPANDER RULE for a plate column spanning source frames
-// [s0, s1): the LARGEST multiplier (the smallest reduction) over the working
-// columns s0 / column_frames through (s1 - 1) / column_frames, both clamped
-// into the array — constant time at every zoom through the curve's
-// range-maximum index (WaveformRangeMaxIndex, 2026-10-13; a plain loop
-// before, one column at working zoom and a few hundred at full zoom-out).
-// 1.0 for an empty curve.
-float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1);
+// THE COLUMN'S TWO SCALES (architect 2026-11-15, send O; THE PAINTER'S RULE
+// above): working column k's outer scale, the gain at its centre times its
+// own expander multiplier, and its inner scale, the inner bar's scale at the
+// same centre times the same multiplier — the centre k x column_frames +
+// column_frames / 2 (integer division, NOT clamped to the source's end:
+// the bar [k x col, (k + 1) x col)'s own (s0 + s1) / 2, so the working zoom
+// reads the scale it always read, the short last column included; the
+// expander's own centre, clamped, differs on that column alone), in that
+// expression order (render_waveform_columns' arithmetic). The one function
+// the producer and THE LIT SUMMARY's build share. `k` is a working column of
+// a curve that has one (0 <= k < expander_multiplier.size()).
+struct WaveformColumnScales {
+    double outer = 1.0;
+    double inner = 1.0;
+};
+WaveformColumnScales waveform_column_scales(const WaveformGainCurve& curve, int64_t k);
+
+// THE LIT SUMMARY'S QUERY (its head above): the hull of whole working
+// columns [ka, kb] (both inclusive, 0 <= ka <= kb < the column count) of
+// `channel` (0 or 1) — the least of the outer's and the inner's minima and
+// the greatest of their maxima — each dequantized as double(q) / 32767.0.
+struct WaveformLitHull {
+    double outer_min = 0.0, outer_max = 0.0;
+    double inner_min = 0.0, inner_max = 0.0;
+};
+WaveformLitHull waveform_lit_summary_hull(const WaveformGainCurve& curve, int channel,
+                                          int64_t ka, int64_t kb);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (15 since the analysis column became the device's working
+// the rule above (16 since the lit rule's exact form, architect 2026-11-15,
+// send O: every working column at its own scales, a bar the hull of its
+// columns' magnified samples — THE PAINTER'S RULE; 15 was the analysis
+// column becoming the device's working
 // column, 2026-09-27, handed in by the load — the column itself is no
 // fingerprint term: the plates live in memory, the cache is per project and
 // the column is fixed for its lifetime; 14 was the inner bar's three numbers
@@ -365,4 +412,4 @@ float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t 
 // Nothing derived from the gain outlives the process — the curve is derived
 // at every load (the `.peaks` sidecar carries no curve) and the plates live
 // in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 15;
+inline constexpr uint64_t kWaveformGainVersion = 16;

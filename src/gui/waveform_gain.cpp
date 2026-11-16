@@ -1,7 +1,6 @@
 #include "waveform_gain.h"
 
 #include <algorithm>
-#include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -229,32 +228,66 @@ private:
     double              min_fraction_;
 };
 
-// THE EXPANDER'S RANGE-MAXIMUM INDEX over `m` (WaveformRangeMaxIndex,
-// waveform_gain.h, owns the structure and its exactness): level 0 the whole
-// blocks' maxima, level j the larger of level j - 1's entries b and
-// b + 2^(j-1). A partial last block takes no entry; the query scans it.
-WaveformRangeMaxIndex build_range_max_index(const std::vector<float>& m) {
-    WaveformRangeMaxIndex idx;
-    const int64_t nb = static_cast<int64_t>(m.size()) / kExpanderRangeBlock;
-    if (nb <= 0) return idx;
-    idx.blocks = nb;
-    idx.levels = std::bit_width(static_cast<uint64_t>(nb));
-    idx.table.resize(static_cast<size_t>(idx.levels) * static_cast<size_t>(nb));
-    for (int64_t b = 0; b < nb; ++b) {
-        const size_t base = static_cast<size_t>(b * kExpanderRangeBlock);
-        float best = m[base];
-        for (int64_t k = 1; k < kExpanderRangeBlock; ++k)
-            best = std::max(best, m[base + static_cast<size_t>(k)]);
-        idx.table[static_cast<size_t>(b)] = best;
+// THE LIT SUMMARY'S ONE STORED NUMBER (waveform_gain.h owns the summary):
+// a raw sample extreme times a column scale, in double, clamped to [-1, 1]
+// (the producer's magnified_tip, render_waveform_columns), then quantized as
+// the peak pyramid quantizes (audio.cpp's quantize_unit: nearbyint of
+// v x 32767, in double).
+int16_t lit_quantized(float raw, double scale) {
+    double v = static_cast<double>(raw) * scale;
+    if (v < -1.0) v = -1.0;
+    if (v >  1.0) v =  1.0;
+    return static_cast<int16_t>(std::nearbyint(v * 32767.0));
+}
+
+// THE LIT SUMMARY's build (waveform_gain.h owns the structure): the base
+// from each working column's per-channel raw extremes (`lo`, `hi`, the
+// column pass's) times the column's two scales, then the factor-4 levels,
+// each entry the hull of the existing entries under it.
+WaveformLitSummary build_lit_summary(const WaveformGainCurve& curve,
+                                     const std::vector<float> (&lo)[2],
+                                     const std::vector<float> (&hi)[2]) {
+    WaveformLitSummary s;
+    const int64_t n = static_cast<int64_t>(lo[0].size());
+    s.level_begin.push_back(0);
+    for (int64_t size = n;;) {
+        s.level_begin.push_back(s.level_begin.back() + size);
+        if (size <= 1) break;
+        size = (size + kWaveformLitSummaryFactor - 1) / kWaveformLitSummaryFactor;
     }
-    for (int j = 1; j < idx.levels; ++j) {
-        const float* prev = idx.table.data() + static_cast<size_t>(j - 1) * nb;
-        float*       cur  = idx.table.data() + static_cast<size_t>(j) * nb;
-        const int64_t half = int64_t{1} << (j - 1);
-        for (int64_t b = 0; b + 2 * half <= nb; ++b)
-            cur[b] = std::max(prev[b], prev[b + half]);
+    for (std::vector<WaveformLitEntry>& e : s.entries)
+        e.resize(static_cast<size_t>(s.level_begin.back()));
+    for (int64_t k = 0; k < n; ++k) {
+        const WaveformColumnScales sc = waveform_column_scales(curve, k);
+        for (int ch = 0; ch < 2; ++ch) {
+            const float mn = lo[ch][static_cast<size_t>(k)];
+            const float mx = hi[ch][static_cast<size_t>(k)];
+            s.entries[ch][static_cast<size_t>(k)] = WaveformLitEntry{
+                lit_quantized(mn, sc.outer), lit_quantized(mx, sc.outer),
+                lit_quantized(mn, sc.inner), lit_quantized(mx, sc.inner)};
+        }
     }
-    return idx;
+    const size_t levels = s.level_begin.size() - 1;
+    for (std::vector<WaveformLitEntry>& e : s.entries) {
+        for (size_t j = 1; j < levels; ++j) {
+            const int64_t p0 = s.level_begin[j - 1], p1 = s.level_begin[j];
+            const int64_t c1 = s.level_begin[j + 1];
+            for (int64_t i = 0; p1 + i < c1; ++i) {
+                const int64_t first = p0 + kWaveformLitSummaryFactor * i;
+                const int64_t last  = std::min(p1, first + kWaveformLitSummaryFactor);
+                WaveformLitEntry h = e[static_cast<size_t>(first)];
+                for (int64_t c = first + 1; c < last; ++c) {
+                    const WaveformLitEntry& x = e[static_cast<size_t>(c)];
+                    h.outer_min = std::min(h.outer_min, x.outer_min);
+                    h.outer_max = std::max(h.outer_max, x.outer_max);
+                    h.inner_min = std::min(h.inner_min, x.inner_min);
+                    h.inner_max = std::max(h.inner_max, x.inner_max);
+                }
+                e[static_cast<size_t>(p1 + i)] = h;
+            }
+        }
+    }
+    return s;
 }
 
 }  // namespace
@@ -269,23 +302,42 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     // THE COLUMN PASS, one read of every sample: each column of `col` frames
     // (the last partial) takes its PEAK, the largest |x| over both channels,
     // and its MEAN SQUARE, the sum of x^2 over its samples (both channels
-    // together, accumulated in double) divided by their count.
+    // together, accumulated in double) divided by their count — and, for
+    // THE LIT SUMMARY (waveform_gain.h), each channel's least and greatest
+    // sample, kept beside them until the summary is built.
     const int64_t n = (total_frames + col - 1) / col;
     std::vector<double> peaks(static_cast<size_t>(n));
     std::vector<double> mean_squares(static_cast<size_t>(n));
+    std::vector<float> raw_lo[2], raw_hi[2];
+    for (int ch = 0; ch < 2; ++ch) {
+        raw_lo[ch].resize(static_cast<size_t>(n));
+        raw_hi[ch].resize(static_cast<size_t>(n));
+    }
     for (int64_t k = 0; k < n; ++k) {
         const int64_t f0 = k * col;
         const int64_t f1 = std::min(total_frames, f0 + col);
         float  peak = 0.0f;
         double sq   = 0.0;
+        float  lo[2] = { std::numeric_limits<float>::infinity(),
+                         std::numeric_limits<float>::infinity()};
+        float  hi[2] = {-std::numeric_limits<float>::infinity(),
+                        -std::numeric_limits<float>::infinity()};
+        int    ch = 0;   // the interleaved channel of *p
         for (const float* p = interleaved + 2 * f0, *pe = interleaved + 2 * f1; p < pe; ++p) {
             const float a = std::fabs(*p);
             if (a > peak) peak = a;
             const double x = static_cast<double>(*p);
             sq += x * x;
+            if (*p < lo[ch]) lo[ch] = *p;
+            if (*p > hi[ch]) hi[ch] = *p;
+            ch ^= 1;
         }
         peaks[static_cast<size_t>(k)]        = static_cast<double>(peak);
         mean_squares[static_cast<size_t>(k)] = sq / static_cast<double>(2 * (f1 - f0));
+        for (int c = 0; c < 2; ++c) {
+            raw_lo[c][static_cast<size_t>(k)] = lo[c];
+            raw_hi[c][static_cast<size_t>(k)] = hi[c];
+        }
     }
 
     const double cps = static_cast<double>(sample_rate) / static_cast<double>(col);
@@ -376,7 +428,8 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         out.expander_multiplier[static_cast<size_t>(k)] =
             static_cast<float>(std::pow(10.0, -expander_reduction_db(x) / 20));
     }
-    out.expander_range_max = build_range_max_index(out.expander_multiplier);
+    // THE LIT SUMMARY, after the expander (the column's scales read it).
+    out.lit_summary = build_lit_summary(out, raw_lo, raw_hi);
     return out;
 }
 
@@ -407,26 +460,48 @@ double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame) {
     return per_hop_at(curve.inner_scale, curve.hop_frames, frame);
 }
 
-float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1) {
-    const std::vector<float>& m = curve.expander_multiplier;
-    if (m.empty() || curve.column_frames <= 0) return 1.0f;
-    const int64_t last = static_cast<int64_t>(m.size()) - 1;
-    const int64_t k0 = std::clamp<int64_t>(s0 / curve.column_frames, 0, last);
-    const int64_t k1 = std::clamp<int64_t>((std::max(s1, s0 + 1) - 1) / curve.column_frames, k0, last);
-    // THE INDEX (WaveformRangeMaxIndex, waveform_gain.h): the whole blocks
-    // [b_lo, b_hi] inside [k0, k1] through the table, the partial ends
-    // scanned; a run with no whole block inside it is scanned whole.
-    const WaveformRangeMaxIndex& idx = curve.expander_range_max;
-    const int64_t b_lo = (k0 + kExpanderRangeBlock - 1) / kExpanderRangeBlock;
-    const int64_t b_hi = (k1 + 1) / kExpanderRangeBlock - 1;
-    const auto scan = [&](int64_t a, int64_t b, float best) {
-        for (int64_t k = a; k <= b; ++k) best = std::max(best, m[static_cast<size_t>(k)]);
-        return best;
+WaveformColumnScales waveform_column_scales(const WaveformGainCurve& curve, int64_t k) {
+    assert(k >= 0 && k < static_cast<int64_t>(curve.expander_multiplier.size()));
+    const int64_t col    = curve.column_frames;
+    const int64_t centre = k * col + col / 2;
+    const double  e      = static_cast<double>(curve.expander_multiplier[static_cast<size_t>(k)]);
+    return WaveformColumnScales{waveform_gain_at(curve, centre) * e,
+                                waveform_inner_scale_at(curve, centre) * e};
+}
+
+WaveformLitHull waveform_lit_summary_hull(const WaveformGainCurve& curve, int channel,
+                                          int64_t ka, int64_t kb) {
+    const WaveformLitSummary& s = curve.lit_summary;
+    assert(channel == 0 || channel == 1);
+    assert(s.level_begin.size() >= 2 && 0 <= ka && ka <= kb && kb < s.level_begin[1]);
+    const WaveformLitEntry* const e = s.entries[channel].data();
+    int16_t omin = std::numeric_limits<int16_t>::max();
+    int16_t omax = std::numeric_limits<int16_t>::min();
+    int16_t imin = std::numeric_limits<int16_t>::max();
+    int16_t imax = std::numeric_limits<int16_t>::min();
+    const auto take = [&](const WaveformLitEntry& x) {
+        omin = std::min(omin, x.outer_min);
+        omax = std::max(omax, x.outer_max);
+        imin = std::min(imin, x.inner_min);
+        imax = std::max(imax, x.inner_max);
     };
-    if (b_lo > b_hi) return scan(k0 + 1, k1, m[static_cast<size_t>(k0)]);
-    const int j = std::bit_width(static_cast<uint64_t>(b_hi - b_lo + 1)) - 1;
-    const float* level = idx.table.data() + static_cast<size_t>(j) * idx.blocks;
-    float best = std::max(level[b_lo], level[b_hi - (int64_t{1} << j) + 1]);
-    best = scan(k0, b_lo * kExpanderRangeBlock - 1, best);
-    return scan((b_hi + 1) * kExpanderRangeBlock, k1, best);
+    // BOTTOM-UP over the run [l, r) of level j: its unaligned ends taken one
+    // entry at a time (at most F - 1 a side), the aligned middle handed up as
+    // the next level's [l / F, r / F) — whose entries hold exactly F of
+    // these each, r being at most this level's size (the head's exactness).
+    constexpr int64_t F = kWaveformLitSummaryFactor;
+    int64_t l = ka;
+    int64_t r = kb + 1;
+    for (size_t j = 0; l < r; ++j) {
+        assert(j + 1 < s.level_begin.size());
+        const WaveformLitEntry* const level = e + s.level_begin[j];
+        while (l % F != 0 && l < r) take(level[l++]);
+        while (r % F != 0 && l < r) take(level[--r]);
+        l /= F;
+        r /= F;
+    }
+    return WaveformLitHull{static_cast<double>(omin) / 32767.0,
+                           static_cast<double>(omax) / 32767.0,
+                           static_cast<double>(imin) / 32767.0,
+                           static_cast<double>(imax) / 32767.0};
 }

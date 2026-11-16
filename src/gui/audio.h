@@ -175,8 +175,10 @@ public:
     // curve, prints its own stderr line (`gain_derive=... ms`, which the
     // tablet routes to logcat with every other stderr line) and sets the
     // ready flag. Nothing needs the curve at load — the magnification lamp is
-    // dark at every open — so the load does not wait out the ~115 ms the
-    // derivation costs on the tablet.
+    // dark at every open — so the load does not wait out the derivation and
+    // THE LIT SUMMARY built inside it (waveform_gain.h; architect 2026-11-15,
+    // send O; the derivation alone was measured at ~115 ms on the tablet, the
+    // summary's build about as much again by the Mac's measure).
     //
     // THE READY FLAG's one reader outside this class is
     // waveform_magnification_toggle_actionable (warp_frame_map_view.h): the

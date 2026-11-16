@@ -932,12 +932,17 @@ bool GuiPaintHandler::live_plate_published() const {
 //      views: at most 4 + 6(L-1) pairs and 30 raw samples at ladder level L,
 //      76 pairs at the top rung (the bound and its proof live at
 //      GuiAudio::level_for_span). A
-//      magnified plate also pays waveform_expander_multiplier_over
-//      (waveform_gain.cpp) per plate column, the largest multiplier over the
-//      working-zoom columns that column's source span covers — CONSTANT TIME
-//      at every zoom since 2026-10-13 through the curve's range-maximum
-//      index (WaveformRangeMaxIndex, waveform_gain.h; a plain loop before,
-//      its length growing with the source seconds per plate column). So the
+//      magnified plate's bar (architect 2026-11-15, send O; THE EXACT FORM
+//      at render_waveform_columns, render.h) pays that one read inside one
+//      working column, and across several at most two partial reads and
+//      ONE QUERY of the curve's lit summary for the whole working columns
+//      between (waveform_lit_summary_hull, waveform_gain.h: at most three
+//      entries a side a level of its factor-4 levels) — so in the SOURCE
+//      view a zoomed-out lit bar is one bounded query and no read (but the
+//      last bar, whose clamped extent may lie inside one working column:
+//      that column's one read), and in the TARGET view, its mapped edges
+//      generally off the working columns, one query and at most two partial
+//      reads. So the
 //      synchronous render is O(the bars it asks the producer), AND WITH THE
 //      KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars, render.h)
 //      THAT IS THE BARS THAT ENTER: a pan's few at the edge it moves
