@@ -15,7 +15,8 @@
 #
 # <outdir> is the score/ folder, created if absent. A run writes into it:
 #   page001.jpg, page002.jpg, ...  the pages (1-based, three digits, four from page 1000 on), grabbed at the fit size
-#                                  (--fit), GRAYSCALE JPEG AT QUALITY 92 (PAGE_JPEG_QUALITY); a PDF's are its slices;
+#                                  (--fit) and PADDED TO THE BOX'S PARITY (center_pad), GRAYSCALE JPEG AT QUALITY 92
+#                                  (PAGE_JPEG_QUALITY); a PDF's are its slices;
 #   pages.txt                      the pages' ranges (THE GRAMMAR OF pages.txt);
 #   audio.wav                      the video's soundtrack, pcm_s16le STEREO (`-ac 2`: a mono stream is doubled) at
 #                                  the stream's own rate (AUDIO_WAV): the score's audio is the video's, the score
@@ -30,7 +31,11 @@
 #   --fit W:H   THE VIEWER'S BOX in device px (default PAGE_FIT, the tablet's): each page is scaled, down or up, to
 #               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2101x1182
 #               from any 16:9 video at the default (k = min(2256/1920, 1182/1080) = 1.0944); a PDF's slice is the box's height and its page's width at THE
-#               DOCUMENT SCALE. The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
+#               DOCUMENT SCALE. THE FILE IS THAT PICTURE PADDED TO THE BOX'S PARITY (center_pad; architect 2026-11-15:
+#               the viewer shows a page at 100 % on whole pixels, centered): where the side that does not fill the box
+#               leaves an odd number of pixels, the page gains one column on its right (or one row at its bottom), its
+#               own edge column repeated, so the leftover halves evenly — 2102x1182 from a 16:9 video at the default
+#               (2256 - 2101 = 155 is odd). The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
 #               laptop's terminal, the tablet's logcat warptempo:I): that pair, as W:H, pre-sizes the pages for
 #               another screen or gui_scale.
 #   --rate R    the unit of pages.txt's frames (default the video's audio sample_rate; required when the video has no
@@ -206,8 +211,9 @@
 #   PAD rows above it, its last PAD below; the page's median where an edge band reads as ink; FILL_PCT's block;
 #   2026-10-27), NEVER BLACK: a black block would stand as a rectangle on the box's ground, while the margin's own paper
 #   reads as the page running on.
-# - THE SLICE FILE is exactly (round(page width x scale), box_h) device px — the viewer's identity blit (fit_size's
-#   rule: a slice IS the fit size on the height) — gray JPEG at PAGE_JPEG_QUALITY, optimized.
+# - THE SLICE FILE is (round(page width x scale), box_h) device px, and one column more, the slice's own last column
+#   repeated on its right, where the box's width less the slice's is odd (center_pad) — the viewer's identity blit
+#   either way (fit_size's rule: a slice IS the fit size on the height) — gray JPEG at PAGE_JPEG_QUALITY, optimized.
 # - TWO RENDERS PER PAGE (render_pdf_page), the analysis one for every page first (the scale needs the tallest sure
 #   system and the average rows every sure page's windows before any slice is cut): poppler's pdftoppm renders the page
 #   gray at PDF_SUPERSAMPLE times the size wanted and Pillow box-averages it down, so both the analysis render and the
@@ -980,19 +986,47 @@ def fit_size(width, height, box):
     picture to fit the box, nothing more; a narrower rip enlarged by a few percent loses nothing). The tool computes
     the pair itself rather than leave it to ffmpeg's force_original_aspect_ratio (whose av_rescale rounds half away
     from zero), because the gray pipe needs the size, and so that EVERY page made for a box is exactly the size the
-    viewer would scale it to there: its scale pass then never runs (the worker's identity short-circuit)."""
+    viewer would scale it to there: its scale pass then never runs (the worker's identity short-circuit). This is THE
+    PICTURE's size; the FILE may carry one column or row more (center_pad)."""
     k = min(box[0] / width, box[1] / height)
     return round(width * k), round(height * k)
+
+
+def center_pad(size, box):
+    """THE CENTERING PAD (architect 2026-11-15: "the score should have no upscaling or downscaling. It should be 100%"
+    and the tool pads so the page centers exactly on whole pixels): (columns, rows) to add to a page of `size` made
+    for `box`, each 0 or 1 — ONE where that side is under the box by an ODD number of pixels, so the page takes the
+    box's parity on that axis and the viewer's centering (gui_page_place, src/gui/canvas_sink.h: half the leftover
+    each side, in whole pixels) splits an even leftover exactly; none where the side fills the box or the leftover is
+    even, so a padded page is never larger than the box. THE VIEWER STILL SHOWS IT UNSCALED: the side that fills the
+    box is the box's own length, so the worker's fit ratio (decode_fit_page, src/gui/score_page_worker.cpp: the
+    smaller of box / page on the two axes) is exactly 1 with the other side still inside the box, and both sides
+    round to themselves — its identity arm. A page made by fit_size fills the box on one axis, so at most one axis
+    is ever padded; a PDF's slice fills its height."""
+    return tuple(1 if box[i] > size[i] and (box[i] - size[i]) % 2 else 0 for i in (0, 1))
+
+
+def pad_page(gray, pad):
+    """`gray` (rows x columns, uint8) with the centering pad laid (center_pad): THE PAGE'S OWN EDGE REPEATED — its
+    last column once more ON ITS RIGHT, its last row once more AT ITS BOTTOM — so the added pixels are whatever the
+    page itself shows at that edge (its paper, a staff line running off it, a pillarbox's black, a slice's fill) and
+    no color is chosen here. The picture's own pixels are untouched: it is not scaled again."""
+    if pad[0]:
+        gray = np.concatenate([gray, gray[:, -1:]], axis=1)
+    if pad[1]:
+        gray = np.concatenate([gray, gray[-1:, :]], axis=0)
+    return gray
 
 
 class GrabFailure(Exception):
     """A page grab that did not complete, carrying its words."""
 
 
-def grab_page(video, fps, frame, size, out):
+def grab_page(video, fps, frame, size, pad, out):
     """One page: ffmpeg decodes the frame, scales it to `size` with the box filter (flags=area, the reduction of
     thin staff lines DIFF_W's note gives it for; an enlargement it interpolates) and pipes it as one gray rawvideo frame; Pillow writes the grayscale
-    JPEG (PAGE_JPEG_QUALITY)."""
+    JPEG (PAGE_JPEG_QUALITY) — the frame as ffmpeg scaled it, and where `pad` asks (center_pad) its own last column
+    or row once more (pad_page): the scale is never asked for the padded size."""
     w, h = size
     proc = subprocess.run(["ffmpeg", "-v", "error", "-ss", seek_time(fps, frame), "-i", video, "-frames:v", "1",
                            "-vf", f"scale={w}:{h}:flags=area,format=gray", "-pix_fmt", "gray", "-f", "rawvideo", "-"],
@@ -1000,7 +1034,11 @@ def grab_page(video, fps, frame, size, out):
     if proc.returncode != 0 or len(proc.stdout) != w * h:
         raise GrabFailure(f"ffmpeg could not grab a page (exit {proc.returncode}, {len(proc.stdout)} of {w * h} "
                           "bytes)")
-    Image.frombytes("L", (w, h), proc.stdout).save(out, "JPEG", quality=PAGE_JPEG_QUALITY, optimize=True)
+    if any(pad):
+        page = Image.fromarray(pad_page(np.frombuffer(proc.stdout, dtype=np.uint8).reshape(h, w), pad), "L")
+    else:
+        page = Image.frombytes("L", (w, h), proc.stdout)
+    page.save(out, "JPEG", quality=PAGE_JPEG_QUALITY, optimize=True)
 
 
 def group_pages(lit, signatures):
@@ -1498,7 +1536,9 @@ def pdf_main(pdf, outdir, opts):
     widths = sorted({size[0] for size in sizes})
     shape = (f"{sizes[0][0]:g}x{sizes[0][1]:g} pt" if len(set(sizes)) == 1
              else f"{len(set(sizes))} page sizes, {widths[0]:g} to {widths[-1]:g} pt wide")
-    slice_w = sorted({render_size[page][0] for page in shown})
+    # Each slice file's width: its page's render width and the centering column where the box asks (center_pad).
+    slice_pad = {page: center_pad((render_size[page][0], box_h), (box_w, box_h)) for page in shown}
+    slice_w = sorted({render_size[page][0] + slice_pad[page][0] for page in shown})
     kinds = [kind for kind, _ in outcome.values()]
     print(f"{len(sizes)} PDF pages, {shape}; tallest sure system {tall_rows} rows (PDF page {tall_page}); scale "
           f"{scale:.3f} px/pt ({scale * 72:.1f} dpi); slices "
@@ -1530,7 +1570,7 @@ def pdf_main(pdf, outdir, opts):
         for number in range(first_slice[page], count + 1):
             if slices[number - 1][0] != page:
                 break
-            out = cut_slice(render, slices[number - 1][1], box_h, tones)
+            out = pad_page(cut_slice(render, slices[number - 1][1], box_h, tones), slice_pad[page])
             Image.fromarray(out, "L").save(os.path.join(outdir, page_name(number, count)), "JPEG",
                                            quality=PAGE_JPEG_QUALITY, optimize=True)
 
@@ -1573,6 +1613,7 @@ def main():
             return pdf_main(video, outdir, opts)
         fps_text, fps, (vid_w, vid_h) = video_stream(video)
         page_size = fit_size(vid_w, vid_h, opts["fit"])
+        page_pad = center_pad(page_size, opts["fit"])
         stream_rate = audio_rate(video)
         has_audio = stream_rate is not None
         rate = opts["rate"] if opts["rate"] is not None else stream_rate
@@ -1644,7 +1685,10 @@ def main():
         return f"{spell_time(secs(s))}..{spell_time(secs(e + 1))}"
 
     print(f"scan: {n} frames at {fps_text} fps ({float(secs(n)):.3f} s){', cached' if cached else ''}; rate {rate}; "
-          f"{len(lit)} lit runs, analysis at {size[0]}x{size[1]}, pages at {page_size[0]}x{page_size[1]}")
+          f"{len(lit)} lit runs, analysis at {size[0]}x{size[1]}, pages at "
+          f"{page_size[0] + page_pad[0]}x{page_size[1] + page_pad[1]}"
+          + (f" (the picture {page_size[0]}x{page_size[1]} and one edge "
+             f"{'column' if page_pad[0] else 'row'} for the box's parity)" if any(page_pad) else ""))
     for name in ("cut", "crossfade", "fade-out", "fade-in"):
         print(f"{name}s: {len(classes[name])}")
     if classes["within black"]:
@@ -1704,7 +1748,7 @@ def main():
             for i, (s, e) in enumerate((page["principal"] for page in pages), start=1)]
     try:
         with ThreadPoolExecutor(GRAB_WORKERS) as pool:
-            list(pool.map(lambda job: grab_page(video, fps, job[0], page_size, job[1]), jobs))
+            list(pool.map(lambda job: grab_page(video, fps, job[0], page_size, page_pad, job[1]), jobs))
     except GrabFailure as err:
         print(f"FAIL: {err}; {PAGES_TXT} not written")
         return 1
