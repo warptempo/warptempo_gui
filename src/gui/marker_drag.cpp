@@ -184,8 +184,8 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
     // run_marker_click_act, whose plain
     // arm single-selects the grabbed marker — so the re-assert was the SECOND
     // mutation of one invariant. set_single_selection is not an assertion: it
-    // clears and rebuilds the selection and schedules top-strip and status-chain
-    // damage, so every successful drag start issued that damage twice, and two
+    // clears and rebuilds the selection and runs the flag cache's rebuild for
+    // the stems' damage, so every successful drag start did that work twice, and two
     // owners for one invariant is exactly the shape that diverges when one of them
     // is later changed. THE CLICK ACT IS THE OWNER AT ITS ONE SITE (the arming
     // press, 2026-08-17), so the drag machinery writes no selection

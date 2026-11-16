@@ -2674,8 +2674,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // The backstop DEFERS for the gesture rather than clamping into it — a
         // synchronous clamp+rebuild mid-drag would page the viewport sideways
         // under a hand that is moving vertically, which is precisely what the
-        // gesture's "motion damages the top strip alone" ruling forbids
-        // (value_drag.cpp). Nothing is lost by waiting: the commit clears
+        // gesture's "a step repaints the cues it changed and nothing else"
+        // rule forbids (value_drag.cpp). Nothing is lost by waiting: the commit clears
         // app.value_drag and then runs warp_tempo_write_tail, whose
         // kick_waveform_sync reclamps through this same chokepoint and renders
         // the final geometry in one shot, so the first tick AFTER the release

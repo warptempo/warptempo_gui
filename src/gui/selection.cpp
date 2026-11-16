@@ -97,12 +97,28 @@ void Selection::damage_overlay_on_subject_change(
 // STEMS: since 2026-11-05 the stem is the selection's (render.h's THE STATES;
 // MarkerStem published per selected cue, enabled or disabled, by the flag cache's
 // rebuild), so a select takes the stem off the old members and stands it on
-// the new. The mutators' own damage stays the top strip's; the STEMS' damage,
-// the stem stash AND THE LEAD-IN RING'S DAMAGE are the flag cache rebuild's
-// (maybe_rebuild_flag_cache, waveform_cache.cpp: the selection and the focus
-// are its fingerprint's fp_selection_hash, and its tail damages each stem
-// that left or arrived, at the stem's own place, and the ring's four sides
-// where they stood and where they stand, 2026-11-16).
+// the new. A SELECTION CHANGE'S WHOLE DAMAGE IS THE FLAG CACHE REBUILD'S
+// (architect 2026-11-16, the beats; maybe_rebuild_flag_cache,
+// waveform_cache.cpp: the selection and the focus are its fingerprint's
+// fp_selection_hash, and its tail damages each stem that left or arrived,
+// at the stem's own place, and the lead-in ring's four sides where they
+// stood and where they stand) — THE MUTATORS DECLARE NO RECT OF THEIR OWN,
+// and a change that moves no stem and no ring declares nothing. THE TOP
+// STRIP IS NOT DAMAGED HERE: NOTHING PAINTED IN ITS ROWS
+// READS THE SELECTION — a cue's chip and label are the same selected or not
+// (resolve_flag_face: the selection is the stem's alone), the stem's head
+// on the lane's last row and the ground line is inside the stem's own
+// rect, the ring is the canvas's, and every key's face, whatever it asks,
+// is the tick's comparator's (main.cpp; the marker verbs' keys stand in
+// row 8) — AND NO CALLER LEANS ON SUCH A DAMAGE for a change of its own
+// (re-derived 2026-11-16 by reading every call site of the six publishing
+// mutators): clear_selection, collapse_to_focused and repair_last_selected
+// publish nothing where the selection already stands as asked, so no site
+// of theirs could; and each site of the three that always publish declares
+// what it changes itself — the land its playhead (the viewport's lanes and
+// the clock), the drops, the paste and the restore the whole waveform area,
+// the editors' opens their own strip damage, the BPM form its opener's, the
+// ADD SEL sweep its highlight.
 // THE RING NEEDS NO DAMAGE OF ITS OWN HERE (architect 2026-11-16, the
 // beats; the whole waveform area this publish declared on a change of the
 // overlay's subject is gone from it): a change of subject is a change of
@@ -144,7 +160,6 @@ void Selection::damage_overlay_on_subject_change(
 // repair_last_selected (cycle_selection through set_single_selection) — but
 // sanitize_selection_after_restore, whose seat says why.
 void Selection::publish_selection_change() {
-    viewport.invalidate_top_strip();
     viewport.refresh_flag_cache();
 }
 
@@ -192,13 +207,12 @@ void Selection::set_single_selection(int idx) {
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     seat_focus((idx >= 0) ? idx : -1);
-    // THE TOP STRIP, NOT THE BOTTOM ROW, since 2026-08-29: a selection change
-    // moves nothing on the bottom row any more. It used to damage that row's
-    // state lane too, for the RESOLVED READOUT that showed the last-selected
-    // marker's value there, and that readout retired whole with the one-day
-    // status bar — the state cell carries only the two progress-class strings,
-    // which no selection writes. The chips and the stems ride the publish's
-    // same-event flag rebuild.
+    // NO RECT OF ITS OWN (the publish's head): a selection change moves
+    // nothing on the bottom row (the state cell carries only the two
+    // progress-class strings, which no selection writes; the keys there are
+    // the tick's comparator's) and nothing in the top strip but the stems'
+    // heads, which ride the publish's same-event flag rebuild with the
+    // stems.
     publish_selection_change();
 }
 
@@ -244,7 +258,7 @@ void Selection::collapse_to_focused() {
     // 2026-07-23) and move the whole selection's images rigidly.
     // last_selected_marker
     // is untouched — it stays the focus. Callers that full-invalidate afterward
-    // make the top-strip / status-chain damage here redundant (a benign damage-union,
+    // make the stems' damage here redundant (a benign damage-union,
     // accepted).
     // No focus -> nothing to collapse TO. Both surviving classes depend on the
     // focus being a live member of the very selection they are collapsing, and it

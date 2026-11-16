@@ -115,7 +115,8 @@ struct Selection {
     // returns (the walk lands on the payload through this reset, 2026-11-02;
     // the inventory is at
     // AppState::addressed_cell). No damage of its own — every caller
-    // publishes through publish_selection_change below, but the restore's
+    // publishes through publish_selection_change below (the flag rebuild,
+    // whose tail damages the stems and the ring), but the restore's
     // sanitize, whose one caller repaints and rebuilds the whole picture
     // (its seat, selection.cpp).
     void seat_focus(int idx);
@@ -134,9 +135,10 @@ struct Selection {
 
     // PUBLISH A SELECTION CHANGE — the ONE tail of every mutator above that
     // writes the membership or the focus (the contract is at the definition,
-    // selection.cpp): the top strip's damage and
+    // selection.cpp):
     // the flag cache's rebuild IN THE SAME EVENT (Viewport::refresh_flag_cache),
     // so the selection stem and the playhead's landing paint together — that
-    // rebuild's tail the damage of the stems and of the lead-in ring.
+    // rebuild's tail the damage of the stems and of the lead-in ring, the
+    // whole of a selection change's damage (architect 2026-11-16, the beats).
     void publish_selection_change();
 };
