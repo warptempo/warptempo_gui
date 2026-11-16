@@ -234,10 +234,11 @@ void finish_position_nudge(
     // width (the rows above them owed a check, viewport.h), so ONE call covers
     // both halves of a moved marker — the flag box (a top-strip pixel, blitted
     // from the flag cache) and its stem (a waveform pixel, painted live from the
-    // same pass's stash). That pairing is why the call cannot narrow: row 5 made
-    // the stem a waveform pixel, so a strip-only damage here would repaint the
-    // flag at its new column while the old stem ink stayed on the plate until
-    // some later full-area damage arrived. Verified 2026-08-01 (both nudge twins
+    // same pass's stash). (The flag cache's rebuild, run at this tail's end,
+    // damages the moved cue and its stem's two places itself since
+    // 2026-11-16, maybe_rebuild_flag_cache's tail; the full call stays — a
+    // nudge is a discrete write, and the beats narrowed the gestures' own
+    // motions alone.) Verified 2026-08-01 (both nudge twins
     // reach here; the marker-moving routes were re-grepped against this rule and
     // every one of them — drop, delete, the disabled/inherits toggles, both
     // tempo steps, the drag commit, the flag-editor commit, the propagate paste,

@@ -409,6 +409,32 @@ struct WaveformCache {
 // span clip (paint_cues) already excluded; and the blit puts the same bytes on the same client rows — the
 // rows above origin_y held only transparent pixels, which the OVER blit left
 // untouched.
+
+// THE LEAD-IN RING'S FOUR RECORDS, AS REAL RECTS (architect 2026-11-16, the
+// beats): what paint_phase_reset_overlay_ring hands the canvas sink for a
+// band — the top run, the bottom run, the left side and the right side, in
+// that order, each its real edges in window px — or `valid` false where no
+// band shows. THE RING'S GEOMETRY FOR ITS DAMAGE, never for its paint: the
+// rebuild's tail compares two of these and damages each side's cells
+// (GuiPaintHandler::phase_reset_ring_sides owns the arithmetic and its
+// lockstep with the painter; the record's rule is at FlagCache's
+// `ring_declared`). The left side is held WHETHER OR NOT IT IS DRAWN (it
+// yields to its reset's selection stem, the coincident lines): a stem that
+// arrives on it or leaves it damages the same columns over more rows (the
+// stem's own rect), so the comparison needs no drawn bit.
+struct GuiPhaseResetRingSides {
+    struct Edges {
+        double x0 = 0.0;
+        double y0 = 0.0;
+        double x1 = 0.0;
+        double y1 = 0.0;
+        bool operator==(const Edges&) const = default;
+    };
+    bool                 valid = false;
+    std::array<Edges, 4> side{};
+    bool operator==(const GuiPhaseResetRingSides&) const = default;
+};
+
 struct FlagCache {
     cairo_surface_t* surface = nullptr;
     int              width   = 0;
@@ -586,6 +612,45 @@ struct FlagCache {
     std::size_t        fp_history_commit_count   = 0;
     GuiHistoryWalkSource fp_history_source   = GuiHistoryWalkSource::Commit;
     std::size_t        fp_history_local_index    = 0;
+
+    // THE REBUILD'S DAMAGE RECORD (architect 2026-11-16, the beats; the rule
+    // and its one reader at maybe_rebuild_flag_cache's tail,
+    // waveform_cache.cpp): what the last rebuild left, held so the next one
+    // can damage what it changed and nothing else. No fingerprint field: it
+    // describes the pixels, it does not key them.
+    //   `layout_stands` — a rebuild has completed on this surface, so the
+    //     layout the cue pass last left (render.cpp's CuePassScratch) is
+    //     the one this surface shows. False cold, and put out by every call
+    //     that returns before a rebuild could run (a load in flight, no
+    //     audio, no plate, no band): frames painted through such a state
+    //     blit no cues and build no ring, so the first rebuild after it
+    //     declares the whole area.
+    //   `stem_xs` — the exact places of the stems the last rebuild staged
+    //     (MarkerStem::x), sorted, one a distinct place: the stem painters
+    //     draw one line a distinct place and read nothing else of an entry
+    //     (GuiPaintHandler::standing_stem_spans), so the places are the
+    //     whole of what the stems paint. `stem_scratch` is the next
+    //     rebuild's list in the making, swapped in.
+    //   `ring_declared` — the lead-in ring's four sides as the last
+    //     rebuild's tail computed them: THE GEOMETRY THE LAST DECLARED
+    //     DAMAGE LEFT THE SCREEN CONSISTENT WITH. THE RING IS PAINTED LIVE
+    //     from app state at every list build, not from anything this
+    //     rebuild stages, so a frame can draw a geometry no rebuild has
+    //     compared — a frame served between a write and the tick's rebuild,
+    //     or the frame that promotes a changed item map — over part of the
+    //     canvas only; `ring_drawn_undeclared` is raised by the list build
+    //     that does (paint_phase_reset_overlay_ring; build_canvas_list's
+    //     arm without audio), and while it stands the screen may hold two
+    //     geometries, so the next rebuild declares the whole area and puts
+    //     it out.
+    //   `damage_scratch` — the rects a rebuild is about to declare, kept
+    //     across rebuilds for its capacity.
+    bool                   layout_stands = false;
+    std::vector<double>    stem_xs;
+    std::vector<double>    stem_scratch;
+    GuiPhaseResetRingSides ring_declared;
+    bool                   ring_drawn_undeclared = false;
+    std::vector<GuiRect>   damage_scratch;
 
     void destroy_surface() {
         if (surface) {
@@ -767,7 +832,26 @@ struct GuiPaintHandler {
     // flag counts). This rebuild is the SOLE item-basis STAGE site (the retired
     // trim-stem cache's rebuild was the only other one) — see the staging
     // comment at its tail in waveform_cache.cpp.
+    // ITS DAMAGE (architect 2026-11-16, the beats; the rule at its tail,
+    // waveform_cache.cpp): WHAT IT CHANGED — the cues, the stems and the
+    // lead-in ring's sides that differ from the rebuild before — where the
+    // miss is in the CONTENT fields alone (both store generations, the
+    // phase-reset lattice hash, the drag overlay hash, the selection hash),
+    // and the whole waveform area with the viewport's lanes for every other
+    // field, a first build and each state its tail names.
     void maybe_rebuild_flag_cache();
+    // THE MOST RECTS A REBUILD DECLARES ITS CHANGE AS (the tail's last
+    // resort): past this many the change is declared as the whole area.
+    // Each damage rect is one on_redraw
+    // call (GuiPlatform::invalidate_surface_rect's note) and, united with
+    // the two frames' before it, a scissored clear and an instanced draw of
+    // the whole canvas list (the repair region, kRepairRectCap,
+    // platform_android.h), so a rebuild that changed many things at once —
+    // a restore, a select-all's stems — is cheaper whole. Twelve holds a
+    // marker drag's frame under a ring — the cue, the stem's two places and
+    // the ring's four sides before and after, eleven before any are united —
+    // and a value drag's tied cues.
+    static constexpr std::size_t kFlagRebuildNarrowRects = 12;
 
     // Resolve the history mode's CURRENT commit into app.history_mode.flags, the
     // painted-order list the lane's diff pass consumes. Called from
@@ -1007,6 +1091,25 @@ private:
         double right_x  = 0.0;
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
+    // THE RING'S FOUR RECORDS FOR A BAND, AS REAL RECTS — the geometry its
+    // damage is built from (GuiPhaseResetRingSides above; the arithmetic, in
+    // lockstep with paint_phase_reset_overlay_ring's own, at the
+    // definition) — and the cells they touch, declared for a change from one
+    // geometry to another (the rule at the definition; its one caller the
+    // flag cache's rebuild).
+    static GuiPhaseResetRingSides phase_reset_ring_sides(
+        const PhaseResetOverlayBand& band, const GuiRect& area);
+    static void phase_reset_ring_damage(const GuiPhaseResetRingSides& before,
+                                        const GuiPhaseResetRingSides& after,
+                                        std::vector<GuiRect>& out);
+    // THE LIST BUILD'S NOTE of the ring it drew, or of none (FlagCache's
+    // `ring_declared`: a drawn geometry no rebuild has compared raises
+    // `ring_drawn_undeclared`). Its two callers are the list's two arms:
+    // the ring's painter and build_canvas_list's arm without audio.
+    void note_ring_drawn(const GuiPhaseResetRingSides& drawn) {
+        if (!(drawn == flag_cache.ring_declared))
+            flag_cache.ring_drawn_undeclared = true;
+    }
 
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
@@ -1200,6 +1303,12 @@ private:
     // equal) — asked by the two lines that then yield to it, the playhead's
     // and the lead-in ring's left side.
     bool stem_stands_at(const GuiRect& area, double x) const;
+    // ONE STEM'S DAMAGE RECT (architect 2026-11-16, the beats): every cell a
+    // stem standing at the exact place `x` touches, both halves in one rect
+    // — empty where its line has no part inside `area`'s columns (the rule
+    // at the definition, beside the painters; its one caller the flag
+    // cache's rebuild, for each place a stem left or arrived on).
+    GuiRect marker_stem_damage_rect(const GuiRect& area, double x) const;
 
     // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
     // nothing over the view bar, architect 2026-10-09 ~14:30): a solid one-W

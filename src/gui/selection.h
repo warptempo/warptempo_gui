@@ -82,13 +82,15 @@ struct Selection {
     // subject-stable. ONE DELIBERATE DIVERGENCE from the band during a live
     // phase-reset drag: the band reads the drag-proposed time
     // (paint_handler.cpp), while this mirror reads the STORE time — the
-    // drag's damage is a full-area invalidate, so the mirror's readers never
-    // need the proposed value mid-drag.
+    // drag's ring damage is the flag cache rebuild's, computed off the band
+    // itself (maybe_rebuild_flag_cache's tail, 2026-11-16), so the mirror's
+    // readers never need the proposed value mid-drag.
     // THREE READERS. Two are the damage owner just below (called at every
     // selection mutator, through the publish but at the restore's sanitize):
     // the overlay lives in the WAVEFORM but the mutators' own damage is the
-    // top strip's, and the publish's flag rebuild damages the waveform only
-    // when it runs (it refuses while loading or before the first plate), so
+    // top strip's, and the publish's flag rebuild damages the ring's sides
+    // only when it runs (it refuses while loading or before the first
+    // plate), so
     // a change of subject owns its waveform damage to paint/erase the
     // overlay's forward span. The
     // third is the LEAD-IN LAUNCH OFFSET OWNER

@@ -99,10 +99,11 @@ void Selection::damage_overlay_on_subject_change(
 // MarkerStem published per selected cue, enabled or disabled, by the flag cache's
 // rebuild), so a select takes the stem off the old members and stands it on
 // the new. The mutators' own damage stays the top strip's plus the overlay
-// owner's above; the WAVEFORM damage and the stem stash are the flag cache
+// owner's above; the STEMS' damage and the stem stash are the flag cache
 // rebuild's (maybe_rebuild_flag_cache, waveform_cache.cpp: the selection and
 // the focus are its fingerprint's fp_selection_hash, and its tail damages
-// the viewport's lanes through the waveform's foot). That rebuild ran only at
+// each stem that left or arrived, at the stem's own place, 2026-11-16). That
+// rebuild ran only at
 // the tick until this helper, and a select that lands the playhead in the
 // same event (land_playhead_on_marker, the chip tap's road) damaged a frame
 // that could paint BEFORE the tick: the playhead's line on the newly

@@ -1180,9 +1180,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // normalizes to the 1.00 fallback — which strikes its label or lifts the
     // strike (resolve_flag_face, render.cpp; the chip's fill and the stem do
     // not follow the red set). The flag cache's rebuild on the store's new
-    // generation damages the strip and the waveform together,
-    // maybe_rebuild_flag_cache, so the repaint is owed no damage of its own
-    // here.)
+    // generation damages every cue it changed, the struck label among them
+    // (maybe_rebuild_flag_cache's tail), so the repaint is owed no damage
+    // of its own here.)
     // THE TAIL IS ONE BODY (warp_tempo_write_tail, above — the re-warp, the
     // re-land and the trigger, with the whole argument at its definition): the
     // Up/Down step is a warp authoring gesture reachable off its source home
@@ -1607,9 +1607,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // normalizes to the 1.00 fallback — which strikes its label or lifts the
     // strike (resolve_flag_face, render.cpp; the chip's fill and the stem do
     // not follow the red set). The flag cache's rebuild on the store's new
-    // generation damages the strip and the waveform together,
-    // maybe_rebuild_flag_cache, so the repaint is owed no damage of its own
-    // here.)
+    // generation damages every cue it changed, the struck label among them
+    // (maybe_rebuild_flag_cache's tail), so the repaint is owed no damage
+    // of its own here.)
     // Target-view synchronous re-warp tail (the plate must re-warp when authoring
     // off source home), THEN re-land the playhead on the FOCUSED marker's
     // post-step image: the marker lane owns the playhead (the rule is stated in

@@ -4346,8 +4346,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // when the clip covers it; a head that paints nowhere is published (cold,
     // nothing to grab) when the clip covers the head last published, whose
     // pixels this run erased. Every move of the playhead damages the head's
-    // old and new columns from the window's top (playhead_invalidate_rect,
-    // main.cpp) or the viewport's lanes whole (the discrete moves'
+    // old and new columns from the viewport's lanes' top row
+    // (playhead_invalidate_rect, main.cpp: the head's rows are inside it)
+    // or the viewport's lanes whole (the discrete moves'
     // Viewport::invalidate_waveform_area), so the frame that shows a moved
     // head is always a publishing one.
     // THE HIT IS REAL, THE COVERAGE TEST ITS HULL (architect 2026-11-15, the
@@ -4839,11 +4840,13 @@ GuiPaintHandler::plate_viewport_basis() const {
 // DAMAGE. The right edge depends on the reset's frame and on the displayed
 // map, both of which the left edge already depended on, so no new damage
 // owner is needed: a nudge and a drag commit pay the FULL waveform-area
-// invalidate (position_nudge.cpp's tail, marker_drag.cpp's commit — the
-// stem's own requirement), the drag's every motion event does too
-// (marker_drag.cpp's apply), and every map change (a cent step, a warp
-// move) runs the full waveform damage beside its plate re-warp
-// (warpmarkers_ops.cpp). A hop snap under any of them rides that damage.
+// invalidate (position_nudge.cpp's tail, marker_drag.cpp's commit), every
+// map change (a cent step, a warp move) runs the full waveform damage
+// beside its plate re-warp (warpmarkers_ops.cpp), and the drag's every
+// motion event rebuilds the flag cache in the event, whose tail damages the
+// ring's four sides where it stood and where it stands
+// (paint_phase_reset_overlay_ring's DAMAGE). A hop snap under any of them
+// rides that damage.
 //
 // THE GEOMETRY AND VISIBILITY OWNER, kept SEPARATE from its one consumer
 // (paint_phase_reset_overlay_ring) rather than folded into it. It carries every
@@ -5065,18 +5068,28 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // covers whole — at the tablet's even t whole places are whole cells — and
 // the word over what lies beneath by the cell's coverage where an edge
 // crosses it. No other
-// reader takes the ring's cells: it is no hit target, and its damage is the
-// whole waveform area's (the flag cache's rebuild and
-// Selection::damage_overlay_on_subject_change), which holds it whole.
-// DAMAGE: this pass paints live in on_redraw from app state, never from a
-// cached surface, and every change to its inputs misses the flag cache's
-// fingerprint, whose rebuild damages the waveform with the strip
-// (maybe_rebuild_flag_cache, waveform_cache.cpp); a palette install damages
-// the whole window. A disabled reset paints no ring (the band's gate).
+// reader takes the ring's cells: it is no hit target.
+// DAMAGE (architect 2026-11-16, the beats): this pass paints live at every
+// list build from app state, never from a cached surface, and every change
+// to its inputs misses the flag cache's fingerprint, WHOSE REBUILD'S TAIL
+// DAMAGES THE RING (maybe_rebuild_flag_cache, waveform_cache.cpp): the four
+// sides where the last rebuild left them and the four where they now stand,
+// each side's own cells (phase_reset_ring_sides and phase_reset_ring_damage
+// below), where the miss is the marker-driven content alone — a marker
+// drag's motion, a nudge, a selection change — and the whole waveform area
+// with every other field; a subject change adds the whole area itself
+// (Selection::damage_overlay_on_subject_change) and a palette install the
+// whole window. THE GEOMETRY THIS PASS DRAWS IS NOTED AGAINST THE ONE THAT
+// REBUILD LAST COMPARED (note_ring_drawn, FlagCache's `ring_declared`): a
+// frame that draws another — served between a write and the tick's
+// rebuild, or promoting a changed item map — has put a geometry on part of
+// the canvas no damage was declared for, and the next rebuild declares the
+// whole area. A disabled reset paints no ring (the band's gate).
 // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): four records at most.
 void GuiPaintHandler::paint_phase_reset_overlay_ring(
     GuiCanvasSink& sink, const GuiRect& area) {
     const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
+    note_ring_drawn(phase_reset_ring_sides(band, area));
     if (!band.valid) return;
 
     const int      t    = waveform_line_px();
@@ -5106,6 +5119,80 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // THE RIGHT SIDE, flush inside the band.
     sink.blended_rect(std::max(xr - static_cast<double>(t), ax0), ya, xr, yb,
                       ink, 100);
+}
+
+// THE RING'S FOUR RECORDS AS REAL RECTS, FOR ITS DAMAGE (architect
+// 2026-11-16, the beats; GuiPhaseResetRingSides, paint_handler.h): the top
+// run, the bottom run, the left side and the right side of `band` over
+// `area`, each the real edges the painter above hands the sink. IN LOCKSTEP
+// WITH paint_phase_reset_overlay_ring: every expression here is that
+// body's own, restated (the painter is not routed through this — its
+// arithmetic is the picture and stays where it is read), so a change to
+// either is a change to both. The left side is given whether or not the
+// painter draws it (the type's note). No band, no sides.
+GuiPhaseResetRingSides GuiPaintHandler::phase_reset_ring_sides(
+    const PhaseResetOverlayBand& band, const GuiRect& area) {
+    GuiPhaseResetRingSides out;
+    if (!band.valid) return out;
+    const int    t   = waveform_line_px();
+    const double ax0 = static_cast<double>(area.x);
+    const double ax1 = static_cast<double>(area.x + area.w);
+    const double xl  = ax0 + band.left_x;
+    const double xr  = std::min(ax0 + band.right_x, ax1);
+    const double y0  = static_cast<double>(area.y);
+    const double y1  = static_cast<double>(area.y + area.h);
+    const double ya  = y0 + static_cast<double>(t);
+    const double yb  = y1 - static_cast<double>(t);
+    const double run_lo =
+        std::max(xl - static_cast<double>(t) / 2.0, ax0);
+    const WaveformLineSpan left =
+        waveform_line_span(area.x, area.w, band.left_x, t);
+    out.valid   = true;
+    out.side[0] = {run_lo, y0, xr, ya};
+    out.side[1] = {run_lo, yb, xr, y1};
+    out.side[2] = {left.x0, ya, left.x1, yb};
+    out.side[3] = {std::max(xr - static_cast<double>(t), ax0), ya, xr, yb};
+    return out;
+}
+
+// THE RING'S DAMAGE FOR A CHANGE OF GEOMETRY (architect 2026-11-16, the
+// beats): the cells of the four sides `before` and of the four `after`,
+// EACH SIDE ITS OWN RECT — the runs are wide and two rows thin, the sides
+// thin and the canvas tall, so their bounding box would be the band's whole
+// face — a side's cells the floor of its real edges through their ceiling,
+// the very cells its record covers (GuiCanvasSink::blended_rect), so each
+// rect holds its side whole. A side's two rects are declared as one where
+// they overlap or abut (both stand on the same rows, so their bound is
+// their union: a run that grew, a side that moved under a line's width)
+// and apart otherwise (the right side after a hop snap). A geometry with no
+// band gives none; an empty side (the left side off the area's edge, the
+// sink's own refusal) gives none.
+void GuiPaintHandler::phase_reset_ring_damage(
+    const GuiPhaseResetRingSides& before, const GuiPhaseResetRingSides& after,
+    std::vector<GuiRect>& out) {
+    const auto cells = [](const GuiPhaseResetRingSides& g, std::size_t k) {
+        const GuiPhaseResetRingSides::Edges& e = g.side[k];
+        if (!g.valid || e.x1 <= e.x0 || e.y1 <= e.y0)
+            return GuiRect{0, 0, 0, 0};
+        const int x0 = static_cast<int>(std::floor(e.x0));
+        const int y0 = static_cast<int>(std::floor(e.y0));
+        return GuiRect{x0, y0, static_cast<int>(std::ceil(e.x1)) - x0,
+                       static_cast<int>(std::ceil(e.y1)) - y0};
+    };
+    for (std::size_t k = 0; k < before.side.size(); ++k) {
+        const GuiRect a = cells(before, k);
+        const GuiRect b = cells(after, k);
+        const bool has_a = a.w > 0 && a.h > 0;
+        const bool has_b = b.w > 0 && b.h > 0;
+        if (has_a && has_b &&
+            std::max(a.x, b.x) <= std::min(a.x + a.w, b.x + b.w) &&
+            std::max(a.y, b.y) <= std::min(a.y + a.h, b.y + b.h)) {
+            out.push_back(union_rect(a, b));
+            continue;
+        }
+        if (has_a) out.push_back(a);
+        if (has_b) out.push_back(b);
+    }
 }
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
@@ -5307,14 +5394,19 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // rebuild — the selection is a field of its fingerprint
 // (FlagCache::fp_selection_hash, the `h` view's focus and selection beside
 // it), and the selection's writers run the rebuild in their own event (the
-// rule above) — and that rebuild damages the
-// window's rows from the viewport's lanes through the waveform area's foot
-// (maybe_rebuild_flag_cache's tail, damage_window_top_rows), which holds
-// every cell a stem touches (the canvas's rows, and the lane's last row
-// and the ground line above them — whole rows, so the line's one column
-// more each side at an exact place is held) at both the old stash's places
-// and the new; the GL canvas's list is rebuilt whole at every frame that
-// meets the canvas paint area.
+// rule above) — and THAT REBUILD'S TAIL DAMAGES THE STEMS IT CHANGED
+// (architect 2026-11-16, the beats; maybe_rebuild_flag_cache,
+// waveform_cache.cpp): for every exact place a stem left or arrived on, the
+// stem's own rect (marker_stem_damage_rect below — every cell its line
+// touches, the canvas's rows with the lane's last row and the ground line
+// above them, in one rect), and the window's rows from the viewport's lanes
+// through the waveform area's foot wherever the rebuild's miss is more than
+// the marker-driven content (its tail's list). THE COINCIDENT LINES RIDE
+// THE SAME RECT: a line that yields to a stem on its own exact place — the
+// playhead's, the lead-in ring's left side — spans the stem's own columns
+// on rows the stem's rect holds, so the stem's arrival or leaving repaints
+// the line it hides or uncovers. The GL canvas's list is rebuilt whole at
+// every frame that meets the canvas paint area.
 //
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
@@ -5433,6 +5525,29 @@ void GuiPaintHandler::paint_marker_stem_heads(cairo_t* cr) {
     for (const WaveformLineSpan& span : spans)
         stamp.rect(span.x0, y0, span.x1, y1, ink);
     stamp.end();
+}
+
+// ONE STEM'S DAMAGE RECT (architect 2026-11-16, the beats): every cell a
+// stem standing at the exact place `x` (MarkerStem::x, device px from
+// `area`'s left edge) touches, BOTH HALVES IN ONE RECT, so the rect holds
+// the line whole — the columns its real span touches, the span's floor
+// through its ceiling (waveform_line_span, the very span
+// standing_stem_spans hands both painters: the sink's blended rect and the
+// coverage stamp each cover exactly those cells), over the rows from the
+// marker lane's last row (paint_marker_stem_heads' first) through the
+// canvas's last (paint_marker_stems'). Empty (w 0) where the span is — the
+// painters' own gate — or where there are no rows.
+GuiRect GuiPaintHandler::marker_stem_damage_rect(const GuiRect& area,
+                                                 double x) const {
+    const WaveformLineSpan span = waveform_line_span(area.x, area.w, x);
+    const GuiRect lane = top_marker_row_area(app);
+    const int y0 = lane.h > 0 ? std::min(lane.y + lane.h - 1, area.y)
+                              : area.y;
+    const int y1 = area.y + std::max(area.h, 0);
+    if (span.empty() || y1 <= y0) return GuiRect{area.x, area.y, 0, 0};
+    const int x0 = static_cast<int>(std::floor(span.x0));
+    return GuiRect{x0, y0, static_cast<int>(std::ceil(span.x1)) - x0,
+                   y1 - y0};
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -8689,7 +8804,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // marker whose flag had moved away). Promote the staged value the last item
     // rebuild left, once — staged_displayed_valid clears on the first damage rect
     // of the frame, so the remaining rects are no-ops; idle frames with no staged
-    // value do nothing. A rebuild always invalidates its item region, so the
+    // value do nothing. A rebuild that stages a CHANGED pair always
+    // invalidates its item region (every value of the pair is a field of
+    // the flag cache's frame, whose miss declares the strip+waveform rect; a
+    // content-only rebuild re-stages the standing pair, and promoting it
+    // moves nothing — maybe_rebuild_flag_cache's tail, 2026-11-16), so the
     // committing frame's damage always includes the items — TRUE OF EVERY
     // PROMPT PROMOTE, and repaired rather than assumed for the DEFERRED one
     // below, whose committing frame is some later frame: the deferral records
@@ -9331,6 +9450,9 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
     if (!plate_branch) {
         render_center_lines(sink, area);
         render_waveform_divider(sink, area);
+        // This list holds no ring (the note's rule, FlagCache's
+        // `ring_declared`).
+        note_ring_drawn(GuiPhaseResetRingSides{});
         return;
     }
     paint_waveform_plate(sink, area);

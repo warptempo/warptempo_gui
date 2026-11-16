@@ -544,7 +544,7 @@ struct DragState {
     // lead-in workflow (parking
     // the playhead upstream to audition the approach) that the decoupling
     // served is supplied by the audition scrub instead. Only the RESTING
-    // cursor playhead moves — the tow (Viewport::translate_playhead_to, no
+    // cursor playhead moves — the tow (Viewport::tow_playhead_to, no
     // scroll, architect 2026-09-24) and the commit's move_playhead_to write
     // the cursor field only, so a live scanner is left untouched; it stays
     // the audio thread's to own.
@@ -4302,8 +4302,8 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         move. (The trim overlay's hide rule shared these owners from
 //         2026-08-26 until that rule was deleted on 2026-09-22.) So a MOVEMENT
 //         interrupts, while a TRANSLATION (Viewport::reseat_playhead_to,
-//         Viewport::translate_playhead_to and reseat_playhead_on_marker, the
-//         named non-movement entries) and a
+//         Viewport::translate_playhead_to, Viewport::tow_playhead_to and
+//         reseat_playhead_on_marker, the named non-movement entries) and a
 //         RESTORE (the tab switch's band swap,
 //         which writes app.playhead_cursor_sample direct) do not — and the act
 //         needs both of those exemptions, its own two tab switches being
@@ -4510,7 +4510,8 @@ struct AppState {
     //     SCROLL'S PLACEMENTS (Viewport::follow_scanner, send N, 2026-11-15:
     //     a pan frame the play makes) and THE RE-VALIDATIONS THAT WRITE NO
     //     START (kick_waveform_sync, the tick's live-total backstop, the
-    //     resize, the load-in-place's domain re-clamp, translate_playhead_to,
+    //     resize, the load-in-place's domain re-clamp, translate_playhead_to
+    //     and tow_playhead_to,
     //     and reseat_playhead_to when it pages nothing): the current origin,
     //     the start snapped onto ITS lattice, so a pan is a pure index shift of k0 (the same lattice
     //     columns, shifted: every mark by whole px, the plate's placement by
@@ -5912,10 +5913,12 @@ struct AppState {
     // FREEZE, unlike the basis pair's: the flag SURFACE blits unconditionally
     // (a marker or value drag rebuilds it every tick and the dragged flag must
     // move on screen), so the stash that describes it promotes with it. The
-    // rebuild's own damage is the strip+waveform rect (since 2026-10-13 the
-    // viewport lanes' rect from the band's foot, the rows above it owed a
-    // fingerprint check, damage_window_top_rows), so the promoting frame
-    // repaints the whole lane and every stem. Every reader — the hit
+    // rebuild's own damage is every cue and every stem it changed (since
+    // 2026-11-16, maybe_rebuild_flag_cache's tail: the cues and the stem
+    // places that differ from the rebuild before where the miss is the
+    // marker-driven content alone, the strip+waveform rect otherwise), so
+    // the promoting frame repaints everything the new stash describes
+    // differently from the old. Every reader — the hit
     // walk (topmost_flag_rect, app_state.cpp) and the stem painter — reads
     // THESE promoted copies; nothing reads the staged pair but the promote.
     //
@@ -12877,22 +12880,32 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 // TWO SHAPES SATISFY THE RULE, chosen per site by CADENCE (re-derived by grep
 // 2026-07-30 over the narrow entry's callers and the playhead-writing
 // full-area sites; the narrow callers again 2026-11-16, Viewport::
-// invalidate_scanner_line's):
-//  - NARROW ON PLATE, reserved for the PER-FRAME sites, which cannot afford a
-//    full repaint and can see a GuiPaintHandler to compute plate places: the
-//    two per-frame SCANNER sites in main.cpp — the tick heartbeat and the
-//    pre-paint advance — and nothing else (the fading line's per-tick step of
+// invalidate_scanner_line's and invalidate_playhead_columns'):
+//  - NARROW ON PLATE, reserved for the sites that run at a frame's or a
+//    motion's cadence, where a full repaint makes every frame a heavy one,
+//    and that can reach a GuiPaintHandler to compute plate places. THREE
+//    SITES (re-derived by grep 2026-11-16 over the two narrow entries'
+//    callers): the two per-frame SCANNER sites in main.cpp — the tick
+//    heartbeat and the pre-paint advance (the fading line's per-tick step of
 //    2026-11-04 went with the fade that night: the resting line is one
-//    static tone and owes the tick nothing). Each passes plate_viewport_basis() through the
-//    explicit-basis overloads, and THE RECT IS THE SCANNER'S OWN (architect
+//    static tone and owes the tick nothing) — and THE MARKER DRAG'S TOW
+//    (Viewport::tow_playhead_to; architect 2026-11-16, the beats), the one
+//    cursor write that rides a gesture's every motion. The scanner's two
+//    pass plate_viewport_basis() through the
+//    explicit-basis overloads, and THEIR RECT IS THE SCANNER'S OWN (architect
 //    2026-11-16, the beats; scanner_invalidate_rect, main.cpp, through
 //    Viewport::invalidate_scanner_line): the hull of its line's span at
 //    scanner_exact_x over the canvas's rows — the scanner has no head, so
-//    nothing above the canvas is its to repaint. The playhead's own narrow
-//    box (playhead_invalidate_rect through
+//    nothing above the canvas is its to repaint. The tow takes THE
+//    PLAYHEAD'S OWN NARROW BOX (playhead_invalidate_rect through
 //    Viewport::invalidate_playhead_columns: the head's reach from the
-//    window's top) is the same shape for a cursor move and has no caller,
-//    every cursor write being of the next class.
+//    viewport's lanes' top row through the waveform's foot, the head and
+//    the line, nothing of the band above) at
+//    the cursor's old and new columns, each playhead_pixel_x on the plate
+//    basis, which Viewport reaches through a hook wired beside the paint
+//    handler (Viewport::plate_playhead_column_) — sound there because the
+//    drag freezes the displayed basis for its life (displayed_basis_frozen),
+//    and whole-area where the hook is unwired or the camera moved.
 //  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:
 //    the stop teardown (stop_playback_if_playing) and the launch
 //    (launch_playback_window, the one launch body every launch ends in — the
@@ -12900,6 +12913,7 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 //    (land_playhead_on_marker — through
 //    which the Tab/`c` jump now inherits this shape too, having stopped
 //    hand-copying the recipe 2026-07-30), move_playhead_to's no-scroll branch,
+//    the undo / redo restore's re-land (Viewport::translate_playhead_to),
 //    and the live-domain cursor repair (clamp_display_state_to_live_domain). A
 //    full-area invalidate is ownership-window-proof by construction — it cannot
 //    ride the wrong epoch — and the repaint is affordable at the rate these
@@ -13221,7 +13235,8 @@ std::pair<long long, long long> compute_trim_samples(
 // declaration in viewport.h. A route touching the clock AND the state cell
 // spells both, the cell's owner covering the clock's rect as a superset.)
 GuiRect clock_invalidate_rect(const AppState& a);
-GuiRect playhead_invalidate_rect(const GuiRect& area, int col);
+GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
+                                 int col);
 // The scanner's own damage rect — the hull of its line's span at the exact
 // place `x` over `area`'s rows, empty where the line has no part inside
 // (the rule at the definition, main.cpp).
@@ -19724,7 +19739,7 @@ bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
 //     the `_on_basis` pair is the whole pixel-anchoring API,
 //     warp_frame_map_view.h). Every pending press that aims a painted subject
 //     freezes that basis until its release (displayed_basis_frozen below), and
-//     a drag's playhead tow writes through Viewport::translate_playhead_to, so
+//     a drag's playhead tow writes through Viewport::tow_playhead_to, so
 //     no synchronous plate render moves the flag off the pointer mid-drag.
 //   * CHROME: every claim — roster press, lift and hold-repeat,
 //     the render player's row — reads the FACE the painter
@@ -19872,7 +19887,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // check of its own, and the grep that it has no in-freeze caller is at its
 // definition (waveform_cache.cpp). The marker drag's playhead tow, which
 // scrolled through the reseat's edge-align and was that caller, writes
-// through Viewport::translate_playhead_to and scrolls nothing.
+// through Viewport::tow_playhead_to and scrolls nothing.
 inline bool displayed_basis_frozen(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||

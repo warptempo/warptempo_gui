@@ -1333,17 +1333,18 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // which builds one per column (old and new), unions them when they are close
 // and invalidates what comes out — the narrow-on-plate shape of a playhead
 // move (the rule and the per-site table are at playhead_pixel_x,
-// app_state.h), WHICH NO SITE TAKES AT PRESENT: every cursor write is
-// discrete and takes the full-area shape, and the scanner — the one
-// per-frame mover, a line with no head — has its own rect
-// (scanner_invalidate_rect below; architect 2026-11-16, the beats). THE BOX
+// app_state.h), WHICH ONE SITE TAKES: the marker drag's tow
+// (Viewport::tow_playhead_to; architect 2026-11-16, the beats), the cursor
+// write that runs at a motion's cadence. Every other cursor write is
+// discrete and takes the full-area shape, and the scanner — a line with no
+// head — has its own rect (scanner_invalidate_rect below). THE BOX
 // IS THE HEAD'S PAINTED REACH
 // (2026-10-09, ON SCREEN IS AS PAINTED; the reach architect 2026-11-14,
 // send J): the head is the chip's drawing at the playhead's exact x, so the
 // columns it can touch are [col − H − 1, col + H + 1), H the chip's height
 // (cue_chip_paint_reach_px, render.h: 14 each side, 28 device px on the
-// tablet at 200 %, 7 each side at 100 %) — its rows the whole band from the
-// window's top below — which also holds the one-W line of
+// tablet at 200 %, 7 each side at 100 %) — its rows the envelope's, below —
+// which also holds the one-W line of
 // the cursor at its exact place: the line's x lies within half a px of
 // `col`, so the cells its real interval [x − t / 2, x + t / 2] touches lie
 // in [col − t / 2 − 1, col + t / 2 + 1), t waveform_line_px — two columns
@@ -1359,27 +1360,37 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // built on the column the paint uses — and the box is placed at
 // area.x + col, the canvas standing the column's margin in from the window's
 // side since 2026-10-09.
-GuiRect playhead_invalidate_rect(const GuiRect& area, int px_col) {
+GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
+                                 int px_col) {
     const int col = area.x + px_col;
     const int reach = cue_chip_paint_reach_px();
     const int x0 = std::max(area.x, col - reach);
     const int x1 = std::min(area.x + area.w, col + reach);
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
-    // Envelope extends up from the top of the window to the bottom of the
-    // waveform area so it covers the playhead's line inside the waveform AND
-    // its top-strip pixels above — the head on the ruler's bottom rows
-    // (paint_ruler_row, 2026-10-09; the view bar carries no mark since
-    // ~14:30). The top strip is where the cursor's
-    // non-waveform pixels live, and the envelope
-    // covers the whole lane band above the waveform rather than tracking the
-    // head's own rows. (The discrete moves' damage,
-    // Viewport::invalidate_waveform_area, starts at the window top too but
-    // owes the rows above the viewport's lanes a check rather than a repaint
-    // since 2026-10-13, damage_window_top_rows; these per-frame columns keep
-    // the window-top start, a column rect being no full-width row band the
-    // check replays.)
-    const int y0 = 0;
+    // THE ENVELOPE: FROM THE VIEWPORT'S LANES' TOP ROW THROUGH THE WAVEFORM
+    // AREA'S FOOT (architect 2026-11-16, the beats) — viewport_lanes_top_y,
+    // the toolbar band's foot: the very row the discrete moves' damage
+    // starts at (damage_window_top_rows, Viewport::invalidate_waveform_area),
+    // so the boundary is one fact. THE PLAYHEAD'S PIXELS ARE ALL INSIDE IT:
+    // its head on the ruler's last rows (paint_ruler_row, 2026-10-09; the
+    // view bar carries no mark since ~14:30) and its line on the canvas's
+    // rows (paint_playheads). The lanes between and above them — the view
+    // bar, the marker lane, the row of ground — hold nothing of the
+    // playhead; they are inside because the rect is ONE rect, the head and
+    // the line whole in one clip, and they repaint as they stand (each
+    // lane's painter is clip-driven; a stash a narrow clip does not cover is
+    // not republished — the trim bar's, a key's — and the ruler head's own
+    // as-painted hit, whose hull is the head's rows inside these columns,
+    // is). THE ROWS ABOVE THE LANES — the logo lane and the toolbar band —
+    // ARE LEFT OUT: nothing of the playhead stands there, and a column of
+    // them repainted on every motion would lay a slice of a key's face in
+    // its live state ahead of the tick's comparator (a face split for a
+    // frame) and run the upper rows' fingerprint each time
+    // (note_upper_rows_painted). A layout with no row from the lanes' top to
+    // the waveform's foot gives an empty rect.
+    const int y0 = std::max(0, viewport_lanes_top_y(a));
     const int y1 = area.y + area.h;
+    if (y1 <= y0) return GuiRect{area.x, 0, 0, 0};
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
@@ -1957,6 +1968,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // declaration): the flag-only refresh.
     viewport.refresh_flag_cache_ =
         [&]() { paint_handler.maybe_rebuild_flag_cache(); };
+    // The marker drag's tow's seam (architect 2026-11-16, the beats; the
+    // contract at its Viewport declaration and Viewport::tow_playhead_to):
+    // the cursor's column on the PLATE basis, the basis paint_playheads and
+    // the ruler's head draw it through — the same three fields, read the
+    // way the pre-paint hook's scanner advance reads them.
+    viewport.plate_playhead_column_ = [&]() {
+        const GuiPaintHandler::PlateViewportBasis pb =
+            paint_handler.plate_viewport_basis();
+        return playhead_pixel_x(app, static_cast<int64_t>(pb.vp_start),
+                                pb.spp, pb.lattice_origin);
+    };
 
     // The touch navigation (touch phase 1, 2026-08-11; ELEVEN hooks since
     // 2026-11-07, the sweep-armed query the last to join): the

@@ -39,7 +39,8 @@ enum class LandingKind { Walk, Restore };
 // cursor: Viewport::invalidate_waveform_area (whose declaration below holds
 // the lane inventory), the viewport routes' top-strip damage, and the
 // waveform cache's four (the async publish, the synchronous rebuild, the
-// deferred basis repair and the flag cache's stage, waveform_cache.cpp).
+// deferred basis repair and the flag cache's stage wherever it declares the
+// whole area, waveform_cache.cpp).
 // THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the band's foot
 // (the tab strip's 2026-10-18 to 2026-10-22) — the band ends there and the
 // view bar and the modal family's box begin there — so the two halves paint exactly the pixels the one rect
@@ -370,6 +371,15 @@ struct Viewport {
     void refresh_flag_cache() {
         if (refresh_flag_cache_) refresh_flag_cache_();
     }
+    // THE PLAYHEAD'S COLUMN ON THE PLATE BASIS (architect 2026-11-16, the
+    // beats): playhead_pixel_x of the cursor as it stands, on
+    // GuiPaintHandler::plate_viewport_basis — the column the cursor's line
+    // and its ruler head are PAINTED on, which this struct cannot compute
+    // (it sees no paint handler; the playheads' damage rule,
+    // playhead_pixel_x, app_state.h). Wired in main.cpp beside the hook
+    // above; ONE READER, tow_playhead_to below, which widens to the whole
+    // area unwired.
+    std::function<int()> plate_playhead_column_;
 
     // Viewport mutators.
     // THE MOVEMENT OWNER — the cursor's live chokepoint, and one of the TWO
@@ -396,11 +406,19 @@ struct Viewport {
     // either (architect 2026-09-22): the cursor follows its own musical
     // instant into a rebuilt domain and the camera stays where it stands,
     // however far off screen the cursor lands. Named rather than a flag on the
-    // reseat, the movement owners' convention. TWO CALLERS, the undo/redo
-    // restore's map-change re-land (undo.cpp) and the marker drag's playhead
-    // tow (marker_drag.cpp, architect 2026-09-24: no scroll under a held
-    // hand); the contract is at the definition (viewport.cpp).
+    // reseat, the movement owners' convention. ONE CALLER, the undo/redo
+    // restore's map-change re-land (undo.cpp), with the whole waveform
+    // area's damage; the contract is at the definition (viewport.cpp).
     void translate_playhead_to(int64_t new_sample);
+    // THE TOW — the translation's write for THE MARKER DRAG'S PLAYHEAD
+    // (marker_drag.cpp, architect 2026-09-24: no scroll under a held hand),
+    // WITH THE PLAYHEAD'S OWN NARROW DAMAGE (architect 2026-11-16, the
+    // beats): the cursor's old and new columns on the plate basis and the
+    // clock cell, nothing else. A second entry rather than a flag on the
+    // translation, the movement owners' convention again; ONE CALLER,
+    // MarkerDragOps::apply_drag_motion. The contract is at the definition
+    // (viewport.cpp).
+    void tow_playhead_to(int64_t new_sample);
     // The waveform lane's Left / Right step, in the step's own unit
     // (playhead_arrow_step_landing, app_state.h): one millisecond, or on
     // the phase-reset column one hop.
@@ -719,12 +737,12 @@ struct Viewport {
     // rather than inherited, each member with its own reason:
     //
     //   CLOCK ALONE —
-    //   * Viewport's three CURSOR WRITERS: reseat_playhead_to (the live
+    //   * Viewport's four CURSOR WRITERS: reseat_playhead_to (the live
     //     chokepoint's write half — move_playhead_to is that same write with
     //     the audition's end in front of it, so both spellings damage this
     //     cell through the one body), translate_playhead_to (the undo/redo
-    //     restore's no-scroll re-land, 2026-09-22, and the marker drag's
-    //     no-scroll tow, 2026-09-24) and
+    //     restore's no-scroll re-land, 2026-09-22), tow_playhead_to (the
+    //     marker drag's no-scroll tow, 2026-09-24) and
     //     clamp_display_state_to_live_domain's playhead repair.
     //   (Viewport's three ZOOM APPLIERS — apply_zoom_change,
     //     apply_strip_drag_zoom, apply_zoom_to_start — are NOT members since
@@ -805,9 +823,11 @@ struct Viewport {
     // playheads' pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule, and the table of which sites take a
     // narrow shape versus a full-area widening, live at playhead_pixel_x in
-    // app_state.h). IT HAS NO CALLER (re-derived by grep 2026-11-16): its
-    // two were the per-frame scanner sites, which take the scanner's own
-    // rect below, and every playhead write is discrete and widens.
+    // app_state.h). ONE CALLER (re-derived by grep 2026-11-16): the marker
+    // drag's tow (tow_playhead_to above), a per-motion cursor write that
+    // reaches the plate's column through plate_playhead_column_; the
+    // per-frame scanner sites take the scanner's own rect below, and every
+    // other playhead write is discrete and widens.
     void invalidate_playhead_columns(int old_px, int new_px);
     // THE SCANNER'S NARROW DAMAGE (architect 2026-11-16, the beats): the
     // scanner's own rect (scanner_invalidate_rect, main.cpp: the hull of its
@@ -826,18 +846,20 @@ struct Viewport {
     // both inside a scope that reaches paint_handler. IT SERVES THE
     // PER-FRAME ADVANCE ALONE: a move of the scanner's place by a move of
     // the viewport or of the plate's basis carries that mover's own
-    // full-area damage. Every playhead write is discrete and widens; do not
-    // add a narrow caller for one.
+    // full-area damage. A playhead write is no caller of this: the cursor
+    // has a head, and its narrow shape is invalidate_playhead_columns above.
     void invalidate_scanner_line(double old_x, double new_x);
-    // (There is no stem-column invalidator any more, and since row 5 no
+    // (There is no stem-column invalidator in this struct, and since row 5 no
     // selection-driven stem damage either. invalidate_stem_column computed the
     // old singleton stem's narrow damage on the ITEM basis while the stem
     // painted on the PLATE basis; that damage was widened to
     // invalidate_waveform_area in 2026-07-30 and then deleted outright with
     // Selection's stem subject pair; the selection stem (2026-11-05) rides
-    // the flag cache's selection fingerprint, whose rebuild damages the
-    // waveform — run in the selecting event itself by every Selection
-    // mutator's publish, Selection::publish_selection_change.)
+    // the flag cache's selection fingerprint, whose rebuild damages each
+    // stem it moved at the stem's own exact place, on the basis it was laid
+    // out on (maybe_rebuild_flag_cache's tail, 2026-11-16) — run in the
+    // selecting event itself by every Selection mutator's publish,
+    // Selection::publish_selection_change.)
     void invalidate_top_strip();
     void invalidate_all();
     // (THE WHOLE SURFACE IS THE GUI'S GEOMETRY, the tablet's window the whole

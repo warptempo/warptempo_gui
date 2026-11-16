@@ -241,8 +241,8 @@ void Viewport::owe_clock_check() {
 
 void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
     const GuiRect area = waveform_area(app);
-    const GuiRect r_old = playhead_invalidate_rect(area, old_px);
-    const GuiRect r_new = playhead_invalidate_rect(area, new_px);
+    const GuiRect r_old = playhead_invalidate_rect(app, area, old_px);
+    const GuiRect r_new = playhead_invalidate_rect(app, area, new_px);
     // Union when close (common case: 1px nudges overlap) — one expose.
     if (rects_intersect(r_old, r_new) ||
         std::abs(new_px - old_px) < 4) {
@@ -283,7 +283,8 @@ void Viewport::invalidate_scanner_line(double old_x, double new_x) {
 // OWNER is the land (land_playhead_on_marker / land_playhead_on_domain_frame,
 // input_pointer.cpp), and it has THREE EXEMPTIONS, none of which reaches an
 // owner: a TRANSLATION (reseat_playhead_to below, translate_playhead_to — the
-// undo/redo restore's re-land, which scrolls nothing — and
+// undo/redo restore's re-land, which scrolls nothing — its twin
+// tow_playhead_to, the marker drag's tow, and
 // reseat_playhead_on_marker — the S/T flip, the map-change re-lands, the
 // coincidence auto-select's no-op), a RESTORE (the tab switch's band swap,
 // which writes the cursor direct — the act's own two tab switches are
@@ -525,31 +526,18 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
 // write moves neither the camera nor the audition (no audition end, the
 // reseat's own exemption).
 //
-// TWO CALLERS (re-derived by grep 2026-09-24):
-//   * THE RESTORE'S MAP-CHANGE RE-LAND (undo.cpp), the reason above.
-//   * THE MARKER DRAG'S PLAYHEAD TOW (MarkerDragOps::apply_drag_motion,
-//     marker_drag.cpp; architect 2026-09-24). The cursor rides the dragged
-//     flag, and a keep-visible edge-align there scrolled the viewport under
-//     the held hand on a grab whose stem stood left of the viewport — a
-//     synchronous plate render inside the displayed-basis freeze, the basis
-//     the gesture reads moving mid-drag. Here the playhead may ride offscreen
-//     for the drag's life and catches up at the release (commit_drag's land,
-//     after the freeze lifts). The tow is the ride of a movement already
-//     taken, not a movement of its own: the press's click act landed the
-//     playhead (land_playhead_on_marker, the audition's end, and the hold's
-//     when the press moved the cursor; a press on the marker under the
-//     playhead leaves the hold to commit_drag's move_playhead_to, which
-//     clears it at every release) and nothing can re-arm either mid-drag
-//     (on_key's drag-modal statement: no key arrives mid-gesture).
+// ONE CALLER (re-derived by grep 2026-11-16): THE RESTORE'S MAP-CHANGE
+// RE-LAND (undo.cpp), the reason above. (The marker drag's tow is
+// tow_playhead_to below: the same write under the playhead's own narrow
+// damage.)
 // The live-domain clamp is the shared ruling (clamp_playhead_to_live_domain);
 // the viewport's own domain wall is re-derived through clamp_viewport_start
 // because the restore's swap may have shortened the domain under a standing
-// viewport — a wall, not a scroll toward the cursor, and a no-op under the
-// drag, which moves neither the domain nor the camera; a re-validation, so it
+// viewport — a wall, not a scroll toward the cursor; a re-validation, so it
 // keeps the camera's lattice (ViewportLattice::Keep, architect 2026-10-31).
 // NO RENDER: the
 // restore's tail renders the plate synchronously once for the finished state,
-// and the drag's plate does not move, so this owes only the damage.
+// so this owes only the damage.
 void Viewport::translate_playhead_to(int64_t new_sample) {
     if (audio.total_frames() <= 0) return;
     app.playhead_cursor_sample =
@@ -559,10 +547,78 @@ void Viewport::translate_playhead_to(int64_t new_sample) {
     // cursor's pixels are plate-registered; rule at playhead_pixel_x).
     invalidate_waveform_area();
     invalidate_clock_area();
-    // NO PREDICTOR RESYNC, unlike the reseat: both callers run with playback
-    // stopped (restore_history_entry's head; the drag's arming press, with
-    // every launch swallowed until the release), so there is no play in
-    // flight to re-anchor.
+    // NO PREDICTOR RESYNC, unlike the reseat: the caller runs with playback
+    // stopped (restore_history_entry's head), so there is no play in flight
+    // to re-anchor.
+}
+
+// tow_playhead_to: THE MARKER DRAG'S PLAYHEAD TOW (MarkerDragOps::
+// apply_drag_motion, marker_drag.cpp; architect 2026-09-24) — THE
+// TRANSLATION'S WRITE, the cursor to its new instant and the camera where it
+// stands. The cursor rides the dragged flag, and a keep-visible edge-align
+// there scrolled the viewport under the held hand on a grab whose stem stood
+// left of the viewport — a synchronous plate render inside the
+// displayed-basis freeze, the basis the gesture reads moving mid-drag. Here
+// the playhead may ride offscreen for the drag's life and catches up at the
+// release (commit_drag's land, after the freeze lifts). The tow is the ride
+// of a movement already taken, not a movement of its own: the press's click
+// act landed the playhead (land_playhead_on_marker, the audition's end, and
+// the hold's when the press moved the cursor; a press on the marker under
+// the playhead leaves the hold to commit_drag's move_playhead_to, which
+// clears it at every release) and nothing can re-arm either mid-drag
+// (on_key's drag-modal statement: no key arrives mid-gesture). The
+// viewport's clamp is the translation's own re-validation and a no-op under
+// the drag, which moves neither the domain nor the camera.
+//
+// ITS DAMAGE IS THE PLAYHEAD'S OWN (architect 2026-11-16, the beats: a
+// marker drag's frame repaints what moved and nothing else): the playhead's
+// narrow rect (playhead_invalidate_rect, main.cpp — the head's painted reach
+// from the viewport's lanes' top row through the waveform's foot, which
+// holds the head in the ruler and the line on the canvas and nothing of the
+// toolbar band) at the cursor's OLD COLUMN AND ITS
+// NEW ONE, BOTH ON THE PLATE BASIS (the playheads' damage rule,
+// playhead_pixel_x, app_state.h: the cursor's pixels are plate-registered) —
+// the old column derived before the write and the new after it, never
+// stashed, the way the scanner's advance derives its places (main.cpp's
+// pre-paint hook): the plate basis is what paint_playheads and the ruler's
+// head draw the cursor through, so the column it answers for the cursor as
+// it still stands is the column the last paint put the playhead on. The
+// basis is the paint handler's, reached through plate_playhead_column_
+// (viewport.h). SOUND UNDER THE DRAG: the displayed basis is frozen for its
+// life (displayed_basis_frozen, app_state.h — no plate is dispatched or
+// published and no gesture path reaches a synchronous plate rebuild), and a
+// plate that does publish damages the whole area itself. The clock cell,
+// which reads the cursor's time, is damaged beside it. What else a motion
+// changes — the dragged cue, its stem, the lead-in ring — is the flag
+// cache's rebuild's, run by the same event (apply_drag_motion; the damage at
+// maybe_rebuild_flag_cache's tail), the stem's rect repainting the cursor's
+// line where the stem hides or uncovers it (the coincident lines). THE KEYS
+// whose face reads the cursor are the tick's comparator's (main.cpp).
+// THE WHOLE AREA STAYS where the narrow shape cannot be trusted: the hook
+// unwired, or a clamp that did move the camera.
+// NO RENDER and NO PREDICTOR RESYNC: the drag's plate does not move, and the
+// drag runs with playback stopped (its arming press, with every launch
+// swallowed until the release).
+void Viewport::tow_playhead_to(int64_t new_sample) {
+    if (audio.total_frames() <= 0) return;
+    if (!plate_playhead_column_) {
+        translate_playhead_to(new_sample);
+        return;
+    }
+    const int     old_px     = plate_playhead_column_();
+    const int64_t old_vp     = app.viewport_start_sample;
+    const int64_t old_origin = app.viewport_lattice_origin;
+    const double  old_zoom   = app.zoom_level;
+    app.playhead_cursor_sample =
+        clamp_playhead_to_live_domain(new_sample, app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Keep);
+    if (app.viewport_start_sample != old_vp ||
+        app.viewport_lattice_origin != old_origin ||
+        app.zoom_level != old_zoom)
+        invalidate_waveform_area();
+    else
+        invalidate_playhead_columns(old_px, plate_playhead_column_());
+    invalidate_clock_area();
 }
 
 // Repair the LIVE display-state fields after a total-changing map edit. The

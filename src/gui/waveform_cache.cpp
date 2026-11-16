@@ -980,7 +980,7 @@ bool GuiPaintHandler::live_plate_published() const {
 // 2026-09-24): it rode move_playhead_to → reseat_playhead_to, whose
 // keep-visible edge-align scrolled the viewport on a grab whose stem stood
 // left of it and kicked this render mid-drag; it writes through
-// Viewport::translate_playhead_to now, which scrolls nothing, so the playhead
+// Viewport::tow_playhead_to now, which scrolls nothing, so the playhead
 // rides offscreen until the release and the displayed basis holds. A new
 // caller that can run inside the freeze answers at its own site, not here.
 // THE OWED REBUILD (2026-10-13) CAN BE PAID INSIDE ONE: a kick owed before an
@@ -1375,13 +1375,24 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         damage_window_top_rows(app, gui, wave_repair.y + wave_repair.h);
     }
 
-    if (app.loading || audio.total_frames() <= 0) return;
+    // NO REBUILD CAN RUN in the three states below, and each puts the
+    // damage record out (FlagCache::layout_stands), so the first rebuild
+    // after it declares the whole area: a load or no audio paints frames
+    // that blit no flag surface and build no ring, and the other two are
+    // cold states no layout is compared across.
+    if (app.loading || audio.total_frames() <= 0) {
+        flag_cache.layout_stands = false;
+        return;
+    }
 
     // No live waveform yet → no flags. Until wf_cache.fp_rendered comes up
     // after the
     // first worker swap, the displayed-viewport fields hold defaults that
     // wouldn't agree with anything sensible.
-    if (!wf_cache.fp_rendered) return;
+    if (!wf_cache.fp_rendered) {
+        flag_cache.layout_stands = false;
+        return;
+    }
 
     // THE SURFACE'S BAND (2026-10-13, FlagCache's head): the window's width,
     // the client rows from the ruler lane's top through the top strip's
@@ -1391,7 +1402,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const int origin_y  = top_ruler_row_area(app).y;
     const int surface_w = top_strip.w;
     const int surface_h = top_strip.y + top_strip.h - origin_y;
-    if (surface_w <= 0 || surface_h <= 0) return;
+    if (surface_w <= 0 || surface_h <= 0) {
+        flag_cache.layout_stands = false;
+        return;
+    }
     // THE SCALE THE FLAG PIXELS ARE LAID OUT AT, keyed by field (contract at
     // FlagCache::fp_gui_scale_percent).
     const int gui_scale = gui_scale_percent();
@@ -1439,7 +1453,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // look is the cue's stem, never a segment's — architect 2026-11-05,
     // render.h's THE STATES — keyed by sel_hash above, whose focus term is
     // harmless: the stem stash this rebuild stages follows the selection,
-    // and the rebuild's tail damages the waveform with the strip.)
+    // and the rebuild's tail damages the stems and the ring's sides that
+    // moved with it — a focus that moved neither damages nothing.)
     const bool      iter_on    = iteration_column_lit(app, mv);
     // THE STANDING EDITOR'S SUPPRESSION — which marker, and which of its boxes
     // the pass below does not paint — off THE ONE DERIVATION
@@ -1494,7 +1509,19 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const GuiHistoryWalkSource history_source = app.history_mode.source;
     const std::size_t        history_local_index = app.history_mode.local_index;
 
-    const bool matches =
+    // THE FINGERPRINT IN TWO PARTS (architect 2026-11-16, the beats; the
+    // split is the tail's, where the rebuild's damage is decided): THE
+    // MARKER-DRIVEN CONTENT — the five fields that change what cues, stems
+    // and ring show on a surface that otherwise stands: both stores'
+    // generations, the phase-reset strike's lattice, the drag overlay and
+    // the selection (a marker's motion, an edit, a select) — and
+    // THE FRAME, every other field: the surface itself, the basis it is laid
+    // out on (the displayed span, the lattice origin, the target bit, the
+    // map), the band's size and origin, the scale, the palette, the column,
+    // the iteration verdict, the editor's suppression and the history
+    // mode's nine. A miss in the content alone repaints cues on a surface
+    // whose every other cue stands where it stood.
+    const bool frame_matches =
         flag_cache.surface &&
         flag_cache.fp_vp_start                == vp_start &&
         flag_cache.fp_vp_end                  == vp_end &&
@@ -1506,11 +1533,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_palette_generation      == pal_gen &&
         flag_cache.fp_target                  == is_target &&
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
-        flag_cache.fp_warp_generation   == warp_gen &&
-        flag_cache.fp_phase_reset_generation  == phase_gen &&
-        flag_cache.fp_phase_reset_lattice_hash == lattice_hash &&
-        flag_cache.fp_drag_overlay_hash       == drag_hash &&
-        flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_iteration_mode          == iter_on &&
         flag_cache.fp_suppressed_box_index    == suppressed.marker_index &&
@@ -1524,12 +1546,18 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_commit_count    == history_count &&
         flag_cache.fp_history_source          == history_source &&
         flag_cache.fp_history_local_index     == history_local_index;
+    const bool content_matches =
+        flag_cache.fp_warp_generation   == warp_gen &&
+        flag_cache.fp_phase_reset_generation  == phase_gen &&
+        flag_cache.fp_phase_reset_lattice_hash == lattice_hash &&
+        flag_cache.fp_drag_overlay_hash       == drag_hash &&
+        flag_cache.fp_selection_hash          == sel_hash;
 
     // THE ORIGIN IS KEYED (FlagCache::fp_origin_y): the key case's height
     // moves it while the band's width, height and the scale stand (the
     // `key_height` tuning key, architect 2026-10-29, live through
     // apply_key_height's relayout).
-    if (matches) return;
+    if (frame_matches && content_matches) return;
 
     if (!flag_cache.surface ||
         flag_cache.width  != surface_w ||
@@ -1650,6 +1678,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // blits that surface (the stage bit is raised at the tail below). The
     // active view supplies its own column's stash and the other column's is
     // not retained — hit tests and the stem pass are both active-column-only.
+    //
+    // THE LAYOUT THE LAST PASS LEFT IS KEPT FIRST (cue_pass_keep_previous,
+    // render.h): the tail compares this pass's cues with it.
+    cue_pass_keep_previous();
     if (history_active) {
         // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
         // marker paints. (The lane is not the whole of that suppression — the
@@ -1788,52 +1820,144 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     app.staged_displayed_lattice_origin = wf_cache.fp_lattice_origin;
     app.staged_displayed_valid = true;
 
-    // THE REBUILD'S OWN DAMAGE REACHES THE WAVEFORM (architect 2026-08-01,
-    // closing the ONE-PRESS STEM LAG). It was the top strip alone, which was
-    // exactly right while this cache was a strip surface and nothing else; ROW 5
-    // MADE IT A PRODUCER OF WAVEFORM PIXELS — app.marker_stems, painted live by
-    // GuiPaintHandler::paint_marker_stems inside the waveform area — and the
-    // damage never followed.
+    // THE REBUILD'S OWN DAMAGE IS WHAT IT CHANGED (architect 2026-11-16, the
+    // beats: "I think we should build the most optimistic with regards to
+    // the scanner and the marker drag and anything that would follow" — a
+    // frame that repaints a moved marker and nothing else is a light one,
+    // the area rule at kBeatLight, platform_android.cpp).
     //
-    // THE LAG, in the order the loop actually runs it: a nudge press mutates the
-    // store and queues its own strip+waveform damage (the viewport lanes' rect
-    // from the band's foot since 2026-10-13, the rows above owed a fingerprint
-    // check, damage_window_top_rows); THE FRAME PAINTED
-    // BEFORE THE NEXT TICK (the loop of the day serviced the frame callback
-    // first, and this rebuild lives in on_tick — the same
-    // paint-outruns-the-fingerprint-check ordering the `p` view switch was
-    // fixed for), so that repaint consumed the OLD cache and the OLD stash and
-    // was internally consistent: stale flag, stale stem. Then the tick ran, this
-    // function rebuilt both, and damaged the STRIP only — so the next frame
-    // blitted the NEW flag surface over an untouched waveform, leaving the stem
-    // ink at the old column. Flag moved, stem did not, and the stem caught up
-    // only when the NEXT press's own waveform damage arrived: every press showed
-    // the previous press's stem, which reads as "stepping back resyncs them".
+    // WHAT THIS REBUILD PUTS ON THE SCREEN: the surface's CUES, blitted over
+    // the marker lane; the STEM STASH it stages, painted live in both halves
+    // (paint_marker_stems, paint_marker_stem_heads) — the damage reaches the
+    // waveform for them, and it is declared HERE, at the one producer,
+    // because the stash is both the stems' paint source and the hit
+    // geometry, staged here and promoted by the frame this damage schedules,
+    // so stash and pixels advance at the same frame (a frame served between
+    // a write and the tick's rebuild paints the old cache and the old stash,
+    // whole and consistent, and this damage then lands the new pair
+    // together; a synchronous rebuild at every mutation would need a
+    // mutation-site inventory that can rot); and, not its product but its
+    // charge, THE LEAD-IN RING, painted live from state whose every input is
+    // a field of this fingerprint (paint_phase_reset_overlay_ring's DAMAGE).
     //
-    // WHY THE DAMAGE AND NOT A SYNCHRONOUS REBUILD AT EVERY MUTATION: this shape
-    // is what DELAY-AND-SYNC asks for. The stash is BOTH the stem paint source
-    // and the hit geometry (flag_hit_rects + marker_stems, one producer — this
-    // function), and like the item basis above it is STAGED here and promoted
-    // at the top of the frame this rect schedules — the frame that blits the
-    // surface — so stash and pixels advance at the SAME frame, one frame
-    // behind the rebuild, consistently, with the display never showing a flag
-    // the hit test disagrees with. (The basis pair joins them at that frame
-    // unless the displayed-basis freeze defers it; the stash never waits,
-    // because the surface it describes never does.) Making every marker
-    // mutation rebuild synchronously would also land them together, but it
-    // moves a HarfBuzz shaping pass over every visible label onto each press
-    // at key-repeat cadence, and it would need a mutation-site inventory that
-    // can rot; this is one rect at the one producer.
+    // WHERE THE MISS IS THE MARKER-DRIVEN CONTENT ALONE (content_matches
+    // false over a frame that matches — a marker drag's motion, a value
+    // drag's step, a nudge, an edit, a selection change, a lattice change)
+    // AND THE RECORD STANDS, the damage is exactly:
+    //   * EVERY CUE THAT DIFFERS from the pass before — one rect a cue, its
+    //     previous and present painted extents together over the lane's rows
+    //     (cue_pass_changed_rects, render.h, which owns the comparison and
+    //     why it is every changed pixel of the pass: exact x, colors, every
+    //     segment, the order);
+    //   * EVERY PLACE A STEM LEFT OR ARRIVED ON — the exact places of the
+    //     staged entries against the last rebuild's (FlagCache::stem_xs),
+    //     the stem's own rect at each place in one list and not the other
+    //     (marker_stem_damage_rect: both halves, one rect), which also
+    //     repaints the line a stem hides or uncovers there (the coincident
+    //     lines: the playhead's, the ring's left side);
+    //   * THE RING'S SIDES, where its geometry now differs from the one the
+    //     last rebuild compared (FlagCache::ring_declared): the four it had
+    //     and the four it has, each side its own rect
+    //     (phase_reset_ring_damage).
+    // OLD IS WHAT THE LAST REBUILD LEFT, not what the screen shows, and that
+    // is enough: cues and stems reach the screen only as a rebuild leaves
+    // them (the surface blitted, the stash promoted by the frame that blits
+    // it), every rebuild's damage stands until a frame paints it, and a
+    // frame paints the newest state under all of it — so the differences of
+    // consecutive rebuilds, united, cover the screen's state through to the
+    // newest. (The ring is the one thing a frame can draw ahead of a
+    // rebuild; FlagCache's `ring_drawn_undeclared` is its answer.)
+    // NOTHING ELSE READS THOSE FIVE FIELDS AT PAINT TIME (re-derived by grep
+    // 2026-11-16 over the painters' reads of the two stores, the selection
+    // and the drag): the keys' faces are the tick's comparator's (main.cpp),
+    // and the two surfaces that do — an open marker-lane editor's box and a
+    // cue's standing tooltip — keep the whole rect below.
     //
-    // The rect is the top strip PLUS the waveform — Viewport::invalidate_-
-    // waveform_area's waveform rect, on its road (damage_window_top_rows,
+    // THE WHOLE AREA STAYS — the top strip plus the waveform, on
+    // Viewport::invalidate_waveform_area's road (damage_window_top_rows,
     // viewport.h: the viewport's lanes damaged, the rows above them owed a
-    // check) because this struct holds no Viewport. It CONTAINS the
-    // old strip-only rect by construction (waveform_area.y IS the top strip's
-    // height and its own height floors at 0), so it replaces rather than joins
-    // it; and the platform's containment coalescing drops it wholesale on the
-    // paths that already damaged the waveform this frame — every marker
-    // mutation, every pan/zoom, every drag motion event — so those pay nothing.
+    // check) because this struct holds no Viewport — FOR EVERYTHING ELSE:
+    //   * a miss in any FRAME field (a first build and a (re)allocation
+    //     among them: the surface's size is the band's, fp_area_w and
+    //     fp_area_h) — every cue may have moved, and the staged basis has;
+    //   * a record that does not stand (FlagCache::layout_stands), or a ring
+    //     some frame drew that no rebuild compared (`ring_drawn_undeclared`);
+    //   * the `h` view (its items are another list under the same indexes);
+    //   * a standing marker-lane editor (the suppression): its box and the
+    //     segments riding it paint live off the store beside these cues
+    //     (render_flag_editor_box);
+    //   * a cue's standing tooltip: it seats on its cue's face in the live
+    //     stash (marker_cue_face), so it moves with the cue under this rect
+    //     — which a standing floater widens to the window's top
+    //     (settle_owed_lane_damage);
+    //   * a change of more than kFlagRebuildNarrowRects rects (the count's
+    //     reason at the constant).
+    // A REBUILD THAT CHANGED NOTHING VISIBLE DECLARES NOTHING (a focus that
+    // moved no stem and no ring; a drag armed at its marker's own place):
+    // no frame is owed, and the pair it staged is the standing one in every
+    // field a reader takes (cue_paints_alike's note, render.cpp), promoted
+    // by whatever frame comes next.
+    // THE STAGED BASIS ABOVE NEEDS NO MORE: a content-only rebuild re-stages
+    // the pair that stands (every value of it is a frame field), so its
+    // promote moves no item-basis surface; a frame miss stages a changed
+    // pair and declares the whole rect, which is on_redraw's promote's
+    // premise.
     const GuiRect wave = waveform_area(app);
-    damage_window_top_rows(app, gui, wave.y + wave.h);
+    const GuiPhaseResetRingSides ring =
+        phase_reset_ring_sides(phase_reset_overlay_band(wave), wave);
+    std::vector<double>& stems = flag_cache.stem_scratch;
+    stems.clear();
+    for (const MarkerStem& stem : app.staged_marker_stems)
+        stems.push_back(stem.x);
+    std::sort(stems.begin(), stems.end());
+    stems.erase(std::unique(stems.begin(), stems.end()), stems.end());
+
+    const AppState::RedesignTooltip& tip = app.redesign_tooltip;
+    const bool cue_tooltip_stands =
+        tip.visible &&
+        (tip.owner.surface == AppState::RedesignTooltip::Surface::Marker ||
+         tip.owner.surface == AppState::RedesignTooltip::Surface::History);
+    std::vector<GuiRect>& rects = flag_cache.damage_scratch;
+    rects.clear();
+    bool narrow = frame_matches && flag_cache.layout_stands &&
+                  !flag_cache.ring_drawn_undeclared && !history_active &&
+                  suppressed.marker_index < 0 && !cue_tooltip_stands;
+    if (narrow) {
+        cue_pass_changed_rects(flag_lanes, wave_w, rects);
+        // The two sorted lists of distinct places, walked together: a place
+        // in one and not the other is a stem that left or arrived.
+        const std::vector<double>& was = flag_cache.stem_xs;
+        const auto declare_stem = [&](double x) {
+            const GuiRect r = marker_stem_damage_rect(wave, x);
+            if (r.w > 0 && r.h > 0) rects.push_back(r);
+        };
+        std::size_t a = 0;
+        std::size_t b = 0;
+        while (a < was.size() || b < stems.size()) {
+            if (b == stems.size() || (a < was.size() && was[a] < stems[b]))
+                declare_stem(was[a++]);
+            else if (a == was.size() || stems[b] < was[a])
+                declare_stem(stems[b++]);
+            else {
+                ++a;
+                ++b;
+            }
+        }
+        if (!(ring == flag_cache.ring_declared))
+            phase_reset_ring_damage(flag_cache.ring_declared, ring, rects);
+        narrow = rects.size() <= kFlagRebuildNarrowRects;
+    }
+    if (narrow) {
+        for (const GuiRect& r : rects)
+            gui.invalidate_region(r.x, r.y, r.w, r.h);
+    } else {
+        damage_window_top_rows(app, gui, wave.y + wave.h);
+    }
+    // THE RECORD, for the next rebuild (FlagCache's THE REBUILD'S DAMAGE
+    // RECORD): this pass's stems, the ring as compared here, and — all of
+    // it now declared — no ring drawn ahead.
+    flag_cache.stem_xs.swap(stems);
+    flag_cache.ring_declared         = ring;
+    flag_cache.ring_drawn_undeclared = false;
+    flag_cache.layout_stands         = true;
 }

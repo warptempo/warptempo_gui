@@ -5350,6 +5350,46 @@ void render_history_diff_flags(cairo_t* cr,
                                std::vector<MarkerStem>* out_stems,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
+// THE CUE PASS'S OWN CHANGE (architect 2026-11-16, the beats: a rebuild of
+// the flag cache damages what it changed and nothing else, so a marker
+// drag's frame is a light one — the rule at maybe_rebuild_flag_cache's
+// tail, waveform_cache.cpp). The three producers above lay their cues out
+// in one kept scratch (render.cpp's CuePassScratch); these two let their one
+// caller, the flag cache's rebuild, say WHICH CUES ITS SURFACE NOW SHOWS
+// DIFFERENTLY from the pass before:
+//   cue_pass_keep_previous — called ONCE, AHEAD OF THE REBUILD'S PASS: the
+//     layout the last pass left becomes the previous one, and the present
+//     one starts empty (a producer that returns before it lays anything out
+//     has painted nothing, and reads so).
+//   cue_pass_changed_rects — after the pass: appends to `out` one rect for
+//     every cue that DIFFERS between the previous layout and the present
+//     one, cues matched by marker index — a cue in one and not the other; a
+//     cue whose exact place, chip colors, or any segment's presence, run,
+//     box, look or strike differs (EXACT x INCLUDED: the chip and the label
+//     stand on it, so a sub-pixel move changes their ink under whole-px
+//     rects that stand); the two cues of a pair whose painted order flipped.
+//     THE RECT is the hull of the cue's previous and present painted extents
+//     together — its chip at the painted reach round its exact place
+//     (cue_chip_paint_reach_px, never the hit box) united with its label's
+//     occluding box through its last segment's end — cut to the pass's
+//     columns [lanes.columns_x, + waveform_width), over the marker lane's
+//     rows (the rows the pass's clip holds every cue pixel to).
+// WHY THAT IS EVERY CHANGED PIXEL OF THE PASS: a cue paints inside its own
+// extent alone — its chip there, its label's ink inside its own box — and
+// reaches another cue's pixels only there too (its box hides the earlier
+// labels across its own extent, its chip is stamped over what stands under
+// it), and the order the cues are painted in is their places' and then
+// their indexes', so cues that did not differ keep their order. A pixel
+// outside every differing cue's two extents is therefore painted by the
+// same cues, alike, in the same order. THE PREMISE IS THE CALLER'S: both
+// passes laid out on one surface band, one basis, one scale and one palette
+// (the rebuild compares only where its fingerprint's other fields stand,
+// maybe_rebuild_flag_cache, waveform_cache.cpp) — the lane, the columns and
+// every length here are then the same for both layouts.
+void cue_pass_keep_previous();
+void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
+                            std::vector<GuiRect>& out);
+
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical
 // line's payload WHOLE — the tempo's derived base and its every deviation
 // term, `*scale`, `:label`, or the pass / ref forms — and never a bracket.

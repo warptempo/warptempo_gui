@@ -256,11 +256,31 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
 // Symmetric across warp and phase reset: both columns write the same
 // statement into the same vector. The plate's GEOMETRY stays valid
 // throughout the drag — viewport / trim / dimensions / view-domain / the
-// display warp_frame_map hash don't change — so the invalidation normally
-// triggers a cheap blit of cached pixels with stems, flags, and playhead
-// repainted on top. A narrow per-marker rect would be wrong in target view, where
-// the dragged marker's proposed position lands at the cursor's pixel
-// regardless of which markers surround it.
+// display warp_frame_map hash don't change.
+//
+// A MOTION'S DAMAGE IS WHAT IT MOVED (architect 2026-11-16, the beats: "I
+// think we should build the most optimistic with regards to the scanner and
+// the marker drag and anything that would follow"), AND THIS BODY DECLARES
+// NONE OF ITS OWN: its two writers do. THE TOW (Viewport::tow_playhead_to)
+// damages the playhead's old and new columns on the plate basis — the head
+// in the ruler and the line on the canvas — and the clock cell; THE FLAG
+// CACHE'S REBUILD, run in this event (Viewport::refresh_flag_cache), damages
+// what it changed (maybe_rebuild_flag_cache's tail, waveform_cache.cpp): the
+// dragged cue's chip and label where they stood and where they stand — and
+// so every neighbor's label or chip it covers or uncovers, which lies inside
+// those two extents — its selection stem's two places (with the cursor's
+// line the stem hides or uncovers there), and in T+P the lead-in ring's four
+// sides before and after. Each on the basis its pixels are painted on: the
+// cue and the stem at the exact place the pass laid them out, the playhead
+// on the plate's column — never one derived from the other (the tow maps
+// through the item map and the flags through the plate's, and the two can
+// part in a deferred promote's window). NOTHING ELSE MOVES IN A MOTION: the
+// plate, the grid and the ruler stand (the basis is frozen), no strike
+// changes (the red sets read the committed store, re-evaluated at the
+// commit), the trim is not written, and the keys whose face reads the
+// cursor are repainted by the tick's comparator when they flip. The arming
+// press and the release keep their own whole-area damage (the click act's
+// select and land; commit_drag).
 void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (!app.drag.active) return;
     if (app.drag.moveable_times.empty() ||
@@ -351,8 +371,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // gate swallows every launch until the release — so the scanner is always
     // inactive here, and the writer below only ever writes the resting cursor.
     // THE TOW SCROLLS NOTHING (architect 2026-09-24): the writer is
-    // Viewport::translate_playhead_to — the cursor write, its full-area and
-    // clock damage and no keep-visible edge-align — never move_playhead_to,
+    // Viewport::tow_playhead_to — the cursor write, the playhead's own
+    // narrow damage with the clock cell's (2026-11-16) and no keep-visible
+    // edge-align — never move_playhead_to,
     // whose reseat scrolled the viewport to an offscreen cursor. The
     // motion-clamped proposal stays inside the visible strip EXCEPT on a grab
     // whose stem stood LEFT of the viewport (the clamp's widen-to-zero admits
@@ -382,7 +403,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     } else {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
-    viewport.translate_playhead_to(sample);
+    viewport.tow_playhead_to(sample);
     // THE FLAG CACHE REBUILT IN THE SAME EVENT (architect 2026-11-04, the
     // drag's stutter on his glass: the stem flickering dark / light over the
     // playhead's line): the cursor above rides the drag NOW, so the chip and
@@ -391,15 +412,15 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // tick's rebuild paints the cursor at the new frame beside a stem still
     // at the old column (paint_marker_stems' ONE-STATE RULE).
     // Fingerprint-guarded (the drag overlay's hash moved), no plate render;
-    // the tick's own rebuild then finds nothing to do.
+    // the tick's own rebuild then finds nothing to do. ITS TAIL IS THIS
+    // MOTION'S DAMAGE for the cue, the stem and the ring (the head of this
+    // body): no rect is declared here.
     viewport.refresh_flag_cache();
     // NO REGION WORK OWED HERE: the region is the trim, which a marker drag
     // never writes. The group live-track
     // that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
     // never moved; the doctrine is at the head of position_nudge.h).
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_top_strip();
 }
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty

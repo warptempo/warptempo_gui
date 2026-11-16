@@ -1657,11 +1657,21 @@ struct CueDraw {
 // next pass's clear, holding their runs' handles (CueRun) that long. NO
 // HIGH-WATER BOUND: a project's worst case is a few hundred cues, so the
 // kept capacity is a few hundred elements of each.
+// AND THE PASS BEFORE IT (architect 2026-11-16, the beats): `previous` is
+// the layout of the pass that ran before the last one, as that pass left it
+// — its cues in its painted order — swapped out of `cues` by the flag
+// cache's rebuild ahead of its pass (cue_pass_keep_previous), so the rebuild
+// can damage the cues that differ and no others (cue_pass_changed_rects,
+// below the producers; the rule is there). `order` and `kept` are that
+// comparison's two working vectors.
 struct CuePassScratch {
     std::vector<CueDraw>             cues;
     std::vector<double>              lo;
     std::vector<double>              hi;
     std::vector<text_raster::XSpan>  spans;
+    std::vector<CueDraw>             previous;
+    std::vector<std::pair<int, int>> order;
+    std::vector<unsigned char>       kept;
 };
 static CuePassScratch g_cue_pass_scratch;
 
@@ -2320,6 +2330,129 @@ void render_history_diff_flags(
     paint_cues(cr, lane, lanes.columns_x, waveform_width, cues, out_hit_rects,
                out_stems);
     cairo_restore(cr);
+}
+
+// THE CUE PASS'S OWN CHANGE (architect 2026-11-16, the beats; the contract
+// at the declarations, render.h).
+namespace {
+
+// Whether two laid-out cues PAINT ALIKE: every input paint_cues reads of a
+// cue but its place in the order — its exact place, the chip's two colors,
+// and each segment's presence, run, box, look and strike; `segments_are_cells`
+// beside them, which no pixel reads but the published hit rect does
+// (FlagHitRect's two boundaries), so that "no cue differs" also says "no
+// published rect differs". THE RUN IS COMPARED BY HANDLE: a run is one
+// memoized shaping (CueRun), and the kept previous layout holds its handles,
+// so one handle is one text on one face and a re-shaped equal text only
+// reads as a difference. NOT `face.stem`: it paints nothing here — the stem
+// is the stem painters', off the published entries, which the rebuild
+// compares on their own (maybe_rebuild_flag_cache's tail).
+bool cue_paints_alike(const CueDraw& a, const CueDraw& b) {
+    const auto same_color = [](const GuiColor& p, const GuiColor& q) {
+        return p.r == q.r && p.g == q.g && p.b == q.b;
+    };
+    if (a.x != b.x || a.segments_are_cells != b.segments_are_cells ||
+        !same_color(a.face.fill, b.face.fill) ||
+        !same_color(a.face.outline, b.face.outline))
+        return false;
+    for (std::size_t s = 0; s < a.seg.size(); ++s) {
+        const CueSegment& p = a.seg[s];
+        const CueSegment& q = b.seg[s];
+        if (p.present != q.present) return false;
+        if (!p.present) continue;
+        if (p.run != q.run || p.x0 != q.x0 || p.x1 != q.x1 ||
+            p.inert != q.inert || p.struck != q.struck)
+            return false;
+    }
+    return true;
+}
+
+// Widens the real interval [lo, hi] of window x to hold EVERYTHING ONE CUE
+// CAN PAINT OR HIDE (paint_cues): its chip, the real interval [X − H, X + H]
+// round its exact place X, taken at the chip's painted reach
+// (cue_chip_paint_reach_px, a whole px past the chip's hull); and its
+// label's occluding box, from the chip's hit edge left of X — inside the
+// reach — through its last segment's end, the interval its own text and
+// strike are cut to and across which it hides every earlier label.
+void widen_to_cue(const CueDraw& c, int x0, double& lo, double& hi) {
+    const double X     = static_cast<double>(x0) + c.x;
+    const double reach = static_cast<double>(cue_chip_paint_reach_px());
+    lo = std::min(lo, X - reach);
+    hi = std::max(hi, X + reach);
+    for (const CueSegment& s : c.seg)
+        if (s.present) hi = std::max(hi, s.x1);
+}
+
+}  // namespace
+
+void cue_pass_keep_previous() {
+    std::swap(g_cue_pass_scratch.cues, g_cue_pass_scratch.previous);
+    g_cue_pass_scratch.cues.clear();
+}
+
+void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
+                            std::vector<GuiRect>& out) {
+    const GuiRect lane = lanes.marker_lane;
+    const int     x0   = lanes.columns_x;
+    if (lane.h <= 0 || waveform_width <= 0) return;
+    const std::vector<CueDraw>& now = g_cue_pass_scratch.cues;
+    const std::vector<CueDraw>& was = g_cue_pass_scratch.previous;
+    // The previous cues by marker index (one cue a marker, the iterator's
+    // walk), each with its position in the previous painted order.
+    std::vector<std::pair<int, int>>& order = g_cue_pass_scratch.order;
+    std::vector<unsigned char>&       kept  = g_cue_pass_scratch.kept;
+    order.clear();
+    kept.assign(was.size(), 0);
+    for (std::size_t p = 0; p < was.size(); ++p)
+        order.emplace_back(was[p].index, static_cast<int>(p));
+    std::sort(order.begin(), order.end());
+
+    // One rect for a cue's previous and present extents together (either
+    // may be absent): the hull of the real interval, cut to the waveform's
+    // columns as the pass's clip cuts the ink, over the lane's rows — the
+    // rows paint_cues' one clip holds every cue pixel to.
+    const auto declare = [&](const CueDraw* before, const CueDraw* after) {
+        double lo = std::numeric_limits<double>::infinity();
+        double hi = -std::numeric_limits<double>::infinity();
+        if (before) widen_to_cue(*before, x0, lo, hi);
+        if (after)  widen_to_cue(*after, x0, lo, hi);
+        const int c0 = std::max(x0, static_cast<int>(std::floor(lo)));
+        const int c1 = std::min(x0 + waveform_width,
+                                static_cast<int>(std::ceil(hi)));
+        if (c1 > c0) out.push_back(GuiRect{c0, lane.y, c1 - c0, lane.h});
+    };
+
+    // The present cues in painted order, each against the previous cue of
+    // its marker index. THE ORDER: two cues that paint alike in both passes
+    // hold their places and their indexes, and the painted order is by place
+    // and then by index (paint_cues' stable sort over the store's order), so
+    // they hold their order too; a pair whose order flipped is declared, both
+    // cues, whatever the comparison said of each (the flip means one of them
+    // moved, and what it changes lies in that one's two extents).
+    int last_i = -1;
+    int last_p = -1;
+    for (std::size_t i = 0; i < now.size(); ++i) {
+        const auto it = std::lower_bound(order.begin(), order.end(),
+                                         std::make_pair(now[i].index, 0));
+        if (it == order.end() || it->first != now[i].index) {
+            declare(nullptr, &now[i]);   // a cue that entered
+            continue;
+        }
+        const int p = it->second;
+        kept[static_cast<std::size_t>(p)] = 1;
+        bool differs = !cue_paints_alike(was[static_cast<std::size_t>(p)],
+                                         now[i]);
+        if (last_i >= 0 && p < last_p) {
+            differs = true;
+            declare(&was[static_cast<std::size_t>(last_p)],
+                    &now[static_cast<std::size_t>(last_i)]);
+        }
+        if (differs) declare(&was[static_cast<std::size_t>(p)], &now[i]);
+        last_i = static_cast<int>(i);
+        last_p = p;
+    }
+    for (std::size_t p = 0; p < was.size(); ++p)
+        if (!kept[p]) declare(&was[p], nullptr);   // a cue that left
 }
 
 namespace {

@@ -1131,8 +1131,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // the publish's rebuild is then the only real one, and a
                 // restore that also moves a keyed viewport or the target map
                 // rebuilds twice), its rebuild damages
-                // the strip with the waveform, and the invalidates below
-                // cover the same rows.
+                // the stems it moved, and the invalidates below
+                // cover the strip and the waveform whole.
             }
         } else if (sel_size >= 2) {
             // GROUP: LAND the playhead on the restore's FOCUS (architect
