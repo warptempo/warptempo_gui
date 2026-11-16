@@ -2580,6 +2580,7 @@ void GuiInputHandler::run_overview_command() {
         OverviewRecall& r = active_view_state(app).overview_recall;
         r.zoom_level             = app.zoom_level;
         r.viewport_start_sample  = app.viewport_start_sample;
+        r.viewport_lattice_origin = app.viewport_lattice_origin;
         r.playhead_cursor_sample = app.playhead_cursor_sample;
         r.audio_view             = app.active_audio_view;
         viewport.apply_zoom_change(target.level);
@@ -2612,7 +2613,8 @@ void GuiInputHandler::run_overview_command() {
             viewport.move_playhead_to(playhead);
         }
         active_view_state(app).whole_song_visible = false;
-        viewport.apply_zoom_to_start(target.level, r.viewport_start_sample);
+        viewport.apply_zoom_to_start(target.level, r.viewport_start_sample,
+                                     r.viewport_lattice_origin);
         return;
     }
     case OverviewCommandTarget::Arm::NoOp:
@@ -2780,7 +2782,8 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // recenter on the playhead).
     if (const std::optional<SpanFramingLanding> landing =
             span_framing_landing(app, audio, lo, hi, margin)) {
-        viewport.apply_zoom_to_start(landing->level, landing->start);
+        viewport.apply_zoom_to_start(landing->level, landing->start,
+                                     std::nullopt);
     }
 }
 
@@ -2793,7 +2796,8 @@ bool span_framing_would_act(const AppState& app, const GuiAudio& audio) {
     const std::optional<SpanFramingLanding> landing =
         span_framing_landing(app, audio, span->lo, span->hi, span->margin);
     return landing &&
-           zoom_to_start_would_move(app, audio, landing->level, landing->start);
+           zoom_to_start_would_move(app, audio, landing->level, landing->start,
+                                    std::nullopt);
 }
 
 void GuiInputHandler::run_span_framing_command() {

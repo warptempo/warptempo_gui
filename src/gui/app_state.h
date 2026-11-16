@@ -3937,6 +3937,11 @@ inline TrimState full_trim_window(int64_t total_frames) {
 struct OverviewRecall {
     double  zoom_level             = kUnloadedZoomLevel;
     int64_t viewport_start_sample  = 0;
+    // THE STAMPED CAMERA'S LATTICE ORIGIN, beside its start (Sol's review,
+    // 2026-11-16): the recall rests the start on it, so the view returned to
+    // is the view left, a panned one included
+    // (clamp_viewport_start_parked). In memory alone, like the stamp.
+    int64_t viewport_lattice_origin = 0;
     int64_t playhead_cursor_sample = 0;
     // The audio view the three above are expressed in ('S' / 'T'), and the
     // only view they are restored in.
@@ -3968,6 +3973,23 @@ struct ViewState {
     int64_t viewport_start_sample      = 0;
     double  zoom_level                 = kUnloadedZoomLevel;
     int64_t playhead_cursor_sample     = 0;
+    // THE PARKED CAMERA'S LATTICE ORIGIN (Sol's review, 2026-11-16) — the
+    // live AppState::viewport_lattice_origin as the tab was left, mirrored
+    // beside the start by the tab switch's push and read by its pull, which
+    // rests the start on it (clamp_viewport_start_parked: a view you come
+    // back to is the view you left, a panned one at a fractional step
+    // included). IT SPEAKS ONLY FOR THE CAMERA IT WAS PARKED WITH: the push
+    // records the start and the level beside it (`lattice_parked_start`,
+    // `lattice_parked_zoom`), and the pull honors the origin only while the
+    // band still holds exactly those two — a band whose start or level
+    // another writer has written since (a load, the settings page's line,
+    // the S/T flip's shift of the other tab) comes back as the Exact landing
+    // every such write is. IN MEMORY ALONE: no settings key carries any of
+    // the three (kSettingsOrder is an explicit list), and a fresh band's
+    // parked start, -1, is no start.
+    int64_t viewport_lattice_origin    = 0;
+    int64_t lattice_parked_start       = -1;
+    double  lattice_parked_zoom        = 0.0;
 
     // BARE `0`'s RECALL STAMP (architect 2026-09-23; the struct and its
     // contract are at OverviewRecall above). Written by the first press, read
@@ -4501,9 +4523,13 @@ struct AppState {
     // origin 0 — frame 0 standing at column 0's
     // edge at the left wall, and the right wall stays the one owner's.
     // Degenerate geometry (a non-numeric zoom, the whole song visible and
-    // the start parked at 0) holds origin 0. NO PERSISTED FIELD AND NONE
-    // PARKED: a sidecar's, a settings line's, a parked tab's or FIT's stamped
-    // start rests as it is under Exact, its origin derived again from it.
+    // the start parked at 0) holds origin 0. NO PERSISTED FIELD: a sidecar's
+    // or a settings line's start rests as it is under Exact, its origin
+    // derived from it. PARKED IN MEMORY BESIDE THE START in the two cameras
+    // the session comes back to — a tab's band (ViewState) and FIT's recall
+    // stamp (OverviewRecall) — and restored with it
+    // (clamp_viewport_start_parked), so a view left by a pan returns on the
+    // very lattice it was left on.
     // The plate's
     // fingerprint (WaveformCache::fp_lattice_origin) and the displayed mirror
     // (displayed_lattice_origin) carry it, so ON SCREEN IS AS PAINTED holds
@@ -12749,6 +12775,14 @@ enum class ViewportLattice { Keep, Exact };
 // one body for both rules. Body in main.cpp.
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio,
                              ViewportLattice rule);
+// THE SAME CHOKEPOINT FOR A PARKED CAMERA COMING BACK (the tab switch's pull
+// and FIT's recall; Sol's review, 2026-11-16): the live start rests on the
+// lattice origin it was parked with wherever that origin is still the
+// start's own lattice at the settled level, and as an Exact landing wherever
+// it is not (resting_parked_viewport_start below owns the test). Body in
+// main.cpp.
+void    clamp_viewport_start_parked(AppState& a, const GuiAudio& audio,
+                                    int64_t parked_origin);
 // THE REST THE CHOKEPOINT ABOVE WOULD SETTLE `start` AT under `rule`, at the
 // live zoom — the start and its lattice's origin as a pure function, the
 // arithmetic's one copy (clamp_viewport_start's body calls it after its
@@ -12765,6 +12799,12 @@ struct ViewportRest {
 };
 ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
                                     int64_t start, ViewportLattice rule);
+// THE REST THE PARKED ENTRY ABOVE WOULD SETTLE `start` AT, a pure question at
+// the live zoom (the rule and its two readers at the definition, main.cpp).
+ViewportRest resting_parked_viewport_start(const AppState& a,
+                                           const GuiAudio& audio,
+                                           int64_t start,
+                                           int64_t parked_origin);
 // WOULD Viewport::apply_zoom_to_start MOVE THE CAMERA (2026-10-25): the
 // applier's idempotence test as a pure question, its one owner — the applier
 // reads it at its head and returns there when it answers false, so a request
@@ -12777,13 +12817,18 @@ ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
 // the request's rest is the start it asks for at the origin that start
 // derives, so a framing whose rest is the live camera writes nothing and the
 // Zoom to Fit key greys truthfully there, while one at the very start a pan
-// holds on another lattice still moves the picture. No
+// holds on another lattice still moves the picture. A RECALL hands the
+// stamp's own lattice origin (`parked_origin`), and its rest is the parked
+// one (resting_parked_viewport_start: the stamped start on the stamped
+// origin where that is still its lattice), so a recall whose stamp is the
+// live start AND origin writes nothing. No
 // piece (a zero frame count) answers false, the applier's own head return.
 // TWO READERS: the applier (viewport.cpp, its body beside it) and
 // span_framing_would_act (input_handler.cpp), the Zoom to Fit key's frame
 // term.
 bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
-                              double new_zoom_level, int64_t new_start);
+                              double new_zoom_level, int64_t new_start,
+                              std::optional<int64_t> parked_origin);
 // Returns the PAINTED pixel column (offset from waveform_area.x) for the
 // cursor: displayed_column_at (warp_frame_map_view.h) of the resting cursor's
 // frame — THE NEAREST LATTICE POINT ON THE BASIS'S OWN LATTICE INDEX

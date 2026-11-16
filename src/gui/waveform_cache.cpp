@@ -1621,8 +1621,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback OR that are coincident with another row of their own store,
-    // disabled or not — a shared frame on the warp column, a shared seed
-    // window on the phase-reset column (architect 2026-11-11; the caches'
+    // disabled or not — on the warp column a neighbor inside the VICINITY,
+    // less than one nudge step (a millisecond's frames) away, the exact
+    // frame included (architect 2026-11-15, warp_frames_in_vicinity); on the
+    // phase-reset column a shared seed
+    // window (architect 2026-11-11; the caches'
     // contract, warp_frame_map_view.h), painted
     // STRUCK — the plain cue with its label struck through (resolve_flag_face's
     // table, render.cpp; architect 2026-10-26 ~15:10, "have coincident

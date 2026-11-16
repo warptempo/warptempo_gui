@@ -216,11 +216,13 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // start S is the frame-0 lattice point with S >= total − w·q
 // (max_viewport_start_grid, main.cpp) and at the whole-song zoom the start
 // is 0 with w·q >= total (fit_zoom_level's ceil), so the frame at x = w,
-// S + w·q, is >= total — and every pen place past the strip's right edge is
-// held at x = w by the callers, so an end dragged as far as it goes rests
-// on total-1, what Reset Trim writes; inside the strip the pen reaches it
-// from the last frame's own place, x >= (total − 1 − S) / q − half a frame,
-// rightward.
+// S + w·q, is >= total — and a click's or a sweep's place past the strip's
+// right edge is held at x = w by its caller, so a sweep carried past the
+// edge rests its end on total-1, what Reset Trim writes; inside the strip
+// the pen reaches it from the last frame's own place,
+// x >= (total − 1 − S) / q − half a frame, rightward. (The endcap and bridge
+// DRAGS reach the same wall by their own road, the bound's proposal held to
+// the strip's extent and the walls: update_trim_drag.)
 //
 // SO A FULL DRAG LEAVES THE FULL WINDOW [0, total-1] EXACTLY, the integer
 // pair Reset Trim writes, and every full-window compare (trim_is_full_window —
@@ -250,12 +252,23 @@ int64_t trim_bound_frame_at_x(const AppState& app, const GuiAudio& audio,
 // live viewport a worker job in flight at the press has moved ahead of the
 // pixels; the freeze holds it from the aimed press to the release; cold, the
 // live viewport by the basis's own contract). THE PLACE IS A WAVEFORM PLACE
-// whatever surface the press came from, measured off waveform_area's x and
-// HELD INTO THE STRIP'S CLOSED EXTENT [0, w]: a pen past either end of the
-// strip answers that end's own frame, so a bound dragged past the right edge
-// reaches the frame at x = w and the wall behind it
-// (trim_bound_frame_at_x's head). False (out untouched) on unusable
-// geometry.
+// whatever surface the press came from, measured off waveform_area's x.
+//
+// THE PEN'S PLACE IS NOT HELD INTO THE STRIP (architect 2026-11-15, the
+// no-grid arc): both drags are ANCHOR-RELATIVE — the bound moves by the
+// pen's displacement from its grab — so what they need of a pen past either
+// end of the strip is its REAL displacement, and the conversion is linear,
+// meaningful at any x. WHAT IS HELD IS THE BOUND'S PROPOSAL, by the motion
+// arms (update_trim_drag): the single bound into the strip's own extent, the
+// frame at x = 0 through the frame at x = w, then the song's walls, then its
+// partner; the pair by its wall-held shared delta. Holding the pen instead
+// would stop a bound short of its wall by the grab's own offset: an end
+// grabbed a fraction of a px right of its bound could then never be pushed
+// the last frames to total-1 (Sol's review, 2026-11-16). The roads that are
+// NOT anchor-relative — the bound-set click and the TRIM sweep's ends, whose
+// place IS the frame — hold the place into [0, w] themselves
+// (trim_bound_click, apply_region_drag_motion). False (out untouched) on
+// unusable geometry.
 bool trim_displayed_frame_at_mouse_x(const AppState& app,
                                      const GuiAudio& audio, double mouse_x,
                                      double& out_frame) {
@@ -263,10 +276,9 @@ bool trim_displayed_frame_at_mouse_x(const AppState& app,
     const GuiRect area = waveform_area(app);
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0 || area.w <= 0) return false;
-    const double x = std::clamp(mouse_x - static_cast<double>(area.x), 0.0,
-                                static_cast<double>(area.w));
     out_frame = displayed_frame_at_x(
-        x, static_cast<double>(basis.vp_start_frame), basis.spp,
+        mouse_x - static_cast<double>(area.x),
+        static_cast<double>(basis.vp_start_frame), basis.spp,
         basis.lattice_origin);
     return true;
 }
@@ -580,10 +592,17 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(double mouse_x,
     // like the marker drag's anchor, so the tracked bound stays locked to the
     // pointer under any map, stale or fresh; the single-bound motion's
     // snap_authored_frame of the anchor-relative delta owns the one
-    // fractional-to-authored rounding.
+    // fractional-to-authored rounding. A PLACE LEFT OF THE MAP'S START
+    // CONTINUES AT THE IDENTITY SLOPE, the mirror of the map's own rule past
+    // its last segment (the map itself holds every earlier time on its first
+    // frame): the pen's displacement stays real on both sides of the piece,
+    // which is what an anchor-relative drag reads (the conversion's head
+    // above).
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
-    out_frame = map_target_to_source(g < 0.0 ? 0.0 : g, dmap);
+    out_frame = map_target_to_source(g, dmap);
+    if (!dmap.empty() && g < dmap.front().tgt_frame)
+        out_frame = dmap.front().src_frame + (g - dmap.front().tgt_frame);
     return true;
 }
 
@@ -781,10 +800,23 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // below rests it on total-1 (architect 2026-11-15, the no-grid arc: the
     // end's reach is the wall's own clamp, trim_bound_frame_at_x's head; the
     // last fully-visible pixel's left edge, the bound of the marker drag's
-    // viewport_marker_bounds, would stop the end a column short of it). The
-    // pen's place is already held into that extent, but a grab a few pixels
-    // off the endcap can trail the bound past the edge; this makes the bound
-    // itself exact. THE
+    // viewport_marker_bounds, would stop the end a column short of it).
+    // THIS, THE BOUND'S PROPOSAL, IS WHAT IS HELD — NOT THE PEN (the
+    // conversion's head, trim_displayed_frame_at_mouse_x): the proposal above
+    // is the bound's own frame plus the pen's real displacement from its
+    // grab, wherever the pen has gone, so FOR ANY GRAB OFFSET g (the grab's
+    // place less the bound's, in px) the proposal reaches the frame at x = w
+    // once the pen stands at w + g, and the frame at x = 0 once it stands at
+    // g. At the right wall and at the whole-song zoom the frame at x = w is
+    // at or past total (S + w·q >= total, trim_bound_frame_at_x's head), so
+    // the end rests on total-1 there; at the left wall the frame at x = 0 is
+    // frame 0. THE PEN'S TRAVEL PAST THE EDGE IS THE GRAB'S OWN OFFSET: an
+    // end zone ends one px right of its bound (trim_endcap_rect), so g < 1
+    // px and the pen reaches the wall under one px past the strip's right
+    // edge; a begin zone starts on its bound, so g >= 0 and the pen reaches
+    // frame 0 inside the strip; only a NARROW window's end zone, standing
+    // edge to edge right of the begin's, can carry a g of up to two zones'
+    // width. THE
     // GRAB CAN BEGIN ON A BOUND JUST OFF SCREEN (architect 2026-10-05): a
     // button sliding off an edge is grabbed by its visible columns
     // (hit_test_trim_endcap tests what the painter published), its bound up

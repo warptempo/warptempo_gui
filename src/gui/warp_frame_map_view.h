@@ -501,9 +501,11 @@ inline double lattice_index_ties_right(double x) {
 //
 // THE UNROUNDED SIBLING IS A DIFFERENT CONCEPT AND STAYS SEPARATE: the strip
 // drag's fractional anchor_col wants the SUB-PIXEL position, not a column.
-// THE PAINT'S EXACT PLACE is this owner's sibling below, displayed_x_at
-// (architect 2026-11-14, send J): the same quotient unrounded, for paint
-// alone.
+// THE EXACT PLACE is this owner's sibling below, displayed_x_at
+// (architect 2026-11-14, send J): the same quotient unrounded — paint's,
+// and since the no-grid arc (2026-11-15) the hit geometry's, the ADD SEL
+// sweep's membership's and the nudge's held place's too (its own head
+// lists them).
 //
 // NO SECOND SPELLING OF K − m STANDS ANYWHERE: the int64 column walk the
 // playhead's step kept beside this owner went with the column step

@@ -28,6 +28,12 @@
 void GuiActiveViews::refresh_active_tab_view_from_app() {
     ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     t.viewport_start_sample = app.viewport_start_sample;
+    // The camera's lattice origin parks beside its start, with the start and
+    // the level it speaks for (ViewState's own comment): the pull rests the
+    // start on it while the band still holds both.
+    t.viewport_lattice_origin = app.viewport_lattice_origin;
+    t.lattice_parked_start    = app.viewport_start_sample;
+    t.lattice_parked_zoom     = app.zoom_level;
     t.zoom_level            = app.zoom_level;
     t.playhead_cursor_sample       = app.playhead_cursor_sample;
     // Lockstep with switch_active_tab_view_to's pull block: adding a per-tab
@@ -173,7 +179,18 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // per-tab live-mirror field means updating that push, this pull, and
     // ViewState.
     app.trim                = target.trim;
-    clamp_viewport_start(app, audio, ViewportLattice::Exact);
+    // THE PARKED CAMERA COMES BACK ON ITS OWN LATTICE (Sol's review,
+    // 2026-11-16): the level was written above, so the parked origin is
+    // judged at the parked step (resting_parked_viewport_start, main.cpp);
+    // a band whose start or level another writer has written since it was
+    // parked comes back as the Exact landing that write is (ViewState's
+    // parked pair).
+    if (target.lattice_parked_start == target.viewport_start_sample &&
+        target.lattice_parked_zoom == target.zoom_level)
+        clamp_viewport_start_parked(app, audio,
+                                    target.viewport_lattice_origin);
+    else
+        clamp_viewport_start(app, audio, ViewportLattice::Exact);
     // COINCIDENCE AUTO-SELECT, the tab-entry chokepoint (the rule, the formula and
     // the authoritative call-site inventory live at auto_select_marker_at_playhead,
     // input_pointer.cpp / input_handler.h).

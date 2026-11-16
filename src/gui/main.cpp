@@ -1142,9 +1142,43 @@ ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
     return {snapped, origin};
 }
 
+// THE REST OF A PARKED CAMERA COMING BACK (architect 2026-11-15, the no-grid
+// arc; Sol's review, 2026-11-16: a view you come back to is the view you
+// left) — the tab switch's parked band and FIT's recall stamp each keep THE
+// LATTICE ORIGIN beside the start they park (ViewState, OverviewRecall,
+// app_state.h: in memory alone), and the restore rests the start ON THAT
+// ORIGIN, so a view left by a pan — whose kept origin at a fractional step
+// need not be the one Exact would derive from its start — returns the very
+// picture, start and origin. THE PARKED ORIGIN IS HONORED ONLY WHERE IT IS
+// STILL THE START'S OWN LATTICE at the live step: inside Keep's bound
+// |origin| <= (q + 1) / 2 and with the start one of its points; a band whose
+// start another writer moved since it was parked (the S/T flip's shift of the
+// other tab, a start typed or loaded) or whose step changed (a resize under
+// the whole-song state) fails that test and rests as any landing does, Exact
+// — as does a rest the walls or a degenerate view move. Pure, at the live
+// zoom, like resting_viewport_start above; its readers are the parked
+// chokepoint entry below and zoom_to_start_would_move (viewport.cpp), which
+// asks it ahead for a recall.
+ViewportRest resting_parked_viewport_start(const AppState& a,
+                                           const GuiAudio& audio,
+                                           int64_t start,
+                                           int64_t parked_origin) {
+    const ViewportRest exact =
+        resting_viewport_start(a, audio, start, ViewportLattice::Exact);
+    if (exact.start != start) return exact;   // a wall or a parked-at-0 view
+    if (samples_visible(a, audio) >= live_total_frames(a, audio)) return exact;
+    const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
+    if (q <= 0.0) return exact;
+    if (2.0 * std::fabs(static_cast<double>(parked_origin)) > q + 1.0)
+        return exact;
+    if (nearest_viewport_grid_point(start, q, parked_origin) != start)
+        return exact;
+    return {start, parked_origin};
+}
+
 namespace {
-void clamp_viewport_start_body(AppState& a, const GuiAudio& audio,
-                               ViewportLattice rule) {
+// THE CHOKEPOINT'S LEVEL HALF, run before either rest is asked.
+void settle_zoom_level(AppState& a, const GuiAudio& audio) {
     // Level ceiling (the chokepoint): every zoom write funnels through this
     // function immediately after assigning zoom_level — the same single-funnel
     // argument that placed the viewport grid snap below — so a per-file ceiling
@@ -1152,7 +1186,7 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio,
     // the Ctrl+Tab band restore, a fresh short project's second tab) can never
     // rest above the effective ceiling. The scattered tick/on_resize reclamps
     // that used to own this were the leaking surface; they now only trigger and
-    // delegate here. Clamped BEFORE samples_visible below so `visible` reflects
+    // delegate here. Clamped BEFORE the rest is asked so its `visible` reflects
     // the final level. clamp_zoom_level no-ops while loading. Parked (inactive-
     // tab) ViewState bands deliberately store zoom requests verbatim and are
     // governed here only once they go live -- at Ctrl+Tab restore or tab-in.
@@ -1177,21 +1211,14 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio,
         }
     }
     a.zoom_level = clamp_zoom_level(a, audio, a.zoom_level);
+}
 
-    // The lattice snap and the two walls under the rule, at the level just
-    // settled (resting_viewport_start above, the arithmetic's one copy) — the
-    // camera's start and its lattice origin written together, the invariant
-    // at AppState::viewport_lattice_origin.
-    const ViewportRest rest =
-        resting_viewport_start(a, audio, a.viewport_start_sample, rule);
+// THE CHOKEPOINT'S WRITE AND COMPARE, one body for every entry: the camera's
+// start and its lattice origin written together (the invariant at
+// AppState::viewport_lattice_origin), then the compare.
+void settle_camera(AppState& a, const ViewportRest& rest) {
     a.viewport_start_sample   = rest.start;
     a.viewport_lattice_origin = rest.lattice_origin;
-}
-}  // namespace
-
-void clamp_viewport_start(AppState& a, const GuiAudio& audio,
-                          ViewportLattice rule) {
-    clamp_viewport_start_body(a, audio, rule);
     // THE CAMERA CHOKEPOINT'S COMPARE (architect 2026-09-23): every viewport
     // write passes this function before anything reads the camera, so a
     // camera it settles somewhere other than where it settled last puts out
@@ -1200,7 +1227,8 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio,
     // rule, the writer inventory this claim rests on and the exempt writers
     // (which keep or re-arm their bit after this call) are at
     // AppState::camera_hold and AppState::follow_suspended. ONE COMPARE FOR
-    // BOTH LATTICE RULES (Keep, Exact). THE CAMERA IS FIVE FIELDS
+    // BOTH LATTICE RULES (Keep, Exact) AND THE PARKED RESTORE. THE CAMERA IS
+    // FIVE FIELDS
     // (AppState::camera_posture_identity): the tab and the audio view ride
     // beside the start and the zoom, so a switch that lands the same two
     // numbers still registers as the change it is, and the lattice origin
@@ -1221,6 +1249,26 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio,
         a.follow_suspended = true;
         a.camera_posture_identity = settled;
     }
+}
+}  // namespace
+
+void clamp_viewport_start(AppState& a, const GuiAudio& audio,
+                          ViewportLattice rule) {
+    settle_zoom_level(a, audio);
+    // The lattice snap and the two walls under the rule, at the level just
+    // settled (resting_viewport_start above, the arithmetic's one copy).
+    settle_camera(a, resting_viewport_start(a, audio, a.viewport_start_sample,
+                                            rule));
+}
+
+// THE CHOKEPOINT'S ENTRY FOR A PARKED CAMERA COMING BACK (the tab switch's
+// pull, FIT's recall): the same level half, the parked rest
+// (resting_parked_viewport_start above), the same write and compare.
+void clamp_viewport_start_parked(AppState& a, const GuiAudio& audio,
+                                 int64_t parked_origin) {
+    settle_zoom_level(a, audio);
+    settle_camera(a, resting_parked_viewport_start(
+                         a, audio, a.viewport_start_sample, parked_origin));
 }
 
 int playhead_pixel_x(const AppState& a, int64_t vp_start, double spp,

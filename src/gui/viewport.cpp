@@ -875,21 +875,29 @@ void Viewport::zoom_step(double levels) {
 // WOULD THE APPLIER BELOW MOVE THE CAMERA — the contract and the two readers
 // are at the declaration (app_state.h).
 bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
-                              double new_zoom_level, int64_t new_start) {
+                              double new_zoom_level, int64_t new_start,
+                              std::optional<int64_t> parked_origin) {
     if (audio.total_frames() <= 0) return false;
     const double level = clamp_zoom_level(a, audio, new_zoom_level);
     if (std::fabs(level - a.zoom_level) >= 1e-9) return true;
-    // The rest under THE APPLIER'S OWN RULE, Exact (architect 2026-11-15,
-    // the no-grid arc): the start as asked and the origin it derives, or the
-    // wall it passed at origin 0 — so a request whose rest is the live camera,
-    // start AND origin, moves nothing.
+    // The rest under THE APPLIER'S OWN RULE (architect 2026-11-15, the
+    // no-grid arc): a framing lands Exact — the start as asked and the origin
+    // it derives, or the wall it passed at origin 0 — and a recall rests its
+    // stamped start on its stamped origin (resting_parked_viewport_start),
+    // so a request whose rest is the live camera, start AND origin, moves
+    // nothing.
     const ViewportRest rest =
-        resting_viewport_start(a, audio, new_start, ViewportLattice::Exact);
+        parked_origin
+            ? resting_parked_viewport_start(a, audio, new_start,
+                                            *parked_origin)
+            : resting_viewport_start(a, audio, new_start,
+                                     ViewportLattice::Exact);
     return rest.start != a.viewport_start_sample ||
            rest.lattice_origin != a.viewport_lattice_origin;
 }
 
-void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
+void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start,
+                                   std::optional<int64_t> parked_origin) {
     // IDEMPOTENT NO-OP (zoom_to_start_would_move, the test's one owner since
     // 2026-10-25, when the Zoom to Fit key's face came to ask it ahead): the
     // resting (level, start) this call would produce equals the current
@@ -897,7 +905,8 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // repaint. A pan/zoom since the last framing makes them differ and this
     // proceeds to re-frame. (Until then the test ran after the writes, which
     // put identical values back.) The no-piece return is the predicate's.
-    if (!zoom_to_start_would_move(app, audio, new_zoom_level, new_start))
+    if (!zoom_to_start_would_move(app, audio, new_zoom_level, new_start,
+                                  parked_origin))
         return;
 
     // Pre-clamp the requested level to the per-file window. clamp_viewport_start
@@ -917,7 +926,13 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // playhead recenter), and funnel through the two clamp chokepoints.
     app.zoom_level = new_zoom_level;
     app.viewport_start_sample = new_start;
-    clamp_viewport_start(app, audio, ViewportLattice::Exact);
+    // A framing lands Exact; a recall comes back on its stamped lattice (the
+    // level is written above, so the parked origin is judged at its own
+    // step).
+    if (parked_origin)
+        clamp_viewport_start_parked(app, audio, *parked_origin);
+    else
+        clamp_viewport_start(app, audio, ViewportLattice::Exact);
 
     // Past the head's return either the level or the start really moved, so
     // this is a zoom, a pan, or both at once — the trim bar's span-framing

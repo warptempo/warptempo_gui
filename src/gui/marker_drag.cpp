@@ -218,16 +218,18 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
 // flag's CONTINUOUS position tracks the pointer 1:1 BY CONSTRUCTION, under
 // any map, stale or fresh, at every song location (no live-map inverse, no
 // slope-ratio slip when displayed != live or when the pointer's image and
-// the marker sit in different segments). THE RASTER IS 1:1 EXACTLY AT A
-// WHOLE q IN SOURCE VIEW, away from the walls: an integer original and an
-// integer pointer travel keep the proposal on whole frames, and the
-// placement's directed tie (ties right, displayed_column_at, architect
-// 2026-11-06) translates with it, one column per device px of travel. AT A
-// FRACTIONAL q AND IN TARGET VIEW the painter's earlier frame rounding
-// (frame_to_paint_sample's source and target roundings) can leave a
-// one-device-px quantization: q = 23.5, F = 4853, origin 0 places the flag at
-// column 207, and 37 px of travel proposes 5722.5, painted from frame 5722
-// at column 243, not 244 (Sol's tie review, 2026-11-06). This is the one
+// the marker sit in different segments). THE PAINTED PLACE IS 1:1 EXACTLY
+// AT A WHOLE q IN SOURCE VIEW, away from the walls: an integer original and
+// an integer pointer travel keep the proposal on whole frames, and the flag
+// is painted at its frame's exact place (displayed_x_at), one px per device
+// px of travel. AT A FRACTIONAL q AND IN TARGET VIEW what remains is THE
+// WHOLE-FRAME ROUNDING RESIDUE of the painter's frame rounding
+// (frame_to_paint_sample's source and target roundings), half a frame's
+// worth of px in source view: q = 23.5, F = 4853, origin 0 paints the flag
+// at x = 4853 / 23.5 = 206.5106, and 37 px of travel proposes 5722.5,
+// painted from frame 5722 at x = 243.4894 — 36.9787 px of painted travel,
+// 0.0213 px short of the pointer's 37 (Sol's review, 2026-11-16). This is
+// the one
 // deliberate revision of the "gesture mechanics stay on the live map" rule:
 // the drag's contract is
 // pointer-lockstep with the painted flag, so its mechanics run on the

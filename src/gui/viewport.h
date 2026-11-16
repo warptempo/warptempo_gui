@@ -466,7 +466,12 @@ struct Viewport {
     // framer frame_span_into_view (the trim-bar double-click and the group
     // undo/redo restore) and bare `0`'s restore of its stamped view
     // (run_overview_command), whose start is the stamp's, not a span's.
-    void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
+    // `parked_origin` names the rule the start rests by, at every call: empty
+    // for a framing, which lands Exact; the stamp's own lattice origin for
+    // the recall, which rests its start on it (clamp_viewport_start_parked,
+    // app_state.h: the view returned to is the view left).
+    void apply_zoom_to_start(double new_zoom_level, int64_t new_start,
+                             std::optional<int64_t> parked_origin);
     void center_viewport_on_playhead();
     // THE NUDGE HOLDS ITS SUBJECT'S COLUMN while the HOLD posture stands
     // (architect 2026-09-17; chosen by AppState::camera_hold, which an

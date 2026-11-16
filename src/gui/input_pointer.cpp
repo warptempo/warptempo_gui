@@ -9129,10 +9129,11 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     // The displayed-map hops that carry the delta into the source domain
     // live inside apply_drag_motion, which anchors the proposal in the
     // DISPLAYED target domain so the painted flag tracks the pointer 1:1 —
-    // exactly one column per device px at a whole q in source view away from
-    // the walls, within a one-device-px quantization at a fractional q and in
-    // target view (the earlier frame rounding; the qualification at
-    // apply_drag_motion's head, marker_drag.cpp).
+    // exactly one px per device px at a whole q in source view away from
+    // the walls, within the whole-frame rounding residue (a fraction of a
+    // px) at a fractional q and in target view (the painter's frame
+    // rounding; the qualification at apply_drag_motion's head,
+    // marker_drag.cpp).
     // The position is taken on the ITEM viewport basis, begin_drag's anchor's
     // own (architect 2026-09-24, strictly as painted — the rationale at that
     // anchor, marker_drag.cpp), so the delta is pure pointer travel on the

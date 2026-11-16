@@ -3821,13 +3821,18 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 namespace {
 
 // THE CARD'S LINE SPACING: the body face's OWN line height (the file's
-// ascender, descender and line gap at the live size, gui_font_line_px;
-// gui_font.h's head, 2026-10-23 — the recorded 13-W Windows cell retired
-// with the skin's type table), rounded to whole px, so a wrapped card's rows
-// sit exactly as the face intends them to. Read ONCE per paint and handed
-// down — it is the only thing that turns a line count into a card height.
-int notification_line_h_px(const GuiFont& font) {
-    return static_cast<int>(std::nearbyint(gui_font_line_px(font)));
+// ascender, descender and line gap at the live size; gui_font.h's head,
+// 2026-10-23 — the recorded 13-W Windows cell retired with the skin's type
+// table), UNROUNDED (gui_font_line_exact_px; architect 2026-11-15, the
+// no-grid arc: text stands where its metrics put it), so a wrapped card's
+// baselines step by the face's own pitch and each row sits exactly as the
+// face intends. Read ONCE per paint and handed down — it is the only thing
+// that turns a line count into a card height, and THE CARD'S OUTER BOX STAYS
+// WHOLE PIXELS: its height is the first line's whole rows plus the whole
+// hull (ceil) of the further lines' exact pitch, a box over the canvas's
+// hole being whole on its outer edges (render.h's hull, its last item).
+double notification_line_px(const GuiFont& font) {
+    return gui_font_line_exact_px(font);
 }
 
 // THE WRAP, and the ONE place a card's text is broken into lines (architect
@@ -3983,7 +3988,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const GuiFont font = gui_font(GuiFace::Body);
 
     const int line1_h  = notification_card_h_px();
-    const int line_h   = notification_line_h_px(font);
+    const double line_px = notification_line_px(font);
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = notification_gap_px();
@@ -4084,11 +4089,15 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                 : static_cast<double>(w) - chrome_w;
         std::vector<text_shape::ShapedRun> lines =
             notification_text_lines(font, n.text, whole, text_room);
-        // THE CARD GROWS DOWNWARD BY WHOLE LINES; its first line is a
-        // one-line card and the first baseline sits in it.
+        // THE CARD GROWS DOWNWARD BY ITS LINES' EXACT PITCH, its box the
+        // whole hull of it; its first line is a one-line card and the first
+        // baseline sits in it.
         const GuiRect card{
             card_x, y, w,
-            line1_h + (static_cast<int>(lines.size()) - 1) * line_h};
+            line1_h + static_cast<int>(std::ceil(
+                          static_cast<double>(
+                              lines.empty() ? 0 : lines.size() - 1) *
+                          line_px))};
         laid.push_back(LaidCard{&n, card, text_x, text_room, std::move(lines)});
         y += card.h + gap;
     }
@@ -4151,8 +4160,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             for (size_t li = 0; li < lines.size(); ++li) {
                 text_shape::show_shaped_run_within(
                     cr, lines[li], text_x,
-                    base + static_cast<double>(li) *
-                               static_cast<double>(line_h),
+                    base + static_cast<double>(li) * line_px,
                     &room_span, 1);
             }
         }
@@ -8305,7 +8313,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // single note no longer), Folder on a folder or
             // project row — on the ink-box road (icons.h): its ink box's
             // larger side kListGlyphInkW = 26 px, half the 52-px row,
-            // its rows centered on the row (the floor of the spare), its
+            // its rows centered EXACTLY on the row's real rows (the exact
+            // half of the spare, on the row as the real scroll offset
+            // places it; the no-grid arc, 2026-11-15), its
             // first ink column kListGlyphXW = 18 px past the pane's left
             // edge (the text seat), in the row text's tone — `text` at
             // rest, `selection_text` 111111 on the lit row (the selection
