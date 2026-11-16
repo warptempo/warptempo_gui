@@ -369,7 +369,8 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
 // (confirmed by the architect 2026-11-05 night, "no press face on the
 // cases"; a press face would read as a button's blink under a finger that
 // is setting a number) — UNDER A FILL FROM THE FACE'S LEFT EDGE,
-// nearbyint(t · face width) device px wide, the face's full height, NO
+// EXACTLY t · face width device px wide (architect 2026-11-15, the no-grid
+// arc; render.h's hull holds the rule), the face's full height, NO
 // BORDER (his "agree on no border"), no inset: LIVE'S VOLUME COLOR,
 // `level_fill`, the theme's RangeEditField over the key face, Default's
 // 007383 (architect 2026-11-11: "give noise the volume color from the ask
@@ -377,9 +378,11 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
 // case color"; theme_roles.h's COMPOSITED block), where t
 // is the exact
 // level's travel fraction (level_travel_fraction, the square-law taper,
-// app_state.h: 0 dB the face full, -9 dB 0.596 of it, -60 dB two columns,
-// -inf none, the bare key face) — whole device-px cells, no antialiasing
-// (paint_cell_rect).
+// app_state.h: 0 dB the face full, -9 dB 0.596 of it, -60 dB 2.2 px,
+// -inf none, the bare key face) — its right edge a real x, the column it
+// crosses at the fill's coverage of it over the face (the exact fill,
+// paint_cell_rect on a GuiRectF), so the fill moves with every change of
+// the level, however small.
 // THE NUMBER over it: the level TO ONE DECIMAL, "0.0", "-9.0", "-inf"
 // (format_level_db_face, THE LEVEL GRAMMAR, device_config.h: his "single
 // decimal is what ableton does", 2026-11-05 night; the file keeps the exact
@@ -392,9 +395,9 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
 // 2026-11-10: an enabled case standing at -inf prints its "-inf" dim, over
 // no fill — off reads off, the tap that toggles it there, IconNoiseLevel's
 // entry); centered on the face by its cap band (redesign_baseline, the
-// chrome labels' rule) and horizontally by its ink (ink_left_px /
-// ink_right_px, the floor of the spare to the left); the run shaped through
-// the memo (memoized_run: a few dozen spellings). DISABLED (`enabled` false
+// chrome labels' rule) and horizontally by its ink, EXACTLY (ink_left_px /
+// ink_right_px, half the spare on each side, no half rounded); the run
+// shaped through the memo (memoized_run: a few dozen spellings). DISABLED (`enabled` false
 // — no folder or a failed load, and the roster's blanket greys): the fill in `key_dim_ink`, THE NUMBER IN `text_dim`
 // (Live's TextDisabled, Default 757575, the inert rows' tone; architect
 // 2026-11-05 night, his pick m3 of tmp/s49 over the number in the ground,
@@ -411,15 +414,13 @@ void paint_level_case(cairo_t* cr, const GuiRect& face, bool enabled,
     const GuiPalette& p = palette();
     const GuiColor fill_tone = enabled ? p.level_fill : p.key_dim_ink;
     const double t = level_travel_fraction(level_db);
-    const int fill_w = static_cast<int>(std::nearbyint(t * face.w));
-    if (fill_w > 0) {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        paint_cell_rect(cr, GuiRect{face.x, face.y, std::min(fill_w, face.w),
-                                    face.h},
-                        fill_tone);
-        cairo_restore(cr);
-    }
+    const double fill_w =
+        std::clamp(t, 0.0, 1.0) * static_cast<double>(face.w);
+    paint_cell_rect(cr,
+                    GuiRectF{static_cast<double>(face.x),
+                             static_cast<double>(face.y), fill_w,
+                             static_cast<double>(face.h)},
+                    fill_tone);
     const GuiFont font = gui_font(GuiFace::Body);
     const text_shape::SharedRun run =
         text_shape::memoized_run(font, format_level_db_face(level_db));
@@ -427,8 +428,7 @@ void paint_level_case(cairo_t* cr, const GuiRect& face, bool enabled,
     const double ink_r = text_shape::ink_right_px(*run);
     const double ink_w = ink_r - ink_l;
     const double x = static_cast<double>(face.x) +
-                     std::floor((static_cast<double>(face.w) - ink_w) * 0.5) -
-                     ink_l;
+                     (static_cast<double>(face.w) - ink_w) * 0.5 - ink_l;
     const double baseline = redesign_baseline(
         font, static_cast<double>(face.y), static_cast<double>(face.h));
     cairo_save(cr);
@@ -3468,7 +3468,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
 // -- The floating surfaces ---------------------------------------------------
 
-void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
+void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRectF& r,
                                          GuiColor frame, GuiColor ground) {
     // ONE BOX PAINTER FOR EVERY FLOATING SURFACE, TWO LOOKS — the tooltip and
     // every notification card, whose words their painters set (render.h's
@@ -3482,15 +3482,19 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     // (architect 2026-11-04 night, h1 of tmp/s38), so no border shows and the
     // ring stays layout. The tooltip and each card keep their own height
     // rule and pad (paint_shift_tooltip, notification_pad_px), the border
-    // inside their heights.
-    if (r.w <= 0 || r.h <= 0) return;
-    const int px = hairline_px();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // inside their heights. THE BOX STANDS ON ITS REAL EDGES (architect
+    // 2026-11-15, the no-grid arc; render.h's hull holds the rule): `r` an
+    // exact rect, the border one W inside it on all four sides, both fills
+    // at exact coverage (the exact fill, paint_cell_rect on a GuiRectF) —
+    // a box with whole edges painted as the whole road paints it; its
+    // caller damages the box's hull.
+    if (!(r.w > 0.0) || !(r.h > 0.0)) return;
+    const double px = static_cast<double>(hairline_px());
     paint_cell_rect(cr, r, frame);
-    paint_cell_rect(cr, GuiRect{r.x + px, r.y + px, r.w - 2 * px, r.h - 2 * px},
+    paint_cell_rect(cr,
+                    GuiRectF{r.x + px, r.y + px, r.w - 2.0 * px,
+                             r.h - 2.0 * px},
                     ground);
-    cairo_restore(cr);
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
@@ -6274,9 +6278,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     for (const AppState::ModalDialogButton& pb : dlg.buttons)
         prev_enabled.push_back(PrevFace{pb.player_act, pb.score_act,
                                         pb.trim_act, pb.bpm_act, pb.enabled});
-    // THE OUTGOING THUMB COLUMN AND TRACK, AS PAINTED, for the same reason:
+    // THE OUTGOING THUMB CENTER AND TRACK, AS PAINTED, for the same reason:
     // a frame whose clip misses the track carries them (the scrub, below).
-    const int     prev_thumb_x = dlg.scrub_thumb_x;
+    const double  prev_thumb_x = dlg.scrub_thumb_x;
     const GuiRect prev_scrub   = dlg.scrub;
     dlg.valid   = false;
     dlg.owner   = AppState::ModalDialogOwner::None;
@@ -6285,7 +6289,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.field   = GuiRect{0, 0, 0, 0};
     dlg.scrub   = GuiRect{0, 0, 0, 0};
     dlg.clock   = GuiRect{0, 0, 0, 0};
-    dlg.scrub_thumb_x = -1;
+    dlg.scrub_thumb_x = -1.0;
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
@@ -6864,7 +6868,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // render player's play-scrub and the score viewer's page scrub
     // (2026-10-26, lifted out of the player's branch): the channel at
     // `scrub_x0` and `scrub_w` columns on the controls row's case band, the
-    // thumb at the column `thumb_x_of()` answers once the item is published.
+    // thumb's center at the real x `thumb_x_of()` answers once the item is
+    // published (architect 2026-11-15, the no-grid arc: the thumb at its
+    // position's exact place, render.h's scrub block).
     // `thumb_pressed`: the owner's drag holds the thumb (its ScrubDrag armed
     // on_thumb), the thumb's press face from the grab to the lift
     // (paint_scrub_thumb's rule, render.h; the press arc, 2026-11-05).
@@ -6873,59 +6879,60 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                       const auto& thumb_x_of) {
             // THE CHANNEL, the layout's span, and THE ITEM round it: the
             // channel widened by the thumb's left half before its first
-            // column and its right half after its last (the thumb's box from
-            // center − w / 2, render_player_scrub_handle_hit's and the
-            // painter's own left edge), so item.w = channel − 1 + thumb.
+            // column and its right half after its last, so item.w =
+            // channel − 1 + thumb — a whole rect, layout and the scrub's
+            // damage, inside which the thumb's box stands at every place
+            // of its travel (the mapping's ends,
+            // render_player_scrub_travel_x0 / _usable_span, app_state.h).
             const int thumb_w = scrub_thumb_w_px();
             const GuiRect channel{scrub_x0, btn_y, scrub_w, btn_h};
             const GuiRect track{scrub_x0 - thumb_w / 2, btn_y,
                                 scrub_w - 1 + thumb_w, btn_h};
             dlg.scrub = track;
-            // THE THUMB'S ROWS, CENTERED IN THE TRACK'S BAND (the case's
-            // rows), and THE CHANNEL on their center row (render.h's
-            // scrub_channel_above_px).
-            const int channel_h = scrub_channel_h_px();
-            const int above     = scrub_channel_above_px();
-            const int thumb_h   = scrub_thumb_h_px();
-            const int thumb_y   = track.y + (track.h - thumb_h) / 2;
-            // THE THUMB'S COLUMN — THE THUMB ALWAYS STANDS (2026-10-25,
+            // THE THUMB'S CENTER — THE THUMB ALWAYS STANDS (2026-10-25,
             // render.h's scrub block; it stood only while an item was
             // decoded until then) — is the owner's, asked once the item is
             // published (its mapping reads dlg.scrub): the player's at its
-            // branch, the score viewer's at its own.
-            const int hx = thumb_x_of();
+            // branch, the score viewer's at its own. ITS BOX is the one
+            // geometry's (scrub_thumb_box, render.h): its rows centered
+            // exactly in the track's band (the case's rows).
+            const double   hx    = thumb_x_of();
+            const GuiRectF thumb = scrub_thumb_box(track, hx);
             // THE CHANNEL (render.h's scrub block, M7): ONE W of
-            // `well_frame` centered on the face's rows, across the channel's
+            // `well_frame` centered exactly on the thumb's rows
+            // (scrub_channel_above_px, its half kept), across the channel's
             // width, nothing else.
-            paint_cell_rect(cr, GuiRect{channel.x, thumb_y + above,
-                                        channel.w, channel_h},
+            paint_cell_rect(cr,
+                            GuiRectF{static_cast<double>(channel.x),
+                                     thumb.y + scrub_channel_above_px(),
+                                     static_cast<double>(channel.w),
+                                     static_cast<double>(scrub_channel_h_px())},
                             palette().well_frame);
             {
                 // THE THUMB — the blank flat key block (render.h's scrub
-                // block: the key at rest, no glyph, 8 W by the key's height),
-                // centered on the column and on the channel —
+                // block: the key at rest, no glyph, 12 W by the key's
+                // height), centered on its exact place and on the channel —
                 // the track's whole band, its rows the case's — its box
-                // inside the item at
-                // every column of the travel. No hover face: its painted rect
-                // is the press's business (render_player_scrub_handle_hit)
-                // and the cursor its cue.
-                const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
-                                    thumb_h};
+                // inside the item at every place of the travel, each edge
+                // column at its coverage over the channel and the pane
+                // painted under it (the exact fill). No hover face: its
+                // painted rect is the press's business
+                // (render_player_scrub_handle_hit) and the cursor its cue.
                 paint_scrub_thumb(cr, thumb, thumb_pressed);
-                // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
+                // THE CENTER IS PUBLISHED AS PAINTED (the field's rule,
                 // AppState::ModalDialogGeometry::scrub_thumb_x), with no item
                 // too: a clip that covers the item — the channel and the
                 // thumb's whole travel, its overhangs included — drew the
-                // whole slider, so this column is
+                // whole slider, so this center is
                 // the one on screen; a clip that misses it left the last
-                // frame's thumb standing, so that frame's column is carried
+                // frame's thumb standing, so that frame's center is carried
                 // while the session and the track are the same.
                 const bool same_track =
                     prev_scrub.x == track.x && prev_scrub.y == track.y &&
                     prev_scrub.w == track.w && prev_scrub.h == track.h;
                 dlg.scrub_thumb_x =
                     (!clip_covers_drawable(cr, app, track) &&
-                     !face_state_reset && same_track && prev_thumb_x >= 0)
+                     !face_state_reset && same_track && prev_thumb_x >= 0.0)
                         ? prev_thumb_x
                         : hx;
             }
@@ -7048,22 +7055,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    press anywhere on the slider — the thumb's overhanging half
         //    included — is on it and the per-position damage covers the
         //    thumb's whole travel, its end columns included; the MAPPING
-        //    (render_player_scrub_x_of) runs the thumb's centre, the frame's
-        //    position, from the channel's first column to its last. --
+        //    (render_player_scrub_x_of) runs the thumb's center, the frame's
+        //    exact place, from the channel's first column to its last. --
         const AppState::RenderPlayer& rp = app.render_player;
         const int64_t pos = render_player_position(app, playback);
         if (scrub_w > 0) {
             paint_scrub_item(scrub_x0, scrub_w,
                              app.render_player.scrub.armed &&
                                  app.render_player.scrub.on_thumb,
-                             [&] {
-                // The drag's carried x while the thumb is being dragged (the
-                // sound paused under the hold and the seek committing at the
-                // release), the item position's own otherwise — the
-                // channel's first column, frame 0, while no item is loaded
-                // (render_player_scrub_x_of's frames <= 0 arm, the clock's
-                // zeros).
-                return rp.scrub.armed ? rp.scrub.marker_x
+                             [&]() -> double {
+                // The drag's carried column while the thumb is being dragged
+                // (the sound paused under the hold and the seek committing at
+                // the release), the item position's own exact place
+                // otherwise — the travel's start, frame 0, while no item is
+                // loaded (render_player_scrub_x_of's frames <= 0 arm, the
+                // clock's zeros).
+                return rp.scrub.armed ? static_cast<double>(rp.scrub.marker_x)
                                       : render_player_scrub_x_of(app, pos);
             });
         }
@@ -7151,11 +7158,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 paint_scrub_item(ml.scrub_x0, ml.scrub_w,
                                  app.score_viewer.scrub.armed &&
                                      app.score_viewer.scrub.on_thumb,
-                                 [&] {
+                                 [&]() -> double {
                     // The drag's carried column while the thumb is dragged,
-                    // the cursor's own otherwise.
+                    // the cursor's own exact place otherwise.
                     return app.score_viewer.scrub.armed
-                               ? app.score_viewer.scrub.marker_x
+                               ? static_cast<double>(
+                                     app.score_viewer.scrub.marker_x)
                                : score_scrub_x_of_frame(app, pos);
                 });
             }
@@ -7218,15 +7226,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // THE PAGE SCRUB, the player's item over the viewing range's pages:
             // the drag's carried column while the thumb is dragged (architect
             // 2026-10-27, "the thumb follows the pen continuously, the page
-            // under it changes in steps"), the shown page's column otherwise
-            // (score_scrub_x_of) — the step.
+            // under it changes in steps"), the shown page's exact place
+            // otherwise (score_scrub_x_of) — the step.
             if (sl.scrub_w > 0) {
                 paint_scrub_item(sl.scrub_x0, sl.scrub_w,
                                  app.score_viewer.scrub.armed &&
                                      app.score_viewer.scrub.on_thumb,
-                                 [&] {
+                                 [&]() -> double {
                     return app.score_viewer.scrub.armed
-                               ? app.score_viewer.scrub.marker_x
+                               ? static_cast<double>(
+                                     app.score_viewer.scrub.marker_x)
                                : score_scrub_x_of(app, app.score_viewer.page);
                 });
             }

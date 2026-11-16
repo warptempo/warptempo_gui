@@ -362,6 +362,13 @@ inline uint32_t key_ink(KeyLook look, bool enabled) {
 // and the same enabled bit.
 void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look, bool enabled,
                KeyLitClass cls);
+// THE SAME KEY ON REAL EDGES (architect 2026-11-15, the no-grid arc;
+// render.h's hull holds the rule): a key block whose place is a continuous
+// value — the scrub's thumb — the same face tone through the exact fill
+// (paint_ink_rect on a GuiRectF), every edge pixel at its coverage. A box
+// with whole edges writes the whole road's bytes.
+void paint_key(cairo_t* cr, const GuiRectF& r, KeyLook look, bool enabled,
+               KeyLitClass cls);
 
 // THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key
 // gap — the step from a key's face to the next one's in its group, every

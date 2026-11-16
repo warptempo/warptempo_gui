@@ -4339,8 +4339,10 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // Over the painter's published track (AppState::ModalDialogGeometry::scrub,
 // the whole SLIDER ITEM — zero under every owner but the player and read only
 // through a stash that names the live player session). The mapping between a
-// column and a frame is the one the painter's handle uses
-// (render_player_scrub_x_of / _frame_at, app_state.h), whose travel runs the
+// place and a frame is the one the painter's handle uses
+// (render_player_scrub_x_of / _frame_at, app_state.h: the resting thumb at
+// its frame's exact place, a held one on the whole column the pointer
+// carries it to), whose travel runs the
 // thumb's center from the channel's first column to its last (2026-10-25).
 // THE THUMB DRAGS, WINDOWS' TRACKBAR (architect
 // 2026-10-02 — the fix for "the thumb doesn't drag"; the drag itself stood
@@ -4397,13 +4399,20 @@ static void invalidate_scrub_clock(Viewport& viewport, const AppState& app) {
 // THE DRAG'S CARRIED COLUMN, clamped onto the HANDLE'S TRAVEL — the one
 // expression its two writers (the press's arm, the motion) share, so the
 // painted handle sits inside its own track at every point of a drag and the
-// release's seek reads the same span the mapping does.
+// release's seek reads the same span the mapping does. The carried center
+// is a WHOLE COLUMN (the pointer hands whole pixels) on a travel whose ends
+// are real (render_player_scrub_travel_x0, half a thumb into the item), so
+// the clamp is onto the whole columns inside the travel; a travel with no
+// span answers the column a resting thumb is carried from
+// (scrub_thumb_carried_column, app_state.h).
 int GuiInputHandler::clamp_player_scrub_marker_x(int x) const {
     const GuiRect track = app.modal_dialog.scrub;
-    const int x0   = render_player_scrub_travel_x0(track);
-    const int span = render_player_scrub_usable_span(track);
-    if (span <= 0) return x0;
-    return x < x0 ? x0 : (x > x0 + span ? x0 + span : x);
+    const double x0 = render_player_scrub_travel_x0(track);
+    const int span  = render_player_scrub_usable_span(track);
+    if (span <= 0) return scrub_thumb_carried_column(x0);
+    const int lo = static_cast<int>(std::ceil(x0));
+    const int hi = static_cast<int>(std::floor(x0 + static_cast<double>(span)));
+    return x < lo ? lo : (x > hi ? hi : x);
 }
 
 bool GuiInputHandler::claim_player_scrub_press(int x, int y,
@@ -4435,23 +4444,26 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
         return true;
     // THE THUMB IS RESOLVED WHERE IT IS PAINTED (ON SCREEN IS AS PAINTED,
     // the displayed-not-live rule displayed_or_live_target_map states,
-    // app_state.h): the painter's published column, never the live position,
-    // which under a LIVE transport runs a tick ahead of the pixels. The live
-    // read was older than the jump, but since every off-thumb press makes the
-    // thumb JUMP (2026-10-02) a wrong verdict would move it. A stash with no
-    // thumb (-1) has none to take, so the press jumps.
-    const int marker_x = app.modal_dialog.scrub_thumb_x;
+    // app_state.h): the painter's published center, its exact place, never
+    // the live position, which under a LIVE transport runs a tick ahead of
+    // the pixels. The live read was older than the jump, but since every
+    // off-thumb press makes the thumb JUMP (2026-10-02) a wrong verdict would
+    // move it. A stash with no thumb (-1) has none to take, so the press
+    // jumps.
+    const double thumb_x = app.modal_dialog.scrub_thumb_x;
     // THE ARM, ON THE THUMB OR OFF IT (the block above): the grab offset is
-    // the press's distance from the thumb's centre on the grab band and zero
-    // elsewhere, so the thumb jumps to an off-thumb press and keeps its seat
-    // under an on-thumb one.
+    // the press's distance from the thumb's carried column on the grab band
+    // (scrub_thumb_carried_column, app_state.h: the whole column nearest the
+    // painted center, the one the drag carries it from) and zero elsewhere,
+    // so the thumb jumps to an off-thumb press and keeps its seat under an
+    // on-thumb one.
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     const bool on_thumb =
-        marker_x >= 0 && render_player_scrub_handle_hit(track, marker_x, x, y);
+        thumb_x >= 0.0 && render_player_scrub_handle_hit(track, thumb_x, x, y);
     drag          = AppState::RenderPlayer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
-    drag.grab_dx  = on_thumb ? x - marker_x : 0;
+    drag.grab_dx  = on_thumb ? x - scrub_thumb_carried_column(thumb_x) : 0;
     // THE CARRIED x IS A THUMB CENTRE, so it is clamped onto the thumb's OWN
     // TRAVEL and not onto the item — the painter draws the thumb at it, and a
     // centre past either end of that travel would hang the thumb off its
@@ -4602,12 +4614,14 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     // Consumed from here: a ctrl press does nothing on the track.
     if (mods.ctrl) return true;
     if (!app.score) return true;
-    // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED): on its grab band the
-    // press takes it where it stands, the grab offset kept; anywhere else on
-    // the item the thumb jumps to the press.
-    const int marker_x = app.modal_dialog.scrub_thumb_x;
+    // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED), its published exact
+    // center: on its grab band the press takes it where it stands, the grab
+    // offset kept against its carried column (scrub_thumb_carried_column,
+    // the render player's claim); anywhere else on the item the thumb jumps
+    // to the press.
+    const double thumb_x = app.modal_dialog.scrub_thumb_x;
     const bool on_thumb =
-        marker_x >= 0 && render_player_scrub_handle_hit(track, marker_x, x, y);
+        thumb_x >= 0.0 && render_player_scrub_handle_hit(track, thumb_x, x, y);
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     const bool media = score_viewer_has_soundtrack(app);
     // A range of one page has no other page to show (the scrub dead).
@@ -4615,7 +4629,7 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     drag          = AppState::ScoreViewer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
-    drag.grab_dx  = on_thumb ? x - marker_x : 0;
+    drag.grab_dx  = on_thumb ? x - scrub_thumb_carried_column(thumb_x) : 0;
     drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (media) {
         // THE SOUND PAUSES WHILE THE SCRUB IS HELD (the block head): a live

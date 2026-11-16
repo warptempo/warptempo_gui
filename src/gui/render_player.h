@@ -654,11 +654,12 @@ struct GuiRenderPlayer {
     // The item position the clock and the scrub read: the engine's cursor
     // while live, the resume point otherwise. 0 with no item.
     int64_t position() const;
-    // A frame's x on the published scrub track, and the inverse — the one
-    // mapping the painter's marker and the press router's seek share, over the
+    // A frame's exact x on the published scrub track (a real place: the
+    // thumb's center, render_player_scrub_x_of), and the inverse — the one
+    // mapping the painter's thumb and the press router's seek share, over the
     // stashed track rect.
-    int     scrub_x_of(int64_t frame) const;
-    int64_t scrub_frame_at(int x) const;
+    double  scrub_x_of(int64_t frame) const;
+    int64_t scrub_frame_at(double x) const;
 
     // THE TICK (main.cpp's on_tick, forked at its head onto this while the
     // mode stands): a live transport with NO DEVICE TO PLAY ON pauses (the

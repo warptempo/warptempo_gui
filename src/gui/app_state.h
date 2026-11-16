@@ -2331,7 +2331,7 @@ enum class RedesignButton {
     // FILL FROM ITS LEFT EDGE IN LIVE'S VOLUME COLOR, `level_fill`, the
     // theme's RangeEditField (architect 2026-11-11: "at 0 it wears the full
     // vol color, and at -inf it wears the button case color";
-    // paint_level_case) — nearbyint(t · face width)
+    // paint_level_case) — exactly t · face width
     // device px wide, the face's full height, no border, no inset, where t is
     // the level's TRAVEL FRACTION (level_travel_fraction below, the
     // square-law taper); THE NUMBER over it, the level to one decimal
@@ -3120,7 +3120,7 @@ inline constexpr bool redesign_button_is_level_case(RedesignButton b) {
 // THE SLIDERS' TAPER — THE SQUARE LAW (architect 2026-11-05, "accept square
 // law"): the fill's TRAVEL FRACTION t in [0, 1] and the level in dB are
 // dB = 40 · log10(t), t = 10^(dB / 40) — 0 dB at t = 1 (the fill full),
-// -9 dB at t = 0.596, -60 dB at t = 0.0316 (two columns of the 70-px face
+// -9 dB at t = 0.596, -60 dB at t = 0.0316 (2.2 px of the 70-px face
 // at the defaults),
 // and -inf (kLevelDbOff) at t = 0, an empty fill. THE FLOOR ("-60 then
 // -inf"): a travel whose dB falls below kLevelDbMin reads -inf, so the
@@ -6326,16 +6326,17 @@ struct AppState {
         // player session.
         GuiRect                        scrub{0, 0, 0, 0};
         GuiRect                        clock{0, 0, 0, 0};
-        // THE SCRUB THUMB'S CENTRE COLUMN AS PAINTED (architect 2026-10-02,
-        // ON SCREEN IS AS PAINTED), -1 when no thumb stands — no channel
-        // (another owner, or a row too narrow to hold one): the thumb stands
-        // whenever the channel does since 2026-10-25, at frame 0 with no
-        // item. The column whose
+        // THE SCRUB THUMB'S CENTER AS PAINTED (architect 2026-10-02, ON
+        // SCREEN IS AS PAINTED), its EXACT place (a real x: the thumb is
+        // painted on real edges, render.h's scrub_thumb_box), -1 when no
+        // thumb stands — no channel (another owner, or a row too narrow to
+        // hold one): the thumb stands whenever the channel does since
+        // 2026-10-25, at frame 0 with no item. The center whose
         // pixels are on screen, which the press router resolves the thumb
         // against (claim_player_scrub_press) rather than the live position a
         // tick ahead. A frame whose clip does not cover the track carries
-        // the last painted column (paint_modal_dialog's player branch).
-        int                            scrub_thumb_x = -1;
+        // the last painted center (paint_modal_dialog's player branch).
+        double                         scrub_thumb_x = -1.0;
         // (THE SETTINGS EDITOR'S CHOICE COMBO — the combo, its dropped list,
         // the list's rows and its scroll bar, 2026-10-07 to 2026-10-14 — went
         // with the choice editor, architect 2026-10-14.)
@@ -9427,9 +9428,10 @@ struct AppState {
         int64_t                    painted_cursor = -1;
         struct ScrubDrag {
             bool armed    = false;
-            int  marker_x = 0;      // the thumb's carried centre
+            int  marker_x = 0;      // the thumb's carried center, a whole column
             bool on_thumb = false;  // armed on the grab band, not the track
-            int  grab_dx  = 0;      // press x − thumb centre; 0 off the thumb
+            int  grab_dx  = 0;      // press x − the thumb's carried column
+                                    // (scrub_thumb_carried_column); 0 off it
             bool moved    = false;  // the carried centre has moved
             bool was_live = false;  // the press paused a LIVE item
         };
@@ -9570,7 +9572,8 @@ struct AppState {
             bool armed      = false;
             bool on_thumb   = false;  // taken on the thumb
             bool moved      = false;  // a motion moved it
-            int  grab_dx    = 0;      // press x − thumb center; 0 off the thumb
+            int  grab_dx    = 0;      // press x − the thumb's carried column
+                                      // (scrub_thumb_carried_column); 0 off it
             int  marker_x   = 0;      // the carried column
             bool was_live   = false;  // the soundtrack's face: paused LIVE
             int  press_page = 0;      // the page the press found
@@ -10418,80 +10421,93 @@ inline int64_t render_player_position(const AppState& a,
 
 // THE SCRUB TRACK'S ONE MAPPING, over the painter's PUBLISHED item rect
 // (AppState::ModalDialogGeometry::scrub, the whole SLIDER ITEM): a frame's
-// column on the channel and the column's frame back. The painter's thumb and
-// the press router's seek share it, so the pixel a press lands on and the
-// pixel the thumb paints at answer the same frame. Banker's rounding onto
-// the cells, like every grid conversion.
+// place on the channel and a place's frame back. The painter's thumb and
+// the press router's seek share it, so the place a carried thumb stands at
+// and the place the thumb paints at answer the same frame.
+// THE THUMB'S CENTER STANDS AT ITS FRAME'S EXACT PLACE (architect
+// 2026-11-15, the no-grid arc; render.h's hull holds the rule): x0 + t ·
+// span, t the frame's fraction of the item, a real x — nothing rounded onto
+// a column, so the thumb moves by the fraction of a pixel its time moved it
+// (its box and its paint, render.h's scrub_thumb_box and paint_scrub_thumb).
+// The inverse rounds to a FRAME alone (a frame is whole).
 //
 // THE THUMB'S CENTER RUNS THE CHANNEL END TO END (architect 2026-10-25,
-// "centered on the trough's end"): frame 0's column is the channel's first
-// and the last frame's its last, NO INSET. The published item is the channel
-// widened by the thumb's overhang at each end (render.h's scrub block), so
-// over the ITEM the centre's travel starts half a thumb in
-// (scrub_thumb_w_px() / 2, the painter's own left-edge offset) and the
-// USABLE SPAN is the item less one thumb — the channel's width less one,
-// the first column to the last. An item too narrow to hold one seats the
-// centre at the channel's first column and answers frame 0, the same cold
-// answer a zero item gives. (The mapping inset the channel by half the 14-W
-// grab box at each end, 2026-10-02 to 2026-10-25, which left the thumb's
-// edge 9 px into the trough at frame 0 and 21 px of trough at each end
-// standing for no frame.)
-inline int render_player_scrub_travel_x0(const GuiRect& item) {
-    return item.x + scrub_thumb_w_px() / 2;
+// "centered on the trough's end"), NO INSET. The published item is the
+// channel widened by the thumb's overhang at each end (render.h's scrub
+// block), so over the ITEM the center's travel starts exactly half a thumb
+// in (scrub_thumb_w_px() / 2.0 — the thumb's box at frame 0 begins on the
+// item's first edge) and the USABLE SPAN is the item less one thumb (the
+// box at the last frame ends on the item's last edge), so the thumb stands
+// inside the item — its damage — at every frame. An item too narrow to hold
+// one seats the center at the travel's start and answers frame 0, the same
+// cold answer a zero item gives. (The mapping inset the channel by half the
+// 14-W grab box at each end, 2026-10-02 to 2026-10-25, which left the
+// thumb's edge 9 px into the trough at frame 0 and 21 px of trough at each
+// end standing for no frame.)
+inline double render_player_scrub_travel_x0(const GuiRect& item) {
+    return static_cast<double>(item.x) +
+           static_cast<double>(scrub_thumb_w_px()) / 2.0;
 }
 inline int render_player_scrub_usable_span(const GuiRect& item) {
     return item.w - scrub_thumb_w_px();
 }
-inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
+inline double render_player_scrub_x_of(const AppState& a, int64_t frame) {
     const GuiRect track = a.modal_dialog.scrub;
     const int64_t frames = a.render_player.frames;
-    const int x0   = render_player_scrub_travel_x0(track);
-    const int span = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(track);
+    const int span  = render_player_scrub_usable_span(track);
     if (span <= 0 || frames <= 0) return x0;
     const int64_t f = frame < 0 ? 0 : (frame > frames ? frames : frame);
     const double t = static_cast<double>(f) / static_cast<double>(frames);
-    return x0 + static_cast<int>(std::nearbyint(t * span));
+    return x0 + t * static_cast<double>(span);
+}
+// THE WHOLE COLUMN A DRAG CARRIES A THUMB FROM: the column nearest the
+// thumb's painted center `center_x` — a center names an EDGE between two
+// columns (the thumb's box starts half a thumb before it), so the nearest
+// one, not the containing one. THE ONE SITE that takes the thumb's exact
+// place to a whole column: the pointer hands whole pixels, so a drag's
+// carried center is a whole column (ScrubDrag::marker_x), and the press
+// reads its grab offset against this one (claim_player_scrub_press,
+// claim_score_scrub_press), the thumb stepping from its exact place onto
+// that column — half a pixel at most — while it is held.
+inline int scrub_thumb_carried_column(double center_x) {
+    return static_cast<int>(std::nearbyint(center_x));
 }
 // THE THUMB'S GRAB BAND — the painted thumb (below), and its
 // ONE reader is the press router, which asks it whether a press TAKES the
 // thumb where it stands (the band) or makes it JUMP to the press (the rest of
 // the item, architect 2026-10-02); the thumb (paint_scrub_thumb) wears no
 // hover face.
-// `handle_x` is the handle's painted centre — the position's own column, or
-// the drag's carried one while a drag stands.
+// `handle_x` is the handle's painted center — the position's own exact
+// place, or the drag's carried column while a drag stands.
 //
 // THE BAND IS THE PAINTED THUMB (architect 2026-10-23, on screen is as
 // painted; the thumb's box widened to the 14-W handle box, 2026-10-02 to
 // 2026-10-23, retired), its overhanging half at either end of the channel
-// included (the item covers it, 2026-10-25): the thumb's own rows
-// (scrub_thumb_h_px, the key face's height since 2026-11-03, centred in the
-// track's band exactly as the painter centres it — the track's band is the
-// controls row's case rows, the cell's height, so the thumb's rows are the
-// track's less the face's one-px inset above and below) by its
-// own columns (scrub_thumb_w_px, 8 W, from handle_x − w / 2, the painter's
-// own left edge), HALF-OPEN on both
-// axes like every other
-// pixel-cell test in the product (a pixel x covers [x, x+1), containing_pixel's
-// rule). A press outside it but on the item makes the thumb JUMP there
-// (claim_player_scrub_press); the track rect stays the press router's OUTER
-// gate and this test runs inside it.
-inline bool render_player_scrub_handle_hit(const GuiRect& track, int handle_x,
-                                           int x, int y) {
+// included (the item covers it, 2026-10-25): THE PAINTER'S OWN BOX
+// (scrub_thumb_box, render.h, the one geometry — the thumb's width about
+// `handle_x`, its rows centered in the track's band), asked for the PIXEL
+// the pointer names: a press is on the thumb when its pixel is one the
+// thumb's box touches (the box's hull, half-open on both axes like every
+// pixel-cell test in the product — a pixel x covers [x, x+1),
+// containing_pixel's rule). A press outside it but on the item makes the
+// thumb JUMP there (claim_player_scrub_press); the track rect stays the
+// press router's OUTER gate and this test runs inside it.
+inline bool render_player_scrub_handle_hit(const GuiRect& track,
+                                           double handle_x, int x, int y) {
     if (track.w <= 0 || track.h <= 0) return false;
-    const int box = scrub_thumb_w_px();
-    const int th  = scrub_thumb_h_px();
-    const int bx  = handle_x - box / 2;
-    const int by  = track.y + (track.h - th) / 2;
-    return x >= bx && x < bx + box && y >= by && y < by + th;
+    return rect_contains(hull(scrub_thumb_box(track, handle_x)), x, y);
 }
-inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
+// The frame of a thumb whose center stands at `x` (a carried column, or any
+// real place), clamped onto the travel.
+inline int64_t render_player_scrub_frame_at(const AppState& a, double x) {
     const GuiRect track = a.modal_dialog.scrub;
     const int64_t frames = a.render_player.frames;
-    const int x0   = render_player_scrub_travel_x0(track);
-    const int span = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(track);
+    const int span  = render_player_scrub_usable_span(track);
     if (span <= 0 || frames <= 0) return 0;
-    const int cx = x < x0 ? x0 : (x > x0 + span ? x0 + span : x);
-    const double t = static_cast<double>(cx - x0) / static_cast<double>(span);
+    const double cx = std::clamp(x, x0, x0 + static_cast<double>(span));
+    const double t = (cx - x0) / static_cast<double>(span);
     const int64_t f =
         static_cast<int64_t>(std::nearbyint(t * static_cast<double>(frames)));
     return f < 0 ? 0 : (f > frames ? frames : f);
@@ -10513,7 +10529,7 @@ inline std::optional<int64_t> render_player_scrub_drop_frame(
         const AppState& a, const AppState::RenderPlayer::ScrubDrag& drag,
         int thumb_x) {
     if (drag.on_thumb && !drag.moved) return std::nullopt;
-    return render_player_scrub_frame_at(a, thumb_x);
+    return render_player_scrub_frame_at(a, static_cast<double>(thumb_x));
 }
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared

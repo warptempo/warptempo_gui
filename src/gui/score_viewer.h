@@ -555,57 +555,61 @@ inline const char* score_viewer_button_shift_hint(
 // THE PAGE SCRUB'S MAPPING (the page road) over the painter's PUBLISHED item
 // rect (AppState::ModalDialogGeometry::scrub), the player's travel exactly
 // (render_player_scrub_travel_x0 / _usable_span): the range's first page at
-// the channel's first column, its last at the last, page i at
-// (i − first) / (count − 1) of the travel — the resting thumb's column; the
-// inverse rounds to the nearest page, the page under a dragged thumb's
-// carried column (architect 2026-10-27, the steps the page changes in). One
-// page: the thumb at the left, the scrub dead (the press claim).
-inline int score_scrub_x_of(const AppState& a, int page) {
+// the travel's start, its last at its end, page i at EXACTLY
+// (i − first) / (count − 1) of the travel — the resting thumb's center, a
+// real x, nothing rounded onto a column (architect 2026-11-15, the no-grid
+// arc; the player's mapping, app_state.h); the
+// inverse rounds to the nearest page (a page is whole), the page under a
+// dragged thumb's carried column (architect 2026-10-27, the steps the page
+// changes in). One page: the thumb at the left, the scrub dead (the press
+// claim).
+inline double score_scrub_x_of(const AppState& a, int page) {
     const GuiRect track = a.modal_dialog.scrub;
-    const int x0   = render_player_scrub_travel_x0(track);
-    const int span = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(track);
+    const int span  = render_player_scrub_usable_span(track);
     const ScoreViewerRange r = score_viewer_range(a);
     if (span <= 0 || r.count() <= 1) return x0;
     const double t = static_cast<double>(page - r.first) /
                      static_cast<double>(r.count() - 1);
-    return x0 + static_cast<int>(std::nearbyint(t * span));
+    return x0 + t * static_cast<double>(span);
 }
-inline int score_scrub_page_at(const AppState& a, int x) {
+inline int score_scrub_page_at(const AppState& a, double x) {
     const GuiRect track = a.modal_dialog.scrub;
-    const int x0   = render_player_scrub_travel_x0(track);
-    const int span = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(track);
+    const int span  = render_player_scrub_usable_span(track);
     const ScoreViewerRange r = score_viewer_range(a);
     if (span <= 0 || r.count() <= 1) return r.first;
-    const int cx = std::clamp(x, x0, x0 + span);
-    const double t = static_cast<double>(cx - x0) / static_cast<double>(span);
+    const double cx = std::clamp(x, x0, x0 + static_cast<double>(span));
+    const double t = (cx - x0) / static_cast<double>(span);
     return r.first + static_cast<int>(
                          std::nearbyint(t * static_cast<double>(r.count() - 1)));
 }
 
 // THE SOUNDTRACK SCRUB'S MAPPING (the media player's face), the render
 // player's (render_player_scrub_x_of / _frame_at) over the range's frames:
-// the range's first frame at the channel's first column, its end at the
-// last, banker's rounding onto the cells; a zero item or an empty range the
-// first column and the first frame.
-inline int score_scrub_x_of_frame(const AppState& a, int64_t frame) {
+// the range's first frame at the travel's start, its end at the travel's
+// end, the thumb's center at its frame's exact place (a real x; the inverse
+// rounds to a frame alone); a zero item or an empty range the travel's
+// start and the first frame.
+inline double score_scrub_x_of_frame(const AppState& a, int64_t frame) {
     const GuiRect track = a.modal_dialog.scrub;
-    const int x0   = render_player_scrub_travel_x0(track);
-    const int span = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(track);
+    const int span  = render_player_scrub_usable_span(track);
     const ScoreFrameRange fr = score_viewer_frame_range(a);
     if (span <= 0 || fr.length() <= 0) return x0;
     const int64_t f = std::clamp(frame, fr.begin, fr.end);
     const double t = static_cast<double>(f - fr.begin) /
                      static_cast<double>(fr.length());
-    return x0 + static_cast<int>(std::nearbyint(t * span));
+    return x0 + t * static_cast<double>(span);
 }
-inline int64_t score_scrub_frame_at(const AppState& a, int x) {
+inline int64_t score_scrub_frame_at(const AppState& a, double x) {
     const GuiRect track = a.modal_dialog.scrub;
-    const int x0   = render_player_scrub_travel_x0(track);
-    const int span = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(track);
+    const int span  = render_player_scrub_usable_span(track);
     const ScoreFrameRange fr = score_viewer_frame_range(a);
     if (span <= 0 || fr.length() <= 0) return fr.begin;
-    const int cx = std::clamp(x, x0, x0 + span);
-    const double t = static_cast<double>(cx - x0) / static_cast<double>(span);
+    const double cx = std::clamp(x, x0, x0 + static_cast<double>(span));
+    const double t = (cx - x0) / static_cast<double>(span);
     return fr.begin + static_cast<int64_t>(std::nearbyint(
                           t * static_cast<double>(fr.length())));
 }
@@ -624,7 +628,7 @@ inline std::optional<int64_t> score_scrub_drop_frame(
         const AppState& a, const AppState::ScoreViewer::ScrubDrag& drag,
         int thumb_x) {
     if (drag.on_thumb && !drag.moved) return std::nullopt;
-    return score_scrub_frame_at(a, thumb_x);
+    return score_scrub_frame_at(a, static_cast<double>(thumb_x));
 }
 
 // THE PAGE UNDER A DRAGGED THUMB'S CARRIED COLUMN, the one answer of both
@@ -635,9 +639,10 @@ inline std::optional<int64_t> score_scrub_drop_frame(
 // (score_page_for_position over score_scrub_frame_at), the very frame the
 // lift seeks, so the seek's page is the page the drag showed.
 inline int score_scrub_page_under(const AppState& a, int x) {
+    const double cx = static_cast<double>(x);
     if (score_viewer_has_soundtrack(a))
-        return score_page_for_position(a, score_scrub_frame_at(a, x));
-    return score_scrub_page_at(a, x);
+        return score_page_for_position(a, score_scrub_frame_at(a, cx));
+    return score_scrub_page_at(a, cx);
 }
 
 // THE PAGE STANDS: the viewer stands with a score loaded and is THE LIVE

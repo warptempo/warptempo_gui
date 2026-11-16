@@ -1115,8 +1115,10 @@ private:
     // a one-W `frame` border on all four sides — the tooltip the pane in
     // `well_frame` (architect 2026-11-02, M11 with M14 "d"), the cards Live's
     // orange with the frame in the fill (2026-11-04 night; render.h's
-    // palette block, THE CARD FACE).
-    void paint_popup_chrome(cairo_t* cr, const GuiRect& r, GuiColor frame,
+    // palette block, THE CARD FACE) — ON AN EXACT RECT, the box and its
+    // border at exact coverage on the box's real edges (architect
+    // 2026-11-15, the no-grid arc; a whole box is handed as it is).
+    void paint_popup_chrome(cairo_t* cr, const GuiRectF& r, GuiColor frame,
                             GuiColor ground);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box — above every lane and the

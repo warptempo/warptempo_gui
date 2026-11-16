@@ -651,11 +651,11 @@ int64_t GuiRenderPlayer::position() const {
     return render_player_position(app, playback);
 }
 
-int GuiRenderPlayer::scrub_x_of(int64_t frame) const {
+double GuiRenderPlayer::scrub_x_of(int64_t frame) const {
     return render_player_scrub_x_of(app, frame);
 }
 
-int64_t GuiRenderPlayer::scrub_frame_at(int x) const {
+int64_t GuiRenderPlayer::scrub_frame_at(double x) const {
     return render_player_scrub_frame_at(app, x);
 }
 

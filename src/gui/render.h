@@ -46,6 +46,75 @@ inline bool rect_contains(const GuiRect& r, int x, int y) {
     return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 }
 
+// A RECT ON REAL EDGES, in device px: the box of a thing whose place or size
+// is a continuous quantity — a level's fill, a scrub's thumb — painted at
+// exact coverage (the exact fills, paint_cell_rect / paint_ink_rect on a
+// GuiRectF, below). A GuiRect widens to it exactly (every int is a double),
+// so a whole box may be handed wherever an exact one is asked for.
+struct GuiRectF {
+    double x = 0.0;
+    double y = 0.0;
+    double w = 0.0;
+    double h = 0.0;
+    constexpr GuiRectF() = default;
+    constexpr GuiRectF(double x_, double y_, double w_, double h_)
+        : x(x_), y(y_), w(w_), h(h_) {}
+    constexpr GuiRectF(const GuiRect& r)
+        : x(r.x), y(r.y), w(r.w), h(r.h) {}
+    bool operator==(const GuiRectF&) const = default;
+};
+
+// THE HULL — THE ONE CONVERSION FROM AN EXACT RECT TO PIXELS: the smallest
+// whole rect that covers it, the floor of its low edges and the ceil of its
+// high ones (an empty rect's hull is empty). It is what a damage rect, a
+// cull or a scissor asks of a thing painted on real edges, and the damage of
+// a thing that moved is its old hull united with its new one.
+//
+// THE RULE, AND WHAT STAYS WHOLE UNDER IT — THIS LIST'S ONE SEAT (architect
+// 2026-11-15, the no-grid arc: "no grid whatsoever. That just one rule for
+// everything"; "Only things that are basically impossible to move, like the
+// damages and the culls, should stay integer."): WHATEVER IS PAINTED STANDS
+// WHERE ITS ARITHMETIC PUTS IT, AT EXACT COVERAGE — no nearbyint, floor,
+// ceil or integer division between a continuous quantity and the paint.
+// WHOLE, each for its own reason:
+//   PIXELS NAMED AS PIXELS — damage rects, culls, repair regions, scissors,
+//     the GL clip, and GuiRect / GuiGlRect as the type of those: they say
+//     which pixels are touched, and a pixel is whole. An exact thing's
+//     damage is its hull.
+//   THE LAYOUT'S BOXES — lanes, rows, the keys' faces, fields, panes, the
+//     waveform area (its 16-px floor) and the well's columns: every box
+//     another thing is laid out against. Their sizes are whole W through
+//     scaled_px (rounded at the element, its own rule, below) or the
+//     whole-px hull of a font metric (a row's pitch from the line height, the
+//     time field's height from the cap); the rule governs what is painted
+//     IN and BESIDE them. A box that is NOT layout — one whose size is a
+//     text's own width or whose place is a mark's — takes its exact size and
+//     place.
+//   AN AUTHORED LENGTH — scaled_px rounds each at the element, so on the
+//     tablet (gui_scale 200) every W is 2 device px and every sum of W is
+//     whole; at another scale each element rounds.
+//   THE AUDIO'S LATTICE — the plate's bars and columns,
+//     painter_quantized_spp, the sixteenth-frame grid, authored frames (whole
+//     by their grammar) and the viewport's start (a whole frame).
+//   THE SCORE PAGE — whole pixels at 100 % ("the score should have no
+//     upscaling or downscaling. It should be 100%. And if that's required,
+//     if that requires whole pixels, then so be it.").
+inline GuiRect hull(const GuiRectF& r) {
+    const int x0 = static_cast<int>(std::floor(r.x));
+    const int y0 = static_cast<int>(std::floor(r.y));
+    if (!(r.w > 0.0) || !(r.h > 0.0)) return GuiRect{x0, y0, 0, 0};
+    const int x1 = static_cast<int>(std::ceil(r.x + r.w));
+    const int y1 = static_cast<int>(std::ceil(r.y + r.h));
+    return GuiRect{x0, y0, x1 - x0, y1 - y0};
+}
+
+// Point-in-rect on real edges, the same half-open convention (>= x, < x + w)
+// over a real point: adjacent exact rects tile with no shared point and an
+// empty one contains nothing.
+inline bool rect_contains(const GuiRectF& r, double x, double y) {
+    return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+}
+
 struct GuiColor {
     double r;
     double g;
@@ -1845,8 +1914,8 @@ inline int program_run_gap_px() {
 //   THE CHANNEL — ONE W (scrub_channel_h_px, hairline_px, the line rule:
 //     2 device px on the tablet at 200 %, 1 at 100 %, architect 2026-11-04)
 //     of materials.h's `well_frame` (Default's 757575), the grammar's frame tone, CENTERED
-//     ON THE FACE — the centered elements' tie rule, (face rows − channel
-//     rows) / 2 below the face's top, rounded down (scrub_channel_above_px):
+//     ON THE FACE EXACTLY — (face rows − channel rows) / 2 below the face's
+//     top, the half kept (scrub_channel_above_px; the exact fill):
 //     rows 1384..1385 at 200 % on the keys' face rows 1368..1401 at
 //     key_height 17 —
 //     across the channel's own columns, from the thumb's center at frame 0
@@ -1864,7 +1933,12 @@ inline int program_run_gap_px() {
 //     HEIGHT (architect 2026-10-29: "Shrink it to the height of the key.";
 //     scrub_thumb_h_px is the key's height, icon_case_h_px — the face is the
 //     key since 2026-11-04 — following the `key_height` tuning key live), so
-//     it stands on the faces' rows beside it; ITS HIT ZONE ITS PAINTED RECT
+//     it stands on the faces' rows beside it; AT ITS POSITION'S EXACT PLACE
+//     (architect 2026-11-15, the no-grid arc; the rule at hull, above): its
+//     center the real x of its frame or page (the owners' mappings,
+//     render_player_scrub_x_of, score_scrub_x_of / _of_frame), its box that
+//     center ± half its width on real edges (scrub_thumb_box, the one
+//     geometry), painted at exact coverage; ITS HIT ZONE ITS PAINTED RECT
 //     (render_player_scrub_handle_hit: on screen is as painted).
 // The painter is paint_modal_dialog's paint_scrub_item; the press is
 // claim_player_scrub_press (the score viewer's its own claim).
@@ -1875,29 +1949,32 @@ inline int program_run_gap_px() {
 // it or on the channel with no item is consumed and seeks nothing, as
 // before (claim_player_scrub_press's frames <= 0 arm).
 // THE THUMB IS CENTERED ON THE TROUGH'S END (architect 2026-10-25, "centered
-// on the trough's end"): NO INSET — frame 0's column is the channel's first
+// on the trough's end"): NO INSET — frame 0's place is the channel's first
 // column and the last frame's its last (render_player_scrub_x_of), the
-// thumb's center the frame's column, so HALF THE THUMB OVERHANGS the channel
+// thumb's center the frame's place, so HALF THE THUMB OVERHANGS the channel
 // at each end, over the group space beside it (a fader knob at the end of
 // its slot: 12 of the 24 device px on the tablet). THE PUBLISHED ITEM is therefore the
 // channel widened by that overhang at each end (AppState::
 // ModalDialogGeometry::scrub, the press router's outer gate and the
-// per-position damage), so a press on the overhanging half takes the thumb
-// and a moving thumb's end column is always inside the damage. (The 14-W
+// per-position damage — a whole rect, the hull of every place the thumb's
+// box can stand), so a press on the overhanging half takes the thumb
+// and a moving thumb, old place and new, is always inside the damage. (The 14-W
 // grab box the mapping inset the channel by — half of it at each end, a
 // leftover of the pointed Windows thumb — stood 2026-10-02 to 2026-10-25.)
 inline constexpr double kScrubThumbWidthPx  = 12.0;
 // The thumb's width floors at three device px; its height is the face's,
 // one row at least (scrub_thumb_h_px).
 inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
-// THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px): the
+// THE THUMB ON ITS BOX `box` (scrub_thumb_box below: scrub_thumb_w_px by
+// scrub_thumb_h_px on real edges, painted at exact coverage, materials.h's
+// paint_key on a GuiRectF): the
 // flat key, at rest or — `pressed`, the owner's ScrubDrag armed ON THE
 // THUMB (RenderPlayer::ScrubDrag::on_thumb, ScoreViewer::ScrubDrag's; a
 // press on the track beside it carries the thumb but presses no key) — in
 // the key's press face from the grab to the lift (the press arc, architect
 // 2026-11-05; materials.h's key_look). The grab and the lift damage the
 // track (the scrub claims and releases, input_pointer.cpp).
-void paint_scrub_thumb(cairo_t* cr, const GuiRect& box, bool pressed);
+void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed);
 
 // (THE TAB STRIP — Cool Edit's Organizer tabs, "Tab A" and "Tab B", a 21-W
 // lane under the band 2026-10-18 to 2026-10-22 — IS REMOVED, architect
@@ -2452,13 +2529,35 @@ inline int scrub_channel_h_px() {
 inline int scrub_thumb_h_px() {
     return icon_case_h_px();
 }
-// The channel's rows below the thumb's top: CENTERED ON THE FACE, the
-// centered elements' tie rule ((face − channel) / 2, the remainder rounded
-// down, the upper row winning a tie) — 16 on the tablet at 200 % on the
-// 34-row face at key_height 17 (the 2-row channel on rows 1384..1385), 8 at
-// 100 % (the 17-row face, the 1-row channel).
-inline int scrub_channel_above_px() {
-    return (scrub_thumb_h_px() - scrub_channel_h_px()) / 2;
+// The channel's rows below the thumb's top: CENTERED ON THE FACE EXACTLY
+// (architect 2026-11-15, the no-grid arc), (face − channel) / 2 with its
+// half kept — 16 on the tablet at 200 % on the 34-row face at key_height 17
+// (the 2-row channel on rows 1384..1385), 8 at 100 % (the 17-row face, the
+// 1-row channel); where the two differ in parity the channel stands half a
+// row on each side of two rows' edge, painted at that coverage.
+inline double scrub_channel_above_px() {
+    return static_cast<double>(scrub_thumb_h_px() - scrub_channel_h_px()) /
+           2.0;
+}
+// THE THUMB'S BOX — THE ONE GEOMETRY (architect 2026-11-15, the no-grid
+// arc; the scrub's block above): on the published item `track` (the
+// controls row's case band) with its center at the real x `center_x`, the
+// thumb's width about that center and its rows CENTERED EXACTLY in the
+// track's band, no half rounded on either axis. THREE READERS, so the
+// thumb is hit where it is painted and damaged where it stands: the painter
+// (paint_modal_dialog's paint_scrub_item, the box itself through
+// paint_scrub_thumb), the press's grab band
+// (render_player_scrub_handle_hit, app_state.h, the pixels of its hull) and
+// the damage, which is the track — every box this answers for a center on
+// the travel lies inside it (the mapping's ends, render_player_scrub_
+// travel_x0 / _usable_span).
+inline GuiRectF scrub_thumb_box(const GuiRect& track, double center_x) {
+    const double w = static_cast<double>(scrub_thumb_w_px());
+    const double h = static_cast<double>(scrub_thumb_h_px());
+    return GuiRectF{center_x - w / 2.0,
+                    static_cast<double>(track.y) +
+                        (static_cast<double>(track.h) - h) / 2.0,
+                    w, h};
 }
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas has none (row 6's canvas
 // paragraph), the rows and columns of ground stand outside the area.
@@ -3110,6 +3209,29 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // or a word's own cells. The same fill as paint_cell_rect, its path built
 // after the source.
 void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
+// THE EXACT CHROME FILL (architect 2026-11-15, the no-grid arc; the rule at
+// hull, above): the same two fills on a GuiRectF — one solid rect on its
+// REAL edges, every pixel at the coverage the rect has of it, on the
+// chrome's context. The coverage is cairo's own gray antialiasing (the
+// fill's rectangular scan converter, the rect's edges on cairo's 24.8 fixed
+// point, 1/256 px), which the painter sets for its fill and puts back, so a
+// caller's CAIRO_ANTIALIAS_NONE never rounds it. A RECT WITH WHOLE EDGES
+// WRITES THE INT ROAD'S BYTES: cairo turns a rectilinear path into boxes
+// first and fills pixel-aligned boxes directly, the same boxes under either
+// antialias mode (cairo 1.18.4, _cairo_spans_compositor_fill →
+// clip_and_composite_boxes → composite_aligned_boxes), so a whole box may
+// take either road. EVERY PARTLY COVERED PIXEL IS A BLEND OVER WHAT STANDS
+// UNDER IT: the caller paints the surface under the rect first, inside the
+// same clip, and damages the rect's hull. THE RECT LIES INSIDE ONE CLIP
+// RECTANGLE — the frame's damage rect (the platform's paint loop clips each
+// on its own), whatever rect a painter intersects with it, or one rect of
+// on_redraw's strip-and-waveform pair: a rect that STRADDLES two rectangles
+// of a clip region would put cairo on its polygon road, whose rows are 15
+// sub-rows (measured on the host: an edge pixel up to 9 levels off the
+// coverage), so an exact fill is never painted across the rectangles of a
+// multi-rect clip.
+void paint_cell_rect(cairo_t* cr, const GuiRectF& r, GuiColor c);
+void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c);
 // THE STRIKE'S BAR OVER ONE STRUCK RUN — THE ONE GEOMETRY (architect
 // 2026-10-26 ~15:10: "just the strike through on the text"; ~15:30, "the
 // same thickness as the regular — for example, a T would have the same

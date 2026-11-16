@@ -363,6 +363,28 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
     cairo_fill(cr);
 }
 
+// THE EXACT CHROME FILL (the contract is at the declarations, render.h):
+// cairo's gray coverage for this one fill, the context's own mode put back.
+void paint_cell_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
+    if (!(r.w > 0.0) || !(r.h > 0.0)) return;
+    const cairo_antialias_t was = cairo_get_antialias(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+    set_palette_source(cr, c);
+    cairo_fill(cr);
+    cairo_set_antialias(cr, was);
+}
+
+void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
+    if (!(r.w > 0.0) || !(r.h > 0.0)) return;
+    const cairo_antialias_t was = cairo_get_antialias(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    set_palette_source(cr, c);
+    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+    cairo_fill(cr);
+    cairo_set_antialias(cr, was);
+}
+
 // (THE RELIEF FAMILY — paint_relief_frame, paint_relief_edge,
 // paint_relief_plain_sunken, paint_relief_line_frame, every line one scaled
 // Windows px — went 2026-10-23, and its one-device-px successor, the mitred
@@ -376,13 +398,13 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
 // render.h's caption note.)
 
 // THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key on
-// its box (materials.h's paint_key) — never lit (it is dragged, not turned
+// its box's real edges (materials.h's paint_key on a GuiRectF, the exact
+// fill) — never lit (it is dragged, not turned
 // on or off), so the enabled bit and the lit class, which part a lit key's
 // faces alone, have nothing to say here (Lamp, every non-roster surface's
 // class) — the press face while `pressed`, the owner's grab on the thumb
 // (the press arc, architect 2026-11-05; the rule at the declaration).
-void paint_scrub_thumb(cairo_t* cr, const GuiRect& box, bool pressed) {
-    if (box.w <= 0 || box.h <= 0) return;
+void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed) {
     paint_key(cr, box, key_look(/*checked=*/false, pressed),
               /*enabled=*/true, KeyLitClass::Lamp);
 }
