@@ -4,8 +4,7 @@
 #include "input_handler.h"      // land_playhead_on_marker (the collapse's
                                 // land)
 #include "target_render.h"
-#include "warp_frame_map_view.h"  // painted_column_of_source_frame_on_basis,
-                                  // authored_frame_at_column_on_basis,
+#include "warp_frame_map_view.h"  // painted_x_of_source_frame_on_basis,
                                   // source_frame_to_active_domain
 
 #include <cstdint>
@@ -122,21 +121,6 @@ PositionNudgePrologue position_nudge_prologue(
     return r;
 }
 
-int64_t stepped_anchor_frame(
-    const AppState& app, const GuiAudio& audio,
-    const std::vector<WarpFrameMapSegment>& map,
-    int64_t orig_frame, int step_columns) {
-    // The ITEM viewport basis, the displayed map's twin (the rule at the
-    // declaration).
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    const int cf = painted_column_of_source_frame_on_basis(
-        app, audio, static_cast<double>(orig_frame), map,
-        basis.vp_start, basis.spp, basis.lattice_origin);
-    return authored_frame_at_column_on_basis(
-        app, audio, cf + step_columns, map, basis.vp_start_frame, basis.spp,
-        basis.lattice_origin);
-}
-
 int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
                                int64_t orig_frame, HorizontalArrowStep step) {
     // The prologue's geometry refusals, asked here so a caller that has NOT
@@ -158,17 +142,29 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
                                        live_warp_frame_map(app, audio)) -
             orig_frame;
     } else {
-        // The anchoring map is the DISPLAYED paint basis —
-        // displayed_or_live_target_map, the SAME map the flag/trim painters
-        // read — so the moved marker travels exactly the commanded pixel
-        // column against WHAT IS PAINTED, even inside a worker publish window
-        // where the displayed map lags the live one. In warp's SOURCE home
-        // that map is the empty identity map and every commit is a plain
-        // integer frame; in phase's TARGET home it is a real map.
+        // (1) THE MILLISECOND (architect 2026-11-15, the no-grid arc: "the
+        // left-right nudge should be recalibrated to one millisecond left or
+        // right"): `count` milliseconds OF THE DISPLAYED DOMAIN — the
+        // marker's displayed image moved by exactly count ×
+        // arrow_millisecond_frames, so one press moves the mark one
+        // millisecond as shown — landed back through the DISPLAYED paint
+        // basis, displayed_or_live_target_map, the SAME map the flag
+        // painters read, at full precision, then snap_authored_frame, the
+        // one double-to-authored route. In the warp column's SOURCE home,
+        // the one view its nudge runs in (a warp nudge in target view is
+        // refused upstream, active_column_authoring_allowed), that map is
+        // the empty identity map and the commit is the plain integer
+        // orig ± the count; under a real map the same expression carries
+        // the millisecond through the map both ways (the marker drag's own
+        // shape, MarkerDragOps::apply_drag_motion).
         const std::vector<WarpFrameMapSegment>& map =
             displayed_or_live_target_map(app, audio);
-        // (1) the commanded painted columns, as a plain integer delta.
-        D = stepped_anchor_frame(app, audio, map, orig_frame, step.count) -
+        const double shown =
+            map_source_to_target(static_cast<double>(orig_frame), map) +
+            static_cast<double>(step.count) *
+                static_cast<double>(
+                    arrow_millisecond_frames(audio.sample_rate()));
+        D = snap_authored_frame(map_target_to_source(shown, map)) -
             orig_frame;
     }
     // (2) walls win by clamping, in this marker's own headroom.
@@ -251,8 +247,8 @@ void finish_position_nudge(
     viewport.invalidate_clock_area();
     // (e) playhead follows the nudged marker's committed frame through the
     // movement owner. THE SUBJECT'S PRIOR PLACE is captured first, for (f):
-    // THE COLUMN THE FOCUSED MARKER PAINTED IN before the write, on the SAME
-    // painted basis its step anchored on (stepped_anchor_frame, above) — the
+    // THE EXACT PLACE THE FOCUSED MARKER PAINTED AT before the write, on the
+    // painted basis — the
     // displayed map and its twin item_viewport_basis (architect 2026-09-24,
     // strictly as painted) — so the hold answers the pixels the user saw even
     // while a viewport job (a resize re-clamp, a target-map publish) has moved

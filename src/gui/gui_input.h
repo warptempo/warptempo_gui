@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -231,7 +232,7 @@ struct GuiCarriedMods {
 //
 // THE HORIZONTAL PAIR HAS NO LADDER (architect 2026-09-21, retiring the
 // 2026-08-31 horizontal rungs on every column): horizontal placement is
-// GRAPHICAL — "three columns" or "ten columns" is a number nobody thinks in —
+// GRAPHICAL — a multiple of the step is a number nobody thinks in —
 // so Shift+Left / Shift+Right are UNBOUND on every column, for the marker and
 // the playhead alike (chord_is_bound), and silent as every unbound chord is.
 // Left / Right take ONE STEP IN THE ACTIVE COLUMN'S UNIT (horizontal_arrow_step
@@ -254,35 +255,58 @@ struct GuiCarriedMods {
 // landing owners and the faces: a signed COUNT in one of two UNITS, the count
 // always ±1 since the horizontal ladder retired (the direction; the struct
 // keeps a count so the landing arithmetic reads one number in one unit).
-// COLUMNS is the painted-column step (the one-column-per-press guarantee at
-// stepped_anchor_frame, position_nudge.h); HOPS is the hop step, one hop of
-// the engine's analysis lattice measured in the TARGET domain, which makes no
-// pixel claim at all. The unit travels beside the count so no landing owner
-// ever reads a magic number as the other unit.
+// MILLISECONDS is the calibrated step (architect 2026-11-15, the no-grid arc:
+// "the left-right nudge should be recalibrated to one millisecond left or
+// right ... we would convert 1 millisecond to the nearest amount in frames,
+// and that would be the nudge step"; "using nudge on a coarse zoom is kind
+// of pointless, because the point of nudge is fine-tuning") — one
+// millisecond of the displayed domain, arrow_millisecond_frames below,
+// WHATEVER THE ZOOM, which makes no pixel claim: a press moves its subject
+// about a pixel at the working zoom, a fraction of one above it and about
+// two at the deepest, painted at its exact place. HOPS is the hop step, one
+// hop of the engine's analysis lattice measured in the TARGET domain, which
+// makes no pixel claim either. The unit travels beside the count so no
+// landing owner ever reads a magic number as the other unit.
 struct HorizontalArrowStep {
-    enum class Unit : uint8_t { Columns, Hops };
-    Unit unit  = Unit::Columns;
+    enum class Unit : uint8_t { Milliseconds, Hops };
+    Unit unit  = Unit::Milliseconds;
     int  count = 0;   // signed: negative is earlier
-    static constexpr HorizontalArrowStep columns(int n) {
-        return HorizontalArrowStep{Unit::Columns, n};
+    static constexpr HorizontalArrowStep milliseconds(int n) {
+        return HorizontalArrowStep{Unit::Milliseconds, n};
     }
     static constexpr HorizontalArrowStep hops(int n) {
         return HorizontalArrowStep{Unit::Hops, n};
     }
 };
 
+// ONE MILLISECOND IN FRAMES — THE COUNT'S ONE OWNER (architect 2026-11-15,
+// the no-grid arc, his words at HorizontalArrowStep): the whole number of
+// frames nearest a millisecond at `sample_rate`, nearbyint(rate / 1000) — 44
+// at 44.1 kHz, 48 at 48 kHz, 88 at 88.2 kHz, 96 at 96 kHz — never less than
+// one frame, so a press always moves its subject off a wall. The frames are
+// the DISPLAYED domain's (source and target views share the one rate). ITS
+// READERS, the unit's two landings: the marker nudge
+// (position_nudge_landing, position_nudge.h) and the playhead's step
+// (playhead_arrow_step_landing, app_state.h).
+inline int64_t arrow_millisecond_frames(int sample_rate) {
+    const int64_t n = static_cast<int64_t>(
+        std::nearbyint(static_cast<double>(sample_rate) / 1000.0));
+    return n < 1 ? 1 : n;
+}
+
 // THE ONE FORK OF THE HORIZONTAL ARROW'S UNIT, keyed on the ACTIVE COLUMN
 // (`markers_view`, the column letter) and never on the subject: `direction`
-// is -1 for Left and +1 for Right. One painted COLUMN on W and M; on the
+// is -1 for Left and +1 for Right. ONE MILLISECOND on the warp column; on the
 // PHASE-RESET column ONE HOP — THE P COLUMN'S ARROW UNIT IS A HOP (architect
 // 2026-09-21, the recorded exception between columns, warpmarkers.h's
-// naming rules), for
+// naming rules; untouched by the millisecond, which he likens to it — the
+// reset's step is "already calibrated"), for
 // the focused reset and the playhead with an empty selection alike. The unit
 // follows from the engine's lattice, which only P has: the render depends
 // only on the window a reset seeds in (S - N/2, the engine seeding at the
-// last window at or before it), so a column nudge on P is almost always
-// SILENT — about twenty-one of twenty-two at the tablet's working zoom (one
-// hop is about 22 of its 46-frame columns) re-render identical audio — and the hop is the only arrow move there that changes what is
+// last window at or before it), so a millisecond nudge on P would almost
+// always be SILENT — one hop is about 23 of them — re-rendering identical
+// audio, and the hop is the only arrow move there that changes what is
 // heard. Every reader of the horizontal pair's step asks this: the marker-
 // and waveform-lane dispatch, and the Left / Right face
 // (horizontal_arrow_step_actionable, app_state.h), so the face asks the step
@@ -290,7 +314,7 @@ struct HorizontalArrowStep {
 constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
                                                     char markers_view) {
     if (markers_view == 'P') return HorizontalArrowStep::hops(direction);
-    return HorizontalArrowStep::columns(direction);
+    return HorizontalArrowStep::milliseconds(direction);
 }
 
 // THE HORIZONTAL ARROW'S CAMERA IS THE HOLD POSTURE'S (architect 2026-09-23:

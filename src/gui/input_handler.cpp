@@ -1803,7 +1803,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // BARE Left / Right, MARKER-LANE half (architect 2026-07-28). The horizontal
-    // arrows step one painted column; the selection
+    // arrows step one millisecond (a hop on the phase-reset column); the selection
     // decides which LANE that step happens in, and playhead_in_marker_lane is that
     // decision. With a selection the arrows move the FOCUSED MARKER and the
     // always-visible cursor RIDES ALONG — the two routes below both re-land the
@@ -1858,10 +1858,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // HoldColumn while an explicit centring's posture stands and FollowEdge
     // otherwise, carried to the shared tail and changing nothing else the act
     // does — it was Ctrl's choice for the day before. The unit is
-    // horizontal_arrow_step's — one painted column on W and M, ONE HOP on the
-    // phase-reset column — and it travels as a HorizontalArrowStep, its unit
+    // horizontal_arrow_step's — one millisecond on the warp column, ONE HOP on
+    // the phase-reset column — and it travels as a HorizontalArrowStep, its unit
     // beside its count, so the hop step reaches the same twin, prologue and
-    // landing owner as the column step and takes everything else the nudge
+    // landing owner as the millisecond and takes everything else the nudge
     // does. The WAVEFORM lane's twin is handle_plain_bare_keys' Left / Right
     // case (input_key_dispatch.cpp), which asks the same owner.
     //

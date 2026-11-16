@@ -491,7 +491,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // for later — THE P COLUMN'S ARROW UNIT IS A HOP (architect 2026-09-21, the
 // recorded exception between columns at horizontal_arrow_step, gui_input.h,
 // where the rationale lives: the render depends only on the window a reset
-// seeds in, so a column step here was almost always silent). One hop of the
+// seeds in, so a finer step here is almost always silent). One hop of the
 // engine's analysis lattice, kRs samples of the TARGET domain, landed through
 // phase_reset_hop_step_frame under the LIVE map — the owner the iteration
 // cells land through — so Right then Left returns the reset to where it
@@ -501,8 +501,8 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // (NudgeCamera::HoldColumn, position_nudge.h), never a different step or a
 // different wall, and no modifier reaches here — the horizontal ladder
 // retired Shift, and Ctrl+Left / Ctrl+Right bind nothing since 2026-09-23. Every committed value is a
-// whole source frame. The warp twin takes the same road with one painted
-// column instead (stepped_anchor_frame).
+// whole source frame. The warp twin takes the same road with one
+// millisecond instead (position_nudge_landing's millisecond arm).
 //
 // HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
 // 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
@@ -552,12 +552,12 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
 
     // THE WALL-REGIME MIDDLE, through the shared landing owner since
     // 2026-08-31 — THE WARP TWIN'S OWN CALL, not a copy of its shape
-    // (position_nudge_landing, position_nudge.h; the painted-column step, the
+    // (position_nudge_landing, position_nudge.h; the step in its unit, the
     // headroom clamp with its exact integer compares, and the walls-win belt
     // are all argued at its declaration). This column's step is ALWAYS A HOP
     // (the landing owner's hop arm, which asks the LIVE map — a hop is the
     // render's quantum, not a painted one — and then clamps onto the same
-    // walls the column step clamps onto) — the same hop in S+P and T+P, the
+    // walls the millisecond clamps onto) — the same hop in S+P and T+P, the
     // live map being the render's whatever the view (architect 2026-10-12:
     // "nudges as in the other views") — and the EOF wall is the one every
     // column shares. Crossing a neighbor is
@@ -565,7 +565,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
-    // (or one whose column step resolved to the same frame) writes NOTHING — no
+    // (or one whose step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
     // AND IT IS SILENT AGAIN SINCE 2026-08-31, the warp twin's rule verbatim —

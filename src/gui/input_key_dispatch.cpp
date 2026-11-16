@@ -9032,8 +9032,8 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 // THE WAVEFORM-LANE PLAYHEAD STEP, one act owner (architect 2026-08-31,
 // when the step ladder made it three magnitudes; ONE STEP IN THE ACTIVE
 // COLUMN'S UNIT since 2026-09-21, the horizontal ladder retired on every
-// column). The unit is horizontal_arrow_step's (gui_input.h): one painted
-// column on W and M, ONE HOP — kRs target frames — on the phase-reset column,
+// column). The unit is horizontal_arrow_step's (gui_input.h): one
+// millisecond on the warp column, ONE HOP — kRs target frames — on the phase-reset column,
 // the recorded exception keyed on the column and never on the subject. The
 // landing owner forks on the unit (playhead_arrow_step_landing, app_state.h);
 // everything below — the stop, the clear, the camera — is the same for
@@ -9079,7 +9079,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     }
     // Navigation playhead step, through the MOVEMENT OWNER
     // (move_playhead_by_arrow_step -> move_playhead_to). AT THE WALL the
-    // landing is the cursor itself (playhead_pixel_step_landing, the owner the
+    // landing is the cursor itself (playhead_arrow_step_landing, the owner the
     // Left button's face reads since 2026-08-30): the key still runs
     // the stop and the clear, the greyed button neither of them. THE
     // WALL IS THE SAME WALL IN BOTH UNITS — the landing owner clamps into the

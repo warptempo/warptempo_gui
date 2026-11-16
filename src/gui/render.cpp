@@ -904,19 +904,12 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
     // (viewport_end_sample), so this is q exactly.
     const double span = static_cast<double>(vp_end - vp_start);
     const double samples_per_pixel = span / static_cast<double>(wave_w);
-    // The one rounding, on the caller's UNIFIED displayed basis (this file's
-    // header block above): displayed_column_at, warp_frame_map_view.h.
-    out.col = displayed_column_at(displayed_ms,
-                                  static_cast<double>(vp_start),
-                                  samples_per_pixel, lattice_origin);
-    // THE EOF-WALL CLAMP, an IN-VIEW bound's alone (render.h): its rounding
-    // can reach grid point wave_w, and the clamp keeps its button whole. An
-    // offscreen bound keeps its own column, so its button stands where the
-    // bound is and the lane's clip cuts it (architect 2026-10-05).
-    if (out.in_viewport && wave_w > 0)
-        out.col = std::clamp(out.col, 0, wave_w - 1);
-    // THE EXACT PLACE (render.h: paint's alone), the column's own arguments
-    // through displayed_x_at, and the same wall clamp in reals.
+    // THE EXACT PLACE on the caller's UNIFIED displayed basis (this file's
+    // header block above): displayed_x_at, warp_frame_map_view.h. THE
+    // EOF-WALL CLAMP, an IN-VIEW bound's alone (render.h): its place can
+    // stand past the last column's left edge, and the clamp keeps its end
+    // zone whole. An offscreen bound keeps its own place, so its zone stands
+    // where the bound is and the lane's clip cuts it (architect 2026-10-05).
     out.x = displayed_x_at(displayed_ms, static_cast<double>(vp_start),
                            samples_per_pixel, lattice_origin);
     if (out.in_viewport && wave_w > 0)

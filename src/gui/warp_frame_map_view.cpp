@@ -500,43 +500,6 @@ bool phase_reset_crossing_group_would_drop(const AppState& a,
     return false;
 }
 
-int64_t authored_frame_at_column_on_basis(
-    const AppState& app, const GuiAudio& audio, int col,
-    const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    int64_t vp_start, double spp, int64_t lattice_origin) {
-    if (spp <= 0.0) return 0;
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
-    // The column's ACTIVE-DOMAIN time on the single-rounding grid (the
-    // lattice-snapped viewport is a true point of its own lattice, so the
-    // recovered column index is exact). Both arms below land on it, so a
-    // commit is anchored at the basis's lattice — frame 0 of the domain it was
-    // authored in where the camera's origin is 0, the painted column's edge
-    // at every other rest — rather than at the basis's viewport start.
-    const double g = displayed_grid_position_at_column(vp_start, col, spp,
-                                                       lattice_origin);
-    if (ctx.domain == GuiDisplayDomain::Source) {
-        // snap_authored_frame stays the sole double-to-authored conversion.
-        return snap_authored_frame(g);
-    }
-    if (!warp_frame_map.empty()) {
-        // Target view: quantize the column's target-domain time to an integer
-        // target frame (floored at 0), then inverse-map at full precision; the
-        // map is monotone increasing, so the target-domain direction is the
-        // source-domain direction. That time is the grid position above, so a
-        // phase-reset nudge, drag or sweep commit is independent of the
-        // viewport's own index at a fixed q and origin exactly like the source
-        // arm's — not of the origin itself, a gesture rest's being the
-        // camera's (this arm spelled the two-rounding
-        // viewport_start + nearbyint(col*q) until 2026-08-22 — the source arm
-        // took the single-rounding grid in 2026-07-14 and this one was missed).
-        const double qf = (g < 0.0)
-            ? 0.0
-            : static_cast<double>(std::llrint(g));
-        return snap_authored_frame(map_target_to_source(qf, warp_frame_map));
-    }
-    return snap_authored_frame(g);
-}
-
 int64_t authored_frame_at_x_on_basis(
     const AppState& app, const GuiAudio& audio, double x,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,

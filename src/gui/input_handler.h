@@ -2546,7 +2546,7 @@ private:
     // bare Left / Right (handle_plain_bare_keys' two arms below; Ctrl+Left /
     // Ctrl+Right were a second road 2026-09-22 to 2026-09-23). `step` is
     // the press's one step in the active column's unit (horizontal_arrow_step,
-    // gui_input.h) — one painted column, or ONE HOP on the phase-reset
+    // gui_input.h) — one millisecond, or ONE HOP on the phase-reset
     // column; the camera is the hold posture's (nudge_camera, app_state.h),
     // read and kept by the body. Reached only with an empty selection: the
     // marker-lane branch claims the press first. The `h` view's Left / Right
@@ -4033,7 +4033,8 @@ private:
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare
-    // horizontal arrows step one painted column per press; the lane decides WHAT
+    // horizontal arrows step one millisecond per press (a hop on the
+    // phase-reset column); the lane decides WHAT
     // moves. A selection IS the marker lane: the step moves the FOCUSED MARKER
     // and the always-visible cursor RIDES ALONG, because both marker-lane routes
     // (the two position nudges) re-land the playhead on their committed focus.

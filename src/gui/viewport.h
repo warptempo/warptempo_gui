@@ -402,7 +402,7 @@ struct Viewport {
     // hand); the contract is at the definition (viewport.cpp).
     void translate_playhead_to(int64_t new_sample);
     // The waveform lane's Left / Right step, in the step's own unit
-    // (playhead_arrow_step_landing, app_state.h): one painted column, or on
+    // (playhead_arrow_step_landing, app_state.h): one millisecond, or on
     // the phase-reset column one hop.
     void move_playhead_by_arrow_step(HorizontalArrowStep step);
     void apply_zoom_change(double new_zoom_level);

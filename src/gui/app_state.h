@@ -96,16 +96,13 @@ constexpr double kWorkingZoomLevel = 2.0;  // spp = the working column exactly;
                                            // step deeper, to the floor below
 // THE DEEPEST-ZOOM FLOOR (architect 2026-09-27): the finest step the zoom may
 // paint, in source frames per pixel. Level 1 paints half the working column,
-// and on a wide enough display that is too fine for two guarantees:
-//   * THE ONE-COLUMN NUDGE (position_nudge.h): at the value brackets' extreme
-//     stretch the phase nudge's target home carries q / 16 source frames per
-//     target pixel, so its whole-frame rounding error, 8 / q px, stays under
-//     half a pixel only for q > 16, and each adjacent column is a whole frame
-//     away only for q >= 16;
+// and on a wide enough display that is too fine for one guarantee:
 //   * THE TARGET-VIEW ROUND TRIP (render.cpp's playhead comment carries
 //     the derivation): its worst-case residue is 9.5 / q px, under
 //     half a pixel only for q > 19.
-// 20 holds both at every width (8 / 20 = 0.4 px, 9.5 / 20 = 0.475 px). It is a
+// 20 holds it at every width (9.5 / 20 = 0.475 px). (No step leans on the
+// floor: the nudge is one millisecond of frames whatever the zoom,
+// position_nudge.h.) It is a
 // whole number of frames, so it sits on the sixteenth-frame grid and the
 // floor paints q = 20 exactly (painter_quantized_spp). It binds only where
 // level 1 would paint finer, a working column under 40 frames, which no
@@ -2626,8 +2623,8 @@ enum class RedesignButton {
     // principle at ToolbarChord::repeats (input_pointer.cpp).
     // LEFT / RIGHT ADMIT NEITHER since
     // 2026-09-21 (the horizontal ladder retired on every column): their one
-    // bare step is the active column's unit — a painted column on W and M, a
-    // HOP on the phase-reset column — so the hop is glass-reachable by the
+    // bare step is the active column's unit — a millisecond on the warp
+    // column, a HOP on the phase-reset column — so the hop is glass-reachable by the
     // plain press and the held button walks hops.
     //
     // THE PLAY BUTTON ADMITS SHIFT (architect 2026-08-26): its twin is
@@ -11371,7 +11368,7 @@ inline bool tempo_cent_step_actionable(const AppState& app) {
 
 // WHERE ONE CENT STEP WOULD LAND A VALUE — the singleton step's constructive
 // clamp into the tempo bracket, ONE owner (2026-08-31), the twin in the value
-// domain of playhead_pixel_step_landing in the frame domain. The act's loop
+// domain of playhead_arrow_step_landing in the frame domain. The act's loop
 // commits exactly this number (adjust_tempo_cents, warpmarkers_ops.cpp) and
 // tempo_cent_step_direction_actionable below COMPARES it against the value the
 // marker already holds, so the face reads the act's own arithmetic rather than
@@ -12260,36 +12257,24 @@ inline bool transport_session_live(const AppState& a) {
     return a.playhead_scanner_active || audition_sequence_standing(a);
 }
 
-// WHERE A Left / Right COLUMN STEP WOULD LAND THE CURSOR in the WAVEFORM lane —
-// `delta_px` painted columns away (±1 since the horizontal ladder retired
-// 2026-09-21; it has taken a signed count since it was extracted) — the
-// target column's frame through the one column->frame owner, pre-clamped into
-// the live domain exactly as move_playhead_to would clamp it. Defined in
-// viewport.cpp beside the skip landing it is the twin of; the arithmetic and
-// its rationale are at Viewport::move_playhead_by_arrow_step. ONE READER:
-// playhead_arrow_step_landing below, its Columns arm — which the act and
-// horizontal_arrow_step_actionable's waveform-lane branch both read, so the
-// Left / Right buttons grey where the landing IS the resting cursor — frame 0
-// under Left, the domain's last frame under Right, the walls — never a raw
-// frame-bound compare, since the landing is on the painted grid. A blank
-// piece or a degenerate grid answers the cursor itself (the act's own early
-// return), so the face greys there too.
-int64_t playhead_pixel_step_landing(const AppState& a, const GuiAudio& audio,
-                                    int delta_px);
-
 // WHERE ONE HORIZONTAL ARROW STEP WOULD LAND THE CURSOR in the WAVEFORM lane,
-// in either unit of the step (HorizontalArrowStep, gui_input.h): COLUMNS is
-// playhead_pixel_step_landing above, verbatim; HOPS is the phase-reset
-// column's unit (architect 2026-09-21, THE P COLUMN'S ARROW UNIT IS A HOP),
-// the cursor moved by exactly `count` × kRs frames of the active domain — the
-// target domain, the P column being target view's alone — in pure integer
-// arithmetic, no map and no rounding, and pre-clamped through the SAME
-// live-domain clamp the pixel landing takes, so the walls are one wall. A
-// blank piece answers the cursor itself, the pixel landing's own degenerate
-// answer. TWO READERS: Viewport::move_playhead_by_arrow_step, the
+// in either unit of the step (HorizontalArrowStep, gui_input.h): the cursor
+// moved by exactly `count` units of ACTIVE-DOMAIN frames in pure integer
+// arithmetic, no grid, no map and no rounding — MILLISECONDS is the warp
+// column's unit (architect 2026-11-15, the no-grid arc: the nudge
+// recalibrated to one millisecond), arrow_millisecond_frames at the piece's
+// rate, whatever the zoom; HOPS is the phase-reset column's (architect
+// 2026-09-21, THE P COLUMN'S ARROW UNIT IS A HOP), kRs frames of the target
+// domain, the P column being target view's alone — pre-clamped through the
+// live-domain clamp exactly as move_playhead_to would clamp it, so the walls
+// are one wall. A blank piece, or a dead sample rate under the millisecond,
+// answers the cursor itself (the act's own no-move), so the face greys
+// there. TWO READERS: Viewport::move_playhead_by_arrow_step, the
 // waveform-lane act's landing, and horizontal_arrow_step_actionable below,
 // the Left / Right face — both handed the step horizontal_arrow_step answers
-// for the active column, so the face asks exactly what the press will do.
+// for the active column, so the face asks exactly what the press will do and
+// the buttons grey where the landing IS the resting cursor: frame 0 under
+// Left, the domain's last frame under Right. Defined in viewport.cpp.
 int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
                                     HorizontalArrowStep step);
 
@@ -12300,7 +12285,7 @@ int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
 // (position_nudge.h — the wall-regime middle both twins now commit through),
 // and it is defined in position_nudge.cpp beside it, so the warp nudge and the
 // phase-reset nudge take ONE term and the naming symmetry needs no recorded
-// asymmetry: the landing is type-free (one painted column, the delta clamped
+// asymmetry: the landing is type-free (one step in its unit, the delta clamped
 // into the marker's own headroom against the ONE EOF wall both columns share),
 // and only the store the focus indexes differs.
 // A 2+ SELECTION STAYS LIT, and that is the twin rule's own reasoning rather
@@ -12317,12 +12302,12 @@ int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
 // degenerate grid the same way.
 // THE FACE ASKS THE STEP THE PRESS WILL TAKE (2026-09-21): `step` is the one
 // step in the active column's unit (horizontal_arrow_step, gui_input.h) — one
-// painted column on W and M, ONE HOP on the phase-reset column — and the face
+// millisecond on the warp column, ONE HOP on the phase-reset column — and the face
 // and the act are handed the same value, so there is no variant to reason
 // about: the ladder retired, and the ctrl form (2026-09-22) is the same step
 // with another camera, so its buttons ask this with the arrows' own value. Both
-// units move a resting marker by at least one frame off a wall (the
-// one-column-per-press guarantee at stepped_anchor_frame; the hop owner's
+// units move a resting marker by at least one frame off a wall (a
+// millisecond is at least a frame, arrow_millisecond_frames; the hop owner's
 // landing lies in the seed window one over, phase_reset_hop_step_frame), so
 // after the headroom clamp the landing equals the resting frame iff that
 // headroom is ZERO: a marker two frames from the end greys nothing (the step
@@ -12349,8 +12334,9 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 
 // THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE, two readers
 // (architect 2026-08-30): Left / Right's lane fork is the waveform-lane
-// step — the cursor stepping one painted column, refused only AT THE WALLS,
-// where the adjacent column's frame is the frame it already rests on — while
+// step — the cursor stepping one millisecond (a hop on the phase-reset
+// column), refused only AT THE WALLS,
+// where the clamped landing is the frame it already rests on — while
 // a standing selection puts the press in the MARKER lane, where it nudges the
 // focused marker and refuses for a WARP marker in target view
 // (active_column_authoring_allowed — the P column nudges in both audio
@@ -12358,7 +12344,7 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // (marker_nudge_actionable above — the singleton whose clamped step lands the
 // frame it already holds), with no fallback to the waveform step. THE TWO
 // LANES NOW GREY ALIKE: the inversion that stood for a day — the plain lane
-// mirroring its walls through playhead_pixel_step_landing while the marker
+// mirroring its walls through its landing owner while the marker
 // lane, the lane that actually AUTHORS, stayed lit over a dead press — is
 // closed, and both walls are read through their act's own landing owner.
 // `direction` is the step's sign (-1 Left, +1 Right) and is consulted by BOTH
@@ -12401,7 +12387,8 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 //
 // `direction` IS A SIGN, and the step both branches ask is the ONE STEP THE
 // PRESS WILL TAKE, horizontal_arrow_step(direction, active column) — a
-// painted column on W and M, a hop on the phase-reset column (architect
+// millisecond on the warp column (architect 2026-11-15), a hop on the
+// phase-reset column (architect
 // 2026-09-21, the horizontal ladder retired on every column and the P
 // column's arrow unit a hop). IT SERVES TWO BUTTONS, TransportLeft/Right
 // (bare Left/Right; their hold-column twins on Ctrl+Left/Right served it too
@@ -16652,7 +16639,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //   further left", the roster's standing treatment of walls, and the
         //   walk arm mirroring the empty store alone — and two decisions
         //   that evening put both in under the absolute rule, each
-        //   through the ACT'S OWN LANDING OWNER: playhead_pixel_step_landing
+        //   through the ACT'S OWN LANDING OWNER: playhead_arrow_step_landing
         //   for Left / Right at frame 0 and the last frame, marker_walk_landing
         //   for the walk pair's all-disabled store and nothing-ahead. "Walls
         //   are the one refusal class this roster has never mirrored" is
@@ -19864,8 +19851,9 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // (trim_mouse_x_to_active_frame and trim_mouse_x_to_source_frame, the frame
 // under the pen's real place); the sweep's TRIM half
 // (sweep_trim_frame_at_x); the trim bar's bound-set click
-// (trim_bound_click); and both nudges' column step
-// (stepped_anchor_frame). The CLICK-PLACEMENT family joined it (architect
+// (trim_bound_click); and the nudge's millisecond, landed through the same
+// displayed map (position_nudge_landing). The CLICK-PLACEMENT family joined
+// it (architect
 // 2026-09-24, "reality to the face" reads the same for a click as for a
 // drag): its one conversion, playhead_frame_at_click_x — the nav click,
 // the scrub click, the sweep's PLAYHEAD half and the empty-lane double-click
@@ -19905,11 +19893,11 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // read for plate-registered overlays vs the staged/promoted mirror for
 // item-registered geometry.
 //
-// The double vp_start/spp serve the column math
-// (painted_column_of_source_frame_on_basis, the pointer-to-frame anchors); the
-// int64 vp_start_frame and lattice_origin serve the landings (the column
-// step's authored_frame_at_column_on_basis; the pen acts'
-// displayed_frame_at_x readers — authored_frame_at_x_on_basis,
+// The double vp_start/spp serve the place math
+// (painted_column_of_source_frame_on_basis and its exact sibling, the
+// pointer-to-frame anchors); the
+// int64 vp_start_frame and lattice_origin serve the pen acts' landings
+// (displayed_frame_at_x's readers — authored_frame_at_x_on_basis,
 // trim_mouse_x_to_active_frame, playhead_frame_at_click_x), and
 // vp_start_frame/vp_end_frame/area_w serve the trim painter, which passes the
 // integer span + width to trim_bound_column verbatim, and the strip clamp
@@ -19924,9 +19912,10 @@ struct ItemViewportBasis {
     int     area_w         = 0;
     // THE PAINTED LATTICE'S ORIGIN (architect 2026-10-31): the displayed
     // mirror's (AppState::displayed_lattice_origin), cold the live camera's
-    // (AppState::viewport_lattice_origin) — the grid landings' third term
-    // (displayed_grid_position_at_column), so a commit lands on the frame the
-    // painted column shows. Whatever the camera rests on: the origin its
+    // (AppState::viewport_lattice_origin) — the third term of every place
+    // on the painted lattice (displayed_x_at and its inverse,
+    // displayed_frame_at_x), so a pen act lands on the frame painted under
+    // the pen. Whatever the camera rests on: the origin its
     // start derived at a landing or a zoom frame (0 at a wall and at a start
     // a whole number of steps from frame 0), kept under a pan.
     int64_t lattice_origin = 0;

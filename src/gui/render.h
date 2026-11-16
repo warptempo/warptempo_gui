@@ -4592,15 +4592,15 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // GuiPaintHandler::paint_trim, ahead of the playheads; trim has had no stem
 // since render_trim_stems died, and no stem is cached anywhere.)
 
-// The ONE trim bound-to-column geometry owner. Every consumer of a
-// trim bound's pixel column — and of its exact place — funnels here: the
+// The ONE trim bound-to-place geometry owner. Every consumer of a
+// trim bound's exact place funnels here: the
 // paint site (render_trim_flags' endcaps, bar and bridge gap — the waveform
 // stem site left with render_trim_stems), the TRIM sweep's highlight
 // (sweep_highlight_columns, app_state.cpp, the bar's own chain) and the
 // bound-set click's nearest-cap test (input_trim.cpp). The two hit sites (hit_test_trim_endcap's endcap
 // rects, point_in_trim_bridge_span's bridge test) called it too until
 // 2026-09-24, when they began reading what the painter PUBLISHES instead
-// (TrimBarHit, below — strictly as-painted), so the columns they test are
+// (TrimBarHit, below — strictly as-painted), so the places they test are
 // this owner's output by construction. It replaced five hand-copied
 // `nearbyint` + `clamp(0, W-1)` formulas maintained "byte-identical" by
 // comment discipline.
@@ -4609,7 +4609,7 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // live trim pass (GuiPaintHandler::paint_trim) calls with the DISPLAYED basis
 // from item_viewport_basis (vp_start_frame/vp_end_frame/lattice_origin/area_w
 // — the promoted mirror of the committed fp_vp span, its lattice + effective
-// width; the column displayed_column_at's, on that lattice's own index) and
+// width; the place displayed_x_at's, on that lattice's own index) and
 // `displayed_ms`
 // mapped through displayed_or_live_target_map by displayed_trim_ms (the
 // event-synchronized hit-geometry doctrine), and the hit sites read that
@@ -4629,36 +4629,37 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // published stash now carries for free.
 //
 // EOF-WALL CLAMP (the one copy, formerly installed at three sites at once):
-// an IN-VIEW bound's `col` clamps into the visible column range [0, wave_w-1]
-// — and its exact place `x` with it, in reals (below).
-// The inclusive END wall T-1 at full zoom-out rounds to column wave_w (one
-// past the surface); left unclamped, the right-edge-anchored end CAP loses its
-// bound-edge pixel to the lane clip. Clamping lands the wall on the last
+// an IN-VIEW bound's exact place `x` clamps into [0, wave_w − 1], the last
+// column's left edge, in reals.
+// The inclusive END wall T-1 at full zoom-out stands within a px of the
+// surface's right edge; left unclamped, the right-edge-anchored end CAP loses
+// its bound-edge pixel to the lane clip. Clamping lands the wall on the last
 // visible column so the cap stays fully visible on the bar's end.
-// Begin/frame-0 already maps to column 0, unaffected.
-// AN OFFSCREEN BOUND KEEPS ITS OWN COLUMN, past the edge (architect
+// Begin/frame-0 already stands at 0, unaffected.
+// AN OFFSCREEN BOUND KEEPS ITS OWN PLACE, past the edge (architect
 // 2026-10-05, "it slides off the edge, clipped, like any other content"): its
 // button stands where the bound is and the lane's clip cuts it, so a panned
 // end leaves the view column by column instead of vanishing whole with the
 // body growing into its room. The painter clips everything it draws to the
 // effective width [0, wave_w), so the inert gutter never paints.
-// THE BOUND'S EXACT PLACE RIDES BESIDE ITS COLUMN (architect 2026-11-14,
-// send J): `x` is displayed_x_at on the column's own arguments, device px
+// THE BOUND'S EXACT PLACE IS THE WHOLE ANSWER (architect 2026-11-14,
+// send J; no column rides beside it since the no-grid arc): `x` is
+// displayed_x_at on the caller's basis, device px
 // from the lane's first column, WITH THE EOF-WALL CLAMP APPLIED IN REALS —
-// an in-view bound's x clamped into [0, wave_w − 1] as its column is, an
+// an in-view bound's x clamped into [0, wave_w − 1], an
 // offscreen one's raw. PAINT AND THE GRABS READ IT (architect 2026-11-15,
 // the no-grid arc: "yes, I'd like to move to fractional hitboxes.") — the
 // span's fill and the TRIM sweep's highlight through trim_span_columns, and
 // the two end zones and the bridge, published on the span's real ends
 // (trim_endcap_rect, trim_bridge_gap) and tested with the pointer's real
-// place; `col` stays the bound-set click's nearest-cap test's and the
-// culls'.
+// place, and the bound-set click's nearest-cap verdict by real distance
+// (trim_bound_click, input_trim.cpp).
 struct TrimBoundColumn {
     double ms;          // displayed-domain position (already mapped)
     bool   in_viewport; // ms in [vp_start, vp_end), the unrounded verdict
-    int    col;         // the bound's column; clamped into [0, wave_w-1]
-                        // in view (the EOF-wall clamp), raw off it
-    double x;           // the bound's exact place; clamped likewise
+    double x;           // the bound's exact place; clamped into
+                        // [0, wave_w − 1] in view (the EOF-wall clamp), raw
+                        // off it
 };
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,

@@ -52,7 +52,7 @@ struct GuiTargetRender;
 //     the pass -> owner freeze reads the RESOLVED walk — a member's frozen tempo
 //     depends on what the members before it just became, so a group toggle's
 //     result would depend on iteration order; positional acts are coupled because
-//     one painted column per member and one rigid delta for all of them are
+//     one step per member and one rigid delta for all of them are
 //     different arrangements, and neither can be the honest reading of "move the
 //     selection".
 // THE ARCHITECT'S GENERAL RULE, verbatim (2026-07-29), which generalizes those two
@@ -83,12 +83,14 @@ struct GuiTargetRender;
 //
 // THE WALL POLICY, ONE RULE FOR THE WHOLE PRODUCT (architect 2026-07-30) — stated
 // ONCE here, every arm carrying only its own class plus a pointer back:
-//   * A SINGLETON STEP CLAMPS ONTO ITS WALL. A position nudge moves one painted
-//     column = samples-per-pixel FRAMES (or, on the phase-reset column, one
+//   * A SINGLETON STEP CLAMPS ONTO ITS WALL. A position nudge moves one
+//     millisecond's FRAMES (or, on the phase-reset column, one
 //     HOP of the engine's analysis lattice — below), so a press starting near
 //     an edge can overshoot mid-step; clamping is what makes the song edges
-//     EXACTLY REACHABLE by the arrow buttons, in every column. The hop, being the
-//     longer stride at working zoom, clamps sooner than a column step does.
+//     EXACTLY REACHABLE by the arrow buttons, in every column — the last
+//     press before a wall moves the remaining distance, and the next is
+//     refused. The hop, being the
+//     longer stride, clamps sooner than a millisecond does.
 //     Both position twins clamp (the warp twin
 //     always did; the phase twin joined with this ruling, replacing a whole-press
 //     refusal). The SINGLETON TEMPO STEP's constructive clamp
@@ -109,7 +111,7 @@ struct GuiTargetRender;
 //
 // This file is the type-free flesh SHARED BY THE TWO POSITION NUDGE TWINS, all of
 // it singleton-scoped now: an identical guard prologue (which owns the collapse),
-// an identical pixel-column step, an identical WALL-REGIME MIDDLE and an
+// one step owner with its two units, an identical WALL-REGIME MIDDLE and an
 // identical commit tail. The middle was the SAME SHAPE in both twins under the
 // policy above from 2026-07-30 — a delta clamped into the marker's own wall
 // headroom, over warp's identity domain and over phase's mapped domain alike —
@@ -129,19 +131,20 @@ struct GuiTargetRender;
 // BARE Left / Right alone — the horizontal ladder is retired on every column,
 // placement being graphical — and every press carries a HorizontalArrowStep
 // (gui_input.h), ONE step in the ACTIVE COLUMN'S unit (horizontal_arrow_step,
-// the one fork): a PAINTED COLUMN on W and M, or on the PHASE-RESET column a
+// the one fork): ONE MILLISECOND on the warp column (architect 2026-11-15),
+// or on the PHASE-RESET column a
 // HOP, which moves the reset by exactly one hop of the engine's analysis
 // lattice through phase_reset_hop_step_frame (warp_frame_map_view.h, the
 // owner the iteration cells land through: a translation of the reset's target
 // image by kRs, so Right then Left returns it where it started give or take a
 // frame). THE P COLUMN'S ARROW UNIT IS A HOP because the render depends only
-// on the window a reset seeds in, so a column nudge there is almost always
+// on the window a reset seeds in, so a finer nudge there is almost always
 // silent — the recorded exception between columns (horizontal_arrow_step's
 // own comment, gui_input.h). The hop takes the prologue, the landing
 // owner's walls, the
-// post-clamp identity no-op and the commit tail exactly as the column step
+// post-clamp identity no-op and the commit tail exactly as the millisecond
 // does; only the landing's step arithmetic forks, in position_nudge_landing,
-// and the hop makes no pixel claim.
+// and neither unit makes a pixel claim.
 
 // Result of the shared guard prologue.
 struct PositionNudgePrologue {
@@ -214,7 +217,7 @@ struct PositionNudgePrologue {
 // `synthesized_repeat` is the dispatching key event's platform repeat bit,
 // consumed by the coalesce verdict alone. `step` is the press's own ONE STEP
 // IN THE ACTIVE COLUMN'S UNIT (horizontal_arrow_step, gui_input.h) — ±1
-// painted column on W and M, ±1 hop on the phase-reset column — consumed by
+// millisecond on the warp column, ±1 hop on the phase-reset column — consumed by
 // the wall term at (1) alone, which is what makes the refusal DIRECTIONAL,
 // the marker at frame 0 refusing Left and taking Right. IT WAS A BARE SIGN
 // NAMED `direction` UNTIL THE 2026-08-31 LADDER made it a column count, and
@@ -228,67 +231,28 @@ PositionNudgePrologue position_nudge_prologue(
     Viewport& viewport, Undo& undo,
     GestureKind kind, bool synthesized_repeat, HorizontalArrowStep step);
 
-// THE pixel-column step, and the ONLY COLUMN derivation any nudge uses: read
-// the marker's currently painted column
-// (painted_column_of_source_frame_on_basis — the stem painters' own math
-// against the displayed paint basis) and commit the frame at cf + step_columns
-// (authored_frame_at_column_on_basis, which funnels through
-// snap_authored_frame, the one fractional-to-authored route). BOTH HALVES OF
-// THE BASIS ARE THE PAINTED ONES (architect 2026-09-24, strictly as painted):
-// the caller's `map` is the displayed map and the viewport is its twin,
-// item_viewport_basis, read here — the column the flag is on screen at, not
-// the one the live viewport would put it at while a viewport-dispatched worker
-// job is still in flight; cold, the basis is the live viewport by its own
-// contract. The press's CAMERA is another matter: the hold's column
-// (finish_position_nudge's prior viewport) is a camera write placed against
-// the live viewport it writes, navigation and not this step. Returns the
-// committed frame RAW — walls are NOT this helper's business: the landing
-// owner applies them to the result. Exactly one call per COLUMN press, on the
-// focus. THE PHASE-RESET COLUMN'S HOP (2026-09-21) IS NOT A COLUMN STEP and
-// never reaches here: it lands through phase_reset_hop_step_frame under the
-// LIVE map, a hop being the render's quantum rather than a painted one, and it
-// makes no pixel claim — nothing below speaks for it.
-//
-// THE COMMANDED COLUMN COUNT IS ±1, ONE COLUMN PER PRESS, since the horizontal
-// ladder retired on 2026-09-21 (it was ±3 under Shift and ±10 under Ctrl from
-// 2026-08-31); the parameter stays a signed count because the arithmetic is a
-// signed column delta added to the painted column. A held key or button
-// repeats the one-column press.
-//
-// THE ONE-COLUMN-PER-PRESS GUARANTEE and its numeric rationale live here. It is a
-// GRID-FINENESS property, not a gesture-family property: the painted move is
-// exactly the commanded column per press because the authored FRAME grid is
-// finer than the pixel grid, so every adjacent-column target is representable in
-// the authored domain (and re-anchoring to the column grid every press re-derives
-// the pixel phase, so whole-frame rounding residue never accumulates — rounding
-// each press independently would paint occasional 0 or 2 px jumps). The deepest
-// zoom, level 1, paints q = half the working column (working_column_frames,
-// app_state.h), floored at kDeepestZoomMinFramesPerPx = 20 (app_state.h). In
-// the PHASE nudge's mapped target home that gives q / 16 source
-// frames per target pixel under the value brackets (tempo times both scales at
-// least 0.25 * 0.5 * 0.5 = 1/16), so the whole-frame rounding error is at most
-// 8 / q px: at 44.1 kHz the tablet's q = 23 gives 1.4375 frames per pixel and
-// 0.348 px; at 48 kHz q = 25 gives 1.5625 and 0.320 px. In the WARP nudge's
-// identity source home the bound is trivially stronger (error at most half a
-// frame, 0.5 / q: 0.022 px on the tablet). Either way each press
-// still advances at least one whole frame. THE BOUND NEEDS q > 16, and the
-// deepest-zoom floor holds it at every waveform width: where level 1 would
-// paint under 20 frames per pixel the zoom stops at 20 (8 / 20 = 0.4 px,
-// effective_min_zoom_level, main.cpp).
-//
-// ONE PAINTED COLUMN PER PRESS IS A COLUMN-STEP PROPERTY AND NOTHING ELSE, and
-// the trap it documents already bit once: the only other gesture that ever claimed
-// it was the W+target bare Left/Right TEMPO-IMAGE STEP, which authored CENTS — a
-// grid COARSER than the pixel grid on ordinary spans (one cent moves the image
-// about 2+ px there) — so the guarantee INVERTED there and that gesture needed a
-// minimum-directional-cent rule of its own. It is deleted (2026-07-29, with the
-// whole tempo-image family — see marker_drag.h), and the surviving tempo surface,
-// the bare Up/Down cent step, makes no pixel claim at all: it steps ONE CENT per
-// press by definition. So do not carry this guarantee to any value gesture.
-int64_t stepped_anchor_frame(
-    const AppState& app, const GuiAudio& audio,
-    const std::vector<WarpFrameMapSegment>& map,
-    int64_t orig_frame, int step_columns);
+// ONE MILLISECOND A PRESS (architect 2026-11-15, the no-grid arc: "the
+// left-right nudge should be recalibrated to one millisecond left or right
+// ... we would convert 1 millisecond to the nearest amount in frames, and
+// that would be the nudge step"; "using nudge on a coarse zoom is kind of
+// pointless, because the point of nudge is fine-tuning"). The warp column's
+// step is A TIME, NOT A PLACE: arrow_millisecond_frames (gui_input.h) frames
+// of the displayed domain — 44 at 44.1 kHz, 48 at 48 kHz — at every zoom, the
+// arithmetic at position_nudge_landing's millisecond arm. IT MAKES NO PIXEL
+// CLAIM: on the tablet at 44.1 kHz a press moves the mark 44 / 46 of a px at
+// the working zoom (the 46-frame working column), 44 / 184 of one two levels
+// coarser and 44 / 23, under two, at the deepest zoom, and the mark is
+// painted at its exact place, so every press shows — by that fraction. A
+// held key or button repeats the one-millisecond press. Right then Left
+// returns the marker to its frame exactly in the source home (integer
+// arithmetic off the walls). THE PHASE-RESET COLUMN'S HOP (2026-09-21) is the
+// other unit, the render's quantum under the LIVE map
+// (phase_reset_hop_step_frame), untouched by the millisecond.
+// DO NOT CARRY A PIXEL GUARANTEE TO ANY STEP: the column step that stood here
+// until 2026-11-15 moved exactly one painted column a press, and the
+// tempo-image step that once borrowed that claim for a cent's step inverted
+// it and is deleted (2026-07-29, marker_drag.h); the surviving steps — a
+// millisecond, a hop, a cent — are each one unit of their own by definition.
 
 // WHERE ONE POSITION NUDGE WOULD LAND A MARKER — THE WALL-REGIME MIDDLE, one
 // owner for both columns since 2026-08-31 (it stood spelled out in each twin
@@ -298,9 +262,9 @@ int64_t stepped_anchor_frame(
 // single marker wall stated at drop_phase_reset_at_position). Given the
 // marker's resting frame it returns the frame the press would commit:
 //   (1) THE STEP, as a plain integer delta, forked on the step's UNIT and on
-//       nothing else: COLUMNS takes `count` painted columns through
-//       stepped_anchor_frame over the DISPLAYED map (the one-column-per-press
-//       guarantee and its numbers are at that declaration); HOPS, the
+//       nothing else: MILLISECONDS moves the marker's displayed image by
+//       `count` × arrow_millisecond_frames and lands it back through the
+//       DISPLAYED map (ONE MILLISECOND A PRESS, above); HOPS, the
 //       phase-reset column's arrow unit (architect 2026-09-21), takes `count`
 //       hops through phase_reset_hop_step_frame over the LIVE map
 //       (live_warp_frame_map — the render's, the map the iteration cells
@@ -320,8 +284,8 @@ int64_t stepped_anchor_frame(
 // refusals, so the press writes nothing there, and answering the resting frame
 // is how this owner says so to a caller that has not run the prologue. The
 // TWINS reach it past those guards, so the arm is the FACE's alone in practice
-// — the waveform lane's landing owner (playhead_pixel_step_landing) treats its
-// degenerate grid the same way.
+// — the waveform lane's landing owner (playhead_arrow_step_landing) treats its
+// degenerate state the same way.
 // THREE READERS: the TWO nudge twins, whose committed frame this IS
 // (GuiWarpMarkersOps::nudge_selected_markers and
 // GuiPhaseResetMarkersOps::nudge_selected_phase_resets — each
@@ -329,9 +293,11 @@ int64_t stepped_anchor_frame(
 // marker_nudge_actionable (app_state.h), the Left / Right buttons' marker-lane
 // wall term, which compares this landing against the resting frame.
 //
-// THE WALL VERDICT IS THE HEADROOM'S, in both units: the column mapping is
-// monotonic and every column step is at least one whole frame (the guarantee
-// at stepped_anchor_frame), and a hop's landing leaves the resting seed
+// THE WALL VERDICT IS THE HEADROOM'S, in both units: a millisecond is at
+// least one whole frame (arrow_millisecond_frames' floor; under a real map
+// its image is at least a sixteenth of that, the value brackets' slope
+// floor, still over a frame at every product rate), and a hop's landing
+// leaves the resting seed
 // window by exactly one in the pressed direction, so off a wall either step
 // moves the marker by at least one frame, and after the clamp at (2)
 // `landing == orig_frame` iff the headroom in that direction is zero — a step
@@ -379,10 +345,10 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     edge once it would leave; HoldColumn (the posture an explicit centring
 //     armed) runs
 //     Viewport::hold_subject_column_after_nudge, which places the viewport so
-//     the playhead (e) just landed paints in the column the marker painted in
+//     the playhead (e) just landed paints at the exact place the marker held
 //     before the nudge (prior_focused_frame, the twin's pre-write frame,
-//     taken to its painted column on the displayed map and item_viewport_basis
-//     — the basis the step anchored on — ahead of (e)'s edge-align; architect
+//     taken to its exact x on the displayed map and item_viewport_basis
+//     — the painted basis — ahead of (e)'s edge-align; architect
 //     2026-09-24, strictly as painted), clamped to the waveform's edge columns
 //     (the rule at its definition, viewport.cpp). Every press that reaches this tail moved its
 //     marker — the twins return on the post-clamp identity no-op first — so a

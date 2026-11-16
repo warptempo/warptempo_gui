@@ -588,93 +588,55 @@ void Viewport::clamp_display_state_to_live_domain() {
     // every gesture, and are not this function's subject.)
 }
 
-// WHERE ONE PIXEL STEP WOULD LAND — the contract is at the declaration
-// (app_state.h); the arithmetic is move_playhead_by_arrow_step's own, which
-// reads this for its landing since 2026-08-30 through
-// playhead_arrow_step_landing's Columns arm, the Left / Right buttons' face
-// reading the same owner. The two degenerate cases the act
-// used to return on — no audio, no painted grid — answer the resting cursor
+// WHERE ONE ARROW STEP WOULD LAND THE CURSOR — the contract is at the
+// declaration (app_state.h); the arithmetic is move_playhead_by_arrow_step's
+// own, which reads this for its landing, the Left / Right buttons' face
+// reading the same owner. The degenerate cases — no audio, a dead sample
+// rate under the millisecond — answer the resting cursor
 // itself, so a step there is the no-op it always was and the face greys.
-int64_t playhead_pixel_step_landing(const AppState& app, const GuiAudio& audio,
-                                    int delta_px) {
+int64_t playhead_arrow_step_landing(const AppState& app, const GuiAudio& audio,
+                                    HorizontalArrowStep step) {
     if (audio.total_frames() <= 0) return app.playhead_cursor_sample;
-    const GuiRect area = waveform_area(app);
-    const double q = painter_samples_per_pixel(app, audio, area);
-    if (q <= 0.0) return app.playhead_cursor_sample;
-    // The cursor's painted column on the live lattice's OWN INDEX, K − m
-    // (displayed_column_at's rule in int64, the exempt sibling recorded
-    // there): m the viewport's index (viewport_lattice_index, the recovery
-    // the landing below shares), K the cursor's nearest lattice index through
-    // THE PLACEMENT'S OWN SELECTOR, lattice_index_ties_right — an exact tie
-    // goes right (architect 2026-11-06, session 69, the reason at
-    // displayed_column_at), so the step starts from the column the cursor
-    // paints in and the two spellings cannot fork on a tie.
-    const int64_t origin = app.viewport_lattice_origin;
-    const int64_t m = static_cast<int64_t>(viewport_lattice_index(
-        static_cast<double>(app.viewport_start_sample), q, origin));
-    const int64_t cur_col = static_cast<int64_t>(lattice_index_ties_right(
-        static_cast<double>(app.playhead_cursor_sample - origin) / q)) - m;
-    const int64_t target_col = cur_col + static_cast<int64_t>(delta_px);
+    // The step in frames of the ACTIVE domain, the cursor's own: a
+    // millisecond's frames at the piece's rate (arrow_millisecond_frames —
+    // the two views share the one rate), or a hop's kRs. A dead rate has no
+    // millisecond and answers the cursor itself, the act's own no-move.
+    int64_t unit_frames = kRs;
+    if (step.unit == HorizontalArrowStep::Unit::Milliseconds) {
+        if (audio.sample_rate() <= 0) return app.playhead_cursor_sample;
+        unit_frames = arrow_millisecond_frames(audio.sample_rate());
+    }
     // Pre-clamped into the live domain, the clamp move_playhead_to would apply
     // anyway — a landing must be a frame the cursor can occupy, which is what
     // makes the wall compare exact.
     return clamp_playhead_to_live_domain(
-        static_cast<int64_t>(std::llrint(displayed_grid_position_at_column(
-            app.viewport_start_sample, target_col, q, origin))),
-        app, audio);
-}
-
-int64_t playhead_arrow_step_landing(const AppState& app, const GuiAudio& audio,
-                                    HorizontalArrowStep step) {
-    if (step.unit == HorizontalArrowStep::Unit::Columns)
-        return playhead_pixel_step_landing(app, audio, step.count);
-    if (audio.total_frames() <= 0) return app.playhead_cursor_sample;
-    return clamp_playhead_to_live_domain(
-        app.playhead_cursor_sample + static_cast<int64_t>(step.count) * kRs,
+        app.playhead_cursor_sample +
+            static_cast<int64_t>(step.count) * unit_frames,
         app, audio);
 }
 
 void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     if (audio.total_frames() <= 0) return;
-    // Resolve the playhead's CURRENT painted column —
-    // lattice_index_ties_right((cursor − origin)/q) − m, the painters' own
-    // placement on the lattice's own index (displayed_column_at's K − m) — and
-    // land on the ADJACENT grid column's frame through the one column->frame
-    // owner. So one keypress moves exactly one painted pixel even when q is
-    // fractional (a sub-pixel sample step could leave the displayed column
-    // unchanged), AND the landed sample is independent of the viewport's own
-    // index m AT A FIXED q AND ORIGIN: it is the
-    // painted lattice, the one the marker nudge's column step lands on (the
-    // pen acts land on the frame under the pen, off any lattice, architect
-    // 2026-11-15) — the camera's lattice origin its third term (the rest's
-    // own, architect 2026-10-31 and 2026-11-15, the no-grid arc: every
-    // landing and every zoom frame rests on the origin its start derives,
-    // AppState::viewport_lattice_origin) — so a step means the same sample
-    // whatever pan preceded it on that lattice. NOT across a change of
-    // origin: a step lands on the lattice the camera rests on, which a
-    // later landing (a tab switch, a walk, `c`) replaces with its own, so
-    // the same marker's step can land a different frame there — each the
-    // correct frame of its own painted lattice (Astra's determinism audit,
-    // 2026-11-06; the approved origin design). (Finer adjustment
-    // is a deeper zoom's job.) The spp is the PAINTER-quantized q rather than
-    // the logical one for the same reason the click placement's item basis
-    // carries that quantization: it is the grid actually drawn (at a whole
-    // level the two agree exactly; at a fractional rest q is the logical spp
-    // rounded to the sixteenth-frame grid, painter_quantized_spp).
-    // The column's index is the placement's own selector
-    // (lattice_index_ties_right, shared with displayed_column_at); the
-    // landing is the shared owner's. move_playhead_to still owns the walls, and
-    // a playhead parked off-lattice (a tap's, a drag's: the frame under the
-    // pen) re-snaps onto it at its first step. THE
-    // WHOLE ARITHMETIC LIVES AT playhead_pixel_step_landing since 2026-08-30,
-    // the Left / Right buttons' face reading the same
-    // landing; a step at a wall still reaches move_playhead_to, whose
-    // unconditional audition end is the KEY's to keep (the greyed button
-    // forgoes it, the skips' own shape). ON THE PHASE-RESET COLUMN THE UNIT
-    // IS A HOP (architect 2026-09-21, horizontal_arrow_step): the same road in
-    // its own unit, exactly kRs target frames, no grid and no rounding, the
-    // landing owner's Hops arm — everything said above about columns is the
-    // Columns arm's.
+    // ONE STEP IN THE ACTIVE COLUMN'S UNIT (horizontal_arrow_step,
+    // gui_input.h), in pure integer arithmetic on the cursor's own frame —
+    // no grid, no map and no rounding: ON THE WARP COLUMN ONE MILLISECOND
+    // (architect 2026-11-15, the no-grid arc: "the left-right nudge should be
+    // recalibrated to one millisecond left or right ... we would convert 1
+    // millisecond to the nearest amount in frames, and that would be the
+    // nudge step"; the marker nudge's own unit, position_nudge.h's ONE
+    // MILLISECOND A PRESS), arrow_millisecond_frames of the active domain
+    // whatever the zoom — 44 frames at 44.1 kHz: about a pixel at the working
+    // zoom, a fraction of one above it, under two at the deepest — the line
+    // painted at its exact place, so every press shows; ON THE PHASE-RESET
+    // COLUMN ONE HOP (architect 2026-09-21), exactly kRs target frames. So a
+    // step means the same frames whatever the camera, and Right then Left
+    // returns the cursor to its frame off the walls. THE WHOLE ARITHMETIC
+    // LIVES AT playhead_arrow_step_landing, the Left / Right buttons' face
+    // reading the same landing; move_playhead_to still owns the walls and the
+    // keep-visible edge-align, which pages the view exactly where a step
+    // carries the cursor off screen (reseat_playhead_to); a step at a wall
+    // still reaches move_playhead_to, whose unconditional audition end is the
+    // KEY's to keep (the greyed button forgoes it, the skips' own shape).
     move_playhead_to(playhead_arrow_step_landing(app, audio, step));
 }
 
@@ -1163,8 +1125,8 @@ void Viewport::invalidate_all() {
 //   * THE MARKER NUDGE'S COMMIT TAIL (finish_position_nudge,
 //     position_nudge.cpp) passes the PAINTED EXACT x — the focused marker's
 //     pre-write frame through painted_x_of_source_frame_on_basis over
-//     the displayed map and item_viewport_basis, the SAME painted basis its
-//     step anchored on (stepped_anchor_frame), so the column held is the one
+//     the displayed map and item_viewport_basis, the painted basis, so the
+//     place held is the one
 //     the marker visibly occupied even while a viewport job (a resize
 //     re-clamp, a target-map publish) has moved the live viewport ahead of
 //     the pixels (architect 2026-09-24, strictly as painted).

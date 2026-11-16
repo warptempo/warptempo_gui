@@ -194,9 +194,10 @@ struct GuiWarpMarkersOps {
     // declaration, architect 2026-10-14).
     GuiOpRefusal adjust_iter_bound_cents(MarkerCell side, int64_t delta_cents);
     // `step` is the press's one step in its unit (horizontal_arrow_step,
-    // gui_input.h): on this column always ONE PAINTED COLUMN (the horizontal
+    // gui_input.h): on this column always ONE MILLISECOND (architect
+    // 2026-11-15; the horizontal
     // ladder is retired, the vertical one above standing), which the shared
-    // road reads as a plain column delta the whole way down. `camera` is the
+    // road reads as a plain signed count the whole way down. `camera` is the
     // press's (NudgeCamera, gui_input.h — the hold posture's answer,
     // nudge_camera: dark follows the edge, standing holds the column),
     // forwarded to the shared tail untouched.

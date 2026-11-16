@@ -288,9 +288,9 @@ uint64_t waveform_gain_fingerprint(const AppState& app);
 // domain.
 //
 // NOT for sites translating against an explicit caller-supplied map — a
-// proposed (pre-commit) marker list. Those use the explicit-map pixel-anchoring
+// proposed (pre-commit) marker list. Those use the explicit-map
 // helpers (painted_column_of_source_frame_on_basis /
-// authored_frame_at_column_on_basis) with their own map.
+// authored_frame_at_x_on_basis) with their own map.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
@@ -381,14 +381,28 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
 // THE VIEWPORT'S OWN LATTICE INDEX m: the grid index of a lattice-snapped
 // viewport start on its lattice of origin `origin` at painter step q (q > 0),
 // m = nearbyint((vp_start − origin) / q), as a whole-valued double. THE ONE
-// RECOVERY, shared by both directions of the lattice: the column->frame
-// landing below (displayed_grid_position_at_column, g(m + col)) and the
-// frame->column placement (displayed_column_at, K − m), so the column a
-// frame paints in and the frame a column lands on are indexed from the same
-// m. Exact for a start the chokepoint settled (the start lies on its own
-// lattice; the mantissa argument is at the landing below). The int64 walk
-// that cannot take a double (playhead_pixel_step_landing, viewport.cpp)
-// casts this same answer.
+// RECOVERY, shared by every reader of the lattice: the frame->column
+// placement (displayed_column_at, K − m), the exact place (displayed_x_at)
+// and its inverse, the pen acts' conversion (displayed_frame_at_x), so the
+// place a frame paints at and the frame a place lands on are indexed from
+// the same m. Caller supplies a `vp_start` and an origin in the SAME domain
+// as `q` — the arithmetic is domain-blind, so source view and target view
+// both read it, each in its own active display domain.
+//
+// THE RECOVERY IS EXACT for product-reachable audio lengths, for a start the
+// chokepoint settled (the start lies on its own lattice by the chokepoint's
+// invariant): at the deepest
+// numeric zoom q >= column / 2 frames/px (23 or more on the tablet)
+// and a source length fits well within the
+// double mantissa, so |(vp_start − origin)/q - m| << 0.5. The target domain's total
+// is at most 16x the source's — build_warp_frame_map divides each source delta
+// by the product of tempo, marker scale and settings scale, and all three
+// floors are legal at once (0.25 * 0.5 * 0.5 = 1/16, value_format.h), so the
+// bracket bound is 16x rather than the tempo bracket's 4x alone. A RIFF source
+// caps under 2^32 bytes, i.e. under ~1.1e9 frames at 16-bit stereo, so even a
+// 16x target total is ~1.7e10 — four orders of magnitude inside the 2^53
+// mantissa, and the argument holds in that domain too. It is NOT claimed exact
+// over the whole int64 range.
 inline double viewport_lattice_index(double vp_start, double q,
                                      int64_t origin) {
     return std::nearbyint((vp_start - static_cast<double>(origin)) / q);
@@ -398,8 +412,9 @@ inline double viewport_lattice_index(double vp_start, double q,
 // RIGHT): the nearest integer to a lattice quotient x, an EXACT half-integer
 // going toward +inf, as a whole-valued double — integer K owns [K − 0.5,
 // K + 0.5). Shared by the frame->column placement (displayed_column_at) and
-// its int64 sibling (playhead_pixel_step_landing, viewport.cpp), so the two
-// cannot fork on a tie; the rule's reason is at displayed_column_at. The
+// the chokepoint's Exact origin (resting_viewport_start, main.cpp: one
+// origin per start's place within a step); the rule's reason is at
+// displayed_column_at. The
 // compare is against the representable half-integer lo + 0.5, so only an
 // exact tie goes right: floor(x + 0.5) is NOT this — its addition rounds the
 // double just below a half up across the tie. No epsilon, no rounding-mode
@@ -409,74 +424,6 @@ inline double viewport_lattice_index(double vp_start, double q,
 inline double lattice_index_ties_right(double x) {
     const double lo = std::floor(x);
     return lo + (x >= lo + 0.5 ? 1.0 : 0.0);
-}
-
-// THE ONE COLUMN->FRAME LANDING for a lattice-snapped viewport: the exact
-// DISPLAY-DOMAIN grid position at pixel column `col` on the viewport's own
-// lattice, of origin `origin` (AppState::viewport_lattice_origin, carried by
-// the caller's basis). Recover the viewport's column index
-// m = nearbyint((viewport_start − origin)/q) (viewport_lattice_index above,
-// the recovery the frame->column placement shares), round ONCE, and return the
-// lattice point itself, origin + nearbyint((m+col)*q), as a whole-frame
-// double. A marker commit funnels this through snap_authored_frame; the
-// playhead landings llrint/nearbyint it; those roundings pass the whole
-// value unchanged. Caller supplies q>0 (painter spp), and a `viewport_start`
-// and an origin in the SAME domain as `q` — the arithmetic is domain-blind,
-// so source view and target view both land through it, each in its own
-// active display domain.
-//
-// SINGLE ROUNDING, ON THE PAINTED LATTICE (architect 2026-10-31): the one
-// nearbyint is HERE, on (m+col)*q alone, so the answer IS the pixel
-// column's left edge on the displayed viewport's lattice — the column
-// coordinates the plate's bars are placed in (render.h's THE PLATE'S BARS),
-// and on a whole level at origin 0 the bar's own edge,
-// render_waveform_columns' edge_at to the bit (the origin
-// is added after the rounding, as there: a tie rounded after adding an odd
-// origin would land a frame off the edge) — a commit lands on the frame the
-// finger's painted column shows. At origin 0 it is byte for byte the value
-// the callers' own nearbyint / llrint made of (m+col)*q before the origin
-// existed (both round the FRAME half to even; the placement's column tie is
-// its own, ties right, at displayed_column_at). THE GRID FOLLOWS THE
-// PICTURE AT EVERY REST (architect 2026-11-15, the no-grid arc: every
-// landing exact; a gesture's rest since 2026-10-31), its origin the
-// camera's (the architect's "the lattice is less
-// important than smooth operation"): a column means the frame painted at
-// its left edge on the lattice the camera rests on, the same sample for the
-// same viewport — start, origin and step. That matters past display: both
-// drop-at-playhead routes commit the playhead's sample into authored data, so
-// the playhead lattice is an authoring lattice too.
-//
-// THE TWO-ROUNDING SIBLING IS BANNED: the form viewport_start +
-// nearbyint(col*q) rounds twice (once into the viewport start, once into the
-// column offset), each with its own independent half-frame error, so its
-// landings are anchored to the CURRENT viewport start rather than to the
-// lattice — a pan or a zoom round trip back to the same level relabels the
-// same painted column by +/-1 frame. The choice is invisible in paint: both
-// forms sit within one frame of the ideal grid point, and one frame is at
-// most 1/q px, q at least half the working column at the deepest numeric
-// zoom (23 on the tablet at 44.1 kHz) — far under the half-pixel
-// paint-rounding threshold — so a landing paints at column `col` either way.
-//
-// m recovery is exact for product-reachable audio lengths: at the deepest
-// numeric zoom q >= column / 2 frames/px (23 or more on the tablet)
-// and a source length fits well within the
-// double mantissa, so |(viewport_start − origin)/q - m| << 0.5 (the start lies
-// on its own lattice by the chokepoint's invariant). The target domain's total
-// is at most 16x the source's — build_warp_frame_map divides each source delta
-// by the product of tempo, marker scale and settings scale, and all three
-// floors are legal at once (0.25 * 0.5 * 0.5 = 1/16, value_format.h), so the
-// bracket bound is 16x rather than the tempo bracket's 4x alone. A RIFF source
-// caps under 2^32 bytes, i.e. under ~1.1e9 frames at 16-bit stereo, so even a
-// 16x target total is ~1.7e10 — four orders of magnitude inside the 2^53
-// mantissa, and the argument holds in that domain too. It is NOT claimed exact
-// over the whole int64 range.
-inline double displayed_grid_position_at_column(int64_t viewport_start,
-                                                int64_t col, double q,
-                                                int64_t origin) {
-    const double m = viewport_lattice_index(
-        static_cast<double>(viewport_start), q, origin);
-    return static_cast<double>(origin) +
-           std::nearbyint((m + static_cast<double>(col)) * q);
 }
 
 // THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain,
@@ -502,9 +449,7 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // convention's choice, not geometry's (at a two-device-px line either stem
 // is half a device px from the point). Ties to even, ties left and a
 // drag-only tie rule are not taken (closed_questions.md). Only placement
-// takes it: the landing (displayed_grid_position_at_column) and every frame
-// rounding keep nearbyint, and a landed lattice point is never near a
-// placement tie (its quotient is within 0.5 / q of a whole index).
+// takes it: every frame rounding keeps nearbyint.
 //
 // WHY THE GLOBAL INDEX: the waveform area's pixel columns are the lattice's
 // cells, global — column c spans [g(m + c), g(m + c + 1)) — and the plate is
@@ -524,28 +469,22 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // would answer the same column (the rule is translation-invariant and the
 // start lies exactly on the lattice); at a fractional q they differ only
 // for a point within the start's rounding residue (at most 0.5 / q column)
-// of a half-column. m is the column->frame landing's
-// own recovery (displayed_grid_position_at_column), so a frame's column and
-// a column's frame index the same lattice.
+// of a half-column. m is the one recovery every reader of the lattice
+// shares (viewport_lattice_index).
 //
 // One owner for the one rounding — THE COLUMN'S READERS, and what each takes
 // of it since the marks are painted at their exact places (architect
 // 2026-11-14, send J; displayed_x_at below owns that rule and the list of
-// what is painted there): the trim-bound column (trim_bound_column,
-// render.cpp — the grabs, the bridge, the published hit geometry and the
-// bound-set click), the phase-reset overlay's edges (the ring's visibility
-// gates and its left side's gate), the undo
-// restore's held column (the singleton under the hold, undo.cpp; the
-// restore's visibility test is displayed_frame_on_screen, inside
-// land_subject) and the nudge's (viewport.cpp, input_key_dispatch.cpp), the
-// flag iterator (iterate_visible_flags_impl, render.cpp — the right cull,
-// every hit box, the label's whole-px seat and the stem's gate), the
-// playheads' and the scanner's column (playhead_pixel_x / scanner_pixel_x,
-// main.cpp — the line's gate, the ruler's head's cull and hit, their damage
-// box and RESTRICT's stop), the ruler's ticks' gates and its majors' label
-// seats (RulerComb::tick_col, paint_handler.cpp, the tick's time in frames)
-// and painted_column_of_source_frame_on_basis's tail (every gesture's
-// column) all place through this exact expression. PURE ARITHMETIC,
+// what is painted there; the gates, the hit boxes, the held place and the
+// landings left the column with the no-grid arc, 2026-11-15): THE CULLS AND
+// THE CAMERAS' TESTS — the flag iterator's right cull
+// (iterate_visible_flags_impl, render.cpp), the playheads' and the
+// scanner's column (playhead_pixel_x / scanner_pixel_x, main.cpp — the
+// ruler's head's cull, their damage box and RESTRICT's stop), the cameras'
+// visibility test (displayed_frame_on_screen below; follow's off-screen-left
+// test beside it, viewport.cpp) and
+// painted_column_of_source_frame_on_basis's tail (the off-edge authoring
+// refusal) all place through this exact expression. PURE ARITHMETIC,
 // NO BASIS CHOICE INSIDE: the caller supplies its own vp_start/spp AND THE
 // LATTICE ORIGIN OF THE SAME BASIS (plate basis, item basis, or live values —
 // the two-epochs split at plate_viewport_basis / item_viewport_basis is the
@@ -559,15 +498,9 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // (architect 2026-11-14, send J): the same quotient unrounded, for paint
 // alone.
 //
-// THE ONE INT64 SIBLING IS ALSO EXEMPT AND COUNTED (2026-08-22):
-// playhead_pixel_step_landing (viewport.cpp) spells this same K − m inline in
-// the INT64 domain — its column walk composes with
-// displayed_grid_position_at_column's int64 col and cannot take this owner's
-// int return — m cast from viewport_lattice_index and K from THE SAME
-// SELECTOR, lattice_index_ties_right, so the two share the tie rule and
-// cannot fork on it (2026-11-06), recorded at its own site. It is the exempt
-// list's whole int64 class; a second int64 spelling would be the fork this
-// owner exists to prevent.
+// NO SECOND SPELLING OF K − m STANDS ANYWHERE: the int64 column walk the
+// playhead's step kept beside this owner went with the column step
+// (architect 2026-11-15, the nudge one millisecond).
 inline int displayed_column_at(double displayed, double vp_start, double spp,
                                int64_t origin) {
     const double m = viewport_lattice_index(vp_start, spp, origin);
@@ -599,10 +532,10 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 // decisions."; the gates, the published rects, the hit tests and the pen
 // acts' landings left it 2026-11-15, the no-grid arc): every CULL and the
 // CAMERAS' VISIBILITY TEST (displayed_frame_on_screen) read
-// displayed_column_at, and THE ARROW STEP AND THE NUDGE step one painted
-// column of it (displayed_grid_position_at_column). A PEN ACT LANDS ON THE
+// displayed_column_at, and nothing lands on a column: A PEN ACT LANDS ON THE
 // FRAME UNDER THE PEN'S REAL PLACE, this expression's inverse
-// (displayed_frame_at_x, below). THE GATES
+// (displayed_frame_at_x, below), and the arrow step and the nudge move one
+// millisecond of frames (HorizontalArrowStep, gui_input.h). THE GATES
 // ARE THE EXACT PLACE'S — a line is drawn wherever any of its real interval
 // lies inside the strip (render.h's waveform_line_span: its span's own
 // emptiness, no column asked), so a line slides in and out at the canvas's
@@ -726,47 +659,31 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
     return x;
 }
 
-// Pixel-anchoring pair for THE COLUMN STEP. Every gesture that moves an
-// authored position by pixel columns (the bare Left/Right nudges on both
-// marker columns) anchors to the on-screen column grid through these two
-// helpers (A POINTER'S RELEASE DOES NOT — architect 2026-11-15, the no-grid
-// arc: the marker drag commits its free proposal's own frame and the trim
-// its dragged frame, the frame under the pen's real place,
-// displayed_frame_at_x above): read the item's
-// currently painted column with painted_column_of_source_frame_on_basis, pick
-// the destination column, and commit authored_frame_at_column_on_basis of it —
-// which funnels through snap_authored_frame (app_state.h), the single
-// fractional-to-authored route. Anchoring to the column grid re-derives
-// the pixel phase on every gesture, so whole-frame rounding residue can
-// never accumulate on top of an off-grid sub-pixel phase; the painted
-// move is exactly the commanded number of columns, and the stored value
-// is the whole frame the painting already shows. Exactly ONE item moves per
-// gesture: a nudge steps the FOCUS (a 2+ selection collapses to it first — groups
-// are never moved, the doctrine at the head of position_nudge.h) and a drag
-// moves the marker it grabbed.
+// WHERE A SOURCE FRAME IS PAINTED, ON THE CALLER'S BASIS — the column and
+// its exact sibling below. NO GESTURE LANDS THROUGH A COLUMN (architect
+// 2026-11-15, the no-grid arc: a pen act takes the frame under the pen's
+// real place, displayed_frame_at_x above; the nudge is one millisecond,
+// position_nudge.h), so these two only READ where a frame stands: the
+// column for the off-edge authoring refusal (source_frame_off_right_edge
+// below), the exact x for the flag editor's unrolled box (render.cpp), the
+// ADD SEL sweep's membership and the nudge's held place.
 //
 // THE BASIS IS THE CALLER'S, AND EVERY GESTURE PASSES THE ITEM BASIS
 // (architect 2026-09-24, strictly as painted: a gesture runs on ONE painted
 // basis). The map is the DISPLAYED map (displayed_or_live_target_map) and the
 // viewport is its twin, item_viewport_basis (app_state.h) — the vp_start and
-// samples-per-pixel the committed flag cache was built against, so the column
-// read and the column committed are the ones on screen even while a
+// samples-per-pixel the committed flag cache was built against, so the place
+// read is the one on screen even while a
 // viewport-dispatched worker job is in flight across the press (the freeze
-// drops its completion, but the LIVE viewport has already moved; converting on
-// it would author on a grid the pixels never showed). Cold, the item basis IS
-// the live viewport by its own contract, so nothing here forks on warmth. The
-// gesture callers — both nudges' column step (stepped_anchor_frame,
-// position_nudge.h) — are the whole caller list of the pair apart from the
-// exact sibling's readers below (painted_x_of_source_frame_on_basis: the
-// flag editor's unrolled box, render.cpp, the ADD SEL sweep's membership and
-// the nudge's held place), on the same item basis. THE LIVE-VIEWPORT FORMS ARE DELETED (2026-09-24): with the
-// gesture class moved no caller was left on them. Two families never reached
-// this pair: the click-placement family (the nav click, the scrub click, the
+// drops its completion, but the LIVE viewport has already moved). Cold, the
+// item basis IS
+// the live viewport by its own contract, so nothing here forks on warmth.
+// The click-placement family (the nav click, the scrub click, the
 // ruler head's drag, the empty-lane double-click create) lands
 // active-domain playhead frames through playhead_frame_at_click_x
 // (input_pointer.cpp), on the same item basis since 2026-09-24 (architect,
 // strictly as painted — the drops at the playhead author at the playhead's
-// frame and convert no column); and the playhead's damage columns come from
+// frame and convert no place); and the playhead's damage columns come from
 // playhead_pixel_x (main.cpp) on the basis of the pixels they erase.
 //
 // painted_column_of_source_frame_on_basis: the pixel column (offset from
@@ -854,30 +771,10 @@ double painted_x_of_source_frame_on_basis(
 bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
                                  int64_t source_frame);
 
-// authored_frame_at_column_on_basis: the authored source-frame value of pixel
-// column `col` under the same coordinate system and the caller's basis — the
-// active-domain time is displayed_grid_position_at_column above at the
-// basis's viewport start (`vp_start`, the integer frame — the grid owner
-// recovers its column index from it), samples-per-pixel (`spp`) and lattice
-// origin (`lattice_origin`, ItemViewportBasis's: the origin the camera
-// rests on, so the commit lands on the frame the
-// painted column shows — architect 2026-10-31), in EVERY
-// domain; in the TargetLive domain that time is quantized to an integer target
-// frame (llrint, floored at 0 — the same quantization the target-view nudges
-// have always applied) and inverse-mapped through `warp_frame_map` at full
-// precision. The result returns through snap_authored_frame, so it is a whole
-// source frame in the authored int64 domain; callers apply their own walls
-// AFTER — the walls win over the pixel grid, and every wall is itself an
-// integer frame. Returns 0 on a degenerate `spp` (callers guard the geometry).
-int64_t authored_frame_at_column_on_basis(
-    const AppState& app, const GuiAudio& audio, int col,
-    const std::vector<WarpFrameMapSegment>& warp_frame_map,
-    int64_t vp_start, double spp, int64_t lattice_origin);
-
 // authored_frame_at_x_on_basis: THE AUTHORED SOURCE FRAME UNDER A REAL x
 // (architect 2026-11-15, the no-grid arc: a pen act takes the frame under
-// the pen's real place) — the pen's sibling of the column form above, on
-// the same basis and the same map: the displayed frame is
+// the pen's real place), on the caller's basis and map — the DISPLAYED
+// map and the ITEM basis at every caller: the displayed frame is
 // displayed_frame_at_x, unrounded; in the Source domain it returns through
 // snap_authored_frame as it is; in the TargetLive domain it is floored at 0
 // and inverse-mapped through `warp_frame_map` AT ITS FULL PRECISION (the map
@@ -974,8 +871,7 @@ int64_t phase_reset_window_centre_frame(
 // computed under the same map the walls were checked under and every cell
 // renders under, once per reset per k. The hop step asks the same map, because
 // a hop is the RENDER's quantum and not a painted one — it makes no pixel
-// claim (the one-column-per-press guarantee at stepped_anchor_frame is the
-// column step's alone). Each landing is an ordinary whole authored frame and
+// claim. Each landing is an ordinary whole authored frame and
 // re-parses normally.
 int64_t phase_reset_hop_step_frame(
     int64_t reset_source_frame, int k,

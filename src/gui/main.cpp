@@ -1112,9 +1112,9 @@ ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
     if (q <= 0.0)
         return {std::min(std::max<int64_t>(start, 0), max_start_grid), 0};
 
-    // 1. The origin under the rule. The same painter q the item basis carries
-    // into authored_frame_at_column_on_basis, so viewport grid and marker grid
-    // are one grid, on one lattice.
+    // 1. The origin under the rule, at the same painter q the item basis
+    // carries into every place on the painted lattice (displayed_x_at and
+    // its inverse), so the viewport's lattice and the marks' are one.
     int64_t origin = 0;
     switch (rule) {
         case ViewportLattice::Keep:

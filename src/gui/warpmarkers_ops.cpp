@@ -1871,10 +1871,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
 // dispatch site in input_handler.cpp owning the routing.
 //
 // The wall regime over the identity map, one shape: the marker steps ONE
-// PAINTED column per press — the horizontal ladder retired
+// MILLISECOND per press (architect 2026-11-15, the no-grid arc;
+// position_nudge.h's ONE MILLISECOND A PRESS) — the horizontal ladder retired
 // (horizontal_arrow_step in gui_input.h), so no modifier changes the step size
-// any more — through stepped_anchor_frame (the guarantee and its numeric rationale live
-// in the comment there), and its delta is CLAMPED into its own wall headroom, walls
+// any more — through position_nudge_landing, and its delta is CLAMPED into
+// its own wall headroom, walls
 // exactly reachable — the unified wall policy, stated once at the head of
 // position_nudge.h. The camera term (the hold posture's, nudge_camera) is
 // only passed through to finish_position_nudge (NudgeCamera::HoldColumn,
@@ -1925,7 +1926,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
-    // (or one whose column step resolved to the same frame) writes NOTHING — no
+    // (or one whose step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
     // AND IT IS SILENT AGAIN SINCE 2026-08-31 (architect, retiring the
@@ -1933,8 +1934,8 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // one-dimensional refusal already at its state says nothing — the marker
     // is one flag in one place, and the glance that asks whether it moved is
     // the glance that answers. (A zero-step press cannot arise off a wall
-    // anyway, the authored frame grid being finer than the pixel grid — the
-    // one-column-per-press guarantee at stepped_anchor_frame.)
+    // anyway: a millisecond is at least one whole frame,
+    // arrow_millisecond_frames.)
     // WHAT STILL REACHES IT is the 2+ press whose FOCUS rests on a wall: the
     // prologue asks the same landing ahead of the coalesce stamp now, so a
     // SINGLETON at its wall never gets this far (the wall no-op touches
