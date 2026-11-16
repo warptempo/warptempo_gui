@@ -90,12 +90,12 @@
 // channel's center line, the pads grown in even W), so the box is as much
 // shorter as the floor grows it. On the tablet (200 %) at key_height 17 and
 // the keyboard's defaults, osk_key_w 24 and osk_key_h 30 (48 x 60 device
-// px): 38 + 38 = 76 device rows (the row's faces end on 1017 and the first
-// key row starts on 1094); THE ROWS: the keyboard's band 1056–1439 (its
-// pads 38, the floor's), the controls row 946–1055 (its face rows
-// 984–1017), the box's bottom rows 944–945 (ground), the pane y 146..943.
-// At his tuning (key_height 25, osk_key_h 35): 38 + 18 = 56 rows, the band
-// 1046–1439, the controls row 920–1045 (its face rows 958–1007).
+// px): 38 + 39 = 77 device rows (the row's faces end on 1015 and the first
+// key row starts on 1093); THE ROWS: the keyboard's band 1054–1439 (its
+// pads 39, the height floor's), the controls row 944–1053 (its face rows
+// 982–1015), the box's bottom rows 942–943 (ground), the pane y 146..941.
+// At his tuning (key_height 25, osk_key_h 35): 38 + 17.5 = 55.5 rows, the
+// band 1047–1439, the controls row 921–1046 (its face rows 959–1008).
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);

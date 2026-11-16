@@ -186,7 +186,8 @@ void drop_rasters();
 // scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' .525 of the first
 // line's inside height (kNotificationGlyphRatio, notifications.h). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and
-// shared by the colors; the cropped raster per (drawing, ink px, color),
+// shared by the colors; the cropped raster per (drawing, ink px, color,
+// phase — draw_glyph below),
 // converted for the window as every raster (svg_icon::convert_to_display).
 
 // The ink box's size, device px, at `ink_px` (its larger side `ink_px` or
@@ -196,12 +197,26 @@ struct InkSize {
 };
 InkSize glyph_ink_size(Icon icon, int ink_px);
 
-// THE GLYPH, its INK BOX's top-left at (x, y), in `color` (0xRRGGBB, sRGB —
-// the caller's tone; the head's THE BOUND DRAWING): one copy of the
-// cropped raster at that integer device px, no resample, a straight OVER.
+// THE GLYPH, its INK BOX's top-left AT EXACTLY (x, y) — real device px
+// (architect 2026-11-15, the no-grid arc; render.h's hull holds the rule) —
+// in `color` (0xRRGGBB, sRGB — the caller's tone; the head's THE BOUND
+// DRAWING). THE INK BOX IS A REAL RECT: the fit's box (the bounds of the
+// drawing's ink at the fitted zoom, `glyph_ink_size`, whole px by its
+// measure) standing with its top-left corner on (x, y). THE RASTER IS
+// RENDERED AT THE PLACE'S FRACTION, to a 64th of a px on each axis (the
+// text's own resolution, text_raster.h): the drawing rasterized by resvg
+// with the fraction as its translation (svg_icon::rasterise_zoom's phase),
+// the fit's box cropped out of it with one column or row more for the ink
+// the fraction pushes right or down — the hull of the box at that phase —
+// and that crop copied at the whole part of the place, no resample, a
+// straight OVER. AT A WHOLE PLACE the raster is the phase-less one, byte
+// for byte (the same render call, the same crop). THE CACHE: one raster per
+// (drawing, ink px, color, x phase, y phase), BOUNDED — kept until the
+// set holds kGlyphRasterBound of them, then DROPPED WHOLE (the shaping
+// memo's rule); the bound's reason at the constant (icons.cpp).
 // Cairo state is saved and restored; the caller's clip stands. Cannot fail:
 // the launch's load parsed every drawing.
-void draw_glyph(cairo_t* cr, Icon icon, int x, int y, int ink_px,
+void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
                 uint32_t color);
 
 } // namespace icons

@@ -47,8 +47,12 @@
 // (architect 2026-10-26 ~11:30), the render player's two (~12:10, "yes" to
 // symmetry; gui_font.h's table) and the score viewer's — centred on both
 // axes (render.h's time_field_pad_px / time_field_h_px own the 12-px pads
-// and the 39-px height derived from them, 2026-11-04, the unit).
-void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
+// and the 39-px height derived from them, 2026-11-04, the unit). ON ITS REAL
+// EDGES (architect 2026-11-15, the no-grid arc): `field` is an exact rect —
+// its rows centered exactly on the key face beside it, half a row over the
+// face above and below where their parities differ (paint_handler.cpp's
+// time_field_rect) — filled at exact coverage over the strip's ground.
+void paint_ce_time_field(cairo_t* cr, const GuiRectF& field);
 
 // (THE TAB STRIP — paint_ce_tab_strip, ce_tab_strip_layout, kCeTabCount and
 // ce_tab_growth_px, Cool Edit's Organizer tabs, 2026-10-18 — IS REMOVED with

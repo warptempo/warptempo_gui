@@ -1515,12 +1515,13 @@ void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
     if (clip_lit != app.clip_lamp_lit || struck != app.clip_lamp_struck) {
         app.clip_lamp_lit    = clip_lit;
         app.clip_lamp_struck = struck;
-        const GuiRect& r = rects.clip;
+        // The square's hull: the whole pixels it touches (render.h).
+        const GuiRect r = hull(rects.clip);
         if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
     }
     if (limiter_lit != app.limiter_lamp_lit) {
         app.limiter_lamp_lit = limiter_lit;
-        const GuiRect& r = rects.limiter;
+        const GuiRect r = hull(rects.limiter);
         if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
     }
 }

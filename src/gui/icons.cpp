@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -29,8 +30,9 @@ namespace {
 // caller passes per drawing (the text tones, a lit key's print and its
 // dimmed tone, per theme installed) — and held for the session.
 //
-// THE CACHES: per (drawing, ink px) a FIT, and per (drawing, ink px, color)
-// its cropped raster. Main thread only: every draw is the painter's.
+// THE CACHES: per (drawing, ink px) a FIT, and per (drawing, ink px, color,
+// x phase, y phase) its cropped raster (GlyphKey, draw_glyph). Main thread
+// only: every draw is the painter's.
 struct SurfaceDeleter {
     void operator()(cairo_surface_t* s) const { cairo_surface_destroy(s); }
 };
@@ -43,12 +45,29 @@ struct Fit {
     int    x = 0, y = 0, w = 0, h = 0;
 };
 
+// ONE CROPPED RASTER'S KEY: the drawing, its ink px, its sRGB color and THE
+// PLACE'S FRACTION ON EACH AXIS IN 64THS of a device px (architect
+// 2026-11-15, the no-grid arc; icons.h's draw_glyph) — (0, 0) the raster of
+// a whole place.
+using GlyphKey = std::tuple<int, int, uint32_t, int, int>;
+
+// THE RASTERS' BOUND: at this many the set is dropped whole and refills as
+// it is asked (the shaping memo's rule, text_shape.h). WHY 1024: a seat at
+// rest asks one phase — the roster's and the rows' glyphs in their few
+// tones, a few hundred rasters at most — but a seat that MOVES by fractions
+// (a list scrolled by the finger) can ask any of 64 phases an axis, a few
+// hundred more over one gesture, and a bound those overran would drop the
+// resting keys' rasters mid-gesture and re-render them (a resvg render
+// each). A raster is its ink box's pixels, about 1.5 to 3 KiB at the
+// product's sizes, so the bound is two or three MiB at its worst.
+constexpr std::size_t kGlyphRasterBound = 1024;
+
 struct LoadedSet {
     std::array<svg_icon::Document, kIconCount>  docs;
     std::array<std::string, kIconCount>         bound;   // a bound file's bytes
     std::map<std::pair<int, uint32_t>, svg_icon::Document> bound_docs;
     std::map<std::pair<int, int>, Fit>          fits;
-    std::map<std::tuple<int, int, uint32_t>, Surface> glyphs;
+    std::map<GlyphKey, Surface>                 glyphs;
 };
 
 std::optional<LoadedSet>& loaded_set() {
@@ -163,7 +182,7 @@ InkSize glyph_ink_size(Icon icon, int ink_px) {
     return InkSize{fit.w, fit.h};
 }
 
-void draw_glyph(cairo_t* cr, Icon icon, int x, int y, int ink_px,
+void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
                 uint32_t color) {
     if (ink_px <= 0) return;
     const Fit& fit = fit_for(icon, ink_px);
@@ -171,23 +190,50 @@ void draw_glyph(cairo_t* cr, Icon icon, int x, int y, int ink_px,
     LoadedSet& set = *loaded_set();
     const int index = static_cast<int>(icon);
     const uint32_t rgb = color & 0xFFFFFFu;
-    Surface& glyph = set.glyphs[{index, ink_px, rgb}];
-    if (!glyph) {
-        // THE CROP: the render at the fit's zoom under `color`, its ink box
-        // copied out whole into a surface of exactly that size, then
-        // converted for the window.
-        Surface full(svg_icon::rasterise_zoom(document(index, rgb), fit.zoom));
-        glyph.reset(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, fit.w,
-                                               fit.h));
+    // THE PLACE'S WHOLE PART AND ITS FRACTION IN 64THS, each axis (the
+    // nearest 64th; a fraction that rounds to a whole px is the next px at
+    // phase 0) — the text's own resolution (text_raster.cpp's place_of).
+    const auto split = [](double v, int& whole, int& phase) {
+        const double f = std::floor(v);
+        whole = static_cast<int>(f);
+        phase = static_cast<int>(std::lround((v - f) * 64.0));
+        if (phase >= 64) {
+            phase = 0;
+            ++whole;
+        }
+    };
+    int wx = 0, wy = 0, px = 0, py = 0;
+    split(x, wx, px);
+    split(y, wy, py);
+    const GlyphKey key{index, ink_px, rgb, px, py};
+    auto it = set.glyphs.find(key);
+    if (it == set.glyphs.end()) {
+        // THE BOUND (kGlyphRasterBound): the set dropped whole before the
+        // raster that would pass it.
+        if (set.glyphs.size() >= kGlyphRasterBound) set.glyphs.clear();
+        // THE CROP: the render at the fit's zoom under `color`, AT THE
+        // PLACE'S FRACTION (the drawing moved right and down by it, in
+        // device px — svg_icon::rasterise_zoom's phase), the fit's ink box
+        // copied out whole — one column more where the x fraction pushes
+        // the ink right of it, one row more where the y fraction pushes it
+        // down: the hull of the box at this phase — into a surface of
+        // exactly that size, then converted for the window. At phase (0, 0)
+        // the render and the crop are the phase-less ones.
+        Surface full(svg_icon::rasterise_zoom(document(index, rgb), fit.zoom,
+                                              px / 64.0, py / 64.0));
+        Surface glyph(cairo_image_surface_create(
+            CAIRO_FORMAT_ARGB32, fit.w + (px > 0 ? 1 : 0),
+            fit.h + (py > 0 ? 1 : 0)));
         cairo_t* c = cairo_create(glyph.get());
         cairo_set_operator(c, CAIRO_OPERATOR_SOURCE);
         cairo_set_source_surface(c, full.get(), -fit.x, -fit.y);
         cairo_paint(c);
         cairo_destroy(c);
         svg_icon::convert_to_display(glyph.get());
+        it = set.glyphs.emplace(key, std::move(glyph)).first;
     }
     cairo_save(cr);
-    cairo_set_source_surface(cr, glyph.get(), x, y);
+    cairo_set_source_surface(cr, it->second.get(), wx, wy);
     cairo_paint(cr);
     cairo_restore(cr);
 }

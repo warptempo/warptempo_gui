@@ -222,10 +222,15 @@ std::expected<std::vector<cairo_surface_t*>, std::string> raster_regions(
     return out;
 }
 
-cairo_surface_t* rasterise_zoom(const Document& doc, double zoom) {
+cairo_surface_t* rasterise_zoom(const Document& doc, double zoom, double dx,
+                                double dy) {
     const resvg_size size = resvg_get_image_size(doc.tree.get());
-    const int w = std::max(1, static_cast<int>(std::ceil(size.width * zoom)));
-    const int h = std::max(1, static_cast<int>(std::ceil(size.height * zoom)));
+    // The drawing's size at the zoom, each side rounded up, and one column
+    // or row more where a phase pushes the ink past it (the declaration).
+    const int w = std::max(1, static_cast<int>(std::ceil(size.width * zoom))) +
+                  (dx > 0.0 ? 1 : 0);
+    const int h = std::max(1, static_cast<int>(std::ceil(size.height * zoom))) +
+                  (dy > 0.0 ? 1 : 0);
     // A new image surface is cleared to transparent, which resvg's render
     // composites onto. Its stride is exactly 4 * w: cairo aligns ARGB32 rows
     // to 4 bytes, and resvg's pixmap is packed rows of 4 bytes.
@@ -233,8 +238,11 @@ cairo_surface_t* rasterise_zoom(const Document& doc, double zoom) {
     assert(cairo_image_surface_get_stride(s) == 4 * w);
     cairo_surface_flush(s);
     unsigned char* data = cairo_image_surface_get_data(s);
+    // (a, b, c, d, e, f): the zoom, then the phase in pixmap px (the
+    // declaration's THE PHASE).
     const resvg_transform at{static_cast<float>(zoom), 0.0f, 0.0f,
-                             static_cast<float>(zoom), 0.0f, 0.0f};
+                             static_cast<float>(zoom),
+                             static_cast<float>(dx), static_cast<float>(dy)};
     resvg_render(doc.tree.get(), at, static_cast<uint32_t>(w),
                  static_cast<uint32_t>(h), reinterpret_cast<char*>(data));
     rgba_bytes_to_argb_words(data, w * h);

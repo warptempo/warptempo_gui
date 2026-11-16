@@ -98,7 +98,6 @@
 #include "platform.h"
 #include "render.h"
 #include "viewport.h"
-#include "warp_frame_map_view.h"  // lattice_index_ties_right (the slots' tie)
 
 #include <algorithm>
 #include <cmath>
@@ -531,7 +530,8 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // at 200 %, the key widths the slots' at the one-W gap (2026-11-04): at the
 // defaults (osk_key_w 24, osk_font_px 12 — 48 and 24 device px) "Space" 71
 // px in the 4u key's 198, "&123" 57, "Shift" 53 and "ABC" 52 in their 1.5u
-// keys' 74, "Esc" 43 in its 72 (the slots' rounding, quarter_offset_px), and
+// keys' 73, "Esc" 43 in its 73 (every 1.5u key the one width,
+// quarter_offset_px), and
 // the widest character cap, "@", 23 in the 1u key's 48 (the capital "W"
 // 23). At 100 % the key and the face scale together and every word fits as
 // well. A WORD THAT FAILS ITS KEY UNDER AN EXTREME TUNING SIMPLY OVERHANGS
@@ -591,55 +591,55 @@ inline constexpr Page page_after(Role role, Page page) {
 // keys, both axes, IS THE PROGRAM KEYS' GAP, ONE W (render.h's key_gap_px:
 // 2 device px on the tablet at 200 %, 1 at 100 %; architect 2026-11-04, the
 // unit: "the same face and gap on every key surface", the tenth of the
-// height of 2026-10-29 retired); THE PITCH is the key plus the gap, in W;
-// a key of n units is n pitches less one gap, EACH SLOT'S EDGE ROUNDED IN W
-// at the element and only then scaled (quarter_offset_px; architect
-// 2026-11-06, session 77), so every slot edge stands on a whole W at every
-// tuning. At an ODD pitch (an even osk_key_w) an edge an odd number of
-// half-units in falls on a half W, and EVERY SUCH TIE GOES UP, toward +inf
-// (quarter_offset_px), so keys of one span differ by at most one W by
-// their slot and a run of 1u keys between two tied edges keeps the 1u
-// width: at the defaults (the key 24 x 30 W, the gap 1, the pitch 25;
-// 48 x 60, 2 and 50 device px on the tablet at 200 %) every 1u key is 24 W
-// (48 device px) — the pass key, LEFT and RIGHT included — row 3's Shift
-// 37 W (74) and Bksp 61 W (122), the bottom
-// row's page key 37 W (74), Copy 36 (72), Paste 37 (74), Space 99 (198),
-// `.` 24 (48), Esc 36 (72) and Enter 49 (98); his tuning's osk_key_w is the
-// default 24 (2026-11-08), so his widths are these. (At an even pitch — an
-// odd osk_key_w, 25 say, the pitch 26 W — no edge needs rounding: 1u 25,
-// 1.5u 38, 2u 51, 2.5u 64 and 4u 103 W.) THE
+// height of 2026-10-29 retired); THE PITCH is the key plus the gap, in
+// device px; a key of n units is n pitches less one gap, and EVERY SLOT'S
+// EDGE STANDS AT ITS EXACT QUARTER OF THE PITCH (architect 2026-11-15, the
+// no-grid arc: a slot's edge is a ratio of the pitch, and no rounding
+// stands between it and the paint — the whole-W edges of 2026-11-06,
+// session 77, and their ties are retired), so keys of one span are ONE
+// WIDTH wherever they stand and a half-unit edge at an odd pitch stands on
+// its half: at the defaults (the key 48 x 60 device px on the tablet at
+// 200 %, the gap 2, the pitch 50) every 1u key is 48 px — the pass key,
+// LEFT and RIGHT included — every 1.5u key 73 (row 3's Shift, the bottom
+// row's page key, Copy, Paste and Esc), Enter 98, Bksp 123 and Space 198;
+// his tuning's osk_key_w is the default 24 (2026-11-08), so his widths are
+// these. On the tablet the pitch is an even number of device px at every
+// tuning, so every edge there is a whole px; at a scale where it is odd a
+// half-unit edge stands on half a px, the key's face painted at that
+// coverage over the band's ground (the exact fill). THE
 // KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S face (architect
 // 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the key_width x
 // key_height face): their box is `osk_key_w` x `osk_key_h` alone, their gap
 // the program's. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is
 // retired 2026-10-29, git history.)
+// THE BAND IS OPAQUE CHROME AND WHOLE PIXELS (render.h's hull): its ground
+// is one fill across the whole band (paint_onscreen_keyboard), the band's
+// rect is the layout's (surface_rect), and the canvas is not painted under
+// it — so its OUTER edge is whole, and the keys INSIDE it stand on the
+// band's own ground and may stand at fractions.
 inline int key_w_px()     { return scaled_px(osk_key_width_w(), 1); }
 inline int key_h_px()     { return scaled_px(osk_key_height_w(), 1); }
 inline int key_gap_px()   { return ::key_gap_px(); }
+// The pitch in device px: one key and one gap, each rounded at the element.
+inline int key_pitch_px() { return key_w_px() + key_gap_px(); }
 
 // A SLOT'S LEFT EDGE, `q` quarters into the block, off the block's left edge:
-// q quarter-pitches IN W, ROUNDED TO A WHOLE W at the element, then through
-// scaled_px, the one road (architect 2026-11-06, session 77); so a key's
-// width is the rounded span less one gap and the gap between neighbors is
-// the gap exactly. Every span of the table is an even number of
-// quarters, so an edge falls on a half-pitch at worst and a tie arises only
-// at an odd pitch. AN EXACT TIE GOES UP, toward +inf (lattice_index_ties_right,
-// warp_frame_map_view.h — the placement's selector, ruled the same day,
-// architect 2026-11-06, session 69: translation-consistent, so every tied
-// edge of a row moves the same way and same-span keys differ by at most one
-// W — where ties to even would round them alternately, two W apart).
-inline int quarter_offset_px(int q) {
-    const double pitch_w = osk_key_width_w() + kKeyGapW;
-    return scaled_px(
-        lattice_index_ties_right(q * pitch_w / kQuartersPerUnit));
+// q quarters of the pitch, EXACTLY (the head's rule), a real number of
+// device px; a key's width is the next slot's edge less one gap and less
+// this, and the gap between neighbors is the gap exactly. Every span of
+// the table is an even number of quarters, so an edge falls on a half
+// pitch at worst.
+inline double quarter_offset_px(int q) {
+    return static_cast<double>(q) * static_cast<double>(key_pitch_px()) /
+           static_cast<double>(kQuartersPerUnit);
 }
 
 // THE BLOCK'S WIDTH: the widest row, thirteen units — thirteen pitches less
-// one gap, a whole W at every tuning (52 quarters, no rounding): 324 W, 648
-// device px at the defaults (osk_key_w 24, his tuning's too) on the tablet.
+// one gap, whole px (52 quarters): 648 device px at the defaults
+// (osk_key_w 24, his tuning's too) on the tablet.
 inline int block_w_px() {
-    return quarter_offset_px(kBlockQuarters) - key_gap_px();
+    return (kBlockQuarters / kQuartersPerUnit) * key_pitch_px() - key_gap_px();
 }
 
 // THE BLOCK'S SEAT — THE `5` | `6` GAP ON THE WINDOW'S CENTER (architect
@@ -647,31 +647,28 @@ inline int block_w_px() {
 // 2026-10-29): the block's left edge, window x in device px, placed so the
 // gap between row 0's `5` and `6` keys (detail::seat_gap_quarters, 20
 // quarters into the block) stands on the band's center — the band being the
-// window's width, its center the window's. IN W, rounded at the element:
-//   block_left_w = center_w − (q · pitch_w / 4 − gap_w / 2)
-// with q the seat's quarters, pitch_w osk_key_w + the one-W key gap and the
-// subtrahend the gap's own center off the block's left edge; the result
-// ROUNDED TO A WHOLE W WITH EXACT TIES UP, toward +inf
-// (lattice_index_ties_right, quarter_offset_px's own rule), then through
-// scaled_px. Worked on the tablet (2304 px = 1152 W at 200 %, center 576 W)
-// at osk_key_w 24 (the default and his tuning): the pitch 25, the gap's
-// center 125 − 0.5 = 124.5 W in, 576 − 124.5 = 451.5 → 452 W → the block x
-// 904 .. 1551 (648 px), the `5` ending on 1151 and the `6` starting on
-// 1154, the gap's two cells 1152 .. 1153. AN EXTREME TUNING THAT PUSHES THE
+// window's width, its center the window's — EXACTLY, IN DEVICE PX
+// (architect 2026-11-15, the no-grid arc: no rounding to a whole W):
+//   block_left = center − (q · pitch / 4 − gap / 2)
+// with q the seat's quarters, the pitch and the gap in device px and the
+// subtrahend the gap's own center off the block's left edge. Worked on the
+// tablet (2304 px, center 1152) at osk_key_w 24 (the default and his
+// tuning): the pitch 50, the gap's center 250 − 1 = 249 px in, so the block
+// x 903 .. 1550 (648 px), the `5` ending on 1150 and the `6` starting on
+// 1153, the gap's two cells 1151 .. 1152 either side of the center. AN
+// EXTREME TUNING THAT PUSHES THE
 // BLOCK PAST THE WINDOW'S EDGE IS THAT TUNING KEY'S OWN CONSEQUENCE, like an
 // overhanging cap word: no clamp. (In this table the `5` | `6` gap stands
 // over r | t and f | g — row 1 leads with Tab and row 2 with the pass key.
 // The architect, shown that on 2026-11-09, session 97 — not t | y, as "the
 // true center of the alphabet" might suggest — RULED "keep 5|6": the seat
 // stays on the digit row's gap.)
-inline int block_x_px(const GuiRect& band) {
-    const double factor   = gui_scale_factor();
-    const double pitch_w  = osk_key_width_w() + kKeyGapW;
-    const double center_w = (band.x + band.w * 0.5) / factor;
-    const double gap_c_w  = detail::seat_gap_quarters() * pitch_w /
-                                kQuartersPerUnit -
-                            kKeyGapW * 0.5;
-    return scaled_px(lattice_index_ties_right(center_w - gap_c_w));
+inline double block_x_px(const GuiRect& band) {
+    const double center = static_cast<double>(band.x) +
+                          static_cast<double>(band.w) * 0.5;
+    const double gap_c  = quarter_offset_px(detail::seat_gap_quarters()) -
+                          static_cast<double>(key_gap_px()) * 0.5;
+    return center - gap_c;
 }
 
 // THE EDGE PAD — THE BAND'S TOP AND FOOT, EQUAL, AND THE HEIGHT FLOOR'S
@@ -680,10 +677,10 @@ inline int block_x_px(const GuiRect& band) {
 // necessary to make the padding symmetrical"). THE PAD'S OWN FLOOR IS A
 // QUARTER OF THE KEYBOARD'S KEY HEIGHT (architect 2026-11-13, session 121:
 // "the run gap, but applied vertically" — his run_gap 9 to key_width 36 —
-// "more symmetric" as a quarter of the keyboard key's own height):
-// edge_pad_floor_w, osk_key_h / 4 ROUNDED TO THE NEAREST W through
-// std::nearbyint (the ruled off-grid rule; the default rounding mode takes
-// an exact half TO EVEN — 7.5 → 8, 8.5 → 8, 9.5 → 10). THE LINE'S FLOOR IS
+// "more symmetric" as a quarter of the keyboard key's own height) —
+// EXACTLY (architect 2026-11-15, the no-grid arc: the quarter is a ratio,
+// and the nearest-W rounding of 2026-11-13 is retired): edge_pad_floor_px,
+// the key's height in device px over 4, a real length. THE LINE'S FLOOR IS
 // A FORMULA, NEVER A CONSTANT, RECOMPUTED AT EVERY LAYOUT — key_height and
 // the lane table move the line, osk_key_h moves the band and its pads'
 // floor, gui_scale moves both — so it is asked of the live geometry on every
@@ -699,7 +696,14 @@ inline int block_x_px(const GuiRect& band) {
 //   shortfall_px ≤ 0: each pad the floor;
 //   else extra_w = the shortfall in whole W ROUNDED UP (px over the device
 //     px per W), MADE EVEN by one W when odd, split equally — each pad
-//     the floor + extra_w / 2 W through scaled_px.
+//     the floor and extra_w / 2 W through scaled_px (a whole W, the height
+//     floor's own step: the band's top must stand at or above the line).
+// THE BAND'S HEIGHT IS WHOLE PIXELS (layout; the band's edge is the
+// chrome's outer edge over the canvas): the key rows and the whole hull of
+// the two pads (surface_height_px), THE KEYS CENTERED IN IT EXACTLY, the
+// two pads equal — so a pad that ends on a fraction puts every key row on
+// that fraction, the faces' top and bottom rows at their coverage over the
+// band's ground.
 // THE KEYS KEEP THEIR OWN BOX; only the two pads grow. ONE BAND HEIGHT under
 // every editor (the flag editor's band and a dialog editor's alike; the
 // modal stack on the band under a dialog editor shortened by the same
@@ -708,22 +712,23 @@ inline int block_x_px(const GuiRect& band) {
 // A canvas with no rows paints no line, so no line's floor (the pads the
 // floor).
 // Worked on the tablet at 200 % (2304 x 1440):
-//   AT THE DEFAULTS (key_height 17, osk_key_h 30): the floor 7.5 → 8 W
-//     (16 px); the line on rows 1055..1057 (half, whole, half), its first
-//     row 1055; the natural band 16 + 300 + 8 + 16 = 340 rows from 1100 —
-//     45 px = 22.5 W short, up to 23, made even 24 → each pad 8 + 12 = 20 W
-//     (40 px), the band 388 rows from 1052, its first key row 1092.
-//   AT HIS TUNING (key_height 25, osk_key_h 35): the floor 8.75 → 9 W
-//     (18 px); the line on rows 1047..1049, its first row 1047; the natural
-//     band 18 + 350 + 8 + 18 = 394 rows from 1046 — above the line, no
-//     shortfall → each pad 9 W (18 px), the floor binding, the band 394 rows
-//     from 1046 (the session-96 capture's own), its first key row 1064.
-//   THE FLOOR ALONE (key_height 17, osk_key_h 38): the floor 9.5 → 10 W
-//     (20 px); the natural band 20 + 380 + 8 + 20 = 428 rows from 1012,
-//     43 rows above the line's first row 1055 → each pad 10 W, the band 428
-//     rows from 1012, its first key row 1032.
-inline double edge_pad_floor_w() {
-    return std::nearbyint(osk_key_height_w() / 4.0);
+//   AT THE DEFAULTS (key_height 17, osk_key_h 30): the floor 7.5 W, 15 px;
+//     the line on rows 1055..1057 (half, whole, half), its first row 1055;
+//     the natural band 15 + 300 + 8 + 15 = 338 rows from 1102 — 47 px =
+//     23.5 W short, up to 24, even → each pad 15 + 24 = 39 px, the band 386
+//     rows from 1054, its first key row's top 1093.
+//   AT HIS TUNING (key_height 25, osk_key_h 35): the floor 8.75 W, 17.5 px;
+//     the line on rows 1047..1049, its first row 1047; the natural band
+//     17.5 + 350 + 8 + 17.5 = 393 rows from 1047 — at the line, no
+//     shortfall → each pad 17.5 px, the floor binding, the band 393 rows
+//     from 1047, its first key row's top 1064.5 (every key row on a half
+//     row).
+//   THE FLOOR ALONE (key_height 17, osk_key_h 38): the floor 9.5 W, 19 px;
+//     the natural band 19 + 380 + 8 + 19 = 426 rows from 1014, 41 rows
+//     above the line's first row 1055 → each pad 19 px, the band 426 rows
+//     from 1014, its first key row's top 1033.
+inline double edge_pad_floor_px() {
+    return static_cast<double>(key_h_px()) / 4.0;
 }
 
 // The five key rows and the four gaps between them, the band less its pads.
@@ -731,29 +736,32 @@ inline int key_rows_h_px() {
     return kRowCount * key_h_px() + (kRowCount - 1) * key_gap_px();
 }
 
-inline int edge_pad_px(const AppState& a) {
-    const double  floor_w     = edge_pad_floor_w();
-    const int     natural_pad = scaled_px(floor_w, 1);
+// One pad's exact height at the live geometry (the rule above): the floor,
+// and the height floor's whole-W step where the line asks for it.
+inline double edge_pad_px(const AppState& a) {
+    const double  natural_pad = edge_pad_floor_px();
     const GuiRect lane        = bottom_row_area(a);
     const int     line_top    = lower_center_line_top_row(waveform_area(a));
     if (line_top < 0) return natural_pad;
-    const int natural_top =
-        lane.y + lane.h - (2 * natural_pad + key_rows_h_px());
-    const int shortfall_px = natural_top - line_top;
-    if (shortfall_px <= 0) return natural_pad;
-    int extra_w = static_cast<int>(
-        std::ceil(static_cast<double>(shortfall_px) / gui_scale_factor()));
+    const double natural_top =
+        static_cast<double>(lane.y + lane.h) -
+        (2.0 * natural_pad + static_cast<double>(key_rows_h_px()));
+    const double shortfall_px = natural_top - static_cast<double>(line_top);
+    if (shortfall_px <= 0.0) return natural_pad;
+    int extra_w = static_cast<int>(std::ceil(shortfall_px / gui_scale_factor()));
     if (extra_w % 2 != 0) ++extra_w;
-    return scaled_px(floor_w + extra_w / 2, 1);
+    return natural_pad + static_cast<double>(scaled_px(extra_w / 2));
 }
 
-// The band's whole height: the edge pad, five key rows and the four gaps
-// between them, and the edge pad (the floor's numbers at edge_pad_px).
+// The band's whole height: the five key rows and the four gaps between them
+// and THE WHOLE HULL OF THE TWO EDGE PADS (the floor's numbers at
+// edge_pad_px; the keys stand centered in it, for_each_key).
 // THE BAND CARRIES NO LINE (architect 2026-10-14: the raised
 // Hilight line the taskbar overlay laid on its top, 2026-10-10 to 2026-10-14,
 // is gone with the overlay; the placement block below).
 inline int surface_height_px(const AppState& a) {
-    return 2 * edge_pad_px(a) + key_rows_h_px();
+    return static_cast<int>(std::ceil(2.0 * edge_pad_px(a))) +
+           key_rows_h_px();
 }
 
 // -- Standing ----------------------------------------------------------------
@@ -828,22 +836,22 @@ inline bool stands(const AppState& a) {
 // stop doing that". The dialog's surface is the modal family's box and
 // controls row; its band, its pad and its line went with the overlay.)
 //   ALONE (the flag editor), on the tablet (200 %, 2304 x 1440), across x
-//     0..2303, the block of keys x 904..1551 (648 wide, its seat
+//     0..2303, the block of keys x 903..1550 (648 wide, its seat
 //     block_x_px) at osk_key_w 24:
 //     AT THE DEFAULTS (key_height 17, osk_key_h 30 W, the keys 48 x 60
-//     device px) the band 1056–1439 (38 + 308 + 38, the floor's pads), its
-//     first key row's top 1094;
+//     device px) the band 1054–1439 (39 + 308 + 39, the height floor's
+//     pads), its first key row's top 1093;
 //     AT HIS TUNING (key_height 25, osk_key_h 35 W, the keys 48 x 70) the
-//     band 1046–1439 (18 + 358 + 18), its first key row's top 1064.
+//     band 1047–1439 (17.5 + 358 + 17.5), its first key row's top 1064.5.
 //     Row 8 is under it
 //     and unreachable: the keyboard's press claim takes the band, the ground
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
 //     arithmetic at modal_box.h's head; on the tablet at key_height 17 and
-//     the keyboard's defaults the controls row 946–1055, its faces
-//     984–1017, the box 144–945, its top under the band's rows 0–143 with
-//     the 72-row logo lane; at his tuning the controls row 920–1045, its
-//     faces 958–1007).
+//     the keyboard's defaults the controls row 944–1053, its faces
+//     982–1015, the box 144–943, its top under the band's rows 0–143 with
+//     the 72-row logo lane; at his tuning the controls row 921–1046, its
+//     faces 959–1008).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press or the
 // touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),
@@ -1070,16 +1078,20 @@ inline GuiRect waveform_paint_area(const AppState& a) {
 
 // THE ONE WALK OVER THE KEYS, and the reason paint and hit cannot drift: both
 // go through it. `fn(index, def, rect)` is called for every key of `page` in
-// painted order, with `rect` the key's PAINTED box.
+// painted order, with `rect` the key's PAINTED box — AN EXACT RECT
+// (architect 2026-11-15, the no-grid arc): its edges the slots' exact
+// quarters of the pitch off the block's exact seat, its rows the band's
+// exactly centered key rows.
 //
 // ACROSS: THE BLOCK — the widest row, block_w_px — stands on its SEAT, the
 // `5` | `6` gap on the window's center (block_x_px, architect 2026-11-08;
 // centered in the band 2026-10-29 to 2026-11-08), and EVERY ROW STARTS AT
 // THE BLOCK'S LEFT EDGE (no centering of a short row, no stagger since
 // 2026-11-08), each key `q` quarters in at quarter_offset_px(q), its
-// width the next slot's offset less one gap. DOWN, the first row starts the
-// edge pad (the height floor's, edge_pad_px) under the band's top and each
-// next one a key and a gap lower. THE ONE READER OF THE BLOCK'S X: every
+// width the next slot's offset less one gap. DOWN, the key rows stand
+// CENTERED IN THE BAND — one edge pad (the height floor's, edge_pad_px)
+// under the band's top, the same above its foot — each next row a key and a
+// gap lower. THE ONE READER OF THE BLOCK'S X: every
 // key rect the product uses comes out of this walk (key_at, key_rect, the
 // painter, the press router's damage).
 template <class Fn>
@@ -1087,21 +1099,22 @@ inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
     const GuiRect surf = surface_rect(a);
     if (surf.w <= 0 || surf.h <= 0) return;
 
-    const int gap     = key_gap_px();
-    const int key_h   = key_h_px();
-    const int block_x = block_x_px(surf);
+    const double gap     = static_cast<double>(key_gap_px());
+    const double key_h   = static_cast<double>(key_h_px());
+    const double block_x = block_x_px(surf);
 
-    int y = surf.y + edge_pad_px(a);
+    double y = static_cast<double>(surf.y) +
+               static_cast<double>(surf.h - key_rows_h_px()) / 2.0;
     for (int r = 0; r < kRowCount; ++r) {
         const Row& row = row_of(page, r);
         int q = 0;
         for (int i = 0; i < row.count; ++i) {
             const KeyDef& k  = row.keys[i];
-            const int     x0 = quarter_offset_px(q);
-            const int     kw = quarter_offset_px(q + k.span_q) - gap - x0;
-            if (kw > 0) {
+            const double  x0 = quarter_offset_px(q);
+            const double  kw = quarter_offset_px(q + k.span_q) - gap - x0;
+            if (kw > 0.0) {
                 fn(key_index(page, r, i), k,
-                   GuiRect{block_x + x0, y, kw, key_h});
+                   GuiRectF{block_x + x0, y, kw, key_h});
             }
             q += k.span_q;
         }
@@ -1110,7 +1123,9 @@ inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
 }
 
 // THE KEY UNDER A POINT, or -1, asked of the PAINTED key through the keys'
-// one predicate (point_on_key, materials.h). A press inside the surface but
+// one predicate (point_on_key, materials.h) — of the pixels the painted
+// face touches, its hull (render.h): the pointer names a whole pixel. A
+// press inside the surface but
 // off every key — the gaps, the margins — answers -1 (architect 2026-11-02,
 // R11: the keyboard's gap is dead like the ground round a program key's
 // face) and is still CONSUMED
@@ -1124,8 +1139,8 @@ inline int key_at(const AppState& a, Page page, int x, int y,
     int found = -1;
     KeyDef found_def{};
     for_each_key(a, page,
-                 [&](uint32_t index, const KeyDef& k, const GuiRect& r) {
-                     if (found < 0 && point_on_key(r, x, y)) {
+                 [&](uint32_t index, const KeyDef& k, const GuiRectF& r) {
+                     if (found < 0 && point_on_key(hull(r), x, y)) {
                          found     = static_cast<int>(index);
                          found_def = k;
                      }
@@ -1134,13 +1149,14 @@ inline int key_at(const AppState& a, Page page, int x, int y,
     return found;
 }
 
-// The painted rect of one key index, for the per-key press/lift damage. A zero
-// rect when the index is not on the given page.
+// The painted rect of one key index as WHOLE PIXELS, its hull, for the
+// per-key press/lift damage. A zero rect when the index is not on the given
+// page.
 inline GuiRect key_rect(const AppState& a, Page page, int index) {
     GuiRect found{0, 0, 0, 0};
     for_each_key(a, page,
-                 [&](uint32_t i, const KeyDef&, const GuiRect& r) {
-                     if (static_cast<int>(i) == index) found = r;
+                 [&](uint32_t i, const KeyDef&, const GuiRectF& r) {
+                     if (static_cast<int>(i) == index) found = hull(r);
                  });
     return found;
 }

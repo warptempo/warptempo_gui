@@ -59,10 +59,13 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // refresh_logo_lamps: the lit bits under the hold, the clip lamp's strike),
 // and the clip square is the struck lamp's hit box too
 // (GuiInputHandler::arm_clip_lamp_press and its lift), so the hit and the
-// picture are one rect.
+// picture are one rect. THE SQUARES ARE EXACT RECTS (architect 2026-11-15,
+// the no-grid arc: off the percent run's real ink edge and the runs' exact
+// ink top); a reader that names PIXELS takes the hull (render.h) — the
+// tick's damage, and the press, whose pointer is a whole pixel.
 struct LogoLampRects {
-    GuiRect limiter;
-    GuiRect clip;
+    GuiRectF limiter;
+    GuiRectF clip;
 };
 LogoLampRects logo_lamp_rects(const AppState& app, const GuiLogoLegend& legend);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, went with the

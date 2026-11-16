@@ -6317,7 +6317,8 @@ struct AppState {
         // THE PLAYER'S TWO PUBLISHED CELLS (2026-08-28), zero under every
         // other owner: the PLAY-SCRUB — THE WHOLE SLIDER ITEM, the button
         // box's own band, THE CHANNEL WIDENED BY THE THUMB'S OVERHANG AT EACH
-        // END (2026-10-25, render.h's scrub block), so a press anywhere on it
+        // END (2026-10-25, render.h's scrub block: whole pixels, the hull of
+        // every place the thumb's box can stand), so a press anywhere on it
         // is on the slider and the per-position damage covers the thumb's
         // whole travel, its end columns included; the press
         // router arms the thumb drag against it — published
@@ -6329,6 +6330,11 @@ struct AppState {
         // doctrine above: read only through a stash that names the live
         // player session.
         GuiRect                        scrub{0, 0, 0, 0};
+        // THE SCRUB'S CHANNEL, the trough's own columns on the same band
+        // (zero wherever `scrub` is): the travel of the thumb's center, its
+        // left edge to its right edge — what the one mapping reads
+        // (render_player_scrub_travel_x0 / _usable_span, below).
+        GuiRect                        scrub_channel{0, 0, 0, 0};
         GuiRect                        clock{0, 0, 0, 0};
         // THE SCRUB THUMB'S CENTER AS PAINTED (architect 2026-10-02, ON
         // SCREEN IS AS PAINTED), its EXACT place (a real x: the thumb is
@@ -10423,11 +10429,11 @@ inline int64_t render_player_position(const AppState& a,
     return pos < 0 ? 0 : (pos > rp.frames ? rp.frames : pos);
 }
 
-// THE SCRUB TRACK'S ONE MAPPING, over the painter's PUBLISHED item rect
-// (AppState::ModalDialogGeometry::scrub, the whole SLIDER ITEM): a frame's
-// place on the channel and a place's frame back. The painter's thumb and
-// the press router's seek share it, so the place a carried thumb stands at
-// and the place the thumb paints at answer the same frame.
+// THE SCRUB'S ONE MAPPING, over the painter's PUBLISHED CHANNEL
+// (AppState::ModalDialogGeometry::scrub_channel, the trough's own columns):
+// a frame's place on the channel and a place's frame back. The painter's
+// thumb and the press router's seek share it, so the place a carried thumb
+// stands at and the place the thumb paints at answer the same frame.
 // THE THUMB'S CENTER STANDS AT ITS FRAME'S EXACT PLACE (architect
 // 2026-11-15, the no-grid arc; render.h's hull holds the rule): x0 + t ·
 // span, t the frame's fraction of the item, a real x — nothing rounded onto
@@ -10435,31 +10441,32 @@ inline int64_t render_player_position(const AppState& a,
 // (its box and its paint, render.h's scrub_thumb_box and paint_scrub_thumb).
 // The inverse rounds to a FRAME alone (a frame is whole).
 //
-// THE THUMB'S CENTER RUNS THE CHANNEL END TO END (architect 2026-10-25,
-// "centered on the trough's end"), NO INSET. The published item is the
-// channel widened by the thumb's overhang at each end (render.h's scrub
-// block), so over the ITEM the center's travel starts exactly half a thumb
-// in (scrub_thumb_w_px() / 2.0 — the thumb's box at frame 0 begins on the
-// item's first edge) and the USABLE SPAN is the item less one thumb (the
-// box at the last frame ends on the item's last edge), so the thumb stands
-// inside the item — its damage — at every frame. An item too narrow to hold
-// one seats the center at the travel's start and answers frame 0, the same
-// cold answer a zero item gives. (The mapping inset the channel by half the
+// THE THUMB'S CENTER RUNS THE CHANNEL FROM ITS LEFT EDGE TO ITS RIGHT EDGE
+// (architect 2026-10-25, "centered on the trough's end", NO INSET; on the
+// trough's REAL ends since the no-grid arc, 2026-11-15 — the center at
+// frame 0 on the channel's left edge and at the last frame on its right
+// edge, where the column grammar had put it on the last column's left
+// edge, one px short): the travel starts at the channel's x and THE USABLE
+// SPAN IS THE CHANNEL'S WHOLE WIDTH, so half the thumb overhangs the trough
+// at each end alike. The published ITEM (ModalDialogGeometry::scrub) is the
+// hull of every place the thumb's box can stand — the channel widened by
+// half a thumb at each end — its press gate and its damage. No channel
+// seats the center at the travel's start and answers frame 0, the same cold
+// answer a zero item gives. (The mapping inset the channel by half the
 // 14-W grab box at each end, 2026-10-02 to 2026-10-25, which left the
 // thumb's edge 9 px into the trough at frame 0 and 21 px of trough at each
 // end standing for no frame.)
-inline double render_player_scrub_travel_x0(const GuiRect& item) {
-    return static_cast<double>(item.x) +
-           static_cast<double>(scrub_thumb_w_px()) / 2.0;
+inline double render_player_scrub_travel_x0(const GuiRect& channel) {
+    return static_cast<double>(channel.x);
 }
-inline int render_player_scrub_usable_span(const GuiRect& item) {
-    return item.w - scrub_thumb_w_px();
+inline int render_player_scrub_usable_span(const GuiRect& channel) {
+    return channel.w;
 }
 inline double render_player_scrub_x_of(const AppState& a, int64_t frame) {
-    const GuiRect track = a.modal_dialog.scrub;
+    const GuiRect channel = a.modal_dialog.scrub_channel;
     const int64_t frames = a.render_player.frames;
-    const double x0 = render_player_scrub_travel_x0(track);
-    const int span  = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(channel);
+    const int span  = render_player_scrub_usable_span(channel);
     if (span <= 0 || frames <= 0) return x0;
     const int64_t f = frame < 0 ? 0 : (frame > frames ? frames : frame);
     const double t = static_cast<double>(f) / static_cast<double>(frames);
@@ -10505,10 +10512,10 @@ inline bool render_player_scrub_handle_hit(const GuiRect& track,
 // The frame of a thumb whose center stands at `x` (a carried column, or any
 // real place), clamped onto the travel.
 inline int64_t render_player_scrub_frame_at(const AppState& a, double x) {
-    const GuiRect track = a.modal_dialog.scrub;
+    const GuiRect channel = a.modal_dialog.scrub_channel;
     const int64_t frames = a.render_player.frames;
-    const double x0 = render_player_scrub_travel_x0(track);
-    const int span  = render_player_scrub_usable_span(track);
+    const double x0 = render_player_scrub_travel_x0(channel);
+    const int span  = render_player_scrub_usable_span(channel);
     if (span <= 0 || frames <= 0) return 0;
     const double cx = std::clamp(x, x0, x0 + static_cast<double>(span));
     const double t = (cx - x0) / static_cast<double>(span);

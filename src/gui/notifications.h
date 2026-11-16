@@ -813,16 +813,17 @@ inline constexpr double kNotificationGlyphRatio = 0.525;
 
 // THE GLYPH'S SEAT WIDTH, device px, for an ink of `ink_px` live device px
 // (2026-11-02): the box the retired boxed glyph stood in — the ink's 40 / 27
-// rounded at the box, floored at 1, then the box's 34 / 40 rounded — kept
+// tall and 34 / 40 of that wide — kept
 // as the seat so THE TEXT'S COLUMN did not move when Breeze's drawing,
 // placed by its own ink, replaced the planner's i and X (the column derived
-// from the same ink length, never from the new drawing's width). The
+// from the same ink length, never from the new drawing's width). THE RATIO
+// ITSELF, UNROUNDED (architect 2026-11-15, the no-grid arc): ink · 34 / 27,
+// a real length — 33.72 device px on the tablet for the 26.78-px ink
+// length. The
 // card's text pen stands this seat plus the glyph gap (below) past ring + pad
 // (paint_notifications).
-inline int notification_glyph_seat_w_px(double ink_px) {
-    const int box_h = std::max(
-        1, static_cast<int>(std::nearbyint(ink_px * 40.0 / 27.0)));
-    return static_cast<int>(std::nearbyint(box_h * 34.0 / 40.0));
+inline double notification_glyph_seat_w_px(double ink_px) {
+    return ink_px * 34.0 / 27.0;
 }
 
 // THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN: kNotificationGlyphGapW

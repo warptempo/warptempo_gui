@@ -73,7 +73,23 @@ std::expected<Document, std::string> parse(
 // `--zoom`, the approved M5 mock's render), the antialiasing resvg's. EVERY
 // GLYPH'S RASTER (icons.h's THE INK BOX), whose ink the caller crops.
 // Cannot fail.
-cairo_surface_t* rasterise_zoom(const Document& doc, double zoom);
+// THE PHASE (architect 2026-11-15, the no-grid arc; icons.h's draw_glyph):
+// `dx`, `dy` in [0, 1) DEVICE PX move the whole drawing right and down by
+// that fraction of a pixel — the render's own translation, so the drawing
+// is RASTERIZED at the fraction, never resampled — and a non-zero one adds
+// a column or a row to the surface for the ink it pushes out. THEY ARE
+// resvg_transform's `e` AND `f`, WHICH ARE PIXMAP PX, APPLIED AFTER THE
+// ZOOM: the C API hands (a, b, c, d, e, f) unchanged to
+// tiny_skia::Transform::from_row(sx, ky, kx, sy, tx, ty) as the root
+// transform (resvg 0.48.1, crates/c-api/lib.rs's to_tiny_skia and
+// crates/resvg/src/lib.rs's render: "`transform` will be used as a root
+// transform. Can be used to position SVG inside the `pixmap`"), and
+// tiny-skia maps a point as x · sx + tx, y · sy + ty
+// (tiny-skia-path's Transform::map_point) — a user point (x, y) lands on
+// the pixmap at (zoom · x + e, zoom · y + f). AT (0, 0) THE CALL IS THE
+// ONE WITH NO PHASE, argument for argument, so its bytes are that render's.
+cairo_surface_t* rasterise_zoom(const Document& doc, double zoom,
+                                double dx = 0.0, double dy = 0.0);
 
 // -- THE RASTER ROAD (architect 2026-10-21; the score viewer's pages its
 // reader, score_page_worker.h) ---------------------------------------------

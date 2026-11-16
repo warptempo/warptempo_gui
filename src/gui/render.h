@@ -1193,7 +1193,7 @@ int  run_gap_w();
 // (scaled_px's axis), read by onscreen_keyboard.h's geometry and nothing
 // else (osk_key_h moving the band's height and so its height floor's pads,
 // onscreen_keyboard::edge_pad_px, 2026-11-08, and the pads' own floor, a
-// quarter of osk_key_h, edge_pad_floor_w, 2026-11-13). The key_height
+// quarter of osk_key_h, edge_pad_floor_px, 2026-11-13). The key_height
 // seat's shape exactly — file-scope state in render.cpp,
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
@@ -1477,9 +1477,11 @@ constexpr int kMinWindowHeightPx = 480;
 //     at bold reads oddly"; his pick p1 of tmp/s46): A HARD BLOCK in the
 //     text tone `text`, kLogoPipeW = 1 W wide (2 device px on the tablet),
 //     ON THE LEGEND RUNS' INK ROWS — the alphabet's band the layout centers
-//     the runs on (on the tablet rows 28..42, the digits' own 15 rows), not
+//     the runs on (on the tablet from 28.5 to 43.5 under the lane's top,
+//     the digits' own 15 rows centered exactly on the 72-row lane), not
 //     the Bold glyph's 21 rows and not one W up (p2..p5 declined) — filled
-//     in whole device-px cells with no antialiasing (paint_logo_lane; the
+//     ON ITS REAL EDGES at exact coverage (architect 2026-11-15, the
+//     no-grid arc; paint_logo_lane; the
 //     face's "|" glyph, lifted onto the digits' band wherever else the face
 //     shows one, is no longer the legend's: gui_font.h's kGuiLiftedSigns
 //     keeps the lift for the labels' grammar). FIVE W OF GROUND ON EACH SIDE
@@ -1501,10 +1503,11 @@ constexpr int kMinWindowHeightPx = 480;
 //     SIDE OF THE CELL ALONE since 2026-11-05 (both sides until the drawn
 //     pipe took the pipe side); the clock, the pipe and the drawing itself
 //     do not move with the percent. FLUSH IS THE INK, the chokepoint's own
-//     measure (text_shape::ink_left_px / ink_right_px: cairo's glyph
-//     extents of the run as painted): the clock's first ink column is the
-//     floor of its first ink, the percent's likewise; the block and the
-//     cell stand on whole columns. THE RUNS' INK ROWS ARE THE ALPHABET'S,
+//     measure (text_shape::ink_left_px / ink_right_px: the run's outlines'
+//     real edges): the airs are measured from the clock's and the
+//     percent's REAL first ink, nothing floored, so the block, the cell
+//     and the lamps stand at real x (architect 2026-11-15, the no-grid
+//     arc). THE RUNS' INK ROWS ARE THE ALPHABET'S,
 //     kLogoLegendInkSet (the composer's every character: the digits, "%",
 //     ":", the space and "AMP"), so the seat never moves with what the
 //     clock reads; the pipe's rows are the same band.
@@ -1520,8 +1523,9 @@ constexpr int kMinWindowHeightPx = 480;
 //     not a stack beside the NOISE case (d2 declined). THEIR ROWS: the top row
 //     ON THE LEGEND RUNS' INK TOP ROW, the glyph cell's own top row
 //     (logo_item_y of the runs' ink rows; the lamps carry no row offset of
-//     their own, as the cell carries none — no constant; on the tablet rows
-//     28..43 beside the cell's 28..41 and the runs' 28..42) — his pick
+//     their own, as the cell carries none — no constant; on the tablet from
+//     28.5 to 44.5 beside the cell's 28.5 .. 42.5 and the runs' 28.5 ..
+//     43.5, the runs centered exactly on the lane) — his pick
 //     m5 / m6; an alignment, not a length. THEIR COLUMNS: THE CLIP LAMP on
 //     the right, its last column + 1 + kLogoLampGapW (4 W, 8 device px of
 //     ground) = the percent run's first ink column (with no percent run —
@@ -1649,14 +1653,15 @@ constexpr int kMinWindowHeightPx = 480;
 //     "every item centered" rule, stated as the alignment it is, not as a
 //     length): the cell starts on the row the percent and clock digits'
 //     ink starts on (logo_item_y of the runs' ink rows), so at 200 % the
-//     cell stands on rows 28..41 beside the digits' 15 ink rows 28..42 —
-//     both start on row 28, the cell ending one row above the digits. His
-//     reason: the cell centered on the lane (rows 29..42, half a row under
-//     the digits' center by the floors) read "too low"; two rows up (27..40,
-//     mock f1) not taken. The air either side of the cell the space advance
+//     cell stands from 28.5 to 42.5 beside the digits' 15 ink rows from
+//     28.5 to 43.5 — both start together, the cell ending one row above
+//     the digits. His
+//     reason: the cell centered on the lane (rows 29..42 then) read "too
+//     low"; two rows up (27..40, mock f1) not taken. The air either side of
+//     the cell the space advance
 //     and one W, above; the cell the larger of the two drawings' ink boxes
 //     on each axis so no state can move it, each drawing centered in it
-//     (the floor of the spare). Painted in the text tone.
+//     exactly. Painted in the text tone.
 //   (Liberation's own arrows ↑ / ↓ as the glyphs and "nothing" as the
 //   discharging glyph were judged on the same sheets and not taken,
 //   docs/engineering/closed_questions.md; the drawn pipe, declined there
@@ -1963,8 +1968,9 @@ inline int program_run_gap_px() {
 // it or on the channel with no item is consumed and seeks nothing, as
 // before (claim_player_scrub_press's frames <= 0 arm).
 // THE THUMB IS CENTERED ON THE TROUGH'S END (architect 2026-10-25, "centered
-// on the trough's end"): NO INSET — frame 0's place is the channel's first
-// column and the last frame's its last (render_player_scrub_x_of), the
+// on the trough's end"): NO INSET — frame 0's place is the channel's LEFT
+// EDGE and the last frame's its RIGHT EDGE (render_player_scrub_x_of: the
+// trough's real ends since the no-grid arc, 2026-11-15), the
 // thumb's center the frame's place, so HALF THE THUMB OVERHANGS the channel
 // at each end, over the group space beside it (a fader knob at the end of
 // its slot: 12 of the 24 device px on the tablet). THE PUBLISHED ITEM is therefore the

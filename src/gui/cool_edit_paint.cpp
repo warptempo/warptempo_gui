@@ -11,9 +11,9 @@
 
 // The rules are at the declarations (cool_edit_paint.h).
 
-void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
-    if (f.w <= 0 || f.h <= 0) return;
-    // THE FLAT KEY FACE, no ring (the declaration's rule).
+void paint_ce_time_field(cairo_t* cr, const GuiRectF& f) {
+    // THE FLAT KEY FACE, no ring (the declaration's rule), on the field's
+    // real edges (the exact fill, render.h).
     paint_cell_rect(cr, f, palette().key_face);
 }
 

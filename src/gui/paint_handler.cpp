@@ -15,6 +15,7 @@
 #include "score_viewer.h"
 #include "text_editor.h"
 #include "text_shape.h"
+#include "text_raster.h"   // XSpan, the cards' text room
 #include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
@@ -647,15 +648,15 @@ std::string key_legend_word(std::string_view word) {
 // the icon caches keyed on the ink px. THE FACE'S WIDTH (the `key_width`
 // tuning key, 2026-11-06) never sizes it: a width commit moves the face and
 // so the glyph's seat, never its ink.
-// CENTERED in the painted face `face` (architect 2026-11-03, the retrofit:
-// the glyph centered on the face; the left-square seat of the earlier mocks
-// rejected; the face the whole key since 2026-11-04 night, 70 x 34 at the
-// defaults), the spare
-// split with its odd px below and right (the integer floor, the mock's). THE
-// ODD HALF PX IS ACCEPTED (architect 2026-11-02: "I'd prefer slight
-// misalignment over uneven sizing"): a drawing whose ink side's parity
-// differs from the face's stands half a px off center rather than taking a
-// size of its own, every key glyph keeping the one ink size. ITS TONE
+// CENTERED in the painted face `face` EXACTLY (architect 2026-11-03, the
+// retrofit: the glyph centered on the face; the left-square seat of the
+// earlier mocks rejected; the face the whole key since 2026-11-04 night,
+// 70 x 34 at the defaults; exact since the no-grid arc, architect
+// 2026-11-15): the ink box's top-left at half the spare on each axis, a
+// real place, the glyph rasterized there (icons::draw_glyph) — so a
+// drawing whose ink side's parity differs from the face's stands centered
+// on a half px rather than half a px off, every key glyph keeping the one
+// ink size (a raster size, whole). ITS TONE
 // FOLLOWS THE FACE (materials.h's key_ink; architect 2026-11-11, session
 // 106): `text_on_lit` (Default's 111111) when the key paints LIT (`look`,
 // key_look's answer: checked), on the accent or a radio key's purple and on
@@ -663,23 +664,25 @@ std::string key_legend_word(std::string_view word) {
 // on a lit key that is disabled, its face dimmed with it; else `text` (Default's B5B5B5) on a
 // resting or pressed face, or `key_dim_ink` (Default's 5D5D5D) when the
 // key is disabled. The glyph is
-// clipped to the face: a face smaller than the ink box keeps its glyph
-// centered and lets nothing overhang onto the ground. None is at the
+// clipped to the face's whole pixels (its hull): a face smaller than the
+// ink box keeps its glyph centered and lets nothing overhang onto the
+// ground. None is at the
 // defaults — the ink's larger side 18 on the 70 x 34 face, 8 rows above and
 // 8 below an 18-row ink.
 constexpr double kKeyGlyphInkPerKeySide = 9.0 / 17.0;
-void paint_key_glyph(cairo_t* cr, const GuiRect& face, icons::Icon icon,
+void paint_key_glyph(cairo_t* cr, const GuiRectF& face, icons::Icon icon,
                      bool enabled, KeyLook look) {
-    const GuiRect& key = face;
-    if (key.w <= 0 || key.h <= 0) return;
+    const GuiRectF& key = face;
+    if (!(key.w > 0.0) || !(key.h > 0.0)) return;
     const int ink = scaled_px(kKeyGlyphInkPerKeySide * key_height_w(), 1);
     const icons::InkSize size = icons::glyph_ink_size(icon, ink);
     if (size.w <= 0 || size.h <= 0) return;
-    const int x = key.x + static_cast<int>(std::floor((key.w - size.w) * 0.5));
-    const int y = key.y + static_cast<int>(std::floor((key.h - size.h) * 0.5));
+    const double x = key.x + (key.w - static_cast<double>(size.w)) * 0.5;
+    const double y = key.y + (key.h - static_cast<double>(size.h)) * 0.5;
     const uint32_t tone = key_ink(look, enabled);
+    const GuiRect clip = hull(key);
     cairo_save(cr);
-    cairo_rectangle(cr, key.x, key.y, key.w, key.h);
+    cairo_rectangle(cr, clip.x, clip.y, clip.w, clip.h);
     cairo_clip(cr);
     icons::draw_glyph(cr, icon, x, y, ink, tone);
     cairo_restore(cr);
@@ -1631,7 +1634,10 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 // ONE ROAD for the painter and the tick's damage (logo_legend_extent), so
 // the two cannot disagree: the lane is the band's first logo_lane_h_px rows
 // (36 W, 72 device px on the tablet, 2026-11-03); EVERY ITEM CENTERED ON THE LANE BY ITS OWN
-// INK, the spare row below (architect 2026-11-03, on mock dec0b) — the
+// INK, EXACTLY (architect 2026-11-03, on mock dec0b; exact since the no-grid
+// arc, architect 2026-11-15: half the spare above and half below, no spare
+// row — the ink's whole row count stays the measure, gui_font_ink_band, and
+// its place is a real y) — the
 // note's ink box (lifted one W above that seat, kLogoNoteLiftW, by the
 // painter, 2026-11-04 night), the
 // brand's ink rows, the legend's runs' ink rows (the alphabet's,
@@ -1676,20 +1682,27 @@ icons::InkSize logo_note_ink() {
     return icons::glyph_ink_size(icons::Icon::MusicNote16th,
                                  scaled_px(kLogoNoteInkW, 1));
 }
-// THE ROW an item `rows` tall starts on in the lane `lane`: centered, the
-// spare row below (the floor of the half).
-int logo_item_y(const GuiRect& lane, int rows) {
-    return lane.y + (lane.h - rows) / 2;
+// WHERE an item `rows` tall starts in the lane `lane`: CENTERED EXACTLY, a
+// real y — half the spare above it, no half rounded (architect 2026-11-15,
+// the no-grid arc).
+double logo_item_y(const GuiRect& lane, int rows) {
+    return static_cast<double>(lane.y) +
+           static_cast<double>(lane.h - rows) / 2.0;
 }
+// EVERY PLACE HERE IS REAL (architect 2026-11-15, the no-grid arc): the
+// runs' pens and their baseline, and the pipe, the cell and the two lamps
+// as exact rects off the runs' REAL ink edges — painted through the exact
+// fill and the exact icon road; `extent` alone is whole pixels, the damage
+// (the hull of everything the legend inks).
 struct LogoLegendLayout {
     GuiRect lane{0, 0, 0, 0};
     text_shape::SharedRun clock, percent;   // percent null when empty
     double clock_x = 0.0, percent_x = 0.0;
     double baseline = 0.0;        // the runs' (the clock's and the percent's)
-    GuiRect pipe{0, 0, 0, 0};     // the drawn block, on the runs' ink rows
-    GuiRect cell{0, 0, 0, 0};
-    GuiRect limiter_lamp{0, 0, 0, 0};   // THE TWO LAMPS (render.h)
-    GuiRect clip_lamp{0, 0, 0, 0};
+    GuiRectF pipe{};              // the drawn block, on the runs' ink rows
+    GuiRectF cell{};
+    GuiRectF limiter_lamp{};      // THE TWO LAMPS (render.h)
+    GuiRectF clip_lamp{};
     GuiRect extent{0, 0, 0, 0};
 };
 GuiRect logo_lane_rect(const AppState& app) {
@@ -1703,53 +1716,57 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     const WellColumns well = well_columns(app);
     const GuiFont body = gui_font(GuiFace::Body);
     const LogoTextInk ink = logo_text_ink(GuiFace::Body, kLogoLegendInkSet);
-    const int ink_top = logo_item_y(l.lane, ink.rows());
-    l.baseline = static_cast<double>(ink_top + ink.above);
+    const double ink_top  = logo_item_y(l.lane, ink.rows());
+    const double ink_rows = static_cast<double>(ink.rows());
+    l.baseline = ink_top + static_cast<double>(ink.above);
     const double space = text_shape::memoized_run(body, " ")->width_px;
     l.clock = text_shape::memoized_run(body, legend.clock);
     l.clock_x = static_cast<double>(well.end) - text_shape::ink_right_px(*l.clock);
     // THE DRAWN PIPE (render.h's logo lane block, 2026-11-05): a block one W
-    // wide on the runs' ink rows, kLogoPipeAirW of ground between its last
-    // column and the clock's first ink column (the floor of the first ink).
-    const int clock_first_ink = static_cast<int>(std::floor(
-        l.clock_x + text_shape::ink_left_px(*l.clock)));
-    const int pipe_air = scaled_px(kLogoPipeAirW);
-    const int pipe_w   = scaled_px(kLogoPipeW, 1);
-    l.pipe = GuiRect{clock_first_ink - pipe_air - pipe_w, ink_top, pipe_w,
-                     ink.rows()};
-    // THE CELL: kLogoPipeAirW of ground between its last column and the
+    // wide on the runs' ink rows, kLogoPipeAirW of ground between its right
+    // edge and THE CLOCK'S FIRST INK'S REAL EDGE (nothing floored).
+    const double clock_first_ink =
+        l.clock_x + text_shape::ink_left_px(*l.clock);
+    const double pipe_air = static_cast<double>(scaled_px(kLogoPipeAirW));
+    const double pipe_w   = static_cast<double>(scaled_px(kLogoPipeW, 1));
+    l.pipe = GuiRectF{clock_first_ink - pipe_air - pipe_w, ink_top, pipe_w,
+                      ink_rows};
+    // THE CELL: kLogoPipeAirW of ground between its right edge and the
     // block (the pipe side; the digit side keeps the space advance and the
     // one W of air, kLogoGlyphAirW — the stated asymmetry, render.h). ITS
-    // TOP ROW IS THE RUNS' INK TOP ROW (the row the percent and clock
-    // digits' ink starts on), not the cell's own centered seat.
+    // TOP IS THE RUNS' INK TOP (where the percent and clock digits' ink
+    // starts), not the cell's own centered seat.
     const icons::InkSize cell = logo_glyph_cell();
-    const int air = scaled_px(kLogoGlyphAirW);
-    const int cell_right = l.pipe.x - pipe_air;   // one past the cell's last column
-    l.cell = GuiRect{cell_right - cell.w, ink_top, cell.w, cell.h};
-    int percent_first_ink = l.cell.x;
+    const double air = static_cast<double>(scaled_px(kLogoGlyphAirW));
+    const double cell_right = l.pipe.x - pipe_air;
+    l.cell = GuiRectF{cell_right - static_cast<double>(cell.w), ink_top,
+                      static_cast<double>(cell.w),
+                      static_cast<double>(cell.h)};
+    double percent_first_ink = l.cell.x;
     if (!legend.percent.empty()) {
         l.percent = text_shape::memoized_run(body, legend.percent);
-        l.percent_x = static_cast<double>(l.cell.x - air) - space -
+        l.percent_x = l.cell.x - air - space -
                       text_shape::ink_right_px(*l.percent);
-        percent_first_ink = static_cast<int>(std::floor(
-            l.percent_x + text_shape::ink_left_px(*l.percent)));
+        percent_first_ink = l.percent_x + text_shape::ink_left_px(*l.percent);
     }
     // THE TWO LAMPS (render.h's THE TWO LAMPS): the clip lamp kLogoLampGapW
-    // of ground left of the percent's first ink column (the cell's first
-    // column with no percent run), the limiter lamp one key gap left of it,
-    // both kLogoLampW square with their top row ON the runs' ink top row,
+    // of ground left of the percent's first ink's real edge (the cell's left
+    // edge with no percent run), the limiter lamp one key gap left of it,
+    // both kLogoLampW square with their top ON the runs' ink top,
     // the cell's own (2026-11-06, his pick m5 / m6 of tmp/s63).
-    const int lamp  = scaled_px(kLogoLampW, 1);
-    const int lamp_y = ink_top;
-    const int clip_x = percent_first_ink - scaled_px(kLogoLampGapW) - lamp;
-    l.clip_lamp    = GuiRect{clip_x, lamp_y, lamp, lamp};
-    l.limiter_lamp = GuiRect{clip_x - key_gap_px() - lamp, lamp_y, lamp, lamp};
-    // THE EXTENT: the columns from the first ink — the limiter lamp's first
-    // column, the leftmost thing by construction — through the well's last
-    // column (the clock's last ink stands on it) and one column of slack
-    // past it for that ink's antialiased fraction, the lane's rows, no
-    // clamp: every ink stands inside the lane by construction.
-    const int first = l.limiter_lamp.x;
+    const double lamp   = static_cast<double>(scaled_px(kLogoLampW, 1));
+    const double lamp_y = ink_top;
+    const double clip_x = percent_first_ink -
+                          static_cast<double>(scaled_px(kLogoLampGapW)) - lamp;
+    l.clip_lamp    = GuiRectF{clip_x, lamp_y, lamp, lamp};
+    l.limiter_lamp = GuiRectF{
+        clip_x - static_cast<double>(key_gap_px()) - lamp, lamp_y, lamp, lamp};
+    // THE EXTENT, WHOLE PIXELS: the columns from the first ink — the limiter
+    // lamp's left edge's column, the leftmost thing by construction —
+    // through the well's last column (the clock's last ink stands on its
+    // edge) and one column of slack past it, the lane's rows, no clamp:
+    // every ink stands inside the lane by construction.
+    const int first = static_cast<int>(std::floor(l.limiter_lamp.x));
     l.extent = GuiRect{first, l.lane.y, std::max(0, well.end + 1 - first),
                        l.lane.h};
     return l;
@@ -1785,16 +1802,18 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // BPM key's drawing too, a deliberate share, architect 2026-11-02, R14
     // (4): "the logo, the launcher and BPM keep the single note"): its ink box's first
     // column on the well's first column and its rows ONE W ABOVE their
-    // centered seat on the lane (kLogoNoteLiftW, render.h's logo lane
-    // block, 2026-11-04 night: the centered note hung below the brand).
+    // exactly centered seat on the lane (kLogoNoteLiftW, render.h's logo
+    // lane block, 2026-11-04 night: the centered note hung below the brand).
     const int note_ink = scaled_px(kLogoNoteInkW, 1);
     const icons::InkSize note = logo_note_ink();
-    icons::draw_glyph(cr, icons::Icon::MusicNote16th, well.x,
-                      logo_item_y(lane, note.h) - scaled_px(kLogoNoteLiftW),
+    icons::draw_glyph(cr, icons::Icon::MusicNote16th,
+                      static_cast<double>(well.x),
+                      logo_item_y(lane, note.h) -
+                          static_cast<double>(scaled_px(kLogoNoteLiftW)),
                       note_ink, text_word);
 
     // THE BRAND, a constant: its first ink the gap past the note's last
-    // ink column, its ink rows centered on the lane.
+    // ink column, its ink rows centered on the lane exactly.
     set_palette_source(cr, text);
     {
         const GuiFont bold = gui_font(GuiFace::Bold);
@@ -1806,7 +1825,7 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
                          text_shape::ink_left_px(*brand);
         text_shape::show_shaped_run(
             cr, *brand, x,
-            static_cast<double>(logo_item_y(lane, ink.rows()) + ink.above));
+            logo_item_y(lane, ink.rows()) + static_cast<double>(ink.above));
     }
 
     // THE LEGEND (logo_legend_layout): the clock run, the drawn pipe on the
@@ -1817,8 +1836,12 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     text_shape::show_shaped_run(cr, *l.clock, l.clock_x, l.baseline);
     if (l.percent)
         text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
-    // THE DRAWN PIPE AND THE TWO LAMPS: whole device-px cells, no
-    // antialiasing — the block in the text tone; each lamp its face at rest
+    // THE DRAWN PIPE AND THE TWO LAMPS, ON THEIR REAL EDGES (architect
+    // 2026-11-15, the no-grid arc): exact rects off the runs' real ink
+    // edges and the runs' exactly centered ink top, filled at exact
+    // coverage over the band's ground (the exact fill, render.h — the logo
+    // lane is opaque chrome at the window's top, far from the canvas) —
+    // the block in the text tone; each lamp its face at rest
     // (`key_face`, Live's indicator box) or lit (the limiter the cards'
     // orange, `card_ground`; the clip `clip_lamp`, Live's meter red); the
     // clip lamp, while struck, THE WHOLE SQUARE in `key_dim_ink`, the dead
@@ -1827,8 +1850,6 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // struck, else lit, else rest — from the three bits the tick writes
     // (refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS).
     {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         const GuiPalette& p = palette();
         paint_ink_rect(cr, l.pipe, text);
         paint_ink_rect(cr, l.limiter_lamp,
@@ -1837,12 +1858,11 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
                        app.clip_lamp_struck ? p.key_dim_ink
                        : app.clip_lamp_lit  ? p.clip_lamp
                                             : p.key_face);
-        cairo_restore(cr);
     }
 
     // THE GLYPH, Breeze's battery by the plug state (GuiLogoGlyph's rule),
-    // its ink box centered in the cell (the floor of the spare; one box for
-    // both today, so flush), in the text tone.
+    // its ink box centered in the cell exactly (one box for both today, so
+    // flush), at the cell's real place, in the text tone.
     {
         const icons::Icon glyph =
             app.logo_legend.glyph == GuiLogoGlyph::Charging
@@ -1850,9 +1870,11 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
                 : icons::Icon::Battery000;
         const int glyph_ink = scaled_px(kLogoGlyphInkW, 1);
         const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
-        icons::draw_glyph(cr, glyph, l.cell.x + (l.cell.w - s.w) / 2,
-                          l.cell.y + (l.cell.h - s.h) / 2, glyph_ink,
-                          text_word);
+        icons::draw_glyph(
+            cr, glyph,
+            l.cell.x + (l.cell.w - static_cast<double>(s.w)) / 2.0,
+            l.cell.y + (l.cell.h - static_cast<double>(s.h)) / 2.0, glyph_ink,
+            text_word);
     }
 
     cairo_restore(cr);
@@ -2610,10 +2632,10 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // color should not be this yellowish color") — 39 DEVICE PX TALL on the
 // tablet at 200 %, THE PAD, THE CAP AND THE PAD (time_field_h_px, render.h, the
 // owner of the pad and the height; 2026-11-03; it does not follow the
-// key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a half-row tie
-// toward the top, time_field_rect's; round the 34-row face at key_height
-// 17, time_field_rect: row 8's 1365 .. 1403 round the face's 1368 ..
-// 1401, the field the taller), its run in THE PROGRAM FACE, 11 W, 22
+// key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS EXACTLY (no half
+// rounded, time_field_rect: round the 34-row face at key_height 17, row
+// 8's field from 1365.5 to 1404.5 round the face's 1368 .. 1401, the field
+// the taller by 2.5 rows above and below), its run in THE PROGRAM FACE, 11 W, 22
 // device px on the tablet, in every time field (row 8's clock, architect
 // 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to symmetry;
 // gui_font.h's table), its cap band centred in the field EXACTLY by
@@ -2982,23 +3004,28 @@ static Row8Clock row8_clock(const AppState& app, const GuiRect& lane) {
     return c;
 }
 
-// ONE TIME FIELD'S RECT: its left line at `x`, `w` wide, centred on the
-// case's rows [case_y, case_y + case_h), A HALF-ROW TIE TOWARD THE TOP
-// either way (the offset FLOORED, so a field TALLER than the case — as it
-// stands under a key_height shorter than the field — takes the tie upward
-// too, where truncation would send it down). At key_height 17 the field,
-// 39 device rows on the tablet at 200 % (time_field_h_px), is the taller: 3
-// rows over the face above it and 2 below (row 8's 1365 .. 1403 round the
-// face's 1368 .. 1401), standing over the strip pads either side — inside
-// row 8's and the controls row's rows at every key_height in the key's
-// range, the strip pad 19 W, 38 device px, whatever the key (2026-11-03,
-// the retrofit; 19 W since 2026-11-04 night), so no field overhangs its
-// strip.
-static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
+// ONE TIME FIELD'S RECT: its left edge at `x`, `w` wide, CENTERED EXACTLY ON
+// THE CASE'S ROWS [case_y, case_y + case_h) (architect 2026-11-15, the
+// no-grid arc: no half rounded, either way — the upper-row tie of the floor
+// is retired with the grid), so a field taller or shorter than the case by
+// an odd number of rows stands half a row over it, or inside it, above and
+// below alike. At key_height 17 the field, 39 device rows on the tablet at
+// 200 % (time_field_h_px), is the taller: 2.5 rows over the face above it
+// and 2.5 below (row 8's field from 1365.5 to 1404.5 round the face's 1368
+// .. 1401), standing over the strip pads either side — inside row 8's and
+// the controls row's rows at every key_height in the key's range, the strip
+// pad 19 W, 38 device px, whatever the key (2026-11-03, the retrofit; 19 W
+// since 2026-11-04 night), so no field overhangs its strip, and the strip's
+// ground is opaque chrome under every edge. AN EXACT RECT: its painter the
+// exact fill (paint_ce_time_field), its digits centered on its real rows
+// (redesign_baseline), and whatever names its PIXELS — the play field's
+// press box, a clip test — its hull.
+static GuiRectF time_field_rect(int x, int w, int case_y, int case_h) {
     const int h = time_field_h_px();
-    const int d = case_h - h;
-    const int off = d >= 0 ? d / 2 : -((1 - d) / 2);
-    return GuiRect{x, case_y + off, w, h};
+    return GuiRectF{static_cast<double>(x),
+                    static_cast<double>(case_y) +
+                        static_cast<double>(case_h - h) / 2.0,
+                    static_cast<double>(w), static_cast<double>(h)};
 }
 // A FIELD'S WIDTH round a reserved cell `cell_w` whole px wide: the cell
 // and the pad either side (no least width since 2026-10-10, kTimeShape's
@@ -3212,8 +3239,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const int    cell_w  = clock.cell_w;
         const int    field_x = clock.field_x;
         const int    field_w = clock.field_w;
-        const GuiRect clock_field =
+        const GuiRectF clock_field =
             time_field_rect(field_x, field_w, btn_y, btn_h);
+        // The field's whole pixels (render.h's hull): what the press box
+        // and the clip test below name.
+        const GuiRect clock_hull = hull(clock_field);
         // THE CLOCK IS PRESSED AS THE PLAY KEY (architect 2026-10-27): the
         // field as painted is Play / Stop's second rect
         // (RedesignButtonFace::field), so a press on it is a press on that
@@ -3235,10 +3265,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // share the field's painter (paint_ce_time_field) and never the
         // press.
         {
-            GuiRect play_field = clock_field;
-            play_field.w = std::min(clock_field.x + clock_field.w,
+            GuiRect play_field = clock_hull;
+            play_field.w = std::min(clock_hull.x + clock_hull.w,
                                     right_block_x) -
-                           clock_field.x;
+                           clock_hull.x;
             if (play_field.w <= 0) play_field = GuiRect{0, 0, 0, 0};
             app.redesign_buttons[redesign_button_index(
                                      RedesignButton::TransportPlayStop)]
@@ -3247,14 +3277,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // THE FIELD AND ITS RUN ARE SKIPPED WHERE THE CLIP MISSES THE FIELD
         // (clip_meets): the run lies inside the cell published below, which
         // lies inside the field.
-        const bool clock_drawn = clip_meets(cr, clock_field);
+        const bool clock_drawn = clip_meets(cr, clock_hull);
         if (clock_drawn) paint_ce_time_field(cr, clock_field);
         // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the face
         // split above and below its digits by the one box solver. THE NAME
         // AND THE STATE LINE TAKE IT TOO (the ONE BASELINE block below).
         const double baseline =
-            redesign_baseline(font, static_cast<double>(clock_field.y),
-                              static_cast<double>(clock_field.h));
+            redesign_baseline(font, clock_field.y, clock_field.h);
         // THE ACTIVE TAB'S NAME (architect 2026-10-22: the tab strip goes,
         // "Tab A" / "Tab B" on the bare ground right of the clock): its FIRST
         // INK the name's air (kTabNameAirW) past the field's right edge, the run's
@@ -3961,10 +3990,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     // short of the right border. The first line's INSIDE rows are pad + cap
     // + pad; the glyph's ink box's larger side is kNotificationGlyphRatio of
     // them (icons.h's THE INK BOX), its first ink column at ring + pad and
-    // its rows centered on the inside rows (the floor of the spare). THE
+    // its rows centered on the inside rows exactly. THE
     // SEAT'S WIDTH, which places the text, is notification_glyph_seat_w_px
-    // (notifications.h) — the same ink length's retired box, so the text's
-    // column did not move with the drawing.
+    // (notifications.h) — the same ink length's retired box's ratio, exact,
+    // so the text's column did not move with the drawing.
     const int ring     = hairline_px();
     const int pad      = notification_pad_px();
     const int cap      = notification_cap_px();
@@ -3973,11 +4002,16 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         kNotificationGlyphRatio * static_cast<double>(inside_h);
     const int glyph_ink = std::max(
         1, static_cast<int>(std::nearbyint(glyph_ink_px)));
-    const int glyph_w   = notification_glyph_seat_w_px(glyph_ink_px);
+    // THE TEXT'S COLUMN IS EXACT (architect 2026-11-15, the no-grid arc):
+    // the seat's width the ratio itself, unrounded
+    // (notification_glyph_seat_w_px), so the pen stands a real length past
+    // the card's left edge. The glyph's INK stays whole (a raster size).
+    const double glyph_w = notification_glyph_seat_w_px(glyph_ink_px);
     const int glyph_gap = scaled_px(kNotificationGlyphGapW);
-    const int lead_w   = ring + pad + glyph_w + glyph_gap;
-    const int tail_w   = pad + ring;
-    const int chrome_w = lead_w + tail_w;
+    const double lead_w   = static_cast<double>(ring + pad) + glyph_w +
+                            static_cast<double>(glyph_gap);
+    const int    tail_w   = pad + ring;
+    const double chrome_w = lead_w + static_cast<double>(tail_w);
     const int right_x  = room.x + room.w;
     // WHAT IS PUBLISHED IS WHAT IS VISIBLE: the room clips the paint, so it
     // clips the publication too, or the hit would claim a press on pixels
@@ -3995,8 +4029,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     struct LaidCard {
         const AppState::Notification*        n = nullptr;
         GuiRect                              card{0, 0, 0, 0};
-        int                                  text_x    = 0;
-        int                                  text_room = 0;
+        double                               text_x    = 0.0;
+        double                               text_room = 0.0;
         std::vector<text_shape::ShapedRun>   lines;
     };
     std::vector<LaidCard> laid;
@@ -4026,17 +4060,26 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // fits-whole test is exact.
         const text_shape::ShapedRun whole =
             text_shape::shape_text_run(font, n.text);
-        int w = chrome_w + static_cast<int>(std::ceil(whole.width_px));
+        // THE BOX IS WHOLE PIXELS (a floating surface's, render.h's hull):
+        // the ceiling of its real content width, so the text's room is the
+        // shaped width or more.
+        const int wanted =
+            static_cast<int>(std::ceil(chrome_w + whole.width_px));
         // max_w never answers under min_w (the owner floors it there, so the
         // room this paints into cannot be narrower than the card), and the
         // std::max keeps the clamp's own precondition stated at the call.
-        w = std::clamp(w, min_w, std::max(min_w, max_w));
-        const int card_x    = right_x - w;
-        const int text_x    = card_x + lead_w;
-        const int text_room = card_x + w - tail_w - text_x;
+        const int w = std::clamp(wanted, min_w, std::max(min_w, max_w));
+        const int card_x       = right_x - w;
+        const double text_x    = static_cast<double>(card_x) + lead_w;
+        // The room from the pen to the right pad; a card not clamped under
+        // its content holds the whole sentence by the ceiling above (the
+        // max keeps the last bit of the two sums from breaking a line).
+        const double text_room =
+            w >= wanted
+                ? std::max(static_cast<double>(w) - chrome_w, whole.width_px)
+                : static_cast<double>(w) - chrome_w;
         std::vector<text_shape::ShapedRun> lines =
-            notification_text_lines(font, n.text, whole,
-                                    static_cast<double>(text_room));
+            notification_text_lines(font, n.text, whole, text_room);
         // THE CARD GROWS DOWNWARD BY WHOLE LINES; its first line is a
         // one-line card and the first baseline sits in it.
         const GuiRect card{
@@ -4052,8 +4095,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     for (const LaidCard& c : laid) {
         const AppState::Notification& n = *c.n;
         const GuiRect& card = c.card;
-        const int text_x    = c.text_x;
-        const int text_room = c.text_room;
+        const double text_x    = c.text_x;
+        const double text_room = c.text_room;
         const std::vector<text_shape::ShapedRun>& lines = c.lines;
         // The box, then the class glyph at its seat on the first line's
         // inside rows (the layout block above): Breeze's cut-out
@@ -4068,17 +4111,23 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                 n.cls == AppState::NotificationClass::Critical
                     ? icons::Icon::DialogError
                     : icons::Icon::DialogInformation;
+            // Its ink box centered EXACTLY on the first line's inside rows
+            // (half the spare above and below, no half rounded), at the
+            // card's whole left seat.
             const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
-            icons::draw_glyph(cr, glyph, card.x + ring + pad,
-                              card.y + ring + (inside_h - s.h) / 2,
-                              glyph_ink,
-                              argb32_opaque_word(palette().card_text));
+            icons::draw_glyph(
+                cr, glyph, static_cast<double>(card.x + ring + pad),
+                static_cast<double>(card.y + ring) +
+                    static_cast<double>(inside_h - s.h) / 2.0,
+                glyph_ink, argb32_opaque_word(palette().card_text));
         }
 
-        if (text_room > 0) {
-            cairo_save(cr);
-            cairo_rectangle(cr, text_x, card.y, text_room, card.h);
-            cairo_clip(cr);
+        if (text_room > 0.0) {
+            // THE TEXT IS CUT TO ITS ROOM ON ITS OWN MASK
+            // (text_shape::show_shaped_run_within: the pen and the room's
+            // end are real x, and a line too long for the room is cut there
+            // at exact coverage with no cairo clip).
+            const text_raster::XSpan room_span{text_x, text_x + text_room};
             set_palette_source(cr, palette().card_text);
             // The FIRST line's baseline CENTERS ITS CAP BAND IN THE FIRST
             // LINE EXACTLY (architect 2026-10-24; exact since the no-grid
@@ -4096,12 +4145,12 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                                   static_cast<double>(card.y + ring),
                                   static_cast<double>(inside_h));
             for (size_t li = 0; li < lines.size(); ++li) {
-                text_shape::show_shaped_run(
-                    cr, lines[li], static_cast<double>(text_x),
+                text_shape::show_shaped_run_within(
+                    cr, lines[li], text_x,
                     base + static_cast<double>(li) *
-                               static_cast<double>(line_h));
+                               static_cast<double>(line_h),
+                    &room_span, 1);
             }
-            cairo_restore(cr);
         }
 
         const GuiRect shown = in_room(card);
@@ -6313,6 +6362,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.box     = GuiRect{0, 0, 0, 0};
     dlg.field   = GuiRect{0, 0, 0, 0};
     dlg.scrub   = GuiRect{0, 0, 0, 0};
+    dlg.scrub_channel = GuiRect{0, 0, 0, 0};
     dlg.clock   = GuiRect{0, 0, 0, 0};
     dlg.scrub_thumb_x = -1.0;
     dlg.buttons.clear();
@@ -6904,23 +6954,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const auto paint_scrub_item = [&](int scrub_x0, int scrub_w,
                                       bool thumb_pressed,
                                       const auto& thumb_x_of) {
-            // THE CHANNEL, the layout's span, and THE ITEM round it: the
-            // channel widened by the thumb's left half before its first
-            // column and its right half after its last, so item.w =
-            // channel − 1 + thumb — a whole rect, layout and the scrub's
-            // damage, inside which the thumb's box stands at every place
-            // of its travel (the mapping's ends,
-            // render_player_scrub_travel_x0 / _usable_span, app_state.h).
-            const int thumb_w = scrub_thumb_w_px();
+            // THE CHANNEL, the layout's span — THE TRAVEL of the thumb's
+            // center, its left edge to its right (the mapping's ends,
+            // render_player_scrub_travel_x0 / _usable_span, app_state.h) —
+            // and THE ITEM round it: THE HULL OF EVERY PLACE THE THUMB'S BOX
+            // CAN STAND, the channel widened by half a thumb before its left
+            // edge and half a thumb past its right (render.h's hull: whole
+            // pixels, the scrub's press gate and its damage).
+            const double half_thumb =
+                static_cast<double>(scrub_thumb_w_px()) / 2.0;
             const GuiRect channel{scrub_x0, btn_y, scrub_w, btn_h};
-            const GuiRect track{scrub_x0 - thumb_w / 2, btn_y,
-                                scrub_w - 1 + thumb_w, btn_h};
-            dlg.scrub = track;
+            const GuiRect track = hull(GuiRectF{
+                static_cast<double>(scrub_x0) - half_thumb,
+                static_cast<double>(btn_y),
+                static_cast<double>(scrub_w) + 2.0 * half_thumb,
+                static_cast<double>(btn_h)});
+            dlg.scrub         = track;
+            dlg.scrub_channel = channel;
             // THE THUMB'S CENTER — THE THUMB ALWAYS STANDS (2026-10-25,
             // render.h's scrub block; it stood only while an item was
             // decoded until then) — is the owner's, asked once the item is
-            // published (its mapping reads dlg.scrub): the player's at its
-            // branch, the score viewer's at its own. ITS BOX is the one
+            // published (its mapping reads dlg.scrub_channel): the player's
+            // at its branch, the score viewer's at its own. ITS BOX is the one
             // geometry's (scrub_thumb_box, render.h): its rows centered
             // exactly in the track's band (the case's rows).
             const double   hx    = thumb_x_of();
@@ -7135,7 +7190,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const int64_t shown[2] = {at, rp.frames};
             for (int i = 0; i < 2; ++i) {
                 const int field_x = clock_x0 + i * (field_w + field_gap);
-                const GuiRect field = time_field_rect(
+                const GuiRectF field = time_field_rect(
                     field_x, field_w, seats.case_y, seats.case_h);
                 paint_ce_time_field(cr, field);
                 // THE FIELDS' ONE ORIGIN (time_field_run_x), kerning off:
@@ -7149,8 +7204,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 set_palette_source(cr, palette().text);
                 text_shape::show_shaped_run(
                     cr, run, time_field_run_x(field_x),
-                    redesign_baseline(cfont, static_cast<double>(field.y),
-                                      static_cast<double>(field.h)));
+                    redesign_baseline(cfont, field.y, field.h));
             }
             cairo_restore(cr);
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
@@ -7224,7 +7278,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 for (int i = 0; i < 2; ++i) {
                     const int field_x =
                         ml.clock_x0 + i * (ml.field_w + ml.field_gap);
-                    const GuiRect field = time_field_rect(
+                    const GuiRectF field = time_field_rect(
                         field_x, ml.field_w, seats.case_y, seats.case_h);
                     paint_ce_time_field(cr, field);
                     // The player's run verbatim: kerning off, the fields'
@@ -7237,8 +7291,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     text_shape::show_shaped_run(
                         cr, run,
                         time_field_run_x(field_x),
-                        redesign_baseline(cfont, static_cast<double>(field.y),
-                                          static_cast<double>(field.h)));
+                        redesign_baseline(cfont, field.y, field.h));
                 }
                 cairo_restore(cr);
                 dlg.clock = GuiRect{ml.clock_x0 - 1, content.y,
@@ -7281,8 +7334,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     std::to_string(app.score_viewer.page - r.first + 1) + " / " +
                     std::to_string(r.count());
                 const GuiFont cfont = gui_font(GuiFace::Program);
-                const GuiRect field = time_field_rect(sl.cell_x0, sl.cell_w,
-                                                      seats.case_y, seats.case_h);
+                const GuiRectF field = time_field_rect(
+                    sl.cell_x0, sl.cell_w, seats.case_y, seats.case_h);
                 cairo_save(cr);
                 cairo_rectangle(cr, sl.cell_x0, content.y,
                                 cell_right - sl.cell_x0, content.h);
@@ -7295,8 +7348,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     cr, run,
                     static_cast<double>(sl.cell_x0 + sl.cell_w - sl.cell_pad) -
                         run.width_px,
-                    redesign_baseline(cfont, static_cast<double>(field.y),
-                                      static_cast<double>(field.h)));
+                    redesign_baseline(cfont, field.y, field.h));
                 cairo_restore(cr);
             }
         }
@@ -7843,7 +7895,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     onscreen_keyboard::for_each_key(
         app, page,
         [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
-            const GuiRect& r) {
+            const GuiRectF& r) {
             using Role = onscreen_keyboard::Role;
             // PER-KEY EXPOSURE. The band's ground is laid across the whole
             // surface above (one fill, bounded by the outer damage clip), but a
@@ -7852,8 +7904,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // no other. That matters at the panel's tick rate:
             // the scanner's own damage is a column a few pixels wide, and
             // without this test every one of them painted every key on the
-            // page (fifty-one).
-            if (!rects_intersect(exposed, r)) return;
+            // page (fifty-one). The test names pixels: the key's hull.
+            if (!rects_intersect(exposed, hull(r))) return;
 
             // HELD BY SLOT, not by index (onscreen_keyboard::same_slot): the
             // page key's own press has moved the page this walk is on.
@@ -7864,7 +7916,10 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 (k.role == Role::SymbolMode &&
                  page == onscreen_keyboard::Page::Symbols);
 
-            // THE KEY (paint_key, materials.h): LIT, the accent face, while
+            // THE KEY ON ITS REAL EDGES (paint_key on a GuiRectF, materials.h:
+            // the exact fill over the band's ground laid above — the band is
+            // opaque and whole, so a face inside it may stand at a fraction;
+            // architect 2026-11-15, the no-grid arc): LIT, the accent face, while
             // its lamp stands (Shift latched, the page key on the symbols
             // page), darkened by the press ratio under the finger
             // (key_look's LitPress), else the press face under the finger,
@@ -7902,11 +7957,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 text_shape::shape_text_run(font, cap);
             // The pen centers the cap's advance on the key EXACTLY (no half
             // rounded; architect 2026-11-15, the no-grid arc).
-            const double cap_x = static_cast<double>(r.x) +
-                                 (static_cast<double>(r.w) - run.width_px) *
-                                     0.5;
-            const double baseline = redesign_baseline(
-                font, static_cast<double>(r.y), static_cast<double>(r.h));
+            const double cap_x = r.x + (r.w - run.width_px) * 0.5;
+            const double baseline = redesign_baseline(font, r.y, r.h);
             // THE CAP in the keys face, no shadow, its cap band centered on
             // the key by redesign_baseline: the text tone on an unlit key,
             // `text_on_lit` on a lit one's accent face, the press moving
@@ -8263,8 +8315,14 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 const int ink = scaled_px(kListGlyphInkW, 1);
                 const icons::InkSize s = icons::glyph_ink_size(glyph, ink);
                 const GuiThemeTones& t = installed_theme().tones;
-                icons::draw_glyph(cr, glyph, x0 + scaled_px(kListGlyphXW),
-                                  r.y + (r.h - s.h) / 2, ink,
+                // Its ink box centered exactly on the row's rows (no half
+                // rounded; the no-grid arc, 2026-11-15).
+                icons::draw_glyph(cr, glyph,
+                                  static_cast<double>(
+                                      x0 + scaled_px(kListGlyphXW)),
+                                  static_cast<double>(r.y) +
+                                      static_cast<double>(r.h - s.h) / 2.0,
+                                  ink,
                                   pressed ? t.list_press_text
                                   : lit   ? t.selection_text
                                           : t.text);

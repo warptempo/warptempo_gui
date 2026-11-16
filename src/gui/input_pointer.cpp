@@ -4400,15 +4400,15 @@ static void invalidate_scrub_clock(Viewport& viewport, const AppState& app) {
 // expression its two writers (the press's arm, the motion) share, so the
 // painted handle sits inside its own track at every point of a drag and the
 // release's seek reads the same span the mapping does. The carried center
-// is a WHOLE COLUMN (the pointer hands whole pixels) on a travel whose ends
-// are real (render_player_scrub_travel_x0, half a thumb into the item), so
+// is a WHOLE COLUMN (the pointer hands whole pixels) on the channel's travel
+// (render_player_scrub_travel_x0, the trough's left edge to its right), so
 // the clamp is onto the whole columns inside the travel; a travel with no
 // span answers the column a resting thumb is carried from
 // (scrub_thumb_carried_column, app_state.h).
 int GuiInputHandler::clamp_player_scrub_marker_x(int x) const {
-    const GuiRect track = app.modal_dialog.scrub;
-    const double x0 = render_player_scrub_travel_x0(track);
-    const int span  = render_player_scrub_usable_span(track);
+    const GuiRect channel = app.modal_dialog.scrub_channel;
+    const double x0 = render_player_scrub_travel_x0(channel);
+    const int span  = render_player_scrub_usable_span(channel);
     if (span <= 0) return scrub_thumb_carried_column(x0);
     const int lo = static_cast<int>(std::ceil(x0));
     const int hi = static_cast<int>(std::floor(x0 + static_cast<double>(span)));
@@ -7293,7 +7293,8 @@ void GuiInputHandler::finish_level_press_release(
 // and an editor dialog standing at the lift refuses it there.
 bool GuiInputHandler::arm_clip_lamp_press(int x, int y) {
     if (!app.clip_lamp_struck) return false;
-    const GuiRect r = logo_lamp_rects(app, app.logo_legend).clip;
+    // The square's hull: the pixels it touches (the pointer names a pixel).
+    const GuiRect r = hull(logo_lamp_rects(app, app.logo_legend).clip);
     if (!rect_contains(r, x, y)) return false;
     app.chrome_press = AppState::ChromePress{
         .kind     = AppState::ChromePress::Kind::Lamp,
@@ -7319,7 +7320,7 @@ bool GuiInputHandler::arm_clip_lamp_press(int x, int y) {
 // clearing the strike and damaging the square (refresh_logo_lamps).
 void GuiInputHandler::finish_clip_lamp_press_release(int x, int y) {
     if (!app.clip_lamp_struck) return;
-    const GuiRect r = logo_lamp_rects(app, app.logo_legend).clip;
+    const GuiRect r = hull(logo_lamp_rects(app, app.logo_legend).clip);
     if (!rect_contains(r, x, y)) return;
     if (!playback.ensure_device_available_for_play())
         notifications.notify(AppState::NotificationClass::Normal,
