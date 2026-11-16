@@ -174,6 +174,31 @@ GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio) {
     return GuiRect{x0, area.y, x1 - x0, area.h};
 }
 
+SweepHighlightChange sweep_highlight_change(
+    const AppState& app, const SweepHighlightColumns& before,
+    const SweepHighlightColumns& after) {
+    // The cells from one real x through another over the canvas's rows (the
+    // declaration): empty where the two are one place.
+    const GuiRect area = waveform_area(app);
+    const auto cells = [&](double a, double b) {
+        if (a == b || area.h <= 0) return GuiRect{};
+        const int x0 = static_cast<int>(std::floor(std::min(a, b)));
+        const int x1 = static_cast<int>(std::ceil(std::max(a, b)));
+        return GuiRect{x0, area.y, x1 - x0, area.h};
+    };
+    SweepHighlightChange out;
+    if (before.empty() && after.empty()) return out;
+    if (before.empty()) {
+        out.lo = cells(after.x0, after.x1);
+    } else if (after.empty()) {
+        out.lo = cells(before.x0, before.x1);
+    } else {
+        out.lo = cells(before.x0, after.x0);
+        out.hi = cells(before.x1, after.x1);
+    }
+    return out;
+}
+
 TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
                              double mouse_y) {
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly

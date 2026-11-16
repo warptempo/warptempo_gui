@@ -5253,10 +5253,12 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // and for its reason: on_redraw runs once per damage rect and this pass
     // runs whole under each, so a narrow rect (the playhead's) would otherwise
     // stamp the stash with bounds whose pixels it never redrew. Every trim
-    // write damages at least the viewport's lanes, the band's foot through
-    // the waveform's bottom at the window's width, which hold this
-    // lane whole (commit_trim_mutation, the sweep's and the drag's per-motion writes, the
-    // maximizer, and the tab, load and load-in-place roads), so the frame that
+    // write damages at least this lane whole — the sweep's and the bar
+    // drags' per-motion writes the lane itself (top_trim_row_area;
+    // architect 2026-11-16, the beats), commit_trim_mutation, the maximizer
+    // and the tab, load and load-in-place roads the viewport's lanes, the
+    // band's foot through the waveform's bottom at the window's width —
+    // so the frame that
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
@@ -5637,7 +5639,8 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 // ONLY WHILE THE SWEEP'S POINTER IS DOWN: one tint record (GuiCanvasSink::
 // blended_rect) over the columns sweep_highlight_columns answers
 // (app_state.h — the real span, the formers and the empty states; its
-// damage sites read the same owner's bounding cells, sweep_highlight_rect),
+// damage sites read the same owner's cells, sweep_highlight_rect and
+// sweep_highlight_change),
 // blending it toward WHITE at the `sweep_highlight` device key's
 // whole percent (a tuning key, device_config.h; 0 paints nothing), read
 // here at every list build.

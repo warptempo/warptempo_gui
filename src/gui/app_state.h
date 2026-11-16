@@ -828,8 +828,9 @@ struct UndoHistory {
 // TRACKS THE SWEEP LIVE: the bar is drawn at the view's own scale, in the
 // columns the stroke is drawn in, and the sweep writes the moving pair
 // straight into the trim per motion event (write_trim_from_sweep,
-// input_trim.cpp, whose write repaints the waveform area, the bar's lane
-// inside it). AND THE CANVAS HIGHLIGHT STANDS ON THE SWEPT SPAN WHILE
+// input_trim.cpp; the motion path damages the bar's lane whole and the
+// highlight's moved edges for each accepted write,
+// apply_region_drag_motion). AND THE CANVAS HIGHLIGHT STANDS ON THE SWEPT SPAN WHILE
 // EITHER SWEEP'S POINTER IS DOWN (architect 2026-11-12: "it could just be
 // an alpha overlay with a config key for tuning ... a blend towards white";
 // one look for this former and the ADD SEL former below): a blend toward
@@ -20037,8 +20038,12 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // THE PAINTER lays the span through the sink's blended rect at the
 // `sweep_highlight` key's percent; THE DAMAGE SITES take
 // sweep_highlight_rect, THE SPAN'S BOUNDING CELLS — its floor through its
-// ceiling over the canvas's rows, every cell the blend touches. An empty
-// span is the empty rect, which paints and damages nothing.
+// ceiling over the canvas's rows, every cell the blend touches — where the
+// highlight leaves whole (the lift), and sweep_highlight_change, THE CELLS
+// BETWEEN EACH EDGE'S OLD AND NEW PLACE, where its span moves under a held
+// sweep (the TRIM former's every accepted write; architect 2026-11-16, the
+// beats). An empty span is the empty rect, which paints and damages
+// nothing.
 struct SweepHighlightColumns {
     double x0 = 0.0;
     double x1 = 0.0;
@@ -20047,6 +20052,27 @@ struct SweepHighlightColumns {
 SweepHighlightColumns sweep_highlight_columns(const AppState& app,
                                               const GuiAudio& audio);
 GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio);
+// THE HIGHLIGHT'S DAMAGE FOR A CHANGE OF SPAN (architect 2026-11-16, the
+// beats: a sweep's frame repaints what the write moved and nothing else):
+// `before` the span read BEFORE the write and `after` the span after it
+// (two answers of sweep_highlight_columns). The tint lays on each cell the
+// percent times the cell's share inside the span, so the cells that change
+// are those the two spans' difference touches — and that difference lies
+// between the two LEFT edges and between the two RIGHT edges (both edges
+// can move at once: the pen crossing the anchor swaps them). So: ONE RECT
+// AN EDGE, the cells from the lesser of its two places through the greater
+// — the floor through the ceiling, each edge's own cell with it, so an edge
+// that moved inside one cell is held — over the canvas's rows; an edge that
+// did not move gives none; a span that appeared or left (one of the two
+// empty) gives the other's bounding cells as `lo`. The canvas's rows hold
+// the GL list alone, so each rect is a scissored redraw of the list.
+struct SweepHighlightChange {
+    GuiRect lo{};
+    GuiRect hi{};
+};
+SweepHighlightChange sweep_highlight_change(
+    const AppState& app, const SweepHighlightColumns& before,
+    const SweepHighlightColumns& after);
 
 // Promoted from a lambda in main(). Eligible iff the warp marker at `idx` has
 // a RESOLVED value worth reaching for — i.e. its flag does not already display

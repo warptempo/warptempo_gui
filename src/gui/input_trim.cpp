@@ -405,10 +405,11 @@ void GuiInputHandler::handle_trim_clear_both() {
 // in one gesture, the trim bar and the canvas's sweep highlight being its
 // live picture (the bar drawn at the view's scale; the highlight on the
 // bar's span, edge for edge, architect 2026-11-12, sweep_highlight_columns,
-// raised by the first accepted write here): this write's own repaint,
-// invalidate_waveform_area — the rows from the viewport's lanes through the
-// canvas's foot, the window's whole width — covers the bar and the
-// highlight's old and new columns on every accepted event. THE SET-FROM-REGION
+// raised by the first accepted write here). THE WRITE'S REPAINT IS ITS
+// CALLER'S (architect 2026-11-16, the beats; apply_region_drag_motion,
+// input_pointer.cpp, which reads the highlight's span before this write and
+// after it): the trim bar's lane whole and the cells the highlight's two
+// edges moved across — what a write changes and nothing else. THE SET-FROM-REGION
 // ACT was the old two-step's commit half — sweep a free span, then commit it —
 // and the step it named is gone. The maximizer is unchanged and is the
 // recovery route, trim having no undo.
@@ -495,11 +496,11 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
     // is idempotent.
     selection.clear_selection();
     // THE PLAYHEAD DOES NOT MOVE (the rule at this file's head) and nothing
-    // commits mid-gesture: the repaint is this event's whole tail (the bar
-    // and the sweep highlight on the canvas both inside it), and the
+    // commits mid-gesture: the repaint — the bar's lane and the highlight's
+    // moved edges — is the caller's, on this function's true answer (the
+    // head of this body), and the
     // release runs the shared commit tail (the drag arms' own arrangement,
     // update_trim_drag below).
-    viewport.invalidate_waveform_area();
     return true;
 }
 
@@ -751,8 +752,20 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
             app.trim.end_frame   = ne;
             app.trim_drag.moved    = true;
             // THE PLAYHEAD DOES NOT MOVE, here or at the release (the rule
-            // at this file's head): motion updates the bounds and repaints.
-            viewport.invalidate_waveform_area();
+            // at this file's head): motion updates the bounds and repaints
+            // THE TRIM BAR'S LANE, WHOLE, AND NOTHING ELSE (architect
+            // 2026-11-16, the beats: a motion's frame repaints what it
+            // moved, so it is a light frame). The bar is the trim's one
+            // painter while no sweep stands (paint_trim; the canvas's
+            // highlight is the sweep's alone, sweep_highlight_columns), and
+            // the lane is taken whole because the bar's hit stash
+            // republishes only under a clip that covers it
+            // (AppState::trim_bar_hit, paint_trim's gate) — which also holds
+            // each of the bar's two fills, real-edged, in one clip
+            // rectangle. The keys whose face reads the trim are the tick's
+            // comparator's (main.cpp); the release's commit keeps the whole
+            // waveform area (commit_trim_mutation).
+            viewport.invalidate_rect(top_trim_row_area(app));
             // THE DRAG IS A SETTER, so it DESELECTS (architect 2026-07-29) —
             // past the moved-bounds gate above, so a drag event that changes
             // nothing deselects nothing, and idempotent across the gesture's
@@ -889,8 +902,9 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         app.trim_drag.moved = true;
         // THE PLAYHEAD DOES NOT MOVE (the pair arm's twin above; a recorded
         // difference from the marker drag, which tracks its grabbed marker):
-        // motion updates the bound and repaints.
-        viewport.invalidate_waveform_area();
+        // motion updates the bound and repaints the trim bar's lane, whole,
+        // and nothing else (the pair arm's twin above, where the rule is).
+        viewport.invalidate_rect(top_trim_row_area(app));
         // THE DRAG IS A SETTER, so it DESELECTS (the pair arm's twin above) —
         // past the moved-bound gate, and idempotent across the gesture's later
         // events; it publishes nothing, the trim-window highlight having retired.

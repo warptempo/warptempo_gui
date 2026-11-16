@@ -8522,7 +8522,20 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
     // the release turns into the whole song. It owns its own same-pair
     // short-circuit, so a jitter event inside one frame writes and
     // repaints nothing; `wrote_trim` latches for the release's commit gate.
-    // Its own repaint is the waveform area's, the trim bar's lane inside it.
+    // THE WRITE'S REPAINT IS DECLARED HERE, WHAT IT MOVED AND NOTHING ELSE
+    // (architect 2026-11-16, the beats; below the write): THE TRIM BAR'S
+    // LANE, WHOLE — the bar is the trim's painter, and its hit stash
+    // republishes only under a clip that covers the lane (paint_trim's
+    // gate), which also keeps each of its real-edged fills in one clip
+    // rectangle — and THE HIGHLIGHT'S MOVED EDGES on the canvas's rows: the
+    // highlight's span read BEFORE the write and after it (the latch first:
+    // the span is empty until `wrote_trim`), the cells each edge crossed
+    // (sweep_highlight_change, app_state.h — the first accepted write the
+    // whole new span). Nothing else painted reads the trim (paint_trim and
+    // the highlight's span are its two paint-time readers); the keys whose
+    // face reads it are the tick's comparator's. The write's own first-event
+    // acts declare theirs: a live play's stop the whole area, the deselect
+    // its stems and ring (the flag rebuild's tail).
     //
     // (THE `h` VIEW WAS CARVED OUT HERE while its hold ran a playhead-only
     // sweep; that former retired with the hold, architect 2026-11-07,
@@ -8536,9 +8549,15 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
         apply_selection_sweep_to(rel);
         return;
     }
+    const SweepHighlightColumns before = sweep_highlight_columns(app, audio);
     if (write_trim_from_sweep(app.region_drag.anchor_source_frame,
                               sweep_trim_frame_at_x(rel))) {
         app.region_drag.wrote_trim = true;
+        viewport.invalidate_rect(top_trim_row_area(app));
+        const SweepHighlightChange moved = sweep_highlight_change(
+            app, before, sweep_highlight_columns(app, audio));
+        viewport.invalidate_rect(moved.lo);
+        viewport.invalidate_rect(moved.hi);
     }
     // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): sweeping a TRIM
     // span does NOT select the markers it contains (the reverse coupling — a
