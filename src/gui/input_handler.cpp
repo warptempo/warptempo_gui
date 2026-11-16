@@ -1355,7 +1355,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // The drops' reason channel: the occupied place
             // (kPhaseResetDropOccupiedCard / kMarkerDropOccupiedCard — a
             // reset already seeding in the lead-in frame's window, a warp
-            // marker already on the playhead's frame; architect 2026-11-11)
+            // marker already within one nudge step of the playhead's frame;
+            // architect 2026-11-11, the vicinity 2026-11-15)
             // and the off-edge refusal (kMarkerDropOffEdgeCard — End at the
             // whole-song zoom, then `s`). The key's lift reaches either only
             // while the hold would still act: where neither form would, the

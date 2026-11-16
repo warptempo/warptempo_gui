@@ -159,20 +159,21 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
         if (ambiguous[static_cast<size_t>(k)]) c.red.insert(k);
     }
 
-    // Pass 3 — participation-blind coincidence: every row of a run of 2+ rows
-    // at one frame, disabled or not. The store is time-sorted, so a run is
-    // adjacent equal frames. This is the paint cue alone (the header's
-    // contract): the render collapses nothing where fewer than two of the run
-    // are enabled, and `collapsed` stays pass 1's.
-    int i = 0;
-    while (i < n) {
-        int j = i + 1;
-        while (j < n && mv[static_cast<size_t>(j)].time_frame ==
-                            mv[static_cast<size_t>(i)].time_frame)
-            ++j;
-        if (j - i >= 2)
-            for (int k = i; k < j; ++k) c.red.insert(k);
-        i = j;
+    // Pass 3 — the participation-blind VICINITY (architect 2026-11-15, the
+    // no-grid arc; warp_frames_in_vicinity, the one predicate): every row
+    // with a store neighbor less than one nudge step away, disabled or not —
+    // both rows of a pair, every member of a chain. The store is time-sorted,
+    // so a row's nearest neighbors are the rows beside it and each adjacent
+    // pair is asked once. This is the paint cue alone (the header's
+    // contract): the render collapses only an exact frame holding two
+    // enabled rows, and `collapsed` stays pass 1's.
+    for (int k = 0; k + 1 < n; ++k) {
+        if (warp_frames_in_vicinity(mv[static_cast<size_t>(k)].time_frame,
+                                    mv[static_cast<size_t>(k + 1)].time_frame,
+                                    sample_rate)) {
+            c.red.insert(k);
+            c.red.insert(k + 1);
+        }
     }
 
     c.markers_gen  = gen;
@@ -384,13 +385,20 @@ bool phase_reset_seeds_in_window_of(const AppState& app, const GuiAudio& audio,
         phase_reset_seed_frame_index(source_frame, map));
 }
 
-bool warp_marker_stands_on_frame(const AppState& app, int64_t source_frame) {
-    // The store is ascending by time_frame (GuiMarkerStore).
+bool warp_marker_in_vicinity_of(const AppState& app, int sample_rate,
+                                int64_t source_frame) {
+    // The store is ascending by time_frame (GuiMarkerStore), so the frame's
+    // nearest markers are the first at or past it and the one before that.
     const std::vector<GuiWarpMarker>& wv = app.warpmarkers.markers();
     const auto at = std::lower_bound(
         wv.begin(), wv.end(), source_frame,
         [](const GuiWarpMarker& m, int64_t f) { return m.time_frame < f; });
-    return at != wv.end() && at->time_frame == source_frame;
+    if (at != wv.end() &&
+        warp_frames_in_vicinity(at->time_frame, source_frame, sample_rate))
+        return true;
+    return at != wv.begin() &&
+           warp_frames_in_vicinity(std::prev(at)->time_frame, source_frame,
+                                   sample_rate);
 }
 
 bool drop_at_playhead_coincides(const AppState& a, const GuiAudio& audio) {
@@ -398,7 +406,7 @@ bool drop_at_playhead_coincides(const AppState& a, const GuiAudio& audio) {
     const int64_t frame = drop_at_playhead_source_frame(a, audio);
     return a.active_markers_view == 'P'
                ? phase_reset_seeds_in_window_of(a, audio, frame)
-               : warp_marker_stands_on_frame(a, frame);
+               : warp_marker_in_vicinity_of(a, audio.sample_rate(), frame);
 }
 
 // THE CROSSING'S GROUP DROP, ONE SELECTED WARP MARKER'S PLACE (the rule is

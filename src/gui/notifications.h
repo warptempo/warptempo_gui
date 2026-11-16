@@ -606,7 +606,7 @@ inline constexpr const char* kMarkerDropOffEdgeCard =
 // THE OCCUPIED PLACE'S TWO SENTENCES (architect 2026-11-11, THE DROP
 // COINCIDENCE RULE: "coincident markers are always unintentional" — every
 // drop refuses a place already taken; the two tests' owners are
-// phase_reset_seeds_in_window_of and warp_marker_stands_on_frame,
+// phase_reset_seeds_in_window_of and warp_marker_in_vicinity_of,
 // warp_frame_map_view.h). One per column, each naming what already stands
 // where the drop would put its marker, a disabled one included:
 //   * THE PHASE RESET'S — a reset already seeds in the window of the frame
@@ -617,8 +617,9 @@ inline constexpr const char* kMarkerDropOffEdgeCard =
 //     before its column switch (GuiInputHandler::drop_phase_reset_crossing).
 //     The group form's every-place-skipped sentence is its own ("The
 //     selected markers already have their phase resets").
-//   * THE WARP MARKER'S — a marker already stands on the playhead's exact
-//     frame. ONE RAISER: the W column's drop body through its reason channel
+//   * THE WARP MARKER'S — a marker already stands within one nudge step of
+//     the playhead's frame (the vicinity, architect 2026-11-15). ONE RAISER:
+//     the W column's drop body through its reason channel
 //     (GuiWarpMarkersOps::drop_copy_previous_at_playhead).
 // Where both this and the painted edge would refuse a drop, this is the
 // sentence: no zoom frees an occupied place. The Drop key greys where

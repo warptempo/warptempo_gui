@@ -5408,7 +5408,8 @@ struct AppState {
     // Memoized red-flag sets — `red` (both caches) is the marker lane's PAINT
     // cue, painted whether or not the row is selected: the render's own
     // normalization plus any row COINCIDENT with another row of its own
-    // store, disabled rows included — a warp marker sharing its exact frame,
+    // store, disabled rows included — a warp marker within one nudge step of
+    // another (the vicinity, architect 2026-11-15),
     // a phase reset sharing its seed window of the analysis lattice
     // (architect 2026-11-11; warp_frame_map_view.h carries the
     // full contract, including the participation-blind coincidence). Act and
@@ -11294,8 +11295,9 @@ inline bool phase_reset_drop_crossing_would_act(const AppState& a,
 // always unintentional"; every drop refuses a coincident place) — the
 // column's own test asked of the frame above: on the P column a phase reset
 // already seeding in that frame's window, on the W column a warp marker
-// already standing on that exact frame, disabled ones counted in both
-// (phase_reset_seeds_in_window_of / warp_marker_stands_on_frame,
+// already standing within one nudge step of that frame (the vicinity,
+// architect 2026-11-15, the no-grid arc), disabled ones counted in both
+// (phase_reset_seeds_in_window_of / warp_marker_in_vicinity_of,
 // warp_frame_map_view.h, which own the two definitions). Defined in
 // warp_frame_map_view.cpp. THREE READERS, the off-edge refusal's own: the
 // two drop bodies, which refuse on it AHEAD of the edge with
@@ -16266,8 +16268,8 @@ inline bool redesign_button_enabled(const AppState& a,
         //     AND ITS PLACE IS FREE (architect 2026-11-11, the drop
         //     coincidence rule, drop_at_playhead_coincides: a phase reset
         //     already seeding in that frame's window on the P column, a warp
-        //     marker already on that exact frame on the W column, disabled
-        //     ones counted);
+        //     marker already within one nudge step of that frame on the W
+        //     column, disabled ones counted);
         //   * THE HOLD (Shift+S, the crossing from the warp column) acts
         //     where its whole answer says so
         //     (phase_reset_drop_crossing_would_act: the warp column

@@ -6219,8 +6219,9 @@ void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // of the clicked place, so the stretch right of a reset is empty lane,
     // and a second double-click where the first just dropped asks for a
     // reset in the window that one now seeds in — refused, on its card, the
-    // playhead left where the click seated it. On the W column a marker on
-    // the clicked place's exact frame paints its cue on that column, so the
+    // playhead left where the click seated it. On the W column a marker
+    // within one nudge step of the clicked place paints its cue over that
+    // place (the step is under two px at every zoom, inside the chip), so the
     // press is ordinarily the cue's and not the empty lane's. THE OFF-EDGE
     // REFUSAL (kMarkerDropOffEdgeCard) this road meets in ONE PLACE on the W
     // column (architect 2026-11-15, the no-grid arc: the playhead was just

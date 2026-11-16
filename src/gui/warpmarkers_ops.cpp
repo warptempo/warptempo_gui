@@ -273,11 +273,13 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // visits survives by construction (find_immediate_prior and the loop's own
 // survival test), so one OTHER surviving index at its frame makes the group.
 //
-// AN OCCUPIED FRAME REFUSES WITH A CARD (architect 2026-11-11, THE DROP
+// AN OCCUPIED PLACE REFUSES WITH A CARD (architect 2026-11-11, THE DROP
 // COINCIDENCE RULE: "coincident (exact frame) warp marker drops are never
-// intentional"): where a warp marker — enabled or disabled — already stands
-// on the playhead's exact frame (drop_at_playhead_coincides, app_state.h;
-// the test's owner warp_marker_stands_on_frame, warp_frame_map_view.h), the
+// intentional"; architect 2026-11-15, the no-grid arc: the place a VICINITY,
+// one nudge step): where a warp marker — enabled or disabled — already stands
+// within one nudge step of the playhead's frame (drop_at_playhead_coincides,
+// app_state.h; the test's owner warp_marker_in_vicinity_of,
+// warp_frame_map_view.h), the
 // drop returns kMarkerDropOccupiedCard for its dispatcher to raise, ahead of
 // any write. Asked here, in the body, so both roads into the warp drop meet
 // it (bare `s` and the empty-lane double-click). So the copy-previous walk

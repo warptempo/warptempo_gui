@@ -816,6 +816,9 @@ void install_true_colors(bool on);
 // is actually effective because that's what happens to them. They become
 // one. Very easy to see. So just the strike through on the text"; the
 // strike's shadow went with every shadow, 2026-11-02): a coincident marker
+// (one inside another's place: a warp marker within one nudge step of
+// another, a phase reset sharing a seed window — warp_frame_map_view.h's
+// two red-flag sets)
 // wears the plain cue with its label STRUCK (show_cue_label's bar, the face's own
 // stroke on its own strikeout rows, gui_font_strike_band) — the invalid
 // color of 2026-10-11 retired with its role. THE TABLE — which fill, which
