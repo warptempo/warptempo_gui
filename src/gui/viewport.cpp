@@ -126,8 +126,8 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
 
 // Viewport changes repaint the waveform area and the top strip together:
 // flag positions depend on the viewport, so any pan/zoom has to refresh
-// flags as well as waveform. Playhead-only moves keep using the narrow
-// column invalidation below. The rect and the lanes it holds are at the
+// flags as well as waveform. The scanner's per-frame advance keeps its own
+// narrow rect (invalidate_scanner_line below). The rect and the lanes it holds are at the
 // declaration (viewport.h); the rows above it are owed a check
 // (damage_window_top_rows).
 void Viewport::invalidate_waveform_area() {
@@ -254,6 +254,25 @@ void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
         if (r_old.w > 0) gui.invalidate_region(r_old.x, r_old.y, r_old.w, r_old.h);
         if (r_new.w > 0) gui.invalidate_region(r_new.x, r_new.y, r_new.w, r_new.h);
     }
+}
+
+// The scanner's old and new rects, united where they touch (the rule and
+// the two callers at the declaration, viewport.h; the rect's at
+// scanner_invalidate_rect, main.cpp). Both stand on the area's rows, so
+// they touch exactly when their column intervals overlap or abut.
+void Viewport::invalidate_scanner_line(double old_x, double new_x) {
+    const GuiRect area  = waveform_area(app);
+    const GuiRect r_old = scanner_invalidate_rect(area, old_x);
+    const GuiRect r_new = scanner_invalidate_rect(area, new_x);
+    if (r_old.w > 0 && r_new.w > 0 &&
+        std::max(r_old.x, r_new.x) <=
+            std::min(r_old.x + r_old.w, r_new.x + r_new.w)) {
+        const GuiRect u = union_rect(r_old, r_new);
+        gui.invalidate_region(u.x, u.y, u.w, u.h);
+        return;
+    }
+    if (r_old.w > 0) gui.invalidate_region(r_old.x, r_old.y, r_old.w, r_old.h);
+    if (r_new.w > 0) gui.invalidate_region(r_new.x, r_new.y, r_new.w, r_new.h);
 }
 
 // move_playhead_to: THE MOVEMENT OWNER — the A/B audition's END in front of the

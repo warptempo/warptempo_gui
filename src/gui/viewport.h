@@ -748,7 +748,7 @@ struct Viewport {
     //     trim's start, beside its full-area waveform damage), and the
     //     PAINT-CLOCK KEEPER, which changes nothing the clock shows and is a
     //     member because the cell is the always-onscreen rect: the playing
-    //     heartbeat's OFFSCREEN FALLBACK (when the scanner column yields no
+    //     heartbeat's OFFSCREEN FALLBACK (when the scanner's line yields no
     //     damage). (The resize/total-change
     //     repair's geometry-moved arm owes the cell a check since 2026-10-13,
     //     like the zoom appliers — owe_clock_check below; the cursor clamp
@@ -794,21 +794,37 @@ struct Viewport {
     // damages the viewport's lanes beside it, so a frame — and its pre-paint
     // check (GuiPaintHandler::settle_owed_lane_damage) — follows.
     void owe_clock_check();
-    // Narrow playhead/scanner damage: the union (or the pair) of the two given
-    // COLUMNS' rects (playhead_invalidate_rect; scanner_pixel_x's
+    // Narrow PLAYHEAD damage: the union (or the pair) of the two given
+    // COLUMNS' rects (playhead_invalidate_rect; playhead_pixel_x's
     // columns, each holding the line and the head painted at the exact
     // place within half a px of it). The columns must be resolved on the PLATE basis — the
     // playheads' pixels are plate-registered, and damage follows the basis of
-    // the pixels it erases (the rule, and the table of which sites take this
+    // the pixels it erases (the rule, and the table of which sites take a
     // narrow shape versus a full-area widening, live at playhead_pixel_x in
-    // app_state.h). THE CALLERS ARE EXACTLY THE TWO PER-FRAME SCANNER SITES
-    // (re-derived by grep 2026-07-30): main.cpp's tick heartbeat and its
-    // pre-paint scanner advance, both narrow BY NECESSITY at 60 Hz and both
-    // inside a scope that reaches paint_handler. The Tab/`c` jump's no-scroll
-    // branch was the third until it moved onto land_playhead_on_marker and took
-    // that owner's full-area shape with it. Every other playhead write is
-    // discrete and widens; do not add a narrow caller for one.
+    // app_state.h). IT HAS NO CALLER (re-derived by grep 2026-11-16): its
+    // two were the per-frame scanner sites, which take the scanner's own
+    // rect below, and every playhead write is discrete and widens.
     void invalidate_playhead_columns(int old_px, int new_px);
+    // THE SCANNER'S NARROW DAMAGE (architect 2026-11-16, the beats): the
+    // scanner's own rect (scanner_invalidate_rect, main.cpp: the hull of its
+    // line's span over the canvas's rows, nothing above the canvas) at its
+    // old and its new EXACT PLACE, the two united into one rect where they
+    // touch (overlap or abut: one region, one redraw) and declared apart
+    // otherwise; a place whose line has no part inside the waveform area
+    // declares nothing. The places must be resolved on the PLATE basis
+    // (scanner_exact_x through GuiPaintHandler::plate_viewport_basis) — the
+    // scanner's pixels are plate-registered, and damage follows the basis of
+    // the pixels it erases (the rule and the per-site table at
+    // playhead_pixel_x, app_state.h). THE CALLERS ARE EXACTLY THE TWO
+    // PER-FRAME SCANNER SITES (re-derived by grep 2026-11-16): main.cpp's
+    // tick heartbeat (the one place twice) and its pre-paint scanner advance
+    // (old, then new), both narrow BY NECESSITY at the frame's cadence and
+    // both inside a scope that reaches paint_handler. IT SERVES THE
+    // PER-FRAME ADVANCE ALONE: a move of the scanner's place by a move of
+    // the viewport or of the plate's basis carries that mover's own
+    // full-area damage. Every playhead write is discrete and widens; do not
+    // add a narrow caller for one.
+    void invalidate_scanner_line(double old_x, double new_x);
     // (There is no stem-column invalidator any more, and since row 5 no
     // selection-driven stem damage either. invalidate_stem_column computed the
     // old singleton stem's narrow damage on the ITEM basis while the stem

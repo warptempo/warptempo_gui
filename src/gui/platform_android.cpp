@@ -239,6 +239,59 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
     return true;
 }
 
+// THE REPAIR REGION'S MERGE (architect 2026-11-16, the beats;
+// GuiPlatform::present's repair list, its one caller): a rect joins the
+// list by MERGING — while some rect R of the list has
+//     area(bound(R, r)) <= (area(R) + area(r)) · 5 / 4,
+// bound the two's bounding rect, R leaves the list and r becomes
+// bound(R, r); then r is appended. The overlap of R and r counts twice in
+// the sum, as the GPU pays it (each repair rect is cleared and recomposed
+// whole, GuiGlCanvas::present_frame), and containment is the case
+// bound == R or bound == r, so this subsumes the coalescing by containment
+// the damage list keeps (append_coalesced_rect). WHY: the repair region is
+// this frame's change united with the changes of the frames since the
+// acquired buffer was drawn, and what recurs frame after frame recurs
+// beside itself — the scanner's line a few columns on over the same rows,
+// the clock cell on itself — so coalesced by containment alone a light
+// frame's region would be several rects for one thing, each a scissored
+// clear, one instanced draw of every instance of the canvas list and the
+// texture's triangle. Merged, neighbors are one rect at no more than a
+// quarter over the pixels they held apart, and two rects far apart (the
+// scanner's line and the clock cell; a lamp and a key) never merge, so a
+// light frame's repair stays its own few pixels. The quarter is the trade's
+// one number:
+// a draw call's fixed cost against redrawn canvas pixels, which on a lit
+// plate are the frame's cost.
+// THE BYTES ARE UNCHANGED: the merged region is a superset of the unmerged
+// one, and present_frame recomposes every repair rect through the whole
+// pass order from the frame's own state (its THE REPAIR), so a pixel drawn
+// that no frame changed is drawn as it stood. THE REPAIR LIST ONLY: the
+// frame's damage, its change (the swap's damage and the history's entry)
+// and every other list keep append_coalesced_rect.
+template <typename Rect>
+void merge_repair_rect(std::vector<Rect>& rects, Rect r) {
+    const auto area = [](const Rect& a) {
+        return static_cast<long long>(a.w) * static_cast<long long>(a.h);
+    };
+    for (bool merged = true; merged;) {
+        merged = false;
+        for (std::size_t i = 0; i < rects.size(); ++i) {
+            const Rect& e = rects[i];
+            const int x0 = std::min(e.x, r.x);
+            const int y0 = std::min(e.y, r.y);
+            const int x1 = std::max(e.x + e.w, r.x + r.w);
+            const int y1 = std::max(e.y + e.h, r.y + r.h);
+            const Rect bound{x0, y0, x1 - x0, y1 - y0};
+            if (area(bound) * 4 > (area(e) + area(r)) * 5) continue;
+            r = bound;
+            rects.erase(rects.begin() + static_cast<std::ptrdiff_t>(i));
+            merged = true;
+            break;
+        }
+    }
+    rects.push_back(r);
+}
+
 // ---------------------------------------------------------------------------
 // The GL canvas's fatal lines (2026-10-13; the road is at present, its GL
 // calls GuiGlCanvas's, gl_canvas.cpp)
@@ -1544,7 +1597,9 @@ bool GuiPlatform::present() {
     //   * THE BUFFER'S AGE, asked of EGL before anything draws: the acquired
     //     buffer holds the frame `age` presents back (0: unknown contents).
     //     THE REPAIR REGION is this frame's damage united with the changes
-    //     of the age − 1 frames before it (repair_history_, newest first).
+    //     of the age − 1 frames before it (repair_history_, newest first),
+    //     its rects merged where they neighbor (merge_repair_rect, above;
+    //     architect 2026-11-16, the beats) and capped (kRepairRectCap).
     //     The frame is drawn WHOLE at age 0, at an age the history cannot
     //     cover (a new surface, a new size or a failed swap empties it), and
     //     at GuiGlCanvas::repair_must_be_full's verdict (the clip moved, the
@@ -1609,13 +1664,18 @@ bool GuiPlatform::present() {
                           repair_history_.size();
     std::vector<DamageRect> repair;
     if (!full) {
-        repair = change;
+        // THE REPAIR REGION, MERGED (architect 2026-11-16, the beats; the
+        // rule at merge_repair_rect): this frame's change and the changes of
+        // the age − 1 frames before it, each rect joining by the merge, so
+        // what recurs beside itself across those frames is one rect.
+        for (const DamageRect& r : change) merge_repair_rect(repair, r);
         for (int i = 0; i < age - 1; ++i)
             for (const DamageRect& r : repair_history_[static_cast<std::size_t>(i)])
-                append_coalesced_rect(repair, r);
-        // MANY RECTS BECOME THEIR BOUNDING RECT: a few scissored passes
-        // each, never dozens.
-        if (repair.size() > 8) {
+                merge_repair_rect(repair, r);
+        // THE LAST RESORT: more rects than the cap become their bounding
+        // rect (kRepairRectCap, platform_android.h, where the count's
+        // reason is).
+        if (repair.size() > kRepairRectCap) {
             int x0 = sw, y0 = sh, x1 = 0, y1 = 0;
             for (const DamageRect& r : repair) {
                 x0 = std::min(x0, r.x);

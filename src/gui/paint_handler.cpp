@@ -5660,7 +5660,8 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
                         basis.lattice_origin);
     // The predictor position's exact place (architect 2026-11-14, send J):
     // the line moves by the real distance the position moved, the column
-    // above its cull's and its damage's.
+    // above its cull's alone; its damage is this line's own cells, the hull
+    // of its span on these rows (scanner_invalidate_rect, main.cpp).
     const double scan_x =
         scanner_exact_x(app, wf_cache.fp_vp_start, basis.spp,
                         basis.lattice_origin);

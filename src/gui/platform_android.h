@@ -600,6 +600,21 @@ private:
     void*                 egl_swap_with_damage_   = nullptr;
     static constexpr std::size_t kRepairHistoryDepth = 8;
     std::vector<std::vector<GuiGlRect>> repair_history_;
+    // THE REPAIR LIST'S CAP (architect 2026-11-16, the beats; present's
+    // repair region, after its merge — merge_repair_rect,
+    // platform_android.cpp): more than this many rects become their
+    // bounding rect. THE COUNT BOUNDS DRAW CALLS: each repair rect costs a
+    // scissored clear, one instanced draw of EVERY instance of the canvas
+    // list (where the rect meets the canvas) and the texture's triangle
+    // (GuiGlCanvas::present_frame's repair loop), so sixteen is at most
+    // sixteen passes over the list, a few scissored passes each and never
+    // dozens. IT IS THE LAST RESORT, the merge the rule: the merge makes one
+    // rect of what recurs beside itself across the buffer's missed frames
+    // (the scanner's line, the clock cell), so a light frame with a lamp's
+    // edge or a key's face beside it stays under the cap and stays light —
+    // its bounding rect would be most of the window, a whole plate redrawn
+    // for a lamp.
+    static constexpr std::size_t kRepairRectCap = 16;
     // THE FIRST SURFACE'S DISPLAY-P3 ANSWER, the one gui_main read; a later
     // surface answering otherwise is fatal (ensure_gl_surface, 2026-10-13).
     std::optional<bool>   gl_first_display_p3_;

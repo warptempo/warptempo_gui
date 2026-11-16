@@ -5009,8 +5009,9 @@ struct AppState {
     int64_t playhead_scanner_sample = 0;
     // Continuous (sub-frame) sibling of playhead_scanner_sample: the scanner's
     // DRAWN PLACE is computed from this double (scanner_exact_x, its exact
-    // place since 2026-11-14, send J; scanner_pixel_x its column, the gate
-    // and the damage box's seat) so a per-frame
+    // place since 2026-11-14, send J, and its damage rect's seat,
+    // scanner_invalidate_rect; scanner_pixel_x its column, the cull's) so a
+    // per-frame
     // viewport rescale during a strip-drag zoom slides the scanner smoothly
     // instead of stepping on integer frames (smoothness over accuracy —
     // precision is judged at standstill). Written only on the active path: the
@@ -12873,15 +12874,24 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 // until the next publish heals it.
 //
 // TWO SHAPES SATISFY THE RULE, chosen per site by CADENCE (re-derived by grep
-// 2026-07-30 over Viewport::invalidate_playhead_columns' callers and the
-// playhead-writing full-area sites):
+// 2026-07-30 over the narrow entry's callers and the playhead-writing
+// full-area sites; the narrow callers again 2026-11-16, Viewport::
+// invalidate_scanner_line's):
 //  - NARROW ON PLATE, reserved for the PER-FRAME sites, which cannot afford a
-//    full repaint and can see a GuiPaintHandler to compute plate columns: the
-//    two 60 Hz SCANNER sites in main.cpp — the tick heartbeat and the pre-paint
-//    advance — and nothing else (the fading line's per-tick step of
+//    full repaint and can see a GuiPaintHandler to compute plate places: the
+//    two per-frame SCANNER sites in main.cpp — the tick heartbeat and the
+//    pre-paint advance — and nothing else (the fading line's per-tick step of
 //    2026-11-04 went with the fade that night: the resting line is one
 //    static tone and owes the tick nothing). Each passes plate_viewport_basis() through the
-//    explicit-basis overloads.
+//    explicit-basis overloads, and THE RECT IS THE SCANNER'S OWN (architect
+//    2026-11-16, the beats; scanner_invalidate_rect, main.cpp, through
+//    Viewport::invalidate_scanner_line): the hull of its line's span at
+//    scanner_exact_x over the canvas's rows — the scanner has no head, so
+//    nothing above the canvas is its to repaint. The playhead's own narrow
+//    box (playhead_invalidate_rect through
+//    Viewport::invalidate_playhead_columns: the head's reach from the
+//    window's top) is the same shape for a cursor move and has no caller,
+//    every cursor write being of the next class.
 //  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:
 //    the stop teardown (stop_playback_if_playing) and the launch
 //    (launch_playback_window, the one launch body every launch ends in — the
@@ -12916,7 +12926,9 @@ int     scanner_pixel_x(const AppState& a, int64_t vp_start, double spp,
 // scanner's continuous predictor position — on the same explicit basis, in
 // device px from waveform_area.x: WHERE THE LINE IS PAINTED
 // (render_playhead), within half a px of the column. The column stays the
-// line's gate, the damage box's seat and every test over the playhead; -1
+// line's gate, the playhead's damage box's seat and every test over the
+// playhead (the scanner's damage rect stands on its exact place,
+// scanner_invalidate_rect, main.cpp); -1
 // on a degenerate spp, as the column's (the gate refuses it there).
 // scanner_exact_x is meaningful only while playhead_scanner_active, as
 // scanner_pixel_x.
@@ -13209,6 +13221,10 @@ std::pair<long long, long long> compute_trim_samples(
 // spells both, the cell's owner covering the clock's rect as a superset.)
 GuiRect clock_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const GuiRect& area, int col);
+// The scanner's own damage rect — the hull of its line's span at the exact
+// place `x` over `area`'s rows, empty where the line has no part inside
+// (the rule at the definition, main.cpp).
+GuiRect scanner_invalidate_rect(const GuiRect& area, double x);
 bool    rects_intersect(GuiRect a, GuiRect b);
 GuiRect union_rect(GuiRect a, GuiRect b);
 

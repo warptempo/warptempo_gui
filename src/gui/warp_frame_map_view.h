@@ -487,7 +487,7 @@ inline double lattice_index_ties_right(double x) {
 // THE CAMERAS' TESTS — the flag iterator's right cull
 // (iterate_visible_flags_impl, render.cpp), the playheads' and the
 // scanner's column (playhead_pixel_x / scanner_pixel_x, main.cpp — the
-// ruler's head's cull, their damage box and RESTRICT's stop), the cameras'
+// ruler's head's cull, the playhead's damage box and RESTRICT's stop), the cameras'
 // visibility test (displayed_frame_on_screen below; follow's off-screen-left
 // test beside it, viewport.cpp) and
 // painted_column_of_source_frame_on_basis's tail (the off-edge authoring

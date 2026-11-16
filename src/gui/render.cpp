@@ -816,10 +816,13 @@ void render_playhead(GuiCanvasSink& sink,
     // snapping it inward at the rightmost samples. THE CULL, on the whole
     // column: the bound is the head's painted reach
     // (cue_chip_paint_reach_px, render.h), stated in the same columns the
-    // damage box takes (playhead_invalidate_rect, main.cpp) — wider than
+    // playhead's damage box takes (playhead_invalidate_rect, main.cpp) — wider than
     // the line by construction (the reach is the chip's height and one, the
     // line reaches half a W from a place within half a px of the column),
-    // so it never drops a line whose real interval reaches the area.
+    // so it never drops a line whose real interval reaches the area — which
+    // the scanner's damage stands on: its rect is the hull of the span below
+    // (scanner_invalidate_rect, main.cpp), every pixel this function can
+    // touch at that x.
     if (col + cue_chip_paint_reach_px() <= 0) return;
     if (col - cue_chip_paint_reach_px() >= area.w) return;
 
@@ -833,13 +836,14 @@ void render_playhead(GuiCanvasSink& sink,
     // lattice point stands between the line and its frame (the half-column
     // bias such a rounding carries, accepted 2026-09-02 as a coarse-zoom
     // cost, is the column's alone). THE COLUMN IS THE CULL'S AND THE
-    // DAMAGE'S:
+    // PLAYHEAD'S DAMAGE BOX'S:
     // `col` is the caller's playhead_pixel_x / scanner_pixel_x,
     // displayed_column_at's K − m on the same basis (architect 2026-11-06,
     // session 68; a tie TO THE RIGHT, session 69: index K owns [K − 0.5,
     // K + 0.5), the reason at displayed_column_at) — the column the ruler's
-    // head's cull and hit and the damage box are built on
-    // (playhead_invalidate_rect), within half a px of x.
+    // head's cull and hit and the playhead's damage box are built on
+    // (playhead_invalidate_rect), within half a px of x; the scanner's
+    // damage is built on x itself (scanner_invalidate_rect).
     // THE POINT MODEL STAYS LOAD-BEARING FOR EVERY LANDING: every
     // column→frame landing in the product rides the lattice point,
     // with the worst-case round-trip residue of the target-view landing's

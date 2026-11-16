@@ -586,8 +586,9 @@ GuiRect waveform_area(const AppState& a) {
     // ZERO, not a positive minimum: zero is the honest answer ("no room left"),
     // and every consumer already handles it — the painters gate on `w <= 0 ||
     // h <= 0`, the plate render and the flag/waveform caches skip an empty area,
-    // playhead_invalidate_rect yields an empty rect (whose tick fallback damages
-    // the clock cell instead), and cairo treats an empty rectangle as a no-op.
+    // playhead_invalidate_rect and scanner_invalidate_rect yield an empty rect
+    // (the scanner's tick fallback damages the clock cell instead), and cairo
+    // treats an empty rectangle as a no-op.
     // A positive floor would instead invent a strip of waveform that has nowhere
     // to live. THE VOCABULARY QUESTION WAS ANSWERED SEPARATELY — gui_scale's
     // ceiling came down to 200 (architect 2026-07-31) and went back up to 400
@@ -1286,9 +1287,10 @@ int scanner_pixel_x(const AppState& a, int64_t vp_start, double spp,
     // per-frame viewport rescale during a strip-drag zoom slides the scanner
     // smoothly instead of jittering on integer-frame steps. The position stays
     // continuous until this one quantization, displayed_column_at's nearest
-    // lattice point on the basis's own lattice index — the line's gate and
-    // its damage box's seat; the line itself paints at the position's exact
-    // place (scanner_exact_x below; render_playhead).
+    // lattice point on the basis's own lattice index — the line's cull's
+    // column (render_playhead); the line itself paints at the position's
+    // exact place (scanner_exact_x below), and its damage is that line's own
+    // cells (scanner_invalidate_rect below).
     return displayed_column_at(a.playhead_scanner_precise,
                                static_cast<double>(vp_start), spp, origin);
 }
@@ -1326,19 +1328,22 @@ bool rects_intersect(GuiRect a, GuiRect b) {
     return true;
 }
 
-// The narrow playhead-damage rect. TWO CONSUMERS, and the rect is REAL DAMAGE
-// at the first of them, not a predicate: Viewport::invalidate_playhead_columns
-// builds one per column (old and new), unions them when they are close and
-// invalidates what comes out; the tick's offscreen fallback in this file reads
-// only the WIDTH, as an emptiness test. Both are the narrow-on-plate shape,
-// reserved for the two per-frame scanner sites (the rule and the per-site table
-// are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED REACH
+// The narrow playhead-damage rect: THE PLAYHEAD'S SHAPE, the cursor's line
+// with its head in the ruler. ONE CONSUMER, Viewport::invalidate_playhead_columns,
+// which builds one per column (old and new), unions them when they are close
+// and invalidates what comes out — the narrow-on-plate shape of a playhead
+// move (the rule and the per-site table are at playhead_pixel_x,
+// app_state.h), WHICH NO SITE TAKES AT PRESENT: every cursor write is
+// discrete and takes the full-area shape, and the scanner — the one
+// per-frame mover, a line with no head — has its own rect
+// (scanner_invalidate_rect below; architect 2026-11-16, the beats). THE BOX
+// IS THE HEAD'S PAINTED REACH
 // (2026-10-09, ON SCREEN IS AS PAINTED; the reach architect 2026-11-14,
 // send J): the head is the chip's drawing at the playhead's exact x, so the
 // columns it can touch are [col − H − 1, col + H + 1), H the chip's height
 // (cue_chip_paint_reach_px, render.h: 14 each side, 28 device px on the
 // tablet at 200 %, 7 each side at 100 %) — its rows the whole band from the
-// window's top below — which also holds the one-W line of the scanner and
+// window's top below — which also holds the one-W line of
 // the cursor at its exact place: the line's x lies within half a px of
 // `col`, so the cells its real interval [x − t / 2, x + t / 2] touches lie
 // in [col − t / 2 − 1, col + t / 2 + 1), t waveform_line_px — two columns
@@ -1347,9 +1352,9 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // below, cue_chip_h_px, so the box reaches at least 2 t + 3 columns each
 // side) — so a move repaints every column the head and the line stood on.
 // `col` is the waveform's own column (offset from area.x, as every
-// playhead pixel is) — THE PAINTED COLUMN, playhead_pixel_x /
-// scanner_pixel_x's on the plate basis, the same number render_playhead
-// draws the line at and the ruler's head stands on (the nearest lattice
+// playhead pixel is) — THE PAINTED COLUMN, playhead_pixel_x's on the plate
+// basis, the same number render_playhead
+// culls the line by and the ruler's head stands on (the nearest lattice
 // point on the lattice's own index, displayed_column_at), so the damage is
 // built on the column the paint uses — and the box is placed at
 // area.x + col, the canvas standing the column's margin in from the window's
@@ -1376,6 +1381,46 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, int px_col) {
     const int y0 = 0;
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
+}
+
+// THE SCANNER'S DAMAGE RECT (architect 2026-11-16, the beats: a scanner
+// frame is a light frame, so it repaints the scanner's own pixels and no
+// chrome above the canvas, which holds nothing of it): THE HULL OF ITS
+// LINE'S OWN SPAN
+// OVER THE CANVAS'S ROWS — waveform_line_span (render.h, the line's one
+// rule) at the scanner's exact place `x` (scanner_exact_x's on the PLATE
+// basis: device px from area.x), over `area`'s rows, through hull (render.h,
+// the one conversion to pixels). THE SCANNER IS THAT LINE AND NOTHING ELSE:
+// one Tint record of the canvas list (paint_scanner → render_playhead →
+// the sink's blended rect over exactly this span and these rows), no head,
+// nothing in the ruler, the lanes or the band and nothing of cairo's — so
+// the rect holds every pixel the scanner's painter can touch at that x, and
+// no more: the record's cells are the floor of the span's left edge through
+// the ceil of its right (GuiCanvasSink::blended_rect), the hull's own, and
+// render_playhead's cull, on the whole column, drops only a line whose span
+// is empty (its reach is wider than the line: the chip's, more than half a
+// W and half a px). The list's clip (the keyboard's slice off the canvas's
+// foot) only cuts the line shorter. THE SPAN'S EMPTINESS IS THE RECT'S: a
+// line with no part inside the strip — the scanner off screen — is an
+// empty rect (w 0), and so is an area with no rows.
+// TWO CONSUMERS: Viewport::
+// invalidate_scanner_line builds one per place (old and new), unites them
+// when they touch and invalidates what comes out — REAL DAMAGE; the tick's
+// offscreen fallback in this file reads only the WIDTH, as an emptiness
+// test. They are the two per-frame scanner sites, the narrow-on-plate shape
+// (the rule and the per-site table at playhead_pixel_x, app_state.h).
+// WHAT IT DOES NOT COVER IS NOT THE SCANNER'S: the clock cell, whose run
+// reads the scanner's time, is damaged beside it by the same sites
+// (clock_invalidate_rect below); the passes drawn after the scanner (the
+// zoom anchor's stem, the sweep highlight) blend over whatever stands under
+// them pixel by pixel and are damaged by their own producers; every road
+// that moves the scanner's place by moving the VIEWPORT (a pan, a zoom,
+// FOLLOW's scroll, a plate's publication) damages the waveform area whole.
+GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
+    const WaveformLineSpan span = waveform_line_span(area.x, area.w, x);
+    if (span.empty()) return GuiRect{area.x, area.y, 0, 0};
+    return hull(GuiRectF{span.x0, static_cast<double>(area.y),
+                         span.x1 - span.x0, static_cast<double>(area.h)});
 }
 
 // (THE STATUS CELL'S RECT IS DELETED — 2026-08-13, when the architect moved
@@ -2012,7 +2057,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     auto invalidate_dialog_editor_box = [&]() { viewport.invalidate_dialog_editor_box(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
-    auto invalidate_playhead_columns = [&](int a, int b) { viewport.invalidate_playhead_columns(a, b); };
+    auto invalidate_scanner_line     = [&](double a, double b) { viewport.invalidate_scanner_line(a, b); };
     auto follow_scanner              = [&]() { viewport.follow_scanner(); };
 
     bool initial_load_done = false;
@@ -3190,7 +3235,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 viewport.invalidate_clock_area();
                 car_transport.note_loop_wrap();
             }
-            // Heartbeat: invalidate the scanner column at the current
+            // Heartbeat: invalidate the scanner's line at the current
             // model position so the paint cycle keeps running. The
             // pre-paint hook reads the predictor at paint time and adds
             // damage for the actually-painted position. We do not read
@@ -3199,7 +3244,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // sampling on the paint clock; reading it on the tick too
             // would reintroduce the tick/paint sampling-rate mismatch
             // that stutters playhead motion at high zoom. While the
-            // scanner column is onscreen the CLOCK CELL is
+            // scanner's line is onscreen the CLOCK CELL is
             // invalidated only by the pre-paint hook (when the
             // predictor advances past app.playhead_scanner_sample),
             // never by the tick — the tick fires ~2x per frame, so
@@ -3210,18 +3255,22 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // the per-site shape table live at playhead_pixel_x, app_state.h.
             // NARROW is mandatory here (this fires ~2x per frame while playing),
             // and this lambda's scope reaches paint_handler, so the site takes
-            // the narrow-on-plate shape rather than widening.
+            // the narrow-on-plate shape rather than widening: THE SCANNER'S
+            // OWN RECT (architect 2026-11-16, the beats;
+            // scanner_invalidate_rect), the cells of the line as the last
+            // paint drew it — its exact place read from the same position on
+            // the same basis paint_scanner reads — over the canvas's rows.
             const GuiPaintHandler::PlateViewportBasis pb =
                 paint_handler.plate_viewport_basis();
-            const int px = scanner_pixel_x(
+            const double x = scanner_exact_x(
                 app, static_cast<int64_t>(pb.vp_start), pb.spp,
                 pb.lattice_origin);
-            invalidate_playhead_columns(px, px);
+            invalidate_scanner_line(x, x);
             // OFFSCREEN FALLBACK — the paint clock has to keep running
-            // even when the scanner column contributes nothing.
-            // playhead_invalidate_rect yields a zero-width rect for a
-            // column outside the waveform area and
-            // invalidate_playhead_columns emits no damage for one, so a
+            // even when the scanner's line contributes nothing.
+            // scanner_invalidate_rect yields a zero-width rect for a
+            // line with no part inside the waveform area and
+            // invalidate_scanner_line emits no damage for one, so a
             // scanner that has left the viewport (a launch inside a trim
             // window the user then panned away from, follow not scrolling)
             // leaves this tick producing NO damage at all — and with the
@@ -3229,15 +3278,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // while playing, no damage means no paint means the position
             // can never come back. So ask the rect builder rather than
             // re-derive its bounds test here (the tick damages one
-            // column, so that single rect decides it), and when it yields
+            // place, so that single rect decides it), and when it yields
             // nothing, damage the CLOCK CELL instead: row 8 is always
             // onscreen, so a paint is always produced, and it is the
             // honest rect — the clock tracks the SCANNER's time
             // while playing, so it is frozen alongside the line for
             // exactly the same stretch. Follow is untouched: no
             // viewport work is added here, and a following viewport keeps
-            // the column onscreen so the fallback simply never fires.
-            if (playhead_invalidate_rect(waveform_area(app), px).w <= 0)
+            // the line onscreen so the fallback simply never fires.
+            if (scanner_invalidate_rect(waveform_area(app), x).w <= 0)
                 invalidate_clock_area();
             return;
         }
@@ -3439,49 +3488,56 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // paint even while this gate holds.
         if (cur == app.playhead_scanner_sample) return;
 
-        // PLATE basis for both columns, not live: the scanner's pixels are
+        // PLATE basis for both places, not live: the scanner's pixels are
         // plate-registered (paint_scanner), so its damage resolves there —
         // the rule and the per-site shape table live at playhead_pixel_x
         // (app_state.h). NARROW is mandatory here (this is the per-frame
         // scanner advance) and this lambda reaches paint_handler, so the site
-        // takes the narrow-on-plate shape rather than widening.
+        // takes the narrow-on-plate shape rather than widening: THE
+        // SCANNER'S OWN RECT at its old and its new place (architect
+        // 2026-11-16, the beats; scanner_invalidate_rect — the cells of the
+        // line over the canvas's rows, nothing above the canvas).
         const GuiPaintHandler::PlateViewportBasis pb =
             paint_handler.plate_viewport_basis();
         const int64_t pb_vp = static_cast<int64_t>(pb.vp_start);
-        // OLD COLUMN, DERIVED — never stashed (the viewport-mutation stash
+        // OLD PLACE, DERIVED — never stashed (the viewport-mutation stash
         // playhead_scanner_old_px_stash was retired 2026-07-30; do not reintroduce
         // one). The plate basis IS the answer by construction: paint_scanner
-        // draws the scanner through this same basis, so scanner_pixel_x against it,
+        // draws the scanner through this same basis, so scanner_exact_x against it,
         // read with the still-current playhead_scanner_precise (the last painted
-        // continuous position), names exactly the column the last paint put the
-        // line at. A stash could only be WORSE — its producers captured on the LIVE
+        // continuous position), names exactly the place the last paint put the
+        // line at — the very double the painter spanned, so the rect is the
+        // painted line's own cells. A stash could only be WORSE — its
+        // producers captured on the LIVE
         // viewport, which parts company with the plate during every async publish
         // window (resize, load, preview-driven total drift — follow's page turn
         // left this list 2026-09-02 for the synchronous kick), and two
         // of them published on paths that then discovered they had moved nothing.
         // Nor is a stash needed: every viewport mutator that could reflow the
-        // scanner's column pairs its write with full waveform-area damage AND a
+        // scanner's place pairs its write with full waveform-area damage AND a
         // synchronous plate rebuild (kick_waveform_sync, which damages the
-        // viewport's lanes through the waveform's bottom itself), so the old
+        // viewport's lanes through the waveform's bottom itself), and a
+        // plate's publication — the one writer of this basis — damages them
+        // too, so the old
         // line is erased wholesale in the
         // mutating frame and this narrow pair only ever has to cover the ordinary
         // per-frame advance.
-        const int old_px = scanner_pixel_x(app, pb_vp, pb.spp,
-                                           pb.lattice_origin);
+        const double old_x = scanner_exact_x(app, pb_vp, pb.spp,
+                                             pb.lattice_origin);
         // Advance both fields: the integer sample (domain / change-detection)
-        // and the continuous position the scanner pixel is drawn from. new_px
-        // and the invalidated span are therefore the column paint quantizes
-        // that continuous position to (scanner_pixel_x), matching what paint
+        // and the continuous position the scanner's line is drawn from. new_x
+        // and the invalidated span are therefore the exact place paint draws
+        // that continuous position at (scanner_exact_x), matching what paint
         // draws.
         app.playhead_scanner_sample = cur;
         app.playhead_scanner_precise = playback.cursor_precise();
-        const int new_px  = scanner_pixel_x(app, pb_vp, pb.spp,
-                                            pb.lattice_origin);
+        const double new_x = scanner_exact_x(app, pb_vp, pb.spp,
+                                             pb.lattice_origin);
 
-        // invalidate_region during pre-paint appends to damage_ without
-        // scheduling a redundant frame callback (platform layer handles
-        // that via its in_pre_paint_ flag).
-        invalidate_playhead_columns(old_px, new_px);
+        // invalidate_region during pre-paint appends to damage_ and
+        // schedules nothing (the post is the loop pass's tail's,
+        // GuiPlatform::invalidate_surface_rect).
+        invalidate_scanner_line(old_x, new_x);
         invalidate_clock_area();
         // RESTRICT'S STOP (architect 2026-10-29, AppState::restrict): under the
         // lit lamp a RESTRICTABLE play — Space's or the scrub's, the entry's
@@ -3573,7 +3629,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // window-top rect (damage_window_top_rows), whose owed rows above
         // the viewport's lanes that check settles. Where a debt is paid, the
         // scanner's narrow damage above resolved on the plate it replaces,
-        // and the rebuild's full rect covers both of its columns.
+        // and the rebuild's full rect covers both of its places.
         paint_handler.flush_owed_waveform_rebuild();
         // THE OWED CHECK LAST (2026-10-13): the rows above the viewport's
         // lanes and the clock cell, which the narrowed routes owe a check
