@@ -410,6 +410,16 @@ event, one paint per compositor frame — parity in mechanism. The state
 machine and its edge cases (a blocking paint between callbacks, a surface
 loss, the teardown's late callback) are at `GuiPlatform::pump`'s tail
 (`platform_android.cpp`).
+SINCE 2026-11-16 THE GATE SPACES FRAMES BY THEIR BEATS on the panel pinned at
+90 Hz again: one paint per vsync holds for a light frame, a heavy frame (its
+repair region over an eighth of the surface) is followed by 33.3 ms of quiet,
+the next frame on the third refresh (the single cadence of 2026-11-15 — every
+other refresh of the 60 Hz panel — before it); the table and its tolerance
+proof at `kBeatLight` (`platform_android.cpp`). The callback is
+`AChoreographer_postVsyncCallback` where API 33's frame timeline resolves by
+name (the frame callback above otherwise, the build's floor staying API 30),
+and each frame the gate invites is told when to show
+(`eglPresentationTimeANDROID`, `presentation_stamp_ns`, the same file).
 
 THE INSTRUMENT LESSON: THE PROOF OF RECORD FOR CADENCE IS `dumpsys
 SurfaceFlinger --timestats`, the display's own record, never the app's

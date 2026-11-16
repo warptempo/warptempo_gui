@@ -1528,8 +1528,9 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // edges are owed whatever mode stands. THE HOLD (architect 2026-11-05 night,
 // session 49, REVERSING the same night's "no hold": the tick is the
 // platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms,
-// platform_android.cpp) while only the PRESENT waits for the 60 Hz vsync, a
-// 16.7 ms period, so a lamp lit for one 5 ms tick can be cleared before any
+// platform_android.cpp) while only the PRESENT waits for the vsync, an
+// 11.1 ms period at the pinned 90 Hz (a lamp's edge is a light frame, every
+// refresh), so a lamp lit for one 5 ms tick can be cleared before any
 // present and never be painted — the clip clamps a RUN of blocks and its
 // lamp spans ticks, but the limiter's engaged frames are POINTS, and its
 // one-tick lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD —
@@ -1539,7 +1540,7 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // now before the stamp. So an event re-arms the hold (a run of clamping
 // blocks keeps the lamp lit until the hold after its last block), the dark
 // edge lands on the first tick at or past the stamp, and 100 ms is about
-// six presents at 60 Hz. NO TIMER OF ITS OWN: the tick is the clock, the
+// nine presents at 90 Hz. NO TIMER OF ITS OWN: the tick is the clock, the
 // stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
 // (architect 2026-11-05 night, session 49): the clip lamp's third bit,
 // GuiPlayback::device_unavailable() read on every tick — the error

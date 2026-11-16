@@ -123,7 +123,13 @@ justify. The floor and the ceiling both leave it free:
   pair is exactly what the ~8 ms scanner tick will want if the playhead judders.
 - Above 30 the only prize is `AChoreographer_postVsyncCallback` (33), which the
   research doc rates "if you ever cared". Raising to 33 stays free if it is ever
-  wanted — it is one line in `00_env.sh` plus a rebuild.
+  wanted — it is one line in `00_env.sh` plus a rebuild. TAKEN 2026-11-16
+  WITHOUT RAISING THE FLOOR (the beats' presentation times): the callback and its
+  four frame-timeline getters are looked up by name at init (`dlsym(RTLD_DEFAULT,
+  …)`, `resolve_frame_timeline`, platform_android.cpp), all five or none — absent,
+  one stderr line, `AChoreographer_postFrameCallback64` and no frame stamped; the
+  stamp's `eglPresentationTimeANDROID` by `eglGetProcAddress` at the capability
+  line.
 
 The research doc recommends 28; 30 is the same reasoning carried two levels
 further, for the two frame-pacing entry points 28 does not reach.
@@ -800,7 +806,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 |---|---|
 | Device | SM-X520 (Galaxy Tab S10 FE), Android 16 |
 | Window handed to the activity | **2304 x 1440**, landscape, 1:1 with the panel (the SURFACE is always this, at every setting tried; from 2026-08-27 the WINDOW was the content rect the framework reports, which on an AWAKE panel EXCLUDED BOTH BARS — 60 px status bar, 96 px taskbar — LESS the 14 px of air added under the bar that evening, so **2304x1270 at (0,74)** under the architect's Screen zoom (override density 320); since 2026-10-01 the activity is full screen and the window is the whole surface again, §12.7) |
-| Panel refresh (active mode) | **90 Hz** at most (60 and 30 also supported); the app pins **60 Hz** since 2026-11-14 (90 from 2026-08-27); 280 dpi bucket / 248.8 real dpi |
+| Panel refresh (active mode) | **90 Hz** at most (60 and 30 also supported); the app pins **90 Hz** since 2026-11-16 (from 2026-08-27; 60 from 2026-11-14 to 2026-11-16); 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) — measured under the 90 Hz pin |
 | WAV load (101 MB, 25.4 M frames) + 14-level peaks pyramid | 479 ms cold, **235–247 ms** with the peaks cache warm |
@@ -808,31 +814,40 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Stripped `.so` | 6.7 MB; APK 7.4 MB |
 | DT_NEEDED | `libdl libm libaaudio libandroid libnativewindow liblog libc` — nothing to ship beside the app, no `libc++_shared` (`libnativewindow` since the 90 Hz pin below: `ANativeWindow_setFrameRate` lives there, not in libandroid) |
 
-**The tick is 5 ms and the panel is pinned to 60 Hz (architect 2026-11-14;
-90 Hz from 2026-08-27, which closed the mismatch this section used to
-record).** The Wayland rule is "half the refresh period": the 5 ms tick was
-90 Hz's, and stays under 60 Hz's 8.3 ms, so the number stands (a faster tick
-only polls deadlines and drives the scanner, never a wrong frame).
+**The tick is 5 ms and the panel is pinned to 90 Hz (architect 2026-11-16; from
+2026-08-27, which closed the mismatch this section used to record, to
+2026-11-14, then 60 Hz to 2026-11-16).** The Wayland rule is "half the refresh
+period": 90 Hz's half-period is 5.6 ms and the 5 ms tick is it rounded down,
+kept through the 60 Hz pin, so the number stands (a faster tick only polls
+deadlines and drives the scanner, never a wrong frame).
 `adopt_window` asks the window for the rate outright (`kPanelRefreshHz`):
 
 ```c
-ANativeWindow_setFrameRate(window, 60.0f,
+ANativeWindow_setFrameRate(window, 90.0f,
                            ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
 ```
 
-60 Hz, given up from 90 on his "Agree to all" of 2026-11-14: the plate shader's
-lit cost under the whole-doubling fade to come does not fit 90 Hz's 11.1 ms,
-and 16.7 ms gives it the headroom; a smooth fade outranks the higher rate.
-A hard-coded number is honest here: **there is one device and it is pinned.**
-**The vote holds 60 Hz only inside the system's range.** With no touch down the
-panel runs at the vote; under a touch SurfaceFlinger's touch boost lifts it to
-the top of DisplayModeDirector's range, which the system setting Motion
-smoothness sets (`settings secure refresh_rate_mode`: 1 Adaptive, range 30..90;
-0 Standard, top 60) and an app cannot lower. Measured 2026-11-14: under Adaptive
-an injected pan ran at 90 Hz with the 60 vote standing, and the window's
-`setFrameRateBoostOnTouchEnabled(false)` (API 35) changed nothing; under
-Standard the same pans ran at 60. So the tablet is set to Standard (INSTALL.md,
-A new tablet, step 7). `FIXED_SOURCE` is the compatibility that asks
+90 Hz again on his word of 2026-11-16 ("I would say let's move to 90 Hz, and
+let's also create a second category"). It was given up 2026-11-14 (his "Agree
+to all") because the plate shader's lit cost under the whole-doubling fade does
+not fit 90 Hz's 11.1 ms; THE BEATS answer that: a frame's beat is a whole
+number of the pinned panel's refreshes decided from what the frame costs, a
+heavy frame (a plate frame among them) every third refresh, 33.3 ms, every
+light frame (the scanner's, a lamp's, the clock's) every refresh
+(`kBeatLight`'s block, platform_android.cpp). A hard-coded number is honest
+here: **there is one device and it is pinned.** **The vote holds 90 Hz only
+inside the system's range.** With no touch down the panel runs at the vote;
+under a touch SurfaceFlinger's touch boost lifts it to the top of
+DisplayModeDirector's range, which the system setting Motion smoothness sets
+(`settings secure refresh_rate_mode`: 1 Adaptive, range 30..90; 0 Standard, top
+60) and an app cannot lower — under Adaptive the pinned rate itself. Measured
+2026-11-14, the vote then 60: under Adaptive an injected pan ran at 90 Hz with
+the 60 vote standing, and the window's `setFrameRateBoostOnTouchEnabled(false)`
+(API 35) changed nothing; under Standard the same pans ran at 60. So the tablet
+is set to Adaptive (INSTALL.md, A new tablet, step 7); under Standard the panel
+runs at 60 whatever the vote, every light frame at 60 and every heavy one at 30
+(the beats' tolerance proof covers that panel). The 90 Hz panel under the beats
+has not run on the tablet yet. `FIXED_SOURCE` is the compatibility that asks
 the display to run AT the rate rather than at a multiple it finds convenient;
 the panel is variable-refresh, and a program that paints only on damage
 otherwise reads to the system as "hardly ever" and lands on 60. The call's
@@ -862,15 +877,16 @@ Measured since: SurfaceFlinger drops the panel 90 -> 30 Hz once no layer has
 presented for 250 ms, and the first frames after it land at 30 Hz cadence;
 neither the `setFrameRate` vote above nor a preferred display mode holds it
 (`min_refresh_rate` would, but no app may write it). Nothing keeps it awake
-(architect 2026-11-15, the app drawing at 30 frames a second: "pointless when
-everything is already so low frame rate"): at rest, after a fast Stop and
-through an A/B audition's rest the app presents nothing, and the first frame
-after a rest may land a refresh late, accepted. The forms not kept: a
-keep-alive at every vsync (~46 % app / ~53 % SurfaceFlinger, session 33), the
-permanent sparse one (90 Hz held at rest for about 11 % battery, session 117,
-under the 90 Hz pin), the brief window after a fast Stop (session 118) and the
-A/B rests' every-tick clock damage (2026-10-18), both retired 2026-11-15. The
-fact lives at `kAppFrameRateHz` (platform_android.cpp).
+(architect 2026-11-15, under that day's single cadence of 30 frames a second,
+which the beats superseded 2026-11-16: "pointless when everything is already so
+low frame rate"): at rest, after a fast Stop and through an A/B audition's rest
+the app presents nothing, and the first frame after a rest may land a refresh
+late, accepted. The forms not kept: a keep-alive at every vsync (~46 % app /
+~53 % SurfaceFlinger, session 33), the permanent sparse one (90 Hz held at rest
+for about 11 % battery, session 117, under the 90 Hz pin), the brief window
+after a fast Stop (session 118) and the A/B rests' every-tick clock damage
+(2026-10-18), both retired 2026-11-15. The fact lives at the beats' block, THE
+PANEL IDLES AT REST (`kBeatLight`, platform_android.cpp).
 
 **`C.UTF-8` vs `C`.** bionic starts a process in `C.UTF-8`, so
 `verify_c_numeric_locale` (locale_check.h) — a pure tripwire on Linux, where a

@@ -49,8 +49,8 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // and hands the core plain values.
 //
 // THE ONE GLASS HOST is the Galaxy Tab S10 FE (SM-X520): Android 16 / One UI
-// 8.0.5, 2304x1440 at 280 dpi (exactly 1.75x), the panel pinned to 60 Hz
-// (adopt_window, 2026-11-14) and the tick 5 ms, under its half-period,
+// 8.0.5, 2304x1440 at 280 dpi (exactly 1.75x), the panel pinned to 90 Hz
+// (adopt_window, 2026-11-16) and the tick 5 ms, under its half-period,
 // PAGE_SIZE 4096 (the APK's 16 KB alignment is headroom), `/storage` 0711
 // (traversable, never listable), one USB-C port (cable and any OTG device
 // exclusive; wireless adb for the rest), and `block_usb_lock` blocking USB
@@ -332,8 +332,8 @@ public:
         std::function<void(const GuiPointerPlace& at)> caret_update,
         std::function<void()> caret_end);
 
-    // TRUE WHILE ANY FINGER IS ON THE GLASS. Contract at
-    // GuiInputCore::touch_contact_active, input_core.h.
+    // TRUE WHILE ANY CONTACT IS ON THE GLASS, a finger or the pen's tip.
+    // Contract at GuiInputCore::touch_contact_active, input_core.h.
     bool touch_contact_active() const;
 
     // THE PEN'S RETAINED ZOOM ANCHOR (architect 2026-09-27): a mouse's
@@ -598,6 +598,12 @@ private:
     bool                  egl_swap_damage_ext_    = false;
     void*                 egl_set_damage_region_  = nullptr;
     void*                 egl_swap_with_damage_   = nullptr;
+    // THE PRESENTATION TIME'S ENTRY POINT (architect 2026-11-16, the beats;
+    // EGL_ANDROID_presentation_time, resolved at the capability line like
+    // the two above and spelled void* for the same rule; present casts it
+    // to eglext.h's PFNEGLPRESENTATIONTIMEANDROIDPROC). Null where the
+    // extension is absent: no frame is stamped.
+    void*                 egl_presentation_time_  = nullptr;
     static constexpr std::size_t kRepairHistoryDepth = 8;
     std::vector<std::vector<GuiGlRect>> repair_history_;
     // THE REPAIR LIST'S CAP (architect 2026-11-16, the beats; present's
@@ -815,12 +821,32 @@ private:
     struct AChoreographer* choreographer_ = nullptr;
     bool vsync_pending_ = false;
     bool vsync_due_     = false;
-    // THE APP'S FRAME CADENCE (kAppFrameRateHz, platform_android.cpp, the
-    // rule): the frame time (CLOCK_MONOTONIC ns) of the vsync that set
-    // vsync_due_, and that of the vsync whose frame last presented through
-    // the gate (pump's tail its one writer); 0 = none yet.
+    // THE BEATS (architect 2026-11-16; kBeatLight, platform_android.cpp, the
+    // rule and the table): the frame time (CLOCK_MONOTONIC ns) of the vsync
+    // that set vsync_due_, and that of the vsync whose frame last presented
+    // through the gate (pump's tail its one writer); 0 = none yet. AND THE
+    // BEAT OF THE FRAME LAST PRESENTED, gated or not — the whole refreshes
+    // of the pinned panel the next frame waits after that vsync — written
+    // at present's tail on a successful swap alone, read by the vsync
+    // callback; 1 until a frame has presented (unread while the stamp is 0)
+    // and again at shutdown.
     int64_t due_vsync_frame_ns_    = 0;
     int64_t last_painted_vsync_ns_ = 0;
+    int     last_frame_beat_       = 1;
+    // THE DUE VSYNC'S TIMELINE (architect 2026-11-16, the presentation
+    // times; the rule at presentation_stamp_ns, platform_android.cpp):
+    // whether the callback that set vsync_due_ carried a frame timeline,
+    // and its E (the preferred timeline's expected presentation time) and P
+    // (the real refresh period), CLOCK_MONOTONIC ns — written with the due
+    // bit by that one callback, read by the present of the frame that vsync
+    // invites and by no other. painting_due_vsync_ is that invitation:
+    // raised by pump's tail round its gated paint and nowhere else, so a
+    // present outside the gate (the open's hold's one frame) reads no
+    // timeline and stamps its own time.
+    bool    due_vsync_timeline_    = false;
+    int64_t due_vsync_expected_ns_ = 0;
+    int64_t due_vsync_period_ns_   = 0;
+    bool    painting_due_vsync_    = false;
 
     // -- Async renderer completion fd (owned by GuiAsyncRenderer; this is just
     // a watch handle, not a lifetime claim). -1 when none is registered.
@@ -889,8 +915,7 @@ private:
     void destroy_backbuffer();
     // `held_frame` is the open's hold's one frame (present_held_frame), the
     // one call the hold's gate lets through (platform.h's head). True iff
-    // the frame was presented (the app's frame cadence reads it, pump's
-    // tail).
+    // the frame was presented (the gate's stamp reads it, pump's tail).
     bool paint_one_frame(bool held_frame = false);
     // Upload every rect of damage_ into the GL canvas's texture and swap the
     // whole frame (the definition). Silent false with no window, no

@@ -1555,7 +1555,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     "a hold on both lamps, lamp_hold_ms a tuning key with a Settings row
 //     (default 100)" — REVERSING the same night's "no hold": the tick is
 //     the platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms) while
-//     only the PRESENT waits for the 60 Hz vsync, a 16.7 ms period, so a
+//     only the PRESENT waits for the vsync, an 11.1 ms period at the pinned
+//     90 Hz (a lamp's edge is a light frame, every refresh), so a
 //     lamp lit for one 5 ms tick can be cleared before any present and
 //     never be painted; the clip clamps a RUN of blocks and its lamp spans
 //     ticks, but the limiter's engaged frames are POINTS, and its one-tick
@@ -1567,7 +1568,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     lamp lit on that tick and on every tick before the stamp: an event
 //     re-arms it (a run of clamping blocks keeps the lamp lit until the hold
 //     after its last block), the dark edge lands on the first tick at or
-//     past the stamp, and 100 ms is about six presents at 60 Hz. NO TIMER OF
+//     past the stamp, and 100 ms is about nine presents at 90 Hz. NO TIMER OF
 //     ITS OWN: the tick is the clock. The bits on AppState
 //     (clip_lamp_lit, limiter_lamp_lit) are written only by the tick's
 //     refresh_logo_lamps (main.cpp, beside refresh_logo_legend, on EVERY
@@ -3737,8 +3738,9 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // I'm zooming in and out slowly, I guess I feel the steps, the fades.
 // Wouldn't it be better to have a continuous fade motion", an eased curve
 // over that shorter band declined: "generally cheap partials don't work
-// very well, and instead they get in the way of the true solution"; the
-// panel pinned to 60 Hz for its cost, kPanelRefreshHz; architect
+// very well, and instead they get in the way of the true solution"; its
+// cost carried by a plate frame's own beat on the 90 Hz panel since
+// 2026-11-16, kBeatHeavyLit, platform_android.cpp; architect
 // 2026-11-15, send O: THE TWO-PICTURE BLEND, "Agree to all." — the blend
 // ruled first and dropped 2026-11-14 (send H) REOPENED by him and built).
 // Inside a band of zoom before each split — from the key's start width up

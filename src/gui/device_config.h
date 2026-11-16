@@ -1320,10 +1320,10 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
 // one owner the reader, the writer, the settings editor's commit and its
 // recall read (format_lamp_hold_ms, parse_lamp_hold_ms). THE FIRST-RUN
 // VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above; 100 ms, his
-// number of 2026-11-05 night, the template's until 2026-11-09: six frames
-// at the tablet's 60 Hz vsync, the tick being the lamps' clock,
+// number of 2026-11-05 night, the template's until 2026-11-09: nine frames
+// at the tablet's 90 Hz vsync, the tick being the lamps' clock,
 // refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS). The range: 20 ms
-// is a little over one frame at 60 Hz (16.7 ms), still a hold: a lamp lit
+// is nearly two frames at 90 Hz (11.1 ms each), still a hold: a lamp lit
 // for it spans a vsync, which a one-tick lamp need not; 1000 ms, a second,
 // is past any meter's peak hold. The
 // settings page opens the LINE EDITOR on it, not a value list (981 values is
@@ -1349,7 +1349,7 @@ inline std::optional<int> parse_lamp_hold_ms(std::string_view v) {
 // recall read (format_tooltip_delay_ms, parse_tooltip_delay_ms). THE
 // FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above; 100
 // ms, the template's until 2026-11-09, his "maybe a tiny delay before
-// showing it": six frames at the tablet's 60 Hz vsync, the run loop's tick
+// showing it": nine frames at the tablet's 90 Hz vsync, the run loop's tick
 // being the tooltip's clock, tick_tooltip; the model at
 // AppState::RedesignTooltip). The range: 0 is no
 // wait at all (the box at the arrival's next tick); 1000 ms, a second, twice

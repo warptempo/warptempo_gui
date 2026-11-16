@@ -4742,8 +4742,14 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): the list takes
     // the live COLUMN BOUNDS (WaveformCache::columns) and the published
     // inks, the GPU rasterizing the antialiased plate from them
-    // (GuiCanvasSink::plate; kListFragmentShader, gl_canvas.cpp).
-    sink.plate(area, wf_cache.columns, wf_cache.fp_inks);
+    // (GuiCanvasSink::plate; kListFragmentShader, gl_canvas.cpp). THE LIT
+    // BIT rides with them (architect 2026-11-16, the beats;
+    // GuiCanvasDrawList::plate_lit): the live plate's own gain field,
+    // nonzero where it was rendered magnified (WaveformCache::fp_gain_hash,
+    // published with the columns by both of the live slot's writers) — the
+    // plate on screen, never the lamp's live state.
+    sink.plate(area, wf_cache.columns, wf_cache.fp_inks,
+               wf_cache.fp_gain_hash != 0);
 }
 
 // -- GuiPaintHandler::plate_viewport_basis ------------------------------

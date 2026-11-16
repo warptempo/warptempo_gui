@@ -310,6 +310,20 @@ struct GuiCanvasDrawList {
     // with it — so a commit of the key is a rebuild of the records and of
     // the program, nothing else.
     int      plate_grow = 0;
+    // THE LIT BIT (architect 2026-11-16, the beats): true when the records
+    // hold a plate published under MAGNIFY — the picture with the inner bar,
+    // the plate shader's expensive form — false for a dark plate and for a
+    // list with no plate record at all. The sink clears it at every rebuild
+    // and its plate() stamps it from the caller's word for the published
+    // plate (the cache's gain field, WaveformCache::fp_gain_hash: nonzero
+    // where the live plate was rendered magnified) once a record is pushed.
+    // ITS ONE READER is the platform's present(), which picks a heavy
+    // frame's beat by it (kBeatHeavyLit / kBeatHeavyDark,
+    // platform_android.cpp: "the magnified lamp is expensive, and so it
+    // should be reflected in having poorer performance when it's lit"). It
+    // names the plate DRAWN, never the lamp: between the lamp's press and
+    // the plate's publication the frame still draws the plate it holds.
+    bool     plate_lit = false;
     std::vector<GuiCanvasPrimitive>  prims;
     std::vector<WaveformColumnRows>  columns;
     // THE GPU PAGE (above): while `page.stands` the clip is the box's
@@ -325,7 +339,9 @@ GuiCanvasDrawList& gui_canvas_frame();
 // payload). rects append in `color` (an authored color,
 // display_color applied here); plate the cache's
 // published plate at `area` from its `columns` (not rendered: nothing),
-// `inks` the published inks, the grow the seat's (plate_grow);
+// `inks` the published inks, `lit` whether that plate was rendered under
+// MAGNIFY (GuiCanvasDrawList::plate_lit, stamped where a record is pushed),
+// the grow the seat's (plate_grow);
 // blended_rect one Tint record blending THE REAL RECT [x0, x1) x [y0, y1)
 // (surface px, doubles) toward `toward` (an authored color, display_color
 // applied here, the rects' word) at `percent` whole percent (at most 100)
@@ -338,7 +354,7 @@ public:
     explicit GuiCanvasSink(GuiCanvasDrawList& list);
     void rects(std::span<const GuiRect> rs, GuiColor color);
     void plate(const GuiRect& area, const GuiPlateColumns& columns,
-               WaveformPlateInks inks);
+               WaveformPlateInks inks, bool lit);
     void blended_rect(double x0, double y0, double x1, double y1,
                       GuiColor toward, int percent);
 

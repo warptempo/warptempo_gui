@@ -647,11 +647,15 @@ public:
     // this class.
     void set_touch_slop_px(double px) { touch_slop_px_ = px; }
 
-    // TRUE WHILE ANY FINGER IS ON THE GLASS — the phase machine simply not
-    // Idle. The full rationale (and why Drain's inclusion is harmless) is at
-    // the touch state block below, beside the phases it reads; the ONE
-    // consumer is main.cpp's pre-paint follow chase, which must not page the
-    // song out from under a finger that is aiming or gesturing.
+    // TRUE WHILE ANY CONTACT IS ON THE GLASS, a finger or the pen's tip —
+    // the phase machine simply not Idle. The full rationale (and why Drain's
+    // inclusion is harmless) is at the touch state block below, beside the
+    // phases it reads. TWO CONSUMERS OUTSIDE THE INPUT ROAD: main.cpp's
+    // pre-paint follow chase, which must not page the song out from under a
+    // contact that is aiming or gesturing, and THE BEATS' POINTER BIT
+    // (architect 2026-11-16; GuiPlatform::present, platform_android.cpp: a
+    // light frame painted while a pen or a finger is on the glass takes
+    // kBeatLightUnderPointer).
     bool touch_contact_active() const {
         return touch_phase_ != TouchPhase::Idle;
     }
@@ -1032,9 +1036,10 @@ private:
     // pen's lift is a pointer door, the pen going on as the hovering pointer,
     // not a touch write (architect 2026-10-07).
     //
-    // ANY CONTACT DOWN PAUSES THE FOLLOW CHASE — the one thing outside this
-    // layer that reads the phase machine, through touch_contact_active()
-    // above. THE HONEST PHONE-MODEL STATEMENT: a finger on the glass means the
+    // ANY CONTACT DOWN PAUSES THE FOLLOW CHASE — the reader outside this
+    // layer the phase machine was opened for, through touch_contact_active()
+    // above (the beats' pointer bit reads the same answer, its comment
+    // there). THE HONEST PHONE-MODEL STATEMENT: a finger on the glass means the
     // user is aiming or gesturing, and the follow scroll must not move the song
     // under it. It is not a nicety — the window's whole design defers
     // conversion: a TAP delivers its press+release burst AT THE LIFT carrying
