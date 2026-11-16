@@ -46,7 +46,8 @@ struct GuiNoiseVoice;   // noise.h
 //     generation-qualified compare-exchange (playback_common.h). No
 //     allocation, no I/O, no locks.
 //   - Main thread: calls init/play/stop/shutdown; takes is_playing() per tick
-//     and cursor() / cursor_precise() per paint (the design note's one
+//     and position_at() per paint (the scanner's advance; cursor() the same
+//     observation at `now` for every other reader — the design note's one
 //     observation, below).
 //
 // PLAYBACK PLAYS THE BOUND BUFFER AT ITS OWN RATE (the source's, or the score
@@ -88,7 +89,11 @@ struct GuiNoiseVoice;   // noise.h
 // THE LINE IS THE RAW PREDICTOR AND IT LEADS THE SOUND (architect 2026-09-03,
 // after a blind comparison at his own rig against a fully compensated build).
 // play() anchors at the PUBLISH INSTANT, the position is read at the bare
-// `now`, and no latency figure of either device enters either term — so the
+// `now` — or, by the scanner's per-frame advance, at ITS FRAME'S OWN VSYNC
+// TIME, a few ms before `now` and the same every frame (position_at below,
+// architect 2026-11-16: the time is the frame's, not a latency figure; the
+// lead is less by that constant and nothing compensates it) —
+// and no latency figure of either device enters either term — so the
 // painted line lights at `press + D` (the compositor's paint-to-light delay)
 // while the sound starts at `press + phase + L_audio` (the audio thread's
 // pickup phase, 0 to one period, then the device's output latency), and the
@@ -219,6 +224,14 @@ struct GuiBoundAudio {
     }
 };
 
+// A PLAY POSITION IN BOTH FORMS, of one observation (GuiPlayback::
+// position_at, where the contract is): the integer domain cursor and the
+// pre-truncation double it is the floor of.
+struct GuiPlaybackPosition {
+    int64_t cursor  = 0;
+    double  precise = 0.0;
+};
+
 class GuiPlayback {
 public:
     GuiPlayback();
@@ -329,9 +342,10 @@ public:
     // extrapolating, and after a natural end or any stop it answers the read
     // cursor at rest. cursor() reports the DOMAIN position: the internal
     // buffer-local cursor plus the bound buffer's domain offset. IT IS THE
-    // ONE POSITION FACE — painting and resting reads take the same line at
-    // the same instant (architect 2026-09-03: a second, lead-free face lived
-    // beside it while the display lead did, and went with it).
+    // ONE POSITION LINE — painting and resting reads take the same raw line
+    // (architect 2026-09-03: a second, lead-free face lived
+    // beside it while the display lead did, and went with it), this face at
+    // `now`, the scanner's advance at its frame's time (position_at below).
     bool    is_playing() const;
     int64_t cursor()     const;
 
@@ -463,18 +477,30 @@ public:
     // and start a device.
     bool    ensure_device_available_for_play();
 
-    // Continuous (sub-frame) counterpart of cursor(): the pre-truncation
-    // extrapolated position as a double, in the SAME domain cursor() reports
-    // (the bound buffer's domain offset added once, no translation). cursor()
-    // returns floor(this) clamped to the window; the two agree exactly at the
-    // clamped window end. A pure reader with no side effects — the same
-    // observation cursor() is, without its store: cursor(), called alongside
-    // it on the main thread, owns the graph-suspended re-anchor, and this
-    // derives the same anchor without writing it. The
-    // scanner's DRAWN pixel is derived from this so a per-frame viewport rescale
-    // (a strip-drag zoom) slides it smoothly instead of stepping on integer
-    // frames; the integer cursor() stays the domain / change-detection anchor.
-    double  cursor_precise() const;
+    // THE POSITION AT A GIVEN TIME, BOTH FORMS FROM ONE OBSERVATION
+    // (architect 2026-11-16, the beats: the scanner's position at its
+    // frame's own time): cursor()'s observation with the predictor
+    // evaluated at `at_ns` — a CLOCK_MONOTONIC instant in ns, the
+    // predictor's own clock (playback_common.cpp's steady_now_ns) — or at
+    // `now` when `at_ns` is 0. `cursor` is cursor()'s integer (the domain /
+    // change-detection anchor), `precise` its pre-truncation double in the
+    // SAME domain (the bound buffer's domain offset added once): cursor ==
+    // floor(precise), the two agreeing exactly at the clamped window end,
+    // BOTH OF THE ONE EVALUATION, so the gate that asks the integer and the
+    // place drawn from the double cannot disagree. The scanner's DRAWN
+    // place is derived from `precise` so a per-frame viewport rescale (a
+    // strip-drag zoom) slides it smoothly instead of stepping on integer
+    // frames. The storing reader, as cursor() is (the graph-suspended
+    // re-anchor, taken at the real `now` whatever `at_ns` says). ONE
+    // CALLER: main.cpp's pre-paint scanner advance, which hands the frame
+    // time of the vsync whose frame is being painted
+    // (GuiPlatform::painting_vsync_frame_ns), so in a steady play the
+    // line's step from one frame to the next is the speed times the
+    // spacing of their two vsyncs exactly. AN `at_ns` BEFORE THE ANCHOR
+    // (the first frame of a launch made in the same loop pass, a resync's
+    // stamp taken after the vsync) extrapolates backward on the same line
+    // and is floored at the session's start, as any position is.
+    GuiPlaybackPosition position_at(int64_t at_ns) const;
 
     // The bound buffer's domain extent, for call-site range policy:
     // domain_begin() is the domain offset (the domain coordinate of buffer

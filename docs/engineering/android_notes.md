@@ -1194,7 +1194,8 @@ architect listens, on the panel, and that check is his.
 The extraction was proved rather than asserted: every moved body was extracted
 from the pre-M4 `playback.cpp` and diffed statement-for-statement against
 `playback_common.cpp` under a declared rename list. The engine bodies — the
-render body, the predictor, `cursor`/`cursor_precise`, rebind, speed, resync —
+render body, the predictor, `cursor`/`cursor_precise` (2026-11-16: `position_at`
+in its place, the scanner's position at its frame's own time), rebind, speed, resync —
 come out EMPTY. The deviations are five, all declared: the two output-layout
 reconciliations (the silence memsets become one helper and the sample write
 gains a stride, so one body serves JACK's de-interleaved ports and AAudio's

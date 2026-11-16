@@ -881,9 +881,9 @@ uint64_t GuiPlayback::clipped_blocks() const {
     return impl_->state.clipped_blocks.load(std::memory_order_acquire);
 }
 
-double GuiPlayback::cursor_precise() const {
-    if (!impl_) return 0.0;
-    return playback_cursor_precise(impl_->state);
+GuiPlaybackPosition GuiPlayback::position_at(int64_t at_ns) const {
+    if (!impl_) return GuiPlaybackPosition{};
+    return playback_position_at(impl_->state, at_ns);
 }
 
 int64_t GuiPlayback::domain_begin() const {

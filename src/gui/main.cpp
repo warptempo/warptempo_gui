@@ -3312,7 +3312,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
             // Heartbeat: invalidate the scanner's line at the current
             // model position so the paint cycle keeps running. The
-            // pre-paint hook reads the predictor at paint time and adds
+            // pre-paint hook reads the predictor ahead of each paint, at
+            // its frame's own time, and adds
             // damage for the actually-painted position. We do not read
             // the predictor or update app.playhead_scanner_sample here
             // — the pre-paint hook owns that work, keeping predictor
@@ -3537,13 +3538,32 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // once, and the one looping session is re-anchored where the other
         // discrete events are, at tick cadence, never per paint.)
 
-        // Read the predictor at paint time. The predictor is continuous
-        // in wall time, so this gives the freshest possible position
-        // right before paint consumes the damage list. Under the
+        // READ THE PREDICTOR AT THE FRAME'S OWN TIME (architect 2026-11-16,
+        // the beats): the frame time of the vsync whose frame this hook
+        // precedes (GuiPlatform::painting_vsync_frame_ns, CLOCK_MONOTONIC ns,
+        // the predictor's own clock), and at `now` where the paint is no due
+        // vsync's (the platform answers 0). The predictor is continuous and
+        // linear in the time it is given, so IN A STEADY PLAY THE LINE'S
+        // STEP FROM ONE FRAME TO THE NEXT IS THE SPEED TIMES THE SPACING OF
+        // THEIR TWO VSYNCS EXACTLY — a frame's beat in whole refreshes —
+        // whatever ran ahead of this hook in its loop pass (the tick's whole
+        // body, the workers, the car); read at `now`, as it was, the step
+        // was the speed times the real interval between two pre-paint
+        // samplings, uneven by that work. The frame's time is a few ms
+        // before `now`, so the line leads the sound by that constant less;
+        // NOTHING COMPENSATES IT (the line's lead is his ruling, playback.h's
+        // design note). ONE EVALUATION ANSWERS BOTH FORMS, the integer that
+        // gates the advance below and the continuous position the line is
+        // drawn from (GuiPlayback::position_at), so the gate and the drawn
+        // place are of one instant. Under the
         // split-playhead model the predictor advances the scanner only
-        // — the cursor stays where the user left it.
+        // — the cursor stays where the user left it. THE TICK'S HEARTBEAT
+        // READS NO PREDICTOR (it re-declares the place this hook last
+        // wrote), and every reader after this hook in the frame — RESTRICT's
+        // stop and FOLLOW's scroll below, the clock's run, the painter —
+        // reads the two scanner fields as this hook leaves them.
         //
-        // playback.cursor() reports the bound buffer's own domain: the
+        // The position's cursor reports the bound buffer's own domain: the
         // domain offset travels with the bind (playback.h), so this is
         // full-target-frame when the target buffer is bound and the source
         // frame (offset 0) when source.wav is bound —
@@ -3553,7 +3573,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // can never be applied to the wrong buffer's cursor, structurally.
         // (An old app-side bias field needed a target_buffer_frames > 0
         // guard here for exactly that skew.)
-        const int64_t cur = playback.cursor();
+        const GuiPlaybackPosition at_frame =
+            playback.position_at(gui.painting_vsync_frame_ns());
+        const int64_t cur = at_frame.cursor;
         // The integer cursor is the change-detection anchor: gate on it so a
         // sub-frame advance that has not yet crossed an integer boundary adds no
         // damage here (the stationary no-repaint case). A viewport change that
@@ -3605,7 +3627,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // that continuous position at (scanner_exact_x), matching what paint
         // draws.
         app.playhead_scanner_sample = cur;
-        app.playhead_scanner_precise = playback.cursor_precise();
+        app.playhead_scanner_precise = at_frame.precise;
         const double new_x = scanner_exact_x(app, pb_vp, pb.spp,
                                              pb.lattice_origin);
 

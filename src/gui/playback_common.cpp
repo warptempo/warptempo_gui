@@ -448,7 +448,9 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // THE LINE LEADS THE SOUND, AND THAT IS THE RULING (architect 2026-09-03).
 // The predictor anchors HERE, at the publish instant, and extrapolates in
 // wall-clock at the source rate from there; nothing is added to that instant
-// and nothing is added to the `now` a position is read at. So the painted
+// and nothing is added to the time a position is read at — `now`, or for
+// the scanner's per-frame advance its frame's own vsync time, a few ms
+// before `now` (playback_position_at; architect 2026-11-16). So the painted
 // line lights at `press + D` (the compositor's paint-to-light delay) while
 // the sound starts at `press + phase + L_audio` — the device's pickup phase,
 // 0 to one period, then its own output latency — and the line
@@ -637,22 +639,33 @@ struct Observation {
 };
 
 // THE ONE MAIN-THREAD OBSERVATION. Both predictor readers — playback_cursor
-// and playback_cursor_precise — are this body behind a face, and the body
+// and playback_position_at — are this body behind a face, and the body
 // DERIVES ONLY: it stores nothing, handing a fresh anchor back for the
-// storing face to write (the declarations' block, playback_common.h), which
-// is what lets the precise reader be the same pure function of the same
-// atomics with no write, agreeing with the other whichever is asked first.
+// storing face to write (the declarations' block, playback_common.h).
 //
 // IT READS THE ANCHOR AND THE CLOCK AND NOTHING ELSE. There is no latency
 // term, no display lead and no cycle-stamp read here: the anchor was written
 // by the publish (at the publish instant) or by a resync (at a stamp's port
-// instant), and the position is that anchor extrapolated to `now` — the raw
-// line, ahead of the ear by the device's output latency and the launch's
-// pickup phase, which is the ruling (the record above playback_publish_play).
+// instant), and the position is that anchor extrapolated to THE EVALUATION
+// TIME — `now`, or `at_ns` where the caller hands one (architect 2026-11-16,
+// the beats: the scanner's advance hands its frame's own vsync time, the
+// same clock, so a play's step from frame to frame is the speed times the
+// spacing of two vsyncs exactly; before this the step was the speed times
+// the real interval between two pre-paint samplings, whatever ran ahead of
+// each in its loop pass). IT IS THE SAME RAW LINE AT ANOTHER INSTANT: the
+// extrapolation is linear in the time it is given, earlier than the anchor
+// as well as later, floored at the session's start and clamped at the ends
+// as ever (predict_position) — the
+// raw line, ahead of the ear by the device's output latency and the launch's
+// pickup phase, which is the ruling (the record above playback_publish_play);
+// a frame's time is a few ms before the `now` its paint runs at, so the
+// lead is less by that constant and nothing compensates it. THE SUSPENDED
+// ARM KEEPS THE REAL `now`: it holds the line at the integer cursor and
+// re-anchors there, whatever time was handed.
 // Keeping the stamp out of the per-frame path is also what keeps playback.h's
 // design note literal: the main thread reads the stamp at the resync events
 // and nowhere else, so motion between resyncs is a smooth wall-clock line.
-Observation observe(const GuiPlaybackState& state) {
+Observation observe(const GuiPlaybackState& state, int64_t at_ns) {
     Observation o;
     // ACQUIRE on the session word: it pairs with the audio thread's release
     // exchange at the natural end, so a flag read down is ordered after that
@@ -691,7 +704,8 @@ Observation observe(const GuiPlaybackState& state) {
         // position is the anchor's own sample, extrapolated from nothing.
         o.predicted = a.ns == 0
             ? static_cast<double>(a.sample)
-            : predict_position(state, a.sample, a.ns, now_ns);
+            : predict_position(state, a.sample, a.ns,
+                               at_ns != 0 ? at_ns : now_ns);
     }
 
     return o;
@@ -726,20 +740,25 @@ int64_t playback_cursor(GuiPlaybackState& state) {
     // instant existed while the display lead did — the render player's pause
     // point took it — and went with the lead. There is one line and one
     // reading of it.
-    const Observation o = observe(state);
+    const Observation o = observe(state, /*at_ns=*/0);
     commit_observation(state, o);
     return static_cast<int64_t>(std::floor(o.predicted)) + state.domain_offset;
 }
 
-double playback_cursor_precise(const GuiPlaybackState& state) {
-    // The same observation WITHOUT THE STORE — the pre-truncation double, so
-    // it agrees with cursor() exactly at the clamped window end and is
-    // floor()-consistent with it elsewhere (the floor at `start` and the two
-    // end clamps are integers, so floor commutes with each); the anchor it
-    // derives is the one cursor() stores, a pure function of the same
-    // atomics. The domain offset is added once, matching cursor()'s domain.
-    return observe(state).predicted +
-           static_cast<double>(state.domain_offset);
+GuiPlaybackPosition playback_position_at(GuiPlaybackState& state,
+                                         int64_t at_ns) {
+    // The same observation at the caller's time, BOTH FORMS OF ITS ONE
+    // POSITION: the integer by playback_cursor's own floor (the rounding
+    // rule's declared exception there) and the pre-truncation double, so
+    // the two agree exactly at the clamped window end and are
+    // floor()-consistent elsewhere (the floor at `start` and the two end
+    // clamps are integers, so floor commutes with each). The domain offset
+    // is added once to each, cursor()'s domain.
+    const Observation o = observe(state, at_ns);
+    commit_observation(state, o);
+    return GuiPlaybackPosition{
+        static_cast<int64_t>(std::floor(o.predicted)) + state.domain_offset,
+        o.predicted + static_cast<double>(state.domain_offset)};
 }
 
 int64_t playback_domain_begin(const GuiPlaybackState& state) {

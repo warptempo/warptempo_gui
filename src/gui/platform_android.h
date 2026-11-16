@@ -356,6 +356,20 @@ public:
     // Contract at GuiInputCore::touch_contact_active, input_core.h.
     bool touch_contact_active() const;
 
+    // THE TIME OF THE FRAME BEING PAINTED (architect 2026-11-16, the beats:
+    // the scanner's position at its frame's own time): the frame time,
+    // CLOCK_MONOTONIC ns, of the vsync whose frame the gate is painting
+    // now — the due vsync's own (due_vsync_frame_ns_, the number the gate
+    // spaces frames by) while pump's tail runs its gated paint
+    // (painting_due_vsync_, the bit raised round that one call: "this paint
+    // is the due vsync's own") — and 0 for a paint that is no due vsync's
+    // (the open's hold's one frame) and outside any paint. ONE ASKER: the
+    // pre-paint hook's scanner advance (main.cpp), which evaluates the play
+    // position at this time where it is given one and at `now` otherwise.
+    int64_t painting_vsync_frame_ns() const {
+        return painting_due_vsync_ ? due_vsync_frame_ns_ : 0;
+    }
+
     // THE PEN'S RETAINED ZOOM ANCHOR (architect 2026-09-27): a mouse's
     // Ctrl + left button held while it is lifted off the table and set down
     // again, carried onto the S Pen. The platform owns the pen facts (its

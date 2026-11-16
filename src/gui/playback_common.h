@@ -204,7 +204,8 @@ struct GuiPlaybackState {
     // playback_common.cpp — every write of these two words lands there, so
     // they are always written together), and its WRITERS, all main thread, in
     // THREE CLASSES: (1) the SUSPENDED HOLD that `observe` derives and its
-    // storing reader playback_cursor writes (while output_rate reads 0: the
+    // storing readers, playback_cursor and playback_position_at, write
+    // (while output_rate reads 0: the
     // held integer cursor at `now`, so a resume extrapolates from the held
     // position); (2) the RESYNC (playback_resync_predictor: the cycle stamp's
     // pair, so a resync's step is the accumulated steady_clock-vs-interface-
@@ -529,12 +530,17 @@ bool   playback_is_playing(const GuiPlaybackState& state);
 // over one main-thread body (`observe`, playback_common.cpp) that loads the
 // session word once, reads the clock once, and forms the predicted position
 // from the standing anchor — re-anchoring only where the device is suspended
-// and the line must hold at the integer cursor. THE STORING READER is
-// playback_cursor, which writes the anchor the observation derived (through
-// store_anchor) before answering; playback_cursor_precise is the same pure
-// function without the write, so it agrees with it whichever is asked first.
+// and the line must hold at the integer cursor. BOTH ARE STORING READERS:
+// each writes the anchor the observation derived (through store_anchor)
+// before answering. playback_cursor evaluates the predictor at `now`;
+// playback_position_at (architect 2026-11-16, the beats;
+// GuiPlayback::position_at's contract, playback.h) at `at_ns`, a
+// CLOCK_MONOTONIC instant in ns on the predictor's own clock, or at `now`
+// for 0 — and answers the integer and the pre-truncation double of that
+// one evaluation together.
 int64_t playback_cursor(GuiPlaybackState& state);
-double playback_cursor_precise(const GuiPlaybackState& state);
+GuiPlaybackPosition playback_position_at(GuiPlaybackState& state,
+                                         int64_t at_ns);
 int64_t playback_domain_begin(const GuiPlaybackState& state);
 int64_t playback_domain_end(const GuiPlaybackState& state);
 
