@@ -222,7 +222,9 @@ adb shell cmd media_session volume --stream 1 --set 0
 #    replaces monospace). Software update: auto download OFF (an update can change audio and
 #    USB behaviour; update by hand when you can test). Screen timeout to taste. Pair Bluetooth.
 #    Settings > Display > Motion smoothness > Adaptive: the app runs the panel at 90 Hz, and
-#    under Standard the panel tops at 60 Hz whatever the app asks.
+#    under Standard the panel tops at 60 Hz whatever the app asks. The app's frames come two refreshes
+#    apart, 45 a second, so the panel must reach 90 Hz for every second refresh to be 45; on Standard
+#    every frame lands at 30.
 #    The same from the laptop (0 = Standard, 1 = Adaptive):
 adb shell settings put secure refresh_rate_mode 1
 ```

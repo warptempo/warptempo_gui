@@ -494,7 +494,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // AN OWED SYNCHRONOUS REBUILD STANDS THIS DOWN (2026-10-13): the kick that
     // owed it moved the fingerprint, and the pre-paint hook's rebuild publishes
     // the live one before any frame paints (the rule at
-    // Viewport::kick_waveform_sync). The tick runs about twice per frame, so
+    // Viewport::kick_waveform_sync). The tick (5 ms) runs about four times per painted frame (the one beat), so
     // without this every tick between a pan's motion and its frame would
     // dispatch a job for the rebuild's wait_until_idle to cancel.
     if (waveform_rebuild_owed)

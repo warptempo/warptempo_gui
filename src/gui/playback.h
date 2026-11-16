@@ -300,7 +300,7 @@ public:
     // HAS THE LOOP WRAPPED SINCE THE LAST CALL — main thread only, ONE
     // CALLER: the run loop's tick (main.cpp's ma_playing branch), which
     // answers a true with resync_predictor and full waveform-and-clock damage
-    // (the rare-discrete-event shape, the launch's own). A COUNT DIFFERENCE
+    // (the rare-discrete-event shape). A COUNT DIFFERENCE
     // against a main-thread-private mirror of the audio thread's wrap
     // counter, so a wrap per tick and ten per tick answer alike, and the
     // mirror catches up whole at each call. Always false on a once-through

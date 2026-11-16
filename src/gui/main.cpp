@@ -3412,8 +3412,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // time). EVERY REST TAKES IT, the pair rests with the switch rest:
         // one rule rather than a threshold against one device's timer. It sits
         // AFTER fire_if_due: a rest that
-        // fired this tick is waiting no longer, and the launch's own
-        // full-area damage covers that frame.
+        // fired this tick is waiting no longer, and the launch's own damage
+        // covers that frame: the scanner's own rect and the clock cell
+        // (architect 2026-11-16, send Q; the launch's success tail,
+        // playback_lifecycle.cpp), the clock cell the one rect that always
+        // produces a paint.
         if (app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle &&
             app.audition_sequence.waiting)
             invalidate_clock_area();
@@ -3444,7 +3447,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // backward jump to follow, sits clamped at the mirror's end until
             // this line re-anchors it on the cycle stamp, whose cursor has
             // already wrapped. THE DAMAGE IS FULL-AREA, the rare-discrete-
-            // event shape and the launch's own: the line does not step, it
+            // event shape: the line does not step, it
             // JUMPS from the trim's end back to its start, so there is no
             // narrow column pair to damage and a wrap costs one full waveform
             // repaint per lap. consume_loop_wrap is a count difference and
@@ -3470,13 +3473,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // scanner's line is onscreen the CLOCK CELL is
             // invalidated only by the pre-paint hook (when the
             // predictor advances past app.playhead_scanner_sample),
-            // never by the tick — the tick fires ~2x per frame, so
+            // never by the tick — the tick (5 ms) fires about four times
+            // per painted frame (the one beat, 22.2 ms), so
             // duplicating the clock rect there is wasted on_redraw
             // work.
             // PLATE basis, not live: the scanner's pixels are plate-registered
             // (paint_scanner), so its damage resolves there too — the rule and
             // the per-site shape table live at playhead_pixel_x, app_state.h.
-            // NARROW is mandatory here (this fires ~2x per frame while playing),
+            // NARROW is mandatory here (this fires about four times per
+            // painted frame while playing),
             // and this lambda's scope reaches paint_handler, so the site takes
             // the narrow-on-plate shape rather than widening: THE SCANNER'S
             // OWN RECT (architect 2026-11-16, the beats;

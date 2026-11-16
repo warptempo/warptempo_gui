@@ -509,7 +509,8 @@ constexpr int64_t kPanelPeriodNs  = 1'000'000'000LL / kPanelRefreshHz;
 //     (11.11) and 4 under the second (22.22): every second, 45.
 //   ON 60 Hz (the tablet's Motion smoothness at Standard, or the vote
 //     refused; 16.67 apart): 1.55 ms past the first (16.67) — the narrowest
-//     margin — so the second (33.33): 30.
+//     margin on this panel's rates (the 120 Hz entry ties it) — so the
+//     second (33.33): 30.
 //   ON 30 Hz (the idle panel; 33.33 apart): under the first vsync: every
 //     one.
 //   ON 120 Hz (not this panel; 8.33 apart): 1.55 past the second (16.67)

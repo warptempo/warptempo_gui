@@ -809,6 +809,7 @@ link of a complete object set. `cmake --build build -j$(nproc)` is green.
 | Panel refresh (active mode) | **90 Hz** at most (60 and 30 also supported); the app pins **90 Hz** since 2026-11-16 (from 2026-08-27; 60 from 2026-11-14 to 2026-11-16); 280 dpi bucket / 248.8 real dpi |
 | Backend tick | **5 ms** since 2026-08-27 (was 8 ms; see below) |
 | Presented frame cadence during a continuous one-finger pan | **median 11.09 ms = 90.2 fps**, p10 11.06, p90 22.14 (≈1 frame in 10 doubles) — measured under the 90 Hz pin |
+| Presented frame cadence under flat 45 (2026-11-16; 12 s a state, Motion smoothness Adaptive, the panel pinned at 90) | play at fine and at coarse zoom and FOLLOW play, MAGNIFY dark / lit: **45.5 fps**, every step 21-22 ms, none late (FOLLOW GPU p50 / max 10 / 12 ms dark, 11 / 14 lit); a pan at a landing **43.7 / 43.5 fps** (dark / lit), between levels **43.6 / 43.7**, 22 ms steps with one or two of 33 ms per 12 s (GPU p50 / max 11 / 14 dark and 11 / 13 lit at the landing, 15 / 16 and 20 / 21 between levels); an oscillating pinch **41.0 / 41.1 fps**, 22 ms steps with about twenty of 33 ms per 12 s, dark and lit alike (the dark pinch's GPU 15 ms, so not GPU-bound; he zooms with the pen's barrel and does not feel them) |
 | WAV load (101 MB, 25.4 M frames) + 14-level peaks pyramid | 479 ms cold, **235–247 ms** with the peaks cache warm |
 | Full PGHI target render, 7:36 output | **~8.7 s** |
 | Stripped `.so` | 6.7 MB; APK 7.4 MB |
@@ -830,11 +831,14 @@ ANativeWindow_setFrameRate(window, 90.0f,
 90 Hz again on his word of 2026-11-16 ("I would say let's move to 90 Hz, and
 let's also create a second category"). It was given up 2026-11-14 (his "Agree
 to all") because the plate shader's lit cost under the whole-doubling fade does
-not fit 90 Hz's 11.1 ms; THE BEATS answer that: a frame's beat is a whole
-number of the pinned panel's refreshes decided from what the frame costs, a
-heavy frame (a plate frame among them) every third refresh, 33.3 ms, every
-light frame (the scanner's, a lamp's, the clock's) every refresh
-(`kBeatLight`'s block, platform_android.cpp). A hard-coded number is honest
+not fit 90 Hz's 11.1 ms; THE BEAT answers that: every frame, whatever it draws,
+is followed by one beat, `kFrameBeat` 2 — two refreshes of the pinned panel,
+22.2 ms, 45 a second (flat 45, architect 2026-11-16: "we don't need anything to
+be at 90. If the scanner is going to be at 45, everything else can be also
+pinned at 45"; the cost classes of earlier that day, three refreshes for the
+costly frame and one for the cheap, folded into it on his "Good, I agree."; 45
+is no panel mode, the gate makes it on the 90 Hz pin; the rule, the tolerance
+proof and the measurement at `kFrameBeat`'s block, platform_android.cpp). A hard-coded number is honest
 here: **there is one device and it is pinned.** **The vote holds 90 Hz only
 inside the system's range.** With no touch down the panel runs at the vote;
 under a touch SurfaceFlinger's touch boost lifts it to the top of
@@ -845,9 +849,10 @@ DisplayModeDirector's range, which the system setting Motion smoothness sets
 the 60 vote standing, and the window's `setFrameRateBoostOnTouchEnabled(false)`
 (API 35) changed nothing; under Standard the same pans ran at 60. So the tablet
 is set to Adaptive (INSTALL.md, A new tablet, step 7); under Standard the panel
-runs at 60 whatever the vote, every light frame at 60 and every heavy one at 30
-(the beats' tolerance proof covers that panel). The 90 Hz panel under the beats
-has not run on the tablet yet. `FIXED_SOURCE` is the compatibility that asks
+runs at 60 whatever the vote, every frame landing at 30 (the beat's tolerance
+proof covers that panel): the panel must reach 90 for every second refresh to
+be 45. The 90 Hz panel under flat 45 ran on the tablet 2026-11-16 (the table
+above, its last row). `FIXED_SOURCE` is the compatibility that asks
 the display to run AT the rate rather than at a multiple it finds convenient;
 the panel is variable-refresh, and a program that paints only on damage
 otherwise reads to the system as "hardly ever" and lands on 60. The call's
@@ -888,14 +893,14 @@ for 1500 ms past that Stop, one clock-cell frame that changes no pixel after
 200 ms without a present (`GuiPlatform::kDisplayKeepAliveMs`,
 `display_keep_alive_due`), each such Stop re-arming it — and the A/B audition's
 rests, the clock cell damaged every tick (main.cpp's "A REST KEEPS THE PAINT
-CLOCK RUNNING"); LIGHT frames both by the beats' table. Everywhere else at rest
+CLOCK RUNNING"); both frames on the beat like any other. Everywhere else at rest
 the app presents nothing, and the first frame after a rest may land a refresh
 late, accepted. The forms not taken: a keep-alive at every vsync (~46 % app /
 ~53 % SurfaceFlinger, session 33) and the permanent sparse one (90 Hz held at
 rest for about 11 % battery, session 117, under the 90 Hz pin). The facts
 (measured 2026-11-13 under the 90 Hz pin that stands again) and the ruling live
 at `kDisplayKeepAliveFastStopMs` (playback_lifecycle.h); the idle fact at the
-beats' block (`kBeatLight`, platform_android.cpp).
+beat's block (`kFrameBeat`, platform_android.cpp).
 
 **`C.UTF-8` vs `C`.** bionic starts a process in `C.UTF-8`, so
 `verify_c_numeric_locale` (locale_check.h) — a pure tripwire on Linux, where a
