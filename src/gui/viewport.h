@@ -377,8 +377,9 @@ struct Viewport {
     // and its ruler head are PAINTED on, which this struct cannot compute
     // (it sees no paint handler; the playheads' damage rule,
     // playhead_pixel_x, app_state.h). Wired in main.cpp beside the hook
-    // above; ONE READER, tow_playhead_to below, which widens to the whole
-    // area unwired.
+    // above; TWO READERS, the two narrow playhead writes below —
+    // tow_playhead_to and drag_playhead_to (through reseat_playhead) — each
+    // of which widens to the whole area unwired.
     std::function<int()> plate_playhead_column_;
 
     // Viewport mutators.
@@ -389,6 +390,13 @@ struct Viewport {
     // (viewport.cpp). UNCONDITIONAL — a write onto the frame the cursor already
     // holds still ends the act.
     void move_playhead_to(int64_t new_sample);
+    // THE MOVEMENT OWNER AT A DRAG'S CADENCE (architect 2026-11-16, the
+    // beats): move_playhead_to's act whole — the audition's end, the hold
+    // put out, the reseat — with the playhead's own narrow damage where the
+    // move scrolled nothing. ONE CALLER, the ruler head's drag
+    // (GuiInputHandler::place_playhead_at_click_column); the contract is at
+    // the definition (viewport.cpp).
+    void drag_playhead_to(int64_t new_sample);
     // A marker drop's seat of the playhead: move_playhead_to, then the
     // landing owner's walk over the seated playhead (the drop lands as Tab
     // does, architect 2026-10-29), keeping a standing hold where the walk did
@@ -402,6 +410,11 @@ struct Viewport {
     // definition; do not add one without an argument for why the cursor is not
     // moving in the music.
     void reseat_playhead_to(int64_t new_sample);
+    // The reseat's one body for its two entries (reseat_playhead_to and
+    // drag_playhead_to): `own_columns` chooses the no-scroll branch's
+    // damage, the whole waveform area or the playhead's own columns on the
+    // plate basis (the definition, viewport.cpp). Not an entry of its own.
+    void reseat_playhead(int64_t new_sample, bool own_columns);
     // THE TRANSLATION — the reseat's cursor write with NO keep-visible scroll
     // either (architect 2026-09-22): the cursor follows its own musical
     // instant into a rebuilt domain and the camera stays where it stands,
@@ -738,8 +751,9 @@ struct Viewport {
     //
     //   CLOCK ALONE —
     //   * Viewport's four CURSOR WRITERS: reseat_playhead_to (the live
-    //     chokepoint's write half — move_playhead_to is that same write with
-    //     the audition's end in front of it, so both spellings damage this
+    //     chokepoint's write half — move_playhead_to and drag_playhead_to
+    //     are that same write with the audition's end in front of it, so
+    //     all three spellings damage this
     //     cell through the one body), translate_playhead_to (the undo/redo
     //     restore's no-scroll re-land, 2026-09-22), tow_playhead_to (the
     //     marker drag's no-scroll tow, 2026-09-24) and
@@ -823,9 +837,11 @@ struct Viewport {
     // playheads' pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule, and the table of which sites take a
     // narrow shape versus a full-area widening, live at playhead_pixel_x in
-    // app_state.h). ONE CALLER (re-derived by grep 2026-11-16): the marker
-    // drag's tow (tow_playhead_to above), a per-motion cursor write that
-    // reaches the plate's column through plate_playhead_column_; the
+    // app_state.h). TWO CALLERS (re-derived by grep 2026-11-16), the two
+    // per-motion cursor writes, each reaching the plate's column through
+    // plate_playhead_column_: the marker drag's tow (tow_playhead_to above)
+    // and the ruler head's drag (drag_playhead_to, in reseat_playhead's
+    // no-scroll branch); the
     // per-frame scanner sites take the scanner's own rect below, and every
     // other playhead write is discrete and widens.
     void invalidate_playhead_columns(int old_px, int new_px);

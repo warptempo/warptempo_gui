@@ -1361,6 +1361,8 @@ struct ScrollDragState {
     // ACT at the pointer's place — the motionless click's own act,
     // run_nav_click_act's placement arm (the play's stop, the deselect or the
     // `h` view's mode land, the playhead to the column, the follow override),
+    // its movement through the owner's drag entry (Viewport::drag_playhead_to:
+    // the same act, the playhead's own narrow damage, 2026-11-16),
     // the column clamped onto the waveform's — so the playhead rides the
     // pointer; a motionless press-and-lift places at the press, the lane's
     // click unchanged; the lift ends it (a crossed release runs no act). The
@@ -12883,36 +12885,45 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 // invalidate_scanner_line's and invalidate_playhead_columns'):
 //  - NARROW ON PLATE, reserved for the sites that run at a frame's or a
 //    motion's cadence, where a full repaint makes every frame a heavy one,
-//    and that can reach a GuiPaintHandler to compute plate places. THREE
+//    and that can reach a GuiPaintHandler to compute plate places. FOUR
 //    SITES (re-derived by grep 2026-11-16 over the two narrow entries'
 //    callers): the two per-frame SCANNER sites in main.cpp — the tick
 //    heartbeat and the pre-paint advance (the fading line's per-tick step of
 //    2026-11-04 went with the fade that night: the resting line is one
-//    static tone and owes the tick nothing) — and THE MARKER DRAG'S TOW
-//    (Viewport::tow_playhead_to; architect 2026-11-16, the beats), the one
-//    cursor write that rides a gesture's every motion. The scanner's two
+//    static tone and owes the tick nothing) — and THE TWO CURSOR WRITES
+//    THAT RIDE A GESTURE'S EVERY MOTION (architect 2026-11-16, the beats):
+//    THE MARKER DRAG'S TOW (Viewport::tow_playhead_to) and THE RULER HEAD'S
+//    DRAG (Viewport::drag_playhead_to, the movement owner's act with the
+//    reseat's no-scroll branch narrowed). The scanner's two
 //    pass plate_viewport_basis() through the
 //    explicit-basis overloads, and THEIR RECT IS THE SCANNER'S OWN (architect
 //    2026-11-16, the beats; scanner_invalidate_rect, main.cpp, through
 //    Viewport::invalidate_scanner_line): the hull of its line's span at
 //    scanner_exact_x over the canvas's rows — the scanner has no head, so
-//    nothing above the canvas is its to repaint. The tow takes THE
+//    nothing above the canvas is its to repaint. The tow and the head's
+//    drag take THE
 //    PLAYHEAD'S OWN NARROW BOX (playhead_invalidate_rect through
 //    Viewport::invalidate_playhead_columns: the head's reach from the
 //    viewport's lanes' top row through the waveform's foot, the head and
 //    the line, nothing of the band above) at
 //    the cursor's old and new columns, each playhead_pixel_x on the plate
 //    basis, which Viewport reaches through a hook wired beside the paint
-//    handler (Viewport::plate_playhead_column_) — sound there because the
-//    drag freezes the displayed basis for its life (displayed_basis_frozen),
-//    and whole-area where the hook is unwired or the camera moved.
+//    handler (Viewport::plate_playhead_column_) — sound for the tow because
+//    the marker drag freezes the displayed basis for its life
+//    (displayed_basis_frozen), and for the head's drag, which does not,
+//    because a plate that publishes under it damages the whole area itself
+//    and each step derives its old column on the basis then standing; and
+//    whole-area where the hook is unwired or the camera moved (the head's
+//    drag at a keep-visible page: the reseat's own render).
 //  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:
 //    the stop teardown (stop_playback_if_playing) and the launch
 //    (launch_playback_window, the one launch body every launch ends in — the
 //    view-end entry and the bounded audition alike), the MARKER LAND
 //    (land_playhead_on_marker — through
 //    which the Tab/`c` jump now inherits this shape too, having stopped
-//    hand-copying the recipe 2026-07-30), move_playhead_to's no-scroll branch,
+//    hand-copying the recipe 2026-07-30), the reseat's no-scroll branch
+//    under move_playhead_to and reseat_playhead_to (the ruler head's drag
+//    takes the narrow shape there, above),
 //    the undo / redo restore's re-land (Viewport::translate_playhead_to),
 //    and the live-domain cursor repair (clamp_display_state_to_live_domain). A
 //    full-area invalidate is ownership-window-proof by construction — it cannot

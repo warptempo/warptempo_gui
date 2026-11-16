@@ -6113,7 +6113,7 @@ void GuiInputHandler::arm_placement_press(const GuiPointerPlace& at,
 // (begin_touch_region), and a click is not a drag. A tap under the lit lamp
 // is this same act, the lamp staying lit (architect 2026-11-07, session 87).
 void GuiInputHandler::run_nav_click_act(double press_x, bool history,
-                                        bool scrub_release) {
+                                        bool scrub_release, bool head_drag) {
     const GuiRect area = waveform_area(app);
     if (scrub_release) {
         scrub_press_at(press_x - static_cast<double>(area.x));
@@ -6128,14 +6128,17 @@ void GuiInputHandler::run_nav_click_act(double press_x, bool history,
             // ONE-STATE RULE, 2026-11-05), before the playhead moves.
             viewport.refresh_flag_cache();
         }
-        place_playhead_at_click_column(press_x - static_cast<double>(area.x));
+        place_playhead_at_click_column(press_x - static_cast<double>(area.x),
+                                       head_drag);
         return;
     }
     selection.clear_selection();
-    place_playhead_at_click_column(press_x - static_cast<double>(area.x));
+    place_playhead_at_click_column(press_x - static_cast<double>(area.x),
+                                   head_drag);
 }
 
-void GuiInputHandler::place_playhead_at_click_column(double click_rel_x) {
+void GuiInputHandler::place_playhead_at_click_column(double click_rel_x,
+                                                     bool head_drag) {
     // THE PLACEMENT PRESS'S PLAYHEAD HALF — the column-to-cursor recipe alone,
     // with no selection in it, so the `h` history mode can seat a playhead by
     // exactly the arithmetic and exactly the playback regime the live click
@@ -6164,7 +6167,14 @@ void GuiInputHandler::place_playhead_at_click_column(double click_rel_x) {
     // the click act's (the sweep seats no playhead since 2026-11-07, session
     // 88; its stop is the trim write's own).
     playback_lifecycle.stop_playback_if_playing();
-    viewport.move_playhead_to(sample);
+    // THE MOVEMENT OWNER, IN THE SHAPE THE ACT'S CADENCE ASKS (architect
+    // 2026-11-16, the beats): a click is discrete and takes move_playhead_to
+    // and its whole-area damage; THE RULER HEAD'S DRAG runs this act at
+    // every motion (`head_drag`; ScrollDragState::head_drag) and takes the
+    // owner's drag entry — the same movement, the playhead's own narrow
+    // damage where the camera stood (Viewport::drag_playhead_to).
+    if (head_drag) viewport.drag_playhead_to(sample);
+    else           viewport.move_playhead_to(sample);
 }
 
 void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
@@ -6477,7 +6487,7 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
         const double press_x = app.scroll_drag.press_x;
         app.scroll_drag = ScrollDragState{};
         if (moved) return;
-        run_nav_click_act(press_x, history, scrub);
+        run_nav_click_act(press_x, history, scrub, /*head_drag=*/false);
         if (seed_lane) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::EmptyLane,
@@ -8787,15 +8797,22 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         // (the place the keep-visible edge-align rests a subject at,
         // Viewport's edge_aligned_viewport_start: no page under a held pen)
         // rather than meeting the act's gutter.
-        // No second placement road: the play's stop, the deselect, the
-        // movement owner and its damage are the act's.
+        // No second placement road: the play's stop, the deselect and the
+        // movement owner are the act's — the act told it is this drag's
+        // step, so its movement declares the playhead's own narrow damage
+        // (architect 2026-11-16, the beats; place_playhead_at_click_column):
+        // the head and the line where they stood and where they stand, and
+        // the clock cell. A FIRST STEP MAY DECLARE MORE, each by its own
+        // owner and once: a live play's stop (the whole area), a standing
+        // selection's clear (its stems and ring, the flag rebuild's tail),
+        // the `h` view's focus clear (the whole window).
         const auto head_drag_step = [&] {
             const GuiRect area = waveform_area(app);
             const double col = std::clamp(
                 at.rx - static_cast<double>(area.x), 0.0,
                 static_cast<double>(std::max(0, area.w - 1)));
             run_nav_click_act(static_cast<double>(area.x) + col, sd.history,
-                              /*scrub_release=*/false);
+                              /*scrub_release=*/false, /*head_drag=*/true);
         };
         // Sub-threshold: still the pending click. The press did nothing, so
         // nothing happens here either — the fork IS the threshold.

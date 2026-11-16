@@ -1333,9 +1333,10 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // which builds one per column (old and new), unions them when they are close
 // and invalidates what comes out — the narrow-on-plate shape of a playhead
 // move (the rule and the per-site table are at playhead_pixel_x,
-// app_state.h), WHICH ONE SITE TAKES: the marker drag's tow
-// (Viewport::tow_playhead_to; architect 2026-11-16, the beats), the cursor
-// write that runs at a motion's cadence. Every other cursor write is
+// app_state.h), WHICH TWO SITES TAKE: the marker drag's tow and the ruler
+// head's drag (Viewport::tow_playhead_to, Viewport::drag_playhead_to;
+// architect 2026-11-16, the beats), the cursor writes that run at a
+// motion's cadence. Every other cursor write is
 // discrete and takes the full-area shape, and the scanner — a line with no
 // head — has its own rect (scanner_invalidate_rect below). THE BOX
 // IS THE HEAD'S PAINTED REACH

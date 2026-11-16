@@ -1968,7 +1968,12 @@ struct GuiInputHandler {
     // (scrub_press_at, create_marker_at_empty_lane) is the click's real x on
     // the strip, waveform-relative, handed on to the family's one
     // conversion (playhead_frame_at_click_x, input_pointer.cpp).
-    void place_playhead_at_click_column(double click_rel_x);
+    // `head_drag` (architect 2026-11-16, the beats) says the act is the
+    // ruler head's drag's step, which runs it at every motion: the movement
+    // then goes through the owner's drag entry (Viewport::drag_playhead_to
+    // — the same movement, the playhead's own narrow damage); false, the
+    // click's move_playhead_to.
+    void place_playhead_at_click_column(double click_rel_x, bool head_drag);
 
     // ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click (contract
     // at ScrollDragState, app_state.h; the deferred act below). Records the press and its three
@@ -2010,8 +2015,10 @@ struct GuiInputHandler {
     // (lower half), or deselect (live) / mode-focus clear (`h` view), then
     // the placement above at the press's place, playback state
     // read at the act. The full contract is at the definition
-    // (input_pointer.cpp).
-    void run_nav_click_act(double press_x, bool history, bool scrub_release);
+    // (input_pointer.cpp). `head_drag` is handed on to the placement (above):
+    // true from the ruler head's drag's step alone.
+    void run_nav_click_act(double press_x, bool history, bool scrub_release,
+                           bool head_drag);
 
     // THE MARKER CLICK ACT, AT THE PRESS (2026-08-17) — stop, the two-way
     // selection fork, the land, the PLAIN shape's

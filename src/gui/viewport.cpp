@@ -315,6 +315,31 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     reseat_playhead_to(new_sample);
 }
 
+// drag_playhead_to: THE MOVEMENT OWNER'S ACT AT A DRAG'S CADENCE — THE RULER
+// HEAD'S DRAG (architect 2026-11-16, the beats: a motion's frame repaints
+// what it moved and nothing else, so it is a light frame). ONE CALLER, the
+// head drag's step (GuiInputHandler::place_playhead_at_click_column under
+// its `head_drag`; ScrollDragState::head_drag, app_state.h): every motion of
+// that drag is the placement act, and through move_playhead_to above each
+// one damaged the whole waveform area.
+// THE ACT IS move_playhead_to's, WHOLE — the audition's end, the hold put
+// out, then the reseat's own body: the live-domain clamp, the keep-visible
+// edge-align and its synchronous plate render, the follow bit kept, the
+// clock, the predictor's resync where a play is in flight (none is: the
+// placement stops a live play ahead of its first write,
+// place_playhead_at_click_column). ONLY THE DAMAGE OF A MOVE THAT SCROLLED
+// NOTHING IS NARROWED (reseat_playhead's `own_columns`): the playhead's own
+// rect at the cursor's old and new columns on the plate basis, the tow's
+// shape and for the tow's reason (tow_playhead_to, below), in place of the
+// whole waveform area. A second entry rather than a flag on the mover, the
+// movement owners' convention; every other caller keeps move_playhead_to
+// and the whole area, being discrete.
+void Viewport::drag_playhead_to(int64_t new_sample) {
+    clear_audition_sequence(app);
+    app.camera_hold = false;
+    reseat_playhead(new_sample, /*own_columns=*/true);
+}
+
 // THE DROP'S SEAT AND ITS CAMERA, the one owner for every drop body
 // (GuiWarpMarkersOps::drop_marker,
 // GuiPhaseResetMarkersOps::drop_phase_reset_at_position).
@@ -435,16 +460,31 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
 //     2026-11-07 (session 88, the rule at the head of input_trim.cpp), so the
 //     trim's surfaces take no suppression, they simply do not pass through
 //     here.
-// EVERY OTHER CALLER GOES THROUGH move_playhead_to and inherits the audition
-// end.
+// EVERY OTHER CALLER GOES THROUGH move_playhead_to — or, the ruler head's
+// drag, its twin drag_playhead_to — and inherits the audition end.
 //
 // The [0, total - 1] live-domain clamp is the shared ruling spelled at
 // clamp_playhead_to_live_domain (app_state.h) — this gesture route funnels
 // through it exactly like every non-gesture sync route, so they can never
 // disagree about the same endpoint.
 void Viewport::reseat_playhead_to(int64_t new_sample) {
+    reseat_playhead(new_sample, /*own_columns=*/false);
+}
+
+// THE RESEAT'S ONE BODY (the contract above), for its two entries:
+// reseat_playhead_to, every reseat and — through move_playhead_to — every
+// discrete movement, and drag_playhead_to, the ruler head's drag.
+// `own_columns` chooses THE NO-SCROLL BRANCH'S DAMAGE and nothing else: the
+// whole waveform area, or the playhead's own columns (the branch's comment).
+void Viewport::reseat_playhead(int64_t new_sample, bool own_columns) {
     if (audio.total_frames() <= 0) return;
     new_sample = clamp_playhead_to_live_domain(new_sample, app, audio);
+
+    // THE CURSOR'S COLUMN AS LAST PAINTED, for the narrow shape: derived on
+    // the plate basis BEFORE the write, never stashed (the tow's pattern,
+    // tow_playhead_to; the hook unwired, the whole area as ever).
+    const bool narrow = own_columns && plate_playhead_column_;
+    const int  old_px = narrow ? plate_playhead_column_() : 0;
 
     const int64_t old_vp = app.viewport_start_sample;
     const int64_t old_origin = app.viewport_lattice_origin;
@@ -508,7 +548,25 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
         // compositor-throttled arrow step, and the moved branch above already
         // pays a full synchronous plate RENDER at that same cadence. Rule and
         // per-site shape table at playhead_pixel_x (app_state.h).
-        invalidate_waveform_area();
+        // THE RULER HEAD'S DRAG TAKES THE NARROW SHAPE INSTEAD (architect
+        // 2026-11-16, the beats; drag_playhead_to): the playhead's own rect
+        // at the old and the new column, BOTH ON THE PLATE BASIS, which
+        // answers that paragraph's objection — the columns are the plate's,
+        // read through the paint handler's hook (plate_playhead_column_),
+        // not the live viewport's. That drag is outside the displayed-basis
+        // freeze, so a plate may publish under it: the publication damages
+        // the whole area itself, and the next step derives its old column on
+        // the basis that then stands — the one the cursor was last painted
+        // through. What the cursor's move changes beside its own head and
+        // line: the cursor's line appearing on or yielding to a selection
+        // stem's exact place (inside this rect — it is this line that is
+        // drawn or not; the stem itself reads no cursor) and the clock cell
+        // (below); the keys whose face reads the cursor are the tick's
+        // comparator's (main.cpp).
+        if (narrow)
+            invalidate_playhead_columns(old_px, plate_playhead_column_());
+        else
+            invalidate_waveform_area();
     }
     invalidate_clock_area();
     if (playback.is_playing()) playback.resync_predictor();
