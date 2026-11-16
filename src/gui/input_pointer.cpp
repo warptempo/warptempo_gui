@@ -8615,7 +8615,8 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
     // whole new span). Nothing else painted reads the trim (paint_trim and
     // the highlight's span are its two paint-time readers); the keys whose
     // face reads it are the tick's comparator's. The write's own first-event
-    // acts declare theirs: a live play's stop the whole area, the deselect
+    // acts declare theirs: a live play's stop the scanner's own rect and the
+    // clock cell (Viewport::invalidate_standing_scanner), the deselect
     // its stems and ring (the flag rebuild's tail).
     //
     // (THE `h` VIEW WAS CARVED OUT HERE while its hold ran a playhead-only
@@ -8903,7 +8904,8 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         // (architect 2026-11-16, the beats; place_playhead_at_click_column):
         // the head and the line where they stood and where they stand, and
         // the clock cell. A FIRST STEP MAY DECLARE MORE, each by its own
-        // owner and once: a live play's stop (the whole area), a standing
+        // owner and once: a live play's stop (the scanner's own rect and
+        // the clock cell), a standing
         // selection's clear (its stems and ring, the flag rebuild's tail),
         // the `h` view's focus clear (the whole window).
         const auto head_drag_step = [&] {

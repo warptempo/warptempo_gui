@@ -142,17 +142,21 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         user_play_launched_ms = -1;
     }
     playback.stop();
+    // THE SCANNER'S OWN RECT AT ITS PAINTED PLACE, THEN THE BIT (architect
+    // 2026-11-16, send Q: "number 3, narrowing agree";
+    // Viewport::invalidate_standing_scanner): the place is read while the
+    // bit still stands, from the still-current playhead_scanner_precise on
+    // the PLATE basis — the place the last paint drew the line at, by the
+    // pre-paint advance's own argument for its OLD place (main.cpp's "OLD
+    // PLACE, DERIVED — never stashed"; playback.stop() writes nothing of
+    // AppState). A place the viewport or the plate's basis moved since that
+    // paint carries the mover's own whole-area damage, a publication's
+    // included. With the bit already down nothing of the canvas is the
+    // scanner's. The clock cell flips from the scanner's time to the
+    // cursor's. The rule and the per-site shape table live at
+    // playhead_pixel_x (app_state.h).
+    if (app.playhead_scanner_active) viewport.invalidate_standing_scanner();
     app.playhead_scanner_active = false;
-    // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
-    // scanner/cursor column pair this used to compute on the LIVE viewport).
-    // The playheads' pixels are PLATE-registered, so live-basis columns could
-    // leave the scanner's last line un-erased through an async publish window;
-    // GuiPlaybackLifecycle sees no GuiPaintHandler, so the site takes the
-    // widening shape instead of the honest-basis one — a full-area invalidate
-    // cannot ride the wrong epoch, and a stop is a discrete once-per-audition
-    // event. The rule and the per-site shape table live at playhead_pixel_x
-    // (app_state.h).
-    viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
     // THE STOP LEAVES THE FOLLOW LAMP ALONE (architect 2026-09-23): it is a
     // lamp, not a one-shot, so the next play follows while it stays lit
@@ -227,8 +231,8 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // marker-lane run beneath it — belongs to the CURSOR alone), and a stop moves no cursor.
         // So the two collapsed onto
         // this one call, which takes the same QUIESCENCE FENCE through its own
-        // playback.stop() and then deactivates the scanner and damages the
-        // waveform area and the clock cell.
+        // playback.stop() and then deactivates the scanner, damaging its own
+        // rect and the clock cell.
         stop_playback_if_playing();
         return;
     }
@@ -714,6 +718,13 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     }
     // (`end` is the caller's: the view's end from active_view_play_end for
     // the view-end launch, the clamped bounded window for the audition.)
+    // A SCANNER STILL STANDING IS ERASED WHERE IT WAS PAINTED, AHEAD OF THE
+    // SEED (architect 2026-11-16, send Q; Viewport::
+    // invalidate_standing_scanner): a launch inside the sub-tick window
+    // between the audio thread's natural end and the tick that tears the
+    // scanner down finds the bit up, and its place — read before the seed
+    // overwrites playhead_scanner_precise — is the one the last paint drew.
+    if (app.playhead_scanner_active) viewport.invalidate_standing_scanner();
     // Scanner launch = the validated launch position, in the paint domain
     // in every view (see the comment above `start`). Seed the continuous
     // position too so the first paint (where the predictor's cur still equals
@@ -745,29 +756,27 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // and the camera stays where the user left it.
     if (camera == LaunchCamera::PageIn) viewport.follow_scroll_if_needed();
     if (camera == LaunchCamera::Follow) viewport.follow_scanner();
-    // Damage the waveform area and the clock cell NOW, in the success tail
-    // (strictly after every refusal return above). A launch's visible effect —
-    // the scanner line appearing at the launch column and the timestamp readout
-    // advancing — otherwise waits for the next tick-driven paint opportunity
-    // (the tick heartbeat invalidates the scanner's current column even when the
-    // integer predictor has not yet advanced), leaving the PRESS itself damage-less
-    // for a whole frame. Damaging at press paints the scanner one frame earlier
-    // than the tick heartbeat would — honest damage at the press that caused it.
+    // Damage the scanner's seeded place and the clock cell NOW, in the success
+    // tail (strictly after every refusal return above). A launch's visible
+    // effect — the scanner line appearing at the launch column and the
+    // timestamp readout advancing — otherwise waits for the next tick-driven
+    // paint opportunity (the tick heartbeat invalidates the scanner's current
+    // place even when the integer predictor has not yet advanced), leaving
+    // the PRESS itself damage-less for a whole frame. Damaging at press paints
+    // the scanner one frame earlier than the tick heartbeat would — honest
+    // damage at the press that caused it.
     //
-    // FULL waveform-area damage, NOT a narrow launch-column recompute (the
-    // "for a rare cleanup, full-area damage beats a clever narrow recompute" shape).
-    // A playback launch is a rare, DISCRETE command, and the scanner PAINTS against
-    // the plate owner (wf_cache.fp_*), which a narrow-damage basis reachable from
-    // here can transiently DIVERGE from: during an async publish window (plate old,
-    // live viewport new — a resize's included), a narrow live-basis column would
-    // miss the plate-basis scanner and the line would stay invisible until the
-    // publish. Full-area
-    // damage is ownership-window-proof by construction, at one full repaint per
-    // launch keystroke — bounded for a rare command. It also subsumes any column
-    // a just-ended session's scanner still had painted (a launch inside the
-    // sub-tick window between the audio thread's natural end and the tick that
-    // deactivates the scanner), so no stale line can survive a relaunch.
-    viewport.invalidate_waveform_area();
+    // THE SCANNER'S OWN RECT, AFTER THE CAMERA (architect 2026-11-16, send
+    // Q: "number 3, narrowing agree"; Viewport::invalidate_standing_scanner),
+    // not the whole waveform area: a few thousand px redrawn in place of
+    // three whole plates across the window's three buffers. ON THE PLATE
+    // BASIS, the one the scanner is painted through, so it names the pixels
+    // even while a plate is in flight (live viewport new, plate old), whose
+    // publication damages the viewport's lanes whole itself. A camera that
+    // moved (the page-in or the follow scroll above) took its own whole-area
+    // damage and synchronous rebuild, so the launch is wide exactly when the
+    // camera moved; an offscreen place is an empty rect and declares nothing.
+    viewport.invalidate_standing_scanner();
     viewport.invalidate_clock_area();
     if (loop_begin == kPlaybackNoLoop) {
         playback.play(start, end);

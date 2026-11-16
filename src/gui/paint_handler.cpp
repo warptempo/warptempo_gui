@@ -787,7 +787,7 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // state moved axis TWICE more the same day — onto the SELECTED bit with the
 // radio ruling, and onto the GLYPH with the collapse of play and stop into one
 // button — so the very same masking edge (a click act's stop, or the natural
-// end-of-song teardown, damaging only the clock cell) now flips that button's
+// end-of-song teardown, damaging no button) now flips that button's
 // GLYPH under a clip that redraws no button. Same gate, same repair, the third
 // term; `glyph` (the glyph index since Save grew a third, 2026-09-27) is
 // stashed here for exactly that reason and its whole argument is at the

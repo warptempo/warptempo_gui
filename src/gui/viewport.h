@@ -381,6 +381,17 @@ struct Viewport {
     // tow_playhead_to and drag_playhead_to (through reseat_playhead) — each
     // of which widens to the whole area unwired.
     std::function<int()> plate_playhead_column_;
+    // THE SCANNER'S EXACT PLACE ON THE PLATE BASIS (architect 2026-11-16,
+    // send Q): scanner_exact_x of the scanner as it stands, on
+    // GuiPaintHandler::plate_viewport_basis — the place its line is PAINTED
+    // at (paint_scanner), which this struct cannot compute for the same
+    // reason (it sees no paint handler; the playheads' damage rule,
+    // playhead_pixel_x, app_state.h). The playhead column hook's twin, wired
+    // in main.cpp beside it. Meaningful only while
+    // app.playhead_scanner_active (scanner_exact_x's contract). ONE READER,
+    // invalidate_standing_scanner below, which widens to the whole area
+    // unwired.
+    std::function<double()> plate_scanner_x_;
     // THE TOOLTIP'S BOX AS ITS PAINTER WILL LAY IT OUT (architect
     // 2026-11-16, the beats): GuiPaintHandler::tooltip_box_for_show — the
     // hull of the standing owner's box, or empty where none would paint —
@@ -856,8 +867,9 @@ struct Viewport {
     // plate_playhead_column_: the marker drag's tow (tow_playhead_to above)
     // and the ruler head's drag (drag_playhead_to, in reseat_playhead's
     // no-scroll branch); the
-    // per-frame scanner sites take the scanner's own rect below, and every
-    // other playhead write is discrete and widens.
+    // scanner's sites — the per-frame advance, the launch and the stop —
+    // take the scanner's own rect below, and every other playhead write is
+    // discrete and widens.
     void invalidate_playhead_columns(int old_px, int new_px);
     // THE SCANNER'S NARROW DAMAGE (architect 2026-11-16, the beats): the
     // scanner's own rect (scanner_invalidate_rect, main.cpp: the hull of its
@@ -870,15 +882,31 @@ struct Viewport {
     // scanner's pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule and the per-site table at
     // playhead_pixel_x, app_state.h). THE CALLERS ARE EXACTLY THE TWO
-    // PER-FRAME SCANNER SITES (re-derived by grep 2026-11-16): main.cpp's
-    // tick heartbeat (the one place twice) and its pre-paint scanner advance
-    // (old, then new), both narrow BY NECESSITY at the frame's cadence and
-    // both inside a scope that reaches paint_handler. IT SERVES THE
-    // PER-FRAME ADVANCE ALONE: a move of the scanner's place by a move of
-    // the viewport or of the plate's basis carries that mover's own
-    // full-area damage. A playhead write is no caller of this: the cursor
-    // has a head, and its narrow shape is invalidate_playhead_columns above.
+    // PER-FRAME SCANNER SITES AND THE STANDING SCANNER'S DAMAGE BELOW
+    // (re-derived by grep 2026-11-16, send Q): main.cpp's tick heartbeat (the
+    // one place twice) and its pre-paint scanner advance (old, then new),
+    // both narrow BY NECESSITY at the frame's cadence and both inside a
+    // scope that reaches paint_handler; and invalidate_standing_scanner (the
+    // one place twice), the launch's and the stop's, reaching the plate
+    // basis through plate_scanner_x_. IT SERVES THE SCANNER'S OWN EDGES
+    // ALONE — the per-frame advance, the launch's seed, the stop's teardown:
+    // a move of the scanner's place by a move of the viewport or of the
+    // plate's basis carries that mover's own full-area damage. A playhead
+    // write is no caller of this: the cursor has a head, and its narrow
+    // shape is invalidate_playhead_columns above.
     void invalidate_scanner_line(double old_x, double new_x);
+    // THE STANDING SCANNER'S DAMAGE (architect 2026-11-16, send Q: "number
+    // 3, narrowing agree"): the scanner's own rect at its place as it stands
+    // — invalidate_scanner_line(x, x), x from plate_scanner_x_, the place the
+    // last paint drew it at (the seed's place right after a launch's seed) —
+    // and, with the hook unwired, the whole waveform area (the tow's and the
+    // ruler head's drag's fallback shape). PRECONDITION: the scanner is
+    // active; the caller checks (scanner_exact_x's contract). TWO CALLERS,
+    // GuiPlaybackLifecycle's two discrete scanner edges: the stop body's
+    // teardown (the place before the bit clears) and the launch body's
+    // success tail (a scanner still standing before the seed, then the
+    // seeded place after the camera).
+    void invalidate_standing_scanner();
     // (There is no stem-column invalidator in this struct, and since row 5 no
     // selection-driven stem damage either. invalidate_stem_column computed the
     // old singleton stem's narrow damage on the ITEM basis while the stem

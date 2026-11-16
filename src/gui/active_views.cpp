@@ -125,11 +125,11 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // never moved during playback — so the leaving tab's snapshot below captures
     // it exactly, as it did under the hand-spelled pair this replaced (and which
     // the two stop edges themselves collapsed onto this same call in 2026-07-30's
-    // one-stop-body ruling). Its damage is fully
+    // one-stop-body ruling). Its canvas damage is
     // redundant here either way: the kick_waveform_sync at the tail damages
     // the window-top rect through the waveform's bottom on
     // invalidate_waveform_area's road (damage_window_top_rows, viewport.h),
-    // which is the stop's own full waveform-area invalidate.
+    // which holds the scanner's own rect the stop declares.
     playback_lifecycle.stop_playback_if_playing();
     // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19: the
     // ENTERING tab has a trim of its own, so a switch has nothing to put away.)

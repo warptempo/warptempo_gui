@@ -12899,29 +12899,40 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 // at — a frozen scanner line, or a stop that leaves its last column un-erased,
 // until the next publish heals it.
 //
-// TWO SHAPES SATISFY THE RULE, chosen per site by CADENCE (re-derived by grep
+// TWO SHAPES SATISFY THE RULE, chosen per site (re-derived by grep
 // 2026-07-30 over the narrow entry's callers and the playhead-writing
-// full-area sites; the narrow callers again 2026-11-16, Viewport::
-// invalidate_scanner_line's and invalidate_playhead_columns'):
-//  - NARROW ON PLATE, reserved for the sites that run at a frame's or a
-//    motion's cadence, where a full repaint makes every frame a whole one,
-//    and that can reach a GuiPaintHandler to compute plate places. FOUR
-//    SITES (re-derived by grep 2026-11-16 over the two narrow entries'
+// full-area sites; the narrow callers again 2026-11-16, send Q, Viewport::
+// invalidate_scanner_line's, invalidate_standing_scanner's and
+// invalidate_playhead_columns'):
+//  - NARROW ON PLATE, for the sites that run at a frame's or a motion's
+//    cadence, where a full repaint makes every frame a whole one, and for
+//    the scanner's own discrete edges, each reaching a GuiPaintHandler's
+//    plate places directly or through a Viewport hook. SIX SITES
+//    (re-derived by grep 2026-11-16, send Q, over the three narrow entries'
 //    callers): the two per-frame SCANNER sites in main.cpp — the tick
 //    heartbeat and the pre-paint advance (the fading line's per-tick step of
 //    2026-11-04 went with the fade that night: the resting line is one
-//    static tone and owes the tick nothing) — and THE TWO CURSOR WRITES
-//    THAT RIDE A GESTURE'S EVERY MOTION (architect 2026-11-16, the beats):
-//    THE MARKER DRAG'S TOW (Viewport::tow_playhead_to) and THE RULER HEAD'S
-//    DRAG (Viewport::drag_playhead_to, the movement owner's act with the
-//    reseat's no-scroll branch narrowed). The scanner's two
-//    pass plate_viewport_basis() through the
-//    explicit-basis overloads, and THEIR RECT IS THE SCANNER'S OWN (architect
-//    2026-11-16, the beats; scanner_invalidate_rect, main.cpp, through
-//    Viewport::invalidate_scanner_line): the hull of its line's span at
-//    scanner_exact_x over the canvas's rows — the scanner has no head, so
-//    nothing above the canvas is its to repaint. The tow and the head's
-//    drag take THE
+//    static tone and owes the tick nothing); THE SCANNER'S TWO DISCRETE
+//    EDGES (architect 2026-11-16, send Q: "number 3, narrowing agree"), THE
+//    STOP TEARDOWN (stop_playback_if_playing) and THE LAUNCH
+//    (launch_playback_window, the one launch body every launch ends in — the
+//    view-end entry, the bounded audition and the car's play alike), through
+//    Viewport::invalidate_standing_scanner; and THE TWO CURSOR WRITES THAT
+//    RIDE A GESTURE'S EVERY MOTION (architect 2026-11-16, the beats): THE
+//    MARKER DRAG'S TOW (Viewport::tow_playhead_to) and THE RULER HEAD'S DRAG
+//    (Viewport::drag_playhead_to, the movement owner's act with the reseat's
+//    no-scroll branch narrowed). The per-frame scanner sites pass
+//    plate_viewport_basis() through the explicit-basis overloads and the two
+//    edges reach the same expression through a hook wired beside the paint
+//    handler (Viewport::plate_scanner_x_), and THEIR RECT IS THE SCANNER'S
+//    OWN (architect 2026-11-16, the beats; scanner_invalidate_rect, main.cpp,
+//    through Viewport::invalidate_scanner_line): the hull of its line's span
+//    at scanner_exact_x over the canvas's rows — the scanner has no head, so
+//    nothing above the canvas is its to repaint. A scanner's place a camera
+//    or a plate's publication moved carries that mover's own whole-area
+//    damage, the launch's page-in and follow scroll included, so an edge's
+//    place on the standing basis is the painted one or covered; unwired, the
+//    edges widen to the whole area. The tow and the head's drag take THE
 //    PLAYHEAD'S OWN NARROW BOX (playhead_invalidate_rect through
 //    Viewport::invalidate_playhead_columns: the head's reach from the
 //    viewport's lanes' top row through the waveform's foot, the head and
@@ -12935,10 +12946,8 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 //    and each step derives its old column on the basis then standing; and
 //    whole-area where the hook is unwired or the camera moved (the head's
 //    drag at a keep-visible page: the reseat's own render).
-//  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:
-//    the stop teardown (stop_playback_if_playing) and the launch
-//    (launch_playback_window, the one launch body every launch ends in — the
-//    view-end entry and the bounded audition alike), the MARKER LAND
+//  - FULL WAVEFORM-AREA DAMAGE for every other DISCRETE, human-paced
+//    playhead write: the MARKER LAND
 //    (land_playhead_on_marker — through
 //    which the Tab/`c` jump now inherits this shape too, having stopped
 //    hand-copying the recipe 2026-07-30), the reseat's no-scroll branch
@@ -12950,9 +12959,12 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 //    ride the wrong epoch — and the repaint is affordable at the rate these
 //    fire (the project already pays a full synchronous plate RENDER per pan
 //    event at the same key-repeat and pointer-frame cadence). Several of these
-//    sites additionally CANNOT reach a paint handler (Viewport,
-//    GuiPlaybackLifecycle and the free land helper all see none), so for them
-//    the widening is the only honest shape as well as the affordable one.
+//    sites see no paint handler (Viewport and the free land helper), and for
+//    a discrete write the widening is the affordable shape; Viewport's narrow
+//    writes reach the plate through its two hooks (plate_playhead_column_,
+//    plate_scanner_x_), and GuiPlaybackLifecycle, which sees none either,
+//    reaches the scanner's place through the second, its widening the
+//    unwired fallback alone.
 int     playhead_pixel_x(const AppState& a, int64_t vp_start, double spp,
                          int64_t origin);
 // Returns the painted pixel column (offset from waveform_area.x) for the

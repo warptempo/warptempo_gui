@@ -10,6 +10,7 @@
 #include "platform.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 
 // THE NAVIGATION RANGE (contract at the declaration): Home/End's jump bounds and
@@ -126,8 +127,9 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
 
 // Viewport changes repaint the waveform area and the top strip together:
 // flag positions depend on the viewport, so any pan/zoom has to refresh
-// flags as well as waveform. The scanner's per-frame advance keeps its own
-// narrow rect (invalidate_scanner_line below). The rect and the lanes it holds are at the
+// flags as well as waveform. The scanner keeps its own narrow rect — its
+// per-frame advance, its launch and its stop (invalidate_scanner_line and
+// invalidate_standing_scanner below). The rect and the lanes it holds are at the
 // declaration (viewport.h); the rows above it are owed a check
 // (damage_window_top_rows).
 void Viewport::invalidate_waveform_area() {
@@ -289,7 +291,7 @@ void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
 }
 
 // The scanner's old and new rects, united where they touch (the rule and
-// the two callers at the declaration, viewport.h; the rect's at
+// the callers at the declaration, viewport.h; the rect's at
 // scanner_invalidate_rect, main.cpp). Both stand on the area's rows, so
 // they touch exactly when their column intervals overlap or abut.
 void Viewport::invalidate_scanner_line(double old_x, double new_x) {
@@ -305,6 +307,18 @@ void Viewport::invalidate_scanner_line(double old_x, double new_x) {
     }
     if (r_old.w > 0) gui.invalidate_region(r_old.x, r_old.y, r_old.w, r_old.h);
     if (r_new.w > 0) gui.invalidate_region(r_new.x, r_new.y, r_new.w, r_new.h);
+}
+
+// The standing scanner's own rect, or the whole area unwired (the rule and
+// the two callers at the declaration, viewport.h).
+void Viewport::invalidate_standing_scanner() {
+    assert(app.playhead_scanner_active);
+    if (!plate_scanner_x_) {
+        invalidate_waveform_area();
+        return;
+    }
+    const double x = plate_scanner_x_();
+    invalidate_scanner_line(x, x);
 }
 
 // move_playhead_to: THE MOVEMENT OWNER — the A/B audition's END in front of the

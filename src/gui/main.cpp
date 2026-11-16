@@ -1418,10 +1418,12 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 // empty rect (w 0), and so is an area with no rows.
 // TWO CONSUMERS: Viewport::
 // invalidate_scanner_line builds one per place (old and new), unites them
-// when they touch and invalidates what comes out — REAL DAMAGE; the tick's
-// offscreen fallback in this file reads only the WIDTH, as an emptiness
-// test. They are the two per-frame scanner sites, the narrow-on-plate shape
-// (the rule and the per-site table at playhead_pixel_x, app_state.h).
+// when they touch and invalidates what comes out — REAL DAMAGE, for the two
+// per-frame scanner sites and the launch's and the stop's edges
+// (Viewport::invalidate_standing_scanner, architect 2026-11-16, send Q);
+// the tick's offscreen fallback in this file reads only the WIDTH, as an
+// emptiness test. The narrow-on-plate shape (the rule and the per-site
+// table at playhead_pixel_x, app_state.h).
 // WHAT IT DOES NOT COVER IS NOT THE SCANNER'S: the clock cell, whose run
 // reads the scanner's time, is damaged beside it by the same sites
 // (clock_invalidate_rect below); the passes drawn after the scanner (the
@@ -1992,6 +1994,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             paint_handler.plate_viewport_basis();
         return playhead_pixel_x(app, static_cast<int64_t>(pb.vp_start),
                                 pb.spp, pb.lattice_origin);
+    };
+    // The launch's and the stop's seam (architect 2026-11-16, send Q; the
+    // contract at its Viewport declaration and
+    // Viewport::invalidate_standing_scanner): the scanner's exact place on
+    // the PLATE basis, the expression the two per-frame scanner sites below
+    // read and paint_scanner paints by.
+    viewport.plate_scanner_x_ = [&]() {
+        const GuiPaintHandler::PlateViewportBasis pb =
+            paint_handler.plate_viewport_basis();
+        return scanner_exact_x(app, static_cast<int64_t>(pb.vp_start),
+                               pb.spp, pb.lattice_origin);
     };
 
     // The touch navigation (touch phase 1, 2026-08-11; ELEVEN hooks since
@@ -3752,7 +3765,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // too, so the old
         // line is erased wholesale in the
         // mutating frame and this narrow pair only ever has to cover the ordinary
-        // per-frame advance.
+        // per-frame advance (the launch's seed and the stop's teardown, the
+        // scanner's two other place changes, declare their own places,
+        // Viewport::invalidate_standing_scanner, send Q).
         const double old_x = scanner_exact_x(app, pb_vp, pb.spp,
                                              pb.lattice_origin);
         // Advance both fields: the integer sample (domain / change-detection)
