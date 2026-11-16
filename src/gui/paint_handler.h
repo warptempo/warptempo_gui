@@ -320,8 +320,9 @@ struct WaveformCache {
 
     // THE AHEAD PLATE (send M, 2026-11-15; architect 2026-11-15: "do the
     // next page, draw and ahead"): THE NEXT PAGE's plate (Viewport::next_page,
-    // viewport.cpp, owns the term), rendered during the current page of a
-    // paging play by GuiPaintHandler::maintain_ahead_plate (the rule at its
+    // viewport.cpp, owns the term), rendered during the current page by
+    // GuiPaintHandler::maintain_ahead_plate where it is handed one (the
+    // pre-paint hook hands none, send N, 2026-11-15; the rule at its
     // definition, waveform_cache.cpp) WITH THE KEPT BARS above, so that the
     // kept rows hold the next page's bars when the turn's synchronous rebuild
     // asks for them. NOT A PUBLICATION: it is no slot of the plate's two
@@ -823,8 +824,10 @@ struct GuiPaintHandler {
     // (architect 2026-07-26 — moving and resting plates come off one code path;
     // see the routing rules at the definition). Undriven changes — resize, the
     // launch load, the preview completion's repaint — stay on the worker;
-    // FOLLOW'S PAGE TURN joined this route 2026-09-02 (the vanishing
-    // playhead line — the reasoning is at Viewport::follow_scroll_if_needed).
+    // FOLLOW'S CAMERA joined this route 2026-09-02 (the vanishing playhead
+    // line — the reasoning is at Viewport::follow_scroll_if_needed), the
+    // follow scroll's frames riding apply_strip_drag_zoom's kick
+    // (Viewport::follow_scanner).
     // ONE PER FRAME since 2026-10-13: a kick OWES it (owe_waveform_rebuild)
     // and the pre-paint hook runs it (flush_owed_waveform_rebuild); a run by
     // any road discharges the debt. The rule is at Viewport::kick_waveform_sync.
@@ -848,9 +851,10 @@ struct GuiPaintHandler {
     // WaveformCache::ahead_columns): once a frame from the pre-paint hook
     // (main.cpp), after flush_owed_waveform_rebuild and before
     // settle_owed_lane_damage. `next_page` is THE NEXT PAGE's rest
-    // (Viewport::next_page) during THE PAGING PLAY (main.cpp's
-    // paging_play), none otherwise. It renders the ahead plate at most once
-    // per page and publishes and damages nothing.
+    // (Viewport::next_page) where the caller hands one; the hook hands none
+    // (send N, 2026-11-15: FOLLOW scrolls), so the ahead plate never stands.
+    // It renders the ahead plate at most once per page and publishes and
+    // damages nothing.
     void maintain_ahead_plate(const std::optional<ViewportRest>& next_page);
 
     // THE PRE-PAINT CHECK OF WHAT THE NARROWED ROUTES OWE (2026-10-13): the

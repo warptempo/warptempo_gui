@@ -66,8 +66,10 @@ struct GuiNoiseVoice;   // noise.h
 // visible discontinuity, never inside the audio callback. The set of
 // resync events: playhead jumps via move_playhead, discrete zooms via the shared
 // apply_zoom_change helper, the resize zoom-out reclamp,
-// follow's page-in (follow_scroll_if_needed) and the follow toggle's lit edge
-// — AND, SINCE 2026-09-17, THE LOOP WRAP. (The C key's recenter, center_viewport_on_playhead, shares
+// follow's page-in (follow_scroll_if_needed — during a play the follow
+// scroll's off-screen-left arm alone; the scroll's own placements,
+// Viewport::follow_scanner, are pan frames and resync nothing) and the
+// follow toggle's lit edge — AND, SINCE 2026-09-17, THE LOOP WRAP. (The C key's recenter, center_viewport_on_playhead, shares
 // the discrete move's resync but meets no live session: `c` stops playback
 // before it centres.)
 // Every GUI launch still runs [start, end) once and stops at the natural end
@@ -111,7 +113,7 @@ struct GuiNoiseVoice;   // noise.h
 // NOT land). Every resync is an EVENT — FOURTEEN
 // call sites at this writing (re-counted 2026-09-17), in classes: the zooms
 // (apply_zoom_change, apply_strip_drag_zoom's final frame,
-// apply_zoom_to_start), the centring jump, follow's page and the on-edge of the follow
+// apply_zoom_to_start), the centring jump, follow's page-in and the on-edge of the follow
 // toggle, the map-change re-land (reseat_playhead_to), the resize whose
 // level moved, the pointer ends (the nav drag's release and force-end, the
 // touch hard end), and — the one class whose event is the AUDIO THREAD'S

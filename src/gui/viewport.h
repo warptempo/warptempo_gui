@@ -127,7 +127,7 @@ struct Viewport {
     //    apply_zoom_to_start, center_viewport_on_playhead, the discrete move's
     //    other three callers (hold_subject_column_after_nudge,
     //    follow_scroll_if_needed and land_subject),
-    //    apply_strip_drag_zoom),
+    //    apply_strip_drag_zoom and the follow scroll through it, follow_scanner),
     //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
     //    switch (GuiInputHandler::switch_active_audio_view_to) and the A/B tab
     //    switch (GuiActiveViews::switch_active_tab_view_to — Ctrl+Tab and the
@@ -247,8 +247,8 @@ struct Viewport {
     // any more.
     // (The live-per-event kick that remains is apply_strip_drag_zoom — a
     // generic viewport rebuild, not a map edit, a sustained pointer gesture
-    // paying one full rebuild per displayed frame since the rebuild became
-    // owed, 2026-10-13, below.)
+    // or a following play's scroll (follow_scanner) paying one full rebuild
+    // per displayed frame since the rebuild became owed, 2026-10-13, below.)
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
@@ -264,16 +264,15 @@ struct Viewport {
     // vanished for a frame or two at each crossing; its reasoning lives at
     // follow_scroll_if_needed. Panning left the list 2026-07-26 for the same
     // rule: a mover the user sees renders synchronously like zoom. So the
-    // playback mover is on the synchronous route now, once per page (the
-    // per-frame centered pin that shared the route from 2026-08-31 retired
-    // 2026-09-13).
+    // playback mover is on the synchronous route, once per frame the follow
+    // scroll moves the picture (follow_scanner, send N, 2026-11-15).
     //
     // THE REBUILD IS OWED, NEVER RUN HERE (architect 2026-10-13, P4 approved):
     // the callback marks the synchronous rebuild owed
     // (GuiPaintHandler::owe_waveform_rebuild, which also declares the
     // rebuild's rect so the frame that pays it is scheduled) and the
     // pre-paint hook runs it ONCE, at its tail (main.cpp) — after the
-    // scanner advance and Follow's page, either of which may kick, and before
+    // scanner advance and Follow's scroll, either of which may kick, and before
     // the owed lane check. The 2026-07-26 ruling that every mover takes the
     // synchronous full rebuild keeps its intent: EVERY FRAME takes one, from
     // the latest state, so no frame paints overlays against a stale plate;
@@ -411,12 +410,14 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // TWO callers (re-derived 2026-10-30): the touch-nav body
+    // THREE callers (re-derived 2026-11-15): the touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the song frame the pan seated, placed at the current
-    // fractional finger centroid, 2026-10-22) and the zoom step zoom_step
+    // fractional finger centroid, 2026-10-22), the zoom step zoom_step
     // (the viewport's centre frame held at the centre column, one final
-    // event per press). All pre-clamp the level; this
+    // event per press) and the follow scroll (follow_scanner, send N,
+    // 2026-11-15: the scanner held at the centre at the standing level, a pan
+    // frame the play makes, never final). All pre-clamp the level; this
     // places the anchor at
     // the new level and clamps. For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport
@@ -431,7 +432,7 @@ struct Viewport {
     // 2026-10-31; the rules at AppState::viewport_lattice_origin): the
     // touch-nav body passes Exact on a frame that changes the level (the
     // pivot's frame then sits at its column to one frame) and Keep on a pan
-    // frame; the zoom step passes Land, a landing.
+    // frame; the zoom step passes Land, a landing; the follow scroll Keep.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final,
                                ViewportLattice lattice);
@@ -493,17 +494,30 @@ struct Viewport {
     // definition), a subject less than one margin past the next page's edge
     // frame lands on the next page, between one and two margins in. It
     // suspends no
-    // follow with its own write (AppState::follow_suspended).
+    // follow with its own write (AppState::follow_suspended). Its callers: a
+    // launch with FOLLOW dark that asks LaunchCamera::PageIn (the A/B
+    // audition's always) and the follow scroll's off-screen-left arm
+    // (follow_scanner below).
     void follow_scroll_if_needed();
+    // THE FOLLOW SCROLL (architect 2026-11-15, send N, a trial; the rule's
+    // one owner at the definition): the picture moves only so that the
+    // moving line never passes the waveform area's center — a line left of
+    // it runs toward it over a still picture, one right of it is placed on
+    // it through the pan's own road (apply_strip_drag_zoom, the Keep
+    // lattice, no predictor resync), one off screen to the left is paged in.
+    // It suspends no follow with its own write. Its callers: the pre-paint
+    // advance during the following play (main.cpp), the launch's
+    // LaunchCamera::Follow and the FOLLOW lamp's lit edge during a play.
+    void follow_scanner();
     // THE NEXT PAGE of the live viewport (send M, 2026-11-15; the terms THE
     // EDGE FRAME and THE NEXT PAGE are defined at the definition,
     // viewport.cpp): the first frame that paints off screen to the right,
     // and the rest follow's page-in would settle a target standing on it —
     // or none where the geometry is degenerate or that rest is the live
-    // camera's (the right wall). PURE: it writes nothing. Its two readers
-    // are follow_scroll_if_needed's PAGE RULE (send M, 2026-11-15) and the
-    // ahead plate's maintenance (main.cpp's pre-paint hook,
-    // GuiPaintHandler::maintain_ahead_plate).
+    // camera's (the right wall). PURE: it writes nothing. Its one reader is
+    // follow_scroll_if_needed's PAGE RULE (send M, 2026-11-15); the pre-paint
+    // hook asks it nothing (send N, 2026-11-15), so the ahead plate
+    // (GuiPaintHandler::maintain_ahead_plate) never stands.
     struct NextPage {
         int64_t      edge_frame = 0;
         ViewportRest rest;

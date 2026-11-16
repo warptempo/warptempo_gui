@@ -84,7 +84,9 @@
 // leading records that are the page's own picture, the plate branch's first
 // four passes (GuiCanvasDrawList::prefix) — and a second list, THE AHEAD
 // LIST (gui_canvas_ahead below), carries the same four passes over the
-// next page's plate while a paging play stands. The GL canvas composes the
+// next page's plate where the ahead plate stands (it is handed no page,
+// send N, 2026-11-15: FOLLOW scrolls, so the list stays empty). The GL
+// canvas composes the
 // ahead list into a target of its own a slice a frame and, in a frame whose
 // prefix equals what that target was composed from, copies the target's
 // pixels in the prefix's place and draws the rest of the list over them

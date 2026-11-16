@@ -420,16 +420,17 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
                              "Playhead is off screen");
         return false;
     }
-    // PageIn: Space launches from the cursor and the scrub from a clicked
-    // column, so both roads start on screen except when the cursor has been
-    // left offscreen by a pan — which is exactly what the page-in rescues
-    // for the unrestricted play (the restricted one was refused above).
+    // FOLLOW LIT, THE FOLLOW SCROLL (Viewport::follow_scanner, send N,
+    // 2026-11-15); DARK, PageIn: Space launches from the cursor and the scrub
+    // from a clicked column, so both roads start on screen except when the
+    // cursor has been left offscreen by a pan — which is exactly what the
+    // page-in rescues for the unrestricted play (the restricted one was
+    // refused above).
     // THIS ENTRY'S PLAY IS THE RESTRICTABLE ONE (restrictable_play, the
     // contract at the declaration).
-    restrictable_play = launch_playback_window(launch_pos,
-                                               active_view_play_end(),
-                                               kPlaybackNoLoop,
-                                               LaunchCamera::PageIn);
+    restrictable_play = launch_playback_window(
+        launch_pos, active_view_play_end(), kPlaybackNoLoop,
+        app.follow ? LaunchCamera::Follow : LaunchCamera::PageIn);
     return restrictable_play;
 }
 
@@ -501,12 +502,12 @@ void GuiPlaybackLifecycle::car_play_playback() {
     // THE CAMERA IS THE FOLLOW LAMP'S (architect 2026-09-18; the ruling at
     // the declaration): this is the one launch in the product that may start
     // OFF SCREEN by design, the trim's begin being a fixed point while the
-    // passage under work sits screens downstream of it, so the page-in is
-    // the user's to ask for — lit, the launch pages in and the tick's
-    // autopager takes over the paging the instant it succeeds
-    // (AppState::follow).
+    // passage under work sits screens downstream of it, so the camera is
+    // the user's to ask for — lit, the launch takes the follow scroll
+    // (Viewport::follow_scanner) and the pre-paint advance keeps it the
+    // instant it succeeds (AppState::follow).
     launch_playback_window(begin, end, begin,
-                           app.follow ? LaunchCamera::PageIn
+                           app.follow ? LaunchCamera::Follow
                                       : LaunchCamera::Leave);
 }
 
@@ -526,8 +527,8 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     if (span <= 0) return false;
     // THE AUDITION IGNORES THE FOLLOW LAMP (architect 2026-09-11;
     // AppState::follow): its four bounded plays are each framed by their own
-    // `c`, so a page would only fight that framing. The autopager asks the
-    // act's phase and pages none of its plays.
+    // `c`, so a scroll would only fight that framing. The pre-paint follow
+    // scroll asks the act's phase and moves for none of its plays.
     const int64_t view_end = active_view_play_end();
     if (start >= view_end - 1) return false;
     const int64_t end = std::min(start + span, view_end);
@@ -558,9 +559,9 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // (Space's play edge and the scrub, `end` = the view's end), the bounded
 // audition (`end` = start + span, clamped) and the car's launch
 // (car_toggle_playback, `end` = the trim's end and `loop_begin` its begin,
-// 2026-09-17). `camera` is each caller's own word and takes no default — the
-// two GUI entries say PageIn, the car's says Leave unless the follow lamp
-// is lit (architect 2026-09-18; the enum's contract at the declaration). This
+// 2026-09-17). `camera` is each caller's own word and takes no default —
+// who says which is at the enum's declaration (architect 2026-09-18, the
+// caller's-word rule; the enum's contract at the declaration). This
 // body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
@@ -599,8 +600,9 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // launch position below are in the active PAINT domain
     // (full-target-frame in target view; source-frame otherwise)
     // — playback's API takes domain coordinates, so the same value
-    // serves both, and follow_scroll_if_needed compares the scanner
-    // against the full-domain viewport with no wrong-domain leak.
+    // serves both, and the launch's camera (follow_scroll_if_needed,
+    // follow_scanner) compares the scanner against the full-domain viewport
+    // with no wrong-domain leak.
     //
     // NO LOOPING ON ANY GUI ROAD (architect 2026-07-30, "looping behavior is
     // not that useful. ok to remove all looping" — re-ruling the 2026-07-19
@@ -691,24 +693,28 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     app.playhead_scanner_precise = static_cast<double>(start);
     app.playhead_scanner_active = true;
     // EVERY PLAY STARTS UNSUSPENDED (AppState::follow_suspended): a camera
-    // change during the play before this one suspended that play's paging,
-    // not this one's. Ahead of the page-in below, which keeps it as it
-    // stands.
+    // change during the play before this one suspended that play's
+    // following, not this one's. Ahead of the camera below, which keeps it
+    // as it stands.
     app.follow_suspended = false;
     // THE CAMERA IS THE CALLER'S WORD (architect 2026-09-18; the enum's
     // contract at the declaration). Where the caller says PageIn and the
     // launch position is offscreen, left-edge-align the viewport on it before
     // the scanner issues forth — follow's own page-in has exactly the right
-    // shape for it whether or not this play will follow. EVERY GUI ROAD SAYS
-    // PageIn AND STARTS ON SCREEN ANYWAY: Space launches from the cursor, the
-    // scrub from a column the user just clicked, the A/B audition's plays
-    // from a half its own `c` has centred — so the page-in there is a rescue
-    // for a cursor a pan has carried offscreen and a no-op otherwise. THE
+    // shape for it. EVERY GUI ROAD WITH FOLLOW DARK SAYS PageIn AND STARTS
+    // ON SCREEN ANYWAY: Space launches from the cursor, the scrub from a
+    // column the user just clicked, the A/B audition's plays from a half its
+    // own `c` has centred — so the page-in there is a rescue for a cursor a
+    // pan has carried offscreen and a no-op otherwise. WITH FOLLOW LIT the
+    // two user entries say Follow: THE FOLLOW SCROLL at the launch
+    // (Viewport::follow_scanner, the rule's one owner; architect 2026-11-15,
+    // send N), a launch position right of the center centered at once. THE
     // CAR'S PLAY IS THE ONE LAUNCH THAT STARTS OFF SCREEN BY DESIGN: its
     // position is the trim's BEGIN, a fixed point the worked passage sits
     // screens downstream of, so it says Leave unless the follow lamp is lit,
     // and the camera stays where the user left it.
     if (camera == LaunchCamera::PageIn) viewport.follow_scroll_if_needed();
+    if (camera == LaunchCamera::Follow) viewport.follow_scanner();
     // Damage the waveform area and the clock cell NOW, in the success tail
     // (strictly after every refusal return above). A launch's visible effect —
     // the scanner line appearing at the launch column and the timestamp readout
@@ -747,20 +753,22 @@ void GuiPlaybackLifecycle::toggle_follow() {
     app.follow = !app.follow;
     if (!app.follow) return;
     // THE RADIO (architect 2026-10-29, AppState::follow): FOLLOW lit puts
-    // RESTRICT out — with both lit the page below would carry the scanner
-    // away before RESTRICT's stop at the right edge could fire.
+    // RESTRICT out — with both lit the scroll below would carry the window
+    // along before RESTRICT's stop at the right edge could fire.
     app.restrict = false;
-    // THE LIT EDGE RESUMES THE PAGING AT ONCE: whatever suspended the play in
-    // flight is forgiven, and during a play the predictor re-anchors (as
-    // every discrete camera move does) and the scanner is paged back into
-    // view if a pan had left it offscreen — a no-op when it is in view. At
-    // rest the page-in is skipped: the next launch pages for itself. The
-    // A/B audition's plays are not paged (the autopager asks its phase), so
-    // the lamp lit during the act waits for the user's next play too.
+    // THE LIT EDGE RESUMES THE SCROLL AT ONCE: whatever suspended the play
+    // in flight is forgiven, and during a play the predictor re-anchors (as
+    // every discrete camera move does) and the follow scroll runs
+    // (Viewport::follow_scanner, send N, 2026-11-15): a scanner right of the
+    // center is placed on it, one off screen to the left paged in, one left
+    // of the center left to run. At rest the scroll is skipped: the next
+    // launch places the camera for itself. The A/B audition's plays are not
+    // followed (the pre-paint scroll asks its phase), so the lamp lit during
+    // the act waits for the user's next play too.
     app.follow_suspended = false;
     if (playback.is_playing() && !audition_sequence_standing(app)) {
         playback.resync_predictor();
-        viewport.follow_scroll_if_needed();
+        viewport.follow_scanner();
     }
 }
 
@@ -770,8 +778,8 @@ void GuiPlaybackLifecycle::toggle_restrict() {
     app.restrict = !app.restrict;
     if (!app.restrict) return;
     // THE RADIO (architect 2026-10-29, AppState::restrict): RESTRICT lit puts
-    // FOLLOW out, so the autopager stops paging the play in flight and the
-    // tick's stop at the right edge governs it from the next frame.
+    // FOLLOW out, so the follow scroll stops moving for the play in flight
+    // and the tick's stop at the right edge governs it from the next frame.
     app.follow = false;
 }
 

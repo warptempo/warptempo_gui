@@ -164,9 +164,10 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 // tried and bumped for a consistent feel; a flag that then clips at the right
 // edge is accepted and not designed around). A retune is this one number.
 // ITS READERS, grepped at the ruling — the one inventory of the class:
-//   * Viewport::follow_scroll_if_needed — follow's page-in, during playback
-//     and at a PageIn launch: an offscreen target lands the margin in from
-//     the LEFT edge, EXCEPT under ITS PAGE RULE (send M, 2026-11-15; the
+//   * Viewport::follow_scroll_if_needed — follow's page-in, at a PageIn
+//     launch and for the follow scroll's target off screen to the left
+//     (Viewport::follow_scanner): an offscreen target lands the margin in
+//     from the LEFT edge, EXCEPT under ITS PAGE RULE (send M, 2026-11-15; the
 //     architect's "agree"), where a target less than one margin past the
 //     next page's edge frame lands between one and two margins in (the
 //     margin the rule's bound too); and its prediction, Viewport::next_page,
@@ -1304,7 +1305,7 @@ struct TrimDragState {
 //     THE PRESS COLUMN STAYS THE COLUMN THE USER AIMED AT because the FOLLOW
 //     CHASE IS PAUSED for the press's whole life — the pre-paint gate refuses
 //     under any live pointer gesture (this pending included) and under any
-//     touch contact, so no autopager can slide the song beneath a held
+//     touch contact, so no follow scroll can slide the song beneath a held
 //     column between the press and the release that converts it (main.cpp);
 //   * CROSSING the threshold ends the click and BEGINS NOTHING (architect
 //     2026-10-30: on glass the pan is the touch layer's, before this road):
@@ -1453,7 +1454,7 @@ struct ScrollDragState {
 //     `retained` set, the stem still painted at the anchor's live column; the
 //     next button-held landing's zoom frames find it seated and of their own
 //     kind, so they continue about the SAME anchor_sample and anchor_col (no
-//     seat; a camera a following play paged meanwhile is re-seat (B) below,
+//     seat; a camera a following play scrolled meanwhile is re-seat (B) below,
 //     the column re-read from the live view), and the first such frame drops
 //     `retained` — the seat is a live gesture's again. The platform owns the
 //     pen facts and end_touch_nav asks it (GuiPlatform::
@@ -1492,7 +1493,7 @@ struct ScrollDragState {
 // the content and the held column follows it, which is the reversibility
 // paragraph above; and (B) A CAMERA ANOTHER WRITER MOVED under the gesture
 // (before the placement; `zoom_vp` / `zoom_level`, the camera the last zoom
-// frame settled, no longer stand) — a following play paging the view under
+// frame settled, no longer stand) — a following play scrolling the view under
 // the pen's retained anchor, or between the seat and the first applied
 // frame. At either re-seat a column pushed outside the waveform CLAMPS to the
 // edge pixel and REBINDS the held frame to that pixel's content — the edge
@@ -1999,7 +2000,7 @@ enum class RedesignButton {
     // the camera is. A plain per-project session lamp (AppState::follow;
     // architect 2026-09-23, reinstated the evening the Shift+C chase posture
     // that had replaced it that morning was deleted): lit, every project play
-    // pages the viewport in with the scanner; it stays lit across plays and
+    // is followed by the follow scroll (Viewport::follow_scanner); it stays lit across plays and
     // stops until `f` puts it out. It wears a lamp, reading the live bit its
     // own chord flips. It GREYS IN THE `h` VIEW, whose allowlist does not name
     // `f`, through the derived partition; it does NOT grey on a locked tab or
@@ -4695,18 +4696,19 @@ struct AppState {
 
     // FOLLOW — THE `f` LAMP (architect 2026-09-23, reinstated the evening
     // the Shift+C chase posture that had replaced it that morning was
-    // deleted). A PLAIN LAMP, NEVER A ONE-SHOT: lit, every PROJECT play pages
-    // the viewport in with the scanner; it stays lit across plays and stops
-    // until `f` puts it out; dark, no play moves the camera. At rest it does
-    // nothing. THE PLAY CAMERA READS IT LIVE: the pre-paint hook's autopager
-    // (Viewport::follow_scroll_if_needed through main.cpp, which asks this
-    // bit with playback live, follow_suspended below dark, the A/B audition
-    // not standing and no pointer or touch aim held) pages the viewport so
-    // the scanner lands the edge margin in from the left edge — between one
-    // and two margins in under the page rule (send M, 2026-11-15; at
-    // Viewport::follow_scroll_if_needed) — and the car's
-    // launch asks LaunchCamera::PageIn off it (car_play_playback). The A/B
-    // audition and the render player ignore it — the autopager asks the
+    // deleted). A PLAIN LAMP, NEVER A ONE-SHOT: lit, every PROJECT play
+    // carries the viewport with the scanner; it stays lit across plays and
+    // stops until `f` puts it out; dark, no play moves the camera. At rest
+    // it does nothing. THE PLAY CAMERA READS IT LIVE, AND IT SCROLLS
+    // (architect 2026-11-15, send N, a trial; THE FOLLOW SCROLL's one owner
+    // is Viewport::follow_scanner): the line runs to the waveform area's
+    // center over a still picture and the picture then moves under it,
+    // through the pre-paint advance (main.cpp, which asks this bit with
+    // playback live, follow_suspended below dark, the A/B audition not
+    // standing and no pointer or touch aim held), the two user launches
+    // asking LaunchCamera::Follow off it (launch_playback_from,
+    // car_play_playback) and the lamp's lit edge (toggle_follow). The A/B
+    // audition and the render player ignore it — the scroll asks the
     // audition's phase and returns under the player.
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_follow, the chokepoint bare
     //     `f` and its icon-row button share — and RESTRICT's lit edge
@@ -4716,8 +4718,8 @@ struct AppState {
     //     admitted under both locks (navigation).
     //   * A RADIO WITH RESTRICT (architect 2026-10-29): lighting either lamp
     //     puts the other out, so one camera posture stands at a time — with
-    //     both lit the autopager would page the scanner before RESTRICT's stop
-    //     at the right edge could fire. Putting a lamp out touches the other
+    //     both lit the scroll would carry the window along before RESTRICT's
+    //     stop at the right edge could fire. Putting a lamp out touches the other
     //     not at all.
     bool    follow                 = false;
 
@@ -4781,8 +4783,8 @@ struct AppState {
     // FOLLOW SUSPENDED FOR THE PLAY IN FLIGHT — the pan rule (architect
     // 2026-07-30, "every pan suppresses", kept for the reinstated lamp
     // 2026-09-23): a camera change during a play means the user has taken the
-    // viewport away to look elsewhere, so the autopager stops snatching it
-    // back until that play ends. The lamp stays lit. Meaningful only while a
+    // viewport away to look elsewhere, so the follow scroll stops snatching
+    // it back until that play ends. The lamp stays lit. Meaningful only while a
     // project play runs; its value at rest is never read.
     //   * SET by every CHANGED CAMERA at the chokepoint above
     //     (clamp_viewport_start) — the touch pan, the pointer zooms, the zoom
@@ -4792,16 +4794,17 @@ struct AppState {
     //     moves the camera. A PLACEMENT CLICK DURING A PLAY DOES NOT SET IT:
     //     the click moves the playhead, not the camera, and it stops the play
     //     (architect 2026-10-06), so there is no play left to suspend.
-    //   * KEPT AS IT STOOD by follow's own page-in (follow_scroll_if_needed)
-    //     and by the movement owners' keep-visible edge-align
+    //   * KEPT AS IT STOOD by follow's own camera — the follow scroll
+    //     (Viewport::follow_scanner) and its page-in (follow_scroll_if_needed)
+    //     — and by the movement owners' keep-visible edge-align
     //     (reseat_playhead_to), each restoring it behind its clamp. Bare `c`
     //     keeps nothing: it stops the play before it centres, so its camera
     //     write suspends a play that is no longer running, a value never read
     //     before the next launch clears it.
     //   * CLEARED by every launch (the one launch body's success tail,
-    //     GuiPlaybackLifecycle::launch_playback_window, ahead of its page-in),
+    //     GuiPlaybackLifecycle::launch_playback_window, ahead of its camera),
     //     so each play starts following while the lamp is lit, and by the lamp's
-    //     lit edge (toggle_follow), which during a play resumes the paging at
+    //     lit edge (toggle_follow), which during a play resumes the scroll at
     //     once.
     bool    follow_suspended       = false;
 
@@ -10829,9 +10832,9 @@ inline int64_t snap_authored_frame(double frame) {
 //     the hook pattern);
 //   * the run loop's per-tick redesign-button hover refresh (main.cpp) — an
 //     active gesture FREEZES hover;
-//   * the run loop's PRE-PAINT FOLLOW CHASE (main.cpp) — the autopager is the
-//     product's one autonomous viewport mover, and every aiming gesture
-//     converts a window column through the CURRENT viewport later than the
+//   * the run loop's PRE-PAINT FOLLOW CHASE (main.cpp) — the follow scroll
+//     (Viewport::follow_scanner) is the product's one autonomous viewport
+//     mover, and every aiming gesture converts a window column through the CURRENT viewport later than the
 //     press it was aimed with, so the chase is PAUSED (it writes nothing here,
 //     so this is no follow producer) for the gesture's whole life. Its touch
 //     sibling term is the platform's own contact query, the Pending window
@@ -17334,8 +17337,9 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         case RedesignButton::ViewPhase:  return a.active_markers_view == 'P';
         // FOLLOW'S LAMP (architect 2026-09-23): the same toggle pattern,
         // reading the live bit bare `f` flips. It reports the lamp, not
-        // whether the play in flight is paging — a pan during a play suspends
-        // that play's paging with the lamp still lit (AppState::follow).
+        // whether the play in flight is followed — its camera is the follow
+        // scroll (Viewport::follow_scanner), and a pan during a play suspends
+        // that play's scroll with the lamp still lit (AppState::follow).
         case RedesignButton::IconFollow:
             return a.follow;
         // RESTRICT'S LAMP (architect 2026-10-29): the same toggle pattern,
@@ -19622,7 +19626,7 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 // through item_viewport_basis instead, the same painted twin. THE RECORDED
 // LIVE-BASIS FAMILY IS NARROWER NOW: the post-commit land/follow placements
 // alone — land_playhead_on_marker, land_playhead_on_domain_frame and the
-// follow lamp's camera paging, which WRITE the viewport rather than read a
+// follow lamp's camera scrolling, which WRITE the viewport rather than read a
 // snapshot of it, so staying live is what keeps them from chasing their own
 // tail — while walls stay integer source frames outside either basis;
 // the rule is STRICTLY AS PAINTED, stated whole at the head of this block,
@@ -19941,7 +19945,7 @@ std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
 // than the cue: the key's column is a key-surface rule (tooltip_column_rect).
 int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out);
 // marker_cue_face — THE SEAT'S FACE, read from the LIVE stash so a cue that
-// moved (FOLLOW paging, a relayout) is read where it is painted: the face
+// moved (FOLLOW scrolling, a relayout) is read where it is painted: the face
 // (as marker_cue_hit's) of the topmost published rect naming store index
 // `idx`, or the zero rect where none does or in the `h` view — the painter
 // then paints nothing and the walk's next pass ends the box. The face is the

@@ -2361,11 +2361,11 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         TouchNavZoomState& z = app.touch_nav_zoom;
         // RE-SEAT (B), A CAMERA ANOTHER WRITER MOVED under the gesture: the
         // camera the seat or the last zoom frame settled no longer stands (a
-        // following play paged the view under the pen's retained anchor, or
+        // following play scrolled the view under the pen's retained anchor, or
         // between the seat and the first applied frame), so the held column
         // would yank the view back to the section it left. The column is
         // re-read from the live viewport through the edge trick's one owner,
-        // which pins a frame the page carried off the waveform at the edge
+        // which pins a frame the scroll carried off the waveform at the edge
         // pixel and rebinds it to that pixel's content.
         // A REBIND THAT MOVES THE ANCHOR'S FRAME OWES THE STEM'S DAMAGE
         // (architect 2026-11-14, send J; canvas_sink.h's damage contract):
@@ -5752,7 +5752,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
         //
         // WHAT THE LOWER HALF GAINS BY BEING A PENDING: for the press's whole
         // life it is a live pointer gesture like the upper half's — every
-        // chord is swallowed and follow's page is paused — which is exactly
+        // chord is swallowed and follow's scroll is paused — which is exactly
         // the symmetry the
         // ruling asked for and not a new rule of its own.
         //

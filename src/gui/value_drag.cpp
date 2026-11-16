@@ -237,7 +237,7 @@ void ValueDragOps::apply_motion(int mouse_y) {
 void ValueDragOps::commit() {
     if (!app.value_drag.active) return;
     // READ, CLEAR, THEN ACT — the release bodies' standing shape, so the tail
-    // below runs with no gesture live (follow's page asks
+    // below runs with no gesture live (follow's scroll asks
     // any_pointer_gesture_active, and this body's own tail moves the
     // camera through the reseat).
     ValueDragState st = std::move(app.value_drag);

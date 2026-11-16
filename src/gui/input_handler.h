@@ -1120,7 +1120,7 @@ struct GuiInputHandler {
     //
     // Navigation-class whole: no playhead, no selection, no region, allowed in
     // read-only, and a frame that moves the camera puts out the hold and
-    // suspends a following play's paging through the chokepoint's clamp
+    // suspends a following play's scroll through the chokepoint's clamp
     // (AppState::camera_hold, follow_suspended). Implemented beside the strip drag in
     // input_pointer.cpp.
     void apply_touch_nav_update(const GuiTouchNavFrame& frame);

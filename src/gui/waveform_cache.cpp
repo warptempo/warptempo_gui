@@ -966,14 +966,9 @@ bool GuiPaintHandler::live_plate_is_live_view() const {
 //      whole row only where nothing is kept — the first render under a key
 //      (a lamp flip, an S/T switch, a map edit in target view), a new rung
 //      at a level switch, a jump to a disjoint range (a page turn keeps its
-//      overlap), a moved band height. DURING A PAGING PLAY the kept rows
-//      stand on the next page once the ahead plate has rendered it (send M,
-//      2026-11-15, maintain_ahead_plate): the turn, which under follow's
-//      page rule lands on that very page, then asks none, and any other
-//      rebuild before the turn — a
-//      pan, which suspends the paging, or a kick that leaves the camera —
-//      asks the live page's bars the next page does not share, nearly the
-//      whole row. Its cost without the store, the row
+//      overlap), a moved band height. A FOLLOWING PLAY's scroll frame
+//      (Viewport::follow_scanner, send N, 2026-11-15) is a pan's: the few
+//      bars at the edge it moves toward. Its cost without the store, the row
 //      itself — the area's width over the bars' pitch and a halo of a few,
 //      at most the width out of the fade band; in it the fine row and its
 //      parents, N + 2N, up to three times the width just past a whole
@@ -1221,8 +1216,8 @@ void GuiPaintHandler::flush_owed_waveform_rebuild() {
 // ONCE A FRAME, from the pre-paint hook (main.cpp) after the owed rebuild's
 // flush — so the live plate is the live viewport's — and before the owed
 // lane check:
-//   1. NOT WANTED — no next page (not THE PAGING PLAY, main.cpp's
-//      paging_play, or none at the right wall), or the live plate not the
+//   1. NOT WANTED — no next page (the pre-paint hook hands none, send N,
+//      2026-11-15: FOLLOW scrolls), or the live plate not the
 //      live viewport's (unpublished, or its fingerprint not the live
 //      inputs': a worker publication pending, a load): the ahead plate stops
 //      standing and the settle count is 0. Nothing is freed.

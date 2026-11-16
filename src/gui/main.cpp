@@ -1945,7 +1945,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     auto invalidate_dialog_editor_box = [&]() { viewport.invalidate_dialog_editor_box(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
     auto invalidate_playhead_columns = [&](int a, int b) { viewport.invalidate_playhead_columns(a, b); };
-    auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
+    auto follow_scanner              = [&]() { viewport.follow_scanner(); };
 
     bool initial_load_done = false;
     // THE LOAD HAS RETURNED, SUCCEEDED (its one writer, the startup tick's
@@ -3153,7 +3153,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // column outside the waveform area and
             // invalidate_playhead_columns emits no damage for one, so a
             // scanner that has left the viewport (a launch inside a trim
-            // window the user then panned away from, follow not paging)
+            // window the user then panned away from, follow not scrolling)
             // leaves this tick producing NO damage at all — and with the
             // pre-paint hook the sole advancer of the scanner position
             // while playing, no damage means no paint means the position
@@ -3283,20 +3283,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         ab_audition.advance_after_natural_end(ended_audition);
     });
 
-    // THE PAGING PLAY (send M, 2026-11-15): the state in which the advance's
-    // autopager below would page — a PROJECT play with the scanner active
-    // (no load in flight, audio present, neither the render player nor the
-    // score viewer standing: their plays are their items' and return ahead
-    // of the autopager) with FOLLOW lit and not suspended for this play, and
-    // no A/B audition standing (its plays are framed by their own `c`). ONE
-    // PREDICATE, read by the autopager's condition, where every term ahead
-    // of FOLLOW's already holds (the advance's returns; a playing engine is
-    // a raised scanner bit, the launch raising it and every stop lowering it
-    // with the engine), and by the ahead plate's maintenance in the hook
-    // below (GuiPaintHandler::maintain_ahead_plate). The autopager's two
-    // PAUSE terms — a pointer gesture, a touch contact — are its own and no
-    // part of this: a held pen pauses the turn, not the preparation.
-    const auto paging_play = [&]() {
+    // THE FOLLOWING PLAY (send N, 2026-11-15): the state in which the
+    // advance's follow scroll below runs (Viewport::follow_scanner, the
+    // rule's one owner) — a PROJECT play with the scanner active (no load in
+    // flight, audio present, neither the render player nor the score viewer
+    // standing: their plays are their items' and return ahead of the scroll)
+    // with FOLLOW lit and not suspended for this play, and no A/B audition
+    // standing (its plays are framed by their own `c`). ONE PREDICATE, read
+    // by the scroll's condition, where every term ahead of FOLLOW's already
+    // holds (the advance's returns; a playing engine is a raised scanner
+    // bit, the launch raising it and every stop lowering it with the
+    // engine). The scroll's two PAUSE terms — a pointer gesture, a touch
+    // contact — are its own and no part of this.
+    const auto following_play = [&]() {
         return !app.loading && audio.total_frames() > 0 &&
                !app.render_player.active && !score_viewer_stands(app) &&
                app.playhead_scanner_active &&
@@ -3435,9 +3434,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // playback_lifecycle.cpp), so the playhead rests where it stood before
         // the play, every stop edge's rule — after a Space play the point the
         // start gate admitted on the window, so the next Space plays the same
-        // stretch again unless the camera has moved. The return skips the autopager
-        // below, which the radio has put out anyway (follow dark while
-        // RESTRICT is lit).
+        // stretch again unless the camera has moved. The return skips the
+        // follow scroll below, which the radio has put out anyway (follow
+        // dark while RESTRICT is lit).
         if (app.restrict && playback_lifecycle.restrictable_play &&
             pb.spp > 0.0) {
             const int    w    = waveform_area(app).w;
@@ -3451,52 +3450,53 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 return;
             }
         }
-        // FOLLOW NEVER PAGES UNDER A LIVE AIM (the two refusal terms
-        // below). Follow's page is the product's one AUTONOMOUS viewport mover: it
-        // fires from the clock rather than from an event, and every aiming
-        // gesture converts a WINDOW COLUMN through the CURRENT viewport at some
-        // later moment than the press the user aimed with —
+        // FOLLOW NEVER SCROLLS UNDER A LIVE AIM (the two refusal terms
+        // below). The follow scroll (Viewport::follow_scanner, the rule's one
+        // owner) is the product's one AUTONOMOUS viewport mover: it fires
+        // from the clock rather than from an event, and every aiming gesture
+        // converts a WINDOW COLUMN through the CURRENT viewport at some later
+        // moment than the press the user aimed with —
         //   * the pending nav-surface click (ScrollDragState) converts its
-        //     remembered press_x at the RELEASE, so a page in between would
+        //     remembered press_x at the RELEASE, so a scroll in between would
         //     place the playhead on whatever frame had slid under that column;
         //   * a live marker / trim / region / strip drag converts each motion's
-        //     window x the same way, so a page mid-drag would teleport the
+        //     window x the same way, so a scroll mid-drag would teleport the
         //     dragged subject under a motionless pointer;
         //   * on glass the conversion is deferred by design — a tap delivers its
         //     whole burst at the LIFT with the DOWN point's coordinates.
-        // PAUSING THE MOVER is the whole fix: with the page held, the
+        // PAUSING THE MOVER is the whole fix: with the scroll held, the
         // press-time viewport stays valid by construction and every existing
         // conversion is already correct — nothing captures frames at the press
         // and nothing about the click act or the fold moves. This is a PAUSE,
         // not an end: it writes nothing, so the lamp (AppState::follow) and
-        // the play's suspension are unchanged and the page simply
-        // resumes and catches up on the next tick after the gesture ends —
-        // including after a lost button or a force-end that ran no act at
-        // all. A long motionless HOLD therefore visibly freezes the page for
-        // as long as it is held, which is the intended reading: the user is
-        // aiming.
+        // the play's suspension are unchanged; the picture stands still while
+        // the line runs on, and the first frame after the gesture ends places
+        // the line at the center in one move — including after a lost button
+        // or a force-end that ran no act at all. A long motionless HOLD
+        // therefore visibly freezes the picture for as long as it is held,
+        // which is the intended reading: the user is aiming.
         // The touch term is the platform's (touch_contact_active — any finger
         // down), because nothing GUI-side is armed during a touch window (the
         // waveform's or the editor field's); the contract is at
         // the touch state block, input_core.h.
         // THE LAMP IS READ LIVE (architect 2026-09-23, AppState::follow): lit
         // and not suspended for this play by a camera change
-        // (AppState::follow_suspended), the play pages. THE A/B AUDITION IS
-        // NOT PAGED: its bounded plays are each framed by their own `c`, so
-        // the act's phase standing turns the page off (the render player
-        // never reaches here, its return above). Those terms are THE PAGING
-        // PLAY's (paging_play above, the one predicate); the two pause terms
-        // beside it are this autopager's own.
-        if (paging_play() &&
+        // (AppState::follow_suspended), the play scrolls, on every frame.
+        // THE A/B AUDITION IS NOT FOLLOWED: its bounded plays are each framed
+        // by their own `c`, so the act's phase standing turns the scroll off
+        // (the render player never reaches here, its return above). Those
+        // terms are THE FOLLOWING PLAY's (following_play above, the one
+        // predicate); the two pause terms beside it are this scroll's own.
+        if (following_play() &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
-            follow_scroll_if_needed();
+            follow_scanner();
     };
     gui.set_on_pre_paint([&]() {
         pre_paint_advance();
         // THE OWED PLATE REBUILD, ONCE PER FRAME (architect 2026-10-13; the
         // rule at Viewport::kick_waveform_sync): every kick since the last
         // frame owed it, and it runs here from the latest state — AFTER the
-        // advance, whose scanner sampling and Follow page may kick, and
+        // advance, whose scanner sampling and Follow scroll may kick, and
         // OUTSIDE the advance, whose early returns (loading, the render
         // player, a stopped play) must not skip a debt an event left; and
         // BEFORE the owed check below, because the rebuild declares the
@@ -3506,21 +3506,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // and the rebuild's full rect covers both of its columns.
         paint_handler.flush_owed_waveform_rebuild();
         // THE AHEAD PLATE (send M, 2026-11-15; the rule at
-        // GuiPaintHandler::maintain_ahead_plate): after the flush, so the live
-        // plate it checks is the live viewport's and a turn this frame has
-        // already paged, and ahead of the owed check, which it adds nothing
-        // to. The next page is asked only during THE PAGING PLAY.
-        std::optional<ViewportRest> ahead_page;
-        if (paging_play()) {
-            if (const std::optional<Viewport::NextPage> np =
-                    viewport.next_page())
-                ahead_page = np->rest;
-        }
-        paint_handler.maintain_ahead_plate(ahead_page);
+        // GuiPaintHandler::maintain_ahead_plate) IS HANDED NO PAGE: FOLLOW
+        // scrolls (Viewport::follow_scanner, send N, 2026-11-15) and turns no
+        // page, so the ahead plate stops standing and the ahead list stays
+        // empty. After the flush and ahead of the owed check, which it adds
+        // nothing to.
+        paint_handler.maintain_ahead_plate(std::nullopt);
         // THE OWED CHECK LAST (2026-10-13): the rows above the viewport's
         // lanes and the clock cell, which the narrowed routes owe a check
         // rather than a repaint, are compared after every write the advance
-        // made (a Follow page among them) and before the damage list is
+        // made (a Follow scroll among them) and before the damage list is
         // read (GuiPaintHandler::settle_owed_lane_damage, where the rule is).
         paint_handler.settle_owed_lane_damage();
         // THE GL CANVAS'S FRAME OPENS (2026-10-13, canvas_sink.h): the frame

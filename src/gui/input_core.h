@@ -992,7 +992,7 @@ private:
     // ANY CONTACT DOWN PAUSES THE FOLLOW CHASE — the one thing outside this
     // layer that reads the phase machine, through touch_contact_active()
     // above. THE HONEST PHONE-MODEL STATEMENT: a finger on the glass means the
-    // user is aiming or gesturing, and the autopager must not move the song
+    // user is aiming or gesturing, and the follow scroll must not move the song
     // under it. It is not a nicety — the window's whole design defers
     // conversion: a TAP delivers its press+release burst AT THE LIFT carrying
     // the DOWN point's coordinates (any time later, the window having no

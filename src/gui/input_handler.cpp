@@ -2560,7 +2560,7 @@ void GuiInputHandler::run_overview_command() {
     //
     // THE HOLD POSTURE AND FOLLOW (AppState::camera_hold /
     // follow_suspended): `0` arms no hold and keeps none. Both acting presses
-    // put the hold out and suspend a following play's paging through the one
+    // put the hold out and suspend a following play's scroll through the one
     // chokepoint compare in clamp_viewport_start (the camera they settle
     // differs from the last one settled), and the restore's movement owner
     // puts HOLD out as well; no exemption is spelled here. The no-op writes

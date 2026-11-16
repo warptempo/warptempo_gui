@@ -3580,8 +3580,8 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // draw at w = 0, byte for byte, so the test moves which arm and which row
 // draw it and no pixel. WHY STRICT: at F = 1, P == 1 is A LANDING ON A
 // WHOLE LEVEL (q == B), and it stays the uniform one-bar-a-pixel plate —
-// one producer query and the cheaper arm, at rest, under playback and at
-// FOLLOW's page turns. So determinism's one seat (above) is unchanged, and
+// one producer query and the cheaper arm, at rest, under playback and
+// under FOLLOW's scroll. So determinism's one seat (above) is unchanged, and
 // at F = 1 a whole level is the one zoom of each doubling off the band.
 // OUT OF THE BAND the plate is rung B's uniform bars in every
 // respect — the row, the transform and the bytes — and Fh == 200 IS OFF

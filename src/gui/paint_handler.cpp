@@ -4609,10 +4609,10 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     //      for UNDRIVEN changes — resize, the launch load — and as the
     //      on_tick backstop for any residual fingerprint drift (a
     //      warp_frame_map hash included). Map EDITS themselves are
-    //      user-driven and take path 2, and so does FOLLOW'S PAGE TURN since
-    //      2026-09-02 (it was on this list until then; the playhead line is
-    //      drawn onto that very frame, so the page turn cannot wait a
-    //      publish — Viewport::follow_scroll_if_needed).
+    //      user-driven and take path 2, and so does FOLLOW'S CAMERA since
+    //      2026-09-02 — its page-in and its scroll's frames (the playhead
+    //      line is drawn onto that very frame, so the move cannot wait a
+    //      publish — Viewport::follow_scroll_if_needed, follow_scanner).
     //   2. Synchronous full render — force_synchronous_waveform_rebuild
     //      renders the full window inline on the GUI thread for every
     //      USER-DRIVEN viewport change: zoom, center-on-playhead, the
@@ -8478,7 +8478,7 @@ void GuiPaintHandler::note_upper_rows_painted(const GuiRect& exposed) {
 // THE OWED CHECK, run at the END OF THE PRE-PAINT HOOK (main.cpp), the one
 // seat that precedes every painted frame and may still add
 // damage (paint_one_frame's rule): after the hook's own writes (the
-// scanner's advance, Follow's page), and with nothing able to run between it
+// scanner's advance, Follow's scroll), and with nothing able to run between it
 // and the paint. Each target that still owes is checked against what IT
 // shows; any target whose record is invalid or differs from the live
 // fingerprint, or a floating surface standing over the rows, declares the

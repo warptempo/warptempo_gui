@@ -378,12 +378,13 @@ struct GuiPlaybackLifecycle {
     // trim's begin is a fixed point and the passage he is working on is
     // habitually a couple of screens downstream of it, so a page-in on every
     // console press cost him a manual recentre per audition. The launch
-    // states `LaunchCamera::PageIn` iff the lamp AppState::follow is lit and
-    // `LaunchCamera::Leave` otherwise — lit, the pre-paint autopager pages
-    // the scanner for the whole play (unless a camera change suspends it,
-    // AppState::follow_suspended); dark, nothing moves, at the launch or at
-    // any loop wrap (the wrap's consumer resyncs the predictor and damages,
-    // and writes no camera — main.cpp's tick).
+    // states `LaunchCamera::Follow` iff the lamp AppState::follow is lit and
+    // `LaunchCamera::Leave` otherwise — lit, the follow scroll
+    // (Viewport::follow_scanner) places the scanner at the launch and the
+    // pre-paint advance keeps it for the whole play (unless a camera change
+    // suspends it, AppState::follow_suspended); dark, nothing moves, at the
+    // launch or at any loop wrap (the wrap's consumer resyncs the predictor
+    // and damages, and writes no camera — main.cpp's tick).
     // A trim under two frames refuses in the body's own playable gate,
     // silently (the benign one-dimensional class: the playhead and the grey
     // say it). The target view's preview-readiness gate is THE CALLER'S on
@@ -452,8 +453,8 @@ struct GuiPlaybackLifecycle {
     // untouched exactly as under Space — the same launch body, the same
     // gates (playback_launch_playable, so a start at or past the domain end
     // or leaving fewer than two frames refuses), the same scanner — but NO
-    // FOLLOW: the pre-paint autopager asks the act's phase and pages none of
-    // its plays, each framed by its own `c`. Returns whether it launched; the refusals are the
+    // FOLLOW: the pre-paint follow scroll asks the act's phase and moves for
+    // none of its plays, each framed by its own `c`. Returns whether it launched; the refusals are the
     // launch body's own two — the POSITION gate, silent since 2026-08-31, and
     // the DEAD-DEVICE gate, which still cards — and the audition's press-time
     // preflight has already asked both ahead of the act (so a refusal here is
@@ -469,10 +470,10 @@ struct GuiPlaybackLifecycle {
     // `f` and the icon-row button that synthesizes that chord — the lamp
     // AppState::follow's one writer. It flips the lamp. The LIT EDGE also
     // clears AppState::follow_suspended, and during a project play (the A/B
-    // audition not standing) resyncs the predictor and pages the scanner
-    // back into view if a pan had left it offscreen, so the paging resumes
-    // at once; the dark edge writes nothing else, the camera staying where
-    // the page left it. The face repaints through the per-tick comparator,
+    // audition not standing) resyncs the predictor and takes the follow
+    // scroll at once (Viewport::follow_scanner: a scanner right of the
+    // center is placed on it, one off screen to the left paged in); the dark
+    // edge writes nothing else, the camera staying where the scroll left it. The face repaints through the per-tick comparator,
     // so this mutator owes no damage. Refused in the `h` view by the
     // dispatch (bare `f` is off that mode's allowlist), never here.
     // THE RADIO (architect 2026-10-29): the lit edge also puts RESTRICT out
@@ -511,18 +512,26 @@ private:
     // THE LAUNCH'S CAMERA TERM, THE CALLER'S WORD (architect 2026-09-18):
     //   * `PageIn` — if the launch position is offscreen, left-edge-align the
     //     viewport on it before the scanner issues forth
-    //     (Viewport::follow_scroll_if_needed, follow's own page-in). Every
+    //     (Viewport::follow_scroll_if_needed, follow's page-in). Every
     //     GUI launch road starts ON SCREEN by construction, so
     //     this is a no-op on the ordinary press and a rescue on the rare one.
     //     THE RESCUE IS THE UNRESTRICTED PLAY'S (architect 2026-10-29): under
     //     a lit RESTRICT the view-end entry refuses an offscreen launch
     //     position on a card before the body is reached, so no page-in ever
-    //     follows the playhead out of the window there.
+    //     follows the playhead out of the window there. Asked by the
+    //     view-end entry with FOLLOW dark and by the A/B audition, never
+    //     followed.
+    //   * `Follow` — THE FOLLOW SCROLL at the launch (architect 2026-11-15,
+    //     send N; Viewport::follow_scanner, the rule's one owner): a launch
+    //     position right of the center is centered at once, one off screen
+    //     to the left paged in, one left of the center moves nothing. Asked
+    //     by the two user entries — the view-end entry and the car's play —
+    //     when the lamp AppState::follow is lit.
     //   * `Leave` — the launch writes no camera at all.
     // NO DEFAULT ARGUMENT: every caller states its own, as MarkerLandingFrame
     // is stated at cycle_marker_focus (MarkerLandingFrame's precedent — a
     // camera term that defaults is a camera term nobody reads).
-    enum class LaunchCamera { PageIn, Leave };
+    enum class LaunchCamera { PageIn, Follow, Leave };
     // THE ONE LAUNCH BODY FOR THE PROJECT'S AUDIO (contract at the
     // definition): validate `start`, seed the scanner, and play [start, end)
     // — ONCE with `loop_begin` = kPlaybackNoLoop, or wrapping to `loop_begin`

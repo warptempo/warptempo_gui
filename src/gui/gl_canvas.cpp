@@ -41,7 +41,8 @@
 // canvas's own offscreen target over this frame's change alone, and each
 // window buffer is brought up to date by a copy out of it, the window's
 // bytes the target's, exactly (present_frame's THE FRAME TARGET). And THE
-// AHEAD TARGET (send M, 2026-11-15): during a paging play the next page's
+// AHEAD TARGET (send M, 2026-11-15): where the GUI hands an ahead list (it
+// hands none, send N, 2026-11-15: FOLLOW scrolls) the next page's
 // own picture is composed into a second target a slice a frame, and a frame
 // whose leading records equal it copies it in their place, the plain road's
 // bytes (present_frame's THE AHEAD TARGET and THE ADOPTION).
@@ -1874,8 +1875,9 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // THE AHEAD TARGET (send M, 2026-11-15; architect 2026-11-15: "do the next
 // page, draw and ahead. Even if it's only as insurance for a later future
 // iteration of the project on a more powerful tablet, where I may try to
-// squeeze even more performance out of it"): while a paging play stands
-// the GUI hands the next page's PREFIX — the four passes over the next
+// squeeze even more performance out of it"): where the ahead plate stands
+// (it is handed no page, send N, 2026-11-15) the GUI hands the next page's
+// PREFIX — the four passes over the next
 // page's plate, the ahead list (gui_canvas_ahead, canvas_sink.h) — beside
 // the frame's list, and its picture is composed AHEAD into a second
 // target, ensure_texture's twin of the frame target, so the turn copies
@@ -1949,8 +1951,9 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // and the next buffers' copies; a frame at rest draws nothing. A TURN THAT
 // ADOPTS (send M) costs a fetch a pixel over the clip and the suffix's few
 // lines in the plate's place, its heavy GPU work spread as eight slices
-// over the page before it; outside a paging play the ahead list is empty
-// and the verdict and the ahead step cost a handful of compares.
+// over the page before it; the ahead list empty (send N, 2026-11-15: no
+// page is handed), the verdict and the ahead step cost a handful of
+// compares.
 // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
 // 2026-10-24): an empty clip — no list yet, or a paint area the folder
 // overlay emptied — leaves nothing out of any upload and draws no list.

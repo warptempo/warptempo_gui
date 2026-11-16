@@ -805,10 +805,12 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // 2026-09-23): a camera this applier moves — either axis, the level
     // included, since a song-anchored zoom carries the view off the scanner
     // as a pan does — is a camera change at clamp_viewport_start, which puts
-    // out the hold and suspends a following play's paging
-    // (AppState::camera_hold, AppState::follow_suspended); follow has no
-    // exemption here, so a zoom during a following play suspends its paging.
-    // `level_changed` reports a real move, not a request: BOTH callers — the
+    // out the hold and suspends a following play's scroll
+    // (AppState::camera_hold, AppState::follow_suspended); a pan or a zoom
+    // has no exemption here, so it suspends the following play's scroll, and
+    // the follow scroll itself restores the suspension behind its call
+    // (follow_scanner). `level_changed` reports a real move, not a request:
+    // the two zooming callers — the
     // touch-nav body (apply_touch_nav_update, the pinch and the one-finger
     // ctrl zoom) and the zoom step (zoom_step) — pre-clamp
     // new_level into the same [effective_min_zoom_level, effective_max_zoom_level]
@@ -857,7 +859,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 // 2026-10-27, keeping 2026-09-25's "every zoom clears the camera hold"): the
 // applier pays what every zoom pays (the synchronous rebuild, the damage, the
 // predictor resync while playing), the chokepoint's compare puts the HOLD
-// out and suspends a following play's paging (AppState::camera_hold,
+// out and suspends a following play's scroll (AppState::camera_hold,
 // follow_suspended), and a level move clears Zoom to Fit's whole-song state
 // (ViewState::whole_song_visible), so a step taken while FIT stands drops
 // the recall exactly as a Ctrl+drag zoom there does — the next `0` zooms out
@@ -1249,8 +1251,8 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
 // else — no next page (the right wall), a target further past E (a launch
 // off screen, a held pen that paused the page while the scanner ran on), a
 // target off screen to the LEFT — the page is aligned on t as above. Every
-// caller takes the one rule: the autopager, the launch's PageIn and the
-// lamp's lit edge.
+// caller takes the one rule: a launch's PageIn and the follow scroll's
+// off-screen-left arm (follow_scanner below).
 // OFF SCREEN IS AS PAINTED (architect 2026-09-28, displayed_frame_on_screen,
 // warp_frame_map_view.h): the page fires once the scanner's painted column
 // leaves [0, w), so the half-column before the right edge, where its column
@@ -1262,11 +1264,12 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
 // scanner to the launch position), so the same landing rule places an
 // offscreen launch position the same margin in from the left edge.
 // THE LAUNCH CALL IS THE CALLER'S WORD SINCE 2026-09-18
-// (GuiPlaybackLifecycle::LaunchCamera): every GUI road asks for it and starts
-// on screen anyway (Space's cursor launch is the one that a pan can have
+// (GuiPlaybackLifecycle::LaunchCamera): every GUI road asks for it with
+// FOLLOW dark (lit, the follow scroll, follow_scanner below) and starts on
+// screen anyway (Space's cursor launch is the one that a pan can have
 // carried out of view; a scrub click is a visible column already), while the
 // CAR'S play of the trim — the one launch that begins off screen by design —
-// asks for it only when the follow lamp is lit, so the camera stays where
+// asks for no camera with the follow lamp dark, so the camera stays where
 // the user left it.
 //
 // THE PAGE IS FOLLOW'S OWN CAMERA MOVE AND SUSPENDS NOTHING (architect
@@ -1321,6 +1324,86 @@ void Viewport::follow_scroll_if_needed() {
     }
 }
 
+// THE FOLLOW SCROLL (architect 2026-11-15, send N: FOLLOW built as a
+// scrolling follow, A TRIAL he judges on glass; "run to center, then
+// scroll"; the scroll in place of the page flip, which "is ... more of a
+// Reaper design" — his lean to Live's follow, the line standing at the
+// center and the waveform moving under it). THE ONE OWNER OF THE RULE:
+// THE PICTURE MOVES ONLY SO THAT THE MOVING LINE NEVER PASSES THE WAVEFORM
+// AREA'S CENTER. The target t is the scanner's continuous position
+// (playhead_scanner_precise, the place its line is drawn from) while the
+// scanner is active, else the cursor's frame; every test is on the LIVE
+// viewport — its start, its lattice origin, the painted step q
+// (painter_samples_per_pixel) and the waveform area's width w — ON SCREEN
+// AS PAINTED:
+//   (a) t PAINTS OFF SCREEN TO THE LEFT (its column, displayed_column_at,
+//       below 0): THE PAGE-IN as it stands, follow_scroll_if_needed above —
+//       t lands the edge margin in from the left edge, then runs toward the
+//       center under (c) and (b).
+//   (b) ELSE, where THE CENTERED START nearbyint(t − (w / 2)·q) — the start
+//       that paints t at x = w / 2, the area's exact middle (a column
+//       boundary where w is even) — LIES PAST THE LIVE START: THE PLACEMENT,
+//       t at the center, through THE PAN'S OWN ROAD, apply_strip_drag_zoom at
+//       the standing level with t anchored at w / 2 under
+//       ViewportLattice::Keep, the test and the placement one arithmetic. The
+//       start snaps onto the camera's CURRENT lattice (a pan's rule,
+//       AppState::viewport_lattice_origin: a pure index shift), so the
+//       picture translates by whole device px, a following play from a landed
+//       view stays on the frame-0 lattice and the rest after its Stop is a
+//       landing's picture; the line, painted at its exact place as
+//       everywhere, stands within half a px of the center plus the
+//       whole-frame rounding of the requested start (nearbyint, before the
+//       lattice snap), 0.5 / q px more at most, away from the walls. The walls clamp
+//       as for any pan: at the song's end the picture stops at the right wall
+//       and the line runs on to the edge. A centered start that snaps back
+//       onto the standing one moves nothing and damages nothing (the
+//       applier's true-no-op skip); every moved frame takes the applier's
+//       synchronous rebuild (through the kept bars, WaveformKeptBars,
+//       render.h) and its full waveform-area damage, and NO PREDICTOR RESYNC
+//       (`final` false): a scroll frame is a pan frame the play makes, never
+//       a discrete event. The snap rounds to the nearest lattice point and
+//       the live start is one, so a centered start past it never lands left
+//       of it: the rule only ever moves the picture forward, except (a).
+//   (c) ELSE NOTHING: a line left of the center runs toward it over a still
+//       picture.
+// THE SCROLL IS FOLLOW'S OWN CAMERA MOVE AND SUSPENDS NOTHING, the page's
+// rule (architect 2026-09-23, above): the chokepoint inside the applier
+// suspends follow at a changed camera, and the suspension is restored behind
+// it (AppState::follow_suspended); the HOLD posture stays out. Degenerate
+// geometry (no audio, nothing visible, q or w not positive) moves nothing.
+// THREE CALLERS: the pre-paint advance on every frame of THE FOLLOWING PLAY
+// (main.cpp's following_play; paused under a live aim, so the first frame
+// after the lift places the line at the center in one move), the launch's
+// LaunchCamera::Follow (GuiPlaybackLifecycle::launch_playback_window: a
+// start right of the center is centered at once) and the FOLLOW lamp's lit
+// edge during a play (GuiPlaybackLifecycle::toggle_follow).
+void Viewport::follow_scanner() {
+    if (audio.total_frames() <= 0) return;
+    if (samples_visible(app, audio) <= 0) return;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return;
+    const double q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0) return;
+    const double t = app.playhead_scanner_active
+        ? app.playhead_scanner_precise
+        : static_cast<double>(app.playhead_cursor_sample);
+    // (a) Off screen to the left: the page-in.
+    if (displayed_column_at(t, static_cast<double>(app.viewport_start_sample),
+                            q, app.viewport_lattice_origin) < 0) {
+        follow_scroll_if_needed();
+        return;
+    }
+    // (b) Right of the center: t placed at the center, the pan's road.
+    const double center_x = static_cast<double>(area.w) / 2.0;
+    const int64_t centered_start =
+        static_cast<int64_t>(std::nearbyint(t - center_x * q));
+    if (centered_start <= app.viewport_start_sample) return;   // (c)
+    const bool suspended_before = app.follow_suspended;
+    apply_strip_drag_zoom(app.zoom_level, t, center_x, /*final=*/false,
+                          ViewportLattice::Keep);
+    app.follow_suspended = suspended_before;
+}
+
 // THE NEXT PAGE (send M, 2026-11-15; architect 2026-11-15: "do the next
 // page, draw and ahead. Even if it's only as insurance for a later future
 // iteration of the project on a more powerful tablet, where I may try to
@@ -1329,9 +1412,7 @@ void Viewport::follow_scroll_if_needed() {
 //     grid step q, the waveform area's width w): the least frame f >= start
 //     whose painted column displayed_column_at(f, start, q, origin) is >= w —
 //     the first frame that paints off screen to the right on the cameras'
-//     own test (displayed_frame_on_screen), so a scanner running right is
-//     paged by follow_scroll_if_needed above at the first frame it reaches
-//     at or past E. Found from the column formula — the column is
+//     own test (displayed_frame_on_screen). Found from the column formula — the column is
 //     K − m with K the quotient (f − origin) / q taken ties right
 //     (lattice_index_ties_right), so it reaches w where the quotient reaches
 //     m + w − 0.5 — and SETTLED BY TESTING displayed_column_at on the
@@ -1348,15 +1429,11 @@ void Viewport::follow_scroll_if_needed() {
 //     where nothing is visible, q or w is not positive, or the rest is the
 //     live camera's (start and origin): at the right wall, where follow's
 //     page settles onto the wall it stands at.
-// PURE: it reads the live viewport and writes nothing. ITS TWO READERS:
+// PURE: it reads the live viewport and writes nothing. ITS ONE READER:
 // follow_scroll_if_needed above, whose PAGE RULE writes this rest where the
-// target lies less than one edge margin past E — so an uninterrupted
-// paging play's turn lands on exactly this page — and the ahead plate's
-// maintenance (GuiPaintHandler::maintain_ahead_plate, from main.cpp's
-// pre-paint hook during THE PAGING PLAY), which renders this page's plate
-// during the current page so the turn's own rebuild finds its bars kept
-// (WaveformKeptBars, render.h) and the GL canvas composes its picture ahead
-// (gl_canvas.cpp's present_frame, THE AHEAD TARGET).
+// target lies less than one edge margin past E. The pre-paint hook asks it
+// nothing (send N, 2026-11-15: FOLLOW scrolls, follow_scanner above), so
+// the ahead plate (GuiPaintHandler::maintain_ahead_plate) never stands.
 std::optional<Viewport::NextPage> Viewport::next_page() const {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return std::nullopt;
@@ -1501,8 +1578,9 @@ std::optional<Viewport::NextPage> Viewport::next_page() const {
 // running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition (its three
 // centrings `c`'s act too, 2026-09-29), which
 // centre unconditionally (center_viewport_on_playhead after the working
-// zoom); follow's page-in during playback (follow_scroll_if_needed, which
-// reads the scanner and keeps follow's suspension its own); the nudge's
+// zoom); follow's camera during playback (follow_scanner and its page-in,
+// follow_scroll_if_needed, which read the scanner and keep follow's
+// suspension their own); the nudge's
 // cameras.
 bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     if (hi < lo) std::swap(lo, hi);   // defensive; the callers pass in order
