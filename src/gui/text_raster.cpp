@@ -269,10 +269,51 @@ struct Stamp {
     int         y      = 0;
 };
 
+// THE CUT (show_glyphs_within's contract, text_raster.h): the mask's columns
+// [x0, x0 + w) in device px, each multiplied by the length of it that lies
+// inside the visible intervals (device x, ascending and disjoint). The
+// weights are built first — whole columns inside an interval 1, a column an
+// edge crosses its covered fraction, summed where two intervals meet in one
+// column — then only the columns whose weight is not 1 are touched.
+void cut_mask(uint8_t* mask, int stride, int x0, int w, int h,
+              const XSpan* visible, int nvisible, double tx) {
+    static std::vector<float> weight;
+    weight.assign(static_cast<std::size_t>(w), 0.0f);
+    for (int i = 0; i < nvisible; ++i) {
+        const double a = std::max(visible[i].x0 + tx, static_cast<double>(x0));
+        const double b =
+            std::min(visible[i].x1 + tx, static_cast<double>(x0 + w));
+        if (!(b > a)) continue;
+        const int ca = static_cast<int>(std::floor(a));
+        const int cb = static_cast<int>(std::ceil(b));   // one past the last
+        for (int c = ca; c < cb; ++c) {
+            const double lo = std::max(a, static_cast<double>(c));
+            const double hi = std::min(b, static_cast<double>(c + 1));
+            weight[static_cast<std::size_t>(c - x0)] +=
+                static_cast<float>(hi - lo);
+        }
+    }
+    for (int c = 0; c < w; ++c) {
+        const float wt = weight[static_cast<std::size_t>(c)];
+        if (wt >= 1.0f) continue;
+        uint8_t* p = mask + c;
+        if (wt <= 0.0f) {
+            for (int y = 0; y < h; ++y, p += stride) *p = 0;
+        } else {
+            for (int y = 0; y < h; ++y, p += stride)
+                *p = static_cast<uint8_t>(
+                    std::lround(static_cast<float>(*p) * wt));
+        }
+    }
+}
+
 // One run of at most kRunGlyphs: every glyph's raster summed, saturating,
-// into the one mask and the mask composited at its whole place.
+// into the one mask, the mask cut to the visible intervals where the caller
+// gave any (`visible` null: the whole run), and composited at its whole
+// place.
 void show_run(cairo_t* cr, cairo_scaled_font_t* font, const FontKey& key,
-              double tx, double ty, const cairo_glyph_t* glyphs, int count) {
+              double tx, double ty, const cairo_glyph_t* glyphs, int count,
+              const XSpan* visible, int nvisible) {
     RasterTable& t = raster_table();
     t.reserve_once();
     // THE BOUND, tested where no index is held: a run that could pass the
@@ -333,6 +374,8 @@ void show_run(cairo_t* cr, cairo_scaled_font_t* font, const FontKey& key,
                 dst[x] = static_cast<uint8_t>(v > 255u ? 255u : v);
             }
     }
+    if (visible != nullptr)
+        cut_mask(mask.data(), stride, x0, w, h, visible, nvisible, tx);
     cairo_surface_t* surface = cairo_image_surface_create_for_data(
         mask.data(), CAIRO_FORMAT_A8, w, h, stride);
     // The mask's corner in user space: whole device px less the context's
@@ -356,7 +399,19 @@ void show_glyphs(cairo_t* cr, cairo_scaled_font_t* font,
     cairo_get_matrix(cr, &m);
     for (int at = 0; at < count; at += kRunGlyphs)
         show_run(cr, font, key, m.x0, m.y0, glyphs + at,
-                 std::min(kRunGlyphs, count - at));
+                 std::min(kRunGlyphs, count - at), nullptr, 0);
+}
+
+void show_glyphs_within(cairo_t* cr, cairo_scaled_font_t* font,
+                        const cairo_glyph_t* glyphs, int count,
+                        const XSpan* visible, int nvisible) {
+    if (count <= 0 || nvisible <= 0) return;
+    const FontKey key = font_key(font);
+    cairo_matrix_t m;
+    cairo_get_matrix(cr, &m);
+    for (int at = 0; at < count; at += kRunGlyphs)
+        show_run(cr, font, key, m.x0, m.y0, glyphs + at,
+                 std::min(kRunGlyphs, count - at), visible, nvisible);
 }
 
 InkBox ink_box(cairo_scaled_font_t* font, const cairo_glyph_t* glyphs,

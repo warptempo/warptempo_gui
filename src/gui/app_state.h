@@ -5856,12 +5856,13 @@ struct AppState {
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
     // carries one entry per SELECTED cue, enabled or disabled (2026-11-11),
-    // which on the two LIVE columns means every selected marker whose column
-    // is a waveform column in [0, w) (the producers' gate, stem_column_on_waveform in
-    // render.cpp; a flag hanging into view from past either edge publishes no
+    // which on the two LIVE columns means every selected marker whose stem's
+    // line reaches the waveform's columns [0, w) (the producers' gate,
+    // stem_meets_waveform in render.cpp: any of the one-W line inside them;
+    // a flag hanging into view from further past either edge publishes no
     // entry) — an unselected marker has no stem, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode every selected
-    // item's one cue on a waveform column (2026-11-11); the painter
+    // item's one cue whose line reaches them (2026-11-11); the painter
     // paints every entry (2026-11-05). Since
     // the stems-inert ruling (architect 2026-08-12) `marker_stems` is
     // PAINT-ONLY: its readers are the per-frame stem painter's geometry

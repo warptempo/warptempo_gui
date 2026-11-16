@@ -373,14 +373,13 @@ struct WaveformCache {
 // foot) — the ruler lane, the marker lane and the foot line, 38 + 39 + 2 =
 // 79 device rows on the tablet at 200 % where the whole strip from row 0 is
 // 243 at key_height 17 (re-derived 2026-11-04 night). Every cue pixel is
-// inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
-// the font: in paint_cues (render.cpp) every label's face box and its text
-// are painted under a clip of the label's span
-// rectangles, each the lane's top row and cue_fill_h_px() tall (the marker
-// lane's composite height), so no cached label pixel leaves those rows
-// however far a glyph overshoots; the chips stand on the lane's own rows
-// under a clip of those rows (the chip's stamp, CoverageStampPass::chip,
-// cool_edit_paint.h; paint_cues); and the flag editor and its riding cells
+// inside the marker lane's rows BY THE PAINTER'S OWN CLIP, not by a bound on
+// the font: paint_cues (render.cpp) paints every label's text and strike
+// and every chip under ONE clip of the lane's rows over the waveform's
+// columns — a whole rectangle, the lane's top row and its height — so no
+// cached cue pixel leaves those rows however far a glyph overshoots (the
+// chip's stamp, CoverageStampPass::chip, cool_edit_paint.h); and the flag
+// editor and its riding cells
 // paint later onto the frame, never into this surface. The ruler lane above
 // is in the band as its clean upper boundary, with margin, not because
 // anything there is inked by a cue; the foot line is the strip's own foot.
@@ -996,14 +995,11 @@ private:
     // declaration in selection.h.
     struct PhaseResetOverlayBand {
         bool   valid    = false;
-        // The reset's own column, counted from the area's first, UNCLIPPED
-        // (negative when the reset stands off the area's left edge): the
-        // gate of the ring's left side, painted only where the column is
-        // the area's.
-        int    left_col = 0;
-        // THE EXACT PLACES the ring is painted at (architect 2026-11-14,
-        // send J; displayed_x_at, device px from the area's left edge,
-        // UNCLIPPED): the reset's own and the seed grain's end.
+        // THE EXACT PLACES the ring is painted at and gated on (architect
+        // 2026-11-14, send J; the gates 2026-11-15, the no-grid arc;
+        // displayed_x_at, device px from the area's left edge, UNCLIPPED —
+        // negative where the reset stands off the area's left edge): the
+        // reset's own and the seed grain's end.
         double left_x   = 0.0;
         double right_x  = 0.0;
     };
@@ -1187,9 +1183,10 @@ private:
     void paint_marker_stem_heads(cairo_t* cr);
     // THE ONE GEOMETRY both stem painters read (architect 2026-11-14, send
     // J): one real span of window columns per DISTINCT EXACT PLACE among the
-    // stash's entries — the one-W line centered on that place, gated on the
-    // entry's column and cut to `area`'s columns (waveform_gated_line_span,
-    // render.h; the rule at paint_marker_stems), two entries on one exact x
+    // stash's entries — the one-W line centered on that place, drawn where
+    // any of it is inside `area`'s columns and cut to them
+    // (waveform_line_span, render.h; the rule at paint_marker_stems), two
+    // entries on one exact x
     // one span (the coincident lines) — so the stem's two halves paint one
     // interval, once.
     std::vector<WaveformLineSpan> standing_stem_spans(

@@ -62,6 +62,10 @@
 #include <string_view>
 #include <vector>
 
+// text_raster.h's interval of user x, the cut painter's
+// (show_shaped_run_within below).
+namespace text_raster { struct XSpan; }
+
 namespace text_shape {
 
 // One positioned glyph of a shaped run, in pixels, relative to the run's pen
@@ -160,7 +164,11 @@ SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
 // is cut at a fraction). Cairo state and the current path are not modified.
 // The placement goes through one reused per-thread buffer (text_shape.cpp,
 // 2026-10-13), so a paint allocates nothing once that buffer has grown.
-// GUI THREAD ONLY (the raster road's tables, text_raster.h).
+// GUI THREAD ONLY — THE THREAD CONTRACT of every paint and ink measure in
+// this file (show_shaped_run, show_shaped_run_bytes, ink_left_px,
+// ink_right_px; the memo's too, above): the raster road's tables are
+// unlocked statics (text_raster.h's THE THREAD CONTRACT, which lists the
+// callers and the threads that never reach it).
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 
 // PAINT ONE BYTE RANGE OF `run` — the glyphs whose cluster begins in
@@ -175,6 +183,15 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // laid in its own ink. A range that holds no cluster paints nothing.
 void show_shaped_run_bytes(cairo_t* cr, const ShapedRun& run, double x,
                            double y, size_t byte_begin, size_t byte_end);
+
+// PAINT `run` AT EXACTLY (x, y), CUT TO THE VISIBLE INTERVALS OF x
+// (text_raster::show_glyphs_within, whose contract this hands on: `visible`
+// ascending and disjoint, the run's coverage multiplied column by column by
+// the length inside them — the ink clipped at each edge at exact coverage,
+// with no cairo clip). The marker lane's labels' painter (render.cpp).
+void show_shaped_run_within(cairo_t* cr, const ShapedRun& run, double x,
+                            double y, const text_raster::XSpan* visible,
+                            int nvisible);
 
 // A RUN'S FIRST INK, in pixels from the run's pen origin to THE REAL LEFT
 // EDGE OF ITS INK — the left side bearing of the run as it is painted

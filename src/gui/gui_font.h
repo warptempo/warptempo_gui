@@ -290,23 +290,23 @@ GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set);
 // be shown as a strike through … They become one"; "it's the same thickness
 // as the regular — for example, a T would have the same thickness"): the
 // rows of the bar a struck cue label wears through its run (show_cue_label,
-// render.cpp, the one painter), relative to the run's baseline row —
-// [baseline + dy, baseline + dy + h). THE THICKNESS IS THE FACE'S STROKE AT
+// render.cpp, the one painter), relative to the run's baseline —
+// [baseline + dy, baseline + dy + h), REAL EDGES (architect 2026-11-15, the
+// no-grid arc: nothing rounded between the face's metrics and the bar; the
+// painters lay it at exact coverage). THE THICKNESS IS THE FACE'S STROKE AT
 // THE SIZE: the use's file's "l" — one vertical stem — measured across its
-// unscaled outline (xMax − xMin, per em, read at the install) times the em,
-// std::nearbyint, at least one device px. THE HEIGHT IS THE FACE'S OWN
+// unscaled outline (xMax − xMin, per em, read at the install) times the em.
+// THE HEIGHT IS THE FACE'S OWN
 // STRIKEOUT POSITION (the file's OS/2 yStrikeoutPosition, per em, read at
-// the install): the band centered on it above the baseline, its top edge
-// rounded to a whole row at the element and the thickness below it. The cues'
+// the install): the band centered on it above the baseline. The cues'
 // labels are the Label face, the Bold file, since 2026-11-01 night, which is
 // measured alike (its own "l" stem and strikeout); for the record, for
 // Liberation Sans Regular (the "l" 180 of 2048 units, the strikeout 530):
-// at a 21-px em a stroke of 1.85 → 2 rows, centered 5.43 above the
-// baseline → rows baseline − 6 .. − 5; at 14 px 1.23 → 1 row, 3.62 above →
-// baseline − 4; at 10 px 0.88 → 1 row, 2.59 above → baseline − 3.
+// at a 21-px em a stroke of 1.85 px, centered 5.43 above the baseline; at
+// 14 px 1.23, 3.62 above; at 10 px 0.88, 2.59 above.
 struct GuiStrikeBand {
-    int dy = 0;   // the band's top row less the baseline row (negative: up)
-    int h  = 1;   // the band's rows, the stroke
+    double dy = 0.0;   // the band's top edge less the baseline (negative: up)
+    double h  = 0.0;   // the band's height, the stroke
 };
 GuiStrikeBand gui_font_strike_band(const GuiFont& f);
 

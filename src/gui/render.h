@@ -99,13 +99,15 @@ struct GuiRectF {
 //   THE SCORE PAGE — whole pixels at 100 % ("the score should have no
 //     upscaling or downscaling. It should be 100%. And if that's required,
 //     if that requires whole pixels, then so be it.").
-//   A FLOATING SURFACE'S BOX — the tooltip's and the notification cards':
-//     they stand over the canvas, which the GPU draws, and the backbuffer
-//     over the canvas holds alpha 0 or alpha 255 alone (canvas_sink.h's THE
-//     TRANSPARENCY INVARIANT: the texture's draw is unblended), so an edge
-//     at a fraction would leave a partly covered pixel nothing composites.
-//     The box is painted on whole edges; what is painted IN it — its text —
-//     is exact.
+//   A BOX PAINTED OVER THE CANVAS'S HOLE — the canvas is the GPU's, and
+//     the backbuffer over it holds alpha 0 or alpha 255 alone
+//     (canvas_sink.h's THE TRANSPARENCY INVARIANT: the texture's draw is
+//     unblended), so an edge at a fraction there would leave a partly
+//     covered pixel nothing composites: whatever chrome stands over the
+//     hole is whole pixels on its OUTER edges — the floating surfaces' boxes
+//     (the tooltip's and the notification cards'), the on-screen keyboard's
+//     outer edge, and any other chrome that reaches over it. What is
+//     painted IN such a box — its text, its inner marks — is exact.
 inline GuiRect hull(const GuiRectF& r) {
     const int x0 = static_cast<int>(std::floor(r.x));
     const int y0 = static_cast<int>(std::floor(r.y));
@@ -656,7 +658,7 @@ void install_true_colors(bool on);
 // ITS TOP; THE TICKS `ruler_tick` (Default's 919191), ONE W WIDE (the canvas's line,
 // waveform_line_px, 2026-11-04), EACH CENTERED ON ITS OWN EXACT TIME'S
 // PLACE at its exact coverage (architect 2026-11-14, send J; the line rule,
-// waveform_gated_line_span), STANDING ON THE
+// waveform_line_span), STANDING ON THE
 // RULER'S FOOT, the major 4 W and the minor 1 W (8 and 2 device rows at
 // 200 %, scaled_px), overlaying its bottom pad, NO SHADOW; THE DIGITS the
 // ruler face (GuiFace::Small, BOLD 8 W, 16 device px at 200 %) in the text
@@ -684,7 +686,7 @@ void install_true_colors(bool on);
 // chip's hit extent); IN THE
 // CANVAS A SOLID LINE, ONE W, AT ITS FRAME'S EXACT PLACE (architect
 // 2026-11-04: Live's playhead line, measured; the exact place architect
-// 2026-11-14, send J, waveform_gated_line_span; canvas_line, the scanner's
+// 2026-11-14, send J, waveform_line_span; canvas_line, the scanner's
 // form) in
 // THE PALETTE'S `playhead_line` (81E1EA), down the area's whole height,
 // the stereo divider's row included (architect 2026-11-02) — ONE STATIC
@@ -762,20 +764,22 @@ void install_true_colors(bool on);
 // LABEL FACE, BOLD Label 11 W, 22 device px at 200 % (gui_font.h's
 // kGuiFaceSizes; architect 2026-11-01 night, M5i; the retrofit's 22 device
 // px), starting the fill's reach right, the outline's W and a gap of 6 W
-// right of the column (cue_label_lead_px: 11 W, 22 device px at 200 %) —
-// its whole-px seat, ITS INK GLIDING WITH ITS MARK by the cue's exact place
-// less its column, at most half a px, A TRIAL (architect 2026-11-14, send
-// J: "The text is the one thing that is questionable, but I would say let's
-// give it a try"; show_cue_label's head, the seat paint_cues') — ON
+// right of the mark (cue_label_lead_px: 11 W, 22 device px at 200 %) —
+// STANDING WITH ITS MARK EXACTLY, its pen the cue's exact place plus that
+// lead, a real x (architect 2026-11-15, the no-grid arc: "looks better
+// because it just feels more cohesive now. The whole thing is just one
+// unit" — the glide's trial of 2026-11-14, send J, is the rule;
+// show_cue_label's head, paint_cues) — ON
 // THE LANE'S ONE BASELINE
 // at rest and in the editor (cue_baseline_px, THE METRICS RULE at
-// marker_lane_h_px: the x-height band centered in the lane, 13 rows from
-// its top and 14 from its bottom at 200 %) — `show_cue_label`, render.cpp,
+// marker_lane_h_px: the x-height band centered in the lane exactly, 13.69
+// px from its top and from its bottom at 200 %) — `show_cue_label`,
+// render.cpp,
 // the one painter of every label look on the face; and THE STEM, ON EVERY
 // SELECTED MARKER, ENABLED OR DISABLED (architect 2026-11-11, session 106)
 // — a SOLID ONE-W LINE in the `cue_outline`, centered on
 // the marker's frame at its exact place (architect 2026-11-14, send J, the
-// line rule at waveform_gated_line_span),
+// line rule at waveform_line_span),
 // FROM THE CHIP'S APEX ROW (the
 // lane's last) through the row of ground under the lane down the canvas's
 // whole height (waveform_line_px;
@@ -828,15 +832,18 @@ void install_true_colors(bool on);
 // ~19:00, after two near-coincident phase resets showed the earlier one's text
 // over the later's: "why not go simpler — later always wins?", and "a long
 // flag before a short one should continue after the short one ends"). The
-// labels paint LEFT TO RIGHT, each on an OPAQUE FACE BOX of the lane's own
+// labels paint LEFT TO RIGHT, each OWNING AN OPAQUE BOX of the lane's own
 // `lane_face` from ITS OWN
-// CHIP'S LEFT HIT EDGE (the column less cue_chip_hit_left_px, whole px) to
+// CHIP'S LEFT HIT EDGE (the cue's exact place less cue_chip_hit_left_px) to
 // one fill pad past its last segment's text, on THE WHOLE LANE'S ROWS (the
 // press target's rows, so the label is one geometry at rest and selected,
 // 2026-10-09 ~21:00), so
-// a later cue masks an earlier label's text only across its own
+// a later cue hides an earlier label's text only across its own
 // chip-to-end extent and an earlier long label's text resumes past a
-// short later one; no label is ever clipped. Then the chips paint LEFT TO
+// short later one — THE BOX'S EDGES REAL, the earlier text cut on them at
+// exact coverage, and the box itself never painted (the lane under the
+// cues is already its color; paint_cues, render.cpp; architect 2026-11-15,
+// the no-grid arc). Then the chips paint LEFT TO
 // RIGHT over every label, each at its mark's exact place, so a right chip
 // stands over its left neighbour's text and chip, its edge soft. The press follows the picture (topmost_flag_rect, app_state.cpp):
 // the rightmost chip, then the rightmost label box, under the point.
@@ -1743,7 +1750,7 @@ inline int logo_lane_h_px() {
 // PLACE at each pixel's exact coverage (architect 2026-11-14, send J): a
 // vertical one on its frame, the pixel boundary (architect 2026-11-06), a
 // horizontal one on its row — the rule's one statement at waveform_line_px
-// below, its paint waveform_gated_line_span and canvas_hline_span.
+// below, its paint waveform_line_span and canvas_hline_span.
 inline int hairline_px() { return scaled_px(1.0, 1); }
 
 // (THE PROGRAM'S FRAME — Cool Edit's frame window round the program, one
@@ -2039,7 +2046,7 @@ inline int trim_lane_h_px() {
 // 1 W since that night): ONE CANVAS LINE WIDE — waveform_line_px, the line
 // rule's W, 2 device px on the tablet at 200 %, 1 at 100 % — CENTERED ON
 // THE TICK'S OWN EXACT TIME'S PLACE (architect 2026-11-14, send J;
-// waveform_gated_line_span's rule, RulerComb's tick_frames), the
+// waveform_line_span's rule, RulerComb's tick_frames), the
 // major 4 W and the minor 1 W tall, 8 and 2 device rows on the tablet
 // (scaled_px, each floored at one row; the major 10 device rows of the text
 // round and the retrofit rounded to the unit). THEY OVERLAY THE RULER'S FOOT AND ADD
@@ -2119,37 +2126,45 @@ inline int cue_triangle_rows() {
 }
 // THE CHIP'S HEIGHT H, the outer triangle's height and half-base in device
 // px — and the ruler's head's: THE FILL'S ROWS, ONE W ABOVE THEM AND
-// nearbyint(W · √2) BELOW (architect 2026-11-04, mock g1: the triangle "in
-// a one-W 111111 outline"; the one-W band across a 45° side is √2 W along a
-// row), W hairline_px — A WHOLE NUMBER, so the outer's top edge stands on a
-// row boundary: 8 + 2 + 3 = 13 on the tablet at 200 %, 4 + 1 + 1 = 6 at
-// 100 %. THE CHIP'S APEX STANDS ON THE BOTTOM EDGE OF THE LANE'S LAST ROW
-// (cue_above_chip_h_px below: at 200 %, lane rows 202 .. 240, the outer's
-// rows 228 .. 240, its apex on the edge under row 240). THE RULER'S HEAD IS
+// W · √2 BELOW (architect 2026-11-04, mock g1: the triangle "in a one-W
+// 111111 outline"; the one-W band across a 45° side is √2 W along a row), W
+// hairline_px — THE EXACT SUM (architect 2026-11-15, the no-grid arc: the
+// √2 no longer rounded to a row; the triangle is stamped at exact coverage,
+// cool_edit_paint.h): cue_chip_h_exact_px, 8 + 2 + 2.83 = 12.83 on the
+// tablet at 200 %, 4 + 1 + 1.41 = 6.41 at 100 %. THE CHIP'S APEX STANDS ON
+// THE BOTTOM EDGE OF THE LANE'S LAST ROW (at 200 %, lane rows 202 .. 240,
+// its apex on the edge under row 240, its top edge 12.83 above it, inside
+// row 228). THE RULER'S HEAD IS
 // THE SAME CHIP (architect 2026-11-04, mock k1, "4 accept overlap"), its
 // apex on the bottom edge of the ruler's last row (200 %: ruler rows
-// 164 .. 199, the outer on 187 .. 199), so its top reaches into the ruler's
+// 164 .. 199), so its top reaches into the ruler's
 // digits where it stands under a label — ACCEPTED ("timestamp not really
 // important for fine tune, just ballpark"): it paints over them as a chip
 // paints over a label (paint_ruler_row).
 // THE FILL IS THE OUTER INSET BY ONE W ACROSS EACH OF ITS THREE EDGES
 // (architect 2026-11-14, send J): its top edge one W under the outer's and
 // ITS APEX W · √2 ABOVE THE OUTER'S (cue_chip_fill_drop_px, the exact
-// product, no rounding), so ITS HEIGHT and half-base are (H − W) − W · √2
-// (cue_chip_fill_h_px): on the tablet 2.83 and 8.17, at 100 % 1.41 and
-// 3.59 — the whole-cell chip's "W rows above, nearbyint(W · √2) below" with
-// the side's inset exact.
+// product), so ITS HEIGHT and half-base are (H − W) − W · √2 — EXACTLY THE
+// FILL'S NOMINAL ROWS (cue_chip_fill_h_px: 8 on the tablet, 4 at 100 %),
+// the inset the same real W across all three edges.
+// ONE SIZE, AND ITS WHOLE HULL DERIVED HERE: cue_chip_h_px is ceil(H), the
+// rows and half-columns that hold the chip — 13 on the tablet, 7 at 100 % —
+// what every WHOLE reader takes: the lane's seat (cue_above_chip_h_px), the
+// two extents (cue_chip_paint_reach_px, the hit pair) and so every cull,
+// damage box and published rect. The painter alone reads the exact H
+// (CoverageStampPass::chip).
+inline double cue_chip_h_exact_px() {
+    const double w = static_cast<double>(hairline_px());
+    return static_cast<double>(cue_triangle_rows()) + w + w * std::sqrt(2.0);
+}
 inline int cue_chip_h_px() {
-    const int w = hairline_px();
-    return cue_triangle_rows() + w +
-           static_cast<int>(
-               std::nearbyint(static_cast<double>(w) * std::sqrt(2.0)));
+    return static_cast<int>(std::ceil(cue_chip_h_exact_px()));
 }
 inline double cue_chip_fill_drop_px() {
     return static_cast<double>(hairline_px()) * std::sqrt(2.0);
 }
 inline double cue_chip_fill_h_px() {
-    return static_cast<double>(cue_chip_h_px() - hairline_px()) -
+    return cue_chip_h_exact_px() - static_cast<double>(hairline_px()) -
            cue_chip_fill_drop_px();
 }
 // THE LABEL'S HORIZONTAL LENGTHS, WHOLE W through scaled_px (the text
@@ -2176,7 +2191,7 @@ inline int cue_segment_gap_px() {
 // FROM ONE SEGMENT'S TEXT END TO THE NEXT SEGMENT'S TEXT START: the first's
 // right pad, the segment gap, the second's left pad — the run-to-run step
 // the segment boxes lay (cue_segment_boxes, render.cpp: a box is the text's
-// rounded advance plus a pad either side). Its one other reader is the `h`
+// own advance, unrounded, plus a pad either side). Its one other reader is the `h`
 // view's cue tooltip, which lays a changed item's struck run and plain run
 // on one line by the same step (architect 2026-11-11, session 107: "both in
 // one line with the old one struck and the old one listed first";
@@ -2198,8 +2213,8 @@ inline int cue_segment_text_gap_px() {
 // so the label follows the rows and keeps the gap. THE GAP IS MEASURED FROM
 // THE OUTLINE'S NOMINAL ONE-W EDGE BESIDE THE FILL'S REACH, not from the
 // chip's own widest reach: the outer's top corner stands H = rows + W +
-// nearbyint(W · √2) from the mark, so from it to the text's origin stand
-// the gap less nearbyint(W · √2) px, 9 on the tablet, AT EVERY ROW
+// W · √2 from the mark, so from it to the text's origin stand
+// the gap less W · √2 px, 9.17 on the tablet, AT EVERY ROW
 // COUNT — the lead and the chip's reach move together with the rows (the
 // triangles one W shorter, the labels one W left, architect 2026-11-12,
 // session 114: the chip's edge to the label's ink unchanged on his mock).
@@ -2267,59 +2282,66 @@ inline int time_field_h_px() {
 // lowercase, digits, `.`, `+`, `-`, `:`) with THE X-HEIGHT BAND CENTERED IN
 // IT, the x band being what the eye centers ("measuring in GIMP, the 'ass'
 // in pass has 15px to top and 16px to bottom; I can see that 1px
-// discrepancy"): k = max(ascender − x-height, descender) rows each side of
-// the x band — the label face's "l" ink, its "x" ink and its descent, each
-// rounded at the element (gui_font_ascender_ink_px, gui_font_x_ink_px,
-// gui_font_descent_px) — so the band is x + k above the baseline and k
-// below it.
-// THE BAND'S SEAT: THE X BAND CENTERED IN THE LANE, A HALF-ROW TIE UP —
-// its top x_top = floor((H − x) / 2) rows under the lane's top (H the
-// lane, x the x band's rows; cue_x_top_px), the pad above the band x_top −
-// outline − k (cue_editor_pad_above_px), the pad below it the rest, H −
-// x_top − x − k − outline (cue_editor_pad_below_px). ON THE TABLET AT 200 %
-// (Bold Label 11 W = 22 device px: ascender 16 (15.94), x 12 (11.62),
-// descent 5): k 5, the band 17 above the baseline and 5 below (22), the
-// lane 39 = 2 + 6 + 22 + 7 + 2, THE X BAND ROWS 13 .. 24 (13 rows above it,
-// 14 below), the band rows 8 .. 29, the baseline 25 rows under the lane's
-// top. A scale whose field is shorter than the box's minimum (2 · outline +
-// the band) takes that minimum, both pads 0. The chip's device rows are the
-// lane's bottom rows (cue_above_chip_h_px the remainder: 39 − 13 = 26 on
-// the tablet), under the band's descenders where no label stands beside it.
+// discrepancy"): k = max(ascender − x-height, descender) each side of the x
+// band — the label face's "l" ink, its "x" ink and its descent
+// (gui_font_ascender_ink_px, gui_font_x_ink_px, gui_font_descent_exact_px)
+// — so the band is x + k above the baseline and k below it.
+// THE BAND IS EXACT, THE LANE'S HEIGHT WHOLE (architect 2026-11-15, the
+// no-grid arc; render.h's hull holds the rule): the lane is layout — the
+// time field's whole height, every lane under it laid out against it — and
+// what is painted IN it stands on the face's real metrics, none rounded to
+// a row: the x band, k, the band's top, the label's baseline and the
+// editor's caret and selection band are real y.
+// THE BAND'S SEAT: THE X BAND CENTERED IN THE LANE EXACTLY — its top
+// x_top = (H − x) / 2 under the lane's top (H the lane, x the x band;
+// cue_x_top_px), the pad above the band x_top − outline − k
+// (cue_editor_pad_above_px), the pad below it the rest, H − x_top − x − k −
+// outline (cue_editor_pad_below_px) — THE SAME REAL LENGTH, so the space
+// above and below the text is identical. ON THE TABLET AT 200 % (Bold Label
+// 11 W = 22 device px: ascender 15.94, x 11.62, descent 4.66): k 4.66, the
+// band 16.28 above the baseline and 4.66 below (20.94), the lane 39 = 2 +
+// 7.03 + 20.94 + 7.03 + 2, THE X BAND from 13.69 to 25.31 under the lane's
+// top (13.69 above it, 13.69 below), the band from 9.03 to 29.97, the
+// baseline 25.31 under the lane's top. A scale whose field is shorter than
+// the box's minimum (2 · outline + the band's whole hull) takes that
+// minimum. The chip's rows are the lane's bottom rows (cue_above_chip_h_px
+// the remainder above its hull: 39 − 13 = 26 on the tablet), under the
+// band's descenders where no label stands beside it.
 inline constexpr double kCueEditorOutlineW = 1.0;
 inline int cue_editor_outline_px() {
     return scaled_px(kCueEditorOutlineW, 1);
 }
-inline int cue_band_k_px() {
+inline double cue_band_x_px() {
+    return gui_font_x_ink_px(gui_font(GuiFace::Label));
+}
+inline double cue_band_k_px() {
     const GuiFont f = gui_font(GuiFace::Label);
-    const int asc = static_cast<int>(std::nearbyint(gui_font_ascender_ink_px(f)));
-    const int x   = static_cast<int>(std::nearbyint(gui_font_x_ink_px(f)));
-    const int dsc = static_cast<int>(gui_font_descent_px(f));
-    return std::max(asc - x, dsc);
+    return std::max(gui_font_ascender_ink_px(f) - gui_font_x_ink_px(f),
+                    gui_font_descent_exact_px(f));
 }
-inline int cue_band_x_px() {
-    return static_cast<int>(std::nearbyint(
-        gui_font_x_ink_px(gui_font(GuiFace::Label))));
-}
-inline int cue_band_above_px() {
+inline double cue_band_above_px() {
     return cue_band_x_px() + cue_band_k_px();
 }
-inline int cue_band_below_px() {
+inline double cue_band_below_px() {
     return cue_band_k_px();
 }
 inline int marker_lane_h_px() {
     return std::max(time_field_h_px(),
-                    2 * cue_editor_outline_px() + cue_band_above_px() +
-                        cue_band_below_px());
+                    2 * cue_editor_outline_px() +
+                        static_cast<int>(std::ceil(cue_band_above_px() +
+                                                   cue_band_below_px())));
 }
-inline int cue_x_top_px() {
-    return (marker_lane_h_px() - cue_band_x_px()) / 2;
+inline double cue_x_top_px() {
+    return (static_cast<double>(marker_lane_h_px()) - cue_band_x_px()) / 2.0;
 }
-inline int cue_editor_pad_above_px() {
-    return cue_x_top_px() - cue_editor_outline_px() - cue_band_k_px();
+inline double cue_editor_pad_above_px() {
+    return cue_x_top_px() - static_cast<double>(cue_editor_outline_px()) -
+           cue_band_k_px();
 }
-inline int cue_editor_pad_below_px() {
-    return marker_lane_h_px() - cue_x_top_px() - cue_band_x_px() -
-           cue_band_k_px() - cue_editor_outline_px();
+inline double cue_editor_pad_below_px() {
+    return static_cast<double>(marker_lane_h_px()) - cue_x_top_px() -
+           cue_band_x_px() - cue_band_k_px() -
+           static_cast<double>(cue_editor_outline_px());
 }
 inline int cue_above_chip_h_px() {
     return marker_lane_h_px() - cue_chip_h_px();
@@ -2337,28 +2359,27 @@ inline int cue_fill_h_px() {
 // [box_y, box_y + box_h) exactly, a real y (no half rounded).
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // THE CUE LABEL'S BASELINE AND THE EDITOR'S BAND under the marker lane's top
-// (the metrics rule above): THE BAND — the flag editor's caret and selection
-// band (render_flag_editor_box reads cue_band_top_px and cue_band_h_px,
-// never a second derivation) — from the pad above's foot, the band's two
-// parts tall (rows 8 .. 29 on the tablet at 200 %); THE BASELINE the
-// band's top and its rows above the baseline (25 on the tablet).
+// (the metrics rule above), REAL y: THE BAND — the flag editor's caret and
+// selection band (render_flag_editor_box reads cue_band_top_px and
+// cue_band_h_px, never a second derivation) — from the pad above's foot,
+// the band's two parts tall (9.03 .. 29.97 on the tablet at 200 %); THE
+// BASELINE the band's top and its part above the baseline (25.31 on the
+// tablet).
 // Every label segment — the resting label, the bound cells, the history's
 // two halves — and the flag editor's text ride the baseline (the editor's
 // text sits at the label's seat).
-inline int cue_band_top_px() {
-    return cue_editor_outline_px() + cue_editor_pad_above_px();
+inline double cue_band_top_px() {
+    return static_cast<double>(cue_editor_outline_px()) +
+           cue_editor_pad_above_px();
 }
-inline int cue_band_h_px() {
+inline double cue_band_h_px() {
     return cue_band_above_px() + cue_band_below_px();
 }
-inline int cue_baseline_px() {
+inline double cue_baseline_px() {
     return cue_band_top_px() + cue_band_above_px();
 }
-// THE CHIP'S TWO EXTENTS round its mark's column `col` (architect
-// 2026-11-14, send J: hit boxes and published rects stay on the integer
-// column, the ruling at warp_frame_map_view.h's displayed_x_at; paint and
-// the damage it owes take the painted reach), H the chip's height
-// (cue_chip_h_px) — the marker's chip
+// THE CHIP'S TWO EXTENTS (architect 2026-11-14, send J), H the chip's
+// height's whole hull (cue_chip_h_px) — the marker's chip
 // and THE RULER'S HEAD alike, the head the same drawing:
 //   THE PAINTED REACH, cue_chip_paint_reach_px = H + 1 EACH SIDE: the chip
 //     is painted at its mark's exact x, the real interval [x − H, x + H]
@@ -2370,13 +2391,15 @@ inline int cue_baseline_px() {
 //     damage box (playhead_invalidate_rect, main.cpp), so no repaint can
 //     be narrower than what the head painted.
 //   THE HIT EXTENT, cue_chip_hit_left_px = H − 1 left and
-//     cue_chip_hit_right_px = H right of col — [col − (H − 1), col + H),
-//     12 and 13 device px on the tablet at 200 %, 5 and 6 at 100 %: the
-//     box every PRESS AND PUBLISHED RECT keeps, unmoved by the exact place
-//     (no input path reads an exact x). ITS READERS: the cue's published
-//     chip box and the label's occluding face box from its own chip's left
-//     edge (paint_cues, render.cpp; no label is clipped), and the head's
-//     published hit (paint_ruler_row, AppState::playhead_head_hit).
+//     cue_chip_hit_right_px = H right of the mark, 12 and 13 device px on
+//     the tablet at 200 %, 6 and 7 at 100 %: the box every PRESS AND
+//     PUBLISHED RECT keeps. ITS READERS: THE CUE'S, OFF THE CUE'S EXACT x
+//     (architect 2026-11-15, the no-grid arc) — [x − (H − 1), x + H), the
+//     published chip box and the label's occluding box from its own chip's
+//     left edge (paint_cues, render.cpp; no label is clipped) — and THE
+//     HEAD'S, off the playhead's column, [col − (H − 1), col + H) (the
+//     published hit, paint_ruler_row, AppState::playhead_head_hit). The
+//     pointer's place is a whole pixel in both tests.
 // The chip's rows are [yb − H, yb), yb the bottom edge of the row its apex
 // stands on.
 inline int cue_chip_paint_reach_px() {
@@ -2522,8 +2545,9 @@ inline int bottom_row_h_px() {
 // the flag iterator admits a marker whose triangle can reach into them (its
 // painted reach cue_chip_paint_reach_px left of its column, 14 device px on
 // the tablet at 200 %), so a marker just past the last
-// column shows the left half of its chip there, and no stem (the stem
-// stash is gated to [0, w)).
+// column shows the left half of its chip there, and of its stem the part
+// of the one-W line that still lies inside the columns (the stem stash's
+// gate is the line's own span, stem_meets_waveform, render.cpp).
 // THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because the channel is a
 // hairline (the slider's block, with its constants, is above): the channel
 // ONE W (hairline_px, the line rule, architect 2026-11-04); the thumb THE
@@ -2599,8 +2623,8 @@ inline GuiRectF scrub_thumb_box(const GuiRect& track, double center_x) {
 // the real interval [x − t / 2, x + t / 2] (architect 2026-11-14, send J,
 // reopening the whole-cell line — 2026-11-04 night's "an antialiased stem
 // centered on the frame" not taken, and 2026-11-06's straddle of whole
-// columns, which this is at a whole place; waveform_gated_line_span below,
-// the one owner, the gate still the column's): a frame on a whole place at
+// columns, which this is at a whole place; waveform_line_span below,
+// the one owner, its emptiness the gate): a frame on a whole place at
 // the tablet's t = 2 takes the
 // column left of the boundary and the frame's own, each whole. Nothing
 // moves in the lattice, the camera, the landings or the
@@ -2708,27 +2732,29 @@ static_assert(kWaveformSubcells % 4 == 0,
 // covers its two end columns half each, the line centered on the frame's
 // boundary — the rule's own consequence at a gui_scale the product does
 // not run at.
-// THE TWO EDGE RULES live here. A line is GATED ON ITS OWN COLUMN, `col` —
-// displayed_column_at's on the arguments x was taken on (the ruling at
-// warp_frame_map_view.h's displayed_x_at: gates stay on the integer column,
-// so a line appears or disappears whole at the strip's edge, up to a pixel
-// and a half at once): a col outside [0, area_w) answers the empty span,
-// whatever part of the real interval would reach the strip — a line
-// belongs to its column — and its interval is CUT AT BOTH EDGES, so a line
-// on column 0 or area_w − 1 paints only what lies inside the strip and
-// nothing reaches the ground beside the canvas. THE RIGHT EDGE'S ASYMMETRY
-// IS DELIBERATE (architect 2026-11-06, session 67): a frame at column w,
-// one past the area's last column (End at the whole-song zoom), paints no
-// line under the gate while a line on column 0 shows its right part — "I
-// don't go to the end of the file. There's no purpose. A marker, either
-// warp or phase reset there, does nothing. I would say leave."; the gate
-// stays. waveform_line_span is the cut alone, for a line whose place is
-// clamped into the strip (the zoom anchor's stem); waveform_gated_line_span
-// the gate and the cut.
+// THE EDGE RULE, ONE FOR BOTH EDGES (architect 2026-11-15, the no-grid arc:
+// "the priority would be moving everything to, as much as possible, to
+// fractional. Only things that are basically impossible to move, like the
+// damages and the culls, should stay integer." — reopening 2026-11-06's "the
+// gate stays", the column gate, and with it the right edge's asymmetry):
+// A LINE IS DRAWN WHENEVER ANY OF ITS REAL INTERVAL LIES INSIDE THE STRIP,
+// CUT AT THE STRIP'S EDGES — the span below is non-empty exactly when
+// [X − t / 2, X + t / 2) meets [area_x, area_x + area_w), and it IS that
+// intersection, so a line slides in and out at either edge by the fraction
+// of it that is inside, and nothing reaches the ground beside the canvas.
+// THE SPAN'S OWN EMPTINESS IS THE GATE: no column is asked, at the left edge
+// or the right — a frame one past the area's last column (End at the
+// whole-song zoom) shows the left half of its line on the last column, as a
+// frame at column 0 shows its right half.
 // THE READERS: canvas_line (render.cpp — the cursor's line, the scanner,
-// the zoom anchor's stem), the selection stems' two halves
-// (GuiPaintHandler::standing_stem_spans), the lead-in ring's left side
-// (paint_phase_reset_overlay_ring) and the ruler's ticks (paint_ruler_row).
+// the zoom anchor's stem, whose place is clamped into the strip), the
+// selection stems' two halves (GuiPaintHandler::standing_stem_spans) and
+// their producers' stash (stem_meets_waveform, render.cpp), the lead-in
+// ring's left side (paint_phase_reset_overlay_ring) and the ruler's ticks
+// (paint_ruler_row). CULLS STAY CULLS, on whole columns, and each is wider
+// than the line it could cut (the flag iterator's, render_playhead's: the
+// chip's reach, more than a W past the column a place lies within half a px
+// of).
 struct WaveformLineSpan {
     double x0 = 0.0;
     double x1 = 0.0;
@@ -2741,12 +2767,6 @@ inline WaveformLineSpan waveform_line_span(int area_x, int area_w, double x,
     return WaveformLineSpan{
         std::max(X - half, static_cast<double>(area_x)),
         std::min(X + half, static_cast<double>(area_x + area_w))};
-}
-inline WaveformLineSpan waveform_gated_line_span(int area_x, int area_w,
-                                                 int col, double x,
-                                                 int t = waveform_line_px()) {
-    if (col < 0 || col >= area_w) return WaveformLineSpan{};
-    return waveform_line_span(area_x, area_w, x, t);
 }
 // THE SCALE IS THE ONE THING A FLAG CUTS (architect 2026-09-19, replacing the
 // nine-glyph budget this lane carried from the retired marker-text lane). A
@@ -3120,16 +3140,18 @@ inline int level_travel_px() {
 //
 // SINCE 2026-10-09 A CUE IS TWO RECTS (architect 2026-10-09: "the flag's
 // press target becomes the union of the triangle and the label's box as
-// painted"): `x, y, w, h` is THE LABEL'S BOX as painted — its opaque face
-// box on THE WHOLE LANE'S ROWS (2026-10-09 ~21:00: a press anywhere in the
-// lane's height over the label's columns is the label's — "right now it's
-// too small to click"; cue_fill_h_px), from the chip's left edge (the
-// column less the chip's half width) to one fill pad past its last
-// segment's text, the occluding box the painter lays — and `tri_*` THE
-// CHIP'S, its HIT extent round its column, 2 · H − 1 device px
-// (cue_chip_hit_left_px, cue_chip_hit_right_px; H cue_chip_h_px: whole px
-// off the column, the painted chip within a px and a half of it, architect
-// 2026-11-14, send J) over its rows.
+// painted"): `x, y, w, h` is THE LABEL'S BOX — its occluding box, the
+// extent it hides earlier labels across, on THE WHOLE LANE'S ROWS
+// (2026-10-09 ~21:00: a press anywhere in the lane's height over the
+// label's columns is the label's — "right now it's too small to click";
+// cue_fill_h_px), from the chip's left edge (the cue's exact place less
+// the chip's hit extent) to one fill pad past its last segment's text —
+// and `tri_*` THE CHIP'S, its HIT extent round its exact place, 2 · H − 1
+// device px (cue_chip_hit_left_px, cue_chip_hit_right_px; H
+// cue_chip_h_px) over its rows. EVERY x HERE IS REAL (architect
+// 2026-11-15, the no-grid arc: a hit box stands on its mark's real edges):
+// the cue's exact place plus real offsets, the very edges the painter cut
+// and laid the label on.
 // Either may be empty (a cue with no label segment, a field
 // standing in for the label, the
 // riding cells' run, which carries no triangle). The containment owner is
@@ -3152,11 +3174,12 @@ struct FlagHitRect {
     double tri_h        = 0.0;
     // THE LABEL'S TEXT ORIGIN (architect 2026-11-09, session 100: "the first
     // char on the left of the tooltip should align horizontally with the
-    // first char of the marker"): the WHOLE-PX pen x of the cue pass's FIRST
+    // first char of the marker"): the EXACT pen x of the cue pass's FIRST
     // painted segment's run (paint_cues, render.cpp: the segment's box start
-    // plus the fill pad), unclipped — the label's ink stands within half a
-    // px of it, gliding with its mark (architect 2026-11-14, send J, a
-    // trial); the tooltip's seat does not glide. `has_text_x` false where no
+    // plus the fill pad — the cue's exact place plus the label's lead),
+    // unclipped: the very pen the label's ink is laid at, so the tooltip's
+    // text stands on the label's (architect 2026-11-15, the no-grid arc).
+    // `has_text_x` false where no
     // segment paints or the label's box lies off the waveform's columns, and
     // on the riding cells' run. ONE READER, the cue tooltip's seat
     // (marker_tooltip_box_rect, app_state.h); no hit reads it.
@@ -3220,9 +3243,12 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // hull, above): the same two fills on a GuiRectF — one solid rect on its
 // REAL edges, every pixel at the coverage the rect has of it, on the
 // chrome's context. The coverage is cairo's own gray antialiasing (the
-// fill's rectangular scan converter, the rect's edges on cairo's 24.8 fixed
-// point, 1/256 px), which the painter sets for its fill and puts back, so a
-// caller's CAIRO_ANTIALIAS_NONE never rounds it. A RECT WITH WHOLE EDGES
+// fill's rectangular scan converter: the rect's edges on cairo's 24.8 fixed
+// point, 1/256 px, and the coverage and the blend in cairo's 8-bit
+// arithmetic — measured on the host, a pixel within 2 levels of the
+// analytic coverage's blend), which the painter sets for its fill and puts
+// back, so a caller's CAIRO_ANTIALIAS_NONE never rounds it. A RECT WITH
+// WHOLE EDGES
 // WRITES THE INT ROAD'S BYTES: cairo turns a rectilinear path into boxes
 // first and fills pixel-aligned boxes directly, the same boxes under either
 // antialias mode (cairo 1.18.4, _cairo_spans_compositor_fill →
@@ -3234,28 +3260,28 @@ void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // on its own), whatever rect a painter intersects with it, or one rect of
 // on_redraw's strip-and-waveform pair: a rect that STRADDLES two rectangles
 // of a clip region would put cairo on its polygon road, whose rows are 15
-// sub-rows (measured on the host: an edge pixel up to 9 levels off the
-// coverage), so an exact fill is never painted across the rectangles of a
-// multi-rect clip.
+// sub-rows (an edge pixel about ten levels off the coverage, 12 measured
+// on the host), so an exact fill is never painted across the rectangles of
+// a multi-rect clip.
 void paint_cell_rect(cairo_t* cr, const GuiRectF& r, GuiColor c);
 void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c);
 // THE STRIKE'S BAR OVER ONE STRUCK RUN — THE ONE GEOMETRY (architect
 // 2026-10-26 ~15:10: "just the strike through on the text"; ~15:30, "the
 // same thickness as the regular — for example, a T would have the same
-// thickness"): the run's own face's stroke on that face's own strikeout rows
-// (gui_font_strike_band, gui_font.h) — [nearbyint(baseline) + dy, + h) —
-// across the run's whole advance, the cells [nearbyint(x), nearbyint(x +
-// width_px)), the cells the flag editor's selection band covers over the
-// same run. `font` is the run's face, `x` its WHOLE-PX pen, `baseline` its
-// baseline. The caller paints it as one rect in the run's own ink. TWO
-// READERS: the cue labels' text painter (show_cue_label, render.cpp — the
-// live lane and the `h` view's lane — which translates these cells by the
-// cue's glide with the text, a trial, architect 2026-11-14, send J) and the
-// `h` view's cue tooltip, on whole px (paint_shift_tooltip,
-// paint_handler.cpp; architect 2026-11-11, session 107: "draw the strike as
-// the lane's label strike is drawn").
-GuiRect struck_run_bar(const GuiFont& font, double x, double width_px,
-                       double baseline);
+// thickness"): the run's own face's stroke on that face's own strikeout
+// band (gui_font_strike_band, gui_font.h) — [baseline + dy, + h) — across
+// the run's whole advance, [x, x + width_px): AN EXACT RECT (architect
+// 2026-11-15, the no-grid arc), the run's own pen and baseline taken as
+// they are and the face's band unrounded, so the bar stands on the text it
+// strikes wherever that text stands. `font` is the run's face, `x` its pen,
+// `baseline` its baseline. The caller paints it at exact coverage in the
+// run's own ink. TWO READERS: the cue labels' text painter (show_cue_label,
+// render.cpp — the live lane and the `h` view's lane — through the coverage
+// stamp, cut where the label is) and the `h` view's cue tooltip (the exact
+// fill; paint_shift_tooltip, paint_handler.cpp; architect 2026-11-11,
+// session 107: "draw the strike as the lane's label strike is drawn").
+GuiRectF struck_run_bar(const GuiFont& font, double x, double width_px,
+                        double baseline);
 
 // THE DIRECT ROAD (2026-10-13): the context's own target as pixel words, and
 // the clip it holds in device pixels, for a painter that writes the words
@@ -4466,17 +4492,18 @@ struct GuiPlateColumns {
 // (architect 2026-11-14, send J; device px from area.x, playhead_exact_x /
 // scanner_exact_x's on the plate basis, app_state.h): the real interval
 // [x − t / 2, x + t / 2] centered on the frame, each pixel at its exact
-// coverage (the line rule at its exact place, waveform_gated_line_span), in
+// coverage (the line rule at its exact place, waveform_line_span), in
 // `color`,
 // SOLID — the scanner (Cool Edit's playback cursor a solid line, measured
 // 2026-10-09) and the resting cursor alike (architect 2026-11-04, Live's
 // playhead line; the static tone below, the caller's palette read,
 // paint_playheads) — painted
 // over whatever it crosses — waveform ink included. No-op if
-// outside; the line is GATED ON ITS OWN COLUMN `col` (playhead_pixel_x /
+// outside; the line is drawn wherever any of its real interval lies inside
+// the area and cut at both edges (waveform_line_span, the one edge rule), so
+// it never leaks into an adjacent region; `col` (playhead_pixel_x /
 // scanner_pixel_x's, the nearest lattice point on the same basis: the
-// column of x) and cut at both edges, so it never leaks into an adjacent
-// region.
+// column of x) is the cull's alone.
 //
 // THE RESTING CURSOR IS ONE STATIC TONE (architect 2026-11-04 night, his
 // pick n1 of four static tones, after the measured cost of a fading line —
@@ -4531,7 +4558,7 @@ void render_playhead(GuiCanvasSink& sink,
 // inversion). The line is waveform_line_px() wide AT ITS EXACT PLACE
 // (architect 2026-11-14, send J): the real interval [x − t / 2, x + t / 2]
 // cut at both edges, each pixel at its exact coverage (waveform_line_span;
-// no column gate, a clamped place being a waveform column's).
+// a clamped place always has its line inside the area).
 void render_strip_anchor_stem(GuiCanvasSink& sink,
                               GuiRect area,
                               double x);
@@ -4788,24 +4815,25 @@ struct FlagLaneRects {
     int     columns_x = 0;
 };
 
-// ONE MARKER'S STEM ENTRY, as the flag painter publishes it: THE COLUMN it
-// stands on (`col`, the chip's column counted from the waveform's first, a
-// drag's moving column included — the stem's gate) AND ITS EXACT PLACE (`x`,
-// architect 2026-11-14, send J: displayed_x_at of the frame the chip was
-// laid out at, on the flag pass's own basis, device px from the waveform's
-// first column — where the stem's line is painted, the playhead's line and
-// the lead-in ring's left side yielding to a stem on their own exact x,
+// ONE MARKER'S STEM ENTRY, as the flag painter publishes it: ITS EXACT PLACE
+// (`x`, architect 2026-11-14, send J: displayed_x_at of the frame the chip
+// was laid out at, on the flag pass's own basis, device px from the
+// waveform's first column, a drag's moving place included — where the
+// stem's line is painted, the playhead's line and the lead-in ring's left
+// side yielding to a stem on their own exact x,
 // GuiPaintHandler::stem_stands_at).
 // The painters publish one for EVERY SELECTED LIVE CUE AND DIFF
 // FLAG, ENABLED OR DISABLED (architect 2026-11-11, session 106), they walk
-// whose column is a waveform column
+// WHOSE LINE REACHES THE WAVEFORM'S COLUMNS — any of the one-W line's real
+// interval inside them (architect 2026-11-15, the no-grid arc; the gate is
+// the line's own span, waveform_line_span below, never a column) —
 // (resolve_flag_face's `stem`; an `h` item is one cue), and THE STEM PAINTER
 // (GuiPaintHandler::standing_stem_spans, the one geometry both halves of
 // the stem read) paints THE SELECTION STEM — a
 // solid one-W `cue_outline` line down
 // the canvas's whole height — on every entry (architect 2026-11-05, his
 // pick a2 of tmp/s42, reversing 2026-11-04's coincidence stem), so the
-// stem and its chip can never disagree about a column. The flag PAINTERS
+// stem and its chip can never disagree about a place. The flag PAINTERS
 // are the only producers — the two live columns', and the `h` view's diff
 // lane, which replaces them wholesale while the mode stands. An UNSELECTED
 // marker publishes NO ENTRY AT ALL (no stem, the playhead on it or not); the
@@ -4815,7 +4843,6 @@ struct FlagLaneRects {
 // serves the painter's identity bookkeeping alone.
 struct MarkerStem {
     int     marker_index;
-    int     col;
     double  x;
 };
 

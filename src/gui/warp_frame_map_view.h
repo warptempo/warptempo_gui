@@ -596,14 +596,17 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 // displayed_column_at's SIBLING ON THE SAME QUOTIENT: the column is that
 // quotient through lattice_index_ties_right less the same m, so column − 0.5
 // <= x < column + 0.5 — the exact place lies within half a px of its column.
-// THE COLUMN STAYS THE OWNER OF EVERYTHING BUT PAINT (architect 2026-11-14,
-// "Agree to all decisions.": gates, culls, hit boxes and landings stay on
-// the integer column, so a line still appears or disappears whole at the
-// canvas's edge — his 2026-11-06 "the gate stays" — now up to a pixel and a
-// half at once): every gate (a line
-// paints iff its own column is a waveform column), cull, hit box, published
-// rect, camera test and landing reads displayed_column_at; this answer feeds
-// paint and the damage paint owes, and nothing an input reads.
+// WHAT THE COLUMN STILL OWNS (architect 2026-11-14, "Agree to all
+// decisions."; the gates and the published rects left it 2026-11-15, the
+// no-grid arc): every CULL, CAMERA TEST AND LANDING reads
+// displayed_column_at, and the pointer's place is a whole pixel. THE GATES
+// ARE THE EXACT PLACE'S — a line is drawn wherever any of its real interval
+// lies inside the strip (render.h's waveform_line_span: its span's own
+// emptiness, no column asked), so a line slides in and out at the canvas's
+// edge — and THE CUES' PUBLISHED RECTS stand on it (paint_cues, render.cpp:
+// the label's box, the chip's box and the label's pen off the cue's exact
+// x); this answer feeds paint, the gates, those rects and the damage paint
+// owes.
 // PURE ARITHMETIC ON THE CALLER'S BASIS, as displayed_column_at's: a painter
 // hands both the same arguments, so a marker and the playhead parked on it —
 // one whole displayed frame — answer the same double.
@@ -621,9 +624,12 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 //     (the same exact_x), the ruler's ticks (RulerComb::tick_x,
 //     paint_handler.cpp) and its head (playhead_exact_x), the trim bar's
 //     span (trim_span_columns);
-//   AND THE TEXT THAT GLIDES WITH ITS MARK, a trial — a cue's label by its
-//     cue's x less its column (paint_cues, render.cpp), the ruler's digits
-//     by their major's (paint_ruler_row).
+//   AND THE TEXT THAT STANDS WITH ITS MARK (architect 2026-11-15, the
+//     no-grid arc: the glide's trial of 2026-11-14 is the rule) — a cue's
+//     label, its pen the cue's x plus the label's lead (paint_cues,
+//     render.cpp), the flag editor's box and text on the same place
+//     (render_flag_editor_box), and the ruler's digits, centered on their
+//     major's x (paint_ruler_row).
 // The canvas's grid and center lines stand at exact ROWS by the same rule
 // (render.h's canvas_hline_span); they are placed by no time.
 inline double displayed_x_at(double displayed, double vp_start, double spp,
@@ -635,11 +641,15 @@ inline double displayed_x_at(double displayed, double vp_start, double spp,
 // IS A DISPLAYED FRAME ON SCREEN, AS PAINTED — THE CAMERAS' ONE VISIBILITY
 // TEST (architect 2026-09-28, strictly as painted): true iff the frame's
 // painted column, displayed_column_at's one rounding, lies in the waveform's
-// columns [0, w). The painters gate a frame's mark on that rounding, so a
-// frame in the view's last half-column rounds to grid point w and paints no
-// stem and no playhead line, while one in the half-column left of the start
-// paints, its column 0; a sample-span test ([vp_start, vp_start + w·q)) called the first
-// on screen and the second off. PURE ARITHMETIC, the basis the caller's: the
+// columns [0, w) — THE CAMERAS' OWN QUESTION, on the whole column: a frame
+// in the view's last half-column rounds to grid point w and is off screen
+// to a camera, while one in the half-column left of the start is on, its
+// column 0 (a sample-span test, [vp_start, vp_start + w·q), called the
+// first on screen and the second off). The painters ask their own: a line
+// is drawn wherever any of it is inside the columns (render.h's
+// waveform_line_span), so a frame a camera calls off screen at grid point w
+// still shows the left half of its line on the last column. PURE
+// ARITHMETIC, the basis the caller's: the
 // three cameras that ask it — Viewport::reseat_playhead_to's keep-visible
 // edge-align, follow_scroll_if_needed and land_subject — pass the live
 // viewport, its lattice origin (AppState::viewport_lattice_origin) and the
@@ -657,8 +667,8 @@ inline bool displayed_frame_on_screen(double displayed, double vp_start,
 // [0, w − 1] in reals (architect 2026-11-14, send J: the edge clamp, on the
 // exact place), the x render_strip_anchor_stem draws its line
 // at: an anchor pushed to or past a song edge pins to the edge column's
-// place, so the stem draws exactly there, and a clamped place is always a
-// waveform column's, so this line needs no column gate. Its one reader is
+// place, so the stem draws exactly there, and a clamped place always has
+// its line inside the area. Its one reader is
 // the stem painter (paint_strip_drag_anchor, on the PLATE basis).
 inline double strip_anchor_stem_x(double displayed, double vp_start,
                                   double spp, int64_t origin, int w) {
@@ -701,7 +711,8 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
 // drags' release snap, the sweep's trim half and the trim bar's bound-set
 // click (input_trim.cpp), and both nudges' column step (stepped_anchor_frame,
 // position_nudge.h) — are the whole caller list of the pair apart from the
-// flag editor's unrolled box (render.cpp), which rides the same item basis on
+// flag editor's unrolled box (render.cpp), which reads the exact sibling
+// below (painted_x_of_source_frame_on_basis) on the same item basis, on
 // the paint side. THE LIVE-VIEWPORT FORMS ARE DELETED (2026-09-24): with the
 // gesture class moved no caller was left on them. Two families never reached
 // this pair: the click-placement family (the nav click, the scrub click, the
@@ -725,8 +736,9 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
 // item is painted through — the DISPLAYED map at every caller. Ignored in the
 // Source domain; an empty map in a mapped domain falls back to identity,
 // exactly like paint. The flag EDITOR's unrolled box passes the ITEM basis
-// too — damage follows the pixels it erases, so the box unrolls from the
-// column the flag pixels were painted at even mid-publish. (Two other
+// too, to the exact sibling — damage follows the pixels it erases, so the
+// box unrolls from the place the flag pixels were painted at even
+// mid-publish. (Two other
 // ITEM-basis callers died in row 5 with the marker-text lane: the run
 // centering and the run hit. The selected-stem invalidator was an _on_basis
 // caller until 2026-07-30; it is gone with the singleton selected-marker stem
@@ -734,6 +746,17 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
 // callers guard the geometry). The domain and the source->target mapping do
 // not depend on the viewport.
 int painted_column_of_source_frame_on_basis(
+    const AppState& app, const GuiAudio& audio, double source_frame,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    double vp_start, double spp, int64_t lattice_origin);
+// THE SAME FRAME'S EXACT PLACE on the same basis (displayed_x_at, device px
+// from the waveform area's left edge): the place the cue pass paints the
+// marker's chip, label and stem at — the column's sibling on one displayed
+// frame, the two a function of the same arguments. Its reader is the flag
+// EDITOR's unrolled box (render.cpp), which stands on the marker's exact
+// place as its resting label does (architect 2026-11-15, the no-grid arc).
+// 0 on a degenerate spp.
+double painted_x_of_source_frame_on_basis(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
     double vp_start, double spp, int64_t lattice_origin);

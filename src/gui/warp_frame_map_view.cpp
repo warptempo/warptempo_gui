@@ -257,20 +257,40 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
     return painter_quantized_spp(current_samples_per_pixel(app, audio));
 }
 
+// The displayed frame the stem painters place `source_frame` at — the
+// painters' exact shape (frame_to_paint_sample in render.cpp): nearbyint the
+// source frame; in the TargetLive domain forward-map and nearbyint the map
+// output. The column and the exact place below both stand it on the
+// basis's lattice.
+static double painted_displayed_frame(
+    const AppState& app, const GuiAudio& audio, double source_frame,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map) {
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    double ms = std::nearbyint(source_frame);
+    if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
+        ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
+    }
+    return ms;
+}
+
 int painted_column_of_source_frame_on_basis(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
     double vp_start, double spp, int64_t lattice_origin) {
     if (spp <= 0.0) return 0;
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
-    // The painters' exact shape (frame_to_paint_sample in render.cpp):
-    // nearbyint the source frame; in the TargetLive domain forward-map and
-    // nearbyint the map output; then place it on the basis's lattice.
-    double ms = std::nearbyint(source_frame);
-    if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
-        ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
-    }
-    return displayed_column_at(ms, vp_start, spp, lattice_origin);
+    return displayed_column_at(
+        painted_displayed_frame(app, audio, source_frame, warp_frame_map),
+        vp_start, spp, lattice_origin);
+}
+
+double painted_x_of_source_frame_on_basis(
+    const AppState& app, const GuiAudio& audio, double source_frame,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    double vp_start, double spp, int64_t lattice_origin) {
+    if (spp <= 0.0) return 0.0;
+    return displayed_x_at(
+        painted_displayed_frame(app, audio, source_frame, warp_frame_map),
+        vp_start, spp, lattice_origin);
 }
 
 bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,

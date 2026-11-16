@@ -235,10 +235,10 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
     // IT: the fill and the text_raster::show_glyphs that reads it are back
     // to back here, this function calls only the raster road between them
     // and is never re-entered from inside itself, and the ink measure
-    // (run_ink_box) places into a buffer of its own. THREAD-LOCAL because
-    // the declaration states no thread contract of its own; the raster road
-    // it feeds is the GUI thread's alone (text_raster.h), as today's
-    // callers all are (the flag cache, the lanes, the dialogs, the picker).
+    // (run_ink_box) places into a buffer of its own. GUI THREAD ONLY, the
+    // declaration's contract (the raster road it feeds holds unlocked
+    // statics, text_raster.h); the buffer's thread_local storage predates
+    // that contract and costs nothing on the one thread that paints.
     //
     // THE GLYPHS GO DOWN THROUGH THE RASTER ROAD (architect 2026-11-15, the
     // no-grid arc; text_raster.h's head holds the road and why it is not
@@ -272,6 +272,19 @@ void show_shaped_run_bytes(cairo_t* cr, const ShapedRun& run, double x,
     text_raster::show_glyphs(cr, gui_outline_scaled_font(run.font),
                              placed_glyphs.data() + first,
                              static_cast<int>(last - first));
+}
+
+void show_shaped_run_within(cairo_t* cr, const ShapedRun& run, double x,
+                            double y, const text_raster::XSpan* visible,
+                            int nvisible) {
+    if (run.glyphs.empty() || nvisible <= 0) return;
+    // show_shaped_run's buffer and arithmetic, the cut the raster road's.
+    thread_local std::vector<cairo_glyph_t> placed_glyphs;
+    place_glyphs(run, x, y, placed_glyphs);
+    text_raster::show_glyphs_within(cr, gui_outline_scaled_font(run.font),
+                                    placed_glyphs.data(),
+                                    static_cast<int>(placed_glyphs.size()),
+                                    visible, nvisible);
 }
 
 // THE RUN'S INK BOX at pen origin (0, 0): the paint's own placement

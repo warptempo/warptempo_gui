@@ -235,7 +235,7 @@ void CoverageStampPass::triangle(double ax, double ay, double h,
 void CoverageStampPass::chip(double x, double yb, GuiColor fill,
                              std::optional<GuiColor> outline) {
     if (!chip_read_) {
-        chip_h_      = static_cast<double>(cue_chip_h_px());
+        chip_h_      = cue_chip_h_exact_px();
         chip_drop_   = cue_chip_fill_drop_px();
         chip_fill_h_ = cue_chip_fill_h_px();
         chip_read_   = true;

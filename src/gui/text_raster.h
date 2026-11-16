@@ -68,9 +68,21 @@
 // A SELF-CONTAINED UNIT: cairo, cairo-ft and FreeType alone — no HarfBuzz,
 // no GuiFont, nothing of the product's — so a host driver links it against
 // the same libraries and holds (a) and (b) against cairo itself.
-// text_shape.cpp's show_shaped_run is its one product caller (the placement
-// is that file's, its fixed arithmetic), and its ink measure the other.
-// GUI THREAD ONLY, as the scaled font it reads is (gui_outline_scaled_font).
+// text_shape.cpp is its one product caller: show_shaped_run and
+// show_shaped_run_bytes (the placement is that file's, its fixed
+// arithmetic) and the ink measure (ink_left_px / ink_right_px).
+//
+// THE THREAD CONTRACT — GUI THREAD ONLY: the two tables, the run's mask and
+// its stamp list are plain statics with NO LOCK, and the FT face a miss
+// loads from is the one the scaled font's other users share
+// (gui_outline_scaled_font, itself the GUI thread's). Every road into this
+// unit runs on that thread: the chrome's painters and the flag cache's
+// rebuild (paint_handler.cpp, render.cpp, waveform_cache.cpp's
+// maybe_rebuild_flag_cache — on_redraw, the pre-paint hook and the tick),
+// the lane table's ink bands (gui_font_ink_band, main.cpp's layout). No
+// worker reaches it — the waveform worker, the async renderer, the history
+// workers, the score page worker (which decodes pages, never text), the
+// audio and noise threads include neither text_shape.h nor a painter.
 
 #include <cairo/cairo.h>
 
@@ -86,6 +98,28 @@ namespace text_raster {
 // its state and its current path are not modified.
 void show_glyphs(cairo_t* cr, cairo_scaled_font_t* font,
                  const cairo_glyph_t* glyphs, int count);
+
+// THE SAME PAINT, CUT TO WHERE THE TEXT IS VISIBLE — AN EXACT CUT WITH NO
+// CLIP (architect 2026-11-15, the no-grid arc; the marker lane's labels,
+// render.cpp's paint_cues, where a later label's box hides an earlier
+// label's text from a real x on): `visible` is `nvisible` intervals of user
+// x, [x0, x1) each, ASCENDING AND DISJOINT, and the run's coverage mask is
+// MULTIPLIED, COLUMN BY COLUMN, BY THE LENGTH OF THE COLUMN THAT LIES INSIDE
+// THEM before it is composited — a column wholly inside keeps its coverage,
+// one wholly outside is emptied, and the column a cut's edge crosses keeps
+// the fraction of its coverage that the edge leaves visible. That is the
+// ink clipped at the edge at exact coverage (an opaque box laid over the
+// ink from the edge on leaves the same pixel), made on the text's own mask:
+// the context's clip is never touched, so no fractional or multi-rect clip
+// stands under any later fill or stamp, and a hidden part costs nothing to
+// composite. No interval paints nothing.
+struct XSpan {
+    double x0 = 0.0;
+    double x1 = 0.0;
+};
+void show_glyphs_within(cairo_t* cr, cairo_scaled_font_t* font,
+                        const cairo_glyph_t* glyphs, int count,
+                        const XSpan* visible, int nvisible);
 
 // THE OUTLINE'S OWN BOX OF `count` PLACED GLYPHS, unrounded: the union of
 // each glyph's hinted outline's control box (26.6, the box the rasterizer

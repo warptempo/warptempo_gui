@@ -321,11 +321,9 @@ GuiStrikeBand gui_font_strike_band(const GuiFont& f) {
     // The rule and the measured rows are at the declaration (gui_font.h).
     const FileMetrics& m = g_metrics[file_of(f.face)];
     const double em = gui_font_em_px(f);
-    const int h = std::max(1, static_cast<int>(std::nearbyint(m.l_stem_em * em)));
+    const double h = m.l_stem_em * em;
     const double centre = m.strike_em * em;
-    return GuiStrikeBand{
-        static_cast<int>(std::nearbyint(-centre - static_cast<double>(h) / 2.0)),
-        h};
+    return GuiStrikeBand{-centre - h / 2.0, h};
 }
 
 const GuiSignAxis& gui_sign_axis(GuiFace face) {
