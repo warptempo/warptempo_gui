@@ -759,24 +759,25 @@ GuiRect bottom_row_area(const AppState& a) {
 
 // THE HOVER TOOLTIP'S SEAT AND ITS DAMAGE BAND (the contract at the
 // declaration, app_state.h; architect 2026-11-07, session 91).
-GuiRect tooltip_box_rect(const AppState& a, const GuiRect& face, int w,
-                         int h) {
+GuiRectF tooltip_box_rect(const AppState& a, const GuiRectF& face, double w,
+                          double h) {
     // LEFT-ALIGNED ON THE FACE: the box's left edge the face's.
-    int x = face.x;
-    // ABOVE THE FACE: the box's bottom row the gap (kTooltipGapW, render.h)
-    // over the face's top row.
-    int y = face.y - tooltip_gap_px() - h;
+    double x = face.x;
+    // ABOVE THE FACE: the box's bottom edge the gap (kTooltipGapW, render.h)
+    // over the face's top edge.
+    double y = face.y - static_cast<double>(tooltip_gap_px()) - h;
     // THE EDGE RULE (architect 2026-11-02, M11 ruling 4): the box between the
     // keys' outer columns — the right clamp first, pulling a box that would
     // run past the right one back to end on it, then the left, so a box wider
     // than the span pins its left edge.
     const WellColumns keys = well_columns(a);
-    if (x + w > keys.end) x = keys.end - w;
-    if (x < keys.x) x = keys.x;
+    if (x + w > static_cast<double>(keys.end))
+        x = static_cast<double>(keys.end) - w;
+    if (x < static_cast<double>(keys.x)) x = static_cast<double>(keys.x);
     // NEVER ABOVE THE WINDOW'S TOP: where the face stands too near it for the
     // box and the gap, the box lays over the face's top rows instead.
-    if (y < 0) y = 0;
-    return GuiRect{x, y, w, h};
+    if (y < 0.0) y = 0.0;
+    return GuiRectF{x, y, w, h};
 }
 
 // The owner's painted face, read as the painter reads it (the stash's button

@@ -5978,7 +5978,10 @@ struct AppState {
             int    begin    = 0;
             int    end      = 0;
             double origin_x = 0.0;
-            int    y        = 0;
+            // The band's top, a REAL y (the first row's band stands where
+            // its baseline lands on the text seat's, exactly; the pitch
+            // between rows is whole), and its whole height.
+            double y        = 0.0;
             int    h        = 0;
             bool   hard     = false;
         };
@@ -10723,8 +10726,8 @@ inline DialogEditorStop dialog_editor_byte_at(
 //     2 device px on the tablet at 200 %). On the band that is the logo
 //     lane, over the brand, the lamps and the battery while the box stands,
 //     never over the well: on the tablet the band's face top is row 72, so a
-//     one-line box (43 rows) stands on rows 27..69 and a two-line box (67)
-//     on rows 3..69, the gap rows 70..71;
+//     one-line box (43.14 rows, painted on 44) stands on rows 26..69 and a
+//     two-line box (67.52, on 68) on rows 2..69, the gap rows 70..71;
 //   * LEFT-ALIGNED ON THE FACE: box.x = face.x, one expression whether the
 //     box is wider or narrower than its face;
 //   * THEN HELD BETWEEN THE KEYS' OUTER COLUMNS (render.h's well_columns,
@@ -10734,8 +10737,15 @@ inline DialogEditorStop dialog_editor_byte_at(
 //     span pins its left edge there;
 //   * NEVER ABOVE THE WINDOW'S TOP: y ≥ 0, the box laying over its face's
 //     top rows where the face stands too near the top for the box and the
-//     gap (never on the tablet at 1 W: the band's two-line box keeps three
+//     gap (never on the tablet at 1 W: the band's two-line box keeps two
 //     rows above it).
+// THE BOX'S GEOMETRY IS EXACT (architect 2026-11-15, the no-grid arc):
+// `w` and `h` its text's real size and insets, the face a real rect, the
+// answer a GuiRectF — its bottom edge whole on the gap over a whole face,
+// its top and (where the right clamp pulls it in) its left wherever the
+// size puts them. The painter seats the text in this box exactly and
+// paints and publishes the box's HULL (paint_shift_tooltip: a floating
+// surface's box stays whole, render.h's hull).
 // The box never shrinks. (The pointer's seat, Windows 95's — the left edge at
 // the pointer and the top 27 W under it, flipped above the button at the
 // window's foot — retired with session 90's rule, and session 90's centering
@@ -10751,7 +10761,8 @@ inline DialogEditorStop dialog_editor_byte_at(
 // owner's words are composed by paint_modal_dialog in the frame that paints
 // the box, and a roster owner's need the shaping pass and the audio the
 // painter alone holds. Empty when the owner has no painted face.
-GuiRect tooltip_box_rect(const AppState& a, const GuiRect& face, int w, int h);
+GuiRectF tooltip_box_rect(const AppState& a, const GuiRectF& face, double w,
+                          double h);
 GuiRect tooltip_damage_band(const AppState& a);
 
 // (THE KEYBOARD SLOT'S SHARED BAND — keyboard_slot_band and its ceiling,
@@ -19979,9 +19990,10 @@ GuiRect marker_cue_face(const AppState& app, int idx);
 // the window's top. A cue with no painted label segment keeps the first
 // seat, the box's left on the chip's left. The target is untouched — the
 // chain's rect and the hit stay label box ∪ chip (marker_cue_hit). The zero
-// rect where no published rect names `idx`.
-GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
-                                int w, int h);
+// rect where no published rect names `idx`. The box is exact
+// (tooltip_box_rect: `w` and `h` real, the answer a GuiRectF).
+GuiRectF marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
+                                 double w, double h);
 
 // THE `h` VIEW'S CUE TOOLTIP — TIPS SHOWS THE DIFF (architect 2026-11-11,
 // session 106: with TIPS lit, hovering a history item shows its diff, so
@@ -20030,5 +20042,5 @@ GuiRect history_cue_face(const AppState& app, int idx);
 // history_tooltip_box_rect — THE BOX SEAT, marker_tooltip_box_rect's rule
 // (the text origin on the label's first character, above the marker lane)
 // over the item's published rect.
-GuiRect history_tooltip_box_rect(const AppState& app, int idx,
-                                 int text_inset, int w, int h);
+GuiRectF history_tooltip_box_rect(const AppState& app, int idx,
+                                  int text_inset, double w, double h);

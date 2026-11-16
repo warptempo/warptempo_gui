@@ -93,8 +93,9 @@
 // EVERY FACE DRAWS ITS ANTIALIASED OUTLINE AT EVERY SIZE, NEVER AN EMBEDDED
 // BITMAP STRIKE (architect 2026-10-06): the install hides any strike from
 // FreeType, in every file, and every glyph load passes FT_LOAD_NO_BITMAP
-// (gui_font_bundled.cpp's head). Every run is shaped by HarfBuzz under
-// SLIGHT hinting and painted through cairo_show_glyphs (text_shape.h).
+// (gui_font_bundled.cpp's head). Every run is shaped by HarfBuzz and
+// painted under SLIGHT hinting through the raster road, each glyph at its
+// exact place (text_shape.h, text_raster.h).
 //
 // THE FOUR MATH SIGNS AND THE PIPE ARE LIFTED (gui_sign_axis below): the
 // signs onto the hyphen's axis, downward (Arial's metrics draw them above
@@ -216,12 +217,22 @@ inline double gui_font_em_px(const GuiFont& f) {
 }
 
 // THE FACE'S OWN VERTICAL METRICS (the head) in DEVICE px at the font's
-// scale, each rounded to whole px: the ascent above the baseline, the
-// descent below it, and the line height (the file's ascender, descender
-// and line gap). Out of line: the file's metrics are the install's.
+// scale: the ascent above the baseline, the descent below it, and the line
+// height (the file's ascender, descender and line gap). Out of line: the
+// file's metrics are the install's. TWO FORMS OF EACH (architect
+// 2026-11-15, the no-grid arc; render.h's hull holds the rule):
+//   THE WHOLE FORM, rounded to whole px — A SIZE FOR LAYOUT ALONE: a row's
+//     pitch, a band's or a field's height, a box other things are laid out
+//     against. Never a placement.
+//   THE EXACT FORM (`_exact_px`), the em times the file's metric,
+//     unrounded — what every PLACEMENT reads: a baseline, a band's top
+//     under a baseline, a line's step, the hull of a line box.
 double gui_font_ascent_px(const GuiFont& f);
 double gui_font_descent_px(const GuiFont& f);
 double gui_font_line_px(const GuiFont& f);
+double gui_font_ascent_exact_px(const GuiFont& f);
+double gui_font_descent_exact_px(const GuiFont& f);
+double gui_font_line_exact_px(const GuiFont& f);
 // THE CAP BAND in device px at the font's scale, unrounded — what
 // redesign_baseline centers in a chrome box (paint_handler.cpp): the em
 // times the use's file's own "H" ink per em.
@@ -250,9 +261,10 @@ double gui_font_x_ink_px(const GuiFont& f);
 // each lifted mark, kGuiLiftedSigns below, at the fractional seat the
 // shaper gives it) at an INTEGER baseline onto a scratch A8 surface, a row
 // counted when any pixel of it holds coverage; `above + below` is the set's
-// row count. RASTERIZED, NOT READ OFF CAIRO'S GLYPH EXTENTS (2026-11-03):
-// the hinted extents are grid-fitted boxes taken before the lifted pipe's
-// fractional seat and cairo's subpixel placement, so they overstate it (the
+// row count. RASTERIZED, NOT READ OFF GLYPH EXTENTS (2026-11-03):
+// grid-fitted extents are boxes taken before the lifted pipe's
+// fractional seat and each glyph's own fractional place, so they overstate
+// it (the
 // pipe in Regular 24 among the legend's digits: extents 20 + 3, the paint
 // 19 + 3), and
 // the design's unhinted bounds rounded, the first measure, miss the

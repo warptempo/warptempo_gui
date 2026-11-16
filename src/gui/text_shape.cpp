@@ -1,5 +1,7 @@
 #include "text_shape.h"
 
+#include "text_raster.h"   // the glyphs' exact-place raster road
+
 #include <cairo/cairo-ft.h>
 #include <hb-ft.h>
 #include <hb.h>
@@ -198,13 +200,14 @@ SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
 }
 
 // THE RUN'S GLYPHS PLACED at the baseline origin (x, y) into `placed_glyphs`,
-// emptied first and refilled — the one placement the painter hands cairo and
-// the ink measure below reads, so the two cannot part. THE ARITHMETIC IS
-// FIXED, in this order: the pen starts AT x, each glyph stands at the pen
-// plus its x offset, then the pen takes its advance. Never reassociated and
-// never a run placed at origin zero and translated after: the placement is
-// fractional, and a glyph whose x differs in its last bit can land on a
-// different subpixel phase and change its antialiased pixels.
+// emptied first and refilled — the one placement the painter hands the
+// raster road and the ink measure below reads, so the two cannot part. THE
+// ARITHMETIC IS FIXED, in this order: the pen starts AT x, each glyph stands
+// at the pen plus its x offset, then the pen takes its advance. Never
+// reassociated and never a run placed at origin zero and translated after:
+// the placement is fractional, and a glyph whose x differs in its last bit
+// can land on a different 64th (text_raster's phase) and change its
+// antialiased pixels.
 static void place_glyphs(const ShapedRun& run, double x, double y,
                          std::vector<cairo_glyph_t>& placed_glyphs) {
     placed_glyphs.clear();
@@ -229,49 +232,75 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
     // (a cue label and the ruler's major label each place their ink). It
     // keeps its
     // capacity, so the steady state allocates nothing. NOTHING ELSE TOUCHES
-    // IT: the fill and the cairo_show_glyphs that reads it are back to back
-    // here, this function calls only cairo between them and is never
-    // re-entered from inside itself, and the ink measure (ink_left_px) places
-    // into a local of its own. THREAD-LOCAL because the declaration states no
-    // thread contract: today's callers are all the GUI thread's (the flag
-    // cache, the lanes, the dialogs, the picker), and a thread that ever
-    // paints text pays one vector for it.
+    // IT: the fill and the text_raster::show_glyphs that reads it are back
+    // to back here, this function calls only the raster road between them
+    // and is never re-entered from inside itself, and the ink measure
+    // (run_ink_box) places into a buffer of its own. THREAD-LOCAL because
+    // the declaration states no thread contract of its own; the raster road
+    // it feeds is the GUI thread's alone (text_raster.h), as today's
+    // callers all are (the flag cache, the lanes, the dialogs, the picker).
+    //
+    // THE GLYPHS GO DOWN THROUGH THE RASTER ROAD (architect 2026-11-15, the
+    // no-grid arc; text_raster.h's head holds the road and why it is not
+    // cairo_show_glyphs): each at its exact place, to a 64th of a px on
+    // both axes, in the context's current source under its clip; the
+    // context's state and path untouched.
     thread_local std::vector<cairo_glyph_t> placed_glyphs;
     place_glyphs(run, x, y, placed_glyphs);
-    cairo_save(cr);
-    cairo_set_scaled_font(cr, gui_outline_scaled_font(run.font));
-    cairo_show_glyphs(cr, placed_glyphs.data(),
-                      static_cast<int>(placed_glyphs.size()));
-    cairo_restore(cr);
+    text_raster::show_glyphs(cr, gui_outline_scaled_font(run.font),
+                             placed_glyphs.data(),
+                             static_cast<int>(placed_glyphs.size()));
+}
+
+void show_shaped_run_bytes(cairo_t* cr, const ShapedRun& run, double x,
+                           double y, size_t byte_begin, size_t byte_end) {
+    if (run.glyphs.empty() || byte_end <= byte_begin) return;
+    // The whole run placed (show_shaped_run's buffer and arithmetic), then
+    // the range's glyphs alone handed down: clusters do not decrease across
+    // an LTR run, so the range is one stretch of the placement.
+    thread_local std::vector<cairo_glyph_t> placed_glyphs;
+    place_glyphs(run, x, y, placed_glyphs);
+    std::size_t first = 0;
+    while (first < run.glyphs.size() &&
+           static_cast<size_t>(run.glyphs[first].cluster) < byte_begin)
+        ++first;
+    std::size_t last = first;
+    while (last < run.glyphs.size() &&
+           static_cast<size_t>(run.glyphs[last].cluster) < byte_end)
+        ++last;
+    if (last <= first) return;
+    text_raster::show_glyphs(cr, gui_outline_scaled_font(run.font),
+                             placed_glyphs.data() + first,
+                             static_cast<int>(last - first));
+}
+
+// THE RUN'S INK BOX at pen origin (0, 0): the paint's own placement
+// (place_glyphs) measured by the raster road's own outlines
+// (text_raster::ink_box — each glyph's hinted outline's box, unrounded, the
+// box its raster is rendered on). It places into a buffer of its own, never
+// the painter's, so the two cannot alias whatever the call order.
+static text_raster::InkBox run_ink_box(const ShapedRun& run) {
+    thread_local std::vector<cairo_glyph_t> placed;
+    place_glyphs(run, 0.0, 0.0, placed);
+    return text_raster::ink_box(gui_outline_scaled_font(run.font),
+                                placed.data(),
+                                static_cast<int>(placed.size()));
 }
 
 double ink_left_px(const ShapedRun& run) {
-    // The contract is at the declaration: the paint's own placement at pen
-    // origin (0, 0), measured on the run's own font. It places into a local
-    // of its own, never the painter's buffer, so the two cannot alias
-    // whatever the call order; its consumers (the declaration) measure a
-    // single run at a time, not worth sharing the buffer for.
+    // The contract is at the declaration: the first ink's real edge, 0 for a
+    // run with no ink.
     if (run.glyphs.empty()) return 0.0;
-    std::vector<cairo_glyph_t> placed;
-    place_glyphs(run, 0.0, 0.0, placed);
-    cairo_text_extents_t ext;
-    cairo_scaled_font_glyph_extents(gui_outline_scaled_font(run.font),
-                                    placed.data(),
-                                    static_cast<int>(placed.size()), &ext);
-    return ext.x_bearing;
+    const text_raster::InkBox box = run_ink_box(run);
+    return box.empty ? 0.0 : box.x0;
 }
 
 double ink_right_px(const ShapedRun& run) {
     // The contract is at the declaration: ink_left_px's measure, its right
     // edge.
     if (run.glyphs.empty()) return 0.0;
-    std::vector<cairo_glyph_t> placed;
-    place_glyphs(run, 0.0, 0.0, placed);
-    cairo_text_extents_t ext;
-    cairo_scaled_font_glyph_extents(gui_outline_scaled_font(run.font),
-                                    placed.data(),
-                                    static_cast<int>(placed.size()), &ext);
-    return ext.x_bearing + ext.width;
+    const text_raster::InkBox box = run_ink_box(run);
+    return box.empty ? 0.0 : box.x1;
 }
 
 std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {

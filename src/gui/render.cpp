@@ -1576,8 +1576,9 @@ struct CueSegment {
 // for every label that stands on whole px, the flag editor's riding
 // cells). `x` stays the label's whole-px pen: the run is shown at x + glide
 // (one pen origin handed to the shaper's placement, text_shape's
-// place_glyphs unchanged — cairo places each glyph on its own quarter-pixel
-// phase, as it does the fractional pens inside a run), and THE BAR IS THE
+// place_glyphs unchanged — the raster road places each glyph at its own
+// exact x, to a 64th of a px, as it does the fractional pens inside a run;
+// text_raster.h), and THE BAR IS THE
 // WHOLE-PX BAR TRANSLATED BY THE SAME glide — struck_run_bar's cells off x,
 // their two x edges real, their rows whole — through a one-rect coverage
 // stamp (CoverageStampPass, cool_edit_paint.h), which reads the context's

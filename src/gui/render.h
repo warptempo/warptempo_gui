@@ -99,6 +99,13 @@ struct GuiRectF {
 //   THE SCORE PAGE — whole pixels at 100 % ("the score should have no
 //     upscaling or downscaling. It should be 100%. And if that's required,
 //     if that requires whole pixels, then so be it.").
+//   A FLOATING SURFACE'S BOX — the tooltip's and the notification cards':
+//     they stand over the canvas, which the GPU draws, and the backbuffer
+//     over the canvas holds alpha 0 or alpha 255 alone (canvas_sink.h's THE
+//     TRANSPARENCY INVARIANT: the texture's draw is unblended), so an edge
+//     at a fraction would leave a partly covered pixel nothing composites.
+//     The box is painted on whole edges; what is painted IN it — its text —
+//     is exact.
 inline GuiRect hull(const GuiRectF& r) {
     const int x0 = static_cast<int>(std::floor(r.x));
     const int y0 = static_cast<int>(std::floor(r.y));
@@ -2326,8 +2333,8 @@ inline int cue_fill_h_px() {
     return marker_lane_h_px();
 }
 // THE BOX SEAT'S ONE SOLVER (paint_handler.cpp, where its rule and its other
-// callers stand): the baseline that centres `font`'s cap band in the box
-// [box_y, box_y + box_h), a half-row tie toward the top.
+// callers stand): the baseline that centers `font`'s cap band in the box
+// [box_y, box_y + box_h) exactly, a real y (no half rounded).
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // THE CUE LABEL'S BASELINE AND THE EDITOR'S BAND under the marker lane's top
 // (the metrics rule above): THE BAND — the flag editor's caret and selection
@@ -2901,7 +2908,7 @@ inline int view_bar_grab_w_px() {
 // from the two faces' caps under the time field's pad (paint_shift_tooltip,
 // 2026-10-31), so the run loop only needs to know it can never exceed this:
 // 75 W (the 50 Windows px of 2026-10-31 times 1.5 at the rebase to 200 %,
-// 2026-11-05), 150 device rows on the tablet against the two-line box's 67.
+// 2026-11-05), 150 device rows on the tablet against the two-line box's 68.
 inline constexpr int     kTooltipDamageHeightPx = 75;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);

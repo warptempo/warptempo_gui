@@ -42,12 +42,16 @@
 // the ink band (gui_font_ink_band), which counts the rows the paint covers.
 // The advances stay unhinted (text_shape's come off hb-ft, which loads its own glyphs
 // unhinted), so every scale measures one set of widths. The vertical
-// metrics are the file's own hhea per em, read at the install and rounded
-// at the size (gui_font.h, 2026-10-23), so the hinter only decides how the
-// ink sits on the pixel rows. ANTIALIASING AND SUBPIXEL
-// ORDER STAY AT CAIRO'S DEFAULTS: GRAY, no subpixel order (a tablet ROTATES,
-// so a subpixel order is not a face fact there). HINT METRICS stay at
-// cairo's default too, ON for the image surface the backend paints to.
+// metrics are the file's own hhea per em, read at the install (gui_font.h,
+// 2026-10-23: whole for a layout size, exact for a placement), so the
+// hinter only decides how the ink sits on the pixel rows — fitted to whole
+// rows at the origin, then slid by the baseline's own fraction
+// (text_raster.h, the no-grid arc, 2026-11-15). THE GLYPHS ARE RASTERIZED
+// GRAY BY FREETYPE ITSELF on that road, no subpixel order (a tablet
+// ROTATES, so a subpixel order is not a face fact there); the scaled
+// font's antialias, subpixel and hint-metrics options stay at cairo's
+// defaults and no painter reads cairo's glyph extents (the ink measures
+// read the outlines, text_shape.h).
 //
 // LIFETIME: the library, the faces and the font options are created once
 // and never destroyed — the process's exit reclaims them, and there is no
@@ -236,6 +240,12 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
         g_library = nullptr;
         return false;
     }
+    // THE ONE OPTION, SLIGHT (the head's THE PRODUCT'S HINTER). It rides the
+    // scaled font for cairo's own readers; THE RASTERIZER READS IT AS ITS
+    // LOAD TARGET — text_raster.cpp loads every glyph with
+    // FT_LOAD_TARGET_LIGHT, cairo-ft's own translation of SLIGHT under gray
+    // antialiasing, beside the face's FT_LOAD_NO_BITMAP — so a change of
+    // this option is a change of that constant too.
     g_options = cairo_font_options_create();
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     bool ok = true;
@@ -284,6 +294,17 @@ double gui_font_line_px(const GuiFont& f) {
     return std::nearbyint(g_metrics[file_of(f.face)].line_em * gui_font_em_px(f));
 }
 
+// The exact forms (gui_font.h: what a placement reads).
+double gui_font_ascent_exact_px(const GuiFont& f) {
+    return g_metrics[file_of(f.face)].ascent_em * gui_font_em_px(f);
+}
+double gui_font_descent_exact_px(const GuiFont& f) {
+    return g_metrics[file_of(f.face)].descent_em * gui_font_em_px(f);
+}
+double gui_font_line_exact_px(const GuiFont& f) {
+    return g_metrics[file_of(f.face)].line_em * gui_font_em_px(f);
+}
+
 double gui_font_cap_px(const GuiFont& f) {
     return g_metrics[file_of(f.face)].cap_em * gui_font_em_px(f);
 }
@@ -314,10 +335,10 @@ const GuiSignAxis& gui_sign_axis(GuiFace face) {
 GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set) {
     // The rule is at the declaration (gui_font.h): the set shaped and painted
     // through the chokepoint (text_shape's shape_text_run and
-    // show_shaped_run, the painter's own scaled font and placement, the
-    // lifted marks at their lifted seats) onto a scratch A8 surface at an
-    // integer baseline, and the rows holding any coverage counted. Kept per
-    // file, em and set.
+    // show_shaped_run — the painter's own road, text_raster's, on its own
+    // scaled font and placement, the lifted marks at their lifted seats)
+    // onto a scratch A8 surface at an integer baseline, and the rows holding
+    // any coverage counted. Kept per file, em and set.
     struct Entry {
         std::size_t file = 0;
         double      em   = 0.0;

@@ -102,6 +102,10 @@ set(WARPTEMPO_GUI_SOURCES
     # source lists — warptempo_cli must never carry it, nor the
     # harfbuzz/cairo-ft link it implies.
     src/gui/text_shape.cpp
+    # GUI-ONLY, beside text_shape.cpp: the glyphs' raster road (text_raster.h:
+    # FreeType direct, every glyph at its exact place) — cairo, cairo-ft and
+    # FreeType alone, no HarfBuzz, so a host driver links this one file.
+    src/gui/text_raster.cpp
     # GUI-ONLY, like text_shape.cpp: the one face owner (gui_font.h), which
     # builds the product's faces (gui_font.h's kGuiFontFiles: Liberation
     # Sans and its bold) through FreeType from the APK's font assets.

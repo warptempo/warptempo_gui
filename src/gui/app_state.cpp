@@ -604,28 +604,32 @@ GuiRect history_cue_face(const AppState& app, int idx) {
 }
 
 // THE CUE'S BOX SEAT over one published rect, both index spaces' one body.
-static GuiRect cue_tooltip_box_rect(const AppState& app, const FlagHitRect* r,
-                                    int text_inset, int w, int h) {
-    if (!r) return GuiRect{0, 0, 0, 0};
+static GuiRectF cue_tooltip_box_rect(const AppState& app,
+                                     const FlagHitRect* r, int text_inset,
+                                     double w, double h) {
+    if (!r) return GuiRectF{};
     // THE ANCHOR: the cue's face for the rows (above it, the gap), its x
     // moved so the box's text origin — its left plus `text_inset` — stands
-    // on the label's (FlagHitRect::text_x); a cue with no label keeps the
-    // face's left, the chip's. Everything else is tooltip_box_rect's.
-    GuiRect anchor = flag_hit_rect_face(*r);
-    if (anchor.w <= 0 || anchor.h <= 0) return GuiRect{0, 0, 0, 0};
+    // on the label's published pen (FlagHitRect::text_x, a real x, taken as
+    // it is: nothing rounded between the label's pen and the box's); a cue
+    // with no label keeps the face's left, the chip's. Everything else is
+    // tooltip_box_rect's.
+    const GuiRect face = flag_hit_rect_face(*r);
+    if (face.w <= 0 || face.h <= 0) return GuiRectF{};
+    GuiRectF anchor = face;
     if (r->has_text_x)
-        anchor.x = static_cast<int>(std::nearbyint(r->text_x)) - text_inset;
+        anchor.x = r->text_x - static_cast<double>(text_inset);
     return tooltip_box_rect(app, anchor, w, h);
 }
 
-GuiRect marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
-                                int w, int h) {
+GuiRectF marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
+                                 double w, double h) {
     return cue_tooltip_box_rect(
         app, published_cue_rect(app, idx, /*history=*/false), text_inset, w, h);
 }
 
-GuiRect history_tooltip_box_rect(const AppState& app, int idx,
-                                 int text_inset, int w, int h) {
+GuiRectF history_tooltip_box_rect(const AppState& app, int idx,
+                                  int text_inset, double w, double h) {
     return cue_tooltip_box_rect(
         app, published_cue_rect(app, idx, /*history=*/true), text_inset, w, h);
 }

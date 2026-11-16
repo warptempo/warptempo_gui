@@ -584,9 +584,10 @@ KeyLegendLayout key_legend_layout(const GuiRect& face, std::string_view word) {
     const int lx1 = static_cast<int>(std::floor(out.seat.x));
     const int lx2 =
         static_cast<int>(std::ceil(out.seat.x + out.run->width_px));
-    const int ly1 = static_cast<int>(std::floor(base - gui_font_ascent_px(font)));
+    const int ly1 =
+        static_cast<int>(std::floor(base - gui_font_ascent_exact_px(font)));
     const int ly2 =
-        static_cast<int>(std::ceil(base + gui_font_descent_px(font)));
+        static_cast<int>(std::ceil(base + gui_font_descent_exact_px(font)));
     const int x1 = std::min(face.x, lx1);
     const int y1 = std::min(face.y, ly1);
     const int x2 = std::max(face.x + face.w, lx2);
@@ -1300,19 +1301,20 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
 // beside the roster, because the pointer side reads the same table.)
 
-// THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
-// the face's own CAP BAND in the box, a half-row tie going toward the TOP
-// (architect 2026-09-09, after his pixel pass on two screenshots at 100% and
-// 225%). What the eye centres in a chrome box is the capital band — the word
-// "File" is cap-height ink and nothing else — so the solver centres exactly
-// that and lets the descender band fall where the face puts it:
+// THE BASELINE FOR A LABEL VERTICALLY CENTERED IN A BOX: the baseline that
+// centers the face's own CAP BAND in the box EXACTLY (architect 2026-11-15,
+// the no-grid arc: no half is rounded, the baseline a real y and the text
+// painted at it — text_raster.h; the upper-row tie of 2026-09-09, a floor,
+// is retired with the grid). What the eye centers in a chrome box is the
+// capital band — the word "File" is cap-height ink and nothing else — so
+// the solver centers exactly that and lets the descender band fall where
+// the face puts it:
 //
-//     baseline = box_y + floor((box_h + cap_height) / 2)
+//     baseline = box_y + (box_h + cap_height) / 2
 //
-// The floor IS the cell rule (containing_pixel, input_core.h) and not an
-// exception to it: a half-row tie belongs to the row that contains it, which
-// is the upper one. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTRED CHROME
-// LABEL and every time field (Qt's integer box rule fails the crops).
+// so the air above the cap band and under the baseline is the same real
+// length. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTERED CHROME LABEL
+// and every time field.
 //
 // THE CAP BAND IS THE FACE'S OWN (gui_font.h, gui_font_cap_px): the em
 // times the file's own "H" ink per em (Liberation Sans 1409 / 2048 units),
@@ -1320,10 +1322,9 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // Program face's 11 W, a 22-device-px em), 7.57 at 100 %'s 11-px em.
 //
 // THE SEATS ON THE TABLET (200 %): a list row (the folder overlay's row box,
-// folder_overlay.h's kListRowW, 26 W, 52 device rows) seats at row
-// floor((52 + 15.14) / 2) = 33; at 100 % its 26 rows seat at
-// floor((26 + 7.57) / 2) = 16. The answer is independent of the box's y by construction rather than
-// by a tie rule.
+// folder_overlay.h's kListRowW, 26 W, 52 device rows) seats its baseline
+// (52 + 15.14) / 2 = 33.57 rows under the row's top; at 100 % its 26 rows
+// seat at (26 + 7.57) / 2 = 16.79.
 //
 // ONE SEAT FOR EVERY BOXED CHROME LABEL (architect 2026-10-22). THE BOX
 // SEATS: the row-8 clock (in its time field) and the active tab's name and
@@ -1335,8 +1336,8 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // on the text seat's baseline, modal_box_text_baseline0) — the dialog
 // editors' lines on their rows, the on-screen keyboard's caps and the
 // folder overlay's rows. The
-// notification card's first line states the same centering whole on its
-// rounded cap (pad + cap + pad, notification_card_h_px); the hover tooltip
+// notification card's first line states the same centering on its own cap
+// (pad + cap + pad, notification_card_h_px); the hover tooltip
 // seats its own caps under one pad (paint_shift_tooltip); the logo lane's
 // items center their ink on the lane (logo_item_y).
 //
@@ -1358,15 +1359,15 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
 // their own box, its height the pad, the cap's rows and the pad
 // (time_field_h_px, render.h): the 39-row field on the tablet at 200 %
-// (12 + 15 + 12) puts the Program face's 15.14-row cap band at row
-// floor((39 + 15.14) / 2) = 27.
+// (12 + 15 + 12) puts the Program face's 15.14-row cap band's baseline
+// (39 + 15.14) / 2 = 27.07 rows under the field's top.
 // AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop until the label's removal
 // (2026-10-14).
 } // namespace
 double redesign_baseline(const GuiFont& font, double box_y,
                          double box_h) {
-    return box_y + std::floor((box_h + gui_font_cap_px(font)) * 0.5);
+    return box_y + (box_h + gui_font_cap_px(font)) * 0.5;
 }
 // (THE CAPTION'S PAINTER — paint_caption_row, the window's own title bar
 // at the top lane 0 from 2026-10-05: the quaver, "<piece> - Warptempo" and
@@ -2610,14 +2611,14 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // tablet at 200 %, THE PAD, THE CAP AND THE PAD (time_field_h_px, render.h, the
 // owner of the pad and the height; 2026-11-03; it does not follow the
 // key's height, 2026-10-29), CENTRED ON THE CASE'S ROWS (a half-row tie
-// toward the top, the cap rule's own; round the 34-row face at key_height
+// toward the top, time_field_rect's; round the 34-row face at key_height
 // 17, time_field_rect: row 8's 1365 .. 1403 round the face's 1368 ..
 // 1401, the field the taller), its run in THE PROGRAM FACE, 11 W, 22
 // device px on the tablet, in every time field (row 8's clock, architect
 // 2026-10-26 ~11:30; the render player's two, ~12:10, "yes" to symmetry;
-// gui_font.h's table), its cap band centred in the field by
+// gui_font.h's table), its cap band centred in the field EXACTLY by
 // redesign_baseline — on the tablet the 15.14-row cap band in the 39-row
-// field, twelve rows of field above it and twelve below (the pad's rule,
+// field, 11.93 rows of field above it and 11.93 below (the pad's rule,
 // 2026-11-03; 6 W since the unit, 2026-11-04). The digits are
 // TABULAR — Liberation Sans's every digit 0.556 em — AND THE RUN IS SHAPED
 // WITH KERNING OFF (text_shape::Kerning::Off, architect 2026-11-05: the
@@ -2633,23 +2634,26 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // field can ever show in this face — the widest digit in every digit slot of
 // "DD:DD.DDD" (kTimeShape) — shaped through the one chokepoint at the
 // live scale with kerning off (the head above), so nothing is trusted to
-// the face. THE CELL IS THE SPECIMEN'S INK BOX IN WHOLE PIXELS (architect
+// the face. THE CELL IS THE WHOLE HULL OF THE SPECIMEN'S INK (architect
 // 2026-11-05, on the planner's measurement of the tablet's capture, session
 // 40: the field's pads read 12 left and 14 right of the digits' ink, the
 // cell having been the specimen's ADVANCE sum ceiled, 99.08 -> 100, which
 // carried the last glyph's right side bearing and the ceiling's fraction
 // while the vertical pad was taken from the digits' cap band): with the
-// specimen shaped at origin 0, `ink_l` = floor(ink_left_px), `ink_r` =
-// ceil(ink_right_px) (text_shape.h; cairo's own glyph extents of the run
-// as painted), the cell `ink_r - ink_l` (time_field_metrics), so the
-// specimen's first ink stands on the cell's first column and its last on
-// the cell's last. The field is that cell plus
+// specimen shaped at origin 0, `ink_l` and `ink_r` are its ink's real edges
+// (text_shape.h's ink_left_px / ink_right_px, the outlines' own, unrounded)
+// and the cell is ceil(ink_r - ink_l) whole px (time_field_metrics) — a
+// layout box, the row's walk reads it — WITH THE SPECIMEN'S INK CENTERED IN
+// IT EXACTLY (architect 2026-11-15, the no-grid arc: the cell's spare
+// fraction of a px half on each side, no first ink floored onto a column).
+// The field is that cell plus
 // THE PAD either side — 6 W, 12 device px on the tablet (time_field_pad_px,
 // render.h; architect 2026-10-23, "symmetrical and much tighter"; 13 device
 // px his pick of 2026-11-03, mock u3, rounded to the unit 2026-11-04) —
 // AND NOTHING MORE: row 8's clock exactly as the render player's two fields,
 // the one face, so the three fields are one width, and THE PAD IS THE SAME
-// 12 DEVICE PX ON ALL FOUR SIDES OF THE SPECIMEN'S INK. The specimen's
+// 12 DEVICE PX ON ALL FOUR SIDES OF THE SPECIMEN'S INK (and half the cell's
+// spare fraction more, left and right alike). The specimen's
 // advance is 4.504 em
 // in the Program face's Bold (gui_font.h, every use Bold but the legends
 // since 2026-11-04 night: seven tabular digits at 0.556 em, the colon at
@@ -2668,11 +2672,11 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // the grammar's ceiling, 50 W; each W of run_gap 6 (the row's three group
 // spaces), 1166 at its ceiling, 44 W.
 //
-// ONE ORIGIN RULE FOR EVERY TIME FIELD (architect 2026-11-05): THE RUN
-// STARTS AT `field_x + pad - ink_l`, a whole pixel (every term an int, so
-// cairo's glyph placement stays on integer x as before and the digits
-// rasterize as they did), which puts the specimen's first ink on the cell's
-// first column; with kerning off every time is the specimen's advance, so
+// ONE ORIGIN RULE FOR EVERY TIME FIELD (architect 2026-11-05; exact since
+// the no-grid arc, 2026-11-15): THE RUN STARTS AT `field_x + pad + (cell_w
+// - ink_w) / 2 - ink_l`, a real x (time_field_run_x), which centers the
+// specimen's ink in the cell; with kerning off every time is the specimen's
+// advance, so
 // the run ENDS AT THE CELL'S RIGHT EDGE BY CONSTRUCTION — the player's
 // right-alignment of 2026-10-05 (the period's ACID / Vegas fields: the run
 // ending at the reserved cell's right edge so nothing moves as the time
@@ -2680,11 +2684,10 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // first or last digit is narrower than the widest digit (a "1", its ink
 // one column in from its slot's edge) shows that air inside its slot: THE
 // TABULAR SLOTS ARE THE CELL, the ink of a "1" is not — accepted. (The
-// ink box is cairo's hinted glyph metrics, whole px per glyph, in which a
-// "4" reads one column wider than a "0" of the same advance, so a time
-// ending in "4" may put a sliver of ink on the right pad's first column —
-// accepted too; the widest digit is picked by advance, all ten being
-// 0.556 em, so the specimen is "00:00.000".) THE
+// ink box is the specimen's own outlines', and a digit whose ink reaches
+// further in its slot than the "0"'s — a "4" — may put a sliver of ink on
+// the pad beside the cell — accepted too; the widest digit is picked by
+// advance, all ten being 0.556 em, so the specimen is "00:00.000".) THE
 // CELL'S RIGHT EDGE IS THE FIELD'S RIGHT PAD in every time field, the field
 // being the cell and its two pads (the floor's centering of 2026-10-09 went
 // with the floor). ROW 8'S CLOCK IS THE TIMESTAMP ALONE (architect
@@ -2767,20 +2770,20 @@ constexpr double kTimeFieldGapW = 4.0;
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
-// THE CELL IS THE SPECIMEN'S INK BOX, THE SLOTS ITS ADVANCES (architect
-// 2026-11-05; kTimeShape's block): `time_w` is the specimen's advance sum,
-// shaped with kerning off, so every time is that wide and no glyph ever
-// walks; `ink_l` / `ink_r` are its first ink floored and its last ink
-// ceiled, from origin 0 (text_shape::ink_left_px / ink_right_px), and
-// `cell_w` = ink_r - ink_l is row 8's cell and each player field's, in
-// whole px; each cell is its field's damage box too. Every shaping here is
+// THE CELL IS THE SPECIMEN'S INK'S WHOLE HULL, THE SLOTS ITS ADVANCES
+// (architect 2026-11-05; kTimeShape's block): `time_w` is the specimen's
+// advance sum, shaped with kerning off, so every time is that wide and no
+// glyph ever walks; `ink_l` / `ink_r` are its ink's real edges from origin
+// 0 (text_shape::ink_left_px / ink_right_px, unrounded), and `cell_w` =
+// ceil(ink_r - ink_l) is row 8's cell and each player field's, in whole px
+// (layout); each cell is its field's damage box too. Every shaping here is
 // text_shape::Kerning::Off, the fields' own option.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
-    int    ink_l    = 0;      // the specimen's first ink, floored
-    int    ink_r    = 0;      // one past the specimen's last ink, ceiled
-    int    cell_w   = 0;      // ink_r - ink_l
+    double ink_l    = 0.0;    // the specimen's first ink's real edge
+    double ink_r    = 0.0;    // the specimen's last ink's real edge
+    int    cell_w   = 0;      // ceil(ink_r - ink_l), the ink's whole hull
 };
 static TimeFieldMetrics g_time_field_metrics;
 
@@ -2801,18 +2804,22 @@ static const TimeFieldMetrics& time_field_metrics() {
     const text_shape::ShapedRun run =
         text_shape::shape_text_run(font, specimen, text_shape::Kerning::Off);
     m.time_w  = run.width_px;
-    m.ink_l   = static_cast<int>(std::floor(text_shape::ink_left_px(run)));
-    m.ink_r   = static_cast<int>(std::ceil(text_shape::ink_right_px(run)));
-    m.cell_w  = m.ink_r - m.ink_l;
+    m.ink_l   = text_shape::ink_left_px(run);
+    m.ink_r   = text_shape::ink_right_px(run);
+    m.cell_w  = static_cast<int>(std::ceil(m.ink_r - m.ink_l));
     m.percent = font.percent;
     return m;
 }
 
 // EVERY TIME FIELD'S RUN ORIGIN (the one rule at kTimeShape's block): the
-// field's first column, the pad, less the specimen's floored first ink —
-// a whole pixel, the specimen's first ink on the cell's first column.
-static int time_field_run_x(int field_x) {
-    return field_x + time_field_pad_px() - time_field_metrics().ink_l;
+// field's first column, the pad, half the cell's spare past the specimen's
+// ink, less the specimen's first ink — a real x, the specimen's ink
+// centered in the cell exactly.
+static double time_field_run_x(int field_x) {
+    const TimeFieldMetrics& m = time_field_metrics();
+    const double ink_w = m.ink_r - m.ink_l;
+    return static_cast<double>(field_x + time_field_pad_px()) +
+           (static_cast<double>(m.cell_w) - ink_w) * 0.5 - m.ink_l;
 }
 
 // THE BOTTOM ROW'S SEATS — row 8's and the modal controls row's, ONE OWNER
@@ -3299,10 +3306,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // 2026-10-21, one group gap of 2 W short of its gripper before); a
         // window too narrow to leave that span positive paints no state text
         // — the row's crop-at-the-floor allowance (the block above).
-        const int state_x =
-            static_cast<int>(std::ceil(name_origin + name_run.width_px)) +
-            (name_ends_in_separator ? 0
-                                    : scaled_px(kStateAirW));
+        // THE FIRST INK'S PLACE IS EXACT (architect 2026-11-15, the no-grid
+        // arc): the name's real end plus the air, nothing ceiled, `state_ink_x`
+        // a real x; THE SPAN — the clip and the paint gate — is whole px,
+        // from the column that holds that first ink (its floor: the run's
+        // ink starts at the place, so the column's sliver left of it holds
+        // none) to the whole right edge.
+        const double state_ink_x =
+            name_origin + name_run.width_px +
+            (name_ends_in_separator
+                 ? 0.0
+                 : static_cast<double>(scaled_px(kStateAirW)));
+        const int state_x = static_cast<int>(std::floor(state_ink_x));
         const int state_w = (right_block_x - lengths.gap) - state_x;
         set_palette_source(cr, palette().text);
         text_shape::show_shaped_run(cr, name_run, name_origin, baseline);
@@ -3312,15 +3327,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // so this is the one case: the cell's first column one pad in, the
         // run's origin the specimen's first ink short of it
         // (time_field_run_x; kTimeShape's block, 2026-11-05).
-        const int cell_x = field_x + time_field_pad_px();
-        const int run_x  = time_field_run_x(field_x);
+        const int    cell_x = field_x + time_field_pad_px();
+        const double run_x  = time_field_run_x(field_x);
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
-        // on each side: the cell is the SPECIMEN's ink box and another
-        // time's glyph may put a sliver outside it (a "4" in cairo's hinted
-        // metrics, kTimeShape's block), and the band is the row's height,
-        // which contains the field and so the baseline's ink by construction.
+        // on each side: the cell is the SPECIMEN's ink's hull and another
+        // time's glyph may put a sliver outside it (a "4", kTimeShape's
+        // block), and the band is the row's height, which contains the field
+        // and so the ink on its exact baseline by construction.
         // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the cell's
         // first column is one pad into the field and so is this box's, the
         // run seated on it by the same metrics, so the
@@ -3407,13 +3422,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // 2026-10-23: "the font color should not be this yellowish
             // color").
             set_palette_source(cr, palette().text);
-            text_shape::show_shaped_run(cr, time_run,
-                                        static_cast<double>(run_x), baseline);
+            text_shape::show_shaped_run(cr, time_run, run_x, baseline);
         }
         if (state_drawn && !state.empty()) {
             // The clock's face on THE CLOCK'S BASELINE (the block above), its
-            // FIRST INK at the clip's left edge: the origin stands the run's
-            // own left bearing short of state_x.
+            // FIRST INK at its exact place: the origin stands the run's
+            // own left bearing short of state_ink_x.
             const text_shape::ShapedRun state_run =
                 text_shape::shape_text_run(font, state);
             cairo_save(cr);
@@ -3421,7 +3435,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             cairo_clip(cr);
             set_palette_source(cr, palette().text);
             text_shape::show_shaped_run(cr, state_run,
-                                        static_cast<double>(state_x) -
+                                        state_ink_x -
                                             text_shape::ink_left_px(state_run),
                                         baseline);
             cairo_restore(cr);
@@ -3638,19 +3652,31 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // IS THE TIME FIELD'S (time_field_pad_px, 6 W, 12 device px on the tablet: the architect's
     // row-8 clock, "a nice padding for the font size and resolution"; "the
     // tooltips should also increase padding", 2026-11-03), on both axes and
-    // between the two lines. Each cap is the face's own (gui_font_cap_px)
-    // rounded at the element; each baseline stands on its cap's bottom row,
-    // so a descender hangs into the pad below it. On the tablet at 200 % a
-    // one-line box is 2 + 12 + 15 + 12 + 2 = 43 device rows, a two-line one
-    // 2 + 12 + 15 + 12 + 12 + 12 + 2 = 67 (the Hint face's cap 12.38).
+    // between the two lines. Each cap is the face's own (gui_font_cap_px),
+    // UNROUNDED, and THE BOX'S GEOMETRY IS ITS TEXT'S EXACT SIZE (architect
+    // 2026-11-15, the no-grid arc): its width the wider line's real width
+    // and the insets, its height the caps' real heights under the pads, each
+    // baseline at its cap's real bottom edge, so a descender hangs into the
+    // pad below it — and THE TEXT STANDS IN THAT EXACT BOX, its pen one
+    // inset from the box's real left edge. THE BOX IS PAINTED ON ITS HULL,
+    // whole edges (render.h's hull: a floating surface's box stays whole —
+    // it stands over the canvas, where the backbuffer may hold alpha 0 or
+    // 255 alone, canvas_sink.h's THE TRANSPARENCY INVARIANT), so the pad at
+    // its top and at the side the text does not start from is the real pad
+    // and under one px more; its published rect — the damage — is that
+    // hull. On the tablet at 200 % a one-line box is 2 + 12 + 15.14 + 12 +
+    // 2 = 43.14 device rows painted on 44, a two-line one 2 + 12 + 15.14 +
+    // 12 + 12.38 + 12 + 2 = 67.52 on 68 (the Hint face's cap 12.38), its
+    // bottom edge whole on the gap over the face.
     //
     // A HISTORY ITEM'S ONE LINE (architect 2026-11-11, session 107: "both in
     // one line with the old one struck and the old one listed first") is two
     // runs in the name line's face and ink: the STRUCK run first, its bar the
     // lane's own geometry (struck_run_bar, render.h — the cue labels' strike,
     // the face's stroke on its strikeout rows across the run's advance) in
-    // the same ink, then the PLAIN run, its pen the struck run's rounded
-    // advance and the lane's segment step past it (cue_segment_text_gap_px:
+    // the same ink, then the PLAIN run, its pen the struck run's own
+    // advance, unrounded, and the lane's segment step past it
+    // (cue_segment_text_gap_px:
     // pad, gap, pad — where the lane's second segment's text stands from the
     // first's). A run that is absent takes no room and no step; line 1's
     // extent is the runs' with the step between.
@@ -3659,35 +3685,32 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const bool two_line = (line2 != nullptr);
     const text_shape::ShapedRun r1 =
         text_shape::shape_text_run(name_font, line1);
-    const int cap1 =
-        static_cast<int>(std::nearbyint(gui_font_cap_px(name_font)));
+    const double cap1 = gui_font_cap_px(name_font);
     text_shape::ShapedRun rs;
     double line1_w  = r1.width_px;
     double plain_dx = 0.0;   // the plain run's pen past line 1's
     if (struck != nullptr) {
         rs = text_shape::shape_text_run(name_font, struck);
-        const int ws = static_cast<int>(std::nearbyint(rs.width_px));
-        plain_dx = static_cast<double>(ws + cue_segment_text_gap_px());
-        line1_w  = line1[0] != '\0'
-                       ? plain_dx + std::nearbyint(r1.width_px)
-                       : static_cast<double>(ws);
+        plain_dx = rs.width_px +
+                   static_cast<double>(cue_segment_text_gap_px());
+        line1_w  = line1[0] != '\0' ? plain_dx + r1.width_px : rs.width_px;
     }
 
-    int cap2 = 0;
+    double cap2 = 0.0;
     double w2 = 0.0;
     text_shape::ShapedRun r2;
     if (two_line) {
         r2 = text_shape::shape_text_run(hint_font, line2);
-        cap2 = static_cast<int>(std::nearbyint(gui_font_cap_px(hint_font)));
+        cap2 = gui_font_cap_px(hint_font);
         w2 = r2.width_px;
     }
 
     const int frame = hairline_px();
     const int pad   = time_field_pad_px();
     const int inset = frame + pad;
-    const int w = static_cast<int>(std::nearbyint(std::max(line1_w, w2))) +
-                  2 * inset;
-    const int h = 2 * inset + cap1 + (two_line ? pad + cap2 : 0);
+    const double w = std::max(line1_w, w2) + static_cast<double>(2 * inset);
+    const double h = static_cast<double>(2 * inset) + cap1 +
+                     (two_line ? static_cast<double>(pad) + cap2 : 0.0);
 
     // OFF THE OWNER'S FACE ALONE (architect 2026-11-07, sessions 90 and 91):
     // above `btn`, one W between (render.h's kTooltipGapW), its left edge on
@@ -3703,14 +3726,18 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // pen as the cue pass drew it — marker_tooltip_box_rect, app_state.h,
     // over the same rule, and a history item's the same
     // (history_tooltip_box_rect); `btn` stays its vertical seat.
-    const GuiRect box =
+    const GuiRectF box =
         owner.surface == AppState::RedesignTooltip::Surface::Marker
             ? marker_tooltip_box_rect(app, owner.index, inset, w, h)
         : owner.surface == AppState::RedesignTooltip::Surface::History
             ? history_tooltip_box_rect(app, owner.index, inset, w, h)
             : tooltip_box_rect(app, btn, w, h);
-    const int x = box.x;
-    const int y = box.y;
+    const double x = box.x;
+    const double y = box.y;
+    // THE PAINTED BOX AND THE PUBLISHED RECT ARE THE BOX'S HULL (render.h;
+    // the block above): whole edges, what the hide edge and the words
+    // comparator damage.
+    const GuiRect box_hull = hull(box);
     // PUBLISHED AS PAINTED: a clip that covers the box draws it whole, so the
     // rect and the words are exactly this frame's; a clip that does not (the
     // player's clock and scrub cells at scanner cadence, which recompose a
@@ -3718,27 +3745,29 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // leaves the old box's pixels where they stood, so the rect grows to the
     // union of the two and the words stay the last ones really drawn —
     // main.cpp's comparator sees that drift and damages the box whole.
-    if (clip_covers_drawable(cr, app, box)) {
-        app.redesign_tooltip.rect          = box;
+    if (clip_covers_drawable(cr, app, box_hull)) {
+        app.redesign_tooltip.rect          = box_hull;
         app.redesign_tooltip.painted_line1 = line1;
         app.redesign_tooltip.painted_line2 = line2 != nullptr ? line2 : "";
         app.redesign_tooltip.painted_struck = struck != nullptr ? struck : "";
     } else {
         app.redesign_tooltip.rect =
-            (prev_rect.w > 0 && prev_rect.h > 0) ? union_rect(prev_rect, box)
-                                                 : box;
+            (prev_rect.w > 0 && prev_rect.h > 0)
+                ? union_rect(prev_rect, box_hull)
+                : box_hull;
     }
 
     // THE TOOLTIP'S LOOK, the flat look's tones off the installed palette
     // (`pane_face`, `well_frame`, the text pair): the pane in the one frame
     // tone (render.h's THE CARD FACE).
     const GuiPalette& p = palette();
-    paint_popup_chrome(cr, box, p.well_frame, p.pane_face);
+    paint_popup_chrome(cr, box_hull, p.well_frame, p.pane_face);
 
-    // THE BASELINES (the box above): the name's on its cap's bottom row
-    // under the frame and the pad, the hint's one pad and its own cap lower.
-    const double base1 = static_cast<double>(y + inset + cap1);
-    const double pen1  = static_cast<double>(x + inset);
+    // THE BASELINES (the box above), exact: the name's at its cap's bottom
+    // edge under the frame and the pad, the hint's one pad and its own cap
+    // lower; the pen one inset in from the box's real left edge.
+    const double base1 = y + static_cast<double>(inset) + cap1;
+    const double pen1  = x + static_cast<double>(inset);
     if (struck != nullptr) {
         set_palette_source(cr, p.text);
         text_shape::show_shaped_run(cr, rs, pen1, base1);
@@ -3749,8 +3778,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     text_shape::show_shaped_run(cr, r1, pen1 + plain_dx, base1);
     if (two_line) {
         set_palette_source(cr, p.text_dim);
-        text_shape::show_shaped_run(cr, r2, static_cast<double>(x + inset),
-                                    base1 + static_cast<double>(pad + cap2));
+        text_shape::show_shaped_run(cr, r2, pen1,
+                                    base1 + static_cast<double>(pad) + cap2);
     }
 
     cairo_restore(cr);
@@ -4051,13 +4080,21 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             cairo_rectangle(cr, text_x, card.y, text_room, card.h);
             cairo_clip(cr);
             set_palette_source(cr, palette().card_text);
-            // The FIRST line's baseline puts ITS CAP TOP AT RING + PAD
-            // (architect 2026-10-24): the cap band centered in the first
-            // line, the line being exactly pad + cap + pad inside the ring
-            // (notification_card_h_px) — redesign_baseline's centering on
-            // the rounded cap, stated whole so no half-px floor moves it.
-            // Each further line is one face line-height lower.
-            const double base = static_cast<double>(card.y + ring + pad + cap);
+            // The FIRST line's baseline CENTERS ITS CAP BAND IN THE FIRST
+            // LINE EXACTLY (architect 2026-10-24; exact since the no-grid
+            // arc, 2026-11-15): the line's inside rows are pad + the cap's
+            // whole rows + pad (notification_card_h_px, a layout size — the
+            // card is a floating surface's box and stays whole, render.h's
+            // hull), and the face's real cap band (gui_font_cap_px,
+            // unrounded) stands in the middle of them, so the air above the
+            // caps and under the baseline is the same real length —
+            // redesign_baseline's centering, on the card's own rows.
+            // Each further line is one face line-height lower (the whole
+            // pitch the card grows by).
+            const double base =
+                redesign_baseline(font,
+                                  static_cast<double>(card.y + ring),
+                                  static_cast<double>(inside_h));
             for (size_t li = 0; li < lines.size(); ++li) {
                 text_shape::show_shaped_run(
                     cr, lines[li], static_cast<double>(text_x),
@@ -6833,7 +6870,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // row's baseline modal_box_text_baseline0 (the "l"'s ink top the seat
     // under the pane's top row), each further row one list row pitch below.
     // The rows keep the list's band (row_h) for the published geometry, the
-    // first row's band placed so redesign_baseline lands on that baseline.
+    // first row's band placed so redesign_baseline lands on that baseline
+    // EXACTLY (architect 2026-11-15, the no-grid arc): the band's top a real
+    // y, nothing truncated; the pitch from row to row stays whole (layout).
     const GuiRect interior   = boxed ? modal_box_interior_rect(app, kb_h)
                                      : GuiRect{0, 0, 0, 0};
     const GuiRect text_room  = modal_box_text_room(interior);
@@ -6842,9 +6881,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int     row_h      = folder_overlay::button_row_height_px();
     const int     row_pitch  = row_h + folder_overlay::button_row_gap_px();
     const double  baseline0  = modal_box_text_baseline0(font, interior);
-    const int     row0_y     = static_cast<int>(baseline0) -
-                               static_cast<int>(redesign_baseline(font, 0.0,
-                                                static_cast<double>(row_h)));
+    const double  row0_y     = baseline0 -
+                               redesign_baseline(font, 0.0,
+                                                 static_cast<double>(row_h));
     // ONE LINE ON THE BOX'S FIRST ROW, in the chrome's text on the pane —
     // a prompt's question and the progress modal's sentence alike — CLIPPED
     // to the text room, the seat short of the box's right column: a line
@@ -7121,7 +7160,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // Row 8's clock's ink, the text tone (M13, 2026-11-02).
                 set_palette_source(cr, palette().text);
                 text_shape::show_shaped_run(
-                    cr, run, static_cast<double>(time_field_run_x(field_x)),
+                    cr, run, time_field_run_x(field_x),
                     redesign_baseline(cfont, static_cast<double>(field.y),
                                       static_cast<double>(field.h)));
             }
@@ -7209,7 +7248,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     set_palette_source(cr, palette().text);
                     text_shape::show_shaped_run(
                         cr, run,
-                        static_cast<double>(time_field_run_x(field_x)),
+                        time_field_run_x(field_x),
                         redesign_baseline(cfont, static_cast<double>(field.y),
                                           static_cast<double>(field.h)));
                 }
@@ -7381,16 +7420,19 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 row.hard     = ranges[r].hard;
                 row.origin_x = static_cast<double>(line_x0) -
                                bx_off[static_cast<std::size_t>(row.begin)];
-                row.y        = row0_y + static_cast<int>(r) * row_pitch;
+                row.y        = row0_y +
+                               static_cast<double>(static_cast<int>(r) *
+                                                   row_pitch);
                 row.h        = row_h;
                 out.rows.push_back(row);
             }
 
             // Everything from here paints CLIPPED TO THE PANE'S COLUMNS AND
             // THE TEXT ROOM'S ROWS (the seat over the box's foot, modal_box.h's
-            // THE TEXT SEAT), and each row's run under its own row's clip
-            // (its text range's columns), so a row shows its own bytes and no
-            // other row's.
+            // THE TEXT SEAT) — ONE WHOLE RECTANGLE, the only clip the rows
+            // take: each row paints its own byte range's glyphs alone
+            // (text_shape::show_shaped_run_bytes), so a row shows its own
+            // bytes and no other row's with no clip of its own.
             cairo_save(cr);
             cairo_rectangle(cr, interior.x, text_room.y, interior.w,
                             text_room.h);
@@ -7403,87 +7445,66 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
             const int  caret_row  =
                 dialog_editor_row_of(out, cursor_pos, ed->caret_row_end);
+            // THE SELECTION AND CARET BAND IS THE FACE'S LINE BOX on the
+            // text's own rows (the flag editor's, brief 69 — from the
+            // ascent above the baseline, the line height tall), as the
+            // one-row field took it — AT ITS EXACT PLACE (architect
+            // 2026-11-15, the no-grid arc): the face's real ascent and line
+            // height under the row's real baseline, nothing rounded.
+            const double band_up = gui_font_ascent_exact_px(font);
+            const double band_h  = gui_font_line_exact_px(font);
             for (std::size_t r = 0; r < out.rows.size(); ++r) {
                 const AppState::DialogEditorText::Row& row = out.rows[r];
                 const double baseline =
-                    redesign_baseline(font, static_cast<double>(row.y),
+                    redesign_baseline(font, row.y,
                                       static_cast<double>(row.h));
-                // THE SELECTION AND CARET BAND IS THE FACE'S LINE BOX on the
-                // text's own rows (the flag editor's, brief 69 — ascent +
-                // descent), as the one-row field took it.
-                const int band_y =
-                    static_cast<int>(std::nearbyint(baseline -
-                                                    gui_font_ascent_px(font)));
-                const int band_h =
-                    static_cast<int>(std::nearbyint(gui_font_line_px(font)));
-                const double tx    = row.origin_x;
-                const double row_w =
-                    bx_off[static_cast<std::size_t>(row.end)] -
-                    bx_off[static_cast<std::size_t>(row.begin)];
-                // THE ROW'S OWN COLUMNS: from the line's start to its last
-                // byte's pen — the last row's to the interior's edge, nothing
-                // following it there.
-                const bool   last_row = r + 1 == out.rows.size();
-                const double clip_x0  = static_cast<double>(line_x0);
-                const double clip_x1  =
-                    last_row ? static_cast<double>(interior.x + interior.w)
-                             : clip_x0 + row_w;
-                const double ry0 = static_cast<double>(row.y);
-                const double ry1 = static_cast<double>(row.y + row.h);
+                const double band_y = baseline - band_up;
+                const double tx     = row.origin_x;
+                const auto byte_x = [&](int byte) {
+                    return tx + bx_off[static_cast<std::size_t>(byte)];
+                };
                 // THE SELECTION IS THE THEME'S SELECTED PAIR OVER THE FIELD
                 // PAIR (architect 2026-10-03, unified fields; render.h's
                 // palette block) — the selected fill behind the selected
                 // substring's part on this row, the selected text for its
-                // glyphs, the field text for the rest: the flag editor's
-                // marker-lane box paints the same four. ONE INK PER PIXEL, the
-                // flag editor's rule (render_flag_editor_box): with a
-                // selection on the row, the field-text run is clipped to the
-                // band's complement and the selected run to the band, two
-                // disjoint regions, so every antialiased edge blends against
-                // exactly the ground it sits on.
+                // glyphs, the field text for the rest. THE BAND'S TWO EDGES
+                // STAND ON THEIR BYTES' EXACT x (the run's own pen at each
+                // boundary, unrounded), filled at exact coverage (the exact
+                // fill, render.h — inside the one clip rectangle above), and
+                // THE TEXT'S COLOR CHANGES AT THOSE SAME BOUNDARIES, GLYPH BY
+                // GLYPH: a selection's edge is a byte boundary, between two
+                // glyphs, so the row is painted as three byte ranges — before
+                // the band in the field text, the band's in the selected
+                // text, after it in the field text — each range whole glyphs
+                // at the places the whole run gives them, with no clip at
+                // the band (no fractional clip, no multi-rect clip: the
+                // exact fill's own condition, render.h). A glyph that
+                // overhangs the boundary beside it keeps its own ink there.
                 const int a = std::max(s0, row.begin);
                 const int b = std::min(s1, row.end);
                 if (has_sel && a < b) {
-                    const int hx0 = static_cast<int>(std::nearbyint(
-                        tx + bx_off[static_cast<std::size_t>(a)]));
-                    const int hx1 = static_cast<int>(std::nearbyint(
-                        tx + bx_off[static_cast<std::size_t>(b)]));
-                    const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
-                    cairo_save(cr);
-                    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                    set_palette_source(cr, ink_sel_fill);
-                    cairo_rectangle(cr, hx0, band_y, hw, band_h);
-                    cairo_fill(cr);
-                    cairo_restore(cr);
-                    // The complement inside the row's columns: the columns
-                    // left and right of the band, and the rows above and
-                    // below it (the band is the face's line, not the row's
-                    // box), as one clip path.
-                    cairo_save(cr);
-                    cairo_rectangle(cr, clip_x0, ry0, hx0 - clip_x0, ry1 - ry0);
-                    cairo_rectangle(cr, hx0 + hw, ry0,
-                                    clip_x1 - (hx0 + hw), ry1 - ry0);
-                    cairo_rectangle(cr, hx0, ry0, hw, band_y - ry0);
-                    cairo_rectangle(cr, hx0, band_y + band_h, hw,
-                                    ry1 - (band_y + band_h));
-                    cairo_clip(cr);
+                    paint_ink_rect(cr,
+                                   GuiRectF{byte_x(a), band_y,
+                                            byte_x(b) - byte_x(a), band_h},
+                                   ink_sel_fill);
                     set_palette_source(cr, ink_text);
-                    text_shape::show_shaped_run(cr, run, tx, baseline);
-                    cairo_restore(cr);
-                    cairo_save(cr);
-                    cairo_rectangle(cr, hx0, band_y, hw, band_h);
-                    cairo_clip(cr);
+                    text_shape::show_shaped_run_bytes(
+                        cr, run, tx, baseline,
+                        static_cast<std::size_t>(row.begin),
+                        static_cast<std::size_t>(a));
+                    text_shape::show_shaped_run_bytes(
+                        cr, run, tx, baseline, static_cast<std::size_t>(b),
+                        static_cast<std::size_t>(row.end));
                     set_palette_source(cr, ink_sel_text);
-                    text_shape::show_shaped_run(cr, run, tx, baseline);
-                    cairo_restore(cr);
+                    text_shape::show_shaped_run_bytes(
+                        cr, run, tx, baseline, static_cast<std::size_t>(a),
+                        static_cast<std::size_t>(b));
                 } else {
-                    cairo_save(cr);
-                    cairo_rectangle(cr, clip_x0, ry0, clip_x1 - clip_x0,
-                                    ry1 - ry0);
-                    cairo_clip(cr);
                     set_palette_source(cr, ink_text);
-                    text_shape::show_shaped_run(cr, run, tx, baseline);
-                    cairo_restore(cr);
+                    text_shape::show_shaped_run_bytes(
+                        cr, run, tx, baseline,
+                        static_cast<std::size_t>(row.begin),
+                        static_cast<std::size_t>(row.end));
                 }
                 // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE
                 // FIELD HAS IT (architect 2026-08-13, at his live test: "the
@@ -7504,16 +7525,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // reserved.
                 if (static_cast<int>(r) == caret_row && field_focused &&
                     text_editor::cursor_visible_now(*ed)) {
-                    const double caret_x =
-                        tx + bx_off[static_cast<std::size_t>(cursor_pos)];
-                    cairo_save(cr);
-                    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                    // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03).
-                    set_palette_source(cr, ink_text);
-                    cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
-                                    band_y, caret_px, band_h);
-                    cairo_fill(cr);
-                    cairo_restore(cr);
+                    // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03),
+                    // one W wide FROM ITS BYTE'S EXACT x on the band's exact
+                    // rows, at exact coverage (the exact fill).
+                    paint_ink_rect(cr,
+                                   GuiRectF{byte_x(cursor_pos), band_y,
+                                            static_cast<double>(caret_px),
+                                            band_h},
+                                   ink_text);
                 }
             }
             cairo_restore(cr);   // the interior clip
@@ -7888,8 +7907,11 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             }
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, cap);
-            const double cap_x = std::nearbyint(
-                r.x + (r.w - run.width_px) * 0.5);
+            // The pen centers the cap's advance on the key EXACTLY (no half
+            // rounded; architect 2026-11-15, the no-grid arc).
+            const double cap_x = static_cast<double>(r.x) +
+                                 (static_cast<double>(r.w) - run.width_px) *
+                                     0.5;
             const double baseline = redesign_baseline(
                 font, static_cast<double>(r.y), static_cast<double>(r.h));
             // THE CAP in the keys face, no shadow, its cap band centered on

@@ -27,9 +27,13 @@
 // axis and the pipe onto the digits' band where the live set lifts them
 // (gui_sign_lift_px, gui_font.h) — and
 // painted
-// through cairo_show_glyphs on the same scaled font. The run is seated on a
-// baseline the caller hands in, which its seat derived from the face's
-// recorded vertical metrics (gui_face_metrics).
+// through THE RASTER ROAD on the same scaled font (text_raster.h, architect
+// 2026-11-15, the no-grid arc): every glyph at its EXACT place, to a 64th
+// of a px on both axes, the pen and the baseline taken as the caller hands
+// them — a glyph whose own place is whole is the glyph cairo_show_glyphs
+// would put down, and a glyph inside a run stands on its own fraction (the
+// sum of the unhinted advances before it). The run is seated on a baseline the caller hands in, which its
+// seat derived from the face's recorded vertical metrics (gui_font.h).
 //
 // PRECONDITIONS (stated, not guarded — no error arm without a producer):
 //   - the faces are installed (gui_font_install_bundled, before the first
@@ -42,8 +46,10 @@
 //   - NO FALLBACK FACE. A codepoint the face does not cover either
 //     shapes to .notdef and paints as the empty box — accepted, in the same
 //     class as the no-bidi exclusion below.
-//   - The current cairo PATH is preserved by show_shaped_run:
-//     cairo_show_glyphs neither reads nor touches it.
+//   - The current cairo PATH is preserved by show_shaped_run: the raster
+//     road composites a mask and neither reads nor touches it.
+//   - The context's matrix is a pure translation (text_raster.h's THE
+//     CONTEXT; every product context's).
 //
 // Runs are single-direction LTR horizontal only: y advances are not modelled,
 // and a run's pen walks x alone.
@@ -147,19 +153,40 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
                        Kerning kerning = Kerning::On);
 
-// Paint `run` with its baseline origin at (x, y) in cairo's current source,
-// on the run's own font. Cairo state and the current path are not modified.
+// Paint `run` with its baseline origin at EXACTLY (x, y) in cairo's current
+// source, on the run's own font, under the context's clip: no rounding of
+// the pen or of the baseline here or below it (text_raster.h — the ink
+// stands where x and y say, to a 64th of a px, and no row or column of it
+// is cut at a fraction). Cairo state and the current path are not modified.
 // The placement goes through one reused per-thread buffer (text_shape.cpp,
 // 2026-10-13), so a paint allocates nothing once that buffer has grown.
+// GUI THREAD ONLY (the raster road's tables, text_raster.h).
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 
-// A RUN'S FIRST INK, in pixels from the run's pen origin to the left edge of
-// its first lit pixel — the left side bearing of the run as cairo will paint
-// it (negative where a glyph overhangs its origin), as against the origin
-// `width_px` measures from; an empty run answers 0. Measured through cairo's
-// own glyph extents (cairo_scaled_font_glyph_extents) on the run's OWN
-// positioned glyphs on its own scaled font, so it is the ink show_shaped_run
-// puts down — the chokepoint's one-run property, said of ink.
+// PAINT ONE BYTE RANGE OF `run` — the glyphs whose cluster begins in
+// [byte_begin, byte_end) — EACH AT THE PLACE THE WHOLE RUN'S PLACEMENT AT
+// (x, y) GIVES IT (the one fixed arithmetic, never a sub-run laid out
+// again), in cairo's current source. THE EDITORS' COLOR SPLIT (architect
+// 2026-11-15, the no-grid arc): a selection's edges stand on byte
+// boundaries, between glyphs, so the selected bytes and the bytes around
+// them are whole glyphs each and take their own ink with no clip at all —
+// a line painted as its ranges is the line painted whole, less only cairo's
+// saturating sum where two glyphs of different ranges overlap, each then
+// laid in its own ink. A range that holds no cluster paints nothing.
+void show_shaped_run_bytes(cairo_t* cr, const ShapedRun& run, double x,
+                           double y, size_t byte_begin, size_t byte_end);
+
+// A RUN'S FIRST INK, in pixels from the run's pen origin to THE REAL LEFT
+// EDGE OF ITS INK — the left side bearing of the run as it is painted
+// (negative where a glyph overhangs its origin), UNROUNDED (architect
+// 2026-11-15, the no-grid arc), as against the origin `width_px` measures
+// from; an empty run, or one with no ink, answers 0. Measured on the run's
+// OWN positioned glyphs by the raster road's own outlines
+// (text_raster::ink_box: each glyph's hinted outline's box in 26.6, the box
+// its raster is rendered on — the light hinter leaves every x as designed,
+// so this is the design's own edge at the size), so it is the ink
+// show_shaped_run puts down — the chokepoint's one-run property, said of
+// ink — and a seat that aligns ink to an edge aligns it exactly.
 //
 // ITS CONSUMERS: row 8's STATE LINE (architect 2026-10-08): its first ink
 // stands one field pad past the clock's field, the same air the field
@@ -170,24 +197,23 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // block): the brand's first ink a gap past the note's last, and the
 // legend's runs and its glyph cell spaced off each other's ink; and THE
 // TIME FIELDS' CELL (architect 2026-11-05, paint_handler.cpp's kTimeShape
-// block): the widest-digit specimen's first ink, floored, is the cell's
-// first column, and every time field's run origin stands that bearing
-// short of the cell. Every other
+// block): the cell is the whole hull of the widest-digit specimen's ink
+// and every time field's run stands so that ink is centered in it exactly.
+// Every other
 // layout wants a reserved CELL, which is `width_px`'s job.
 double ink_left_px(const ShapedRun& run);
-// A RUN'S LAST INK, in pixels from the run's pen origin to the right edge of
-// its last lit pixel, measured the same way (the run's own positioned glyphs
-// through cairo_scaled_font_glyph_extents: x_bearing + width); an empty run
-// answers 0. ITS CONSUMERS: THE LOGO LANE'S LEGEND (architect
+// A RUN'S LAST INK, in pixels from the run's pen origin to the real right
+// edge of its ink, measured the same way (the run's own positioned glyphs'
+// outline boxes, unrounded); an empty run answers 0. ITS CONSUMERS: THE LOGO LANE'S LEGEND (architect
 // 2026-10-24, "the clock flush with the right edge of the buttons"): the
 // clock run's last ink on the well's last column and the
 // percent run's last ink one space advance and the battery's one W of air
 // short of the glyph cell (paint_handler.cpp's logo_legend_layout, which
 // reads ink_left_px for the clock's and the percent's first ink columns —
 // the drawn pipe's and the lamps' seats, 2026-11-05); and THE TIME FIELDS' CELL
-// (architect 2026-11-05, kTimeShape's block): the widest-digit specimen's
-// last ink, ceiled, is one past the cell's last column, so the cell is the
-// specimen's ink box in whole px and its pads read equal on both sides.
+// (architect 2026-11-05, kTimeShape's block): the cell's width is the
+// whole hull of the widest-digit specimen's ink width, the ink centered in
+// it exactly, so its pads read equal on both sides.
 double ink_right_px(const ShapedRun& run);
 
 // THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels

@@ -837,7 +837,10 @@ inline constexpr double kNotificationGlyphGapW = 4.0;
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
 // own "H" ink (gui_font_cap_px, the one cap measure redesign_baseline
-// reads), rounded to whole px so the first line's rows are whole.
+// reads), rounded to whole px so the first line's rows are whole — A SIZE
+// FOR THE CARD'S BOX, which stays whole (a floating surface's, render.h's
+// hull); the text's baseline centers the face's REAL cap in those rows
+// (paint_notifications).
 int notification_cap_px();
 
 // A ONE-LINE card's height, and the height every card's FIRST line occupies

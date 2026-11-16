@@ -279,9 +279,10 @@ inline GuiRect modal_box_text_room(const GuiRect& pane) {
     return GuiRect{pane.x + seat, pane.y, pane.w - 2 * seat, pane.h - seat};
 }
 // THE FIRST ROW'S BASELINE in the pane `pane`: the seat under the pane's top
-// row is the ascender line, the baseline the ascender's own height under it,
-// rounded at the element.
+// row is the ascender line, the baseline the ascender's own height under it
+// — EXACT (architect 2026-11-15, the no-grid arc): the face's real "l" ink
+// height, unrounded, so the lowercase ink's top stands on the seat's edge.
 inline double modal_box_text_baseline0(const GuiFont& font, const GuiRect& pane) {
     return static_cast<double>(pane.y + modal_box_text_seat_px()) +
-           std::nearbyint(gui_font_ascender_ink_px(font));
+           gui_font_ascender_ink_px(font);
 }
