@@ -665,6 +665,16 @@ struct FlagCache {
     ~FlagCache() { destroy_surface(); }
 };
 
+// A KEY'S PAINTED EXTENT FOR A LEGEND (architect 2026-11-16, the beats): the
+// face united with the line box of `legend` printed under it — the keys' one
+// layout owner's answer (key_legend_layout's `extent`, paint_handler.cpp:
+// what the rows' painters publish as RedesignButtonFace::painted and their
+// coverage tests read), given to the one reader outside the painters, THE
+// ROSTER'S FACE COMPARATOR (main.cpp), which damages a drifted key's stashed
+// extent united with the extent its live legend lays out. `face` is the
+// key's whole face; a face cut at the band's overflow column is not one.
+GuiRect key_painted_extent(const GuiRect& face, std::string_view legend);
+
 // -- GuiPaintHandler -----------------------------------------------------
 //
 // Extracted from main.cpp's set_on_redraw / set_on_resize lambdas.
@@ -936,6 +946,12 @@ struct GuiPaintHandler {
     // area builds the list. Called from the pre-paint hook (main.cpp), the
     // one seat that opens every painted frame.
     void begin_canvas_frame();
+    // THE FRAMES BEGUN (architect 2026-11-16, the beats): one more at every
+    // begin_canvas_frame — the pre-paint hook, which runs once for each
+    // frame that paints and never without its paint. ONE READER, the
+    // roster's face comparator (main.cpp), which asks whether a frame has
+    // painted since it declared a key's own rect.
+    uint64_t frames_begun = 0;
 
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the published plate (wf_cache.fp_*) while the worker rebuilds against a

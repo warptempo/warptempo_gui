@@ -1368,6 +1368,13 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // rather than the field band's plus a drop until the label's removal
 // (2026-10-14).
 } // namespace
+
+// A KEY'S PAINTED EXTENT FOR A LEGEND (the declaration, paint_handler.h):
+// key_legend_layout's `extent`, the one owner's, for the roster's face
+// comparator (main.cpp).
+GuiRect key_painted_extent(const GuiRect& face, std::string_view legend) {
+    return key_legend_layout(face, legend).extent;
+}
 double redesign_baseline(const GuiFont& font, double box_y,
                          double box_h) {
     return box_y + (box_h + gui_font_cap_px(font)) * 0.5;
@@ -9545,6 +9552,7 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
 void GuiPaintHandler::begin_canvas_frame() {
     canvas_frame_seen = false;
     canvas_list_built = false;
+    ++frames_begun;
 }
 
 // -- GuiPaintHandler::on_resize ------------------------------------------

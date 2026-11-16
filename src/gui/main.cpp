@@ -2416,6 +2416,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // detects natural end-of-playback via the session word's playing bit.
     // THE LOGO LANE'S LEGEND before the first paint (refresh_logo_legend).
     refresh_logo_legend(app, gui);
+    // THE FACE COMPARATOR'S OWN-RECT RECORD (the comparator's block in the
+    // tick below, where the rule is): per roster key, the frame count at
+    // which the comparator last declared that key's own rect, 0 while the
+    // key does not drift.
+    std::array<uint64_t, kRedesignButtonCount> face_narrow_frame{};
     gui.set_on_tick([&]() {
         // THE NOTIFICATION CARDS' CLOCK, THE TICK'S FIRST TENANT — the one
         // thing this body does on EVERY tick, ahead of all five of its early
@@ -2771,11 +2776,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // Those facts change with no top-strip damage whatsoever, so the strip
         // would keep showing yesterday's faces; here the LIVE bits are compared
         // against the ones the painter last painted
-        // (RedesignButtonFace::enabled and ::selected) and any drift pays a
-        // single invalidate_top_strip. The repaint rewrites the whole stash, so
+        // (RedesignButtonFace::enabled and ::selected) and any drift pays
+        // THE DRIFTED KEYS' OWN RECTS, or the key's home strip whole (the
+        // damage's rule at the walk below; architect 2026-11-16, the beats).
+        // The repaint rewrites each repainted key's stash, so
         // the faces settle in one pass — including the cold case, where the
         // roster's bits start at their defaults and the first compare corrects
-        // them. (A standing BOTTOM-ROW hint's words, compared below, settle in
+        // them (no painted extent yet: the strip). (A standing BOTTOM-ROW hint's words, compared below, settle in
         // two frames; the reason is at that compare.)
         // IT IS ALSO WHAT MAKES THE PAINTED CLAIM TRUTHFUL (architect
         // 2026-09-24, strictly as-painted): every chrome claim — the roster's
@@ -2794,8 +2801,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // and its legend name the next press's act, arm for arm — FIT /
         // RECALL and INHERIT / TIE move with no damage of their own; the
         // publication's coverage is the union of the old and new painted
-        // extents, publish_button_face, and the damage below is the whole
-        // strip, so a word's change repaints both).
+        // extents, publish_button_face, and the damage below is that union
+        // or the whole strip, so a word's change repaints both).
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
@@ -2859,11 +2866,58 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // that edge (finalize_render_run clears the bit from an async
             // completion), the glyph predicate reading queue_running itself
             // with no per-tick mirror between them (architect 2026-09-24).
-            bool drift_top       = false;
-            bool drift_transport = false;
-            for (int i = 0;
-                 i < kRedesignButtonCount && !(drift_top && drift_transport);
-                 ++i) {
+            // THE DAMAGE IS THE DRIFTED KEY'S OWN (architect 2026-11-16, the
+            // beats: the face and its legend, not the whole strip — a lamp
+            // tapped during a play no longer costs the scanner three heavy
+            // frames): ONE RECT A DRIFTED KEY, THE UNION OF ITS STASHED
+            // PAINTED EXTENT AND THE EXTENT ITS LIVE LEGEND LAYS OUT
+            // (RedesignButtonFace::painted; key_painted_extent of the face
+            // and redesign_button_legend's live word, paint_handler.h — the
+            // rows' painters' own layout owner). That rect holds every pixel
+            // the drift can change — the face, the glyph on it, the legend's
+            // old word and its new one — and it is exactly the coverage
+            // publish_button_face asks before it refreshes the key's stash
+            // (the stashed extent united with the one the painter lays out,
+            // the same owner's answer for the same word, cut no wider at the
+            // band's overflow column), so the frame repaints the key and
+            // republishes it and this walk finds no drift at the next tick.
+            // A legend never widens a key or moves a neighbor (the faces'
+            // pitch is the row's), so no other key's seat follows a drift.
+            // THE HOME STRIP STAYS, WHOLE, for a strip on which this tick
+            // finds any of:
+            //   * a drifted key with NO PAINTED EXTENT (the cold case; a key
+            //     hidden, yielded or overflowed has an empty rect and its
+            //     stash refreshes unconditionally, so it does not drift), or
+            //     whose published face is NOT THE WHOLE FACE (cut at the
+            //     band's overflow column: the layout owner wants the whole
+            //     face to seat a legend);
+            //   * A KEY THAT STILL DRIFTS AFTER A FRAME PAINTED ITS OWN RECT
+            //     (face_narrow_frame: the frames begun when the rect was
+            //     declared, against GuiPaintHandler::frames_begun now) — the
+            //     publisher did not refresh it under that rect, for whatever
+            //     reason, and the strip is the repaint that always settles
+            //     (the stash rewritten under a clip that covers every key),
+            //     so the walk cannot declare one key's rect tick after tick;
+            //   * MORE THAN kFaceComparatorKeys drifted keys: each rect is
+            //     one on_redraw call and one repair rect (kRepairRectCap,
+            //     platform_android.h), and a tick that flips many faces at
+            //     once — a load, an overlay opening over a dead roster, a
+            //     selection arriving under row 8's marker verbs — is one
+            //     repaint of the strip, as cheap. Four holds what a tap
+            //     flips: a lamp, a radio pair, a key and its twin.
+            // Until a frame paints, each tick re-declares the same rect
+            // (coalesced). The walk runs the whole roster, so a key that no
+            // longer drifts clears its record.
+            constexpr int kFaceComparatorKeys = 4;
+            struct StripDrift {
+                bool                                     whole = false;
+                int                                      n     = 0;
+                std::array<GuiRect, kFaceComparatorKeys> rects{};
+            };
+            StripDrift top;
+            StripDrift row8;
+            const uint64_t frame_now = paint_handler.frames_begun + 1;
+            for (int i = 0; i < kRedesignButtonCount; ++i) {
                 const RedesignButton id = static_cast<RedesignButton>(i);
                 const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
                 const bool drifted =
@@ -2874,15 +2928,46 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                       app, audio.total_frames(), id) ||
                     f.glyph != redesign_button_glyph(app, id) ||
                     f.icon != redesign_button_icon(app, audio, id);
-                if (!drifted) continue;
-                if (redesign_button_in_transport_row(id))
-                    drift_transport = true;
-                else
-                    drift_top = true;
+                if (!drifted) {
+                    face_narrow_frame[static_cast<size_t>(i)] = 0;
+                    continue;
+                }
+                StripDrift& strip =
+                    redesign_button_in_transport_row(id) ? row8 : top;
+                if (strip.whole) continue;
+                uint64_t& declared = face_narrow_frame[static_cast<size_t>(i)];
+                const bool whole_face =
+                    f.painted.w > 0 && f.painted.h > 0 &&
+                    f.rect.w == icon_case_w_px() &&
+                    f.rect.h == icon_case_h_px();
+                const bool painted_since = declared != 0 &&
+                                           declared != frame_now;
+                if (!whole_face || painted_since ||
+                    strip.n == kFaceComparatorKeys) {
+                    strip.whole = true;
+                    continue;
+                }
+                const char* legend = redesign_button_legend(app, audio, id);
+                strip.rects[static_cast<size_t>(strip.n++)] = union_rect(
+                    f.painted,
+                    key_painted_extent(f.rect, legend != nullptr ? legend
+                                                                 : ""));
+                declared = frame_now;
             }
-            if (drift_top) invalidate_top_strip();
-            if (drift_transport)
+            if (top.whole) {
+                invalidate_top_strip();
+            } else {
+                for (int k = 0; k < top.n; ++k)
+                    viewport.invalidate_rect(
+                        top.rects[static_cast<size_t>(k)]);
+            }
+            if (row8.whole) {
                 viewport.invalidate_rect(bottom_row_area(app));
+            } else {
+                for (int k = 0; k < row8.n; ++k)
+                    viewport.invalidate_rect(
+                        row8.rects[static_cast<size_t>(k)]);
+            }
             // A STANDING HINT IS A FACE TOO (architect 2026-09-24, strictly
             // as-painted; general since 2026-09-29): a roster hint's words are
             // the stateful overload's (redesign_button_tooltip), which fork on
