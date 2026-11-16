@@ -23,7 +23,7 @@
 // every former that lands a bound by column lands the column holding frame 0
 // on frame 0 and the column holding the last frame on total-1, so a bound
 // dragged as far as it goes rests where Reset Trim puts it — the rule and why
-// the start needs no arm at trim_bound_frame_at_column, the one owner.
+// the start needs no arm at trim_bound_frame_at_x, the one owner.
 //
 // PARTNER WALLS ARE NOW PER-ROUTE (architect 2026-08-02, splitting what used to
 // be one blanket "there are no partner walls" clause). What is unchanged
@@ -42,13 +42,14 @@
 //     the pair rigidly by one shared delta, so the gap between the bounds is
 //     invariant for the whole gesture and there is nothing to cross.
 //   THE BARREL'S BOUND-SET CLICK REFUSES AT ITS PARTNER (architect
-//     2026-11-10): it moves WHICHEVER END CAP IS NEAREST the click ON THE
-//     PAINTED COLUMNS, a tie the begin's but right of both caps, where it
-//     is the end's — inward from inside the trim,
-//     outward from outside it — and a click on its cap's own painted
-//     column, on the bound's own frame, or one whose
+//     2026-11-10): it moves WHICHEVER END CAP IS NEAREST the click BY
+//     REAL DISTANCE ON THE BAR, a tie the begin's but right of both caps,
+//     where it is the end's — inward from inside the trim,
+//     outward from outside it — and a click within half a px of its cap's
+//     own painted place, on the bound's own frame, or one whose
 //     frame would land the bound on or past its partner (a midpoint tie
-//     whose frame rounds onto the end's, where a column is under a frame),
+//     whose frame rounds onto the end's, where the caps stand under a px
+//     apart),
 //     is a consumed no-op that
 //     writes nothing
 //     (trim_bound_click). A clamp would move the bound somewhere the user
@@ -162,24 +163,18 @@
 
 namespace {
 
-// THE PARTNER CLAMP, one owner for the single-bound drag's two applications
+// THE PARTNER CLAMP, the single-bound drag's
 // (architect 2026-08-02: the trim handles "cannot move past each other"): the
 // moving bound stops INCLUSIVELY on the resting partner — a begin clamps DOWN
 // to the end, an end clamps UP to the begin — so the pair can hold begin == end
 // mid-gesture but never a crossed shape. Value in, value out; the partner is
 // read from the pair as it rests, which is the other, un-dragged field.
 //
-// TWO CALLERS, and the duality is the point: the MOTION arm (update_trim_drag's
-// single-bound path) clamps the tracked candidate, and the COMMIT arm
-// (commit_trim_drag) re-clamps AFTER the release column snap, whose
-// round-tripped value can come off the partner by up to a grid span — the
-// [96, 100] sliver that silently broke the ruled drag-onto-partner quick-clear
-// when the two applications were two independent spellings. One expression now,
-// so the invariant cannot fork again. THE COMMIT ARM RE-CLAMPS ONLY A RELEASE
-// THAT WAS NOT PINNED ON THE PARTNER (2026-08-22): a pre-snap coincident
-// release restores equality outright instead, because the nearest-column snap
-// moves an off-grid coincident value in EITHER direction and this clamp binds
-// only in the toward-the-window one — the analysis is at the commit arm. The
+// ONE CALLER, the MOTION arm (update_trim_drag's single-bound path), which
+// clamps the tracked candidate at every event; the release commits that
+// value as it stands (commit_trim_drag takes no snap, architect 2026-11-15,
+// the no-grid arc), so a bound pinned on its partner rests pinned and the
+// ruled drag-onto-partner quick-clear reads the equality the motion left. The
 // BRIDGE arm deliberately does not call
 // this and must not: it moves the pair rigidly by one shared delta, so the gap
 // is invariant and there is no partner wall by ruling (recorded at that arm).
@@ -194,75 +189,86 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
     return v;
 }
 
-// THE TRIM FORMERS' ONE COLUMN->BOUND LANDING, AND HOW EACH WALL IS REACHED
+// THE TRIM FORMERS' ONE PLACE->BOUND LANDING, AND HOW EACH WALL IS REACHED
 // (architect 2026-10-14: "the full drag should be the same as shift plus
-// zero"). Every trim former that lands a bound by column takes its frame
-// here, so the family authors on one lattice: the endcap and bridge drags'
-// release snap (commit_trim_drag), the sweep's two ends
-// (sweep_trim_frame_at_column, the armed touch sweep) and
-// the barrel's bound-set click (trim_bound_click). The frame
-// is the column's authored time — authored_frame_at_column_on_basis over the
-// displayed-or-live target map on the item viewport basis, the column's LEFT
-// edge, where the waveform painter starts that column's span — with the
-// absolute walls [0, total-1] after, plain integer compares.
+// zero"; architect 2026-11-15, the no-grid arc, ruling B: "B, yes, also the
+// exact frame there" — the trim's edges land on the frame under the pen's
+// real place). The trim formers that land a bound at a place take its frame
+// here: the sweep's two ends (sweep_trim_frame_at_x, the armed touch sweep)
+// and the barrel's bound-set click (trim_bound_click). `x` is the pen's real
+// place on the strip, waveform-relative, held by the caller into the strip's
+// closed extent [0, w]. The frame is authored_frame_at_x_on_basis over the
+// displayed-or-live target map on the item viewport basis — the displayed
+// frame under x (displayed_frame_at_x, warp_frame_map_view.h, the pen acts'
+// one conversion), in target view through the displayed map at full
+// precision, snap_authored_frame the one rounding — with the absolute walls
+// [0, total-1] after, plain integer compares.
 //
-// BOTH WALLS ARE REACHED BY THE COLUMN THAT PAINTS THEM: the column holding
-// frame 0 lands ON frame 0, and the column holding the source's last frame
-// lands ON the last frame, total-1 — what Reset Trim writes. THE START HOLDS BY
-// CONSTRUCTION: the grid is anchored at frame 0 of the displayed domain and
-// frame 0 maps to frame 0, so that column's left edge IS frame 0. THE END
-// NEEDS THIS ARM: that column's left edge stands up to one column's span
-// before total-1, so a bound dragged as far as it goes would rest that far
-// short of the source's end. A column holds the last frame when its RIGHT edge — its
-// successor's authored time, the lattice column's own span end (the next
-// lattice point through the map, authored_frame_at_column_on_basis) — lies
-// past it, in both views, the target
-// view's columns read through the same displayed map the painter used; a
-// column past that one lands on the wall already. Either bound, the mirror of
-// the start's: an end landing in the column holding frame 0 lands on frame 0.
-//
-// A DELIBERATE ASYMMETRY WITH THE MARKER DRAG (architect 2026-10-14), which
-// lands a marker on its column's left edge in every column, the last one
-// included (committed_frame_for_proposal, marker_drag.cpp): snapping is
-// something the product avoids, and a marker at EOF is useless, but a trim
-// end at EOF is REQUIRED — the full render is the window [0, total-1], and
-// the act that reaches it by hand is to zoom out full and drag the end as far
-// as it goes ("trim at EOF is required for full render, marker at EOF is
-// useless"). So the trim is the one exception, and its arm is this one.
+// BOTH WALLS ARE REACHED BY THE WALL'S OWN CLAMP — no column holds a wall
+// any more. THE START: frame 0 stands at the strip's left edge wherever the
+// view rests at the left wall, and a pen at x = 0 answers it. THE END, the
+// trim's one required reach (architect 2026-10-14: "trim at EOF is required
+// for full render, marker at EOF is useless" — the full render is the window
+// [0, total-1], and the act that reaches it by hand is to zoom out full and
+// drag the end as far as it goes): a pen AT OR PAST THE LAST FRAME'S PLACE
+// answers a frame >= total-1 and the wall clamps it there. At the right wall
+// the strip's right edge is past that place by construction — the wall's
+// start S is the frame-0 lattice point with S >= total − w·q
+// (max_viewport_start_grid, main.cpp) and at the whole-song zoom the start
+// is 0 with w·q >= total (fit_zoom_level's ceil), so the frame at x = w,
+// S + w·q, is >= total — and every pen place past the strip's right edge is
+// held at x = w by the callers, so an end dragged as far as it goes rests
+// on total-1, what Reset Trim writes; inside the strip the pen reaches it
+// from the last frame's own place, x >= (total − 1 − S) / q − half a frame,
+// rightward.
 //
 // SO A FULL DRAG LEAVES THE FULL WINDOW [0, total-1] EXACTLY, the integer
 // pair Reset Trim writes, and every full-window compare (trim_is_full_window —
 // Reset Trim's already-full guard, the render's sub-window test, the crossed
 // reset's one-frame exception) reads it as full: it renders untrimmed and
-// plays to the natural end. The accepted cost is the release snap's own kind,
-// at most one column: that last column's left edge is no longer a frame a
-// column authors, and a begin landing there meets an end at total-1 (the
-// drag's coincident reset; the click there is on the end's own cap or at
-// the partner wall, a no-op either way), as an end
-// landing in column 0 meets a begin at frame 0. Degenerate geometry is the
-// callers' to refuse first.
-int64_t trim_bound_frame_at_column(const AppState& app, const GuiAudio& audio,
-                                   double col_x) {
-    // THE POINTER'S REAL PLACE REACHES THIS DOOR (architect 2026-11-15, the
-    // no-grid arc), waveform-relative; THE LANDING IS STILL THE WHOLE COLUMN
-    // UNDER IT — this one floor, which the pen act's own landing rule
-    // replaces (the frame under the pen's real place).
-    const int col = static_cast<int>(std::floor(col_x));
+// plays to the natural end. Degenerate geometry is the callers' to refuse
+// first.
+int64_t trim_bound_frame_at_x(const AppState& app, const GuiAudio& audio,
+                              double x) {
     const int64_t wall = audio.total_frames() - 1;
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
-    if (authored_frame_at_column_on_basis(app, audio, col + 1, map,
-                                          basis.vp_start_frame, basis.spp,
-                                          basis.lattice_origin) >
-        wall)
-        return wall;
-    int64_t frame = authored_frame_at_column_on_basis(
-        app, audio, col, map, basis.vp_start_frame, basis.spp,
+    int64_t frame = authored_frame_at_x_on_basis(
+        app, audio, x, map, basis.vp_start_frame, basis.spp,
         basis.lattice_origin);
     if (frame < 0)    frame = 0;
     if (frame > wall) frame = wall;
     return frame;
+}
+
+// THE TRIM DRAGS' ONE PLACE -> DISPLAYED FRAME CONVERSION (the endcap and the
+// bridge drags' anchor and motion): the displayed frame under the pen's real
+// place, unrounded (displayed_frame_at_x, the pen acts' one conversion), on
+// THE ITEM BASIS (architect 2026-09-24, strictly as painted: the span the
+// trim pass drew the bar and its ends on, the displayed map's twin, not the
+// live viewport a worker job in flight at the press has moved ahead of the
+// pixels; the freeze holds it from the aimed press to the release; cold, the
+// live viewport by the basis's own contract). THE PLACE IS A WAVEFORM PLACE
+// whatever surface the press came from, measured off waveform_area's x and
+// HELD INTO THE STRIP'S CLOSED EXTENT [0, w]: a pen past either end of the
+// strip answers that end's own frame, so a bound dragged past the right edge
+// reaches the frame at x = w and the wall behind it
+// (trim_bound_frame_at_x's head). False (out untouched) on unusable
+// geometry.
+bool trim_displayed_frame_at_mouse_x(const AppState& app,
+                                     const GuiAudio& audio, double mouse_x,
+                                     double& out_frame) {
+    if (audio.total_frames() <= 0) return false;
+    const GuiRect area = waveform_area(app);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    if (basis.spp <= 0.0 || area.w <= 0) return false;
+    const double x = std::clamp(mouse_x - static_cast<double>(area.x), 0.0,
+                                static_cast<double>(area.w));
+    out_frame = displayed_frame_at_x(
+        x, static_cast<double>(basis.vp_start_frame), basis.spp,
+        basis.lattice_origin);
+    return true;
 }
 
 } // namespace
@@ -402,12 +408,12 @@ void GuiInputHandler::handle_trim_clear_both() {
 // THE PLAYHEAD IS NEVER WRITTEN (the rule at this file's head, 2026-11-07).
 //
 // NO DOMAIN HOP IN HERE: both endpoints arrive as whole SOURCE frames already
-// inside the song walls, from the sweep's one column->trim route
-// (sweep_trim_frame_at_column, below this function), so this function orders
+// inside the song walls, from the sweep's one place->trim route
+// (sweep_trim_frame_at_x, below this function), so this function orders
 // and writes and maps nothing. (The old set-from-region's hop
 // — ACTIVE-domain ends crossed through active_domain_to_source_frame in here —
 // took the CURSOR's value as the trim's, an authored write off the
-// authored_frame_at_column_on_basis -> snap_authored_frame chokepoint every
+// snap_authored_frame chokepoint's trim road every
 // other trim former commits through: numerically the same frame in source
 // view, but a second route.) Equality is the only collapse a stroke's two ends can
 // produce, and an equal pair is a legal thing to write here: the release's
@@ -485,32 +491,31 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
     return true;
 }
 
-// THE SWEEP'S ONE COLUMN->TRIM ROUTE — the authored value a sweep column
+// THE SWEEP'S ONE PLACE->TRIM ROUTE — the authored value a sweep's place
 // yields, and the only producer of write_trim_from_sweep's two arguments (the
 // arm's anchor, arm_region_drag_at; the motion path's moving end,
-// apply_region_drag_motion). A SWEEP COLUMN YIELDS ONE VALUE since
+// apply_region_drag_motion). A SWEEP PLACE YIELDS ONE VALUE since
 // 2026-11-07 (session 88: the sweep seats and carries no playhead, the rule
-// at this file's head), this whole SOURCE frame for the TRIM:
-// authored_frame_at_column_on_basis over the displayed-or-live target map —
-// the single-rounding grid in both views, the target arm quantizing to a
-// target frame and inverse-mapping at full precision, snap_authored_frame the
-// one double->authored conversion — with the song walls applied AFTER in
-// source space (walls win over the grid), exactly the route the endcap drag's
-// release snap (commit_trim_drag's snap_moved_bound) and the trim bar's ctrl
-// click (trim_bound_click) commit through, so every trim former authors
-// on one lattice. IT CONVERTS ON THE PAINTED VIEWPORT (architect 2026-09-24,
-// strictly as painted): the ITEM viewport basis — the viewport the trim bar
-// and the lane are painted on, the displayed map's twin — so a worker job in
-// flight at the press does not move the grid the sweep lands on ahead of the
-// pixels (cold, the basis is the live viewport by its own contract).
+// at this file's head), this whole SOURCE frame for the TRIM: THE FRAME
+// UNDER THE PEN'S REAL PLACE (architect 2026-11-15, the no-grid arc) through
+// the family's one landing, trim_bound_frame_at_x (this file's anonymous
+// namespace: the displayed frame under the place, the target view through
+// the displayed map at full precision, snap_authored_frame the one
+// double->authored conversion, the song walls AFTER in source space) —
+// exactly the route the trim bar's bound-set click (trim_bound_click)
+// commits through. `x` is waveform-relative, held by the caller into the
+// strip's closed extent [0, w]. IT CONVERTS ON THE PAINTED VIEWPORT
+// (architect 2026-09-24, strictly as painted): the ITEM viewport basis — the
+// viewport the trim bar and the lane are painted on, the displayed map's
+// twin — so a worker job in flight at the press does not move the picture
+// the sweep lands on ahead of the pixels (cold, the basis is the live
+// viewport by its own contract).
 // Returns 0 on degenerate geometry (unloaded audio, no strip width), which no
 // caller reaches: every arm refuses unloaded audio and the gutter, and the
 // motion path returns on an empty strip.
-// The landing itself, the walls and the end wall's reach are the family's one
-// owner, trim_bound_frame_at_column (this file's anonymous namespace).
-int64_t GuiInputHandler::sweep_trim_frame_at_column(double col) const {
+int64_t GuiInputHandler::sweep_trim_frame_at_x(double x) const {
     if (audio.total_frames() <= 0) return 0;
-    return trim_bound_frame_at_column(app, audio, col);
+    return trim_bound_frame_at_x(app, audio, x);
 }
 
 // Shift+T MAXIMIZES the trim to the full window — RESET TRIM (architect
@@ -541,57 +546,20 @@ void GuiInputHandler::handle_trim_maximize() {
 
 // --- Trim boundary pointer gestures -------------------------------------
 
-// THE TRIM GESTURES' COLUMN->FRAME LANDING, on the one displayed-grid owner
-// (displayed_grid_position_at_column, warp_frame_map_view.h): trim bounds are
-// AUTHORED data, so this site is inside the determinism ruling that put every
-// column->frame landing on the single-rounding grid — it spelled the banned
-// two-rounding viewport_start + nearbyint(col*q) until 2026-08-22, the last one
-// left after the playhead step, the click placement and both
-// authored_frame_at_column_on_basis arms.
-//
-// THE COLUMN IS A WAVEFORM COLUMN whatever surface the press came from: `rel` is
-// measured off waveform_area's x and clamped to its width for the 10 px bar's
-// endcaps and bridge, the bar standing directly over the waveform's own span.
-// So the basis is the painter q — the grid actually drawn (at a whole level it
-// equals the logical spp; at a fractional rest it is that spp on the
-// sixteenth-frame grid, painter_quantized_spp). `rel` is already a whole
-// column out of an integer mouse_x, so there is no column rounding to do
-// here; the landing's single rounding is the owner's.
-//
-// THE VIEWPORT IS THE ITEM BASIS (architect 2026-09-24, strictly as painted):
-// item_viewport_basis's vp_start and spp — the span the trim pass drew the bar
-// and endcaps on, the displayed map's twin — not the live viewport, which a
-// viewport-dispatched worker job in flight at the press has already moved ahead
-// of the pixels. Its spp is this same painter quantization of the span the
-// flags were built against. Every trim-drag conversion rides it through this
-// function and its source-domain sibling below — the begin anchor, both motion
-// arms — beside commit_trim_drag's release snap and the bound-set click
-// (trim_bound_click) on the same basis, and the freeze holds it from the
-// aimed press to the release. Cold, the basis is the live viewport by its own
-// contract.
-//
-// ACTIVE DOMAIN, NO FORK — the name's promise and the source-domain sibling's
-// contract: consumers that need source frames cross through
-// trim_mouse_x_to_source_frame's inverse map, and the pair drag deliberately
-// keeps its gap in the domain the user sees.
+// THE TRIM DRAGS' ACTIVE-DOMAIN FRAME UNDER THE PEN — the whole frame nearest
+// the displayed frame under the pen's real place (trim_displayed_frame_at_
+// mouse_x above, the conversion and its basis; llrint, the playhead roads'
+// own rounding of an active-domain frame). ITS READER is the pair (bridge)
+// drag, which keeps its gap in the domain the user sees: its anchor and its
+// motion are both this value, so the rigid pair moves by the pen's own
+// whole-frame travel. ACTIVE DOMAIN, NO FORK — consumers that need source
+// frames cross through trim_mouse_x_to_source_frame's inverse map.
 bool GuiInputHandler::trim_mouse_x_to_active_frame(double mouse_x,
                                                    int64_t& out_frame) {
-    if (audio.total_frames() <= 0) return false;
-    const GuiRect area = waveform_area(app);
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    if (basis.spp <= 0.0 || area.w <= 0) return false;
-
-    // THE POINTER'S REAL PLACE REACHES THIS DOOR (architect 2026-11-15, the
-    // no-grid arc); THE LANDING IS STILL THE WHOLE COLUMN UNDER IT — this
-    // one floor, which the pen act's own landing rule replaces (the frame
-    // under the pen's real place).
-    int rel = static_cast<int>(
-        std::floor(mouse_x - static_cast<double>(area.x)));
-    if (rel < 0) rel = 0;
-    if (rel >= area.w) rel = area.w - 1;
-    out_frame = static_cast<int64_t>(std::llrint(
-        displayed_grid_position_at_column(basis.vp_start_frame, rel,
-                                          basis.spp, basis.lattice_origin)));
+    double g = 0.0;
+    if (!trim_displayed_frame_at_mouse_x(app, audio, mouse_x, g))
+        return false;
+    out_frame = static_cast<int64_t>(std::llrint(g));
     return true;
 }
 
@@ -599,21 +567,23 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(double mouse_x,
                                                     double& out_frame) {
     if (audio.sample_rate() <= 0) return false;
 
-    int64_t domain_frame = 0;
-    if (!trim_mouse_x_to_active_frame(mouse_x, domain_frame)) return false;
+    double g = 0.0;
+    if (!trim_displayed_frame_at_mouse_x(app, audio, mouse_x, g))
+        return false;
 
-    // Target view: the cursor column is an active-domain frame; the trim
-    // store is source-domain. Inverse-translate at the boundary through the
-    // DISPLAYED paint basis (displayed_or_live_target_map — the SAME map the
-    // trim bar/endcaps are painted with; identity in source view), in full
-    // double precision like the marker drag's anchor, so the tracked bound
-    // stays locked to the pointer under any map, stale or fresh, and the
-    // release column-snap in commit_trim_drag owns the single
+    // Target view: the pen's displayed frame is an active-domain time; the
+    // trim store is source-domain. Inverse-translate THE REAL DISPLAYED FRAME
+    // (architect 2026-11-15, the no-grid arc: no whole active frame is taken
+    // on the way) at the boundary through the DISPLAYED paint basis
+    // (displayed_or_live_target_map — the SAME map the trim bar and its ends
+    // are painted with; identity in source view), in full double precision
+    // like the marker drag's anchor, so the tracked bound stays locked to the
+    // pointer under any map, stale or fresh; the single-bound motion's
+    // snap_authored_frame of the anchor-relative delta owns the one
     // fractional-to-authored rounding.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
-    out_frame = map_target_to_source(
-        static_cast<double>(domain_frame), dmap);
+    out_frame = map_target_to_source(g < 0.0 ? 0.0 : g, dmap);
     return true;
 }
 
@@ -735,9 +705,9 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         if (ob + df > wall_active)  df = wall_active - ob;
         if (oe + df > wall_active)  df = wall_active - oe;
         // snap_authored_frame lands each result on a whole int64 frame (the
-        // single fractional-to-authored route). These are mid-gesture tracking
-        // values; the release in commit_trim_drag snaps each moved bound to its
-        // painted column's authored time.
+        // single fractional-to-authored route). These are the pair's exact
+        // dragged frames, and the values the release commits as they stand
+        // (commit_trim_drag takes no snap, architect 2026-11-15).
         int64_t nb = snap_authored_frame(
             map_target_to_source(static_cast<double>(ob + df), dmap));
         int64_t ne = snap_authored_frame(
@@ -803,11 +773,18 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     int64_t src_frame = app.trim_drag.orig_frame +
         snap_authored_frame(delta_frames);
 
-    // Viewport clamp: keep the grabbed bound within the visible strip (pixel 0
-    // through the last fully-visible pixel) so the drag can't push it
-    // offscreen, where its precise location would be hidden. The cursor column
-    // is already viewport-bound, but a grab a few pixels off the endcap can
-    // trail the bound past the edge; this makes the bound itself exact. THE
+    // Viewport clamp: keep the grabbed bound within THE STRIP'S OWN EXTENT,
+    // the frame at its left edge (x = 0) through the frame at its right edge
+    // (x = w) — so the drag can't push it offscreen, where its precise
+    // location would be hidden, AND AN END DRAGGED AS FAR AS IT GOES REACHES
+    // THE FRAME AT THE STRIP'S RIGHT EDGE, behind which the structural wall
+    // below rests it on total-1 (architect 2026-11-15, the no-grid arc: the
+    // end's reach is the wall's own clamp, trim_bound_frame_at_x's head; the
+    // last fully-visible pixel's left edge, the bound of the marker drag's
+    // viewport_marker_bounds, would stop the end a column short of it). The
+    // pen's place is already held into that extent, but a grab a few pixels
+    // off the endcap can trail the bound past the edge; this makes the bound
+    // itself exact. THE
     // GRAB CAN BEGIN ON A BOUND JUST OFF SCREEN (architect 2026-10-05): a
     // button sliding off an edge is grabbed by its visible columns
     // (hit_test_trim_endcap tests what the painter published), its bound up
@@ -818,13 +795,16 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // src_frame is source, so inverse-translate the edges through the DISPLAYED
     // paint basis (the same map the tracked bound rode above; monotonic, so the
     // source clamp matches the active-pixel one).
-    const auto vb = viewport_marker_bounds(app, audio);
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    const int64_t vp_lo = snap_authored_frame(
-        map_target_to_source(static_cast<double>(vb.first), dmap));
-    const int64_t vp_hi = snap_authored_frame(
-        map_target_to_source(static_cast<double>(vb.second), dmap));
+    const GuiRect strip = waveform_area(app);
+    double strip_lo = 0.0;
+    double strip_hi = 0.0;
+    if (!trim_mouse_x_to_source_frame(static_cast<double>(strip.x),
+                                      strip_lo) ||
+        !trim_mouse_x_to_source_frame(static_cast<double>(strip.x + strip.w),
+                                      strip_hi))
+        return;
+    const int64_t vp_lo = snap_authored_frame(strip_lo);
+    const int64_t vp_hi = snap_authored_frame(strip_hi);
     const int64_t lo = std::min(vp_lo, app.trim_drag.orig_frame);
     const int64_t hi = std::max(vp_hi, app.trim_drag.orig_frame);
     if (src_frame < lo) src_frame = lo;
@@ -865,10 +845,10 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // to hand back a frame past it.
     src_frame = clamp_trim_bound_at_partner(app.trim_drag.is_begin,
                                             src_frame, app.trim);
-    // Mid-gesture tracking value: int64 throughout (the store cannot hold a
-    // fractional frame), but pointer-derived, not column-canonical — the
-    // release in commit_trim_drag snaps a moved bound to its painted
-    // column's authored time, superseding this value.
+    // THE BOUND'S EXACT DRAGGED FRAME: int64 throughout (the store cannot
+    // hold a fractional frame), the bound's own frame plus the pen's real
+    // travel — and the value the release commits as it stands
+    // (commit_trim_drag takes no snap, architect 2026-11-15).
     const int64_t new_frame = src_frame;
     int64_t& field = app.trim_drag.is_begin ? app.trim.begin_frame
                                             : app.trim.end_frame;
@@ -892,166 +872,21 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
 void GuiInputHandler::commit_trim_drag() {
     if (!app.trim_drag.active) return;
     if (app.trim_drag.moved) {
-        // Release-time column snap, the marker commit_drag shape: each bound
-        // the drag actually MOVED snaps to the time of the pixel column it is
-        // painted at — the stem painter's own math via
-        // painted_column_of_source_frame_on_basis /
-        // authored_frame_at_column_on_basis (which funnels through
-        // snap_authored_frame) — so the stored value is the
-        // whole frame of the shown column: stored equals shown, in both views
-        // at all zooms. An untouched bound keeps its stored value bit-exact
-        // (commit_drag's moved-only rule); on a rigid two-bound drag each
-        // moved bound anchors to its OWN painted column independently, so the
-        // pair's span may deform by up to one frame at release — an accepted
-        // release-snap consequence (the constant-gap phrasing at TrimDragState
-        // describes the mid-gesture active-domain motion).
-        // The map is the DISPLAYED paint basis (displayed_or_live_target_map —
-        // identity in source view), the SAME map the live trim pass
-        // (paint_trim) draws the on-screen
-        // stems through (falling back to the live cache only when cold), so the release
-        // column-snaps against WHAT IS PAINTED and stored equals shown even inside
-        // an async waveform-rebuild window where the displayed map lags the live
-        // cache — the residual case now that the target-view warp_frame_map edits
-        // all re-warp synchronously (the full inventory lives at
-        // Viewport::kick_waveform_sync; warp placement edits author in source view
-        // under the home-view binding, where the displayed map is identity): a
-        // worker job dispatched by a
-        // viewport change and still in flight across the grab, carrying the
-        // then-current map. That is the same displayed basis route_trim_bar_press's
-        // hit test and the drag mechanics above all read, and the VIEWPORT is
-        // its twin, the item basis (architect 2026-09-24, strictly as painted:
-        // the span the bar was drawn on, the freeze holding it since the aimed
-        // press — so the job in flight above moves neither half; cold, the
-        // live viewport by the basis's own contract). The absolute walls
-        // — both bounds 0..EOF-1, plain integer compares —
-        // re-apply AFTER the snap so the walls win over the pixel grid and a
-        // wall-clamped release rests exactly on its wall; and a bound released
-        // in the column holding the source's last frame lands ON that frame
-        // (architect 2026-10-14, trim_bound_frame_at_column's rule), so an end
-        // dragged as far as it goes rests where Reset Trim puts it. THE BRIDGE
-        // takes it too: when its end reaches that column the pair stops there
-        // and the end lands on total-1, the span deforming by at most one
-        // column, the same accepted kind as the snap's own. Degenerate paint
-        // geometry (no strip width / zoom, unloaded audio) skips the snap and
-        // keeps the tracked value: trim has no undo, so routing a bound
-        // through the helpers' 0-fallback would be unrecoverable.
-        const int sr = audio.sample_rate();
-        const ItemViewportBasis basis = item_viewport_basis(app, audio);
-        if (sr > 0 && audio.total_frames() > 0 &&
-            current_samples_per_pixel(app, audio) > 0.0 && basis.spp > 0.0) {
-            const std::vector<WarpFrameMapSegment>& map =
-                displayed_or_live_target_map(app, audio);
-            // The column -> frame half, the walls and the end wall's reach
-            // (the column holding the source's last frame lands ON it, as
-            // Reset Trim writes it) are the family's one owner,
-            // trim_bound_frame_at_column (this file's anonymous namespace).
-            const auto snap_moved_bound = [&](int64_t& field, int64_t orig) {
-                if (field == orig) return;  // untouched: bit-exact, no snap
-                const int c = painted_column_of_source_frame_on_basis(
-                    app, audio, static_cast<double>(field), map,
-                    basis.vp_start, basis.spp, basis.lattice_origin);
-                // The column's own place, its left edge, as a real place.
-                field = trim_bound_frame_at_column(app, audio,
-                                                   static_cast<double>(c));
-            };
-            // THE COINCIDENCE IS JUDGED BEFORE THE SNAP (architect-ruled
-            // behavior delivered 2026-08-22). update_trim_drag's partner clamp
-            // pins the moving bound exactly ON its partner, and the ruled
-            // drag-onto-partner quick-clear ("if they are set coincident, make
-            // trim 0 to EOF") reads that equality at the commit tail — but the
-            // release column-snap below round-trips the pinned value through
-            // painted_column_of_source_frame_on_basis /
-            // authored_frame_at_column_on_basis, and an
-            // arbitrary resting partner need not sit on the painted authoring
-            // grid, so the snap can move the bound OFF the partner. The
-            // pre-snap tracked value is the pin's own evidence, so it is read
-            // here, while it still rests. The partner itself is bit-exact
-            // through the snap (the untouched-bound early return above), so
-            // comparing against the resting field is exact.
-            const bool release_pinned_on_partner =
-                !app.trim_drag.both &&
-                ((app.trim_drag.is_begin ? app.trim.begin_frame
-                                         : app.trim.end_frame) ==
-                 (app.trim_drag.is_begin ? app.trim.end_frame
-                                         : app.trim.begin_frame));
-            snap_moved_bound(app.trim.begin_frame,
-                             app.trim_drag.orig_begin_frame);
-            snap_moved_bound(app.trim.end_frame,
-                             app.trim_drag.orig_end_frame);
-            // AFTER THE SNAP, THE SINGLE-BOUND ARM RESTORES WHAT THE SNAP CAN
-            // BREAK, in two ranked steps:
-            //
-            // A PINNED RELEASE RESTORES EQUALITY OUTRIGHT (2026-08-22). The
-            // snap is nearest-column, so it moves an off-grid coincident value
-            // in EITHER direction — toward the window's inside or away from it
-            // — and only the toward case is caught by the partner re-clamp
-            // below. Worked at q = 55 (the laptop's working zoom at 44.1 kHz,
-            // where the case was found): a
-            // partner end at 12350 sits at 12350/55 = 224.55 → column 225 →
-            // grid frame 12375, so a begin pinned on it snapped PAST it and the
-            // re-clamp pulled it back — equality restored, clear fired. But a
-            // partner end at 12345 sits at 224.45 → column 224 → grid frame
-            // 12320 (224 × 55), so the pinned begin snapped AWAY to 12320, the
-            // begin re-clamp (`v > partner`) did not bind, and the pair rested
-            // [12320, 12345] — a 25-frame (~0.6 ms) sliver auto_clear_crossed_trim's
-            // `end <= begin` compare does not recognise, which silently
-            // defeated the ruled quick-clear on roughly half the phase space of
-            // an off-grid partner. (The comment that stood here claimed "the
-            // snap always pulls a value DOWN" and that "re-clamping restores
-            // the equality" — both arithmetically false: its own worked
-            // example, an end at 100 on a 16-frame grid committing [96, 100],
-            // is a round-AWAY case the re-clamp never touched.) So a release
-            // whose PRE-SNAP value rested on the partner assigns the partner's
-            // frame back, in both rounding directions: equality-with-partner is
-            // a STRONGER user statement than column membership — the pin is the
-            // user's named act, dragging one handle onto the other, and the
-            // snap's stored-equals-shown purpose has nothing to say about a
-            // value about to reset the pair to the song edges. BOTH ARMS
-            // SYMMETRICALLY: an end pinned on its begin snaps down-and-across
-            // (rescued by the crossed compare, clearing by accident) or
-            // up-and-away (the same sliver, mirrored); the restore makes both
-            // clear BY THE RULE rather than one by rescue and one not at all.
-            // A BOUND PINNED BY THE WALL RATHER THAN BY AIM — an end partner
-            // resting wall-held at EOF-1, the moved begin clamped onto it by
-            // the walls — restores and clears too, deliberately:
-            // pinned-at-partner IS the coincidence whatever pinned it, and
-            // auto_clear_crossed_trim's contract has always been the plain
-            // integer compare over whatever shape the release hands it.
-            //
-            // ELSE THE PARTNER CLAMP RUNS AGAIN — the same
-            // clamp_trim_bound_at_partner owner the motion arm applies —
-            // because the snap can carry a NEAR-partner (not pinned) bound
-            // across it: the clamp's own invariant ("the handle can land
-            // exactly ON its partner and never beyond it") must survive the
-            // snap. A release the re-clamp pulls exactly onto the partner
-            // resets at the tail like any other coincident shape.
-            //
-            // AFTER THE ABSOLUTE WALL IS SAFE, the same order-independence
-            // argument the mid-drag clamp records: the partner is itself
-            // wall-held, so restoring to it or clamping at it only ever pulls
-            // the bound INWARD and can never push it back outside [0, EOF-1]
-            // that snap_moved_bound just enforced.
-            //
-            // SINGLE-BOUND ARM ONLY. The bridge drag moves both bounds by one
-            // shared delta and has no partner wall by ruling (the gap is
-            // invariant mid-gesture, so there is nothing to cross); adding a
-            // clamp there would invent a rule for a gesture that cannot need
-            // one. Its own release-snap deformation is the accepted ±1 frame the
-            // block comment above records.
-            if (!app.trim_drag.both) {
-                int64_t& moved = app.trim_drag.is_begin ? app.trim.begin_frame
-                                                        : app.trim.end_frame;
-                if (release_pinned_on_partner) {
-                    moved = app.trim_drag.is_begin ? app.trim.end_frame
-                                                   : app.trim.begin_frame;
-                } else {
-                    moved = clamp_trim_bound_at_partner(app.trim_drag.is_begin,
-                                                        moved, app.trim);
-                }
-            }
-            // The snap is the BOUNDS' alone — there is no playhead pin or
-            // sync here, nor in the commit tail below.
-        }
+        // THE RELEASE COMMITS THE BOUNDS AS THE MOTION LEFT THEM (architect
+        // 2026-11-15, the no-grid arc, ruling B: a moved bound rests on its
+        // exact dragged frame — the frame its own motion arm tracked under
+        // the pen, whole already — and takes no snap to a painted column).
+        // So nothing is re-judged here: the absolute walls, the single-bound
+        // arm's partner clamp (a handle lands exactly ON its partner and
+        // never beyond it) and the pair arm's wall-held shared delta are the
+        // motion arms' own, applied at every event (update_trim_drag), and
+        // the values they wrote are the ones that rest. A BOUND PINNED ON
+        // ITS PARTNER STAYS PINNED — no snap can carry it off — so the ruled
+        // drag-onto-partner quick-clear ("if they are set coincident, make
+        // trim 0 to EOF") reads the equality at the tail below as the motion
+        // left it. An untouched bound keeps its stored value bit-exact, and
+        // an end dragged as far as it goes rests on total-1 (the motion's
+        // strip clamp and wall, trim_bound_frame_at_x's head).
         // The release is the commit: a bound released on or across its
         // partner RESETS the pair to the song edges (crossed/equal cannot rest;
         // ruling at auto_clear_crossed_trim). The playhead stays where it is
@@ -1089,33 +924,33 @@ void GuiInputHandler::commit_trim_drag() {
 // THE BARREL CLICK ON THE TRIM BAR MOVES WHICHEVER END CAP IS NEAREST THE
 // PEN (architect 2026-11-10; the begin for a plain barrel click and the end
 // for one held past the hold delay until then, which "doesn't work very
-// well"). The click moves one bound of the resting window to the clicked
-// column: the column maps to a source frame through
-// authored_frame_at_column_on_basis over the DISPLAYED paint map on the ITEM
-// viewport basis — the same release-snap basis commit_trim_drag uses (its
-// snap_moved_bound goes source_frame -> painted_column -> authored_frame; a
-// click carries the column directly). The absolute walls [0, total-1] apply
-// after the snap, and a click in the column holding the source's last frame
-// sets total-1 (trim_bound_frame_at_column).
+// well"). The click moves one bound of the resting window to THE FRAME
+// UNDER THE PEN'S REAL PLACE (architect 2026-11-15, the no-grid arc, ruling
+// B): the place maps to a source frame through the family's one landing
+// (trim_bound_frame_at_x: authored_frame_at_x_on_basis over the DISPLAYED
+// paint map on the ITEM viewport basis, the absolute walls [0, total-1]
+// after), the click held into the strip's closed extent, so a click at the
+// strip's right edge at the right wall sets total-1.
 //
-// NEAREST IS DECIDED ONCE, IN THE DECIDER, ON THE PAINTED COLUMNS (architect
-// 2026-11-10, on screen is as painted: the cap nearest the PEN, by distance
-// on the bar): the bound whose cap's column is the fewer columns from the
-// clicked column, A TIE GOING TO THE BEGIN — EXCEPT RIGHT OF BOTH CAPS,
+// NEAREST IS DECIDED ONCE, IN THE DECIDER, BY REAL DISTANCE ON THE BAR
+// (architect 2026-11-10, on screen is as painted: the cap nearest the PEN, by
+// distance on the bar; the distance real since the no-grid arc): the bound
+// whose cap's exact place is the nearer to the click's real place,
+// A TIE GOING TO THE BEGIN — EXCEPT RIGHT OF BOTH CAPS,
 // WHERE IT IS THE END'S (such a tie stands only where the two caps share
-// one column: the click is outside the trim, and the cap on its side is the
-// end; the midpoint tie between two columns stays the begin's). A cap's
-// column is the column the
-// trim bar's painter drew it on — the painter's own owner chain
-// (displayed_trim_ms -> trim_bound_column, render.h) on the same item
-// viewport basis and displayed map the click's column converts on, so the
+// one place: the click is outside the trim, and the cap on its side is the
+// end; the midpoint tie between two caps stays the begin's). A cap's
+// place is the place the
+// trim bar's painter drew it at — the painter's own owner chain
+// (displayed_trim_ms -> trim_bound_column's x, render.h) on the same item
+// viewport basis and displayed map the click's place converts on, so the
 // two are one coordinate, waveform-relative on one lattice; an off-screen
-// cap keeps its own column past the lane's edge, so it is always the
+// cap keeps its own place past the lane's edge, so it is always the
 // farther. In target view over a tempo change the nearer cap in frames can
 // be the farther on glass, which is why frames do not decide. So a click
 // INSIDE the trim pulls the nearer cap in to it, and a click OUTSIDE the
 // trim moves the near cap OUTWARD to it (left of the begin the begin, right
-// of the end the end) — a trim one column wide included, which widens to
+// of the end the end) — a trim one frame wide included, which widens to
 // the left by a click left of it and to the right by a click right of it.
 // NO LONG PRESS MEANS ANYTHING ON THE TRIM BAR: the
 // verdict reads no clock.
@@ -1124,26 +959,25 @@ void GuiInputHandler::commit_trim_drag() {
 // nothing stops, the caller arms no drag, no card — asked in this order.
 //
 // A CLICK EXACTLY ON ITS CAP IS A CONSUMED NO-OP, AND "ON ITS CAP" IS THE
-// CAP'S PAINTED COLUMN (architect 2026-11-10, on screen is as painted): the
-// clicked column is the nearest cap's own column, whatever lattice the
-// bound was authored on. The pen is on the cap and there is nothing to move
-// on glass — a bound set at another zoom or in the other view rests off
-// this view's lattice, so its column's own frame is not the bound's, and
-// writing it would stop the play, clear the selection and trigger a render
+// PIXEL THE CAP'S PAINTED PLACE HOLDS (architect 2026-11-10, on screen is as
+// painted; in reals since the no-grid arc: the click within half a device
+// px of the nearest cap's exact place). The pen is on the cap and there is
+// nothing to move on glass — writing the fraction of a px between them
+// would stop the play, clear the selection and trigger a render
 // for a move nobody can see. THE ONE ACCEPTED CONSEQUENCE: a click on the
-// lane's last (or first) column where the cap already stands does not
+// cap standing at the lane's last (or first) column does not
 // re-author the bound to total-1 (or 0); the endcap drag and the maximize
 // (Reset Trim) do.
 //
-// THE SAME FRAME: another column can hold the nearest bound's own resting
-// frame (the columns at and past the one holding the source's last frame
-// all land on total-1; at a zoom where a column is under a frame, several
-// columns share one), and there is nothing to write.
+// THE SAME FRAME: another place can hold the nearest bound's own resting
+// frame (every place at and past the last frame's lands on total-1 by the
+// wall; at a zoom where a px is under a frame, a stretch of places shares
+// one), and there is nothing to write.
 //
 // THE PARTNER WALL: the nearest bound's new frame would land ON or PAST its
 // partner (a begin at or past the end, an end at or before the begin). WHAT
-// STILL REACHES IT under the column verdict is ONE CASE: at a zoom where a
-// column is under a frame, a midpoint tie between the two caps (the
+// STILL REACHES IT under the nearest verdict is ONE CASE: at a zoom where
+// the two caps stand under a px apart, a midpoint tie between them (the
 // begin's) whose clicked frame rounds onto the end's. There the two bounds
 // are a frame apart and the click does nothing: never the other
 // bound, never a second verdict. The end's arm is its mirror and has no
@@ -1210,55 +1044,47 @@ GuiInputHandler::trim_bound_click(double mouse_x) const {
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return std::nullopt;
     // THE CLICK'S REAL PLACE on the strip (architect 2026-11-15, the no-grid
-    // arc), held on the strip's columns. THE NEAREST-CAP VERDICT below stays
-    // on whole columns — the click's containing column against the caps'
-    // painted columns — until the pen act's own landing rule replaces it and
-    // the family owner's floor together.
-    const double col_x = std::clamp(
+    // arc), held into the strip's closed extent [0, w].
+    const double click_x = std::clamp(
         mouse_x - static_cast<double>(area.x), 0.0,
-        static_cast<double>(area.w - 1));
-    const int col = static_cast<int>(std::floor(col_x));
-    // The landing, the walls and the end wall's reach (a click in the column
-    // holding the source's last frame sets total-1) are the family's one
-    // owner, trim_bound_frame_at_column (this file's anonymous namespace).
-    const int64_t frame = trim_bound_frame_at_column(app, audio, col_x);
-    // THE NEAREST END CAP, ON THE PAINTED COLUMNS (see the header): each
-    // resting bound's column as the trim bar's painter draws it — its own
-    // two owners with its own arguments (GuiPaintHandler::paint_trim:
-    // displayed_trim_ms over the displayed-or-live map, null in source view,
-    // then trim_bound_column on the item basis's integer span and width) —
-    // in the coordinate `col` is in. An in-view cap is clamped onto the
-    // lane's last column as it is painted, an off-screen one keeps its raw
-    // column. Exact integer distances, 64-bit (an off-screen column can
-    // stand far past the lane); a tie is the begin's, except right of both
-    // caps — only where they share one column — where it is the end's, the
-    // cap on the click's side.
+        static_cast<double>(area.w));
+    // The landing — the frame under that place — and the walls are the
+    // family's one owner, trim_bound_frame_at_x (this file's anonymous
+    // namespace).
+    const int64_t frame = trim_bound_frame_at_x(app, audio, click_x);
+    // THE NEAREST END CAP, BY REAL DISTANCE ON THE BAR (see the header;
+    // architect 2026-11-15, the no-grid arc): each resting bound's EXACT
+    // PLACE as the trim bar's painter draws it — its own two owners with its
+    // own arguments (GuiPaintHandler::paint_trim: displayed_trim_ms over the
+    // displayed-or-live map, null in source view, then trim_bound_column's
+    // `x` on the item basis's integer span and width) — in the coordinate
+    // `click_x` is in. An in-view cap is held onto the lane's last column as
+    // it is painted, an off-screen one keeps its raw place. A tie is the
+    // begin's, except right of both caps — only where they share one place —
+    // where it is the end's, the cap on the click's side.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* const map_arg =
         map.empty() ? nullptr : &map;
-    const auto cap_column = [&](int64_t bound_frame) -> int64_t {
+    const auto cap_x = [&](int64_t bound_frame) -> double {
         return trim_bound_column(
             displayed_trim_ms(bound_frame, map_arg), basis.vp_start_frame,
-            basis.vp_end_frame, basis.lattice_origin, basis.area_w).col;
+            basis.vp_end_frame, basis.lattice_origin, basis.area_w).x;
     };
-    const auto columns_apart = [](int64_t p, int64_t q) {
-        return p >= q ? p - q : q - p;
-    };
-    const int64_t at        = col;
-    const int64_t begin_col = cap_column(app.trim.begin_frame);
-    const int64_t end_col   = cap_column(app.trim.end_frame);
-    const int64_t to_begin = columns_apart(at, begin_col);
-    const int64_t to_end   = columns_apart(at, end_col);
+    const double begin_x  = cap_x(app.trim.begin_frame);
+    const double end_x    = cap_x(app.trim.end_frame);
+    const double to_begin = std::fabs(click_x - begin_x);
+    const double to_end   = std::fabs(click_x - end_x);
     const bool is_begin =
-        to_begin < to_end || (to_begin == to_end && at <= end_col);
+        to_begin < to_end || (to_begin == to_end && click_x <= end_x);
     // ON ITS OWN CAP, AS PAINTED (see the header; architect 2026-11-10): the
-    // clicked column is the chosen cap's own column, so there is nothing to
-    // move on glass — whatever frame that column would author. Ahead of the
-    // two frame tests, which a bound resting off this view's lattice would
+    // click stands within half a device px of the chosen cap's exact place —
+    // the pixel the cap's place holds — so there is nothing to move on
+    // glass, whatever frame that place would author. Ahead of the two frame
+    // tests, which a click a fraction of a px off the bound's frame would
     // pass.
-    if (at == (is_begin ? begin_col : end_col)) return std::nullopt;
-    // THE SAME FRAME (see the header): another column holding the chosen
+    if ((is_begin ? to_begin : to_end) < 0.5) return std::nullopt;
+    // THE SAME FRAME (see the header): another place holding the chosen
     // bound's own resting frame writes nothing either. On a one-frame source
     // (canonical full window [0, 0]) every click ends at one of these two.
     if (frame == (is_begin ? app.trim.begin_frame : app.trim.end_frame))
@@ -1266,7 +1092,7 @@ GuiInputHandler::trim_bound_click(double mouse_x) const {
     // THE PARTNER WALL (see the header), exact integer compares against the
     // partner as it rests, in the source domain the store and `frame` live
     // in. The begin's arm is reached by one case, a midpoint tie whose
-    // frame rounds onto the end's where a column is under a frame; the
+    // frame rounds onto the end's where the caps stand under a px apart; the
     // end's arm is its mirror, with no producer found, kept with it — trim
     // has no undo and the compare is two integers. Silent.
     if (is_begin ? frame >= app.trim.end_frame
@@ -1307,7 +1133,7 @@ GuiInputHandler::set_trim_bound_at_click(double mouse_x) {
 }
 
 // The barrel trim-bar bound set's THRESHOLD CROSSING: set the nearest bound
-// at the press column (set_trim_bound_at_click above) AND arm the
+// at the press's place (set_trim_bound_at_click above) AND arm the
 // single-bound trim drag on the bound just set, so the gesture continues
 // exactly like an ENDCAP press's does. NOTHING is stashed: the click-set is
 // committed when made (trim is history-less) and pointer gestures have no
@@ -1317,7 +1143,7 @@ GuiInputHandler::set_trim_bound_at_click(double mouse_x) {
 // branch), where it used to be the PRESS: the act-at-lift sweep moved the set to
 // the lift, so this pair is what a barrel press becomes only once the pointer
 // has actually travelled. THE MARKER FLAG'S CROSSING IS THE MODEL — run the
-// click act, then begin the drag — the set landing at the press column and
+// click act, then begin the drag — the set landing at the press's place and
 // the drag anchoring there. A motionless lift runs the set ALONE, through
 // the act owner, and arms no drag at all.
 //
@@ -1332,7 +1158,7 @@ GuiInputHandler::set_trim_bound_at_click(double mouse_x) {
 // wall) arms nothing,
 // so a consumed no-op stays a consumed no-op with no drag left hanging on a bound
 // that never moved; and THE BOUND THE DRAG TAKES IS THE BOUND THE SET MOVED
-// — the nearest cap at the press column, decided once at the down's own
+// — the nearest cap at the press's place, decided once at the down's own
 // column where the set runs (architect 2026-11-10), never a second verdict
 // here. A set that succeeded left an ORDERED pair by construction, so there
 // is always something to drag.

@@ -940,7 +940,7 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // EXCEPTION, THE PLAYHEAD'S HEAD (architect 2026-10-09 ~17:40, Cool Edit's
 // cursor grabbed by its head): a plain press on the head as painted
 // (point_on_playhead_head, below) is the HEAD DRAG, every motion past the
-// slop the placement act at the pointer's column (ScrollDragState::head_drag). The
+// slop the placement act at the pointer's place (ScrollDragState::head_drag). The
 // press's order: a flag first (a cue's triangle or label over the head is
 // a flag act, hit_test_flag), then the head, then the lane's placement. The FLAG BOXES
 // carve themselves out (the band walks' own flag claims), and the TRIM BAR is a disjoint y-band that never answers
@@ -1012,48 +1012,47 @@ bool point_on_nav_surface(const AppState& app, int x, int y) {
            !point_on_waveform_divider(waveform_area(app), y);
 }
 
-// Active-domain playhead frame at click column `col`: the single-rounding
-// display grid (displayed_grid_position_at_column via painter q) in BOTH views,
-// so a click, a 1px step and the marker commits agree on ONE lattice per view
-// and a drop-at-playhead lands where a drag or a nudge would. The target branch
-// used to take the domain-spp form on the reasoning that the source-frame commit
-// routes through the inverse map and so carried no source-grid claim; the
-// target-domain lattice is an authoring lattice in its own right (the
-// phase-reset drop commits the playhead's sample, and
-// authored_frame_at_column_on_basis's target arm rides this same grid), and an
-// unanchored landing relabels by a frame across a pan or a zoom round trip.
+// THE CLICK FAMILY'S ONE CONVERSION: the active-domain playhead frame UNDER
+// THE PEN'S REAL PLACE (architect 2026-11-15, the no-grid arc, ruling B: "B,
+// yes, also the exact frame there") — `x` the click's real x on the strip,
+// waveform-relative, a parameter of its own so no caller can pair a place
+// with a stale one; the displayed frame there is displayed_frame_at_x
+// (warp_frame_map_view.h, displayed_x_at's inverse, unrounded) in BOTH
+// views, and the playhead's whole frame its nearest (llrint), so the
+// playhead's line is painted where the pen stood to that one rounding,
+// 0.5 / q px at most, at exact coverage. A PEN AT A WHOLE PIXEL COORDINATE
+// stands on that pixel's left edge, the lattice point origin + (m + c)·q:
+// wherever that point is a whole frame (every whole step) the answer is the
+// column landing's own frame, and otherwise the whole frame nearest it.
+// EVERY DROP INHERITS IT: a drop at the playhead authors at the playhead's
+// frame and converts no place itself (drop_at_playhead_source_frame,
+// warp_frame_map_view.cpp), so a marker dropped where the pen put the
+// playhead stands under the pen.
 // THE VIEWPORT IS THE ITEM BASIS (architect 2026-09-24, strictly as painted —
 // "reality to the face" reads the same for a click as for a drag):
-// item_viewport_basis's integer vp_start_frame and its spp, the span the
-// displayed items were painted on, so a click converts its column against the
+// item_viewport_basis's integer vp_start_frame, its spp and its lattice
+// origin, the span the
+// displayed items were painted on, so a click converts its place against the
 // picture ON SCREEN and never against the live viewport a viewport-dispatched
 // worker job in flight at the press (a pan or a zoom gesture, then a quick
-// click) has already moved ahead of the pixels. The integer start is the
-// grid's own input, the shape trim_mouse_x_to_active_frame takes on the same
-// basis. Cold, the basis is the live viewport by its own contract. This is
+// click) has already moved ahead of the pixels. Cold, the basis is the live
+// viewport by its own contract. This is
 // the whole click-placement family's one conversion — the nav click act
-// (place_playhead_at_click_column, run_nav_click_act), the
-// scrub click (scrub_press_at) and the empty-lane double-click create — so
-// every one of them lands on the painted grid the gesture family's
-// conversions ride; the 2026-07-25 live-viewport ruling for this family is
-// repealed.
+// (place_playhead_at_click_column, run_nav_click_act), the ruler head's drag
+// through it, the
+// scrub click (scrub_press_at) and the empty-lane double-click create; each
+// caller clamps the answer into the live domain
+// (clamp_playhead_to_live_domain) and refuses a place off the strip, the real
+// x against [0, w).
 // The fallback covers degenerate geometry only (no strip width / no zoom), where
 // there is no painted grid to land on.
-//
-// THE POINTER'S REAL PLACE REACHES THIS DOOR (architect 2026-11-15, the
-// no-grid arc): `col_x` is the click's real x on the strip, waveform-relative,
-// a parameter of its own so no caller can pair a place with a stale one. THE
-// LANDING IS STILL THE WHOLE COLUMN UNDER IT — the one floor below, which the
-// pen act's own landing rule replaces (the frame under the pen's real place).
-int64_t playhead_frame_at_click_column(const AppState& app,
-                                       const GuiAudio& audio, double col_x) {
-    const int64_t col = static_cast<int64_t>(std::floor(col_x));
+int64_t playhead_frame_at_click_x(const AppState& app, const GuiAudio& audio,
+                                  double x) {
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp > 0.0)
-        return static_cast<int64_t>(std::llrint(
-            displayed_grid_position_at_column(basis.vp_start_frame, col,
-                                              basis.spp,
-                                              basis.lattice_origin)));
+        return static_cast<int64_t>(std::llrint(displayed_frame_at_x(
+            x, static_cast<double>(basis.vp_start_frame), basis.spp,
+            basis.lattice_origin)));
     return basis.vp_start_frame;
 }
 
@@ -1966,7 +1965,7 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 // DELETED 2026-07-27 with that lane.) The caller owns only its own gate — the
 // half, read at the press and stashed on the pending — and everything below is
 // shared. See the declaration for the full contract. ONE-SHOT per click
-// (architect 2026-07-23, the Ableton model): derive the clicked column's frame
+// (architect 2026-07-23, the Ableton model): derive the clicked place's frame
 // and run one scrub act — the press arms only the pending click, a held press
 // does nothing further, and CROSSING the threshold cancels the act outright by
 // making the gesture a pan (each click pays scrub_act_at's stop quiescence
@@ -1982,11 +1981,11 @@ void GuiInputHandler::scrub_press_at(double click_rel_x) {
     // Gutter / invalid column: no launch position exists, silent no-op.
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
     // The clicked column converts on the PAINTED viewport, the item basis
-    // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
+    // (playhead_frame_at_click_x; architect 2026-09-24, strictly as
     // painted), so the scrub launches at the frame the pixels under the
     // pointer showed; cold, the live viewport by the basis's own contract.
     const int64_t frame = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+        playhead_frame_at_click_x(app, audio, click_rel_x), app, audio);
     scrub_act_at(frame);
 }
 
@@ -3764,7 +3763,7 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
 // act and is therefore re-asked LIVE at the lift, which is the chrome lift's
 // own rule: a gate may change under a held button and the LIFT decides.
 // Nothing is carried but the press POINT: which bound the click writes is
-// decided where the act runs, the end cap nearest the press column on the
+// decided where the act runs, the end cap nearest the press's place on the
 // painted columns
 // (trim_bound_click, input_trim.cpp; architect 2026-11-10 — no clock is
 // read, a long press meaning nothing on the trim bar).
@@ -3797,7 +3796,7 @@ void GuiInputHandler::arm_pending_click_act(const GuiPointerPlace& at) {
 // shape exists for.
 void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
     if (press.kind != PendingClickKind::TrimBoundSet) return;
-    // The barrel bound set — the END CAP NEAREST THE PRESS COLUMN, the
+    // The barrel bound set — the END CAP NEAREST THE PRESS'S PLACE, the
     // act's own verdict (architect 2026-11-10) — WHOLE AND UNSPLIT:
     // set_trim_bound_at_click owns every refusal (a degenerate
     // audio/geometry state, a click exactly on its cap and the partner
@@ -5505,11 +5504,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                     // refusals, its stop, its commit tail and its deselect
                     // are the CLICK, and the click runs at the MOTIONLESS LIFT
                     // through the one act owner (run_pending_click_act), at
-                    // the PRESS column. A
+                    // the PRESS's place. A
                     // CROSSING runs that same set and then hands the gesture to
                     // the single-bound endcap drag on the bound it just wrote.
                     // THE BOUND IS THE NEAREST END CAP (architect 2026-11-10):
-                    // whichever cap is nearest the press column on the
+                    // whichever cap is nearest the press's place on the
                     // painted columns, a tie the
                     // begin's but right of both caps, where it is the
                     // end's, decided where the set runs (trim_bound_click,
@@ -5604,7 +5603,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // ON THE PLAYHEAD'S HEAD AS PAINTED the same pending is THE HEAD
             // DRAG (architect 2026-10-09 ~17:40; point_on_playhead_head,
             // ScrollDragState::head_drag): past the slop every motion places
-            // the playhead at the pointer's column. The flags rank first
+            // the playhead at the pointer's place. The flags rank first
             // (mh_index, the one hit above — a cue never stands in the ruler,
             // and the order is stated rather than left to geometry).
             {
@@ -5846,7 +5845,7 @@ void GuiInputHandler::arm_region_drag_at(double anchor_x,
     // PLACE on the strip: the whole source frame through the sweep's one
     // column->trim route (the field's declaration). No playhead is seated
     // (2026-11-07, session 88).
-    app.region_drag.anchor_source_frame = sweep_trim_frame_at_column(anchor_x);
+    app.region_drag.anchor_source_frame = sweep_trim_frame_at_x(anchor_x);
     app.region_drag.press_x      = at.rx;
     app.region_drag.press_y      = at.ry;
     // THIS ARM WRITES NOTHING ELSE: the trim is written by the motion path
@@ -6086,7 +6085,7 @@ void GuiInputHandler::arm_placement_press(const GuiPointerPlace& at,
 // its RELEASE (the eighth glass ruling's deferral: the press could not know it
 // was a click until the release said so, and a pan must move no playhead and
 // clear nothing, so everything the old press-time placement did moved here
-// whole). Runs at the PRESS column — sub-threshold travel is jitter, and the
+// whole). Runs at the PRESS's place — sub-threshold travel is jitter, and the
 // press point is what the user aimed at. A live play is stopped HERE, inside
 // the placement body, never at the press (the press touched nothing, so a
 // pan or a gutter click leaves the play running; architect 2026-10-06).
@@ -6144,7 +6143,7 @@ void GuiInputHandler::place_playhead_at_click_column(double click_rel_x) {
     // live arm clears the store selection). A gutter column seats nothing.
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
-    // Clamp the click column's frame into the live domain: move_playhead_to
+    // Clamp the click place's frame into the live domain: move_playhead_to
     // clamps internally, but the clamp here stays required because the
     // conversion reads ItemViewportBasis::spp, the PAINTED item epoch, which
     // can extend past the CURRENT live domain — a resize or a target-domain
@@ -6152,12 +6151,12 @@ void GuiInputHandler::place_playhead_at_click_column(double click_rel_x) {
     // basis's last column computing to domain_total or beyond, one past
     // [0, domain_total-1], which the display-state validator would clear
     // wholesale. THE COLUMN CONVERTS ON THE PAINTED VIEWPORT, the item basis
-    // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
+    // (playhead_frame_at_click_x; architect 2026-09-24, strictly as
     // painted): the playhead seats at the frame the clicked pixels showed even
     // while a viewport job in flight has moved the live viewport ahead of
     // them; cold, the live viewport by the basis's own contract.
     const int64_t sample = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+        playhead_frame_at_click_x(app, audio, click_rel_x), app, audio);
     // A POINTER OR TOUCH PLACEMENT STOPS A LIVE PLAY (architect 2026-10-06; the
     // class is stated at stop_playback_if_playing's declaration): past the
     // gutter refusal above and ahead of the first write, so a click that seats
@@ -6171,7 +6170,7 @@ void GuiInputHandler::place_playhead_at_click_column(double click_rel_x) {
 void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // The empty marker-lane double-click, AT THE SECOND PRESS (2026-08-17 —
     // a recognized second press acts immediately; its one caller is the lane's
-    // consume in on_button_press, which passes the press column and arms
+    // consume in on_button_press, which passes the press's place and arms
     // nothing after the create).
     // CREATE the marker, SELECT it, LAND
     // the playhead on it (the architect's words, eighth glass ruling) — the
@@ -6184,7 +6183,7 @@ void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // the playhead), so one body serves the key and the click with no
     // divergence to record. Gated exactly like
     // the keyboard `s`: home-view (active_column_authoring_allowed) and read-only
-    // refuse SILENTLY. Place the playhead on the clicked column first — the
+    // refuse SILENTLY. Place the playhead at the clicked place first — the
     // first pair's deferred click act already moved it there at its release,
     // so this is a harmless same-value repeat that also covers any first
     // press whose placement was
@@ -6201,13 +6200,13 @@ void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     if (authoring_locked(app)) return;
     if (!active_column_authoring_allowed(app)) return;
     // The placement converts on the PAINTED viewport, the item basis
-    // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
+    // (playhead_frame_at_click_x; architect 2026-09-24, strictly as
     // painted), so the drop below authors at the column the double-click
     // pressed on screen; cold, the live viewport by the basis's own contract.
     // The drops themselves convert no column: they author at the playhead's
     // frame.
     const int64_t sample = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+        playhead_frame_at_click_x(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
     // active_column_authoring_allowed admits W only in source view (warp
     // drops legal there alone) and P in both audio views (S+P and T+P, each
@@ -6217,15 +6216,18 @@ void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // (architect 2026-11-11, the drop coincidence rule;
     // kPhaseResetDropOccupiedCard / kMarkerDropOccupiedCard) this road CAN
     // meet on the P column: the lead-in reset lands kN/2 output samples left
-    // of the clicked column, so the stretch right of a reset is empty lane,
+    // of the clicked place, so the stretch right of a reset is empty lane,
     // and a second double-click where the first just dropped asks for a
     // reset in the window that one now seeds in — refused, on its card, the
     // playhead left where the click seated it. On the W column a marker on
-    // the clicked column's exact frame paints its cue on that column, so the
+    // the clicked place's exact frame paints its cue on that column, so the
     // press is ordinarily the cue's and not the empty lane's. THE OFF-EDGE
-    // REFUSAL (kMarkerDropOffEdgeCard) this road cannot meet: the playhead was
-    // just seated on a painted column (< area.w on the painted viewport, so at
-    // or left of it at the right wall), and the lead-in lies further left
+    // REFUSAL (kMarkerDropOffEdgeCard) this road meets in ONE PLACE on the W
+    // column (architect 2026-11-15, the no-grid arc: the playhead was just
+    // seated on the frame under the pen's real place): a double-click in the
+    // strip's last half px at the right wall seats the playhead in the song's
+    // last half-column, where no marker paints, and the drop there is
+    // refused on its card; on the P column the lead-in lies further left
     // still. Whatever comes back is raised, the channel's contract.
     const GuiOpRefusal refusal =
         app.active_markers_view == 'P'
@@ -6520,7 +6522,7 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
         // THE MOTIONLESS LIFT OF THE ONE SURVIVING DEFERRED CLICK — the trim
         // bar's ctrl bound set (the contract is at PendingClickAct,
         // app_state.h; the 2026-08-17 ruling took the record's other four
-        // kinds back to the press). The act runs on the PRESS column,
+        // kinds back to the press). The act runs at the PRESS's place,
         // re-asking every gate live inside set_trim_bound_at_click, where
         // the nearest end cap is chosen too (architect 2026-11-10).
         // THE RELEASE BODIES' STANDING SHAPE: read the pending, DISARM, then
@@ -6624,8 +6626,8 @@ void GuiInputHandler::finalize_active_drags() {
     if (app.value_drag.active) value_drag.commit();
     // (The tempo drag's finalize arm went with the gesture, 2026-07-29 — see
     // marker_drag.h.)
-    // The trim drag keeps its live bounds and runs the full commit tail (the
-    // release column-snap, auto_clear_crossed_trim, the repaint/trigger, the
+    // The trim drag keeps its live bounds and runs the full commit tail (
+    // auto_clear_crossed_trim, the repaint/trigger, the
     // setter's deselect). TRIM IS HISTORY-LESS BY RULING, so these bounds are not
     // undoable — that is the standing trim gap (every trim gesture commits
     // outside undo), not something this force-end introduces.
@@ -7824,7 +7826,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 //     CLICK (arm_nav_press with the history flag): nothing at
 //     press; a motionless release runs THE MODE'S LAND — clear the mode focus
 //     + selection (the deselect's mode analog, through the one pair clearer),
-//     seat the playhead at the press column (run_nav_click_act's history arm — the
+//     seat the playhead at the press's place (run_nav_click_act's history arm — the
 //     live recipe through the shared placement body, whose play stop has
 //     nothing to stop in the silent view); a crossed press runs nothing,
 //     moving no playhead and clearing nothing (the pan is the touch layer's,
@@ -8493,21 +8495,21 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
     // The MOVING endpoint at THE PEN'S REAL PLACE, waveform-relative
     // (architect 2026-11-15, the no-grid arc), held between the strip's two
     // real edges like the other drags' live tracking; the trim former reads
-    // it as the whole SOURCE frame
-    // through the sweep's one column->trim route (sweep_trim_frame_at_column,
+    // it as the whole SOURCE frame under that place
+    // through the sweep's one place->trim route (sweep_trim_frame_at_x,
     // on the painted item basis, architect 2026-09-24), so the writer needs no
-    // domain hop — that route names a column of the strip, so its place stops
-    // at the last column's left edge.
+    // domain hop — a pen at or past the strip's right edge answers the frame
+    // there, behind which the wall rests the end on the source's last frame.
     const double rel = std::clamp(at.rx - static_cast<double>(area.x), 0.0,
                                   static_cast<double>(area.w));
     // THE TRIM WRITE — the sweep IS a trim write (architect 2026-08-18): from
-    // the drag's fixed ANCHOR to the pointer's column, ordered and clamped to
+    // the drag's fixed ANCHOR to the frame under the pointer, ordered and clamped to
     // the song walls, through the one owner that carries all of that
     // (write_trim_from_sweep, input_trim.cpp). NO WIDTH RULE stands between the
     // two ends since 2026-08-19 (the retired floor's record is at that owner),
     // so a stroke authors whatever span it draws — including none at all, which
     // the release turns into the whole song. It owns its own same-pair
-    // short-circuit, so a sub-pixel jitter event inside one column writes and
+    // short-circuit, so a jitter event inside one frame writes and
     // repaints nothing; `wrote_trim` latches for the release's commit gate.
     // Its own repaint is the waveform area's, the trim bar's lane inside it.
     //
@@ -8524,8 +8526,7 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
         return;
     }
     if (write_trim_from_sweep(app.region_drag.anchor_source_frame,
-                              sweep_trim_frame_at_column(std::min(
-                                  rel, static_cast<double>(area.w - 1))))) {
+                              sweep_trim_frame_at_x(rel))) {
         app.region_drag.wrote_trim = true;
     }
     // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): sweeping a TRIM
@@ -8779,9 +8780,12 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         // THE HEAD DRAG'S ONE STEP (architect 2026-10-09 ~17:40; contract at
         // ScrollDragState::head_drag): THE CLICK ACT ITSELF at the pointer's
         // column — run_nav_click_act, the motionless release's own body, the
-        // `h` view's mode land with it — the column clamped onto the
-        // waveform's, so a pointer past either end of the canvas holds the
-        // playhead at that end's column rather than meeting the act's gutter.
+        // `h` view's mode land with it — the pen's real place held between
+        // the first and the last columns' left edges, so a pointer past
+        // either end of the canvas holds the playhead at that end's column
+        // (the place the keep-visible edge-align rests a subject at,
+        // Viewport's edge_aligned_viewport_start: no page under a held pen)
+        // rather than meeting the act's gutter.
         // No second placement road: the play's stop, the deselect, the
         // movement owner and its damage are the act's.
         const auto head_drag_step = [&] {
@@ -8859,18 +8863,18 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         const PendingClickAct press = app.pending_click;
         app.pending_click = PendingClickAct{};
         // THE BOUND SET RUNS HERE AND THEN BECOMES THE DRAG — the act first,
-        // at the PRESS column, then the
+        // at the PRESS's place, then the
         // gesture it was always the prologue to. set_trim_bound_at_click_then_
         // arm_drag is the one owner of that pair — its arm RIDES the set's
         // verdict, so a refused set (a degenerate audio/geometry state, a
         // click on its own cap, the partner wall) arms nothing and the
         // crossing is a
         // consumed nothing, exactly as the motionless lift would have been.
-        // The bound is written at the press column, the drag
+        // The bound is written at the press's place, the drag
         // anchors there, and begin_trim_drag's orig_* capture is the click-set
         // value.
         // WHICH BOUND IS THE NEAREST RULE'S, AT THE DOWN'S COLUMN (architect
-        // 2026-11-10): the set picks the end cap nearest the press column
+        // 2026-11-10): the set picks the end cap nearest the press's place
         // and the drag takes the bound the set moved, however long the press
         // was held before it crossed.
         // FALL THROUGH (no return) so the pending trim drag armed just now
@@ -8907,7 +8911,7 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
                 grab_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
-        // Threshold crossed: begin the trim drag anchored at the PRESS column so
+        // Threshold crossed: begin the trim drag anchored at the PRESS's place so
         // the bound(s) track from the grab, this first update folding the whole
         // press->crossing delta (the marker-pending / strip catch-up pattern).
         // begin_trim_drag captures the anchor at press_x now — exact, since
@@ -9058,7 +9062,7 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         // 2026-10-12) and T+P with grid iterations dark reach here, all of
         // them authoring views.
         if (authoring_locked(app)) return;
-        // Begin the drag anchored at the PRESS column so the marker tracks the
+        // Begin the drag anchored at the PRESS's place so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta
         // (the strip/region catch-up pattern). begin_drag captures the pre-drag
         // snapshot and the wall math now — exact, since nothing mutated the

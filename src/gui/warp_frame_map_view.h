@@ -596,9 +596,13 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 // quotient through lattice_index_ties_right less the same m, so column − 0.5
 // <= x < column + 0.5 — the exact place lies within half a px of its column.
 // WHAT THE COLUMN STILL OWNS (architect 2026-11-14, "Agree to all
-// decisions."; the gates, the published rects and the hit tests left it
-// 2026-11-15, the no-grid arc): every CULL, CAMERA TEST AND LANDING reads
-// displayed_column_at. THE GATES
+// decisions."; the gates, the published rects, the hit tests and the pen
+// acts' landings left it 2026-11-15, the no-grid arc): every CULL and the
+// CAMERAS' VISIBILITY TEST (displayed_frame_on_screen) read
+// displayed_column_at, and THE ARROW STEP AND THE NUDGE step one painted
+// column of it (displayed_grid_position_at_column). A PEN ACT LANDS ON THE
+// FRAME UNDER THE PEN'S REAL PLACE, this expression's inverse
+// (displayed_frame_at_x, below). THE GATES
 // ARE THE EXACT PLACE'S — a line is drawn wherever any of its real interval
 // lies inside the strip (render.h's waveform_line_span: its span's own
 // emptiness, no column asked), so a line slides in and out at the canvas's
@@ -642,6 +646,45 @@ inline double displayed_x_at(double displayed, double vp_start, double spp,
     return (displayed - static_cast<double>(origin)) / spp - m;
 }
 
+// THE PEN ACTS' ONE CONVERSION — displayed_x_at's INVERSE (architect
+// 2026-11-15, the no-grid arc, ruling B: "B, yes, also the exact frame
+// there" — a tap's playhead, a drop, a drag, the trim's edges): the
+// DISPLAYED frame under a real x (device px from the waveform area's left
+// edge) on the caller's lattice,
+//     frame = origin + (m + x) · spp,   m = viewport_lattice_index(
+//                                           vp_start, spp, origin)
+// UNROUNDED, so displayed_x_at(displayed_frame_at_x(x)) == x to floating
+// error: a mark dropped under the pen is painted where the pen stood, to the
+// whole frame its domain's road then takes — 0.5 / spp px at most. PURE
+// ARITHMETIC ON THE CALLER'S BASIS, as its sibling's; every pen act passes
+// the ITEM basis (item_viewport_basis: on screen is as painted).
+// THE WHOLE FRAME IS THE DOMAIN'S ROAD'S, never taken here: an AUTHORED
+// position through authored_frame_at_x_on_basis below (snap_authored_frame,
+// the one double-to-authored route; the target view through the displayed
+// map at this full precision); the PLAYHEAD's by llrint and
+// clamp_playhead_to_live_domain (playhead_frame_at_click_x,
+// input_pointer.cpp); the trim drags' active-domain frame by llrint
+// (trim_mouse_x_to_active_frame, input_trim.cpp).
+// WHAT A WHOLE x ANSWERS: x = c is column c's left edge, the lattice point
+// origin + (m + c) · spp, so a pen at a whole pixel coordinate lands the
+// frame the column landing gave it wherever that point is a whole frame
+// (every whole step: the working zoom and every whole level from it up),
+// and the nearest whole frame to it otherwise.
+// ITS READERS, the one list: the click family's owner
+// (playhead_frame_at_click_x — the tap's playhead, the scrub click, the
+// ruler head's drag, the empty-lane double-click's seat, and through the
+// playhead every drop), the trim's conversions (trim_mouse_x_to_active_frame
+// and its source sibling, the endcap and bridge drags' motion) and
+// authored_frame_at_x_on_basis (the trim's bound landing,
+// trim_bound_frame_at_x: the bound-set click and the TRIM sweep). The marker
+// drag converts no place at its commit: its free proposal is a source frame
+// already (marker_drag.cpp).
+inline double displayed_frame_at_x(double x, double vp_start, double spp,
+                                   int64_t origin) {
+    const double m = viewport_lattice_index(vp_start, spp, origin);
+    return static_cast<double>(origin) + (m + x) * spp;
+}
+
 // IS A DISPLAYED FRAME ON SCREEN, AS PAINTED — THE CAMERAS' ONE VISIBILITY
 // TEST (architect 2026-09-28, strictly as painted): true iff the frame's
 // painted column, displayed_column_at's one rounding, lies in the waveform's
@@ -683,12 +726,13 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
     return x;
 }
 
-// Pixel-anchoring pair for gesture commits. Every gesture that moves an
+// Pixel-anchoring pair for THE COLUMN STEP. Every gesture that moves an
 // authored position by pixel columns (the bare Left/Right nudges on both
-// marker columns) or releases one at a
-// pointer position (marker AND trim drag commits both snap their release to
-// the painted column) anchors to the on-screen column grid through these two
-// helpers: read the item's
+// marker columns) anchors to the on-screen column grid through these two
+// helpers (A POINTER'S RELEASE DOES NOT — architect 2026-11-15, the no-grid
+// arc: the marker drag commits its free proposal's own frame and the trim
+// its dragged frame, the frame under the pen's real place,
+// displayed_frame_at_x above): read the item's
 // currently painted column with painted_column_of_source_frame_on_basis, pick
 // the destination column, and commit authored_frame_at_column_on_basis of it —
 // which funnels through snap_authored_frame (app_state.h), the single
@@ -711,17 +755,15 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
 // drops its completion, but the LIVE viewport has already moved; converting on
 // it would author on a grid the pixels never showed). Cold, the item basis IS
 // the live viewport by its own contract, so nothing here forks on warmth. The
-// gesture callers — the marker drag's commit snap (marker_drag.cpp), the trim
-// drags' release snap, the sweep's trim half and the trim bar's bound-set
-// click (input_trim.cpp), and both nudges' column step (stepped_anchor_frame,
+// gesture callers — both nudges' column step (stepped_anchor_frame,
 // position_nudge.h) — are the whole caller list of the pair apart from the
-// flag editor's unrolled box (render.cpp), which reads the exact sibling
-// below (painted_x_of_source_frame_on_basis) on the same item basis, on
-// the paint side. THE LIVE-VIEWPORT FORMS ARE DELETED (2026-09-24): with the
+// exact sibling's readers below (painted_x_of_source_frame_on_basis: the
+// flag editor's unrolled box, render.cpp, the ADD SEL sweep's membership and
+// the nudge's held place), on the same item basis. THE LIVE-VIEWPORT FORMS ARE DELETED (2026-09-24): with the
 // gesture class moved no caller was left on them. Two families never reached
 // this pair: the click-placement family (the nav click, the scrub click, the
-// sweep's PLAYHEAD half, the empty-lane double-click create) lands
-// active-domain playhead frames through playhead_frame_at_click_column
+// ruler head's drag, the empty-lane double-click create) lands
+// active-domain playhead frames through playhead_frame_at_click_x
 // (input_pointer.cpp), on the same item basis since 2026-09-24 (architect,
 // strictly as painted — the drops at the playhead author at the playhead's
 // frame and convert no column); and the playhead's damage columns come from
@@ -804,8 +846,11 @@ double painted_x_of_source_frame_on_basis(
 // rule) and is reachable by zooming in or by the Tab walk. So the refusal is
 // input routing, never an adversarial class: it judges no data and no render
 // stage sees it. Its error arm has a producer (a Right press in the song's
-// last columns, End then `s` at the whole-song zoom); the pointer roads need
-// no copy, their columns stopping at w − 1.
+// last columns, End then `s` at the whole-song zoom; and, since the pen acts
+// take the frame under the pen's real place, a tap in the strip's last half
+// px at the right wall, whose playhead a drop then authors at); the marker
+// drag needs no copy, its visible-strip clamp stopping at the last column's
+// left edge (viewport_marker_bounds).
 bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
                                  int64_t source_frame);
 
@@ -826,6 +871,23 @@ bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
 // integer frame. Returns 0 on a degenerate `spp` (callers guard the geometry).
 int64_t authored_frame_at_column_on_basis(
     const AppState& app, const GuiAudio& audio, int col,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    int64_t vp_start, double spp, int64_t lattice_origin);
+
+// authored_frame_at_x_on_basis: THE AUTHORED SOURCE FRAME UNDER A REAL x
+// (architect 2026-11-15, the no-grid arc: a pen act takes the frame under
+// the pen's real place) — the pen's sibling of the column form above, on
+// the same basis and the same map: the displayed frame is
+// displayed_frame_at_x, unrounded; in the Source domain it returns through
+// snap_authored_frame as it is; in the TargetLive domain it is floored at 0
+// and inverse-mapped through `warp_frame_map` AT ITS FULL PRECISION (the map
+// takes a real: no whole target frame is taken on the way, so the one
+// rounding is the authored one), then snap_authored_frame. A whole source
+// frame in the authored int64 domain; callers apply their own walls AFTER.
+// Returns 0 on a degenerate `spp`. ITS READER: the trim's bound landing
+// (trim_bound_frame_at_x, input_trim.cpp).
+int64_t authored_frame_at_x_on_basis(
+    const AppState& app, const GuiAudio& audio, double x,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
     int64_t vp_start, double spp, int64_t lattice_origin);
 

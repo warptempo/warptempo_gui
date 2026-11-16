@@ -715,7 +715,7 @@ void install_true_colors(bool on);
 // (AppState::playhead_head_hit) and read by point_on_playhead_head
 // (input_pointer.cpp), a cue over the head keeping the press; a plain press
 // there drags the playhead, every motion past the slop the ruler's
-// placement act at the pointer's column (ScrollDragState::head_drag).
+// placement act at the pointer's place (ScrollDragState::head_drag).
 // NO HOLD LAMP (architect 2026-10-05): the head paints the same whether or
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git

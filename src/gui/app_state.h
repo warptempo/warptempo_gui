@@ -486,9 +486,8 @@ struct DragState {
     // apply_drag_motion's header (identity orig + delta in source view);
     // consumed by paint via DragOverlay so the live marker store stays untouched
     // until commit. Seeded from original_times at begin_drag. This is a
-    // MOTION/PAINT value: at commit it converts back to an authored frame
-    // through
-    // the pixel-anchoring column snap (commit_drag).
+    // MOTION/PAINT value: at commit it is taken to its own nearest whole
+    // frame, the authored one (commit_drag; no column is asked).
     std::vector<double> moveable_times;
     // Press position in ACTIVE-domain frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in active-domain frames, and
@@ -861,7 +860,7 @@ struct UndoHistory {
 // ITSELF WRITES NO TRIM; the commit puts the lamp out (commit_region_sweep).
 //
 // THE ANCHOR IS THE WHOLE OF THE GESTURE'S GEOMETRY. Under derive-do-not-store
-// there is no span field to extend: this holds the press column's authored
+// there is no span field to extend: this holds the press place's authored
 // source frame (the field's own comment), the trim
 // holds the pair, and the bar and the canvas highlight paint from the trim
 // on every frame including the ones this gesture writes.
@@ -913,12 +912,12 @@ struct RegionDragState {
     double  press_x      = 0.0;    // the press's REAL place (window px), for the gate
     double  press_y      = 0.0;
     // THE TRIM'S FIXED END — a whole SOURCE frame in the authored int64 domain,
-    // taken at the press column through the sweep's one column route
-    // (sweep_trim_frame_at_column, input_trim.cpp:
-    // authored_frame_at_column_on_basis over the displayed-or-live target map
+    // taken at the press's real place through the sweep's one place route
+    // (sweep_trim_frame_at_x, input_trim.cpp:
+    // authored_frame_at_x_on_basis over the displayed-or-live target map
     // on the item viewport basis, walls after, snap_authored_frame
-    // the one double->authored conversion — the lattice every other trim
-    // former commits on). A SWEEP COLUMN YIELDS THIS ONE VALUE since
+    // the one double->authored conversion — the frame under the pen,
+    // architect 2026-11-15). A SWEEP PLACE YIELDS THIS ONE VALUE since
     // 2026-11-07 (session 88: the sweep seats and carries no playhead, so no
     // active-domain frame is taken beside it).
     int64_t anchor_source_frame = 0;
@@ -1102,7 +1101,7 @@ struct PendingMarkerPress {
 // rather than at their press, the bound set having moved to the lift as the
 // ONE surviving deferred click (PendingClickAct below owns that hand-over,
 // and the drag it hands to is byte-for-byte the one it always was: the set runs
-// first, at the press column, and this pending is armed on the bound it wrote).
+// first, at the press's place, and this pending is armed on the bound it wrote).
 // (The trim surface arc scattered these arms
 // across the merged band's modifiers for one day, 2026-08-11..12 — the alt
 // bridge press and the ctrl deferred-set pending died with the arc's revert.)
@@ -1174,14 +1173,14 @@ enum class PendingClickKind {
 // finalizer and the touch layer's ABNORMAL end all commit nothing. Read
 // PendingMarkerPress above for the neighbouring press-time model.
 //
-// THE ACT ACTS ON THE ARMED SUBJECT — the press column — and never on a re-hit
+// THE ACT ACTS ON THE ARMED SUBJECT — the press's place — and never on a re-hit
 // at the release's coordinates (touch delivers the press at the finger's DOWN
 // point and the release at its last position, and the press point is what the
 // user aimed at, sub-threshold travel being jitter).
 //
 // WHICH BOUND THE CLICK WRITES IS A VERDICT AT THE ACT, NOT A PRESS-TIME FACT
 // (architect 2026-11-10): the lift or the crossing moves WHICHEVER END CAP IS
-// NEAREST THE PRESS COLUMN ON THE PAINTED COLUMNS (the caps as the trim bar
+// NEAREST THE PRESS'S PLACE ON THE PAINTED COLUMNS (the caps as the trim bar
 // shows them, on screen is as painted), a tie the begin's but right of
 // both caps, where it is the end's, a click outside
 // the trim
@@ -1245,9 +1244,9 @@ struct TrimDragState {
     // orig_begin/orig_end are LIVE MECHANICS, the one thing to know about them now
     // that no cancel reads anything here (2026-07-29 — pointer gestures have no
     // cancel; the rule is at on_key's drag-modal statement): the rigid
-    // PAIR path rides its delta off them, and commit_trim_drag's release snap uses
-    // them as its untouched-bound test (a bound equal to its origin keeps its
-    // stored value bit-exact instead of column-snapping). They hold the values at
+    // PAIR path rides its delta off them, and the single-bound path's
+    // viewport clamp widens to its own (a bound grabbed just off screen is
+    // never pulled in by a jump). They hold the values at
     // BEGIN — for a bound-set-armed drag, the click-set values, since that click
     // already committed. The set_click flag and the pre-gesture
     // selection + region that used to sit here were the Esc-restore origin and are
@@ -1289,7 +1288,7 @@ struct TrimDragState {
 // deferred-hide model, the one-day ruler former's own pattern generalized
 // to the whole surface):
 //   * a MOTIONLESS RELEASE (never crossed drag_moved_threshold_px()) runs THE
-//     CLICK ACT at the press column, forked on the pressed half
+//     CLICK ACT at the press's place, forked on the pressed half
 //     (run_nav_click_act, input_pointer.cpp). UPPER half — everything the old
 //     press-time placement did: deselect-all (the mode-focus clear in the `h`
 //     view), the play's stop (architect 2026-10-06), playhead to the column,
@@ -1346,7 +1345,7 @@ struct ScrollDragState {
     // seed nothing — the lane is the one double-click surface here.
     bool   seed_empty_lane = false;
     // The press landed on the WAVEFORM'S LOWER HALF (2026-08-13): a motionless
-    // release runs the AUDITION SCRUB at the press column instead of the
+    // release runs the AUDITION SCRUB at the press's place instead of the
     // placement. Read ONCE, at the press, because the press point is what the
     // user aimed at — the same reason the click act runs at press_x. Mutually
     // exclusive with the two flags above by geometry, and false in the `h`
@@ -1362,7 +1361,7 @@ struct ScrollDragState {
     // nothing on any surface): on_motion marks `moved` at the crossing and
     // runs this drag's step and nothing else. FROM THE CROSSING ON (the slop is
     // jitter, the pending's own rule), EVERY MOTION EVENT runs THE PLACEMENT
-    // ACT at the pointer's column — the motionless click's own act,
+    // ACT at the pointer's place — the motionless click's own act,
     // run_nav_click_act's placement arm (the play's stop, the deselect or the
     // `h` view's mode land, the playhead to the column, the follow override),
     // the column clamped onto the waveform's — so the playhead rides the
@@ -10849,9 +10848,11 @@ double  samples_per_pixel_at(double zoom_level, int64_t column_frames);
 // Returns {lo, hi} as active-domain samples. THE STRIP IS THE PAINTED ONE
 // (architect 2026-09-24, strictly as painted): the span and spp come from
 // item_viewport_basis — the viewport the grabbed item was painted on — since
-// both callers are gesture clamps, the marker drag's begin (begin_drag) and
-// the single-bound trim drag's motion (update_trim_drag), and a gesture runs on
-// one painted basis; cold, the basis is the live viewport by its own contract.
+// its caller is a gesture clamp, the marker drag's begin (begin_drag), and a
+// gesture runs on one painted basis; cold, the basis is the live viewport by
+// its own contract. (The single-bound trim drag clamps to the strip's own
+// extent instead, through to its right edge, so its end reaches the last
+// frame: update_trim_drag.)
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
                                                    const GuiAudio& audio);
 
@@ -19667,7 +19668,7 @@ bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
 //     and motion, the trim drags' conversions and commit snap, the sweep, the
 //     bound-set click's decider, both nudges' pixel anchoring, the drag's
 //     viewport clamp, and the click placements through
-//     playhead_frame_at_click_column (the live forms
+//     playhead_frame_at_click_x (the live forms
 //     painted_column_of_source_frame / authored_frame_at_column are deleted;
 //     the `_on_basis` pair is the whole pixel-anchoring API,
 //     warp_frame_map_view.h). Every pending press that aims a painted subject
@@ -19707,8 +19708,8 @@ bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
 // only stages) and not the earlier plate publish. GESTURE MECHANICS READ THE
 // SAME DISPLAYED MAP (2026-07-22, the slippery-drag fix, superseding the
 // original mechanics-stay-live rule this contract carried until 2026-08-22):
-// the marker drag's anchors/walls/motion/release column-snap, the trim drags'
-// anchor/motion/clamp/release snap, both nudges' pixel anchoring and the
+// the marker drag's anchors/walls/motion, the trim drags'
+// anchor/motion/clamp, both nudges' pixel anchoring and the
 // phase-reset overlay's map all convert through this owner per motion event,
 // so the grabbed subject tracks the pointer against WHAT IS PAINTED even
 // where the displayed map lags the live one — and, since 2026-09-24 (architect,
@@ -19788,7 +19789,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // OUT FOR AN UNRELATED REASON: since 2026-09-24 (architect, strictly
 // as-painted) its column converts on the item basis exactly like every
 // other click-placement conversion (item_viewport_basis;
-// sweep_trim_frame_at_column, its one value since its playhead half left,
+// sweep_trim_frame_at_x, its one value since its playhead half left,
 // 2026-11-07) — it is excluded here because it writes the trim from a fixed
 // anchor to the live pointer and holds no grabbed subject to protect, not
 // because its conversion reads the live viewport. This is a
@@ -19857,16 +19858,16 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // and viewport alike, so a viewport-dispatched worker job in flight at the
 // press cannot move the grid the mechanics convert on ahead of the pixels):
 // the marker drag's anchor (MarkerDragOps::begin_drag) and motion (the drag
-// arm of on_motion) and its commit snap (committed_frame_for_proposal);
-// viewport_marker_bounds, the marker drag's and the single-bound trim drag's
-// visible-strip clamp; the trim drags' column landing
-// (trim_mouse_x_to_active_frame, which trim_mouse_x_to_source_frame rides) and
-// release snap (commit_trim_drag); the sweep's TRIM half
-// (sweep_trim_frame_at_column); the trim bar's bound-set click
+// arm of on_motion);
+// viewport_marker_bounds, the marker drag's
+// visible-strip clamp; the trim drags' place conversions
+// (trim_mouse_x_to_active_frame and trim_mouse_x_to_source_frame, the frame
+// under the pen's real place); the sweep's TRIM half
+// (sweep_trim_frame_at_x); the trim bar's bound-set click
 // (trim_bound_click); and both nudges' column step
 // (stepped_anchor_frame). The CLICK-PLACEMENT family joined it (architect
 // 2026-09-24, "reality to the face" reads the same for a click as for a
-// drag): its one conversion, playhead_frame_at_click_column — the nav click,
+// drag): its one conversion, playhead_frame_at_click_x — the nav click,
 // the scrub click, the sweep's PLAYHEAD half and the empty-lane double-click
 // create. The navigation that writes the viewport itself stays live.
 // (Five former consumers left the list for a PAINTER'S STASH, the stronger
@@ -19906,9 +19907,10 @@ inline bool displayed_basis_frozen(const AppState& app) {
 //
 // The double vp_start/spp serve the column math
 // (painted_column_of_source_frame_on_basis, the pointer-to-frame anchors); the
-// int64 vp_start_frame and lattice_origin serve the grid landings
-// (authored_frame_at_column_on_basis, trim_mouse_x_to_active_frame,
-// playhead_frame_at_click_column), and
+// int64 vp_start_frame and lattice_origin serve the landings (the column
+// step's authored_frame_at_column_on_basis; the pen acts'
+// displayed_frame_at_x readers — authored_frame_at_x_on_basis,
+// trim_mouse_x_to_active_frame, playhead_frame_at_click_x), and
 // vp_start_frame/vp_end_frame/area_w serve the trim painter, which passes the
 // integer span + width to trim_bound_column verbatim, and the strip clamp
 // (viewport_marker_bounds). (compute_flag_hit_rects

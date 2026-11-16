@@ -537,6 +537,27 @@ int64_t authored_frame_at_column_on_basis(
     return snap_authored_frame(g);
 }
 
+int64_t authored_frame_at_x_on_basis(
+    const AppState& app, const GuiAudio& audio, double x,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    int64_t vp_start, double spp, int64_t lattice_origin) {
+    if (spp <= 0.0) return 0;
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    // The displayed frame under the real place, unrounded (the pen acts' one
+    // conversion). Both arms take their whole frame through
+    // snap_authored_frame, the sole double-to-authored conversion.
+    const double g = displayed_frame_at_x(x, static_cast<double>(vp_start),
+                                          spp, lattice_origin);
+    if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
+        // Target view: the real target-domain time, floored at 0, through
+        // the inverse map at full precision; the map is monotone increasing,
+        // so the target-domain direction is the source-domain direction.
+        return snap_authored_frame(
+            map_target_to_source(g < 0.0 ? 0.0 : g, warp_frame_map));
+    }
+    return snap_authored_frame(g);
+}
+
 // The single reader of app.active_audio_view for DOMAIN QUERIES (see
 // gui_display_context.h for the ruling and the mode-logic carve-out). The
 // two arms are the view rule.

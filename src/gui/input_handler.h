@@ -1881,7 +1881,7 @@ struct GuiInputHandler {
     // caller has refused the gutter; architect 2026-11-15, the no-grid
     // arc), from which THE ARM ITSELF authors the fixed end of every trim
     // pair the sweep writes: RegionDragState::anchor_source_frame through
-    // sweep_trim_frame_at_column, the sweep's one column->trim route. `at`
+    // sweep_trim_frame_at_x, the sweep's one column->trim route. `at`
     // is the press's place for the press-becomes-drag threshold. THE PRESS
     // WRITES NO TRIM AND SEATS NO PLAYHEAD (architect 2026-11-07, session 88).
     // ONE CALLER (2026-11-07): the former's press half, the armed sweep's
@@ -1949,7 +1949,7 @@ struct GuiInputHandler {
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
     // and the `h` history mode's own have in common: drop the
-    // playhead at the clicked column, stopping a live play first (architect
+    // playhead at the clicked place, stopping a live play first (architect
     // 2026-10-06: a pointer or touch placement stops playback, the class at
     // stop_playback_if_playing's declaration; the stop sits past the gutter
     // refusal, ahead of the write — the ONE site for every placement route).
@@ -1967,7 +1967,7 @@ struct GuiInputHandler {
     // no-grid arc): `click_rel_x` here and in the two siblings below
     // (scrub_press_at, create_marker_at_empty_lane) is the click's real x on
     // the strip, waveform-relative, handed on to the family's one
-    // conversion (playhead_frame_at_click_column, input_pointer.cpp).
+    // conversion (playhead_frame_at_click_x, input_pointer.cpp).
     void place_playhead_at_click_column(double click_rel_x);
 
     // ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click (contract
@@ -2008,7 +2008,7 @@ struct GuiInputHandler {
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's
     // whole body, running THE PRESSED HALF'S OWN ACT: the audition scrub
     // (lower half), or deselect (live) / mode-focus clear (`h` view), then
-    // the placement above at the press column, playback state
+    // the placement above at the press's place, playback state
     // read at the act. The full contract is at the definition
     // (input_pointer.cpp).
     void run_nav_click_act(double press_x, bool history, bool scrub_release);
@@ -2048,7 +2048,7 @@ struct GuiInputHandler {
     // taken BY VALUE so the caller can disarm before running it, the release
     // bodies' standing shape. Every gate the set meets is re-asked inside it,
     // live at the lift, and which bound it writes is decided there too: the
-    // end cap nearest the press column (architect 2026-11-10).
+    // end cap nearest the press's place (architect 2026-11-10).
     // Contract at PendingClickAct (app_state.h), reasoning at the
     // definitions (input_pointer.cpp).
     void arm_pending_click_act(const GuiPointerPlace& at);
@@ -2057,12 +2057,12 @@ struct GuiInputHandler {
     // The empty marker-lane double-click marker CREATE, run at the SECOND
     // PRESS (2026-08-17) from the lane's consume in on_button_press: the
     // bare-`s`
-    // drop equivalent at the clicked column — the copy-previous drop in W,
+    // drop equivalent at the clicked place — the copy-previous drop in W,
     // the lead-in reset in P, exactly as bare `s` performs them, the drop's
     // own single-select and playhead land included (create + select + land,
     // the eighth glass ruling's words) — home-view and read-only gated
     // silently, the drops' refusal cards raised.
-    // Places the playhead on the clicked column first, then drops through the
+    // Places the playhead at the clicked place first, then drops through the
     // standing _at_playhead paths so the create takes the full path (walls, undo,
     // selection, the lead-in offset) unchanged.
     void create_marker_at_empty_lane(double click_rel_x);
@@ -3393,7 +3393,7 @@ private:
 
     // THE SWEEP'S TRIM WRITE (architect 2026-08-18 — the region IS the trim):
     // one ANCHOR and one MOVING end, both whole SOURCE frames already inside
-    // the song walls (sweep_trim_frame_at_column below is their one producer),
+    // the song walls (sweep_trim_frame_at_x below is their one producer),
     // written straight into the trim store as an ordered pair — no domain hop
     // in here. Its one entry is the TRIM arm lamp's touch sweep, which
     // calls it PER MOTION EVENT, so a stroke sets the trim in one gesture. It takes the setter's regime at the first accepted change
@@ -3413,19 +3413,19 @@ private:
     // survives unchanged as the recovery route.)
     bool write_trim_from_sweep(int64_t anchor_source, int64_t moving_source);
 
-    // THE SWEEP'S ONE COLUMN->TRIM ROUTE: the whole SOURCE frame a
-    // waveform-relative column authors, through
-    // authored_frame_at_column_on_basis over the displayed-or-live target map
-    // on the item viewport basis with the song walls applied after and the
-    // column holding the last frame landing on it (trim_bound_frame_at_column,
-    // input_trim.cpp, the family's one owner) —
-    // the lattice every other trim former commits on. Both of the sweep's
+    // THE SWEEP'S ONE PLACE->TRIM ROUTE: the whole SOURCE frame a
+    // waveform-relative real place authors, through
+    // authored_frame_at_x_on_basis over the displayed-or-live target map
+    // on the item viewport basis with the song walls applied after
+    // (trim_bound_frame_at_x, input_trim.cpp, the family's one owner: the
+    // frame under the pen's real place, architect 2026-11-15, the no-grid
+    // arc). Both of the sweep's
     // trim ends (the arm's anchor, the motion path's moving end) come from
-    // here and nowhere else; the PLAYHEAD those same columns seat and carry
-    // takes the active-domain frame from playhead_frame_at_click_column
+    // here and nowhere else; a playhead placed at the same place
+    // takes the active-domain frame from playhead_frame_at_click_x
     // instead, the two domains kept apart (the rule and its reasons are at
     // RegionDragState::anchor_source_frame and at the definition).
-    int64_t sweep_trim_frame_at_column(double col) const;
+    int64_t sweep_trim_frame_at_x(double x) const;
 
     // (THE MINIMUM TRIM WIDTH FLOOR — kMinTrimSpanFrames, a flat count of
     // source frames derived from the engine window and the authored value
@@ -3548,33 +3548,33 @@ private:
     // drag anchor (begin) and the live cursor (update) read so they can never
     // diverge. Returns false (out untouched) when audio/zoom state is unusable.
     bool trim_mouse_x_to_source_frame(double mouse_x, double& out_frame);
-    // mouse_x → active-domain frame: the cursor-column half of
-    // trim_mouse_x_to_source_frame, shared with the move-both-bounds drag
+    // mouse_x → active-domain frame: the whole frame nearest the displayed
+    // frame under the pen's real place, the move-both-bounds drag's
     // so the gap is preserved in the domain the user actually sees (active),
-    // not source. Lands on the one displayed-grid owner like every other
-    // column→frame landing (the basis and the domain rule are at the
+    // not source (the conversion, the basis and the domain rule are at the
     // definition, input_trim.cpp). Returns false (out untouched) when
     // audio/zoom state is unusable.
     bool trim_mouse_x_to_active_frame(double mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
 
     // THE BARREL'S BOUND SET ON THE TRIM BAR: move WHICHEVER END CAP IS
-    // NEAREST the clicked column to it (architect 2026-11-10; a begin click
-    // and a held end click until then) — the trim-drag release-snap basis
-    // (authored_frame_at_column_on_basis over the displayed paint map on the
-    // item viewport basis), walls [0, total-1], then the shared commit tail.
-    // NEAREST is the decider's verdict, ON THE PAINTED COLUMNS (the caps'
-    // columns as the trim bar's painter draws them, on the click's own
+    // NEAREST the clicked place to it (architect 2026-11-10; a begin click
+    // and a held end click until then) — the frame under the pen's real
+    // place (authored_frame_at_x_on_basis over the displayed paint map on the
+    // item viewport basis; architect 2026-11-15, the no-grid arc), walls
+    // [0, total-1], then the shared commit tail.
+    // NEAREST is the decider's verdict, BY REAL DISTANCE ON THE BAR (the caps'
+    // exact places as the trim bar's painter draws them, on the click's own
     // basis), a tie the begin's but right of both caps, where it is the
     // end's;
     // a click outside the trim moves the near cap outward; NO LONG PRESS
-    // MEANS ANYTHING HERE. A click exactly on its cap — THE CAP'S PAINTED
-    // COLUMN, whatever lattice the bound was authored on — is a CONSUMED
+    // MEANS ANYTHING HERE. A click exactly on its cap — WITHIN HALF A PX OF
+    // THE CAP'S PAINTED PLACE — is a CONSUMED
     // NO-OP: no write, no deselect, no stop, no drag, no card. So is a
-    // click on another column holding the bound's own frame, and so is THE
+    // click at another place holding the bound's own frame, and so is THE
     // PARTNER WALL, a click whose frame would land the nearest bound on or
     // past its partner (a midpoint tie whose frame rounds onto the end's,
-    // where a column is under a frame), so this
+    // where the caps stand under a px apart), so this
     // route never
     // hands a crossed pair to auto_clear_crossed_trim. History-less like
     // every trim mutation; repaint + target_render.trigger() like the drag
@@ -3585,7 +3585,7 @@ private:
     // audition playing. RETURNS THE CLICK IT COMMITTED, or nothing where it
     // wrote nothing (the wrapper's arm gate and its drag's bound).
     // IT RUNS AT THE LIFT (2026-08-15, the act-at-lift sweep): the press arms
-    // PendingClickAct, the motionless lift calls this at the PRESS column, and a
+    // PendingClickAct, the motionless lift calls this at the PRESS's place, and a
     // crossing calls it and hands over to the drag.
     // The full derivation lives at the definition, input_trim.cpp.
     struct TrimBoundClick {
@@ -3596,9 +3596,9 @@ private:
 
     // WHAT THAT CLICK WOULD WRITE, or nullopt when it refuses — the whole of the
     // decision half of set_trim_bound_at_click above (its
-    // degenerate-geometry gate, the column clamp, the map + item basis +
-    // authored_frame_at_column_on_basis derivation, the absolute walls, THE
-    // NEAREST-CAP VERDICT on the painted columns, the on-its-own-cap no-op
+    // degenerate-geometry gate, the hold into the strip, the map + item basis +
+    // authored_frame_at_x_on_basis derivation, the absolute walls, THE
+    // NEAREST-CAP VERDICT by real distance, the on-its-own-cap no-op
     // and the partner wall), leaving that
     // function nothing but the write and its tail. Const, because deciding is
     // not acting: the answer is a pure function of the store, the audio and the

@@ -644,8 +644,9 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // fractional (a sub-pixel sample step could leave the displayed column
     // unchanged), AND the landed sample is independent of the viewport's own
     // index m AT A FIXED q AND ORIGIN: it is the
-    // same lattice the click placement and the marker commits land on — the
-    // painted one, the camera's lattice origin its third term (the rest's
+    // painted lattice, the one the marker nudge's column step lands on (the
+    // pen acts land on the frame under the pen, off any lattice, architect
+    // 2026-11-15) — the camera's lattice origin its third term (the rest's
     // own, architect 2026-10-31 and 2026-11-15, the no-grid arc: every
     // landing and every zoom frame rests on the origin its start derives,
     // AppState::viewport_lattice_origin) — so a step means the same sample
@@ -663,7 +664,8 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // The column's index is the placement's own selector
     // (lattice_index_ties_right, shared with displayed_column_at); the
     // landing is the shared owner's. move_playhead_to still owns the walls, and
-    // a playhead parked off-lattice re-snaps onto it at its first step. THE
+    // a playhead parked off-lattice (a tap's, a drag's: the frame under the
+    // pen) re-snaps onto it at its first step. THE
     // WHOLE ARITHMETIC LIVES AT playhead_pixel_step_landing since 2026-08-30,
     // the Left / Right buttons' face reading the same
     // landing; a step at a wall still reaches move_playhead_to, whose

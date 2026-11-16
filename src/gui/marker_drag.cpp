@@ -15,32 +15,25 @@
 
 namespace {
 
-// THE COMMIT'S CONVERSION, commit_drag's store write. A proposal bit-equal
-// to the original keeps the original (a wander returning exactly to the press
-// x, dodging the two-hop's non-bitwise identity); anything else snaps to its
-// painted column through authored_frame_at_column_on_basis (which funnels the
-// column time through snap_authored_frame, the ONE double-to-authored route)
-// against the displayed map `dmap` on the ITEM viewport basis — the viewport
-// the flag was painted on, which the freeze has held since the aimed press
-// (architect 2026-09-24, strictly as painted; cold, the basis is the live
-// viewport by its own contract) — then takes the integer walls. THE LAST
-// COLUMN KEEPS ITS LEFT EDGE TOO, never the last frame (architect
-// 2026-10-14): a marker at EOF is useless and snapping is avoided; the trim
-// bound's landing on total-1 is the recorded exception, a full render needing
-// its end at EOF (trim_bound_frame_at_column, input_trim.cpp).
-int64_t committed_frame_for_proposal(
-    const AppState& app, const GuiAudio& audio,
-    const std::vector<WarpFrameMapSegment>& dmap,
-    double proposed, int64_t original) {
+// THE COMMIT'S CONVERSION, commit_drag's store write: THE EXACT FRAME OF THE
+// FREE PROPOSAL (architect 2026-11-15, the no-grid arc, ruling B: "B, yes,
+// also the exact frame there" — a drag commits where the pen left the mark,
+// to the frame). A proposal bit-equal to the original keeps the original (a
+// wander returning exactly to the press x, dodging the two-hop's non-bitwise
+// identity); anything else is the proposal's own source frame — the motion
+// arm's value, the press's frame plus the pointer's real travel carried
+// through the displayed map in both views (apply_drag_motion) — taken whole
+// through snap_authored_frame, the ONE double-to-authored route, then the
+// integer walls [0, total − 1]. No painted column is asked: the mark rests
+// where it was painted under the pen, within half a frame. A MARKER STILL
+// NEVER SNAPS TO THE LAST FRAME (architect 2026-10-14): a marker at EOF is
+// useless and snapping is avoided; the wall is only where a proposal past
+// it stops.
+int64_t committed_frame_for_proposal(const GuiAudio& audio, double proposed,
+                                     int64_t original) {
     if (proposed == static_cast<double>(original)) return original;
     const int64_t eof_wall = audio.total_frames() - 1;
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    const int c = painted_column_of_source_frame_on_basis(
-        app, audio, proposed, dmap, basis.vp_start, basis.spp,
-        basis.lattice_origin);
-    int64_t t = authored_frame_at_column_on_basis(
-        app, audio, c, dmap, basis.vp_start_frame, basis.spp,
-        basis.lattice_origin);
+    int64_t t = snap_authored_frame(proposed);
     if (t < 0)        t = 0;
     if (t > eof_wall) t = eof_wall;
     return t;
@@ -284,8 +277,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 
     // Full-precision frame doubles throughout: mid-gesture positions
     // are free — no grid, no snap — so the marker tracks the pointer
-    // exactly. At commit the proposal snaps to its painted column's whole frame,
-    // so this is a paint value, not the committed position. Both hops are identity
+    // exactly. At commit the proposal is taken to its own nearest whole frame
+    // (committed_frame_for_proposal), so the committed position is this value
+    // to half a frame. Both hops are identity
     // on source view's empty map (proposed = orig + clamped there, bit-for-bit).
     const double orig = static_cast<double>(app.drag.original_times[0]);
     // Zero-EFFECTIVE-motion short-circuit on the CLAMPED delta, not the raw
@@ -294,9 +288,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // pointer delta is nonzero but CLAMPED TO ZERO — the load-bearing case is
     // an OUTWARD drag of a half-offscreen flag, whose contains-zero viewport
     // bound clamps it to 0 — would otherwise write sub-frame residue into
-    // moveable_times, miss commit's bit-exact untouched branch, and column-snap
-    // a marker that had NO permitted motion (a visually motionless, forbidden
-    // drag committing an inward jump). Testing clamped == 0.0 returns orig
+    // moveable_times, miss commit's bit-exact untouched branch, and could
+    // commit a marker that had NO permitted motion a frame off its own (a
+    // visually motionless, forbidden drag committing a move). Testing clamped == 0.0 returns orig
     // verbatim ALWAYS. The downstream no-commit chain (no change -> moved never
     // latches -> commit's untouched short-circuit -> the original stands) holds for
     // a drag whose EVERY event was zero-clamped. A drag that moved inward first
@@ -423,35 +417,26 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read
-// it through the DragOverlay). On commit the proposal column-snaps
-// (pixel-anchored) and is assigned to the marker's time_frame before pushing the
+// it through the DragOverlay). On commit the proposal's own whole frame
+// (committed_frame_for_proposal: the exact frame, no column asked) is
+// assigned to the marker's time_frame before pushing the
 // pre-drag snapshot onto the undo stack. Symmetric across warp and phase reset:
 // identical statement shape on each side.
 void MarkerDragOps::commit_drag() {
     if (!app.drag.active) return;
     const bool phase_reset = (app.drag.drag_mode == 'P');
-    // ONE MARKER, PIXEL-ANCHORED: the proposal snaps to its painted column, so
-    // stored equals shown for the pointer-authored flag. The rigid GROUP commit
-    // this replaced — the grabbed member's snap folded into a uniform
-    // active-domain delta D that every other member rode, with D re-clamped into
-    // the group's wall intersection and the grabbed member re-derived from it —
-    // died with the group drag (architect 2026-07-29, HORIZONTAL MOVEMENT IS A
-    // FOCUS ACT; the doctrine and the full delete list are at the head of
-    // position_nudge.h). Nothing here needs the walls-win D clamp any more:
-    // the snap's only overshoot risk was carrying OTHER members past the wall the
-    // group stopped at, and a lone marker's snap is bounded by the integer walls
-    // below (which is exactly what a single-marker drag committed before the group
-    // arc, bit-for-bit).
-    //
-    // dmap = displayed_or_live_target_map — the DISPLAYED map (converged == live
-    // at rest; empty / identity in source view), the same basis apply_drag_motion
-    // anchored the proposal in and the overlay painted through, so
+    // ONE MARKER, AT ITS EXACT FRAME (architect 2026-11-15, the no-grid arc):
+    // the proposal the motion arm painted is taken to its nearest whole
+    // frame, so stored equals shown for the pointer-authored flag to half a
+    // frame — the flag rests where the pen left it, at exact coverage. ONE
+    // marker moves (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS ACT;
+    // the doctrine is at the head of position_nudge.h), bounded by the
+    // integer walls. The proposal was anchored on the DISPLAYED map by
+    // apply_drag_motion, the basis the overlay painted through, so
     // stored-equals-shown holds even inside a worker publish window where
     // displayed != live. The commit-time land below stays on the LIVE
     // map deliberately — post-commit placement truth, the Tab basis.
 
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
     // Slot 0 is the dragged marker (begin_drag seeds exactly one). The guard
     // covers a degenerate drag with no moveable marker.
     const bool slot_valid =
@@ -461,17 +446,15 @@ void MarkerDragOps::commit_drag() {
 
     // The commit: bit-exact untouched short-circuit (a wander returning exactly to
     // the press x keeps the original, dodging the two-hop's non-bitwise identity),
-    // else the painted column snap through authored_frame_at_column_on_basis
-    // (which funnels the column time through snap_authored_frame, the ONE
-    // double-to-authored route) against the displayed map on the item viewport
-    // basis, then the integer walls.
+    // else the proposal's own whole frame through snap_authored_frame, the ONE
+    // double-to-authored route, then the integer walls.
     // (committed_frame_for_proposal, above, is that conversion's one spelling.)
     int64_t committed = 0;
     int64_t original  = 0;
     if (slot_valid) {
         original  = app.drag.original_times[0];
         committed = committed_frame_for_proposal(
-            app, audio, dmap, app.drag.moveable_times[0], original);
+            audio, app.drag.moveable_times[0], original);
     }
     // Commit gates on NET CHANGE, not on whether motion occurred — the COMMITTED
     // frame against the pre-drag one, which is the only form of the question worth
@@ -479,13 +462,13 @@ void MarkerDragOps::commit_drag() {
     // and is deleted, 2026-07-29). A drag that wanders and returns exactly to its
     // original position therefore commits nothing: pushing an undo entry there would
     // record a snapshot byte-equal to the live store, a no-op history entry that
-    // both undo and redo restore invisibly. The compare runs on the SNAPPED value:
-    // a sub-column wander commits nothing, while the whole-frame store keeps
-    // committed == original exactly when the marker returns to its column.
+    // both undo and redo restore invisibly. The compare runs on the WHOLE-FRAME
+    // value: a wander of under half a frame commits nothing, and the store
+    // keeps committed == original exactly when the marker returns to its frame.
     const bool net_changed = slot_valid && committed != original;
     // Identity hints for the post-restore selection, filled only on a real
     // (net_changed) drag. The undo diff matcher cannot recover the touched marker
-    // when a column-snapped drag lands the row FIELD-IDENTICAL at another marker's
+    // when a drag lands the row FIELD-IDENTICAL at another marker's
     // position, so name it explicitly: touched_snapshot = its index in the PRE-DRAG
     // snapshot (the pre-reorder store index, valid in the snapshot a restore
     // produces), touched_live = its POST-reorder index in the committed (after)
