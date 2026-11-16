@@ -3838,7 +3838,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // at 2, off, the picture steps there once. A pan moves the placement by
 // whole device px, the stored range with it, and re-reads no column
 // differently. SO A FRAME ASKS THE PRODUCER ONLY FOR THE BARS THAT ENTER
-// (architect 2026-11-15, send L): on the GUI thread's renders the bars a
+// (architect 2026-11-15, send L): on the synchronous route the bars a
 // render already holds are kept to the next (WaveformKeptBars below), the
 // pure function's numbers needing no second reading; the worker's route
 // asks for its whole row. NOT PROMISED:
@@ -4188,10 +4188,8 @@ struct WaveformBandColumns {
 // map hash is the plate fingerprint's own 64-bit content hash, trusted here
 // as there.
 // THE THREAD RULE: THE GUI THREAD'S ALONE. The synchronous route
-// (force_synchronous_waveform_rebuild) and the ahead plate's render
-// (GuiPaintHandler::maintain_ahead_plate, send M, 2026-11-15) hand
-// render_waveform_to_plate_columns the cache's store, both on the GUI
-// thread; the worker's route hands it none (the worker's call,
+// (force_synchronous_waveform_rebuild) hands render_waveform_to_plate_columns
+// the cache's store; the worker's route hands it none (the worker's call,
 // waveform_worker.cpp) and runs the function's store-less road to the
 // letter, so nothing is shared with the worker — not even under
 // wait_until_idle's timeout arm, where a worker still running holds a job
@@ -4288,9 +4286,7 @@ bool render_waveform_columns(GuiRect area,
 // bounds — a process-wide counter the GUI thread stamps at every PUBLICATION
 // of a plate (next_plate_revision, waveform_cache.cpp: the worker's
 // completion swap and the synchronous rebuild, the only two writers of the
-// live slot) — and at every render of the ahead plate, which is no
-// publication (WaveformCache::ahead_columns, send M, 2026-11-15) — never 0
-// once published, and never repeated in the process, so
+// live slot), never 0 once published, and never repeated in the process, so
 // one revision names one set of bounds whatever project set or cache
 // produced it. An owned number rather than an address: the slots swap, and
 // a pointer would name the slot, not the plate in it. The pending slot's

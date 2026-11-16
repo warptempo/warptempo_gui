@@ -6,7 +6,6 @@
 #include <GLES3/gl3.h>
 
 #include <algorithm>
-#include <bit>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -40,12 +39,7 @@
 // (architect 2026-11-15, "Send L."): every pass above composes into the
 // canvas's own offscreen target over this frame's change alone, and each
 // window buffer is brought up to date by a copy out of it, the window's
-// bytes the target's, exactly (present_frame's THE FRAME TARGET). And THE
-// AHEAD TARGET (send M, 2026-11-15): where the GUI hands an ahead list (it
-// hands none, send N, 2026-11-15: FOLLOW scrolls) the next page's
-// own picture is composed into a second target a slice a frame, and a frame
-// whose leading records equal it copies it in their place, the plain road's
-// bytes (present_frame's THE AHEAD TARGET and THE ADOPTION).
+// bytes the target's, exactly (present_frame's THE FRAME TARGET).
 
 namespace {
 
@@ -1503,85 +1497,6 @@ GLuint link_canvas_program(const GuiGlCanvasHost& host, const char* vs_source,
     return prog;
 }
 
-// THE LIST'S ATTRIBUTES (the instance fields at CanvasInstance, one rule at
-// one site): on the bound vertex array, over the instance buffer `vbo`,
-// starting `base` records in — the list's and the ahead kit's arrays at 0,
-// the suffix's at the frame's prefix (send M, 2026-11-15) — one instance a
-// record. The buffer's NAME and the offset are what the array keeps, so a
-// glBufferData on the same name later leaves it pointing at the new storage.
-void bind_list_attributes(GLuint vbo, int base) {
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    const GLsizei stride = static_cast<GLsizei>(sizeof(CanvasInstance));
-    const std::size_t at =
-        static_cast<std::size_t>(base) * sizeof(CanvasInstance);
-    glVertexAttribIPointer(0, 4, GL_INT, stride,
-        reinterpret_cast<const void*>(at + offsetof(CanvasInstance, rect)));
-    glVertexAttribIPointer(1, 4, GL_INT, stride,
-        reinterpret_cast<const void*>(at + offsetof(CanvasInstance, param)));
-    glVertexAttribIPointer(2, 2, GL_UNSIGNED_INT, stride,
-        reinterpret_cast<const void*>(at + offsetof(CanvasInstance, words)));
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, stride,
-        reinterpret_cast<const void*>(at + offsetof(CanvasInstance, bars)));
-    for (GLuint loc = 0; loc < 4; ++loc) {
-        glEnableVertexAttribArray(loc);
-        glVertexAttribDivisor(loc, 1);
-    }
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-// A PLATE'S BOUNDS TEXTURE (the list's and the ahead kit's, one rule): on
-// unit 1, GL_RGBA16I, NEAREST (an integer texture with a filtering
-// minifier is incomplete), seeded 1 x 1 so the sampler is complete before
-// the first plate, its capacity grown by the first pack (pack_list); unit 0
-// active at the return.
-void make_bounds_texture(GLuint& name, int& w, int& h) {
-    glGenTextures(1, &name);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, name);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    const GLshort seed[4] = {};
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16I, 1, 1, 0, GL_RGBA_INTEGER,
-                 GL_SHORT, seed);
-    w = 1;
-    h = 1;
-    glActiveTexture(GL_TEXTURE0);
-}
-
-// A COMPOSE TARGET (the frame target's and the ahead target's, one rule;
-// the rule at ensure_texture): a framebuffer object whose one color
-// attachment is an immutable GL_RGBA8 texture of w x h, made on unit 3 and
-// unbound from it at once; an incomplete target is fatal. The default
-// framebuffer bound and unit 0 active at the return.
-void make_compose_target(const GuiGlCanvasHost& host, const char* what,
-                         GLuint& fbo, GLuint& texture, int w, int h) {
-    if (fbo) glDeleteFramebuffers(1, &fbo);
-    if (texture) glDeleteTextures(1, &texture);
-    glGenTextures(1, &texture);
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, w, h);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE0);
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D, texture, 0);
-    const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        char line[160];
-        std::snprintf(line, sizeof(line),
-                      "the GL canvas: the %s %dx%d is incomplete (0x%x)",
-                      what, w, h, static_cast<unsigned>(status));
-        canvas_fatal(host, line);
-    }
-}
-
 } // namespace
 
 // THE LIST PROGRAM AT A GROW (the declaration's rule, gl_canvas.h): the
@@ -1635,37 +1550,46 @@ void GuiGlCanvas::ensure_programs() {
     // the default one the texture triangle draws from — over one instance
     // buffer (three integer attributes and a float one, the plate's bars or
     // a tint's edges, CanvasInstance), and the plate's bounds texture on
-    // unit 1 (make_bounds_texture: GL_RGBA16I,
+    // unit 1 (GL_RGBA16I,
     // NEAREST: an integer texture with a filtering minifier is incomplete),
     // seeded 1 x 1 so the sampler is complete before the first plate, its
     // capacity grown by the first pack (upload_list).
-    // WITH THEM (send M, 2026-11-15; present_frame's THE AHEAD TARGET): THE
-    // AHEAD KIT's vertex array over its own instance buffer and its own
-    // bounds texture, made by the same two routines, and THE SUFFIX'S vertex
-    // array over the list's instance buffer, pointed at the adopting frame's
-    // prefix when one first adopts (suffix_base_ −1 until then).
     if (!list_program_) {
         build_list_program(kWaveformGrowDefaultQuarters);
         glGenVertexArrays(1, &list_vao_);
         glGenBuffers(1, &list_vbo_);
         glBindVertexArray(list_vao_);
-        bind_list_attributes(list_vbo_, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, list_vbo_);
+        const GLsizei stride = static_cast<GLsizei>(sizeof(CanvasInstance));
+        glVertexAttribIPointer(0, 4, GL_INT, stride,
+            reinterpret_cast<const void*>(offsetof(CanvasInstance, rect)));
+        glVertexAttribIPointer(1, 4, GL_INT, stride,
+            reinterpret_cast<const void*>(offsetof(CanvasInstance, param)));
+        glVertexAttribIPointer(2, 2, GL_UNSIGNED_INT, stride,
+            reinterpret_cast<const void*>(offsetof(CanvasInstance, words)));
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, stride,
+            reinterpret_cast<const void*>(offsetof(CanvasInstance, bars)));
+        for (GLuint loc = 0; loc < 4; ++loc) {
+            glEnableVertexAttribArray(loc);
+            glVertexAttribDivisor(loc, 1);
+        }
         glBindVertexArray(0);
-        make_bounds_texture(columns_texture_, columns_w_, columns_h_);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glGenTextures(1, &columns_texture_);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, columns_texture_);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        const GLshort seed[4] = {};
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16I, 1, 1, 0, GL_RGBA_INTEGER,
+                     GL_SHORT, seed);
+        columns_w_ = 1;
+        columns_h_ = 1;
         // The seed is no upload: the first plate packs whatever its key.
         columns_uploaded_ = false;
-
-        glGenVertexArrays(1, &ahead_vao_);
-        glGenBuffers(1, &ahead_vbo_);
-        glBindVertexArray(ahead_vao_);
-        bind_list_attributes(ahead_vbo_, 0);
-        glBindVertexArray(0);
-        make_bounds_texture(ahead_columns_texture_, ahead_columns_w_,
-                            ahead_columns_h_);
-        ahead_kit_ = false;
-
-        glGenVertexArrays(1, &suffix_vao_);
-        suffix_base_ = -1;
+        glActiveTexture(GL_TEXTURE0);
     }
     // THE PAGE PROGRAM (2026-10-27; kPageFragmentShader's head): the texture
     // triangle's vertex shader, its sampler on unit 2.
@@ -1710,11 +1634,8 @@ void GuiGlCanvas::ensure_programs() {
 // has. Its completeness is checked once, at the make: an incomplete target
 // is fatal by the host's rule (canvas_fatal; no fallback road). The new
 // target holds no frame (frame_seeded_ false), so the compose's verdict
-// draws the next frame whole. THE AHEAD TARGET (send M, 2026-11-15) is made
-// and remade beside it by the same routine (make_compose_target), holding
-// nothing composed after the make. THE DEFAULT FRAMEBUFFER IS BOUND AT THE
-// RETURN, unit 0 active, no texture of either target bound to any unit —
-// the rest state present_frame keeps too.
+// draws the next frame whole. THE DEFAULT FRAMEBUFFER IS BOUND AT THE
+// RETURN, the rest state present_frame keeps too.
 void GuiGlCanvas::ensure_texture(int w, int h) {
     if (texture_ && texture_w_ == w && texture_h_ == h)
         return;
@@ -1731,16 +1652,31 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
     // rule).
     upload_seeded_ = false;
 
-    make_compose_target(host_, "frame target", frame_fbo_, frame_texture_, w,
-                        h);
+    if (frame_fbo_) glDeleteFramebuffers(1, &frame_fbo_);
+    if (frame_texture_) glDeleteTextures(1, &frame_texture_);
+    glGenTextures(1, &frame_texture_);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, frame_texture_);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, w, h);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glGenFramebuffers(1, &frame_fbo_);
+    glBindFramebuffer(GL_FRAMEBUFFER, frame_fbo_);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D, frame_texture_, 0);
+    const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        char line[160];
+        std::snprintf(line, sizeof(line),
+                      "the GL canvas: the frame target %dx%d is incomplete "
+                      "(0x%x)",
+                      w, h, static_cast<unsigned>(status));
+        canvas_fatal(host_, line);
+    }
     frame_seeded_ = false;
-    // THE AHEAD TARGET (send M, 2026-11-15; the rule at present_frame's THE
-    // AHEAD TARGET): made and remade with the frame target, by the same
-    // routine and the same size test, its completeness fatal alike; a
-    // remade target holds nothing, so no column of it counts as composed.
-    make_compose_target(host_, "ahead target", ahead_fbo_, ahead_texture_, w,
-                        h);
-    ahead_composed_ = 0;
 }
 
 // THE FRAME (2026-10-13; the design record is
@@ -1872,72 +1808,11 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // texture's triangle and the page write 1 unblended, and a discard leaves
 // the 1 beneath; so the target's alpha, like a whole draw's, is 255, and no
 // RGB blend reads the destination's alpha at all.
-// THE AHEAD TARGET (send M, 2026-11-15; architect 2026-11-15: "do the next
-// page, draw and ahead. Even if it's only as insurance for a later future
-// iteration of the project on a more powerful tablet, where I may try to
-// squeeze even more performance out of it"): where the ahead plate stands
-// (it is handed no page, send N, 2026-11-15) the GUI hands the next page's
-// PREFIX — the four passes over the next
-// page's plate, the ahead list (gui_canvas_ahead, canvas_sink.h) — beside
-// the frame's list, and its picture is composed AHEAD into a second
-// target, ensure_texture's twin of the frame target, so the turn copies
-// it. THE KIT (gl_canvas.h) is the ahead list as the GPU reads it, packed
-// by the frame list's own routine (pack_list), with a CPU copy of WHAT THE
-// TARGET HOLDS: the records and bounds it was composed from, the clip, the
-// grow, and how many of the clip's columns are composed. THE AHEAD STEP
-// (ahead_step), after the copy, at every frame whose list draws: an empty
-// ahead list does nothing; an ahead list whose content differs from the
-// copy is uploaded into the kit and composes from nothing; then, the
-// standing program at the kit's grow, one slice of the clip a frame
-// (kAheadSlices) is cleared and drawn into the ahead target, under its
-// scissor, from the kit, with the frame's own program, uniforms, viewport
-// and blend (draw_instances).
-// THE ADOPTION: once a frame, before the compose, THE VERDICT
-// (adoption_verdict) — the list draws, its prefix stands and is the kit's
-// record count, the target is composed whole over the kit's clip and that
-// clip and grow are the frame's, the kit's first record is a rect over the
-// clip, the prefix's records equal the kit's field for field, and the
-// bounds they read equal the kit's bar for bar. In a frame that adopts,
-// wherever the compose draws the list under a scissor c (the whole
-// compose's clip, a partial compose's rect ∩ clip), IN ITS PLACE: the ahead
-// target's texels COPIED over c (the copy program, the blend off, the ahead
-// target's texture on unit 3 for the copy alone), then THE SUFFIX — the
-// list's records from the prefix on — drawn over them under c with the
-// blend, the list program and the frame's bounds texture, in list order,
-// through a vertex array over the frame's instance buffer whose attributes
-// start the prefix's count of records in (suffix_vao_). The clear before
-// it and the texture pass after it are the compose's own.
-// WHY THE BYTES ARE THE PLAIN ROAD'S, clause by clause: the prefix's first
-// record is the canvas's ground, an opaque rect over the clip (the verdict
-// checks it), written at alpha 1 under the blend (src · 1 + dst · 0), so
-// every pixel of c after the prefix is a function of the prefix's records
-// and bounds alone, never of the clear or of what the target held; the
-// ahead target's pixels over the clip are that same function — drawn by the
-// same program object (a grow change re-uploads the kit and the kit's slices
-// wait for the program at its grow, so every slice and the frame draw with
-// the program standing since its last rebuild), the same uniforms (the
-// surface's size, the texture's height: the two targets are the texture's
-// size) and viewport, at the same absolute coordinates, into an RGBA8
-// target of the same format, from records equal field for field and bounds
-// equal bar for bar in rows of the same index (the prefix's plate records
-// are both lists' first, each one row of its own bounds texture in list
-// order); NO INSTANCE READS ITS INDEX and NO FETCH DEPENDS ON THE BOUNDS
-// TEXTURE'S SIZE (the list's two shaders name no gl_InstanceID and no
-// textureSize; a plate's fetch is clamped to its own record's bar count),
-// so the kit's other capacity and the suffix's offset change nothing; a
-// scissor changes no fragment; the copy moves each texel exactly (texelFetch
-// of an RGBA8 texel into an RGBA8 target, unblended, undithered; its alpha,
-// like the frame target's, 255); and the suffix then blends over the same
-// bytes in the same order the plain road's suffix does.
-// NO FEEDBACK: no draw samples the texture attached to its own draw
-// target. Unit 3 holds the ahead target's texture only during an
-// adoption's copy, the frame target the draw target, and the frame
-// target's texture only during the copy into the window, the default
-// framebuffer the draw target; unit 3 is empty during every instanced list
-// draw (the frame's list, the suffix, an ahead slice) and during the ahead
-// target's composition. THE REST STATE at every return of present_frame
-// and ensure_texture: the default framebuffer bound, unit 0 active, the
-// scissor test and the blend off.
+// NO FEEDBACK: the target's texture is bound to a unit only between the
+// copy's bind and its unbind, while the default framebuffer is bound; every
+// draw into the target runs with unit 3 empty. THE REST STATE at every
+// return of present_frame and ensure_texture: the default framebuffer
+// bound, unit 0 active, the scissor test and the blend off.
 // The texture's upload is still THIS frame's damage alone (the texture is
 // persistent, so every older pixel is already its own). IT STANDS ON THE
 // DAMAGE CONTRACT: a canvas pixel the list changes outside every declared
@@ -1948,12 +1823,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // compose_must_be_whole's verdict, and its copy is whole (the platform).
 // A FRAME COSTS the passes over its own change, once, into the target, and
 // one fetch a pixel over the repair region: a page turn is one heavy frame
-// and the next buffers' copies; a frame at rest draws nothing. A TURN THAT
-// ADOPTS (send M) costs a fetch a pixel over the clip and the suffix's few
-// lines in the plate's place, its heavy GPU work spread as eight slices
-// over the page before it; the ahead list empty (send N, 2026-11-15: no
-// page is handed), the verdict and the ahead step cost a handful of
-// compares.
+// and the next buffers' copies; a frame at rest draws nothing.
 // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
 // 2026-10-24): an empty clip — no list yet, or a paint area the folder
 // overlay emptied — leaves nothing out of any upload and draws no list.
@@ -2010,7 +1880,6 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> compose,
                                 std::span<const GuiGlRect> repair,
                                 GuiCanvasDrawList* list,
-                                const GuiCanvasDrawList* ahead,
                                 int surface_w, int surface_h) {
     if (!texture_) return false;
     const int stride_px = cairo_image_surface_get_stride(back) / 4;
@@ -2088,44 +1957,24 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
             build_list_program(list->plate_grow);
         }
     }
-    // THE VERDICT (send M, 2026-11-15; the rule at THE ADOPTION above):
-    // once, before the compose, from what the kit's copy says the ahead
-    // target holds now — the ahead step that may replace that copy runs
-    // after the compose. An adopting frame points the suffix's vertex array
-    // at its prefix.
-    const bool adopt = list_draws && adoption_verdict(*list, clip);
-    if (adopt && suffix_base_ != list->prefix) {
-        glBindVertexArray(suffix_vao_);
-        bind_list_attributes(list_vbo_, list->prefix);
-        glBindVertexArray(0);
-        suffix_base_ = list->prefix;
-    }
     // THE LIST'S DRAW under the scissor (x, y, w, h) in surface px, top-left
-    // — the canvas clip, or a compose rect's part of it. IN AN ADOPTING
-    // FRAME, IN ITS PLACE (THE ADOPTION above): the ahead target's texels
-    // copied over the same scissor — the copy program, the blend off, the
-    // ahead target's texture on unit 3 for the copy alone — and then THE
-    // SUFFIX, the list's records from the prefix on, drawn over them as the
-    // list is, through the suffix's vertex array.
+    // — the canvas clip, or a compose rect's part of it.
     const auto draw_list = [&](int x, int y, int w, int h) {
         if (w <= 0 || h <= 0 || list_instances_ <= 0) return;
         glEnable(GL_SCISSOR_TEST);
         glScissor(x, texture_h_ - (y + h), w, h);
-        if (adopt) {
-            glUseProgram(copy_program_);
-            glActiveTexture(GL_TEXTURE3);
-            glBindTexture(GL_TEXTURE_2D, ahead_texture_);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-            glBindTexture(GL_TEXTURE_2D, 0);
-            glActiveTexture(GL_TEXTURE0);
-            if (list_instances_ > list->prefix)
-                draw_instances(suffix_vao_, columns_texture_,
-                               list_instances_ - list->prefix, surface_w,
-                               surface_h);
-        } else {
-            draw_instances(list_vao_, columns_texture_, list_instances_,
-                           surface_w, surface_h);
-        }
+        glUseProgram(list_program_);
+        glUniform2f(list_size_uniform_, static_cast<float>(surface_w),
+                    static_cast<float>(surface_h));
+        glUniform1i(list_height_uniform_, texture_h_);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, columns_texture_);
+        glBindVertexArray(list_vao_);
+        glEnable(GL_BLEND);
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, list_instances_);
+        glDisable(GL_BLEND);
+        glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE0);
         glDisable(GL_SCISSOR_TEST);
     };
     const auto draw_texture = [&]() {
@@ -2209,35 +2058,7 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     }
     glBindTexture(GL_TEXTURE_2D, 0);
     glActiveTexture(GL_TEXTURE0);
-
-    // THE AHEAD STEP (send M, 2026-11-15; the rule at THE AHEAD TARGET
-    // above): after the copy, at every frame whose list draws.
-    if (list_draws && ahead) ahead_step(*ahead, clip, surface_w, surface_h);
     return true;
-}
-
-// THE LIST PROGRAM'S INSTANCED DRAW (the one spelling of the frame's list
-// draw, the suffix's and the ahead slice's): `count` instances of the
-// vertex array `vao` under the caller's scissor into the bound framebuffer,
-// with the list program, its two uniforms (the surface's size, the
-// texture's height), the bounds texture `columns_texture` on unit 1 and the
-// blend enabled for the draw alone; unit 0 active and the vertex array
-// unbound after.
-void GuiGlCanvas::draw_instances(unsigned int vao,
-                                 unsigned int columns_texture, int count,
-                                 int surface_w, int surface_h) {
-    glUseProgram(list_program_);
-    glUniform2f(list_size_uniform_, static_cast<float>(surface_w),
-                static_cast<float>(surface_h));
-    glUniform1i(list_height_uniform_, texture_h_);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, columns_texture);
-    glBindVertexArray(vao);
-    glEnable(GL_BLEND);
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, count);
-    glDisable(GL_BLEND);
-    glBindVertexArray(0);
-    glActiveTexture(GL_TEXTURE0);
 }
 
 // THE CONTEXT'S END: the platform has destroyed the context, and every
@@ -2275,27 +2096,6 @@ void GuiGlCanvas::forget() {
     frame_texture_       = 0;
     frame_seeded_        = false;
     copy_program_        = 0;
-    // The ahead target and its kit, and the suffix's array (send M,
-    // 2026-11-15): forgotten with the frame target, the kit's copy emptied,
-    // nothing composed.
-    ahead_fbo_             = 0;
-    ahead_texture_         = 0;
-    ahead_vao_             = 0;
-    ahead_vbo_             = 0;
-    ahead_instances_       = 0;
-    ahead_columns_texture_ = 0;
-    ahead_columns_w_       = 0;
-    ahead_columns_h_       = 0;
-    ahead_kit_             = false;
-    ahead_prims_.clear();
-    ahead_columns_.clear();
-    ahead_revision_        = 0;
-    for (int& c : ahead_clip_) c = 0;
-    ahead_grow_            = -1;
-    ahead_composed_        = 0;
-    verdict_cached_        = false;
-    suffix_vao_            = 0;
-    suffix_base_           = -1;
 }
 
 // THE PAGE TEXTURES' RECONCILIATION (2026-10-27; the rule at gl_canvas.h's
@@ -2447,31 +2247,24 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // IS NO PART OF IT EITHER: it rides the instances, rewritten whole at every
 // generation. A list with no plate record leaves the texture and its key as
 // they are: nothing samples it, and its texels still answer the key.
-namespace {
 constexpr int kColumnsCapacityStep = 1024;
-
-// THE LIST'S PACKING (send M, 2026-11-15: ONE ROUTINE for the frame's list
-// and the ahead kit, so the instance fields and the texel layout are one
-// rule at one site; the rule is upload_list's head above): every record one
-// instance in list order into the instance buffer `vbo` (rewritten whole,
-// nothing sent for an empty list), and where `pack` and the list has plate
-// records, their bounds into `columns_texture` — one row a plate record,
-// grown to the capacity `columns_w` x `columns_h` when a row is wider or
-// there is one row more. Each plate record's `period` is its row. Answers
-// the instance count. Unit 0 active at the return.
-int pack_list(const GuiCanvasDrawList& list, bool pack, GLuint vbo,
-              GLuint columns_texture, int& columns_w, int& columns_h) {
-    static std::vector<CanvasInstance> instances;
-    static std::vector<GLshort>        texels;
-    int max_n  = 1;
-    int plates = 0;
+void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
+    static std::vector<CanvasInstance>      instances;
+    static std::vector<GLshort>             texels;
+    static std::vector<std::pair<int, int>> spans;
+    spans.clear();
+    int max_n = 1;
     for (const GuiCanvasPrimitive& p : list.prims) {
         if (p.kind != GuiCanvasKind::Plate) continue;
-        ++plates;
+        spans.emplace_back(p.period, p.bars);
         max_n = std::max(max_n, p.bars);
     }
-    const int rows = std::max(1, plates);
-    pack = pack && plates > 0;
+    const int plates = static_cast<int>(spans.size());
+    const int rows   = std::max(1, plates);
+    const bool pack =
+        plates > 0 &&
+        !(columns_uploaded_ && list.plate_revision == columns_revision_ &&
+          spans == columns_spans_);
     if (pack)
         texels.assign(static_cast<size_t>(max_n) * rows * 4, 0);
     const auto texel = [&](int row, int col) {
@@ -2529,7 +2322,7 @@ int pack_list(const GuiCanvasDrawList& list, bool pack, GLuint vbo,
         instances.push_back(in);
     }
     if (!instances.empty()) {
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, list_vbo_);
         glBufferData(GL_ARRAY_BUFFER,
                      static_cast<GLsizeiptr>(instances.size() *
                                              sizeof(CanvasInstance)),
@@ -2538,180 +2331,26 @@ int pack_list(const GuiCanvasDrawList& list, bool pack, GLuint vbo,
     }
     if (pack) {
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, columns_texture);
+        glBindTexture(GL_TEXTURE_2D, columns_texture_);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        if (max_n > columns_w || rows > columns_h) {
+        if (max_n > columns_w_ || rows > columns_h_) {
             const int grown_w =
                 (max_n + kColumnsCapacityStep - 1) / kColumnsCapacityStep *
                 kColumnsCapacityStep;
-            columns_w = std::max(columns_w, grown_w);
-            columns_h = std::max(columns_h, rows);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16I, columns_w, columns_h,
+            columns_w_ = std::max(columns_w_, grown_w);
+            columns_h_ = std::max(columns_h_, rows);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16I, columns_w_, columns_h_,
                          0, GL_RGBA_INTEGER, GL_SHORT, nullptr);
         }
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, max_n, rows,
                         GL_RGBA_INTEGER, GL_SHORT, texels.data());
         glActiveTexture(GL_TEXTURE0);
-    }
-    return static_cast<int>(instances.size());
-}
-} // namespace
-
-void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list) {
-    static std::vector<std::pair<int, int>> spans;
-    spans.clear();
-    for (const GuiCanvasPrimitive& p : list.prims)
-        if (p.kind == GuiCanvasKind::Plate) spans.emplace_back(p.period, p.bars);
-    const bool pack =
-        !spans.empty() &&
-        !(columns_uploaded_ && list.plate_revision == columns_revision_ &&
-          spans == columns_spans_);
-    list_instances_ = pack_list(list, pack, list_vbo_, columns_texture_,
-                                columns_w_, columns_h_);
-    if (pack) {
         columns_uploaded_ = true;
         columns_revision_ = list.plate_revision;
         columns_spans_    = spans;
     }
+    list_instances_  = static_cast<int>(instances.size());
     list_generation_ = list.generation;
     list_uploaded_   = true;
-}
-
-// -- THE NEXT PAGE DRAWN AHEAD (send M, 2026-11-15) -------------------------
-//
-// The rules are present_frame's THE AHEAD TARGET and THE ADOPTION; these are
-// their two bodies.
-namespace {
-// ONE SLICE A FRAME: the ahead target is composed over ceil(clip.w /
-// kAheadSlices) of the clip's device columns a frame. THE SLICE'S COST IS AN
-// ESTIMATE, UNMEASURED: a lit page's whole plate measured about 14 ms of
-// GPU at a turn (his local planner's page-turn runs, send L's return,
-// 2026-11-15); an eighth of the clip a frame is that fragment work divided
-// by eight, plus what a third render pass costs on the tablet's GPU (the
-// ahead target's load and store under a scissored clear), which is
-// unmeasured — the tablet's page-turn run measures it. The target is whole
-// eight frames after its list arrives, early in a page that plays for about
-// two seconds at the working zoom.
-constexpr int kAheadSlices = 8;
-
-// TWO RECORDS EQUAL FIELD FOR FIELD: every member, the floats by their bits
-// (no tolerance and no −0 == +0: equal bits are equal shader inputs).
-bool same_record(const GuiCanvasPrimitive& a, const GuiCanvasPrimitive& b) {
-    const auto bits = [](float f) { return std::bit_cast<uint32_t>(f); };
-    if (a.kind != b.kind || !(a.r == b.r) || a.period != b.period ||
-        a.origin != b.origin || a.word != b.word || a.word2 != b.word2 ||
-        a.bars != b.bars || bits(a.bars_x0) != bits(b.bars_x0) ||
-        bits(a.bars_pitch) != bits(b.bars_pitch) ||
-        bits(a.bars_weight) != bits(b.bars_weight))
-        return false;
-    for (int i = 0; i < 4; ++i)
-        if (bits(a.edges[i]) != bits(b.edges[i])) return false;
-    return true;
-}
-
-// Two bars' bounds equal, the four tips the texel packs.
-bool same_bar(const WaveformColumnRows& a, const WaveformColumnRows& b) {
-    return a.o_top == b.o_top && a.o_bot == b.o_bot && a.i_top == b.i_top &&
-           a.i_bot == b.i_bot;
-}
-} // namespace
-
-// THE VERDICT (THE ADOPTION's terms, in that order, the cheap first): the
-// list's prefix stands and is the kit's record count; the kit holds an
-// upload composed whole over its clip — the count the clip's width — and
-// that clip and grow are the frame's; the kit's first record is a rect
-// over the whole clip (the ground the byte argument stands on); the
-// prefix's records equal the kit's field for field; and the bounds those
-// records read equal the kit's, bar for bar — that last compare kept per
-// pair of revisions (the frame list's plate revision against the kit's
-// upload; the cache is dropped at every upload of the kit).
-bool GuiGlCanvas::adoption_verdict(const GuiCanvasDrawList& list,
-                                   const int clip[4]) {
-    if (list.prefix <= 0 || !ahead_kit_) return false;
-    if (static_cast<std::size_t>(list.prefix) != ahead_prims_.size())
-        return false;
-    for (int i = 0; i < 4; ++i)
-        if (clip[i] != ahead_clip_[i]) return false;
-    if (ahead_composed_ < ahead_clip_[2]) return false;
-    if (list.plate_grow != ahead_grow_) return false;
-    const GuiCanvasPrimitive& ground = ahead_prims_.front();
-    if (ground.kind != GuiCanvasKind::Rect || ground.r.x > clip[0] ||
-        ground.r.y > clip[1] || ground.r.x + ground.r.w < clip[0] + clip[2] ||
-        ground.r.y + ground.r.h < clip[1] + clip[3])
-        return false;
-    for (std::size_t i = 0; i < ahead_prims_.size(); ++i)
-        if (!same_record(list.prims[i], ahead_prims_[i])) return false;
-    if (!verdict_cached_ || verdict_revision_ != list.plate_revision) {
-        bool equal = true;
-        for (const GuiCanvasPrimitive& p : ahead_prims_) {
-            if (p.kind != GuiCanvasKind::Plate) continue;
-            // The spans are the records', equal in both lists, and each
-            // list's sink wrote its columns to cover its plate records'
-            // spans (GuiCanvasSink::plate's offsets).
-            const std::size_t lo = static_cast<std::size_t>(p.period);
-            const std::size_t hi = lo + static_cast<std::size_t>(p.bars);
-            assert(hi <= list.columns.size() && hi <= ahead_columns_.size());
-            for (std::size_t j = lo; j < hi && equal; ++j)
-                equal = same_bar(list.columns[j], ahead_columns_[j]);
-            if (!equal) break;
-        }
-        verdict_cached_       = true;
-        verdict_revision_     = list.plate_revision;
-        verdict_bounds_equal_ = equal;
-    }
-    return verdict_bounds_equal_;
-}
-
-// THE AHEAD STEP (THE AHEAD TARGET's three cases, after the copy): an empty
-// ahead list leaves the kit and the target as they are; an ahead list whose
-// content — its records, field for field, its plate revision (a revision
-// names one set of bounds, the records holding the spans), the frame's clip
-// and its grow — differs from the kit's copy is uploaded into the kit
-// (pack_list, the frame list's own packing), the copy replaced, nothing
-// composed; then, with the standing list program at the kit's grow and the
-// clip not composed whole, ONE SLICE — the next ceil(clip.w / kAheadSlices)
-// columns by the clip's rows — cleared and drawn into the ahead target
-// under its scissor from the kit, the frame's own program, uniforms,
-// viewport and blend (draw_instances). The default framebuffer bound again,
-// unit 0 active, the scissor and the blend off at the return; the ahead
-// target's texture bound to no unit throughout.
-void GuiGlCanvas::ahead_step(const GuiCanvasDrawList& ahead, const int clip[4],
-                             int surface_w, int surface_h) {
-    if (ahead.prims.empty()) return;
-    bool differs = !ahead_kit_ || ahead.prims.size() != ahead_prims_.size() ||
-                   ahead.plate_revision != ahead_revision_ ||
-                   ahead.plate_grow != ahead_grow_;
-    for (int i = 0; i < 4 && !differs; ++i)
-        differs = clip[i] != ahead_clip_[i];
-    for (std::size_t i = 0; i < ahead.prims.size() && !differs; ++i)
-        differs = !same_record(ahead.prims[i], ahead_prims_[i]);
-    if (differs) {
-        ahead_instances_ = pack_list(ahead, /*pack=*/true, ahead_vbo_,
-                                     ahead_columns_texture_, ahead_columns_w_,
-                                     ahead_columns_h_);
-        ahead_prims_   = ahead.prims;
-        ahead_columns_ = ahead.columns;
-        ahead_revision_ = ahead.plate_revision;
-        for (int i = 0; i < 4; ++i) ahead_clip_[i] = clip[i];
-        ahead_grow_     = ahead.plate_grow;
-        ahead_composed_ = 0;
-        ahead_kit_      = true;
-        verdict_cached_ = false;
-    }
-    if (ahead_grow_ != list_program_grow_) return;
-    if (ahead_composed_ >= ahead_clip_[2] || ahead_instances_ <= 0) return;
-    const int slice = (ahead_clip_[2] + kAheadSlices - 1) / kAheadSlices;
-    const int x = ahead_clip_[0] + ahead_composed_;
-    const int w = std::min(slice, ahead_clip_[2] - ahead_composed_);
-    glBindFramebuffer(GL_FRAMEBUFFER, ahead_fbo_);
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(x, texture_h_ - (ahead_clip_[1] + ahead_clip_[3]), w,
-              ahead_clip_[3]);
-    glClear(GL_COLOR_BUFFER_BIT);
-    draw_instances(ahead_vao_, ahead_columns_texture_, ahead_instances_,
-                   surface_w, surface_h);
-    glDisable(GL_SCISSOR_TEST);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    ahead_composed_ += w;
 }

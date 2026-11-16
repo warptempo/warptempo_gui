@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <functional>
-#include <optional>
 #include <utility>
 
 class GuiAudio;
@@ -490,14 +489,8 @@ struct Viewport {
     void finish_discrete_viewport_move();
     // Follow's page-in (AppState::follow): an offscreen subject lands the
     // edge margin (kViewportEdgeMarginFraction, app_state.h) in from the LEFT
-    // edge — or, under THE PAGE RULE (send M, 2026-11-15; the rule at the
-    // definition), a subject less than one margin past the next page's edge
-    // frame lands on the next page, between one and two margins in. It
-    // suspends no
-    // follow with its own write (AppState::follow_suspended). Its callers: a
-    // launch with FOLLOW dark that asks LaunchCamera::PageIn (the A/B
-    // audition's always) and the follow scroll's off-screen-left arm
-    // (follow_scanner below).
+    // edge. It suspends no follow with its own write
+    // (AppState::follow_suspended). Its callers at the definition.
     void follow_scroll_if_needed();
     // THE FOLLOW SCROLL (architect 2026-11-15, send N, a trial; the rule's
     // one owner at the definition): the picture moves only so that the
@@ -509,20 +502,6 @@ struct Viewport {
     // advance during the following play (main.cpp), the launch's
     // LaunchCamera::Follow and the FOLLOW lamp's lit edge during a play.
     void follow_scanner();
-    // THE NEXT PAGE of the live viewport (send M, 2026-11-15; the terms THE
-    // EDGE FRAME and THE NEXT PAGE are defined at the definition,
-    // viewport.cpp): the first frame that paints off screen to the right,
-    // and the rest follow's page-in would settle a target standing on it —
-    // or none where the geometry is degenerate or that rest is the live
-    // camera's (the right wall). PURE: it writes nothing. Its one reader is
-    // follow_scroll_if_needed's PAGE RULE (send M, 2026-11-15); the pre-paint
-    // hook asks it nothing (send N, 2026-11-15), so the ahead plate
-    // (GuiPaintHandler::maintain_ahead_plate) never stands.
-    struct NextPage {
-        int64_t      edge_frame = 0;
-        ViewportRest rest;
-    };
-    std::optional<NextPage> next_page() const;
     // THE LANDING OWNER (architect 2026-09-24): the one camera that brings a
     // walked or restored subject — the active-domain range [lo, hi], lo == hi
     // for a single marker — on screen, READING THE ZOOM at the discrete act,

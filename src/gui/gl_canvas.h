@@ -1,11 +1,12 @@
 #pragma once
-#include "canvas_sink.h"   // GuiCanvasPrimitive, WaveformColumnRows: the ahead kit's copy
-
 #include <cairo/cairo.h>
 #include <cstdint>
 #include <span>
 #include <utility>
 #include <vector>
+
+struct GuiCanvasDrawList;
+struct GuiCanvasPage;
 
 // THE GL CANVAS'S OWNER (2026-10-14; the design record is
 // docs/engineering/gpu_canvas_2026_10.md): everything of the GPU canvas that
@@ -14,9 +15,7 @@
 // plate's bounds texture and the score viewer's page textures, THE FRAME
 // TARGET (architect 2026-11-15, send L: the canvas keeps its own frame, an
 // offscreen RGBA8 target holding the whole picture of the last frame
-// composed), THE AHEAD TARGET and its kit (send M, 2026-11-15: the next
-// page's picture composed ahead, a slice a frame, and copied at the turn),
-// the upload walk, the frame's compose into the target and the
+// composed), the upload walk, the frame's compose into the target and the
 // copy out of it into the window's buffer — in ONE platform-neutral object
 // the platform's present drives (the one canvas road, architect 2026-10-30).
 // THE PLATFORM KEEPS
@@ -62,15 +61,12 @@ public:
     // default grow, the source being specialized per grow (build_list_program
     // below) — with its vertex array, its instance buffer and the plate's
     // bounds texture, the GPU page's (2026-10-27), and THE COPY's (architect
-    // 2026-11-15, send L; kCopyFragmentShader's head), its sampler on unit 3;
-    // made with the list's objects, THE AHEAD KIT's (send M, 2026-11-15) —
-    // its vertex array, instance buffer and bounds texture — and THE
-    // SUFFIX'S vertex array over the list's instance buffer.
+    // 2026-11-15, send L; kCopyFragmentShader's head), its sampler on unit 3.
     void ensure_programs();
-    // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER, AND THE FRAME TARGET AND THE
-    // AHEAD TARGET WITH IT (the definition): all three remade at a size of
-    // w x h the texture does not have, by the one size test; the default
-    // framebuffer bound at the return.
+    // THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER, AND THE FRAME TARGET WITH IT
+    // (the definition): both remade at a size of w x h the texture does not
+    // have, by the one size test; the default framebuffer bound at the
+    // return.
     void ensure_texture(int w, int h);
     // THE FRAME (the definition): the upload walk of `damage` out of `back`
     // into the texture, less the canvas clip; the page textures reconciled
@@ -93,15 +89,10 @@ public:
     // definition): the region the window's buffer is missing (the platform's
     // buffer-age history) — empty copies the whole surface; otherwise only
     // its rects, the buffer's other pixels being an earlier frame's copy.
-    // `ahead` THE AHEAD LIST (send M, 2026-11-15; gui_canvas_ahead,
-    // canvas_sink.h), null before the first frame: THE VERDICT before the
-    // compose, THE ADOPTION in the list draw's place where it holds, THE
-    // AHEAD STEP after the copy (the definition's THE AHEAD TARGET).
     bool present_frame(cairo_surface_t* back, std::span<const GuiGlRect> damage,
                        std::span<const GuiGlRect> compose,
                        std::span<const GuiGlRect> repair,
                        GuiCanvasDrawList* list,
-                       const GuiCanvasDrawList* ahead,
                        int surface_w, int surface_h);
     // Whether present_frame would draw at all (a texture, a backbuffer with
     // data): the platform asks before it names a frame's damage region to
@@ -129,15 +120,6 @@ private:
     // draw whose list carries another grow.
     void build_list_program(int grow);
     void upload_list(const GuiCanvasDrawList& list);
-    // THE ADOPTION'S VERDICT and THE AHEAD STEP (send M, 2026-11-15; the
-    // rules at present_frame's THE AHEAD TARGET, gl_canvas.cpp).
-    bool adoption_verdict(const GuiCanvasDrawList& list, const int clip[4]);
-    void ahead_step(const GuiCanvasDrawList& ahead, const int clip[4],
-                    int surface_w, int surface_h);
-    // The list program's instanced draw, one spelling for the frame's list,
-    // the suffix and the ahead slice (the definition).
-    void draw_instances(unsigned int vao, unsigned int columns_texture,
-                        int count, int surface_w, int surface_h);
     void reconcile_pages(GuiCanvasPage& page);
     void draw_page(GuiCanvasPage& page, const int clip[4]);
     static void frame_clip(const GuiCanvasDrawList* list, int clip[4],
@@ -238,45 +220,4 @@ private:
     unsigned int frame_texture_       = 0;
     bool         frame_seeded_        = false;
     unsigned int copy_program_        = 0;
-    // THE AHEAD TARGET (send M, 2026-11-15; the rule at present_frame's THE
-    // AHEAD TARGET, gl_canvas.cpp): a second framebuffer object over an
-    // immutable RGBA8 texture of the surface's size, made, remade and
-    // forgotten with the frame target (ensure_texture, forget) — its texture
-    // bound to a unit, unit 3, during an adoption's copy alone.
-    unsigned int ahead_fbo_           = 0;
-    unsigned int ahead_texture_       = 0;
-    // THE AHEAD KIT: the ahead list as the GPU reads it — its own vertex
-    // array over its own instance buffer, its own bounds texture and that
-    // texture's capacity (the list's packing, pack_list, one routine for
-    // both) and its instances' count — and WHAT THE TARGET HOLDS, kept on
-    // the CPU: whether the kit holds an upload at all, the records and the
-    // bounds it was composed from (the ahead list's records and columns,
-    // and the plate revision those columns are), the clip and the grow it
-    // was composed under, and how many of the clip's device columns are
-    // composed, from the left (ahead_composed_, 0 at every upload, remake
-    // and forget).
-    unsigned int ahead_vao_           = 0;
-    unsigned int ahead_vbo_           = 0;
-    int          ahead_instances_     = 0;
-    unsigned int ahead_columns_texture_ = 0;
-    int          ahead_columns_w_     = 0;
-    int          ahead_columns_h_     = 0;
-    bool         ahead_kit_           = false;
-    std::vector<GuiCanvasPrimitive> ahead_prims_;
-    std::vector<WaveformColumnRows> ahead_columns_;
-    uint64_t     ahead_revision_      = 0;
-    int          ahead_clip_[4]       = {0, 0, 0, 0};
-    int          ahead_grow_          = -1;
-    int          ahead_composed_      = 0;
-    // THE VERDICT'S BOUNDS COMPARE, kept per pair of revisions (a revision
-    // names one set of bounds): valid while the kit holds the same upload,
-    // for the frame list's plate revision `verdict_revision_`.
-    bool         verdict_cached_      = false;
-    uint64_t     verdict_revision_    = 0;
-    bool         verdict_bounds_equal_ = false;
-    // THE SUFFIX'S VERTEX ARRAY: the list's attributes over the list's own
-    // instance buffer, starting `suffix_base_` records in (−1: never
-    // pointed), re-pointed when an adopting frame's prefix differs.
-    unsigned int suffix_vao_          = 0;
-    int          suffix_base_         = -1;
 };

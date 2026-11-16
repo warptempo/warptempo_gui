@@ -3505,13 +3505,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner's narrow damage above resolved on the plate it replaces,
         // and the rebuild's full rect covers both of its columns.
         paint_handler.flush_owed_waveform_rebuild();
-        // THE AHEAD PLATE (send M, 2026-11-15; the rule at
-        // GuiPaintHandler::maintain_ahead_plate) IS HANDED NO PAGE: FOLLOW
-        // scrolls (Viewport::follow_scanner, send N, 2026-11-15) and turns no
-        // page, so the ahead plate stops standing and the ahead list stays
-        // empty. After the flush and ahead of the owed check, which it adds
-        // nothing to.
-        paint_handler.maintain_ahead_plate(std::nullopt);
         // THE OWED CHECK LAST (2026-10-13): the rows above the viewport's
         // lanes and the clock cell, which the narrowed routes owe a check
         // rather than a repaint, are compared after every write the advance

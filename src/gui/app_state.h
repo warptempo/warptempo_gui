@@ -167,12 +167,7 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 //   * Viewport::follow_scroll_if_needed — follow's page-in, at a PageIn
 //     launch and for the follow scroll's target off screen to the left
 //     (Viewport::follow_scanner): an offscreen target lands the margin in
-//     from the LEFT edge, EXCEPT under ITS PAGE RULE (send M, 2026-11-15; the
-//     architect's "agree"), where a target less than one margin past the
-//     next page's edge frame lands between one and two margins in (the
-//     margin the rule's bound too); and its prediction, Viewport::next_page,
-//     the page-in of a target on the edge frame, through the same
-//     conversion;
+//     from the LEFT edge;
 //   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
 //     audio views and the marker drop's landing, the undo/redo restore):
 //     its fit test
@@ -4460,12 +4455,13 @@ struct AppState {
     //     audio, architect 2026-11-14, the same residue would shake the
     //     whole picture half a px a frame). Each zoom
     //     frame derives a fresh origin the same way.
-    //   * KEEP — THE GESTURE'S PAN FRAMES (the level unchanged) and THE
-    //     RE-VALIDATIONS THAT WRITE NO START (kick_waveform_sync, the tick's
-    //     live-total backstop, the resize, the load-in-place's domain
-    //     re-clamp, translate_playhead_to, and reseat_playhead_to when it
-    //     pages nothing): the current origin, the start snapped onto ITS
-    //     lattice, so a pan is a pure index shift of k0 (the same lattice
+    //   * KEEP — THE GESTURE'S PAN FRAMES (the level unchanged), THE FOLLOW
+    //     SCROLL'S PLACEMENTS (Viewport::follow_scanner, send N, 2026-11-15:
+    //     a pan frame the play makes) and THE RE-VALIDATIONS THAT WRITE NO
+    //     START (kick_waveform_sync, the tick's live-total backstop, the
+    //     resize, the load-in-place's domain re-clamp, translate_playhead_to,
+    //     and reseat_playhead_to when it pages nothing): the current origin,
+    //     the start snapped onto ITS lattice, so a pan is a pure index shift of k0 (the same lattice
     //     columns, shifted: every mark by whole px, the plate's placement by
     //     the same whole px with every bar's tips as they were), a pan after
     //     a pinch keeps the pinch's
@@ -10834,9 +10830,10 @@ inline int64_t snap_authored_frame(double frame) {
 //     active gesture FREEZES hover;
 //   * the run loop's PRE-PAINT FOLLOW CHASE (main.cpp) — the follow scroll
 //     (Viewport::follow_scanner) is the product's one autonomous viewport
-//     mover, and every aiming gesture converts a window column through the CURRENT viewport later than the
-//     press it was aimed with, so the chase is PAUSED (it writes nothing here,
-//     so this is no follow producer) for the gesture's whole life. Its touch
+//     mover, and every aiming gesture converts a window column through the
+//     CURRENT viewport later than the press it was aimed with, so the chase
+//     is PAUSED (it writes nothing here, so this is no follow producer) for
+//     the gesture's whole life. Its touch
 //     sibling term is the platform's own contact query, the Pending window
 //     arming nothing this predicate can see; the argument is at the gate.
 // (A CONSUMER lived here for one day of 2026-08-09 — the checkpoint's

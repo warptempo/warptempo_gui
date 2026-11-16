@@ -12,11 +12,6 @@ GuiCanvasDrawList& gui_canvas_frame() {
     return frame;
 }
 
-GuiCanvasDrawList& gui_canvas_ahead() {
-    static GuiCanvasDrawList ahead;
-    return ahead;
-}
-
 // -- THE SINK ----------------------------------------------------------------
 
 // THE COLUMNS ARE NOT CLEARED HERE (2026-10-14): they belong to the plate's
@@ -27,7 +22,6 @@ GuiCanvasDrawList& gui_canvas_ahead() {
 // without a plate must carry the same number as one with.
 GuiCanvasSink::GuiCanvasSink(GuiCanvasDrawList& list) : list_(list) {
     list_.prims.clear();
-    list_.prefix = 0;
     ++list_.generation;
     list_.plate_grow = waveform_grow_quarters();
 }

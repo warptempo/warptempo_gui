@@ -988,10 +988,9 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
 //     body (center_viewport_on_playhead) and the landing owner's centre
 //     answer (land_subject);
 //   * paged_in_viewport_start — `target` the edge margin in from the LEFT
-//     edge: follow's page-in (follow_scroll_if_needed), its prediction one
-//     page ahead (next_page, send M, 2026-11-15) and the landing owner's
-//     walk page-in at every zoom but the working one, finer or coarser
-//     (land_subject).
+//     edge: follow's page-in (follow_scroll_if_needed) and the landing
+//     owner's walk page-in at every zoom but the working one, finer or
+//     coarser (land_subject).
 namespace {
 int64_t centred_viewport_start(int64_t target, int64_t visible) {
     return target - visible / 2;
@@ -1225,34 +1224,15 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
         finish_discrete_viewport_move();
 }
 
-// Follow's page during playback (AppState::follow): when the scanner leaves the viewport, scroll
-// so the scanner lands THE EDGE MARGIN in from the new view's LEFT edge
+// FOLLOW'S PAGE-IN (AppState::follow): when the target leaves the viewport,
+// scroll so it lands THE EDGE MARGIN in from the new view's LEFT edge
 // (kViewportEdgeMarginFraction, app_state.h — 5 % since 2026-09-22, the
 // architect finding the old 10 % lead "starts way too late"; the class's
-// inventory is at that declaration), leaving the rest of the window ahead —
-// EXCEPT THE PAGE RULE below, under which a scanner just past the window's
-// right edge lands between one and two margins in.
-// THE PAGE RULE (send M, 2026-11-15; the architect's "agree" the same day,
-// on the planner's statement: the scanner landing between one and two edge
-// margins in, 5 % to 10 % of the window, typically within 8 W of the 5 %
-// mark, instead of exactly at 5 %, and a scanner further off paged in as
-// before): WHERE THE NEXT PAGE STANDS (next_page below, whose comment owns
-// the terms) AND THE TARGET t LIES LESS THAN ONE EDGE MARGIN PAST THE EDGE
-// FRAME E — E <= t and t − E < viewport_edge_margin_samples(visible) — THE
-// PAGE IS THE NEXT PAGE: the write is paged_in_viewport_start(E, visible)
-// through the same clamp, so the camera rests at the next page's start and
-// origin and t paints between one and two margins in. WHY: the pages of an
-// uninterrupted paging play are then a function of the page before, known a
-// page ahead, which is what lets the next page's plate and picture be made
-// during the current page (GuiPaintHandler::maintain_ahead_plate, and the
-// GL canvas's adoption, gl_canvas.cpp's present_frame) — the scanner is
-// sampled once a frame and reaches the edge up to one frame's advance past
-// E, which a page aligned on t would follow by those few bars. Everywhere
-// else — no next page (the right wall), a target further past E (a launch
-// off screen, a held pen that paused the page while the scanner ran on), a
-// target off screen to the LEFT — the page is aligned on t as above. Every
-// caller takes the one rule: a launch's PageIn and the follow scroll's
-// off-screen-left arm (follow_scanner below).
+// inventory is at that declaration), leaving the rest of the window ahead.
+// THREE CALLERS, the one enumeration (send N, 2026-11-15): the launch of the
+// view-end entry with FOLLOW dark and the A/B audition's bounded launch, both
+// LaunchCamera::PageIn, and the follow scroll's off-screen-left arm
+// (follow_scanner below) — the play's own camera is that scroll.
 // OFF SCREEN IS AS PAINTED (architect 2026-09-28, displayed_frame_on_screen,
 // warp_frame_map_view.h): the page fires once the scanner's painted column
 // leaves [0, w), so the half-column before the right edge, where its column
@@ -1292,14 +1272,7 @@ void Viewport::follow_scroll_if_needed() {
             app.viewport_lattice_origin, area.w)) {
         const int64_t old_vp = app.viewport_start_sample;
         const int64_t old_origin = app.viewport_lattice_origin;
-        // THE PAGE RULE (above): the next page where the target lies less
-        // than one edge margin past its edge frame, else aligned on it.
-        const std::optional<NextPage> next = next_page();
-        const bool on_next_page =
-            next && next->edge_frame <= target &&
-            target - next->edge_frame < viewport_edge_margin_samples(visible);
-        app.viewport_start_sample = paged_in_viewport_start(
-            on_next_page ? next->edge_frame : target, visible);
+        app.viewport_start_sample = paged_in_viewport_start(target, visible);
         const bool suspended_before = app.follow_suspended;
         clamp_viewport_start(app, audio);
         app.follow_suspended = suspended_before;
@@ -1312,7 +1285,7 @@ void Viewport::follow_scroll_if_needed() {
         // page (main.cpp's pre-paint documents that offscreen scanner as its
         // own fallback case). The retired centered pin (2026-08-31 to
         // 2026-09-13) proved the synchronous rebuild fits inside a frame EVERY
-        // frame; follow pays it once per page — and the 2026-08-07 flicker
+        // frame; the page-in pays it once per move — and the 2026-08-07 flicker
         // ruling (republish_history_lane_now) put a reported flicker onto this path the
         // same way. The tail was spelled here inline until 2026-09-22, minus
         // the top-strip damage the shared tail carries — which a page owes all
@@ -1402,63 +1375,6 @@ void Viewport::follow_scanner() {
     apply_strip_drag_zoom(app.zoom_level, t, center_x, /*final=*/false,
                           ViewportLattice::Keep);
     app.follow_suspended = suspended_before;
-}
-
-// THE NEXT PAGE (send M, 2026-11-15; architect 2026-11-15: "do the next
-// page, draw and ahead. Even if it's only as insurance for a later future
-// iteration of the project on a more powerful tablet, where I may try to
-// squeeze even more performance out of it"). Two terms, owned here:
-//   * THE EDGE FRAME E of the live viewport (start, lattice origin, the live
-//     grid step q, the waveform area's width w): the least frame f >= start
-//     whose painted column displayed_column_at(f, start, q, origin) is >= w —
-//     the first frame that paints off screen to the right on the cameras'
-//     own test (displayed_frame_on_screen). Found from the column formula — the column is
-//     K − m with K the quotient (f − origin) / q taken ties right
-//     (lattice_index_ties_right), so it reaches w where the quotient reaches
-//     m + w − 0.5 — and SETTLED BY TESTING displayed_column_at on the
-//     candidate and its left neighbor, the column being nondecreasing in f,
-//     so E is the painted rule's answer by construction whatever the
-//     formula's rounding. E > start: the start's own column is 0.
-//   * THE NEXT PAGE: the rest follow's page-in writes for a target standing
-//     on E — paged_in_viewport_start(E, visible) through the chokepoint's
-//     rest under the lattice rule follow's clamp passes (the plain
-//     clamp_viewport_start, ViewportLattice::Land: the frame-0 lattice, the
-//     walls), i.e. resting_viewport_start at the live zoom, the arithmetic
-//     the chokepoint's body runs after its level clamp, which at rest
-//     leaves the level as it stands (every zoom write has passed it). NONE
-//     where nothing is visible, q or w is not positive, or the rest is the
-//     live camera's (start and origin): at the right wall, where follow's
-//     page settles onto the wall it stands at.
-// PURE: it reads the live viewport and writes nothing. ITS ONE READER:
-// follow_scroll_if_needed above, whose PAGE RULE writes this rest where the
-// target lies less than one edge margin past E. The pre-paint hook asks it
-// nothing (send N, 2026-11-15: FOLLOW scrolls, follow_scanner above), so
-// the ahead plate (GuiPaintHandler::maintain_ahead_plate) never stands.
-std::optional<Viewport::NextPage> Viewport::next_page() const {
-    const int64_t visible = samples_visible(app, audio);
-    if (visible <= 0) return std::nullopt;
-    const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return std::nullopt;
-    const double q = painter_samples_per_pixel(app, audio, area);
-    if (q <= 0.0) return std::nullopt;
-    const double  start  = static_cast<double>(app.viewport_start_sample);
-    const int64_t origin = app.viewport_lattice_origin;
-    const auto column_of = [&](int64_t f) {
-        return displayed_column_at(static_cast<double>(f), start, q, origin);
-    };
-    const double m = viewport_lattice_index(start, q, origin);
-    int64_t e = static_cast<int64_t>(std::ceil(
-        static_cast<double>(origin) +
-        (m + static_cast<double>(area.w) - 0.5) * q));
-    while (column_of(e) < area.w) ++e;
-    while (column_of(e - 1) >= area.w) --e;
-    const ViewportRest rest = resting_viewport_start(
-        app, audio, paged_in_viewport_start(e, visible),
-        ViewportLattice::Land);
-    if (rest.start == app.viewport_start_sample &&
-        rest.lattice_origin == origin)
-        return std::nullopt;
-    return NextPage{e, rest};
 }
 
 // THE LANDING OWNER (architect 2026-09-24): ONE camera for every act that

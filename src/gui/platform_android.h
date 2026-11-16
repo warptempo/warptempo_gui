@@ -269,10 +269,8 @@ public:
     // viewer's page while it stands, drawn under a scissor to its clip, its
     // clip left out of every upload unless a floater stands — and writes its
     // page's report (GuiCanvasPage, canvas_sink.h), until the next call names
-    // another — and beside it THE AHEAD LIST (send M, 2026-11-15;
-    // gui_canvas_ahead, canvas_sink.h), which present() hands the GL canvas
-    // on the same road (GuiGlCanvas::present_frame's THE AHEAD TARGET).
-    void set_canvas_frame(GuiCanvasDrawList* frame, GuiCanvasDrawList* ahead);
+    // another.
+    void set_canvas_frame(GuiCanvasDrawList* frame);
 
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
@@ -617,9 +615,8 @@ private:
     void destroy_gl();
     // The GL canvas's frame (set_canvas_frame): the GUI's one process-wide
     // list (gui_canvas_frame, canvas_sink.h), null until the first frame
-    // names it — and the ahead list beside it (send M, 2026-11-15).
+    // names it.
     GuiCanvasDrawList* canvas_frame_ = nullptr;
-    GuiCanvasDrawList* canvas_ahead_ = nullptr;
 
     // -- Window state --
     // THE SURFACE IS THE WINDOW (architect 2026-10-01, with full screen):

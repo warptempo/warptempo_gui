@@ -4594,13 +4594,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
 
 void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
-                                           const GuiRect& area,
-                                           const GuiPlateColumns& plate,
-                                           const WaveformPlateInks& inks) {
-    // THE PLATE IT IS HANDED (send M, 2026-11-15; build_canvas_prefix): the
-    // live plate and its published inks for the frame's list, the ahead plate
-    // (WaveformCache::ahead_columns) and the inks it was rendered under for
-    // the ahead list. The paragraphs below are the live plate's.
+                                           const GuiRect& area) {
     // The live plate (wf_cache.columns) is produced by one of two paths,
     // both of which leave this paint path draw-only:
     //   1. Worker full render — maybe_enqueue_waveform_render
@@ -4653,7 +4647,7 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     // the live COLUMN BOUNDS (WaveformCache::columns) and the published
     // inks, the GPU rasterizing the antialiased plate from them
     // (GuiCanvasSink::plate; kListFragmentShader, gl_canvas.cpp).
-    sink.plate(area, plate, inks);
+    sink.plate(area, wf_cache.columns, wf_cache.fp_inks);
 }
 
 // -- GuiPaintHandler::plate_viewport_basis ------------------------------
@@ -8746,7 +8740,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             assert(!(canvas_paint_whole && frame.page.stands));
             frame.clip    = canvas_paint_whole ? canvas_paint : page_hole;
             frame.floater = floating_surface_stands(app);
-            gui.set_canvas_frame(&frame, &gui_canvas_ahead());
+            gui.set_canvas_frame(&frame);
             // THE KNOWN-CLEAR RECORD'S FOLD AND THE FRAME'S DECISION (the
             // rule at the CLEAR below): the last painted frame's summary
             // becomes the record, and this frame skips its clears only on a
@@ -8771,7 +8765,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             std::max(y, canvas_paint.y) <
                 std::min(y + h, canvas_paint.y + canvas_paint.h)) {
             canvas_list_built = true;
-            build_canvas_list(frame, gui_canvas_ahead(), plate_branch);
+            build_canvas_list(frame, plate_branch);
         }
     }
 
@@ -9209,54 +9203,25 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 // over everything in the waveform area); a frame with no audio has no
 // sweep (begin_touch_region refuses unloaded audio), so the other branch
 // has none.
-// THE PREFIX AND THE AHEAD LIST (send M, 2026-11-15; canvas_sink.h's
-// GuiCanvasDrawList::prefix and gui_canvas_ahead): the plate branch's first
-// four passes come out of ONE BUILDER over an explicit plate
-// (build_canvas_prefix), their count the frame's `prefix`, and the same
-// builder writes the ahead list over the ahead plate where it stands — at
-// this site, so at the frame list's own frames — the ahead list built empty
-// where it does not stand or the plate branch does not run. THE PREFIX IS
-// THE PAGE'S OWN PICTURE: each of its passes reads the area, the theme's
-// palette, the scale's line width and divider (render_canvas,
-// render_center_lines, render_waveform_divider, render.cpp) and the plate
-// and inks handed (paint_waveform_plate), and no cursor, selection,
-// scanner, gesture or sweep state; every pass that does follows it.
 void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
-                                        GuiCanvasDrawList& ahead,
                                         bool plate_branch) {
+    GuiCanvasSink sink(frame);
     const GuiRect area = waveform_area(app);
-    {
-        GuiCanvasSink sink(frame);
-        if (!plate_branch) {
-            render_canvas(sink, area);
-            render_center_lines(sink, area);
-            render_waveform_divider(sink, area);
-        } else {
-            build_canvas_prefix(sink, area, wf_cache.columns,
-                                wf_cache.fp_inks);
-            frame.prefix = static_cast<int>(frame.prims.size());
-            paint_phase_reset_overlay_ring(sink, area);
-            paint_playheads(sink, area);
-            paint_marker_stems(sink, area);
-            paint_scanner(sink, area);
-            paint_strip_drag_anchor(sink, area);
-            paint_sweep_highlight(sink, area);
-        }
-    }
-    GuiCanvasSink ahead_sink(ahead);
-    if (plate_branch && wf_cache.ahead_stands)
-        build_canvas_prefix(ahead_sink, area, wf_cache.ahead_columns,
-                            wf_cache.ahead_fp_inks);
-}
-
-void GuiPaintHandler::build_canvas_prefix(GuiCanvasSink& sink,
-                                          const GuiRect& area,
-                                          const GuiPlateColumns& plate,
-                                          const WaveformPlateInks& inks) {
     render_canvas(sink, area);
-    paint_waveform_plate(sink, area, plate, inks);
+    if (!plate_branch) {
+        render_center_lines(sink, area);
+        render_waveform_divider(sink, area);
+        return;
+    }
+    paint_waveform_plate(sink, area);
     render_center_lines(sink, area);
     render_waveform_divider(sink, area);
+    paint_phase_reset_overlay_ring(sink, area);
+    paint_playheads(sink, area);
+    paint_marker_stems(sink, area);
+    paint_scanner(sink, area);
+    paint_strip_drag_anchor(sink, area);
+    paint_sweep_highlight(sink, area);
 }
 
 void GuiPaintHandler::begin_canvas_frame() {

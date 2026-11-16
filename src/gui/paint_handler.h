@@ -9,7 +9,6 @@
 
 #include <cairo/cairo.h>
 #include <array>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -309,51 +308,13 @@ struct WaveformCache {
 
     // THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
     // render.h, owns the rule, the key, what is not keyed and why, and the
-    // thread rule): the producer's unmixed rows from one GUI-thread render
-    // to the next, read and written only inside the two GUI-thread calls of
-    // render_waveform_to_plate_columns — force_synchronous_waveform_rebuild's
-    // into the live slot and the ahead plate's (maintain_ahead_plate, send
-    // M, 2026-11-15) into `ahead_columns` below — never named in a worker's
-    // job. It lives and dies with this cache, which lives and dies with the
-    // project set's one GuiAudio; forget_plate empties it.
+    // thread rule): the producer's unmixed rows from one synchronous render
+    // to the next, read and written only inside
+    // force_synchronous_waveform_rebuild's call of
+    // render_waveform_to_plate_columns, on the GUI thread — never named in a
+    // worker's job. It lives and dies with this cache, which lives and dies
+    // with the project set's one GuiAudio; forget_plate empties it.
     WaveformKeptBars kept_bars;
-
-    // THE AHEAD PLATE (send M, 2026-11-15; architect 2026-11-15: "do the
-    // next page, draw and ahead"): THE NEXT PAGE's plate (Viewport::next_page,
-    // viewport.cpp, owns the term), rendered during the current page by
-    // GuiPaintHandler::maintain_ahead_plate where it is handed one (the
-    // pre-paint hook hands none, send N, 2026-11-15; the rule at its
-    // definition, waveform_cache.cpp) WITH THE KEPT BARS above, so that the
-    // kept rows hold the next page's bars when the turn's synchronous rebuild
-    // asks for them. NOT A PUBLICATION: it is no slot of the plate's two
-    // (no swap, no fp_* write, no damage, no flag rebuild), and no pixel on
-    // the glass is drawn from it but through THE ADOPTION: while it stands
-    // the ahead list carries its prefix (build_canvas_list,
-    // gui_canvas_ahead), which the GL canvas composes into its ahead target
-    // and copies only where the frame's own prefix is equal to it, the
-    // plain road's bytes (gl_canvas.cpp's present_frame, THE AHEAD TARGET
-    // and THE ADOPTION). `ahead_columns` takes a revision of its own at each
-    // render (next_plate_revision), so one revision still names one set of
-    // bounds. `ahead_stands` is set by a render and cleared by the
-    // maintenance wherever the ahead plate is not wanted, and by
-    // forget_plate; the `ahead_fp_*` fields are the inputs it was rendered
-    // from — every identity the live fingerprint compares, the fp_ roster
-    // above (the map's hash alone: the plate's records are drawn from its
-    // bounds and transform, never from the map). Its capacity is reused,
-    // never freed, while the cache lives.
-    GuiPlateColumns ahead_columns;
-    bool      ahead_stands             = false;
-    int64_t   ahead_fp_vp_start        = 0;
-    int64_t   ahead_fp_lattice_origin  = 0;
-    int64_t   ahead_fp_vp_end          = 0;
-    int       ahead_fp_area_w          = 0;
-    int       ahead_fp_area_h          = 0;
-    int       ahead_fp_divider_px      = -1;
-    int       ahead_fp_fade_hundredths = 0;
-    WaveformPlateInks ahead_fp_inks{};
-    uint64_t  ahead_fp_gain_hash       = 0;
-    bool      ahead_fp_target          = false;
-    uint64_t  ahead_fp_warp_frame_map_hash = 0;
 
     void forget_plate() {
         columns.rendered         = false;
@@ -375,7 +336,6 @@ struct WaveformCache {
         fp_warp_frame_map.clear();
         pending_fp_warp_frame_map.clear();
         kept_bars.clear();
-        ahead_stands = false;
     }
 
     ~WaveformCache() { forget_plate(); }
@@ -846,17 +806,6 @@ struct GuiPaintHandler {
     void owe_waveform_rebuild();
     void flush_owed_waveform_rebuild();
 
-    // THE AHEAD PLATE'S MAINTENANCE (send M, 2026-11-15; the rule and its
-    // reasons at the definition, waveform_cache.cpp; the plate at
-    // WaveformCache::ahead_columns): once a frame from the pre-paint hook
-    // (main.cpp), after flush_owed_waveform_rebuild and before
-    // settle_owed_lane_damage. `next_page` is THE NEXT PAGE's rest
-    // (Viewport::next_page) where the caller hands one; the hook hands none
-    // (send N, 2026-11-15: FOLLOW scrolls), so the ahead plate never stands.
-    // It renders the ahead plate at most once per page and publishes and
-    // damages nothing.
-    void maintain_ahead_plate(const std::optional<ViewportRest>& next_page);
-
     // THE PRE-PAINT CHECK OF WHAT THE NARROWED ROUTES OWE (2026-10-13): the
     // rows above the viewport's lanes and row 8's clock cell, each repainted
     // only where the live fingerprint has moved past what the target shows.
@@ -932,14 +881,6 @@ private:
     // paint, so a job dispatched in between would only be drained unfinished.
     bool waveform_rebuild_owed = false;
 
-    // THE AHEAD PLATE'S SETTLE COUNT (maintain_ahead_plate's step 2, the
-    // rule at its definition): the consecutive frames the same next page,
-    // `ahead_settle_start` / `ahead_settle_origin`, has been wanted, 0 when
-    // none is.
-    int     ahead_settle_frames = 0;
-    int64_t ahead_settle_start  = 0;
-    int64_t ahead_settle_origin = 0;
-
     // THE GL CANVAS'S PER-FRAME BITS (begin_canvas_frame above, on_redraw's
     // canvas block): the frame's list clip and floater bit written, and the
     // frame's list built.
@@ -962,19 +903,8 @@ private:
     bool    canvas_clear_covered = false;
     bool    canvas_clear_floater = false;
     // The frame's draw list from the canvas passes, through the sink, in
-    // on_redraw's paint order, and beside it the ahead list (send M,
-    // 2026-11-15; gui_canvas_ahead, canvas_sink.h) — the definition,
-    // paint_handler.cpp.
-    void build_canvas_list(GuiCanvasDrawList& frame, GuiCanvasDrawList& ahead,
-                           bool plate_branch);
-    // THE PREFIX'S ONE BUILDER (send M, 2026-11-15; GuiCanvasDrawList::
-    // prefix, canvas_sink.h): the plate branch's first four passes over AN
-    // EXPLICIT PLATE and its inks — the live plate for the frame's list, the
-    // ahead plate for the ahead list — so the two lists' records are equal
-    // wherever the two plates are.
-    void build_canvas_prefix(GuiCanvasSink& sink, const GuiRect& area,
-                             const GuiPlateColumns& plate,
-                             const WaveformPlateInks& inks);
+    // on_redraw's paint order (the definition, paint_handler.cpp).
+    void build_canvas_list(GuiCanvasDrawList& frame, bool plate_branch);
 
     // The two as-painted fingerprints and the paint's half of their record
     // (settle_owed_lane_damage's block, paint_handler.cpp).
@@ -1043,35 +973,7 @@ private:
         bool     valid         = false;        // false if degenerate / loading
     };
 
-    // THE ONE BODY ANSWERS FOR A NAMED (start, lattice origin) (send M,
-    // 2026-11-15): compute_waveform_render_inputs_at is every field above
-    // for the viewport starting at `vp_start` on the lattice of origin
-    // `lattice_origin` at the live zoom, the rest the live state's; the live
-    // call passes the live pair (AppState::viewport_start_sample and
-    // viewport_lattice_origin) and the ahead plate's maintenance the next
-    // page's. `snapshot_map` takes the owned copy of the target map into
-    // `warp_frame_map` — where a render or a publication will hold it — and
-    // false leaves it empty beside its hash, the compare's whole need (the
-    // maintenance's frames that render nothing copy no map).
     WaveformRenderInputs compute_waveform_render_inputs() const;
-    WaveformRenderInputs compute_waveform_render_inputs_at(
-        int64_t vp_start, int64_t lattice_origin, bool snapshot_map) const;
-    // THE FINGERPRINT'S ONE COMPARE (the roster at WaveformCache's fp_
-    // fields): true where any of the eleven identities given — a slot's
-    // fingerprint, live, pending or ahead — differs from `in`'s. Read by
-    // maybe_enqueue_waveform_render against the pending slot,
-    // live_plate_is_live_view below against the live one, and
-    // maintain_ahead_plate against the ahead plate's.
-    static bool plate_fingerprint_differs(
-        const WaveformRenderInputs& in,
-        int64_t vp_start, int64_t lattice_origin, int64_t vp_end,
-        int area_w, int area_h, int divider_px, int fade_hundredths,
-        const WaveformPlateInks& inks, uint64_t gain_hash, bool is_target,
-        uint64_t warp_frame_map_hash);
-    // The published plate against the live inputs (the definition,
-    // waveform_cache.cpp): live_plate_published's compare and the ahead
-    // plate's maintenance's step 1.
-    bool live_plate_is_live_view() const;
 
     // (The out-of-trim DIM and its two private helpers — compute_displayed_trim
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
@@ -1232,11 +1134,8 @@ private:
     // THE CANVAS PASSES PAINT THROUGH THE CANVAS SINK (2026-10-13,
     // canvas_sink.h): the plate, the ring, the stems and their runs, the
     // cursor, the scanner, the anchor and the sweep highlight below — into
-    // the frame's draw list (build_canvas_list). The plate pass draws the
-    // plate it is handed with its inks (build_canvas_prefix's two plates).
-    void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area,
-                              const GuiPlateColumns& plate,
-                              const WaveformPlateInks& inks);
+    // the frame's draw list (build_canvas_list).
+    void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
     // The overlay band's RING — the phase-reset overlay's whole visual, four
     // solid one-W lines in the `cue_outline` (architect 2026-11-04), each at
     // its exact place, its left side centered on the reset's frame
