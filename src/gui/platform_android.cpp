@@ -1022,10 +1022,8 @@ void GuiPlatform::ensure_backbuffer(int w, int h) {
         // buffer of the old size holds a frame of this one.
         repair_history_.clear();
     }
-    // The texture follows the backbuffer, the canvas's frame target with it
-    // (GuiGlCanvas::ensure_texture's rule; a remade target is composed
-    // whole at the next frame), asked with the context current on a
-    // surface.
+    // The texture follows the backbuffer (GuiGlCanvas::ensure_texture's
+    // rule), asked with the context current on a surface.
     if (egl_surface_ && back_) gl_canvas_.ensure_texture(back_w_, back_h_);
 }
 
@@ -1157,12 +1155,11 @@ void GuiPlatform::ensure_gl_surface() {
         // THE EGL CAPABILITY LINE, PERMANENT (2026-11-04), beside the
         // identity: the four extensions a cheaper present could stand on,
         // the chosen config's samples and red / alpha depths, and the first
-        // surface's swap behavior. The present's road stands on the first
-        // three — the buffer age, the damage region and the swap with
-        // damage bringing each window buffer up to date from the canvas's
-        // frame target (architect 2026-11-15, send L; GuiPlatform::present)
-        // — and a present advertising an extension is necessary for that
-        // road, not proof of its savings downstream.
+        // surface's swap behavior. The frame cost arc of 2026-11-04 reads it
+        // to choose between a buffer-age partial repair and a persistent
+        // composite (the Astra consult's (b) / (c), tmp/codex_review.md); a
+        // present advertising an extension is necessary for that road, not
+        // proof of its savings downstream.
         const char* ext = eglQueryString(dpy, EGL_EXTENSIONS);
         const auto has = [ext](std::string_view name) {
             if (!ext) return false;
@@ -1204,13 +1201,11 @@ void GuiPlatform::ensure_gl_surface() {
                      : swap == EGL_BUFFER_DESTROYED ? "destroyed"
                                                     : "unknown",
                      static_cast<unsigned>(swap));
-        // THE BUFFER-AGE ROAD'S EGL (2026-11-04, session 33; the road at
+        // THE PARTIAL REPAIR'S EGL (2026-11-04, session 33; the road at
         // present): the three extensions, and the two entry points resolved
         // here, once for the process's display. A missing one is one line:
-        // without the buffer age every frame's window buffer is written
-        // whole by the copy (the compose still over the frame's own change,
-        // architect 2026-11-15, send L), without the swap with damage the
-        // swap is the plain one.
+        // without the buffer age every frame is drawn whole, without the
+        // swap with damage the swap is the plain one.
         egl_buffer_age_ext_     = age;
         egl_partial_update_ext_ = partial;
         egl_swap_damage_ext_    = damage;
@@ -1232,17 +1227,14 @@ void GuiPlatform::ensure_gl_surface() {
                          "swap is the plain one\n");
     }
     // A NEW SURFACE FORGETS THE REPAIR'S HISTORY (present's rule): its
-    // buffers hold no frame of ours, so its first copy is whole. The canvas's
-    // frame target is the context's and stays, still holding the last frame
-    // composed (architect 2026-11-15, send L).
+    // buffers hold no frame of ours.
     repair_history_.clear();
 }
 
 // THE WINDOW'S LOSS (APP_CMD_TERM_WINDOW) and a new window's adoption: the
-// surface goes, the context and everything in it — the programs, the
-// textures, the frame target (GuiGlCanvas's, gl_canvas.h) — stay. The
-// context is released from the surface first, because EGL destroys a
-// CURRENT surface only once it stops being
+// surface goes, the context and everything in it — the programs, the textures
+// (GuiGlCanvas's, gl_canvas.h) — stay. The context is released from the surface
+// first, because EGL destroys a CURRENT surface only once it stops being
 // current, and the glue releases the window when the command returns: the
 // surface must let go of it now. The next adoption makes the context current on
 // its new surface.
@@ -1256,8 +1248,8 @@ void GuiPlatform::destroy_gl_surface() {
 }
 
 // THE PROCESS'S EXIT (shutdown): the surface, then the context — the
-// programs, the textures and the frame target with it, their names then
-// forgotten (GuiGlCanvas::forget) — and the display.
+// programs and the textures with it, their names then forgotten
+// (GuiGlCanvas::forget) — and the display.
 void GuiPlatform::destroy_gl() {
     destroy_gl_surface();
     if (egl_display_) {
@@ -1519,11 +1511,9 @@ bool GuiPlatform::present() {
     // THE GL CANVAS (2026-10-13; the design record is
     // docs/engineering/gpu_canvas_2026_10.md). The damage list itself, the
     // rects paint_one_frame just painted, goes to the GL canvas's frame —
-    // the upload walk less the canvas clip, then the clear, the list's draw
-    // and the texture's composed into the canvas's frame target and the
-    // window's buffer brought up to date by a copy out of it
-    // (GuiGlCanvas::present_frame, gl_canvas.cpp, where the upload, compose
-    // and copy rules are) — and the frame swaps. A frame that would
+    // the upload walk less the canvas clip, the clear, the list's draw and
+    // the texture's (GuiGlCanvas::present_frame, gl_canvas.cpp, where the
+    // upload and draw rules are) — and the frame swaps. A frame that would
     // draw nothing (no texture yet, a backbuffer without data;
     // GuiGlCanvas::ready) swaps nothing and keeps the damage.
     //
@@ -1536,74 +1526,49 @@ bool GuiPlatform::present() {
     // pen's ~500 events a second cost drains and never an extra swap. No
     // glFinish, no glFlush beyond the swap's own, no readback.
     //
-    // THE BUFFER-AGE ROAD (2026-11-04, session 33; the Astra consult's (b),
-    // tmp/codex_review.md) AND THE FRAME TARGET (architect 2026-11-15,
-    // "Send L."; present_frame's THE FRAME TARGET, gl_canvas.cpp).
-    // MEASURED (2026-11-04, the planner's measurement on the tablet, a free
-    // fading line at rest, the panel then pinned at 90 Hz), on the road
-    // that brought each window buffer up to date by re-rendering its repair
-    // region: with every present the whole surface, 90 presents a second,
-    // per second of wall time the swap 160 ms, the present 30, cairo 15, the
-    // upload 3, the list 1.7, top ~50 % app / ~50 % SurfaceFlinger; with the
-    // repair region alone, 3240 px repaired a frame and no whole frame at
-    // rest, top ~46 % / ~53 % — THE PRESENT IS THE COST (the swap ~1.7 ms of
-    // the loop thread a frame), the pixels were not, and the draw list's
-    // rebuild never was. MEASURED on the same re-rendering road (send J's
-    // return, the architect's local planner's measurement): under FOLLOW at
-    // the working zoom a page turn was three whole-canvas GPU frames back to
-    // back — the turn's frame and, at age 3, the next two buffers' repairs
-    // of the same area, each a full re-render of the plate — the swap after
-    // the turn waiting on the GPU 6.7 ms dark / 12.6 ms lit, most lit turns
-    // dropping a frame; hence the frame target, which composes the passes
-    // once a frame and copies. The tablet's EGL (the capability line,
-    // 2026-11-04): EGL_EXT_buffer_age, EGL_KHR_partial_update and
+    // THE PARTIAL REPAIR (2026-11-04, session 33; the Astra consult's (b),
+    // tmp/codex_review.md). MEASURED (2026-11-04, the planner's measurement
+    // on the tablet, a free fading line at rest, the panel then pinned at
+    // 90 Hz): before, 90 presents a second, each the whole surface, per
+    // second of wall time the swap 160 ms, the present 30, cairo 15, the
+    // upload 3, the list 1.7, top ~50 %
+    // app / ~50 % SurfaceFlinger; after, 3240 px repaired a frame and no
+    // whole frame at rest, top ~46 % / ~53 % — THE PRESENT IS THE COST (the
+    // swap ~1.7 ms of the loop thread a frame), the pixels were not, and the
+    // draw list's rebuild never was. The tablet's EGL (the capability line, 2026-11-04):
+    // EGL_EXT_buffer_age, EGL_KHR_partial_update and
     // EGL_KHR_swap_buffers_with_damage present, swap behavior DESTROYED, the
-    // age 3 steady (a triple-buffered swapchain). THE ROAD, four mechanisms
+    // age 3 steady (a triple-buffered swapchain). THE ROAD, three mechanisms
     // kept apart:
     //   * THE BUFFER'S AGE, asked of EGL before anything draws: the acquired
     //     buffer holds the frame `age` presents back (0: unknown contents).
-    //     THE CHANGE is this frame's damage, or the whole surface at
-    //     GuiGlCanvas::compose_must_be_whole's verdict (the clip moved, the
+    //     THE REPAIR REGION is this frame's damage united with the changes
+    //     of the age − 1 frames before it (repair_history_, newest first).
+    //     The frame is drawn WHOLE at age 0, at an age the history cannot
+    //     cover (a new surface, a new size or a failed swap empties it), and
+    //     at GuiGlCanvas::repair_must_be_full's verdict (the clip moved, the
     //     score viewer's page, the grow's program, no walk yet on the
-    //     texture, a frame target holding no whole frame), whose change the
-    //     damage does not describe. THE REPAIR REGION, what the acquired
-    //     buffer is missing, is the change united with the changes of the
-    //     age − 1 frames before it (repair_history_, newest first); it is
-    //     the whole surface at age 0, at an age the history cannot cover (a
-    //     new surface, a new size or a failed swap empties it) and at the
-    //     verdict — that frame's history entry is then the whole surface, so
-    //     the older buffers are copied whole too.
-    //   * THE COMPOSE REGION (architect 2026-11-15, send L): the change
-    //     itself, whole where it is the whole surface. present_frame
-    //     composes it into the frame target — each rect recomposed through
-    //     the whole pass order, so the target's bytes are the whole draw's —
-    //     and then copies the repair region out of the target into the
-    //     acquired buffer, one fetch a pixel. A frame's passes run once, over
-    //     its own change: a page turn is one heavy frame and two copies, a
-    //     pan frame its passes and one copy, a frame at rest nothing.
-    //   * THE DAMAGE REGION (EGL_KHR_partial_update): the repair region —
-    //     the region of the window's buffer this frame writes — named to EGL
-    //     once, after the age's query and before the first draw (present_frame
-    //     draws nothing before this call, the target's compose included), in
+    //     texture), whose change the damage does not describe — that frame's
+    //     history entry is then the whole surface, so the older buffers are
+    //     redrawn whole too.
+    //   * THE DAMAGE REGION (EGL_KHR_partial_update): the repair region named
+    //     to EGL once, after the age's query and before the first draw, in
     //     EGL's bottom-left rects (y' = height − y − h); never called for a
-    //     whole repair (zero rects would mean the whole surface anyway).
+    //     whole frame (zero rects would mean the whole surface anyway).
     //   * THE SWAP WITH DAMAGE (EGL_KHR_swap_buffers_with_damage): the swap
     //     carries THIS FRAME'S CHANGE alone (not the repair region): its
     //     damage, or the whole surface for an undescribed change; the plain
     //     swap only where the extension is absent (one line at the
     //     capability line).
-    // IT STANDS ON THE DAMAGE CONTRACT: every GPU-visible change of the
-    // canvas owes damage on its pixels, the CPU road's rule, now the GPU's
-    // too. A frame drawn whole at age 0 is a whole copy of the target, the
-    // same bytes as a whole draw from the live state wherever the contract
-    // holds.
+    // present_frame recomposes each repair rect through the whole pass order,
+    // so the picture's bytes are the whole draw's (its THE REPAIR). IT
+    // STANDS ON THE DAMAGE CONTRACT: every GPU-visible change of the canvas
+    // owes damage on its pixels, the CPU road's rule, now the GPU's too.
     //
     // A FAILED SWAP: a lost context is a rare non-silent fault and is fatal
     // (no recovery code); any other failure is one line and false, the
     // damage kept and re-posted (paint_one_frame's tail), the history
-    // emptied so the retry's copy is whole. The frame target stays valid —
-    // it holds the composed frame — and the kept damage recomposes there to
-    // the same bytes at the retry.
+    // emptied so the retry is drawn whole.
     EGLDisplay dpy  = egl_display_;
     EGLSurface surf = egl_surface_;
     if (!surf) return false;
@@ -1630,38 +1595,14 @@ bool GuiPlatform::present() {
     EGLint age = 0;
     if (egl_buffer_age_ext_ &&
         !eglQuerySurface(dpy, surf, EGL_BUFFER_AGE_EXT, &age))
-        age = -2;  // the query failed: copied whole
+        age = -2;  // the query failed: drawn whole
 
-    const bool undescribed = gl_canvas_.compose_must_be_whole(canvas_frame_);
+    const bool undescribed = gl_canvas_.repair_must_be_full(canvas_frame_);
     std::vector<DamageRect> change;
     if (undescribed || frame.empty())
         change.push_back(whole_surface);
     else
         change = frame;
-    // MANY RECTS BECOME THEIR BOUNDING RECT: a few scissored passes each,
-    // never dozens (a larger region recomposes, and copies, to the same
-    // bytes); one rect containing the surface is the whole (empty).
-    const auto settle_region = [&](std::vector<DamageRect>& region) {
-        if (region.size() > 8) {
-            int x0 = sw, y0 = sh, x1 = 0, y1 = 0;
-            for (const DamageRect& r : region) {
-                x0 = std::min(x0, r.x);
-                y0 = std::min(y0, r.y);
-                x1 = std::max(x1, r.x + r.w);
-                y1 = std::max(y1, r.y + r.h);
-            }
-            region.assign(1, DamageRect{x0, y0, x1 - x0, y1 - y0});
-        }
-        if (region.size() == 1 && contains_rect(region[0], whole_surface))
-            region.clear();
-    };
-    // THE COMPOSE REGION (architect 2026-11-15, send L): this frame's own
-    // change, whole (empty) where the change is the whole surface.
-    std::vector<DamageRect> compose;
-    if (!(undescribed || frame.empty())) {
-        compose = change;
-        settle_region(compose);
-    }
     const bool full = undescribed || frame.empty() || age <= 0 ||
                       static_cast<std::size_t>(age - 1) >
                           repair_history_.size();
@@ -1671,7 +1612,20 @@ bool GuiPlatform::present() {
         for (int i = 0; i < age - 1; ++i)
             for (const DamageRect& r : repair_history_[static_cast<std::size_t>(i)])
                 append_coalesced_rect(repair, r);
-        settle_region(repair);
+        // MANY RECTS BECOME THEIR BOUNDING RECT: a few scissored passes
+        // each, never dozens.
+        if (repair.size() > 8) {
+            int x0 = sw, y0 = sh, x1 = 0, y1 = 0;
+            for (const DamageRect& r : repair) {
+                x0 = std::min(x0, r.x);
+                y0 = std::min(y0, r.y);
+                x1 = std::max(x1, r.x + r.w);
+                y1 = std::max(y1, r.y + r.h);
+            }
+            repair.assign(1, DamageRect{x0, y0, x1 - x0, y1 - y0});
+        }
+        if (repair.size() == 1 && contains_rect(repair[0], whole_surface))
+            repair.clear();
     }
     // EGL's rects, bottom-left (x, y', w, h).
     const auto egl_rects = [sh](const std::vector<DamageRect>& rs) {
@@ -1690,8 +1644,8 @@ bool GuiPlatform::present() {
         reinterpret_cast<PFNEGLSETDAMAGEREGIONKHRPROC>(egl_set_damage_region_)(
             dpy, surf, v.data(), static_cast<EGLint>(repair.size()));
     }
-    if (!gl_canvas_.present_frame(back_, damage_, compose, repair,
-                                  canvas_frame_, sw, sh))
+    if (!gl_canvas_.present_frame(back_, damage_, repair, canvas_frame_, sw,
+                                  sh))
         return false;
     bool swapped = false;
     if (egl_swap_damage_ext_) {
@@ -2113,10 +2067,10 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // a lost window is not a lost touch stream (the hard end has its
             // own edge, APP_CMD_LOST_FOCUS below and touch_cancel).
             // THE GL CANVAS LETS GO OF THE WINDOW HERE: its EGL surface is
-            // destroyed before the glue releases the window, the context, the
-            // texture and the frame target kept — the texture's content
-            // goes back up with the full damage the next adoption declares,
-            // as the backbuffer is re-posted (destroy_gl_surface).
+            // destroyed before the glue releases the window, the context and
+            // the texture kept — the texture's content goes back up with the
+            // full damage the next adoption declares, as the backbuffer is
+            // re-posted (destroy_gl_surface).
             destroy_gl_surface();
             window_ = nullptr;
             break;

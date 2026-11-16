@@ -231,14 +231,12 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    NOT depended on; `eglSwapBuffersWithDamageKHR` may pass the damage union
    as a hint and nothing else. *(REVERSED 2026-11-04, session 33: the fading
    playhead made a damaged frame 90 a second, each a whole redraw, ~50 % of
-   a core in the app and ~50 % in SurfaceFlinger; the frame now composes only
-   its own change into the canvas's frame target (2026-11-15, send L) and
-   each window buffer is brought up to date by copying its repair region out
-   of it — EGL buffer age, `eglSetDamageRegionKHR`,
+   a core in the app and ~50 % in SurfaceFlinger; the frame now draws only
+   its repair region — EGL buffer age, `eglSetDamageRegionKHR`,
    `eglSwapBuffersWithDamageKHR` carrying the frame's own damage — and every
    GPU-visible canvas change owes damage. `GuiPlatform::present`'s THE
-   BUFFER-AGE ROAD AND THE FRAME TARGET and `GuiGlCanvas::present_frame`'s
-   THE FRAME TARGET.)*
+   PARTIAL REPAIR and `GuiGlCanvas::present_frame`'s THE REPAIR and DRAWN
+   INTO THE WINDOW'S OWN BUFFER.)*
 10. **P4 — one rebuild per frame.** `Viewport::kick_waveform_sync` marks the
     rebuild OWED instead of running it; the pre-paint hook runs it once, at
     its tail after the scanner advance and Follow's page (which may kick)
@@ -250,8 +248,7 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
     inventory at the kick's declaration names them).
 11. **The platform seam.** THE GL OWNER IS ONE FILE, `src/gui/gl_canvas.{h,cpp}`
     (`GuiGlCanvas`, 2026-10-14): everything GLES 3.0 and neither EGL nor a
-    window — the four programs, the backbuffer's texture, the frame target
-    (2026-11-15, send L), the list's
+    window — the three programs, the backbuffer's texture, the list's
     instance buffer and the plate's bounds texture, the upload walk less the
     canvas clip, the clear, the list's draw under the scissor and the
     texture's draw — driven by each platform's `present` with its context

@@ -2292,7 +2292,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
         // 2026-11-04 night, render_playhead's paragraph, render.h — the
         // tick's per-frame damage of a fading line stood one day and went
-        // with the fade; the buffer-age road it was measured under stays,
+        // with the fade; the partial repair it was measured under stays,
         // GuiPlatform::present.)
 
         // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,

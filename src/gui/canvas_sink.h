@@ -68,15 +68,18 @@
 // color carry the same bytes — the plate's two words its published inks'.
 // The platform draws the list under a scissor to the list's clip
 // (GuiPlatform::set_canvas_frame; gl_canvas.cpp's GuiGlCanvas::present_frame);
-// the CPU never paints these pixels at all. THE GPU RECOMPOSES ONLY THE
-// FRAME'S OWN CHANGE (architect 2026-11-15, send L; present_frame's THE
-// FRAME TARGET, the platform's buffer-age history at GuiPlatform::present):
-// the list is built whole, but a canvas pixel is drawn again into the
-// canvas's frame target only inside the frame's damage, and each window
-// buffer is brought up to date by a copy out of that target, so EVERY CHANGE A
+// the CPU never paints these pixels at all. THE GPU REDRAWS ONLY THE REPAIR
+// REGION since 2026-11-04 (session 33; present_frame's THE REPAIR, the
+// platform's buffer-age history at GuiPlatform::present): the list is
+// built whole, but a canvas pixel is drawn again only inside the frame's
+// damage and the damage of the frames its buffer missed, so EVERY CHANGE A
 // RECORD MAKES OWES DAMAGE ON ITS OLD AND NEW PIXELS, as every chrome
 // pixel always has (the damage contract; its audit of 2026-11-04 in
-// tmp/s33/done2.md). A CONCRETE CLASS, no virtual
+// tmp/s33/done2.md). AN UNDECLARED CHANGE shows only where some declared
+// rect of this frame or of a frame the buffer missed happens to cover it,
+// so it can reach one window buffer and not the next — a picture that
+// differs buffer to buffer, never a repair (send N, 2026-11-15: each buffer
+// is drawn into directly, gl_canvas.cpp's present_frame). A CONCRETE CLASS, no virtual
 // interface: the painters name GuiCanvasSink& as their road, and the one
 // implementation is the list's.
 //
@@ -208,7 +211,7 @@ struct GuiCanvasPrimitive {
 // THE SOUND WAITS FOR THE LIFT; design record §3.13). The score viewer's page
 // is not painted into the backbuffer: the box's interior is the frame's hole
 // (the list's clip) and the GPU draws it whole at every swap while it
-// stands (the compose's whole-frame verdict, compose_must_be_whole) — THE FIELD
+// stands (the repair's whole-frame verdict, repair_must_be_full) — THE FIELD
 // GROUND (`field`, argb32_opaque_word of display_color, the sink's word for
 // the score viewer's pane, modal_box.h's `score_pane_face`) and over it THE
 // PAGE, one R8 texture of THE GRAY STORE's
