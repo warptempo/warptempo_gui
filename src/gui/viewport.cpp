@@ -1298,8 +1298,10 @@ void Viewport::follow_scroll_if_needed() {
 }
 
 // THE FOLLOW SCROLL (architect 2026-11-15, send N: FOLLOW built as a
-// scrolling follow, A TRIAL he judges on glass; "run to center, then
-// scroll"; the scroll in place of the page flip, which "is ... more of a
+// scrolling follow, KEPT on his glass the same day, "the scroll is actually
+// much smoother with follow on ... it's very stable, and the waveform behind
+// it looks a lot ... more stable, even though it's moving"; "run to center,
+// then scroll"; the scroll in place of the page flip, which "is ... more of a
 // Reaper design" — his lean to Live's follow, the line standing at the
 // center and the waveform moving under it). THE ONE OWNER OF THE RULE:
 // THE PICTURE MOVES ONLY SO THAT THE MOVING LINE NEVER PASSES THE WAVEFORM

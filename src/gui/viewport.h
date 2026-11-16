@@ -492,8 +492,9 @@ struct Viewport {
     // edge. It suspends no follow with its own write
     // (AppState::follow_suspended). Its callers at the definition.
     void follow_scroll_if_needed();
-    // THE FOLLOW SCROLL (architect 2026-11-15, send N, a trial; the rule's
-    // one owner at the definition): the picture moves only so that the
+    // THE FOLLOW SCROLL (architect 2026-11-15, send N, kept on his glass
+    // ("very stable ... even though it's moving"); the rule's one owner at
+    // the definition): the picture moves only so that the
     // moving line never passes the waveform area's center — a line left of
     // it runs toward it over a still picture, one right of it is placed on
     // it through the pan's own road (apply_strip_drag_zoom, the Keep

@@ -4696,8 +4696,9 @@ struct AppState {
     // carries the viewport with the scanner; it stays lit across plays and
     // stops until `f` puts it out; dark, no play moves the camera. At rest
     // it does nothing. THE PLAY CAMERA READS IT LIVE, AND IT SCROLLS
-    // (architect 2026-11-15, send N, a trial; THE FOLLOW SCROLL's one owner
-    // is Viewport::follow_scanner): the line runs to the waveform area's
+    // (architect 2026-11-15, send N, kept on his glass, "very stable ...
+    // even though it's moving"; THE FOLLOW SCROLL's one owner is
+    // Viewport::follow_scanner): the line runs to the waveform area's
     // center over a still picture and the picture then moves under it,
     // through the pre-paint advance (main.cpp, which asks this bit with
     // playback live, follow_suspended below dark, the A/B audition not
