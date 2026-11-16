@@ -709,7 +709,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // Assign-then-clamp: the same idiom every viewport mutation uses;
             // the clamp owns out-of-range constructively.
             app.viewport_start_sample = v;
-            clamp_viewport_start(app, audio);
+            clamp_viewport_start(app, audio, ViewportLattice::Exact);
             viewport.invalidate_waveform_area();
             viewport.kick_waveform_sync();
         } else {

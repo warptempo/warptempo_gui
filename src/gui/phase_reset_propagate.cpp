@@ -536,8 +536,8 @@ void PhaseResetPropagate::paste_apply() {
             // at a fixed origin, so what would leak today is THE GRID'S
             // PITCH q (the zoom level, the sample rate and the held display
             // width that set the working column — not the painter strip's
-            // width) AND THE CAMERA'S LATTICE ORIGIN (0 at every landing, a
-            // gesture rest's own), no longer the viewport position the
+            // width) AND THE CAMERA'S LATTICE ORIGIN (the standing rest's
+            // own), no longer the viewport position the
             // original record named. Clamped after the snap to the column's
             // absolute range — 0 (the universal no-negative-position rule)
             // and the marker EOF wall, total - 1, the single wall both

@@ -4452,30 +4452,41 @@ struct AppState {
     // start: the recovery ties at |origin| = q/2 (q a whole number at whole
     // levels), and a pan's k0 would flip between two lattices with different
     // per-column rounding.
-    // THREE RULES SET IT, the chokepoint's (ViewportLattice, below at
+    // TWO RULES SET IT, the chokepoint's (ViewportLattice, below at
     // clamp_viewport_start):
-    //   * LAND — EVERY LANDING keeps origin 0: the `c` centring, the walk,
-    //     the restore, bare 0 and FIT, follow's page-in, the keep-visible
-    //     edge-align, the playhead step's page, the held column, End / Home,
-    //     the tab switch, the S/T flip, the loads, the undo restore, the trim
-    //     bar's framing, the settings editor's start, and the zoom STEP keys
-    //     (Viewport::zoom_step — a discrete landing; its held pivot already
-    //     cures its own accumulation). Every rest they reach is the frame-0
-    //     lattice's, byte for byte the picture before the origin existed.
-    //   * EXACT — THE GESTURE'S ZOOM FRAMES (the pinch and the pen's
-    //     one-finger zoom: apply_touch_nav_update's level-changing frames).
-    //     The requested start s = nearbyint(anchor_sample − anchor_col·q) IS
-    //     the rest: origin = s − nearbyint(k0·q), k0 = nearbyint(s / q), so s
-    //     lies on its own lattice and the pivot's held frame sits at its held
-    //     column TO ONE FRAME (the rounding of (k0 + c)·q), where the frame-0
-    //     lattice left it up to HALF A COLUMN off — a fresh residue every
+    //   * EXACT — EVERY WRITER THAT ASKS FOR A START (architect 2026-11-15,
+    //     the no-grid arc, ruling every landing exact: "I'm not concerned
+    //     with softness of the waveform or any other element ... And I'm no
+    //     longer concerned with the determinism or precision"; his
+    //     criterion, "So long as C on a given stem always gives me a specific
+    //     view"): EVERY LANDING — the `c` centring, the walk and the drop's
+    //     seat, the restore, bare 0 and FIT's recall, follow's page-in, the
+    //     keep-visible edge-align, the playhead step's page, the held place,
+    //     End / Home, the tab switch, the S/T flip, the loads, the undo
+    //     restore, the trim bar's and the presets' framing, the settings
+    //     editor's start and the zoom STEP keys (Viewport::zoom_step) — AND
+    //     THE GESTURE'S ZOOM FRAMES (the pinch and the pen's one-finger zoom:
+    //     apply_touch_nav_update's level-changing frames).
+    //     The requested start s IS
+    //     the rest: origin = s − nearbyint(k0·q), k0 the index nearest s / q
+    //     (an exact tie to the right, resting_viewport_start's rule), so s
+    //     lies on its own lattice — the origin a function of s and q alone,
+    //     so the same act on the same state rests at the same camera, start,
+    //     origin and level, every time — and a frame the start was computed
+    //     to hold at a place (the centered target at w / 2, the pivot at its
+    //     held column) sits there TO ONE
+    //     FRAME (the rounding of (k0 + c)·q), where a frame-0
+    //     lattice left it up to HALF A COLUMN off — on a zoom gesture a fresh
+    //     residue every
     //     zoom frame (a sixteenth step of q moves s / q by hundreds of
     //     columns), measured on the tablet 2026-10-31 at ±half a column a
     //     step, the peaks near the fingers bubbling up and down (the plate
     //     of that day was cut on this lattice; with its bars anchored to the
     //     audio, architect 2026-11-14, the same residue would shake the
-    //     whole picture half a px a frame). Each zoom
-    //     frame derives a fresh origin the same way.
+    //     whole picture half a px a frame). Each write derives a fresh
+    //     origin the same way. A start a whole number of steps from frame 0
+    //     derives origin 0: the frame-0 lattice's rest, byte for byte the
+    //     picture before the origin existed.
     //   * KEEP — THE GESTURE'S PAN FRAMES (the level unchanged), THE FOLLOW
     //     SCROLL'S PLACEMENTS (Viewport::follow_scanner, send N, 2026-11-15:
     //     a pan frame the play makes) and THE RE-VALIDATIONS THAT WRITE NO
@@ -4485,18 +4496,19 @@ struct AppState {
     //     the start snapped onto ITS lattice, so a pan is a pure index shift of k0 (the same lattice
     //     columns, shifted: every mark by whole px, the plate's placement by
     //     the same whole px with every bar's tips as they were), a pan after
-    //     a pinch keeps the pinch's
+    //     a landing or a pinch keeps that rest's
     //     lattice (no jump at the transition), and a re-validation moves
     //     nothing. An origin outside the bound at the settled q (a level the
     //     re-validation clamped) falls to 0.
     // THE WALLS ARE THE FRAME-0 LATTICE'S UNDER EVERY RULE: a rest that
     // would lie outside [0, max_viewport_start_grid] rests at that wall with
-    // origin 0, the landings' own rest there — so a pinch saturated at a
-    // wall zooms exactly as a landing paints, frame 0 standing at column 0's
+    // origin 0 — frame 0 standing at column 0's
     // edge at the left wall, and the right wall stays the one owner's.
     // Degenerate geometry (a non-numeric zoom, the whole song visible and
-    // the start parked at 0) holds origin 0. NO PERSISTED FIELD: a sidecar
-    // or settings start loads as it is (a load lands, origin 0). The plate's
+    // the start parked at 0) holds origin 0. NO PERSISTED FIELD AND NONE
+    // PARKED: a sidecar's, a settings line's, a parked tab's or FIT's stamped
+    // start rests as it is under Exact, its origin derived again from it.
+    // The plate's
     // fingerprint (WaveformCache::fp_lattice_origin) and the displayed mirror
     // (displayed_lattice_origin) carry it, so ON SCREEN IS AS PAINTED holds
     // for the lattice too, and the camera's identity counts it
@@ -4607,14 +4619,14 @@ struct AppState {
     //     from hold_derived_on_arrival (the rule's one owner, beside
     //     nudge_camera below) once its camera and cursor have settled:
     //     armed iff the entered tab rests at the working zoom as painted
-    //     with its viewport EXACTLY on the grid point of an UNCLAMPED
+    //     with its camera EXACTLY the rest of an UNCLAMPED
     //     centring of its playhead (never at a wall; no marker needed), so a
     //     switch away and back keeps a hold it found, each tab keeping its
     //     own, and a switch into a centred rest arms one. The bit is stored
     //     nowhere per tab: the coincidence auto-select's twin, re-acquired
     //     from the picture at the entry. The S/T switch derives nothing (its
-    //     anchored start's re-snap can move a centred rest one column; below,
-    //     CLEARED). The W/P column switch moves no camera and is no arrival;
+    //     anchored start is the playhead's prior place carried across the
+    //     map, not a centring; below, CLEARED). The W/P column switch moves no camera and is no arrival;
     //     it leaves the bit as it stands.
     //     WHY SO FEW (architect 2026-09-24): an automatic arm on arrival at
     //     the centre would freeze the viewport under a run of nudges that
@@ -4863,22 +4875,23 @@ struct AppState {
     // waveform's centre column; that frame is SEATED AT THE FIRST PRESS OF A
     // RUN and REUSED while the live camera still rests exactly where the
     // step's applier left it and the waveform area keeps its width,
-    // re-seated otherwise. WHY: every landing snaps the
-    // start to its level's frame-0 lattice (resting_viewport_start; the step
-    // is one, AppState::viewport_lattice_origin), so a press lands
-    // its pivot within half a column of the centre; re-read from that rest at
-    // each press, every earlier press's half column rode along and was
-    // magnified by each deeper level — seven presses in from FIT left the
-    // frame that stood at the centre tens of px off it, and IN then OUT was
-    // no round trip. A run of presses is one gesture, as the pinch and the
+    // re-seated otherwise. WHY: a press rests at the start that puts the
+    // pivot at the centre (resting_viewport_start under Exact; the step is a
+    // landing, AppState::viewport_lattice_origin), a whole frame, so it
+    // lands its pivot to one frame of the centre; re-read from that rest at
+    // each press, every earlier press's rounding would ride along, and IN
+    // then OUT would not be held to the very start it left. Held, every press
+    // of the run places the one frame. A run of presses is one gesture, as
+    // the pinch and the
     // Ctrl+drag hold one song frame for theirs (TouchNavZoomState,
     // ScrollDragState's anchor), its lift any other camera move. `frame` is
     // the pivot song frame (start + centre column × the painted grid's
     // samples per pixel, fractional by nature); `left` the five camera fields
     // AS THE APPLIER LEFT THEM, post-clamp — the step's OWN copy, compared
     // against the live viewport_start_sample, zoom_level, active_tab_view,
-    // active_audio_view and viewport_lattice_origin (0 after every press, the
-    // step being a landing, architect 2026-10-31);
+    // active_audio_view and viewport_lattice_origin (the origin the press's
+    // own start derived, the step being an exact landing, architect
+    // 2026-11-15);
     // camera_posture_identity above stays the chokepoint's
     // alone. Any other camera writer between presses (a pan, Center, FIT, a
     // tab switch, an S/T flip, a pinch) moves those fields and so ends the
@@ -12725,32 +12738,36 @@ void remap_marker_indices_after_reorder(AppState& app,
 // app_state.cpp so no TU copies its own clock reader.
 int64_t monotonic_ms();
 
-// THE CHOKEPOINT'S THREE LATTICE RULES (architect 2026-10-31) — who sets the
+// THE CHOKEPOINT'S TWO LATTICE RULES (architect 2026-10-31; two since the
+// no-grid arc, architect 2026-11-15: "THE VIEW LANDS FRACTIONALLY — YES ...
+// I'm no longer concerned with the determinism or precision") — who sets the
 // camera's lattice origin at a write; the rules, their writers and the
 // measurement are at AppState::viewport_lattice_origin, the field's owner:
-//   * Land  — origin 0, the frame-0 lattice: every landing (the default, so
-//     every writer that is not the touch-nav gesture lands by passing the
-//     plain call);
-//   * Keep  — the current origin: the gesture's pan frames and the
-//     re-validations that write no start;
 //   * Exact — the origin derived from the requested start, which IS the rest:
-//     the gesture's zoom frames.
-// Under all three a rest outside the walls rests at that wall at origin 0.
-enum class ViewportLattice { Land, Keep, Exact };
+//     EVERY WRITER THAT ASKS FOR A START — every landing and the gesture's
+//     zoom frames alike. The start its arithmetic asks for is the start the
+//     camera rests at.
+//   * Keep  — the current origin: the pan's frames, FOLLOW's scroll and the
+//     re-validations that write no start.
+// Under both a rest outside the walls rests at that wall at origin 0. THE
+// RULE IS NAMED AT EVERY CALL — the chokepoint carries no default, so no
+// writer chooses one by saying nothing.
+enum class ViewportLattice { Keep, Exact };
 // THE ONE CAMERA CHOKEPOINT: the level clamp, then the lattice snap and the
 // two walls under `rule` (resting_viewport_start below), then the camera
 // compare (the identity's five fields, AppState::camera_posture_identity),
-// one body for all three rules. Body in main.cpp.
+// one body for both rules. Body in main.cpp.
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio,
-                             ViewportLattice rule = ViewportLattice::Land);
+                             ViewportLattice rule);
 // THE REST THE CHOKEPOINT ABOVE WOULD SETTLE `start` AT under `rule`, at the
 // live zoom — the start and its lattice's origin as a pure function, the
 // arithmetic's one copy (clamp_viewport_start's body calls it after its
-// level clamp; its other caller is zoom_to_start_would_move below, which asks
-// it ahead under Land at an unchanged level). Keep reads the live
+// level clamp; its other callers are zoom_to_start_would_move below, which
+// asks it ahead under Exact — the applier's own rule — at an unchanged
+// level, and hold_derived_on_arrival, which asks it the rest of a
+// centring). Keep reads the live
 // AppState::viewport_lattice_origin. Its snap half is
-// nearest_viewport_grid_point (warp_frame_map_view.h), which
-// hold_derived_on_arrival (below) reads apart from the walls. Body in
+// nearest_viewport_grid_point (warp_frame_map_view.h). Body in
 // main.cpp beside the chokepoint.
 struct ViewportRest {
     int64_t start          = 0;
@@ -12764,10 +12781,13 @@ ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
 // whose resting (level, start) is the live viewport's writes nothing,
 // repaints nothing and leaves no state behind. The level is clamp_zoom_level's
 // (the chokepoint's own clamp) and counts as unchanged within 1e-9; at an
-// unchanged level the rest is resting_viewport_start's under Land at the live
-// zoom, compared with the live start AND the live lattice origin — the
-// applier is a landing, so a framing at the very start a gesture's rest
-// holds on another lattice still moves the picture (architect 2026-10-31). No
+// unchanged level the rest is resting_viewport_start's under Exact — the
+// rule the applier lands by (architect 2026-11-15, the no-grid arc) — at
+// the live zoom, compared with the live start AND the live lattice origin:
+// the request's rest is the start it asks for at the origin that start
+// derives, so a framing whose rest is the live camera writes nothing and the
+// Zoom to Fit key greys truthfully there, while one at the very start a pan
+// holds on another lattice still moves the picture. No
 // piece (a zero frame count) answers false, the applier's own head return.
 // TWO READERS: the applier (viewport.cpp, its body beside it) and
 // span_framing_would_act (input_handler.cpp), the Zoom to Fit key's frame
@@ -13107,7 +13127,7 @@ OverviewCommandTarget overview_command_target(const AppState& a,
 // start (resting_viewport_start, main.cpp), source_frame_off_right_edge
 // (warp_frame_map_view.h), which asks where a frame paints at the wall, and
 // hold_derived_on_arrival (viewport.cpp), which asks whether a centring's
-// snapped start lies past it (a clamped centring never arms). It is the
+// start lies past it (a clamped centring never arms). It is the
 // FRAME-0 lattice's wall under every lattice rule (architect 2026-10-31,
 // AppState::viewport_lattice_origin).
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio);
@@ -13869,13 +13889,14 @@ inline NudgeCamera nudge_camera(const AppState& a) {
 // night), the rule's one owner: does the tab just entered rest EXACTLY where
 // an explicit centring of its playhead would have left it — the painted step
 // q EXACTLY the working column (the landing owner's own at-working test,
-// Viewport::land_subject), the camera on THE FRAME-0 LATTICE (lattice origin
-// 0, a centring being a landing — architect 2026-10-31,
-// AppState::viewport_lattice_origin), and the viewport start EQUAL to C, the
-// frame-0 grid point nearest the playhead's centring
-// (nearest_viewport_grid_point), so the
-// playhead paints in precisely the column `c` would put it in. NEVER AT A
-// WALL: C is snapped but NOT clamped, and a C outside
+// Viewport::land_subject), and the camera THE REST OF THE PLAYHEAD'S
+// CENTRING: the viewport start EQUAL to C = cursor − visible / 2, the start
+// `c` asks for, AND the lattice origin the one that start derives
+// (resting_viewport_start under ViewportLattice::Exact, the rule `c` lands
+// by — architect 2026-11-15, the no-grid arc; any origin counts, provided
+// it is the centring's), so the
+// playhead paints in precisely the place `c` would put it in. NEVER AT A
+// WALL: C is NOT clamped, and a C outside
 // [0, max_viewport_start_grid] — a clamped centring, the playhead within
 // half a window of either end — answers false whatever the viewport, since
 // at a wall every rest with the playhead in that half-window would look
@@ -19903,7 +19924,9 @@ struct ItemViewportBasis {
     // mirror's (AppState::displayed_lattice_origin), cold the live camera's
     // (AppState::viewport_lattice_origin) — the grid landings' third term
     // (displayed_grid_position_at_column), so a commit lands on the frame the
-    // painted column shows. 0 at every landing.
+    // painted column shows. Whatever the camera rests on: the origin its
+    // start derived at a landing or a zoom frame (0 at a wall and at a start
+    // a whole number of steps from frame 0), kept under a pan.
     int64_t lattice_origin = 0;
 };
 ItemViewportBasis item_viewport_basis(const AppState& app,

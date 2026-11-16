@@ -2536,7 +2536,7 @@ void GuiInputHandler::run_overview_command() {
     // stamp equal to the live cursor writes nothing there. Then the
     // whole-song state is cleared and the level and viewport start go down
     // together through Viewport::apply_zoom_to_start, whose
-    // clamp_viewport_start owns the lattice snap and the walls (the discrete
+    // clamp_viewport_start rests the start as asked and owns the walls (the discrete
     // move's damage, predictor resync and synchronous rebuild are that
     // applier's). While zoomed out the whole song is visible, so the movement
     // owner's keep-visible edge-align never scrolls ahead of the applier. If
@@ -3253,11 +3253,12 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // THE FLIP PUTS THE HOLD OUT HERE AND DERIVES NOTHING (architect
     // 2026-09-29): an S/T flip is always a changed camera at the chokepoint,
     // and unlike the tab switch it does not re-derive the bit on arrival —
-    // the anchored start's re-snap can move a centred rest by one column, so
-    // the flip cannot meet the exact test (hold_derived_on_arrival,
-    // viewport.cpp). Bare 1/2/3/4 across S and T therefore drop the hold; the
+    // by ruling ("then just remove that"; hold_derived_on_arrival,
+    // viewport.cpp): the anchored start is the playhead's prior place carried
+    // across the map, not a centring. Bare 1/2/3/4 across S and T therefore
+    // drop the hold; the
     // W/P column switch moves no camera and keeps it.
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
     // A SURVIVING SELECTION RE-EXPRESSES THROUGH ITS FOCUS, NOT THROUGH THE
     // CURSOR. The generic translation above is a double round trip — the cursor
     // is already an integer frame in the OLD domain, and mapping it plus

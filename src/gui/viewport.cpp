@@ -338,46 +338,35 @@ void Viewport::seat_playhead_on_drop(int64_t new_sample) {
                        LandingKind::Walk);
     if (!held || app.camera_hold) return;
     if (painted.spp > 0.0 && app.playhead_cursor_sample != cursor_before)
-        hold_subject_column_after_nudge(displayed_column_at(
+        hold_subject_column_after_nudge(displayed_x_at(
             static_cast<double>(cursor_before), painted.vp_start, painted.spp,
             painted.lattice_origin));
     app.camera_hold = true;
 }
 
 namespace {
-// THE KEEP-VISIBLE EDGE-ALIGN'S PLACEMENT, AS PAINTED: the viewport grid start
-// nearest the current one at which `subject` paints in the edge column on the
-// side it left by — past the right edge the smallest grid start that paints
-// it at or left of column w − 1, past the left edge the largest that paints it
-// at or right of column 0: the least page that shows it. Asked of the grid
-// itself (viewport_grid_point, displayed_column_at) rather than written as a
-// sample offset for the chokepoint to snap, because that snap's half-column
-// rounding could rest the subject back on grid point w (or −1), a page that
-// shows nothing. The walk starts one grid step beyond the answer and moves the
-// column by one per step (give or take the grid's sub-frame rounding), so it
-// takes at most three steps. Unclamped: clamp_viewport_start owns the song's
-// two ends, and at the right wall the wall wins — a frame in the song's last
-// half-column paints at grid point w at every viewport there (the off-edge
-// rule, source_frame_off_right_edge), so the edge-align settles on the wall.
+// THE KEEP-VISIBLE EDGE-ALIGN'S PLACEMENT: THE EDGE COLUMN ON THE SUBJECT'S
+// OWN FRAME (architect 2026-11-15, the no-grid arc: every landing exact, the
+// start in frames with no lattice page) — the start at which `subject` stands
+// on the left edge of the edge column on the side it left by: past the LEFT
+// edge the view's first column, x = 0, the start the subject's own frame;
+// past the RIGHT edge the view's last column, x = w − 1, the start
+// nearbyint(subject − (w − 1)·q). The chokepoint rests that start as asked
+// (ViewportLattice::Exact), so the subject paints within the whole-frame
+// rounding of that place, 0.5 / q px, and is on screen as painted
+// (displayed_frame_on_screen: its column is the edge column). BOTH SIDES ARE
+// "THE EDGE COLUMN", and the px each shows follows the mark's model, not this
+// placement: a mark is the boundary at its column's left edge, so at the left
+// its line stands half inside the strip and at the right whole. Unclamped:
+// clamp_viewport_start owns the song's two ends, and at the right wall the
+// wall wins — a frame in the song's last half-column paints at grid point w
+// at every viewport there (the off-edge rule, source_frame_off_right_edge),
+// so the edge-align settles on the wall.
 int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
                                     bool past_right) {
-    const double  s = static_cast<double>(subject);
-    const int64_t k_subject = static_cast<int64_t>(std::nearbyint(s / q));
-    const auto column_at = [&](int64_t k) {
-        // A landing's page: the frame-0 lattice, origin 0.
-        return displayed_column_at(
-            s, static_cast<double>(viewport_grid_point(k, q)), q,
-            /*origin=*/0);
-    };
-    int64_t k = 0;
-    if (past_right) {
-        k = k_subject - w - 1;
-        while (column_at(k) >= w) ++k;
-    } else {
-        k = k_subject + 2;
-        while (column_at(k) < 0) --k;
-    }
-    return viewport_grid_point(k, q);
+    if (!past_right) return subject;
+    return static_cast<int64_t>(std::nearbyint(
+        static_cast<double>(subject) - static_cast<double>(w - 1) * q));
 }
 }  // namespace
 
@@ -446,8 +435,9 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
 
     // THE EDGE-ALIGN IS A LANDING, THE STAY A RE-VALIDATION (architect
     // 2026-10-31; the rules at AppState::viewport_lattice_origin): a page
-    // rests on the frame-0 lattice, while a cursor that stays on screen moves
-    // no camera, so the clamp keeps a gesture's lattice under it.
+    // rests at the start it asks for (Exact), while a cursor that stays on
+    // screen moves no camera, so the clamp keeps the standing lattice under
+    // it.
     ViewportLattice lattice = ViewportLattice::Keep;
     if (q > 0.0 &&
         !displayed_frame_on_screen(static_cast<double>(new_sample),
@@ -457,7 +447,7 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
         // (a frame in the half-column left of the start paints at column 0).
         app.viewport_start_sample = edge_aligned_viewport_start(
             new_sample, q, area.w, new_sample >= old_vp);
-        lattice = ViewportLattice::Land;
+        lattice = ViewportLattice::Exact;
     }
     // THE KEEP-VISIBLE EDGE-ALIGN SUSPENDS NO FOLLOW (architect 2026-09-23):
     // a camera move onto the playhead is a move onto follow's own subject,
@@ -655,16 +645,16 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // unchanged), AND the landed sample is independent of the viewport's own
     // index m AT A FIXED q AND ORIGIN: it is the
     // same lattice the click placement and the marker commits land on — the
-    // painted one, the camera's lattice origin its third term (0 at every
-    // landing; a gesture's own under a pinched rest, architect 2026-10-31,
+    // painted one, the camera's lattice origin its third term (the rest's
+    // own, architect 2026-10-31 and 2026-11-15, the no-grid arc: every
+    // landing and every zoom frame rests on the origin its start derives,
     // AppState::viewport_lattice_origin) — so a step means the same sample
-    // whatever pan preceded it on that lattice, and the same sample after any
-    // landing (origin 0). NOT across a change of origin: a step from a
-    // pinched rest lands on that gesture's lattice, which a later landing
-    // (a tab switch, a walk) replaces with the frame-0 one, so the same
-    // marker's step can land a different frame there — each the correct
-    // frame of its own painted lattice (Astra's determinism audit,
-    // 2026-11-06; the approved gesture-origin design). (Finer adjustment
+    // whatever pan preceded it on that lattice. NOT across a change of
+    // origin: a step lands on the lattice the camera rests on, which a
+    // later landing (a tab switch, a walk, `c`) replaces with its own, so
+    // the same marker's step can land a different frame there — each the
+    // correct frame of its own painted lattice (Astra's determinism audit,
+    // 2026-11-06; the approved origin design). (Finer adjustment
     // is a deeper zoom's job.) The spp is the PAINTER-quantized q rather than
     // the logical one for the same reason the click placement's item basis
     // carries that quantization: it is the grid actually drawn (at a whole
@@ -721,7 +711,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
         : app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     app.viewport_start_sample = target - visible / 2;
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
 
     invalidate_waveform_area();
     // A CHECK, NOT A REPAINT, OF THE CLOCK: a zoom moves the viewport, never
@@ -778,15 +768,16 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     //
     // THE PLACEMENT'S LATTICE IS THE CALLER'S RULE (architect 2026-10-31; the
     // rules at AppState::viewport_lattice_origin). Under EXACT (the gesture's
-    // zoom frames) the requested start is the rest: its lattice origin is
+    // zoom frames and the zoom step) the requested start is the rest: its
+    // lattice origin is
     // derived from it, so the pivot's frame sits at its held column TO ONE
-    // FRAME (the rounding of (k0 + c)·q), not within the half column the
-    // frame-0 lattice's snap left — a fresh residue every zoom frame, the
-    // bubbling peaks measured at the pivot on the tablet the same day. Under
-    // KEEP (the gesture's pan frames) the start snaps onto the current
-    // origin's lattice, so a pan is a pure index shift there. Under LAND (the
-    // zoom step) it snaps onto the frame-0 lattice, a landing. A rest the
-    // walls clamp rests at the wall at origin 0 under all three.
+    // FRAME (the rounding of (k0 + c)·q), not within the half column a
+    // frame-0 lattice's snap would leave — a fresh residue every zoom frame,
+    // the bubbling peaks measured at the pivot on the tablet the same day.
+    // Under KEEP (the gesture's pan frames, FOLLOW's scroll) the start snaps
+    // onto the current origin's lattice, so a pan is a pure index shift
+    // there. A rest the walls clamp rests at the wall at origin 0 under
+    // both.
     const double spp = painter_samples_per_pixel(app, audio, waveform_area(app));
     app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
         anchor_sample - anchor_x * spp));
@@ -841,9 +832,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 }
 
 // THE ZOOM STEP ZOOMS ABOUT THE VIEWPORT'S CENTRE (architect 2026-09-22,
-// kept when the pair returned 2026-10-27), A LANDING ON THE FRAME-0 LATTICE
-// (ViewportLattice::Land, architect 2026-10-31 — a discrete landing, its
-// held pivot below curing its own accumulation): the frame painted at the
+// kept when the pair returned 2026-10-27), AN EXACT LANDING
+// (ViewportLattice::Exact, architect 2026-11-15, the no-grid arc — the start
+// that puts the pivot at the center is the rest, its held pivot below curing
+// the run's accumulation): the frame painted at the
 // waveform's centre column before the run's first press (below) is placed at
 // that same column after each press of the run, through the strip-drag
 // family's applier — the pinch's and the
@@ -874,18 +866,17 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 // reads the centre frame off the rest, and each following press reuses that
 // same frame while the live camera (start, level, tab, audio view) still
 // rests exactly where the previous press left it and the waveform area is
-// still the width it had. So each press lands the held frame within half a
-// column of the centre column — the grid snap's own error, never the sum of
-// the run's — and IN then OUT returns to the exact prior rest wherever
+// still the width it had. So each press lands the held frame at the centre
+// column to one frame — the start's own whole-frame rounding, never the sum
+// of the run's — and IN then OUT returns to the prior start wherever
 // neither press met a wall or a level bound (a whole-level step off the
-// bounds is exact in the level's double, and the prior start is on its
-// level's grid already). A pan, Center, FIT, a tab switch, an S/T flip or
+// bounds is exact in the level's double; the origin is that start's own). A pan, Center, FIT, a tab switch, an S/T flip or
 // any other camera writer between presses moves the compared fields and
 // ends the run; the next press seats afresh. The test is posture identity, so
 // a detour that returns the five fields to exactly the step's own copy — a
 // Ctrl+Tab to the other tab and back, which restores that tab's saved start
 // and level, or FIT followed by its recall — is indistinguishable from the
-// run and continues it: the held frame still sits within half a column of
+// run and continues it: the held frame still sits within a frame of
 // the centre column, the rest the detour returned to, so the reuse costs
 // nothing and keeps IN then OUT reversible across the detour. A window resize
 // ends the run too, since the centre column itself moved: the next press
@@ -909,7 +900,7 @@ void Viewport::zoom_step(double levels) {
             : static_cast<double>(app.viewport_start_sample) +
                   centre_col * spp;
     apply_strip_drag_zoom(zoom_step_level(app, audio, levels), pivot_frame,
-                          centre_col, /*final=*/true, ViewportLattice::Land);
+                          centre_col, /*final=*/true, ViewportLattice::Exact);
     app.zoom_step_pivot = {true, pivot_frame,
                            {app.viewport_start_sample, app.zoom_level,
                             app.active_tab_view, app.active_audio_view,
@@ -924,8 +915,12 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
     if (audio.total_frames() <= 0) return false;
     const double level = clamp_zoom_level(a, audio, new_zoom_level);
     if (std::fabs(level - a.zoom_level) >= 1e-9) return true;
+    // The rest under THE APPLIER'S OWN RULE, Exact (architect 2026-11-15,
+    // the no-grid arc): the start as asked and the origin it derives, or the
+    // wall it passed at origin 0 — so a request whose rest is the live camera,
+    // start AND origin, moves nothing.
     const ViewportRest rest =
-        resting_viewport_start(a, audio, new_start, ViewportLattice::Land);
+        resting_viewport_start(a, audio, new_start, ViewportLattice::Exact);
     return rest.start != a.viewport_start_sample ||
            rest.lattice_origin != a.viewport_lattice_origin;
 }
@@ -958,7 +953,7 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // playhead recenter), and funnel through the two clamp chokepoints.
     app.zoom_level = new_zoom_level;
     app.viewport_start_sample = new_start;
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
 
     // Past the head's return either the level or the start really moved, so
     // this is a zoom, a pan, or both at once — the trim bar's span-framing
@@ -983,7 +978,11 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
 
 // THE TWO LANDING PLACEMENTS, spelled once each for the cameras that share
 // them. The start each returns is unclamped: the caller writes it and passes
-// clamp_viewport_start, which owns the song's two ends and the grid.
+// clamp_viewport_start under ViewportLattice::Exact, which owns the song's
+// two ends and RESTS THE START AS ASKED (architect 2026-11-15, the no-grid
+// arc: no snap to a frame-0 lattice, the origin derived from the start) — so
+// a centered target stands at x = w / 2 to the whole-frame rounding of
+// visible / 2, exactly there at the working zoom's whole q and even w.
 //   * centred_viewport_start — `target` at the window's centre: the centring
 //     body (center_viewport_on_playhead) and the landing owner's centre
 //     answer (land_subject);
@@ -1005,20 +1004,22 @@ int64_t paged_in_viewport_start(int64_t target, int64_t visible) {
 // nothing else that would put it out is done, and each tab keeps its own; the
 // shape is DERIVED, never stored: on arrival in a tab the bit is armed iff the
 // tab rests EXACTLY where `c` would have left it — the working zoom as
-// painted, and the viewport ON the grid point C of the playhead's centring,
-// so the playhead paints in precisely the column `c` would put it in (*"the
+// painted, and the camera THE REST OF THE PLAYHEAD'S CENTRING, so the
+// playhead paints in precisely the place `c` would put it in (*"the
 // hold holds only if it is precisely the same column as the centre"*). A
-// grab-pan that rests even one column off C arrives dark.
+// grab-pan that rests even one column off it arrives dark.
 //
-// ON THE FRAME-0 LATTICE (architect 2026-10-31): a centring is a landing, so
-// the tab must rest at lattice origin 0 (AppState::viewport_lattice_origin)
-// besides the compare below; a tab left at a pinch's rest arrives dark.
+// THE REST IS THE CENTRING'S OWN (architect 2026-11-15, the no-grid arc:
+// every landing exact): C = cursor − visible / 2, the start `c` asks for, at
+// the lattice origin that start derives (resting_viewport_start under
+// ViewportLattice::Exact, the rule `c` lands by) — the live start AND the
+// live origin must both equal it. No frame-0 lattice is asked: any origin
+// counts, provided it is the centring's.
 //
 // NEVER AT A WALL (architect 2026-09-29, the same night): C is the centring's
-// grid snap WITHOUT the wall clamp (nearest_viewport_grid_point, the snap half
-// of the chokepoint's resting_viewport_start), and it must lie within
+// start WITHOUT the wall clamp, and it must lie within
 // [0, max_viewport_start_grid] as well as equal the live start. A centring
-// whose snap falls outside the walls — the playhead within half a window of
+// whose start falls outside the walls — the playhead within half a window of
 // either end — is a CLAMPED one, and answers false whatever the viewport: at a
 // wall the clamp makes every rest with the playhead inside that half-window
 // look like a centring, so a view parked near either end by any road would
@@ -1027,13 +1028,14 @@ int64_t paged_in_viewport_start(int64_t target, int64_t visible) {
 // stays, but a switch away and back arrives dark there; `c` is the repair.
 //
 // THE ONE-COLUMN TOLERANCE WAS STRUCK THE SAME NIGHT: it had been tried so a
-// centred rest would survive the S/T flip, whose anchored start the chokepoint
-// re-snaps (a centred rest can move one grid step); the S/T switch's
+// centred rest would survive the S/T flip, whose anchored start need not be
+// the centring's; the S/T switch's
 // derivation was removed instead (*"then just remove that"*), the flip putting
 // the bit out at the chokepoint as it always had. A tab parked centred while
-// the other tab flips has its band shifted by its playhead's delta and
-// re-snapped when it goes live, which can leave it one column off C: it
-// arrives dark, the correct answer for a band that is no longer centred.
+// the other tab flips has its band shifted by its playhead's delta, which
+// keeps the centring's start to the frame only where the playhead moved by
+// the same whole delta: where it does not, it arrives dark, the correct
+// answer for a band that is no longer centred.
 bool hold_derived_on_arrival(const AppState& app, const GuiAudio& audio) {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0 || audio.sample_rate() <= 0) return false;
@@ -1044,15 +1046,17 @@ bool hold_derived_on_arrival(const AppState& app, const GuiAudio& audio) {
     // The working zoom AS PAINTED, the landing owner's exact equality
     // (land_subject carries why an exact compare is legitimate).
     if (q != static_cast<double>(audio.working_column())) return false;
-    // A centring is a landing: the frame-0 lattice.
-    if (app.viewport_lattice_origin != 0) return false;
-    // The centring's grid point, snapped and NOT clamped: outside the walls
-    // it is a clamped centring and never arms.
-    const int64_t centred = nearest_viewport_grid_point(
-        centred_viewport_start(app.playhead_cursor_sample, visible), q, 0);
+    // The centring's start, NOT clamped: outside the walls it is a clamped
+    // centring and never arms.
+    const int64_t centred =
+        centred_viewport_start(app.playhead_cursor_sample, visible);
     if (centred < 0 || centred > max_viewport_start_grid(app, audio))
         return false;
-    return app.viewport_start_sample == centred;
+    // The centring's rest, start and origin, under the rule `c` lands by.
+    const ViewportRest rest =
+        resting_viewport_start(app, audio, centred, ViewportLattice::Exact);
+    return app.viewport_start_sample == rest.start &&
+           app.viewport_lattice_origin == rest.lattice_origin;
 }
 
 void Viewport::center_viewport_on_playhead() {
@@ -1067,7 +1071,7 @@ void Viewport::center_viewport_on_playhead() {
     const int64_t old_vp = app.viewport_start_sample;
     const int64_t old_origin = app.viewport_lattice_origin;
     app.viewport_start_sample = centred_viewport_start(target, visible);
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
     if (app.viewport_start_sample != old_vp ||
         app.viewport_lattice_origin != old_origin)
         finish_discrete_viewport_move();
@@ -1116,36 +1120,37 @@ void Viewport::invalidate_all() {
 // nudging" — and 2026-09-23 for what chooses it). A Left/Right step that MOVED
 // SOMETHING calls this on its changed path, AT EVERY ZOOM, when the press's
 // camera is NudgeCamera::HoldColumn, and the viewport is placed so the subject
-// — the resting cursor the step has just landed — paints in THE COLUMN IT
-// PAINTED IN BEFORE THE STEP, clamped into the waveform's first and last
-// columns. THE CAMERA IS THE POSTURE'S (nudge_camera, app_state.h, reading
+// — the resting cursor the step has just landed — paints at THE EXACT PLACE
+// IT HELD BEFORE THE STEP (architect 2026-11-15, the no-grid arc: every
+// landing exact — its x, displayed_x_at, not the column that x rounds to),
+// held between the waveform's first and last columns' left edges. THE CAMERA IS THE POSTURE'S (nudge_camera, app_state.h, reading
 // AppState::camera_hold, which an explicit centring arms): with it dark the
 // step never calls this and follows the edge through the movement owner's own
 // keep-visible edge-align. (It was the Ctrl modifier's choice from 2026-09-22
 // to 2026-09-23, Ctrl+Left / Ctrl+Right and two buttons of their own; those
 // chords bind nothing now.) So an onscreen subject keeps its exact screen
-// column and the waveform slides under it by the nudge's own delta, and a
+// place and the waveform slides under it by the nudge's own delta, and a
 // subject that was offscreen lands on the edge column on its side and stays
 // there on later nudges, the window walking with it. NOTHING CENTRES: `c` is
-// the centring act, this only keeps the column the centring left.
+// the centring act, this only keeps the place the centring left.
 //
 // THE PRIOR PLACE IS A PARAMETER because the landing has already run: the
 // movement owner's keep-visible edge-align (reseat_playhead_to) may have
-// scrolled the viewport before this body is reached, so the column is taken
+// scrolled the viewport before this body is reached, so the place is taken
 // against the viewport the subject painted on before the nudge. It arrives as
-// THE PAINTED COLUMN, each caller deriving it on the basis its subject's
+// THE PAINTED EXACT x, each caller deriving it on the basis its subject's
 // pixels were painted with (architect 2026-09-24, strictly as painted), and
-// reduces to a SAMPLE OFFSET on the live grid: the column clamped into
+// reduces to a SAMPLE OFFSET at the live step: the x clamped into
 // [0, w − 1], times q the painter-quantized spp (painter_samples_per_pixel),
-// that offset clamped into [0, floor((w − 1)·q)] — the painted column is
-// the nearest index to offset / q (displayed_column_at, the playhead's and
-// the stems' placement: on the landing's frame-0 lattice at the working
-// zoom's whole q its K − m is that quotient's, and a rounded col·q is never
-// on a tie), so offset 0 paints column 0 and the
-// upper bound paints column w − 1, never one past it. The new start is new subject − offset through
-// clamp_viewport_start, whose grid snap absorbs the sub-sample residue of a
-// column-anchored step, and whose song-end clamp WINS at the song's two ends:
-// there the column cannot be held and the subject walks toward the wall
+// to the whole frame, that offset clamped into [0, floor((w − 1)·q)] — so
+// offset 0 paints the subject at the first column's left edge and the
+// upper bound paints column w − 1, never one past it. The new start is new
+// subject − offset through clamp_viewport_start under ViewportLattice::Exact,
+// which rests it as asked, so the subject paints at the held x to that one
+// rounding (none at the working zoom after the first held step: the offset
+// is then the whole number of frames the subject stood from the start), and
+// whose song-end clamp WINS at the song's two ends:
+// there the place cannot be held and the subject walks toward the wall
 // instead — accepted. A move that changes nothing (a zero delta) repaints
 // nothing. THE WRITE IS A LIVE NAVIGATION WRITE either way: the viewport it
 // places is the one the next frame paints.
@@ -1154,24 +1159,24 @@ void Viewport::invalidate_all() {
 // subject. FOUR CALLERS, re-derived by grep 2026-10-13 (three on 2026-09-25;
 // the drop road joined 2026-10-12), each on its hold arm:
 //   * THE MARKER NUDGE'S COMMIT TAIL (finish_position_nudge,
-//     position_nudge.cpp) passes the PAINTED COLUMN — the focused marker's
-//     pre-write frame through painted_column_of_source_frame_on_basis over
+//     position_nudge.cpp) passes the PAINTED EXACT x — the focused marker's
+//     pre-write frame through painted_x_of_source_frame_on_basis over
 //     the displayed map and item_viewport_basis, the SAME painted basis its
 //     step anchored on (stepped_anchor_frame), so the column held is the one
 //     the marker visibly occupied even while a viewport job (a resize
 //     re-clamp, a target-map publish) has moved the live viewport ahead of
 //     the pixels (architect 2026-09-24, strictly as painted).
 //   * THE WAVEFORM-LANE PLAYHEAD STEP (GuiInputHandler::
-//     run_waveform_lane_playhead_step) passes the cursor's column before the
-//     step on the PLATE basis the cursor pass paints it with
+//     run_waveform_lane_playhead_step) passes the cursor's exact x before
+//     the step on the PLATE basis the cursor pass paints it with
 //     (GuiPaintHandler::plate_viewport_basis; cold, the item basis, then the
 //     live viewport by its own contract), so a viewport job in flight
-//     cannot move the column held ahead of the pixels (architect 2026-09-24,
+//     cannot move the place held ahead of the pixels (architect 2026-09-24,
 //     strictly as painted).
 //   * THE UNDO / REDO SINGLETON RESTORE UNDER THE HOLD
 //     (Undo::restore_history_entry's visual tail, undo.cpp; architect
 //     2026-09-25), a nudge for the camera's purposes, passes the cursor's
-//     PRE-RESTORE frame through displayed_column_at on the ITEM basis
+//     PRE-RESTORE frame through displayed_x_at on the ITEM basis
 //     (item_viewport_basis, the marker nudge's road — that body does not
 //     reach the paint handler's plate basis), both read at the restore's head
 //     before any of its writes; it calls this only when the restore moved
@@ -1181,7 +1186,7 @@ void Viewport::invalidate_all() {
 //     cursor (the P column's lead-in drop) and the walk the drop lands by did
 //     not center it (off the working zoom, a file too short for it; at the
 //     working zoom the walk's centering supersedes the held column, architect
-//     2026-10-29), passing the column the cursor painted in before the drop
+//     2026-10-29), passing the exact x the cursor painted at before the drop
 //     on the item basis, read before the seat, and then re-arms the bit like
 //     the restore.
 // A held arrow's repeats and a held arrow button's fires reach the first two
@@ -1201,24 +1206,25 @@ void Viewport::invalidate_all() {
 // the whole-frame working column and the held offset is a whole number of
 // frames — or, on a file too short for it, at `c`'s clamped level, the one
 // level the drop's seat reaches this body at (architect 2026-10-29).
-void Viewport::hold_subject_column_after_nudge(int prior_column) {
+void Viewport::hold_subject_column_after_nudge(double prior_x) {
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const double q = painter_samples_per_pixel(app, audio, area);
     if (q <= 0.0 || area.w <= 0) return;
-    // The painted column's own offset on the live grid: the nearest index to
-    // offset / q recovers the column (displayed_column_at), and the clamp
-    // keeps the last column's offset inside the window.
+    // The held place's own offset at the live step, x·q to the whole frame —
+    // the start below is rested as asked (Exact), so the subject paints at x
+    // to that rounding, 0.5 / q px — and the clamp keeps the last column's
+    // offset inside the window.
     const int64_t last_offset = static_cast<int64_t>(
         std::floor(static_cast<double>(area.w - 1) * q));
     const int64_t offset = std::clamp<int64_t>(
         static_cast<int64_t>(std::nearbyint(
-            static_cast<double>(std::clamp(prior_column, 0, area.w - 1)) * q)),
+            std::clamp(prior_x, 0.0, static_cast<double>(area.w - 1)) * q)),
         0, last_offset);
     const int64_t old_vp = app.viewport_start_sample;
     const int64_t old_origin = app.viewport_lattice_origin;
     app.viewport_start_sample = app.playhead_cursor_sample - offset;
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
     if (app.viewport_start_sample != old_vp ||
         app.viewport_lattice_origin != old_origin)
         finish_discrete_viewport_move();
@@ -1274,7 +1280,7 @@ void Viewport::follow_scroll_if_needed() {
         const int64_t old_origin = app.viewport_lattice_origin;
         app.viewport_start_sample = paged_in_viewport_start(target, visible);
         const bool suspended_before = app.follow_suspended;
-        clamp_viewport_start(app, audio);
+        clamp_viewport_start(app, audio, ViewportLattice::Exact);
         app.follow_suspended = suspended_before;
         // Viewport actually moved — THE PAGE TAKES THE DISCRETE MOVE'S TAIL,
         // and with it THE SYNCHRONOUS REBUILD (architect 2026-09-02), the same
@@ -1323,9 +1329,10 @@ void Viewport::follow_scroll_if_needed() {
 //       ViewportLattice::Keep, the test and the placement one arithmetic. The
 //       start snaps onto the camera's CURRENT lattice (a pan's rule,
 //       AppState::viewport_lattice_origin: a pure index shift), so the
-//       picture translates by whole device px, a following play from a landed
-//       view stays on the frame-0 lattice and the rest after its Stop is a
-//       landing's picture; the line, painted at its exact place as
+//       picture translates by whole device px, a following play keeps the
+//       origin the view stood on (after `c`, the centring's own) and the
+//       rest after its Stop is that lattice's picture; the line, painted at
+//       its exact place as
 //       everywhere, stands within half a px of the center plus the
 //       whole-frame rounding of the requested start (nearbyint, before the
 //       lattice snap), 0.5 / q px more at most, away from the walls. The walls clamp
@@ -1454,8 +1461,11 @@ void Viewport::follow_scanner() {
 // puts the hold out as at any page; a
 // no-move answer leaves the posture as it stands. Degenerate geometry (no
 // strip width, no sample rate, nothing visible) writes nothing and answers true. clamp_viewport_start
-// owns the song's two ends and the grid; the changed path takes the discrete
-// move's tail. AT THE RIGHT WALL a subject in the song's last half-column
+// owns the song's two ends and RESTS THE START AS ASKED (ViewportLattice::
+// Exact, architect 2026-11-15, the no-grid arc: the centred midpoint stands
+// at the window's exact middle and the paged-in subject exactly the edge
+// margin in, each to the start's whole frame); the changed path takes the
+// discrete move's tail. AT THE RIGHT WALL a subject in the song's last half-column
 // paints at grid point w at every viewport the clamp allows, so it never
 // counts as on screen there; its landing clamps onto the wall, and once the
 // camera rests there the start compares unchanged and nothing repaints.
@@ -1543,7 +1553,7 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     app.viewport_start_sample = centre
         ? centred_viewport_start(lo + (hi - lo) / 2, visible)
         : paged_in_viewport_start(lo, visible);
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
     if (kind == LandingKind::Walk && centre) app.camera_hold = true;
     if (app.viewport_start_sample != old_vp ||
         app.viewport_lattice_origin != old_origin)

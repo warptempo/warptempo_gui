@@ -322,10 +322,11 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 // device every level, whole or fractional (every rest a pinch or pen zoom
 // leaves), has one step; across devices the same level is the same RELATIVE
 // zoom and a different grid, the cross-device promise withdrawn. EVERY
-// LANDING rests on THE FRAME-0 LATTICE of that step, nearbyint(k·q); a
-// GESTURE'S rest lies on its own lattice, origin + nearbyint(k·q), the
-// origin held by the camera (architect 2026-10-31,
-// AppState::viewport_lattice_origin, which owns the three rules).
+// REST — a landing's and a gesture's alike — lies on ITS OWN LATTICE of that
+// step, origin + nearbyint(k·q), the origin derived from the start the act
+// asked for and held by the camera (architect 2026-10-31 and 2026-11-15,
+// the no-grid arc; AppState::viewport_lattice_origin, which owns the two
+// rules); the walls rest on THE FRAME-0 LATTICE, nearbyint(k·q).
 //
 // WHY 16 — the waveform width rule's own reason (waveform_area, main.cpp):
 // every waveform width is a multiple of 16, so w·q is a WHOLE number of
@@ -344,8 +345,8 @@ inline double painter_quantized_spp(double spp) {
 }
 
 // THE FRAME-0 LATTICE'S k-TH POINT at painter step q: nearbyint(k * q) — the
-// landings' rests (clamp_viewport_start's Land rule) and the walls
-// max_viewport_start_grid walks (main.cpp). A lattice of origin o is the
+// walls max_viewport_start_grid walks (main.cpp) and the term every
+// lattice's points are built from. A lattice of origin o is the
 // points o + viewport_grid_point(k, q) (AppState::viewport_lattice_origin).
 inline int64_t viewport_grid_point(int64_t k, double q) {
     return static_cast<int64_t>(std::nearbyint(static_cast<double>(k) * q));
@@ -355,10 +356,7 @@ inline int64_t viewport_grid_point(int64_t k, double q) {
 // `start` at painter step q (q > 0), origin + nearbyint(m·q) with
 // m = nearbyint((start − origin) / q), with no wall — the snap half of the
 // chokepoint's rest (resting_viewport_start, main.cpp, which clamps its
-// answer into the two walls). Its other readers: hold_derived_on_arrival
-// (viewport.cpp), which needs the snap and the walls as separate facts — a
-// centring whose snapped start falls outside the walls is a clamped one —
-// on the frame-0 lattice (a centring is a landing); and the touch-nav
+// answer into the two walls). Its other readers: the touch-nav
 // body's two wall tests (apply_touch_nav_update), on the live origin's.
 inline int64_t nearest_viewport_grid_point(int64_t start, double q,
                                            int64_t origin) {
@@ -431,19 +429,20 @@ inline double lattice_index_ties_right(double x) {
 // nearbyint is HERE, on (m+col)*q alone, so the answer IS the pixel
 // column's left edge on the displayed viewport's lattice — the column
 // coordinates the plate's bars are placed in (render.h's THE PLATE'S BARS),
-// and at a landing on a whole level the bar's own edge,
+// and on a whole level at origin 0 the bar's own edge,
 // render_waveform_columns' edge_at to the bit (the origin
 // is added after the rounding, as there: a tie rounded after adding an odd
 // origin would land a frame off the edge) — a commit lands on the frame the
 // finger's painted column shows. At origin 0 it is byte for byte the value
 // the callers' own nearbyint / llrint made of (m+col)*q before the origin
 // existed (both round the FRAME half to even; the placement's column tie is
-// its own, ties right, at displayed_column_at). At every LANDING the origin is 0
-// and this is the frame-0 lattice: viewport-phase-independent, a
-// landing meaning the same sample whatever the camera did on the way there.
-// Under a GESTURE'S rest (a pinch or a pen zoom) the grid follows the
-// picture, its origin the camera's (the architect's "the lattice is less
-// important than smooth operation"). That matters past display: both
+// its own, ties right, at displayed_column_at). THE GRID FOLLOWS THE
+// PICTURE AT EVERY REST (architect 2026-11-15, the no-grid arc: every
+// landing exact; a gesture's rest since 2026-10-31), its origin the
+// camera's (the architect's "the lattice is less
+// important than smooth operation"): a column means the frame painted at
+// its left edge on the lattice the camera rests on, the same sample for the
+// same viewport — start, origin and step. That matters past display: both
 // drop-at-playhead routes commit the playhead's sample into authored data, so
 // the playhead lattice is an authoring lattice too.
 //
@@ -552,7 +551,7 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // the two-epochs split at plate_viewport_basis / item_viewport_basis is the
 // caller's to name, at the call site, where the provenance comment belongs;
 // the live origin AppState::viewport_lattice_origin, the plate's
-// fp_lattice_origin, the item basis's lattice_origin, a landing's 0).
+// fp_lattice_origin, the item basis's lattice_origin, a wall's 0).
 //
 // THE UNROUNDED SIBLING IS A DIFFERENT CONCEPT AND STAYS SEPARATE: the strip
 // drag's fractional anchor_col wants the SUB-PIXEL position, not a column.
@@ -790,8 +789,8 @@ double painted_x_of_source_frame_on_basis(
 // displayed map, the live grid step q) is >= the waveform's width. It reads
 // the zoom and the frame, never the camera's current place — nor its lattice:
 // the walls are the frame-0 lattice's at every origin (a rest the walls clamp
-// takes origin 0, AppState::viewport_lattice_origin), so a gesture's rest on
-// another lattice lies inside them and this wall is still the rightmost
+// takes origin 0, AppState::viewport_lattice_origin), so a rest on
+// any other lattice lies inside them and this wall is still the rightmost
 // (architect 2026-10-31). THE LEFT EDGE
 // NEEDS NO TWIN: the leftmost start is 0, where frame 0 is column 0 and every
 // authored frame is >= 0, so no frame paints left of column 0 at every
@@ -815,8 +814,8 @@ bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
 // active-domain time is displayed_grid_position_at_column above at the
 // basis's viewport start (`vp_start`, the integer frame — the grid owner
 // recovers its column index from it), samples-per-pixel (`spp`) and lattice
-// origin (`lattice_origin`, ItemViewportBasis's: 0 at every landing, the
-// gesture's own under a pinched rest, so the commit lands on the frame the
+// origin (`lattice_origin`, ItemViewportBasis's: the origin the camera
+// rests on, so the commit lands on the frame the
 // painted column shows — architect 2026-10-31), in EVERY
 // domain; in the TargetLive domain that time is quantized to an integer target
 // frame (llrint, floored at 0 — the same quantization the target-view nudges

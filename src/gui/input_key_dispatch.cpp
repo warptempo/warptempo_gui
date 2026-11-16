@@ -9143,7 +9143,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     viewport.move_playhead_by_arrow_step(step);
     if (camera == NudgeCamera::HoldColumn && painted_spp > 0.0 &&
         app.playhead_cursor_sample != cursor_before)
-        viewport.hold_subject_column_after_nudge(displayed_column_at(
+        viewport.hold_subject_column_after_nudge(displayed_x_at(
             static_cast<double>(cursor_before), painted_vp_start,
             painted_spp, painted_origin));
     app.camera_hold = hold_before;

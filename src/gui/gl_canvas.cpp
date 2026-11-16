@@ -536,9 +536,9 @@ constexpr const char* kCanvasFragmentShader =
 //     there"). NOTHING OF THE TRUTH IS SPENT IN THIS SHADER: every
 //     subcolumn is placed by the quotient, one divide by its row's pitch,
 //     and every decision after it (a floor, the nearer, a core, a quantum
-//     step) is the rule's own. A LANDING ON A WHOLE LEVEL — p = 1 on a whole
-//     offset: the working zoom reached by a landing, and every whole level
-//     alike (render.h's DETERMINISM HAS ONE SEAT) — IS THE ONE-BAR-A-PIXEL
+//     step) is the rule's own. A WHOLE LEVEL AT A WHOLE OFFSET — p = 1 on a
+//     whole offset: a whole level whose viewport rests at lattice origin 0
+//     (render.h's DETERMINISM HAS ONE SEAT) — IS THE ONE-BAR-A-PIXEL
 //     PICTURE BYTE FOR BYTE, the whole plate: the pitch is exactly 1 and
 //     every u is the difference itself (THE BASE's landing paragraph).
 //     EVERYWHERE THE PICTURE IS THIS ARITHMETIC AS WRITTEN, a function of
@@ -639,8 +639,8 @@ constexpr const char* kListFragmentShader =
     // PICTURE'S (architect 2026-11-15, send O: the per-pixel divide back,
     // "I agree to both your points there"): the centre's product exact, then
     // ONE subtraction and ONE divide, each rounded once — never the two terms
-    // scaled apart, never a u stepped by addition; at a landing p is exactly
-    // 1 and u is the difference.
+    // scaled apart, never a u stepped by addition; on a whole level p is
+    // exactly 1 and u is the difference.
     "float bar_u(int s, float x0, float p) {\n"
     "    return ((float(s) + 0.5) * 0.25 - x0) / p;\n"
     "}\n"

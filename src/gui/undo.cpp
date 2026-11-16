@@ -460,7 +460,8 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // undo and redo restore invisibly" (marker_drag.cpp). A MERGED press skips
     // the push and skipped that gate with it — and a nudge pair is exactly
     // reversible FOR A MARKER ALREADY ON THE CURRENT COLUMN GRID (the painted
-    // grid is anchored at frame 0 and reorder_markers_by_time is stable, so
+    // grid is the camera's lattice, which the pair's own camera keeps at a
+    // whole step, and reorder_markers_by_time is stable, so
     // the store comes back row for row; every nudge, drag and drop puts a
     // marker there, while one loaded from file, pasted, or authored at another
     // zoom sits OFF the grid and Right+Left lands it ON the grid, up to half a
@@ -1099,7 +1100,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                     if (painted_before_restore.spp > 0.0 &&
                         app.playhead_cursor_sample != cursor_before_restore)
                         viewport.hold_subject_column_after_nudge(
-                            displayed_column_at(
+                            displayed_x_at(
                                 static_cast<double>(cursor_before_restore),
                                 painted_before_restore.vp_start,
                                 painted_before_restore.spp,

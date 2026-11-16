@@ -510,8 +510,8 @@ int64_t authored_frame_at_column_on_basis(
     // lattice-snapped viewport is a true point of its own lattice, so the
     // recovered column index is exact). Both arms below land on it, so a
     // commit is anchored at the basis's lattice — frame 0 of the domain it was
-    // authored in at every landing, the painted column's edge under a
-    // gesture's rest — rather than at the basis's viewport start.
+    // authored in where the camera's origin is 0, the painted column's edge
+    // at every other rest — rather than at the basis's viewport start.
     const double g = displayed_grid_position_at_column(vp_start, col, spp,
                                                        lattice_origin);
     if (ctx.domain == GuiDisplayDomain::Source) {

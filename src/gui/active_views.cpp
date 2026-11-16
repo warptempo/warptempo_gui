@@ -173,7 +173,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // per-tab live-mirror field means updating that push, this pull, and
     // ViewState.
     app.trim                = target.trim;
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
     // COINCIDENCE AUTO-SELECT, the tab-entry chokepoint (the rule, the formula and
     // the authoritative call-site inventory live at auto_select_marker_at_playhead,
     // input_pointer.cpp / input_handler.h).

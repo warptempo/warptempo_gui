@@ -1041,8 +1041,8 @@ struct GuiInputHandler {
     //     into a walk of the stem (measured +-25 px a pinch, 2026-10-31), and
     //     places it EXACTLY (the lattice origin's Exact rule, the same day,
     //     AppState::viewport_lattice_origin): the held frame sits at the held
-    //     column to one frame, never the half column the frame-0 lattice's
-    //     snap left. The column is re-read from the live viewport
+    //     column to one frame, never the half column a frame-0 lattice's
+    //     snap would leave. The column is re-read from the live viewport
     //     at two re-seats alone: a placement the walls refused (the wall
     //     bullet below) and a camera another writer moved under the gesture.
     //   * MOVING BOTH FINGERS TOGETHER STILL APPLIES NOTHING: the ratio is 1

@@ -1032,15 +1032,15 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // maximum scroll.
     //
     // THE WALL IS THE FRAME-0 LATTICE'S UNDER EVERY LATTICE RULE (architect
-    // 2026-10-31; the rule at AppState::viewport_lattice_origin): a gesture's
-    // rest on another lattice lies inside it, and a rest the walls clamp
-    // rests here at origin 0, the landings' own rest at the wall.
+    // 2026-10-31; the rule at AppState::viewport_lattice_origin): a rest on
+    // any other lattice lies inside it, and a rest the walls clamp
+    // rests here at origin 0.
     //
     // The ONE right-wall owner, with THREE readers: clamp_viewport_start below
     // (through resting_viewport_start), which rests every viewport at or left
     // of it, source_frame_off_right_edge, which asks where a frame paints at
     // it, and hold_derived_on_arrival (viewport.cpp), which refuses the hold
-    // to a centring whose snapped start lies past it.
+    // to a centring whose start lies past it.
     // Degenerate branches: visible >= total
     // (the whole song fits) → 0; q <= 0 (non-numeric zoom) → max(0, max_start).
     const int64_t visible = samples_visible(a, audio);
@@ -1059,27 +1059,41 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
 // below applies to a requested start under a lattice rule, as a PURE
 // question at the live zoom, the arithmetic's one copy (the chokepoint's body
 // calls it after its level clamp, and is its one writer of the camera). The
-// snap half is nearest_viewport_grid_point (warp_frame_map_view.h), which
-// hold_derived_on_arrival (viewport.cpp) reads on its own beside
-// max_viewport_start_grid: the arrival derivation asks whether a centring is
-// CLAMPED, so it needs the snap and the walls apart (architect 2026-09-29).
+// snap half is nearest_viewport_grid_point (warp_frame_map_view.h);
+// hold_derived_on_arrival (viewport.cpp) asks this function the rest of a
+// centring and reads max_viewport_start_grid beside it, the arrival
+// derivation asking whether that centring is CLAMPED (architect 2026-09-29).
 // It reads the live zoom as it stands: a caller that has just written the
 // level passes the chokepoint's level clamp first, which the chokepoint does.
 //
 // THE RULE, as the arithmetic (architect 2026-10-31; who passes which, and
 // why, at AppState::viewport_lattice_origin):
-//   1. the ORIGIN: Land 0; Keep the live origin, falling to 0 outside the
+//   1. the ORIGIN: Keep the live origin, falling to 0 outside the
 //      bound |origin| <= (q + 1) / 2 at the settled q (a level the
 //      re-validation clamped); Exact `start` − nearbyint(k0·q),
-//      k0 = nearbyint(start / q), so `start` lies on its own lattice;
+//      k0 the index nearest start / q, AN EXACT TIE TO THE RIGHT
+//      (lattice_index_ties_right), so `start` lies on its own lattice — a
+//      function of the start and q alone, so the same request at the same
+//      level rests at the same camera every time (his criterion: "So long
+//      as C on a given stem always gives me a specific view"), and |origin|
+//      <= (q + 1) / 2, Keep's own bound. WHY A DIRECTED TIE: at a whole q
+//      every start of one lattice then derives ONE origin (the start's
+//      residue, in [−q/2, q/2)), so the origin a pan keeps is the origin a
+//      landing at that same start derives, and the idempotence tests that
+//      compare start AND origin (zoom_to_start_would_move,
+//      hold_derived_on_arrival) answer for the picture; ties to even gave a
+//      start half a step off the lattice +q/2 or −q/2 by its index's parity
+//      — the same lattice under two names;
 //   2. the SNAP: the nearest point of that lattice to `start`,
 //      origin + nearbyint(m·q), m = nearbyint((start − origin) / q) — under
-//      Exact `start` itself, by construction;
+//      Exact `start` itself, by construction: THE START ASKED FOR IS THE
+//      REST (architect 2026-11-15, the no-grid arc: every landing exact);
 //   3. the WALLS, the frame-0 lattice's [0, max_viewport_start_grid]: a snap
 //      outside them rests AT the wall it passed, with origin 0.
 // Degenerate geometry (the whole song visible → the park at 0; a non-numeric
-// zoom → the walls alone) answers origin 0. At origin 0 — Land, and every
-// Keep or Exact whose origin is 0 — the answer is the frame-0 lattice's,
+// zoom → the walls alone) answers origin 0. At origin 0 — the walls, and
+// every Keep or Exact whose origin is 0 (an Exact start a whole number of
+// steps from frame 0) — the answer is the frame-0 lattice's,
 // byte for byte the rest before the origin existed (the old `start < 0 → 0`
 // pre-clamp is the left wall's arm: a negative start's nearest point is <= 0,
 // so it rests at 0 either way).
@@ -1103,17 +1117,17 @@ ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
     // are one grid, on one lattice.
     int64_t origin = 0;
     switch (rule) {
-        case ViewportLattice::Land:
-            origin = 0;
-            break;
         case ViewportLattice::Keep:
             origin = a.viewport_lattice_origin;
             if (2.0 * std::fabs(static_cast<double>(origin)) > q + 1.0)
                 origin = 0;
             break;
         case ViewportLattice::Exact:
+            // k0 with an exact tie TO THE RIGHT, so the origin is one
+            // function of the start's place within a step (the rule text
+            // above).
             origin = start - viewport_grid_point(static_cast<int64_t>(
-                std::nearbyint(static_cast<double>(start) / q)), q);
+                lattice_index_ties_right(static_cast<double>(start) / q)), q);
             break;
     }
 
@@ -1186,7 +1200,7 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio,
     // rule, the writer inventory this claim rests on and the exempt writers
     // (which keep or re-arm their bit after this call) are at
     // AppState::camera_hold and AppState::follow_suspended. ONE COMPARE FOR
-    // ALL THREE LATTICE RULES (Land, Keep, Exact). THE CAMERA IS FIVE FIELDS
+    // BOTH LATTICE RULES (Keep, Exact). THE CAMERA IS FIVE FIELDS
     // (AppState::camera_posture_identity): the tab and the audio view ride
     // beside the start and the zoom, so a switch that lands the same two
     // numbers still registers as the change it is, and the lattice origin
@@ -1195,7 +1209,7 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio,
     // TAB SWITCH THEN DERIVES THE HOLD AFRESH behind this clear (architect
     // 2026-09-29): it assigns hold_derived_on_arrival (viewport.cpp) once its
     // camera and cursor have settled, so the bit put out here stands again on
-    // arrival in a tab that rests exactly where `c` would centre its playhead
+    // arrival in a tab that rests exactly where `c` would center its playhead
     // at the working zoom, clear of both walls. The S/T switch derives
     // nothing: the bit put out here at a flip stays out.
     const AppState::CameraPostureIdentity settled{

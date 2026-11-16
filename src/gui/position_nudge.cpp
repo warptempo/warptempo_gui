@@ -262,7 +262,7 @@ void finish_position_nudge(
     // edge-align writes the live viewport; the item basis moves only with a
     // painted frame, so nothing between the step and here moves it.
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    const int prior_subject_column = painted_column_of_source_frame_on_basis(
+    const double prior_subject_x = painted_x_of_source_frame_on_basis(
         app, audio, static_cast<double>(prior_focused_frame),
         displayed_or_live_target_map(app, audio), basis.vp_start, basis.spp,
         basis.lattice_origin);
@@ -283,7 +283,7 @@ void finish_position_nudge(
     // collapse keeps the collapse and the land, and nothing more. The hold's
     // rule and body are at Viewport::hold_subject_column_after_nudge.
     if (camera == NudgeCamera::HoldColumn)
-        viewport.hold_subject_column_after_nudge(prior_subject_column);
+        viewport.hold_subject_column_after_nudge(prior_subject_x);
     // THE FLAG CACHE REBUILT IN THE SAME EVENT (architect 2026-11-04,
     // paint_marker_stems' ONE-STATE RULE): (e) moved the cursor onto the
     // nudged marker's new frame, so the chip and the selected marker's stem

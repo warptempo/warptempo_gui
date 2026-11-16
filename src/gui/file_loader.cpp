@@ -337,7 +337,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // (whole-song-visible) instead.
     app.zoom_level = std::min(kWorkingZoomLevel, effective_max_zoom_level(
         waveform_area(app).w, audio.total_frames(), audio.working_column()));
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
 
     // (NO PLAYBACK-SPEED OR gui_scale RESET HERE ANY MORE — 2026-08-27. The
     // speed retired with its key, and the scale is the DEVICE's: gui_main has
@@ -523,7 +523,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // domain by construction (move_playhead_to holds the ruling).
     app.playhead_cursor_sample = viewport.trim_begin_sample();
     app.viewport_start_sample = app.playhead_cursor_sample;
-    clamp_viewport_start(app, audio);
+    clamp_viewport_start(app, audio, ViewportLattice::Exact);
 
     // Seed both tabs with the freshly-computed default post-load state.
     // Parsed .settings values overwrite per-key below.
@@ -703,7 +703,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
         // above, so the live copy is in [0, total - 1] by construction.
         app.playhead_cursor_sample       = parsed_tab.playhead_cursor_sample;
         app.trim                = parsed_tab.trim;
-        clamp_viewport_start(app, audio);
+        clamp_viewport_start(app, audio, ViewportLattice::Exact);
     }
 
     // Adversarial past-EOF guard: hard-fail the load like a corrupt audio
@@ -875,7 +875,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
             // for the forced-S path (with the map unbuildable the earlier
             // clamps already fell back to the source total, so this is
             // usually a no-op).
-            clamp_viewport_start(app, audio);
+            clamp_viewport_start(app, audio, ViewportLattice::Exact);
             app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
                 app.tab_a.playhead_cursor_sample, app, audio);
             app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(

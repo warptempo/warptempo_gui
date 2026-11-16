@@ -431,7 +431,7 @@ struct Viewport {
     // 2026-10-31; the rules at AppState::viewport_lattice_origin): the
     // touch-nav body passes Exact on a frame that changes the level (the
     // pivot's frame then sits at its column to one frame) and Keep on a pan
-    // frame; the zoom step passes Land, a landing; the follow scroll Keep.
+    // frame; the zoom step passes Exact, a landing; the follow scroll Keep.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final,
                                ViewportLattice lattice);
@@ -454,7 +454,7 @@ struct Viewport {
     // Zoom-to-span apply: set the level AND the viewport start EXPLICITLY (the
     // start is a framed span's left edge, NOT a playhead recenter — the sole
     // difference from apply_zoom_change), then funnel both through the clamp
-    // chokepoints (the grid snap + range clamp every zoom/viewport write uses)
+    // chokepoints (the lattice rule + range clamp every zoom/viewport write uses)
     // and repaint exactly as apply_zoom_change does. IDEMPOTENT: if the resting
     // (level, start) after clamping equals the current viewport, it is a true
     // no-op — no repaint and no state left behind — so a second identical framing
@@ -472,10 +472,11 @@ struct Viewport {
     // (architect 2026-09-17; chosen by AppState::camera_hold, which an
     // explicit centring arms, since 2026-09-23 — the Ctrl modifier's choice
     // for the day before): a step that moved something places the viewport so the playhead it just
-    // landed paints in the column the subject painted in before the step,
-    // clamped into the waveform's first and last columns, never changing the
+    // landed paints at the exact place the subject held before the step,
+    // held between the waveform's first and last columns, never changing the
     // zoom. No centring, no lamp, no view term. The prior place is the
-    // subject's PAINTED COLUMN (architect 2026-09-24, strictly as painted),
+    // subject's PAINTED EXACT x (architect 2026-09-24, strictly as painted;
+    // the exact place, not its column, since the no-grid arc, 2026-11-15),
     // each caller deriving it on its subject's painted basis — the marker
     // nudge on the item basis its step anchored on, the playhead step on the
     // plate basis the cursor is drawn with, the undo / redo singleton
@@ -483,7 +484,7 @@ struct Viewport {
     // on the item basis before the restore — reduced to one held sample
     // offset and written through clamp_viewport_start. The clamp derivation
     // and the three callers are at the definition.
-    void hold_subject_column_after_nudge(int prior_column);
+    void hold_subject_column_after_nudge(double prior_x);
     // The changed-path tail the one-shot playhead camera moves share (the two
     // above and the two below).
     void finish_discrete_viewport_move();

@@ -3523,9 +3523,9 @@ inline bool point_on_waveform_divider(const GuiRect& area, int y) {
 // a column's frames are a function of the bar's GLOBAL index and b alone,
 // never of the viewport that asked for it. THE DISPLAYED VIEWPORT'S OWN
 // LATTICE — the camera's start, its origin and the painter's q
-// (AppState::viewport_lattice_origin owns its three rules: every landing
-// rests at origin 0, a gesture's zoom frames set the origin so the pivot's
-// frame holds its column, a pan keeps the origin it stands on) — is the one
+// (AppState::viewport_lattice_origin owns its two rules: every landing and
+// every zoom frame rests at the start it asks for, the origin derived from
+// that start, and a pan keeps the origin it stands on) — is the one
 // the stems, the flags, the playhead and every hit test stand on, and the
 // one a pan steps by: whole columns of it, one device px each, as Ableton
 // pans by whole columns. The plate registers with it through its draw
@@ -3584,26 +3584,34 @@ struct WaveformBasis {
 // 2-px bars. THE SWITCH IS AT ITS FIXED THRESHOLD, no dead band (his
 // "unnecessary and probably more distracting than helpful"); what softens
 // it is the fade band, a function of the zoom alone.
-// DETERMINISM HAS ONE SEAT (architect 2026-11-14, send G): THE WORKING ZOOM
-// REACHED BY A LANDING, AT REST — `c`, or any landing on a whole level. A
-// landing keeps lattice origin 0, so there q = b, the offset is whole and
-// the bars are one device px on the pixel grid: crisp and the same every
-// time, with no special case in this code (his habit of pressing `c` is the
-// determinism: "there's essentially no way that I can manually land at
-// working zoom … we should count on the working zoom level snap";
-// "maintaining determinism at working zoom is all that's required").
-// EVERYWHERE ELSE SMOOTHNESS AND PERFORMANCE OUTRANK ACCURACY: the same
-// whole viewport — start, origin and step — is the same picture, and a zoom
-// reached by a gesture rests on the gesture's own origin, its bars at a
-// fractional offset, soft — and, where it rests inside the fade band, the
-// two levels' pictures mixed, the same every time for that viewport. THE
+// DETERMINISM HAS ONE SEAT, AND IT IS THE VIEWPORT (architect 2026-11-15,
+// the no-grid arc, on the landings: "I'm not concerned with softness of the
+// waveform or any other element ... And I'm no longer concerned with the
+// determinism or precision"; his criterion, "So long as C on a given stem
+// always gives me a specific view"): THE SAME WHOLE VIEWPORT — START, ORIGIN
+// AND STEP — IS THE SAME PICTURE, EVERYWHERE, and the same act on the same
+// state rests at the same viewport (a landing's start is its arithmetic's,
+// its origin that start's own: AppState::viewport_lattice_origin). So `c` on
+// a stem is one picture, every time. WHAT A WHOLE LEVEL (q = b, the pitch
+// exactly 1) LOOKS LIKE THERE: where the origin is 0 — a rest at a wall, or
+// a start a whole number of steps from frame 0 — the offset is whole and the
+// bars are one device px on the pixel grid, the one-bar-a-pixel plate byte
+// for byte, with no special case in this code; at any other landing on a
+// whole level the bars are one device px wide at an offset of
+// −frac(origin / q) px, each straddling two pixels, soft, the same every
+// time for that viewport — accepted by him, his words above (the send G
+// seat, "the working zoom reached by a landing", crisp because a landing
+// kept origin 0, is retired with the frame-0 landings). A zoom reached by a
+// gesture rests the same way on its own origin, and, where it rests inside
+// the fade band, the two levels' pictures mixed, the same every time for
+// that viewport. THE
 // DRAW'S ARITHMETIC IS THE QUOTIENT (architect 2026-11-15, send O: the
 // per-pixel divide back with the blend's shader work, "I agree to both
 // your points there"): the shader places each screen subcolumn among the
-// bars by one divide by the row's pitch — at a landing the pitch is
-// exactly 1 and the place the difference itself, the picture byte for
-// byte the one-bar-a-pixel plate (kListFragmentShader's WHAT IS PROMISED,
-// gl_canvas.cpp).
+// bars by one divide by the row's pitch — on a whole level the pitch is
+// exactly 1 and the place the difference itself, and at a whole offset the
+// picture is byte for byte the one-bar-a-pixel plate (kListFragmentShader's
+// WHAT IS PROMISED, gl_canvas.cpp).
 //
 // BAR k (a GLOBAL index, k >= 0) is the display-domain span [k · b,
 // (k + 1) · b) ON THE FRAME-0 LATTICE: its integer edges are the producer's
@@ -3631,9 +3639,10 @@ struct WaveformBasis {
 // numerator (k_first + 0.5) · b − origin − K0 · q is exact in doubles (every
 // term a multiple of a sixteenth of a frame far inside the mantissa), one
 // divide rounds it, and it is small — the halo's few bars — so the float the
-// shader takes loses nothing that shows. AT A LANDING ON A WHOLE LEVEL
-// (origin 0, q = b) X_j = (k_first + j − K0) + 0.5 and p = 1: bar K0 + c
-// sits exactly on pixel c.
+// shader takes loses nothing that shows. ON A WHOLE LEVEL AT ORIGIN 0
+// (q = b: a wall, or a start a whole number of steps from frame 0)
+// X_j = (k_first + j − K0) + 0.5 and p = 1: bar K0 + c
+// sits exactly on pixel c; at another origin it sits −origin / q px off it.
 //
 // THE STORED RANGE [k_first, k_first + n) IS THE VIEWPORT'S BARS AND A HALO
 // BOTH SIDES: every bar the draw can read at ANY grow of the `waveform_grow`
@@ -3750,11 +3759,11 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // q of a sixteenth, Fh whole). AT P == F THE PLATE IS OUT OF THE BAND, at
 // every F: rung B's uniform row there is the picture the blend would draw
 // at weight 0 (A + (C − A) · 0 is A exactly), so the test moves which arm
-// and which rows draw it and no pixel. WHY STRICT: at F = 1, P == 1 is A LANDING ON A
-// WHOLE LEVEL (q == B), and it stays the uniform one-bar-a-pixel plate —
+// and which rows draw it and no pixel. WHY STRICT: at F = 1, P == 1 is A
+// WHOLE LEVEL (q == B), and it stays the uniform one-bar-a-pixel row —
 // one producer query and the cheaper arm, at rest, under playback and
-// under FOLLOW's scroll. So determinism's one seat (above) is unchanged, and
-// at F = 1 a whole level is the one zoom of each doubling off the band.
+// under FOLLOW's scroll, at whatever offset the viewport's origin gives it.
+// So at F = 1 a whole level is the one zoom of each doubling off the band.
 // OUT OF THE BAND the plate is rung B's uniform bars in every
 // respect — the row, the transform and the bytes — and Fh == 200 IS OFF
 // for every q: the band ends at the switch width, so a start there is a
@@ -3815,9 +3824,8 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // rung, its picture the same function of the same row at a pitch from 1
 // above — so the picture is continuous in the zoom, both ends included.
 // WHAT DOES NOT MOVE: the viewport, the lattice the marks stand on, the
-// producer and every bar's own numbers — and A LANDING ON A WHOLE LEVEL IS
-// P = 1, OUT OF THE BAND, the one uniform row, so determinism's one seat
-// (above) is as it was.
+// producer and every bar's own numbers — and A WHOLE LEVEL IS
+// P = 1, OUT OF THE BAND, the one uniform row.
 // Pure and total: a degenerate q, column or key answers out of the band or
 // the weight 0, no error arm.
 inline constexpr float kWaveformFadeWeightTop = 0x1.fffffep-1f;
@@ -3923,11 +3931,12 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // and each device pixel takes EXACT COVERAGE, its set subcells over sixteen;
 // the lit inner bar is the grown inner shape FILLED SOLID in the core (THE
 // CORE, below), antialiased with its shape.
-// AT A LANDING ON A WHOLE LEVEL (origin 0, q = b: p = 1, every column
+// ON A WHOLE LEVEL AT ORIGIN 0 (q = b: p = 1, every column
 // exactly on a device px) the core is the column's own pixel and the contour
 // reads the nearer neighbor in eighths: one column a device px, crisp, by
 // the same arithmetic — no special case, and no re-seat onto the pixel grid
-// anywhere else. Off a landing the columns' edges are soft, which is ruled
+// anywhere else. Everywhere else — a landing at another origin included,
+// architect 2026-11-15 — the columns' edges are soft, which is ruled
 // fine (his "Ableton has no problem with soft lines"; a snap of any kind is
 // not: "a visceral jarring impact").
 // The coverage is blended SOURCE-OVER IN BYTE SPACE with what lies beneath
