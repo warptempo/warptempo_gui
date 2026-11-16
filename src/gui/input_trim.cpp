@@ -242,7 +242,12 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // landing in column 0 meets a begin at frame 0. Degenerate geometry is the
 // callers' to refuse first.
 int64_t trim_bound_frame_at_column(const AppState& app, const GuiAudio& audio,
-                                   int col) {
+                                   double col_x) {
+    // THE POINTER'S REAL PLACE REACHES THIS DOOR (architect 2026-11-15, the
+    // no-grid arc), waveform-relative; THE LANDING IS STILL THE WHOLE COLUMN
+    // UNDER IT — this one floor, which the pen act's own landing rule
+    // replaces (the frame under the pen's real place).
+    const int col = static_cast<int>(std::floor(col_x));
     const int64_t wall = audio.total_frames() - 1;
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const std::vector<WarpFrameMapSegment>& map =
@@ -503,7 +508,7 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // motion path returns on an empty strip.
 // The landing itself, the walls and the end wall's reach are the family's one
 // owner, trim_bound_frame_at_column (this file's anonymous namespace).
-int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
+int64_t GuiInputHandler::sweep_trim_frame_at_column(double col) const {
     if (audio.total_frames() <= 0) return 0;
     return trim_bound_frame_at_column(app, audio, col);
 }
@@ -569,14 +574,19 @@ void GuiInputHandler::handle_trim_maximize() {
 // contract: consumers that need source frames cross through
 // trim_mouse_x_to_source_frame's inverse map, and the pair drag deliberately
 // keeps its gap in the domain the user sees.
-bool GuiInputHandler::trim_mouse_x_to_active_frame(int mouse_x,
+bool GuiInputHandler::trim_mouse_x_to_active_frame(double mouse_x,
                                                    int64_t& out_frame) {
     if (audio.total_frames() <= 0) return false;
     const GuiRect area = waveform_area(app);
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0 || area.w <= 0) return false;
 
-    int rel = mouse_x - area.x;
+    // THE POINTER'S REAL PLACE REACHES THIS DOOR (architect 2026-11-15, the
+    // no-grid arc); THE LANDING IS STILL THE WHOLE COLUMN UNDER IT — this
+    // one floor, which the pen act's own landing rule replaces (the frame
+    // under the pen's real place).
+    int rel = static_cast<int>(
+        std::floor(mouse_x - static_cast<double>(area.x)));
     if (rel < 0) rel = 0;
     if (rel >= area.w) rel = area.w - 1;
     out_frame = static_cast<int64_t>(std::llrint(
@@ -585,7 +595,7 @@ bool GuiInputHandler::trim_mouse_x_to_active_frame(int mouse_x,
     return true;
 }
 
-bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
+bool GuiInputHandler::trim_mouse_x_to_source_frame(double mouse_x,
                                                     double& out_frame) {
     if (audio.sample_rate() <= 0) return false;
 
@@ -607,7 +617,8 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
     return true;
 }
 
-void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
+void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
+                                      bool both) {
     if (which == TrimHit::None) return;
     const bool is_begin = (which == TrimHit::Begin);
     // (The old both-bounds-set backstop is gone with the unset state: a full
@@ -658,7 +669,7 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     // it; commit_trim_drag damages its release.)
 }
 
-void GuiInputHandler::update_trim_drag(int mouse_x) {
+void GuiInputHandler::update_trim_drag(double mouse_x) {
     if (!app.trim_drag.active) return;
     if (audio.sample_rate() <= 0 || audio.total_frames() <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
@@ -939,7 +950,9 @@ void GuiInputHandler::commit_trim_drag() {
                 const int c = painted_column_of_source_frame_on_basis(
                     app, audio, static_cast<double>(field), map,
                     basis.vp_start, basis.spp, basis.lattice_origin);
-                field = trim_bound_frame_at_column(app, audio, c);
+                // The column's own place, its left edge, as a real place.
+                field = trim_bound_frame_at_column(app, audio,
+                                                   static_cast<double>(c));
             };
             // THE COINCIDENCE IS JUDGED BEFORE THE SNAP (architect-ruled
             // behavior delivered 2026-08-22). update_trim_drag's partner clamp
@@ -1182,7 +1195,7 @@ void GuiInputHandler::commit_trim_drag() {
 // frame, and the partner wall. Nothing here
 // mutates: the caller below owns the stop, the write and the tail.
 std::optional<GuiInputHandler::TrimBoundClick>
-GuiInputHandler::trim_bound_click(int mouse_x) const {
+GuiInputHandler::trim_bound_click(double mouse_x) const {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0)
         return std::nullopt;
     if (current_samples_per_pixel(app, audio) <= 0.0) return std::nullopt;
@@ -1196,13 +1209,19 @@ GuiInputHandler::trim_bound_click(int mouse_x) const {
     // Cold, the basis is the live viewport by its own contract.
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return std::nullopt;
-    int col = mouse_x - area.x;
-    if (col < 0)         col = 0;
-    if (col >= area.w)   col = area.w - 1;
+    // THE CLICK'S REAL PLACE on the strip (architect 2026-11-15, the no-grid
+    // arc), held on the strip's columns. THE NEAREST-CAP VERDICT below stays
+    // on whole columns — the click's containing column against the caps'
+    // painted columns — until the pen act's own landing rule replaces it and
+    // the family owner's floor together.
+    const double col_x = std::clamp(
+        mouse_x - static_cast<double>(area.x), 0.0,
+        static_cast<double>(area.w - 1));
+    const int col = static_cast<int>(std::floor(col_x));
     // The landing, the walls and the end wall's reach (a click in the column
     // holding the source's last frame sets total-1) are the family's one
     // owner, trim_bound_frame_at_column (this file's anonymous namespace).
-    const int64_t frame = trim_bound_frame_at_column(app, audio, col);
+    const int64_t frame = trim_bound_frame_at_column(app, audio, col_x);
     // THE NEAREST END CAP, ON THE PAINTED COLUMNS (see the header): each
     // resting bound's column as the trim bar's painter draws it — its own
     // two owners with its own arguments (GuiPaintHandler::paint_trim:
@@ -1257,7 +1276,7 @@ GuiInputHandler::trim_bound_click(int mouse_x) const {
 }
 
 std::optional<GuiInputHandler::TrimBoundClick>
-GuiInputHandler::set_trim_bound_at_click(int mouse_x) {
+GuiInputHandler::set_trim_bound_at_click(double mouse_x) {
     // EVERY REFUSAL IS THE DECIDER'S (trim_bound_click above) — the
     // degenerate audio/geometry states, the click on its own cap's painted
     // column, the click on the bound's own frame and the
@@ -1317,8 +1336,8 @@ GuiInputHandler::set_trim_bound_at_click(int mouse_x) {
 // column where the set runs (architect 2026-11-10), never a second verdict
 // here. A set that succeeded left an ORDERED pair by construction, so there
 // is always something to drag.
-void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(int mouse_x,
-                                                            int mouse_y) {
+void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
+                                                            double mouse_y) {
     const std::optional<TrimBoundClick> set = set_trim_bound_at_click(mouse_x);
     if (!set) return;
     arm_pending_trim_drag(set->is_begin, /*both=*/false, mouse_x, mouse_y);
@@ -1392,7 +1411,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(int mouse_x,
 // strictly as-painted) they convert through item_viewport_basis, the same
 // painted twin every aimed gesture here reads, so they no longer trail the
 // live viewport.
-bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
+bool GuiInputHandler::route_trim_bar_press(double mouse_x, double mouse_y) {
     if (audio.total_frames() <= 0) return false;
     // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).
     const TrimHit single = hit_test_trim_endcap(app, mouse_x, mouse_y);
@@ -1418,7 +1437,7 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
 // press. is_begin names the single bound (Begin for a bridge/pair drag); both
 // distinguishes the single vs the pair.
 void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
-                                            int press_x, int press_y) {
+                                            double press_x, double press_y) {
     app.pending_trim_drag = PendingTrimDrag{};
     app.pending_trim_drag.active   = true;
     app.pending_trim_drag.is_begin = is_begin;

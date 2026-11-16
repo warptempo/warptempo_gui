@@ -1018,7 +1018,7 @@ private:
     // every pan/zoom along with the strip content it is painted beside; the
     // ticks, the head and the digits stand at their exact places (architect
     // 2026-11-14, send J; the rules at the definition).
-    // PUBLISHES the head's hit on its column (AppState::playhead_head_hit,
+    // PUBLISHES the head's hit at its exact place (AppState::playhead_head_hit,
     // the head drag's target, 2026-10-09).
     void paint_ruler_row(cairo_t* cr);
     // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went

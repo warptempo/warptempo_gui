@@ -597,16 +597,21 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 // quotient through lattice_index_ties_right less the same m, so column − 0.5
 // <= x < column + 0.5 — the exact place lies within half a px of its column.
 // WHAT THE COLUMN STILL OWNS (architect 2026-11-14, "Agree to all
-// decisions."; the gates and the published rects left it 2026-11-15, the
-// no-grid arc): every CULL, CAMERA TEST AND LANDING reads
-// displayed_column_at, and the pointer's place is a whole pixel. THE GATES
+// decisions."; the gates, the published rects and the hit tests left it
+// 2026-11-15, the no-grid arc): every CULL, CAMERA TEST AND LANDING reads
+// displayed_column_at. THE GATES
 // ARE THE EXACT PLACE'S — a line is drawn wherever any of its real interval
 // lies inside the strip (render.h's waveform_line_span: its span's own
 // emptiness, no column asked), so a line slides in and out at the canvas's
-// edge — and THE CUES' PUBLISHED RECTS stand on it (paint_cues, render.cpp:
-// the label's box, the chip's box and the label's pen off the cue's exact
-// x); this answer feeds paint, the gates, those rects and the damage paint
-// owes.
+// edge — and THE HIT BOXES STAND ON IT ("yes, I'd like to move to
+// fractional hitboxes."): the cues' published rects (paint_cues,
+// render.cpp: the label's box, the chip's box and the label's pen off the
+// cue's exact x), the ruler head's (paint_ruler_row), the trim's grab zones
+// and bridge (trim_endcap_rect, off TrimBoundColumn::x) and the ADD SEL
+// sweep's membership (GuiInputHandler::apply_selection_sweep_to), each
+// asked with THE POINTER'S REAL PLACE (GuiPointerPlace, input_core.h),
+// never the pixel that holds it; this answer feeds paint, the gates, those
+// boxes and the damage paint owes.
 // PURE ARITHMETIC ON THE CALLER'S BASIS, as displayed_column_at's: a painter
 // hands both the same arguments, so a marker and the playhead parked on it —
 // one whole displayed frame — answer the same double.

@@ -48,7 +48,7 @@ int64_t committed_frame_for_proposal(
 
 }  // namespace
 
-bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
+bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
     if (hit < 0) return false;
     const int sr = audio.sample_rate();
     if (sr <= 0) return false;
@@ -106,7 +106,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     const GuiRect area = waveform_area(app);
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     d.anchor_mouse_time_frame =
-        basis.vp_start + static_cast<double>(mouse_x - area.x) * basis.spp;
+        basis.vp_start + (mouse_x - static_cast<double>(area.x)) * basis.spp;
 
     // Compute scalar delta_min / delta_max as the dragged marker's ACTIVE-domain
     // wall headroom (architect 2026-07-23, retiring the earlier source-domain

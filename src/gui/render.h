@@ -707,9 +707,10 @@ void install_true_colors(bool on);
 // dark stem is what shows there and the ruler's head marks the playhead; on
 // any other marker the line shows as it stands.
 // THE HEAD IS GRABBED AND DRAGGED, as Cool Edit's is (architect 2026-10-09
-// ~17:40): its HIT is the head on its column, the chip's hit extent
+// ~17:40): its HIT is the head at its exact place, the chip's hit extent
 // (cue_chip_hit_left_px, cut to the waveform's columns) over its device
-// rows of the ruler's, whole px, the painted head within a px and a half
+// rows of the ruler's, real edges tested with the pointer's real place
+// (architect 2026-11-15, the no-grid arc), the painted head within a px
 // of it and no box beyond — published by paint_ruler_row
 // (AppState::playhead_head_hit) and read by point_on_playhead_head
 // (input_pointer.cpp), a cue over the head keeping the press; a plain press
@@ -2403,9 +2404,12 @@ inline double cue_baseline_px() {
 //     (architect 2026-11-15, the no-grid arc) — [x − (H − 1), x + H), the
 //     published chip box and the label's occluding box from its own chip's
 //     left edge (paint_cues, render.cpp; no label is clipped) — and THE
-//     HEAD'S, off the playhead's column, [col − (H − 1), col + H) (the
-//     published hit, paint_ruler_row, AppState::playhead_head_hit). The
-//     pointer's place is a whole pixel in both tests.
+//     HEAD'S, off the playhead's exact x the same way (the published hit,
+//     paint_ruler_row, AppState::playhead_head_hit). BOTH ARE TESTED WITH
+//     THE POINTER'S REAL PLACE, half-open ("yes, I'd like to move to
+//     fractional hitboxes."): hit_test_flag's walk and
+//     point_on_playhead_head read the place the panel reported, never the
+//     pixel that holds it.
 // The chip's rows are [yb − H, yb), yb the bottom edge of the row its apex
 // stands on.
 inline int cue_chip_paint_reach_px() {
@@ -2584,7 +2588,8 @@ inline double scrub_channel_above_px() {
 // thumb is hit where it is painted and damaged where it stands: the painter
 // (paint_modal_dialog's paint_scrub_item, the box itself through
 // paint_scrub_thumb), the press's grab band
-// (render_player_scrub_handle_hit, app_state.h, the pixels of its hull) and
+// (render_player_scrub_handle_hit, app_state.h: the pointer's real place
+// against this real box, architect 2026-11-15, the no-grid arc) and
 // the damage, which is the track — every box this answers for a center on
 // the travel lies inside it (the mapping's ends, render_player_scrub_
 // travel_x0 / _usable_span).
@@ -3193,7 +3198,9 @@ struct FlagHitRect {
     double text_x       = 0.0;
 };
 // THE ONE CONTAINMENT TEST of a published cue (the label's box or its
-// triangle), half-open on both axes like rect_contains.
+// triangle), half-open on both axes like rect_contains, (x, y) THE
+// POINTER'S REAL PLACE (architect 2026-11-15, the no-grid arc): a real
+// point against the box's real edges, no pixel between them.
 inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
     return (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) ||
            (x >= r.tri_x && x < r.tri_x + r.tri_w && y >= r.tri_y &&
@@ -4630,10 +4637,13 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // send J): `x` is displayed_x_at on the column's own arguments, device px
 // from the lane's first column, WITH THE EOF-WALL CLAMP APPLIED IN REALS —
 // an in-view bound's x clamped into [0, wave_w − 1] as its column is, an
-// offscreen one's raw. PAINT ALONE READS IT — the span's fill and the TRIM
-// sweep's highlight, through trim_span_columns; the grabs, the bridge, the
-// published hit geometry and the bound-set click's nearest-cap test stay on
-// `col`.
+// offscreen one's raw. PAINT AND THE GRABS READ IT (architect 2026-11-15,
+// the no-grid arc: "yes, I'd like to move to fractional hitboxes.") — the
+// span's fill and the TRIM sweep's highlight through trim_span_columns, and
+// the two end zones and the bridge, published on the span's real ends
+// (trim_endcap_rect, trim_bridge_gap) and tested with the pointer's real
+// place; `col` stays the bound-set click's nearest-cap test's and the
+// culls'.
 struct TrimBoundColumn {
     double ms;          // displayed-domain position (already mapped)
     bool   in_viewport; // ms in [vp_start, vp_end), the unrounded verdict
@@ -4651,9 +4661,11 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // PUBLISHES as the pair drag's handle (TrimBarHit::bridge_lo / bridge_hi,
 // read by point_in_trim_bridge_span) — the view bar's span between its two
 // end zones (view_bar_grab_w_px). Both bounds must be set
-// (callers gate). ONE RULE ON EVERY SIDE (architect 2026-10-05): lo is the
-// begin zone's inner RIGHT edge (col + endcap_w) and hi the end zone's
-// inner LEFT edge, exclusive (col - endcap_w + 1), whether the zone is on
+// (callers gate). ONE RULE ON EVERY SIDE (architect 2026-10-05), ON THE
+// SPAN'S REAL ENDS (architect 2026-11-15, the no-grid arc): lo is the
+// begin zone's inner RIGHT edge (x + endcap_w) and hi the end zone's
+// inner LEFT edge, exclusive (x + 1 - endcap_w), x each bound's exact place
+// (TrimBoundColumn::x), whether the zone is on
 // screen, part on it or wholly past an edge. In the NARROW case, where
 // trim_endcap_rect stands the end zone right of the begin's, hi is under
 // lo and the gap is empty; a window wholly off one side is
@@ -4664,8 +4676,8 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // effective width [0, wave_w), so the inert non-multiple-of-16 gutter
 // [wave_w, strip_w) answers no hit.
 struct TrimBridgeGap {
-    int lo;  // inclusive left column
-    int hi;  // exclusive right column (empty gap when hi <= lo)
+    double lo;  // the gap's left edge, inclusive
+    double hi;  // its right edge, exclusive (empty gap when hi <= lo)
 };
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
                               const TrimBoundColumn& end, int endcap_w);
@@ -4711,24 +4723,27 @@ double displayed_trim_ms(int64_t frame,
 // painter (render_trim_flags), which publishes each zone, clipped to the
 // lane, for the hit test (hit_test_trim_endcap reads TrimBarHit, below).
 //
-// A trim bound is an EDGE, not a point: the begin zone's LEFT edge sits ON
-// the begin column (rect left = strip_x + begin.col), the end zone's RIGHT
-// edge sits on the end column (rightmost pixel = strip_x + end.col) — the
-// span's own two ends. THE NARROW CASE (architect 2026-10-03): when the
-// drawn width end.col − begin.col + 1 is under two zones — the columns read
+// A trim bound is an EDGE, not a point, AND THE ZONES STAND ON THE SPAN'S
+// REAL ENDS (architect 2026-11-15, the no-grid arc — the ends the bar
+// paints, trim_span_columns): the begin zone's LEFT edge is the span's left
+// end (rect left = strip_x + begin.x), the end zone's RIGHT edge the span's
+// right end (rect right = strip_x + end.x + 1), x each bound's exact place.
+// THE NARROW CASE (architect 2026-10-03): when the
+// drawn width end.x − begin.x + 1 is under two zones — the places read
 // wherever they stand, on screen or off (architect 2026-10-05) — the begin
-// zone keeps its column and the END zone is placed IMMEDIATELY RIGHT OF IT,
-// edge to edge, so it alone overruns its column. The two rects never
-// overlap.
+// zone keeps its end and the END zone is placed IMMEDIATELY RIGHT OF IT,
+// edge to edge, so it alone overruns its end. The two rects never
+// overlap. Bounds on whole places answer the whole rects their columns
+// gave.
 //
 // THE RECT IS THE ZONE, view_bar_grab_w_px() wide over the trim lane `row`'s
 // whole height, and it is THE HIT BAND AS IT IS — no tolerance inflates it.
 // `is_begin` picks which bound's zone. The rect may lie part or wholly past
 // the lane's edge (an offscreen bound keeps its own column,
 // TrimBoundColumn); the painter's clip decides what of it is on screen.
-GuiRect trim_endcap_rect(bool is_begin, int strip_x,
-                         const TrimBoundColumn& begin,
-                         const TrimBoundColumn& end, GuiRect row);
+GuiRectF trim_endcap_rect(bool is_begin, int strip_x,
+                          const TrimBoundColumn& begin,
+                          const TrimBoundColumn& end, GuiRect row);
 
 // (render_trim_stems IS DELETED, architect 2026-08-01: the bar is the trim
 // window's whole resting display, the sweep's transient canvas highlight
@@ -4741,11 +4756,13 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
 // AppState::trim_bar_hit so the trim hits read the pixels rather than
 // re-running the painter's owner chain on the live trim — the flag lane's
 // stash doctrine (AppState::flag_hit_rects) carried to the trim lane.
-// Everything is in SCREEN pixels. `lane` is the view bar's band (its two
-// lines and its field), the y-gate of both hits. Each end (a TrimBarHitCap)
+// Everything is in SCREEN pixels, THE ZONES AND THE BRIDGE REAL (architect
+// 2026-11-15, the no-grid arc: on the span's real ends, tested with the
+// pointer's real place, half-open). `lane` is the view bar's band (its two
+// lines and its field, whole), the y-gate of both hits. Each end (a TrimBarHitCap)
 // is its zone's rect (trim_endcap_rect, over the lane's whole height,
 // clipped to the lane's painted width, the hit band as it is — no
-// tolerance), a zone sliding off an edge publishing its visible columns
+// tolerance), a zone sliding off an edge publishing its visible stretch
 // alone (architect 2026-10-05), and `painted` false for a zone wholly off
 // the lane, which answers no hit. The two rects never overlap. The bridge is
 // the half-open interval [bridge_lo, bridge_hi) between the two zones'
@@ -4753,16 +4770,16 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
 // (trim_bridge_gap); empty when lo >= hi, as in the narrow case.
 // `published` false is COLD — nothing painted, nothing grabbable.
 struct TrimBarHitCap {
-    bool    painted = false;
-    GuiRect rect{0, 0, 0, 0};   // the end zone, clipped to the lane
+    bool     painted = false;
+    GuiRectF rect{0.0, 0.0, 0.0, 0.0};   // the end zone, clipped to the lane
 };
 struct TrimBarHit {
     bool          published = false;
     GuiRect       lane{0, 0, 0, 0};
     TrimBarHitCap begin;
     TrimBarHitCap end;
-    int           bridge_lo = 0;   // screen x, inclusive
-    int           bridge_hi = 0;   // screen x, exclusive
+    double        bridge_lo = 0.0;   // screen x, inclusive
+    double        bridge_hi = 0.0;   // screen x, exclusive
 };
 
 // Draws THE TRIM BAR — the whole trim lane but its first row (architect
@@ -5071,9 +5088,13 @@ void render_flags(cairo_t* cr,
 // 2026-09-05), and the platform's editor-field query reads this same rect
 // (touch_point_in_editor_field), so a finger landing in the field reaches
 // the caret drag — a tap its press — rather than the phone-model pan.
+// THE BOX IS REAL (architect 2026-11-15, the no-grid arc): the painted
+// field's own real edges — it stands at its mark's exact x — cut to the
+// waveform's columns, over the lane's whole rows, asked half-open with the
+// pointer's real place.
 struct FlagEditorBox {
     bool                valid         = false;
-    GuiRect             box{0, 0, 0, 0};
+    GuiRectF            box{0.0, 0.0, 0.0, 0.0};
     FlagHitRect         riding_cells{};
     double              text_origin_x = 0.0;
     std::vector<double> byte_x;

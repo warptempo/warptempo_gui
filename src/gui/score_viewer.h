@@ -561,7 +561,7 @@ inline const char* score_viewer_button_shift_hint(
 // real x, nothing rounded onto a column (architect 2026-11-15, the no-grid
 // arc; the player's mapping, app_state.h); the
 // inverse rounds to the nearest page (a page is whole), the page under a
-// dragged thumb's carried column (architect 2026-10-27, the steps the page
+// dragged thumb's carried center (architect 2026-10-27, the steps the page
 // changes in). One page: the thumb at the left, the scrub dead (the press
 // claim).
 inline double score_scrub_x_of(const AppState& a, int page) {
@@ -617,9 +617,10 @@ inline int64_t score_scrub_frame_at(const AppState& a, double x) {
 // WHERE THE HELD SOUNDTRACK SCRUB'S DROP LANDS — THE ONE DERIVATION
 // (architect 2026-11-10, the timestamp follows the thumb; the render
 // player's render_player_scrub_drop_frame, app_state.h): the frame a lift
-// with the thumb at column `thumb_x` hands the seek, and NOTHING where the
+// with the thumb's center at the real place `thumb_x` hands the seek, and
+// NOTHING where the
 // lift seeks nothing — a motionless tap on the thumb. TWO READERS: THE LIFT
-// (finish_score_scrub_release, the carried column) and THE CLOCK'S PAINTER,
+// (finish_score_scrub_release, the carried center) and THE CLOCK'S PAINTER,
 // whose elapsed field shows this frame's time within the range while the
 // drag stands and the cursor's where this answers nothing. The seek's own
 // end clamp (play_from, score_viewer_seek_landing) stays the seek's. The
@@ -627,20 +628,20 @@ inline int64_t score_scrub_frame_at(const AppState& a, double x) {
 // drag already moves (display_page).
 inline std::optional<int64_t> score_scrub_drop_frame(
         const AppState& a, const AppState::ScoreViewer::ScrubDrag& drag,
-        int thumb_x) {
+        double thumb_x) {
     if (drag.on_thumb && !drag.moved) return std::nullopt;
-    return score_scrub_frame_at(a, static_cast<double>(thumb_x));
+    return score_scrub_frame_at(a, thumb_x);
 }
 
-// THE PAGE UNDER A DRAGGED THUMB'S CARRIED COLUMN, the one answer of both
+// THE PAGE UNDER A DRAGGED THUMB'S CARRIED CENTER, a real place, the one
+// answer of both
 // faces (architect 2026-10-27 ~19:45, "the picture follows the thumb, the
 // sound waits for the lift"; input_pointer.cpp's score-scrub block): on the
-// page road the page the column rounds to (score_scrub_page_at, the steps);
-// under the soundtrack the page holding the column's frame
+// page road the page the place rounds to (score_scrub_page_at, the steps);
+// under the soundtrack the page holding the place's frame
 // (score_page_for_position over score_scrub_frame_at), the very frame the
 // lift seeks, so the seek's page is the page the drag showed.
-inline int score_scrub_page_under(const AppState& a, int x) {
-    const double cx = static_cast<double>(x);
+inline int score_scrub_page_under(const AppState& a, double cx) {
     if (score_viewer_has_soundtrack(a))
         return score_page_for_position(a, score_scrub_frame_at(a, cx));
     return score_scrub_page_at(a, cx);

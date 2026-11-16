@@ -1381,15 +1381,15 @@ inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
 // count and the ctrl bit below, the two fields the GUI forks on. Every field
 // here is read.
 struct GuiTouchNavFrame {
-    // Current centroid, window px (single-finger: the finger itself). Also
-    // the two-finger gesture's zoom pivot.
-    int    x = 0;
-    int    y = 0;
-    // THE SAME CENTROID'S x UNROUNDED, window px (2026-10-22): the pan's
-    // placement column. The pan seats a song frame once per phase and places
-    // it at this column every frame (apply_touch_nav_update's one-finger
-    // arm), so the column must keep its fraction — a cell index would round
-    // the creep away again; the zoom's seat and the pinch read `x` as before.
+    // THE CURRENT CENTROID'S REAL x, window px (single-finger: the finger
+    // itself; 2026-10-22, and the one horizontal place this frame carries
+    // since the no-grid arc, architect 2026-11-15): the pan's placement
+    // column — the pan seats a song frame once per phase and places it at
+    // this column every frame (apply_touch_nav_update's one-finger arm), so
+    // the column must keep its fraction — and the zoom's pivot, the pinch's
+    // and the one-finger zoom's alike, seated on the real centroid. No pixel
+    // rides beside it and no y: the frame's readers place content by x alone
+    // and test no box (the gesture's one surface answer was the down's).
     double cx = 0.0;
     // Centroid horizontal delta since the previous delivered frame
     // (fractional — sub-pixel centroid motion accumulates rather than

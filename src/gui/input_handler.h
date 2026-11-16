@@ -972,9 +972,15 @@ struct GuiInputHandler {
     // what is bare-exact. The arm is AppState::modal_dialog_key_pressed; the body is
     // in input_key_dispatch.cpp beside the ring that arms it.
     void on_key_release(GuiKey key);
-    void on_button_press(int x, int y, GuiInputState mods);
-    void on_button_release(int x, int y, GuiInputState mods);
-    void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
+    // THE POINTER'S THREE ENTRIES TAKE THE PLACE (GuiPointerPlace,
+    // input_core.h; architect 2026-11-15, the no-grid arc): the real position
+    // beside its containing pixel. Inside, a whole-edged box reads the ints
+    // and every fractional box and every conversion into content is handed
+    // the reals as its own parameters — no body reads a real place from a
+    // member behind an int argument.
+    void on_button_press(const GuiPointerPlace& at, GuiInputState mods);
+    void on_button_release(const GuiPointerPlace& at, GuiInputState mods);
+    void on_motion(const GuiPointerPlace& at, GuiInputState mods);
 
     // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone
     // model's single-finger frames are back since the windowed model's
@@ -986,7 +992,7 @@ struct GuiInputHandler {
     // PAN — a one-finger drag whose down point lay on the waveform
     // (touch_point_in_pan_zone below), whose frames carry the finger as the
     // centroid and dist_ratio pinned at 1.0. The payload is a
-    // GuiTouchNavFrame (gui_input.h): the CURRENT centroid, the centroid's
+    // GuiTouchNavFrame (gui_input.h): the CURRENT centroid's real x, the centroid's
     // horizontal delta and the finger-distance ratio against the previous
     // delivered frame, the finger count, and the live ctrl bit.
     //
@@ -1191,7 +1197,7 @@ struct GuiInputHandler {
     // platform opens a WINDOW at all (on the zone, with no deadline; off it, and
     // outside an editor's field, the down is the pointer on contact,
     // 2026-09-25) — the platform state block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
-    bool touch_point_in_pan_zone(int x, int y) const;
+    bool touch_point_in_pan_zone(const GuiPointerPlace& at) const;
 
     // THE SWEEP-ARMED QUERY (architect 2026-11-07, session 87): the platform
     // asks it at a pan-zone window's slop crossing with no ctrl standing,
@@ -1252,8 +1258,8 @@ struct GuiInputHandler {
     // begin runs THE SELECTION FORMER'S press half — NO deselect (the sweep
     // only adds), the arm (arm_selection_sweep_at) on a waveform column, a
     // gutter down point arming nothing — and the same update and end drive
-    // it: the update recomputes the membership at the pen's column
-    // (apply_selection_sweep_to_column), the end puts ADD SEL out after a
+    // it: the update recomputes the membership at the pen's real place
+    // (apply_selection_sweep_to), the end puts ADD SEL out after a
     // moved sweep and lands the playhead on the focus a swept member took
     // (commit_region_sweep). Its refusals are this begin's, no more: the
     // read-only lock and the grid-iterations lock refuse no marker click's
@@ -1285,8 +1291,8 @@ struct GuiInputHandler {
     // THE DRAG STATE IS app.region_drag ITSELF, so a lost-button motion
     // arriving mid-gesture ends it through the pointer paths, every end a
     // commit either way.
-    void begin_touch_region(int x, int y);
-    void update_touch_region(int x, int y);
+    void begin_touch_region(const GuiPointerPlace& at);
+    void update_touch_region(const GuiPointerPlace& at);
     void end_touch_region();
 
     // THE EDITOR-FIELD QUERY (2026-09-05) — the pan-zone query's third
@@ -1299,7 +1305,7 @@ struct GuiInputHandler {
     // memory of taps. Wired at main.cpp's set_touch_nav_hooks call.
     // Non-const because the active editor's resolution is (it yields the
     // editor's own state pointer).
-    GuiTouchEditorField touch_point_in_editor_field(int x, int y);
+    GuiTouchEditorField touch_point_in_editor_field(const GuiPointerPlace& at);
 
     // THE TOUCH CARET DRAG (architect 2026-09-05, on the tablet: "make the
     // tiny text box not feel broken" — a finger dragged inside the open
@@ -1336,8 +1342,8 @@ struct GuiInputHandler {
     // leaves, and damages for it. Fired on the finger's lift and on the hard
     // ends alike (the platform's end split delivers or drops the staged
     // final frame ahead of it, its record).
-    void begin_touch_caret_drag(int x, int y);
-    void update_touch_caret_drag(int x, int y);
+    void begin_touch_caret_drag(const GuiPointerPlace& at);
+    void update_touch_caret_drag(const GuiPointerPlace& at);
     void end_touch_caret_drag();
 
 
@@ -1535,10 +1541,10 @@ struct GuiInputHandler {
     // measured against the arm's press stamp and ORed into the one shift term
     // the chord is built from, on the shift-admitting buttons alone
     // (chrome_shift_hold_ms(), app_state.h, carries the ruling).
-    bool arm_redesign_press(int x, int y);
+    bool arm_redesign_press(const GuiPointerPlace& at);
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,
-                                     int x, int y);
+                                     const GuiPointerPlace& at);
 
     // THE LEVEL CASE'S ARM (architect 2026-11-05, the slider; the
     // contract at AppState::ChromePress's Level kind, the ruling at
@@ -1567,10 +1573,13 @@ struct GuiInputHandler {
     // the device keys' one persist). The case is the level's one road:
     // no Settings row, no typed arm (architect 2026-11-05 night,
     // kSettingsEditorKeys).
-    bool arm_level_case_press(int x, int y);
-    void update_level_press_motion(int x, int y);
+    // THE TRAVEL IS REAL (architect 2026-11-15, the no-grid arc): the arm
+    // stores the press's real place and the motion takes the pointer's, so
+    // the level moves with the pen and the hover slop measures real travel.
+    bool arm_level_case_press(const GuiPointerPlace& at);
+    void update_level_press_motion(double x, double y);
     void finish_level_press_release(const AppState::ChromePress& arm,
-                                    int x, int y);
+                                    const GuiPointerPlace& at);
     void apply_level_case(RedesignButton id, double db);
     void settle_level_case(bool level_changed);
 
@@ -1580,15 +1589,17 @@ struct GuiInputHandler {
     // arm_clip_lamp_press is the band claim's third half, asked where
     // neither arm_redesign_press nor arm_level_case_press claimed the press:
     // WHILE AppState::clip_lamp_struck STANDS, a press on the clip lamp's
-    // square (logo_lamp_rects(...).clip, the rect the tick damages) arms the
+    // square (logo_lamp_rects(...).clip, THE PAINTED SQUARE'S REAL RECT,
+    // asked with the pointer's real place, architect 2026-11-15, the no-grid
+    // arc; the tick damages its hull) arms the
     // Lamp kind, no face damaged (no press look); unstruck it claims nothing.
     // Returns whether it armed. finish_clip_lamp_press_release is the lift's
     // (finish_chrome_press_release's Lamp arm): on the square and the strike
     // standing, GuiPlayback::ensure_device_available_for_play — the launch
     // gates' device question, nothing played — and
     // kPlaybackDeviceUnavailableCard on a false answer.
-    bool arm_clip_lamp_press(int x, int y);
-    void finish_clip_lamp_press_release(int x, int y);
+    bool arm_clip_lamp_press(const GuiPointerPlace& at);
+    void finish_clip_lamp_press_release(const GuiPointerPlace& at);
 
     // THE ARM'S THIRD BODY — the HOLD-REPEAT's firing tick (architect
     // 2026-08-16), driven from the run loop beside the hover recompute. While a
@@ -1674,7 +1685,7 @@ struct GuiInputHandler {
     // taken where it stands, its grab offset kept; off it the thumb jumps to
     // the press, and the motion CARRIES it. ON BOTH FACES THE PICTURE
     // FOLLOWS THE THUMB, THE SOUND WAITS FOR THE LIFT (architect 2026-10-27
-    // ~19:45): the page under the carried column (score_scrub_page_under) is
+    // ~19:45): the page under the carried center (score_scrub_page_under) is
     // SHOWN as the thumb crosses into it, display only — nothing written,
     // nothing seeked. ON THE PAGE ROAD (architect 2026-10-27, "the thumb
     // follows the pen continuously, the page under it changes in steps; the
@@ -1682,18 +1693,21 @@ struct GuiInputHandler {
     // page, the position written once where it differs from the page the
     // press found — a motionless tap on the thumb commits nothing (a range
     // of one page is consumed and does nothing); UNDER THE SOUNDTRACK the
-    // page is the one holding the column's frame, and THE LIFT SEEKS that
-    // frame, the thumb's last painted column's (architect 2026-10-26, "no
+    // page is the one holding the carried center's frame, and THE LIFT SEEKS
+    // that frame, the thumb's last painted place's (architect 2026-10-26, "no
     // scrubbing"), the position written with it and the page the drag showed
     // standing — a motionless tap on the thumb seeks nothing; the clock's
     // elapsed field shows that frame's time while the drag stands (architect
     // 2026-11-10, score_scrub_drop_frame). THE SOUND
     // PAUSES WHILE THE SCRUB IS HELD (architect 2026-10-26 ~23:00, the one
     // rule of both scrubs since ~23:15): a LIVE transport is paused at the
-    // press and played on from the dropped column at the lift. A modified
-    // press is consumed and does nothing.
-    bool claim_score_scrub_press(int x, int y, GuiInputState mods);
-    void update_score_scrub_motion(int x);
+    // press and played on from the dropped place at the lift. A modified
+    // press is consumed and does nothing. The thumb's carried center is a
+    // REAL place and `x` the pointer's real x (architect 2026-11-15, the
+    // no-grid arc).
+    bool claim_score_scrub_press(const GuiPointerPlace& at,
+                                 GuiInputState mods);
+    void update_score_scrub_motion(double x);
     bool finish_score_scrub_release();
     // THE PROMPT'S ROADS INTO THE VIEWER (prompt.cpp, which holds this
     // handler and not the viewer): the exit road's teardown and RESET's OK.
@@ -1862,39 +1876,41 @@ struct GuiInputHandler {
     void finalize_active_drags();
 
     // Arm THE SWEEP at a press — THE ONE ARM, serving its one entry (the
-    // TRIM arm lamp's touch sweep, architect 2026-11-07). `anchor_col` is the
-    // press column (waveform-relative, in range — the caller has refused the
-    // gutter), from which THE ARM ITSELF authors the fixed end of every trim
+    // TRIM arm lamp's touch sweep, architect 2026-11-07). `anchor_x` is the
+    // press's REAL place on the strip (waveform-relative, in range — the
+    // caller has refused the gutter; architect 2026-11-15, the no-grid
+    // arc), from which THE ARM ITSELF authors the fixed end of every trim
     // pair the sweep writes: RegionDragState::anchor_source_frame through
-    // sweep_trim_frame_at_column, the sweep's one column->trim route. (x, y)
-    // is the press position for the press-becomes-drag threshold. THE PRESS
+    // sweep_trim_frame_at_column, the sweep's one column->trim route. `at`
+    // is the press's place for the press-becomes-drag threshold. THE PRESS
     // WRITES NO TRIM AND SEATS NO PLAYHEAD (architect 2026-11-07, session 88).
     // ONE CALLER (2026-11-07): the former's press half, the armed sweep's
     // begin (begin_touch_region). The LOWER
     // half is on the sweep's surface too since 2026-08-13 ("... should also be allowed in the lower
     // half, for consistency"); its PLAIN tap is the pending click, whose
     // motionless release runs the one-shot scrub.
-    void arm_region_drag_at(int anchor_col, int x, int y);
+    void arm_region_drag_at(double anchor_x, const GuiPointerPlace& at);
 
     // THE ADD SEL SWEEP'S ARM (architect 2026-11-10, session 101) — the
     // selection former's press half, arm_region_drag_at's twin on the same
-    // record (RegionDragState::select): `anchor_col` the down point's column
-    // (waveform-relative, in range — the caller has refused the gutter),
-    // (x, y) the press position for the shared threshold, and THE SELECTION
+    // record (RegionDragState::select): `anchor_x` the down point's real
+    // place (waveform-relative, in range — the caller has refused the gutter),
+    // `at` the press's place for the shared threshold, and THE SELECTION
     // STANDING NOW snapshotted as the union's fixed half. IT WRITES NOTHING
     // ELSE: no deselect (the sweep only adds), no playhead, no stop. ONE
     // CALLER: begin_touch_region under the lit ADD SEL lamp.
-    void arm_selection_sweep_at(int anchor_col, int x, int y);
+    void arm_selection_sweep_at(double anchor_x, const GuiPointerPlace& at);
 
     // THE ADD SEL SWEEP'S PER-MOTION BODY (architect 2026-11-10, session
-    // 101): the pen's column stored first (RegionDragState::pen_col, the
+    // 101): the pen's real place stored first (RegionDragState::pen_x, the
     // sweep highlight's moving end, architect 2026-11-12) with the canvas
-    // damage its move owes, then the membership recomputed at `pen_col`
-    // (clamped into [0, w) by the caller) through the Selection mutator, and
+    // damage its move owes, then the membership recomputed at `pen_x`
+    // (waveform-relative, held in [0, w] by the caller; architect
+    // 2026-11-15, the no-grid arc) through the Selection mutator, and
     // only when the membership or the focus moved. The rule is at the definition
     // (input_pointer.cpp). ONE CALLER: apply_region_drag_motion past the
     // shared gate on the `select` former.
-    void apply_selection_sweep_to_column(int pen_col);
+    void apply_selection_sweep_to(double pen_x);
 
     // THE SWEEP'S ONE MOTION PATH, hoisted for its two drivers (2026-08-12, the
     // touch half): on_motion's region branch (pointer motion under the held
@@ -1902,17 +1918,17 @@ struct GuiInputHandler {
     // platform's per-frame region hook, which never has a button to lose). The
     // whole live body: the shared Chebyshev gate from the press/down point
     // (moved latches once), the moved-drag double-click-candidate clear, the
-    // moving endpoint at the pointer column through the click->frame basis, THE
+    // moving endpoint at the pointer's real place through the click->frame basis, THE
     // TRIM WRITE from the anchor to that endpoint (write_trim_from_sweep) — and
     // NO PLAYHEAD WRITE (architect 2026-11-07, session 88, reversing the
     // carry of 2026-07-30); on the ADD SEL former (RegionDragState::select,
-    // 2026-11-10) the selection's recompute at that column in the trim
-    // write's place (apply_selection_sweep_to_column). Caller guards active. The write's
+    // 2026-11-10) the selection's recompute at that place in the trim
+    // write's place (apply_selection_sweep_to). Caller guards active. The write's
     // own repaint is the waveform area's, mid-gesture, so the bar and the
     // canvas's sweep highlight — the sweep's picture (RegionDragState,
     // app_state.h; architect 2026-11-12) — track the stroke live. (No
     // sweep runs in the `h` view since 2026-11-07, so no carve-out stands.)
-    void apply_region_drag_motion(int mouse_x, int mouse_y);
+    void apply_region_drag_motion(const GuiPointerPlace& at);
 
     // THE SWEEP'S ONE END OWNER — every end path calls it (clean release,
     // button lost in on_motion, the touch hook's end, and the force-end
@@ -1947,15 +1963,20 @@ struct GuiInputHandler {
     // 2026-11-07 (session 88, the rule at the head of input_trim.cpp).
     // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
     // [0, area.w)) seats nothing and stops nothing.
-    void place_playhead_at_click_column(int click_rel_x);
+    // THE CLICK FAMILY TAKES THE REAL PLACE (architect 2026-11-15, the
+    // no-grid arc): `click_rel_x` here and in the two siblings below
+    // (scrub_press_at, create_marker_at_empty_lane) is the click's real x on
+    // the strip, waveform-relative, handed on to the family's one
+    // conversion (playhead_frame_at_click_column, input_pointer.cpp).
+    void place_playhead_at_click_column(double click_rel_x);
 
     // ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click (contract
     // at ScrollDragState, app_state.h; the deferred act below). Records the press and its three
     // surface facts and does nothing else. `scrub_release` is the waveform's
     // LOWER half (2026-08-13): the motionless release runs the audition scrub
     // instead of the placement, which is the halves' one remaining difference.
-    void arm_nav_press(int x, int y, bool history, bool seed_empty_lane,
-                       bool scrub_release);
+    void arm_nav_press(const GuiPointerPlace& at, bool history,
+                       bool seed_empty_lane, bool scrub_release);
 
     // THE PLACEMENT LANES' PRESS (architect 2026-09-25: the ruler and the
     // marker lane left the navigation surface): arm_nav_press, so the
@@ -1966,8 +1987,8 @@ struct GuiInputHandler {
     // (`head_drag`, a plain press on the playhead's head as painted, architect
     // 2026-10-09 ~17:40): past the slop each motion runs the click act at the
     // pointer's column (ScrollDragState::head_drag).
-    void arm_placement_press(int x, int y, bool history, bool seed_empty_lane,
-                             bool head_drag = false);
+    void arm_placement_press(const GuiPointerPlace& at, bool history,
+                             bool seed_empty_lane, bool head_drag = false);
 
     // THE ONE-FINGER ZOOM'S LEVEL RULE — `zoom_level - dx/rate` at the
     // gui_scale-resolved rate (nav_zoom_px_per_level(), whose scaling argument
@@ -1990,7 +2011,7 @@ struct GuiInputHandler {
     // the placement above at the press column, playback state
     // read at the act. The full contract is at the definition
     // (input_pointer.cpp).
-    void run_nav_click_act(int press_x, bool history, bool scrub_release);
+    void run_nav_click_act(double press_x, bool history, bool scrub_release);
 
     // THE MARKER CLICK ACT, AT THE PRESS (2026-08-17) — stop, the two-way
     // selection fork, the land, the PLAIN shape's
@@ -2001,7 +2022,7 @@ struct GuiInputHandler {
     // on_button_press's marker claims: the ctrl toggle branch and the
     // plain branch. Contract at PendingMarkerPress (app_state.h),
     // reasoning at the definition (input_pointer.cpp).
-    void run_marker_click_act(int hit, int x, int y, bool ctrl,
+    void run_marker_click_act(int hit, const GuiPointerPlace& at, bool ctrl,
                               const DoubleClickCandidate& dc_at_press);
 
     // THE PLAIN MARKER SELECT (2026-09-14) — the plain click's act whole (the
@@ -2030,7 +2051,7 @@ struct GuiInputHandler {
     // end cap nearest the press column (architect 2026-11-10).
     // Contract at PendingClickAct (app_state.h), reasoning at the
     // definitions (input_pointer.cpp).
-    void arm_pending_click_act(int x, int y);
+    void arm_pending_click_act(const GuiPointerPlace& at);
     void run_pending_click_act(PendingClickAct press);
 
     // The empty marker-lane double-click marker CREATE, run at the SECOND
@@ -2044,7 +2065,7 @@ struct GuiInputHandler {
     // Places the playhead on the clicked column first, then drops through the
     // standing _at_playhead paths so the create takes the full path (walls, undo,
     // selection, the lead-in offset) unchanged.
-    void create_marker_at_empty_lane(int click_rel_x);
+    void create_marker_at_empty_lane(double click_rel_x);
 
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every
@@ -3162,8 +3183,8 @@ private:
     struct PenHotLatch {
         bool armed    = false;
         bool anchored = false;  // set by the first hover report after the arm
-        int  x        = 0;      // the anchor: the first hover report's pixel
-        int  y        = 0;
+        double x      = 0.0;    // the anchor: the first hover report's real place
+        double y      = 0.0;
     };
     PenHotLatch pen_hot_latch_;
     // THE ONE PREDICATE (the rule and the inventory of its readers above):
@@ -3404,7 +3425,7 @@ private:
     // takes the active-domain frame from playhead_frame_at_click_column
     // instead, the two domains kept apart (the rule and its reasons are at
     // RegionDragState::anchor_source_frame and at the definition).
-    int64_t sweep_trim_frame_at_column(int col) const;
+    int64_t sweep_trim_frame_at_column(double col) const;
 
     // (THE MINIMUM TRIM WIDTH FLOOR — kMinTrimSpanFrames, a flat count of
     // source frames derived from the engine window and the authored value
@@ -3506,23 +3527,27 @@ private:
     // input_pointer.cpp, whose application chokepoint it shares, and the
     // region bodies beside the former's own press half there.)
 
-    bool route_trim_bar_press(int mouse_x, int mouse_y);
+    // THE PRESS'S REAL PLACE (architect 2026-11-15, the no-grid arc): the
+    // grabs' zones and the bridge stand on the span's real ends
+    // (TrimBarHit, render.h) and every trim conversion below takes the real
+    // x as its own parameter.
+    bool route_trim_bar_press(double mouse_x, double mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
     // only once on_motion crosses grab_moved_threshold_px() from the press.
     // ONE SURFACE ARMS IT, the 10 px bar's endcaps and bridge (the waveform
     // overlay armed it too from 2026-08-18 until its resting form was deleted
     // on 2026-09-22).
-    void arm_pending_trim_drag(bool is_begin, bool both, int press_x,
-                               int press_y);
+    void arm_pending_trim_drag(bool is_begin, bool both, double press_x,
+                               double press_y);
     // The pending's end without a crossing (lift, lost button, force-end):
     // disarm, raising a held cap (input_trim.cpp).
     void disarm_pending_trim_drag();
-    void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
-    void update_trim_drag(int mouse_x);   // motion: writes the live store
+    void begin_trim_drag(TrimHit which, double mouse_x, bool both = false);
+    void update_trim_drag(double mouse_x);   // motion: writes the live store
     // mouse_x → source-domain frame double, the single conversion both the
     // drag anchor (begin) and the live cursor (update) read so they can never
     // diverge. Returns false (out untouched) when audio/zoom state is unusable.
-    bool trim_mouse_x_to_source_frame(int mouse_x, double& out_frame);
+    bool trim_mouse_x_to_source_frame(double mouse_x, double& out_frame);
     // mouse_x → active-domain frame: the cursor-column half of
     // trim_mouse_x_to_source_frame, shared with the move-both-bounds drag
     // so the gap is preserved in the domain the user actually sees (active),
@@ -3530,7 +3555,7 @@ private:
     // column→frame landing (the basis and the domain rule are at the
     // definition, input_trim.cpp). Returns false (out untouched) when
     // audio/zoom state is unusable.
-    bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
+    bool trim_mouse_x_to_active_frame(double mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
 
     // THE BARREL'S BOUND SET ON THE TRIM BAR: move WHICHEVER END CAP IS
@@ -3567,7 +3592,7 @@ private:
         bool    is_begin;   // the nearest bound: the begin, else the end
         int64_t frame;      // the source frame the click writes
     };
-    std::optional<TrimBoundClick> set_trim_bound_at_click(int mouse_x);
+    std::optional<TrimBoundClick> set_trim_bound_at_click(double mouse_x);
 
     // WHAT THAT CLICK WOULD WRITE, or nullopt when it refuses — the whole of the
     // decision half of set_trim_bound_at_click above (its
@@ -3578,7 +3603,7 @@ private:
     // function nothing but the write and its tail. Const, because deciding is
     // not acting: the answer is a pure function of the store, the audio and the
     // painted geometry.
-    std::optional<TrimBoundClick> trim_bound_click(int mouse_x) const;
+    std::optional<TrimBoundClick> trim_bound_click(double mouse_x) const;
 
     // The barrel trim-bar bound set's THRESHOLD CROSSING (a PRESS
     // until 2026-08-15, when the set moved to the lift): sets the nearest
@@ -3593,7 +3618,8 @@ private:
     // second copy of its guard ladder — and the bound the drag takes is the
     // bound that return names, the nearest cap at the down's column
     // (architect 2026-11-10).
-    void set_trim_bound_at_click_then_arm_drag(int mouse_x, int mouse_y);
+    void set_trim_bound_at_click_then_arm_drag(double mouse_x,
+                                               double mouse_y);
 
     // One scrub ACT at an active-domain frame: THE SCRUB ALWAYS PLAYS
     // (architect 2026-09-21, superseding the 2026-07-27 stop-then-start, which
@@ -3633,7 +3659,7 @@ private:
     // drag-modal statement; the upper half's placement, by contrast, stops the play,
     // architect 2026-10-06); since the scrub always plays (architect 2026-09-21),
     // what the act finds decides only whether it pays the stop's fence.
-    void scrub_press_at(int click_rel_x);
+    void scrub_press_at(double click_rel_x);
 
     // THE S/T CHOKEPOINT, in its two spellings. The BODY is the set-to form:
     // put app.active_audio_view at 'S' or 'T', a no-op when it is already
@@ -4203,9 +4229,10 @@ private:
     // prompt gate and ABOVE the TWO mode veils (the player's and the picker's), each of which
     // admits exactly the band and its own modal row;
     // it owns its own button gate so the rank costs the veils nothing.
-    bool claim_folder_overlay_press(int x, int y, GuiInputState mods);
-    bool finish_folder_overlay_release(int x, int y);
-    void update_folder_overlay_press_motion(int x, int y);
+    bool claim_folder_overlay_press(const GuiPointerPlace& at,
+                                    GuiInputState mods);
+    bool finish_folder_overlay_release(const GuiPointerPlace& at);
+    void update_folder_overlay_press_motion(const GuiPointerPlace& at);
     // THE TWO HALVES OF THE ROW CLICK, FORKED ON THE OWNER and nowhere else:
     // the highlight (the band moves, under every owner — the picker has
     // no field beside it) and the open act (the player enters a folder, goes
@@ -4223,7 +4250,10 @@ private:
     // render_player_scrub_handle_hit) the thumb is taken where it stands, and
     // anywhere else on the band it JUMPS to the press and the same press
     // drags it on — its painted x follows the pointer with nothing seeked,
-    // and the RELEASE commits the seek to the thumb's column (the product's
+    // and the RELEASE commits the seek to the thumb's carried center, a REAL
+    // place (architect 2026-11-15, the no-grid arc: `x` below is the
+    // pointer's real x, and the grab band is asked with its real place) (the
+    // product's
     // deferred-click shape; a motionless tap on the thumb seeks nothing).
     // Until that day a press off the handle's box seeked at the press and
     // armed nothing. THE SOUND PAUSES WHILE THE SCRUB IS HELD (architect
@@ -4237,12 +4267,13 @@ private:
     // the force-end finalizer — drops the arm and commits nothing, a live
     // item the press paused staying PAUSED, the field back on the item's
     // position.
-    bool claim_player_scrub_press(int x, int y, GuiInputState mods);
-    bool finish_player_scrub_release(int x, int y);
-    void update_player_scrub_motion(int x);
-    // The drag's carried column clamped onto the thumb's TRAVEL, the two
-    // writers' one expression (the body says why).
-    int  clamp_player_scrub_marker_x(int x) const;
+    bool claim_player_scrub_press(const GuiPointerPlace& at,
+                                  GuiInputState mods);
+    bool finish_player_scrub_release(double x);
+    void update_player_scrub_motion(double x);
+    // The drag's carried center, a real place, clamped onto the thumb's
+    // TRAVEL, the two writers' one expression (the body says why).
+    double clamp_player_scrub_marker_x(double x) const;
     // (clear_player_scrub_drag is public, beside clear_modal_dialog_press,
     // for the same hook and the same finalizer.)
 
@@ -4378,7 +4409,8 @@ private:
     // even when the press's own act closed the editor under it (Enter, Esc):
     // the key-down was delivered, so its pair is owed whatever became of the
     // surface — and the core's repeat cancel is that pair's other job.
-    bool claim_onscreen_keyboard_press(int x, int y, GuiInputState mods);
+    bool claim_onscreen_keyboard_press(const GuiPointerPlace& at,
+                                       GuiInputState mods);
     bool finish_onscreen_keyboard_release();
 
     // THE DIALOG BUTTONS ACT AT THE RELEASE (architect 2026-08-13,
@@ -4598,7 +4630,8 @@ private:
     void republish_history_lane_now();
     void set_history_delta(GuiHistoryWalkSource source,
                            GuiHistoryCompare    compare);
-    bool handle_history_mode_press(int x, int y, GuiInputState mods,
+    bool handle_history_mode_press(const GuiPointerPlace& at,
+                                   GuiInputState mods,
                                    const DoubleClickCandidate& dc_at_press);
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit);

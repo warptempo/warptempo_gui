@@ -30,7 +30,7 @@ int64_t phase_bound_now(const GuiPhaseResetMarker& m, MarkerCell cell) {
 
 }  // namespace
 
-bool ValueDragOps::begin(int marker, MarkerCell cell, int origin_y) {
+bool ValueDragOps::begin(int marker, MarkerCell cell, double origin_y) {
     // THE TARGET RULE, asked of its one owner and asked HERE rather than at the
     // caller, so no caller can answer it differently
     // (value_drag_target, app_state.h). A refusal is SILENT and writes nothing:
@@ -99,7 +99,7 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int origin_y) {
     return true;
 }
 
-void ValueDragOps::apply_motion(int mouse_y) {
+void ValueDragOps::apply_motion(double mouse_y) {
     if (!app.value_drag.active) return;
     // ONE STEP PER kValueDragPxPerStep WINDOWS PX, through the product's
     // one scale conversion — a press-road LENGTH scales, exactly as the drag
@@ -111,16 +111,18 @@ void ValueDragOps::apply_motion(int mouse_y) {
     // the y where the grab gate was crossed (ValueDragState::origin_y, never
     // the press), window y grows downward, so `origin_y - mouse_y` is "how
     // far the hand has risen since the drag began", and the sign of the step
-    // count is the sign of the value change.
-    const int64_t travel =
-        static_cast<int64_t>(app.value_drag.origin_y) - mouse_y;
-    // C++ integer division TRUNCATES TOWARD ZERO, which is what this gesture
+    // count is the sign of the value change. THE TRAVEL IS REAL (architect
+    // 2026-11-15, the no-grid arc): the pointer's real y against the
+    // origin's, so a step lands where the pen crosses its line.
+    const double travel = app.value_drag.origin_y - mouse_y;
+    // THE COUNT TRUNCATES TOWARD ZERO, which is what this gesture
     // wants: the count is SYMMETRIC about the origin — the first step up and
     // the first step down are both a full per_step away — so a hand wobbling
     // inside the dead band around the crossing writes nothing in either
     // direction. Flooring instead would make the downward half fire a step
-    // one pixel below the origin.
-    const int64_t steps = travel / per_step;
+    // just below the origin.
+    const int64_t steps =
+        static_cast<int64_t>(std::trunc(travel / static_cast<double>(per_step)));
     if (steps == app.value_drag.last_steps) return;
     app.value_drag.last_steps = steps;
     // THE TARGET IS ABSOLUTE AGAINST THE ORIGIN, never an accumulation of

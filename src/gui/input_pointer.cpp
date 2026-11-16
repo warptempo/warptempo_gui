@@ -865,8 +865,12 @@ static_assert(std::size(kToolbarChords) + kLevelCaseCount ==
 // CLOCK (architect 2026-10-27), answers here too (RedesignButtonFace's
 // `contains`, the field's record), so the clock arms, lifts and passes the
 // band's modifier gate as the key does, and the dispatch is the key's.
-bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
-    return app.redesign_buttons[redesign_button_index(id)].contains(x, y);
+// IT TAKES THE PLACE (GuiPointerPlace; architect 2026-11-15, the no-grid arc):
+// the key's whole face reads its pixel, the clock's real field its real point
+// (RedesignButtonFace::contains).
+bool redesign_button_hit(const AppState& app, RedesignButton id,
+                         const GuiPointerPlace& at) {
+    return app.redesign_buttons[redesign_button_index(id)].contains(at);
 }
 
 // (press_on_live_menu_anchor — the folder overlay's two veils' one
@@ -945,9 +949,10 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // is chrome, not surface, and stays inert.
 
 // THE PLAYHEAD'S HEAD AS PAINTED (architect 2026-10-09 ~17:40, the head drag;
-// the lanes' one drag, above): the head's painted columns — the triangle and
-// its shadow, cut to the waveform's columns — over its device rows of
-// the ruler's, NO INVISIBLE HIT BOX beyond them ("I don't think we should
+// the lanes' one drag, above): the head's box at its exact place — the
+// chip's hit extent, cut to the waveform's columns — over its device rows of
+// the ruler's, tested half-open with THE POINTER'S REAL PLACE (architect
+// 2026-11-15, the no-grid arc), NO INVISIBLE HIT BOX beyond them ("I don't think we should
 // get in the habit of making invisible hitboxes"), read from the ruler
 // pass's own publication (AppState::playhead_head_hit, paint_ruler_row) as
 // every flag rect is (ON SCREEN IS AS PAINTED). Its callers ask the flags
@@ -955,7 +960,7 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // plain press's ruler band walk in on_button_press and in
 // handle_history_mode_press (each arming arm_placement_press with the head
 // drag).
-bool point_on_playhead_head(const AppState& app, int x, int y) {
+bool point_on_playhead_head(const AppState& app, double x, double y) {
     return rect_contains(app.playhead_head_hit, x, y);
 }
 
@@ -1034,8 +1039,15 @@ bool point_on_nav_surface(const AppState& app, int x, int y) {
 // repealed.
 // The fallback covers degenerate geometry only (no strip width / no zoom), where
 // there is no painted grid to land on.
+//
+// THE POINTER'S REAL PLACE REACHES THIS DOOR (architect 2026-11-15, the
+// no-grid arc): `col_x` is the click's real x on the strip, waveform-relative,
+// a parameter of its own so no caller can pair a place with a stale one. THE
+// LANDING IS STILL THE WHOLE COLUMN UNDER IT — the one floor below, which the
+// pen act's own landing rule replaces (the frame under the pen's real place).
 int64_t playhead_frame_at_click_column(const AppState& app,
-                                       const GuiAudio& audio, int col) {
+                                       const GuiAudio& audio, double col_x) {
+    const int64_t col = static_cast<int64_t>(std::floor(col_x));
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp > 0.0)
         return static_cast<int64_t>(std::llrint(
@@ -1078,8 +1090,11 @@ struct ActiveEditorText {
     // the field, and a click in its padding puts the caret at the nearest
     // end as clicking a text field's margin does). The press claim and the
     // touch translation's editor-field query both read this, so "in the
-    // field" has one spelling for the pointer road and the finger.
-    GuiRect             field{0, 0, 0, 0};
+    // field" has one spelling for the pointer road and the finger. A REAL
+    // RECT, asked with the pointer's real place (architect 2026-11-15, the
+    // no-grid arc): the flag editor's box stands on its mark's exact x; the
+    // dialog editor's control is whole and answers as its pixels did.
+    GuiRectF            field{0.0, 0.0, 0.0, 0.0};
 };
 
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
@@ -1133,13 +1148,16 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
 // drag-select site funnels through it, and since row 7 there is one family
 // of editors rather than two, so there is nothing left for them to drift
 // apart on.
-DialogEditorStop editor_stop_at(const ActiveEditorText& g, int mouse_x,
-                                int mouse_y) {
+// THE POINT IS THE POINTER'S REAL PLACE (architect 2026-11-15, the no-grid
+// arc): the stops stand at the shaped run's exact pen offsets, so the nearest
+// one is nearest the pen, not nearest the left edge of the pixel under it.
+DialogEditorStop editor_stop_at(const ActiveEditorText& g, double mouse_x,
+                                double mouse_y) {
     if (g.wrap != nullptr)
-        return dialog_editor_byte_at(*g.wrap, g.ed->pending,
-                                     static_cast<double>(mouse_x), mouse_y);
-    return {text_editor::byte_index_from_shaped_x(
-                static_cast<double>(mouse_x), g.text_left, *g.byte_x),
+        return dialog_editor_byte_at(*g.wrap, g.ed->pending, mouse_x,
+                                     mouse_y);
+    return {text_editor::byte_index_from_shaped_x(mouse_x, g.text_left,
+                                                  *g.byte_x),
             false};
 }
 
@@ -1153,8 +1171,8 @@ DialogEditorStop editor_stop_at(const ActiveEditorText& g, int mouse_x,
 // than possibly caught in the dark half of a period, then sets the stop's
 // row-end affinity (a press past a hard-wrapped row's text keeps the caret
 // painted at that row's end, 2026-10-14).
-void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x,
-                             int mouse_y) {
+void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
+                             double mouse_y) {
     const DialogEditorStop s = editor_stop_at(g, mouse_x, mouse_y);
     g.ed->selection_anchor = -1;
     g.ed->cursor_pos = s.byte;
@@ -1959,7 +1977,7 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 // release; since the scrub always plays (architect 2026-09-21) that reading
 // decides only whether the act pays the stop's fence, never whether it
 // launches.
-void GuiInputHandler::scrub_press_at(int click_rel_x) {
+void GuiInputHandler::scrub_press_at(double click_rel_x) {
     const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
@@ -2236,8 +2254,10 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // (the button held at the down, then the slop crossed) the DOWN point.
     if ((f.two_finger || one_finger_zoom) && !app.touch_nav_zoom.seated) {
         TouchNavZoomState& z = app.touch_nav_zoom;
-        // The waveform's own column (window x less the area's x, the
-        // canvas standing the column's margin in since 2026-10-09), CLAMPED
+        // The waveform's own column AS A REAL PLACE (the centroid's real
+        // window x less the area's x — architect 2026-11-15, the no-grid arc:
+        // the pivot is where the fingers are, not the pixel that holds them;
+        // the canvas standing the column's margin in since 2026-10-09), CLAMPED
         // INTO THE WAVEFORM'S COLUMNS before the frame is read under it: the
         // second finger may join over chrome and the pen's previous point may
         // lie off the canvas, and the seat HOLDS this column for the phase
@@ -2245,7 +2265,8 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // the seat was taken against is recorded for re-seat (B) below.
         const double seat_col = clamp_col_into_waveform(
             wf_area,
-            static_cast<double>(f.x - wf_area.x) - (one_finger_zoom ? f.dx : 0.0));
+            (f.cx - static_cast<double>(wf_area.x)) -
+                (one_finger_zoom ? f.dx : 0.0));
         z.anchor_sample = vp + seat_col * spp_old;
         z.anchor_col    = seat_col;
         z.zoom_vp       = app.viewport_start_sample;
@@ -2583,7 +2604,10 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 // to the POINTER TRANSLATION, where the lanes' own press arms answer it: a
 // tap places the playhead (a double tap on the empty marker lane creates)
 // and a drag does nothing — the placement pending begins no pan.
-bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
+bool GuiInputHandler::touch_point_in_pan_zone(
+        const GuiPointerPlace& at) const {
+    const int x = at.x;
+    const int y = at.y;
     // (A CLAUSE FOR THE SETTINGS CHOICE EDITOR'S DROPPED LIST stood here
     // 2026-10-07 to 2026-10-14, for the dropdown's reason, and went with the
     // list.)
@@ -2678,7 +2702,8 @@ bool GuiInputHandler::touch_sweep_armed() const {
            !app.history_mode.active;
 }
 
-void GuiInputHandler::begin_touch_region(int x, int y) {
+void GuiInputHandler::begin_touch_region(const GuiPointerPlace& at) {
+    const int x = at.x;
     // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
     // end_audition_for_press's declaration): the armed sweep delivers no
     // button press, so its begin is a press entry of its own, ahead of the
@@ -2714,7 +2739,7 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
         const GuiRect sel_area = waveform_area(app);
         const int sel_rel = x - sel_area.x;
         if (sel_rel < 0 || sel_rel >= sel_area.w) return;
-        arm_selection_sweep_at(sel_rel, x, y);
+        arm_selection_sweep_at(at.rx - static_cast<double>(sel_area.x), at);
         return;
     }
     // THE FORMER'S PRESS HALF at the DOWN point; the platform stages the
@@ -2731,17 +2756,17 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     const GuiRect area = waveform_area(app);
     const int rel = x - area.x;
     if (rel < 0 || rel >= area.w) return;
-    arm_region_drag_at(rel, x, y);
+    arm_region_drag_at(at.rx - static_cast<double>(area.x), at);
 }
 
-void GuiInputHandler::update_touch_region(int x, int y) {
+void GuiInputHandler::update_touch_region(const GuiPointerPlace& at) {
     // The drag's ONE motion path (apply_region_drag_motion): the shared
     // Chebyshev gate from the down point, the trim's moving end, no playhead
     // write. Self-guarded on the drag's own active bit,
     // which is what makes a refused begin's stream free — and what covers a
     // lost-button motion that ended it mid-gesture.
     if (!app.region_drag.active) return;
-    apply_region_drag_motion(x, y);
+    apply_region_drag_motion(at);
 }
 
 void GuiInputHandler::end_touch_region() {
@@ -2766,10 +2791,12 @@ void GuiInputHandler::end_touch_region() {
 // blink rule; nothing here selects, commits or seeds (the field's whole
 // vocabulary, a tap and a drag, at begin_touch_caret_drag's declaration).
 
-GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
-                                                                  int y) {
+GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(
+        const GuiPointerPlace& at) {
+    const int x = at.x;
+    const int y = at.y;
     const ActiveEditorText g = active_editor_text(app, audio);
-    if (!g.valid || !rect_contains(g.field, x, y))
+    if (!g.valid || !rect_contains(g.field, at.rx, at.ry))
         return GuiTouchEditorField::Outside;
     // A NOTIFICATION CARD STANDING OVER THE FIELD OWNS THE GLASS UNDER IT
     // (2026-10-14): the cards paint above the modal family's box, and a
@@ -2786,7 +2813,7 @@ GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
     return GuiTouchEditorField::Field;
 }
 
-void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
+void GuiInputHandler::begin_touch_caret_drag(const GuiPointerPlace& at) {
     // The stream acts on the editor active now and keeps no record of it
     // (the contract at the declaration).
     const ActiveEditorText g = active_editor_text(app, audio);
@@ -2799,12 +2826,12 @@ void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
     // across it (the C8 rule the nav frames apply); the stream's own end
     // seeds nothing.
     app.double_click = DoubleClickCandidate{};
-    set_editor_caret_from_x(g, x, y);
+    set_editor_caret_from_x(g, at.rx, at.ry);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
 
-void GuiInputHandler::update_touch_caret_drag(int x, int y) {
+void GuiInputHandler::update_touch_caret_drag(const GuiPointerPlace& at) {
     const ActiveEditorText g = active_editor_text(app, audio);
     // The editor active now is the one the stream began on: the drag owns
     // the one touch, so no road opens another meanwhile (architect
@@ -2812,7 +2839,7 @@ void GuiInputHandler::update_touch_caret_drag(int x, int y) {
     if (!g.valid) return;
     // The I-beam follows the finger and nothing selects — the seat drops the
     // anchor at every frame.
-    set_editor_caret_from_x(g, x, y);
+    set_editor_caret_from_x(g, at.rx, at.ry);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
@@ -3436,7 +3463,7 @@ bool GuiInputHandler::return_modal_focus_to_field() {
 // because the press clears that field at its top: only the snapshot still holds
 // the previous click.
 static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
-                                     int x, int y) {
+                                     double x, double y) {
     return dc.surface == DoubleClickSurface::TrimBar &&
            monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
            std::abs(x - dc.press_x) <= double_click_slack_px() &&
@@ -3528,7 +3555,8 @@ void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
 // no drag can begin under the editor it just opened (the editor owns input
 // and veils the pointer, 2026-10-25, so the press's motion and lift are the
 // veil's). It seeds nothing either — the family rule.
-void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
+void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
+                                           bool ctrl,
                                            const DoubleClickCandidate&
                                                dc_at_press) {
     if (hit < 0) return;
@@ -3539,7 +3567,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
     // the selection fork and the double-click seed the plain arm stamps at
     // the tail. It is a pure geometry read, which is what lets it stand ahead
     // of the stop.
-    const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
+    const MarkerCell cell = hit_test_flag_cell(app, audio, at.rx, at.ry);
     // ADD TO SELECTION IS THE TOGGLE ARM'S SECOND PRODUCER (architect
     // 2026-08-18): while the mode stands, a PLAIN press on a flag's PAYLOAD
     // BOX is a ctrl press in every respect — same branch, same land, same
@@ -3665,8 +3693,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
         dc_at_press.surface == DoubleClickSurface::Marker &&
         dc_at_press.target == hit &&
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
-        std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
-        std::abs(y - dc_at_press.press_y) <= double_click_slack_px();
+        std::abs(at.rx - dc_at_press.press_x) <= double_click_slack_px() &&
+        std::abs(at.ry - dc_at_press.press_y) <= double_click_slack_px();
     if (double_click &&
         // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
         // Read-only refuses every one of the marker-lane editors, as it
@@ -3713,8 +3741,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
     app.pending_marker_press = PendingMarkerPress{};
     app.pending_marker_press.active  = true;
     app.pending_marker_press.marker  = hit;
-    app.pending_marker_press.press_x = x;
-    app.pending_marker_press.press_y = y;
+    app.pending_marker_press.press_x = at.rx;
+    app.pending_marker_press.press_y = at.ry;
     // WHICH CELL THIS PRESS LANDED ON, resolved at the head and carried to
     // the seed at the motionless release AND, since 2026-09-10, to the VALUE
     // DRAG at the threshold crossing, whose subject IS the cell. The
@@ -3746,11 +3774,11 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool ctrl,
 // stored press_x through the displayed map, the crossing arming the trim drag
 // at it too — so the gates are live and the aim's geometry is the epoch the
 // user pressed in, like every other aimed press.
-void GuiInputHandler::arm_pending_click_act(int x, int y) {
+void GuiInputHandler::arm_pending_click_act(const GuiPointerPlace& at) {
     app.pending_click = PendingClickAct{};
     app.pending_click.kind     = PendingClickKind::TrimBoundSet;
-    app.pending_click.press_x  = x;
-    app.pending_click.press_y  = y;
+    app.pending_click.press_x  = at.rx;
+    app.pending_click.press_y  = at.ry;
 }
 
 // RUN THE ARMED ACT — the motionless lift's whole body. Its ONE caller is
@@ -3789,8 +3817,10 @@ void GuiInputHandler::run_pending_click_act(PendingClickAct press) {
 // two lamps are at onscreen_keyboard.h. What is here is the press's own
 // dispatch and the release's owed key-up.
 
-bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
-                                                    GuiInputState mods) {
+bool GuiInputHandler::claim_onscreen_keyboard_press(
+        const GuiPointerPlace& at, GuiInputState mods) {
+    const int x = at.x;
+    const int y = at.y;
     if (!onscreen_keyboard::stands(app)) return false;
     const GuiRect surf = onscreen_keyboard::surface_rect(app);
     // THE CLAIM IS THE BAND (onscreen_keyboard::claim_rect; with the taskbar
@@ -3832,7 +3862,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(int x, int y,
     const bool                    shift_latched = kb.shift_latched;
 
     onscreen_keyboard::KeyDef def{};
-    const int hit = onscreen_keyboard::key_at(app, page, x, y, def);
+    const int hit =
+        onscreen_keyboard::key_at(app, page, at.rx, at.ry, def);
     if (hit < 0) return true;   // a gap, the margin: consumed, no key
 
     using Role = onscreen_keyboard::Role;
@@ -4078,7 +4109,9 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
 }
 
 bool GuiInputHandler::claim_folder_overlay_press(
-        int x, int y, GuiInputState mods) {
+        const GuiPointerPlace& at, GuiInputState mods) {
+    const int x = at.x;
+    const int y = at.y;
     if (!folder_overlay::stands(app)) return false;
     const GuiRect surf = folder_overlay::surface_rect(app);
     if (!rect_contains(surf, x, y)) return false;
@@ -4103,7 +4136,7 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // it, the modified press claiming the band and arming nothing wherever it
     // lands.
     if (mods.ctrl) return true;
-    const int hit = folder_overlay::row_at(app, x, y);
+    const int hit = folder_overlay::row_at(app, at.rx, at.ry);
     if (hit < 0) return true;
     // THE PRESS ONLY ARMS — a click activates, but the act rides the
     // MOTIONLESS LIFT because this same press may still become the band's
@@ -4112,8 +4145,8 @@ bool GuiInputHandler::claim_folder_overlay_press(
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     press.armed           = true;
     press.row             = hit;
-    press.press_x         = x;
-    press.press_y         = y;
+    press.press_x         = at.rx;
+    press.press_y         = at.ry;
     press.scroll_at_press = app.folder_overlay.scroll_px;
     press.inside          = true;
     press.scrolling       = false;
@@ -4122,11 +4155,12 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // the row damaged here, at every inside crossing (the motion below) and
     // at the lift (finish_folder_overlay_release); an inert row's arm paints
     // nothing, the painter's own gate.
-    viewport.invalidate_rect(folder_overlay::row_rect(app, hit));
+    viewport.invalidate_rect(hull(folder_overlay::row_rect(app, hit)));
     return true;
 }
 
-void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
+void GuiInputHandler::update_folder_overlay_press_motion(
+        const GuiPointerPlace& at) {
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     if (!press.armed) return;
     if (!press.scrolling) {
@@ -4149,8 +4183,7 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
         // purely sideways crossing simply scrolls nothing and ends with no act,
         // which is the answer Plasma's single-click and GNOME's touch both give
         // (the ruling's own references).
-        if (std::max(std::abs(x - press.press_x),
-                     std::abs(y - press.press_y)) >=
+        if (real_travel_px(press.press_x, press.press_y, at.rx, at.ry) >=
                 drag_moved_threshold_px()) {
             // The arm IS the scroll drag now: no row is pressed (the press
             // pair leaves it), the surface repainted whole.
@@ -4161,11 +4194,12 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
             // THE FEINT'S BIT (2026-11-05): the row under the press wears
             // the press pair while the pointer is on it, each crossing
             // damaging the row.
-            const bool inside = folder_overlay::row_at(app, x, y) == press.row;
+            const bool inside =
+                folder_overlay::row_at(app, at.rx, at.ry) == press.row;
             if (inside != press.inside) {
                 press.inside = inside;
                 viewport.invalidate_rect(
-                    folder_overlay::row_rect(app, press.row));
+                    hull(folder_overlay::row_rect(app, press.row)));
             }
             return;
         }
@@ -4173,19 +4207,24 @@ void GuiInputHandler::update_folder_overlay_press_motion(int x, int y) {
     // THE SCROLL DRAG: the content follows the finger — a pointer moving
     // down pulls earlier rows into view — measured from the press, so the
     // offset cannot accumulate drift across the events.
-    const int before = app.folder_overlay.scroll_px;
-    app.folder_overlay.scroll_px = press.scroll_at_press - (y - press.press_y);
+    // THE FINGER'S REAL TRAVEL MOVES THE LIST BY A REAL OFFSET (architect
+    // 2026-11-15, the no-grid arc); the damage is the surface, whole.
+    const double before = app.folder_overlay.scroll_px;
+    app.folder_overlay.scroll_px =
+        press.scroll_at_press - (at.ry - press.press_y);
     folder_overlay::clamp_scroll(app);
     if (app.folder_overlay.scroll_px != before)
         viewport.invalidate_rect(folder_overlay::surface_rect(app));
 }
 
-bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
+bool GuiInputHandler::finish_folder_overlay_release(
+        const GuiPointerPlace& at) {
     AppState::FolderOverlayPress press = app.folder_overlay.press;
     if (!press.armed) return false;
     app.folder_overlay.press = AppState::FolderOverlayPress{};
     if (press.row >= 0)
-        viewport.invalidate_rect(folder_overlay::row_rect(app, press.row));
+        viewport.invalidate_rect(
+            hull(folder_overlay::row_rect(app, press.row)));
     // A scroll drag ends here with nothing else owed.
     if (press.scrolling) return true;
     // A MOTIONLESS LIFT ON THE ARMED ROW HIGHLIGHTS IT AND THEN OPENS IT — A
@@ -4199,7 +4238,7 @@ bool GuiInputHandler::finish_folder_overlay_release(int x, int y) {
     // lines, 2026-10-29): neither half, the row being no choice.
     // NOTHING IS SEEDED HERE ANY MORE: the row's double-click surface went
     // with the ruling, no second meaning being left for a second press.
-    if (folder_overlay::row_at(app, x, y) != press.row) return true;
+    if (folder_overlay::row_at(app, at.rx, at.ry) != press.row) return true;
     if (folder_overlay::row_is_inert(app, press.row)) return true;
     folder_overlay_highlight_row(press.row);
     folder_overlay_open_row(press.row);
@@ -4331,7 +4370,7 @@ void GuiInputHandler::clear_folder_overlay_press() {
     const int row = press.row;
     press = AppState::FolderOverlayPress{};
     if (folder_overlay::stands(app) && row >= 0)
-        viewport.invalidate_rect(folder_overlay::row_rect(app, row));
+        viewport.invalidate_rect(hull(folder_overlay::row_rect(app, row)));
 }
 
 // -- THE PLAY-SCRUB'S POINTER HALF (2026-08-28) --------------------------------
@@ -4341,8 +4380,8 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // through a stash that names the live player session). The mapping between a
 // place and a frame is the one the painter's handle uses
 // (render_player_scrub_x_of / _frame_at, app_state.h: the resting thumb at
-// its frame's exact place, a held one on the whole column the pointer
-// carries it to), whose travel runs the
+// its frame's exact place, a held one at the real place the pointer
+// carries it to — architect 2026-11-15, the no-grid arc), whose travel runs the
 // thumb's center from the channel's first column to its last (2026-10-25).
 // THE THUMB DRAGS, WINDOWS' TRACKBAR (architect
 // 2026-10-02 — the fix for "the thumb doesn't drag"; the drag itself stood
@@ -4352,10 +4391,10 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // thumb, its overhang past the channel's ends included, through the one test
 // (render_player_scrub_handle_hit) — the thumb is TAKEN WHERE IT IS, the grab
 // offset kept so it does not jump under the pointer; ANYWHERE ELSE on the
-// item's band the thumb JUMPS to the press's column and the same press
+// item's band the thumb JUMPS to the press's real place and the same press
 // continues as the drag. Either way the thumb's painted x follows the
 // pointer with nothing seeked, and the RELEASE commits the seek to the
-// thumb's carried column, the product's deferred-click shape — so a tap on
+// thumb's carried center, the product's deferred-click shape — so a tap on
 // the track seeks at the lift, and a motionless tap on the thumb itself
 // seeks nothing (Windows: clicking the thumb moves nothing).
 // THE SOUND PAUSES WHILE THE SCRUB IS HELD — THE ONE RULE OF BOTH SCRUBS,
@@ -4396,27 +4435,27 @@ static void invalidate_scrub_clock(Viewport& viewport, const AppState& app) {
     if (clock.w > 0 && clock.h > 0) viewport.invalidate_rect(clock);
 }
 
-// THE DRAG'S CARRIED COLUMN, clamped onto the HANDLE'S TRAVEL — the one
+// THE DRAG'S CARRIED CENTER, clamped onto the HANDLE'S TRAVEL — the one
 // expression its two writers (the press's arm, the motion) share, so the
 // painted handle sits inside its own track at every point of a drag and the
 // release's seek reads the same span the mapping does. The carried center
-// is a WHOLE COLUMN (the pointer hands whole pixels) on the channel's travel
-// (render_player_scrub_travel_x0, the trough's left edge to its right), so
-// the clamp is onto the whole columns inside the travel; a travel with no
-// span answers the column a resting thumb is carried from
-// (scrub_thumb_carried_column, app_state.h).
-int GuiInputHandler::clamp_player_scrub_marker_x(int x) const {
+// is A REAL PLACE (architect 2026-11-15, the no-grid arc: the pointer's real
+// x less the grab offset, so a held thumb stands where the pen holds it) on
+// the channel's travel (render_player_scrub_travel_x0, the trough's left
+// edge to its right), the clamp onto that real interval; a travel with no
+// span answers its one place.
+double GuiInputHandler::clamp_player_scrub_marker_x(double x) const {
     const GuiRect channel = app.modal_dialog.scrub_channel;
     const double x0 = render_player_scrub_travel_x0(channel);
     const int span  = render_player_scrub_usable_span(channel);
-    if (span <= 0) return scrub_thumb_carried_column(x0);
-    const int lo = static_cast<int>(std::ceil(x0));
-    const int hi = static_cast<int>(std::floor(x0 + static_cast<double>(span)));
-    return x < lo ? lo : (x > hi ? hi : x);
+    if (span <= 0) return x0;
+    return std::clamp(x, x0, x0 + static_cast<double>(span));
 }
 
-bool GuiInputHandler::claim_player_scrub_press(int x, int y,
+bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
                                                GuiInputState mods) {
+    const int x = at.x;
+    const int y = at.y;
     if (!app.render_player.active) return false;
     if (!modal_dialog_stash_current()) return false;
     const GuiRect track = app.modal_dialog.scrub;
@@ -4452,24 +4491,26 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     // jumps.
     const double thumb_x = app.modal_dialog.scrub_thumb_x;
     // THE ARM, ON THE THUMB OR OFF IT (the block above): the grab offset is
-    // the press's distance from the thumb's carried column on the grab band
-    // (scrub_thumb_carried_column, app_state.h: the whole column nearest the
-    // painted center, the one the drag carries it from) and zero elsewhere,
+    // the press's REAL distance from the thumb's painted center on the grab
+    // band (architect 2026-11-15, the no-grid arc: the thumb is taken
+    // exactly where it stands, no step onto a column) and zero elsewhere,
     // so the thumb jumps to an off-thumb press and keeps its seat under an
-    // on-thumb one.
+    // on-thumb one. The grab band is asked with the real point
+    // (render_player_scrub_handle_hit).
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     const bool on_thumb =
-        thumb_x >= 0.0 && render_player_scrub_handle_hit(track, thumb_x, x, y);
+        thumb_x >= 0.0 &&
+        render_player_scrub_handle_hit(track, thumb_x, at.rx, at.ry);
     drag          = AppState::RenderPlayer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
-    drag.grab_dx  = on_thumb ? x - scrub_thumb_carried_column(thumb_x) : 0;
+    drag.grab_dx  = on_thumb ? at.rx - thumb_x : 0.0;
     // THE CARRIED x IS A THUMB CENTRE, so it is clamped onto the thumb's OWN
     // TRAVEL and not onto the item — the painter draws the thumb at it, and a
     // centre past either end of that travel would hang the thumb off its
     // channel (the
     // travel is the mapping's, one owner: render_player_scrub_usable_span).
-    drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
+    drag.marker_x = clamp_player_scrub_marker_x(at.rx - drag.grab_dx);
     // THE SOUND PAUSES WHILE THE SCRUB IS HELD (the block head): a live item
     // paused here, its resume point the engine's position; a paused one arms
     // as it stands.
@@ -4481,12 +4522,12 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     return true;
 }
 
-void GuiInputHandler::update_player_scrub_motion(int x) {
+void GuiInputHandler::update_player_scrub_motion(double x) {
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     if (!drag.armed) return;
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w <= 0) return;
-    const int mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
+    const double mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (mx == drag.marker_x) return;
     drag.marker_x = mx;
     drag.moved    = true;
@@ -4495,8 +4536,7 @@ void GuiInputHandler::update_player_scrub_motion(int x) {
     invalidate_scrub_clock(viewport, app);
 }
 
-bool GuiInputHandler::finish_player_scrub_release(int x, int y) {
-    (void)y;
+bool GuiInputHandler::finish_player_scrub_release(double x) {
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     if (!drag.armed) return false;
     const AppState::RenderPlayer::ScrubDrag ended = drag;
@@ -4562,8 +4602,9 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    RENDER PLAYER'S SCRUB ARMS: the thumb taken where it stands on its grab
 //    band, the grab offset kept, jumping to a press anywhere else, and
 //    CARRIED by the motion (clamp_player_scrub_marker_x, the travel's one
-//    owner), the painter drawing it at the carried column while armed. THE
-//    PAGE UNDER THE CARRIED COLUMN IS SHOWN LIVE, DISPLAY ONLY
+//    owner), the painter drawing it at the carried center, a real place,
+//    while armed. THE
+//    PAGE UNDER THE CARRIED CENTER IS SHOWN LIVE, DISPLAY ONLY
 //    (score_scrub_page_under, the one mapping per face; GuiScoreViewer::
 //    display_page): at an off-thumb press and at every motion, nothing
 //    seeked, nothing written — a press on the thumb takes
@@ -4604,8 +4645,10 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    taking it: "we should make them both the same"; the play-scrub's block
 //    head) holds for the sound; the picture is the score's own. --
 
-bool GuiInputHandler::claim_score_scrub_press(int x, int y,
+bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
                                               GuiInputState mods) {
+    const int x = at.x;
+    const int y = at.y;
     if (!app.score_viewer.active || score_viewer == nullptr) return false;
     if (!modal_dialog_stash_current()) return false;
     const GuiRect track = app.modal_dialog.scrub;
@@ -4616,12 +4659,12 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     if (!app.score) return true;
     // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED), its published exact
     // center: on its grab band the press takes it where it stands, the grab
-    // offset kept against its carried column (scrub_thumb_carried_column,
-    // the render player's claim); anywhere else on the item the thumb jumps
-    // to the press.
+    // offset kept against that painted center (the render player's claim);
+    // anywhere else on the item the thumb jumps to the press.
     const double thumb_x = app.modal_dialog.scrub_thumb_x;
     const bool on_thumb =
-        thumb_x >= 0.0 && render_player_scrub_handle_hit(track, thumb_x, x, y);
+        thumb_x >= 0.0 &&
+        render_player_scrub_handle_hit(track, thumb_x, at.rx, at.ry);
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     const bool media = score_viewer_has_soundtrack(app);
     // A range of one page has no other page to show (the scrub dead).
@@ -4629,8 +4672,8 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     drag          = AppState::ScoreViewer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
-    drag.grab_dx  = on_thumb ? x - scrub_thumb_carried_column(thumb_x) : 0;
-    drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
+    drag.grab_dx  = on_thumb ? at.rx - thumb_x : 0.0;
+    drag.marker_x = clamp_player_scrub_marker_x(at.rx - drag.grab_dx);
     if (media) {
         // THE SOUND PAUSES WHILE THE SCRUB IS HELD (the block head): a live
         // transport paused here, the cursor read into the resting position
@@ -4655,19 +4698,19 @@ bool GuiInputHandler::claim_score_scrub_press(int x, int y,
     return true;
 }
 
-void GuiInputHandler::update_score_scrub_motion(int x) {
+void GuiInputHandler::update_score_scrub_motion(double x) {
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     if (!drag.armed || score_viewer == nullptr) return;
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w <= 0) return;
-    const int mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
+    const double mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (mx == drag.marker_x) return;
     drag.marker_x = mx;
     drag.moved    = true;
     viewport.invalidate_rect(track);
     // The soundtrack's timestamp follows the thumb (the block head).
     invalidate_scrub_clock(viewport, app);
-    // THE PAGE UNDER THE CARRIED COLUMN IS SHOWN (the block head), display
+    // THE PAGE UNDER THE CARRIED CENTER IS SHOWN (the block head), display
     // only on both faces — nothing written, nothing seeked until the lift; a
     // column inside the shown page changes nothing but the thumb.
     score_viewer->display_page(score_scrub_page_under(app, mx));
@@ -4746,7 +4789,10 @@ void GuiInputHandler::clear_score_scrub_drag() {
 }
 
 
-void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
+void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
+                                      GuiInputState mods) {
+    const int x = at.x;
+    const int y = at.y;
     // ANY PRESS IS THE TOOLTIP'S HARD END, above every gate — Windows hides a
     // tooltip at a click ("About Tooltip Controls"), and a hint left floating
     // over the thing the user just clicked is noise. The release is one too
@@ -4803,7 +4849,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // ending the act at this press would make that lift a launch or a restart.
     const bool play_key_press =
         notification_card_at(app, x, y) == 0 &&
-        redesign_button_hit(app, RedesignButton::TransportPlayStop, x, y);
+        redesign_button_hit(app, RedesignButton::TransportPlayStop, at);
     if (!play_key_press) end_audition_for_press();
 
     // THE NOTIFICATION CARDS, ABOVE EVERY GATE AND EVERY VEIL (architect
@@ -4840,7 +4886,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // gestures underneath, key or gap. (Contract at the declaration; the act
     // runs at the PRESS, inside; a press carrying the barrel's ctrl is
     // consumed there with no act, architect 2026-11-08.)
-    if (claim_onscreen_keyboard_press(x, y, mods)) return;
+    if (claim_onscreen_keyboard_press(at, mods)) return;
 
     // (THE SIZING FRAME's claim, above every veil, 2026-10-05 to 2026-10-24,
     // went with the app's frame.)
@@ -4892,7 +4938,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // veils below — the player's and the picker's, each of which
     // admits the band and its own modal row
     // and consumes the rest. The claim is opaque.
-    if (claim_folder_overlay_press(x, y, mods)) return;
+    if (claim_folder_overlay_press(at, mods)) return;
 
     // (THE VEILS BELOW LET NOTHING THROUGH since 2026-10-24: the app's
     // caption, the window's title bar, was their one exemption from
@@ -4917,9 +4963,9 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // no chrome modifier).
     const auto claim_button_row_press = [&] {
         if (chrome_band_modifiers_refused(app, x, y, mods)) return;
-        if (arm_redesign_press(x, y)) return;
-        if (arm_level_case_press(x, y)) return;
-        arm_clip_lamp_press(x, y);
+        if (arm_redesign_press(at)) return;
+        if (arm_level_case_press(at)) return;
+        arm_clip_lamp_press(at);
     };
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
@@ -4952,7 +4998,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
             claim_button_row_press();
             return;
         }
-        if (claim_player_scrub_press(x, y, mods)) return;
+        if (claim_player_scrub_press(at, mods)) return;
         if (!mods.ctrl && modal_dialog_stash_current()) {
             arm_modal_dialog_press(x, y);
         }
@@ -5006,7 +5052,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
             claim_button_row_press();
             return;
         }
-        if (claim_score_scrub_press(x, y, mods)) return;
+        if (claim_score_scrub_press(at, mods)) return;
         if (!mods.ctrl && modal_dialog_stash_current()) {
             arm_modal_dialog_press(x, y);
         }
@@ -5094,7 +5140,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
             // editor byte — or the marker lane's whole published box, pads
             // included. Any press OUTSIDE it is consumed by the veil
             // below, closing nothing.
-            if (rect_contains(g.field, x, y)) {
+            if (rect_contains(g.field, at.rx, at.ry)) {
                 // THE FIELD TAKES THE FOCUS BACK AT THE PRESS (architect
                 // 2026-10-02; the rule at return_modal_focus_to_field), the
                 // caret's blink restarted so it is lit at once (the blink
@@ -5105,7 +5151,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                 // retiring the double tap's word select and its drag by
                 // words): the seat collapses the selection, and the
                 // selection is the keys' alone (Shift + LEFT / RIGHT).
-                set_editor_caret_from_x(g, x, y);
+                set_editor_caret_from_x(g, at.rx, at.ry);
                 app.editor_text_drag = EditorTextDragState{};
                 app.editor_text_drag.active = true;
                 // The dialog editors' edit damage is the box's interior
@@ -5266,7 +5312,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
     // act of its own (the trim bar's framing) and this function's own field was
     // cleared at the top of the press; nothing else about the call is special.
     if (app.history_mode.active &&
-        handle_history_mode_press(x, y, mods, dc_at_press)) {
+        handle_history_mode_press(at, mods, dc_at_press)) {
         return;
     }
 
@@ -5339,7 +5385,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
         // empty-top-strip fallthrough (mh_index < 0 is what makes a spot EMPTY)
         // all read this one hit.
         int mh_index = -1;
-        if (inside_top) mh_index = hit_test_flag(app, audio, x, y);
+        if (inside_top) mh_index = hit_test_flag(app, audio, at.rx, at.ry);
 
         // A top-strip gesture stops playback WHEN IT CLAIMS SOMETHING, never
         // merely because it landed in the strip (architect 2026-07-27). The
@@ -5419,7 +5465,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                 // act owner (run_marker_click_act). A ctrl click has no
                 // gesture to become and no double-click meaning, so nothing is
                 // armed — the act's own modified-shape return.
-                run_marker_click_act(mh_index, x, y, /*ctrl=*/true, dc_at_press);
+                run_marker_click_act(mh_index, at, /*ctrl=*/true, dc_at_press);
                 return;
             }
             // Markerless top-strip ctrl press: the TRIM BAR sets a trim bound
@@ -5476,7 +5522,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                     // stop to protect. The stop lives INSIDE
                     // set_trim_bound_at_click, past every refusal and
                     // immediately ahead of the bound write.
-                    arm_pending_click_act(x, y);
+                    arm_pending_click_act(at);
                     return;
                 }
             }
@@ -5565,9 +5611,9 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                 const GuiRect ruler = top_ruler_row_area(app);
                 if (rect_contains(ruler, x, y)) {
                     arm_placement_press(
-                        x, y, /*history=*/false, /*seed_empty_lane=*/false,
+                        at, /*history=*/false, /*seed_empty_lane=*/false,
                         /*head_drag=*/mh_index < 0 &&
-                            point_on_playhead_head(app, x, y));
+                            point_on_playhead_head(app, at.rx, at.ry));
                     return;
                 }
             }
@@ -5624,7 +5670,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                 // pending held the staged viewport's promote until the
                 // release, so the waveform zoomed at once and the trim bar
                 // snapped to the framing a release, a tick and a frame later.)
-                if (trim_bar_double_click_at(dc_at_press, x, y)) {
+                if (trim_bar_double_click_at(dc_at_press, at.rx, at.ry)) {
                     run_span_framing_command();
                     return;
                 }
@@ -5632,7 +5678,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                 // stayed still), so the press records its point and the release
                 // decides — see TrimBarPressSeed.
                 app.trim_bar_press = TrimBarPressSeed{
-                    .active = true, .press_x = x, .press_y = y};
+                    .active = true, .press_x = at.rx, .press_y = at.ry};
                 // THE BAND'S READ-ONLY RETURN IS DELETED (architect 2026-08-07):
                 // it was the sole read-only defense for the whole trim-bar band,
                 // and the ruling removed the thing it was defending — read-only
@@ -5644,7 +5690,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                 // read-only check (it never did). The full ruling is at
                 // read_only_key_blocked
                 // (input_key_dispatch.cpp).
-                route_trim_bar_press(x, y);
+                route_trim_bar_press(at.rx, at.ry);
                 return;
             }
             if (mh_index >= 0) {
@@ -5662,7 +5708,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                 // through the value-drag posture) live at the crossing, never here: a
                 // locked tab and an off-home column still select and still
                 // land. The contract is at PendingMarkerPress (app_state.h).
-                run_marker_click_act(mh_index, x, y, /*ctrl=*/false,
+                run_marker_click_act(mh_index, at, /*ctrl=*/false,
                                      dc_at_press);
             } else {
                 // Empty top-strip spot — no marker flag under the point (the
@@ -5712,14 +5758,15 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
                     const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::EmptyLane &&
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-                        std::abs(x - dc.press_x) <= double_click_slack_px() &&
-                        std::abs(y - dc.press_y) <= double_click_slack_px()) {
+                        std::abs(at.rx - dc.press_x) <= double_click_slack_px() &&
+                        std::abs(at.ry - dc.press_y) <= double_click_slack_px()) {
                         // A double-click is never a drag: the rule at
                         // DoubleClickSurface (app_state.h).
-                        create_marker_at_empty_lane(x - area.x);
+                        create_marker_at_empty_lane(
+                            at.rx - static_cast<double>(area.x));
                         return;
                     }
-                    arm_placement_press(x, y, /*history=*/false,
+                    arm_placement_press(at, /*history=*/false,
                                         /*seed_empty_lane=*/true);
                     return;
                 }
@@ -5775,7 +5822,7 @@ void GuiInputHandler::on_button_press(int x, int y, GuiInputState mods) {
         // waveform instead of the nav drag. The architect deleted its resting
         // form — the tablet's pen reaches the trim bar — and the claim went
         // with it.)
-        arm_nav_press(x, y, /*history=*/false, /*seed_empty_lane=*/false,
+        arm_nav_press(at, /*history=*/false, /*seed_empty_lane=*/false,
                       /*scrub_release=*/waveform_lower_half(area, y));
     }
 }
@@ -5791,15 +5838,17 @@ void GuiInputHandler::finalize_editor_text_drag() {
     app.editor_text_drag = EditorTextDragState{};
 }
 
-void GuiInputHandler::arm_region_drag_at(int anchor_col, int x, int y) {
+void GuiInputHandler::arm_region_drag_at(double anchor_x,
+                                         const GuiPointerPlace& at) {
     app.region_drag = RegionDragState{};
     app.region_drag.active       = true;
-    // THE ANCHOR IS AUTHORED HERE, at the one arm, from the press COLUMN: the
-    // whole source frame through the sweep's one column->trim route (the
-    // field's declaration). No playhead is seated (2026-11-07, session 88).
-    app.region_drag.anchor_source_frame = sweep_trim_frame_at_column(anchor_col);
-    app.region_drag.press_x      = x;
-    app.region_drag.press_y      = y;
+    // THE ANCHOR IS AUTHORED HERE, at the one arm, from the press's REAL
+    // PLACE on the strip: the whole source frame through the sweep's one
+    // column->trim route (the field's declaration). No playhead is seated
+    // (2026-11-07, session 88).
+    app.region_drag.anchor_source_frame = sweep_trim_frame_at_column(anchor_x);
+    app.region_drag.press_x      = at.rx;
+    app.region_drag.press_y      = at.ry;
     // THIS ARM WRITES NOTHING ELSE: the trim is written by the motion path
     // from the first crossing on, and the trim bar and the canvas highlight,
     // the sweep's picture (RegionDragState, app_state.h), show each write as
@@ -5812,14 +5861,16 @@ void GuiInputHandler::arm_region_drag_at(int anchor_col, int x, int y) {
 }
 
 // THE ADD SEL SWEEP'S ARM (contract at the declaration): the record armed
-// on its `select` former with the down column and the selection standing now.
-void GuiInputHandler::arm_selection_sweep_at(int anchor_col, int x, int y) {
+// on its `select` former with the down's real place and the selection
+// standing now.
+void GuiInputHandler::arm_selection_sweep_at(double anchor_x,
+                                             const GuiPointerPlace& at) {
     app.region_drag = RegionDragState{};
     app.region_drag.active        = true;
     app.region_drag.select        = true;
-    app.region_drag.anchor_col    = anchor_col;
-    app.region_drag.press_x       = x;
-    app.region_drag.press_y       = y;
+    app.region_drag.anchor_x      = anchor_x;
+    app.region_drag.press_x       = at.rx;
+    app.region_drag.press_y       = at.ry;
     app.region_drag.prior_members = app.selected_markers;
     app.region_drag.prior_focus   = app.last_selected_marker;
 }
@@ -5829,82 +5880,86 @@ void GuiInputHandler::arm_selection_sweep_at(int anchor_col, int x, int y) {
 // "2 agree" — live membership; "disagree - include. they might be the
 // target"; "make the last selected in sweep the selection/focus. that's what
 // file managers do"). Asked at every motion past the shared gate, from the
-// snapshot, so the result is a pure function of the down column and the
-// pen's column:
+// snapshot, so the result is a pure function of the down's place and the
+// pen's:
 //   * THE MEMBERS are the selection standing at the down (the snapshot,
 //     RegionDragState::prior_members) UNION every marker of the ACTIVE
-//     COLUMN (the store the marker click selects in, W or P) whose PAINTED
-//     COLUMN lies in the swept span — the down column to the pen's, both
-//     inclusive, either direction. PULLING BACK drops only what this sweep
+//     COLUMN (the store the marker click selects in, W or P) whose EXACT
+//     PAINTED PLACE lies in the swept span — the CLOSED interval between
+//     the down's real place and the pen's, either direction (architect
+//     2026-11-15, the no-grid arc: the span is where the pen is, never the
+//     pixels that hold it). PULLING BACK drops only what this sweep
 //     added, never a prior member; the sweep ADDS ONLY (removal stays the
 //     marker click's toggle). DISABLED MARKERS ARE INCLUDED ("they might be
 //     the target"; a selected disabled marker stands the selection's stem
 //     as an enabled one does, 2026-11-11).
-//   * THE COLUMN IS THE PAINTER'S (ON SCREEN IS AS PAINTED): the marker's
-//     source frame through painted_column_of_source_frame_on_basis on the
+//   * THE PLACE IS THE PAINTER'S (ON SCREEN IS AS PAINTED): the marker's
+//     source frame through painted_x_of_source_frame_on_basis on the
 //     ITEM basis over the displayed map (displayed_or_live_target_map,
-//     item_viewport_basis) — the flag iterator's own shape
-//     (iterate_visible_flags_impl, render.cpp: the chip's apex column, the
-//     stem's column, the column a tap on that chip resolves), so a marker
-//     whose chip stands on a swept column is in, and one past either edge of
-//     the waveform (a column outside [0, w), where the pen's column is
-//     clamped) is never spanned.
+//     item_viewport_basis) — the flag iterator's own number
+//     (iterate_visible_flags_impl, render.cpp: the chip's apex, the stem's
+//     center), so a marker whose stem stands inside the lit span is in, and
+//     one past either edge of the waveform (a place outside [0, w], where
+//     the pen's place is held) is never spanned.
 //   * THE FOCUS is the last marker the sweep selected: the swept member that
 //     was NOT a prior member nearest the pen's end of the span — rightward
-//     (or on the down column) the largest column, leftward the smallest — a
-//     tie on one column taking the largest store index (the topmost chip, the
+//     (or on the down's place) the largest place, leftward the smallest — a
+//     tie on one place taking the largest store index (the topmost chip, the
 //     one a tap there grabs, hit_test_flag), re-seated as the span recomputes.
 //     With no such member the focus is the prior one (or none).
 //   * THE WRITE IS THE SELECTION MUTATOR'S (Selection::replace_selection, its
 //     publish the damage), and only when the membership or the focus moved,
-//     so a motion inside one column republishes nothing. THE SWEEP'S PICTURE
-//     is the stems appearing AND THE CANVAS HIGHLIGHT on the swept columns
-//     while the pointer is down (architect 2026-11-12: "the add selection
+//     so a motion that spans no new mark republishes nothing. THE SWEEP'S
+//     PICTURE is the stems appearing AND THE CANVAS HIGHLIGHT on the swept
+//     span while the pointer is down (architect 2026-11-12: "the add selection
 //     relies on the marker stems, which are dark in color, and they don't
 //     show exactly the bound that's being swept"; RegionDragState's head,
 //     sweep_highlight_columns), on this same span, so a marker is selected iff
-//     its column is lit. The playhead and playback wait for the lift
+//     its stem's center is lit. The playhead and playback wait for the lift
 //     (commit_region_sweep), which takes the highlight away.
-void GuiInputHandler::apply_selection_sweep_to_column(int pen_col) {
+void GuiInputHandler::apply_selection_sweep_to(double pen_x) {
     RegionDragState& d = app.region_drag;
-    // THE HIGHLIGHT'S MOVING END FIRST (RegionDragState::pen_col; the span's
+    // THE HIGHLIGHT'S MOVING END FIRST (RegionDragState::pen_x; the span's
     // one owner sweep_highlight_columns, app_state.h), ahead of the membership
     // and its early return, with the damage its move owes on the canvas's
     // rows (canvas_sink.h's damage contract): at the first crossing the
-    // whole new span, after it the columns from the old pen column to the
-    // new, both inclusive — the anchor fixed, they hold the spans'
-    // symmetric difference. A motion inside one column damages nothing.
-    if (pen_col != d.pen_col) {
+    // whole new span, after it the stretch from the old pen place to the
+    // new — the anchor fixed, that stretch holds the two spans' symmetric
+    // difference — as THE HULL of its real edges (render.h's hull: the
+    // pixels the highlight's two edges partly cover are in it). A motion
+    // that does not move the place damages nothing.
+    if (pen_x != d.pen_x) {
         const GuiRect area = waveform_area(app);
-        const int from = d.pen_col < 0 ? d.anchor_col : d.pen_col;
-        const int dlo  = std::min(from, pen_col);
-        const int dhi  = std::max(from, pen_col);
-        d.pen_col = pen_col;
-        viewport.invalidate_rect(
-            GuiRect{area.x + dlo, area.y, dhi - dlo + 1, area.h});
+        const double from = d.pen_x < 0.0 ? d.anchor_x : d.pen_x;
+        const double dlo  = std::min(from, pen_x);
+        const double dhi  = std::max(from, pen_x);
+        d.pen_x = pen_x;
+        viewport.invalidate_rect(hull(GuiRectF{
+            static_cast<double>(area.x) + dlo, static_cast<double>(area.y),
+            dhi - dlo, static_cast<double>(area.h)}));
     }
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return;
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
-    const int lo = std::min(d.anchor_col, pen_col);
-    const int hi = std::max(d.anchor_col, pen_col);
-    const bool leftward = pen_col < d.anchor_col;
+    const double lo = std::min(d.anchor_x, pen_x);
+    const double hi = std::max(d.anchor_x, pen_x);
+    const bool leftward = pen_x < d.anchor_x;
     std::set<int> members = d.prior_members;
-    int swept_focus = -1;
-    int focus_col   = 0;
+    int    swept_focus = -1;
+    double focus_x     = 0.0;
     const int n = active_marker_count(app);
     for (int i = 0; i < n; ++i) {
-        const int c = painted_column_of_source_frame_on_basis(
+        const double c = painted_x_of_source_frame_on_basis(
             app, audio, static_cast<double>(active_marker_time_frame(app, i)),
             dmap, basis.vp_start, basis.spp, basis.lattice_origin);
         if (c < lo || c > hi) continue;
         members.insert(i);
         if (d.prior_members.count(i)) continue;
-        // Ascending i, so a tie replaces: the largest index on one column.
-        if (swept_focus < 0 || (leftward ? c <= focus_col : c >= focus_col)) {
+        // Ascending i, so a tie replaces: the largest index on one place.
+        if (swept_focus < 0 || (leftward ? c <= focus_x : c >= focus_x)) {
             swept_focus = i;
-            focus_col   = c;
+            focus_x     = c;
         }
     }
     d.swept_focus = swept_focus;
@@ -5997,12 +6052,12 @@ void GuiInputHandler::commit_region_sweep() {
 // release runs the audition scrub instead of the placement — 2026-08-13). The
 // three are mutually exclusive by geometry: a lane is not the waveform, and
 // the `h` view has no scrub half.
-void GuiInputHandler::arm_nav_press(int x, int y, bool history,
+void GuiInputHandler::arm_nav_press(const GuiPointerPlace& at, bool history,
                                     bool seed_empty_lane, bool scrub_release) {
     app.scroll_drag = ScrollDragState{};
     app.scroll_drag.active          = true;
-    app.scroll_drag.press_x         = x;
-    app.scroll_drag.press_y         = y;
+    app.scroll_drag.press_x         = at.rx;
+    app.scroll_drag.press_y         = at.ry;
     app.scroll_drag.history         = history;
     app.scroll_drag.seed_empty_lane = seed_empty_lane;
     app.scroll_drag.scrub_release   = scrub_release;
@@ -6019,10 +6074,11 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
 // the playhead's head as painted (point_on_playhead_head): the lanes' one
 // drag, the playhead riding the pointer past the slop
 // (ScrollDragState::head_drag).
-void GuiInputHandler::arm_placement_press(int x, int y, bool history,
+void GuiInputHandler::arm_placement_press(const GuiPointerPlace& at,
+                                          bool history,
                                           bool seed_empty_lane,
                                           bool head_drag) {
-    arm_nav_press(x, y, history, seed_empty_lane, /*scrub_release=*/false);
+    arm_nav_press(at, history, seed_empty_lane, /*scrub_release=*/false);
     app.scroll_drag.head_drag = head_drag;
 }
 
@@ -6057,11 +6113,11 @@ void GuiInputHandler::arm_placement_press(int x, int y, bool history,
 // NO SWEEP ARM on any path — the sweep is the TRIM arm lamp's touch drag
 // (begin_touch_region), and a click is not a drag. A tap under the lit lamp
 // is this same act, the lamp staying lit (architect 2026-11-07, session 87).
-void GuiInputHandler::run_nav_click_act(int press_x, bool history,
+void GuiInputHandler::run_nav_click_act(double press_x, bool history,
                                         bool scrub_release) {
     const GuiRect area = waveform_area(app);
     if (scrub_release) {
-        scrub_press_at(press_x - area.x);
+        scrub_press_at(press_x - static_cast<double>(area.x));
         return;
     }
     if (history) {
@@ -6073,14 +6129,14 @@ void GuiInputHandler::run_nav_click_act(int press_x, bool history,
             // ONE-STATE RULE, 2026-11-05), before the playhead moves.
             viewport.refresh_flag_cache();
         }
-        place_playhead_at_click_column(press_x - area.x);
+        place_playhead_at_click_column(press_x - static_cast<double>(area.x));
         return;
     }
     selection.clear_selection();
-    place_playhead_at_click_column(press_x - area.x);
+    place_playhead_at_click_column(press_x - static_cast<double>(area.x));
 }
 
-void GuiInputHandler::place_playhead_at_click_column(int click_rel_x) {
+void GuiInputHandler::place_playhead_at_click_column(double click_rel_x) {
     // THE PLACEMENT PRESS'S PLAYHEAD HALF — the column-to-cursor recipe alone,
     // with no selection in it, so the `h` history mode can seat a playhead by
     // exactly the arithmetic and exactly the playback regime the live click
@@ -6112,7 +6168,7 @@ void GuiInputHandler::place_playhead_at_click_column(int click_rel_x) {
     viewport.move_playhead_to(sample);
 }
 
-void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
+void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // The empty marker-lane double-click, AT THE SECOND PRESS (2026-08-17 —
     // a recognized second press acts immediately; its one caller is the lane's
     // consume in on_button_press, which passes the press column and arms
@@ -6182,7 +6238,10 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 // `mods` HAS ONE READER, the tooltip's held bit at the top. No button is
 // named: the touch translation's press is the one the core delivers
 // (architect 2026-10-30, the mouse closed on the tablet).
-void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
+void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
+                                        GuiInputState mods) {
+    const int x = at.x;
+    const int y = at.y;
     // THE TOOLTIP'S HELD BIT, above every return: the platform's own answer
     // with this release (the release reads up), so a wait may start again.
     // AND ANY RELEASE IS THE TOOLTIP'S HARD END, as any press is (a click
@@ -6249,7 +6308,7 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // the reopen (its question standing over the picker, or the session
     // ending at once on a clean tab) — which is why the arm is cleared at the
     // head of that body and this arm returns immediately after it.
-    if (finish_folder_overlay_release(x, y)) return;
+    if (finish_folder_overlay_release(at)) return;
     // THE OVERLAYS' VEILS ADMIT TWO KINDS OF CHROME ARM, the one predicate
     // the three release blocks below read: A ROSTER ARM — THE OPENER'S (its
     // lift the overlay's close) OR THE TOOLTIP LAMP'S (architect 2026-11-10,
@@ -6285,10 +6344,10 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
         // mirror: the chrome arms the player's veil admits dispatch
         // through the chrome act's own body.
         if (overlay_admits_chrome) {
-            finish_chrome_press_release(chrome, x, y);
+            finish_chrome_press_release(chrome, at);
             return;
         }
-        if (finish_player_scrub_release(x, y)) return;
+        if (finish_player_scrub_release(at.rx)) return;
         // THE SHIFTED-TWIN VERDICT IS READ BEFORE THE TAKE, which clears
         // the arm the hold is measured against (2026-08-28; the term's two
         // roads are at modal_dialog_press_shifted).
@@ -6309,7 +6368,7 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // player's are.
     if (app.picker.active) {
         if (overlay_admits_chrome) {
-            finish_chrome_press_release(chrome, x, y);
+            finish_chrome_press_release(chrome, at);
             return;
         }
         dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
@@ -6323,7 +6382,7 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // through the one shared dispatch; every other lift consumed.
     if (app.score_viewer.active) {
         if (overlay_admits_chrome) {
-            finish_chrome_press_release(chrome, x, y);
+            finish_chrome_press_release(chrome, at);
             return;
         }
         if (finish_score_scrub_release()) return;
@@ -6353,7 +6412,7 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
     // below by construction: the press that armed chrome claimed the press
     // whole and armed nothing else.
     if (chrome.kind != AppState::ChromePress::Kind::None) {
-        finish_chrome_press_release(chrome, x, y);
+        finish_chrome_press_release(chrome, at);
         return;
     }
     // F2.1: a release ending an editor-text caret drag ends it before the
@@ -6383,11 +6442,11 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
         const TrimBarPressSeed seed = app.trim_bar_press;
         app.trim_bar_press = TrimBarPressSeed{};
         if (seed.active && !app.trim_drag.active &&
-            std::abs(x - seed.press_x) <= double_click_slack_px() &&
-            std::abs(y - seed.press_y) <= double_click_slack_px()) {
+            std::abs(at.rx - seed.press_x) <= double_click_slack_px() &&
+            std::abs(at.ry - seed.press_y) <= double_click_slack_px()) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::TrimBar,
-                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
+                .time_ms = monotonic_ms(), .press_x = at.rx, .press_y = at.ry,
                 .target = -1};
         }
     }
@@ -6412,14 +6471,14 @@ void GuiInputHandler::on_button_release(int x, int y, GuiInputState mods) {
         const bool history   = app.scroll_drag.history;
         const bool seed_lane = app.scroll_drag.seed_empty_lane;
         const bool scrub     = app.scroll_drag.scrub_release;
-        const int  press_x   = app.scroll_drag.press_x;
+        const double press_x = app.scroll_drag.press_x;
         app.scroll_drag = ScrollDragState{};
         if (moved) return;
         run_nav_click_act(press_x, history, scrub);
         if (seed_lane) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::EmptyLane,
-                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
+                .time_ms = monotonic_ms(), .press_x = at.rx, .press_y = at.ry,
                 .target  = -1};
         }
         return;
@@ -6676,7 +6735,7 @@ void GuiInputHandler::arm_pen_hot_latch() {
     // restore motion left them on the row the contact last lit, and their
     // walks hold it from here.
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
-                                 .x = 0, .y = 0};
+                                 .x = 0.0, .y = 0.0};
     recompute_redesign_button_hover();
     set_player_hot(-1);
 }
@@ -6749,7 +6808,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // The face's `contains`: Play's second rect, row 8's clock, raises
         // the key's own tooltip (2026-10-27).
         const bool under_pointer = !modal_veil && !under_card &&
-                                   f.contains(mx, my);
+                                   f.contains(app.last_mouse_place());
         // THE HOT CANDIDATE (stored by no write while the program's case has
         // no hot face, below): the toolbar button under the pointer on the
         // same gates — and NO keyboard-modal term:
@@ -6768,7 +6827,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         if (modal_veil || under_card) continue;
         const GuiRect column = tooltip_column_rect(f.rect);
         const bool on_column = rect_contains(column, mx, my);
-        if (!on_column && !rect_contains(f.field, mx, my)) continue;
+        if (!on_column &&
+            !rect_contains(f.field, app.last_mouse_rx, app.last_mouse_ry))
+            continue;
         // THE NO-WAIT RULE, ASKED OF THE KEY THE POINTER IS ON (architect
         // 2026-11-11: under an overlay the live band keys show their
         // tooltips): refused under a modal — the veil above already said so
@@ -6787,7 +6848,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // reads the words at paint time.
         if (redesign_button_tooltip(id).line1 != nullptr) {
             hovered_tip = i;
-            tip_column  = on_column ? column : f.field;
+            tip_column  = on_column ? column : hull(f.field);
             break;
         }
     }
@@ -6822,7 +6883,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     if (app.chrome_press.kind == AppState::ChromePress::Kind::Roster) {
         const bool inside =
             app.redesign_buttons[static_cast<size_t>(app.chrome_press.index)]
-                .contains(mx, my);
+                .contains(app.last_mouse_place());
         if (inside != app.chrome_press.inside) {
             app.chrome_press.inside = inside;
             invalidate_roster_press_face(app.chrome_press.index);
@@ -6960,7 +7021,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             !cue_wait_refused) {
             GuiRect face{0, 0, 0, 0};
             if (app.history_mode.active) {
-                const int item = history_cue_hit(app, mx, my, &face);
+                const int item = history_cue_hit(
+                    app, app.last_mouse_rx, app.last_mouse_ry, &face);
                 if (item >= 0 &&
                     !history_cue_tooltip_text(app, item).empty()) {
                     note_tooltip_hover(
@@ -6969,7 +7031,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                     return;
                 }
             } else {
-                const int cue = marker_cue_hit(app, mx, my, &face);
+                const int cue = marker_cue_hit(
+                    app, app.last_mouse_rx, app.last_mouse_ry, &face);
                 if (cue >= 0 &&
                     !marker_tooltip_value(app, audio, cue).empty()) {
                     note_tooltip_hover(
@@ -7008,9 +7071,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // act through
 // finish_chrome_press_release below, which re-asks every gate, the face's
 // bits as painted (architect 2026-09-24).
-bool GuiInputHandler::arm_redesign_press(int x, int y) {
+bool GuiInputHandler::arm_redesign_press(const GuiPointerPlace& at) {
     for (const ToolbarChord& tc : kToolbarChords) {
-        if (!redesign_button_hit(app, tc.id, x, y)) continue;
+        if (!redesign_button_hit(app, tc.id, at)) continue;
         // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: nothing arms, so
         // nothing can dispatch at the lift, and a long press is swallowed
         // exactly like a tap (one bit, both routes — a greyed
@@ -7187,18 +7250,18 @@ void GuiInputHandler::invalidate_roster_press_face(int index) {
 // measures no hold); A DISABLED CASE'S PRESS IS A CONSUMED NOTHING,
 // read as the roster's is, off the painted bit (RedesignButtonFace::enabled,
 // strictly as-painted). No face damage: a slider has no press look.
-bool GuiInputHandler::arm_level_case_press(int x, int y) {
+bool GuiInputHandler::arm_level_case_press(const GuiPointerPlace& at) {
     const RedesignButton id = RedesignButton::IconNoiseLevel;
     const AppState::RedesignButtonFace& face =
         app.redesign_buttons[static_cast<size_t>(redesign_button_index(id))];
-    if (!face.contains(x, y)) return false;
+    if (!face.contains(at)) return false;
     if (!face.enabled) return true;
     app.chrome_press = AppState::ChromePress{
         .kind     = AppState::ChromePress::Kind::Level,
         .index    = redesign_button_index(id),
         .press_ms = monotonic_ms(),
-        .x0       = x,
-        .y0       = y,
+        .x0       = at.rx,
+        .y0       = at.ry,
         .t0       = level_travel_fraction(app.device_config->noise_level)};
     return true;
 }
@@ -7215,7 +7278,7 @@ bool GuiInputHandler::arm_level_case_press(int x, int y) {
 // the canvas: the arm runs to the lift, the scrub thumb's shape, no
 // slide-off feint. `level_changed` records that some motion moved the
 // level, which is what the end's one write is owed for.
-void GuiInputHandler::update_level_press_motion(int x, int y) {
+void GuiInputHandler::update_level_press_motion(double x, double y) {
     AppState::ChromePress& arm = app.chrome_press;
     if (arm.kind != AppState::ChromePress::Kind::Level) return;
     if (!arm.moved) {
@@ -7225,7 +7288,7 @@ void GuiInputHandler::update_level_press_motion(int x, int y) {
         arm.moved = true;
     }
     const double travel = static_cast<double>(level_travel_px());
-    double t = arm.t0 + static_cast<double>(x - arm.x0) / travel;
+    double t = arm.t0 + (x - arm.x0) / travel;
     if (t < 0.0) t = 0.0;
     if (t > 1.0) t = 1.0;
     const double db = level_db_from_travel(t);
@@ -7256,10 +7319,10 @@ void GuiInputHandler::update_level_press_motion(int x, int y) {
 // writes. A moved press's level stands where the last motion put it,
 // settled by the take.
 void GuiInputHandler::finish_level_press_release(
-        const AppState::ChromePress& arm, int x, int y) {
+        const AppState::ChromePress& arm, const GuiPointerPlace& at) {
     if (arm.moved) return;
     const RedesignButton id = static_cast<RedesignButton>(arm.index);
-    if (!redesign_button_hit(app, id, x, y)) return;
+    if (!redesign_button_hit(app, id, at)) return;
     const double standing = app.device_config->noise_level;
     std::optional<double>& remembered = app.level_recall->noise;
     double db = kLevelDbOff;
@@ -7291,11 +7354,11 @@ void GuiInputHandler::finish_level_press_release(
 // exemption at finish_chrome_press_release's head). THE MODALS ALONE VEIL
 // IT: a prompt's or the progress modal's press gate returns above the band,
 // and an editor dialog standing at the lift refuses it there.
-bool GuiInputHandler::arm_clip_lamp_press(int x, int y) {
+bool GuiInputHandler::arm_clip_lamp_press(const GuiPointerPlace& at) {
     if (!app.clip_lamp_struck) return false;
     // The square's hull: the pixels it touches (the pointer names a pixel).
-    const GuiRect r = hull(logo_lamp_rects(app, app.logo_legend).clip);
-    if (!rect_contains(r, x, y)) return false;
+    const GuiRectF r = logo_lamp_rects(app, app.logo_legend).clip;
+    if (!rect_contains(r, at.rx, at.ry)) return false;
     app.chrome_press = AppState::ChromePress{
         .kind     = AppState::ChromePress::Kind::Lamp,
         .press_ms = monotonic_ms()};
@@ -7318,10 +7381,11 @@ bool GuiInputHandler::arm_clip_lamp_press(int x, int y) {
 // kPlaybackDeviceUnavailableCard as the gates do — a device asked for and
 // none given; a true answer raises nothing, the next tick's refresh
 // clearing the strike and damaging the square (refresh_logo_lamps).
-void GuiInputHandler::finish_clip_lamp_press_release(int x, int y) {
+void GuiInputHandler::finish_clip_lamp_press_release(
+        const GuiPointerPlace& at) {
     if (!app.clip_lamp_struck) return;
-    const GuiRect r = hull(logo_lamp_rects(app, app.logo_legend).clip);
-    if (!rect_contains(r, x, y)) return;
+    const GuiRectF r = logo_lamp_rects(app, app.logo_legend).clip;
+    if (!rect_contains(r, at.rx, at.ry)) return;
     if (!playback.ensure_device_available_for_play())
         notifications.notify(AppState::NotificationClass::Normal,
                              kPlaybackDeviceUnavailableCard);
@@ -7386,7 +7450,7 @@ void GuiInputHandler::settle_level_case(bool level_changed) {
 // only WHEN it fires — the keyboard's own chords still dispatch on the key
 // PRESS; button-is-its-chord is about what a button runs, not when.
 void GuiInputHandler::finish_chrome_press_release(
-        const AppState::ChromePress& arm, int x, int y) {
+        const AppState::ChromePress& arm, const GuiPointerPlace& at) {
     // THE VEIL, RE-ASKED ONCE FOR EVERY KIND: a chrome lift is a consumed
     // nothing while an editor dialog stands, whatever the arm is. It was a
     // membership test until 2026-08-13, admitting the modal-trap
@@ -7456,13 +7520,13 @@ void GuiInputHandler::finish_chrome_press_release(
         // act is the tap's toggle (2026-11-10), its own body; the veil
         // above has had its say (a modal raised mid-hold swallows the act,
         // the drag's level standing and already settled by the take).
-        finish_level_press_release(arm, x, y);
+        finish_level_press_release(arm, at);
         return;
     case AppState::ChromePress::Kind::Lamp:
         // THE STRUCK CLIP LAMP'S LIFT (2026-11-05 night): no chord — its one
         // act the device question, its own body; the veil above has had its
         // say (a modal raised mid-hold swallows it).
-        finish_clip_lamp_press_release(x, y);
+        finish_clip_lamp_press_release(at);
         return;
     }
     // A HOLD THAT ALREADY FIRED CONSUMES ITS OWN LIFT (architect 2026-08-16):
@@ -7475,7 +7539,7 @@ void GuiInputHandler::finish_chrome_press_release(
     for (const ToolbarChord& tc : kToolbarChords) {
         if (redesign_button_index(tc.id) != arm.index) continue;
         // The lift must land on the armed button itself.
-        if (!redesign_button_hit(app, tc.id, x, y)) return;
+        if (!redesign_button_hit(app, tc.id, at)) return;
         // (The editor veil is re-asked once for every kind at the top of this
         // body — the roster's own copy lived here until the walk tab was found
         // to be missing it.)
@@ -7692,7 +7756,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
     // remembered position — the lift's own derive doctrine (the arm's inside
     // bit serves the paint alone, AppState::ChromePress).
     if (!app.pointer_in_window ||
-        !redesign_button_hit(app, id, app.last_mouse_x, app.last_mouse_y))
+        !redesign_button_hit(app, id, app.last_mouse_place()))
         return;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != id) continue;
@@ -7820,8 +7884,10 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 // SECOND click, exactly as outside), and every ctrl press that is not the
 // claim above.
 bool GuiInputHandler::handle_history_mode_press(
-        int x, int y, GuiInputState mods,
+        const GuiPointerPlace& at, GuiInputState mods,
         const DoubleClickCandidate& dc_at_press) {
+    const int x = at.x;
+    const int y = at.y;
     const bool ctrl = mods.ctrl;
 
     // THE MODE'S NAVIGATION SURFACE, from the ONE geometry owner: the whole
@@ -7847,7 +7913,7 @@ bool GuiInputHandler::handle_history_mode_press(
     if (ctrl) {
         const GuiRect lane = top_marker_row_area(app);
         if (rect_contains(lane, x, y)) {
-            const int hit = hit_test_flag(app, audio, x, y);
+            const int hit = hit_test_flag(app, audio, at.rx, at.ry);
             if (hit >= 0) {
                 // THE PRESS ACTS (2026-08-17: a diff-flag press has no drag to
                 // become — nothing in this mode drags a marker and the flag
@@ -7874,9 +7940,9 @@ bool GuiInputHandler::handle_history_mode_press(
         const GuiRect ruler = top_ruler_row_area(app);
         if (rect_contains(ruler, x, y)) {
             arm_placement_press(
-                x, y, /*history=*/true, /*seed_empty_lane=*/false,
-                /*head_drag=*/hit_test_flag(app, audio, x, y) < 0 &&
-                    point_on_playhead_head(app, x, y));
+                at, /*history=*/true, /*seed_empty_lane=*/false,
+                /*head_drag=*/hit_test_flag(app, audio, at.rx, at.ry) < 0 &&
+                    point_on_playhead_head(app, at.rx, at.ry));
             return true;
         }
     }
@@ -7921,12 +7987,12 @@ bool GuiInputHandler::handle_history_mode_press(
     {
         const GuiRect trim_bar = top_trim_row_area(app);
         if (rect_contains(trim_bar, x, y)) {
-            if (trim_bar_double_click_at(dc_at_press, x, y)) {
+            if (trim_bar_double_click_at(dc_at_press, at.rx, at.ry)) {
                 run_span_framing_command();
                 return true;
             }
             app.trim_bar_press = TrimBarPressSeed{
-                .active = true, .press_x = x, .press_y = y};
+                .active = true, .press_x = at.rx, .press_y = at.ry};
             return true;
         }
     }
@@ -7946,7 +8012,7 @@ bool GuiInputHandler::handle_history_mode_press(
         // motionless release lands the playhead at the column through the
         // mode's land, a drag there doing nothing. No EmptyLane seed — the
         // marker create is authoring, consumed in here.
-        const int hit = hit_test_flag(app, audio, x, y);
+        const int hit = hit_test_flag(app, audio, at.rx, at.ry);
         if (hit >= 0) {
             // THE PRESS ACTS (2026-08-17): the focus move and the land are the
             // CLICK, run here on the live hit.
@@ -7974,7 +8040,7 @@ bool GuiInputHandler::handle_history_mode_press(
             else
                 focus_history_diff_flag(hit);
         } else {
-            arm_placement_press(x, y, /*history=*/true,
+            arm_placement_press(at, /*history=*/true,
                                 /*seed_empty_lane=*/false);
         }
         return true;
@@ -7989,7 +8055,7 @@ bool GuiInputHandler::handle_history_mode_press(
         // all contexts): the press is the surface's own at EVERY column,
         // stems included. The diff flag's LANE BOX is its one pointer
         // surface, above.
-        arm_nav_press(x, y, /*history=*/true, /*seed_empty_lane=*/false,
+        arm_nav_press(at, /*history=*/true, /*seed_empty_lane=*/false,
                       /*scrub_release=*/false);
         return true;
     }
@@ -8188,7 +8254,7 @@ static void show_tooltip_box(AppState& app, Viewport& viewport) {
         t.owner.index >= 0 && t.owner.index < kRedesignButtonCount &&
         rect_contains(
             app.redesign_buttons[static_cast<size_t>(t.owner.index)].field,
-            app.last_mouse_x, app.last_mouse_y);
+            app.last_mouse_rx, app.last_mouse_ry);
     viewport.invalidate_rect(tooltip_damage_band(app));
 }
 
@@ -8397,7 +8463,7 @@ void GuiInputHandler::clear_release_time_press_arms() {
 // held button, past its own button-lost arm) and update_touch_region (the
 // platform's per-frame region hook, which holds no button and has none to
 // lose). Both callers guard on region_drag.active.
-void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
+void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0) return;
     // Sub-threshold: the press has not yet become a sweep. Below the shared
@@ -8409,8 +8475,8 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // one-day RULER arm's crossing act — the deferred dissolve + deselect —
     // died 2026-08-12 with the ruler former, superseded by pan-primary.)
     if (!app.region_drag.moved) {
-        if (std::max(std::abs(mouse_x - app.region_drag.press_x),
-                     std::abs(mouse_y - app.region_drag.press_y)) <
+        if (real_travel_px(app.region_drag.press_x,
+                           app.region_drag.press_y, at.rx, at.ry) <
                 drag_moved_threshold_px()) {
             return;
         }
@@ -8424,14 +8490,16 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // PREVIOUS clean click left resting — the standing moved-drag clear
     // route.
     app.double_click = DoubleClickCandidate{};
-    // The MOVING endpoint at the pointer column, clamped to the visible strip
-    // like the other drags' live tracking: the column's whole SOURCE frame
+    // The MOVING endpoint at THE PEN'S REAL PLACE, waveform-relative
+    // (architect 2026-11-15, the no-grid arc), held between the strip's two
+    // real edges like the other drags' live tracking; the trim former reads
+    // it as the whole SOURCE frame
     // through the sweep's one column->trim route (sweep_trim_frame_at_column,
     // on the painted item basis, architect 2026-09-24), so the writer needs no
-    // domain hop.
-    int rel = mouse_x - area.x;
-    if (rel < 0) rel = 0;
-    if (rel >= area.w) rel = area.w - 1;
+    // domain hop — that route names a column of the strip, so its place stops
+    // at the last column's left edge.
+    const double rel = std::clamp(at.rx - static_cast<double>(area.x), 0.0,
+                                  static_cast<double>(area.w));
     // THE TRIM WRITE — the sweep IS a trim write (architect 2026-08-18): from
     // the drag's fixed ANCHOR to the pointer's column, ordered and clamped to
     // the song walls, through the one owner that carries all of that
@@ -8450,13 +8518,14 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     //
     // THE ADD SEL FORMER TAKES THE SAME COLUMN AND WRITES THE SELECTION
     // INSTEAD (architect 2026-11-10, session 101; the rule at
-    // apply_selection_sweep_to_column) — no trim write, so nothing below runs.
+    // apply_selection_sweep_to) — no trim write, so nothing below runs.
     if (app.region_drag.select) {
-        apply_selection_sweep_to_column(rel);
+        apply_selection_sweep_to(rel);
         return;
     }
     if (write_trim_from_sweep(app.region_drag.anchor_source_frame,
-                              sweep_trim_frame_at_column(rel))) {
+                              sweep_trim_frame_at_column(std::min(
+                                  rel, static_cast<double>(area.w - 1))))) {
         app.region_drag.wrote_trim = true;
     }
     // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): sweeping a TRIM
@@ -8491,11 +8560,16 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
 // follows the grabbed marker unconditionally (apply_drag_motion owns that —
 // the ARMING PRESS's click act landed the playhead on the marker, so the drag
 // tows it by construction).
-void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
+void GuiInputHandler::on_motion(const GuiPointerPlace& at,
+                                GuiInputState mods) {
+    const int mouse_x = at.x;
+    const int mouse_y = at.y;
     // Record the latest pointer coords so viewport mutators can re-evaluate
     // hover at the pointer's last position.
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
+    app.last_mouse_rx = at.rx;
+    app.last_mouse_ry = at.ry;
     app.pointer_in_window = true;
     // THE PEN'S HOT-FACE LATCH ANCHORS AT THE FIRST HOVER REPORT AND CLEARS
     // ON MOTION OFF THAT ANCHOR (pen_hot_latch_, the rule at its
@@ -8506,12 +8580,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // first hover report: it sets the anchor and clears nothing.
     if (pen_hot_latch_.armed && !pen_hot_latch_.anchored) {
         pen_hot_latch_.anchored = true;
-        pen_hot_latch_.x = mouse_x;
-        pen_hot_latch_.y = mouse_y;
+        pen_hot_latch_.x = at.rx;
+        pen_hot_latch_.y = at.ry;
     } else if (pen_hot_latch_.armed &&
-               std::max(std::abs(mouse_x - pen_hot_latch_.x),
-                        std::abs(mouse_y - pen_hot_latch_.y)) >=
-                   scaled_px(kPenHotRearmPx)) {
+               real_travel_px(pen_hot_latch_.x, pen_hot_latch_.y, at.rx,
+                              at.ry) >= scaled_px(kPenHotRearmPx)) {
         pen_hot_latch_.armed = false;
     }
     // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE,
@@ -8555,7 +8628,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // is dead and arms nothing), and a modal RAISED MID-DRAG leaves the drag
     // its pointer: the lift's act is what the veil swallows.
     if (app.chrome_press.kind == AppState::ChromePress::Kind::Level) {
-        update_level_press_motion(mouse_x, mouse_y);
+        update_level_press_motion(at.rx, at.ry);
         return;
     }
     // THE ROSTER WALK STAYS LIVE UNDER EVERY MODAL SURFACE — the MODAL
@@ -8593,7 +8666,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             clear_folder_overlay_press();
             return;
         }
-        update_folder_overlay_press_motion(mouse_x, mouse_y);
+        update_folder_overlay_press_motion(at);
         return;
     }
     // THE RENDER PLAYER'S MOTION (2026-08-28): a standing scrub drag moves
@@ -8607,7 +8680,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 clear_player_scrub_drag();
                 return;
             }
-            update_player_scrub_motion(mouse_x);
+            update_player_scrub_motion(at.rx);
             return;
         }
         update_modal_dialog_hover(mouse_x, mouse_y);
@@ -8623,7 +8696,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 clear_score_scrub_drag();
                 return;
             }
-            update_score_scrub_motion(mouse_x);
+            update_score_scrub_motion(at.rx);
             return;
         }
         update_modal_dialog_hover(mouse_x, mouse_y);
@@ -8665,7 +8738,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // tap's sub-slop motions are this road's only producer; a drag
             // past the slop is the touch translation's caret drag and never
             // arrives here).
-            set_editor_caret_from_x(g, mouse_x, mouse_y);
+            set_editor_caret_from_x(g, at.rx, at.ry);
             if (g.dialog) viewport.invalidate_dialog_editor_box();
             else          viewport.invalidate_top_strip();
         }
@@ -8713,16 +8786,16 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // movement owner and its damage are the act's.
         const auto head_drag_step = [&] {
             const GuiRect area = waveform_area(app);
-            const int col =
-                std::clamp(mouse_x - area.x, 0, std::max(0, area.w - 1));
-            run_nav_click_act(area.x + col, sd.history,
+            const double col = std::clamp(
+                at.rx - static_cast<double>(area.x), 0.0,
+                static_cast<double>(std::max(0, area.w - 1)));
+            run_nav_click_act(static_cast<double>(area.x) + col, sd.history,
                               /*scrub_release=*/false);
         };
         // Sub-threshold: still the pending click. The press did nothing, so
         // nothing happens here either — the fork IS the threshold.
         if (!sd.moved) {
-            if (std::max(std::abs(mouse_x - sd.press_x),
-                         std::abs(mouse_y - sd.press_y)) <
+            if (real_travel_px(sd.press_x, sd.press_y, at.rx, at.ry) <
                     drag_moved_threshold_px()) {
                 return;
             }
@@ -8751,7 +8824,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             commit_trim_drag();
             return;
         }
-        update_trim_drag(mouse_x);
+        update_trim_drag(at.rx);
         return;
     }
     // THE ONE SURVIVING DEFERRED CLICK (PendingClickAct, app_state.h): the trim
@@ -8776,8 +8849,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the trim bar is one surface with one gate, so this crossing and the
         // pending trim drag's below read the same distance and the set and
         // the drag it hands to resolve on one event.
-        if (std::max(std::abs(mouse_x - app.pending_click.press_x),
-                     std::abs(mouse_y - app.pending_click.press_y)) <
+        if (real_travel_px(app.pending_click.press_x,
+                           app.pending_click.press_y, at.rx, at.ry) <
                 grab_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
@@ -8829,8 +8902,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.trim_bar_press = TrimBarPressSeed{};
             return;
         }
-        if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),
-                     std::abs(mouse_y - app.pending_trim_drag.press_y)) <
+        if (real_travel_px(app.pending_trim_drag.press_x,
+                           app.pending_trim_drag.press_y, at.rx, at.ry) <
                 grab_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
@@ -8851,7 +8924,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // commit's moved-bound test.
         const bool is_begin = app.pending_trim_drag.is_begin;
         const bool both     = app.pending_trim_drag.both;
-        const int  press_x  = app.pending_trim_drag.press_x;
+        const double press_x = app.pending_trim_drag.press_x;
         app.pending_trim_drag = PendingTrimDrag{};
         begin_trim_drag(is_begin ? TrimHit::Begin : TrimHit::End, press_x, both);
         if (!app.trim_drag.active) {
@@ -8861,7 +8934,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // same route every other end takes.
             return;
         }
-        update_trim_drag(mouse_x);
+        update_trim_drag(at.rx);
         return;
     }
     // Motion just continues whatever the press already armed — the drag's
@@ -8884,7 +8957,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         // The drag's ONE motion path, shared with the touch region hook
         // (update_touch_region) — the body just above on_motion.
-        apply_region_drag_motion(mouse_x, mouse_y);
+        apply_region_drag_motion(at);
         return;
     }
     // (No tempo-drag motion arms: the target-view tempo drag and its pending are
@@ -8916,8 +8989,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // a flag is a thing the press grabs, so it rests at twice the drag
         // gate before it moves — and this one crossing is where BOTH of its
         // drags fork, the value drag and the horizontal reposition below.
-        if (std::max(std::abs(mouse_x - app.pending_marker_press.press_x),
-                     std::abs(mouse_y - app.pending_marker_press.press_y)) <
+        if (real_travel_px(app.pending_marker_press.press_x,
+                           app.pending_marker_press.press_y, at.rx, at.ry) <
                 grab_moved_threshold_px()) {
             return;   // still a click; leave the pending armed, do nothing
         }
@@ -8968,8 +9041,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // fall-through said as a call, and that apply now lands on step
             // zero and writes nothing: it is kept so the one motion body owns
             // every event from the crossing on.
-            if (value_drag.begin(press.marker, press.cell, mouse_y))
-                value_drag.apply_motion(mouse_y);
+            if (value_drag.begin(press.marker, press.cell, at.ry))
+                value_drag.apply_motion(at.ry);
             return;
         }
         // THE DARK LAMP WHERE THE VIEW REFUSES THE HORIZONTAL MOVE (architect
@@ -9018,7 +9091,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             value_drag.commit();
             return;
         }
-        value_drag.apply_motion(mouse_y);
+        value_drag.apply_motion(at.ry);
         return;
     }
     if (!app.drag.active) {
@@ -9061,7 +9134,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // painted grid.
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const double mouse_frame =
-        basis.vp_start + static_cast<double>(mouse_x - area.x) * basis.spp;
+        basis.vp_start + (at.rx - static_cast<double>(area.x)) * basis.spp;
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
     // Playhead rule: the playhead follows the dragged marker through the drag
     // inside apply_drag_motion (the crossing's click act landed it on the

@@ -85,7 +85,7 @@ struct MarkerDragOps {
           undo(undo_),
           target_render(target_render_) {}
 
-    bool begin_drag(int hit, int mouse_x);
+    bool begin_drag(int hit, double mouse_x);
     void apply_drag_motion(double raw_delta);
     void commit_drag();
 };

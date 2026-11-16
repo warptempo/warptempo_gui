@@ -127,9 +127,9 @@ SweepHighlightColumns sweep_highlight_columns(const AppState& app,
     double lo = 0.0;
     double hi = 0.0;
     if (d.select) {
-        if (d.pen_col < 0) return SweepHighlightColumns{};
-        lo = static_cast<double>(std::min(d.anchor_col, d.pen_col));
-        hi = static_cast<double>(std::max(d.anchor_col, d.pen_col) + 1);
+        if (d.pen_x < 0.0) return SweepHighlightColumns{};
+        lo = std::min(d.anchor_x, d.pen_x);
+        hi = std::max(d.anchor_x, d.pen_x);
     } else {
         if (!d.wrote_trim) return SweepHighlightColumns{};
         // paint_trim's chain and its gates (paint_handler.cpp,
@@ -174,7 +174,8 @@ GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio) {
     return GuiRect{x0, area.y, x1 - x0, area.h};
 }
 
-TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
+TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
+                             double mouse_y) {
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly
     // as-painted; the contract is at AppState::trim_bar_hit). The grabs are
     // the view bar's span's two end zones as GuiPaintHandler::paint_trim last
@@ -197,7 +198,9 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
         return TrimHit::None;
 
     // THE ZONE IS THE TARGET (architect 2026-10-03, for the buttons the zones
-    // replaced): each published rect is tested as it is, with no tolerance.
+    // replaced): each published rect is tested as it is, with no tolerance,
+    // THE POINTER'S REAL PLACE AGAINST THE ZONE'S REAL EDGES, half-open
+    // (architect 2026-11-15, the no-grid arc).
     // The two rects never overlap — the end zone stands edge to edge right of
     // the begin's in the narrow case (trim_endcap_rect) — so the order of the
     // two tests decides nothing.
@@ -210,7 +213,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     return TrimHit::None;
 }
 
-bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
+bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
+                               double mouse_y) {
     // THE PAINTER'S STASH, the endcap test's twin (AppState::trim_bar_hit):
     // the interval is the span's body between its two end zones as
     // render_trim_flags last DREW it — trim_bridge_gap over the painted
@@ -244,8 +248,13 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
 // later label's box masks an earlier one's text), so among labels the
 // RIGHTMOST under the point is on top. `on_triangle` says
 // which of the two answered (a triangle is the payload's, never a cell).
+//
+// THE POINT IS THE POINTER'S REAL PLACE (architect 2026-11-15, the no-grid
+// arc: "yes, I'd like to move to fractional hitboxes."): the rects stand on
+// their marks' exact x (paint_cues' publication) and are tested half-open
+// against the real point, never against the pixel that holds it.
 static const FlagHitRect* topmost_flag_rect(const AppState& app,
-                                            int mouse_x, int mouse_y,
+                                            double mouse_x, double mouse_y,
                                             bool* on_triangle = nullptr) {
     if (on_triangle) *on_triangle = false;
     // THE OPEN EDITOR'S RIDING BOXES ARE ASKED FIRST — whichever of the
@@ -275,12 +284,11 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
     // one open, and the mode's own paint zeroes this.
     const FlagHitRect& rc = app.flag_editor_box.riding_cells;
     if (rc.marker_index >= 0 &&
-        flag_hit_rect_contains(rc, static_cast<double>(mouse_x),
-                               static_cast<double>(mouse_y))) {
+        flag_hit_rect_contains(rc, mouse_x, mouse_y)) {
         return &rc;
     }
-    const double px = static_cast<double>(mouse_x);
-    const double py = static_cast<double>(mouse_y);
+    const double px = mouse_x;
+    const double py = mouse_y;
     for (auto it = app.flag_hit_rects.rbegin();
          it != app.flag_hit_rects.rend(); ++it) {
         const FlagHitRect& r = *it;
@@ -300,7 +308,7 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
 }
 
 MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
-                              int mouse_x, int mouse_y) {
+                              double mouse_x, double mouse_y) {
     (void)audio;
     bool on_triangle = false;
     const FlagHitRect* r =
@@ -313,14 +321,14 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     // construction. THE TRIANGLE IS THE MARKER'S OWN, never a cell: a press
     // on it answers Payload whatever the boundaries say.
     if (!r || on_triangle) return MarkerCell::Payload;
-    const double x = static_cast<double>(mouse_x);
+    const double x = mouse_x;
     if (x >= r->iter_upper_boundary_x) return MarkerCell::Upper;
     if (x >= r->iter_lower_boundary_x) return MarkerCell::Lower;
     return MarkerCell::Payload;
 }
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
-                  int mouse_x, int mouse_y) {
+                  double mouse_x, double mouse_y) {
     (void)audio;
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (row 5, 2026-08-01). A marker box
     // is as wide as its SHAPED label, so there is no formula to re-derive it
@@ -563,7 +571,8 @@ static GuiRect flag_hit_rect_face(const FlagHitRect& r) {
     return GuiRect{ix0, iy0, ix1 - ix0, iy1 - iy0};
 }
 
-int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out) {
+int marker_cue_hit(const AppState& app, double x, double y,
+                   GuiRect* face_out) {
     if (app.history_mode.active) return -1;
     const FlagHitRect* r = topmost_flag_rect(app, x, y);
     if (!r || r->marker_index < 0) return -1;
@@ -571,7 +580,8 @@ int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out) {
     return r->marker_index;
 }
 
-int history_cue_hit(const AppState& app, int x, int y, GuiRect* face_out) {
+int history_cue_hit(const AppState& app, double x, double y,
+                    GuiRect* face_out) {
     if (!app.history_mode.active) return -1;
     const FlagHitRect* r = topmost_flag_rect(app, x, y);
     if (!r || r->marker_index < 0) return -1;

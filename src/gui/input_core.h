@@ -8,7 +8,8 @@
 // GuiInputCore: the product's PLATFORM-NEUTRAL INPUT POLICY, in one object.
 // It owns the touch translation state machine, the key-repeat synthesis, the
 // ctrl bit, the logical pointer (position, focus and the touch translation's
-// left hold), and the one fractional->pixel conversion the whole product converts through (containing_pixel below).
+// left hold), and the one fractional->pixel conversion the whole product converts through (containing_pixel below,
+// beside the place every delivery carries, GuiPointerPlace).
 //
 // THE PEN AND THE FINGER ARE THE WHOLE INPUT (architect 2026-10-30: the
 // hardware keyboard and the mouse are closed on the tablet, the one platform —
@@ -111,9 +112,24 @@
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names
 // THE PIXEL THAT CONTAINS IT — floor, not rounding. Every fractional position
-// this layer turns into a window pixel goes through here: the pen's hover
-// enter and motion, and every one of the touch machine's deliveries and
-// surface queries.
+// this layer names a window pixel for goes through here, at ONE site:
+// GuiPointerPlace::at below, which every delivery and surface query of this
+// layer builds its place with.
+//
+// WHAT THE PIXEL IS FOR SINCE THE NO-GRID ARC (architect 2026-11-15, the
+// no-grid arc: "yes, I'd like to move to fractional hitboxes."): THE PEN'S
+// REAL PLACE IS THE POINTER, and it rides beside this pixel through the whole
+// seam (GuiPointerPlace). The pixel stays the answer for what is named in
+// pixels — damage, culls, and A BOX WHOSE EDGES ARE WHOLE PIXELS: such a box
+// answers the same for a real point and for its containing pixel
+// (x >= n iff floor(x) >= n, and x < n iff floor(x) < n, for a whole n), so
+// every whole-edged hit test — the keys, the rows' walls, the cards, the
+// lanes — keeps reading the ints and loses nothing. A box on a mark's real
+// edges (a cue's chip and label, the ruler's head, the trim's grab zones, a
+// scrub's thumb, a time field, the on-screen keyboard's faces, a list's
+// scrolled row) and every conversion of a pointer place into content (a
+// frame, a level, a fraction of a scrub, a scroll offset) read the real
+// place, never this pixel.
 //
 // NEAREST-POINT ROUNDING STAYS THE RULE FOR POINTS ON A GRID and is untouched
 // by this: authored frames, lattice columns and sample indices are POINTS,
@@ -129,6 +145,30 @@
 inline int containing_pixel(double v) {
     return static_cast<int>(std::floor(v));
 }
+
+// A POINTER'S PLACE AS THE SEAM CARRIES IT (architect 2026-11-15, the no-grid
+// arc): the real position the panel reported, window px, and the pixel that
+// contains it. THE INVARIANT: x == containing_pixel(rx) and
+// y == containing_pixel(ry), ALWAYS — `at` is the one constructor of a place
+// that came off the glass, so the two can never name different pixels, and no
+// reader may pair an int from one event with a real from another. ONE FORM AT
+// EVERY SEAM: the button and motion callbacks, the touch hooks' point
+// queries, the region and caret trios, and GuiInputHandler's entry points all
+// take this type. Who reads which half is containing_pixel's head: whole-edged
+// boxes, damage and culls the ints; fractional boxes and every conversion
+// into content the reals. A place the GUI SYNTHESIZES (a clamped column, a
+// stored press replayed at a lift) is built by `at` from its own real
+// arithmetic, so the invariant holds for it too.
+struct GuiPointerPlace {
+    int    x  = 0;
+    int    y  = 0;
+    double rx = 0.0;
+    double ry = 0.0;
+    static GuiPointerPlace at(double real_x, double real_y) {
+        return GuiPointerPlace{containing_pixel(real_x),
+                               containing_pixel(real_y), real_x, real_y};
+    }
+};
 
 // THE TOUCH SLOP AT gui_scale 100, in device pixels — the value a freshly
 // built core carries until the GUI pushes its own (set_touch_slop_px). It is
@@ -154,8 +194,10 @@ public:
     // modifiers never select the act, as on_button_release's `mods` says of
     // the pointer (its one reader is the tooltip's held bit).
     using KeyReleaseCallback   = std::function<void(GuiKey key)>;
-    using ButtonCallback       = std::function<void(int x, int y, GuiInputState mods)>;
-    using MotionCallback       = std::function<void(int x, int y, GuiInputState mods)>;
+    // The pointer deliveries carry THE PLACE, the real position beside its
+    // containing pixel (GuiPointerPlace, above).
+    using ButtonCallback       = std::function<void(const GuiPointerPlace& at, GuiInputState mods)>;
+    using MotionCallback       = std::function<void(const GuiPointerPlace& at, GuiInputState mods)>;
     using CloseCallback        = std::function<void()>;
     // Predicate installed by main.cpp: true when a text editor is consuming
     // printable keys. Consulted at PRESS time and at every repeat fire: the
@@ -388,9 +430,9 @@ public:
     //   * update(frame): fired at most once per touch_frame while a
     //     navigation gesture is live and past its latch. The payload is a
     //     GuiTouchNavFrame (gui_input.h, the field contracts there): the
-    //     CURRENT centroid, the centroid's horizontal delta and the
+    //     CURRENT centroid's real x, the centroid's horizontal delta and the
     //     finger-distance ratio against the previous DELIVERED frame, the
-    //     finger count and the live ctrl bit — four measurements and the two
+    //     finger count and the live ctrl bit — three measurements and the two
     //     bits the GUI forks on, every field read. The latch is the platform's: nothing is
     //     delivered until the centroid has travelled the touch slop (Chebyshev)
     //     from the gesture's start OR the finger distance has changed by that
@@ -424,7 +466,7 @@ public:
     //     touch_cancel, or touch-capability loss. Fired ONLY if at least
     //     one update was delivered, so a sub-latch two-finger touch costs the
     //     GUI nothing.
-    //   * pan_zone(x, y): THE ZONE QUERY — does this point lie on the
+    //   * pan_zone(at): THE ZONE QUERY — does this point lie on the
     //     one-finger PAN SURFACE? Asked ONCE per touch stream, at the FIRST
     //     finger's down; the answer is captured beside the down point and
     //     DECIDES WHETHER A WINDOW OPENS AT ALL (2026-09-25): ON the zone a
@@ -460,7 +502,7 @@ public:
     //     GUI's (GuiInputHandler::touch_sweep_armed, dark in the `h` view);
     //     the begin's own refusals stay the begin body's. Null — or
     //     answering false — means the pan.
-    //   * region_begin(x, y): the armed sweep resolved on the pan zone at the
+    //   * region_begin(at): the armed sweep resolved on the pan zone at the
     //     slop crossing — the GUI arms its region former at the DOWN point
     //     (the lit lamp's former's own press half: TRIM's deselect and drag
     //     arm, ADD SEL's selection snapshot and arm), or refuses
@@ -470,7 +512,7 @@ public:
     //     the refused stream is dead. NOTHING pointer-shaped starts — no
     //     press, no hold bit, no release, no translation end (the
     //     single-finger nav's model).
-    //   * region_update(x, y): at most once per touch_frame while the
+    //   * region_update(at): at most once per touch_frame while the
     //     region gesture is live — the finger's current position, absolute
     //     (the drag's one motion path converts to columns itself).
     //   * region_end(): the gesture ended — finger up, touch_cancel or
@@ -481,7 +523,7 @@ public:
     //     the gesture began — the GUI-side drag holds the drag-modal gate
     //     open and its release path is owed — the refused-begin stream
     //     covered by the same !active guard.
-    //   * editor_field(x, y): THE EDITOR-FIELD QUERY (2026-09-05) — does this
+    //   * editor_field(at): THE EDITOR-FIELD QUERY (2026-09-05) — does this
     //     point lie in the ACTIVE EDITOR'S FIELD (GuiTouchEditorField,
     //     gui_input.h — Field or Outside alone, the answer's contract; no
     //     editor-text double-click candidate is asked since 2026-11-08,
@@ -508,7 +550,7 @@ public:
     //     crossing.
     //     Null — or answering Outside — means no field: off the pan zone,
     //     the pointer on contact.
-    //   * caret_begin(x, y): the window resolved to the caret drag at the
+    //   * caret_begin(at): the window resolved to the caret drag at the
     //     SLOP CROSSING (its one road — no window expires)
     //     and this is the DOWN point: the
     //     GUI seats the caret under it through its one pointer seat body,
@@ -518,7 +560,7 @@ public:
     //     press, no hold bit, no release, no translation end (the region
     //     trio's model). A begin with no editor open is a no-op, the body's
     //     own guard, so the stream is dead rather than a fallback.
-    //   * caret_update(x, y): at most once per touch_frame while the caret
+    //   * caret_update(at): at most once per touch_frame while the caret
     //     drag is live — the finger's current position, absolute; the GUI
     //     seats the caret under it, nothing selects.
     //   * caret_end(): the drag ended — finger up, touch_cancel or
@@ -537,14 +579,14 @@ public:
     void set_touch_nav_hooks(
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,
-        std::function<bool(int x, int y)> pan_zone,
+        std::function<bool(const GuiPointerPlace& at)> pan_zone,
         std::function<bool()> sweep_armed,
-        std::function<void(int x, int y)> region_begin,
-        std::function<void(int x, int y)> region_update,
+        std::function<void(const GuiPointerPlace& at)> region_begin,
+        std::function<void(const GuiPointerPlace& at)> region_update,
         std::function<void()> region_end,
-        std::function<GuiTouchEditorField(int x, int y)> editor_field,
-        std::function<void(int x, int y)> caret_begin,
-        std::function<void(int x, int y)> caret_update,
+        std::function<GuiTouchEditorField(const GuiPointerPlace& at)> editor_field,
+        std::function<void(const GuiPointerPlace& at)> caret_begin,
+        std::function<void(const GuiPointerPlace& at)> caret_update,
         std::function<void()> caret_end);
 
     // THE TOUCH SLOP'S ONE DOOR — the travel, in DEVICE pixels, that this layer
@@ -684,13 +726,14 @@ private:
     std::function<uint32_t(uint32_t)> codepoint_probe_;
 
     // THE HOVERING PEN'S FOCUS AND LAST-KNOWN POSITION. The backend hands over
-    // the pen's surface-local hover position as a fractional DOUBLE and
-    // containing_pixel names the pixel it lands in; pointer_x_/pointer_y_ hold
-    // the most recent such pixel, which the translation end's focus fork
-    // restores the pointer to (deliver_touch_translation_end).
-    bool pointer_focused_ = false;
-    int  pointer_x_ = 0;
-    int  pointer_y_ = 0;
+    // the pen's surface-local hover position as a fractional DOUBLE;
+    // pointer_x_/pointer_y_ hold the most recent one AS HANDED, the real
+    // place (every delivery names its pixel beside it, GuiPointerPlace::at),
+    // which the translation end's focus fork restores the pointer to
+    // (deliver_touch_translation_end).
+    bool   pointer_focused_ = false;
+    double pointer_x_ = 0.0;
+    double pointer_y_ = 0.0;
 
     // -- Touch (the finger as the pointer; touch phase 1, 2026-08-11; the
     //    WINDOWED MODEL, restored at the sixth glass ruling, 2026-08-12) --
@@ -782,7 +825,7 @@ private:
     //     trio — begin fired at entry with the DOWN point (the GUI runs the
     //     former's own press half and arms the drag, or refuses), the
     //     crossing position staged as the first frame, motion
-    //     staged to the frame boundary and delivered as region_update(x, y),
+    //     staged to the frame boundary and delivered as region_update(at),
     //     the lift delivering the staged final frame then region_end (any
     //     end commits — the former's own release regime). NOTHING
     //     pointer-shaped ever starts: no press, no hold bit, no release, no
@@ -795,7 +838,7 @@ private:
     //     caret through the caret trio — begin fired at entry with the DOWN
     //     point (the GUI seats the caret there and drops any selection),
     //     motion staged to the frame boundary and delivered as
-    //     caret_update(x, y) (a seat under the finger, nothing selecting),
+    //     caret_update(at) (a seat under the finger, nothing selecting),
     //     the lift delivering the staged final frame then caret_end (the
     //     caret stays where last seated; nothing selects, commits or seeds).
     //     NOTHING pointer-shaped ever starts: no press, no hold bit, no
@@ -1010,9 +1053,10 @@ private:
     // ALL live touch points, the ignored ones included — the Drain exit test.
     int        touch_point_count_ = 0;
     // Pending/Pointer: the translating finger. Positions are surface-local
-    // doubles (touch positions are fractional on real panels); deliveries
-    // resolve through containing_pixel, the product's one fractional
-    // coordinate -> pixel conversion.
+    // doubles (touch positions are fractional on real panels); every delivery
+    // hands the real position with its containing pixel beside it
+    // (GuiPointerPlace::at, the one site of the product's one fractional
+    // coordinate -> pixel conversion).
     int32_t    touch_owner_id_    = 0;
     // The travel every finger is measured against, in DEVICE pixels — the
     // three uses, the gui_scale story and the twin-gate invariant are at
@@ -1040,10 +1084,10 @@ private:
     // leaves the answer to the pan-zone bit.
     GuiTouchEditorField touch_down_in_editor_field_ = GuiTouchEditorField::Outside;
     // Region: a finger position staged for the touch_frame boundary
-    // (the Nav dirty-frame cadence; delivered as region_update(x, y)).
+    // (the Nav dirty-frame cadence; delivered as region_update(at)).
     bool       touch_region_frame_dirty_ = false;
     // Caret: the same staging for the caret trio (delivered as
-    // caret_update(x, y)).
+    // caret_update(at)).
     bool       touch_caret_frame_dirty_  = false;
     // The FIRST contact's tool (touch_down's door), captured beside its id
     // and read at the second-down arms (a pen on either side of a pair
@@ -1104,21 +1148,21 @@ private:
     std::function<void()>                         touch_nav_end_hook_;
     // The pan-zone query (asked once, at the first finger's down; surface
     // geometry only — the contract at set_touch_nav_hooks).
-    std::function<bool(int, int)>                 touch_pan_zone_hook_;
+    std::function<bool(const GuiPointerPlace&)>    touch_pan_zone_hook_;
     // The sweep-armed query (asked at a pan-zone window's slop crossing with
     // no ctrl standing; the contract at set_touch_nav_hooks).
     std::function<bool()>                         touch_sweep_armed_hook_;
     // The region trio the Region phase drives (contracts at
     // set_touch_nav_hooks). Null-safe at each fire site.
-    std::function<void(int, int)>                 touch_region_begin_hook_;
-    std::function<void(int, int)>                 touch_region_update_hook_;
+    std::function<void(const GuiPointerPlace&)>    touch_region_begin_hook_;
+    std::function<void(const GuiPointerPlace&)>    touch_region_update_hook_;
     std::function<void()>                         touch_region_end_hook_;
     // The editor-field query (asked once, at the first finger's down, beside
     // the pan-zone query; the contract at set_touch_nav_hooks) and the
     // caret trio the Caret phase drives. Null-safe at each fire site.
-    std::function<GuiTouchEditorField(int, int)>  touch_editor_field_hook_;
-    std::function<void(int, int)>                 touch_caret_begin_hook_;
-    std::function<void(int, int)>                 touch_caret_update_hook_;
+    std::function<GuiTouchEditorField(const GuiPointerPlace&)> touch_editor_field_hook_;
+    std::function<void(const GuiPointerPlace&)>    touch_caret_begin_hook_;
+    std::function<void(const GuiPointerPlace&)>    touch_caret_update_hook_;
     std::function<void()>                         touch_caret_end_hook_;
 
     // -- Internal helpers --
@@ -1132,14 +1176,14 @@ private:
     // queued motion, the touch frame flush, and the translation end's
     // re-delivery at the hovering pen's spot) — touch is the pointer by
     // ruling, so its deliveries are the pen's hover's kind.
-    void deliver_motion(int x, int y);
+    void deliver_motion(const GuiPointerPlace& at);
 
     // -- The touch machine's internals (the phase machine and the edge
     // inventory are at the touch state block above) --
     // Resolve the Pending window to the POINTER translation: deliver the
     // synthesized enter-motion at the ORIGINAL down point, the left press
-    // there, then any queued motion inside the slop (the sliver's rule at the
-    // definition). Shared
+    // there, then any queued motion (inside the slop by the window's own
+    // test, the same real travel the GUI's gates measure). Shared
     // by all three pointer resolutions — the OFF-ZONE DOWN (on contact,
     // 2026-09-25), the editor field's DOUBLE PRESS (on contact), and the tap
     // (whose caller then delivers the release + the translation end itself,

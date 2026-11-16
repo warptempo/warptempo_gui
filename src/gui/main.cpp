@@ -1911,24 +1911,28 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             input_handler.apply_touch_nav_update(frame);
         },
         [&]() { input_handler.end_touch_nav(); },
-        [&](int x, int y) {
-            return input_handler.touch_point_in_pan_zone(x, y);
+        [&](const GuiPointerPlace& at) {
+            return input_handler.touch_point_in_pan_zone(at);
         },
         [&]() { return input_handler.touch_sweep_armed(); },
-        [&](int x, int y) {
+        [&](const GuiPointerPlace& at) {
             if (open_unseen()) return;
-            input_handler.begin_touch_region(x, y);
+            input_handler.begin_touch_region(at);
         },
-        [&](int x, int y) { input_handler.update_touch_region(x, y); },
+        [&](const GuiPointerPlace& at) {
+            input_handler.update_touch_region(at);
+        },
         [&]() { input_handler.end_touch_region(); },
-        [&](int x, int y) {
-            return input_handler.touch_point_in_editor_field(x, y);
+        [&](const GuiPointerPlace& at) {
+            return input_handler.touch_point_in_editor_field(at);
         },
-        [&](int x, int y) {
+        [&](const GuiPointerPlace& at) {
             if (open_unseen()) return;
-            input_handler.begin_touch_caret_drag(x, y);
+            input_handler.begin_touch_caret_drag(at);
         },
-        [&](int x, int y) { input_handler.update_touch_caret_drag(x, y); },
+        [&](const GuiPointerPlace& at) {
+            input_handler.update_touch_caret_drag(at);
+        },
         [&]() { input_handler.end_touch_caret_drag(); });
     // THE PEN'S RETAINED ZOOM ANCHOR'S RELEASE (architect 2026-09-27): the
     // platform fires it where a retained anchor dies — its inventory is at
@@ -2081,13 +2085,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.on_window_close();
     });
 
-    gui.set_on_button_press([&](int x, int y, GuiInputState mods) {
+    gui.set_on_button_press([&](const GuiPointerPlace& at,
+                                GuiInputState mods) {
         if (open_unseen()) return;   // the open's hold (the block above)
-        input_handler.on_button_press(x, y, mods);
+        input_handler.on_button_press(at, mods);
     });
 
-    gui.set_on_button_release([&](int x, int y, GuiInputState mods) {
-        input_handler.on_button_release(x, y, mods);
+    gui.set_on_button_release([&](const GuiPointerPlace& at,
+                                  GuiInputState mods) {
+        input_handler.on_button_release(at, mods);
     });
 
     // The "editor open" truth the platform's key repeat records at its arm
@@ -2237,8 +2243,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.hide_shift_tooltip();
     });
 
-    gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
-        input_handler.on_motion(mouse_x, mouse_y, mods);
+    gui.set_on_motion([&](const GuiPointerPlace& at, GuiInputState mods) {
+        input_handler.on_motion(at, mods);
     });
 
     // -- File loading --------------------------------------------------------

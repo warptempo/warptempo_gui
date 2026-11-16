@@ -7,6 +7,7 @@
 #include "gui_input.h"
 #include "history_diff.h"
 #include "icons.h"           // the keys' glyphs (redesign_button_icon)
+#include "input_core.h"      // GuiPointerPlace, the pointer's place at every seam
 #include "materials.h"       // point_on_key, the keys' one hit predicate
 #include "playback.h"
 #include "render_pipeline.h"
@@ -623,7 +624,9 @@ struct ValueDragState {
     // motion event that crossed the grab gate, not the press's (architect
     // 2026-09-29) — the gate's own travel buys no step, so the first step
     // lands one full kValueDragPxPerStep past the crossing.
-    int        origin_y = 0;
+    // THE POINTER'S REAL y (architect 2026-11-15, the no-grid arc): the
+    // travel is real, so a step is crossed where the pen crosses it.
+    double     origin_y = 0.0;
     // The value the press found, in the cell's own domain: authored CENTS on
     // the payload and on a warp bound, HOPS on a phase-reset bound. ON A PASS
     // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
@@ -907,8 +910,8 @@ struct RegionDragState {
     // commit tail, so no render triggers behind it.
     // (`moved` is the TRIM arm lamp's: a sweep that moved puts it out.)
     bool    wrote_trim   = false;
-    int     press_x      = 0;      // press position (window px), for the gate
-    int     press_y      = 0;
+    double  press_x      = 0.0;    // the press's REAL place (window px), for the gate
+    double  press_y      = 0.0;
     // THE TRIM'S FIXED END — a whole SOURCE frame in the authored int64 domain,
     // taken at the press column through the sweep's one column route
     // (sweep_trim_frame_at_column, input_trim.cpp:
@@ -933,25 +936,26 @@ struct RegionDragState {
     // fields above stay unread and unwritten on this former. Its rule —
     // membership live per motion, never clearing, the focus the last swept
     // member, the playhead at the lift, the lamp out at a moved commit — is
-    // at apply_selection_sweep_to_column (input_pointer.cpp); its picture,
-    // beside the stems appearing, the canvas highlight on the swept columns
-    // (pen_col below; the head's highlight, architect 2026-11-12).
+    // at apply_selection_sweep_to (input_pointer.cpp); its picture,
+    // beside the stems appearing, the canvas highlight on the swept span
+    // (pen_x below; the head's highlight, architect 2026-11-12).
     bool          select       = false;
-    // THE DOWN POINT'S COLUMN, offset from waveform_area's x, in [0, w): the
+    // THE DOWN POINT'S REAL PLACE, offset from waveform_area's x, in [0, w)
+    // (architect 2026-11-15, the no-grid arc): the
     // swept span's fixed end (the selection sweep reads the picture by
-    // COLUMN, the frame as painted — no camera moves during the gesture: the
+    // PLACE, the frame as painted — no camera moves during the gesture: the
     // Region phase ignores a second finger and the gesture pauses follow).
-    int           anchor_col   = 0;
-    // THE PEN'S COLUMN at the last motion past the gate, offset like
-    // anchor_col and clamped into [0, w) by the motion path; -1 before the
+    double        anchor_x     = 0.0;
+    // THE PEN'S REAL PLACE at the last motion past the gate, offset like
+    // anchor_x and held in [0, w] by the motion path; negative before the
     // first (architect 2026-11-12): THE SWEEP HIGHLIGHT'S MOVING END on this
-    // former, the highlight standing on anchor_col .. pen_col, both
-    // inclusive — the membership's own span, so a marker is selected iff its
-    // column is lit (sweep_highlight_columns below: whole pen columns on
-    // this former). Written at every motion
-    // past the gate ahead of the membership (apply_selection_sweep_to_column,
-    // which damages the columns the move changed).
-    int           pen_col      = -1;
+    // former, the highlight standing from anchor_x to pen_x, their real
+    // edges — the membership's own closed span, so a marker is selected iff
+    // its exact place is lit (sweep_highlight_columns below). Written at
+    // every motion
+    // past the gate ahead of the membership (apply_selection_sweep_to,
+    // which damages the stretch the move changed).
+    double        pen_x        = -1.0;
     // THE SELECTION STANDING AT THE DOWN, snapshotted at the arm: the union's
     // fixed half, so pulling the span back drops only what this sweep added.
     std::set<int> prior_members;
@@ -1068,8 +1072,8 @@ struct EditorTextDragState {
 struct PendingMarkerPress {
     bool active         = false;
     int  marker         = -1; // marker index the press hit (active view's list)
-    int  press_x        = 0;  // press position (window px): the gate + drag
-    int  press_y        = 0;  //   anchor + the release-side seed's position
+    double press_x      = 0.0;  // the press's REAL place (window px): the gate +
+    double press_y      = 0.0;  //   drag anchor + the release-side seed's position
     // WHICH CELL OF THE RUN THE PRESS LANDED ON, resolved once at the press
     // from the painter's published boundaries (the addressed cell is written
     // from the same answer there) and carried to the double-click seed at the
@@ -1132,8 +1136,8 @@ struct PendingTrimDrag {
     bool active   = false;
     bool is_begin = false;  // which bound the single drag targets (Begin if both)
     bool both     = false;  // the inter-endcap bridge (pair) drag
-    int  press_x  = 0;      // press position (window px): the gate + begin anchor
-    int  press_y  = 0;
+    double press_x = 0.0;   // the press's REAL place (window px): the gate + begin anchor
+    double press_y = 0.0;
     // (A `waveform_click_act` field marked an arm taken on the WAVEFORM
     // OVERLAY from 2026-08-18, whose motionless lift fell to the waveform's
     // click act. The overlay's drags were deleted with its resting form on
@@ -1205,8 +1209,8 @@ enum class PendingClickKind {
 // on_key's drag-modal statement, input_handler.cpp).
 struct PendingClickAct {
     PendingClickKind kind = PendingClickKind::None;
-    int  press_x  = 0;   // press position (window px): the gate + the act's column
-    int  press_y  = 0;
+    double press_x = 0.0;   // the press's REAL place (window px): the gate + the act's place
+    double press_y = 0.0;
 
     bool active() const { return kind != PendingClickKind::None; }
 };
@@ -1327,11 +1331,12 @@ struct TrimDragState {
 struct ScrollDragState {
     bool   active   = false;
     bool   moved    = false;  // crossed the threshold: no longer a click
-    // Press position (window px): the Chebyshev gate's reference AND the
-    // deferred click act's column (the point the user aimed at; sub-threshold
+    // The press's REAL place (window px; architect 2026-11-15, the no-grid
+    // arc): the Chebyshev gate's reference AND the
+    // deferred click act's place (the point the user aimed at; sub-threshold
     // travel is jitter).
-    int    press_x  = 0;
-    int    press_y  = 0;
+    double press_x  = 0.0;
+    double press_y  = 0.0;
     // Armed inside the `h` history view: the click act is the MODE's land
     // (clear the mode focus + selection, no store-selection touch).
     bool   history  = false;
@@ -1692,8 +1697,8 @@ enum class DoubleClickSurface {
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    int     press_x   = 0;      // seed x: all four surfaces seed at a motionless
-    int     press_y   = 0;      //   release, Marker with its PRESS coordinates
+    double  press_x   = 0.0;    // seed x, REAL: all four surfaces seed at a motionless
+    double  press_y   = 0.0;    //   release, Marker with its PRESS coordinates
     int     target    = -1;     // marker index for Marker; unused otherwise
     // WHICH CELL THE SEEDING PRESS LANDED ON (Marker only; unused otherwise).
     // The consume forks on THE SEED and not on the second press's own position,
@@ -1730,9 +1735,9 @@ struct DoubleClickCandidate {
 // asynchronous route raises a prompt any more, so a release is never stolen and
 // this record is never stranded.) Session-only.
 struct TrimBarPressSeed {
-    bool active  = false;
-    int  press_x = 0;
-    int  press_y = 0;
+    bool   active  = false;
+    double press_x = 0.0;   // the press's REAL place, window px
+    double press_y = 0.0;
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
@@ -3493,6 +3498,19 @@ inline int drag_moved_threshold_px() {
     return scaled_px(kDragMovedThresholdPx, 1);
 }
 
+// THE TRAVEL EVERY PRESS GATE MEASURES (architect 2026-11-15, the no-grid
+// arc): the Chebyshev distance between two REAL pointer places, window px —
+// the press's and the pointer's now. One spelling for the drag gate, the grab
+// gate and the pen's re-arm, so the GUI's gates and the touch core's slop
+// (GuiInputCore::touch_slop_px_, which has always measured the real travel)
+// judge one number by one metric: a drift the core's window kept under the
+// slop is under the drag gate here by construction, and no gate can flip on
+// which pixel a place happened to fall in. Each site keeps its own compare
+// (`<` stays a click, `>=` re-arms) against its own authored length.
+inline double real_travel_px(double x0, double y0, double x1, double y1) {
+    return std::max(std::abs(x1 - x0), std::abs(y1 - y0));
+}
+
 // THE GRAB GATE (architect 2026-09-29): the Chebyshev distance a press that
 // GRABS A THING must travel before it becomes that thing's drag — TWICE the
 // drag gate above, derived from it so the two stay one authored number (18
@@ -3515,6 +3533,9 @@ inline int drag_moved_threshold_px() {
 //     endcap drag above on the same event. THE TRIM BAR IS ONE SURFACE WITH
 //     ONE GATE, so the set and the drag it hands to cross at the same
 //     distance, as they always have.
+// EVERY GATE MEASURES REAL TRAVEL (architect 2026-11-15, the no-grid arc):
+// the press's real place against the pointer's real place
+// (real_travel_px above), never two pixels' difference.
 // THE TOUCH CORE NEEDS NO SECOND SLOP: the core's pan zone is the waveform
 // alone (touch_point_in_pan_zone asks point_on_nav_surface), so a finger on
 // a flag or the trim bar is the pointer on contact (2026-09-25, the edge
@@ -5187,7 +5208,7 @@ struct AppState {
     // column whose painted column the span covers to the selection standing
     // at the down, live per motion, disabled markers included, the focus the
     // last swept member; the playhead lands on that focus at the lift (the
-    // rule at apply_selection_sweep_to_column, input_pointer.cpp). A tap
+    // rule at apply_selection_sweep_to, input_pointer.cpp). A tap
     // stays the playhead tap, a pinch the pinch, the barrel-held drag the
     // one-finger zoom. INERT IN THE `h` VIEW: the drag there stays the pan,
     // the lamp's role in the view its diff-flag click alone (below).
@@ -5789,13 +5810,18 @@ struct AppState {
         // the ordinary Roster press on Play (the key wears its press face
         // while the pointer stays on either rect — `contains`, the walk's
         // inside bit — the clock changes nothing; the act shows).
-        GuiRect field{0, 0, 0, 0};
+        // THE FIELD IS ITS REAL RECT (architect 2026-11-15, the no-grid arc:
+        // time_field_rect's, the rect the field's painter fills, its rows
+        // real), tested half-open with the pointer's real place.
+        GuiRectF field{0.0, 0.0, 0.0, 0.0};
         // `rect` IS THE PAINTED FACE (architect 2026-11-02, R5: the ground
         // is not pressable; materials.h's THE CELL AND ITS FACE), asked
-        // through the keys' one predicate, point_on_key; the clock's field
+        // through the keys' one predicate, point_on_key — a whole box, so
+        // the place's pixel answers it; the clock's field
         // is no key, nor is the legend under the key.
-        bool contains(int x, int y) const {
-            return point_on_key(rect, x, y) || rect_contains(field, x, y);
+        bool contains(const GuiPointerPlace& at) const {
+            return point_on_key(rect, at.x, at.y) ||
+                   rect_contains(field, at.rx, at.ry);
         }
         // THE TOOLTIP'S FACE (tooltip_box_rect's `face`; architect
         // 2026-11-07, session 90): the field where the show found the pointer
@@ -5803,8 +5829,10 @@ struct AppState {
         // box raised over the clock stands on the clock's left edge, one
         // raised over Play's column on the key's (session 91), and neither
         // moves while it stands.
-        const GuiRect& tooltip_face(bool on_field) const {
-            return on_field ? field : rect;
+        // The field's face is its whole pixels (render.h's hull: a
+        // tooltip's anchor and a damage rect name pixels).
+        GuiRect tooltip_face(bool on_field) const {
+            return on_field ? hull(field) : rect;
         }
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
@@ -5914,15 +5942,17 @@ struct AppState {
     // THE PLAYHEAD HEAD'S PAINTER STASH (architect 2026-10-09 ~17:40, the
     // head drag — ScrollDragState::head_drag), the trim stash's doctrine
     // carried to the ruler: GuiPaintHandler::paint_ruler_row publishes the
-    // rect it last DREW the head in — the triangle's columns cut to the
-    // waveform's, over the head's device rows of the
-    // ruler's, in SCREEN pixels, no tolerance — and
+    // rect it last DREW the head in — the chip's hit extent off the head's
+    // EXACT PLACE (architect 2026-11-15, the no-grid arc), cut to the
+    // waveform's columns, over the head's device rows of the
+    // ruler's, in SCREEN pixels, real edges, no tolerance — and
     // point_on_playhead_head (input_pointer.cpp) reads this and nothing
-    // else, so the press answers the head on screen.
+    // else, with the pointer's real place, so the press answers the head on
+    // screen.
     // Written only by a run whose damage clip redrew it (the pass's
     // publish_head rule). Empty — a head off the waveform's columns, or
     // nothing painted yet — nothing to grab.
-    GuiRect                  playhead_head_hit{0, 0, 0, 0};
+    GuiRectF                 playhead_head_hit{0.0, 0.0, 0.0, 0.0};
 
     // THE OPEN FLAG EDITOR'S BOX, published by the same painter-owns-derived-
     // geometry rule the two stashes above follow, and for the same reason: the
@@ -7113,8 +7143,8 @@ struct AppState {
         uint64_t card_id       = 0;   // the Card kind's card; 0 otherwise
         // THE LEVEL KIND'S WORDS (the Level paragraph above); unread by
         // every other kind.
-        int      x0            = 0;     // the press's x, device px
-        int      y0            = 0;     // the press's y, device px
+        double   x0            = 0.0;   // the press's REAL x, device px
+        double   y0            = 0.0;   // the press's REAL y, device px
         double   t0            = 0.0;   // the level's travel fraction at the press
         bool     moved         = false; // a motion left the slop: a drag
         bool     level_changed = false; // some motion moved the level: the lift writes
@@ -8308,8 +8338,18 @@ struct AppState {
     // tooltip's owner), repaired from the
     // TICK, gated on "no pointer gesture" so the freeze rule holds — geometry
     // changes move the rects under a stationary pointer.
+    // THE REAL PLACE RIDES BESIDE ITS PIXEL (architect 2026-11-15, the
+    // no-grid arc; GuiPointerPlace's invariant, input_core.h: the ints are
+    // the reals' containing pixel, written together at on_motion's top and
+    // nowhere else), so the re-walk asks the fractional boxes — a cue's chip
+    // and label, Play's clock field — with the place the pointer really has.
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
+    double            last_mouse_rx = -1.0;
+    double            last_mouse_ry = -1.0;
+    GuiPointerPlace last_mouse_place() const {
+        return GuiPointerPlace::at(last_mouse_rx, last_mouse_ry);
+    }
 
     // Is the pointer INSIDE the window? last_mouse_{x,y} keep the last position
     // the pointer was seen at, which is a point INSIDE the window even after it
@@ -9216,9 +9256,9 @@ struct AppState {
     struct FolderOverlayPress {
         bool    armed           = false;
         int     row             = -1;
-        int     press_x         = 0;
-        int     press_y         = 0;
-        int     scroll_at_press = 0;
+        double  press_x         = 0.0;   // the press's REAL place, window px
+        double  press_y         = 0.0;
+        double  scroll_at_press = 0.0;
         bool    inside          = true;
         bool    scrolling       = false;
     };
@@ -9250,7 +9290,10 @@ struct AppState {
         // -1 with no question standing.
         int                trim_pending  = -1;
         std::vector<FolderOverlayRow> rows;
-        int                scroll_px     = 0;
+        // THE LIST'S SCROLL OFFSET, REAL (architect 2026-11-15, the no-grid
+        // arc; folder_overlay.h's clamp_scroll): device px, in [0, the
+        // content's overhang], moved by the finger's real travel.
+        double             scroll_px     = 0.0;
         int                highlight_row = -1;
         FolderOverlayPress press;
     };
@@ -9438,11 +9481,11 @@ struct AppState {
         int64_t                    painted_cursor = -1;
         struct ScrubDrag {
             bool armed    = false;
-            int  marker_x = 0;      // the thumb's carried center, a whole column
+            double marker_x = 0.0;  // the thumb's carried center, a real place
             bool on_thumb = false;  // armed on the grab band, not the track
-            int  grab_dx  = 0;      // press x − the thumb's carried column
-                                    // (scrub_thumb_carried_column); 0 off it
-            bool moved    = false;  // the carried centre has moved
+            double grab_dx = 0.0;   // the press's real x − the thumb's painted
+                                    // center; 0 off the thumb
+            bool moved    = false;  // the carried center has moved
             bool was_live = false;  // the press paused a LIVE item
         };
         ScrubDrag                  scrub;
@@ -9516,12 +9559,12 @@ struct AppState {
     //              The tick owes a page turn's position write until the turn
     //              is on screen (`position_owed`);
     //   `scrub`    the scrub's drag arm, on both faces the render player's
-    //              (the thumb's carried column, on or off the thumb, moved):
+    //              (the thumb's carried center, on or off the thumb, moved):
     //              the drag CARRIES the thumb and the lift commits, a
     //              motionless tap on the thumb committing nothing. ON BOTH
     //              FACES (architect 2026-10-27 ~19:45, "the picture follows
     //              the thumb, the sound waits for the lift") the page under
-    //              the carried column is SHOWN as the thumb crosses it,
+    //              the carried center is SHOWN as the thumb crosses it,
     //              display only, and `press_page`, the page the press found
     //              (after its pause), is what a hard end shows again, nothing
     //              written. ON THE PAGE ROAD (architect 2026-10-27, "the
@@ -9530,7 +9573,7 @@ struct AppState {
     //              thumb") the lift writes the shown page's position where it
     //              differs from `press_page`. UNDER THE MEDIA PLAYER'S FACE
     //              nothing is seeked under the drag, THE SEEK IS AT THE LIFT
-    //              to the carried column's frame, whose page the drag showed
+    //              to the carried center's frame, whose page the drag showed
     //              (architect 2026-10-26, "no scrubbing"), THE CLOCK'S
     //              ELAPSED FIELD SHOWING THAT FRAME'S TIME while the drag
     //              stands (architect 2026-11-10; the lift's own derivation,
@@ -9582,9 +9625,9 @@ struct AppState {
             bool armed      = false;
             bool on_thumb   = false;  // taken on the thumb
             bool moved      = false;  // a motion moved it
-            int  grab_dx    = 0;      // press x − the thumb's carried column
-                                      // (scrub_thumb_carried_column); 0 off it
-            int  marker_x   = 0;      // the carried column
+            double grab_dx  = 0.0;    // the press's real x − the thumb's painted
+                                      // center; 0 off the thumb
+            double marker_x = 0.0;    // the carried center, a real place
             bool was_live   = false;  // the soundtrack's face: paused LIVE
             int  press_page = 0;      // the page the press found
         };
@@ -10472,45 +10515,34 @@ inline double render_player_scrub_x_of(const AppState& a, int64_t frame) {
     const double t = static_cast<double>(f) / static_cast<double>(frames);
     return x0 + t * static_cast<double>(span);
 }
-// THE WHOLE COLUMN A DRAG CARRIES A THUMB FROM: the column nearest the
-// thumb's painted center `center_x` — a center names an EDGE between two
-// columns (the thumb's box starts half a thumb before it), so the nearest
-// one, not the containing one. THE ONE SITE that takes the thumb's exact
-// place to a whole column: the pointer hands whole pixels, so a drag's
-// carried center is a whole column (ScrubDrag::marker_x), and the press
-// reads its grab offset against this one (claim_player_scrub_press,
-// claim_score_scrub_press), the thumb stepping from its exact place onto
-// that column — half a pixel at most — while it is held.
-inline int scrub_thumb_carried_column(double center_x) {
-    return static_cast<int>(std::nearbyint(center_x));
-}
 // THE THUMB'S GRAB BAND — the painted thumb (below), and its
 // ONE reader is the press router, which asks it whether a press TAKES the
 // thumb where it stands (the band) or makes it JUMP to the press (the rest of
 // the item, architect 2026-10-02); the thumb (paint_scrub_thumb) wears no
 // hover face.
 // `handle_x` is the handle's painted center — the position's own exact
-// place, or the drag's carried column while a drag stands.
+// place, or the drag's carried center while a drag stands.
 //
 // THE BAND IS THE PAINTED THUMB (architect 2026-10-23, on screen is as
 // painted; the thumb's box widened to the 14-W handle box, 2026-10-02 to
 // 2026-10-23, retired), its overhanging half at either end of the channel
 // included (the item covers it, 2026-10-25): THE PAINTER'S OWN BOX
 // (scrub_thumb_box, render.h, the one geometry — the thumb's width about
-// `handle_x`, its rows centered in the track's band), asked for the PIXEL
-// the pointer names: a press is on the thumb when its pixel is one the
-// thumb's box touches (the box's hull, half-open on both axes like every
-// pixel-cell test in the product — a pixel x covers [x, x+1),
-// containing_pixel's rule). A press outside it but on the item makes the
+// `handle_x`, its rows centered in the track's band), asked with THE
+// POINTER'S REAL PLACE (architect 2026-11-15, the no-grid arc: "yes, I'd
+// like to move to fractional hitboxes."): a press is on the thumb when its
+// real point lies in the thumb's real box, half-open on both axes. A press
+// outside it but on the item makes the
 // thumb JUMP there (claim_player_scrub_press); the track rect stays the
 // press router's OUTER gate and this test runs inside it.
 inline bool render_player_scrub_handle_hit(const GuiRect& track,
-                                           double handle_x, int x, int y) {
+                                           double handle_x, double x,
+                                           double y) {
     if (track.w <= 0 || track.h <= 0) return false;
-    return rect_contains(hull(scrub_thumb_box(track, handle_x)), x, y);
+    return rect_contains(scrub_thumb_box(track, handle_x), x, y);
 }
-// The frame of a thumb whose center stands at `x` (a carried column, or any
-// real place), clamped onto the travel.
+// The frame of a thumb whose center stands at the real place `x`, clamped
+// onto the travel.
 inline int64_t render_player_scrub_frame_at(const AppState& a, double x) {
     const GuiRect channel = a.modal_dialog.scrub_channel;
     const int64_t frames = a.render_player.frames;
@@ -10525,22 +10557,23 @@ inline int64_t render_player_scrub_frame_at(const AppState& a, double x) {
 }
 // WHERE THE HELD SCRUB'S DROP LANDS — THE ONE DERIVATION (architect
 // 2026-11-10, the timestamp follows the thumb): the frame a lift with the
-// thumb's center at column `thumb_x` hands the seek (the mapping above), and
+// thumb's center at the real place `thumb_x` hands the seek (the mapping
+// above), and
 // NOTHING where the lift seeks nothing — a motionless tap on the thumb
 // (`on_thumb` and not `moved`), which re-seeking would round to its
-// column's frame. TWO READERS, so the time shown is the time landed at: THE
-// LIFT (finish_player_scrub_release, the lift's x less the grab offset —
-// the column the motion last painted the thumb at) and THE CLOCK'S PAINTER,
+// place's frame. TWO READERS, so the time shown is the time landed at: THE
+// LIFT (finish_player_scrub_release, the lift's real x less the grab offset —
+// the place the motion last painted the thumb at) and THE CLOCK'S PAINTER,
 // whose position field shows this frame's time while the drag stands (the
-// carried column, ScrubDrag::marker_x; paint_modal_dialog's player branch)
+// carried center, ScrubDrag::marker_x; paint_modal_dialog's player branch)
 // and the item's position where this answers nothing. The seek's own end
 // clamps (a live target stops short of the item's last frame so the natural
 // end takes over, GuiRenderPlayer::seek_to / resume_at) stay the seek's.
 inline std::optional<int64_t> render_player_scrub_drop_frame(
         const AppState& a, const AppState::RenderPlayer::ScrubDrag& drag,
-        int thumb_x) {
+        double thumb_x) {
     if (drag.on_thumb && !drag.moved) return std::nullopt;
-    return render_player_scrub_frame_at(a, static_cast<double>(thumb_x));
+    return render_player_scrub_frame_at(a, thumb_x);
 }
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared
@@ -10670,7 +10703,9 @@ inline bool dialog_editor_stop_is_row_end(const AppState::DialogEditorText& t,
            pos == r.end;
 }
 
-// THE STOP UNDER A PRESS: the row under `y` (the first whose band's foot lies
+// THE STOP UNDER A PRESS, the pointer's REAL place (x, y) (architect
+// 2026-11-15, the no-grid arc): the row under `y` (the first whose band's
+// real foot lies
 // below it, else the last — a press between two rows takes the lower one),
 // then on that row the NEAREST BOUNDARY to `x` among its caret stops, ties to
 // the lower index — text_editor::byte_index_from_shaped_x's rule read on one
@@ -10684,7 +10719,7 @@ struct DialogEditorStop {
 };
 inline DialogEditorStop dialog_editor_byte_at(
         const AppState::DialogEditorText& t, const std::string& text,
-        double x, int y) {
+        double x, double y) {
     const int n = static_cast<int>(t.rows.size());
     if (n == 0) return {};
     int row = n - 1;
@@ -19498,7 +19533,9 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // the box it closes. Boxes OVERLAP freely (later over earlier in store
 // order, the whole occlusion model), and the walk runs BACKWARDS so the topmost
 // = last-painted box wins — WYSIWYG for every consumer (selection clicks, the
-// drag grab, the double-click editor). Selection does not lift a box: it is a
+// drag grab, the double-click editor). THE POINT IS THE POINTER'S REAL PLACE
+// (architect 2026-11-15, the no-grid arc), tested half-open against rects
+// that stand on their marks' exact x. Selection does not lift a box: it is a
 // colour swap now, so there is no second pass. Works in both 'W' and 'P'
 // authoring views — the stash holds the ACTIVE column's boxes only, because
 // that is the column the painter drew.
@@ -19512,7 +19549,7 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // a PRESS on one never reaches this walk since 2026-10-25, the editor's modal
 // veil consuming it).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
-                  int mouse_x, int mouse_y);
+                  double mouse_x, double mouse_y);
 
 // WHICH CELL of that run the point landed on — the topmost rect's three
 // published boundaries compared against mouse_x, nothing more. ITS ONE
@@ -19526,7 +19563,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // as hit_test_flag — literally the same walk, so the two can never disagree
 // about which box was hit.
 MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
-                              int mouse_x, int mouse_y);
+                              double mouse_x, double mouse_y);
 
 // (THE STEM AS A POINTER TARGET IS RETIRED — architect 2026-08-12, the seventh
 // glass ruling: MARKER STEMS ARE POINTER-INERT IN ALL CONTEXTS, the flag box
@@ -19546,7 +19583,8 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
 enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_endcap: return which trim bound's painted ENDCAP contains the
-// press, or None. It reads THE PAINTER'S STASH (AppState::trim_bar_hit,
+// press — THE POINTER'S REAL PLACE against the zone's real edges (architect
+// 2026-11-15, the no-grid arc) — or None. It reads THE PAINTER'S STASH (AppState::trim_bar_hit,
 // architect 2026-09-24 — strictly as-painted): the two caps the live trim pass
 // last DREW, never the store's pair, so a press between a trim write and its
 // repaint grabs the cap on screen. Each bound's cap is its SCROLL-BAR ARROW
@@ -19563,7 +19601,8 @@ enum class TrimHit { None, Begin, End };
 // painted) answers None. The two buttons and the thumb's body between them
 // (the bridge span) are the ONLY trim grab handles (the waveform stem grab
 // retired).
-TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
+TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
+                             double mouse_y);
 
 // point_in_trim_bridge_span: is (mouse_x, mouse_y) on the trim bar's INTER-CAP
 // BRIDGE — the painted bar's stretch between the two endcaps, the pair drag's
@@ -19585,7 +19624,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 // button's width, so the button rects sit outside the interval and
 // this needs no reliance on a caller testing the buttons first. Both bounds are always set (the trim window
 // always rests), so there is no pair gate.
-bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
+bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
+                               double mouse_y);
 
 // STRICTLY AS PAINTED — THE RULE'S ONE STATEMENT (architect 2026-09-24, in his
 // words: "the live painted face should correspond to reality, and reality to
@@ -19877,10 +19917,11 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // [x0, x1] in window px (architect 2026-11-14, send J), over
 // waveform_area's whole rows (the canvas), EMPTY (x1 <= x0) unless a sweep
 // stands MOVED (region_drag.active && .moved), and then:
-//   * THE ADD SEL FORMER (`select`): anchor_col .. pen_col, both inclusive
-//     — apply_selection_sweep_to_column's own lo .. hi, the membership's
-//     span, WHOLE COLUMNS (pen columns, no exact place) — empty before the
-//     first motion past the gate (pen_col -1).
+//   * THE ADD SEL FORMER (`select`): from the down's real place to the
+//     pen's (anchor_x, pen_x; architect 2026-11-15, the no-grid arc) —
+//     apply_selection_sweep_to's own lo .. hi, the membership's closed
+//     span, ITS REAL EDGES — empty before the first motion past the gate
+//     (pen_x negative) and while the pen stands on the down's own place.
 //   * THE TRIM FORMER: empty until the first accepted trim write
 //     (`wrote_trim`); then the trim bar's own span, ITS REAL EDGES, DERIVED
 //     from the trim on the bar's basis and owners — the item basis
@@ -19968,7 +20009,7 @@ bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
 // (AppState::MarkerTooltipValueCache).
 std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
                                  int idx);
-// marker_cue_hit — THE TARGET: the cue under (x, y) by the PRESS'S OWN WALK
+// marker_cue_hit — THE TARGET: the cue under the real point (x, y) by the PRESS'S OWN WALK
 // and arbitration (hit_test_flag's topmost_flag_rect over the published
 // AppState::flag_hit_rects, chips over labels, the last painted on top), its
 // marker index or −1 — and `face_out`, when a cue is hit, that rect's FACE:
@@ -19976,7 +20017,8 @@ std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
 // the chip's left edge on the marker lane's rows (FlagHitRect, render.h). −1
 // in the `h` view (the indices there are the diff flags'). No wider column
 // than the cue: the key's column is a key-surface rule (tooltip_column_rect).
-int marker_cue_hit(const AppState& app, int x, int y, GuiRect* face_out);
+int marker_cue_hit(const AppState& app, double x, double y,
+                   GuiRect* face_out);
 // marker_cue_face — THE SEAT'S FACE, read from the LIVE stash so a cue that
 // moved (FOLLOW scrolling, a relayout) is read where it is painted: the face
 // (as marker_cue_hit's) of the topmost published rect naming store index
@@ -20043,7 +20085,8 @@ HistoryCueTooltipText history_cue_tooltip_text(const AppState& app, int idx);
 // (topmost_flag_rect over the published rects, which the history painter
 // fills with diff-flag indices while the mode stands), and `face_out` its
 // face, as marker_cue_hit's; −1 with the mode down.
-int history_cue_hit(const AppState& app, int x, int y, GuiRect* face_out);
+int history_cue_hit(const AppState& app, double x, double y,
+                    GuiRect* face_out);
 // history_cue_face — THE SEAT'S FACE off the live stash, as marker_cue_face's;
 // the zero rect with the mode down or no rect naming `idx`.
 GuiRect history_cue_face(const AppState& app, int idx);

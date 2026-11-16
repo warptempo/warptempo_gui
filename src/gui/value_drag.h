@@ -108,9 +108,9 @@ struct ValueDragOps {
     // press's (ValueDragState::origin_y). False when the target rule refuses
     // (or the index has gone stale), and nothing is written on that path —
     // the caller drops the gesture.
-    bool begin(int marker, MarkerCell cell, int origin_y);
+    bool begin(int marker, MarkerCell cell, double origin_y);
     // One motion event's whole effect. Cheap and idempotent inside a step.
-    void apply_motion(int mouse_y);
+    void apply_motion(double mouse_y);
     // End the gesture, pushing the tempo arm's one undo entry iff the
     // marker's tempo pair moved (the rule is above), and SPEND THE LAMP
     // (AppState::value_drag_lamp, 2026-10-11) — a drag began, so the one-shot

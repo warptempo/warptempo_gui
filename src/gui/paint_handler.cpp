@@ -848,7 +848,7 @@ AppState::RedesignButtonFace& publish_button_face(
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
     if (rect.w <= 0 || rect.h <= 0) {
-        face.field   = GuiRect{0, 0, 0, 0};
+        face.field   = GuiRectF{0.0, 0.0, 0.0, 0.0};
         face.painted = GuiRect{0, 0, 0, 0};
     }
     const GuiRect covered =
@@ -3241,15 +3241,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const int    field_w = clock.field_w;
         const GuiRectF clock_field =
             time_field_rect(field_x, field_w, btn_y, btn_h);
-        // The field's whole pixels (render.h's hull): what the press box
-        // and the clip test below name.
+        // The field's whole pixels (render.h's hull): what the clip test
+        // below names.
         const GuiRect clock_hull = hull(clock_field);
         // THE CLOCK IS PRESSED AS THE PLAY KEY (architect 2026-10-27): the
         // field as painted is Play / Stop's second rect
         // (RedesignButtonFace::field), so a press on it is a press on that
         // key — the lift bare Space, the Shift press or the long press
         // Shift+Space, the A/B audition — the key's grey its consumed
-        // nothing, and its tooltip the key's own. Published on every pass,
+        // nothing, and its tooltip the key's own. THE FIELD'S REAL RECT
+        // (architect 2026-11-15, the no-grid arc: time_field_rect's, the
+        // rect the painter fills, asked with the pointer's real place).
+        // Published on every pass,
         // whatever the clip, as the keys' rects are; CUT AT THE RIGHT
         // BLOCK'S LEFT EDGE, the block winning in z where a narrow window
         // lays it over the field (the z rule above), so no point answers
@@ -3265,11 +3268,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // share the field's painter (paint_ce_time_field) and never the
         // press.
         {
-            GuiRect play_field = clock_hull;
-            play_field.w = std::min(clock_hull.x + clock_hull.w,
-                                    right_block_x) -
-                           clock_hull.x;
-            if (play_field.w <= 0) play_field = GuiRect{0, 0, 0, 0};
+            GuiRectF play_field = clock_field;
+            play_field.w = std::min(clock_field.x + clock_field.w,
+                                    static_cast<double>(right_block_x)) -
+                           clock_field.x;
+            if (play_field.w <= 0.0)
+                play_field = GuiRectF{0.0, 0.0, 0.0, 0.0};
             app.redesign_buttons[redesign_button_index(
                                      RedesignButton::TransportPlayStop)]
                 .field = play_field;
@@ -4338,18 +4342,22 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // main.cpp) or the viewport's lanes whole (the discrete moves'
     // Viewport::invalidate_waveform_area), so the frame that shows a moved
     // head is always a publishing one.
-    const auto publish_head = [&](const GuiRect& head) {
-        const GuiRect last = app.playhead_head_hit;
-        if (head.w > 0 && head.h > 0) {
-            if (clip_covers_drawable(cr, app, head))
+    // THE HIT IS REAL, THE COVERAGE TEST ITS HULL (architect 2026-11-15, the
+    // no-grid arc): the published rect stands on the head's exact place;
+    // "did this run's clip redraw it" names pixels, so it asks the rect's
+    // whole pixels (render.h's hull).
+    const auto publish_head = [&](const GuiRectF& head) {
+        const GuiRectF last = app.playhead_head_hit;
+        if (head.w > 0.0 && head.h > 0.0) {
+            if (clip_covers_drawable(cr, app, hull(head)))
                 app.playhead_head_hit = head;
-        } else if (last.w <= 0 || last.h <= 0 ||
-                   clip_covers_drawable(cr, app, last)) {
-            app.playhead_head_hit = GuiRect{0, 0, 0, 0};
+        } else if (last.w <= 0.0 || last.h <= 0.0 ||
+                   clip_covers_drawable(cr, app, hull(last))) {
+            app.playhead_head_hit = GuiRectF{0.0, 0.0, 0.0, 0.0};
         }
     };
     if (lane.w <= 0 || lane.h <= 0) {
-        publish_head(GuiRect{0, 0, 0, 0});
+        publish_head(GuiRectF{0.0, 0.0, 0.0, 0.0});
         return;
     }
 
@@ -4626,12 +4634,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const int rows  = cue_chip_h_px();
         // THE TWO EXTENTS (render.h's cue block): the painted reach, the
         // columns [col − reach, col + reach) the head can touch — the cull
-        // here and the damage box's — and the hit extent [col − left,
-        // col + right), the published hit's.
+        // here and the damage box's — and the hit extent [x − left,
+        // x + right) off the head's exact place, the published hit's.
         const int reach = cue_chip_paint_reach_px();
         const int left  = cue_chip_hit_left_px();
         const int right = cue_chip_hit_right_px();
-        GuiRect head_hit{0, 0, 0, 0};
+        GuiRectF head_hit{0.0, 0.0, 0.0, 0.0};
         if (col + reach > 0 && col - reach < wave_w) {
             const int head_top = ruler_bottom - rows;
             // THE HEAD'S CLIP: the waveform's columns over the head's own
@@ -4645,21 +4653,25 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                               palette().playhead_head, palette().cue_outline);
             cairo_restore(cr);
             // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
-            // point_on_playhead_head, input_pointer.cpp): THE HEAD ON ITS
-            // COLUMN — the columns [col − left, col + right) cut to the
-            // waveform's columns as the clip above cuts them, over the
-            // head's `rows` device rows of the ruler's — whole px, unmoved
-            // by the exact place (architect 2026-11-14, send J; render.h's
-            // THE CHIP'S TWO EXTENTS), the painted head within a px and a
-            // half of it
+            // point_on_playhead_head, input_pointer.cpp): THE HEAD AT ITS
+            // EXACT PLACE (architect 2026-11-15, the no-grid arc: "yes, I'd
+            // like to move to fractional hitboxes.") — the real interval
+            // [x − left, x + right) cut to the waveform's columns as the
+            // clip above cuts them, over the head's `rows` device rows of
+            // the ruler's (render.h's THE CHIP'S TWO EXTENTS, the cue
+            // chip's own box), the painted head within a px of it
             // and nothing beyond ("I don't think we should get in the habit
             // of making invisible hitboxes"), published by the pass's rule
-            // (publish_head, the pass's head); none where the cut leaves no
-            // column (a head showing only its painted reach's last pixels
+            // (publish_head, the pass's head); none where the cut leaves
+            // nothing (a head showing only its painted reach's last pixels
             // at an edge).
-            const int x0 = std::max(0, col - left);
-            const int x1 = std::min(wave_w, col + right);
-            if (x1 > x0) head_hit = GuiRect{cx + x0, head_top, x1 - x0, rows};
+            const double x0 = std::max(0.0, x - static_cast<double>(left));
+            const double x1 = std::min(static_cast<double>(wave_w),
+                                       x + static_cast<double>(right));
+            if (x1 > x0)
+                head_hit = GuiRectF{static_cast<double>(cx) + x0,
+                                    static_cast<double>(head_top), x1 - x0,
+                                    static_cast<double>(rows)};
         }
         publish_head(head_hit);
     }
@@ -5515,7 +5527,8 @@ void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
     if (area.w <= 0 || area.h <= 0) return;
     // THE SPAN'S REAL EDGES (architect 2026-11-14, send J;
     // sweep_highlight_columns): TRIM's the trim bar's own span edge for
-    // edge, ADD SEL's whole pen columns — one blended rect over the canvas's
+    // edge, ADD SEL's from the down's real place to the pen's (architect
+    // 2026-11-15, the no-grid arc) — one blended rect over the canvas's
     // rows, each cell an edge crosses lightened by its coverage's share of
     // the percent.
     const SweepHighlightColumns span = sweep_highlight_columns(app, audio);
@@ -7146,13 +7159,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                              app.render_player.scrub.armed &&
                                  app.render_player.scrub.on_thumb,
                              [&]() -> double {
-                // The drag's carried column while the thumb is being dragged
+                // The drag's carried center while the thumb is being dragged
                 // (the sound paused under the hold and the seek committing at
                 // the release), the item position's own exact place
                 // otherwise — the travel's start, frame 0, while no item is
                 // loaded (render_player_scrub_x_of's frames <= 0 arm, the
                 // clock's zeros).
-                return rp.scrub.armed ? static_cast<double>(rp.scrub.marker_x)
+                return rp.scrub.armed ? rp.scrub.marker_x
                                       : render_player_scrub_x_of(app, pos);
             });
         }
@@ -7166,7 +7179,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    at the lane's right pad on a narrow window. WHILE THE SCRUB IS
         //    HELD THE POSITION FIELD SHOWS THE TIME THE DROP WOULD LAND AT
         //    (architect 2026-11-10): the lift's own derivation over the
-        //    thumb's carried column (render_player_scrub_drop_frame,
+        //    thumb's carried center (render_player_scrub_drop_frame,
         //    app_state.h), the item's position where the lift would seek
         //    nothing; the held scrub's edges damage dlg.clock
         //    (input_pointer.cpp's play-scrub block). --
@@ -7240,11 +7253,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                  app.score_viewer.scrub.armed &&
                                      app.score_viewer.scrub.on_thumb,
                                  [&]() -> double {
-                    // The drag's carried column while the thumb is dragged,
+                    // The drag's carried center while the thumb is dragged,
                     // the cursor's own exact place otherwise.
                     return app.score_viewer.scrub.armed
-                               ? static_cast<double>(
-                                     app.score_viewer.scrub.marker_x)
+                               ? app.score_viewer.scrub.marker_x
                                : score_scrub_x_of_frame(app, pos);
                 });
             }
@@ -7253,7 +7265,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // the soundtrack's own rate; WHILE THE SCRUB IS HELD the elapsed
             // field shows the time the drop would land at (architect
             // 2026-11-10; score_scrub_drop_frame, the lift's own derivation
-            // over the carried column), the cursor's where the lift would
+            // over the carried center), the cursor's where the lift would
             // seek nothing.
             const GuiFont cfont = gui_font(GuiFace::Program);
             const int sr = app.score_audio.rate();
@@ -7304,7 +7316,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             for (std::size_t i = 0; i < sl.x.size(); ++i) plan[i].x = sl.x[i];
 
             // THE PAGE SCRUB, the player's item over the viewing range's pages:
-            // the drag's carried column while the thumb is dragged (architect
+            // the drag's carried center while the thumb is dragged (architect
             // 2026-10-27, "the thumb follows the pen continuously, the page
             // under it changes in steps"), the shown page's exact place
             // otherwise (score_scrub_x_of) — the step.
@@ -7314,8 +7326,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                      app.score_viewer.scrub.on_thumb,
                                  [&]() -> double {
                     return app.score_viewer.scrub.armed
-                               ? static_cast<double>(
-                                     app.score_viewer.scrub.marker_x)
+                               ? app.score_viewer.scrub.marker_x
                                : score_scrub_x_of(app, app.score_viewer.page);
                 });
             }
@@ -8188,6 +8199,13 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // SAME RECT (folder_overlay.h's content_rect, the box's interior), so
     // paint and hit agree about every pixel at any scroll offset. The surface
     // stays the panel's ground, the damage and the band's outer claim.
+    // THE ROWS STAND AT THEIR REAL PLACES UNDER THE REAL SCROLL OFFSET
+    // (architect 2026-11-15, the no-grid arc), INSIDE THE OPAQUE PANE: this
+    // clip is whole pixels of the pane's interior, so a row the clip cuts at
+    // the pane's top or bottom is cut on whole pixels, and a row's fractional
+    // top and bottom edges blend over the pane's own opaque fill laid just
+    // above — never over the canvas's hole (render.h's hull, its sixth
+    // item: nothing here reaches past the pane).
     const GuiRect content = folder_overlay::content_rect(app);
     cairo_rectangle(cr, content.x, content.y, content.w, content.h);
     cairo_clip(cr);
@@ -8235,12 +8253,14 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 
     folder_overlay::for_each_row(
         app, [&](int index, const AppState::FolderOverlayRow& row,
-                 const GuiRect& r) {
+                 const GuiRectF& r) {
             // PER-ROW EXPOSURE, the keyboard's own economy: a row costs a face
             // box, a glyph and a shaped run, so a narrow damage pays only for
-            // the rows it crosses.
-            if (!rects_intersect(exposed, r)) return;
-            if (!rects_intersect(content, r)) return;
+            // the rows it crosses — asked of the row's whole pixels, its
+            // hull (a cull names pixels).
+            const GuiRect r_hull = hull(r);
+            if (!rects_intersect(exposed, r_hull)) return;
+            if (!rects_intersect(content, r_hull)) return;
 
             const bool highlighted = index == ov.highlight_row;
             // AN INERT ROW IS NEVER LIT (folder_overlay::row_is_inert, the
@@ -8315,13 +8335,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 const int ink = scaled_px(kListGlyphInkW, 1);
                 const icons::InkSize s = icons::glyph_ink_size(glyph, ink);
                 const GuiThemeTones& t = installed_theme().tones;
-                // Its ink box centered exactly on the row's rows (no half
-                // rounded; the no-grid arc, 2026-11-15).
+                // Its ink box centered exactly on the row's real rows (no
+                // half rounded; the no-grid arc, 2026-11-15). Every row of a
+                // listing shares one phase — the pitch between rows is
+                // whole — so a scrolling frame asks the icon road for one
+                // new raster a drawing and tone, whatever the row count.
                 icons::draw_glyph(cr, glyph,
                                   static_cast<double>(
                                       x0 + scaled_px(kListGlyphXW)),
-                                  static_cast<double>(r.y) +
-                                      static_cast<double>(r.h - s.h) / 2.0,
+                                  r.y + (r.h - static_cast<double>(s.h)) / 2.0,
                                   ink,
                                   pressed ? t.list_press_text
                                   : lit   ? t.selection_text
@@ -8337,17 +8359,17 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                 text_shape::shape_text_run(font, row.name);
             // THE SEAT: a row is a box, so its label takes the box solver's
             // cap centring.
-            const double baseline =
-                redesign_baseline(font, static_cast<double>(r.y),
-                                  static_cast<double>(r.h));
+            const double baseline = redesign_baseline(font, r.y, r.h);
             // A NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE (2026-08-28: no
             // wrap, no ellipsis — "project and file names will be short"), and
-            // the clip to the ROW's own right edge is what "off the edge" means
-            // here: the glyphs stop at the row, not at the window.
-            cairo_save(cr);
-            cairo_rectangle(cr, text_x, r.y,
-                            std::max(0, (r.x + r.w) - text_x), r.h);
-            cairo_clip(cr);
+            // the cut at the ROW's own right edge is what "off the edge" means
+            // here: the glyphs stop at the row, not at the window. THE CUT IS
+            // ON THE NAME'S OWN MASK (text_shape::show_shaped_run_within, the
+            // lanes' road): the run's coverage kept between the name's seat
+            // and the row's right edge, both whole columns — no clip is set
+            // per row, so a scrolling list pays none.
+            const text_raster::XSpan name_span{
+                static_cast<double>(text_x), r.x + r.w};
             // The row's text pair (surface_text, render.h); AN INERT ROW in
             // THE DIM PRINT, `text_dim` (Default's 757575) (materials.h's text tones,
             // architect 2026-10-28: "DEVICE" and "PIECE" dim headings, never
@@ -8357,9 +8379,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
                   : pressed ? pal.list_press_text
                             : surface_text(lit ? GuiSurface::ListRowLit
                                                : GuiSurface::ListRow));
-            text_shape::show_shaped_run(
-                cr, run, static_cast<double>(text_x), baseline);
-            cairo_restore(cr);
+            if (name_span.x1 > name_span.x0)
+                text_shape::show_shaped_run_within(
+                    cr, run, static_cast<double>(text_x), baseline,
+                    &name_span, 1);
         });
 
     cairo_restore(cr);

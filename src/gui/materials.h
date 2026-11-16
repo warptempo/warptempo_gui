@@ -404,3 +404,12 @@ inline int key_group_w_px(int n) {
 inline bool point_on_key(const GuiRect& key, int x, int y) {
     return rect_contains(key, x, y);
 }
+// THE SAME PREDICATE FOR A FACE WITH REAL EDGES (architect 2026-11-15, the
+// no-grid arc: "yes, I'd like to move to fractional hitboxes."): the
+// on-screen keyboard's faces, whose edges its tuning keys make fractional,
+// asked with the pointer's REAL place — half-open on both axes, so two keys
+// never share a point and the ground between them presses nothing. A whole
+// face answers the overload above with its pixel, and the two agree on it.
+inline bool point_on_key(const GuiRectF& key, double x, double y) {
+    return rect_contains(key, x, y);
+}

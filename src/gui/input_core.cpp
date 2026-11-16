@@ -258,15 +258,15 @@ void GuiInputCore::pointer_enter(double x, double y) {
     // Synthesize a motion delivery so consumers register the pointer
     // as present at the entry coordinates. Matches how most clients
     // treat enter — the first "the pointer is here" notification.
-    deliver_motion(pointer_x_, pointer_y_);
+    deliver_motion(GuiPointerPlace::at(pointer_x_, pointer_y_));
 }
 
 void GuiInputCore::pointer_focus_at(double x, double y) {
     // The enter's focus and position, and nothing delivered (the contract and
     // its one caller are at the declaration).
     pointer_focused_ = true;
-    pointer_x_ = containing_pixel(x);
-    pointer_y_ = containing_pixel(y);
+    pointer_x_ = x;
+    pointer_y_ = y;
 }
 
 void GuiInputCore::pointer_leave() {
@@ -281,15 +281,15 @@ void GuiInputCore::pointer_leave() {
 }
 
 void GuiInputCore::pointer_motion(double x, double y) {
-    pointer_x_ = containing_pixel(x);
-    pointer_y_ = containing_pixel(y);
-    deliver_motion(pointer_x_, pointer_y_);
+    pointer_x_ = x;
+    pointer_y_ = y;
+    deliver_motion(GuiPointerPlace::at(x, y));
 }
 
-void GuiInputCore::deliver_motion(int x, int y) {
+void GuiInputCore::deliver_motion(const GuiPointerPlace& at) {
     // The funnel for every motion that carries a REAL position (the caller
     // classes are at the declaration): the GUI sees the ordinary delivery.
-    if (on_motion_) on_motion_(x, y, current_mods());
+    if (on_motion_) on_motion_(at, current_mods());
 }
 
 // ---------------------------------------------------------------------------
@@ -324,40 +324,31 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // the entry motion included — reads primary_button_held through
     // current_mods().
     touch_left_held_ = true;
-    // Touch positions are fractional on real panels; every delivery names the
-    // pixel that contains one (containing_pixel, the one owner).
-    const int down_x = containing_pixel(touch_down_x_);
-    const int down_y = containing_pixel(touch_down_y_);
-    deliver_motion(down_x, down_y);
+    // Touch positions are fractional on real panels; every delivery hands
+    // the real position with the pixel that contains it (GuiPointerPlace::at,
+    // the one owner).
+    const GuiPointerPlace down =
+        GuiPointerPlace::at(touch_down_x_, touch_down_y_);
+    deliver_motion(down);
     // A pointer-button press is a context event that kills an armed key repeat
     // (layer 1 of the repeat contract).
     repeat_key_ = 0;
     if (on_button_press_)
-        on_button_press_(down_x, down_y, current_mods());
+        on_button_press_(down, current_mods());
     // The queued motion: the tap's sub-slop drift (the two on-contact
     // resolutions have none — the contact has not moved yet), the finger's
     // latest position, delivered after the press so it reaches the lift's
     // release where the finger actually was.
-    // DELIVERED ONLY STRICTLY INSIDE THE SLOP IN THE GUI'S OWN METRIC
-    // (architect 2026-10-30, the rounding sliver): the window's slop test
-    // runs on the UNROUNDED doubles (touch_motion's Pending arm), while the
-    // GUI judges a press's drag on the delivered CELLS against the same
-    // number (the twin-gate invariant at set_touch_slop_px) — so a drift
-    // that stayed under the slop by a fraction could land its cell exactly at
-    // the slop and make a tap the GUI's drag (the waveform's pending reading
-    // `moved`, the deferred click act lost). The cells' own Chebyshev
-    // distance is asked here instead, so what the window called a tap is a
-    // tap on the GUI's side by construction; a drift at the slop in cells is
-    // simply not delivered (the release still lands at the finger's cell, and
-    // no release body re-judges travel).
+    // WHAT THE WINDOW CALLED A TAP IS A TAP ON THE GUI'S SIDE BY CONSTRUCTION
+    // (architect 2026-11-15, the no-grid arc): the window's slop test runs on
+    // the real travel (touch_motion's Pending arm) and the GUI's press gates
+    // measure the SAME real travel against the same number (the twin-gate
+    // invariant at set_touch_slop_px; real_travel_px, app_state.h), so a
+    // drift this window kept under the slop is under the GUI's gate too and
+    // is delivered as it is.
     if (touch_window_moved_ &&
-        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_)) {
-        const int last_x = containing_pixel(touch_last_x_);
-        const int last_y = containing_pixel(touch_last_y_);
-        if (std::max(std::abs(last_x - down_x), std::abs(last_y - down_y)) <
-            touch_slop_px_)
-            deliver_motion(last_x, last_y);
-    }
+        (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_))
+        deliver_motion(GuiPointerPlace::at(touch_last_x_, touch_last_y_));
     touch_window_moved_         = false;
     touch_frame_motion_pending_ = false;
 }
@@ -407,8 +398,7 @@ void GuiInputCore::resolve_touch_window_to_region() {
     touch_phase_ = TouchPhase::Region;
     if (touch_region_begin_hook_)
         touch_region_begin_hook_(
-            containing_pixel(touch_down_x_),
-            containing_pixel(touch_down_y_));
+            GuiPointerPlace::at(touch_down_x_, touch_down_y_));
     touch_region_frame_dirty_ =
         touch_window_moved_ &&
         (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_);
@@ -433,8 +423,7 @@ void GuiInputCore::resolve_touch_window_to_caret() {
     touch_phase_ = TouchPhase::Caret;
     if (touch_caret_begin_hook_)
         touch_caret_begin_hook_(
-            containing_pixel(touch_down_x_),
-            containing_pixel(touch_down_y_));
+            GuiPointerPlace::at(touch_down_x_, touch_down_y_));
     touch_caret_frame_dirty_ =
         touch_window_moved_ &&
         (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_);
@@ -455,8 +444,7 @@ void GuiInputCore::flush_touch_frame_motion() {
     // never stages this flag) and forget_touch_state (which runs after the
     // hard-end contract has already ended the hold through the flush here).
     if (touch_frame_motion_pending_) {
-        deliver_motion(containing_pixel(touch_last_x_),
-                       containing_pixel(touch_last_y_));
+        deliver_motion(GuiPointerPlace::at(touch_last_x_, touch_last_y_));
     }
     touch_frame_motion_pending_ = false;
 }
@@ -518,12 +506,12 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
                                        : on_motion_ != nullptr;
     touch_left_held_ = false;
     if (deliver) {
-        const int x = containing_pixel(touch_last_x_);
-        const int y = containing_pixel(touch_last_y_);
+        const GuiPointerPlace last =
+            GuiPointerPlace::at(touch_last_x_, touch_last_y_);
         if (clean_release)
-            on_button_release_(x, y, current_mods());
+            on_button_release_(last, current_mods());
         else
-            deliver_motion(x, y);   // the button-lost edge (the fork above)
+            deliver_motion(last);   // the button-lost edge (the fork above)
     }
     // The return is the END'S OWN EDGE: every caller ends the
     // translation through deliver_touch_translation_end, which acts iff the
@@ -565,7 +553,7 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // gates no touch delivery.
     if (pointer_focused_) {
         // The hovering pen's own position again (deliver_motion's contract).
-        deliver_motion(pointer_x_, pointer_y_);
+        deliver_motion(GuiPointerPlace::at(pointer_x_, pointer_y_));
         return;
     }
     if (pointer_left_hook_) pointer_left_hook_();
@@ -595,8 +583,7 @@ void GuiInputCore::touch_down(int32_t id, double x, double y,
             // surface.
             touch_down_in_pan_zone_ =
                 touch_pan_zone_hook_ &&
-                touch_pan_zone_hook_(containing_pixel(x),
-                                     containing_pixel(y));
+                touch_pan_zone_hook_(GuiPointerPlace::at(x, y));
             // THE EDITOR-FIELD ANSWER rides beside it (2026-09-05), the
             // same shape once more: asked once here, captured, cleared with
             // it. It forks the window's SLOP CROSSING toward the caret
@@ -606,8 +593,7 @@ void GuiInputCore::touch_down(int32_t id, double x, double y,
             // constants block.)
             touch_down_in_editor_field_ =
                 touch_editor_field_hook_
-                    ? touch_editor_field_hook_(containing_pixel(x),
-                                               containing_pixel(y))
+                    ? touch_editor_field_hook_(GuiPointerPlace::at(x, y))
                     : GuiTouchEditorField::Outside;
             // THE ON-CONTACT RESOLUTION — the third clause (content acts the
             // moment its identity is certain): EVERY DOWN OFF THE PAN ZONE
@@ -1026,15 +1012,13 @@ void GuiInputCore::touch_frame() {
         touch_region_frame_dirty_ = false;
         if (touch_region_update_hook_)
             touch_region_update_hook_(
-                containing_pixel(touch_last_x_),
-                containing_pixel(touch_last_y_));
+                GuiPointerPlace::at(touch_last_x_, touch_last_y_));
     } else if (touch_phase_ == TouchPhase::Caret &&
                touch_caret_frame_dirty_) {
         touch_caret_frame_dirty_ = false;
         if (touch_caret_update_hook_)
             touch_caret_update_hook_(
-                containing_pixel(touch_last_x_),
-                containing_pixel(touch_last_y_));
+                GuiPointerPlace::at(touch_last_x_, touch_last_y_));
     }
 }
 
@@ -1093,8 +1077,6 @@ void GuiInputCore::deliver_touch_nav_frame(bool deliver_even_if_no_op) {
     touch_nav_delivered_ = true;
     if (touch_nav_update_hook_) {
         GuiTouchNavFrame frame;
-        frame.x          = containing_pixel(cx);
-        frame.y          = containing_pixel(cy);
         frame.cx         = cx;
         frame.dx         = dx;
         frame.dist_ratio = ratio;
@@ -1171,8 +1153,7 @@ void GuiInputCore::end_touch_region_gesture(bool deliver_final_frame) {
         touch_region_frame_dirty_ = false;
         if (touch_region_update_hook_)
             touch_region_update_hook_(
-                containing_pixel(touch_last_x_),
-                containing_pixel(touch_last_y_));
+                GuiPointerPlace::at(touch_last_x_, touch_last_y_));
     }
     touch_region_frame_dirty_ = false;
     if (touch_region_end_hook_) touch_region_end_hook_();
@@ -1190,8 +1171,7 @@ void GuiInputCore::end_touch_caret_gesture(bool deliver_final_frame) {
         touch_caret_frame_dirty_ = false;
         if (touch_caret_update_hook_)
             touch_caret_update_hook_(
-                containing_pixel(touch_last_x_),
-                containing_pixel(touch_last_y_));
+                GuiPointerPlace::at(touch_last_x_, touch_last_y_));
     }
     touch_caret_frame_dirty_ = false;
     if (touch_caret_end_hook_) touch_caret_end_hook_();
@@ -1328,14 +1308,14 @@ void GuiInputCore::set_pointer_left_hook(std::function<void()> cb) { pointer_lef
 void GuiInputCore::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
-    std::function<bool(int x, int y)> pan_zone,
+    std::function<bool(const GuiPointerPlace& at)> pan_zone,
     std::function<bool()> sweep_armed,
-    std::function<void(int x, int y)> region_begin,
-    std::function<void(int x, int y)> region_update,
+    std::function<void(const GuiPointerPlace& at)> region_begin,
+    std::function<void(const GuiPointerPlace& at)> region_update,
     std::function<void()> region_end,
-    std::function<GuiTouchEditorField(int x, int y)> editor_field,
-    std::function<void(int x, int y)> caret_begin,
-    std::function<void(int x, int y)> caret_update,
+    std::function<GuiTouchEditorField(const GuiPointerPlace& at)> editor_field,
+    std::function<void(const GuiPointerPlace& at)> caret_begin,
+    std::function<void(const GuiPointerPlace& at)> caret_update,
     std::function<void()> caret_end) {
     touch_nav_update_hook_    = std::move(update);
     touch_nav_end_hook_       = std::move(end);

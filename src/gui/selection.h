@@ -45,7 +45,7 @@ struct Selection {
     // (Ctrl+B, input_key_dispatch.cpp, 2026-11-05) is the third: it keeps
     // the span's membership and moves the focus to its first member, where
     // a single-select and a hand re-insert stood. THE ADD SEL SWEEP
-    // (apply_selection_sweep_to_column, input_pointer.cpp, architect
+    // (apply_selection_sweep_to, input_pointer.cpp, architect
     // 2026-11-10, session 101) is the fourth: per motion it installs the
     // selection standing at its down plus the markers its span covers,
     // focused on the last swept member (or the prior focus), and only when

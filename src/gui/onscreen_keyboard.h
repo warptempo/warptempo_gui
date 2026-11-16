@@ -1123,8 +1123,10 @@ inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
 }
 
 // THE KEY UNDER A POINT, or -1, asked of the PAINTED key through the keys'
-// one predicate (point_on_key, materials.h) — of the pixels the painted
-// face touches, its hull (render.h): the pointer names a whole pixel. A
+// one predicate (point_on_key, materials.h) — THE POINTER'S REAL PLACE
+// against the painted face's real edges (architect 2026-11-15, the no-grid
+// arc: THE PAINTED FACE IS THE HIT BOX, half-open, so two keys never share
+// a point). A
 // press inside the surface but
 // off every key — the gaps, the margins — answers -1 (architect 2026-11-02,
 // R11: the keyboard's gap is dead like the ground round a program key's
@@ -1134,13 +1136,13 @@ inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
 //
 // It writes the found key's def through `out_def` so the caller needs no second
 // lookup, and it walks the same for_each_key the painter does.
-inline int key_at(const AppState& a, Page page, int x, int y,
+inline int key_at(const AppState& a, Page page, double x, double y,
                   KeyDef& out_def) {
     int found = -1;
     KeyDef found_def{};
     for_each_key(a, page,
                  [&](uint32_t index, const KeyDef& k, const GuiRectF& r) {
-                     if (found < 0 && point_on_key(hull(r), x, y)) {
+                     if (found < 0 && point_on_key(r, x, y)) {
                          found     = static_cast<int>(index);
                          found_def = k;
                      }

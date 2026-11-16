@@ -930,8 +930,8 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
     // inner edges, wherever the buttons stand — on screen, part on it, or
     // past either edge (architect 2026-10-05).
     TrimBridgeGap g;
-    g.lo = begin.col + endcap_w;
-    g.hi = end.col - endcap_w + 1;
+    g.lo = begin.x + static_cast<double>(endcap_w);
+    g.hi = end.x + 1.0 - static_cast<double>(endcap_w);
     return g;
 }
 
@@ -956,29 +956,30 @@ double displayed_trim_ms(int64_t frame,
     return ms;
 }
 
-GuiRect trim_endcap_rect(bool is_begin, int strip_x,
-                         const TrimBoundColumn& begin,
-                         const TrimBoundColumn& end, GuiRect row) {
-    const int btn_w = view_bar_grab_w_px();
-    GuiRect r;
-    // Begin left-edge-anchored (rect left ON the begin column); end
-    // right-edge-anchored (rightmost pixel ON the end column), so each bound's
+GuiRectF trim_endcap_rect(bool is_begin, int strip_x,
+                          const TrimBoundColumn& begin,
+                          const TrimBoundColumn& end, GuiRect row) {
+    const double btn_w = static_cast<double>(view_bar_grab_w_px());
+    GuiRectF r;
+    // Begin left-edge-anchored (rect left ON the span's left end); end
+    // right-edge-anchored (rect right ON the span's right end, one px past
+    // the end bound's exact place), so each bound's
     // zone stands on the span's own end — UNLESS THE DRAWN WIDTH IS UNDER TWO
-    // ZONES (architect 2026-10-03): then the begin keeps its column and the
-    // end zone stands edge to edge right of it, overrunning its column by
-    // 2 x btn_w − span. THE RULE READS THE COLUMNS WHEREVER THEY ARE, on
+    // ZONES (architect 2026-10-03): then the begin keeps its end and the
+    // end zone stands edge to edge right of it, overrunning its own by
+    // 2 x btn_w − span. THE RULE READS THE PLACES WHEREVER THEY ARE, on
     // screen or off (architect 2026-10-05): a narrow window panned past an
-    // edge keeps its two zones edge to edge and slides off whole. The span is
-    // 64-bit: two far offscreen columns on opposite sides can pass an int's
-    // range. The rect is the ZONE over the trim lane `row`'s whole height —
-    // the hit band, before the lane's clip.
-    const int64_t span = static_cast<int64_t>(end.col) - begin.col + 1;
-    const bool narrow = span < 2 * static_cast<int64_t>(btn_w);
+    // edge keeps its two zones edge to edge and slides off whole. The rect
+    // is the ZONE over the trim lane `row`'s whole height — the hit band,
+    // before the lane's clip.
+    const double span = end.x - begin.x + 1.0;
+    const bool narrow = span < 2.0 * btn_w;
+    const double sx = static_cast<double>(strip_x);
     if (is_begin)
-        r.x = strip_x + begin.col;
+        r.x = sx + begin.x;
     else
-        r.x = narrow ? strip_x + begin.col + btn_w
-                     : strip_x + end.col - btn_w + 1;
+        r.x = narrow ? sx + begin.x + btn_w
+                     : sx + end.x + 1.0 - btn_w;
     r.y = row.y;
     r.w = btn_w;
     r.h = row.h;
@@ -1075,26 +1076,33 @@ void render_trim_flags(cairo_t* cr,
     // them (render.h's view_bar_grab_w_px, trim_endcap_rect,
     // trim_bridge_gap) — each zone cut to the lane's painted width, the clip
     // the pixels take, so a zone overrunning the lane claims its visible
-    // columns alone; a window wholly off one side publishes no zone on that
-    // side and an empty bridge.
+    // stretch alone; a window wholly off one side publishes no zone on that
+    // side and an empty bridge. REAL EDGES (architect 2026-11-15, the
+    // no-grid arc): the zones stand on the span's two real ends, the ends
+    // the stamp above just drew.
     const int btn_w = view_bar_grab_w_px();
-    const GuiRect begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
-    const GuiRect end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
+    const GuiRectF begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
+    const GuiRectF end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
     const TrimBridgeGap gap = trim_bridge_gap(bc, ec, btn_w);
-    const auto lane_cut = [&](GuiRect r) {
-        const int lo = std::max(r.x, lane_x);
-        const int hi = std::min(r.x + r.w, lane_x + lane_w);
+    const double lane_lo = static_cast<double>(lane_x);
+    const double lane_hi = static_cast<double>(lane_x + lane_w);
+    const auto lane_cut = [&](GuiRectF r) {
+        const double lo = std::max(r.x, lane_lo);
+        const double hi = std::min(r.x + r.w, lane_hi);
         r.x = lo;
-        r.w = std::max(0, hi - lo);
+        r.w = std::max(0.0, hi - lo);
         return r;
     };
     if (out_hit) {
-        if (lane_cut(begin_r).w > 0) out_hit->begin = {true, lane_cut(begin_r)};
-        if (lane_cut(end_r).w > 0)   out_hit->end   = {true, lane_cut(end_r)};
+        if (lane_cut(begin_r).w > 0.0)
+            out_hit->begin = {true, lane_cut(begin_r)};
+        if (lane_cut(end_r).w > 0.0)
+            out_hit->end = {true, lane_cut(end_r)};
         out_hit->published = true;
         out_hit->lane      = lane;
-        out_hit->bridge_lo = lane_x + std::max(gap.lo, 0);
-        out_hit->bridge_hi = lane_x + std::min(gap.hi, lane_w);
+        out_hit->bridge_lo = lane_lo + std::max(gap.lo, 0.0);
+        out_hit->bridge_hi = lane_lo + std::min(gap.hi,
+                                                static_cast<double>(lane_w));
     }
 
     cairo_restore(cr);
@@ -3101,16 +3109,18 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // above): a field cut off at the last column claims its visible part, and
     // a field wholly past the edge publishes an empty box, which contains no
     // point.
-    // THE PUBLISHED BOX IS WHOLE PIXELS, THE FIELD'S HULL (render.h's hull:
-    // the pixels the field touches) cut to the columns — the pointer's
-    // place is a whole pixel. (The editor's damage is the top strip's,
-    // whole: Viewport::invalidate_top_strip.)
+    // THE PUBLISHED BOX IS THE FIELD'S REAL EDGES (architect 2026-11-15, the
+    // no-grid arc) cut to the columns, over the lane's whole rows — the
+    // pointer's real place is what asks it. (The editor's damage is the top
+    // strip's, whole: Viewport::invalidate_top_strip.)
     {
-        const GuiRect field_hull = hull(field_box);
-        const int x_lo = std::max(field_hull.x, area.x);
-        const int x_hi =
-            std::min(field_hull.x + field_hull.w, area.x + clip_w);
-        out.box = GuiRect{x_lo, lane.y, std::max(x_hi - x_lo, 0), fill_h};
+        const double x_lo =
+            std::max(field_box.x, static_cast<double>(area.x));
+        const double x_hi = std::min(field_box.x + field_box.w,
+                                     static_cast<double>(area.x + clip_w));
+        out.box = GuiRectF{x_lo, static_cast<double>(lane.y),
+                           std::max(x_hi - x_lo, 0.0),
+                           static_cast<double>(fill_h)};
     }
     out.text_origin_x = text_origin_x;
     out.byte_x        = std::move(byte_x);

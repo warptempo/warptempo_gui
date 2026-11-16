@@ -2267,8 +2267,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // which is what keeps GuiInputCore's coordinates the window's.
     //
     // They are handed over FRACTIONAL because that is what the panel reports
-    // and what the core's one containment conversion expects
-    // (GuiInputCore::containing_pixel).
+    // and what the core carries through the whole seam: the real place, with
+    // its containing pixel beside it (GuiPointerPlace, input_core.h).
     auto px = [&](size_t i) {
         return static_cast<double>(AMotionEvent_getX(event, i));
     };
@@ -3087,14 +3087,14 @@ void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { input_.set_p
 void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
-    std::function<bool(int x, int y)> pan_zone,
+    std::function<bool(const GuiPointerPlace& at)> pan_zone,
     std::function<bool()> sweep_armed,
-    std::function<void(int x, int y)> region_begin,
-    std::function<void(int x, int y)> region_update,
+    std::function<void(const GuiPointerPlace& at)> region_begin,
+    std::function<void(const GuiPointerPlace& at)> region_update,
     std::function<void()> region_end,
-    std::function<GuiTouchEditorField(int x, int y)> editor_field,
-    std::function<void(int x, int y)> caret_begin,
-    std::function<void(int x, int y)> caret_update,
+    std::function<GuiTouchEditorField(const GuiPointerPlace& at)> editor_field,
+    std::function<void(const GuiPointerPlace& at)> caret_begin,
+    std::function<void(const GuiPointerPlace& at)> caret_update,
     std::function<void()> caret_end) {
     input_.set_touch_nav_hooks(std::move(update), std::move(end),
                                std::move(pan_zone), std::move(sweep_armed),

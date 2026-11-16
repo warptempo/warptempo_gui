@@ -351,9 +351,13 @@ inline int max_scroll_px(const AppState& a) {
 // THE ONE CLAMP of the scroll offset onto [0, max_scroll_px]. Every writer
 // (the drag, the row walk, the listing rebuild) calls it after its
 // write, so a listing that shrank under a standing offset lands honestly.
+// THE OFFSET IS REAL, ITS WALLS WHOLE (architect 2026-11-15, the no-grid
+// arc): the finger's real travel moves the list by a real offset, and the
+// two ends it stops at are the whole lengths the layout gives.
 inline void clamp_scroll(AppState& a) {
     a.folder_overlay.scroll_px =
-        std::clamp(a.folder_overlay.scroll_px, 0, max_scroll_px(a));
+        std::clamp(a.folder_overlay.scroll_px, 0.0,
+                   static_cast<double>(max_scroll_px(a)));
 }
 
 // -- The rows ----------------------------------------------------------------
@@ -362,13 +366,22 @@ inline void clamp_scroll(AppState& a) {
 // less the rows' inset on both sides, at the button's row pitch (the painter
 // and the press router read their rects from here and nowhere else). It may
 // lie partly or wholly outside the band; the painter clips and the hit test
-// asks the band first.
-inline GuiRect row_rect(const AppState& a, int index) {
+// asks the band first. A REAL RECT (architect 2026-11-15, the no-grid arc):
+// its columns, its height and the pitch between rows are whole, its rows
+// stand where the real scroll offset puts them — the painter fills it
+// through the exact fill and seats its glyph and its name on it exactly, the
+// press router asks it with the pointer's real place, and a damage site
+// takes its hull (render.h).
+inline GuiRectF row_rect(const AppState& a, int index) {
     const GuiRect band = content_rect(a);
     const int h = button_row_height_px();
-    const int y = band.y + row_inset_px() + index * (h + button_row_gap_px()) -
-                  a.folder_overlay.scroll_px;
-    return GuiRect{band.x + row_inset_px(), y, band.w - 2 * row_inset_px(), h};
+    const double y =
+        static_cast<double>(band.y + row_inset_px() +
+                            index * (h + button_row_gap_px())) -
+        a.folder_overlay.scroll_px;
+    return GuiRectF{static_cast<double>(band.x + row_inset_px()), y,
+                    static_cast<double>(band.w - 2 * row_inset_px()),
+                    static_cast<double>(h)};
 }
 
 // THE ONE WALK OVER THE ROWS, and the reason paint and hit cannot drift: both
@@ -382,20 +395,22 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
     }
 }
 
-// The row under (x, y), or -1 — a point outside the ROWS' BAND (content_rect,
-// the box's interior) answers -1 whatever row's rect would contain it, so a
+// The row under the pointer's REAL place (x, y), or -1 (half-open against
+// each row's real rect, so two rows never share a point and the gap between
+// them answers none) — a point outside the ROWS' BAND (content_rect,
+// the box's interior, whole) answers -1 whatever row's rect would contain it, so a
 // row scrolled out of the band cannot be pressed through the ground round
 // the pane or the controls row below. It is the content rect and not the
 // surface because the surface is the band's outer CLAIM (the press router's
 // own test, one call up) while the rows live in the content — the pane.
 // The painter clips its row walk to this same rect, so paint and hit agree on
 // every pixel of the band.
-inline int row_at(const AppState& a, int x, int y) {
-    const GuiRect band = content_rect(a);
+inline int row_at(const AppState& a, double x, double y) {
+    const GuiRectF band = content_rect(a);
     if (!rect_contains(band, x, y)) return -1;
     int hit = -1;
     for_each_row(a, [&](int i, const AppState::FolderOverlayRow&,
-                        const GuiRect& r) {
+                        const GuiRectF& r) {
         if (hit < 0 && rect_contains(r, x, y)) hit = i;
     });
     return hit;
@@ -408,10 +423,11 @@ inline int row_at(const AppState& a, int x, int y) {
 inline void scroll_row_into_view(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const GuiRect band = content_rect(a);
-    const GuiRect r    = row_rect(a, index);
-    const int top      = band.y + row_inset_px();
-    const int bottom   = band.y + band.h - row_inset_px();
+    const GuiRect  band = content_rect(a);
+    const GuiRectF r    = row_rect(a, index);
+    const double top    = static_cast<double>(band.y + row_inset_px());
+    const double bottom =
+        static_cast<double>(band.y + band.h - row_inset_px());
     if (r.y < top) {
         a.folder_overlay.scroll_px -= (top - r.y);
     } else if (r.y + r.h > bottom) {
@@ -422,8 +438,10 @@ inline void scroll_row_into_view(AppState& a, int index) {
 
 // THE OPEN'S LANDING (architect 2026-10-26: "normally you'd expect a drop
 // down list to center it if possible, or get as close to center"): the
-// offset that puts row `index`'s center on the band's center, the
-// difference rounded at the element, then the one clamp — so a row near
+// offset that puts row `index`'s center on the band's center EXACTLY
+// (architect 2026-11-15, the no-grid arc: where the band's and the row's
+// heights differ by an odd number of px the row rests half a px off the
+// pixel rows, at exact coverage), then the one clamp — so a row near
 // either end of the listing lands as close to center as the ends allow, and a
 // listing shorter than the band never scrolls. The six open-time seats
 // call it after their seat (the project picker's, the settings page's, the
@@ -438,11 +456,12 @@ inline void scroll_row_into_view(AppState& a, int index) {
 inline bool scroll_row_centered(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return false;
-    const int     before = a.folder_overlay.scroll_px;
-    const GuiRect band   = content_rect(a);
-    const GuiRect r      = row_rect(a, index);
-    a.folder_overlay.scroll_px += static_cast<int>(std::nearbyint(
-        (r.y + r.h / 2.0) - (band.y + band.h / 2.0)));
+    const double   before = a.folder_overlay.scroll_px;
+    const GuiRect  band   = content_rect(a);
+    const GuiRectF r      = row_rect(a, index);
+    a.folder_overlay.scroll_px +=
+        (r.y + r.h / 2.0) -
+        (static_cast<double>(band.y) + static_cast<double>(band.h) / 2.0);
     clamp_scroll(a);
     return a.folder_overlay.scroll_px != before;
 }
@@ -491,7 +510,7 @@ inline bool set_highlight(AppState& a, int index) {
         changed          = true;
     }
     if (to >= 0) {
-        const int before = ov.scroll_px;
+        const double before = ov.scroll_px;
         scroll_row_into_view(a, to);
         if (ov.scroll_px != before) changed = true;
     }
