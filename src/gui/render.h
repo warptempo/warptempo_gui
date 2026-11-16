@@ -2932,7 +2932,7 @@ inline int view_bar_grab_w_px() {
 // reach. They live out here, rather than with the rest of the tooltip's
 // anatomy in paint_handler.cpp, because both the RUN LOOP and the input side
 // read them:
-// the clock (GuiInputHandler::tick_tooltip) runs on the tick and damages the
+// the words comparators run on the tick and damage the
 // band every seat of the box lies in (tooltip_damage_band, app_state.h), and
 // the one wait writer (note_tooltip_hover) and the two hover walks read the
 // column and the reach, and the seat's gap, which the seat and the damage band

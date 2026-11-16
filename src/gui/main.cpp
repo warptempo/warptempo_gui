@@ -1974,6 +1974,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // the cursor's column on the PLATE basis, the basis paint_playheads and
     // the ruler's head draw it through — the same three fields, read the
     // way the pre-paint hook's scanner advance reads them.
+    // The tooltip's show's seam (architect 2026-11-16, the beats; the
+    // contract at its Viewport declaration): the box as the painter lays it
+    // out.
+    viewport.tooltip_box_for_show_ =
+        [&]() { return paint_handler.tooltip_box_for_show(); };
     viewport.plate_playhead_column_ = [&]() {
         const GuiPaintHandler::PlateViewportBasis pb =
             paint_handler.plate_viewport_basis();
@@ -2904,8 +2909,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // a Render / Save list on 2026-09-29, which repaired those two and
             // left every other stateful hint, Play / Stop's among them,
             // standing stale under a still pointer.)
+            // NOT WHILE THE BOX'S SHOW IS PENDING (architect 2026-11-16, the
+            // beats; AppState::RedesignTooltip::show_pending): nothing of a
+            // box just shown has been painted, its first paint is owed by
+            // the show's own damage, and the painted words are an earlier
+            // box's — this test and its three twins below (the cue's, the
+            // history item's, the dialog's) hold until that paint.
             const int tip_i = app.redesign_tooltip.owner.index;
             if (app.redesign_tooltip.visible &&
+                !app.redesign_tooltip.show_pending &&
                 app.redesign_tooltip.owner.surface ==
                     AppState::RedesignTooltip::Surface::Roster &&
                 tip_i >= 0 && tip_i < kRedesignButtonCount) {
@@ -2943,6 +2955,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // words): the walk's next pass finds no owner on the cue and ends
             // the box, its hide damaging the painted rect.
             if (app.redesign_tooltip.visible &&
+                !app.redesign_tooltip.show_pending &&
                 app.redesign_tooltip.owner.surface ==
                     AppState::RedesignTooltip::Surface::Marker) {
                 const std::string live = marker_tooltip_value(
@@ -2966,6 +2979,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // an empty live pair owes nothing here, the walk's next pass
             // ending the box.
             if (app.redesign_tooltip.visible &&
+                !app.redesign_tooltip.show_pending &&
                 app.redesign_tooltip.owner.surface ==
                     AppState::RedesignTooltip::Surface::History) {
                 const HistoryCueTooltipText live = history_cue_tooltip_text(
@@ -3081,6 +3095,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // is the stash that armed it (the owner tag and session the painter
         // stamped), since a replaced surface takes the box down on its own.
         if (app.redesign_tooltip.visible && app.modal_dialog.valid &&
+            !app.redesign_tooltip.show_pending &&
             app.redesign_tooltip.owner.surface ==
                 AppState::RedesignTooltip::Surface::Dialog &&
             app.redesign_tooltip.owner.dialog_owner == app.modal_dialog.owner &&

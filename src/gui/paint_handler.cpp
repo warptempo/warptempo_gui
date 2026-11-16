@@ -3544,14 +3544,41 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRectF& r,
                     ground);
 }
 
+GuiRect GuiPaintHandler::tooltip_box_for_show() {
+    // The contract is at the declaration: the painter's own layout, on a
+    // one-pixel target it never draws to.
+    cairo_surface_t* target =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* cr = cairo_create(target);
+    tooltip_measured_  = GuiRect{0, 0, 0, 0};
+    tooltip_measuring_ = true;
+    paint_shift_tooltip(cr);
+    tooltip_measuring_ = false;
+    cairo_destroy(cr);
+    cairo_surface_destroy(target);
+    return tooltip_measured_;
+}
+
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // THE HOVER TOOLTIP, for the box's own button — at most one box. The
     // tooltip's clock (tick_tooltip) owns WHEN it shows and goes; this owns
     // only what it looks like, and publishes the rect it painted so the hide
     // edge can damage it — AS PAINTED (the rule is at AppState::
     // RedesignTooltip): the previous rect is held until the new box is known.
+    // THE RECORD OUTLIVES A RUN THAT PAINTS NO BOX UNLESS THAT RUN ERASED IT
+    // (architect 2026-11-16, the beats: the hide edge damages this rect and
+    // nothing wider, so the rect must name the box's pixels for as long as
+    // any may stand): a run under a clip that covers the recorded rect has
+    // repainted every pixel of it, so with no box painted below the record
+    // is empty; a run whose clip missed it — a narrow rect elsewhere, while
+    // the box is hidden or has nothing to paint — leaves the pixels and so
+    // the record. THE MEASURE FORM (tooltip_box_for_show, paint_handler.h)
+    // touches no record.
     const GuiRect prev_rect = app.redesign_tooltip.rect;
-    app.redesign_tooltip.rect = GuiRect{0, 0, 0, 0};
+    if (!tooltip_measuring_ &&
+        (prev_rect.w <= 0 || prev_rect.h <= 0 ||
+         clip_covers_drawable(cr, app, prev_rect)))
+        app.redesign_tooltip.rect = GuiRect{0, 0, 0, 0};
     if (!app.redesign_tooltip.visible) return;
 
     // THE BOX'S OWN OWNER IS THE SUBJECT, read rather than re-derived: the
@@ -3771,6 +3798,17 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // the block above): whole edges, what the hide edge and the words
     // comparator damage.
     const GuiRect box_hull = hull(box);
+    // THE MEASURE FORM ENDS HERE (tooltip_box_for_show): the hull the show
+    // will damage, nothing painted and nothing published.
+    if (tooltip_measuring_) {
+        tooltip_measured_ = box_hull;
+        cairo_restore(cr);
+        return;
+    }
+    // This box's first paint run is here: its show is pending no longer
+    // (AppState::RedesignTooltip::show_pending), whatever the clip below
+    // covers.
+    app.redesign_tooltip.show_pending = false;
     // PUBLISHED AS PAINTED: a clip that covers the box draws it whole, so the
     // rect and the words are exactly this frame's; a clip that does not (the
     // player's clock and scrub cells at scanner cadence, which recompose a

@@ -381,6 +381,13 @@ struct Viewport {
     // tow_playhead_to and drag_playhead_to (through reseat_playhead) — each
     // of which widens to the whole area unwired.
     std::function<int()> plate_playhead_column_;
+    // THE TOOLTIP'S BOX AS ITS PAINTER WILL LAY IT OUT (architect
+    // 2026-11-16, the beats): GuiPaintHandler::tooltip_box_for_show — the
+    // hull of the standing owner's box, or empty where none would paint —
+    // for the show edge's damage (show_tooltip_box, input_pointer.cpp),
+    // which cannot size a box whose words only the painter shapes. Wired in
+    // main.cpp; unwired, the show falls back to its full-width band.
+    std::function<GuiRect()> tooltip_box_for_show_;
 
     // Viewport mutators.
     // THE MOVEMENT OWNER — the cursor's live chokepoint, and one of the TWO
@@ -888,10 +895,12 @@ struct Viewport {
     // outside the strip that owns it — above its owner's face, in the logo
     // lane over the band or over the well above the bottom row — so
     // invalidate_top_strip alone would leave its overhang stale. The
-    // hide edge damages the strip AND the surface's own published rect — two
-    // cheap calls the platform coalesces — and a show edge the room the
-    // surface will stand in (tooltip_damage_band), rather than growing a
-    // union helper. Since row 8 (2026-08-11) it is
+    // hide edge damages the surface's own published rect, as painted, and
+    // the show edge the rect its painter will lay the box out on
+    // (tooltip_box_for_show_; architect 2026-11-16, the beats) — the box and
+    // nothing else, in either case; the words comparators and a standing
+    // dialog's damage keep the room every seat of the box lies in
+    // (tooltip_damage_band). Since row 8 (2026-08-11) it is
     // also the BOTTOM ROW'S button-face damage entry: the transport/arrow
     // faces live in the bottom strip, so every face writer's damage fork
     // passes bottom_row_area here where the top rows call

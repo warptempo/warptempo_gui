@@ -8264,22 +8264,27 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit) {
 // the Settings popup.)
 
 // THE HOVER TOOLTIP'S BOX GOES DOWN — the one hide body, shared by the hard
-// end and the pointer leaving the box's column (note_tooltip_hover). It
-// damages the strip AND the box's last painted
-// rect, and that is why every edge that takes a hint away must come through
-// here rather than leave it to a hover walk: the box hangs OUTSIDE its strip
-// (above its owner's face — over the logo lane for a band key, over
-// whatever stands above row 8 or a controls row for theirs), so a repaint
-// that found no
-// box to draw would publish a zero rect and return, and the overhang would
-// have nothing left to erase it. Surface-agnostic: the painted rect is
-// wherever that hint was drawn.
+// end and the pointer leaving the box's column (note_tooltip_hover). IT
+// DAMAGES THE BOX'S OWN RECT AS LAST PAINTED AND NOTHING ELSE (architect
+// 2026-11-16, the beats: the box's rect, shown and taken down): the box is
+// the one thing that changes — no key wears a hover face, the rows under it
+// read nothing of it — and its pixels are exactly the published rect
+// (AppState::RedesignTooltip::rect, the painter's as-painted record: the
+// box's hull, held until a run's clip has repainted where it stood, so it
+// names the box for as long as any pixel of it may stand; empty where no
+// box was ever painted). That is why every edge that takes a hint away must
+// come through here rather than leave it to a hover walk: the box hangs
+// OUTSIDE its strip (above its owner's face — over the logo lane for a band
+// key, over whatever stands above row 8 or a controls row for theirs), so
+// no strip's damage reaches it. Surface-agnostic: the painted rect is
+// wherever that hint was drawn. Over the canvas the rect's repaint leaves
+// the hole's zeros, which the upload carries whole while a floater stood at
+// the last walk (GuiGlCanvas::present_frame's upload rule).
 static void take_tooltip_box_down(AppState& app, Viewport& viewport) {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
     if (!t.visible) return;
     const GuiRect painted = t.rect;
     t.visible = false;
-    viewport.invalidate_top_strip();
     viewport.invalidate_rect(painted);
 }
 
@@ -8309,12 +8314,22 @@ void GuiInputHandler::hide_shift_tooltip() {
 // while the box stands: whether the pointer is on row 8's clock field, Play's
 // second rect (`shown_on_field`, the face the box stands over), so motion
 // between the
-// clock and Play's key under a standing box moves nothing. The box's own
-// rect cannot be known yet (the paint that publishes it is the frame this
-// schedules), so it damages the band every seat of the box lies in — the
-// full-width band of tooltip_damage_h_px() rows ending on the gap over the
-// owner's face (tooltip_damage_band), which holds the box whole. No box
-// stands at a show: an arrival took the old one down first.
+// clock and Play's key under a standing box moves nothing.
+// IT DAMAGES THE BOX'S OWN RECT (architect 2026-11-16, the beats: the box's
+// rect, shown and taken down): the rect the painter will lay this owner's
+// box out on, asked of the painter itself (Viewport::tooltip_box_for_show_
+// — the box's size is its shaped words', which no one else derives), so the
+// frame this schedules paints the box under a clip that holds it whole and
+// publishes it. THE SHOW IS MARKED PENDING for the words comparators
+// (AppState::RedesignTooltip::show_pending). Where the painter would lay
+// out no box, or the hook is unwired, the band every seat of a box lies in
+// — the full-width band of tooltip_damage_h_px() rows ending on the gap over
+// the owner's face (tooltip_damage_band). A box whose seat moves between
+// this show and its frame moves with a damage that holds it (a relayout's
+// whole window, a cue's flag rebuild — whole while a cue's box stands — a
+// dialog's area), and a paint whose clip still missed the box is the
+// comparators' to heal, as ever. No box stands at a show: an arrival took
+// the old one down first.
 static void show_tooltip_box(AppState& app, Viewport& viewport) {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
     t.wake_due_ms = 0;
@@ -8327,7 +8342,14 @@ static void show_tooltip_box(AppState& app, Viewport& viewport) {
         rect_contains(
             app.redesign_buttons[static_cast<size_t>(t.owner.index)].field,
             app.last_mouse_rx, app.last_mouse_ry);
-    viewport.invalidate_rect(tooltip_damage_band(app));
+    t.show_pending = true;
+    const GuiRect box = viewport.tooltip_box_for_show_
+                            ? viewport.tooltip_box_for_show_()
+                            : GuiRect{0, 0, 0, 0};
+    if (box.w > 0 && box.h > 0)
+        viewport.invalidate_rect(box);
+    else
+        viewport.invalidate_rect(tooltip_damage_band(app));
 }
 
 // THE CHAIN'S LAPSE (the bypass's rule at AppState::RedesignTooltip): an

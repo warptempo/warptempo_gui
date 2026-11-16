@@ -7313,7 +7313,9 @@ struct AppState {
     //
     // THE BOX: `owner` is the button whose hint is painted, `visible` is what
     // the painter draws, `rect` the painter's published box (damage only —
-    // nothing hit-tests a tooltip), `shown_on_field` the one fact of the pen
+    // nothing hit-tests a tooltip; THE HIDE EDGE'S WHOLE DAMAGE since
+    // 2026-11-16, so it is held until a run's clip has repainted where the
+    // box stood, paint_shift_tooltip's head), `shown_on_field` the one fact of the pen
     // the seat keeps — whether the show found the pointer on row 8's clock
     // field, Play's second rect, rather than on Play's column, which face the
     // box stands over (RedesignButtonFace::tooltip_face; false for every
@@ -7450,6 +7452,18 @@ struct AppState {
         // owner and for a history item with no older side.
         std::string painted_struck;
         bool    shown_on_field = false;
+        // THE SHOW IS PENDING (architect 2026-11-16, the beats): raised by
+        // the show (show_tooltip_box, input_pointer.cpp), which declares the
+        // damage that holds the new box, and put out by the first paint run
+        // that reaches this box's publication (paint_shift_tooltip). While it
+        // stands nothing of this box has been painted, so the as-painted
+        // words above are an earlier box's and the per-tick words
+        // comparators (main.cpp) hold their test — the box's first paint is
+        // already owed; a test there would read every show as a drift and
+        // damage the strip and the band beside it. From the first paint on
+        // the comparators answer as ever, a paint whose clip missed the box
+        // included.
+        bool    show_pending   = false;
         // The wait.
         Owner   hovered{};
         GuiRect hovered_column{0, 0, 0, 0};
@@ -10841,9 +10855,11 @@ inline DialogEditorStop dialog_editor_byte_at(
 // window's foot — retired with session 90's rule, and session 90's centering
 // on the face with session 91's, closed_questions.md.)
 // tooltip_damage_band is the DAMAGE twin, read by the owners that must
-// damage a box before its rect is published (the show edge, tick_tooltip;
-// main.cpp's roster and cue words comparators; Viewport::
-// invalidate_modal_dialog_area for a dialog owner): THE FULL-WIDTH BAND of tooltip_damage_h_px() rows (the
+// damage a box before its rect is published and do not ask the painter for
+// it (main.cpp's roster, cue and history words comparators; Viewport::
+// invalidate_modal_dialog_area for a dialog owner; the show edge where the
+// painter lays out no box — the show itself damages the box's own rect,
+// GuiPaintHandler::tooltip_box_for_show, 2026-11-16): THE FULL-WIDTH BAND of tooltip_damage_h_px() rows (the
 // box height's bound) ending on the gap's top over the owner's face, or from
 // the window's top where it would rise past it — so the box, at any width
 // and either line count, clamped or not, lies inside it. A BAND, NOT THE

@@ -853,6 +853,20 @@ struct GuiPaintHandler {
     // and a value drag's tied cues.
     static constexpr std::size_t kFlagRebuildNarrowRects = 12;
 
+    // THE BOX A TOOLTIP'S SHOW IS ABOUT TO PAINT (architect 2026-11-16, the
+    // beats: the tooltip's show damages its box's own rect, not a band the
+    // window's width): the hull paint_shift_tooltip lays the standing
+    // owner's box out on, ASKED OF THE PAINTER ITSELF — the box's size is
+    // its shaped words under its pads and its seat its owner's face, which
+    // only that body derives, so this runs it in its MEASURE form on a
+    // target that holds no pixel: the body composes the words, lays the box
+    // out and stops at the hull, painting nothing and publishing nothing
+    // (the as-painted record is the real paint's alone). Empty where the
+    // body would paint no box. ONE CALLER, the show (show_tooltip_box,
+    // input_pointer.cpp), through Viewport::tooltip_box_for_show_ (wired in
+    // main.cpp).
+    GuiRect tooltip_box_for_show();
+
     // Resolve the history mode's CURRENT commit into app.history_mode.flags, the
     // painted-order list the lane's diff pass consumes. Called from
     // maybe_rebuild_flag_cache's history arm and nowhere else, so the list is
@@ -1203,7 +1217,8 @@ private:
     // THE TOOLTIP, painted TOPMOST — after every row pass, so it overlaps the
     // rows it hangs over. It PUBLISHES the rect it painted
     // (AppState::redesign_tooltip.rect) only so the hide edge can damage it,
-    // and writes a zero rect when not shown, which is the correct empty answer.
+    // and empties it when no box stands and the run's clip has repainted
+    // where the last one stood (the rule at the body's head, 2026-11-16).
     // IT SERVES TWO SURFACES since 2026-08-13 — the roster and the MODAL
     // DIALOG's buttons, one tooltip state whose owner names which (the
     // encoding is at AppState::RedesignTooltip) — which is why it paints
@@ -1212,6 +1227,12 @@ private:
     // with. (The Settings dropdown, the second floater of this kind, retired
     // 2026-10-21 with paint_dropdown.)
     void paint_shift_tooltip(cairo_t* cr);
+    // THE MEASURE FORM'S TWO BITS (tooltip_box_for_show, above): while
+    // `tooltip_measuring_` stands paint_shift_tooltip composes the words,
+    // lays the box out, leaves its hull in `tooltip_measured_` and returns —
+    // nothing painted, no record touched.
+    bool    tooltip_measuring_ = false;
+    GuiRect tooltip_measured_{0, 0, 0, 0};
     // THE BOX every floating surface draws (the tooltip and the
     // notification cards), ONE PAINTER, TWO LOOKS: a flat `ground` box inside
     // a one-W `frame` border on all four sides — the tooltip the pane in

@@ -1496,8 +1496,8 @@ struct GuiInputHandler {
 
     // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the bypass
     // chain's lapse, and the wait's ripening showing the box above its
-    // owner's face. The show damages once, the band every seat of the box
-    // lies in (tooltip_damage_band).
+    // owner's face. The show damages once, the box's own rect as the painter
+    // will lay it out (show_tooltip_box, input_pointer.cpp; 2026-11-16).
     void tick_tooltip();
 
     // THE NO-WAIT RULE — its ONE expression, asked by the roster's pointer
