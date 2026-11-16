@@ -746,10 +746,14 @@ struct Viewport {
     //   * main.cpp's tick sites: the pre-paint scanner advance (the value
     //     advances), the car's loop wrap (the scanner jumps back to the
     //     trim's start, beside its full-area waveform damage), and the
-    //     PAINT-CLOCK KEEPER, which changes nothing the clock shows and is a
-    //     member because the cell is the always-onscreen rect: the playing
+    //     PAINT-CLOCK KEEPERS, which change nothing the clock shows and are
+    //     members because the cell is the always-onscreen rect: the playing
     //     heartbeat's OFFSCREEN FALLBACK (when the scanner's line yields no
-    //     damage). (The resize/total-change
+    //     damage), the A/B audition's REST (every tick while a rest
+    //     stands, so the display's idle timer never fires inside the act,
+    //     2026-10-18) and the display keep-alive's brief window after a
+    //     fast Stop (the tick's head, one damage per
+    //     GuiPlatform::kDisplayKeepAliveMs). (The resize/total-change
     //     repair's geometry-moved arm owes the cell a check since 2026-10-13,
     //     like the zoom appliers — owe_clock_check below; the cursor clamp
     //     that CAN move the value damages the clock itself inside

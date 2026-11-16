@@ -527,9 +527,13 @@ constexpr int64_t kPanelPeriodNs  = 1'000'000'000LL / kPanelRefreshHz;
 // has presented for 250 ms (measured 2026-11-13 under the 90 Hz pin, 90 ->
 // 30, the vote not holding it), and the first frames after a rest land at
 // that rate until it climbs back, so the first frame after a rest may land
-// late. Nothing keeps the panel awake (architect 2026-11-15, both display
-// keep-alives retired under the single 30 cadence: "pointless when
-// everything is already so low frame rate").
+// late. TWO ROADS KEEP IT AWAKE WHERE THE SCANNER IS ABOUT TO RUN
+// (architect 2026-11-16, the owner kDisplayKeepAliveFastStopMs,
+// playback_lifecycle.h): the brief window after a fast Stop, one clock-cell
+// frame per GuiPlatform::kDisplayKeepAliveMs, and the A/B audition's rests,
+// the clock cell at every tick (main.cpp's tick) — LIGHT frames both by the
+// table above. Everywhere else at rest nothing presents and the late first
+// frame is accepted.
 //
 // THE TOLERANCE, 4 ms, ONE NUMBER FOR EVERY BEAT AND EVERY PANEL RATE: the
 // threshold n · T − 4 ms (T the PINNED rate's period, 11.11 ms, whatever
@@ -698,6 +702,16 @@ int64_t presentation_stamp_ns(int beat, int64_t expected_ns,
     const int64_t k =
         std::max<int64_t>(1, (threshold + period_ns - 1) / period_ns);
     return expected_ns + (k - 1) * period_ns - period_ns / 2;
+}
+
+// THE DISPLAY KEEP-ALIVE'S CLOCK (architect 2026-11-13, session 118): the
+// steady clock in ms, present()'s stamp and display_keep_alive_due's now —
+// the platform's two readings compare only with each other (the period,
+// GuiPlatform::kDisplayKeepAliveMs; the facts and the ruling at
+// kDisplayKeepAliveFastStopMs, playback_lifecycle.h).
+int64_t platform_monotonic_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 // THE VSYNC CALLBACK'S SINK (2026-10-14; the gate's rule at pump's tail).
@@ -2091,7 +2105,26 @@ bool GuiPlatform::present() {
     // THE PRESENTED FRAME'S BEAT, its one writer (the gate's reader,
     // AndroidCallbacks::vsync): the spacing after this frame.
     last_frame_beat_ = beat;
+    // THE LAST PRESENT, the keep-alive's clock (display_keep_alive_due).
+    last_present_ms_ = platform_monotonic_ms();
     return true;
+}
+
+// THE DISPLAY KEEP-ALIVE'S QUESTION (the contract at the declaration; the
+// facts and the ruling at kDisplayKeepAliveFastStopMs, playback_lifecycle.h).
+// THE GATES BEFORE THE CLOCK: a window adopted and FOCUSED
+// (window_activated_: doze, a task switch and the notification shade all
+// take focus, and a window gone takes window_) with its first configure
+// done, the open's hold not standing (it withholds every paint; its release
+// frame presents), and NO DAMAGE WAITING — a frame already owed presents by
+// itself, so a play, a pan or the audition rest's every-tick clock damage is
+// never doubled. Asked by the GUI's tick at its head (main.cpp) and only
+// inside the brief window; the damage it owes posts the vsync callback at
+// the pass's tail like any other.
+bool GuiPlatform::display_keep_alive_due() const {
+    if (!window_ || !window_activated_ || !has_initial_configure_) return false;
+    if (presentation_held_ || !damage_.empty()) return false;
+    return platform_monotonic_ms() - last_present_ms_ >= kDisplayKeepAliveMs;
 }
 
 // THE OPEN'S HOLD'S ONE FRAME (the rule at platform.h's head): painted and

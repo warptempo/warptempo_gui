@@ -876,17 +876,26 @@ in what it prevents rather than in a number this session could re-measure.
 Measured since: SurfaceFlinger drops the panel 90 -> 30 Hz once no layer has
 presented for 250 ms, and the first frames after it land at 30 Hz cadence;
 neither the `setFrameRate` vote above nor a preferred display mode holds it
-(`min_refresh_rate` would, but no app may write it). Nothing keeps it awake
-(architect 2026-11-15, under that day's single cadence of 30 frames a second,
-which the beats superseded 2026-11-16: "pointless when everything is already so
-low frame rate"): at rest, after a fast Stop and through an A/B audition's rest
+(`min_refresh_rate` would, but no app may write it). TWO ROADS KEEP IT AWAKE
+WHERE THE SCANNER IS ABOUT TO RUN (architect 2026-11-16, the beats, reversing
+their retirement of 2026-11-15 under the single 30-frames cadence: "the whole
+point would be that the scanner would be the one thing that gets the special
+treatment. And the keep alives are about the scanner, in particular the AB
+audition and the frantic play press"; the scanner takes the panel's own rate
+again, so its first beat after a rest is seen again): the brief window after a
+fast Stop — a Stop landing within 1000 ms of its Play arms a sparse keep-alive
+for 1500 ms past that Stop, one clock-cell frame that changes no pixel after
+200 ms without a present (`GuiPlatform::kDisplayKeepAliveMs`,
+`display_keep_alive_due`), each such Stop re-arming it — and the A/B audition's
+rests, the clock cell damaged every tick (main.cpp's "A REST KEEPS THE PAINT
+CLOCK RUNNING"); LIGHT frames both by the beats' table. Everywhere else at rest
 the app presents nothing, and the first frame after a rest may land a refresh
-late, accepted. The forms not kept: a keep-alive at every vsync (~46 % app /
-~53 % SurfaceFlinger, session 33), the permanent sparse one (90 Hz held at rest
-for about 11 % battery, session 117, under the 90 Hz pin), the brief window
-after a fast Stop (session 118) and the A/B rests' every-tick clock damage
-(2026-10-18), both retired 2026-11-15. The fact lives at the beats' block, THE
-PANEL IDLES AT REST (`kBeatLight`, platform_android.cpp).
+late, accepted. The forms not taken: a keep-alive at every vsync (~46 % app /
+~53 % SurfaceFlinger, session 33) and the permanent sparse one (90 Hz held at
+rest for about 11 % battery, session 117, under the 90 Hz pin). The facts
+(measured 2026-11-13 under the 90 Hz pin that stands again) and the ruling live
+at `kDisplayKeepAliveFastStopMs` (playback_lifecycle.h); the idle fact at the
+beats' block (`kBeatLight`, platform_android.cpp).
 
 **`C.UTF-8` vs `C`.** bionic starts a process in `C.UTF-8`, so
 `verify_c_numeric_locale` (locale_check.h) — a pure tripwire on Linux, where a
