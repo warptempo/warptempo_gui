@@ -223,8 +223,36 @@ void Viewport::invalidate_dialog_editor_box() {
 // THE NOTIFICATION STACK'S DAMAGE — its room, whole; the callers and the
 // reasoning are at the declaration, viewport.h.
 void Viewport::invalidate_notification_stack() {
-    const GuiRect r = notification_stack_bound(app);
-    gui.invalidate_region(r.x, r.y, r.w, r.h);
+    if (!notification_stack_laid_out_) {
+        const GuiRect r = notification_stack_bound(app);
+        gui.invalidate_region(r.x, r.y, r.w, r.h);
+        return;
+    }
+    // The cards as painted against the cards as they will be laid out (the
+    // rule at the declaration): the bound of every card not in both.
+    const std::vector<AppState::NotificationPainted>& was =
+        app.notifications.painted;
+    std::vector<AppState::NotificationPainted> now;
+    notification_stack_laid_out_(now);
+    const auto stands_in = [](const std::vector<AppState::NotificationPainted>&
+                                  list,
+                              const AppState::NotificationPainted& card) {
+        for (const AppState::NotificationPainted& other : list)
+            if (other.id == card.id && other.rect == card.rect) return true;
+        return false;
+    };
+    bool    any = false;
+    GuiRect bound{0, 0, 0, 0};
+    const auto add = [&](const GuiRect& r) {
+        if (r.w <= 0 || r.h <= 0) return;
+        bound = any ? union_rect(bound, r) : r;
+        any   = true;
+    };
+    for (const AppState::NotificationPainted& card : was)
+        if (!stands_in(now, card)) add(card.rect);
+    for (const AppState::NotificationPainted& card : now)
+        if (!stands_in(was, card)) add(card.rect);
+    if (any) gui.invalidate_region(bound.x, bound.y, bound.w, bound.h);
 }
 
 void Viewport::invalidate_clock_area() {

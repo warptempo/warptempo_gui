@@ -866,6 +866,20 @@ struct GuiPaintHandler {
     // input_pointer.cpp), through Viewport::tooltip_box_for_show_ (wired in
     // main.cpp).
     GuiRect tooltip_box_for_show();
+    // THE CARDS AS A CHANGED STACK WILL BE LAID OUT (architect 2026-11-16,
+    // the beats: a stack change damages the cards it changes, not the
+    // stack's whole room): `out` takes one entry a card paint_notifications
+    // would lay out and publish for the stack as it stands — its id and its
+    // rect clipped to the room, in the stack's order — ASKED OF THE PAINTER
+    // ITSELF, the tooltip's way (tooltip_box_for_show): a card's width is
+    // its shaped sentence's and its height its wrapped lines', which only
+    // that body's layout pass derives, so this runs it in its MEASURE form
+    // on a target that holds no pixel — the layout pass and nothing after
+    // it, no card painted, the publication untouched. ONE CALLER, the
+    // stack's damage owner (Viewport::invalidate_notification_stack),
+    // through Viewport::notification_stack_laid_out_ (wired in main.cpp).
+    void notification_stack_laid_out(
+        std::vector<AppState::NotificationPainted>& out);
 
     // Resolve the history mode's CURRENT commit into app.history_mode.flags, the
     // painted-order list the lane's diff pass consumes. Called from
@@ -1233,6 +1247,11 @@ private:
     // nothing painted, no record touched.
     bool    tooltip_measuring_ = false;
     GuiRect tooltip_measured_{0, 0, 0, 0};
+    // THE CARDS' MEASURE FORM (notification_stack_laid_out): where the
+    // measure's list goes while paint_notifications runs for it, null in
+    // every real run.
+    std::vector<AppState::NotificationPainted>* notifications_measured_ =
+        nullptr;
     // THE BOX every floating surface draws (the tooltip and the
     // notification cards), ONE PAINTER, TWO LOOKS: a flat `ground` box inside
     // a one-W `frame` border on all four sides — the tooltip the pane in

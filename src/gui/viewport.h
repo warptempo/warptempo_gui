@@ -388,6 +388,13 @@ struct Viewport {
     // which cannot size a box whose words only the painter shapes. Wired in
     // main.cpp; unwired, the show falls back to its full-width band.
     std::function<GuiRect()> tooltip_box_for_show_;
+    // THE CARDS AS THE PAINTER WILL LAY THE STACK OUT (architect 2026-11-16,
+    // the beats): GuiPaintHandler::notification_stack_laid_out, for the
+    // stack's damage owner below (invalidate_notification_stack), which
+    // cannot size a card whose sentence only the painter shapes and wraps.
+    // Wired in main.cpp; unwired, that owner damages the stack's room.
+    std::function<void(std::vector<AppState::NotificationPainted>&)>
+        notification_stack_laid_out_;
 
     // Viewport mutators.
     // THE MOVEMENT OWNER — the cursor's live chokepoint, and one of the TWO
@@ -906,14 +913,23 @@ struct Viewport {
     // passes bottom_row_area here where the top rows call
     // invalidate_top_strip. A zero/negative rect is a no-op.
     void invalidate_rect(const GuiRect& r);
-    // THE NOTIFICATION STACK'S DAMAGE (2026-08-29): the stack's ROOM —
-    // notification_stack_bound, notifications.h — the whole space between row
-    // 1 and the bottom row's lane that the cards may grow into, so one call
-    // both erases what stood and admits what comes, and no caller shapes a
-    // glyph to size the damage. It was three one-line cards' worth until
-    // 2026-08-30, when a card's text began to WRAP: a line count needs a
-    // shaped run and no window arithmetic has one, so the damage owner takes
-    // the room and the painter clips to it.
+    // THE NOTIFICATION STACK'S DAMAGE (2026-08-29) — THE CARDS A CHANGE
+    // CHANGED (architect 2026-11-16, the beats: the card's own rect, appear
+    // / dismiss / expire, not the stack's whole room): called AFTER the
+    // stack is changed, it holds the cards as last painted
+    // (AppState::Notifications::painted — every stack change damages what
+    // it changes, so the publication is what the screen shows) against the
+    // cards as the painter will now lay them out
+    // (notification_stack_laid_out_), and damages ONE RECT, the bound of
+    // every card whose id and rect are not in both: a card that left, a
+    // card that arrived, and every card the change moved — the rest of the
+    // stack below a card that left or under one that arrived. One rect
+    // because the changed cards are one run of the stack, each held whole
+    // in the one clip rectangle; a card whose rect stands is outside it (a
+    // card's words and class never change under its id). A change that
+    // moves nothing visible damages nothing. THE ROOM
+    // (notification_stack_bound, notifications.h) stays the answer where
+    // the layout hook is unwired, and the painter's clip.
     // ITS CALLERS, re-derived by grep 2026-10-01, are GuiNotifications' four
     // stack changes and nothing else: notify (a push), dismiss (a card's
     // lift), dismiss_all (a held lift) and

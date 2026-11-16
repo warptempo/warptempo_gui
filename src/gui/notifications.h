@@ -408,10 +408,13 @@
 // hover walk read that publication and then ask the live stack whether the
 // id still stands (published geometry may only SELECT; live state decides).
 // The owners below are pure functions of the window and the scale — the
-// damage ROOM and the ONE-LINE card height — and neither knows a sentence:
+// stack's ROOM and the ONE-LINE card height — and neither knows a sentence:
 // a card's real height needs its line count, the line count needs a shaped
 // run, and shaping needs the paint's own font, so the painter is the only
-// place that can answer it and the room is what the damage owner uses.
+// place that can answer it — and the damage owner asks the painter (its
+// layout pass in a measure form, GuiPaintHandler::
+// notification_stack_laid_out; architect 2026-11-16, the beats), the room
+// staying the painter's clip.
 //
 // NO DOUBLE SPACE, ANYWHERE THE PRODUCT WRITES TEXT: prompt text and its
 // options join with single spaces, and no card, prompt or stderr line carries
@@ -869,7 +872,7 @@ int notification_card_h_px();
 // window). IT NEVER ANSWERS BELOW THE FLOOR: the painter clamps a card's
 // content width into [floor, this] and THE ROOM BELOW IS THIS SAME NUMBER, so
 // a bound under the floor would put painted pixels outside the rect that
-// damages and publishes them. A window narrower than the floor itself
+// clips and publishes them. A window narrower than the floor itself
 // therefore keeps the floor and lets a card overhang, exactly as the retired
 // fraction did — the contrived window this file declines to cater for.
 int notification_card_max_w_px(const AppState& a);
@@ -893,10 +896,11 @@ int notification_card_max_w_px(const AppState& a);
 // under that foot is ever claimed by a card. (A stack that tall is the
 // contrived case this design declines to cater for.)
 //
-// Every change to the stack damages this rect whole (the rect
-// Viewport::invalidate_notification_stack takes): the painted cards lie
-// inside the room by construction, so it erases what stood and admits what
-// comes without shaping a single glyph off the paint clock. A window with no
+// A change to the stack damages the cards it changed, not this rect
+// (architect 2026-11-16, the beats; Viewport::invalidate_notification_stack:
+// the cards as painted against the cards as the painter will lay them out —
+// the room is that owner's answer only where it cannot ask the painter).
+// The painted cards lie inside the room by construction. A window with no
 // room between the card seat (the trim bar's first fill row) and the bottom
 // row answers a zero
 // height and paints nothing — a window with no waveform at all, in the
@@ -910,7 +914,7 @@ GuiRect notification_stack_bound(const AppState& a);
 // IT IS A COUNT OF ONE-LINE CARDS AND NOT A PIXEL BUDGET, deliberately: no
 // pure function of the window can know a card's line count — that needs a
 // shaped run, and the model layer this serves has no font to shape with (the
-// same reason the damage owner takes the room rather than a tight bound). So
+// same reason the damage owner asks the painter for the cards' rects). So
 // the cap counts the cards the room WOULD hold at one line each; a stack of
 // wrapped cards can pass the room's foot while inside this count, and the
 // painter's clip is what answers that, exactly as it answers a stack of

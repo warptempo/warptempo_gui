@@ -4009,12 +4009,35 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // and clipping is what keeps it from painting over that row or claiming a
 // press under it. It runs on every frame, cards or none, for the floating
 // surfaces' reason: a skipped run would strand a stale publication. Its
-// damage is not its own — every stack change damages the room through the
-// viewport owner, and the hover paints nothing to damage.
+// damage is not its own — every stack change damages, through the viewport
+// owner, the cards whose rect the change moves, added or took away
+// (Viewport::invalidate_notification_stack: the publication here against
+// THE MEASURE FORM's layout, notification_stack_laid_out below) — and the
+// hover paints nothing to damage.
+void GuiPaintHandler::notification_stack_laid_out(
+    std::vector<AppState::NotificationPainted>& out) {
+    // The contract is at the declaration: the painter's own layout pass, on
+    // a one-pixel target it never draws to.
+    cairo_surface_t* target =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
+    cairo_t* cr = cairo_create(target);
+    out.clear();
+    notifications_measured_ = &out;
+    paint_notifications(cr);
+    notifications_measured_ = nullptr;
+    cairo_destroy(cr);
+    cairo_surface_destroy(target);
+}
+
 void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     AppState::Notifications& st = app.notifications;
-    st.painted.clear();
-    st.painted_rect = GuiRect{0, 0, 0, 0};
+    // THE MEASURE FORM (notification_stack_laid_out) publishes nothing: the
+    // publication stays what the last real run laid out.
+    const bool measuring = notifications_measured_ != nullptr;
+    if (!measuring) {
+        st.painted.clear();
+        st.painted_rect = GuiRect{0, 0, 0, 0};
+    }
     if (st.cards.empty()) return;
 
     // THE ROOM the stack grows into, and the clip for every card below. A
@@ -4138,6 +4161,16 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                           line_px))};
         laid.push_back(LaidCard{&n, card, text_x, text_room, std::move(lines)});
         y += card.h + gap;
+    }
+
+    // THE MEASURE FORM ENDS HERE: every laid card's rect as the card pass
+    // below would publish it (clipped to the room), nothing painted.
+    if (measuring) {
+        for (const LaidCard& c : laid)
+            notifications_measured_->push_back(
+                AppState::NotificationPainted{c.n->id, in_room(c.card)});
+        cairo_restore(cr);
+        return;
     }
 
     // THE CARD PASS, clipped to the room.

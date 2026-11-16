@@ -44,7 +44,7 @@ int notification_card_max_w_px(const AppState& a) {
     // RULE; notification_stack_bound), so a window that cannot hold the
     // ceiling gets what it has; a window that cannot hold the FLOOR
     // keeps the floor and lets the card overhang, because this number is also
-    // the ROOM the painter clips and the damage owner erases (a bound under
+    // the ROOM the painter clips to and publishes within (a bound under
     // the floor would strand pixels outside it).
     const WellColumns well = well_columns(a);
     const int room_w = well.end - well.x;

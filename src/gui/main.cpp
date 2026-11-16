@@ -1979,6 +1979,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // out.
     viewport.tooltip_box_for_show_ =
         [&]() { return paint_handler.tooltip_box_for_show(); };
+    // The cards' damage owner's seam, the same kind (architect 2026-11-16,
+    // the beats; the contract at its Viewport declaration): the stack as
+    // the painter lays it out.
+    viewport.notification_stack_laid_out_ =
+        [&](std::vector<AppState::NotificationPainted>& out) {
+            paint_handler.notification_stack_laid_out(out);
+        };
     viewport.plate_playhead_column_ = [&]() {
         const GuiPaintHandler::PlateViewportBasis pb =
             paint_handler.plate_viewport_basis();
