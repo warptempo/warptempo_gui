@@ -1463,9 +1463,9 @@ struct GuiInputHandler {
     // replaced, the pointer-leave hook (main.cpp: every reason alike — the
     // ordinary leave, a translated contact's lift, the pen's hover leaving
     // the plane), the TIPS lamp's dark edge (set_show_tooltips), and
-    // main.cpp's activation edge. Damages the strip and the box's last
-    // painted rect (the box hangs outside the strip; the argument is at the
-    // definition).
+    // main.cpp's activation edge. Damages the box's last painted rect and
+    // nothing else (the box hangs outside its strip; the argument is at
+    // take_tooltip_box_down, input_pointer.cpp).
     // NO ROSTER WAIT RUNS UNDER A MODAL SURFACE: the roster's walk refuses one
     // while a prompt, a keyboard-modal editor or the progress modal is up,
     // and under an overlay for every key but the two it leaves live — its

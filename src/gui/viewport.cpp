@@ -202,8 +202,8 @@ void Viewport::invalidate_modal_dialog_area() {
         painted == AppState::ModalDialogOwner::Score)
         invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
-    // published rect and the band every seat of it lies in, the show edge's
-    // own (tooltip_damage_band), which holds the recomposed box whole.
+    // published rect and the band every seat of it lies in
+    // (tooltip_damage_band), which holds the recomposed box whole.
     const AppState::RedesignTooltip& tip = app.redesign_tooltip;
     if (tip.visible &&
         tip.owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
@@ -220,7 +220,11 @@ void Viewport::invalidate_dialog_editor_box() {
         app, onscreen_keyboard::modal_keyboard_h_px(app)));
 }
 
-// THE NOTIFICATION STACK'S DAMAGE — its room, whole; the callers and the
+// THE NOTIFICATION STACK'S DAMAGE — the one bound of the cards that
+// changed: every card as painted that the painter's next layout does not
+// hold at the same rect, and every card of that layout not painted so; a
+// stack that lays out as it stands painted damages nothing. The stack's
+// room, whole, only where the layout hook is unwired. The callers and the
 // reasoning are at the declaration, viewport.h.
 void Viewport::invalidate_notification_stack() {
     if (!notification_stack_laid_out_) {
@@ -349,7 +353,7 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 // head drag's step (GuiInputHandler::place_playhead_at_click_column under
 // its `head_drag`; ScrollDragState::head_drag, app_state.h): every motion of
 // that drag is the placement act, and through move_playhead_to above each
-// one damaged the whole waveform area.
+// one would damage the whole waveform area.
 // THE ACT IS move_playhead_to's, WHOLE — the audition's end, the hold put
 // out, then the reseat's own body: the live-domain clamp, the keep-visible
 // edge-align and its synchronous plate render, the follow bit kept, the

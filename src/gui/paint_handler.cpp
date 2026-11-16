@@ -760,9 +760,10 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // restores the premise at the one writer: a face whose DRAWABLE rect (the
 // part on the surface, clip_covers_drawable above) is not fully inside the
 // current clip keeps its as-painted bits, the comparator sees the
-// drift on the next tick, and its own full-strip damage is what repaints and
-// republishes — the repair mechanism the comparator was always documented to
-// be. An EMPTY rect refreshes unconditionally (as does one wholly off the
+// drift on the next tick, and its own damage — the drifted key's rect, cut
+// to cover what this gate asks, or the key's home strip (main.cpp's walk) —
+// is what repaints and republishes: the comparator is the repair mechanism.
+// An EMPTY rect refreshes unconditionally (as does one wholly off the
 // surface): it publishes "not painted at all", no pixel can be stale for it, and refreshing is what keeps the
 // comparator from thrashing under a standing modal. TWO PRODUCERS of an empty
 // rect: THE MODAL YIELD (since 2026-08-18; the contract is at

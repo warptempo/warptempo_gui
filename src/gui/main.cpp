@@ -2815,11 +2815,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.tick_tooltip();
 
         {
-            // The bottom row's damage fork, here too (2026-08-11, with the
-            // transport row): a drifting bottom-row face damages its own
-            // bottom-row lane, everything else the top
-            // strip. Each strip pays only for its own drift — the walk keeps
-            // going until both verdicts are known (or the roster ends).
+            // THE TWO STRIPS, EACH ITS OWN VERDICT: a key's home strip is
+            // row 8 (redesign_button_in_transport_row) or the top strip. A
+            // drifted key damages ONE RECT OF ITS OWN — its stashed painted
+            // extent united with the extent its live legend lays out — and
+            // its home strip, whole, only under the named fallbacks (the
+            // damage's rule below); a fallback on one strip leaves the other
+            // strip's keys their own rects. The walk runs the whole roster.
             //
             // THE STASH IT COMPARES AGAINST IS AS-PAINTED, NOT AS-COMPUTED
             // (2026-08-15, the transport-pair staleness fix — the mechanism
@@ -2834,10 +2836,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // saw stash equal to live forever and the play/stop pair stayed
             // painted stale until an unrelated full-lane damage (a hover)
             // repaired it. With the gate, the drift survives the masking
-            // frame, this walk catches it on the next tick, and the
-            // full-strip damage below is what both repaints the pixels and
-            // republishes the stash — one pass, the comparator's own
-            // documented model, now true. (The transport's state was the
+            // frame, this walk catches it on the next tick, and the damage
+            // below — the drifted key's own rect, which is the coverage that
+            // gate asks, or its home strip — is what both repaints the
+            // pixels and republishes the stash, in one pass. (The transport's state was the
             // ENABLED bit when that fix landed, the SELECTED bit under the
             // same day's radio ruling, and is the GLYPH since the collapse of
             // play and stop into one button — this comparator reads all three,
@@ -2973,12 +2975,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // the stateful overload's (redesign_button_tooltip), which fork on
             // live state — Play / Stop on the transport, Center on the focus,
             // a second line dropping where its modified press would not act —
-            // and the box hangs OUTSIDE the strip the walk above damages. The
+            // and the box hangs OUTSIDE what the walk above damages (a key's
+            // own rect, or its strip). The
             // box's words are published AS PAINTED (AppState::RedesignTooltip,
             // paint_shift_tooltip), so live words that have moved past the
             // painted pair are a box standing stale: this damages the old
             // box's published rect, the owner's strip (its glyph, below) and
-            // the band every seat of the new one lies in — the show edge's own
+            // the band every seat of the new one lies in
             // (tooltip_damage_band), which holds the new box whole
             // whatever it measures (viewport.h's floating-surface damage
             // rule), so the frame that paints it publishes its words (the
@@ -2987,16 +2990,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // painter publishes the union of the old and new rects with the
             // old words, and the next tick's compare damages that rect whole:
             // two frames at most, once per words change, never a standing
-            // per-tick damage. Asked outside the walk, which stops once both
-            // strips have drifted.
+            // per-tick damage. Asked once, outside the walk, of the hint's
+            // owner alone: the walk's damage is the drifted keys' own rects
+            // or their home strips, and neither holds the box.
             //
             // THE OWNER'S GLYPH DRIFT IS THE SAME TEST ONE TICK EARLIER: two
             // hints read the button's PAINTED glyph rather than live state —
             // Render's Cancel and Save's Pull and Check — so their live words
             // move only
             // once the frame that repaints the button republishes the glyph,
-            // and that frame paints the box under the strip's clip, which does
-            // not cover it. Damaging the box on the owner's glyph drift puts
+            // and that frame paints the box under the key's own clip (or its
+            // strip's), which does not cover it. Damaging the box on the owner's glyph drift puts
             // the button and its hint in one frame. (This general test replaced
             // a Render / Save list on 2026-09-29, which repaired those two and
             // left every other stateful hint, Play / Stop's among them,
@@ -3042,7 +3046,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // memoized on the store's generation and the audio identity, so
             // a tick costs a compare), held against the painted line; a
             // change damages the old box's published rect and the band every
-            // seat of the new one lies in, the show edge's own. An empty live
+            // seat of the new one lies in (tooltip_damage_band). An empty live
             // value owes nothing here (no box paints for it, as a key with no
             // words): the walk's next pass finds no owner on the cue and ends
             // the box, its hide damaging the painted rect.

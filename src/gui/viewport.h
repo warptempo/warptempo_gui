@@ -717,8 +717,8 @@ struct Viewport {
     // end or at a pause) and leave the old box's pixels standing.
     // While a tooltip stands on a Dialog owner this owner also damages the
     // box's published rect (erasing the old words, which may measure wider)
-    // and the band every seat of the recomputed box lies in — the show
-    // edge's own (tooltip_damage_band) — so the frame that repaints the row repaints the
+    // and the band every seat of the recomputed box lies in
+    // (tooltip_damage_band), so the frame that repaints the row repaints the
     // hint from the same composition. Every caller above inherits it, the
     // player's three included; the per-tick comparator in main.cpp calls here
     // for the hint changes no row damage carries (the previous-track window's

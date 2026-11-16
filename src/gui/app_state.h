@@ -19903,7 +19903,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // the freeze the tick's dirty-detect would dispatch a full waveform render per
 // step of travel and publish a NEW map (and a rebuilt flag row) under
 // the hand. The freeze protects the SCREEN from the store, which is what makes
-// the gesture's own ruling true: motion damages the top strip alone, the flags
+// the gesture's own ruling true: motion damages the cues its step changed
+// alone (the flag cache's rebuild in the event, value_drag.cpp), the flags
 // keep sitting on the DISPLAYED basis, and the map re-lands ONCE, at the
 // commit, through the tempo write's shared tail (value_drag.cpp). The commit
 // clears app.value_drag BEFORE it runs that tail, so the tail's synchronous

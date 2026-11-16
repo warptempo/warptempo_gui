@@ -876,7 +876,9 @@ private:
     // times; the rule at presentation_stamp_ns, platform_android.cpp):
     // whether the callback that set vsync_due_ carried a frame timeline,
     // and its E (the preferred timeline's expected presentation time) and P
-    // (the real refresh period), CLOCK_MONOTONIC ns — written with the due
+    // (the real refresh period, the spacing of two timelines of that same
+    // callback — a callback holding one timeline carries none and sets the
+    // bit false), CLOCK_MONOTONIC ns — written with the due
     // bit by that one callback, read by the present of the frame that vsync
     // invites and by no other. painting_due_vsync_ is that invitation:
     // raised by pump's tail round its gated paint and nowhere else, so a

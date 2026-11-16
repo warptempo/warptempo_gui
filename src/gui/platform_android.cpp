@@ -651,8 +651,15 @@ int64_t monotonic_now_ns() {
 //      frame begun at that vsync and finished inside the system's deadline
 //      shows. A light frame shows there, the system's own time.
 //   P  the real refresh period, the spacing of two neighboring timelines'
-//      expected presentation times (the callback's; the pinned rate's
-//      period T where the data held one timeline).
+//      expected presentation times, BOTH OF THE SAME CALLBACK. A callback
+//      whose data holds one timeline carries no period of its own, and none
+//      is assumed for it: the pinned rate's T is the panel's period only
+//      while the panel is at that rate, and a stamp built on it elsewhere
+//      names a wrong refresh or sits exactly on one (a 60 Hz panel, beat
+//      3: E + 2 · 11.11 − 5.56 = E + 16.67 ms, on the next refresh itself,
+//      jitter choosing between one period and two) — so that callback
+//      carries NO TIMELINE (AndroidCallbacks::vsync_timeline) and its frame
+//      is stamped now, like any frame without one.
 //   k  the whole number of real periods until the next frame may begin,
 //      ceil((n · T − kAppFrameToleranceNs) / P) and at least 1, n the
 //      frame's beat: the gate's own threshold (AndroidCallbacks::vsync)
@@ -679,6 +686,13 @@ int64_t monotonic_now_ns() {
 // frame is told when to show. 2: the frames of beat 2 and more — as the
 // table stands the heavy frames alone, every light frame showing as soon as
 // it is finished. Past the table's largest beat: no frame takes a stamp.
+// WHAT 2 COSTS (a host model of the gate and the latch): a light frame
+// after a heavy one is due at once while the heavy frame before it still
+// waits for its stamp, so where E lies a period and a half or more past
+// the frame time beyond SurfaceFlinger's lead the two are due at one latch
+// and THE HEAVY FRAME IS PASSED OVER, never shown, and the stamps are not
+// monotone at that change. 2 is never more even than 1; its one gain is a
+// light frame showing sooner when E is far out.
 // WHAT THE RULE RESTS ON, AND WHAT THE TABLET MEASURES: with v the vsync's
 // frame time and A = E − v, a stamped frame cannot be latched before about
 // E + (k − 1) · P less SurfaceFlinger's own lead, while the gate invites
@@ -686,8 +700,10 @@ int64_t monotonic_now_ns() {
 // while the next is drawn whenever A less that lead exceeds a period — the
 // steady state the system's own timeline describes (a frame begun at v and
 // shown at E), costing nothing with three buffers unless it exceeds two
-// periods. The tablet's buffer age through a play and through a pan's end,
-// the swap's duration and one reading of A decide between 1 and 2 here.
+// periods; past two, the same model has each light frame's buffer dequeue
+// blocked a few ms. The tablet's buffer age through a play and through a
+// pan's end, the swap's duration and one reading of A decide between 1 and
+// 2 here.
 // KNOWN AND LEFT: the scanner's place is sampled before the frame's beat is
 // known (the pre-paint hook runs ahead of present), and a heavy frame shows
 // k − 1 periods later than a light one would; so at the first heavy frame
@@ -799,10 +815,13 @@ struct AndroidCallbacks {
     // THE VSYNC CALLBACK'S ENTRY (AChoreographer_postVsyncCallback's, API
     // 33, through the table): the frame time, the gate's number as on the
     // other road, and beside it E, the preferred timeline's expected
-    // presentation time, and P, its spacing from a neighboring timeline —
-    // the one after it where the data holds one, else the one before, else
-    // (one timeline, or a spacing that is not positive) the pinned rate's
-    // period. Data with no timeline at the preferred index carries none.
+    // presentation time, and P, its spacing from a neighboring timeline of
+    // THIS callback — the one after it where the data holds one, else the
+    // one before. P IS KNOWN FROM TWO TIMELINES OR NOT AT ALL
+    // (presentation_stamp_ns's P): data with one timeline, or a spacing
+    // that is not positive, carries NO TIMELINE — the gate takes its frame
+    // time as on the other road and its frame is stamped now — and so does
+    // data with no timeline at the preferred index.
     // The data does not outlive the callback, so everything is read here.
     static void vsync_timeline(const AChoreographerFrameCallbackData* data,
                                void* /*user*/) {
@@ -820,7 +839,10 @@ struct AndroidCallbacks {
             period_ns = api.expected(data, at + 1) - expected_ns;
         else if (at > 0)
             period_ns = expected_ns - api.expected(data, at - 1);
-        if (period_ns <= 0) period_ns = kPanelPeriodNs;
+        if (period_ns <= 0) {
+            vsync_arrived(frame_time_ns, /*timeline=*/false, 0, 0);
+            return;
+        }
         vsync_arrived(frame_time_ns, /*timeline=*/true, expected_ns,
                       period_ns);
     }
@@ -2061,7 +2083,8 @@ bool GuiPlatform::present() {
     //     pass that set it, so the pair read here is the inviting vsync's,
     //     and no other present reads them.
     //   * EVERY OTHER FRAME — the open's hold's one frame, painted outside
-    //     the gate, a gated frame whose callback carried no timeline, or an
+    //     the gate, a gated frame whose callback carried no timeline (none
+    //     at the preferred index, or one alone: no period of its own), or an
     //     invited frame lighter than kStampFromBeat — is stamped with NOW,
     //     "at once": a future stamp the frame before left on the surface
     //     never holds it.

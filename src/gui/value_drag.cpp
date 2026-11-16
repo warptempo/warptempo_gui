@@ -325,11 +325,16 @@ void ValueDragOps::commit() {
     // record_gesture: a drag is one deliberate act, not a burst.
     undo.push_undo_warp(std::move(st.pre_drag_snapshot));
     undo.recompute_dirty();
-    // THE WAVEFORM, FOR THE STEMS, once: a tempo change can move a marker in
-    // or out of the RED set (a value that normalizes to the 1.00 fallback) and
-    // the stem carries its class's colour. The motion arm deliberately leaves
-    // this to the commit — one plate repaint per gesture rather than one per
-    // eight pixels of travel.
+    // THE VIEWPORT'S LANES AND THE WAVEFORM, WHOLE, ONCE, AT THE GESTURE'S
+    // END: one wide frame a gesture, at the lift, with the freeze cleared
+    // above — where the motion's steps each damaged their changed cues alone
+    // (apply's tail). NOT FOR ANY STEM: the stem is the selection's, one
+    // tone (cue_outline; resolve_flag_face, render.cpp), so a tempo write
+    // moves none and recolors none. A value that puts a marker in or out of
+    // the RED set (one that normalizes to the 1.00 fallback) changes its
+    // label's STRIKE, a cue of the flag cache's surface, and the step that
+    // wrote it damaged that cue. In target view the tail's kick below
+    // re-warps and repaints the plate beside it.
     viewport.invalidate_waveform_area();
     // AND THE TEMPO WRITE'S SHARED TAIL — the target-view re-warp, the focus's
     // re-land on its post-write image and the preview trigger — through the
