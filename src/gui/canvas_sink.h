@@ -115,8 +115,9 @@
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
 // producer: one pair of tips a BAR, the bars anchored to the audio and drawn
 // stretched by the record's draw transform, architect 2026-11-14, send G —
-// and, where the record's weight is under 1, the fade band's fine bars
-// drawn merged pair by pair, send H;
+// and, where the record's weight is under 1, the fade band's two rows each
+// drawn so and their two pictures mixed by the weight, the two-picture
+// blend, architect 2026-11-15, send O;
 // the algorithm kListFragmentShader's) and blended source-over
 // under the GL blend, exactly the word in the core and nothing where no bar
 // covers and the canvas shows; THE TINT writes, per cell of its rect, the
@@ -144,16 +145,22 @@
 // send G), `bars_x0` and `bars_pitch` THE DRAW TRANSFORM as floats — bar j
 // of the row has its centre bars_x0 + j · bars_pitch device px from r's
 // left edge (render.h's THE PLATE'S BARS owns it; the doubles are
-// GuiPlateColumns') — `bars_weight` THE ROW'S WEIGHT (architect 2026-11-14,
+// GuiPlateColumns') — `bars_weight` THE WEIGHT (architect 2026-11-14,
 // send H; GuiPlateColumns::bar_weight, render.h's THE FADE BAND): exactly 1
-// for that uniform row; under 1 the row is the fade band's, an even count
-// of fine bars with mixed tips, and `bars_x0` is its first pair's PARENT
-// CENTRE, `bars_pitch` the fine bars' — `origin` the plate's row 0 (the
-// canvas's first row), `word` the ink and `word2` the core, nothing where
-// no bar covers. A PLATE WHOSE TRANSFORM ALONE MOVED changes nearly every
-// pixel it draws, so it owes the canvas's damage like any other change of
-// the plate — every publication of a plate declares it (waveform_cache.cpp's
-// two publication roads), and the transform moves only with one.
+// for that uniform row alone; under 1 THE FADE BAND (architect 2026-11-15,
+// send O, the two-picture blend), that row the main rung's and beside it
+// THE FINE ROW, the finer rung's own uniform row, `bars2` its count,
+// `period2` the index of its first bar in `columns` (right after the main
+// row's bars) and `bars2_x0` / `bars2_pitch` its own draw transform as
+// floats (GuiPlateColumns' fine_x0 and fine_pitch, each its own double's
+// rounding), the pixel the main row's picture mixed toward the fine row's
+// by the weight — the four fine members 0 on every other record — `origin`
+// the plate's row 0 (the canvas's first row), `word` the ink and `word2`
+// the core, nothing where no bar covers. A PLATE WHOSE TRANSFORM ALONE
+// MOVED changes nearly every pixel it draws, so it owes the canvas's
+// damage like any other change of the plate — every publication of a plate
+// declares it (waveform_cache.cpp's two publication roads), and the
+// transform moves only with one.
 // THE TINT (architect 2026-11-12, the sweep highlight; ITS REAL EDGES
 // architect 2026-11-14, send J, a line at its exact place)
 // blends toward `word` at the alpha `word2`, a WHOLE PERCENT in
@@ -179,6 +186,10 @@ struct GuiCanvasPrimitive {
     float    bars_x0    = 0.0f;
     float    bars_pitch = 0.0f;
     float    bars_weight = 0.0f;
+    int      period2     = 0;
+    int      bars2       = 0;
+    float    bars2_x0    = 0.0f;
+    float    bars2_pitch = 0.0f;
     float    edges[4]   = {0.0f, 0.0f, 0.0f, 0.0f};
 };
 
@@ -204,8 +215,9 @@ struct GuiCanvasPrimitive {
 // revision arrives — a revision's bounds never change, so the kept copy is
 // the copy a rebuild would make. The list's Plate records, when it has any,
 // draw that plate, and the platform re-uploads its bounds texture only when
-// the revision or the records' spans — each its offset into `columns` and
-// its bar count — moved (GuiGlCanvas::upload_list). The transform is no part
+// the revision or the records' spans — each row's offset into `columns`
+// and its bar count, a fade-band record's two rows two spans — moved
+// (GuiGlCanvas::upload_list). The transform is no part
 // of that payload: it rides the records, rebuilt with them every frame.
 // THE GPU PAGE (architect 2026-10-27, "1 a": THE PICTURE FOLLOWS THE THUMB,
 // THE SOUND WAITS FOR THE LIFT; design record §3.13). The score viewer's page

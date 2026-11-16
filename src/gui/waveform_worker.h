@@ -206,9 +206,10 @@ private:
 // that many bars, and writes the geometry into `dest` beside the columns
 // (`dest.width` x `dest.height` stays the plate's device-px size) — and IN
 // THE FADE BAND (architect 2026-11-14, send H; waveform_fade_band, from the
-// same step, the working column and `fade_hundredths`) the row is the fine
-// rung's in the main range's halves, its tips mixed toward its parents' by
-// the band's weight, which rides `dest` with the transform. The inks ride the paint instead (the
+// same step, the working column and `fade_hundredths`) each band holds the
+// fine rung's own uniform row beside the main one, unmixed (the two-picture
+// blend, architect 2026-11-15, send O), its geometry and the band's weight
+// riding `dest` with the transform. The inks ride the paint instead (the
 // published fingerprint's, GuiCanvasSink::plate), so none is taken here.
 // Thread-agnostic: it runs either on the waveform worker thread (the async
 // dispatch) or synchronously on the GUI thread

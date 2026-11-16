@@ -84,16 +84,21 @@ void GuiCanvasSink::blended_rect(double x0, double y0, double x1, double y1,
 // G; render.h's THE PLATE'S BARS): it carries the count of the band's row
 // of bars and the plate's draw transform — the centre of the row's first
 // bar and the bars' pitch, in device px from the rect's left edge, the
-// plate's doubles handed on as the floats the shader takes — and THE ROW'S
+// plate's doubles handed on as the floats the shader takes — and THE
 // WEIGHT as the plate holds it (architect 2026-11-14, send H;
-// GuiPlateColumns::bar_weight): 1 for that uniform row, under 1 for the fade
-// band's, whose x is its first pair's parent centre.
+// GuiPlateColumns::bar_weight): 1 for that uniform row alone, under 1 for
+// THE FADE BAND (architect 2026-11-15, send O, the two-picture blend), where
+// the record also carries the band's FINE ROW — its count, its offset and
+// its own transform, each float its own double's rounding (fine_x0 and
+// fine_pitch, never derived from the main row's floats) — its bars appended
+// right after the band's main bars.
 // THE BOUNDS ARE COPIED ONCE PER REVISION (2026-10-14; GuiCanvasDrawList's
 // plate payload): a plate whose revision the list already holds keeps the
 // held copy — the same bands' bounds, since the live slot changes only at a
-// publication and every publication takes a new revision — and each record's
-// offset into it is the running sum of the stored bands' bar counts either
-// way, the offsets the copy made.
+// publication and every publication takes a new revision — and each row's
+// offset into it is the running sum of the stored rows' bar counts, in
+// list order (a band's main row, then in the fade band its fine row),
+// either way, the offsets the copy made.
 void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
                           WaveformPlateInks inks) {
     if (!columns.rendered) return;
@@ -102,14 +107,19 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
     if (copy) list_.columns.clear();
     const uint32_t ink     = argb32_opaque_word(hex(inks.ink_rgb));
     const uint32_t core    = argb32_opaque_word(hex(inks.core_rgb));
+    const bool     in_band = columns.bar_weight != 1.0f;
     std::size_t offset = 0;
     for (const GuiPlateColumns::Band& b : columns.band) {
         if (!b.stored) continue;
         const WaveformBandColumns& c = b.columns;
+        const WaveformBandColumns& f = b.fine;
         const int n = c.col_hi - c.col_lo;
         const int h = c.y_hi - c.y_lo;
+        const int nf = in_band ? f.col_hi - f.col_lo : 0;
         if (n <= 0 || h <= 0 || columns.width <= 0) continue;
         assert(static_cast<int>(c.cols.size()) == n);
+        assert(!in_band || (nf > 0 && static_cast<int>(f.cols.size()) == nf &&
+                            f.y_lo == c.y_lo && f.y_hi == c.y_hi));
         GuiCanvasPrimitive p;
         p.kind   = GuiCanvasKind::Plate;
         p.r      = GuiRect{area.x, area.y + c.y_lo, columns.width, h};
@@ -119,17 +129,29 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
         p.word2  = core;
         // The row's first bar is the plate's stored bar col_lo (0 for a
         // stored band, which is whole), so its centre stands col_lo bars
-        // past the plate's first (the fade band's x, a pair's parent
-        // centre, likewise: its first stored bar is a left half).
+        // past the plate's first (the fine row's on its own transform,
+        // likewise).
         p.bars       = n;
         p.bars_x0    = static_cast<float>(
             columns.bar_x0 + static_cast<double>(c.col_lo) * columns.bar_pitch);
         p.bars_pitch = static_cast<float>(columns.bar_pitch);
         p.bars_weight = columns.bar_weight;
-        if (copy)
+        if (in_band) {
+            p.period2     = static_cast<int>(offset + c.cols.size());
+            p.bars2       = nf;
+            p.bars2_x0    = static_cast<float>(
+                columns.fine_x0 +
+                static_cast<double>(f.col_lo) * columns.fine_pitch);
+            p.bars2_pitch = static_cast<float>(columns.fine_pitch);
+        }
+        if (copy) {
             list_.columns.insert(list_.columns.end(), c.cols.begin(),
                                  c.cols.end());
-        offset += c.cols.size();
+            if (in_band)
+                list_.columns.insert(list_.columns.end(), f.cols.begin(),
+                                     f.cols.end());
+        }
+        offset += c.cols.size() + (in_band ? f.cols.size() : 0);
         list_.prims.push_back(p);
     }
     assert(offset == list_.columns.size());

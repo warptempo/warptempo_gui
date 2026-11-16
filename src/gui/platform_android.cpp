@@ -902,7 +902,8 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // one owner, this vote its one reader). THE REASON IS THE PLATE'S
     // SHADER, NOT A MISSED FRAME: send I's pans hold 90 with no missed
     // frame, but the fade he wants next, the whole-doubling fade, puts the
-    // merged shader arm's lit cost on every frame that is not a landing, and
+    // plate shader's fade-band cost (since 2026-11-15, send O, THE BLEND ARM:
+    // two uniform pictures a pixel) on every frame that is not a landing, and
     // that does not fit 90 Hz's 11.1 ms; 60 Hz's 16.7 ms gives the plate's
     // shader the headroom — a smooth fade outranks the higher rate. One
     // device, one rate — and the vsync callback that gates the paint (pump's

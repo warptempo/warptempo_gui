@@ -350,8 +350,8 @@
 //                            THE FINER LEVEL STARTS TO APPEAR — the bars
 //                            change level at a fixed 2 px
 //                            (kWaveformSwitchPx), and from F px to there
-//                            the plate draws the finer level's bars, each
-//                            pair merged toward the bar it came from by a
+//                            the plate draws both levels' bars, the finer
+//                            level's picture mixed over the coarser's by a
 //                            weight of the zoom alone; 2 = OFF, a band of
 //                            no length, 1, THE FLOOR, the whole doubling
 //                            from one level's landing to the next's switch
@@ -1484,7 +1484,7 @@ inline std::optional<int> parse_waveform_grow(std::string_view v) {
 // THE RANGE: the number is F, the bar width at which the fade band begins —
 // the plate's bars change level at a fixed 2 device px (render.h's
 // kWaveformSwitchPx), and from F to there the plate draws the finer level's
-// bars, half as wide, each pair merged toward the bar it came from. THE TOP,
+// bars too, half as wide, its picture mixed over the coarser's. THE TOP,
 // 2, IS OFF: the band ends at the switch width, so a start there is a band
 // of no length (render.cpp's static_assert binds this top to the switch
 // width). THE FLOOR, 1, IS THE WHOLE DOUBLING: a main rung's bars are a
@@ -1492,7 +1492,7 @@ inline std::optional<int> parse_waveform_grow(std::string_view v) {
 // 1 would name a bar width no rung draws; at 1 the band runs from the
 // landing on one level to the switch to the next. The band's fine bars
 // then stand over F / 2 device px apart, 1/2 px or more, the least pitch
-// the plate shader's bounds for the band's row (its merged arm) stand on
+// the plate shader's bounds for the band's fine row (rung_px) stand on
 // (gl_canvas.cpp's static_assert).
 // kWaveformFadeDefaultHundredths, 1 px, IS CONSTRUCTION STATE ALONE —
 // render.cpp's seat's initializer, overwritten by gui_main's startup

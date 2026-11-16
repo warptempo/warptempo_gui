@@ -3822,9 +3822,9 @@ private:
     // PLATE'S BARS): push the hundredths to the renderer
     // (set_waveform_fade_hundredths), KICK THE PLATE'S SYNCHRONOUS REBUILD
     // (Viewport::kick_waveform_sync — whether the plate stands in the fade
-    // band, and there its row's bars, their tips and the weight, are a
-    // function of F, so unlike the grow's commit the plate IS re-rendered;
-    // the start is a fingerprint field too,
+    // band, and there its fine row and the weight, are a function of F,
+    // so unlike the grow's commit the plate IS re-rendered; the start is a
+    // fingerprint field too,
     // WaveformCache::fp_fade_hundredths, so no plate of another F is ever
     // taken for the live one), then invalidate the whole window — the frame
     // that pays the rebuild paints the new plate under the page that

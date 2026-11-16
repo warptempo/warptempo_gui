@@ -179,10 +179,11 @@ struct WaveformCache {
     // was rendered for — what the flag rebuild stages and every stem, flag,
     // playhead and hit test reads (plate_viewport_basis, the displayed
     // mirror) — never the bars. The bars' own geometry (the first stored
-    // bar, their width and count, the draw transform and the fade band's
-    // weight) is a pure function of those fields, the painter's step, the
-    // working column and the fade's start (render.h's waveform_bar_geometry
-    // and waveform_fade_band), so it is no field: the producer derives it and
+    // bar, their width and count, the draw transform, the fade band's
+    // weight and there the fine row's own range and transform) is a pure
+    // function of those fields, the painter's step, the working column and
+    // the fade's start (render.h's waveform_bar_geometry and
+    // waveform_fade_band), so it is no field: the producer derives it and
     // it rides the slot with the columns it describes
     // (GuiPlateColumns::first_bar and its neighbors), swapped and published
     // with them. THE PLATE IS STILL RENDERED AT EVERY VIEWPORT CHANGE, a
@@ -215,8 +216,8 @@ struct WaveformCache {
     // THE FADE'S START the live plate was rendered under, in hundredths
     // of a device px (the `waveform_fade_px` key's seat,
     // waveform_fade_hundredths, render.h; architect 2026-11-14, send H):
-    // whether the plate stands in the fade band, and there its row's bars,
-    // their mixed tips and the weight, are a function of it (render.h's
+    // whether the plate stands in the fade band, and there its fine row and
+    // the weight, are a function of it (render.h's
     // waveform_fade_band), so a commit of the key re-renders the plate BY
     // FIELD, keyed directly like the divider's height. 0 before the first
     // plate, a value the key's grammar never spells.
@@ -308,8 +309,8 @@ struct WaveformCache {
 
     // THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
     // render.h, owns the rule, the key, what is not keyed and why, and the
-    // thread rule): the producer's unmixed rows from one synchronous render
-    // to the next, read and written only inside
+    // thread rule): the producer's rows from one synchronous render to the
+    // next, read and written only inside
     // force_synchronous_waveform_rebuild's call of
     // render_waveform_to_plate_columns, on the GUI thread — never named in a
     // worker's job. It lives and dies with this cache, which lives and dies

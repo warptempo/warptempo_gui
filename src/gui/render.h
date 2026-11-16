@@ -1173,8 +1173,8 @@ int  waveform_grow_quarters();
 // file-scope state in render.cpp, pushed by gui_main's startup read of the
 // device config before the window exists and by the settings editor's
 // `waveform_fade_px=` commit (GuiInputHandler::apply_waveform_fade_px,
-// which re-renders the plate and repaints at once: the band's row of bars
-// is a function of F). The construction state is 1 px
+// which re-renders the plate and repaints at once: the band's rows of bars
+// are a function of F). The construction state is 1 px
 // (kWaveformFadeDefaultHundredths), the first-run value the shipped
 // defaults file's. A TUNING KEY.
 void set_waveform_fade_hundredths(int hundredths);
@@ -3427,15 +3427,15 @@ struct WaveformBasis {
 // EVERYWHERE ELSE SMOOTHNESS AND PERFORMANCE OUTRANK ACCURACY: the same
 // whole viewport — start, origin and step — is the same picture, and a zoom
 // reached by a gesture rests on the gesture's own origin, its bars at a
-// fractional offset, soft — and, where it rests inside the fade band, part
-// merged, the same every time for that viewport. THE DRAW'S ARITHMETIC
-// STANDS ON THE SAME SEAT (architect 2026-11-14, send I): the shader places
-// a bar among the screen's subcolumns by a multiply with the row's
-// reciprocal — at a landing exactly 1, the picture byte for byte the
-// one-bar-a-pixel plate; elsewhere the product stands a float's rounding
-// off the quotient, which can move one edge by a quarter px where a
-// decision sits near its boundary (kListFragmentShader's WHAT IS PROMISED,
-// gl_canvas.cpp: the rule and his words).
+// fractional offset, soft — and, where it rests inside the fade band, the
+// two levels' pictures mixed, the same every time for that viewport. THE
+// DRAW'S ARITHMETIC IS THE QUOTIENT (architect 2026-11-15, send O: the
+// per-pixel divide back with the blend's shader work, "I agree to both
+// your points there"): the shader places each screen subcolumn among the
+// bars by one divide by the row's pitch — at a landing the pitch is
+// exactly 1 and the place the difference itself, the picture byte for
+// byte the one-bar-a-pixel plate (kListFragmentShader's WHAT IS PROMISED,
+// gl_canvas.cpp).
 //
 // BAR k (a GLOBAL index, k >= 0) is the display-domain span [k · b,
 // (k + 1) · b) ON THE FRAME-0 LATTICE: its integer edges are the producer's
@@ -3479,9 +3479,10 @@ struct WaveformBasis {
 // one-px core reaches no further, p > 1/2): k_first is the lower bracket of
 // the leftmost centre, the last bar the upper bracket of the rightmost. At a
 // whole level that is three bars beyond each edge, n = W + 6; n <= (W +
-// 3.75) / p + 3 always, and p >= 1 (the fade band's row is this range in
-// halves, twice the count at half the pitch, never under 1/2 px — up to
-// 2 · (W + 6) bars just past a landing: waveform_fade_band below).
+// 3.75) / p + 3 always, and p >= 1 for the main rung (the fade band's fine
+// row is this same rule at the finer rung, inside this range in halves at
+// half the pitch, over 1/2 px — up to 2 · (W + 6) bars just past a
+// landing: waveform_fade_band below).
 // THE TWO ENDS. LEFT OF FRAME 0 NO BAR EXISTS: k_first clamps at 0, and the
 // draw finds no texel there (the plate's left edge at the song's start is
 // the bar's own flat shape, as it was). PAST THE DOMAIN'S END THE BARS ARE
@@ -3557,14 +3558,16 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // Wouldn't it be better to have a continuous fade motion", an eased curve
 // over that shorter band declined: "generally cheap partials don't work
 // very well, and instead they get in the way of the true solution"; the
-// panel pinned to 60 Hz for its cost, kPanelRefreshHz). Inside a band of
-// zoom before each split — from the key's start width up to the switch, at
-// F = 1 the whole way from one whole level to the next — the plate holds
-// THE FINER RUNG ALONE, each pair of its bars MERGED toward the bar they
-// came from by a weight that is a function of THE ZOOM ALONE — no time, no
-// animation, nothing at the lift: hold still and the picture holds still,
-// part merged. THE ONE OWNER of the band, the weight and the band's stored
-// row.
+// panel pinned to 60 Hz for its cost, kPanelRefreshHz; architect
+// 2026-11-15, send O: THE TWO-PICTURE BLEND, "Agree to all." — the blend
+// ruled first and dropped 2026-11-14 (send H) REOPENED by him and built).
+// Inside a band of zoom before each split — from the key's start width up
+// to the switch, at F = 1 the whole way from one whole level to the next —
+// the plate holds BOTH RUNGS, EACH ITS OWN UNIFORM ROW, and the pixel is
+// THE MIX OF THEIR TWO PICTURES by a weight that is a function of THE ZOOM
+// ALONE — no time, no animation, nothing at the lift: hold still and the
+// picture holds still, half-tone between the two levels. THE ONE OWNER of
+// the band, the weight and the band's stored rows.
 //
 // THE MAIN RUNG B for the step q is the rung above (waveform_bar_frames), its
 // pitch P = B / q in [1, 2). THE FINE RUNG b = B / 2 EXISTS iff B >= column
@@ -3577,9 +3580,9 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // — exactly 100 · B > Fh · q, STRICT (architect 2026-11-14, send K), the
 // compare exact in doubles as the rung's is (B a multiple of a half frame,
 // q of a sixteenth, Fh whole). AT P == F THE PLATE IS OUT OF THE BAND, at
-// every F: rung B's uniform row there is the picture the merged arm would
-// draw at w = 0, byte for byte, so the test moves which arm and which row
-// draw it and no pixel. WHY STRICT: at F = 1, P == 1 is A LANDING ON A
+// every F: rung B's uniform row there is the picture the blend would draw
+// at weight 0 (A + (C − A) · 0 is A exactly), so the test moves which arm
+// and which rows draw it and no pixel. WHY STRICT: at F = 1, P == 1 is A LANDING ON A
 // WHOLE LEVEL (q == B), and it stays the uniform one-bar-a-pixel plate —
 // one producer query and the cheaper arm, at rest, under playback and
 // under FOLLOW's scroll. So determinism's one seat (above) is unchanged, and
@@ -3588,83 +3591,70 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // respect — the row, the transform and the bytes — and Fh == 200 IS OFF
 // for every q: the band ends at the switch width, so a start there is a
 // band of no length.
-// THE WEIGHT, how far the halves have parted: w = log2(P / F) / log2(2 / F),
+// THE WEIGHT, the finer picture's share: w = log2(P / F) / log2(2 / F),
 // LINEAR IN THE ZOOM'S LOGARITHM (an even pinch, an even fade; no key),
 // clamped at 0 from below (a rounding of the quotient), in [0, 1): 0 at
 // the band's start, toward 1 as P reaches the switch at 2. The band spans
 // log2(2 / F) of each doubling in the zoom's logarithm, its last part. AT
 // F = 1 w = log2 P and a level's detail opens over THE WHOLE APPROACH TO
-// IT: from the landing on the coarser level (q = B, every pair merged
-// whole) the halves part as the zoom goes in — half way at P = √2 — and
-// reach their own centres at the switch (q = B / 2), past which the finer
-// level is the main rung, its own pairs merged whole again.
+// IT: from the landing on the coarser level (q = B, its picture alone) the
+// finer level fades in as the zoom goes in — half way at P = √2 — and
+// stands alone at the switch (q = B / 2), past which the finer level is
+// the main rung and the next finer one begins to fade in.
 // THE FLOAT THE DRAW TAKES is wf = min(float(w), the largest float under 1),
 // so IN THE BAND wf < 1 ALWAYS and OUT OF IT the draw is handed exactly 1 —
 // wf == 1 is the whole test for a uniform row (GuiPlateColumns::bar_weight).
 //
-// THE BAND'S STORED ROW (render_waveform_to_plate_columns builds it). THE
-// PAIRS: fine bars 2K and 2K + 1 are main bar K's LEFT and RIGHT halves —
-// the frame-0 lattices nest, [K · B, (K + 1) · B) = [2K · b, (2K + 2) · b).
-// THE RANGE IS THE MAIN RUNG'S OWN, IN HALVES: with {K_first, N, xc, P} the
-// geometry above at b = B, the row holds the fine bars [2 · K_first,
-// 2 · K_first + 2N) — the first a left half, every pair whole. That is
-// enough at any grow: a merged pair's two bars stand between their own
-// centres and their parent's, never outside the pair, so the bars either
-// side of a screen subcolumn are halves of the two pairs whose parent
-// centres bracket it, and the main range is exactly those parents over
-// every subcolumn of the support, whatever w.
-// TWO QUERIES OF THE ONE PRODUCER, over the same rows: THE PARENTS, rung
-// B's row exactly as it is asked out of the band (the bar basis of the
-// geometry above, N columns), and THE HALVES, rung b's row on its own bar
-// basis, {nearbyint(2 · K_first · b), origin 0, step b, 2N columns}; a
-// band of the plate is stored only where both came back whole. SO THE
-// PRODUCER IS ASKED N + 2N BARS A FRAME IN THE BAND against N out of it —
-// just past a landing N reaches W + 6 (W the plate's device width), the
-// row 2 · (W + 6) — and at F = 1 every zoom between two whole levels is
-// in the band (architect 2026-11-14, send K; the frame's cost measured on
-// the tablet). ON THE SYNCHRONOUS ROUTE THOSE TWO ROWS ARE KEPT (architect
-// 2026-11-15, send L; WaveformKeptBars below): unmixed, each a row of the
-// store, so a frame asks the producer for the bars that enter either row
-// and redoes the mix over the row; the worker's route asks for both rows
-// whole.
-// THE TIPS ARE MIXED ON THE CPU (waveform_mix_column below): each entry's
-// are (1 − w) · ITS PARENT's + w · ITS OWN, rounded half up to whole quarter
-// rows, the inner present iff present in both — the parent's the main rung's
-// REAL tips, from the producer's own query of rung B (a main bar's tips are
-// the hull of its halves' by the definition, dark and lit, but to the reads'
-// int16 slack, not bit for bit: THE EXACT FORM at render_waveform_columns),
-// so at w = 0 every pair holds its parent's tips twice and the
-// row is rung B's, and toward w = 1 it is rung b's own — what the frame
-// past the switch draws with rung b as the main rung, its pairs merged
-// whole (uniform where F > 1, at w just over 0 at F = 1, the same picture
-// but for the mix's first quarter-row steps). In between a pair's PEAK
-// about holds (with the lamp dark the taller half is the parent's peak
-// already) and the LOWER half
-// sinks from the pair's height to its own, so inside the band the TROUGHS
-// are drawn shallower than they are — accepted (architect 2026-11-14: "The
-// untruthfulness of the trough is accepted. Really, all that really counts
-// is the working zoom for fine horizontal placement. Everything else just
-// needs to be almost overview level granularity"). WHAT DOES NOT MOVE: the
-// viewport, the lattice the marks stand on, the producer and every bar's
-// own numbers — and A LANDING ON A WHOLE LEVEL IS P = 1, OUT OF THE BAND,
-// nothing merged, so determinism's one seat (above) is as it was.
-// THE TRANSFORM THAT RIDES THE ROW: its x is THE FIRST STORED PAIR'S PARENT
-// CENTRE, xc — the main geometry's own x0, to the double — and its pitch p =
-// P / 2, the fine bars' (2 · float(p) == float(P): the draw is handed rung
-// B's own x0 and, doubled, its own pitch); p lies in (F / 2, 1), never
-// under 1/2 px. THE PLACE IS THE DRAW'S (kListFragmentShader's merged arm,
-// gl_canvas.cpp's head): pair K's left half stands at its parent's centre
-// less w · p / 2 and its right at as much more — both ON the parent's
-// centre at w = 0, on their own centres toward w = 1 — and the picture is
-// the uniform row's rule over those vertices, meeting both ends of the
-// band: at its start rung B's picture byte for byte, at its end rung b's
-// but for a float decision that sits near its boundary (architect
-// 2026-11-14, send I; kListFragmentShader's merged arm, AT THE TWO ENDS).
+// THE BAND'S STORED ROWS (render_waveform_to_plate_columns builds them):
+// TWO UNIFORM ROWS, EACH ITS OWN RUNG'S, UNMIXED. THE MAIN ROW is rung B's
+// exactly as it is asked out of the band — the geometry above at b = B,
+// {K_first, N, x0, P}, on its bar basis. THE FINE ROW IS RUNG b's OWN
+// UNIFORM ROW: waveform_bar_geometry at b — the same call the main row
+// makes — {k_f, n_f, x0_f, p}, its own x0 and p = P / 2 to the bit (b =
+// B / 2, a division by two), on its own bar basis: exactly the row rung b
+// is asked as the main rung, so past the switch the kept bars
+// (WaveformKeptBars below) reuse it as it stands. IT LIES INSIDE THE MAIN
+// RANGE IN HALVES, [2 · K_first, 2 · K_first + 2N) — the frame-0 lattices
+// nest, [K · B, (K + 1) · B) = [2K · b, (2K + 2) · b): with y = (o + (k0 +
+// x) · q) / B a point's place in rung B's bars, its lower bracket there is
+// floor(y − 1/2) and on rung b floor(2y − 1/2), so the fine range's first
+// bar is at least 2 · K_first and its last at most twice the main's last
+// plus one — n_f <= 2N. The geometry's range rule (every subcolumn of the
+// support reads the two bars whose centres bracket it) holds at every
+// pitch over 1/2 px, so the fine row serves the draw as the main row does.
+// TWO QUERIES OF THE ONE PRODUCER a band, one a row; a band of the plate is
+// stored only where both came back whole. SO THE PRODUCER IS ASKED N + n_f
+// BARS A FRAME IN THE BAND against N out of it — just past a landing N
+// reaches W + 6 (W the plate's device width) and n_f about twice that —
+// and at F = 1 every zoom between two whole levels is in the band
+// (architect 2026-11-14, send K; the frame's cost measured on the tablet).
+// ON THE SYNCHRONOUS ROUTE THOSE TWO ROWS ARE KEPT (architect 2026-11-15,
+// send L; WaveformKeptBars below), each a row of the store, so a frame asks
+// the producer for the bars that enter either row; the worker's route asks
+// for both rows whole.
+// THE PICTURE IS THE DRAW'S (kListFragmentShader's blend arm, gl_canvas.cpp's
+// head): A the uniform picture of the main row and C that of the fine row —
+// each per pixel a premultiplied color and alpha by the uniform rule at its
+// own row's pitch, places and tips — and the pixel A + (C − A) · wf, then
+// the GL blend, source-over. NO TIP IS MIXED AND NO BAR IS MOVED: the finer
+// level stands at its true heights and places, the coarser over it at
+// 1 − wf, the troughs at their own depth under the coarser level's veil.
+// Premultiplied, so over the ground the result is the mix of the two
+// finished pictures. THE TWO ENDS MEET, NO SECOND POP: toward the band's
+// start wf → 0 and the pixel is A, the landing's own function of rung B's
+// row; toward the switch wf → 1 and it is C, the uniform picture of rung b
+// at a pitch toward 1 from below — and past the switch rung b is the main
+// rung, its picture the same function of the same row at a pitch from 1
+// above — so the picture is continuous in the zoom, both ends included.
+// WHAT DOES NOT MOVE: the viewport, the lattice the marks stand on, the
+// producer and every bar's own numbers — and A LANDING ON A WHOLE LEVEL IS
+// P = 1, OUT OF THE BAND, the one uniform row, so determinism's one seat
+// (above) is as it was.
 // Pure and total: a degenerate q, column or key answers out of the band or
 // the weight 0, no error arm.
 inline constexpr float kWaveformFadeWeightTop = 0x1.fffffep-1f;
 struct WaveformFadeBand {
-    bool   in_band = false;  // the row is the fine rung's, mixed
+    bool   in_band = false;  // the plate holds both rungs' rows, their pictures mixed
     double w       = 1.0;    // the weight, [0, 1) in the band
     float  wf      = 1.0f;   // the float the draw takes: under 1 in the band, 1 out of it
 };
@@ -3735,22 +3725,15 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // FULL-INK CORE (architect 2026-10-30, on his glass against Ableton), DRAWN
 // STRETCHED AT THE COLUMNS' PITCH (architect 2026-11-14, send G: the columns
 // are anchored to the audio and their centres stand p device px apart, p in
-// [1, 2) — in the fade band before a level switch the row is the finer
-// level's, p in [1/2, 1], its tips mixed toward the parents' (send H, the
-// band over the whole doubling at F = 1 since send K; waveform_fade_band)
-// — placed continuously from the displayed viewport,
-// the draw transform, THE PLATE'S BARS above). Each
+// [1, 2) — in the fade band before a level switch the finer level's row
+// beside it, p in (1/2, 1), drawn by this same rule and its picture mixed
+// with the coarser's by the band's weight (send H, the band over the whole
+// doubling at F = 1 since send K, the two-picture blend since send O,
+// 2026-11-15; waveform_fade_band) — placed continuously from the displayed
+// viewport, the draw transform, THE PLATE'S BARS above). Each
 // column reduces to two TIPS in float rows — its raw maximum as the top
 // tip, its raw minimum as the bottom — QUANTIZED TO QUARTER ROWS (below):
-// the column's own extent [T, B) in subrows is its BAR (IN THE FADE BAND the
-// stored columns are the finer level's with each tip mixed toward its
-// parent's, and they are drawn at MERGED PLACES — a pair's two columns
-// standing between their parent's centre and their own by the band's
-// weight, the contour from one to the next and each one's core at its
-// place, a core ending at its sibling's place while a pair is still
-// parting — so what this paragraph says of a column's centre is said there
-// of its merged place; THE PLATE'S BARS' fade band and kListFragmentShader's
-// merged arm own it). THE CORE keeps that
+// the column's own extent [T, B) in subrows is its BAR. THE CORE keeps that
 // bar whole in full ink on A LINE ONE DEVICE PX WIDE AT THE COLUMN'S CENTRE,
 // whatever the pitch (send G, the first build's width; a quarter-px "point"
 // is a second build for his glass only if wanted): a lone spike stands
@@ -3824,8 +3807,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // while the zoom moves within one rung every column's peaks, its working
 // columns' scales and its quarter-row tips are the same numbers frame after
 // frame, dark or lit, and only the placement — x0 and the pitch — moves (in
-// the fade band the stored tips are those numbers of the two rungs mixed by
-// the zoom's weight, waveform_mix_column: they move with the zoom alone). That
+// the fade band both rungs' rows hold those numbers, and only the weight
+// that mixes their two pictures moves, with the zoom alone). That
 // is what the columns are anchored for: a plate cut one column a device px
 // on the viewport's own lattice reads every column over new frames at each
 // zoom frame and re-rolls its narrow valleys, which read as bubbling, the
@@ -3835,8 +3818,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // the children's extrema are their own (lit, each the hull of its own
 // working columns' magnified samples, so the parent is their hull: THE
 // EXACT FORM), and THE FADE BAND before the split (architect 2026-11-14, send H;
-// waveform_fade_band) carries each pair's tips from the parent's to its own
-// as the zoom approaches it — over the whole doubling with the
+// the two-picture blend, send O, 2026-11-15; waveform_fade_band) mixes the
+// parents' picture into the children's as the zoom approaches it — over
+// the whole doubling with the
 // `waveform_fade_px` key at 1, over its last log2(2 / F) at F; with the key
 // at 2, off, the picture steps there once. A pan moves the placement by
 // whole device px, the stored range with it, and re-reads no column
@@ -3844,7 +3828,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // (architect 2026-11-15, send L): on the synchronous route the bars a
 // render already holds are kept to the next (WaveformKeptBars below), the
 // pure function's numbers needing no second reading; the worker's route
-// asks for its whole row. NOT PROMISED:
+// asks for its whole rows. NOT PROMISED:
 // pixel-phase variation stays (a soft edge crossing the pixel grid), so the
 // shimmer has one cause fewer, not none.
 // THE EDGES: THE STORED ROW CARRIES A HALO past the plate's two side edges
@@ -4131,50 +4115,22 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // stretch to the columns' pitch, the contour between column centres, the
 // one-px core, the `waveform_grow` key's grow and each
 // pixel's exact coverage are the fragment shader's, the
-// rule at render_waveform_columns' head (in the fade band the entry is a
-// fine bar's tips mixed toward its parent's, waveform_mix_column below, and
-// the shader draws the pairs merged).
+// rule at render_waveform_columns' head.
 struct WaveformColumnRows {
     int o_top, o_bot;
     int i_top, i_bot;
 };
-// ONE ENTRY OF THE FADE BAND'S ROW (architect 2026-11-14, send H; THE FADE
-// BAND above owns the rule): a fine bar's tips MIXED TOWARD ITS PARENT'S by
-// the weight w — each tip floor(parent + w · (own − parent) + 0.5), ROUND
-// HALF UP in double. At w == 0 the entry is the parent's, bit for bit. The
-// outer keeps bot >= top + 1: the two sums stand a whole subrow or more
-// apart before the rounding, and round half up is monotone and commutes
-// with a whole shift — round half even is monotone too but does not commute
-// with every whole shift (0.5 and 1.5 go to 0 and 2), so no nearbyint here.
-// THE INNER is present in the entry iff present in BOTH (i_bot > i_top),
-// mixed tip by tip likewise, else absent, {0, 0}: one render has one lamp,
-// under which the producer gives every bar an inner or none, so a mismatch
-// has no producer and the rule is total, no arm.
-inline WaveformColumnRows waveform_mix_column(const WaveformColumnRows& parent,
-                                              const WaveformColumnRows& own,
-                                              double w) {
-    const auto mix = [w](int p, int o) {
-        return static_cast<int>(std::floor(
-            static_cast<double>(p) + w * static_cast<double>(o - p) + 0.5));
-    };
-    WaveformColumnRows m{mix(parent.o_top, own.o_top),
-                         mix(parent.o_bot, own.o_bot), 0, 0};
-    if (parent.i_bot > parent.i_top && own.i_bot > own.i_top) {
-        m.i_top = mix(parent.i_top, own.i_top);
-        m.i_bot = mix(parent.i_bot, own.i_bot);
-    }
-    return m;
-}
 // ONE CHANNEL BAND'S COLUMNS as render_waveform_columns produced them: the
 // region the bounds cover, the plate's device rows [y_lo, y_hi) and THE
 // STORED ROW'S BARS [col_lo, col_hi) — indices into the band's row of bars,
 // 0 .. n for a whole band, bar col_lo + j the global bar
-// GuiPlateColumns::first_bar + col_lo + j, NOT device columns (architect
-// 2026-11-14, send G: the plate's columns are its bars, THE PLATE'S BARS
-// above) — `cols` one entry per bar from col_lo, and whether that region is
-// the asked area whole (`whole`). The plate's stored band holds them as
-// produced, or in the fade band the halves' entries mixed in place toward
-// the parents' (render_waveform_to_plate_columns).
+// GuiPlateColumns::first_bar + col_lo + j (the fine row's fine_first_bar +
+// col_lo + j), NOT device columns (architect 2026-11-14, send G: the
+// plate's columns are its bars, THE PLATE'S BARS above) — `cols` one entry
+// per bar from col_lo, and whether that region is the asked area whole
+// (`whole`). The plate's stored band holds them as produced, and in the
+// fade band a second such row, the fine rung's, as produced
+// (GuiPlateColumns::Band::fine; render_waveform_to_plate_columns).
 struct WaveformBandColumns {
     int  y_lo = 0, y_hi = 0;
     int  col_lo = 0, col_hi = 0;
@@ -4182,14 +4138,14 @@ struct WaveformBandColumns {
     std::vector<WaveformColumnRows> cols;
 };
 // THE KEPT BARS (architect 2026-11-15, send L: "let's just go ahead and plan
-// to do the bar cut after or together with send L"): THE PRODUCER'S UNMIXED
-// ROWS KEPT FROM ONE RENDER TO THE NEXT, so a render asks
+// to do the bar cut after or together with send L"): THE PRODUCER'S ROWS
+// KEPT FROM ONE RENDER TO THE NEXT, so a render asks
 // render_waveform_columns only for the bars it does not already hold. Inside
 // a level a bar's numbers never change (PAN AND ZOOM INVARIANCE above), so a
 // pan or a zoom inside a level asks for the few bars that enter and drops
-// the ones that leave; the fade band's mix (waveform_mix_column) is redone
-// every frame from the kept parents and halves at the live weight, the kept
-// rows staying unmixed. THE STORED PLATE IS TODAY'S, FIELD FOR FIELD, for
+// the ones that leave; in the fade band both rows are kept, the main rung's
+// and the fine rung's, each as the producer gave it and stored as it is.
+// THE STORED PLATE IS THE STORE-LESS RENDER'S, FIELD FOR FIELD, for
 // every sequence of renders: the use and the row's update are
 // render_waveform_to_plate_columns' (waveform_cache.cpp), which owns that
 // claim.
@@ -4218,16 +4174,16 @@ struct WaveformBandColumns {
 // (WaveformRenderInputs). A render whose key differs DROPS EVERY ROW first.
 // A ROW is kWaveformKeptRungs (2) a channel, each keyed by {b, channel, the
 // band's y and h, plate_h}, compared exactly (b a double, by ==), holding the
-// unmixed entries of the contiguous global bars [k_lo, k_lo + cols.size()).
-// Two a channel are what the fade band asks every frame, the parents and the
-// halves; a rung no row holds takes that channel's least recently used row
+// entries of the contiguous global bars [k_lo, k_lo + cols.size()).
+// Two a channel are what the fade band asks every frame, the main rung's row
+// and the fine rung's; a rung no row holds takes that channel's least recently used row
 // that the same render does not also ask for, so at a level switch the rung
 // that drops out is the one replaced and the new rung is computed whole,
 // once.
 // NOT IN ANY KEY, each for its reason: the viewport, the step q and the
 // plate's width (no bar reads them; they choose b and the range alone); the
 // working column (fixed for the audio's life; it only chooses b); the fade
-// key (the kept entries are unmixed, the mix redone from the live weight);
+// key (it chooses which rungs are asked, never a bar's entry);
 // the inks (the publication's, never the producer's); THE AUDIO AND ITS GAIN
 // CURVE — the store is a member of the cache (WaveformCache::kept_bars),
 // which lives and dies with one project set's one GuiAudio (run_project,
@@ -4250,8 +4206,8 @@ struct WaveformBandColumns {
 // letter, so nothing is shared with the worker — not even under
 // wait_until_idle's timeout arm, where a worker still running holds a job
 // that names no store.
-// Memory: THE LIVE ENTRIES are four rows' — a parents row at most W + 6
-// entries and a halves row at most 2 · (W + 6), W the plate's device width,
+// Memory: THE LIVE ENTRIES are four rows' — a main row at most W + 6
+// entries and a fine row at most 2 · (W + 6), W the plate's device width,
 // 16 bytes each — so at most 6 · (W + 6) entries in all: at the tablet's
 // 2256 px 13 572 entries, about 217 KB, and the scratch's live entries at
 // most one row's, 4 524 (about 72 KB). The allocation is not bounded by
@@ -4328,16 +4284,20 @@ bool render_waveform_columns(GuiRect area,
 // the one producer (render_waveform_to_plate_columns) from the same job
 // inputs as the columns, so they swap and publish with them and a plate is
 // always drawn by the transform of the viewport it was rendered for.
-// THE WEIGHT TELLS WHICH ROW IT IS (architect 2026-11-14, send H; THE FADE
-// BAND, waveform_fade_band above): `bar_weight` == 1 is A UNIFORM ROW, the
-// rung's own bars as the sentence above has them; `bar_weight` < 1 is THE
-// FADE BAND'S ROW — the fine rung's bars with their tips mixed toward their
-// parents', an even count, the first a left half, `first_bar` and
-// `bar_frames` the fine rung's, `bar_pitch` the fine bars' pitch, and
-// `bar_x0` THE FIRST STORED PAIR'S PARENT CENTRE (one field, its meaning the
-// weight's: the first bar's own centre stands half a pitch left of it once
-// the pair has parted whole), the weight the float the draw takes
-// (WaveformFadeBand::wf, never 1 in the band).
+// THE WEIGHT TELLS WHETHER THE PLATE STANDS IN THE FADE BAND (architect
+// 2026-11-14, send H; THE FADE BAND, waveform_fade_band above): `first_bar`,
+// `bar_frames`, `bar_x0` and `bar_pitch` are ALWAYS THE MAIN RUNG'S, as the
+// sentence above has them; `bar_weight` == 1 is A UNIFORM PLATE, each band
+// its main row alone; `bar_weight` < 1 is THE FADE BAND (architect
+// 2026-11-15, send O, the two-picture blend), the weight the float the
+// draw takes (WaveformFadeBand::wf, never 1 in the band), and each band
+// holds beside its main row `fine`, THE FINE RUNG'S OWN UNIFORM ROW as the
+// producer gave it: the global bars fine_first_bar .. fine_first_bar + n_f
+// − 1, n_f its `cols.size()`, each half `bar_frames` wide, texel j's centre
+// at fine_x0 + j · fine_pitch device px from the plate's left edge — rung
+// b's own geometry (waveform_bar_geometry at b), fine_pitch == bar_pitch /
+// 2 to the bit — and the band `stored` only where both its rows came back
+// whole. Out of the band the fine members are read by nobody.
 // THE PLATE'S OWN REVISION (2026-10-14): `revision` names the live slot's
 // bounds — a process-wide counter the GUI thread stamps at every PUBLICATION
 // of a plate (next_plate_revision, waveform_cache.cpp: the worker's
@@ -4360,9 +4320,13 @@ struct GuiPlateColumns {
     double    bar_x0     = 0.0;
     double    bar_pitch  = 0.0;
     float     bar_weight = 1.0f;
+    long long fine_first_bar = 0;
+    double    fine_x0        = 0.0;
+    double    fine_pitch     = 0.0;
     struct Band {
         bool                stored = false;
         WaveformBandColumns columns;
+        WaveformBandColumns fine;
     };
     Band band[2];
 };

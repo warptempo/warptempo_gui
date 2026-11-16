@@ -136,8 +136,9 @@ private:
     // THE BOUNDS TEXTURE'S KEY (2026-10-14, upload_list's rule): whether its
     // texels are an upload's at all (false while it holds the seed, after
     // forget()), and the plate revision and the plate records' spans —
-    // each record's offset into the list's columns and its bar count, in
-    // list order — that upload packed.
+    // each row's offset into the list's columns and its bar count, in
+    // list order, a fade-band record's two rows two spans — that upload
+    // packed.
     unsigned int list_program_        = 0;
     int          list_size_uniform_   = -1;
     int          list_height_uniform_ = -1;
