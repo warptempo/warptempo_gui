@@ -349,7 +349,8 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 
 // drag_playhead_to: THE MOVEMENT OWNER'S ACT AT A DRAG'S CADENCE — THE RULER
 // HEAD'S DRAG (architect 2026-11-16, the beats: a motion's frame repaints
-// what it moved and nothing else, so it is a light frame). ONE CALLER, the
+// what it moved and nothing else, so it is a small frame, less of the
+// surface redrawn, less GPU). ONE CALLER, the
 // head drag's step (GuiInputHandler::place_playhead_at_click_column under
 // its `head_drag`; ScrollDragState::head_drag, app_state.h): every motion of
 // that drag is the placement act, and through move_playhead_to above each

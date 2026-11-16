@@ -90,16 +90,16 @@ inline constexpr const char* kPlaybackDeviceUnavailableCard =
 // kDisplayKeepAliveWindowMs PAST THAT STOP, each such Stop re-arming it;
 // calm use never arms it, and the first tap after a rest stays uncovered,
 // accepted ("cover a little more than I can physically do ... comfortable
-// hitting it as hard and fast as I want"). IT STANDS WITH THE BEATS
-// (architect 2026-11-16, reversing its retirement of 2026-11-15 under the
-// single 30-frames cadence, where a late first frame was masked: "the whole
-// point would be that the scanner would be the one thing that gets the
-// special treatment. And the keep alives are about the scanner, in
-// particular the AB audition and the frantic play press"): the scanner
-// takes the panel's own rate, so its first beat after a rest is seen again.
-// THE FRAMES IT PRESENTS ARE LIGHT FRAMES by the beats' table (kBeatLight,
-// platform_android.cpp): the clock cell alone, one per
-// GuiPlatform::kDisplayKeepAliveMs inside the window. TWO CONSTEXPRS, NO
+// hitting it as hard and fast as I want"). IT STANDS (architect
+// 2026-11-16, reversing its retirement of 2026-11-15 under the single
+// 30-frames cadence, where a late first frame was masked: "the whole point
+// would be that the scanner would be the one thing that gets the special
+// treatment. And the keep alives are about the scanner, in particular the AB
+// audition and the frantic play press"): the panel kept awake at its pinned
+// rate, the scanner's first frames after the Stop land on the beat
+// (kFrameBeat, platform_android.cpp), not on the idle 30 Hz panel's late
+// first refresh. THE FRAMES IT PRESENTS are the clock cell alone, small
+// frames, one per GuiPlatform::kDisplayKeepAliveMs inside the window. TWO CONSTEXPRS, NO
 // DEVICE KEY ("I'm not going to be able to test this reliably": he
 // recompiles with either raised). The arming is GuiPlaybackLifecycle's (the
 // stamp at the user's launch entries, the window at the one stop body's

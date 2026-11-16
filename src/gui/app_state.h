@@ -12904,7 +12904,7 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 // full-area sites; the narrow callers again 2026-11-16, Viewport::
 // invalidate_scanner_line's and invalidate_playhead_columns'):
 //  - NARROW ON PLATE, reserved for the sites that run at a frame's or a
-//    motion's cadence, where a full repaint makes every frame a heavy one,
+//    motion's cadence, where a full repaint makes every frame a whole one,
 //    and that can reach a GuiPaintHandler to compute plate places. FOUR
 //    SITES (re-derived by grep 2026-11-16 over the two narrow entries'
 //    callers): the two per-frame SCANNER sites in main.cpp — the tick

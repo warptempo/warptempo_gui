@@ -448,10 +448,10 @@ constexpr const char* kCanvasFragmentShader =
 //   more, floor((NO − 1) / (4p)) or one over it — then the dilations of the
 //   family or families that reach. No erosion. At GROW 4 (NO 12): 3, 7 and
 //   19 places, NU 5.
-//   Whether a plate frame holds its beat — three refreshes of the pinned
-//   90 Hz panel, 33.3 ms (kBeatHeavyLit / kBeatHeavyDark,
-//   platform_android.cpp) — on the tablet is
-//   measured there (SurfaceFlinger's timestats), not argued here. The
+//   Whether a plate frame holds the beat — two refreshes of the pinned
+//   90 Hz panel, 22.2 ms (kFrameBeat, platform_android.cpp, its
+//   measurement of 2026-11-16 there) — on the tablet is measured there
+//   (SurfaceFlinger's timestats), not argued here. The
 //   window and the level-indexed dilation schemes are modeled bit for bit
 //   in Python against the brief's forward model
 //   (tmp/grow/make_grow_mag.py's mask / morph / down at SS = 4) at every
@@ -530,9 +530,10 @@ constexpr const char* kCanvasFragmentShader =
 //     pixel each picture's walk and dilations; the solid interior and the
 //     empty rows end at the fast paths in both pictures. Where the key is at
 //     1 the blend arm draws every zoom between two whole levels, the uniform
-//     arm the landings alone. Whether the band's frames hold a plate
-//     frame's 33.3 ms (the beats, kBeatHeavyLit, platform_android.cpp) on
-//     the tablet is measured there.
+//     arm the landings alone. Whether the band's frames hold the beat's
+//     22.2 ms (kFrameBeat, platform_android.cpp) on the tablet is measured
+//     there: on 2026-11-16, flat 45, a lit pan between levels GPU p50 / max
+//     20 / 21 ms, a pan's step 22 ms with one or two of 33 ms per 12 s.
 //   * WHAT IS PROMISED (architect 2026-11-15, send O: the per-pixel divide
 //     back with the blend's shader work, "I agree to both your points
 //     there"). NOTHING OF THE TRUTH IS SPENT IN THIS SHADER: every
@@ -1560,8 +1561,8 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // rounded one or two levels the other way on those pixels (measured on the
 // tablet 2026-11-15, about 1.4 % of the canvas). The cost is the re-render: a
 // change over the whole canvas is drawn whole into each window buffer in turn
-// (three, the age steady at 3), each a heavy frame with its beat's 33.3 ms
-// (the beats, kBeatHeavyLit / kBeatHeavyDark, platform_android.cpp).
+// (three, the age steady at 3), each a whole frame with the beat's 22.2 ms
+// (kFrameBeat, platform_android.cpp).
 // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
 // 2026-10-24): an empty clip — no list yet, or a paint area the folder
 // overlay emptied — leaves nothing out of any upload and draws no list.

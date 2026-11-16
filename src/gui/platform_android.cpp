@@ -254,13 +254,13 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
 // this frame's change united with the changes of the frames since the
 // acquired buffer was drawn, and what recurs frame after frame recurs
 // beside itself — the scanner's line a few columns on over the same rows,
-// the clock cell on itself — so coalesced by containment alone a light
+// the clock cell on itself — so coalesced by containment alone a scanner
 // frame's region would be several rects for one thing, each a scissored
 // clear, one instanced draw of every instance of the canvas list and the
 // texture's triangle. Merged, neighbors are one rect at no more than a
 // quarter over the pixels they held apart, and two rects far apart (the
 // scanner's line and the clock cell; a lamp and a key) never merge, so a
-// light frame's repair stays its own few pixels. The quarter is the trade's
+// small frame's repair stays its own few pixels. The quarter is the trade's
 // one number:
 // a draw call's fixed cost against redrawn canvas pixels, which on a lit
 // plate are the frame's cost.
@@ -434,94 +434,60 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
 // ---------------------------------------------------------------------------
 
 // THE PANEL'S RATE, ONE NUMBER WITH TWO READERS: adopt_window's setFrameRate
-// vote (the pin and its ruling are there) and THE BEATS below, whose unit
-// T is this rate's period. (The present coalescer's least spacing read it
+// vote (the pin and its ruling are there) and THE BEAT below, whose unit T
+// is this rate's period. (The present coalescer's least spacing read it
 // for one commit and went with the coalescer, 2026-10-14; the paint's gate
 // is the vsync callback, pump's tail.) detect_refresh_rate_ms's 5-ms tick
 // is a choice made against this rate and says so there; it reads no number.
 constexpr int     kPanelRefreshHz = 90;
 constexpr int64_t kPanelPeriodNs  = 1'000'000'000LL / kPanelRefreshHz;
 
-// THE BEATS (architect 2026-11-16: "I would say let's move to 90 Hz, and
-// let's also create a second category"): THE SPACING AFTER A FRAME IS THAT
-// FRAME'S OWN BEAT. A frame's beat n is a whole number of refreshes of the
-// pinned panel, T = kPanelPeriodNs each, decided from what the frame COSTS
-// (the table below, GuiPlatform::present its one seat) and kept when the
-// frame reaches the window (last_frame_beat_); the vsync callback
-// (AndroidCallbacks::vsync) counts a vsync as due only when its frame time
-// is at least n · T less kAppFrameToleranceNs past the frame time of the
-// vsync that last PAINTED (last_painted_vsync_ns_, pump's tail its one
-// writer), n the beat of the frame last presented. A vsync not due leaves
-// the damage standing, and pump's tail re-posts the callback as for any
-// damage, so the frame lands on the next due vsync — no damage is dropped
-// and nothing spins (one callback per vsync). With no frame painted yet, or
-// after a rest longer than the last beat, the first vsync is due at once.
-// NOTHING IS CLASSED AHEAD OF ITS PAINT: the beat is read off the frame's
-// own repair region once it is formed, so the pre-paint hook never runs
-// without its paint and no subject is listed anywhere.
+// THE BEAT, ONE NUMBER FOR EVERY FRAME (architect 2026-11-16, flat 45: "we
+// don't need anything to be at 90. If the scanner is going to be at 45,
+// everything else can be also pinned at 45"; the one constant his "Good, I
+// agree."): EVERY FRAME, WHATEVER IT DRAWS, IS FOLLOWED BY ONE BEAT —
+// kFrameBeat refreshes of the pinned panel, T = kPanelPeriodNs each: two on
+// the 90 Hz pin, 22.2 ms, 45 a second — the scanner, a drag under the pen, a
+// pan, a pinch, FOLLOW's scroll, a landing, a lamp and the clock alike. 45
+// IS NO PANEL MODE: the panel stays pinned at 90 (adopt_window's vote) and
+// this gate makes the 45. The vsync callback (AndroidCallbacks::
+// vsync_arrived) counts a vsync as due only when its frame time is at least
+// kFrameBeat · T less kAppFrameToleranceNs past the frame time of the vsync
+// that last PAINTED (last_painted_vsync_ns_, pump's tail its one writer). A
+// vsync not due leaves the damage standing, and pump's tail re-posts the
+// callback as for any damage, so the frame lands on the next due vsync — no
+// damage is dropped and nothing spins (one callback per vsync). With no
+// frame painted yet, or after a rest longer than a beat, the first vsync is
+// due at once.
 //
-// WHY (his words, 2026-11-16): the single cadence of 2026-11-15, every
-// frame at 30 on a 60 Hz panel, was "really not intended to save battery
-// life. It's really intended as a backstop for the huge resource draw of
-// Magnify Zoom, in particular, and Pen, to a lesser extent ... panning at
-// coarse zoom also" — and at 30 the scanner over a still picture showed
-// "this sort of loose rubber band effect ... It whips back and forth, it
-// flails. It's quite distracting." So the backstop stays on the frames that
-// need it and every light frame takes the panel's own rate.
+// WHY (his words, 2026-11-16, on his glass with every frame two refreshes
+// apart): "I don't see any drops ... it feels fine because it feels even,
+// the drops. It doesn't feel like at 90 where it's mostly smooth and then
+// occasionally it'll lag really bad." — the even step over 90 with an
+// occasional 30. And the 30 a second kept on 2026-11-15 as a backstop for
+// the plate's cost is not needed: the costliest frame measured below fits
+// two refreshes.
 //
-// THE TABLE, BY WHAT THE FRAME COSTS, NEVER BY SUBJECT:
-//   THE AREA is what the GPU redraws: the whole surface for a whole draw,
-//     else the sum of the repair rects' areas as formed (after the merge
-//     and the cap, merge_repair_rect; an overlap counted twice, as the GPU
-//     pays it). THE REPAIR REGION, NOT THE FRAME'S OWN CHANGE: it holds the
-//     changes of the frames the acquired buffer missed too.
-//   LIGHT — area <= surface / kLightFrameAreaDivisor: kBeatLight, every
-//     refresh (90 a second); while a pen or a finger is on the glass
-//     (GuiInputCore::touch_contact_active, any contact down)
-//     kBeatLightUnderPointer, 1 AS BUILT. THE 45 FALLBACK IS THAT ONE
-//     CONSTANT: 2 puts every drag's light frames on every second refresh
-//     (architect 2026-11-16: "at 45 they should work").
-//   HEAVY, a lit plate in the frame's list (GuiCanvasDrawList::plate_lit,
-//     MAGNIFY's picture, drawn): kBeatHeavyLit, every third refresh (30 a
-//     second, 33.3 ms). MEASURED on the tablet 2026-11-15, the panel then
-//     pinned at 60 Hz and every frame at 30: a lit whole plate between two
-//     levels GPU p50 19 ms, max 21; a lit landing 10-12, max 15-16 — a
-//     landing's worst does not fit two refreshes (22.2 ms) with the loop's
-//     few ms beside it.
-//   HEAVY, no lit plate (MAGNIFY dark, or no plate drawn: a chrome-only
-//     frame over the area is heavy too, cairo's cost under the same
-//     number): kBeatHeavyDark, 3 AS BUILT. NO DARK NUMBER EXISTS YET — the
-//     measurement above timed the lit plate alone — and his ruling accepts
-//     dark faster than lit ("I would accept that split. That the magnified
-//     lamp is expensive, and so it should be reflected in having poorer
-//     performance when it's lit."), so this entry is the one constant to
-//     change once the tablet times the dark plate.
-//   THE DIVISOR, 8 (about 415 000 px of the tablet's 2304 x 1440): at the
-//     worst measured rate, the lit plate between levels' 19 ms over the
-//     canvas's ~2.45 M px, ~8 ns a px, a light frame is at most ~3.3 ms of
-//     GPU beside the loop's few ms, inside one refresh (11.1 ms). A scanner
-//     frame's repair is a few tens of thousands of px
-//     (scanner_invalidate_rect, main.cpp), and the eighth leaves a small
-//     change beside it room across the three buffers' repair, where a
-//     sixteenth (about 207 000 px) would crowd it. The tablet's light-frame
-//     GPU time confirms or moves it.
-// WHAT FOLLOWS FROM THE TABLE: a heavy frame is followed by 33.3 ms of
-// quiet; THE TWO FRAMES AFTER IT ARE HEAVY BY THEIR REPAIR REGIONS (the
-// buffer's age is 3 steady, so each of the next two buffers still owes the
-// heavy frame's change: the history is the hysteresis) and the third frame
-// after a pan ends is light again; the first heavy frame of a gesture
-// starts one refresh after a light frame; an all-heavy sequence is exactly
-// the 30 a second of 2026-11-15.
+// MEASURED on the tablet 2026-11-16, flat 45 (12 s a state, Motion
+// smoothness Adaptive, the panel pinned at 90): a play at fine and at coarse
+// zoom, and a FOLLOW play with MAGNIFY dark and lit, 45.5 fps, every step
+// 21-22 ms, none late (FOLLOW's GPU p50 / max 10 / 12 ms dark, 11 / 14 lit);
+// a pan at a landing 43.7 / 43.5 fps (dark / lit) and between levels
+// 43.6 / 43.7, 22 ms steps with one or two of 33 ms per 12 s (GPU p50 / max
+// 11 / 14 dark and 11 / 13 lit at the landing, 15 / 16 and 20 / 21 between
+// levels); an oscillating pinch 41.0 / 41.1 fps, 22 ms steps with about
+// twenty of 33 ms per 12 s, dark and lit alike — the dark pinch's GPU at
+// 15 ms, so those misses are the loop's side of a pinch frame, not the
+// GPU's (unexplored; he zooms with the pen's barrel and does not feel them).
 //
 // A FRAME PAINTED OUTSIDE THE GATE (the open's hold's one frame,
 // present_held_frame — the load's drain presents nothing under the hold)
-// records its beat like any other and stamps no vsync, so the gate
-// still measures from the last GATED frame's vsync (none at a cold launch),
-// which the load that follows the hold's frame leaves far more than a beat
-// behind: the first vsync after is due at once. A paint that presents
-// nothing (the hold, no window, a failed swap) records neither, so the
-// vsync after it is due at once — the stamp it is measured from is a whole
-// beat old already.
+// records no vsync, so the gate still measures from the last GATED frame's
+// vsync (none at a cold launch), which the load that follows the hold's
+// frame leaves far more than a beat behind: the first vsync after is due at
+// once. A paint that presents nothing (the hold, no window, a failed swap)
+// records none either, so the vsync after it is due at once — the vsync it
+// is measured from is a whole beat old already.
 //
 // THE PANEL IDLES AT REST: SurfaceFlinger drops it to 30 Hz once no layer
 // has presented for 250 ms (measured 2026-11-13 under the 90 Hz pin, 90 ->
@@ -531,46 +497,28 @@ constexpr int64_t kPanelPeriodNs  = 1'000'000'000LL / kPanelRefreshHz;
 // (architect 2026-11-16, the owner kDisplayKeepAliveFastStopMs,
 // playback_lifecycle.h): the brief window after a fast Stop, one clock-cell
 // frame per GuiPlatform::kDisplayKeepAliveMs, and the A/B audition's rests,
-// the clock cell at every tick (main.cpp's tick) — LIGHT frames both by the
-// table above. Everywhere else at rest nothing presents and the late first
+// the clock cell at every tick (main.cpp's tick) — frames on the beat like
+// any other. Everywhere else at rest nothing presents and the late first
 // frame is accepted.
 //
-// THE TOLERANCE, 4 ms, ONE NUMBER FOR EVERY BEAT AND EVERY PANEL RATE: the
-// threshold n · T − 4 ms (T the PINNED rate's period, 11.11 ms, whatever
-// the panel really runs at) must fall strictly between the vsync that is
-// too early and the one that is due.
-//   ON 90 Hz (the pin; vsyncs 11.11 ms apart): n = 1, 7.11 ms, under the
-//     first vsync (11.11) by 4: every one, 90. n = 2, 18.22, between the
-//     first (11.11) and the second (22.22): every second, 45. n = 3, 29.33,
-//     between the second (22.22) and the third (33.33): every third, 30 —
-//     every threshold 4 ms under the vsync it takes, and 7.11 past the one
-//     it refuses.
+// THE TOLERANCE, 4 ms, ONE NUMBER FOR EVERY PANEL RATE: the threshold
+// kFrameBeat · T − 4 ms = 18.22 ms (T the PINNED rate's period, 11.11 ms,
+// whatever the panel really runs at) must fall strictly between the vsync
+// that is too early and the one that is due.
+//   ON 90 Hz (the pin; vsyncs 11.11 ms apart): 7.11 past the first vsync
+//     (11.11) and 4 under the second (22.22): every second, 45.
 //   ON 60 Hz (the tablet's Motion smoothness at Standard, or the vote
-//     refused; 16.67 apart): n = 1, 7.11: every one, 60. n = 2, 18.22, past
-//     the first (16.67) by 1.55 ms — the narrowest margin at this panel's
-//     rates — so the second (33.33): 30. n = 3, 29.33, 12.7 past the first
-//     and 4 under the second: 30. Every heavy frame at the cadence of
-//     2026-11-15.
-//   ON 30 Hz (the idle panel; 33.33 apart): every beat's threshold is
-//     under the first vsync: every one.
-//   ON 120 Hz (not this panel; 8.33 apart): n = 1, 7.11, under the first by
-//     1.22: every one. n = 2, 18.22, past the second (16.67) by 1.55: every
-//     third (25.0). n = 3, 29.33, past the third (25.0) by 4.33 and 4 under
-//     the fourth (33.33): every fourth.
+//     refused; 16.67 apart): 1.55 ms past the first (16.67) — the narrowest
+//     margin — so the second (33.33): 30.
+//   ON 30 Hz (the idle panel; 33.33 apart): under the first vsync: every
+//     one.
+//   ON 120 Hz (not this panel; 8.33 apart): 1.55 past the second (16.67)
+//     and 6.78 under the third (25.0): every third.
 // A frame time is the vsync's own timestamp (CLOCK_MONOTONIC), its jitter
-// well under a millisecond, so no margin above is within its reach: a beat
-// never takes a vsync early and never skips the one it is due on. MEASURED
-// on the tablet with the single cadence (2026-11-15, the panel pinned at
-// 60 Hz, the threshold then the same 29.33 ms): a swipe, pinches and a
-// FOLLOW play presented exactly every second vsync (33.3 ms); during FOLLOW
-// play the loop thread's CPU fell ~31 % (2.66 -> 1.84 s per 6 s) and the
-// presents halved (361 -> 181) against a frame at every 60 Hz refresh.
-constexpr int     kBeatLight             = 1;
-constexpr int     kBeatLightUnderPointer = 1;
-constexpr int     kBeatHeavyLit          = 3;
-constexpr int     kBeatHeavyDark         = 3;
-constexpr int     kLightFrameAreaDivisor = 8;
-constexpr int64_t kAppFrameToleranceNs   = 4'000'000LL;
+// well under a millisecond, so no margin above is within its reach: the
+// beat never takes a vsync early and never skips the one it is due on.
+constexpr int     kFrameBeat           = 2;
+constexpr int64_t kAppFrameToleranceNs = 4'000'000LL;
 
 // THE FRAME TIMELINE'S ENTRY POINTS, RESOLVED BY NAME (architect 2026-11-16,
 // the beats' presentation times; the stamp's rule at presentation_stamp_ns
@@ -637,40 +585,39 @@ int64_t monotonic_now_ns() {
 
 // THE PRESENTATION TIME OF A FRAME THE GATE INVITED (architect 2026-11-16,
 // the beats; eglPresentationTimeANDROID's argument, GuiPlatform::present its
-// one caller): EVERY FRAME IS TOLD WHEN TO SHOW, SO ITS STEP ON THE GLASS IS
-// ITS BEAT. WHY: without a time a frame shows at the first refresh after it
-// is finished, so on the 90 Hz panel a lit frame between two levels (GPU
-// p50 19 ms, max 21, with the loop's few ms beside it; the beats' table)
-// sits ON the second refresh, 22.2 ms, and would show at the second or the
-// third by chance, a landing frame (10-12 ms) at the second — steps of 22,
-// 33 and 44 ms inside one pan.
+// one caller): EVERY INVITED FRAME IS TOLD WHEN TO SHOW, SO ITS STEP ON THE
+// GLASS IS THE BEAT. WHY: without a time a frame shows at the first refresh
+// after it is finished, so of two frames invited one beat apart, one that
+// finishes inside a refresh would show a period early and a costly one on
+// time — uneven steps on the glass; stamped, each step is exactly the beat
+// (kFrameBeat).
 // THE TERMS, each of the vsync callback that made the frame due (never
 // another's — the reader's rule, present), every one a whole number of
 // CLOCK_MONOTONIC nanoseconds:
 //   E  the PREFERRED frame timeline's expected presentation time: when a
 //      frame begun at that vsync and finished inside the system's deadline
-//      shows. A light frame shows there, the system's own time.
+//      shows, the system's own time.
 //   P  the real refresh period, the spacing of two neighboring timelines'
 //      expected presentation times, BOTH OF THE SAME CALLBACK. A callback
 //      whose data holds one timeline carries no period of its own, and none
 //      is assumed for it: the pinned rate's T is the panel's period only
 //      while the panel is at that rate, and a stamp built on it elsewhere
-//      names a wrong refresh or sits exactly on one (a 60 Hz panel, beat
-//      3: E + 2 · 11.11 − 5.56 = E + 16.67 ms, on the next refresh itself,
-//      jitter choosing between one period and two) — so that callback
-//      carries NO TIMELINE (AndroidCallbacks::vsync_timeline) and its frame
-//      is stamped now, like any frame without one.
+//      names a wrong refresh (the idle 30 Hz panel: E + 11.11 − 5.56 =
+//      E + 5.56 ms, which holds the frame to E + 33.33, a whole period
+//      late) — so that callback carries NO TIMELINE (AndroidCallbacks::
+//      vsync_timeline) and its frame is stamped now, like any frame without
+//      one.
 //   k  the whole number of real periods until the next frame may begin,
-//      ceil((n · T − kAppFrameToleranceNs) / P) and at least 1, n the
-//      frame's beat: the gate's own threshold (AndroidCallbacks::vsync)
-//      counted in the panel's real periods — on the 90 Hz panel k = n; on a
-//      60 Hz panel n = 3 gives k = 2, the second refresh, where that gate
-//      takes it.
-//   THE FRAME SHOWS AT E + (k − 1) · P: a light frame at E; a heavy frame
-//      at the last refresh before the next frame's own E (the next frame
-//      begins k periods on, so its E is E + k · P) — consecutive frames
-//      show exactly the later one's beat apart, whatever each cost inside
-//      its budget.
+//      ceil((kFrameBeat · T − kAppFrameToleranceNs) / P) and at least 1: the
+//      gate's own threshold (AndroidCallbacks::vsync_arrived) counted in the
+//      panel's real periods — on the 90 Hz panel k = 2 (the frame shows at
+//      E + P, the stamp E + P / 2); on a 60 Hz panel k = 2 too (18.22 / 16.67
+//      rounds up to 2: E + P, that gate taking every second vsync there);
+//      on the idle 30 Hz panel k = 1 (at E).
+//   THE FRAME SHOWS AT E + (k − 1) · P, the last refresh before the next
+//      frame's own E (the next frame begins k periods on, so its E is
+//      E + k · P) — consecutive frames show exactly the beat apart, whatever
+//      each cost inside its budget.
 //   THE STAMP IS THAT TIME LESS P / 2: SurfaceFlinger shows a stamped
 //      buffer at its first refresh whose expected time is at or after the
 //      stamp; half a period under the wanted refresh, no drift between T
@@ -679,42 +626,19 @@ int64_t monotonic_now_ns() {
 // A STAMP ALREADY PAST HOLDS NOTHING (a frame that overran, a callback
 // served late): the buffer shows at the first refresh after it is queued,
 // as an unstamped one does.
-// WHICH INVITED FRAMES TAKE IT, kStampFromBeat, ONE NUMBER (present's
-// `invited` test its one reader): an invited frame whose beat is AT LEAST
-// this takes its beat's stamp; a lighter invited frame is stamped NOW, at
-// once, exactly as a frame outside the gate is. 1 AS BUILT: every invited
-// frame is told when to show. 2: the frames of beat 2 and more — as the
-// table stands the heavy frames alone, every light frame showing as soon as
-// it is finished. Past the table's largest beat: no frame takes a stamp.
-// WHAT 2 COSTS (a host model of the gate and the latch): a light frame
-// after a heavy one is due at once while the heavy frame before it still
-// waits for its stamp, so where E lies a period and a half or more past
-// the frame time beyond SurfaceFlinger's lead the two are due at one latch
-// and THE HEAVY FRAME IS PASSED OVER, never shown, and the stamps are not
-// monotone at that change. 2 is never more even than 1; its one gain is a
-// light frame showing sooner when E is far out.
-// WHAT THE RULE RESTS ON, AND WHAT THE TABLET MEASURES: with v the vsync's
-// frame time and A = E − v, a stamped frame cannot be latched before about
-// E + (k − 1) · P less SurfaceFlinger's own lead, while the gate invites
-// the next frame at v + k · P; so one finished frame waits in the queue
-// while the next is drawn whenever A less that lead exceeds a period — the
-// steady state the system's own timeline describes (a frame begun at v and
-// shown at E), costing nothing with three buffers unless it exceeds two
-// periods; past two, the same model has each light frame's buffer dequeue
-// blocked a few ms. The tablet's buffer age through a play and through a
-// pan's end, the swap's duration and one reading of A decide between 1 and
-// 2 here.
-// KNOWN AND LEFT: the scanner's place is sampled before the frame's beat is
-// known (the pre-paint hook runs ahead of present), and a heavy frame shows
-// k − 1 periods later than a light one would; so at the first heavy frame
-// after light ones (a pan begun during a play) the line shows 22 ms late
-// once, and catches up at the first light frame after. Inside a heavy run
-// and inside a light run every step is even. Not compensated: the line
-// leads the sound by his ruling, and no lead is added or taken here.
-constexpr int kStampFromBeat = 1;
-int64_t presentation_stamp_ns(int beat, int64_t expected_ns,
-                              int64_t period_ns) {
-    const int64_t threshold = beat * kPanelPeriodNs - kAppFrameToleranceNs;
+// WHICH FRAMES TAKE IT: every invited frame whose callback carried a
+// timeline; every other frame is stamped now (present's rule).
+// WHAT THE RULE RESTS ON: with v the vsync's frame time and A = E − v, a
+// stamped frame cannot be latched before about E + (k − 1) · P less
+// SurfaceFlinger's own lead, while the gate invites the next frame at
+// v + k · P; so one finished frame waits in the queue while the next is
+// drawn whenever A less that lead exceeds a period — the steady state the
+// system's own timeline describes (a frame begun at v and shown at E),
+// costing nothing while three buffers leave one free for the frame being
+// drawn.
+int64_t presentation_stamp_ns(int64_t expected_ns, int64_t period_ns) {
+    const int64_t threshold =
+        kFrameBeat * kPanelPeriodNs - kAppFrameToleranceNs;
     const int64_t k =
         std::max<int64_t>(1, (threshold + period_ns - 1) / period_ns);
     return expected_ns + (k - 1) * period_ns - period_ns / 2;
@@ -779,12 +703,12 @@ struct AndroidCallbacks {
     // drain_looper's ALooper_pollOnce, and its whole body is the two bits:
     // the post is spent (vsync_pending_) and a frame is due (vsync_due_) —
     // the paint itself waits for the pass's tail, so the frame carries
-    // every event the same drain delivers. THE BEATS (architect 2026-11-16;
-    // the rule and the table at kBeatLight): the frame is due only when
-    // this frame time is the LAST PRESENTED FRAME'S OWN BEAT —
-    // last_frame_beat_ periods of the pinned panel — less the tolerance,
-    // past the last painted vsync's (none yet: due at once); a due vsync's
-    // frame time is kept for the tail to record if it paints, AND ITS
+    // every event the same drain delivers. THE BEAT (architect 2026-11-16,
+    // flat 45; the rule at kFrameBeat): the frame is due only when this
+    // frame time is ONE BEAT — kFrameBeat periods of the pinned panel —
+    // less the tolerance past the last painted vsync's (none yet: due at
+    // once); a due vsync's frame time is kept for the tail to record if it
+    // paints, AND ITS
     // TIMELINE WITH IT (architect 2026-11-16, the presentation times): E
     // and P of this one callback and whether it carried them, for the
     // present of the frame this vsync invites and no other
@@ -797,8 +721,7 @@ struct AndroidCallbacks {
         self->vsync_pending_ = false;
         if (self->last_painted_vsync_ns_ == 0 ||
             frame_time_ns - self->last_painted_vsync_ns_ >=
-                self->last_frame_beat_ * kPanelPeriodNs -
-                    kAppFrameToleranceNs) {
+                kFrameBeat * kPanelPeriodNs - kAppFrameToleranceNs) {
             self->vsync_due_             = true;
             self->due_vsync_frame_ns_    = frame_time_ns;
             self->due_vsync_timeline_    = timeline;
@@ -1258,20 +1181,17 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // head). A re-adoption of the same window keeps its surface.
     ensure_gl_surface();
 
-    // PIN THE PANEL TO 90 Hz (architect 2026-11-16: "I would say let's move
-    // to 90 Hz, and let's also create a second category"; kPanelRefreshHz,
-    // the number's owner, this vote and the beats its readers). THE PIN OF
-    // 2026-08-27, given up 2026-11-14 for 60 Hz, IS BACK: it was left
-    // because a plate frame under the whole-doubling fade does not fit
-    // 90 Hz's 11.1 ms (the plate shader's blend arm, two uniform pictures a
-    // pixel, on every frame that is not a landing), and THE BEATS answer
-    // that — a plate frame keeps three refreshes, 33.3 ms, and every light
-    // frame (the scanner's, a lamp's, the clock's) takes the panel's own
-    // rate (the table at kBeatLight). One device, one rate — and the
+    // PIN THE PANEL TO 90 Hz (architect 2026-11-16, kept by flat 45 the same
+    // day; kPanelRefreshHz, the number's owner, this vote and the beat its
+    // readers). ONE DEVICE, ONE RATE, AND THE VOTE IS THE UNIT OF THE GATE:
+    // every frame is followed by one beat of two refreshes of this panel,
+    // 45 a second (kFrameBeat, the rule and its measurement), and the
+    // plate's costliest measured frame fits two refreshes, 22.2 ms. The
     // vsync callback that gates the paint (pump's tail, since 2026-10-14)
-    // arrives at the panel's rate, so the pin is also the unit of the
-    // paint's cadence: the Tab S10 FE's panel is variable-refresh and the
-    // system otherwise picks a rate from what it sees the app doing, which
+    // arrives at the panel's rate, so the pin is the unit of the paint's
+    // cadence — 45 is no panel mode, the gate makes it on this one: the
+    // Tab S10 FE's panel is variable-refresh and the system otherwise
+    // picks a rate from what it sees the app doing, which
     // for a program that paints only on damage reads as "hardly ever" (it
     // landed on 60 unpinned, 2026-08-27): within the system's range the vote
     // makes the rate this decision rather than the system's guess. The
@@ -1279,9 +1199,9 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // rate. THE SYSTEM'S RANGE IS THE TABLET'S SETTING: the vote is honored
     // only inside it, so the 90 Hz panel ALSO RESTS ON Motion smoothness
     // ADAPTIVE (range 30..90; Standard, `refresh_rate_mode 0`, tops at 60
-    // and the panel then runs at 60 whatever this vote — the beats' proof
-    // covers that panel, a light frame at 60 and every heavy frame at 30;
-    // the runbook, docs/INSTALL.md). UNDER A TOUCH THE VOTE DOES NOT DECIDE:
+    // and the panel then runs at 60 whatever this vote — the beat's proof
+    // covers that panel, every frame at 30; the runbook, docs/INSTALL.md).
+    // UNDER A TOUCH THE VOTE DOES NOT DECIDE:
     // the system's touch boost lifts the panel to the top of the system's
     // range, which under Adaptive is the pinned rate itself. MEASURED on
     // the tablet (the planner, 2026-11-14, the vote then 60): under Adaptive
@@ -1734,7 +1654,6 @@ void GuiPlatform::shutdown() {
     due_vsync_period_ns_   = 0;
     painting_due_vsync_    = false;
     last_painted_vsync_ns_ = 0;
-    last_frame_beat_       = 1;
     unwatch_fd(worker_completion_fd_);
     unwatch_fd(waveform_worker_completion_fd_);
     unwatch_fd(history_worker_completion_fd_);
@@ -1902,11 +1821,9 @@ bool GuiPlatform::present() {
     //
     // THE SWAP WOULD BLOCK with the queue full (swap interval 1), and the
     // paint's gate keeps the queue from filling: since 2026-10-14 a gated
-    // paint runs only at a due vsync callback, at most one per display
-    // period — a light frame — and one per three for a plate frame, each
-    // frame's own beat on the pinned 90 Hz panel (THE BEATS, kBeatLight,
-    // decided below; the gate at pump's
-    // tail, where the reversal of the 2026-08-27 "one wakeup, no
+    // paint runs only at a due vsync callback, at most one per beat — two
+    // refreshes of the pinned 90 Hz panel (THE BEAT, kFrameBeat; the gate
+    // at pump's tail, where the reversal of the 2026-08-27 "one wakeup, no
     // Choreographer" ruling and its measurement are), so the unbuffered
     // pen's ~500 events a second cost drains and never an extra swap. No
     // glFinish, no glFlush beyond the swap's own, no readback.
@@ -2019,34 +1936,6 @@ bool GuiPlatform::present() {
         if (repair.size() == 1 && contains_rect(repair[0], whole_surface))
             repair.clear();
     }
-    // THIS FRAME'S BEAT (architect 2026-11-16; the rule, the table and every
-    // number at kBeatLight), decided here, where what the frame costs is
-    // known: THE AREA the GPU redraws — the surface for a whole draw (an
-    // empty repair list), else the repair rects' areas summed as formed —
-    // against the surface's share that is light; a light frame's beat by
-    // THE POINTER BIT, the input core's own "any contact down" (a pen's tip
-    // or a finger, GuiInputCore::touch_contact_active; a hovering pen is no
-    // contact); a heavy frame's by THE LIT BIT of the frame's list — a lit
-    // plate that this frame's list draws (GuiCanvasDrawList::plate_lit,
-    // stamped by the sink; a list with an empty clip or under the score
-    // viewer's page draws no record, its plate not this frame's cost).
-    // RECORDED AT THE TAIL, on a swap that succeeded and no other.
-    long long redrawn = static_cast<long long>(sw) * sh;
-    if (!repair.empty()) {
-        redrawn = 0;
-        for (const DamageRect& r : repair)
-            redrawn += static_cast<long long>(r.w) * r.h;
-    }
-    const bool light =
-        redrawn * kLightFrameAreaDivisor <= static_cast<long long>(sw) * sh;
-    const bool lit_plate =
-        canvas_frame_ && canvas_frame_->plate_lit &&
-        canvas_frame_->clip.w > 0 && canvas_frame_->clip.h > 0 &&
-        !canvas_frame_->page.stands;
-    const int beat =
-        light ? (input_.touch_contact_active() ? kBeatLightUnderPointer
-                                               : kBeatLight)
-              : (lit_plate ? kBeatHeavyLit : kBeatHeavyDark);
     // EGL's rects, bottom-left (x, y', w, h).
     const auto egl_rects = [sh](const std::vector<DamageRect>& rs) {
         std::vector<EGLint> v;
@@ -2076,28 +1965,25 @@ bool GuiPlatform::present() {
     //   * A FRAME THE GATE INVITED — this present is the paint of pump's
     //     tail for the vsync that just came due (painting_due_vsync_, the
     //     tail's bit round its one paint) AND that vsync's callback carried
-    //     a timeline (due_vsync_timeline_) — WHOSE BEAT IS AT LEAST
-    //     kStampFromBeat (the one number there: 1, every invited frame)
-    //     takes its beat's stamp from THAT callback's E and P. E AND P BELONG TO ONE CALLBACK: they are
+    //     a timeline (due_vsync_timeline_) — takes the beat's stamp from
+    //     THAT callback's E and P. E AND P BELONG TO ONE CALLBACK: they are
     //     written with the due bit and the tail consumes that bit in the
     //     pass that set it, so the pair read here is the inviting vsync's,
     //     and no other present reads them.
     //   * EVERY OTHER FRAME — the open's hold's one frame, painted outside
-    //     the gate, a gated frame whose callback carried no timeline (none
-    //     at the preferred index, or one alone: no period of its own), or an
-    //     invited frame lighter than kStampFromBeat — is stamped with NOW,
-    //     "at once": a future stamp the frame before left on the surface
-    //     never holds it.
+    //     the gate, or a gated frame whose callback carried no timeline
+    //     (none at the preferred index, or one alone: no period of its own)
+    //     — is stamped with NOW, "at once": a future stamp the frame before
+    //     left on the surface never holds it.
     // A NEW SURFACE NEEDS NOTHING RESET for the same reason: its first
     // frame sets its own stamp before its swap. A refused call leaves the
     // surface's last stamp, by then past, and the frame shows at once.
     // Nothing else of the frame moves: the damage, the age and the repair
     // above were formed without it.
     if (egl_presentation_time_ && g_frame_timeline.whole()) {
-        const bool invited = painting_due_vsync_ && due_vsync_timeline_ &&
-                             beat >= kStampFromBeat;
+        const bool invited = painting_due_vsync_ && due_vsync_timeline_;
         const int64_t stamp_ns =
-            invited ? presentation_stamp_ns(beat, due_vsync_expected_ns_,
+            invited ? presentation_stamp_ns(due_vsync_expected_ns_,
                                             due_vsync_period_ns_)
                     : monotonic_now_ns();
         reinterpret_cast<PFNEGLPRESENTATIONTIMEANDROIDPROC>(
@@ -2125,9 +2011,6 @@ bool GuiPlatform::present() {
     repair_history_.insert(repair_history_.begin(), std::move(change));
     if (repair_history_.size() > kRepairHistoryDepth)
         repair_history_.resize(kRepairHistoryDepth);
-    // THE PRESENTED FRAME'S BEAT, its one writer (the gate's reader,
-    // AndroidCallbacks::vsync): the spacing after this frame.
-    last_frame_beat_ = beat;
     // THE LAST PRESENT, the keep-alive's clock (display_keep_alive_due).
     last_present_ms_ = platform_monotonic_ms();
     return true;
@@ -2413,10 +2296,10 @@ void GuiPlatform::pump() {
     // frame; damage left after a paint (a failed present keeps its damage,
     // paint_one_frame's tail) or arriving later posts the next callback at
     // its own pass's tail, so the first damage after idle waits at most one
-    // vsync and every frame paints on a due vsync — the vsync its
-    // predecessor's beat makes due (THE BEATS, kBeatLight: a light frame
-    // the next refresh of the pinned 90 Hz panel, a plate frame the third).
-    // A vsync not due leaves its damage standing and the tail re-posts. A CALLBACK WITH NO DAMAGE TO
+    // vsync and every frame paints on a due vsync — one beat after the last
+    // painted (THE BEAT, kFrameBeat: the second refresh of the pinned 90 Hz
+    // panel). A vsync not due leaves its damage standing and the tail
+    // re-posts. A CALLBACK WITH NO DAMAGE TO
     // PAINT (none came) simply clears the bit: a vsync with nothing to show
     // is gone, and the next damage waits for its own. NOTHING ELSE IS GATED:
     // the open's hold's one frame (present_held_frame, painted and posted at
@@ -2464,18 +2347,17 @@ void GuiPlatform::pump() {
     // events a second cost drains and not frames.
     //
     // THE PAINT RUNS AT THE TAIL OF THE PASS THE CALLBACK WOKE, at most once
-    // per due vsync (the beats, kBeatLight), invited, never by a clock — so
+    // per due vsync (the beat, kFrameBeat), invited, never by a clock — so
     // the frame also carries the input the same drain delivered.
     if (damage_.empty()) {
         vsync_due_ = false;
     } else if (vsync_due_) {
         vsync_due_ = false;
-        // THE BEATS' STAMP'S ONE WRITER (the rule at kBeatLight): the due
-        // vsync's frame time is recorded only when its frame reached the
-        // window — present's tail having recorded that frame's beat beside
-        // it (last_frame_beat_); a paint that presents nothing (the hold, no
-        // window, a failed post) records neither and leaves the next vsync
-        // due at once.
+        // THE LAST PAINTED VSYNC'S ONE WRITER (the rule at kFrameBeat): the
+        // due vsync's frame time is recorded only when its frame reached the
+        // window; a paint that presents nothing (the hold, no window, a
+        // failed post) records nothing and leaves the next vsync due at
+        // once.
         // THE GATED PAINT'S BIT (architect 2026-11-16, the presentation
         // times): raised round this one call, so present knows the frame
         // it is posting is the due vsync's own and may read that vsync's

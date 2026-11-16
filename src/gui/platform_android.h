@@ -201,9 +201,9 @@ public:
     // decides WHETHER a keep-alive is wanted (it asks only inside the brief
     // window, GuiPlaybackLifecycle::display_keep_alive_wanted) and owns WHAT
     // is damaged (main.cpp's tick head, the clock cell), so a true answer
-    // owes one damage that changes no pixel, and the vsync gate presents it
-    // — a light frame, due at the first vsync (the last frame is a whole
-    // period of this keep-alive old, past every beat).
+    // owes one damage that changes no pixel, and the vsync gate presents it,
+    // due at the first vsync (the last frame is a whole period of this
+    // keep-alive old, past the beat).
     bool display_keep_alive_due() const;
 
     // THE COPY STAYS IN THIS PROCESS AND THE PASTE TAKES THE NEWER
@@ -650,10 +650,10 @@ private:
     // sixteen passes over the list, a few scissored passes each and never
     // dozens. IT IS THE LAST RESORT, the merge the rule: the merge makes one
     // rect of what recurs beside itself across the buffer's missed frames
-    // (the scanner's line, the clock cell), so a light frame with a lamp's
-    // edge or a key's face beside it stays under the cap and stays light —
-    // its bounding rect would be most of the window, a whole plate redrawn
-    // for a lamp.
+    // (the scanner's line, the clock cell), so a scanner frame with a
+    // lamp's edge or a key's face beside it stays under the cap and stays
+    // small — its bounding rect would be most of the window, a whole plate
+    // redrawn for a lamp.
     static constexpr std::size_t kRepairRectCap = 16;
     // THE LAST SUCCESSFUL PRESENT, steady-clock ms (platform_monotonic_ms;
     // present's tail, the one writer: every frame that reaches the window
@@ -860,18 +860,13 @@ private:
     struct AChoreographer* choreographer_ = nullptr;
     bool vsync_pending_ = false;
     bool vsync_due_     = false;
-    // THE BEATS (architect 2026-11-16; kBeatLight, platform_android.cpp, the
-    // rule and the table): the frame time (CLOCK_MONOTONIC ns) of the vsync
-    // that set vsync_due_, and that of the vsync whose frame last presented
-    // through the gate (pump's tail its one writer); 0 = none yet. AND THE
-    // BEAT OF THE FRAME LAST PRESENTED, gated or not — the whole refreshes
-    // of the pinned panel the next frame waits after that vsync — written
-    // at present's tail on a successful swap alone, read by the vsync
-    // callback; 1 until a frame has presented (unread while the stamp is 0)
-    // and again at shutdown.
+    // THE BEAT (architect 2026-11-16, flat 45; kFrameBeat,
+    // platform_android.cpp, the rule): the frame time (CLOCK_MONOTONIC ns)
+    // of the vsync that set vsync_due_, and that of the vsync whose frame
+    // last presented through the gate (pump's tail its one writer), the
+    // next frame waiting one beat after it; 0 = none yet.
     int64_t due_vsync_frame_ns_    = 0;
     int64_t last_painted_vsync_ns_ = 0;
-    int     last_frame_beat_       = 1;
     // THE DUE VSYNC'S TIMELINE (architect 2026-11-16, the presentation
     // times; the rule at presentation_stamp_ns, platform_android.cpp):
     // whether the callback that set vsync_due_ carried a frame timeline,

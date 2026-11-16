@@ -1823,8 +1823,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THE REBUILD'S OWN DAMAGE IS WHAT IT CHANGED (architect 2026-11-16, the
     // beats: "I think we should build the most optimistic with regards to
     // the scanner and the marker drag and anything that would follow" — a
-    // frame that repaints a moved marker and nothing else is a light one,
-    // the area rule at kBeatLight, platform_android.cpp).
+    // frame that repaints a moved marker and nothing else is a small one,
+    // less of the surface redrawn, less GPU).
     //
     // WHAT THIS REBUILD PUTS ON THE SCREEN: the surface's CUES, blitted over
     // the marker lane; the STEM STASH it stages, painted live in both halves

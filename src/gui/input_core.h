@@ -650,12 +650,9 @@ public:
     // TRUE WHILE ANY CONTACT IS ON THE GLASS, a finger or the pen's tip —
     // the phase machine simply not Idle. The full rationale (and why Drain's
     // inclusion is harmless) is at the touch state block below, beside the
-    // phases it reads. TWO CONSUMERS OUTSIDE THE INPUT ROAD: main.cpp's
+    // phases it reads. ONE CONSUMER OUTSIDE THE INPUT ROAD: main.cpp's
     // pre-paint follow chase, which must not page the song out from under a
-    // contact that is aiming or gesturing, and THE BEATS' POINTER BIT
-    // (architect 2026-11-16; GuiPlatform::present, platform_android.cpp: a
-    // light frame painted while a pen or a finger is on the glass takes
-    // kBeatLightUnderPointer).
+    // contact that is aiming or gesturing.
     bool touch_contact_active() const {
         return touch_phase_ != TouchPhase::Idle;
     }
@@ -1038,8 +1035,7 @@ private:
     //
     // ANY CONTACT DOWN PAUSES THE FOLLOW CHASE — the reader outside this
     // layer the phase machine was opened for, through touch_contact_active()
-    // above (the beats' pointer bit reads the same answer, its comment
-    // there). THE HONEST PHONE-MODEL STATEMENT: a finger on the glass means the
+    // above. THE HONEST PHONE-MODEL STATEMENT: a finger on the glass means the
     // user is aiming or gesturing, and the follow scroll must not move the song
     // under it. It is not a nicety — the window's whole design defers
     // conversion: a TAP delivers its press+release burst AT THE LIFT carrying

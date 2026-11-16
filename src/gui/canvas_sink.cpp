@@ -20,14 +20,10 @@ GuiCanvasDrawList& gui_canvas_frame() {
 // the key's live seat, in subcells, whether or not a plate follows — the GL
 // canvas compares it with its program's at every list draw, so a list
 // without a plate must carry the same number as one with.
-// THE LIT BIT IS CLEARED AT EVERY REBUILD (GuiCanvasDrawList::plate_lit;
-// architect 2026-11-16, the beats): a list holds a lit plate only once
-// plate() below has pushed one.
 GuiCanvasSink::GuiCanvasSink(GuiCanvasDrawList& list) : list_(list) {
     list_.prims.clear();
     ++list_.generation;
     list_.plate_grow = waveform_grow_quarters();
-    list_.plate_lit  = false;
 }
 
 void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
@@ -103,12 +99,8 @@ void GuiCanvasSink::blended_rect(double x0, double y0, double x1, double y1,
 // offset into it is the running sum of the stored rows' bar counts, in
 // list order (a band's main row, then in the fade band its fine row),
 // either way, the offsets the copy made.
-// THE LIT BIT (architect 2026-11-16, the beats; GuiCanvasDrawList::
-// plate_lit): `lit` is the caller's word that this plate was rendered under
-// MAGNIFY, stamped on the list where a band's record is pushed — a plate
-// not rendered, or with no stored band, leaves the list without one.
 void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
-                          WaveformPlateInks inks, bool lit) {
+                          WaveformPlateInks inks) {
     if (!columns.rendered) return;
     assert(columns.revision != 0);
     const bool copy = columns.revision != list_.plate_revision;
@@ -161,7 +153,6 @@ void GuiCanvasSink::plate(const GuiRect& area, const GuiPlateColumns& columns,
         }
         offset += c.cols.size() + (in_band ? f.cols.size() : 0);
         list_.prims.push_back(p);
-        list_.plate_lit = lit;
     }
     assert(offset == list_.columns.size());
     list_.plate_revision = columns.revision;

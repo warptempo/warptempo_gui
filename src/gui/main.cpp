@@ -1396,8 +1396,9 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 }
 
 // THE SCANNER'S DAMAGE RECT (architect 2026-11-16, the beats: a scanner
-// frame is a light frame, so it repaints the scanner's own pixels and no
-// chrome above the canvas, which holds nothing of it): THE HULL OF ITS
+// frame repaints the scanner's own pixels and no chrome above the canvas,
+// which holds nothing of it — a small frame, little of the surface redrawn,
+// little GPU): THE HULL OF ITS
 // LINE'S OWN SPAN
 // OVER THE CANVAS'S ROWS — waveform_line_span (render.h, the line's one
 // rule) at the scanner's exact place `x` (scanner_exact_x's on the PLATE
@@ -1540,9 +1541,9 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // edges are owed whatever mode stands. THE HOLD (architect 2026-11-05 night,
 // session 49, REVERSING the same night's "no hold": the tick is the
 // platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms,
-// platform_android.cpp) while only the PRESENT waits for the vsync, an
-// 11.1 ms period at the pinned 90 Hz (a lamp's edge is a light frame, every
-// refresh), so a lamp lit for one 5 ms tick can be cleared before any
+// platform_android.cpp) while only the PRESENT waits for the vsync, one
+// beat apart, 22.2 ms at the pinned 90 Hz (kFrameBeat, platform_android.cpp),
+// so a lamp lit for one 5 ms tick can be cleared before any
 // present and never be painted — the clip clamps a RUN of blocks and its
 // lamp spans ticks, but the limiter's engaged frames are POINTS, and its
 // one-tick lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD —
@@ -1552,7 +1553,7 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // now before the stamp. So an event re-arms the hold (a run of clamping
 // blocks keeps the lamp lit until the hold after its last block), the dark
 // edge lands on the first tick at or past the stamp, and 100 ms is about
-// nine presents at 90 Hz. NO TIMER OF ITS OWN: the tick is the clock, the
+// four and a half presents at the beat. NO TIMER OF ITS OWN: the tick is the clock, the
 // stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
 // (architect 2026-11-05 night, session 49): the clip lamp's third bit,
 // GuiPlayback::device_unavailable() read on every tick — the error
@@ -2466,8 +2467,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // last present), and a yes damages THE CLOCK CELL, the audition
         // rest's own road below ("A REST KEEPS THE PAINT CLOCK RUNNING", its
         // reasoning): a cell that always paints and whose repaint changes no
-        // pixel — a LIGHT frame by the beats' table (kBeatLight,
-        // platform_android.cpp), one per kDisplayKeepAliveMs. Past the
+        // pixel — a small frame, one per kDisplayKeepAliveMs. Past the
         // window nothing is asked and nothing presents at
         // rest. HERE, AT THE HEAD, ahead of every early return, so every mode
         // reaches it — the render player, the score viewer, the blank window,
@@ -2870,9 +2870,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // with no per-tick mirror between them (architect 2026-09-24).
             // THE DAMAGE IS THE DRIFTED KEY'S OWN (architect 2026-11-16, the
             // beats: the face and its legend, not the whole strip — a lamp
-            // tapped during a play no longer costs the scanner three heavy
-            // frames): ONE RECT A DRIFTED KEY, THE UNION OF ITS STASHED
-            // PAINTED EXTENT AND THE EXTENT ITS LIVE LEGEND LAYS OUT
+            // tapped during a play adds a key's few pixels to the scanner's
+            // frames, not the strip): ONE RECT A DRIFTED KEY, THE UNION OF
+            // ITS STASHED PAINTED EXTENT AND THE EXTENT ITS LIVE LEGEND LAYS OUT
             // (RedesignButtonFace::painted; key_painted_extent of the face
             // and redesign_button_legend's live word, paint_handler.h — the
             // rows' painters' own layout owner). That rect holds every pixel
@@ -3369,12 +3369,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         ab_audition.fire_if_due();
 
         // A REST KEEPS THE PAINT CLOCK RUNNING (2026-10-18; the ruling that
-        // it stands with the beats at kDisplayKeepAliveFastStopMs,
-        // playback_lifecycle.h, architect 2026-11-16): while a rest of
-        // the act stands, every tick damages the CLOCK CELL, so a frame is
-        // presented through the rest at every due vsync — the clock cell
-        // alone is a LIGHT frame by the beats' table (kBeatLight,
-        // platform_android.cpp), one a refresh of the pinned 90 Hz panel.
+        // it stands at kDisplayKeepAliveFastStopMs, playback_lifecycle.h,
+        // architect 2026-11-16): while a rest of the act stands, every tick
+        // damages the CLOCK CELL, so a frame is presented through the rest
+        // at every due vsync — the clock cell alone, a small frame, one a
+        // beat (kFrameBeat, platform_android.cpp: every second refresh of
+        // the pinned 90 Hz panel).
         // THE DISPLAY HAS AN IDLE
         // TIMER: the tablet's SurfaceFlinger drops the panel from its pinned
         // rate (90 Hz) to 30 Hz once no layer has presented

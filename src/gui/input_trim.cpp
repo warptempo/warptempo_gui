@@ -755,7 +755,8 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
             // at this file's head): motion updates the bounds and repaints
             // THE TRIM BAR'S LANE, WHOLE, AND NOTHING ELSE (architect
             // 2026-11-16, the beats: a motion's frame repaints what it
-            // moved, so it is a light frame). The bar is the trim's one
+            // moved, so it is a small frame, less of the surface redrawn,
+            // less GPU). The bar is the trim's one
             // painter while no sweep stands (paint_trim; the canvas's
             // highlight is the sweep's alone, sweep_highlight_columns), and
             // the lane is taken whole because the bar's hit stash
