@@ -214,12 +214,31 @@ void ValueDragOps::apply_motion(double mouse_y) {
         if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx))
             iter_bound_step_write(*m, cell, landing);
     }
-    // THE MARKER LANE AND NOTHING ELSE, per motion. The flag's number (or its
-    // cell's) is what moved, the store's generation carries the flag cache's
-    // rebuild under this damage, and NO MAP IS RE-LAID: in target view the
+    // THE CUES THE STEP CHANGED AND NOTHING ELSE, per step (architect
+    // 2026-11-16, the beats: a step's frame repaints what it changed, so it
+    // is a light frame). The flag's number (or its cell's) is what moved —
+    // and with it, off the same store, whatever other label reads it: a
+    // tie follower's cells (the leader's bracket), a strike entering or
+    // leaving the red set, this marker's or another's — and every one of
+    // those is a CUE of the flag cache's surface. So this body declares no
+    // rect: it runs THE FLAG CACHE'S REBUILD IN THE EVENT (below), whose
+    // tail damages each cue that differs from the rebuild before, its old
+    // and new extent over the marker lane's rows (maybe_rebuild_flag_cache,
+    // waveform_cache.cpp; the store's generation is one of the five content
+    // fields it compares per cue). NOTHING ELSE ON SCREEN READS THE VALUE AT
+    // PAINT TIME: no stem moves (the stem is the selection's), no ring (it
+    // reads the reset's frame and the seed lattice, never a bracket), the
+    // clock and row 8's line read the cursor and the render; the KEYS whose
+    // face reads the value — the arrows at a bracket's wall, INHERIT at a
+    // pass's freeze, a band key that asks the store — are the tick's
+    // comparator's (main.cpp). And NO MAP IS RE-LAID: in target view the
     // flags keep sitting on the DISPLAYED basis until the commit's own tail
     // re-warps the plate — the marker drag's precedent exactly, where the
-    // proposal paints on the frozen basis and the map re-lands at the release.
+    // proposal paints on the frozen basis and the map re-lands at the
+    // release; the trim bar and the ruler sit on that same frozen basis
+    // (the item basis and its displayed map, promoted only by a frame the
+    // freeze lets promote; the plate's), so a tempo step that moves the LIVE
+    // map moves no painted column.
     // WHAT MAKES THAT TRUE IS NOT THIS FUNCTION'S RESTRAINT (2026-09-10):
     // the write above lands in the LIVE store, so the target
     // map's hash moves with it and the per-tick dirty-detect would dispatch a
@@ -230,10 +249,14 @@ void ValueDragOps::apply_motion(double mouse_y) {
     // on the same bit, so no clamp can page the viewport sideways under a hand
     // moving vertically. Both gates lift at the commit, which clears the state
     // before it runs the tail.
-    // The waveform is not damaged here either: a stem reads the marker's
-    // CLASS, a tempo can move a marker in and out of the RED set, and the
-    // commit is where that one repaint is owed.
-    viewport.invalidate_top_strip();
+    // THE REBUILD, IN THE EVENT (Viewport::refresh_flag_cache,
+    // fingerprint-guarded, no plate render — the marker drag's own call):
+    // the damage above is its tail's, so it is declared before this event
+    // returns and the step shows at the next frame, never a tick later; the
+    // tick's own rebuild then finds nothing to do. A frame cannot paint half
+    // a step either way: the labels have one painter, the surface this
+    // rebuild writes.
+    viewport.refresh_flag_cache();
 }
 
 void ValueDragOps::commit() {
@@ -260,7 +283,7 @@ void ValueDragOps::commit() {
     viewport.invalidate_rect(bottom_row_area(app));
 
     // A BOUND DRAG COMMITS NOTHING AT ALL: every write it made already stands
-    // in the store and already damaged the lane, a bracket pushes no undo
+    // in the store and already damaged its cues, a bracket pushes no undo
     // entry (the iteration lock's rule) and it changes no map, so there is no
     // re-warp, no re-land, no dirty bit and no preview to trigger. The gesture
     // simply ends.

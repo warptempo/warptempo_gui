@@ -83,13 +83,12 @@ void Selection::damage_overlay_on_subject_change(
     std::optional<int64_t> old_subject) {
     if (phase_overlay_subject() == old_subject) return;   // subject unchanged
     if (audio.total_frames() <= 0) return;
-    // Full plate damage: the overlay's forward span is wider than the mutators'
-    // top-strip/playhead damage, and a whole-plate blit on a selection change is
-    // bounded (selection changes are rare). A subject change is the overlay
-    // appearing/disappearing (0<->1 focus, the 1<->2 suppression crossing) or
-    // the focus moving to a reset at a different frame — every case the old
-    // size-2-only helper missed and that fell back to the stem cache's
-    // (now-deleted) selection-hash rebuild damage.
+    // Full plate damage, for the one mutator that runs no flag rebuild of
+    // its own (sanitize_selection_after_restore; the rule at the
+    // declaration): a subject change is the overlay appearing/disappearing
+    // (0<->1 focus, the 1<->2 suppression crossing) or the focus moving to a
+    // reset at a different frame, and with no rebuild behind it nothing
+    // else would compare the ring.
     viewport.invalidate_waveform_area();
 }
 
@@ -98,11 +97,26 @@ void Selection::damage_overlay_on_subject_change(
 // STEMS: since 2026-11-05 the stem is the selection's (render.h's THE STATES;
 // MarkerStem published per selected cue, enabled or disabled, by the flag cache's
 // rebuild), so a select takes the stem off the old members and stands it on
-// the new. The mutators' own damage stays the top strip's plus the overlay
-// owner's above; the STEMS' damage and the stem stash are the flag cache
-// rebuild's (maybe_rebuild_flag_cache, waveform_cache.cpp: the selection and
-// the focus are its fingerprint's fp_selection_hash, and its tail damages
-// each stem that left or arrived, at the stem's own place, 2026-11-16). That
+// the new. The mutators' own damage stays the top strip's; the STEMS' damage,
+// the stem stash AND THE LEAD-IN RING'S DAMAGE are the flag cache rebuild's
+// (maybe_rebuild_flag_cache, waveform_cache.cpp: the selection and the focus
+// are its fingerprint's fp_selection_hash, and its tail damages each stem
+// that left or arrived, at the stem's own place, and the ring's four sides
+// where they stood and where they stand, 2026-11-16).
+// THE RING NEEDS NO DAMAGE OF ITS OWN HERE (architect 2026-11-16, the
+// beats; the whole waveform area this publish declared on a change of the
+// overlay's subject is gone from it): a change of subject is a change of
+// the membership or the focus — nothing else of the subject moves inside a
+// Selection mutator — so the fingerprint misses and the rebuild below runs
+// its tail, which compares the ring's geometry itself: where the geometry
+// moved, the old sides and the new are damaged (or the whole area, wherever
+// that tail keeps it: a ring some frame drew that no rebuild had compared,
+// FlagCache's `ring_drawn_undeclared`, among them); where the subject
+// changed and the painted ring did not (a band off screen, or under a px),
+// nothing is owed. The states in which the rebuild cannot run paint no
+// ring: a load in flight and no audio build a canvas list without one, and
+// "no plate yet" exists only under the open's presentation hold, whose
+// release presents the whole window. That
 // rebuild ran only at
 // the tick until this helper, and a select that lands the playhead in the
 // same event (land_playhead_on_marker, the chip tap's road) damaged a frame
@@ -129,9 +143,8 @@ void Selection::damage_overlay_on_subject_change(
 // collapse_to_focused, toggle_selection_membership and
 // repair_last_selected (cycle_selection through set_single_selection) — but
 // sanitize_selection_after_restore, whose seat says why.
-void Selection::publish_selection_change(std::optional<int64_t> old_subject) {
+void Selection::publish_selection_change() {
     viewport.invalidate_top_strip();
-    damage_overlay_on_subject_change(old_subject);
     viewport.refresh_flag_cache();
 }
 
@@ -146,12 +159,12 @@ void Selection::repair_last_selected() {
     // before the warp-only editor with no waveform damage, and `c`'s recenter
     // can be a no-op at an already-centered rest — so own the overlay repaint
     // here like every other focus-writing mutator, through the one publish
-    // (publish_selection_change, whose flag rebuild a standalone repair —
-    // bare Return, `c` — needs as much as any select). When reached from
+    // (publish_selection_change, whose flag rebuild compares the ring and
+    // which a standalone repair — bare Return, `c` — needs as much as any
+    // select). When reached from
     // toggle_selection_membership this double-fires with that mutator's own
     // publish, harmlessly (the same damage, a benign damage-union, and the
     // second rebuild a fingerprint hit).
-    const std::optional<int64_t> old_subject = phase_overlay_subject();
     if (app.selected_markers.empty()) {
         seat_focus(-1);
     } else {
@@ -159,7 +172,7 @@ void Selection::repair_last_selected() {
         // if empty).
         seat_focus(*app.selected_markers.rbegin());
     }
-    publish_selection_change(old_subject);
+    publish_selection_change();
 }
 
 // The contract is at the declaration. The addressed cell is reset here and
@@ -171,7 +184,6 @@ void Selection::seat_focus(int idx) {
 }
 
 void Selection::set_single_selection(int idx) {
-    const std::optional<int64_t> old_subject = phase_overlay_subject();
     // THE STICKY CTRL DOES NOT DIE HERE (architect 2026-09-10): the Add to
     // selection lamp is a TOOL POSTURE whose off edges are acts and lamps
     // (its toggle, the spending acts, its own sweep's commit, TRIM's lit
@@ -187,28 +199,27 @@ void Selection::set_single_selection(int idx) {
     // status bar — the state cell carries only the two progress-class strings,
     // which no selection writes. The chips and the stems ride the publish's
     // same-event flag rebuild.
-    publish_selection_change(old_subject);
+    publish_selection_change();
 }
 
 // The whole-set replace (contract at the declaration): set_single_selection's
 // body one arity up, with the same publish — one chokepoint for a replace made
 // programmatically.
 void Selection::replace_selection(std::set<int> members, int focus) {
-    const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.selected_markers   = std::move(members);
     seat_focus(app.selected_markers.count(focus) ? focus : -1);
-    publish_selection_change(old_subject);
+    publish_selection_change();
 }
 
 void Selection::clear_selection() {
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
         return;   // nothing selected (already empty)
-    const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.selected_markers.clear();
     seat_focus(-1);
     // Clearing the focus erases any overlay it annotated (subject frame ->
-    // none), and the stems with the membership.
-    publish_selection_change(old_subject);
+    // none), and the stems with the membership: both the publish's flag
+    // rebuild's to damage.
+    publish_selection_change();
 }
 
 void Selection::collapse_to_focused() {
@@ -243,22 +254,21 @@ void Selection::collapse_to_focused() {
     // today. A derivation, not a guard: this early return exists for the
     // ordinary no-selection call, and the gesture callers never meet it.
     if (app.last_selected_marker < 0) return;   // nothing focused
-    const std::optional<int64_t> old_subject = phase_overlay_subject();
     if (app.selected_markers.size() == 1 &&
         app.selected_markers.count(app.last_selected_marker))
         return;   // already exactly the focused singleton
     app.selected_markers.clear();
     app.selected_markers.insert(app.last_selected_marker);
-    // The phase-reset overlay's own P+target repaint rides its subject owner,
-    // which the 2+ -> 1 case here triggers. (The fine-tuning callers can
+    // The phase-reset overlay's own P+target repaint — the 2+ -> 1 case here
+    // brings the ring back — rides the publish's flag rebuild, which
+    // compares the ring. (The fine-tuning callers can
     // collapse then REFUSE and full-invalidate nothing, so the stems the
-    // collapse takes off the other members are the publish's flag rebuild's
-    // to repaint, in this event.)
-    publish_selection_change(old_subject);
+    // collapse takes off the other members are that rebuild's
+    // to repaint too, in this event.)
+    publish_selection_change();
 }
 
 bool Selection::toggle_selection_membership(int idx) {
-    const std::optional<int64_t> old_subject = phase_overlay_subject();
     // app.add_to_selection is untouched here, as it is in every Selection
     // body since 2026-09-10: the mode exists to make plain flag clicks land
     // HERE, and it is a tool posture that only its own toggle puts out.
@@ -278,7 +288,7 @@ bool Selection::toggle_selection_membership(int idx) {
     }
     // (When repair_last_selected fired above it published already, a benign
     // damage-union and a fingerprint hit.)
-    publish_selection_change(old_subject);
+    publish_selection_change();
     return added;
 }
 

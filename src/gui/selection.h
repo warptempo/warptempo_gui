@@ -85,15 +85,13 @@ struct Selection {
     // drag's ring damage is the flag cache rebuild's, computed off the band
     // itself (maybe_rebuild_flag_cache's tail, 2026-11-16), so the mirror's
     // readers never need the proposed value mid-drag.
-    // THREE READERS. Two are the damage owner just below (called at every
-    // selection mutator, through the publish but at the restore's sanitize):
-    // the overlay lives in the WAVEFORM but the mutators' own damage is the
-    // top strip's, and the publish's flag rebuild damages the ring's sides
-    // only when it runs (it refuses while loading or before the first
-    // plate), so
-    // a change of subject owns its waveform damage to paint/erase the
-    // overlay's forward span. The
-    // third is the LEAD-IN LAUNCH OFFSET OWNER
+    // TWO READERS. One is the damage owner just below, at the restore's
+    // sanitize alone (architect 2026-11-16, the beats): every other mutator
+    // publishes, and the publish's flag rebuild compares the ring's
+    // geometry itself and damages its sides (the argument at
+    // publish_selection_change's definition, selection.cpp), so only the
+    // mutator that runs no rebuild asks whether the subject changed. The
+    // other is the LEAD-IN LAUNCH OFFSET OWNER
     // (phase_reset_lead_in_launch_offset, defined beside this in
     // selection.cpp since 2026-08-30): a start-edge Space with a subject
     // launches the lead-in audition at cursor + kN/2 (input_handler.cpp,
@@ -122,23 +120,23 @@ struct Selection {
     // (its seat, selection.cpp).
     void seat_focus(int idx);
 
-    // Damage the waveform when the overlay subject changed across a mutation.
+    // Damage the waveform when the overlay subject changed across a mutation
+    // THAT RUNS NO FLAG REBUILD OF ITS OWN — ONE CALLER,
+    // sanitize_selection_after_restore (architect 2026-11-16, the beats:
+    // every publishing mutator leaves the ring to its publish's rebuild,
+    // which compares the ring's geometry and damages its sides).
     // `old_subject` is captured BEFORE the mutation via phase_overlay_subject();
-    // a no-op when the subject is unchanged (the common case). This is the
-    // explicit owner of the overlay's appear/disappear and focus-move repaints:
-    // before C-A (architect 2026-07-24) the stem cache's fp_selection_hash
-    // rebuilt on every selection change and its tail damaged the whole strip, so
-    // the overlay rode that accident; the C-A cut removed it, leaving this owner.
-    // It SUBSUMES the old size-2-only crossing helper (a 1<->2 crossing is a
-    // subject change) and additionally covers the 0<->1 focus swaps and the
-    // focus moving between resets at different frames.
+    // a no-op when the subject is unchanged (the common case). A subject
+    // change is the 0<->1 focus swap, the 1<->2 suppression crossing, or the
+    // focus moving between resets at different frames; the damage is the
+    // whole waveform area.
     void damage_overlay_on_subject_change(std::optional<int64_t> old_subject);
 
     // PUBLISH A SELECTION CHANGE — the ONE tail of every mutator above that
     // writes the membership or the focus (the contract is at the definition,
-    // selection.cpp): the top strip's damage, the overlay owner above, and
+    // selection.cpp): the top strip's damage and
     // the flag cache's rebuild IN THE SAME EVENT (Viewport::refresh_flag_cache),
-    // so the selection stem and the playhead's landing paint together.
-    // `old_subject` is phase_overlay_subject() captured before the write.
-    void publish_selection_change(std::optional<int64_t> old_subject);
+    // so the selection stem and the playhead's landing paint together — that
+    // rebuild's tail the damage of the stems and of the lead-in ring.
+    void publish_selection_change();
 };

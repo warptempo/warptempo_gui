@@ -1114,7 +1114,8 @@ void GuiSettingsEditor::commit() {
     // selection mutator writes no trim state at all.
     selection.clear_selection();
     // Full-area damage for the teardown, and it is the site's own: clear_selection
-    // damages only on a stem/overlay SUBJECT CHANGE, so an already-empty selection
+    // damages the top strip and what its flag rebuild changed (the stems, the
+    // ring), and an already-empty selection
     // raises nothing there, while this commit rebuilds the map under the whole
     // plate either way (the kick below). A settings commit is a rare, discrete
     // command, so it takes the standing "rare command, full damage" answer.

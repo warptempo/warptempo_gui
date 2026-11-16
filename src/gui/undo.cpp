@@ -620,7 +620,7 @@ namespace {
 // nothing. A REMOVAL reaches the same empty answer for its own reason — it
 // leaves no touched row to select at all — and both take this one clear, which
 // runs through the Selection mutator so the region, the shift anchor and the
-// subject-change damage are all handled by their owner.
+// stems' and the ring's damage are all handled by their owner.
 //
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;

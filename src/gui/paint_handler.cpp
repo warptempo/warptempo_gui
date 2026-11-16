@@ -4853,8 +4853,8 @@ GuiPaintHandler::plate_viewport_basis() const {
 // visibility gate — view, focus, the multi-select suppression, the eligible-marker
 // resolve, the sub-pixel and offscreen refusals — plus the clipped span, and
 // Selection::phase_overlay_subject MIRRORS its selection-state gates — MINUS the
-// geometry ones, which are not selection state — to decide when a subject change
-// needs waveform damage and, since 2026-07-28, whether Space auditions the
+// geometry ones, which are not selection state — to decide whether a restore's
+// sanitize changed the subject and, since 2026-07-28, whether Space auditions the
 // lead-in. One rule, so it stays one function; that mirror's own reader
 // inventory lives at its declaration in selection.h. (It served a second pass,
 // an opaque ground recolor under the plate, until the ring became the overlay's
@@ -4902,8 +4902,9 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // focused reset's lead-in, a single-focus authoring aid, so a MULTI-select
     // (2+ members) suppresses it — the state is about a span of markers rather
     // than a single focus, and the overlay would clutter. (A singleton or empty
-    // selection shows it as before; the multi-select builders all damage the
-    // waveform, so the overlay's appear/disappear rides their damage.)
+    // selection shows it as before; the multi-select builders all publish,
+    // so the overlay's appear/disappear rides their flag rebuild's ring
+    // damage, paint_phase_reset_overlay_ring's DAMAGE.)
 
     if (app.selected_markers.size() >= 2) return out;
 
@@ -5077,8 +5078,9 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // each side's own cells (phase_reset_ring_sides and phase_reset_ring_damage
 // below), where the miss is the marker-driven content alone — a marker
 // drag's motion, a nudge, a selection change — and the whole waveform area
-// with every other field; a subject change adds the whole area itself
-// (Selection::damage_overlay_on_subject_change) and a palette install the
+// with every other field; a restore's sanitize that changed the subject
+// adds the whole area itself (Selection::damage_overlay_on_subject_change,
+// the one selection write that runs no rebuild) and a palette install the
 // whole window. THE GEOMETRY THIS PASS DRAWS IS NOTED AGAINST THE ONE THAT
 // REBUILD LAST COMPARED (note_ring_drawn, FlagCache's `ring_declared`): a
 // frame that draws another — served between a write and the tick's

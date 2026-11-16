@@ -63,8 +63,9 @@ struct GuiTargetRender;
 // THE UNDO STORY FORKS THREE WAYS AT THE COMMIT, one arm per axis.
 //
 // THE TEMPO ARM'S ONE UNDO ENTRY IS THE COMMIT'S, never a motion's, which is
-// the marker drag's own shape: motion writes the live store and damages the
-// top strip, and the release pushes the pre-drag snapshot iff the marker's
+// the marker drag's own shape: motion writes the live store and rebuilds the
+// flag cache, which damages the cues the step changed, and the release
+// pushes the pre-drag snapshot iff the marker's
 // `tempo_inherits`/`tempo_cents` PAIR actually moved — the pair and not the
 // cents alone, because a pass dragged back to its own effective base is still
 // an owner now, which is the same answer the arrow step's byte-equal pop

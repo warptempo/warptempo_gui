@@ -5911,8 +5911,8 @@ struct AppState {
     // blit: a press landing between a rebuild and its frame resolves against
     // the flags still on screen. THE PROMOTE IS NOT BEHIND THE DISPLAYED-BASIS
     // FREEZE, unlike the basis pair's: the flag SURFACE blits unconditionally
-    // (a marker or value drag rebuilds it every tick and the dragged flag must
-    // move on screen), so the stash that describes it promotes with it. The
+    // (a marker or value drag rebuilds it at every motion and the dragged flag
+    // must move on screen), so the stash that describes it promotes with it. The
     // rebuild's own damage is every cue and every stem it changed (since
     // 2026-11-16, maybe_rebuild_flag_cache's tail: the cues and the stem
     // places that differ from the rebuild before where the miss is the
