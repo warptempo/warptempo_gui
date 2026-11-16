@@ -1593,17 +1593,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // seeded from the `true_colors` key before the first session
         // (install_true_colors, gui_main).
         display_transform::set_window_display_p3(gui.window_is_display_p3());
-        // THE DISPLAY KEEP-ALIVE'S NUMBERS, announced once per process so a
-        // build carrying the brief window is confirmable in logcat (the
-        // ruling at kDisplayKeepAliveFastStopMs, playback_lifecycle.h). No
-        // line at an arming: it would print on every fast tap.
-        std::fprintf(stderr,
-                     "warptempo_gui: display keep-alive: a Stop within %lld ms "
-                     "of its Play keeps the panel awake for %lld ms past it, "
-                     "one frame after %lld ms without a present\n",
-                     static_cast<long long>(kDisplayKeepAliveFastStopMs),
-                     static_cast<long long>(kDisplayKeepAliveWindowMs),
-                     static_cast<long long>(GuiPlatform::kDisplayKeepAliveMs));
     }
 
     // -- Viewport + invalidation helpers ------------------------------------
@@ -2299,31 +2288,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // lamp owes its dark edge to the first tick past its hold.
         refresh_logo_legend(app, gui);
         refresh_logo_lamps(app, gui, audio, playback);
-
-        // THE DISPLAY KEEP-ALIVE (architect 2026-11-13, session 118; the
-        // facts and the ruling — a brief window after a fast Stop — at
-        // kDisplayKeepAliveFastStopMs, playback_lifecycle.h): ONLY INSIDE
-        // THE WINDOW the one stop body opened
-        // (GuiPlaybackLifecycle::display_keep_alive_wanted) is the platform
-        // asked whether a frame is due (GuiPlatform::display_keep_alive_due:
-        // focused, no hold, no damage waiting, kDisplayKeepAliveMs since the
-        // last present), and a yes damages THE CLOCK CELL, the audition
-        // rest's own road below ("A REST KEEPS THE PAINT CLOCK RUNNING", its
-        // reasoning): a cell that always paints and whose repaint changes no
-        // pixel. Past the window nothing is asked and nothing presents at
-        // rest. HERE, AT THE HEAD, ahead of every early return, so every mode
-        // reaches it — the render player, the score viewer, the blank window,
-        // a modal, an overlay (the open's hold answers no: it withholds every
-        // paint). THE RECT IS THE CLOCK'S OWN OWNER'S (clock_invalidate_rect):
-        // the published cell, or the whole lane while the row has yielded to
-        // a modal (the cell then reads zero); either way a rect on screen, so
-        // the present follows from the damage alone, whatever the forks below
-        // paint there. Under the score viewer every frame is composed and
-        // copied whole (GuiGlCanvas::compose_must_be_whole), its keep-alive
-        // frames too.
-        if (playback_lifecycle.display_keep_alive_wanted(monotonic_ms()) &&
-            gui.display_keep_alive_due())
-            invalidate_clock_area();
 
         // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
         // 2026-11-04 night, render_playhead's paragraph, render.h — the
@@ -3116,38 +3080,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // sits ahead of ma_playing so a play launched here takes this tick's
         // scanner heartbeat rather than waiting for the next.
         ab_audition.fire_if_due();
-
-        // A REST KEEPS THE PAINT CLOCK RUNNING (2026-10-18): while a rest of
-        // the act stands, every tick damages the CLOCK CELL, so a frame is
-        // presented at every due vsync (every other refresh, one per 33 ms at the
-        // app's frame cadence, kAppFrameRateHz) through the rest. THE DISPLAY HAS AN IDLE
-        // TIMER: the tablet's SurfaceFlinger drops the panel from its pinned
-        // rate (60 Hz since 2026-11-14) to 30 Hz once no layer has presented
-        // for 250 ms, and the first frame presented after that brings the
-        // pinned rate back only a frame or two later — the app's explicit
-        // frame-rate vote does not outrank the idle timer (observed with the
-        // panel then pinned at 90 Hz, as is the beat history below).
-        // Inside the act a rest is the one silent gap, and the one the app can
-        // keep awake itself: nothing is damaged during it (the scanner is
-        // down, and the clock's own damage is the pre-paint hook's while
-        // playing), so nothing would be painted. The pair rest is under the
-        // timer and the switch rest is not, and the press's touch-control
-        // window holds 90 Hz through the first two beats, so the third beat —
-        // the home tab's first play — started under a 30 Hz panel: its first
-        // frames landed 33 ms apart, the scanner stepping three times coarser
-        // until 90 Hz returned, which the architect saw as the scanner
-        // skipping ahead and then playing smoothly. THE CLOCK CELL is the
-        // OFFSCREEN FALLBACK's rect below — row 8 is always onscreen, the
-        // smallest rect that always produces a paint — and its repaint during
-        // a rest changes no pixel (the field shows the resting cursor's
-        // time). EVERY REST TAKES IT, the pair rests with the switch rest:
-        // one rule rather than a threshold against one device's timer. It sits
-        // AFTER fire_if_due: a rest that
-        // fired this tick is waiting no longer, and the launch's own
-        // full-area damage covers that frame.
-        if (app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle &&
-            app.audition_sequence.waiting)
-            invalidate_clock_area();
 
         // THE PLAYING BIT, ONE READ: the audio thread's own flag, which
         // drops at the natural end — the fence/bypass reasoning below is

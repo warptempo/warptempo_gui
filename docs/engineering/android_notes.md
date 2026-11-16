@@ -861,17 +861,16 @@ in what it prevents rather than in a number this session could re-measure.
 Measured since: SurfaceFlinger drops the panel 90 -> 30 Hz once no layer has
 presented for 250 ms, and the first frames after it land at 30 Hz cadence;
 neither the `setFrameRate` vote above nor a preferred display mode holds it
-(`min_refresh_rate` would, but no app may write it). The A/B audition's rests
-keep it awake on their own road (main.cpp's "A REST KEEPS THE PAINT CLOCK
-RUNNING"). Everywhere else the app keeps it awake only BRIEFLY: a Stop landing
-within 1000 ms of its Play arms a sparse keep-alive for 1500 ms past that
-Stop — one clock-cell frame that changes no pixel after 200 ms without a
-present (`GuiPlatform::kDisplayKeepAliveMs`, `display_keep_alive_due`) — so a
-frantic play/stop tap does not start into a 30 Hz panel, and at rest the app
-still presents nothing. The forms not taken: a keep-alive at every vsync
-(~46 % app / ~53 % SurfaceFlinger, session 33) and the permanent sparse one
-(90 Hz held at rest for about 11 % battery, session 117, under the 90 Hz pin). The facts and the
-ruling live at `kDisplayKeepAliveFastStopMs` (playback_lifecycle.h).
+(`min_refresh_rate` would, but no app may write it). Nothing keeps it awake
+(architect 2026-11-15, the app drawing at 30 frames a second: "pointless when
+everything is already so low frame rate"): at rest, after a fast Stop and
+through an A/B audition's rest the app presents nothing, and the first frame
+after a rest may land a refresh late, accepted. The forms not kept: a
+keep-alive at every vsync (~46 % app / ~53 % SurfaceFlinger, session 33), the
+permanent sparse one (90 Hz held at rest for about 11 % battery, session 117,
+under the 90 Hz pin), the brief window after a fast Stop (session 118) and the
+A/B rests' every-tick clock damage (2026-10-18), both retired 2026-11-15. The
+fact lives at `kAppFrameRateHz` (platform_android.cpp).
 
 **`C.UTF-8` vs `C`.** bionic starts a process in `C.UTF-8`, so
 `verify_c_numeric_locale` (locale_check.h) — a pure tripwire on Linux, where a
