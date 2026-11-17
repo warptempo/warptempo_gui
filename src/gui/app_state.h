@@ -586,7 +586,7 @@ struct DragState {
 // at the stepped value — one seed body for the two hands
 // (warp_tempo_step_start, warpmarkers_ops.h). A LABEL REF is still no target,
 // having no tempo of its own to walk from, and neither is a
-// coincident-collapse member, while A DISABLED MARKER IS, as the singleton
+// coincident member, while A DISABLED MARKER IS, as the singleton
 // arrow step steps one (architect 2026-09-13; value_drag_target, below).
 //
 // IT IS THE MARKER DRAG'S SIBLING, NOT ITS STATE: DragState above holds a
@@ -2732,7 +2732,8 @@ enum class RedesignButton {
     // ITS FACE GREYS WHERE BOTH ACTS REFUSE (the twin rule): the jump's own
     // questions (jump_to_value_source_actionable) OR the copy's one gate,
     // payload_eligible_marker on the focus (nothing focused, an owner, a phase
-    // reset, a disabled marker, a coincident-collapsed member, the P column),
+    // reset, a disabled marker, the P column; a coincident member is eligible,
+    // reading 1.00, architect 2026-11-17),
     // which the jump runs too; the empty-payload refusal past the gate stays
     // a card behind a lit face. Both chords are read-only-legal and admitted
     // under the grid-iterations lock (both allowlists name them — they author
@@ -5481,27 +5482,22 @@ struct AppState {
     // refreshed from const hit-test paths.
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
 
-    // Memoized red-flag sets — `red` (both caches) is the marker lane's PAINT
-    // cue, painted whether or not the row is selected: the render's own
-    // normalization plus any row COINCIDENT with another row of its own
-    // store, disabled rows included — a warp marker within one nudge step of
-    // another (the vicinity, architect 2026-11-15),
-    // a phase reset sharing its seed window of the analysis lattice
-    // (architect 2026-11-11; warp_frame_map_view.h carries the
-    // full contract, including the participation-blind coincidence). Act and
-    // face readers that ask whether the render normalizes a marker read the
-    // warp cache's `collapsed` subset instead — `red`'s widened, paint-only
-    // membership has no such reader. Mutable: refreshed from the const
-    // flag-cache build. Each keyed on its store's generation and what else
-    // its count reads (the warp set the audio identity, the phase-reset set
-    // the live map's hash), so the
-    // classification runs once per change, not per tick, and freezes through a
-    // marker drag (the store mutates only at commit).
+    // Memoized warp red-flag set — `red` is the warp lane's PAINT cue,
+    // painted whether or not the row is selected: the render's own
+    // normalization to 1.00, a coincident member of the parser's runs
+    // included whatever its disabled bit (architect 2026-11-17;
+    // warp_frame_map_view.h carries the full contract). Act and face readers
+    // that ask whether the render normalizes a marker read its `collapsed`
+    // subset, the membership. The phase-reset column has no strike
+    // (architect 2026-11-17, anything goes there). Mutable: refreshed from
+    // the const flag-cache build. Keyed on the store's generation and the
+    // audio identity, so the classification runs once per change, not per
+    // tick, and freezes through a marker drag (the store mutates only at
+    // commit).
     mutable WarpRedFlagCache warp_red_flag_cache;
-    mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
-    // the three inputs it read to give it (since 2026-09-01). Jump to Defining
+    // the four inputs it read to give it (since 2026-09-01). Jump to Defining
     // Marker's FACE (jump_to_value_source_actionable) asks that question every
     // tick through the comparator and at every paint of its row through the
     // roster painter — the redraw callback the platform runs once per pending
@@ -5512,13 +5508,16 @@ struct AppState {
     // generation (the store's own "did anything change" token, which the
     // red-flag memos above and the flag-cache fingerprint already key on; the
     // A/B tabs share this store, so no view or tab axis can change the answer
-    // without it) and the frame count the composer resolves against. Mutable
+    // without it), the sample rate (the coincidence's millisecond the
+    // composer's membership reads, architect 2026-11-17) and the frame count
+    // the composer resolves against. Mutable
     // and written by value_source_marker alone; invalidated by the key
     // compare, so no mutator calls anything. Session-only, never serialized.
     struct ValueSourceMarkerCache {
         bool      valid        = false;
         long long markers_gen  = -1;
         int       focus        = -1;
+        int       sample_rate  = 0;
         int64_t   total_frames = -1;
         int       source       = -1;
     };
@@ -11146,11 +11145,9 @@ inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
 // audio views (architect 2026-10-12: in source view the point goes forward
 // through the live map to its whole target frame, takes the subtraction and
 // comes back, one calculation at the drop). Defined in
-// warp_frame_map_view.cpp. THREE READERS: the at-playhead drop's frame below
-// (the point the playhead), the crossing's group drop
-// (phase_reset_crossing_group_drops, the point each selected warp marker)
-// and the crossing's single form asked from the warp column
-// (phase_reset_crossing_single_drop_coincides, the point the playhead).
+// warp_frame_map_view.cpp. TWO READERS: the at-playhead drop's frame below
+// (the point the playhead) and the crossing's group drop
+// (phase_reset_crossing_group_drops, the point each selected warp marker).
 int64_t phase_reset_lead_in_source_frame(const AppState& a,
                                          const GuiAudio& audio, int64_t point);
 
@@ -11161,7 +11158,7 @@ int64_t phase_reset_lead_in_source_frame(const AppState& a,
 // W column the playhead's own source frame. Defined in
 // warp_frame_map_view.cpp. READERS: the two drop bodies
 // (drop_copy_previous_at_playhead, drop_phase_reset_lead_in_at_playhead) and
-// the two refusals asked of it, drop_at_playhead_coincides and
+// the refusals asked of it, drop_at_playhead_coincides (the W column's) and
 // drop_at_playhead_off_edge below.
 int64_t drop_at_playhead_source_frame(const AppState& a,
                                       const GuiAudio& audio);
@@ -11180,19 +11177,16 @@ inline bool phase_reset_crossing_drop_is_group(const AppState& a) {
 // PLACE is the frame the single drop authors with the playhead standing on
 // that marker: the marker's position in the standing audio view's domain
 // through phase_reset_lead_in_source_frame, the single drop's own
-// computation. A PLACE IS SKIPPED where a phase reset ALREADY SEEDS IN ITS
-// WINDOW of the analysis lattice under the live map (architect 2026-11-11,
-// the drop coincidence rule: the single drop's own test,
-// phase_reset_seeds_in_window_of, warp_frame_map_view.h — enabled or
-// disabled alike, and a reset on the exact frame among them), or where the
-// single drop's own validation refuses it — the painted edge,
+// computation. EVERY PLACE GETS ITS RESET (architect 2026-11-17: "let's do
+// anything-goes for phase"; "the 'confusing-in-editor' case is simply
+// something for the user to be careful with"): a place a phase reset already
+// holds, or shares a seed window with, or that another selected marker's
+// place lands on, takes its reset all the same. A PLACE IS SKIPPED only
+// where the single drop's own validation refuses it — the painted edge,
 // source_frame_off_right_edge asked of the frame (`off_edge` records that
-// one was). `frames` is what the act authors, ascending, ONE A WINDOW:
-// selected markers whose places share a seed window drop one reset there, at
-// the warp focus's place where the focus (last_selected_marker) is among
-// them, else at the earliest — no drop makes a coincidence, the plan's own
-// places included. `focus_frame` is the place of the warp focus where that
-// place is dropped, else -1. THE ACT
+// one was). `frames` is what the act authors, ascending, one a place, equal
+// frames kept. `focus_frame` is the place of the warp focus
+// (last_selected_marker) where that place is dropped, else -1. THE ACT
 // REFUSES ONLY WHEN `frames` IS EMPTY — every selected marker skipped — and
 // the face greys on the same emptiness through the twin rule
 // (phase_reset_drop_crossing_would_act below). A stale selection index is
@@ -11209,58 +11203,34 @@ PhaseResetCrossingDrops phase_reset_crossing_group_drops(
 bool phase_reset_crossing_group_would_drop(const AppState& a,
                                            const GuiAudio& audio);
 
-// THE HOLD'S SINGLE FORM, IS ITS PLACE TAKEN (architect 2026-11-11, the drop
-// coincidence rule): Shift+S from the warp column over one selected marker
-// or none authors the lead-in reset of the playhead, and it refuses where a
-// phase reset already seeds in that frame's window
-// (phase_reset_seeds_in_window_of, warp_frame_map_view.h). Asked FROM THE
-// WARP COLUMN, before the switch — which is why it spells the lead-in frame
-// itself: drop_at_playhead_source_frame answers the W column's frame while
-// the W column stands. It is the frame the P body asks
-// drop_at_playhead_coincides of after the switch (the column writer moves no
-// playhead, no store and no map), so the two answers cannot differ. TWO
-// READERS: the act's refusal ahead of its switch
-// (GuiInputHandler::drop_phase_reset_crossing) and the composed answer
-// below.
-inline bool phase_reset_crossing_single_drop_coincides(const AppState& a,
-                                                       const GuiAudio& audio) {
-    return phase_reset_seeds_in_window_of(
-        a, audio,
-        phase_reset_lead_in_source_frame(a, audio, a.playhead_cursor_sample));
-}
-
 // WOULD SHIFT+S ACT — the crossing's whole answer for the Drop key's face
-// and its tooltip's second line (architect 2026-11-10; the single form's
-// term 2026-11-11): the crossing is live
-// (phase_reset_drop_crossing_actionable) and its form would drop — over a
-// multi-selection, at least one selected marker's place would take a reset;
-// over one or no selected marker, no phase reset already seeds in the
-// window of the playhead's lead-in frame
-// (phase_reset_crossing_single_drop_coincides). The single form's
-// painted-edge refusal is NOT a term: it is asked after the switch and stays
-// the chord's card, as it was.
+// and its tooltip's second line (architect 2026-11-10): the crossing is live
+// (phase_reset_drop_crossing_actionable) and, over a multi-selection, at
+// least one selected marker's place would take a reset; over one or no
+// selected marker it acts wherever it is live — anything goes on the
+// phase-reset column (architect 2026-11-17), so no place is taken. The
+// single form's painted-edge refusal is NOT a term: it is asked after the
+// switch and stays the chord's card, as it was.
 inline bool phase_reset_drop_crossing_would_act(const AppState& a,
                                                 const GuiAudio& audio) {
     if (!phase_reset_drop_crossing_actionable(a)) return false;
     if (phase_reset_crossing_drop_is_group(a))
         return phase_reset_crossing_group_would_drop(a, audio);
-    return !phase_reset_crossing_single_drop_coincides(a, audio);
+    return true;
 }
 
 // DOES THE AT-PLAYHEAD DROP'S PLACE ALREADY HOLD A MARKER OF ITS COLUMN
 // (architect 2026-11-11, THE DROP COINCIDENCE RULE: "coincident markers are
-// always unintentional"; every drop refuses a coincident place) — the
-// column's own test asked of the frame above: on the P column a phase reset
-// already seeding in that frame's window, on the W column a warp marker
-// already standing within one nudge step of that frame (the vicinity,
-// architect 2026-11-15, the no-grid arc), disabled ones counted in both
-// (phase_reset_seeds_in_window_of / warp_marker_in_vicinity_of,
-// warp_frame_map_view.h, which own the two definitions). Defined in
-// warp_frame_map_view.cpp. THREE READERS, the off-edge refusal's own: the
-// two drop bodies, which refuse on it AHEAD of the edge with
-// kPhaseResetDropOccupiedCard / kMarkerDropOccupiedCard (notifications.h),
-// and the Drop marker button's face (redesign_button_enabled), whose plain
-// form greys on it.
+// always unintentional") — ON THE W COLUMN ALONE: a warp marker, disabled
+// ones counted, coinciding with the frame above — the same frame or under one
+// millisecond, the parser's predicate (architect 2026-11-17;
+// warp_marker_in_vicinity_of, warp_frame_map_view.h, owns the test). ON THE P
+// COLUMN THE ANSWER IS ALWAYS NO (architect 2026-11-17: "let's do
+// anything-goes for phase"): a reset drops wherever it lands, a stack on one
+// frame included. Defined in warp_frame_map_view.cpp. TWO READERS: the warp
+// drop body, which refuses on it AHEAD of the edge with
+// kMarkerDropOccupiedCard (notifications.h), and the Drop marker button's
+// face (redesign_button_enabled), whose plain form greys on it.
 bool drop_at_playhead_coincides(const AppState& a, const GuiAudio& audio);
 
 // WOULD THE AT-PLAYHEAD DROP AUTHOR A MARKER PAST THE LAST COLUMN AT THIS
@@ -11315,9 +11285,9 @@ inline bool tempo_cent_step_column_allowed(const AppState& app) {
 // claim that it needed the act's own resolution run. THAT LIST IS EMPTY since
 // 2026-09-13: THE TEMPO BRACKET WALL left it on 2026-08-31, a PASS left
 // it when the target-view step began freezing it as source view does, and the
-// KIND REFUSAL — a label ref in either view, a coincident-collapse member in
+// KIND REFUSAL — a label ref in either view, a coincident member in
 // target view — left it the same day, the claim being false for both (a ref is
-// a plain field and the collapse test reads a memoized cache). The DIRECTIONAL
+// a plain field and the coincidence test reads a memoized cache). The DIRECTIONAL
 // predicate below faces all of it: the bracket's max greys Up and its min
 // Down, and the kind refusal greys both.
 inline bool tempo_cent_step_actionable(const AppState& app) {
@@ -11395,7 +11365,7 @@ inline void warp_tempo_step_write(GuiWarpMarker& m,
 
 // THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): true when EVERY
 // selected marker could take a step of `delta_cents` — no pass, no label ref,
-// no coincident-collapse member, none that would leave the tempo bracket under
+// no coincident member, none that would leave the tempo bracket under
 // the WHOLE step (the "already AT the bracket edge" compare until the step
 // ladder landed the same day, and the identical test at the bare ±1: a member
 // is out of bracket after one cent iff it was resting on that edge) — and
@@ -11444,8 +11414,8 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 //     the whole cue;
 //   * a singleton whose focus the step refuses on its KIND — a label ref in
 //     either view ("A label reference has no tempo of its own"), and in
-//     target view a coincident-collapse member ("That marker shares its frame
-//     with another") — greys BOTH directions, asked of the act's own owner
+//     target view an enabled coincident member ("That marker coincides with
+//     another") — greys BOTH directions, asked of the act's own owner
 //     (tempo_cent_step_kind_refusal_for, below), and that refusal KEEPS ITS
 //     CARD at the key (architect 2026-09-13: "shouldn't we grey out the
 //     up/down for label refs in source? we grey out Left for a marker at 0"):
@@ -11453,8 +11423,8 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 //     wall, so the grey and the card stand together, the group arm's shape.
 //     From 2026-08-31 to that ruling the kind refusal kept a LIVE face, on
 //     the claim that it needed the act's own resolution run — false for a
-//     ref, a plain field, and for the collapse test, which reads the red
-//     cache's memoized collapse subset.
+//     ref, a plain field, and for the coincidence test, which reads the red
+//     cache's memoized membership.
 // WHAT IT STILL ANSWERS TRUE FOR, and deliberately: a PASS in both views,
 // which always freezes and so always changes.
 // Defined in warpmarkers_ops.cpp beside both step arms.
@@ -11480,15 +11450,16 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 // label reference has no tempo of its own" — until that ruling the source-view
 // reference was refused at the act's no-change tail with the same literal,
 // where neither the face nor the tooltip could ask it) and, in target view
-// alone, the COINCIDENT-COLLAPSE one ("That marker shares its frame with
-// another", asked of the red cache's collapse subset), with the P column, a
+// alone, the COINCIDENT one ("That marker coincides with another", asked of
+// the red cache's membership, `collapsed`), with the P column, a
 // GROUP press and a stale focus all answering nullptr because none of them is
 // this refusal's business — the group arm's own refusals are the wall scan's,
 // and the belt says nothing by GuiOpRefusal's contract. A DISABLED marker is
 // not refused (architect 2026-09-13, "disabled should be steppable"), a
-// disabled row inside a collapsed run included: the parser's collapse set
-// carries the whole raw run, disabled rows too, so the collapse arm is asked
-// of an enabled row alone. Defined in warpmarkers_ops.cpp beside the act.
+// disabled member of a coincident run included: the parser's membership
+// counts disabled rows (architect 2026-11-17), but a disabled marker's tempo
+// renders nowhere while it is disabled, so the coincidence arm is asked of an
+// enabled row alone. Defined in warpmarkers_ops.cpp beside the act.
 //
 // A PASS IS NOT REFUSED (architect 2026-09-13: "why not just allow tempo step
 // by collapsing the inherit as we already do in S+W?"): the singleton step
@@ -11522,13 +11493,15 @@ const char* tempo_cent_step_kind_refusal_for(const AppState& a,
 const char* tempo_cent_step_kind_refusal(const AppState& a,
                                          const GuiAudio& audio);
 
-// THE COINCIDENT-COLLAPSE STEP SENTENCE (architect 2026-09-16): the tempo
-// step's kind refusal above raises it for an enabled member of a warp run the
-// render collapses. A stepped value on such a member changes nothing the
-// render reads, so the press is refused on the marker's KIND — the frame it
-// shares.
+// THE COINCIDENT STEP SENTENCE (architect 2026-09-16): the tempo step's kind
+// refusal above raises it for an enabled member of a coincident warp run,
+// which renders as a plain 1.00 owner. A stepped value on such a member
+// changes nothing the render reads, so the press is refused on the marker's
+// KIND — the coincidence, the same frame or under one millisecond from a
+// neighbor (warp_coincident_members, architect 2026-11-17), so the sentence
+// says "coincides" and names no frame.
 inline constexpr const char* kCoincidentCollapseStepCard =
-    "That marker shares its frame with another";
+    "That marker coincides with another";
 
 // DOES THIS COLUMN CARRY GRID ITERATIONS RIGHT NOW — the mode's ONE
 // column-shaped question. `column` is 'W' or 'P'.
@@ -12221,7 +12194,7 @@ inline bool transport_session_live(const AppState& a) {
 // moved by exactly `count` units of ACTIVE-DOMAIN frames in pure integer
 // arithmetic, no grid, no map and no rounding — MILLISECONDS is the warp
 // column's unit (architect 2026-11-15, the no-grid arc: the nudge
-// recalibrated to one millisecond), arrow_millisecond_frames at the piece's
+// recalibrated to one millisecond), millisecond_frames at the piece's
 // rate, whatever the zoom; HOPS is the phase-reset column's (architect
 // 2026-09-21, THE P COLUMN'S ARROW UNIT IS A HOP), kRs frames of the target
 // domain, the P column being target view's alone — pre-clamped through the
@@ -12266,7 +12239,7 @@ int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
 // about: the ladder retired, and the ctrl form (2026-09-22) is the same step
 // with another camera, so its buttons ask this with the arrows' own value. Both
 // units move a resting marker by at least one frame off a wall (a
-// millisecond is at least a frame, arrow_millisecond_frames; the hop owner's
+// millisecond is at least a frame, millisecond_frames; the hop owner's
 // landing lies in the seed window one over, phase_reset_hop_step_frame), so
 // after the headroom clamp the landing equals the resting frame iff that
 // headroom is ZERO: a marker two frames from the end greys nothing (the step
@@ -13619,7 +13592,7 @@ inline bool horizontal_flag_drag_refused(const AppState& a) {
 // posture the view clause went, and the payload steps in S+W exactly as the
 // arrows step it there. THE KIND GATE
 // IS THE ARROWS' OWN, IN ITS INDEX FORM (tempo_cent_step_kind_refusal_for):
-// a label ref in either view, and in T view a coincident-collapse member, is refused, and the
+// a label ref in either view, and in T view a coincident member, is refused, and the
 // drag asks the same owner rather than a second reading of it — ABOUT THE
 // MARKER IT WAS ASKED ABOUT. A PASS IS A TARGET (architect
 // 2026-09-13, the arrows freezing a pass in target view as in source view):
@@ -13677,7 +13650,7 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
         // (THE TARGET-VIEW TERM STOOD HERE from 2026-09-13 to 2026-10-11 and
         // went with the view posture: the lamp arms the payload in S+W too.)
         // The arrows' kind refusal, asked of its one owner about THIS marker:
-        // a label ref and a coincident-collapse member refuse, so what passes
+        // a label ref and a coincident member refuse, so what passes
         // is an owner or a pass (which the drag freezes), enabled or disabled.
         if (tempo_cent_step_kind_refusal_for(a, audio, idx)) return false;
         return true;
@@ -13995,7 +13968,7 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     bodies' silent returns hand their dispatcher the same empty answer an
 //     accepted drop does, so only the body knows the press was accepted —
 //     and each road reaches exactly one body, once. A refused drop (the
-//     home-view card, the painted edge, an occupied place) leaves the lamp
+//     home-view card, the painted edge, the warp drop's occupied place) leaves the lamp
 //     lit;
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
@@ -14994,7 +14967,7 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // status/value family deliberately left out of the 2026-08-24 target-view
 // admission), a non-empty selection, an in-range one, CONTIGUITY, no
 // effectively-enabled label ref in [owner .. boundary], an eligible owner, an
-// owner outside every coincident-collapse run, and ONE TEMPO across the
+// owner that is no coincident member, and ONE TEMPO across the
 // selected run. Every arm is input routing: it judges the selection's
 // arrangement and the view, not data, and has no producer on disk; its card
 // is a message, not an error arm, and the coincident arm CALLS the render's
@@ -15019,7 +14992,7 @@ enum class BpmSweepRefusal {
     NotOneRun,        // the selection is not one contiguous run
     LabelRefInSpan,   // an effectively-enabled ref inside or at the span's end
     OwnerIneligible,  // the first selected marker passes, refs or is disabled
-    OwnerCoincident,  // the first selected marker shares its frame
+    OwnerCoincident,  // the first selected marker is a coincident member
     MixedTempos,      // the run's members do not agree on one tempo
 };
 
@@ -15184,7 +15157,7 @@ inline bool playback_launch_playable(const AppState& a,
 // such case is named at its arm: the value-shaped tail that needs the act's
 // own resolution run (an empty payload under the value copy — the BRACKET WALL
 // left this list on 2026-08-31, the directional predicate facing it; Up/Down's
-// KIND REFUSAL, a label ref or a coincident-collapse member in target view,
+// KIND REFUSAL, a label ref or a coincident member in target view,
 // left it on 2026-09-13, the same predicate asking the act's own kind owner;
 // the LEAD-IN OFFSET left it on 2026-08-30,
 // the architect reversing its recorded seam: Play's face reads the REAL
@@ -15534,30 +15507,22 @@ inline bool playback_launch_playable(const AppState& a,
 //     target_render.h includes this header — the class can only be
 //     forward-declared here, and the trampoline is a forwarding call, not a
 //     second spelling of the condition.
-// THE VALUE PAIR'S GATE ANSWERS A THREE-WAY VERDICT, PayloadEligibility,
-// since 2026-09-02 (architect): Eligible, or one of TWO refusals
-// that card in different words — NoResolvedValue (nothing focused, the P
-// column, an owner, an effectively disabled marker) and CollapsedStack (a
-// pass or a ref inside a coincident-collapsed group, whose composed value is
-// the RAW store's and not what the render applies). The acts fork their
-// sentence on it (input_key_dispatch.cpp), Jump to Defining Marker's face
+// THE VALUE PAIR'S GATE ANSWERS A VERDICT, PayloadEligibility: Eligible, or
+// NoResolvedValue (nothing focused, the P column, an owner, an effectively
+// disabled marker — a coincident member never: it reads 1.00, architect
+// 2026-11-17). The acts card on it (input_key_dispatch.cpp), Jump to
+// Defining Marker's face
 // reads the boolean wrapper below for its copy twin (2026-10-14), and the
 // tooltip overload asks it for that button's SHIFT LINE alone. The gate's
 // full contract is at its second declaration with the
 // hit-test declarations below; the enum and the wrapper are named here
 // ahead of them because that face reads the wrapper and this
 // predicate is inline in the header.
-enum class PayloadEligibility { Eligible, NoResolvedValue, CollapsedStack };
+enum class PayloadEligibility { Eligible, NoResolvedValue };
 PayloadEligibility payload_eligibility(const AppState& app,
                                        const GuiAudio& audio, int idx);
 bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
                              int idx);
-// THE STACK REFUSAL'S ONE SENTENCE, said by both chords and by nothing else
-// (their raise sites, input_key_dispatch.cpp); the other two sentences are
-// the acts' own, at their raise sites.
-inline constexpr const char* kValueInCollapsedStack =
-    "The focused marker shares its frame with another, so its value is not "
-    "what the render applies";
 // THE MARKER THE FOCUSED VALUE CAME FROM, or −1 — the jump's own question
 // (Ctrl+J since 2026-09-29, Shift+`j` before; GuiInputHandler::
 // jump_to_value_source), named 2026-09-01 so a face could drop where there is
@@ -15573,11 +15538,12 @@ inline constexpr const char* kValueInCollapsedStack =
 // Marker's face (jump_to_value_source_actionable, below), which asks the same
 // owners in the same order (Copy Value's shift line was the face's reader
 // from 2026-09-01 until the jump left that button, 2026-09-29). MEMOIZED
-// SINCE 2026-09-01 on the store generation, the focus and the
-// frame count — the face is asked on every tick and every paint; the cache,
+// SINCE 2026-09-01 on the store generation, the focus, the sample rate (the
+// coincidence's millisecond, 2026-11-17) and the frame count — the audio's
+// own two, read here — the face is asked on every tick and every paint; the cache,
 // its key and the reasoning are at AppState::ValueSourceMarkerCache. Defined
 // in app_state.cpp beside the eligibility gate.
-int value_source_marker(const AppState& app, int64_t total_frames);
+int value_source_marker(const AppState& app, const GuiAudio& audio);
 // WOULD THE JUMP LAND? — Jump to Defining Marker's face (architect
 // 2026-09-29: the button greys where Ctrl+J refuses). The act's own three
 // questions in the act's own order (GuiInputHandler::jump_to_value_source,
@@ -15585,14 +15551,13 @@ int value_source_marker(const AppState& app, int64_t total_frames);
 // follower lands on the leader and short-circuits the rest), then the
 // eligibility gate on the focus, then value_source_marker (memoized, so the
 // per-tick face costs a compare). Each is read from its owner and restated
-// nowhere; `total_frames` is the source's, the jump's own argument.
+// nowhere.
 inline bool jump_to_value_source_actionable(const AppState& a,
-                                            const GuiAudio& audio,
-                                            int64_t total_frames) {
+                                            const GuiAudio& audio) {
     if (jump_tie_leader_destination(a) >= 0) return true;
     if (!payload_eligible_marker(a, audio, a.last_selected_marker))
         return false;
-    return value_source_marker(a, total_frames) >= 0;
+    return value_source_marker(a, audio) >= 0;
 }
 
 // THE TARGET PREVIEW'S READINESS, forwarded (target_render.cpp): exactly
@@ -16279,27 +16244,27 @@ inline bool redesign_button_enabled(const AppState& a,
         //     everywhere but T+W — the P column drops in both audio views
         //     since S+P's return, 2026-10-12), the drop's frame paints at
         //     this zoom (architect 2026-09-26, drop_at_playhead_off_edge)
-        //     AND ITS PLACE IS FREE (architect 2026-11-11, the drop
-        //     coincidence rule, drop_at_playhead_coincides: a phase reset
-        //     already seeding in that frame's window on the P column, a warp
-        //     marker already within one nudge step of that frame on the W
-        //     column, disabled ones counted);
+        //     AND, ON THE WARP COLUMN, ITS PLACE IS FREE (architect
+        //     2026-11-11, the drop coincidence rule, drop_at_playhead_coincides:
+        //     no warp marker, disabled ones counted, coinciding with that frame
+        //     — the same frame or under one millisecond, the parser's
+        //     predicate, 2026-11-17; the P column asks nothing, anything goes
+        //     there, 2026-11-17);
         //   * THE HOLD (Shift+S, the crossing from the warp column) acts
         //     where its whole answer says so
         //     (phase_reset_drop_crossing_would_act: the warp column
-        //     standing, and over a multi-selection a place that would take
-        //     a reset — architect 2026-11-10 — or, over one selected marker
-        //     or none, the playhead's lead-in window free, 2026-11-11).
+        //     standing, and over a multi-selection a place inside the painted
+        //     edge — architect 2026-11-10; over one selected marker or none
+        //     it always acts).
         // So the face stays lit over a plain refusal exactly while the hold
         // still acts — T+W, where bare `s` is off home and its lift reaches
         // the chord's own card; S+W with the playhead on a warp marker or
-        // past the painted edge while a hold place is free — and greys where
-        // both are dead: the P column past the edge or on an occupied
-        // window (the crossing not live there); T+W with one selected
-        // marker whose reset exists; S+W with the playhead on a warp marker
-        // and every hold place taken. THE HOLD'S SINGLE FORM'S PAINTED-EDGE
-        // REFUSAL IS NO TERM: it is asked after the column switch and stays
-        // the chord's card. The composition is the twin rule's one spelling
+        // past the painted edge — and greys where both are dead: the P
+        // column past the edge (the crossing not live there); a
+        // multi-selection whose every place is past the edge with the plain
+        // form refused. THE HOLD'S SINGLE FORM'S PAINTED-EDGE REFUSAL IS NO
+        // TERM: it is asked after the column switch and stays the chord's
+        // card. The composition is the twin rule's one spelling
         // here, and it is what greys again if either predicate narrows.
         case RedesignButton::IconMarkerDrop:
             return !active_view_state(a).read_only &&
@@ -16662,11 +16627,11 @@ inline bool redesign_button_enabled(const AppState& a,
         //     copy (Jump to Defining Marker's shifted press since 2026-10-14),
         //     which needs the act's own composition run and says so on
         //     a card. (UP / DOWN'S KIND REFUSAL LEFT THIS LIST on 2026-09-13 —
-        //     a label ref in either view, a coincident-collapse member in
+        //     a label ref in either view, a coincident member in
         //     target view; a pass had left it that morning by freezing —
         //     the architect: "shouldn't we grey out the up/down for label refs
         //     in source? we grey out Left for a marker at 0". The ref is a
-        //     plain field and the collapse test a memoized cache read, so the
+        //     plain field and the coincidence test a memoized cache read, so the
         //     face asks the act's own owner and greys, the key still carding.)
         //   (THE BRACKET WALL LEFT THIS LIST on 2026-08-31, in the
         //   refinement arc: Up greys with the focused owner resting on the
@@ -16928,7 +16893,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // the Open Text Editor seat's ctrl presses the same evening (their
         // own key, Copy Phase Resets, since 2026-10-24).
         case RedesignButton::IconJumpToDefiningMarker:
-            if (!jump_to_value_source_actionable(a, audio, total_frames) &&
+            if (!jump_to_value_source_actionable(a, audio) &&
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
                 return false;
             break;
@@ -19234,10 +19199,9 @@ inline RedesignTooltipText redesign_button_tooltip_forks(
         // own line has no arm — its two pastes share one ladder, the constant
         // table's record.)
         // DROP MARKER: in the P column the shifted press refuses as already
-        // crossed, over a multi-selection whose every place is skipped it
-        // refuses too, and over one selected marker or none it refuses where
-        // a phase reset already seeds in the playhead's lead-in window
-        // (architect 2026-11-11, the drop coincidence rule) — the one
+        // crossed, and over a multi-selection whose every place is skipped
+        // (past the painted edge) it refuses too — no place is taken on the
+        // phase-reset column (architect 2026-11-17) — the one
         // composed answer the face's hold term reads
         // (phase_reset_drop_crossing_would_act, the shift act's own) — so
         // its line drops on each. OVER A MULTI-SELECTION THAT WOULD
@@ -19962,25 +19926,26 @@ SweepHighlightChange sweep_highlight_change(
 // a numeric tempo (pass markers and label_ref markers qualify; owning markers
 // don't) — AND that value is the one the render applies. Requires warp view;
 // always NoResolvedValue in phase reset view (no pass concept). The terms, in
-// the order asked (the body, app_state.cpp): the focus and the column, the
+// the order asked (the body, app_state.cpp): the focus and the column, then
+// THE COINCIDENT MEMBER, ELIGIBLE WHATEVER ITS KIND OR BIT (architect
+// 2026-11-17: "they both get 1.0 as their effective tempo" — the composer
+// reads it out as 1.00, the render's truth, read from the red-flag cache's
+// own `collapsed` set, the parser's membership), then the
 // disabled test through the ONE owner effective_disabled (warpmarkers.h — the
 // marker's own flag, the render's drop; a ref under a disabled definition is
-// live and reads out as its 1.00 normalization, 2026-10-29), the pass-or-ref test, and then the COLLAPSED STACK: a member of a
-// coincident-collapsed group refuses CollapsedStack (the group tempo step's
-// precedent, read from the red-flag cache's own `collapsed` subset), because
-// the composer resolves a group member against the raw store — the ruled
-// authored/display split — while the render replaces the stack with one
-// synthetic 1.00 owner. Iteration mode is NOT a term since 2026-09-02: the
+// live and reads out as its 1.00 normalization, 2026-10-29) and the
+// pass-or-ref test. Iteration mode is NOT a term since 2026-09-02: the
 // line refusing under it was the retired readout's, carried past the
 // readout's death, and it made `j` card "no resolved value" on a marker that
 // had one (architect). A ref whose definition is
-// missing entirely stays Eligible — resolved_marker_payload already yields an
-// empty string for that case and both acts refuse an empty payload, so it
-// never surfaces a stale tempo. ITS CALLERS, re-read 2026-10-14: the
+// missing entirely stays Eligible — resolved_marker_payload reads it out as
+// the render's own 1.00 normalization — and an empty payload (a ref whose
+// walk has no successor) is refused by both acts, so it never surfaces a
+// stale tempo. ITS CALLERS, re-read 2026-10-14: the
 // VALUE PAIR (2026-08-29) — Ctrl+Shift+J, which copies the focused marker's
 // resolved value to the system clipboard (since 2026-10-14), and Ctrl+J,
 // which jumps to the marker that value came from (both read the verdict and
-// fork their card on it) — and JUMP TO DEFINING MARKER, the button that
+// card on its refusal) — and JUMP TO DEFINING MARKER, the button that
 // carries both (the copy its shift twin): its face (redesign_button_enabled,
 // the twin rule's OR — the boolean wrapper directly for the copy and through
 // jump_to_value_source_actionable for the jump, its second question after

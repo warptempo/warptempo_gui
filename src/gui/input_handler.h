@@ -206,7 +206,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // the cell as they do in the source. A def's rescale can push an outside ref
 // across that envelope exactly as a cent step on the def can today; under
 // the load-lenient, render-normalizing doctrine that is a red flag on the
-// loaded cell, never a refusal here. The coincident-collapse run is the one
+// loaded cell, never a refusal here. The coincident run is the one
 // such state the `m` gate refuses up front (input_key_dispatch.cpp) — an
 // owner inside it can take no tempo at all.
 inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
@@ -3790,18 +3790,17 @@ private:
     // `s` runs there, so it is bare `s` with a column switch in front of it
     // and never a second drop body; the drop takes the kN/2 lead-in in either
     // audio view (drop_at_playhead_source_frame, app_state.h). In the P
-    // column it refuses whole as already crossed. AND IT REFUSES WHOLE,
-    // BEFORE ANY SWITCH, WHERE ITS PLACE IS TAKEN (architect 2026-11-11, the
-    // drop coincidence rule): a phase reset already seeding in the window of
-    // the playhead's lead-in frame
-    // (phase_reset_crossing_single_drop_coincides, app_state.h).
+    // column it refuses whole as already crossed. NO PLACE IS TAKEN
+    // (architect 2026-11-17, "let's do anything-goes for phase"): the reset
+    // drops wherever the lead-in lands, on a frame or in a window another
+    // reset holds included.
     //
     // OVER A MULTI-SELECTION IT IS THE GROUP DROP (architect 2026-11-10):
     // with two or more markers selected in the warp column each selected
     // marker gets a reset at its own place — the single drop's computation
-    // with the playhead on that marker — a place whose seed window already
-    // holds a phase reset skipped and places sharing a window dropping one
-    // reset (2026-11-11); the act refuses, before any switch, only where
+    // with the playhead on that marker — every place taking its reset, a
+    // place two markers share included (architect 2026-11-17), the painted
+    // edge alone skipping one; the act refuses, before any switch, only where
     // every place is skipped (phase_reset_crossing_group_drops, app_state.h;
     // the body's head).
     //
@@ -3819,8 +3818,8 @@ private:
     // — a phase reset is authored content), the `h` view (its allowlist admits
     // neither), a standing modal (on_key's ranked dispatch above the arm) and
     // a blank session. The drop's own refusals stay its (the painted edge,
-    // asked after the switch); the occupied window is this act's leading
-    // refusal above. BOTH FORMS SPEND THE ADD TO SELECTION LAMP on their
+    // asked after the switch); no place is taken on the phase-reset column
+    // (architect 2026-11-17). BOTH FORMS SPEND THE ADD TO SELECTION LAMP on their
     // accepted path (selection_consumed's inventory, app_state.h).
     //
     // THE HOME-VIEW BINDING IS NOT INVOLVED and this is not a sixth exception

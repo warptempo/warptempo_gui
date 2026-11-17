@@ -28,8 +28,10 @@ public:
     // them ordered: this insert places by lower_bound, and the
     // time-mutating gestures reorder through the reorder-and-remap path,
     // so the list is always sorted at rest. Degenerate equal-time groups
-    // normalize at the render boundary, never here (warp ties collapse to
-    // one plain 1.00 owner in build_warp_frame_map; exact-equal enabled
+    // normalize at the render boundary, never here (every enabled member of
+    // a warp coincidence — the same frame or under one millisecond — renders
+    // as a plain 1.00 owner, those on one exact frame as one, in
+    // resolve_warp_markers_for_render, 2026-11-17; exact-equal enabled
     // phase resets collapse to one event in
     // build_phase_reset_source_frames).
     int insert_marker(GuiM m) {

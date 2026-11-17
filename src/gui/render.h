@@ -326,8 +326,8 @@ struct TrimRange {
 //                 enabled fill (the accent since 2026-11-13, session
 //                 119), `cue_outline` its one-W outline, the
 //                 selected marker's stem and the two rings — warp and
-//                 phase reset alike (the strike is the invalid mark, THE
-//                 MARKER LANE below); the disabled cue's `inactive_cue`,
+//                 phase reset alike (the strike, the warp column's alone, is
+//                 the invalid mark, THE MARKER LANE below); the disabled cue's `inactive_cue`,
 //                 its chip's fill and the inert label, and its
 //                 `inactive_cue_outline`, the disabled chip's outline
 //                 (architect 2026-11-12, session 114); the playhead's two
@@ -815,10 +815,11 @@ void install_true_colors(bool on);
 // should do is have coincident markers be shown as a strike through, which
 // is actually effective because that's what happens to them. They become
 // one. Very easy to see. So just the strike through on the text"; the
-// strike's shadow went with every shadow, 2026-11-02): a coincident marker
-// (one inside another's place: a warp marker within one nudge step of
-// another, a phase reset sharing a seed window — warp_frame_map_view.h's
-// two red-flag sets)
+// strike's shadow went with every shadow, 2026-11-02): a coincident WARP
+// marker (the same frame or under one millisecond from a neighbor, disabled
+// rows counted, the parser's runs — warp_frame_map_view.h's red-flag set,
+// architect 2026-11-17; a phase reset is never struck, anything goes on its
+// column)
 // wears the plain cue with its label STRUCK (show_cue_label's bar, the face's own
 // stroke on its own strikeout rows, gui_font_strike_band) — the invalid
 // color of 2026-10-11 retired with its role. THE TABLE — which fill, which
@@ -5185,7 +5186,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // bound as a SIGNED WHOLE HOP of the analysis lattice
 // (format_phase_iter_bound_cell). The sign is the whole syntax here as it is
 // on the warp column, and the ABSENT DECIMALS are what tell a hop cell from a
-// cent cell. The selection gives the selected look as there.
+// cent cell. The selection gives the selected look as there. NO RESET IS
+// STRUCK, so it takes no strike set (architect 2026-11-17: "phase resets
+// should get no strike b/c they effectively collapse to 1 in the engine
+// already"; anything goes on this column).
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             FlagLaneRects lanes,
@@ -5196,7 +5200,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             long long viewport_lattice_origin,
                             int sample_rate,
                             const std::set<int>& selected_set,
-                            const std::set<int>& red_set,
                             bool iteration_on,
                             std::vector<FlagHitRect>* out_hit_rects = nullptr,
                             std::vector<MarkerStem>* out_stems = nullptr,

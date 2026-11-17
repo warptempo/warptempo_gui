@@ -1497,10 +1497,11 @@ struct FlagFace {
 // 2026-11-05: "only 1 playhead onscreen ever"): the focused member has no
 // paint of its own — every click and toggle lands the playhead on it
 // (land_playhead_on_marker) — and THE RESOLVER NEVER SEES THE PLAYHEAD.
-// A LIVE CUE'S STRIKE: `strike` is its column's red set
-// (warp_red_flag_set_cached / phase_reset_red_flag_set_cached — the
-// coincident run, and on the warp column a label ref the render falls back
-// from and the definitions of a label two live definitions hold, 2026-10-29).
+// A LIVE CUE'S STRIKE: `strike` is the warp column's red set
+// (warp_red_flag_set_cached — the coincident run, the same frame or under one
+// millisecond, disabled rows counted, 2026-11-17; a label ref the render falls
+// back from; the definitions of a label two live definitions hold,
+// 2026-10-29). A phase reset is never struck (architect 2026-11-17).
 // THE HISTORY ROWS (architect 2026-11-11, session 106: "disabled style and
 // strike take on a different meaning in history — disabled means a marker
 // was removed, and strike means a text was changed. a removed flag always
@@ -2138,19 +2139,22 @@ void render_phase_reset_flags(cairo_t* cr,
                             long long viewport_lattice_origin,
                             int sample_rate,
                             const std::set<int>& selected_set,
-                            const std::set<int>& red_set,
                             bool iteration_on,
                             std::vector<FlagHitRect>* out_hit_rects,
                             std::vector<MarkerStem>* out_stems,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
                             const DragOverlay* drag_overlay,
                             SuppressedBox suppressed) {
+    // NO RESET IS STRUCK (architect 2026-11-17: "phase resets should get no
+    // strike b/c they effectively collapse to 1 in the engine already"): the
+    // shared pass's strike set is empty on this column.
+    static const std::set<int> kNoStrike;
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width,
         phase_resets,
         viewport_start_sample, viewport_end_sample,
         viewport_lattice_origin, sample_rate,
-        selected_set, red_set,
+        selected_set, kNoStrike,
         // A phase reset authors no payload, so its flag carries the display-only
         // token (render.h owns it and what it reads). It reaches the pass
         // whole: the shared byte cap is gone (2026-09-19) and this column has
@@ -2909,19 +2913,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
     // THE MARKER'S STRIKE (resolve_flag_face's table, 2026-10-26), off the
-    // same memoized red-flag set the flag pass reads for this column (the
+    // same memoized red-flag set the flag pass reads for the warp column (the
     // flag cache's rebuild, waveform_cache.cpp), so the riding segments and
     // the resting label agree on it — disabled or not, as there; the FIELD
-    // itself never strikes (show_cue_label's head).
+    // itself never strikes (show_cue_label's head). A phase reset is never
+    // struck (architect 2026-11-17, anything goes on that column).
     const bool struck =
-        phase ? phase_reset_red_flag_set_cached(
-                    app, audio.sample_rate(),
-                    static_cast<long>(audio.total_frames()))
-                        .red.count(idx) > 0
-              : warp_red_flag_set_cached(
-                    app, audio.sample_rate(),
-                    static_cast<long>(audio.total_frames()))
-                        .red.count(idx) > 0;
+        !phase && warp_red_flag_set_cached(
+                      app, audio.sample_rate(),
+                      static_cast<long>(audio.total_frames()))
+                          .red.count(idx) > 0;
     // THE FIELD IS AN EDIT FIELD (architect 2026-10-09 ~12:15, reversing
     // 2026-10-07 ~09:45's "the flag in its selected face, no box and no
     // frame"; its look 2026-11-01 night, M5g: "the box's tones as mocked"):

@@ -490,20 +490,6 @@ struct FlagCache {
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
-    // THE LATTICE THE PHASE-RESET STRIKE WAS COUNTED ON (architect
-    // 2026-11-11, the strike by seed window): the LIVE target map's hash
-    // (TargetWarpFrameMapCache::hash) while this surface paints the P
-    // column's live resets, 0 otherwise (the W column, the `h` view). A
-    // reset's label is struck where another reset seeds in its window of the
-    // analysis lattice (phase_reset_red_flag_set_cached, warp_frame_map_view.h
-    // — keyed on exactly this hash and the generation above), and the lattice
-    // is the live map's IN BOTH AUDIO VIEWS, while fp_warp_frame_map_hash is
-    // the displayed plate's and 0 in source view, where a reset's painted
-    // column reads no map. So without this field a scale or BPM commit in
-    // S+P — the warp store's generation standing, no other field moving —
-    // would leave the old strikes blitted. (A warp edit moves
-    // fp_warp_generation on its own.)
-    uint64_t  fp_phase_reset_lattice_hash = 0;
     uint64_t  fp_drag_overlay_hash        = 0;
     uint64_t  fp_selection_hash           = 0;
     char      fp_active_markers_view      = '\0';
@@ -807,11 +793,10 @@ struct GuiPaintHandler {
     //     cues' tuning field of that day left with its keys;
     //   - THE PALETTE, read live: fp_palette_generation (render.h's
     //     palette_generation — every flag pixel a palette color, 2026-10-03);
-    //   - MARKER-DRIVEN, six read live from app state: fp_warp_generation,
-    //     fp_phase_reset_generation, fp_phase_reset_lattice_hash (2026-11-11:
-    //     the live map's hash while the P column's live resets paint — the
-    //     lattice their strike is counted on), fp_drag_overlay_hash,
-    //     fp_selection_hash, fp_active_markers_view;
+    //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
+    //     fp_phase_reset_generation, fp_drag_overlay_hash,
+    //     fp_selection_hash, fp_active_markers_view (no lattice field: the
+    //     phase-reset column strikes nothing, architect 2026-11-17);
     //   - CONTENT, three more: fp_iteration_mode (it changes what the flags
     //     SHOW — the bound cells), and the standing editor's suppression in its
     //     two halves, fp_suppressed_box_index and fp_suppressed_box_cell (which
@@ -845,8 +830,8 @@ struct GuiPaintHandler {
     // ITS DAMAGE (architect 2026-11-16, the beats; the rule at its tail,
     // waveform_cache.cpp): WHAT IT CHANGED — the cues, the stems and the
     // lead-in ring's sides that differ from the rebuild before — where the
-    // miss is in the CONTENT fields alone (both store generations, the
-    // phase-reset lattice hash, the drag overlay hash, the selection hash),
+    // miss is in the CONTENT fields alone (both store generations, the drag
+    // overlay hash, the selection hash),
     // and the whole waveform area with the viewport's lanes for every other
     // field, a first build and each state its tail names.
     void maybe_rebuild_flag_cache();

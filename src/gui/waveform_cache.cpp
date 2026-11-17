@@ -1429,18 +1429,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
-    // THE PHASE-RESET STRIKE'S LATTICE (FlagCache::fp_phase_reset_lattice_hash,
-    // architect 2026-11-11): the LIVE map's hash while this pass paints the P
-    // column's live resets — the arm below that reads the seed-window strike
-    // set, keyed on this hash and phase_gen — and 0 for the W column and the
-    // `h` view, which read no lattice. The memo's own key compare on a hit;
-    // the P column's Drop face asks the same map every tick.
-    const uint64_t  lattice_hash =
-        (mv == 'P' && !app.history_mode.active)
-            ? target_view_warp_frame_map_cached(
-                  app, audio.sample_rate(),
-                  static_cast<long>(audio.total_frames())).hash
-            : 0;
     // The flags carry TEXT since row 5, and grid iterations change what an
     // eligible flag shows (the two bound cells beside it) ON THE COLUMN THE
     // MODE IS LIT FOR AND ON THAT ONE ALONE (iteration_column_lit, app_state.h
@@ -1509,10 +1497,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     // THE FINGERPRINT IN TWO PARTS (architect 2026-11-16, the beats; the
     // split is the tail's, where the rebuild's damage is decided): THE
-    // MARKER-DRIVEN CONTENT — the five fields that change what cues, stems
+    // MARKER-DRIVEN CONTENT — the four fields that change what cues, stems
     // and ring show on a surface that otherwise stands: both stores'
-    // generations, the phase-reset strike's lattice, the drag overlay and
-    // the selection (a marker's motion, an edit, a select) — and
+    // generations, the drag overlay and the selection (a marker's motion, an edit, a select) — and
     // THE FRAME, every other field: the surface itself, the basis it is laid
     // out on (the displayed span, the lattice origin, the target bit, the
     // map), the band's size and origin, the scale, the palette, the column,
@@ -1547,7 +1534,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const bool content_matches =
         flag_cache.fp_warp_generation   == warp_gen &&
         flag_cache.fp_phase_reset_generation  == phase_gen &&
-        flag_cache.fp_phase_reset_lattice_hash == lattice_hash &&
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash;
 
@@ -1645,28 +1631,21 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // cache holds the marker and phase-reset FLAG shapes. Two owners over two
     // disjoint bands — nothing to arbitrate between them.)
 
-    // Red-flag sets: the marker indices whose render normalizes to the 1.00
-    // fallback OR that are coincident with another row of their own store,
-    // disabled or not — on the warp column a neighbor inside the VICINITY,
-    // less than one nudge step (a millisecond's frames) away, the exact
-    // frame included (architect 2026-11-15, warp_frames_in_vicinity); on the
-    // phase-reset column a shared seed
-    // window (architect 2026-11-11; the caches'
-    // contract, warp_frame_map_view.h), painted
+    // The warp red-flag set: the marker indices whose render normalizes to
+    // the 1.00 fallback — a coincident member of the parser's runs, the same
+    // frame or under one millisecond from a neighbor, disabled or not
+    // (architect 2026-11-17; the cache's contract, warp_frame_map_view.h),
+    // and the label fallbacks — painted
     // STRUCK — the plain cue with its label struck through (resolve_flag_face's
     // table, render.cpp; architect 2026-10-26 ~15:10, "have coincident
     // markers be shown as a strike through"); a disabled one is the inactive
-    // cue with its inactive label struck.
-    // Read from the memoized caches (the warp set keyed on its store's
-    // generation and the audio identity; the phase-reset set on its store's
-    // generation and the live map's hash, its coincidence being the shared
-    // seed window since 2026-11-11 — the two fields this rebuild's own
-    // fingerprint carries, fp_phase_reset_generation and
-    // fp_phase_reset_lattice_hash), so the silent classification runs only
-    // on a marker or lattice change,
+    // cue with its inactive label struck. THE PHASE-RESET COLUMN STRIKES
+    // NOTHING (architect 2026-11-17, anything goes there).
+    // Read from the memoized cache (keyed on the warp store's generation and
+    // the audio identity, the first this rebuild's own fingerprint carries),
+    // so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag
-    // freezes through a marker drag and re-evaluates at commit. The active
-    // view supplies only its own column's set.
+    // freezes through a marker drag and re-evaluates at commit.
     //
     // THIS IS THE SOLE PRODUCER of the marker painter's stash (app.flag_hit_rects
     // / app.marker_stems, contract at their declaration): the boxes' widths are
@@ -1706,15 +1685,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             // would.
             tmap_arg);
     } else if (mv == 'P') {
-        const std::set<int>& pr_red =
-            phase_reset_red_flag_set_cached(
-                app, sr, static_cast<long>(audio.total_frames())).red;
         render_phase_reset_flags(
             ccr, local_top_strip, flag_lanes, wave_w,
             app.phaseresetmarkers.markers(),
             vp_start, vp_end, lattice_origin, sr,
             app.selected_markers,
-            pr_red,
             // The mode's verdict FOR THIS COLUMN, which paints its two BOUND
             // CELLS (its hop bracket) exactly as the warp column's are painted
             // when the lamp was lit there instead.
@@ -1766,7 +1741,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
     flag_cache.fp_warp_generation   = warp_gen;
     flag_cache.fp_phase_reset_generation  = phase_gen;
-    flag_cache.fp_phase_reset_lattice_hash = lattice_hash;
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
@@ -1841,7 +1815,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //
     // WHERE THE MISS IS THE MARKER-DRIVEN CONTENT ALONE (content_matches
     // false over a frame that matches — a marker drag's motion, a value
-    // drag's step, a nudge, an edit, a selection change, a lattice change)
+    // drag's step, a nudge, an edit, a selection change)
     // AND THE RECORD STANDS, the damage is exactly:
     //   * EVERY CUE THAT DIFFERS from the pass before — one rect a cue, its
     //     previous and present painted extents together over the lane's rows

@@ -236,7 +236,7 @@ PositionNudgePrologue position_nudge_prologue(
 // ... we would convert 1 millisecond to the nearest amount in frames, and
 // that would be the nudge step"; "using nudge on a coarse zoom is kind of
 // pointless, because the point of nudge is fine-tuning"). The warp column's
-// step is A TIME, NOT A PLACE: arrow_millisecond_frames (gui_input.h) frames
+// step is A TIME, NOT A PLACE: millisecond_frames (warp_coincidence.h) frames
 // of the displayed domain — 44 at 44.1 kHz, 48 at 48 kHz — at every zoom, the
 // arithmetic at position_nudge_landing's millisecond arm. IT MAKES NO PIXEL
 // CLAIM: on the tablet at 44.1 kHz a press moves the mark 44 / 46 of a px at
@@ -263,7 +263,7 @@ PositionNudgePrologue position_nudge_prologue(
 // marker's resting frame it returns the frame the press would commit:
 //   (1) THE STEP, as a plain integer delta, forked on the step's UNIT and on
 //       nothing else: MILLISECONDS moves the marker's displayed image by
-//       `count` × arrow_millisecond_frames and lands it back through the
+//       `count` × millisecond_frames and lands it back through the
 //       DISPLAYED map (ONE MILLISECOND A PRESS, above); HOPS, the
 //       phase-reset column's arrow unit (architect 2026-09-21), takes `count`
 //       hops through phase_reset_hop_step_frame over the LIVE map
@@ -294,7 +294,7 @@ PositionNudgePrologue position_nudge_prologue(
 // wall term, which compares this landing against the resting frame.
 //
 // THE WALL VERDICT IS THE HEADROOM'S, in both units: a millisecond is at
-// least one whole frame (arrow_millisecond_frames' floor; under a real map
+// least one whole frame (millisecond_frames' floor; under a real map
 // its image is at least a sixteenth of that, the value brackets' slope
 // floor, still over a frame at every product rate), and a hop's landing
 // leaves the resting seed

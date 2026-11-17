@@ -68,7 +68,7 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, double origin_y) {
         // the target absolute against the origin.
         const WarpTempoStart start = warp_tempo_step_start(
             mv[static_cast<size_t>(marker)], slice_to_warp_markers(mv), marker,
-            audio.total_frames());
+            audio.sample_rate(), audio.total_frames());
         st.start_value = start.cents;
         st.start_scale = start.scale;
         // THE UNDO PAYLOAD, captured at the BEGIN because that is where the

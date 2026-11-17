@@ -52,7 +52,7 @@ struct GuiTargetRender;
 // walks from is the EFFECTIVE base the flag shows, and the first motion writes
 // the step's own three fields: `tempo_inherits` false, the landed cents, and
 // the effective scale that keeps the freeze lossless. A LABEL REF and a
-// coincident-collapse member are still no target, the arrows' own kind
+// coincident member are still no target, the arrows' own kind
 // refusal ruling, while a DISABLED marker is one, as the singleton arrow step
 // steps it (architect 2026-09-13; value_drag_target, app_state.h).
 //

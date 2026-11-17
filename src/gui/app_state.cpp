@@ -489,46 +489,40 @@ PayloadEligibility payload_eligibility(const AppState& app,
     // marker's resolved value, and Ctrl+J, which jumps to the marker that value
     // came from — a marker's OWN value being written on its flag regardless
     // of eligibility. NEITHER ACT MAY REPORT A TEMPO THE RENDER NEVER
-    // APPLIES, and the render's three ways of not applying one are the
-    // gate's three refusals past the focus and the column:
+    // APPLIES. In the order asked:
+    //   * A COINCIDENT MEMBER IS ELIGIBLE, ANY KIND, ENABLED OR DISABLED
+    //     (architect 2026-11-17: "they both get 1.0 as their effective
+    //     tempo"): its effective value IS 1.00 — the render's own plain 1.00
+    //     owner for an enabled member, what it would be for a disabled one —
+    //     so the copy reads "1.00", the render's truth, and the composer
+    //     names no source (resolved_marker_payload, warp_frame_map_build.h).
+    //     The membership is the red-flag cache's own `collapsed` set, the
+    //     parser classifier's verdict (warp_coincident_members); the cache
+    //     keys on the audio identity, which is why the gate takes it. Asked
+    //     FIRST because the two refusals below exist only where the render
+    //     would not apply the marker's value, and a member's value is applied
+    //     (or would be) as 1.00 whatever its kind or bit;
     //   * the DISABLED marker — resolve_warp_markers_for_render drops it
     //     outright (its own flag alone since 2026-10-29; a ref under a
     //     disabled definition is live, normalized to 1.00 with no source)
     //     — asked of the one owner effective_disabled (warpmarkers.h), the
-    //     same call the diff lane, the sweep and the group step read; the
-    //     gate hand-rolled the walk beside it until 2026-09-02;
+    //     same call the diff lane, the sweep and the group step read;
     //   * an OWNER has no resolved value to reach for — its flag shows its
-    //     number — so only a pass or a ref goes on;
-    //   * the COLLAPSED STACK — a pass or a ref that is a member of a
-    //     coincident-collapsed group. The render replaces the stack with one
-    //     synthetic 1.00 owner, and the composer, by the ruled
-    //     authored/display split, resolves such a member against the RAW
-    //     store (marker_effective's second basis) — so the value it would
-    //     hand `j` is the authored owner's, which the render never applies.
-    //     The membership is the red-flag cache's own `collapsed` subset,
-    //     pass 1 of warp_red_flag_set_cached; the cache keys on the audio
-    //     identity, which is why the gate takes it. Not the whole red set,
-    //     which is a paint cue: its pass-3 coincidence (a frame shared with a
-    //     disabled row) is no render normalization at all, and its pass-2
-    //     members (a dangling ref, an extreme-ratio ref) resolve against
-    //     the projection and so
-    //     already read out as the render's own 1.00 or as the empty payload
-    //     the acts refuse — refusing them here as a stack would name the
-    //     wrong reason. This refusal carries its own sentence
-    //     (kValueInCollapsedStack); the two above share the acts' own.
+    //     number — so only a pass or a ref goes on.
     // Iteration mode is not a term (2026-09-02): the readout-era line
     // that refused under it survived the readout and made `j` card "no
     // resolved value" on a marker that had one. A ref whose definition is
-    // missing entirely stays Eligible — resolved_marker_payload already
-    // yields an empty string for that case and both acts refuse an empty
-    // payload, so it never surfaces a stale tempo.
-    if (effective_disabled(mv, idx)) return E::NoResolvedValue;
-    if (!(m.tempo_inherits || !m.label_ref.empty()))
-        return E::NoResolvedValue;
+    // missing entirely stays Eligible — resolved_marker_payload reads it out
+    // as the render's own 1.00 normalization — and a ref whose walk has no
+    // successor composes the empty string, which both acts refuse, so it
+    // never surfaces a stale tempo.
     const std::set<int>& collapsed = warp_red_flag_set_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).collapsed;
-    if (collapsed.count(idx)) return E::CollapsedStack;
+    if (collapsed.count(idx)) return E::Eligible;
+    if (effective_disabled(mv, idx)) return E::NoResolvedValue;
+    if (!(m.tempo_inherits || !m.label_ref.empty()))
+        return E::NoResolvedValue;
     return E::Eligible;
 }
 
@@ -558,7 +552,7 @@ std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
     // answer no value.
     std::string value;
     if (payload_eligibility(app, audio, idx) == PayloadEligibility::Eligible)
-        value = resolved_marker_payload(slice_to_warp_markers(mv), idx,
+        value = resolved_marker_payload(slice_to_warp_markers(mv), idx, sr,
                                         static_cast<long>(total));
     c.valid        = true;
     c.markers_gen  = gen;
@@ -730,25 +724,29 @@ HistoryCueTooltipText history_cue_tooltip_text(const AppState& app,
 // not changed. (From 2026-09-01 until 2026-09-29 that seat was the Copy
 // resolved value button's tooltip, whose shift line named the jump.) The key
 // is exactly what this body reads (the fields are at
-// AppState::ValueSourceMarkerCache): the focused index, the
+// AppState::ValueSourceMarkerCache): the focused index, the sample rate (the
+// coincidence's millisecond, 2026-11-17), the
 // warp store's generation — the store's own change token, which the red-flag
 // memos and the flag-cache fingerprint key on already, and which the A/B tabs
 // cannot dodge because they share this one store — and the frame count. No
 // mutator calls an invalidation; a stale key is the whole invalidation.
-int value_source_marker(const AppState& app, int64_t total_frames) {
+int value_source_marker(const AppState& app, const GuiAudio& audio) {
+    const int sample_rate = audio.sample_rate();
+    const int64_t total_frames = audio.total_frames();
     const int idx = app.last_selected_marker;
     const auto& mv = app.warpmarkers.markers();
     AppState::ValueSourceMarkerCache& c = app.value_source_marker_cache;
     const long long gen = app.warpmarkers.generation();
     if (c.valid && c.markers_gen == gen && c.focus == idx &&
-        c.total_frames == total_frames) {
+        c.sample_rate == sample_rate && c.total_frames == total_frames) {
         return c.source;
     }
     int answer = -1;
     if (idx >= 0 && idx < static_cast<int>(mv.size())) {
         int source = -1;
         const std::string payload = resolved_marker_payload(
-            slice_to_warp_markers(mv), idx, total_frames, &source);
+            slice_to_warp_markers(mv), idx, sample_rate, total_frames,
+            &source);
         if (!payload.empty() && source >= 0 &&
             source < static_cast<int>(mv.size())) {
             answer = source;
@@ -757,6 +755,7 @@ int value_source_marker(const AppState& app, int64_t total_frames) {
     c.valid        = true;
     c.markers_gen  = gen;
     c.focus        = idx;
+    c.sample_rate  = sample_rate;
     c.total_frames = total_frames;
     c.source       = answer;
     return answer;

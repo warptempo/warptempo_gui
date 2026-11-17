@@ -4,6 +4,7 @@
 #include "input_handler.h"      // land_playhead_on_marker (the collapse's
                                 // land)
 #include "target_render.h"
+#include "warp_coincidence.h"   // millisecond_frames (the arrow step's unit)
 #include "warp_frame_map_view.h"  // painted_x_of_source_frame_on_basis,
                                   // source_frame_to_active_domain
 
@@ -146,7 +147,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
         // left-right nudge should be recalibrated to one millisecond left or
         // right"): `count` milliseconds OF THE DISPLAYED DOMAIN — the
         // marker's displayed image moved by exactly count ×
-        // arrow_millisecond_frames, so one press moves the mark one
+        // millisecond_frames, so one press moves the mark one
         // millisecond as shown — landed back through the DISPLAYED paint
         // basis, displayed_or_live_target_map, the SAME map the flag
         // painters read, at full precision, then snap_authored_frame, the
@@ -163,7 +164,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
             map_source_to_target(static_cast<double>(orig_frame), map) +
             static_cast<double>(step.count) *
                 static_cast<double>(
-                    arrow_millisecond_frames(audio.sample_rate()));
+                    millisecond_frames(audio.sample_rate()));
         D = snap_authored_frame(map_target_to_source(shown, map)) -
             orig_frame;
     }

@@ -260,7 +260,12 @@ struct GuiCarriedMods {
 // right ... we would convert 1 millisecond to the nearest amount in frames,
 // and that would be the nudge step"; "using nudge on a coarse zoom is kind
 // of pointless, because the point of nudge is fine-tuning") — one
-// millisecond of the displayed domain, arrow_millisecond_frames below,
+// millisecond of the displayed domain — THE COUNT'S ONE OWNER IS THE
+// PARSER'S millisecond_frames (warp_coincidence.h; architect 2026-11-17: the
+// same millisecond is the warp coincidence's, so one nudge always clears
+// one) — read by the unit's two landings, the marker nudge
+// (position_nudge_landing, position_nudge.h) and the playhead's step
+// (playhead_arrow_step_landing, app_state.h),
 // WHATEVER THE ZOOM, which makes no pixel claim: a press moves its subject
 // about a pixel at the working zoom, a fraction of one above it and about
 // two at the deepest, painted at its exact place. HOPS is the hop step, one
@@ -278,21 +283,6 @@ struct HorizontalArrowStep {
         return HorizontalArrowStep{Unit::Hops, n};
     }
 };
-
-// ONE MILLISECOND IN FRAMES — THE COUNT'S ONE OWNER (architect 2026-11-15,
-// the no-grid arc, his words at HorizontalArrowStep): the whole number of
-// frames nearest a millisecond at `sample_rate`, nearbyint(rate / 1000) — 44
-// at 44.1 kHz, 48 at 48 kHz, 88 at 88.2 kHz, 96 at 96 kHz — never less than
-// one frame, so a press always moves its subject off a wall. The frames are
-// the DISPLAYED domain's (source and target views share the one rate). ITS
-// READERS, the unit's two landings: the marker nudge
-// (position_nudge_landing, position_nudge.h) and the playhead's step
-// (playhead_arrow_step_landing, app_state.h).
-inline int64_t arrow_millisecond_frames(int sample_rate) {
-    const int64_t n = static_cast<int64_t>(
-        std::nearbyint(static_cast<double>(sample_rate) / 1000.0));
-    return n < 1 ? 1 : n;
-}
 
 // THE ONE FORK OF THE HORIZONTAL ARROW'S UNIT, keyed on the ACTIVE COLUMN
 // (`markers_view`, the column letter) and never on the subject: `direction`
@@ -1175,9 +1165,9 @@ inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
 // IT IS BARE `s`'s ACT WITH THE COLUMN SWITCH IN FRONT, not a second one:
 // from the W column the difference is exactly the column writer Shift+S
 // runs first, and then the same one drop body (the act is
-// GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp), which
-// refuses a place whose seed window already holds a phase reset as bare `s`
-// does there — the chord before its switch (architect 2026-11-11). IN
+// GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp), which drops
+// wherever the lead-in lands as bare `s` does there — no place is taken on
+// the phase-reset column (architect 2026-11-17). IN
 // THE P COLUMN THE CHORD REFUSES WHOLE since 2026-08-30 (architect): the
 // command IS the crossing from warp view, so with phase resets already
 // showing — S+P or T+P — there is nothing to cross and the act answers
@@ -1312,9 +1302,10 @@ inline constexpr double zoom_step_levels(GuiKey key) {
 // (repeat-ineligible: a copy repeats onto itself and a jump has one
 // destination). Their subject is the SELECTION'S FOCUS, and an ineligible
 // focus — an owner, a phase reset, a disabled marker, the `P` column, nothing
-// focused, or a member of a coincident-collapsed stack — is a consumed no-op
-// at the act that says so on a card since 2026-08-30, each chord in its own
-// words and the stack in its own sentence (payload_eligibility, app_state.h).
+// focused — is a consumed no-op at the act that says so on a card since
+// 2026-08-30, each chord in its own words (payload_eligibility, app_state.h;
+// a coincident member of any kind is eligible and reads 1.00, architect
+// 2026-11-17).
 // Both are READ-ONLY-LEGAL (they author nothing: read_only_key_blocked admits
 // them, and the grid-iterations lock inherits the admission) and legal in both
 // audio views, being navigation rather than positional authoring; the `h`

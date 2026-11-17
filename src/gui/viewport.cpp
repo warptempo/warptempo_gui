@@ -6,6 +6,7 @@
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
+#include "warp_coincidence.h"   // millisecond_frames (the arrow step's unit)
 #include "warp_frame_map_view.h"
 #include "platform.h"
 
@@ -779,13 +780,13 @@ int64_t playhead_arrow_step_landing(const AppState& app, const GuiAudio& audio,
                                     HorizontalArrowStep step) {
     if (audio.total_frames() <= 0) return app.playhead_cursor_sample;
     // The step in frames of the ACTIVE domain, the cursor's own: a
-    // millisecond's frames at the piece's rate (arrow_millisecond_frames —
+    // millisecond's frames at the piece's rate (millisecond_frames —
     // the two views share the one rate), or a hop's kRs. A dead rate has no
     // millisecond and answers the cursor itself, the act's own no-move.
     int64_t unit_frames = kRs;
     if (step.unit == HorizontalArrowStep::Unit::Milliseconds) {
         if (audio.sample_rate() <= 0) return app.playhead_cursor_sample;
-        unit_frames = arrow_millisecond_frames(audio.sample_rate());
+        unit_frames = millisecond_frames(audio.sample_rate());
     }
     // Pre-clamped into the live domain, the clamp move_playhead_to would apply
     // anyway — a landing must be a frame the cursor can occupy, which is what
@@ -805,7 +806,7 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // recalibrated to one millisecond left or right ... we would convert 1
     // millisecond to the nearest amount in frames, and that would be the
     // nudge step"; the marker nudge's own unit, position_nudge.h's ONE
-    // MILLISECOND A PRESS), arrow_millisecond_frames of the active domain
+    // MILLISECOND A PRESS), millisecond_frames of the active domain
     // whatever the zoom — 44 frames at 44.1 kHz: about a pixel at the working
     // zoom, a fraction of one above it, under two at the deepest — the line
     // painted at its exact place, so every press shows; ON THE PHASE-RESET

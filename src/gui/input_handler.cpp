@@ -1342,11 +1342,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // the button stays lit and its PLAIN lift reaches this card,
             // synthesizing this very chord; it greys there only where the
             // hold would not act either — over a multi-selection whose every
-            // place the group drop would skip (architect 2026-11-10), or over
-            // one selected marker or none with a reset already seeding in the
-            // playhead's lead-in window (2026-11-11;
-            // phase_reset_drop_crossing_would_act) — where neither form acts
-            // and no press arrives.
+            // place the group drop would skip, each past the painted edge
+            // (architect 2026-11-10; phase_reset_drop_crossing_would_act) —
+            // where neither form acts and no press arrives.
             if (!active_column_authoring_allowed(app)) {
                 notifications.notify(
                     AppState::NotificationClass::Normal,
@@ -1356,11 +1354,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // Past the gate the column is W (in source view) or P, whose own
             // in-column drop this is: the CROSSING chord Shift+S refuses
             // in-column and leaves the drop to this key.
-            // The drops' reason channel: the occupied place
-            // (kPhaseResetDropOccupiedCard / kMarkerDropOccupiedCard — a
-            // reset already seeding in the lead-in frame's window, a warp
-            // marker already within one nudge step of the playhead's frame;
-            // architect 2026-11-11, the vicinity 2026-11-15)
+            // The drops' reason channel: the warp drop's occupied place
+            // (kMarkerDropOccupiedCard — a warp marker already coinciding
+            // with the playhead's frame, the same frame or under one
+            // millisecond; architect 2026-11-11, the parser's predicate
+            // 2026-11-17; the P drop has none, anything goes there)
             // and the off-edge refusal (kMarkerDropOffEdgeCard — End at the
             // whole-song zoom, then `s`). The key's lift reaches either only
             // while the hold would still act: where neither form would, the
@@ -1651,7 +1649,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // guard here — adjust_tempo_cents returns at once unless the warp view is
     // active with a non-empty selection and a valid focus, and SINCE 2026-08-30
     // it hands back the sentence for that refusal — and for the singleton's
-    // kind refusal (a label ref in either view, a coincident-collapse member
+    // kind refusal (a label ref in either view, a coincident member
     // in target view) and the group's wall — for this arm to card: the fact is
     // the act's, the card is the dispatch's. THE SINGLETON'S BRACKET END IS
     // SILENT since 2026-08-31 and the Up / Down buttons GREY on it instead
@@ -3454,14 +3452,15 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 // markers selected in the warp column (phase_reset_crossing_drop_is_group)
 // the playhead is not the subject: THE PLAN is asked FIRST, in the warp
 // column, where the selection still stands (phase_reset_crossing_group_drops,
-// app_state.h — each marker's place the single drop's own computation, a
-// place whose seed window already holds a phase reset skipped, places
-// sharing a window dropping one reset, the single drop's painted-edge
-// refusal skipping its place), and THE ACT REFUSES WHOLE,
-// BEFORE ANY SWITCH, ONLY WHERE EVERY PLACE IS SKIPPED — the answer the
-// Drop key's face greys on (phase_reset_drop_crossing_would_act) — on one
-// card: the drop's own off-edge sentence where the edge refused a place,
-// else that the resets are already there. Otherwise the column switch, then
+// app_state.h — each marker's place the single drop's own computation, EVERY
+// PLACE TAKING ITS RESET, a place a reset already holds and a place two
+// markers share included — architect 2026-11-17, "let's do anything-goes for
+// phase" — the single drop's painted-edge refusal alone skipping a place),
+// and THE ACT REFUSES WHOLE, BEFORE ANY SWITCH, ONLY WHERE EVERY PLACE IS
+// SKIPPED — the answer the Drop key's face greys on
+// (phase_reset_drop_crossing_would_act) — on the drop's own off-edge
+// sentence (a stale selection index, skipped in silence, says nothing).
+// Otherwise the column switch, then
 // the one group create (GuiPhaseResetMarkersOps::drop_phase_resets_at_frames:
 // ONE UNDO ENTRY for the whole act, the created resets selected, the focus
 // and the playhead on the warp focus's reset by the single drop's landing),
@@ -3470,20 +3469,11 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 // refusal; the at-playhead form below spends it in its create body). A skipped
 // place beside a dropped one says nothing.
 //
-// OVER ONE SELECTED MARKER OR NONE THE OCCUPIED WINDOW REFUSES WHOLE TOO,
-// BEFORE ANY SWITCH (architect 2026-11-11, the drop coincidence rule — the
-// group form's shape, the question asked where the press was made): where a
-// phase reset already seeds in the window of the frame the drop would author
-// — the playhead's lead-in frame, phase_reset_crossing_single_drop_coincides,
-// app_state.h, the hold term the Drop key's face reads — the act cards the
-// P drop's own sentence (kPhaseResetDropOccupiedCard) and leaves the warp
-// column and its selection standing. The body's own copy of the test then
-// runs after the switch, in the P column, on the same owner and the same
-// frame (the column writer moves no playhead, no store and no map), so it
-// repeats the false answer and cannot card a second time. THE PAINTED EDGE
-// STAYS WHERE IT WAS, after the switch: it is asked in the geometry the
-// reset would paint in, and the act that asked for the P column and got
-// there is honest even when the reset could not be placed.
+// OVER ONE SELECTED MARKER OR NONE NO PLACE IS TAKEN (architect 2026-11-17,
+// anything goes on the phase-reset column): the column switch, then the P
+// drop. THE PAINTED EDGE is asked after the switch: it is asked in the
+// geometry the reset would paint in, and the act that asked for the P column
+// and got there is honest even when the reset could not be placed.
 void GuiInputHandler::drop_phase_reset_crossing() {
     // The blank/loading guard near the top of on_key already covers this; the
     // helper is defensive for the same reason the S/T chokepoint's own copy is
@@ -3513,11 +3503,9 @@ void GuiInputHandler::drop_phase_reset_crossing() {
         const PhaseResetCrossingDrops drops =
             phase_reset_crossing_group_drops(app, audio);
         if (drops.frames.empty()) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                drops.off_edge
-                    ? kMarkerDropOffEdgeCard
-                    : "The selected markers already have their phase resets");
+            if (drops.off_edge)
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kMarkerDropOffEdgeCard);
             return;
         }
         // THE ACT SPENDS THE SELECTION IT WAS BUILT FOR, so the Add to
@@ -3530,24 +3518,13 @@ void GuiInputHandler::drop_phase_reset_crossing() {
         viewport.kick_waveform_sync();
         return;
     }
-    // THE SINGLE FORM'S OCCUPIED WINDOW (architect 2026-11-11; the head's
-    // last paragraph): asked here, in the warp column, ahead of the switch,
-    // and refused whole — no switch, the selection standing, the P drop's
-    // own sentence.
-    if (phase_reset_crossing_single_drop_coincides(app, audio)) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kPhaseResetDropOccupiedCard);
-        return;
-    }
     active_views.switch_active_markers_view_to('P');
     // The drop's remaining refusals — no sample rate, a frame past the EOF
     // wall, silent; a lead-in frame past the painted edge at this zoom,
     // carded (kMarkerDropOffEdgeCard, asked in the P column after the
     // switch, the geometry the reset would paint in) — leave the view where
     // the switch put it: the act asked for the P column and got there, which
-    // is honest even when the reset could not be placed. (The body asks the
-    // occupied window again, of the same frame through the same owner, and
-    // answers as the test above just did.) THE SPENT SELECTION'S LAMP EDGE
+    // is honest even when the reset could not be placed. THE SPENT SELECTION'S LAMP EDGE
     // is the create body's, on its accepted path alone (selection_consumed's
     // inventory, app_state.h): a refusal here leaves Add to Selection lit.
     card_op_refusal(notifications,

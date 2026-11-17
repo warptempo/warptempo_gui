@@ -7823,7 +7823,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // markers with no effectively-enabled label_ref in
     // [owner .. boundary marker] inclusive and, since 2026-08-26, ONE TEMPO
     // across the run (each selected marker a pass or the owner's own value)
-    // and an owner outside every coincident-collapse run; any other selection
+    // and an owner that is no coincident member; any other selection
     // is refused, and SAYS WHICH RULE IT BROKE since 2026-08-30 (the arm-by-arm
     // ruling is at the first test below). THE LADDER IS bpm_sweep_plan SINCE
     // 2026-09-04, a const owner this arm and the BPM Iterations button's face
@@ -7928,22 +7928,23 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                     "The first selected marker must own its tempo and be enabled");
                 return true;
             // A COINCIDENT OWNER CANNOT TAKE A TEMPO EITHER (2026-08-26,
-            // the ref refusal's own class): the resolver's stage 2 collapses
-            // an exact-frame run with two or more effectively-enabled members
-            // to ONE synthetic 1.00 owner, so a span owned from inside such a
-            // run renders at 1.00 in every cell whatever the editor derived —
-            // and when the coincident partner is the boundary itself the
-            // span's duration is zero, the RENDER gate has nothing to measure
-            // and the sweep derives nothing, closing the mode on an empty
-            // batch. The verdict is the classifier's,
-            // warp_coincident_collapse_members (warp_frame_map_build.h — the
+            // the ref refusal's own class; the membership widened
+            // 2026-11-17): the resolver's stage 2 renders every enabled
+            // member of a coincident run — the same frame or under one
+            // millisecond from a neighbor, disabled rows counted — as a plain
+            // 1.00 owner, so a span owned from such a member renders at 1.00
+            // in every cell whatever the editor derived — and when the
+            // coincident partner is the boundary itself the span is shorter
+            // than a millisecond or empty, and the sweep derives nothing
+            // worth a batch. The verdict is the classifier's,
+            // warp_coincident_members (warp_frame_map_build.h — the
             // render's stage 2 and the lane's red cue consult the same one,
             // and the plan reads it off that cue's own cache), never
             // re-spelled here.
             case BpmSweepRefusal::OwnerCoincident:
                 notifications.notify(
                     AppState::NotificationClass::Normal,
-                    "The first selected marker shares its frame with another");
+                    "The first selected marker coincides with another");
                 return true;
             // ONE TEMPO IN THE RUN (architect 2026-08-26): every selected
             // marker is a pass or carries the owner's own tempo — cents AND
@@ -8239,20 +8240,15 @@ void GuiInputHandler::confirm_score_reset() {
 // different markers.
 //
 // THE ELIGIBILITY IS THE ONE GATE, payload_eligibility (app_state.h): warp
-// view, an effectively enabled pass or ref (effective_disabled, the own
-// flag), and not a member of a coincident-collapsed stack — a
-// THREE-WAY VERDICT, PayloadEligibility, since 2026-09-02 (architect),
-// because its two refusals card in different words. An ineligible
+// view, and a coincident member of any kind or bit (architect 2026-11-17: it
+// reads 1.00, "they both get 1.0 as their effective tempo" — the copy hands
+// "1.00", the render's truth, and the jump finds no source) or an effectively
+// enabled pass or ref (effective_disabled, the own flag). An ineligible
 // focus — an owner, a phase reset, a disabled marker, the `P` column, nothing
 // focused — and an empty payload alike SAY SO ON A CARD since 2026-08-30
 // (architect, the strictness ruling), and they say the SAME words: from the
 // user's side both are "this marker has no resolved value", the difference
-// between them being which layer discovered it. A STACK MEMBER SAYS WHY
-// (PayloadEligibility::CollapsedStack): its composed value is the raw
-// owner's while the render applies the stack's synthetic 1.00, so the sentence
-// names the frame it shares (kValueInCollapsedStack, app_state.h — one
-// sentence for both chords, the jump refusing on the same ground: the marker a
-// render-inert value "came from" is nowhere to stand). Iteration mode stopped
+// between them being which layer discovered it. Iteration mode stopped
 // being a term the same day — the line was the retired readout's, and under it
 // the copy carded "no resolved value" on a marker that had one. THE JUMP TO
 // DEFINING MARKER BUTTON, which carries both acts (the copy its shift twin,
@@ -8261,7 +8257,7 @@ void GuiInputHandler::confirm_score_reset() {
 // the empty payload stays behind a lit face, needing the composer run.
 
 // THE COPY'S ONE SENTENCE, said by BOTH of its no-value refusals
-// (2026-08-30); the stack refusal has its own, app_state.h.
+// (2026-08-30).
 constexpr const char* kNoResolvedValueToCopy =
     "The focused marker has no resolved value to copy";
 
@@ -8271,16 +8267,12 @@ void GuiInputHandler::copy_focused_marker_value() {
             notifications.notify(AppState::NotificationClass::Normal,
                                  kNoResolvedValueToCopy);
             return;
-        case PayloadEligibility::CollapsedStack:
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kValueInCollapsedStack);
-            return;
         case PayloadEligibility::Eligible:
             break;
     }
     const std::string payload = resolved_marker_payload(
         slice_to_warp_markers(app.warpmarkers.markers()),
-        app.last_selected_marker, audio.total_frames());
+        app.last_selected_marker, audio.sample_rate(), audio.total_frames());
     // THE CLIPBOARD HAS ONE REPRESENTATION, the platform's: this composes the
     // string and hands it straight over, holding no copy of its own
     // (platform_android.h's clipboard_set_text).
@@ -8364,8 +8356,8 @@ void GuiInputHandler::copy_focused_marker_value() {
 // the followers on this one" — and the five acts above run on it unchanged.
 // The fork is at the HEAD, ahead of the payload gates, and it is the whole
 // fork: a follower's eligibility is a fact about its TIE, not about a resolved
-// value, so an owner, a phase reset or a collapsed-stack member is a legal
-// subject on this road where the payload road refuses it. On the PAYLOAD axis
+// value, so an owner or a phase reset is a legal subject on this road where
+// the payload road refuses it. On the PAYLOAD axis
 // the chord keeps today's meaning exactly. The destination is an index into
 // the ACTIVE column's store on either road, which is what the tail's two
 // owners resolve against.
@@ -8395,13 +8387,6 @@ void GuiInputHandler::jump_to_value_source() {
                     AppState::NotificationClass::Normal,
                     "The focused marker has no resolved value");
                 return;
-            case PayloadEligibility::CollapsedStack:
-                // THE STACK'S OWN SENTENCE, the copy's verbatim: the value
-                // this marker would name a source for is one the render never
-                // applies, so there is no marker worth standing on.
-                notifications.notify(AppState::NotificationClass::Normal,
-                                     kValueInCollapsedStack);
-                return;
             case PayloadEligibility::Eligible:
                 break;
         }
@@ -8422,7 +8407,7 @@ void GuiInputHandler::jump_to_value_source() {
         // inline and which Jump to Defining Marker's face reads too
         // (jump_to_value_source_actionable), so the button greys exactly
         // where this cards.
-        destination = value_source_marker(app, audio.total_frames());
+        destination = value_source_marker(app, audio);
         if (destination < 0) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  "There is no source marker to jump to");

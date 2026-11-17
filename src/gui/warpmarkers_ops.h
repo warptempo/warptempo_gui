@@ -48,11 +48,13 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
 // marker_effective (warp_frame_map_build.h, the engine-side owner) resolved
 // against `resolved` — the projection-aware walk and NOT the raw backward one,
 // because the step FREEZES a pass to owning at the value it started from, and
-// that value must be the one hover shows and the render produces. Under a
-// coincident-stack collapse the raw walk would seed the freeze from a
-// collapsed group member's authored tempo, silently diverging from the
-// projection's 1.00 owner; the projection resolves a surviving un-collapsed
-// pass against the same basis the render will, keeping the freeze lossless.
+// that value must be the one hover shows and the render produces. The raw
+// walk would seed the freeze from a coincident member's authored tempo,
+// silently diverging from the render's 1.00 owner; the projection resolves a
+// surviving non-member pass against the same basis the render will, and a
+// member pass reads the 1.00 it renders as (architect 2026-11-17, "they both
+// get 1.0 as their effective tempo"), keeping the freeze lossless.
+// `sample_rate` sets the coincidence's millisecond.
 // THE {100, nullopt} FALLBACK is the raw walk's no-owner answer, kept here
 // because marker_effective reports "could not resolve" as base_cents 0, which
 // is not a tempo — unreachable from a pass today, and a fallback rather than a
@@ -72,7 +74,8 @@ struct WarpTempoStart {
 };
 WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
                                      const std::vector<WarpMarker>& resolved,
-                                     int idx, long total_frames);
+                                     int idx, long sample_rate,
+                                     long total_frames);
 
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
 // delete / toggle / adjust) and the pixel-column-anchored nudge — and, in

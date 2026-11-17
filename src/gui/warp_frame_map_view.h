@@ -1,7 +1,6 @@
 #pragma once
 
 #include "gui_display_context.h"  // GuiDisplayContext (the translation bodies' subject)
-#include "gui_input.h"            // arrow_millisecond_frames (the warp vicinity's step)
 #include "warp_frame_map.h"
 #include "warpmarkers.h"   // GuiWarpMarker (the view-overload signature)
 
@@ -89,47 +88,42 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // cues paint STRUCK (the plain cue with its label struck through, in every
 // look — resting, inactive, selected — resolve_flag_face's table, render.cpp;
 // architect 2026-10-26 ~15:10, the invalid color retired), so
-// the mark is never masked by a selection. `red` is a PAINT cue with two
-// meanings: the
-// render normalizes this marker, OR this marker stands inside another's
-// vicinity, less than one nudge step from it.
-// Three contributors, all computed SILENTLY from the display path (no resolver
-// run, no stderr, no frozen-parser dependency): (1) the exact-frame COLLAPSE —
-// a marker sharing its frame with 2+ effectively-enabled markers
-// (marker_effectively_disabled for the enabled test, matching the render's
-// survivor filter), every member reddened, so a coincident stack reads as one
-// red flag mirroring the render's single stderr line; (2) a LABEL-REF fallback
-// via marker_effective — a dangling label ref (a disabled definition's refs
-// included, participation being each marker's own flag since 2026-10-29), a ref to an
+// the mark is never masked by a selection. `red` is a PAINT cue with ONE
+// meaning: the render normalizes this marker to 1.00 — or, for a disabled
+// coincident member, would ("they both get 1.0 as their effective tempo",
+// architect 2026-11-17).
+// Two contributors, both computed SILENTLY from the display path (no resolver
+// run, no stderr): (1) THE COINCIDENT RUNS — every row that stands the same
+// frame or under one millisecond from a store neighbor, DISABLED ROWS COUNTED,
+// both rows of a pair and every row of a chain, the parser classifier's
+// verdict (warp_coincident_members, warp_frame_map_build.h — the render's
+// stage 2 reads the same one, so every struck member renders as 1.00, his
+// "if two warp markers are struck in the gui, both should render as 1.0 in
+// the parser/engine"); (2) a LABEL-REF fallback via marker_effective — a
+// dangling label ref (a disabled definition's refs and a coincident member's
+// included, participation being each marker's own flag since 2026-10-29 and a
+// member holding no label since 2026-11-17), a ref to an
 // AMBIGUOUS label (two live definitions, 2026-10-29) or an extreme-ratio label
 // ref, all of which resolve to source_idx == -1 (a pass never normalizes: its
 // walk skips refs to the owner behind them, architect 2026-09-13), and with
 // them the ambiguous label's DEFINITIONS themselves
 // (warp_ambiguous_label_defs, warp_frame_map_build.h — "now they both get
-// struck, as do all the label references", architect 2026-10-29); (3) the PARTICIPATION-BLIND VICINITY
-// (architect 2026-09-13: coincident markers are never intentional, always
-// accidental, so the red stays; architect 2026-11-15, the no-grid arc: the
-// coincidence a VICINITY, one nudge step — warp_frames_in_vicinity below,
-// its one predicate) — every row with a store neighbor inside its vicinity,
-// BOTH markers of a pair and every member of a chain,
-// DISABLED ROWS COUNTED, so disabling one of two near markers does not
-// put the red out; the render collapses nothing there unless the frames are
-// equal and two are enabled, and (3) is the one
-// contributor that is not a render normalization. (3) contains (1), which is
-// kept as its own step because `collapsed` below is its verdict. The frame-0
-// seed is synthetic (no marker) and never reddens.
+// struck, as do all the label references", architect 2026-10-29). The frame-0
+// seed is synthetic (no marker) and never reddens. A member's own
+// marker_effective reason (Coincident) is (1)'s, so (2) never counts it twice.
 //
-// WIDENING THE CUE WIDENS NO REFUSAL: no act, face or card reads `red`. The
-// act and face readers that ask whether the render normalizes a marker read
-// `collapsed` (the one normalization that is not already walled on the
-// marker's kind — pass-2 reddens only refs), so `red` has only
-// painters for readers: the three flag passes (waveform_cache.cpp's W, P and M
-// arms, each over its own column's cache) and the open marker-lane field's
-// face (render.cpp).
+// WIDENING THE CUE WIDENS NO REFUSAL BUT THE DROP'S: no act or face reads
+// `red`. The act and face readers that ask whether the render normalizes a
+// marker read `collapsed` (the one normalization that is not already walled on
+// the marker's kind — (2) reddens only refs and definitions), so `red` has
+// only painters for readers: the warp flag pass (waveform_cache.cpp's W and M
+// arms) and the open marker-lane field's face (render.cpp). The warp drop
+// refuses a place inside a coincidence by the same predicate
+// (warp_marker_in_vicinity_of below), so no drop makes a strike.
 //
 // Keyed on the warp store generation plus the audio identity (total_frames
 // feeds marker_effective's last-segment envelope distance; the sample rate
-// sets the vicinity's step). It reads the
+// sets the coincidence's millisecond). It reads the
 // COMMITTED store (app.warpmarkers), NOT any mid-drag overlay: the marker drag
 // writes only app.drag.moveable_times and mutates app.warpmarkers wholesale at
 // commit (bumping the generation), so a red flag persists through a drag and
@@ -143,22 +137,18 @@ struct WarpRedFlagCache {
     int       sample_rate  = 0;
     long      total_frames = 0;
     std::set<int> red;   // red warp-marker store indices — PAINT readers only
-    // THE COLLAPSE MEMBERS ALONE — pass 1's own subset of `red`, the
-    // classifier's verdict (warp_coincident_collapse_members) kept apart from
-    // the pass-2 fallbacks and the pass-3 vicinity it is unioned with
-    // above. This is the RENDER-TRUTHFUL answer the act and face readers
-    // take: the value pair's gate (payload_eligibility, app_state.cpp)
-    // refuses a pass or a ref that sits in a collapsed stack — the composer
-    // resolves such a member against the RAW store, the ruled
-    // authored/display split, so its value is not what the render applies —
-    // while the pass-2 fallbacks it must NOT refuse on resolve against the
-    // projection and so already read out as the render's own 1.00 (or as the
-    // empty payload); the group tempo step's wall, the singleton step's kind
-    // refusal and the BPM sweep's owner refusal ask it too. Like pass 1 itself
-    // it marks the WHOLE raw run, disabled rows included, once 2+ effectively
-    // enabled rows share the frame, so a reader that means "a stack member for
-    // the render" composes it with the enabled test. Filled in the same pass
-    // that fills `red`, under the same key; no second computation anywhere.
+    // THE COINCIDENT MEMBERS ALONE — (1)'s own subset of `red`, the parser
+    // classifier's verdict (warp_coincident_members) kept apart from the
+    // label fallbacks it is unioned with above. This is the RENDER-TRUTHFUL
+    // membership the act and face readers take, DISABLED ROWS INCLUDED, so a
+    // reader that means "renders as 1.00" composes it with the enabled test:
+    // the value pair's gate (payload_eligibility, app_state.cpp), where a
+    // member of any kind or bit is eligible and reads 1.00; the copy-previous
+    // drop's walk (drop_copy_previous_at_playhead), which ends at a member;
+    // and the walls on an authored tempo the render would not apply — the
+    // group tempo step's, the singleton step's kind refusal and the BPM
+    // sweep's owner refusal. Filled in the same pass that fills `red`, under
+    // the same key; no second computation anywhere.
     std::set<int> collapsed;
 };
 
@@ -169,54 +159,16 @@ struct WarpRedFlagCache {
 const WarpRedFlagCache& warp_red_flag_set_cached(
     const AppState& app, int sample_rate, long total_frames);
 
-// Phase-reset sibling (the now-resolved naming symmetry): a group of 2+ phase
-// resets SEEDING IN ONE WINDOW of the engine's analysis lattice under the live
-// map reddens every member, WHATEVER THEIR DISABLED BITS — the warp set's
-// participation-blind coincidence (3) on this column, by THIS COLUMN'S
-// DEFINITION OF COINCIDENT (architect 2026-11-11: "since phase resets are on a
-// lattice the definition of coincident there is really in the same quantum
-// step on the lattice"; coincidence is never intentional, 2026-09-13): two
-// resets are coincident when phase_reset_seed_frame_index (below) answers one
-// schedule index for both, the test the drops refuse on
-// (phase_reset_seeds_in_window_of, below) — a strike is exactly a state no
-// drop makes any more, and a nudge, a drag, a paste or a bound cell still can.
-// It contains the render normalization and IS WIDER THAN IT:
-// build_phase_reset_source_frames collapses only an EXACT-EQUAL frame group of
-// 2+ ENABLED resets (one stderr line per group at render), and resets sharing
-// one frame share its window; two resets a few frames apart inside one window
-// are struck here and reach the engine as two events seeding one schedule
-// frame. Phase resets carry no tempo, labels, or inheritance, so collapse is
-// their ONLY normalization — there is no marker_effective analog. No
-// `collapsed` subset is kept here, asymmetric with the warp set by reader
-// count: `red` has only painters for readers — the phase-reset flag pass
-// (waveform_cache.cpp's P arm) and the open marker-lane field's riding
-// segments (render.cpp) — and no act or face on this column asks whether the
-// render collapses a reset.
-//
-// KEYED ON THE PHASE-RESET STORE'S GENERATION AND THE LIVE MAP'S HASH
-// (TargetWarpFrameMapCache::hash, the FNV-1a of the segment list): the seed
-// index is a pure function of the frame and the map's segments, so the pair
-// names every input — a warp edit, a scale change or a load that moves the
-// lattice moves the hash, and a warp edit that leaves the segments as they
-// were rebuilds nothing, where the map cache's own four-field key (warp
-// generation, scale, sample rate, length) would rebuild on every warp
-// generation. The failed build's empty map and a legitimately
-// empty one both hash 0 and both read as the identity, one lattice. THE FLAG
-// CACHE REPAINTS ON THE SAME PAIR (FlagCache::fp_phase_reset_generation and
-// fp_phase_reset_lattice_hash, paint_handler.h), so a strike that moved is
-// painted in the frame the map moved. The same committed-store / drag-freeze
-// rule as the warp set. The rebuild is one seed search a reset: the store is
-// ascending and the seed index monotone in the frame, so a window's resets are
-// adjacent rows.
-struct PhaseResetRedFlagCache {
-    bool      valid       = false;
-    long long markers_gen = -1;
-    uint64_t  map_hash    = 0;
-    std::set<int> red;   // red phase-reset store indices — PAINT readers only
-};
-
-const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
-    const AppState& app, int sample_rate, long total_frames);
+// THE PHASE-RESET COLUMN HAS NO STRIKE (architect 2026-11-17: "let's do
+// anything-goes for phase"; "phase resets should get no strike b/c they
+// effectively collapse to 1 in the engine already - the rare case is two
+// markers within 1ms of each other but in different windows, but those will
+// manifest as an audible click in which case they are manually fixed or they
+// will simply go under the radar, which is also acceptable"): resets on one
+// frame or in one seed window paint as authored, and the render keeps its own
+// treatment — build_phase_reset_source_frames collapses an exact-equal group
+// of 2+ enabled resets to one event, and the engine merges resets seeding one
+// window.
 
 // WHETHER THE WAVEFORM PICTURE IS MAGNIFIED, AND THE ONE GAIN GATE. The gain
 // itself is the continuous curve derived from the source at load — the
@@ -900,84 +852,27 @@ int64_t phase_reset_hop_step_frame(
 const std::vector<WarpFrameMapSegment>& live_warp_frame_map(
     const AppState& app, const GuiAudio& audio);
 
-// THE WARP COLUMN'S VICINITY — THE ONE PREDICATE (architect 2026-11-15, the
-// no-grid arc: "we could just extend the rule so that a strike through on a
-// marker happens if a marker is within a certain vicinity of another, rather
-// than exactly on the same frame"; the vicinity one nudge step, "so a single
-// nudge always clears a strike"): two warp marker frames stand in each
-// other's vicinity when they differ by LESS THAN ONE NUDGE STEP, the
-// millisecond's whole frames (arrow_millisecond_frames, gui_input.h — 44 at
-// 44.1 kHz: distances 0 .. 43 are inside, 44 and more are clear). Exact
-// coincidence is distance 0, so the vicinity contains it; and one nudge of
-// either marker AWAY from the other always clears it (a distance d < N
-// becomes d + N >= N). A dead sample rate has a one-frame step, so the
-// vicinity is then the exact frame alone. TWO READERS, the strike and the
-// drop: warp_red_flag_set_cached's pass 3 above, over the store's
-// neighbors, and warp_marker_in_vicinity_of below, of the frame a drop
-// would author.
-// THE VICINITY IS A PAINT CUE AND A DROP REFUSAL, NOTHING MORE: THE RENDER
-// DOES NOT READ IT. The render's resolver collapses a run of enabled markers
-// on one EXACT frame and nothing else, so two markers inside the vicinity on
-// different frames render exactly as authored — two markers, the short
-// segment between them at the first one's tempo — while both paint struck;
-// the strike there says "these two are closer than one nudge", as pass 3's
-// strike on an exact pair with fewer than two enabled already said more than
-// the render does, and as the phase resets' window strike is wider than the
-// render's collapse.
-inline bool warp_frames_in_vicinity(int64_t a, int64_t b, int sample_rate) {
-    const int64_t d = a >= b ? a - b : b - a;
-    return d < arrow_millisecond_frames(sample_rate);
-}
-
-// THE DROP COINCIDENCE RULE'S TWO TESTS, ONE OWNER EACH — ONE RULE ON BOTH
-// COLUMNS: A MARKER'S PLACE IS AS WIDE AS ONE NUDGE OF ITS COLUMN (architect
-// 2026-11-11: "coincident markers are always unintentional, and since phase
-// resets are on a lattice the definition of coincident there is really in
-// the same quantum step on the lattice. we should unify behavior";
-// "coincident (exact frame) warp marker drops are never intentional and the
-// phase reset coincident test should also apply"; architect 2026-11-15, the
-// no-grid arc, widening the warp column's place from its exact frame to the
-// vicinity: a drop inside it is refused "as a drop on a marker's exact frame
-// is today ... So a strike arises only where a drag or a nudge brings two
-// markers within the vicinity"). NO DROP MAKES A COINCIDENCE: every drop
-// asks one of these of the frame it would author and refuses a place already
-// taken.
-//
-// A PHASE RESET'S PLACE IS ITS SEED WINDOW: does a reset of the store seed in
-// the same schedule window as `source_frame` under the LIVE map
-// (live_warp_frame_map above — the render's lattice, not the picture's), the
-// seed index the one owner's (phase_reset_seed_frame_index above; the frames
-// of window m are [C(m), C(m+1) − 1], phase_reset_window_centre_frame). Its
-// nudge is one hop, which leaves the window, so one nudge already clears its
-// strike: the same rule, untouched by the warp column's widening. A
-// WARP MARKER'S PLACE IS ITS VICINITY: does a marker of the store stand
-// within one nudge step of `source_frame` (warp_frames_in_vicinity above).
-// A DISABLED MARKER OCCUPIES ITS PLACE in both (his "agree"):
-// neither test reads a disabled bit, as the strike counts disabled rows.
-//
-// COST, because the Drop key's face asks every tick: each store is ascending
-// by time_frame and the seed index is monotone in the frame, so the phase test
-// is one lower_bound and at most three seed searches (the frame's and its two
-// store neighbors'), the warp test one lower_bound and its two store
-// neighbors' distances; no list is built and no
-// map rebuilt (the live map is memoized on its own key).
-//
-// THE READERS: the at-playhead drop's answer in the active column
-// (drop_at_playhead_coincides, app_state.h — the two drop bodies and the Drop
-// key's plain term), the hold's single form asked from the warp column
-// (phase_reset_crossing_single_drop_coincides, app_state.h) and — through the
-// same seed compare, handed the window it already holds — the hold's group
-// plan's per-place skip (phase_reset_crossing_group_drops); the crossing's
-// drops author PHASE RESETS, so they ask the window test and never the
-// vicinity. THE STRIKE IS THE SAME DEFINITION over each store itself
-// (phase_reset_red_flag_set_cached and warp_red_flag_set_cached's pass 3,
-// above): a marker is struck exactly where this test would refuse a drop
-// onto its place. NOT ASKED BY: the nudges,
-// the drags, the pastes and the bound cells, which may still author a pair
-// inside one place, which the strike then shows; the render, whose own
-// collapse stays exact-equal frames (the frozen parser's).
-bool phase_reset_seeds_in_window_of(const AppState& app, const GuiAudio& audio,
-                                    int64_t source_frame);
+// THE WARP DROP'S OCCUPIED PLACE, ONE OWNER (architect 2026-11-11, THE DROP
+// COINCIDENCE RULE: "coincident (exact frame) warp marker drops are never
+// intentional"; architect 2026-11-15, the no-grid arc, the place widened to
+// the vicinity: a drop inside it is refused "as a drop on a marker's exact
+// frame is today ... So a strike arises only where a drag or a nudge brings
+// two markers within the vicinity"; architect 2026-11-17, the coincidence
+// the parser's): does a marker of the store — enabled or disabled, his
+// "agree" — coincide with `source_frame`, the frame a drop would author, by
+// the parser's predicate (warp_frames_coincide, warp_coincidence.h: the same
+// frame or under one millisecond). A marker is struck exactly where this test
+// would refuse a drop onto its place (warp_red_flag_set_cached's pass 1,
+// above, the same predicate over the store's neighbors), so no drop makes a
+// strike. COST, because the Drop key's face asks every tick: the store is
+// ascending by time_frame, so one lower_bound and its two store neighbors'
+// distances. THE READER: the at-playhead drop's answer on the warp column
+// (drop_at_playhead_coincides, app_state.h — the warp drop body and the Drop
+// key's plain term). NOT ASKED BY: the nudges, the drags, the pastes and the
+// bound cells, which may still author a coincidence, which the strike then
+// shows and the render normalizes to 1.00. THE PHASE-RESET COLUMN ASKS
+// NOTHING: anything goes there (architect 2026-11-17, the note above at the
+// red-flag set).
 bool warp_marker_in_vicinity_of(const AppState& app, int sample_rate,
                                 int64_t source_frame);
 

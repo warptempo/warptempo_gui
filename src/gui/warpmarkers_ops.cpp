@@ -253,33 +253,26 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // sits at frame 0.
 //
 // Copy-previous is PROJECTION TRUTH end to end: the copied value is the tempo
-// that RENDERS after the prior marker, not the marker's authored member value.
-// marker_effective's OWNER path deliberately returns the marker's own authored
-// fields (the ruled authored-display split for coincident group members), so
-// when the prior is an owner inside a 2+-survivor exact-frame group the render
-// replaces the whole group with one plain enabled 1.00 owner (no labels) while
-// marker_effective would still hand back e.g. 2.00 — a copy that would change
-// the rendered bytes. So a stepped-over survivor that is a member of a
-// collapsed coincident stack — the non-ref marker the step lands on, OR ANY
-// REF IT PASSES, whose group the render likewise replaces with a synthetic
-// owner that is no ref and so ends the pass walk — contributes the collapse's
-// 1.00 (base 100 / no scale, exactly the synthetic owner the resolver seeds),
-// skipping marker_effective; the members' own hovers keep their authored
-// readouts (the ruled display split). The group predicate mirrors the
-// resolver's stage-2 collapse: 2+ SURVIVORS sharing one exact int64 frame
-// (effective_disabled is the shared survival test, the own flag alone;
-// disabled members do not count, and a disabled ref is stepped over as the
-// projection never held it). Every index the step
-// visits survives by construction (find_immediate_prior and the loop's own
-// survival test), so one OTHER surviving index at its frame makes the group.
+// that RENDERS after the prior marker, marker_effective's answer. A COINCIDENT
+// MEMBER reads 1.00 there whatever its kind (architect 2026-11-17: "they both
+// get 1.0 as their effective tempo"; the render's stage 2 makes every enabled
+// member a plain 1.00 owner with no labels), so the step ENDS at a member —
+// the non-ref marker it lands on, OR A REF IT WOULD PASS, which the render
+// likewise turns into an owner that ends the pass walk — and copies its 1.00.
+// The membership is the red-flag cache's `collapsed` set, the parser's
+// classifier (warp_coincident_members) memoized on the store. Every index the
+// step visits survives by construction (find_immediate_prior and the loop's
+// own survival test; a disabled ref is stepped over as the projection never
+// held it).
 //
 // AN OCCUPIED PLACE REFUSES WITH A CARD (architect 2026-11-11, THE DROP
 // COINCIDENCE RULE: "coincident (exact frame) warp marker drops are never
-// intentional"; architect 2026-11-15, the no-grid arc: the place a VICINITY,
-// one nudge step): where a warp marker — enabled or disabled — already stands
-// within one nudge step of the playhead's frame (drop_at_playhead_coincides,
+// intentional"; architect 2026-11-15, the place widened past the exact
+// frame; architect 2026-11-17, the coincidence the parser's): where a warp
+// marker — enabled or disabled — already coincides with the playhead's frame,
+// the same frame or under one millisecond (drop_at_playhead_coincides,
 // app_state.h; the test's owner warp_marker_in_vicinity_of,
-// warp_frame_map_view.h), the
+// warp_frame_map_view.h, over warp_frames_coincide), the
 // drop returns kMarkerDropOccupiedCard for its dispatcher to raise, ahead of
 // any write. Asked here, in the body, so both roads into the warp drop meet
 // it (bare `s` and the empty-lane double-click). So the copy-previous walk
@@ -306,38 +299,24 @@ GuiOpRefusal GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     int                   prev_idx = find_immediate_prior(mv, t);
     int64_t               base_cents = 100;
     std::optional<double> scale;
-    // Is survivor i inside a 2+-survivor exact-frame group the render
-    // collapses to one plain 1.00 owner? Exact integer frame compares —
-    // coincidence IS frame equality in the authored domain.
-    auto in_collapsed_group = [&](int i) {
-        const int64_t frame = mv[i].time_frame;
-        for (int j = 0; j < static_cast<int>(mv.size()); ++j) {
-            if (j != i && mv[j].time_frame == frame &&
-                !effective_disabled(mv, j)) {
-                return true;
-            }
-        }
-        return false;
-    };
-    // Step back past surviving label refs; a collapsed group met on the way
-    // ends the step at the synthetic owner's 1.00.
-    bool collapsed_group = false;
+    const std::set<int>& members = warp_red_flag_set_cached(
+        app, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).collapsed;
+    // Step back past surviving label refs that are no members; a member met
+    // on the way ends the step (it reads 1.00, the head's paragraph).
     while (prev_idx >= 0) {
-        if (in_collapsed_group(prev_idx)) {
-            collapsed_group = true;
-            break;
-        }
+        if (members.count(prev_idx)) break;
         if (mv[prev_idx].label_ref.empty()) break;
         --prev_idx;
         while (prev_idx >= 0 && effective_disabled(mv, prev_idx)) --prev_idx;
     }
-    // Collapsed group: keep base_cents/scale at the synthetic 1.00 owner's
-    // values (the no-prior fallback). Otherwise resolve the non-ref prior's
-    // projection value (owner, or a pass through the same walk the render
-    // runs, incl. the frame-0 seed) through marker_effective.
-    if (prev_idx >= 0 && !collapsed_group) {
+    // The prior's projection value (an owner, a pass through the same walk
+    // the render runs, incl. the frame-0 seed, or a member's 1.00) through
+    // marker_effective; no prior keeps the frame-0 seed's 1.00.
+    if (prev_idx >= 0) {
         const MarkerEffective eff = marker_effective(
-            slice_to_warp_markers(mv), prev_idx, audio.total_frames());
+            slice_to_warp_markers(mv), prev_idx, audio.sample_rate(),
+            audio.total_frames());
         base_cents = eff.base_cents;
         scale      = eff.scale;
     }
@@ -550,11 +529,11 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // Single-marker resolve via marker_effective (slice once) — the
     // projection-aware walk, NOT the raw backward walk. Freezing a pass into
     // an owner must land the value hover shows and the render produces:
-    // under a coincident-stack collapse the nearest prior owner is a member
-    // of a 2+-survivor exact-frame group, which the render replaces with one
-    // plain 1.00 owner, so the raw walk's authored member value (e.g. 150)
-    // would silently change the rendered bytes. marker_effective resolves a
-    // surviving un-collapsed pass against that same projection, keeping the
+    // where the nearest prior owner is a coincident member, the render makes
+    // it a plain 1.00 owner, so the raw walk's authored member value (e.g.
+    // 150) would silently change the rendered bytes. marker_effective
+    // resolves a surviving non-member pass against that same projection, and
+    // a member pass to its own 1.00 (architect 2026-11-17), keeping the
     // freeze lossless (resolve_inherited_tempo's contract).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
@@ -585,7 +564,8 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.iter_tie_group = 0;
         } else if (m.tempo_inherits) {
             const MarkerEffective eff =
-                marker_effective(resolved_src, idx, audio.total_frames());
+                marker_effective(resolved_src, idx, audio.sample_rate(),
+                                 audio.total_frames());
             m.tempo_inherits = false;
             // base_cents == 0 is marker_effective's "could not resolve"; from
             // a pass it is unreachable (resolve_inherited_tempo returns 100 or
@@ -914,9 +894,11 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
 // declaration (warpmarkers_ops.h).
 WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
                                      const std::vector<WarpMarker>& resolved,
-                                     int idx, long total_frames) {
+                                     int idx, long sample_rate,
+                                     long total_frames) {
     if (!m.tempo_inherits) return {m.tempo_cents, m.tempo_scale};
-    const MarkerEffective eff = marker_effective(resolved, idx, total_frames);
+    const MarkerEffective eff =
+        marker_effective(resolved, idx, sample_rate, total_frames);
     // base_cents == 0 ("could not resolve") is unreachable from a pass; mirror
     // the raw walk's {100, nullopt} no-owner fallback.
     if (eff.base_cents == 0) return {100, std::nullopt};
@@ -934,7 +916,7 @@ static constexpr const char* kLabelRefHasNoTempoCard =
 
 // Nudge the selected marker(s)' tempo along the 0.01 grid. SINGLETON ARM
 // ONLY, IN EITHER AUDIO VIEW: a label ref refuses on a card (no tempo to
-// nudge — convert via Ctrl+N first), as does a coincident-collapse member in
+// nudge — convert via Ctrl+N first), as does a coincident member in
 // target view, both through the kind refusal the Up / Down face greys on;
 // a DISABLED marker steps like any other (the one marker asked for is the one
 // stepped — and since 2026-09-13 the group arm and the value drag step one
@@ -966,7 +948,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // "shouldn't we grey out the up/down for label refs in source? we grey out
     // Left for a marker at 0"), and they differ only in what the key says:
     // THE KIND REFUSAL — a label ref in either view and, in target view, a
-    // coincident-collapse member (tempo_cent_step_kind_refusal, app_state.h)
+    // coincident member (tempo_cent_step_kind_refusal, app_state.h)
     // — greys the Up / Down pair AND answers on a CARD, a fact about the
     // marker's kind rather than a value resting somewhere; THE BRACKET WALL
     // greys and is silent at the key. Both are read by the pair's face
@@ -974,8 +956,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // singleton arm's head, ahead of the coalesce stamp, and neither reaches
     // the loop below. (From 2026-08-31 to 2026-09-13 the kind refusal kept a
     // LIVE face on the claim that it needed this act's own resolution run; a
-    // label ref is a plain field and the collapse test reads the red cache's
-    // collapse subset, memoized per store generation, so a per-tick face reads
+    // label ref is a plain field and the coincidence test reads the red
+    // cache's membership, memoized per store generation, so a per-tick face reads
     // both for nothing.)
     //
     // THE BLOCK NOW ANSWERS ON A CARD (architect 2026-08-30, the strictness
@@ -1003,13 +985,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
     // owner-only, no freeze conversion. The singleton path below keeps its own
     // rules (the pass->owner freeze in both views since 2026-09-13, the
-    // target-only collapsed refusal, the constructive per-marker clamp).
+    // target-only coincidence refusal, the constructive per-marker clamp).
     // Its refusal is ITS OWN sentence, forwarded verbatim.
     if (app.selected_markers.size() >= 2)
         return adjust_tempo_cents_group(delta_cents, synthesized_repeat);
     // THE KIND REFUSAL IS ASKED FIRST (architect 2026-09-13, when the Up /
     // Down pair began greying on it): a label ref in either view, and in
-    // target view a coincident-collapse member, refuse on a CARD through the
+    // target view a coincident member, refuse on a CARD through the
     // one owner (tempo_cent_step_kind_refusal, app_state.h — both tests, their
     // order and both sentences), which the pair's face and its tooltip's
     // dropped ladder line read too, so the grey, the line and the card are one
@@ -1017,7 +999,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // resolved projection: the question is whether this marker names a
     // definition, which is payload. It runs AHEAD OF THE WALL because the
     // directional predicate below now answers FALSE on both, and the wall's
-    // exit is silent: asked the other way round, a coincident-collapse OWNER
+    // exit is silent: asked the other way round, a coincident OWNER
     // resting on a bracket end would fall into that exit and lose its
     // sentence. Before any mutation — no freeze, no undo, no dirty.
     if (const char* refusal = tempo_cent_step_kind_refusal(app, audio))
@@ -1098,7 +1080,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         GuiWarpMarker& m = proposed[idx];
         if (!m.label_ref.empty()) continue;
         const WarpTempoStart start =
-            warp_tempo_step_start(m, resolved_src, idx, audio.total_frames());
+            warp_tempo_step_start(m, resolved_src, idx, audio.sample_rate(),
+                                  audio.total_frames());
         // Constructive clamp into the authored-value bracket, the same
         // convention the settings brackets use: the value walks to the edge
         // and stops there, rather than refusing. This SINGLETON arm already
@@ -1229,14 +1212,14 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // (non-empty label_ref) — the ref being the singleton step's payload
 // predicate too, the pass no longer since the singleton freezes one in both
 // audio views (the split is stated just below) — a
-// coincident-collapsed ENABLED marker (warp_red_flag_set_cached's `collapsed`,
-// never its paint cue `red` — the resolver
-// replaces the stack with one 1.00 owner, so the write is render-inert), or
+// coincident ENABLED marker (warp_red_flag_set_cached's `collapsed`, the
+// parser's membership, never its paint cue `red` — the resolver renders every
+// enabled member as a plain 1.00 owner, so the write is render-inert), or
 // a marker that cannot take the WHOLE step without leaving the tempo bracket
 // (the edge compare's generalization under the step ladder — at the bare ±1
-// the two are the same test). Collapse is render-inert regardless of the
-// authoring view, so it walls in SOURCE view too — a DELIBERATE asymmetry with
-// the SINGLETON step, whose collapsed refusal is target-view-only, and whose
+// the two are the same test). The coincidence is render-inert regardless of
+// the authoring view, so it walls in SOURCE view too — a DELIBERATE asymmetry with
+// the SINGLETON step, whose coincidence refusal is target-view-only, and whose
 // pass->owner FREEZE CONVERSION stays a singleton-only act (a bulk payload
 // conversion from one keystroke is refused by design). No freeze conversion
 // here: every stepped member is already an owner, so a plain integer add is
@@ -1264,21 +1247,20 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
         if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
         const GuiWarpMarker& m = mv[idx];
         if (m.tempo_inherits || !m.label_ref.empty()) return false;
-        // THE COLLAPSE TERM, NOT THE PAINT CUE. The cache's `red` also carries
-        // the participation-blind coincidence (a marker sharing its frame with
-        // a DISABLED one paints red, architect 2026-09-13), which the render
-        // does not normalize, so a wall on `red` would refuse a render-live
-        // step. `collapsed` is the render's verdict; the red set's other
-        // producer, the pass-2 fallback, reddens only refs, walled above
-        // whatever their disabled bit, so nothing else of `red`
-        // was ever a wall here.
-        // THE TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13).
-        // The parser's collapse set
-        // (warp_coincident_collapse_members) marks the WHOLE raw run, disabled
-        // rows included, once two or more effectively enabled rows share the
-        // frame; a disabled row in that run is no stack member for the render
-        // — the resolver filters it before it collapses — so it steps like any
-        // disabled marker.
+        // THE COINCIDENCE TERM, the membership and not the whole paint cue.
+        // `collapsed` is the parser's coincident runs (warp_coincident_members,
+        // architect 2026-11-17: the same frame or under one millisecond,
+        // disabled rows counted), and an enabled member renders as a plain
+        // 1.00 owner whatever its authored tempo — so a step on it would
+        // author a number the render never applies, and the group walls.
+        // The red set's other producers, the label-ref fallbacks and the
+        // ambiguous definitions, are refs (walled above whatever their
+        // disabled bit) or definitions whose own tempo still renders, so
+        // nothing else of `red` is a wall here.
+        // THE TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13, "disabled
+        // should be steppable"): a disabled marker's tempo renders nowhere
+        // while it is disabled, member or not, so it steps like any disabled
+        // marker.
         if (collapsed.count(idx) && !effective_disabled(mv, idx)) return false;
         // THE WALL IS "CAN THIS MEMBER TAKE THE WHOLE STEP", not "is it AT the
         // bracket edge" (2026-08-31, with the step ladder): the group
@@ -1306,7 +1288,7 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // declaration (app_state.h). The terms are the act's own, in the act's own
 // order: a GROUP press and the P column are not this refusal's business, the
 // stale-focus belt says nothing, then the LABEL-REFERENCE refusal in EITHER
-// audio view and then, in target view alone, the coincident-collapse one.
+// audio view and then, in target view alone, the coincident one.
 //
 // ONE VERDICT FOR BOTH VIEWS SINCE 2026-09-13 (architect: "shouldn't we grey
 // out the up/down for label refs in source? we grey out Left for a marker at
@@ -1329,32 +1311,31 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // (kLabelRefHasNoTempoCard, above).
 //
 // NOR IS A DISABLED MARKER (architect 2026-09-13, "disabled should be
-// steppable"): the singleton steps the one marker asked for. THE COLLAPSE ARM
-// IS ASKED OF AN ENABLED ROW ALONE (the same day): the
-// parser's collapse set (warp_coincident_collapse_members, frozen, copied into
-// the red cache's `collapsed`) INCLUDES the disabled rows of a collapsed run —
-// it marks the whole raw run once two or more effectively enabled rows share
-// the frame — while the resolver's stack is of effectively enabled markers
-// only, so a disabled row sitting in that run is no member for the render and
-// steps like any disabled marker. The GROUP arm steps a disabled member too
-// since the same day, its red term skipped for one on the same argument
+// steppable"): the singleton steps the one marker asked for. THE COINCIDENCE
+// ARM IS ASKED OF AN ENABLED ROW ALONE (the same day): the parser's
+// membership (warp_coincident_members, copied into the red cache's
+// `collapsed`) INCLUDES disabled rows — a run is the same frame or under one
+// millisecond, disabled rows counted (architect 2026-11-17) — but a disabled
+// marker's tempo renders nowhere while it is disabled, member or not, so it
+// steps like any disabled marker. The GROUP arm steps a disabled member too,
+// its term skipped for one on the same argument
 // (tempo_cent_step_group_actionable).
 //
-// THE COLLAPSE REFUSAL (architect 2026-07-22): a coincident group is treated
-// as ONE marker in target view, and its members' authored tempos are
-// render-inert — the resolver replaces every exact-frame group of 2+
-// effectively-enabled markers with one synthetic plain 1.00 owner. The stack
-// is fixed at the source in warp (source) view, never adjusted from target
-// view. It reads the red cache's COLLAPSE SUBSET (`collapsed`) and not the
-// whole red set since 2026-09-13: the red set also carries the
-// participation-blind coincidence and the label-ref fallbacks, neither of
-// which is this refusal's reason. For an OWNER the collapse is the only
-// render normalization (the pass-2 fallbacks are refs alone — a pass never
-// normalizes since the walk skips refs, architect 2026-09-13), so the
-// owners' answer is unchanged; the GROUP step's wall scan reads the same
-// `collapsed` subset (tempo_cent_step_group_actionable, above), walling
-// passes before it asks. The cache is memoized on the store's generation,
-// which is what lets the per-tick Up / Down face read it.
+// THE COINCIDENCE REFUSAL (architect 2026-07-22; the membership widened
+// 2026-11-17): an enabled member of a coincident run renders as a plain 1.00
+// owner (resolve_warp_markers_for_render's stage 2), so its authored tempo is
+// render-inert and a step in target view, where the picture is the render's,
+// would move nothing. The run is fixed at the source in warp (source) view,
+// never adjusted from target view. It reads the red cache's MEMBERSHIP
+// (`collapsed`) and not the whole red set: the red set also carries the
+// label-ref fallbacks and the ambiguous definitions, neither of which is
+// this refusal's reason. For an OWNER the coincidence is the only render
+// normalization (the label-ref fallbacks are refs alone — a pass never
+// normalizes since the walk skips refs, architect 2026-09-13); the GROUP
+// step's wall scan reads the same `collapsed` set
+// (tempo_cent_step_group_actionable, above), walling passes before it asks.
+// The cache is memoized on the store's generation, which is what lets the
+// per-tick Up / Down face read it.
 //
 // THE BODY IS INDEX-SHAPED AND THE FOCUS FORM WRAPS IT (2026-09-10):
 // the verdict is a fact about ONE marker, so the subject is a
@@ -1404,8 +1385,8 @@ const char* tempo_cent_step_kind_refusal(const AppState& a,
 // THE ARMS ARE THE DISPATCH'S OWN, IN ITS OWN ORDER, and each is argued at the
 // dispatch where its sentence is raised (input_key_dispatch.cpp's Ctrl+B
 // arm, bare `m` until 2026-09-15). What is worth stating HERE is the one thing the extraction changed:
-// the coincident-collapse test reads warp_red_flag_set_cached's `collapsed`
-// set rather than calling warp_coincident_collapse_members fresh. It is the
+// the coincidence test reads warp_red_flag_set_cached's `collapsed`
+// set rather than calling warp_coincident_members fresh. It is the
 // SAME verdict — that cache's pass 1 is that classifier over the same slice of
 // the same committed store (warp_frame_map_view.cpp) — memoized on the store's
 // generation, which is what makes a per-tick face read cost nothing.
@@ -1476,7 +1457,7 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
     const int   f  = a.last_selected_marker;
     if (f < 0 || f >= static_cast<int>(mv.size())) return true;  // belt
     // THE KIND REFUSAL GREYS THE PAIR (architect 2026-09-13): a label ref in
-    // either view, a coincident-collapse member in target view — asked of the
+    // either view, a coincident member in target view — asked of the
     // act's own owner, magnitude-blind, so every admitted rung refuses alike.
     if (tempo_cent_step_kind_refusal_for(a, audio, f)) return false;
     const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
@@ -1515,7 +1496,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // would have moved every selected flag's value, so it is not the
     // one-dimensional already-at-its-state refusal that went silent that day.
     // The sentence is one for the whole wall set (a pass, a ref, a
-    // coincident-collapse member, a marker at the bracket edge) because what
+    // coincident member, a marker at the bracket edge) because what
     // the press needs to know is that the GROUP could not move as a group, not
     // which member walled — naming the member would be a second act's worth
     // of detail for a press that changed nothing. (An EMPTY STEP carded the
@@ -1937,7 +1918,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // is one flag in one place, and the glance that asks whether it moved is
     // the glance that answers. (A zero-step press cannot arise off a wall
     // anyway: a millisecond is at least one whole frame,
-    // arrow_millisecond_frames.)
+    // millisecond_frames.)
     // WHAT STILL REACHES IT is the 2+ press whose FOCUS rests on a wall: the
     // prologue asks the same landing ahead of the coalesce stamp now, so a
     // SINGLETON at its wall never gets this far (the wall no-op touches

@@ -1,8 +1,7 @@
 #include "phaseresetmarkers_ops.h"
 
 #include "audio.h"
-#include "notifications.h"  // kMarkerNudgeOffEdgeCard, kMarkerDropOffEdgeCard,
-                            // kPhaseResetDropOccupiedCard
+#include "notifications.h"  // kMarkerNudgeOffEdgeCard, kMarkerDropOffEdgeCard
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
 #include "target_render.h"
@@ -54,13 +53,13 @@ static std::optional<int64_t> walled_drop_frame(const GuiAudio& audio,
 }
 
 // Drop a phase reset marker at `time_frame` — THE CREATE BODY, bounded here
-// by the absolute range alone. THE OCCUPIED PLACE IS ITS ONE CALLER'S
-// REFUSAL, not this body's (architect 2026-11-11, the drop coincidence
-// rule: drop_phase_reset_lead_in_at_playhead refuses a frame whose seed
-// window already holds a reset before calling), so no drop stacks a reset
-// in a window; the store itself still holds coincident resets where a
-// nudge, a drag, a paste or a load put them (the render boundary collapses
-// an exact-equal group to one event, and the strike shows a shared window).
+// by the absolute range alone. NO PLACE IS TAKEN (architect 2026-11-17:
+// "let's do anything-goes for phase"; "the 'confusing-in-editor' case is
+// simply something for the user to be careful with"): the reset drops
+// wherever it lands, on a frame another reset holds or in its seed window
+// included — the render boundary collapses an exact-equal enabled group to
+// one event and the engine merges resets seeding one window, and the lane
+// paints every reset as authored, no strike.
 // Selection collapses to the freshly-inserted index. Frame-0
 // phase alignment is implicit by definition and needs no marker to
 // assert it.
@@ -77,8 +76,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // drop should also, for symmetry"), the warp drop's clause (drop_marker,
     // warpmarkers_ops.cpp): the Add to Selection lamp goes out here, on the
     // accepted path alone — past this body's two silent returns and its one
-    // caller's carded refusals (drop_phase_reset_lead_in_at_playhead: the
-    // occupied window, the painted edge) — so the P column's bare `s`, the
+    // caller's carded refusal (drop_phase_reset_lead_in_at_playhead: the
+    // painted edge) — so the P column's bare `s`, the
     // empty-lane double-click and the hold's single form (Shift+S over one
     // selected marker or none, GuiInputHandler::drop_phase_reset_crossing)
     // each meet it exactly once and a refused drop leaves the lamp lit. The
@@ -95,11 +94,10 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // app_state.h): the new row is absent from this entry's snapshot, so the
     // UNDO side names nothing and takes the removal arm's empty answer, while
     // touched_live names the inserted row so the counter-entry's swap hands the
-    // REDO the right index. It is the exact answer rather than a needed one
-    // since 2026-11-11: the drop's one caller refuses an occupied window, so
-    // the new reset is alone on its frame and the diff matcher's grown arm
-    // would name the same row (it names the LAST row of a coincident group,
-    // where insert_marker's lower_bound placement puts a new one FIRST).
+    // REDO the right index. It is NEEDED where the new reset lands on a frame
+    // another holds (anything goes, architect 2026-11-17): the diff matcher's
+    // grown arm names the LAST row of a coincident group, where
+    // insert_marker's lower_bound placement puts a new one FIRST.
     undo.push_undo_phase_reset(std::move(pre_state),
                                /*touched_snapshot=*/{},
                                /*touched_live=*/{new_idx});
@@ -140,7 +138,9 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // CREATE PATH, ONE ARITY UP, in its order: each frame through the one funnel
 // and wall (walled_drop_frame), the stop, the pre-state, the inserts, the
 // selection, ONE UNDO ENTRY FOR THE WHOLE ACT, the damage, the playhead's
-// seat and the render's trigger.
+// seat and the render's trigger. A frame `frames` holds twice takes two
+// resets (anything goes on this column, architect 2026-11-17); the index
+// bookkeeping below follows each insert wherever lower_bound puts it.
 //   * THE SELECTION IS WHAT THE ACT CREATED, as the single drop
 //     single-selects its reset: every created reset, through the whole-set
 //     replace (Selection::replace_selection, the paste landing's class).
@@ -357,21 +357,10 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // full create path — the EOF wall, undo, the single-select and the playhead
 // seat — unchanged; only the seed frame is this body's.
 //
-// AN OCCUPIED WINDOW REFUSES WITH A CARD (architect 2026-11-11, THE DROP
-// COINCIDENCE RULE: "since phase resets are on a lattice the definition of
-// coincident there is really in the same quantum step on the lattice"; no
-// drop makes a coincidence): where a phase reset — enabled or disabled —
-// already seeds in the window of the lead-in frame under the live map
-// (drop_at_playhead_coincides, app_state.h; the test's owner
-// phase_reset_seeds_in_window_of, warp_frame_map_view.h), the body returns
-// kPhaseResetDropOccupiedCard for its dispatcher to raise, ahead of any
-// write. Asked HERE, in the body, so every road into the drop meets it: bare
-// `s`, the empty-lane double-click (a second double-click on the stretch it
-// just dropped from is the ordinary producer) and Shift+S's single form —
-// which has ALREADY asked the same owner of the same frame before its column
-// switch and refused whole there
-// (phase_reset_crossing_single_drop_coincides), so on that road this test
-// repeats a false answer and never cards.
+// NO PLACE IS TAKEN (architect 2026-11-17: "let's do anything-goes for
+// phase"): the reset drops wherever the lead-in lands, on a frame another
+// reset holds or in its seed window included, on every road into the drop —
+// bare `s`, the empty-lane double-click and Shift+S's single form.
 //
 // THE PAINTED EDGE REFUSES WITH A CARD (architect 2026-09-26, strictly as
 // painted; the warp drop's twin): a lead-in frame in the song's last
@@ -380,14 +369,10 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // kMarkerDropOffEdgeCard for its dispatcher to raise, ahead of any write.
 // The lead-in arithmetic itself lives in drop_at_playhead_source_frame
 // (warp_frame_map_view.cpp), the one frame the two refusals and the drop
-// share. THE OCCUPIED WINDOW IS ASKED FIRST (the group plan's order too,
-// crossing_drop_place): the edge's sentence says "at this zoom", a promise
-// that zooming in frees the place, and no zoom frees an occupied window.
+// share.
 GuiOpRefusal GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
     if (audio.sample_rate() <= 0) return std::nullopt;
     assert(app.active_markers_view == 'P');
-    if (drop_at_playhead_coincides(app, audio))
-        return GuiOpRefusal{kPhaseResetDropOccupiedCard};
     if (drop_at_playhead_off_edge(app, audio))
         return GuiOpRefusal{kMarkerDropOffEdgeCard};
     const int64_t src_frame = drop_at_playhead_source_frame(app, audio);

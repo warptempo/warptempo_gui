@@ -578,7 +578,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // disable toggle and inherit/collapse (FLATTEN stood among them for the
     // hours of 2026-09-19 and its row is in the icon row's iteration group
     // now) — authoring chords that OWN THEIR REFUSALS AND CARDS (read-only,
-    // the home view, an empty selection, the drop's occupied place,
+    // the home view, an empty selection, the warp drop's occupied place,
     // architect 2026-11-11), inherited whole through on_key; EACH BUTTON'S
     // PUBLISHED FACE IS ITS OWN ARM in redesign_button_enabled (app_state.h)
     // — the Drop key greying where neither of its forms would act, the
@@ -6257,17 +6257,15 @@ void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // drops legal there alone) and P in both audio views (S+P and T+P, each
     // with the lead-in, architect 2026-10-12), so the
     // view dispatch below needs no extra audio-view guard on either column.
-    // The drops' reason channel carries two refusals. THE OCCUPIED PLACE
-    // (architect 2026-11-11, the drop coincidence rule;
-    // kPhaseResetDropOccupiedCard / kMarkerDropOccupiedCard) this road CAN
-    // meet on the P column: the lead-in reset lands kN/2 output samples left
-    // of the clicked place, so the stretch right of a reset is empty lane,
-    // and a second double-click where the first just dropped asks for a
-    // reset in the window that one now seeds in — refused, on its card, the
-    // playhead left where the click seated it. On the W column a marker
-    // within one nudge step of the clicked place paints its cue over that
-    // place (the step is under two px at every zoom, inside the chip), so the
-    // press is ordinarily the cue's and not the empty lane's. THE OFF-EDGE
+    // The drops' reason channel carries up to two refusals. THE OCCUPIED
+    // PLACE (architect 2026-11-11, the drop coincidence rule;
+    // kMarkerDropOccupiedCard) is the W column's alone: a marker coinciding
+    // with the clicked place (under one millisecond, the parser's predicate,
+    // 2026-11-17) paints its cue over that place (the millisecond is under
+    // two px at every zoom, inside the chip), so the press is ordinarily the
+    // cue's and not the empty lane's. The P column has none (anything goes,
+    // architect 2026-11-17): a second double-click where the first just
+    // dropped drops a second reset there. THE OFF-EDGE
     // REFUSAL (kMarkerDropOffEdgeCard) this road meets in ONE PLACE on the W
     // column (architect 2026-11-15, the no-grid arc: the playhead was just
     // seated on the frame under the pen's real place): a double-click in the

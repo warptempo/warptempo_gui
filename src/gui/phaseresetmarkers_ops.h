@@ -48,9 +48,9 @@ struct GuiPhaseResetMarkersOps {
     void drop_phase_resets_at_frames(const std::vector<int64_t>& frames,
                                      int64_t focus_frame);
     // Returns its refusal's sentence for the dispatcher to card — the
-    // occupied window's (kPhaseResetDropOccupiedCard, 2026-11-11), else the
-    // painted edge's (kMarkerDropOffEdgeCard); GuiOpRefusal,
-    // warpmarkers_ops.h — else std::nullopt.
+    // painted edge's (kMarkerDropOffEdgeCard; no place is taken on this
+    // column, architect 2026-11-17); GuiOpRefusal, warpmarkers_ops.h — else
+    // std::nullopt.
     GuiOpRefusal drop_phase_reset_lead_in_at_playhead();
     void delete_selected_phase_reset();
     void toggle_phase_reset_disabled();

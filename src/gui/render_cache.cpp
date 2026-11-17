@@ -438,8 +438,11 @@ std::vector<uint8_t> render_fingerprint(
     // Warp markers: the RESOLVED render list — exactly the MarkerForRender
     // fields build_warp_frame_map reads (frame, resolved owning tempo cents,
     // typed scale, label def/ref), after resolve_warp_markers_for_render's
-    // filter/collapse/seed/materialize/normalize pipeline. Raw disabled
-    // markers, collapsed duplicates, and fields
+    // filter/coincidence/seed/materialize/normalize pipeline. Raw disabled
+    // markers, a coincident member's authored tempo and labels (its plain
+    // 1.00 owner reaches the list instead, those on one exact frame as one;
+    // architect 2026-11-17 — so a change to the coincidence rule moves the
+    // key through this list alone, no version bump), and fields
     // materialization discards never reach this list, so edits that cannot
     // change engine input cannot move the key. All survivors are enabled by
     // the resolver's output invariants — no disabled flag exists here.

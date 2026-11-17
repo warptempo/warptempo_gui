@@ -1,6 +1,7 @@
 #pragma once
 
 #include "warpmarkers_parse.h"          // WarpMarker
+#include "warp_coincidence.h"           // warp_frames_coincide, millisecond_frames
 #include "warp_frame_map.h"                  // WarpFrameMapSegment
 
 #include <cstddef>
@@ -17,7 +18,9 @@
 // Minimal POD the warp_frame_map math needs. The GUI's `GuiWarpMarker` resolves into
 // this: tempo_inherits markers are walked back to their nearest owning
 // ancestor and their effective tempo_cents / tempo_scale are copied forward.
-// Disabled markers are filtered out BEFORE conversion, and a label ref the
+// Disabled markers are filtered out BEFORE conversion, an enabled member of a
+// coincident run arrives as a plain 1.00 owner (architect approval
+// 2026-11-17, warp_coincident_members below), and a label ref the
 // resolver cannot honor (a dangling one, an ambiguous label, an extreme
 // implied ratio) arrives as a plain 1.00 owner (architect approval
 // 2026-10-29: a marker is disabled by its own flag alone, so a disabled
@@ -39,16 +42,20 @@ struct MarkerForRender {
 // Effective tempo a marker resolves to, for display/authoring callers (not
 // fed to the render path). See marker_effective() below.
 struct MarkerEffective {
-    // Why a label ref resolved to the normalized 1.00 fallback (source_idx
-    // -1): the GUI's red-flag set (warp_red_flag_set_cached) reads this
-    // instead of re-searching the raw store, which would name the wrong case
-    // for a def that died in a coincidence collapse (present raw, dangling
-    // in the projection). AmbiguousLabel is a label two or more surviving
-    // definitions hold (architect approval 2026-10-29): no reference honors
-    // either, label_definition_search's verdict in warp_frame_map_build.cpp.
-    // None for every non-fallback result and for every pass.
+    // Why a marker resolved to the normalized 1.00 fallback (source_idx
+    // -1). Coincident is a member of a coincident run, any kind, enabled or
+    // disabled (architect approval 2026-11-17: "they both get 1.0 as their
+    // effective tempo"; warp_coincident_members below). The three label
+    // reasons are a label ref's: the GUI's red-flag set
+    // (warp_red_flag_set_cached) reads them instead of re-searching the raw
+    // store, which would name the wrong case for a def that is a coincident
+    // member (present raw, labelless in the projection). AmbiguousLabel is a
+    // label two or more surviving definitions hold (architect approval
+    // 2026-10-29): no reference honors either, label_definition_search's
+    // verdict in warp_frame_map_build.cpp. None for every non-fallback
+    // result and for every non-member pass.
     enum class NormalizedReason {
-        None, UndefinedLabel, AmbiguousLabel, ExtremeRatio
+        None, Coincident, UndefinedLabel, AmbiguousLabel, ExtremeRatio
     };
 
     int64_t     base_cents = 0;     // integer tempo cents; 0 means "could
@@ -63,8 +70,8 @@ struct MarkerEffective {
                                     // first-marker pass resolving to the
                                     // 1.00 default, or a value taken from
                                     // a synthetic projection marker — a
-                                    // collapsed group's replacement owner
-                                    // or the frame-0 seed — that no raw
+                                    // coincident member's 1.00 owner or
+                                    // the frame-0 seed — that no raw
                                     // index can honestly name)
     NormalizedReason reason = NormalizedReason::None;
     // (No from_ref. It flagged a PASS whose inheritance walk had terminated on
@@ -93,7 +100,8 @@ struct MarkerEffective {
 // src_frame > total_frames (the past-EOF wall — column-symmetric with
 // build_phase_reset_source_frames by ruling, and a loud breach backstop for
 // hand-assembled input), src_frame - prev_src_frame < 1 (unreachable from
-// the resolver, whose coincidence collapse guarantees >= 1-frame spacing;
+// the resolver, whose stage 2 merges every exact-equal frame to one owner, so
+// its output frames are strictly increasing whole frames;
 // kept because the engine validates strict ascent but NOT the >= 1-frame
 // gap, so a sub-frame segment is the one map defect that would render
 // silently wrong bytes), tempo <= 0 (producer-less since the iteration lock of
@@ -157,27 +165,36 @@ bool marker_effectively_disabled(const std::vector<MarkerT>& mv, size_t idx) {
 std::vector<bool> warp_markers_render_keep_mask(
     const std::vector<WarpMarker>& src);
 
-// The stage-2 coincident-collapse rule as a pure classifier over the RAW
-// authored store (the one owner; architect approval 2026-07-30, the site
-// record added 2026-08-29 under that day's approval): out[i] is true iff raw
-// index i
-// belongs to an exact-frame run whose effectively-enabled member count is >= 2
-// — the run that stage 2 collapses to one synthetic 1.00 owner. Positions are
-// whole int64 frames (exact equality IS the coincidence predicate) and the
-// store is time-sorted, so a run is adjacent. Membership is the whole run,
-// disabled members included (the GUI reddens the entire overlapping stack).
-// Consumed internally by stage 2 (via its raw-index map) and externally by the
-// GUI's normalization-red set, so the render's collapse verdict and the GUI's
-// red cue cannot drift.
-std::vector<char> warp_coincident_collapse_members(
-    const std::vector<WarpMarker>& markers);
+// THE COINCIDENT RUNS, the rule's one owner as a pure classifier over the RAW
+// authored store (architect approval 2026-11-17: "for warp, we should make the
+// parser truthful - we need to show coincident markers, and that definition
+// needs to include sub-1ms distance, so the parser should also make them both
+// 1.0. so if two warp markers are struck in the gui, both should render as 1.0
+// in the parser/engine." — "actually i think disabled markers should get
+// struck also. they could mess up a copy-paste of phase resets. so it becomes
+// 'they both get 1.0 as their effective tempo' not 'they both render as
+// 1.0'"): out[i] is true iff raw index i belongs to a COINCIDENT RUN — a
+// maximal run of adjacent rows of the time-sorted store in which each row
+// coincides with its neighbor (warp_frames_coincide, warp_coincidence.h: the
+// same frame or under one millisecond at `sample_rate`), DISABLED ROWS
+// COUNTED, size >= 2. No enabled count: a run of an enabled and a disabled
+// row is a run, a run of two disabled rows is a run. Equivalently, both rows
+// of every adjacent coinciding pair are members (a chain of pairs is one
+// run). The store is time-sorted, so a row's nearest neighbors are the rows
+// beside it, and every row on a frame another row holds is a member.
+// READERS: the resolver's stage 2 (every enabled member renders as a plain
+// 1.00 owner), marker_effective (every member reads 1.00, reason Coincident)
+// and the GUI's red-flag set (warp_red_flag_set_cached), so the render, the
+// readouts and the strike cannot drift.
+std::vector<char> warp_coincident_members(
+    const std::vector<WarpMarker>& markers, long sample_rate);
 
 // THE AMBIGUOUS LABEL'S DEFINITIONS as a pure classifier over the RAW
 // authored store (architect approval 2026-10-29), in
-// warp_coincident_collapse_members' shape: out[i] is true iff raw index i is
-// a surviving, un-collapsed label definition (it reaches the resolver's
-// post-collapse intermediate) whose label at least one OTHER surviving,
-// un-collapsed definition also defines. Two enabled definitions of one label
+// warp_coincident_members' shape: out[i] is true iff raw index i is
+// a surviving, non-member label definition (it reaches the resolver's
+// post-stage-2 intermediate with its label) whose label at least one OTHER
+// such definition also defines. Two enabled definitions of one label
 // are legal — the editor refuses only a label an ENABLED definition holds,
 // and re-enabling a disabled definition beside its successor builds the
 // state — and the resolver honors neither: every reference to the label
@@ -185,13 +202,14 @@ std::vector<char> warp_coincident_collapse_members(
 // definition"). Built on the SAME silent projection and the same definition
 // search the stage-5 lookup reads (label_definition_search, internal to
 // warp_frame_map_build.cpp), so the GUI's strike on the definitions and the
-// render's verdict on the references cannot drift. Consumed by the GUI's
-// red-flag set (warp_red_flag_set_cached), which strikes both definitions
-// and, through marker_effective's AmbiguousLabel, every reference. A
-// disabled definition never counts and is never marked: it fades, it does
-// not strike.
+// render's verdict on the references cannot drift; `sample_rate` because the
+// projection's coincident runs read it (architect approval 2026-11-17).
+// Consumed by the GUI's red-flag set (warp_red_flag_set_cached), which
+// strikes both definitions and, through marker_effective's AmbiguousLabel,
+// every reference. A disabled definition never counts and is never marked:
+// it fades, it does not strike.
 std::vector<char> warp_ambiguous_label_defs(
-    const std::vector<WarpMarker>& markers);
+    const std::vector<WarpMarker>& markers, long sample_rate);
 
 // Resolve each WarpMarker to a MarkerForRender — the normalization
 // chokepoint every render path passes through before build_warp_frame_map
@@ -208,10 +226,22 @@ std::vector<char> warp_ambiguous_label_defs(
 //   1. filter to the survivors of warp_markers_render_keep_mask above —
 //      the participation verdict's single owner — dropping disabled
 //      markers (each by its own flag alone, architect approval 2026-10-29);
-//   2. collapse each group of 2+ survivors sharing one exact time_frame
-//      (positions are whole int64 frames, so exact equality is the whole
-//      coincidence predicate) into ONE plain enabled 1.00 owner with no
-//      labels, one line per group;
+//   2. THE COINCIDENT RUNS (architect approval 2026-11-17, the rulings at
+//      warp_coincident_members above): every ENABLED member of a coincident
+//      run — the same frame or under one millisecond from its neighbor,
+//      disabled rows counted in the run — renders as a plain enabled 1.00
+//      owner with no labels at its own frame, and enabled members on one
+//      exact frame give ONE such owner (the map needs strictly increasing
+//      frames; his "yes" to one 1.00 owner at that frame), one line per run
+//      that holds an enabled member. CONSEQUENCES, by his rulings: a member
+//      that DEFINES a label no longer defines it ("they also collapse to 1.0
+//      and lose their label reference"), so references elsewhere to that
+//      label go dangling (stage 5: a plain 1.00 owner, UndefinedLabel) unless
+//      another surviving definition holds it, which they then bind (the rule
+//      of 2026-10-29, unchanged); a member that REFERENCES a label renders
+//      1.00, the reference lost; and an enabled marker coincident only with a
+//      DISABLED one renders at 1.00 — a disabled marker changes the render
+//      here and nowhere else;
 //   3. when no survivor sits at exactly frame 0, silently prepend a plain
 //      enabled 1.00 owner there (the documented default, not ambiguity);
 //   4. materialize each pass through resolve_inherited_tempo(_scale)'s
@@ -230,7 +260,7 @@ std::vector<char> warp_ambiguous_label_defs(
 // when seeded); every surviving label_ref is resolvable to exactly one
 // definition (architect approval 2026-10-29) and its implied tempo in-band.
 // Input that normalizes to itself — no coincident
-// survivors, a survivor at frame 0, every ref
+// run, a survivor at frame 0, every ref
 // resolvable and in-band — yields the identical resolved list the
 // pre-normalization filter produced, so build_warp_frame_map's output is
 // byte-for-byte unchanged for such input. Returns a PLAIN std::vector: this
@@ -241,8 +271,10 @@ std::vector<char> warp_ambiguous_label_defs(
 // guards for hand-assembled marker lists reaching the build directly (the
 // map-artifact contract, and the tempo arm's vocabulary); the two signatures
 // rightly differ.
-// sample_rate feeds only the stderr timestamps; total_frames only the
-// envelope check's last-segment distance.
+// sample_rate sets the coincidence's millisecond (stage 2's runs,
+// warp_frames_coincide; architect approval 2026-11-17) and the stderr
+// timestamps; total_frames feeds only the envelope check's last-segment
+// distance.
 // Stages 1-3 live in one shared projection function
 // (normalized_surviving_markers, internal to warp_frame_map_build.cpp):
 // the resolver runs it with the stderr lines on, and the display side
@@ -304,23 +336,28 @@ std::optional<double> resolve_inherited_tempo_scale(
 // base_cents == 0 means "could not resolve" (mirrors
 // resolved_marker_payload's "" guards; both are display-only safe returns,
 // writing no bytes and printing nothing). scale == nullopt means no typed
-// scale (treated as 1.0 by callers). total_frames is the source length in
+// scale (treated as 1.0 by callers). sample_rate sets the coincidence's
+// millisecond (warp_coincident_members; architect approval 2026-11-17).
+// total_frames is the source length in
 // frames; it bounds the last projection segment (the resolver's own rule),
 // so a last-segment ref resolves and classifies exactly as it renders.
 //
 // Resolution basis, in order:
-//   - an OWNER resolves to its own fields — coincident group members
-//     included, the accepted authored-display split (the render collapses
-//     a 2+-survivor exact-frame group to one plain 1.00 owner, but the
-//     members themselves keep their authored readouts by ruling);
-//   - an effectively-disabled marker, or a pass/ref that is itself a
-//     member of a 2+-survivor exact-frame group, resolves against the RAW
-//     store (disabled markers do not render at all; group members are the
-//     ruled split above);
-//   - every other pass/ref — surviving and un-collapsed — resolves against
+//   - A MEMBER OF A COINCIDENT RUN (warp_coincident_members), ANY KIND —
+//     owner, pass or ref — ENABLED OR DISABLED, resolves to the 1.00
+//     fallback below with reason Coincident (architect approval 2026-11-17:
+//     "they both get 1.0 as their effective tempo"): an enabled member is
+//     what renders, and a disabled one reads what it would be;
+//   - every other OWNER resolves to its own fields;
+//   - an effectively-disabled pass/ref resolves against the COINCIDENCE-
+//     NORMALIZED RAW STORE (disabled markers do not render at all; the raw
+//     store with every member rewritten as the plain 1.00 owner it reads as,
+//     its enabled bit and frame kept, so a disabled marker behind a member
+//     reads what the member is and a member's label is no definition);
+//   - every other pass/ref — surviving and no member — resolves against
 //     the silent projection (the render resolver's stages 1-3, no stderr),
-//     so its value is what actually renders even when other markers were
-//     collapsed away or the frame-0 seed was inserted, and the band
+//     so its value is what actually renders even when members were
+//     normalized or the frame-0 seed was inserted, and the band
 //     verdict comes from the shared resolver-order classification helper.
 // source_idx names the marker the value is visibly taken from:
 //   owner     -> idx itself (its own tempo_cents / tempo_scale).
@@ -330,10 +367,12 @@ std::optional<double> resolve_inherited_tempo_scale(
 //                carries a different value and is never named — architect
 //                approval 2026-09-13); on the projection path this
 //                is that prior projection entry mapped back to its raw
-//                index, and a SYNTHETIC prior — a collapsed group's
-//                replacement 1.00 owner or the frame-0 seed — reports -1
+//                index, and a SYNTHETIC prior — a coincident member's
+//                1.00 owner or the frame-0 seed — reports -1
 //                (attributing it to any single raw marker would mislead;
-//                the popup then shows the bare resolved value).
+//                the popup then shows the bare resolved value); on the
+//                raw-store path a prior that is a member reports -1 the
+//                same way.
 //                base/scale are still the fully-resolved owner values via
 //                resolve_inherited_tempo(_scale).
 //   label_ref -> the label-definition marker's raw index (a projection
@@ -344,9 +383,11 @@ std::optional<double> resolve_inherited_tempo_scale(
 // Normalization fallbacks mirror the render resolver and report as
 // {base_cents 100, scale nullopt, source_idx -1} — no visible source,
 // because the value is a fallback, not inherited from anywhere:
-//   - a label ref with no definition on its resolution basis (projection
-//     path: a def that died in a coincidence collapse, or a disabled one,
-//     is dangling, the render's own verdict) — reason UndefinedLabel;
+//   - a member of a coincident run, the first bullet above — reason
+//     Coincident;
+//   - a label ref with no definition on its resolution basis (a def that is
+//     a coincident member, or on the projection path a disabled one, is
+//     dangling, the render's own verdict) — reason UndefinedLabel;
 //   - a label ref whose label two or more definitions hold on its
 //     resolution basis (architect approval 2026-10-29; on the raw-store
 //     path the ENABLED definitions are asked first and the disabled ones
@@ -356,14 +397,20 @@ std::optional<double> resolve_inherited_tempo_scale(
 //     per-marker envelope [0.125, 8.0] (the shared classification helper,
 //     resolver operation order) — reason ExtremeRatio.
 MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
-                                 long total_frames);
+                                 long sample_rate, long total_frames);
 
 // THE RESOLVED VALUE OF A PASS OR LABEL_REF WARP MARKER, as the pasteable
 // payload plus the index of the marker that value came FROM. (ARCHITECT
 // APPROVAL 2026-08-29 for the touch on this frozen unit.) Pure parser-domain
 // string/math — it resolves through marker_effective above (the silent
-// projection for surviving un-collapsed passes/refs, the raw store for the
-// carve-outs), so what it composes is what will be rendered.
+// projection for surviving non-member passes/refs, the coincidence-normalized
+// raw store for disabled ones), so what it composes is what will be rendered.
+//
+// A MEMBER OF A COINCIDENT RUN, ANY KIND, ENABLED OR DISABLED, returns the
+// 1.00 literal (format_tempo_cents(100), no scale) and leaves the source
+// index untouched (architect approval 2026-11-17: a member's effective tempo
+// IS 1.00 — "they both get 1.0 as their effective tempo" — so the value copy
+// reads 1.00, the render's truth, and no marker is its source).
 //
 // THE PAYLOAD is the value form the flag editor accepts and the serializer
 // writes: format_tempo_cents(base_cents), plus "*" + format_value_double(
@@ -384,15 +431,17 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // qualify at all (the "" return), a pass whose value is a normalization
 // FALLBACK (a first-marker or all-disabled-priors pass — refs alone ahead of
 // it counting as none, architect approval 2026-09-13 — a visible prior that is a
-// SYNTHETIC projection marker — a collapsed group's replacement 1.00 owner or
-// the frame-0 seed), a pass whose visible prior does not itself resolve, and a
+// SYNTHETIC projection marker or a coincident member — a member's 1.00 owner
+// or the frame-0 seed), a pass whose visible prior does not itself resolve, a
+// coincident member (above), and a
 // ref the render normalizes (an undefined label, an ambiguous one — architect
 // approval 2026-10-29 — or an implied effective tempo outside the
 // [0.125, 8.0] envelope — all spell the 1.00 literal and have no source).
 //
-// Returns "" when the marker does not qualify — owning, malformed, or a
-// carve-out ref (a group member or an effectively-disabled ref) whose raw walk
-// finds no surviving successor to bound a segment — and LEAVES THE INDEX
+// Returns "" when the marker does not qualify — owning and no member,
+// malformed, or an effectively-disabled ref whose walk over the
+// coincidence-normalized raw store finds no surviving successor to bound a
+// segment — and LEAVES THE INDEX
 // UNTOUCHED then, like every other no-source case above: the two writes are on
 // the two success paths and nowhere else, so a caller seeds its own sentinel
 // and reads it back unchanged wherever no marker is named. (Architect approval
@@ -420,7 +469,7 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // state surface; no display string returns here. Comment-only, architect
 // approval 2026-11-09.)
 std::string resolved_marker_payload(const std::vector<WarpMarker>& mv, int idx,
-                                    long total_frames,
+                                    long sample_rate, long total_frames,
                                     int* source_index_out = nullptr);
 
 // The framemap pair the render pipeline drops into the cache dir is always
