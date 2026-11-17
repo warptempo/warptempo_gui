@@ -152,10 +152,12 @@ struct Viewport {
     //    (land_paste_in_phase_reset_view, phase_reset_propagate.cpp) is the
     //    column-switch case reached by a different door and joined 2026-07-30: it calls
     //    switch_active_markers_view_to('P') directly rather than through the
-    //    selector, so it kicks at its own tail — after the created selection, so the
-    //    column and the selection hash rebuild together — its only kick since it
-    //    stopped crossing the audio view (architect 2026-10-14, Shift+S's
-    //    symmetry). SHIFT+S — THE DROP FROM THE WARP COLUMN
+    //    selector, so it kicks at its own tail — after the changed selection, so the
+    //    column and the selection hash rebuild together — its only kick of its
+    //    own since it stopped crossing the audio view (architect 2026-10-14,
+    //    Shift+S's symmetry); the framing of its changed set (architect
+    //    2026-11-17, send U) kicks only through land_subject or
+    //    apply_zoom_to_start, listed above, when it moves the camera. SHIFT+S — THE DROP FROM THE WARP COLUMN
     //    (2026-08-28, staying in its audio view since 2026-10-12,
     //    GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp) — is
     //    that same case through a third door and takes the same tail for the
@@ -519,8 +521,10 @@ struct Viewport {
     // zoom_to_start_would_move (app_state.h), asked at the head before any
     // write (2026-10-25), the one owner the Zoom to Fit key's face also reads
     // through span_framing_would_act. Its callers: the span
-    // framer frame_span_into_view (the trim-bar double-click and the group
-    // undo/redo restore) and bare `0`'s restore of its stamped view
+    // framer frame_span_into_view (the trim-bar double-click and the
+    // cannot-fit arm of land_and_frame_active_markers — the group undo/redo
+    // restore and the phase-reset pastes' landing) and bare `0`'s restore of
+    // its stamped view
     // (run_overview_command), whose start is the stamp's, not a span's.
     // `parked_origin` names the rule the start rests by, at every call: empty
     // for a framing, which lands Exact; the stamp's own lattice origin for

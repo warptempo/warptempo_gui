@@ -39,6 +39,7 @@
 #include <filesystem>
 #include <functional>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -487,13 +488,39 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // span rests CENTERED rather than left-aligned, and the unclamped case
 // degenerates to the span's left edge (W·q_t covers the margined span, over it
 // by under a sixteenth of a frame per column). Shared by
-// run_span_framing_command (both arms) and the GROUP undo/redo restore's
-// cannot-fit arm (undo.cpp, on a false verdict from the landing owner
-// Viewport::land_subject, whose fit test guarantees that arm only ever zooms
-// out). Definition in input_handler.cpp.
+// run_span_framing_command (both arms) and the cannot-fit arm of
+// land_and_frame_active_markers below (on a false verdict from the landing
+// owner Viewport::land_subject, whose fit test guarantees that arm only ever
+// zooms out). Definition in input_handler.cpp.
 void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
+
+// LAND ON AND FRAME A SET OF THE ACTIVE COLUMN'S MARKERS — the group visual
+// language's one body, the group undo / redo restore's and the phase-reset
+// pastes' alike (architect 2026-11-17, send U: "Paste phase reset state should
+// zoom to show affected markers if they don't fit on screen. Make sure paste
+// phase reset also does this"): the hold posture dropped (a group framing is
+// not a hold), the
+// playhead landed on the set's earliest member (land_playhead_on_marker), and
+// the set's [earliest, latest] ACTIVE-DOMAIN extent, each member through the
+// land's own formula, brought on screen by the landing owner's Restore
+// (Viewport::land_subject: wholly on screen moves nothing, an off-screen range
+// that fits is centered at the current zoom), and, when the range plus the
+// edge margin cannot fit, by the span framer's margin arm above, which only
+// ever zooms out. A one-member set is its marker's cursor, which always fits:
+// on screen nothing moves, off screen it is centered, the zoom untouched. An
+// empty set does nothing at all. `indices` name rows of the ACTIVE column's
+// store (active_marker_count / active_marker_time_frame), so the caller has
+// settled the column first. ITS CALLERS, grepped 2026-11-17: the undo / redo
+// restore's group arm (restore_history_entry, undo.cpp, over the restored
+// selection) and the phase-reset pastes' landing
+// (PhaseResetPropagate::land_paste_in_phase_reset_view, over the resets the
+// paste changed, after its column switch and selection). Definition in
+// input_handler.cpp.
+void land_and_frame_active_markers(AppState& app, const GuiAudio& audio,
+                                   Viewport& viewport,
+                                   const std::set<int>& indices);
 
 // (center_span_in_view, the group undo/redo restore's camera from 2026-09-22 —
 // centre the range's middle always, zoom out only when it cannot fit — was

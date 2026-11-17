@@ -3,11 +3,10 @@
 #include "input_handler.h"        // land_playhead_on_marker,
                                   // GuiInputHandler::switch_active_audio_view_to
                                   // — the S/T tag's restore chokepoint,
-                                  // frame_span_into_view — the restore visual
-                                  // tail's group camera's cannot-fit arm
+                                  // land_and_frame_active_markers — the
+                                  // restore visual tail's group arm
 #include "target_render.h"
-#include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
-                                  // group camera's range,
+#include "warp_frame_map_view.h"  // source_frame_to_active_domain and
                                   // active_domain_to_source_frame for the
                                   // restore's map-change re-land, and
                                   // displayed_column_at for the singleton's
@@ -998,7 +997,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     when the range plus the edge margin on each side cannot fit the
     //     window at the current zoom, the owner writes nothing and the span
     //     framer ZOOMS OUT until it does and centres it (frame_span_into_view
-    //     with margin, input_handler.cpp), never in;
+    //     with margin, input_handler.cpp), never in — the land and this
+    //     camera one body, land_and_frame_active_markers (input_handler.cpp),
+    //     which the phase-reset pastes' landing shares (architect 2026-11-17,
+    //     send U);
     //   * NO MARKER (a removal, or an entry that touched nothing in this
     //     column) moves NO CAMERA: the only cursor write such a restore makes
     //     is the map-change re-land's translation above, which scrolls
@@ -1035,10 +1037,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     answer.
     //   * A SINGLETON RESTORE WITH THE HOLD DARK takes the landing owner's
     //     Restore (above), whose off-screen centring cannot arm it.
-    //   * A GROUP RESTORE DROPS THE HOLD, explicitly at its arm: a group
-    //     framing is not a hold, and a group already wholly on screen moves
-    //     nothing at the landing owner, so the chokepoint alone would not put
-    //     it out. Its camera is the landing owner's Restore and the framer.
+    //   * A GROUP RESTORE DROPS THE HOLD, explicitly in its arm's body
+    //     (land_and_frame_active_markers): a group framing is not a hold, and
+    //     a group already wholly on screen moves nothing at the landing owner,
+    //     so the chokepoint alone would not put it out. Its camera is the
+    //     landing owner's Restore and the framer.
     // THE RESTORE NEVER ARMS THE POSTURE FROM DARK (architect 2026-09-24):
     // only the walk's centring, bare `c`, the paired march, the A/B
     // audition's centrings and Ctrl+J arm it as acts, and the singleton's
@@ -1135,64 +1138,25 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // cover the strip and the waveform whole.
             }
         } else if (sel_size >= 2) {
-            // GROUP: LAND the playhead on the restore's FOCUS (architect
-            // 2026-07-25, its region half retired 2026-07-30 with the SPAN
-            // FORM). This obeys the
-            // universal land-on-the-focus rule with no special case, because a
-            // restore's focus IS the earliest touched member by construction
-            // (apply_post_restore_rules_impl) — spelled as
-            // *selected_markers.begin() rather than last_selected_marker so a
-            // sanitize that pruned the focus still lands somewhere live.
-            // land_playhead_on_marker is internally bounds-guarded (an
-            // impossible out-of-range index no-ops the land) and writes NO
-            // viewport, so the camera below is its own; playback is already
-            // stopped above (land's scanner-inactive premise).
-            // THE HOLD IS DROPPED here, explicitly (the rule above): a group
-            // framing is not a hold, and an on-screen range moves no camera,
-            // so the chokepoint would not put it out.
-            app.camera_hold = false;
-            land_playhead_on_marker(app, viewport.audio, viewport,
-                                    *app.selected_markers.begin());
-            // THE CAMERA IS THE LANDING OWNER'S RESTORE OVER THE RANGE, zooming out
-            // only when the range plus the edge margin cannot fit (the fit
-            // test and the answers at Viewport::land_subject, viewport.cpp;
-            // THIS IS ITS ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
-            // hands the range to the span framer's margin arm, which then
-            // only ever zooms out — the argument is at the fit test). WHAT IS
-            // THIS SITE'S OWN: the ACTIVE-DOMAIN extent derived just below.
-            // ACCEPTED COST: the landing's changed path and the
-            // framer each run one synchronous render, and the unconditional
-            // invalidate + kick_waveform_sync at the tail of this body runs a
-            // second over identical final state — a bounded duplicate on a
-            // discrete keystroke.
-            // THE RANGE IS THE TOUCHED SET'S OWN [earliest, latest]
-            // ACTIVE-DOMAIN EXTENT, each member through the LAND'S formula —
-            // clamp_playhead_to_live_domain(source_frame_to_active_domain(...))
-            // — so the endpoints are the playable frames the land would seat.
-            // `have` false (every restored index stale — degenerate, and
-            // impossible post-sanitize) moves no camera.
-            int64_t lo = 0, hi = 0;
-            bool    have = false;
-            {
-                // The index bound and the frame from the active column's one
-                // selector pair (active_marker_count / active_marker_time_frame,
-                // app_state.h), both columns.
-                const int n = active_marker_count(app);
-                for (int idx : app.selected_markers) {
-                    if (idx < 0 || idx >= n) continue;   // defensive
-                    const int64_t src_f = active_marker_time_frame(app, idx);
-                    const int64_t pos = clamp_playhead_to_live_domain(
-                        source_frame_to_active_domain(app, viewport.audio, src_f),
-                        app, viewport.audio);
-                    if (!have) { lo = hi = pos; have = true; }
-                    else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
-                }
-            }
-            if (have &&
-                !viewport.land_subject(lo, hi, LandingKind::Restore)) {
-                frame_span_into_view(app, viewport.audio, viewport, lo, hi,
-                                     /*margin=*/true);
-            }
+            // GROUP: LAND the playhead on the restore's FOCUS and FRAME THE
+            // RESTORED SET (architect 2026-07-25, its region half retired
+            // 2026-07-30 with the SPAN FORM), the group visual language's one
+            // body, land_and_frame_active_markers (input_handler.cpp; its
+            // contract at the declaration, input_handler.h): THE HOLD DROPPED
+            // there explicitly (the rule above), the land on the set's
+            // earliest member, the landing owner's Restore over the set's
+            // ACTIVE-DOMAIN [earliest, latest] extent and the span framer's
+            // margin arm when that range cannot fit. The earliest member IS
+            // the restore's focus by construction
+            // (apply_post_restore_rules_impl), so the land obeys the universal
+            // land-on-the-focus rule with no special case; the body lands on
+            // the set's first index (*selected_markers.begin()) rather than
+            // on last_selected_marker, so a sanitize that pruned the focus
+            // still lands somewhere live.
+            // Playback is already stopped above (the land's scanner-inactive
+            // premise).
+            land_and_frame_active_markers(app, viewport.audio, viewport,
+                                          app.selected_markers);
         }
         // sel_size == 0: nothing — the removal branch cleared, and the camera
         // stays where it stands.

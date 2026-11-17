@@ -617,9 +617,10 @@ void PhaseResetPropagate::paste_apply() {
 
     // Land in the P column of the audio view the paste was pressed in (S+W to
     // S+P, T+W to T+P — architect 2026-10-14, Shift+S's symmetry) with
-    // exactly the newly pasted resets selected, so the architect can inspect
-    // the paste by eye. The set was built with insert-time index adjustment
-    // above, so it names the final post-insert indices.
+    // exactly the newly pasted resets selected, the playhead on the first and
+    // the set framed (architect 2026-11-17, send U), so the architect can
+    // inspect the paste by eye. The set was built with insert-time index
+    // adjustment above, so it names the final post-insert indices.
     land_paste_in_phase_reset_view(
         std::set<int>(created_indices.begin(), created_indices.end()));
     // THE ENTRY NAMES THE VIEW THE PASTE LANDED IN, and this act pushed it
@@ -706,6 +707,13 @@ void PhaseResetPropagate::paste_state_apply() {
     auto& out = app.phaseresetmarkers.markers_mut();
 
     bool any_change = false;
+    // THE RESETS THIS RUN FLIPPED, the landing's changed set (architect
+    // 2026-11-17, send U: the state paste selects them, lands the playhead on
+    // the first and frames them). Store indices of `out`, which this run
+    // writes in place: the state paste moves, inserts and removes no reset,
+    // so a pairing index is its row after the run too, and the set is
+    // exactly the rows whose disabled flag the run changed.
+    std::set<int> flipped;
     std::string stop_message;
     // BLOCKS THAT COMPLETED THEIR PASS — the produced-nothing test below, and
     // NOT the same question as any_change: a block that paired, walked and
@@ -789,6 +797,7 @@ void PhaseResetPropagate::paste_state_apply() {
                 // stops nothing. Later flips find nothing playing.
                 if (!any_change) playback_lifecycle.stop_playback_if_playing();
                 m.disabled = want_disabled;
+                flipped.insert(dest_indices[j]);
                 // (A HOP-BRACKET CLEAR RODE THIS ARM for a few hours on
                 // 2026-09-10 — the third road that disables a reset, beside
                 // the two toggles. The ITERATION LOCK landed the same day and
@@ -863,11 +872,14 @@ void PhaseResetPropagate::paste_state_apply() {
     // architect 2026-10-14) at the end of a
     // paste-state run that wrote at least one block — a run stopped LATER by a
     // divergence or a count mismatch, and a run that flipped no flag because
-    // every one already matched, both included (the ruling above). State paste
-    // creates no resets (it only flips disabled flags on existing ones), so
-    // there is no selection to set and the tail leaves none: the column swap it
-    // runs clears the selection, and nothing restores one.
-    land_paste_in_phase_reset_view({});
+    // every one already matched, both included (the ruling above). THE
+    // FLIPPED RESETS ARE THE LANDING'S SET (architect 2026-11-17, send U):
+    // selected, the playhead on the first (the earliest) and the set framed,
+    // as the placement paste does with the resets it created. A run that
+    // flipped nothing hands the empty set: the column swap clears the
+    // selection, nothing restores one, and neither the playhead nor the
+    // camera moves.
+    land_paste_in_phase_reset_view(flipped);
     // THE ENTRY NAMES THE VIEW THE PASTE LANDED IN — paste_apply's restamp
     // read across, on this act's own push condition (any_change): a run that
     // flipped no flag pushed nothing, and the entry beneath is not its.
@@ -890,10 +902,12 @@ void PhaseResetPropagate::paste_state_apply() {
 //
 // WHAT STAYING IN THE AUDIO VIEW MEANS FOR THE PASTE, each point the S->T
 // switch that led this tail used to carry: no domain flip, so the viewport
-// and the playhead stay exactly where the reader holds them (the created-set
-// arm's land below is the playhead's one move, onto the first created reset
-// as the column shows it; a paste that created nothing leaves the playhead
-// where it rested); no playback stop of the tail's own (the placement
+// and the playhead stay where the reader holds them but for the changed-set
+// arm's land and camera below (the playhead's one move, onto the first
+// changed reset as the column shows it, and the framing of the changed set,
+// which moves the viewport only when the set is not wholly on screen —
+// architect 2026-11-17, send U; a paste that changed nothing leaves both
+// where they rested); no playback stop of the tail's own (the placement
 // paste's confirmation stopped any play at its open, and the state paste
 // stops at its first flipped flag — both pastes are marker mutations,
 // architect 2026-10-14 — so a state paste that flipped nothing leaves a play
@@ -907,23 +921,28 @@ void PhaseResetPropagate::paste_state_apply() {
 // (format_domain_timestamp, before this tail), which is now the view it
 // lands in too.
 //
-// Order — the marker-view switch to P first, then the selection set (the
-// playhead land rides with it, after the swap):
+// Order — the marker-view switch to P first, then the selection set, then
+// the land and the camera (land_and_frame_active_markers), then the damage
+// and the kick:
 //   * switch_active_markers_view_to('P') CLEARS the selection (a column switch
 //     clears) — so the selection must be set AFTER it or that clear would wipe
-//     the new one.
+//     the new one;
+//   * the land and the camera read the changed indices as rows of the ACTIVE
+//     column, so they run after the switch has made it P.
 //
 // Invalidation, and why the tail ends in a SYNCHRONOUS rebuild rather than plain
 // damage: on_redraw is blit-only, and the run loop services the frame callback
 // BEFORE the timerfd tick that runs the fingerprint-guarded flag-cache rebuild.
 // switch_active_markers_view_to('P') moves two flag-cache FINGERPRINT fields —
-// the active column always, and the selection hash whenever the created-set arm
+// the active column always, and the selection hash whenever the changed-set arm
 // below installs one — so ordinary invalidation alone blits the leaving column's
 // W flag pixels (and the pre-paste selection's) under P-live text / stem / overlay
 // passes for one frame. kick_waveform_sync commits plate, fingerprint and flag
 // cache before that paint, which is exactly what the column switch itself takes
 // for the same reason (active_views.cpp). It is the paste's ONLY synchronous
-// rebuild in either audio view, no audio switch running ahead of it.
+// rebuild in either audio view, no audio switch running ahead of it: a camera
+// the changed-set arm moves kicks too, owing the same one debt, paid once at
+// the pre-paint hook (the rule at Viewport::kick_waveform_sync).
 // The ordinary damage stays beside it: the rebuild damages the window-top
 // rect through the waveform's bottom on invalidate_waveform_area's road
 // (damage_window_top_rows, viewport.h), so invalidate_waveform_area is a
@@ -934,63 +953,65 @@ void PhaseResetPropagate::paste_state_apply() {
 // rebuild's rect. No state surface displays a resolved value any more, and the
 // paste's "Stopped at …" report is a notification card with its own owner.)
 void PhaseResetPropagate::land_paste_in_phase_reset_view(
-        const std::set<int>& created) {
+        const std::set<int>& changed) {
     active_views.switch_active_markers_view_to('P');
     // The column write lands in either audio view (S+P a view of its own
-    // since 2026-10-12, the writer refusing no column), so the created set
+    // since 2026-10-12, the writer refusing no column), so the changed set
     // below always names rows of the column shown.
-    // The CREATED-SET arm below LANDS the playhead on the first created reset,
-    // through the land, a movement owner. The NO-CREATED arm lands nothing — a
-    // paste that materialized no reset moved no playhead and touched no
-    // marker.
-    if (!created.empty()) {
-        // FIRST created reset as the focus. This is a PROGRAMMATIC group
+    // The CHANGED-SET arm below selects the set, LANDS the playhead on its
+    // first member and FRAMES it. The EMPTY arm does nothing — a paste that
+    // changed no reset moved no playhead, touched no marker and moves no
+    // camera.
+    if (!changed.empty()) {
+        // FIRST changed reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set
         // restore — focuses the earliest for the same reason: all members are
         // equal, so there is no clicked marker to prefer (the multi-select
         // CLICKS instead focus what the user clicked, and land there).
         //
-        // THROUGH THE SELECTION CHOKEPOINT (2026-08-29). The selection fields
-        // were written directly here until that date — the product's LAST
-        // wholesale replace outside a Selection mutator — which left the
-        // shift-range anchor (and, until 2026-09-10, the sticky ctrl beside
-        // it) depending on a NEIGHBOUR to clear it: the column switch two
-        // lines up, whose clear_selection puts its clear above its own
-        // already-empty early return. THAT ARGUMENT HOLDS TODAY and the change
-        // is behavior-neutral — the paste's two chords are W-gated, so the
-        // switch to P always fires — but it rests on the switch not being a
-        // no-op, which is a property of the paste's ENTRY GATE rather than of
-        // this act, and switch_active_markers_view_to DOES return early when
-        // the column is already the target. Riding the chokepoint makes it a
-        // property of this line instead.
-        selection.replace_selection(created, *created.begin());
-        // The marker lane owns the playhead (the rule is stated in full at
-        // land_playhead_on_marker, input_pointer.cpp): this tail hands the lane a
-        // brand-new focus, so it lands on it, and the always-visible cursor then
-        // rests on the first created reset where the timestamp readout says it
-        // is. That is the WHOLE reason for the land — the earlier
-        // suppression-repair rationale (a non-empty selection hiding the cursor
-        // while playhead_cursor_sample held a stale pre-paste value) went with the
-        // suppression itself, and so did the extent-region write that followed
-        // this land: the region IS THE TRIM, which a paste has no business
-        // writing (architect 2026-07-30).
-        land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
+        // THROUGH THE SELECTION CHOKEPOINT (2026-08-29), so the shift-range
+        // anchor's clear is this line's own property rather than the column
+        // switch's above — the switch returns early when the column is
+        // already P, which the paste's W-gated entry happens to rule out
+        // today.
+        selection.replace_selection(changed, *changed.begin());
+        // THE LAND AND THE CAMERA, the group visual language's one body
+        // (land_and_frame_active_markers, input_handler.cpp; architect
+        // 2026-11-17, send U: "Paste phase reset state should zoom to show
+        // affected markers if they don't fit on screen. Make sure paste phase
+        // reset also does this"): the hold dropped, the playhead LANDED on the
+        // first changed reset — the marker lane owns the playhead (the rule in
+        // full at land_playhead_on_marker, input_pointer.cpp), and this tail
+        // hands the lane a brand-new focus, so the always-visible cursor rests
+        // on it where the timestamp readout says it is — and the set's
+        // active-domain extent brought on screen by the landing owner's
+        // Restore: nothing moves when it is wholly on screen, it is centered
+        // when it fits, and the span framer zooms out only when it cannot. A
+        // one-member set is its reset's cursor: on screen nothing moves, off
+        // screen it is centered, the zoom untouched. AFTER the column switch
+        // (the indices are the P column's rows, read through the active
+        // column's selector pair) and the selection; BEFORE the tail's
+        // invalidates and the kick, which stays last. Playback stands stopped
+        // here whenever the set is non-empty, the land's scanner-inactive
+        // premise (the placement paste stopped it at its confirmation's open,
+        // the state paste at its first flip).
+        land_and_frame_active_markers(app, viewport.audio, viewport, changed);
     }
-    // NO CREATED SET — every paste that materialized nothing, not just the state
-    // paste (paste_state_apply always lands with {}; a PLACEMENT paste whose run
-    // produced no reset reaches here too) — NEEDS NOTHING AT ALL, and that is the
-    // whole arm: the column swap above cleared the selection and nothing restored
-    // one, so there is no group to collapse, no focus to land on, and no lane. The
-    // cursor is the playhead, resting where it rested before the press (no
-    // domain flip re-expresses it since 2026-10-14), and a paste that did
-    // nothing changes nothing. (The collapse
-    // and the land that stood here existed only to clean up the P-column selection
-    // the swap used to restore, deleted 2026-07-29 with the parked slots.)
+    // NO CHANGED SET — a run that paired blocks and wrote nothing new (a state
+    // paste whose every flag already matched, a placement paste whose run
+    // produced no reset) — NEEDS NOTHING AT ALL, and that is the whole arm:
+    // the column swap above cleared the selection and nothing restored one,
+    // so there is no group to collapse, no focus to land on, no camera and no
+    // lane. The cursor is the playhead, resting where it rested before the
+    // press (no domain flip re-expresses it since 2026-10-14), and a paste
+    // that changed nothing moves nothing.
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
-    // LAST, after the created selection is installed, so
-    // the flag cache rebuilds against the final column AND the final selection
-    // hash in one pass (the reasoning is in the head comment above; the
+    // LAST, after the changed selection is installed and the camera has
+    // landed, so the flag cache rebuilds against the final column, the final
+    // selection hash and the final viewport in one pass (the reasoning is in
+    // the head comment above; the debt a camera move owed is this same one,
+    // paid once at the pre-paint hook; the
     // authoritative caller inventory for this kick
     // lives at Viewport::kick_waveform_sync's declaration, viewport.h).
     viewport.kick_waveform_sync();

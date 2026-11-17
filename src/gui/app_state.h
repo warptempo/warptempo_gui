@@ -167,11 +167,12 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 //     (Viewport::follow_scanner): an offscreen target lands the margin in
 //     from the LEFT edge;
 //   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
-//     audio views and the marker drop's landing, the undo/redo restore):
-//     its fit test
+//     audio views and the marker drop's landing, the undo/redo restore, the
+//     phase-reset pastes' landing): its fit test
 //     asks whether the range is at most 1 − 2 × margin of the window at the
 //     live zoom (else its one caller that can meet the verdict, the group
-//     restore, zooms out through the framer's margin arm below), and the
+//     body land_and_frame_active_markers, zooms out through the framer's
+//     margin arm below), and the
 //     walk's page-in, an off-screen landing at any zoom but the working one,
 //     finer or coarser, lands the subject the margin in from the LEFT edge exactly as follow's
 //     does (the restore never pages in);
@@ -4579,8 +4580,10 @@ struct AppState {
     // apply_zoom_change, apply_strip_drag_zoom, apply_zoom_to_start,
     // center_viewport_on_playhead,
     // hold_subject_column_after_nudge, follow_scroll_if_needed and
-    // land_subject (the walk's and the undo restore's camera,
-    // the restore also reaching frame_span_into_view, undo.cpp, and its
+    // land_subject (the walk's, the undo restore's and the phase-reset
+    // pastes' camera, the group restore and the pastes also reaching
+    // frame_span_into_view through land_and_frame_active_markers,
+    // input_handler.cpp, and the restore's
     // singleton under the hold hold_subject_column_after_nudge in its place); the S/T flip's
     // viewport translation (input_handler.cpp); the settings editor's viewport commit
     // (settings_editor.cpp); the tab / view switch's band restore
@@ -4725,8 +4728,11 @@ struct AppState {
     //     nothing — so bare 1/2/3/4 across S and T drop the hold, the arrival
     //     derivation having been tried there and removed the night it was
     //     made, 2026-09-29), by THE UNDO /
-    //     REDO GROUP RESTORE, explicitly at its arm whether or not its camera
-    //     moves (a group framing is not a hold; undo.cpp), and by the three
+    //     REDO GROUP RESTORE AND THE PHASE-RESET PASTES' LANDING, explicitly
+    //     in their one body whether or not its camera moves (a group framing
+    //     is not a hold; land_and_frame_active_markers, input_handler.cpp —
+    //     the pastes' one-member landing included, architect 2026-11-17,
+    //     send U), and by the three
     //     playhead MOVEMENT OWNERS
     //     (Viewport::move_playhead_to, land_playhead_on_marker,
     //     land_playhead_on_domain_frame) — play-then-stop leaves the hold

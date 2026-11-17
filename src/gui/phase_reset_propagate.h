@@ -164,17 +164,26 @@ struct PhaseResetPropagate {
     // (one side produced none) cards kNothingMatched, the placement paste's
     // sentence (propagate_blocks.h); a clean run that paired blocks is
     // silent, whatever it flipped. No confirmation prompt: it applies
-    // directly.
+    // directly. A run that paired a block lands with the resets it FLIPPED
+    // selected, the playhead on the first and the set framed (the tail
+    // below; architect 2026-11-17, send U).
     void paste_state_apply();
 
     // Shared end-of-paste tail: land the completed paste in the P COLUMN OF
     // THE AUDIO VIEW IT WAS PRESSED IN — S+W to S+P, T+W to T+P — with the
-    // newly created resets selected (architect 2026-10-14, the symmetry with
+    // resets it changed selected (architect 2026-10-14, the symmetry with
     // Shift+S, which stays in its audio view the same way; the tail crossed
     // into T+P until then). The audio view never changes.
-    // `created` is the exact post-insert index set of the resets this paste
-    // materialized (empty for the state-only tail, which flips flags on resets
-    // that already exist).
+    // `changed` is the exact post-run index set of the resets this paste
+    // changed: the placement paste's materialized resets (post-insert), the
+    // state paste's flipped ones. A non-empty set is selected, the playhead
+    // landed on its first (the earliest) and the set FRAMED as the group undo
+    // / redo restore frames its markers — on screen nothing moves, off screen
+    // it is centered, too wide it is zoomed out to fit
+    // (land_and_frame_active_markers, input_handler.h; architect 2026-11-17,
+    // send U), a one-member set included. An empty set (a run that paired
+    // blocks and changed nothing) selects nothing and moves neither the
+    // playhead nor the camera.
     // ONLY A PASTE THAT WROTE A BLOCK REACHES IT (architect 2026-08-31):
     // a run that produced nothing says its sentence on a card and leaves the
     // view exactly where it stands, the switch being a change of scene that
@@ -188,5 +197,5 @@ struct PhaseResetPropagate {
     // that paired stands as a paste and the switch shows a true result. What
     // the switch was retired for is a paste that touched no block at all:
     // pair_count 0 on either side, or a divergence / count mismatch at block 0.
-    void land_paste_in_phase_reset_view(const std::set<int>& created);
+    void land_paste_in_phase_reset_view(const std::set<int>& changed);
 };

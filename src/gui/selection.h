@@ -30,7 +30,9 @@ struct Selection {
     // posture no Selection body writes; the contract is at
     // AppState::add_to_selection). FIVE CALLERS,
     // re-grepped 2026-11-10, in four classes. THE PASTE LANDING installs a
-    // set it just created: the phase-reset propagate's landing in the P column
+    // set it just wrote — the resets the placement paste created, the ones
+    // the state paste flipped (architect 2026-11-17, send U): the
+    // phase-reset propagate's landing in the P column
     // (PhaseResetPropagate::land_paste_in_phase_reset_view), for which this arity
     // was added — it wrote the two fields directly until 2026-08-29, leaning
     // on the column switch two lines above it to clear them (behaviour-neutral

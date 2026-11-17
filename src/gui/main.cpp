@@ -907,7 +907,8 @@ double samples_per_pixel_at(double zoom_level, int64_t column_frames) {
 // effective_max_zoom_level below (the whole song) and the span framer
 // frame_span_into_view (input_handler.cpp), whose own two callers are the
 // trim-bar double-click (run_span_framing_command, input_handler.cpp) and the
-// group undo/redo restore that cannot fit (undo.cpp).
+// cannot-fit arm of land_and_frame_active_markers (input_handler.cpp: the
+// group undo/redo restore and the phase-reset pastes' landing).
 double fit_zoom_level(double span_frames, int width_px, int64_t column_frames) {
     assert(column_frames > 0);
     const double sixteenths = std::ceil(

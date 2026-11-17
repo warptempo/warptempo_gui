@@ -1117,8 +1117,9 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start,
 
     // Past the head's return either the level or the start really moved, so
     // this is a zoom, a pan, or both at once — the trim bar's span-framing
-    // double-click, the group undo/redo restore's zoom-out-to-fit arm and bare
-    // `0`'s restore being what reach here.
+    // double-click, the zoom-out-to-fit arm of land_and_frame_active_markers
+    // (the group undo/redo restore and the phase-reset pastes' landing) and
+    // bare `0`'s restore being what reach here.
 
     invalidate_waveform_area();
     // A check of the clock, like apply_zoom_change's (the record is at
@@ -1570,7 +1571,8 @@ void Viewport::follow_scanner() {
 //     (paged_in_viewport_start). A finer zoom is reached only by accident;
 //     `c` is the repair (the working zoom, centred).
 // RESTORE — undo / redo, a singleton (lo == hi) or a group's [earliest,
-// latest]; a restore is a non-linear jump, and centring is the least
+// latest], and the phase-reset pastes' changed set (architect 2026-11-17,
+// send U); a restore is a non-linear jump, and centring is the least
 // prejudicial way of framing one:
 //   * WHOLLY ON SCREEN (lo and hi each painted in the columns [0, w) of
 //     the live viewport, displayed_frame_on_screen — the walk's on-screen
@@ -1608,8 +1610,8 @@ void Viewport::follow_scanner() {
 // takes the nudge's
 // hold_subject_column_after_nudge instead and re-arms the bit itself after
 // that body, as the nudge's dispatch keeps it — the restore's own act, not
-// this owner's. The group restore puts the bit out at its own arm before it
-// asks. Both at undo.cpp, architect 2026-09-25.) WHY: an automatic arm on arrival at
+// this owner's. The group body, land_and_frame_active_markers, puts the bit
+// out before it asks. Both at undo.cpp, architect 2026-09-25.) WHY: an automatic arm on arrival at
 // the centre would freeze the viewport under a run of nudges that happened to
 // reach the middle; `c` then nudging means "I'm looking for a place to drop a
 // marker" and wants the hold, `c` then panning means "I want the working zoom
@@ -1659,9 +1661,14 @@ void Viewport::follow_scanner() {
 //   * RESTORE: restore_history_entry's singleton arm (undo.cpp) on the cursor
 //     just landed, WITH THE HOLD DARK or ACROSS A TAB OR AUDIO-VIEW SWITCH
 //     (otherwise the arm holds the column instead, 2026-09-25; a crossed
-//     restore never does, 2026-09-29), and its group arm on the restored
-//     markers' [earliest, latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
-//     runs the span framer's margin arm on it.
+//     restore never does, 2026-09-29), and the group body
+//     land_and_frame_active_markers (input_handler.cpp) on its set's
+//     [earliest, latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE
+//     VERDICT, which runs the span framer's margin arm on it. Its two
+//     callers: restore_history_entry's group arm over the restored markers,
+//     and the phase-reset pastes' landing
+//     (PhaseResetPropagate::land_paste_in_phase_reset_view) over the resets
+//     the paste changed, one member included (architect 2026-11-17, send U).
 // NOT READERS, by ruling: bare `c`, the paired march (live and `h`, each step
 // running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition (its three
 // centrings `c`'s act too, 2026-09-29), which

@@ -1611,9 +1611,11 @@ bool history_view_hides_button(RedesignButton b) {
 //     chokepoint of the three open routes;
 //   * THE RESTORES, which hand the lane a focus it did not have: BOTH undo/redo
 //     marker arms (undo.cpp's visual tail — the singleton lands on its touched
-//     marker, the group on its focus, which IS the earliest touched member) and
-//     the propagate paste's CREATED-SET arm, on the FIRST created reset
-//     (phase_reset_propagate.cpp — its no-created arm lands nothing now, and the
+//     marker, the group on its focus, which IS the earliest touched member,
+//     through land_and_frame_active_markers, input_handler.cpp) and the
+//     propagate pastes' CHANGED-SET arm, on the FIRST reset the paste created
+//     or flipped, through the same body (phase_reset_propagate.cpp,
+//     architect 2026-11-17, send U — its empty arm lands nothing now, and the
 //     `p` swap lands nothing either: both used to be cleaning up a restored
 //     P-column selection, and the parked slots died 2026-07-29);
 //   * THE VIEW / TAB SWITCHES, which re-express a focus into a new domain: the

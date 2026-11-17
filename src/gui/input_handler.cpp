@@ -2791,6 +2791,57 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     }
 }
 
+void land_and_frame_active_markers(AppState& app, const GuiAudio& audio,
+                                   Viewport& viewport,
+                                   const std::set<int>& indices) {
+    // The group visual language's one body (the contract at the
+    // declaration, input_handler.h; architect 2026-11-17, send U). An empty
+    // set is no subject: nothing at all, the hold included.
+    if (indices.empty()) return;
+    // THE HOLD IS DROPPED, explicitly: a group framing is not a hold, and a
+    // subject already wholly on screen moves no camera, so the chokepoint
+    // alone would not put it out (AppState::camera_hold's CLEARED arm).
+    app.camera_hold = false;
+    // LAND on the FOCUS, the earliest member (the stores are time-ordered,
+    // so the smallest index is the earliest): all members are equal, so
+    // there is no clicked marker to prefer. land_playhead_on_marker is
+    // bounds-guarded (an out-of-range index no-ops the land) and writes NO
+    // viewport, so the camera below is this body's own; the callers have
+    // stopped playback or play nothing (the land's scanner-inactive premise).
+    land_playhead_on_marker(app, audio, viewport, *indices.begin());
+    // THE RANGE IS THE SET'S OWN [earliest, latest] ACTIVE-DOMAIN EXTENT,
+    // each member through the LAND'S formula —
+    // clamp_playhead_to_live_domain(source_frame_to_active_domain(...)) —
+    // so the endpoints are the playable frames the land would seat, and a
+    // one-member range is exactly the cursor the land just seated. `have`
+    // false (every index stale — degenerate, unreachable from the callers)
+    // moves no camera. The index bound and the frame from the active
+    // column's one selector pair (active_marker_count /
+    // active_marker_time_frame, app_state.h), both columns.
+    int64_t lo = 0, hi = 0;
+    bool    have = false;
+    const int n = active_marker_count(app);
+    for (int idx : indices) {
+        if (idx < 0 || idx >= n) continue;   // defensive
+        const int64_t src_f = active_marker_time_frame(app, idx);
+        const int64_t pos = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, src_f), app, audio);
+        if (!have) { lo = hi = pos; have = true; }
+        else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
+    }
+    // THE CAMERA IS THE LANDING OWNER'S RESTORE OVER THE RANGE (the fit test
+    // and the answers at Viewport::land_subject, viewport.cpp), zooming out
+    // only when the range plus the edge margin cannot fit: the false verdict
+    // hands it to the span framer's margin arm, which then only ever zooms
+    // out (the argument is at the fit test). A one-member range always fits.
+    // ACCEPTED COST: the landing's changed path and the framer each owe one
+    // synchronous rebuild, and each caller's own tail kicks again over the
+    // same final state — the debt is one, paid at the pre-paint hook
+    // (Viewport::kick_waveform_sync), on a discrete act.
+    if (have && !viewport.land_subject(lo, hi, LandingKind::Restore))
+        frame_span_into_view(app, audio, viewport, lo, hi, /*margin=*/true);
+}
+
 // WOULD SHIFT+0 (FRAME THE TRIM) ACT — the contract and the reader are at the
 // declaration (app_state.h). The command's own three steps asked ahead: its
 // span, the framer's landing, the applier's idempotence test.
