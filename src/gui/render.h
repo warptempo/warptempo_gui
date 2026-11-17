@@ -5394,10 +5394,14 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical
 // line's payload WHOLE — the tempo's derived base and its every deviation
 // term, `*scale`, `:label`, or the pass / ref forms — and never a bracket.
-// NOTHING HERE IS EVER CUT, and its ONE READER is why: the flag editor seeds
-// its field from it (enter_top_flag_edit, flag_editor.cpp), so what the field
-// opens with is what the store holds — a cut seed would let a commit throw
-// away a scale's digits or a chain's terms the user never touched. (The `j`
+// NOTHING HERE IS EVER CUT, and its first reader is why: the flag editor
+// seeds its field from it (enter_top_flag_edit, flag_editor.cpp; its paste
+// onto the selection the same), so what the field opens with is what the
+// store holds — a cut seed would let a commit throw away a scale's digits or
+// a chain's terms the user never touched. Its other reader is the cue
+// tooltip's cut arm (marker_tooltip_text, app_state.h; architect 2026-11-17,
+// send U), which shows this whole line where the painted label below is cut
+// — a cue is cut exactly when the two composers differ. (The `j`
 // copy's payload is composed in the parser instead, off the RESOLVED value
 // and never off this string: resolved_marker_payload, warp_frame_map_build.h.)
 // The iteration bounds are the two cells beside the flag
@@ -5424,12 +5428,15 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx);
 // does. The chains he expects to author are one to four terms long, and the
 // cap is the headroom above that rather than a shape to plan for.
 //
-// TWO READERS, and they must be exactly two: the warp column's flag pass
-// (render_flags' label lambda) and the BOUND CELLS' SEAM MEASUREMENT
+// TWO READERS SHAPE IT, and they must be exactly two: the warp column's flag
+// pass (render_flags' label lambda) and the BOUND CELLS' SEAM MEASUREMENT
 // (committed_cell_seam_off), which shapes this same string to find where a
 // marker's first cell begins. Measuring the UNCUT composer there would open
 // a bound field at a column no cell stands on — the one place where the
-// wrong composer is invisible until a cell is in the wrong place.
+// wrong composer is invisible until a cell is in the wrong place. A THIRD
+// READER ONLY COMPARES it with flag_text, the cue tooltip's cut test
+// (marker_tooltip_text, app_state.h; architect 2026-11-17, send U): a cue
+// whose two answers differ shows its whole line in the TIPS box.
 std::string flag_display_text(const std::vector<GuiWarpMarker>& markers,
                               int idx);
 

@@ -3608,16 +3608,18 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // composed hint and its button rect, both written by paint_modal_dialog,
     // which runs BEFORE this body precisely so the rect the box stands above
     // is the one this frame draws; a MARKER owner (2026-11-09) reads its cue's
-    // recomposed value and the cue's published face; a HISTORY owner
+    // recomposed words and the cue's published face; a HISTORY owner
     // (2026-11-11) its item's recomposed words and the item's published face.
     const char* line1 = nullptr;
     const char* line2 = nullptr;
     GuiRect     btn{0, 0, 0, 0};
-    // THE STRUCK RUN LEADING LINE 1 — a History owner's alone; null for
-    // every other owner and for a history item with no older side.
+    // THE STRUCK RUN LEADING LINE 1 — a History owner's older side, or a
+    // Marker owner's struck cut line (2026-11-17); null for every other
+    // owner and for a run that is absent.
     const char* struck = nullptr;
-    // A MARKER OWNER'S ONE LINE, held here so line1 can point into it.
-    std::string marker_value;
+    // A MARKER OWNER'S RUNS, held here so line1 and struck can point into
+    // them.
+    MarkerTooltipText marker_text;
     // A HISTORY OWNER'S RUNS, held likewise.
     HistoryCueTooltipText history_text;
     if (owner.surface == AppState::RedesignTooltip::Surface::History) {
@@ -3633,17 +3635,21 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         line1 = history_text.plain.c_str();
         btn   = history_cue_face(app, owner.index);   // the vertical seat
     } else if (owner.surface == AppState::RedesignTooltip::Surface::Marker) {
-        // THE CUE'S RESOLVED VALUE (architect 2026-11-09, session 100; the
-        // Marker owner at AppState::RedesignTooltip): ONE LINE, the value
-        // copy's payload verbatim, recomposed through the one owner
-        // (marker_tooltip_value — empty, and so no box, wherever the copy
-        // would refuse), in the name line's face and ink; no hint line. The
-        // face is the cue's in the LIVE stash (marker_cue_face), so a cue
-        // that moved is read where it is painted; a cue with no published
-        // rect paints nothing, and the walk's next pass ends the box.
-        marker_value = marker_tooltip_value(app, audio, owner.index);
-        if (marker_value.empty()) return;
-        line1 = marker_value.c_str();
+        // THE CUE'S WORDS (the Marker owner at AppState::RedesignTooltip):
+        // ONE LINE, recomposed through the one owner (marker_tooltip_text —
+        // the value copy's payload verbatim as the plain run, architect
+        // 2026-11-09, session 100; or a cut label's whole flag line, struck
+        // where the lane strikes the label, architect 2026-11-17, send U;
+        // empty, and so no box, on every other cue), laid as a History
+        // item's two runs below, in the name line's face and ink; no hint
+        // line. The face is the cue's in the LIVE stash (marker_cue_face), so
+        // a cue that moved is read where it is painted; a cue with no
+        // published rect paints nothing, and the walk's next pass ends the
+        // box.
+        marker_text = marker_tooltip_text(app, audio, owner.index);
+        if (marker_text.empty()) return;
+        if (!marker_text.struck.empty()) struck = marker_text.struck.c_str();
+        line1 = marker_text.plain.c_str();
         btn   = marker_cue_face(app, owner.index);   // the vertical seat
     } else if (owner.surface == AppState::RedesignTooltip::Surface::Dialog) {
         const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
@@ -3748,7 +3754,10 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // (cue_segment_text_gap_px:
     // pad, gap, pad — where the lane's second segment's text stands from the
     // first's). A run that is absent takes no room and no step; line 1's
-    // extent is the runs' with the step between.
+    // extent is the runs' with the step between. A CUE'S ONE LINE is laid
+    // the same (architect 2026-11-17, send U): a struck cut line is the
+    // struck run alone, any other words the plain run alone
+    // (marker_tooltip_text).
     const GuiFont name_font = gui_font(GuiFace::Program);
     const GuiFont hint_font = gui_font(GuiFace::Hint);
     const bool two_line = (line2 != nullptr);

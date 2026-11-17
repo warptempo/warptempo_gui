@@ -5485,8 +5485,9 @@ struct AppState {
 
     // MEMOIZED CUE TOOLTIP VALUE — the answer marker_tooltip_value last gave
     // past its cheap gates (architect 2026-11-09, session 100: the hovered
-    // cue's tooltip is its resolved value). The hover walk asks it on every
-    // motion and every tick with the pen on a cue, main.cpp's comparator on
+    // eligible cue's tooltip is its resolved value). The hover walk asks it
+    // (through marker_tooltip_text, its first arm) on every motion and every
+    // tick with the pen on a cue, main.cpp's comparator on
     // every tick a cue's box stands, and the painter at every redraw callback
     // — once per pending damage rectangle, the scanner's at playback cadence
     // — so without the memo each would re-run the eligibility gate and the
@@ -7332,9 +7333,9 @@ struct AppState {
     // words exactly. The words are what main.cpp's four comparators hold
     // against the live ones — a roster button's stateful overload
     // (redesign_button_tooltip), a modal button's recomposed hint, a cue's
-    // recomposed value (marker_tooltip_value) and a history item's struck
-    // and plain runs (history_cue_tooltip_text) — since each can move with
-    // state under a still pointer.
+    // struck and plain runs (marker_tooltip_text) and a history item's
+    // (history_cue_tooltip_text) — since each can move with state under a
+    // still pointer.
     //
     // THE WAIT: `hovered` is the tooltip-bearing button whose column holds the
     // pointer (no owner off every column, under a held press and after a hard
@@ -7368,13 +7369,17 @@ struct AppState {
     // the product, one painter for it and one clock — so the delay, the
     // arrival, the bypass chain (spanning keys and cues alike), the hard ends
     // and the no-wait rule hold for a cue exactly as for a key.
-    // A MARKER OWNER'S BOX: its one line the cue's RESOLVED VALUE, the value
-    // copy's own payload verbatim (marker_tooltip_value, app_state.h — no
-    // second line, no source, no prefix), and ONLY on a cue the copy would
-    // act on (payload_eligibility Eligible and a non-empty payload; every
-    // other live cue — an owner, a disabled marker, a stack member, the P
-    // column — raises no box and says no refusal; the `h` view's diff flags
-    // are the History owner's, below); its
+    // A MARKER OWNER'S BOX: its one line, through one owner
+    // (marker_tooltip_text, app_state.h — no second line, no source, no
+    // prefix), is EITHER the cue's RESOLVED VALUE, the value copy's own
+    // payload verbatim, on a cue the copy would act on (payload_eligibility
+    // Eligible and a non-empty payload), OR, on a cue whose painted label is
+    // cut (architect 2026-11-17, send U: a scale capped to `*N.NN` and the
+    // truncation marker), ITS WHOLE FLAG LINE, struck where the lane strikes
+    // the label — disabled and stacked owners included; every other live
+    // cue — an uncut owner, a disabled or stacked pass or ref, the P column
+    // — raises no box and says no refusal; the `h` view's diff flags are the
+    // History owner's, below); its
     // TARGET the cue's published hit rects, the press's own walk
     // (marker_cue_hit over flag_hit_rects, no wider column), the rect handed
     // to the chain their label box ∪ chip; its SEAT tooltip_box_rect's rule
@@ -7451,8 +7456,9 @@ struct AppState {
         std::string painted_line1;
         std::string painted_line2;
         // THE STRUCK RUN LEADING LINE 1, as painted: a History owner's older
-        // side's label (history_cue_tooltip_text), empty for every other
-        // owner and for a history item with no older side.
+        // side's label (history_cue_tooltip_text) or a Marker owner's struck
+        // cut line (marker_tooltip_text, 2026-11-17), empty for every other
+        // owner and wherever the run is absent.
         std::string painted_struck;
         bool    shown_on_field = false;
         // THE SHOW IS PENDING (architect 2026-11-16, the beats): raised by
@@ -20119,7 +20125,9 @@ SweepHighlightChange sweep_highlight_change(
 // through the one-day status bar's right cell — and it is named for what it
 // gates. Since 2026-11-09 (architect, session 100) ONE SURFACE DISPLAYS a
 // resolved value again, the hovered cue's tooltip under the TIPS lamp, and
-// its membership is this gate's Eligible (marker_tooltip_value below).
+// its value arm's membership is this gate's Eligible (marker_tooltip_value
+// below; the box's other arm, a cut label's whole line, asks no gate —
+// marker_tooltip_text).
 PayloadEligibility payload_eligibility(const AppState& app,
                                        const GuiAudio& audio, int idx);
 // The boolean face of the verdict: Eligible and nothing else.
@@ -20129,26 +20137,61 @@ bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
 // THE CUE'S HOVER TOOLTIP (architect 2026-11-09, session 100: "with tooltips
 // on, hover should show resolved value for marker. same placement as for
 // icons"; the model, the third owner surface and its encoding at
-// AppState::RedesignTooltip). Its three questions, one owner each, read by
-// the roster's hover walk (recompute_redesign_button_hover), the painter
+// AppState::RedesignTooltip). Its questions, one owner each, read by the
+// roster's hover walk (recompute_redesign_button_hover), the painter
 // (paint_shift_tooltip), main.cpp's words comparator and the owner face the
 // damage band reads (tooltip_owner_face):
 //
-// marker_tooltip_value — THE WORDS AND THE MEMBERSHIP AT ONCE: the cue at
-// warp store index `idx` raises a box iff this is non-empty, and the box's
-// one line is this string verbatim. It is EXACTLY the value copy's answer
+// marker_tooltip_value — THE RESOLVED VALUE: EXACTLY the value copy's answer
 // (copy_focused_marker_value, input_key_dispatch.cpp): payload_eligibility
 // Eligible, then the one parser composer resolved_marker_payload over the
 // sliced store, its empty answer refused — so the words on the box are the
-// very string the copy hands the clipboard. Empty, too, in the `h` view (its
+// very string the copy hands the clipboard. Empty in the `h` view (its
 // lane's flags are diff flags, their indices the mode's own), while a load
-// stands or no audio is bound. Every other cue — an owner, a disabled
-// marker, a collapsed-stack member, the P column — answers empty and raises
-// NO box: no refusal words (closed_questions.md: refusal and state lines on
-// tooltips stay deleted; the absence is the message). Memoized at the owner
-// (AppState::MarkerTooltipValueCache).
+// stands or no audio is bound, and on every cue the copy refuses — an
+// owner, a disabled marker, a collapsed-stack member, the P column.
+// Memoized at the owner (AppState::MarkerTooltipValueCache). The box's
+// words and membership are marker_tooltip_text's, below, whose first arm
+// this is.
 std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
                                  int idx);
+// marker_tooltip_text — THE WORDS AND THE MEMBERSHIP AT ONCE: the cue at
+// warp store index `idx` raises a box iff this answers non-empty, and the
+// box's one line is its struck run then its plain run (the History owner's
+// layout: paint_shift_tooltip lays the two by the lane's segment step and
+// strikes the first by struck_run_bar). TWO ARMS, never both on one cue:
+//   * THE RESOLVED VALUE — marker_tooltip_value non-empty: that string as
+//     the plain run, no struck run (architect 2026-11-09, session 100);
+//   * THE CUT LINE (architect 2026-11-17, send U: "Numbers with a scale
+//     should also get a tooltip ... I can't read the whole scale. I have to
+//     enter the text editor ... show the full text on hover with tooltips
+//     on."): a cue whose PAINTED LABEL IS CUT — flag_display_text differs
+//     from flag_text over the store the lane paints, an owning marker whose
+//     tempo scale is capped to `*N.NN` and so carries the truncation marker
+//     (render.h) — shows its WHOLE flag line, flag_text, the editor's seed:
+//     the struck run where the lane strikes that cue's label (the column's
+//     red set, warp_red_flag_set_cached's `red`, the very set the flag pass
+//     hands resolve_flag_face), else the plain run. Every such cue, disabled
+//     and collapsed-stack owners included — the box shows what the flag
+//     cannot, with no gate of the copy's. A label hidden under a later
+//     label's box is not a cut and raises no box of this arm.
+// The arms are disjoint: the value arm admits only a pass or a ref
+// (payload_eligibility), and neither is ever cut (both composers answer a
+// ref's citation alone, and a pass carries no scale — the parser's and the
+// tempo acts' inert nullopt). Both runs empty — no box — on every other cue,
+// in the `h` view, while a load stands, with no audio bound and on the P
+// column: no refusal words (closed_questions.md: refusal and state lines on
+// tooltips stay deleted; the absence is the message). The cut arm is not
+// memoized: it reads the memoized red set and builds two short strings, a
+// compare's cost beside the hover walk's, the painter's and the
+// comparator's other work.
+struct MarkerTooltipText {
+    std::string struck;   // the whole line of a struck cut label; else empty
+    std::string plain;    // the resolved value or the whole line; else empty
+    bool empty() const { return struck.empty() && plain.empty(); }
+};
+MarkerTooltipText marker_tooltip_text(const AppState& app,
+                                      const GuiAudio& audio, int idx);
 // marker_cue_hit — THE TARGET: the cue under the real point (x, y) by the PRESS'S OWN WALK
 // and arbitration (hit_test_flag's topmost_flag_rect over the published
 // AppState::flag_hit_rects, chips over labels, the last painted on top), its

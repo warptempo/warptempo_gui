@@ -975,7 +975,8 @@ struct Viewport {
     // is written on its flag, and no viewport-side hover state exists to keep
     // in sync. ONE MARKER HOVER SURFACE STANDS SINCE 2026-11-09 (session 100,
     // 00a87821), and it is not the viewport's: with TIPS lit an eligible
-    // cue's resolved value hangs in the roster's tooltip box, targeted by the
+    // cue's resolved value — or, since 2026-11-17 (send U), a cut label's
+    // whole flag line — hangs in the roster's tooltip box, targeted by the
     // roster's hover walk (recompute_redesign_button_hover,
     // input_pointer.cpp) and published and ended through
     // AppState::RedesignTooltip's Surface::Marker, painted by

@@ -569,6 +569,37 @@ std::string marker_tooltip_value(const AppState& app, const GuiAudio& audio,
     return value;
 }
 
+// THE BOX'S TWO ARMS — the contract at the declaration (app_state.h): the
+// resolved value first, then a cut label's whole line, struck as the lane
+// strikes it. The gates are marker_tooltip_value's own, restated because
+// its empty answer does not say which of them refused.
+MarkerTooltipText marker_tooltip_text(const AppState& app,
+                                      const GuiAudio& audio, int idx) {
+    MarkerTooltipText t;
+    t.plain = marker_tooltip_value(app, audio, idx);
+    if (!t.plain.empty()) return t;
+    if (app.history_mode.active || app.loading) return t;
+    if (app.active_markers_view != 'W') return t;
+    const int64_t total = audio.total_frames();
+    if (total <= 0) return t;
+    const auto& mv = app.warpmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return t;
+    // THE CUT: the painted composer against its uncut sibling over the
+    // store the flag pass paints (render_flags), the one truncation site's
+    // own answer rather than a second spelling of when it cuts.
+    std::string whole = flag_text(mv, idx);
+    if (flag_display_text(mv, idx) == whole) return t;
+    // THE STRIKE: the lane's own — the column's red set, the set the flag
+    // pass hands resolve_flag_face (the flag cache's rebuild,
+    // waveform_cache.cpp).
+    const bool struck =
+        warp_red_flag_set_cached(app, audio.sample_rate(),
+                                 static_cast<long>(total))
+            .red.count(idx) > 0;
+    (struck ? t.struck : t.plain) = std::move(whole);
+    return t;
+}
+
 // A published cue's face: the bounding box of its label box ∪ its chip,
 // either possibly empty, widened to whole pixels.
 static GuiRect flag_hit_rect_face(const FlagHitRect& r) {

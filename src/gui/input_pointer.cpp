@@ -7053,9 +7053,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // placement as for icons"; the Marker owner at AppState::
         // RedesignTooltip): with no key's column under the pointer, the cue
         // the press would take — the press's own walk and arbitration over
-        // the published rects (marker_cue_hit) — is the owner when the value
-        // copy would act on it (marker_tooltip_value non-empty), the rect
-        // handed to the chain its face. Under the same gates as a key: no
+        // the published rects (marker_cue_hit) — is the owner when it has
+        // words (marker_tooltip_text non-empty: its resolved value where the
+        // value copy would act on it, or, architect 2026-11-17, send U, its
+        // whole flag line where the painted label is cut), the rect handed
+        // to the chain its face. Under the same gates as a key: no
         // veil, no card over it, the no-wait rule (a cue's under every
         // overlay, the lane covered there); the P column answers no live
         // cue through the two owners. IN THE `h` VIEW THE ITEM UNDER THE PEN
@@ -7082,7 +7084,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                 const int cue = marker_cue_hit(
                     app, app.last_mouse_rx, app.last_mouse_ry, &face);
                 if (cue >= 0 &&
-                    !marker_tooltip_value(app, audio, cue).empty()) {
+                    !marker_tooltip_text(app, audio, cue).empty()) {
                     note_tooltip_hover(
                         {AppState::RedesignTooltip::Surface::Marker, cue},
                         face);

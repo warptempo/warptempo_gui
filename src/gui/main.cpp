@@ -3053,23 +3053,31 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
             // A STANDING CUE'S BOX, the same words test (architect
             // 2026-11-09, session 100; the Marker owner at AppState::
-            // RedesignTooltip): its one line is the cue's resolved value,
-            // recomposed live through the one owner (marker_tooltip_value,
-            // memoized on the store's generation and the audio identity, so
-            // a tick costs a compare), held against the painted line; a
+            // RedesignTooltip): its one line's two runs — the cue's resolved
+            // value as the plain run, or a cut label's whole flag line,
+            // struck where the lane strikes it (architect 2026-11-17, send
+            // U) — recomposed live through the one owner
+            // (marker_tooltip_text: the value memoized on the store's
+            // generation and the audio identity, the cut line two short
+            // strings over the memoized red set, so a tick costs little more
+            // than a compare), held against the painted pair
+            // (`painted_struck`, `painted_line1`; the box has no line 2), the
+            // History arm's test below — a strike that comes or goes under a
+            // resting pen moves the line between the runs, a drift too; a
             // change damages the old box's published rect and the band every
             // seat of the new one lies in (tooltip_damage_band). An empty live
-            // value owes nothing here (no box paints for it, as a key with no
+            // pair owes nothing here (no box paints for it, as a key with no
             // words): the walk's next pass finds no owner on the cue and ends
             // the box, its hide damaging the painted rect.
             if (app.redesign_tooltip.visible &&
                 !app.redesign_tooltip.show_pending &&
                 app.redesign_tooltip.owner.surface ==
                     AppState::RedesignTooltip::Surface::Marker) {
-                const std::string live = marker_tooltip_value(
+                const MarkerTooltipText live = marker_tooltip_text(
                     app, audio, app.redesign_tooltip.owner.index);
                 if (!live.empty() &&
-                    (app.redesign_tooltip.painted_line1 != live ||
+                    (app.redesign_tooltip.painted_struck != live.struck ||
+                     app.redesign_tooltip.painted_line1 != live.plain ||
                      !app.redesign_tooltip.painted_line2.empty())) {
                     viewport.invalidate_rect(app.redesign_tooltip.rect);
                     viewport.invalidate_rect(tooltip_damage_band(app));
