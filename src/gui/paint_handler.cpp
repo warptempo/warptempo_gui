@@ -392,10 +392,10 @@ void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
 // (Liberation Sans Bold 11 W, 22 device px on the tablet: the number is
 // read, so Body and not the legends' Regular 7 W), the text tone `text`
 // whatever is under it — the fill and the face alike, as m1 shows —
-// AND AT -inf, THE CASE OFF, THE DISABLED TEXT TONE `text_dim` (architect
-// 2026-11-10: an enabled case standing at -inf prints its "-inf" dim, over
-// no fill — off reads off, the tap that toggles it there, IconNoiseLevel's
-// entry); centered on the face by its cap band (redesign_baseline, the
+// AT -inf TOO, over no fill (architect 2026-11-17, send U: "Negative INF on
+// the noise slider should not have a disabled color because it's still
+// enabled."; the tap that toggles it there, IconNoiseLevel's entry);
+// centered on the face by its cap band (redesign_baseline, the
 // chrome labels' rule) and horizontally by its ink, EXACTLY (ink_left_px /
 // ink_right_px, half the spare on each side, no half rounded); the run
 // shaped through the memo (memoized_run: a few dozen spellings). DISABLED (`enabled` false
@@ -435,8 +435,7 @@ void paint_level_case(cairo_t* cr, const GuiRect& face, bool enabled,
     cairo_save(cr);
     cairo_rectangle(cr, face.x, face.y, face.w, face.h);
     cairo_clip(cr);
-    set_palette_source(cr, enabled && level_db != kLevelDbOff ? p.text
-                                                              : p.text_dim);
+    set_palette_source(cr, enabled ? p.text : p.text_dim);
     text_shape::show_shaped_run(cr, *run, x, baseline);
     cairo_restore(cr);
 }
@@ -1499,7 +1498,7 @@ static std::string history_walk_line(AppState& app) {
     // THE SCALE SEGMENT, LAST: something always precedes it (the position,
     // `0/0` at worst), so the separator is unconditional.
     const GuiHistoryCommitDelta* d =
-        app.history_mode.displayed_delta(app.history_compare());
+        app.history_mode.displayed_delta();
     // No unavailable-delta arm: walk membership is the strict whole-set load
     // (history_diff.h's gate, 2026-08-04), so every commit this line can name
     // has a real delta — the old `Ambiguous` token died with the display
@@ -2150,8 +2149,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // ITERATION GROUP as this row's set — its two since 2026-09-04, when
         // the buttons came back from the deleted Iterations menu, and FLATTEN
         // since 2026-09-19, whose own predicate carries the lock (the copy/paste
-        // pair left with the 2026-08-20 propagate relocation and the lock
-        // still eats their chords with no face here to grey; Listen left the
+        // pair left with the 2026-08-20 propagate relocation, the duo on row
+        // 8 since 2026-11-08, the lock eating the pastes alone since
+        // 2026-11-17; Listen left the
         // set outright on 2026-08-28, bare `l` joining the allowlist with the
         // in-app player, and the Load in place took its lock term into the
         // history group's own arm on 2026-09-01) — the one place in
@@ -2288,8 +2288,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   "least used left, most used right"):
 //   THE COPY / PASTE DUO (kPhaseResetPropagateGroup, architect 2026-11-08,
 //   session 93) — COPY (bare P, the phase resets' copy, no modifier) and
-//   PASTE (Ctrl+P, the paste, its hold Ctrl+Shift+P the state paste), both
-//   resting greys on a locked tab, PASTE under grid iterations too;
+//   PASTE (Ctrl+P, the paste, its hold Ctrl+Shift+P the state paste), PASTE
+//   alone resting grey on a locked tab and under grid iterations (COPY
+//   admitted by both locks, architect 2026-11-17, send U);
 //   THE SKIPS (kTransportSkipGroup, back 2026-10-24) — GO TO START (bare
 //   Home) and GO TO END (bare End), their shifted presses the whole piece's
 //   ends;

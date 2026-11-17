@@ -1347,12 +1347,13 @@ inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
 // (handle_mode_keys, input_key_dispatch.cpp) with their ladders and cards:
 // all three act from the WARP column alone (phase_reset_copy_refusal /
 // phase_reset_paste_refusal, phase_reset_propagate.h, the first rung; the two
-// pastes one ladder). TWO READERS: the dispatch arms and the iteration lock's
-// allowlist (iteration_lock_key_blocked, which admits the COPY alone —
-// clipboard-only, nothing for the undo domain). The read-only allowlist
-// (read_only_key_blocked) and the `h` view's name none, so all three drop on
-// a locked tab — a copy arms a paste that writes, and the family travels
-// together — and card in the view.
+// pastes one ladder). THE COPY'S TWO READERS: its dispatch arm and the
+// read-only allowlist (read_only_key_blocked, which admits it — architect
+// 2026-11-17, send U: "We should allow copy in read-only, the copy phase
+// resets button." — clipboard-only, it writes no store; the iteration lock
+// inherits the admission). The two pastes have one reader each, their
+// dispatch arm: no allowlist names them, so they drop on a locked tab and
+// under grid iterations. The `h` view's allowlist names none of the three.
 inline bool is_phase_reset_copy_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::P && !mods.ctrl && !mods.shift && !mods.alt;
 }

@@ -577,10 +577,12 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods);
 // and the engine settings — AND NOTHING ELSE (architect 2026-08-07,
 // superseding the old "blocks persistent mutation" standard); the definition
 // carries the ruling, and it is the model's ONE authoritative home.
-// Authoring-mutation chords (Delete, undo/redo, the propagate commands,
+// Authoring-mutation chords (Delete, undo/redo, the propagate's two pastes,
 // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
-// renders and Reset Trim (Shift+T) are ADMITTED — a save writes the state
-// the tab already holds, a render reads it, and trim is band — and so,
+// renders, Reset Trim (Shift+T) and the propagate's copy (bare P, architect
+// 2026-11-17, send U) are ADMITTED — a save writes the state the tab already
+// holds, a render reads it, trim is band and a copy fills the clipboard
+// alone — and so,
 // since 2026-10-21, is `;`, the settings page (2026-10-28) and the editor
 // its rows open: the lock governs the keys, not the editor (architect
 // 2026-09-04), its engine-key commits refusing inside it.

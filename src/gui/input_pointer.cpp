@@ -688,11 +688,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // IT ADMITS SHIFT (redesign_button_shift_admits): the long press ORs the
     // shift into the row's ctrl and dispatches CTRL+SHIFT+P, PASTE PHASE
     // RESET STATE, through the propagate's own arms with their gates and
-    // cards. No lamp, no repeat. THEIR GATES ARE THE CHORDS': the read-only
-    // allowlist names none of the three (both faces grey on the lock), the
-    // iteration gate admits the copy alone (PASTE greys under the lamp), and
-    // the `h` view's allowlist names none, so the derived partition hides
-    // both there.
+    // cards. No lamp, no repeat. THEIR GATES ARE THE CHORDS': both lock
+    // allowlists admit the copy alone (architect 2026-11-17, send U; PASTE
+    // greys on the lock and under the lamp, COPY on neither), and the `h`
+    // view's allowlist names none, so the derived partition hides both
+    // there.
     {RedesignButton::IconCopyPhaseResets,
      GuiKeys::P,      false, false, false},                             // bare P
     {RedesignButton::IconPastePhaseResets,

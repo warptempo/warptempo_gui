@@ -2340,9 +2340,9 @@ enum class RedesignButton {
     // the level's TRAVEL FRACTION (level_travel_fraction below, the
     // square-law taper); THE NUMBER over it, the level to one decimal
     // ("0.0", "-9.0", "-inf", format_level_db_face; the file keeps the exact
-    // value) in the Body face, the text tone on the fill and the face alike
-    // and AT -inf THE DISABLED TEXT TONE (architect 2026-11-10: off reads
-    // off), centered by its cap band and its ink; its printed legend NOISE
+    // value) in the Body face, the text tone on the fill and the face alike,
+    // AT -inf TOO (architect 2026-11-17, send U: the case is still enabled
+    // there), centered by its cap band and its ink; its printed legend NOISE
     // under the face as every key's. THE CASE IS THE LEVEL'S ONE ROAD: no
     // Settings row (architect 2026-11-05 night, a key shown and edited on
     // the main page gets none, kSettingsEditorKeys).
@@ -2425,10 +2425,10 @@ enum class RedesignButton {
     // view — and DEAD on a visit that opened on the local fallback (the
     // committed half needs git; redesign_button_enabled's arm).
     //
-    // ITS LAMP IS SCOPED TO THE VIEW, unlike the Cumulative toggle beside it,
-    // and the contrast is the state's own: the READING is a program-session
-    // preference that outlives every visit, while the WALK SOURCE is per-visit
-    // state reset to Commit at every entry (redesign_button_selected).
+    // ITS LAMP IS SCOPED TO THE VIEW, as the Cumulative toggle's beside it:
+    // the WALK SOURCE and the READING are both per-visit state, reset to
+    // Commit and Iterative at every entry (architect 2026-11-17, send U;
+    // redesign_button_selected).
     SessionHistory,
     // THE FOUR COMPANIONS, behind the walk lamp in the order they have always
     // held — how the delta READS, what you can DO from inside the view, then
@@ -2872,10 +2872,11 @@ enum class RedesignButton {
     // own base chord and hold. THE FACE IS THE COPY'S
     // (phase_reset_copy_refusal through phase_reset_copy_actionable), one
     // line of tooltip. The `h` view does not paint it (its allowlist names no
-    // `p` chord — history_mode_hides_button), and the read-only lock greys it
-    // with the marker verbs (none of the three P chords is on
-    // read_only_key_blocked's allowlist). NO LAMP (an act), NO REPEAT (a copy
-    // repeats onto itself).
+    // `p` chord — history_mode_hides_button). NEITHER LOCK GREYS IT
+    // (architect 2026-11-17, send U: "We should allow copy in read-only, the
+    // copy phase resets button."): bare P is on read_only_key_blocked's
+    // allowlist, a clipboard filled on a locked tab pasting on a writable
+    // one. NO LAMP (an act), NO REPEAT (a copy repeats onto itself).
     IconCopyPhaseResets,
     // PASTE PHASE RESETS (architect 2026-11-08, session 93) — PASTE, the
     // duo's second key, right of COPY. ITS BASE CHORD IS CTRL+P, Paste Phase
@@ -2888,7 +2889,8 @@ enum class RedesignButton {
     // (PhaseResetPropagate::paste_state_apply) — Switch Tab's shape. THE
     // TWIN RULE DECIDES ITS FACE AND IT ORS: lit where either paste would
     // act (redesign_button_enabled). The `h` view does not paint it, and the
-    // read-only lock greys it (no `p` chord is on either allowlist). NO LAMP,
+    // read-only lock greys it (neither paste chord is on either allowlist).
+    // NO LAMP,
     // NO REPEAT (a paste raises a prompt, a state paste repeats onto itself).
     IconPastePhaseResets,
     // THE MARKER-WALK GROUP'S OLD FOUR (architect 2026-08-15; four since
@@ -5253,7 +5255,8 @@ struct AppState {
     // stays the playhead tap, a pinch the pinch, the barrel-held drag the
     // one-finger zoom. INERT IN THE `h` VIEW: the drag there stays the pan,
     // the lamp's role in the view its diff-flag click alone (below).
-    // SESSION SCRATCH, NEVER SERIALIZED, like history_cumulative: no sidecar
+    // SESSION SCRATCH, NEVER SERIALIZED, like the history view's reading
+    // (HistoryMode::cumulative): no sidecar
     // key, no undo entry, no snapshot field.
     //
     // SCOPE: THE PAYLOAD BOX OF A FLAG HIT, AND NOTHING ELSE.
@@ -7647,8 +7650,8 @@ struct AppState {
     // walks, the frozen now side and the head delta describe the same piece on
     // either tab.
     // (The walk has its own lamp in row 4, and the READING is row 4's own
-    // Cumulative toggle, over a session bit that is not in this struct at all —
-    // AppState::history_cumulative, which is why nothing here names it.)
+    // Cumulative toggle, over the struct's `cumulative` bit, per visit like
+    // the walk.)
     //
     // AND THERE ARE TWO WALKS TO SELECT BETWEEN SINCE 2026-08-07 (architect,
     // "the local history feature will be helpful for understanding undo/redo
@@ -7878,7 +7881,8 @@ struct AppState {
         //
         // COMMIT IS THE DEFAULT AT EVERY ENTRY, this plain member initializer
         // applied by the whole-struct machinery at both edges exactly as the
-        // compare bit's is: a visit never inherits the last visit's walk.
+        // reading's (`cumulative` below) is: a visit never inherits the last
+        // visit's walk.
         //
         // WITH ONE FORK, AND IT IS THE ENTRY OWNER'S (architect 2026-09-04): a
         // visit whose REMOTE walk could not be bootstrapped opens on LOCAL,
@@ -7907,18 +7911,24 @@ struct AppState {
         // a bound walk knows what that index is. With no redo entries the two
         // are the same number.
         std::size_t local_index = 0;
-        // THE READING IS NOT A FIELD OF THIS STRUCT — it is AppState's own
-        // `history_cumulative` (architect 2026-08-08), which is exactly why it
-        // is not here: this struct is RESET WHOLE at both mode edges, and the
-        // reading has to survive that. The contract, the default and the
-        // session scope are stated at that field; the mapping onto
-        // GuiHistoryCompare is AppState::history_compare(), the one site that
-        // turns the bit into the delta machinery's vocabulary.
-        //
-        // WHAT THIS STRUCT STILL OWNS IS THE WALK SOURCE ABOVE, and the
-        // asymmetry is deliberate: the SOURCE resets to Commit at every entry
-        // (a per-visit fact — where you are looking) while the READING persists
-        // (a preference — how you want deltas read).
+        // THE READING — the CUMUL lamp's bit, how the lane's delta is read.
+        // OFF IS ITERATIVE — the viewed member against the NEXT-NEWER one,
+        // "what happened after this" — and ON IS CUMULATIVE, the member
+        // against the frozen live now side, "how does my session differ".
+        // ITERATIVE AT EVERY ENTRY, PER VISIT LIKE THE WALK SOURCE ABOVE
+        // (architect 2026-11-17, send U, of the CUMUL lamp: "like session
+        // already does"): this plain member initializer, applied by the
+        // whole-struct reset at both mode edges, so leaving the view puts the
+        // lamp out by construction. Session scratch, NEVER SERIALIZED: not a
+        // settings key, not in a sidecar, not in the render fingerprint — it
+        // changes no rendered bytes, only how a read-only lane groups them.
+        // ITS ONE WRITER is GuiInputHandler::set_history_delta, the switch
+        // owner the `g` and `u` toggles share (beside the whole-struct
+        // resets); its readers are compare() below (the delta machinery's
+        // mapping: the lane, the flag cache's fingerprint, the `g` arm), that
+        // owner's no-change test, the `u` arm's flip and
+        // redesign_button_selected (the Cumulative button's lamp).
+        bool cumulative = false;
         //
         // A READING SWITCH IS STILL A MODE EDGE, exactly like a `,` / `.` step,
         // and one owner does all of it (GuiInputHandler::set_history_delta,
@@ -8122,8 +8132,8 @@ struct AppState {
         // (measure_history_head_delta) therefore names `session` outright, and
         // Save-and-Commit's reach and face are untouched by the source axis.
         //
-        // AND IT NAMES THE CUMULATIVE DELTA EXPLICITLY, never the session's
-        // reading bit (AppState::history_cumulative — this is that bit's one
+        // AND IT NAMES THE CUMULATIVE DELTA EXPLICITLY, never the visit's
+        // reading bit (`cumulative` above — this is that bit's one
         // deliberate non-reader): the act commits THE LIVE STATE, so "is there
         // anything to checkpoint" is live-vs-newest whatever the lane happens to
         // be displaying, and a `u` press must not move this face.
@@ -8329,62 +8339,31 @@ struct AppState {
             else                                       index       = to;
         }
 
+        // THE READING IN THE DELTA MACHINERY'S OWN VOCABULARY — the ONE site
+        // that maps `cumulative` onto GuiHistoryCompare, so no caller spells
+        // the ternary and the two can never come to disagree about which way
+        // round the bit runs.
+        GuiHistoryCompare compare() const {
+            return cumulative ? GuiHistoryCompare::Cumulative
+                              : GuiHistoryCompare::Iterative;
+        }
+
         // THE DELTA THE LANE SHOWS — the ONE accessor for it (architect
         // 2026-08-07's second walk made the reading a PAIR, and a pair spelled at
-        // four sites is four places to forget one of its halves). Non-const
+        // four sites is four places to forget one of its halves): the walk
+        // source's position read at compare(). Non-const
         // because both walks compute lazily and cache; the returned pointer is
         // stable for the visit on either (each class's delta_at states its own
         // contract). nullptr means "nothing to show" and every reader already
         // draws that as the blank lane: an out-of-range index, an unavailable
         // session, or an empty walk.
-        // `compare` is handed IN rather than read off this struct: the reading
-        // is a program-session preference on AppState (history_cumulative), and
-        // a nested struct cannot reach its enclosing object. Every caller spells
-        // it `app.history_mode.displayed_delta(app.history_compare())`, which is
-        // the one mapping owner doing the translation at each use.
-        const GuiHistoryCommitDelta* displayed_delta(GuiHistoryCompare compare) {
+        const GuiHistoryCommitDelta* displayed_delta() {
             return source == GuiHistoryWalkSource::Local
-                       ? local.delta_at(local_index, compare)
-                       : session.delta_at(index, compare);
+                       ? local.delta_at(local_index, compare())
+                       : session.delta_at(index, compare());
         }
     };
     HistoryMode history_mode;
-
-    // THE CUMULATIVE READING'S BIT — how the history view's delta is read, and
-    // the ONE piece of that view's state that is NOT in HistoryMode above
-    // (architect 2026-08-08). It lives out here for the reason
-    // history_checkpoint_in_flight does: it OUTLIVES THE VIEW. HistoryMode is
-    // reset whole at both mode edges, so a field in there could not remember
-    // anything across a visit, and remembering is the point.
-    //
-    // OFF IS ITERATIVE — the viewed member against the NEXT-NEWER one, "what
-    // happened after this" — and ON IS CUMULATIVE, the member against the frozen
-    // live now side, "how does my session differ". Off at program start, which
-    // is this initializer.
-    //
-    // PROGRAM-SESSION SCOPED, and that is its whole contract: a mode exit and
-    // re-entry KEEPS it (superseding the 2026-08-05..08 rule that Iterative was
-    // the default at every entry — the reading is a preference now, and a
-    // preference the user re-sets on every visit is not one), and closing the
-    // program FORGETS it. It is NEVER SERIALIZED: not a settings key, not in the
-    // schema, not in a sidecar, not in the render fingerprint's settings terms —
-    // it changes no rendered bytes, only how a read-only lane groups them.
-    //
-    // ITS ONE WRITER is GuiInputHandler::set_history_delta, the switch owner
-    // the tab press and the `u` toggle share; its readers are
-    // AppState::history_compare() just below (the delta machinery's mapping) and
-    // redesign_button_selected (the Cumulative button's lamp, published in every
-    // view because the bit is true in every view).
-    bool history_cumulative = false;
-
-    // THE BIT IN THE DELTA MACHINERY'S OWN VOCABULARY — the ONE site that maps
-    // the session preference onto GuiHistoryCompare, so no caller spells the
-    // ternary and the two can never come to disagree about which way round the
-    // bit runs.
-    GuiHistoryCompare history_compare() const {
-        return history_cumulative ? GuiHistoryCompare::Cumulative
-                                  : GuiHistoryCompare::Iterative;
-    }
 
     // (WINDOW ACTIVATION'S MIRROR, `window_activated`, retired 2026-10-03:
     // its one reader was the folder overlay's highlighted row, whose inactive
@@ -13314,13 +13293,11 @@ inline const ViewState& active_view_state(const AppState& a) {
 // admits: navigation, playback, the trim gestures and Reset Trim (Shift+T),
 // Ctrl+S, Ctrl+Shift+S, both render chords, Open project and the quit. WHAT
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
-// bound axis addressed, bare `i` itself (the off edge must always be
-// reachable) and
-// THE CLIPBOARD COPY, bare P, which is the exception: it reads a run into a
-// session clipboard and pushes nothing, so the undo domain this lock protects
-// has no interest in it, while the read-only lock eats the propagate family
-// whole for its own reason — one tab's authored content. The two PASTES,
-// Ctrl+P and Ctrl+Shift+P, stay refused by both. (THE BPM OPENER — bare `m`, Ctrl+B since 2026-09-15 — WAS
+// bound axis addressed and bare `i` itself (the off edge must always be
+// reachable). THE CLIPBOARD COPY, bare P, both admit (architect 2026-11-17,
+// send U): it reads a run into a session clipboard and writes no store and
+// pushes nothing. The two PASTES, Ctrl+P and Ctrl+Shift+P, stay refused by
+// both. (THE BPM OPENER — bare `m`, Ctrl+B since 2026-09-15 — WAS
 // A FIFTH ADDITION until 2026-09-10, when the architect ruled its own
 // swap-the-mode exit out; it falls to the base list, which refuses it, same
 // as any other authoring chord.) WHAT
@@ -13483,9 +13460,10 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDisable:
         // PASTE (architect 2026-11-08, session 93): both its chords, Ctrl+P
         // and Ctrl+Shift+P, write the phase-reset store and push, and the
-        // gate admits the propagate's COPY alone (iteration_lock_key_blocked's
-        // delta (b)), so both pastes refuse under the lamp and the key greys
-        // whole there. (COPY is no member: the gate admits it.)
+        // gate admits the propagate's COPY alone (inherited from
+        // read_only_key_blocked since 2026-11-17), so both pastes refuse
+        // under the lamp and the key greys whole there. (COPY is no member:
+        // the gate admits it.)
         case RedesignButton::IconPastePhaseResets:
         // The Toggle History View button — the view's own acts push history,
         // and two modal views are not composed, so the ENTRY refuses
@@ -15473,17 +15451,19 @@ inline bool playback_launch_playable(const AppState& a,
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops.
 //     THIS COUNTS THE BUTTONS WHOSE ARM READS THE BIT AS ITS FIRST TERM, not
-//     the lock's whole button set (that one is SIXTEEN and is enumerated at
-//     the read-only arm itself, below). RE-DERIVED FROM THE ARMS 2026-10-21,
-//     it is EIGHT — bare `s`, Delete, Ctrl+D, Ctrl+N, bare
-//     Return, bare `[`, Ctrl+B and bare `i` — bare `;` LEAVING that day with
-//     its admission (the lock governs the keys, not the settings editor;
-//     read_only_key_blocked), bare `[` joining with the Toggle Value
-//     Drag button 2026-10-11, bare Return back with the Open Text Editor
-//     button 2026-10-09 (it had left with the Edit Flag button 2026-09-29, the
-//     day bare `;` joined with the Settings button), and BARE `/` having gone
-//     with the measures feature whole on 2026-09-16, which took the measure
-//     editor, its button and its chord together. (CTRL+F IS NOT A TENTH
+//     the lock's whole button set (that one is SEVENTEEN and is enumerated at
+//     the read-only arm itself, below). RE-DERIVED FROM THE ARMS 2026-11-17
+//     (send U: bare P left with its admission), it is NINE — bare `s`,
+//     Delete, Ctrl+D, Ctrl+N, bare Return, Ctrl+P (PASTE's, its hold
+//     Ctrl+Shift+P riding it), bare `[`, Ctrl+B and bare `i` — bare `;`
+//     having LEFT 2026-10-21 with its admission (the lock governs the
+//     keys, not the settings editor; read_only_key_blocked), bare `[`
+//     joining with the Toggle Value Drag button 2026-10-11, bare Return
+//     back with the Open Text Editor button 2026-10-09 (it had left with
+//     the Edit Flag button 2026-09-29, the day bare `;` joined with the
+//     Settings button), and BARE `/` having gone with the measures feature
+//     whole on 2026-09-16, which took the measure editor, its button and its
+//     chord together. (CTRL+F IS NOT A TENTH
 //     although this gate drops it too: the Flatten button's face does not read
 //     the lock at this arm — tempo_flatten_actionable composes authoring_locked
 //     itself — so it greys with them while owning no term here. The same
@@ -15504,10 +15484,10 @@ inline bool playback_launch_playable(const AppState& a,
 //     answers do not survive the walk (below), and the propagate pair
 //     made the point: Ctrl+P and Ctrl+Alt+P left this list with
 //     their BUTTONS (the Edit-menu relocation) though the lock still ate the
-//     chords — blocked, with no face to grey — and as bare P / Ctrl+P /
-//     Ctrl+Shift+P since 2026-10-24 they ride the Copy Phase Resets key,
-//     whose face greys on the lock for its plain act (the Open Text Editor
-//     seat's ctrl presses 2026-10-21 to 2026-10-24). (BARE `m` AND BARE `i` MADE THE
+//     chords — blocked, with no face to grey — and came back with the PASTE
+//     key (2026-11-08), whose face greys on the lock; its sibling COPY (bare
+//     P) is admitted by the gate since 2026-11-17 (send U) and greys on no
+//     lock. (BARE `m` AND BARE `i` MADE THE
 //     POINT TWICE, leaving this list with their buttons at the 2026-08-27
 //     Series relocation and coming back with them on 2026-09-04: the gate's
 //     answer never moved either time, only whether a face existed to wear it.) The mirror is a membership, never an equivalence, in both
@@ -15790,8 +15770,9 @@ inline bool reset_trim_would_act(const AppState& a, int64_t total_frames) {
 // phase_reset_copy_refusal (phase_reset_propagate.h) answers None — the warp
 // column, a selection, one consecutive run, something to capture. Defined in
 // phase_reset_propagate.cpp beside the ladder, whose header includes this
-// one. ONE READER: the key's face (redesign_button_enabled), which adds the
-// read-only lock; the bare P arm reads the ladder itself to card each rung.
+// one. ONE READER: the key's face (redesign_button_enabled), which adds no
+// lock term (both locks admit the copy, 2026-11-17); the bare P arm reads the
+// ladder itself to card each rung.
 bool phase_reset_copy_actionable(const AppState& a);
 
 // WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR — the ask-ahead
@@ -16306,12 +16287,11 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // THE MIRROR IS A MEMBERSHIP AND NOT AN EQUIVALENCE, which is why no
         // count is stated here.
-        // THE PROPAGATE FAMILY (bare P, Ctrl+P, Ctrl+Shift+P since
-        // 2026-10-24) is blocked by the gate and IS HERE AGAIN AS ITS OWN, the
-        // COPY and PASTE keys' arms below greying on the lock (its two
-        // buttons left with the Edit-menu relocation of 2026-08-20, and from
-        // 2026-10-21 to 2026-10-24 the pair rode the Open Text Editor seat's
-        // ctrl presses; the duo since 2026-11-08). THE BPM OPENER AND
+        // THE PROPAGATE FAMILY'S TWO PASTES (Ctrl+P, Ctrl+Shift+P) are
+        // blocked by the gate and ARE HERE AS THEIR OWN, the PASTE key's arm
+        // below greying on the lock (the duo since 2026-11-08); ITS COPY,
+        // bare P, is admitted (architect 2026-11-17, send U) and the COPY
+        // key's arm reads no lock. THE BPM OPENER AND
         // GRID ITERATION MODE (bare `m`, bare `i`) left the same way on
         // 2026-08-27 with the Series-menu relocation — blocked by the gate
         // with no face to grey, their menu ITEMS never greying by the command
@@ -16340,16 +16320,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // on purpose, invisible chrome state otherwise, changing only when `o`
         // is pressed.
         //
-        // THE READ-ONLY LOCK'S BUTTON SET IS EIGHTEEN, AND THIS IS THE ONE
-        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-11-08, when
-        // PASTE joined beside COPY; the succession is in git history; every
-        // other site states its own class and points here). In five groups,
-        // by HOW each asks:
-        //   * THESE TEN, whose arms are below (Toggle Value Drag's beside
-        //     Add to Selection's; COPY's and PASTE's beside Open Text
-        //     Editor's) — the bit their first term (SETTINGS left
-        //     them 2026-10-21, `;` admitted by the lock).
-        //     Nine read the ACTIVE TAB's bit; GRID ITERATIONS reads it too,
+        // THE READ-ONLY LOCK'S BUTTON SET IS SEVENTEEN, AND THIS IS THE ONE
+        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-11-17, send
+        // U, when COPY left with bare P's admission; the succession is in
+        // git history; every other site states its own class and points
+        // here). In five groups, by HOW each asks:
+        //   * THESE NINE, whose arms are below (Toggle Value Drag's beside
+        //     Add to Selection's; PASTE's beside Open Text Editor's) — the
+        //     bit their first term (SETTINGS left them 2026-10-21, `;`
+        //     admitted by the lock).
+        //     Eight read the ACTIVE TAB's bit; GRID ITERATIONS reads it too,
         //     with the lamp dark alone (its own arm's reason).
         //   * THE FOUR HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
         //     block below: Up/Down outright, and Left/Right only while a
@@ -16480,22 +16460,20 @@ inline bool redesign_button_enabled(const AppState& a,
                    !iteration_lock_greys(a, b) &&
                    flag_editor_open_actionable(a);
         // COPY PHASE RESETS (architect 2026-10-24) GREYS EXACTLY WHERE BARE P
-        // WOULD NOT COPY, each term the key's road's own: THE READ-ONLY LOCK
-        // (no `p` chord is on read_only_key_blocked's allowlist — a copy arms
-        // a paste that writes, and the family travels together) and THE
-        // COPY'S LADDER (phase_reset_copy_actionable: the warp column, a
-        // selection, one consecutive run, something to capture). THE
-        // ITERATION LOCK IS NO TERM: it admits the copy (clipboard-only,
-        // nothing for the undo domain — iteration_lock_key_blocked's delta
-        // (b)), and refuses the two pastes on its card. THE FACE IS THE
-        // COPY'S ALONE (architect 2026-10-24: the key greys where the copy
-        // would refuse); the key admits nothing since 2026-11-08, its two
-        // pastes being the PASTE key's below. The `h` view hides it
+        // WOULD NOT COPY: THE COPY'S LADDER (phase_reset_copy_actionable: the
+        // warp column, a selection, one consecutive run, something to
+        // capture) and nothing else. NEITHER LOCK IS A TERM: both admit the
+        // copy (architect 2026-11-17, send U: "We should allow copy in
+        // read-only, the copy phase resets button." — read_only_key_blocked
+        // admits bare P, clipboard-only, writing no store, and the iteration
+        // lock inherits it), and both refuse the two pastes. THE FACE IS
+        // THE COPY'S ALONE (architect 2026-10-24: the key greys where the
+        // copy would refuse); the key admits nothing since 2026-11-08, its
+        // two pastes being the PASTE key's below. The `h` view hides it
         // (history_mode_hides_button: no `p` chord is on that view's
         // allowlist).
         case RedesignButton::IconCopyPhaseResets:
-            return !active_view_state(a).read_only &&
-                   phase_reset_copy_actionable(a);
+            return phase_reset_copy_actionable(a);
         // PASTE (architect 2026-11-08, session 93) GREYS WHERE BOTH ITS
         // PRESSES WOULD REFUSE, the twin rule's OR: Ctrl+P (the tap) and
         // Ctrl+Shift+P (the hold) refuse on the read-only lock (no `p` chord
@@ -17158,10 +17136,11 @@ inline bool redesign_button_enabled(const AppState& a,
         //     moves nothing either, the predicates' own argument.
         //
         // THE CUMULATIVE TOGGLE'S SELECTED FACE IS UNAFFECTED and was never
-        // scoped this way: the reading is a session preference
-        // (AppState::history_cumulative) that outlives every visit, so the lamp
-        // reports it wherever the button is painted — inside the view only,
-        // since 2026-10-05 (a dead checked key would stay lit with its glyph
+        // scoped this way: the reading is the visit's
+        // (HistoryMode::cumulative, Iterative at every entry and reset at
+        // every exit, architect 2026-11-17, send U), so the lamp reports it
+        // wherever the button is painted — inside the view only, since
+        // 2026-10-05 (a dead checked key would stay lit with its glyph
         // dimmed, materials.h's disabled composition).
         //
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
@@ -17611,22 +17590,21 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         case RedesignButton::IconNoiseLevel:
             return false;
         // THE CUMULATIVE READING'S LAMP (2026-08-08; reinstated architect
-        // 2026-10-26), the toggle pattern over a bit that is NOT the mode's:
-        // history_cumulative is a program-session preference, so this reads
-        // true wherever the session left it. Publishing it unconditionally is
-        // the point — a mode term here would make the row lie about the
-        // reading the moment the view closed. Outside the view the key stands
-        // in no seat (its seat is the iteration group's, a stand-in of the
-        // `h` view alone, kIconRowHistoryStandIns), so the lamp's reach out
-        // there is the chord's bookkeeping, not a pixel.
-        case RedesignButton::HistoryCumulative: return a.history_cumulative;
+        // 2026-10-26), the toggle pattern over the visit's reading,
+        // HistoryMode::cumulative — per visit like the walk lamp below
+        // (architect 2026-11-17, send U: "like session already does"). It
+        // needs no mode term: the bit is reset whole with the struct at both
+        // mode edges, so outside the view it is false by construction. Out
+        // there the key stands in no seat anyway (its seat is the iteration
+        // group's, a stand-in of the `h` view alone,
+        // kIconRowHistoryStandIns), so the answer reaches no pixel.
+        case RedesignButton::HistoryCumulative:
+            return a.history_mode.cumulative;
         // THE WALK LAMP (2026-08-18; reinstated architect 2026-10-26), lit
         // AWAY FROM HOME: the committed checkpoints are the walk's default,
-        // so the lamp reports SESSION. THE MODE TERM IS DELIBERATE, and it is
-        // the one thing that separates it from the Cumulative toggle directly
-        // above: the READING is a program-session preference that outlives
-        // every visit, so its lamp publishes unconditionally, while the WALK
-        // SOURCE is per-visit state reset to Commit at every entry — so a lit
+        // so the lamp reports SESSION. THE WALK SOURCE is per-visit state
+        // reset to Commit at both mode edges, the reading above alike; the
+        // MODE TERM states outright what the reset already makes true — a lit
         // lamp outside the view would advertise a selection that is not a
         // live fact.
         case RedesignButton::SessionHistory:

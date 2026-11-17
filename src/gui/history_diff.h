@@ -170,11 +170,11 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
 // against two different "other sides", and the view offers both.
 //
-// WHICH ONE IS SHOWING IS A SESSION PREFERENCE, not view state and not a tab:
-// AppState::history_cumulative is the bit (its contract lives at that field),
-// bare `u` and row 4's Cumulative button toggle it, and it is OFF — iterative —
-// at program start and KEPT ACROSS VISITS thereafter, since the mode's own
-// struct is reset whole at both edges and this deliberately is not in it. THE
+// WHICH ONE IS SHOWING IS THE VISIT'S, not a tab: AppState::HistoryMode's
+// `cumulative` is the bit (its contract lives at that field), bare `u` and
+// row 4's Cumulative button toggle it, and it is OFF — iterative — at every
+// entry, the mode's own struct being reset whole at both edges (architect
+// 2026-11-17, send U: CUMUL "like session already does"). THE
 // WALK SOURCE is the icon row's WALK LAMP and bare `g` since 2026-08-18 (two
 // radio buttons over that chord until the 2026-09-04 collapse; row 3's tabs and
 // Ctrl+Tab selected it from 2026-08-05 until 2026-08-18); neither surface

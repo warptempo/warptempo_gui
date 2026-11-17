@@ -1204,7 +1204,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     std::vector<HistoryDiffFlag>& out = app.history_mode.flags;
     out.clear();
 
-    // THE DISPLAYED DELTA IS THE SESSION'S (SOURCE, READING) PAIR, through the
+    // THE DISPLAYED DELTA IS THE VISIT'S (SOURCE, READING) PAIR, through the
     // one accessor that forks on it (AppState::HistoryMode::displayed_delta):
     // the COMMIT walk or the LOCAL one, read iteratively forward against the
     // next-newer item or cumulatively against the frozen live now side. The
@@ -1214,7 +1214,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // drawing, nor that the two readings coincide at the newest index of
     // either.
     const GuiHistoryCommitDelta* d =
-        app.history_mode.displayed_delta(app.history_compare());
+        app.history_mode.displayed_delta();
     if (!d) return;
 
     // THE ACTIVE MARKERS VIEW PICKS THE COLUMN, exactly as it picks which store
@@ -1485,11 +1485,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;
     const unsigned long long history_generation = app.history_mode.generation;
-    // The READING is the session's own bit since 2026-08-08 (it moved off
-    // HistoryMode onto AppState so a mode edge cannot reset it); the fingerprint
-    // term is unchanged in value space — the same two-valued reading, read
-    // through the one mapping owner.
-    const GuiHistoryCompare  history_compare    = app.history_compare();
+    // The READING is the visit's (HistoryMode::cumulative, reset at both mode
+    // edges, architect 2026-11-17), read through the one mapping owner.
+    const GuiHistoryCompare  history_compare    = app.history_mode.compare();
     const uint64_t           history_sel_hash   = hash_selection(
                                  app.history_mode.selection,
                                  app.history_mode.focus);

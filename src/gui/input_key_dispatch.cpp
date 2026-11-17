@@ -110,11 +110,10 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // than admitted for a deeper owner refusal: the marker drop / status-toggle /
 // position-nudge / Delete chords, the flag editor's and the BPM form's openers,
 // the label paste (Shift+Return, the Open Text Editor key's hold, 2026-11-10), `i`,
-// undo/redo (Ctrl+Z / Ctrl+Shift+Z), the three propagate commands (the COPY,
-// bare P, explicitly — a copy is non-mutating, but it arms a paste that
-// is not, and the family travels together; the two PASTES, Ctrl+P and
-// Ctrl+Shift+P, with it; the Copy Phase Resets key's three presses since
-// 2026-10-24, Ctrl+Return / Ctrl+Shift+Return from 2026-10-21) — and `'` IN THE `h` VIEW,
+// undo/redo (Ctrl+Z / Ctrl+Shift+Z), the propagate's two PASTES (Ctrl+P and
+// Ctrl+Shift+P, the PASTE key's tap and hold — each rewrites a store and
+// pushes; their COPY, bare P, is admitted, is_phase_reset_copy below) — and
+// `'` IN THE `h` VIEW,
 // where it is the load-in-place and replaces the whole authored state. THAT
 // ONE ENTRY READS A STATE (2026-09-01): outside the view the same chord opens
 // the RENDER PLAYER, which is bare `l`'s own admitted act, so the gate admits
@@ -159,13 +158,11 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // chord (Shift+S, 2026-08-28) rides that face rather than asking for a second
 // one: the button is greyed by the same arm, and a greyed button's shift press
 // is consumed with its plain one.
-// THE MIRROR IS NOT AN EQUIVALENCE, and one direction has a member: the
-// propagate's two PASTES are BLOCKED here with no face of their own to grey
-// (its two buttons left with the 2026-08-20 relocation; since 2026-10-24 the
-// family rides the Copy Phase Resets key, a face that greys on the lock for
-// its plain act, the copy — the Open Text Editor seat's ctrl presses from
-// 2026-10-21). The other direction — a
-// button lit on a locked tab whose chord drops here — is EMPTY. THE MIRROR IS
+// THE PROPAGATE FAMILY ON THE MIRROR: its two PASTES, blocked here, are the
+// PASTE key's tap and hold (2026-11-08), a face that greys on the lock; its
+// COPY, bare P, admitted here, is the COPY key, lit on a locked tab
+// (architect 2026-11-17, send U). The other direction — a button lit on a
+// locked tab whose chord drops here — is EMPTY. THE MIRROR IS
 // HAND-LISTED at
 // redesign_button_enabled (app_state.h) rather than derived by walking the
 // chord table through this predicate, and the two classes that walk gets wrong
@@ -462,6 +459,19 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // lit exactly as it leaves both chords live.
     const bool is_copy_value          = is_copy_value_key(key, mods);
     const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
+    // BARE P, THE PHASE-RESET COPY (architect 2026-11-17, send U: "We should
+    // allow copy in read-only, the copy phase resets button."), admitted on
+    // the header's own standard, the value copy's beside it: it reads the
+    // selected run's phase resets into the session clipboard and writes no
+    // store, no setting and no trim. ITS TWO PASTES STAY BLOCKED (Ctrl+P and
+    // Ctrl+Shift+P, each rewriting a store and pushing; the PASTE key greys
+    // on the lock): a clipboard filled on a locked tab pastes on a writable
+    // one. Bare-exact through the shared predicate the dispatch arm reads,
+    // so the ctrl-bearing pastes cannot reach this admission. THE FACE
+    // FOLLOWS: the COPY key's arm in redesign_button_enabled reads no lock.
+    // THE ITERATION LOCK INHERITS THE ADMISSION (iteration_lock_key_blocked
+    // falls through to this list).
+    const bool is_phase_reset_copy = is_phase_reset_copy_key(key, mods);
     // BARE `;`, THE SETTINGS PAGE (2026-10-21 for the editor it then opened,
     // the header's ruling; the page since 2026-10-28): the page authors
     // nothing, its rows open the settings editor, whose own commit arms carry
@@ -521,9 +531,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // survives as a backstop for entries that outlive a mid-history lock.
     // Delete, `i`'s ON edge, `[` (the value drag lamp, 2026-10-11: on a locked
     // tab both flag drags refuse, so the lamp would arm nothing — Toggle
-    // Value Drag greys with the verbs) and the phase-reset propagate's
-    // copy and paste chords (bare P, Ctrl+P, Ctrl+Shift+P) are likewise
-    // absent (blocked here); `;` LEFT that list on 2026-10-21 (is_settings_
+    // Value Drag greys with the verbs) and the phase-reset propagate's two
+    // paste chords (Ctrl+P, Ctrl+Shift+P) are likewise absent (blocked
+    // here); `;` LEFT that list on 2026-10-21 (is_settings_
     // editor above); `'` LEFT it on 2026-09-01 for a
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
@@ -543,6 +553,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_play_renders ||
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
+             is_phase_reset_copy ||
              is_settings_page ||
              is_tooltip_lamp || is_score_viewer ||
              is_iteration_off_edge);
@@ -618,6 +629,15 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // selecting pass), which is a use case ending rather than a refusal, so
 // neither direction cards.)
 //
+// THE CLIPBOARD COPY, bare P, IS NO DELTA: the base admits it (architect
+// 2026-11-17, send U; is_phase_reset_copy, read_only_key_blocked), and this
+// gate inherits it — clipboard-only, it writes no store, no undo entry and
+// no dirty bit, nothing this lock protects. The two PASTES, Ctrl+P and
+// Ctrl+Shift+P, stay refused by the base, each rewriting a store and
+// pushing; the COPY key's face takes no iteration term
+// (redesign_button_enabled's arm), so under the lamp the COPY key copies
+// and the PASTE key greys.
+//
 // THE OTHER HALF IS THE WIDER LIST'S: bare `i` with the lamp dark is off
 // read_only_key_blocked's allowlist, so a locked ACTIVE tab cannot light the
 // mode, and the other tab's bit is no part of the question (architect
@@ -649,8 +669,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // other subtractions; each named a chord read-only was thought to admit and
 // does not. Re-greped at the base's body.)
 //
-// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, SIX
-// entries since 2026-10-11 and each with its own reason (BARE `m` WAS ANOTHER
+// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, FIVE
+// entries since 2026-11-17 and each with its own reason (BARE `m` WAS ANOTHER
 // until 2026-09-10:
 // it was admitted as the one road that LEFT this mode by entering another,
 // enter_bpm_mode having run the same wipe the `i` toggle runs, and the
@@ -678,25 +698,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     every other chord and the wrong one for the two the user pressed to ask
 //     about history. The arm refuses first, ahead of its own two terms, and
 //     history_step_actionable greys both buttons on the same fact.
-//   * THE CLIPBOARD COPY — bare P (the phase-reset placements, 2026-10-24;
-//     Ctrl+Return from 2026-10-21, Ctrl+P before) — which is
-//     CLIPBOARD-ONLY: it reads a selection into a session clipboard and
-//     writes no store, no
-//     undo entry and no dirty bit, so the whole reason this lock exists says
-//     nothing about them (the lock protects the undo domain; nothing here can
-//     ever land in it). The base list refuses them because READ-ONLY is a
-//     different question — it protects one tab's authored content and eats
-//     the propagate family whole — and this is the one place the two locks
-//     part company in the admitting direction rather than the refusing one.
-//     THE TWO PASTES STAY REFUSED by the base — Ctrl+P and Ctrl+Shift+P —
-//     each rewriting a store and pushing, which is exactly what the lock
-//     holds back. Bare-exact through the shared predicate
-//     (is_phase_reset_copy_key), the dispatch arm's own spelling — so the
-//     ctrl-bearing pastes cannot reach this admission by widening it. THE
-//     COPY PHASE RESETS KEY'S PLAIN PRESS is this chord and needs no edit of
-//     its own — the button is the key — and its face takes no iteration term
-//     (redesign_button_enabled's arm), so under the lamp the key copies and
-//     its two paste presses card the lock.
 //   * CTRL+SHIFT+N — THE TIE (architect 2026-09-19), and it belongs here for
 //     the lock's own reason rather than as an exception to it: a tie says
 //     which markers are ONE AXIS of the sweep, which is BRACKET state and
@@ -763,12 +764,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // does and their FACE is the icon row's disabled face; their hint names the
 // act, so this gate's card is the only thing that SPEAKS the reason (the
 // account is at their arm in redesign_button_enabled). The propagate
-// family's surface is the Copy Phase Resets key since 2026-10-24, whose face
-// is the copy's — admitted here — so it stays lit under the lamp and its
-// paste presses card (the Open Text Editor seat's ctrl presses 2026-10-21 to
-// 2026-10-24; the Edit menu's rows greyed on the pair's ladders from
-// 2026-09-24, and the pigeon's seat in the phase-reset view for the evening
-// of 2026-10-21).
+// family's surface is the COPY / PASTE duo since 2026-11-08: COPY's face is
+// the copy's — admitted by the base — so it stays lit under the lamp, and
+// PASTE greys on the membership (iteration_lock_greys).
 bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
                                 GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -803,10 +801,6 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // admitted for its own card: the lamp is permanently lit under the mode
     // (~01:45), so the arm cards that it is (delta (b)).
     if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) return false;
-    // The clipboard copy, bare-exact through the predicate its dispatch arm
-    // reads — which is what keeps the ctrl-bearing pastes out of this
-    // admission.
-    if (is_phase_reset_copy_key(key, mods)) return false;
     // THE BOUND AXIS, and it is a STATE-DEPENDENT admission like the base's
     // one (the arrows' lane term): the same chords mean two different acts and
     // the gate has to ask the same question the dispatch asks.
@@ -1759,13 +1753,11 @@ void GuiInputHandler::on_history_prefetch_ready() {
 // one line covering every present and future route; the reasoning and the card
 // are at the site.
 //
-// IT WRITES THE PAIR ACROSS TWO HOMES since 2026-08-08, and the split is the
-// reading's session scope rather than a second owner: the WALK SOURCE is
-// per-visit state on HistoryMode, while the READING is the program-session
-// preference AppState::history_cumulative (its contract is at that field). Both
-// halves still arrive here and only here — the `g` step passes (the next walk,
-// the current reading) and the `u` toggle passes (the current walk, the flipped
-// reading).
+// IT WRITES THE PAIR, both halves per-visit state on HistoryMode (the walk
+// SOURCE and the READING, `cumulative`, each reset at both mode edges —
+// architect 2026-11-17, send U; the contracts at those fields). Both halves
+// arrive here and only here — the `g` step passes (the next walk, the current
+// reading) and the `u` toggle passes (the current walk, the flipped reading).
 //
 // The name covers both axes (renamed from set_history_reading, architect
 // 2026-09-04): the pair this writes is read back through one accessor,
@@ -1795,11 +1787,11 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
     }
     const bool cumulative = (compare == GuiHistoryCompare::Cumulative);
     if (app.history_mode.source == source &&
-        app.history_cumulative == cumulative) {
+        app.history_mode.cumulative == cumulative) {
         return;
     }
-    app.history_mode.source = source;
-    app.history_cumulative  = cumulative;
+    app.history_mode.source     = source;
+    app.history_mode.cumulative = cumulative;
     clear_history_mode_focus(app.history_mode);
     drop_lane_stash_across_history_edge();
     // (NO OVERLAY HIDE, architect 2026-08-19: a walk-or-reading switch is one of
@@ -2179,13 +2171,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
                 break;
             }
         }
-        set_history_delta(kRow[(here + 1) % kCount], app.history_compare());
+        set_history_delta(kRow[(here + 1) % kCount],
+                          app.history_mode.compare());
         return true;
     }
 
     // BARE `u` — THE CUMULATIVE READING'S TOGGLE (architect 2026-08-08), the
-    // axis row 3 carried as two more tabs for one day. It flips the session's
-    // own bit through the same switch owner the walk toggle above uses, so a
+    // axis row 3 carried as two more tabs for one day. It flips the visit's
+    // reading through the same switch owner the walk toggle above uses, so a
     // reading change is
     // the SAME MODE EDGE a walk change is — focus and selection cleared, lane
     // stash dropped, lane republished synchronously, window
@@ -2195,13 +2188,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // chords that DO repeat and leaves this one out): a held toggle can only
     // flap, exactly as the ctrl cycle can.
     //
-    // THE BIT IS THE SESSION'S, NOT THE VIEW'S: it lives on AppState so the mode
-    // edges cannot reset it (its contract is at AppState::history_cumulative), so
-    // this toggle is remembered until the program closes. Its BUTTON is row 4's
-    // HistoryCumulative, which dispatches this same bare chord.
+    // THE BIT IS THE VISIT'S (architect 2026-11-17, send U: CUMUL "like
+    // session already does"): HistoryMode::cumulative, reset to Iterative at
+    // both mode edges with the walk source (its contract at that field), so
+    // this toggle lasts the visit. Its BUTTON is row 4's HistoryCumulative,
+    // which dispatches this same bare chord.
     if (key == GuiKeys::U) {
         set_history_delta(app.history_mode.source,
-                          app.history_cumulative
+                          app.history_mode.cumulative
                               ? GuiHistoryCompare::Iterative
                               : GuiHistoryCompare::Cumulative);
         return true;

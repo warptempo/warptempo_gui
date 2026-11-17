@@ -409,17 +409,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // read-only toggle's lock direction (architect 2026-09-10; narrowed
     // 2026-10-13: the padlock cannot lock the tab the lamp stands lit on, and
     // its unlock is admitted) —
-    // AND PLUS FOUR ADMISSIONS: bare `i` (the off edge must always be
-    // reachable — the BPM opener, bare `m` then and Ctrl+B now, was a fifth
+    // AND PLUS FIVE ADMISSIONS: bare `i` (the off edge must always be
+    // reachable — the BPM opener, bare `m` then and Ctrl+B now, was another
     // until 2026-09-10, when the architect ruled its own swap-the-mode exit
     // out and it fell to the base list, which refuses it),
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
-    // act but so their own arm can card the sentence that names undo), and the
-    // CLIPBOARD COPY bare P, bare-exact (it reads a selection into a
-    // session clipboard and pushes nothing, so the undo domain this lock
-    // protects has no interest in it; the two PASTES, Ctrl+P and
-    // Ctrl+Shift+P, stay refused). That
+    // act but so their own arm can card the sentence that names undo),
+    // Ctrl+Shift+N (the tie, bracket state alone) and bare `[` (the value
+    // drag lamp, admitted for its own card). THE CLIPBOARD COPY bare P is no
+    // delta: the read-only list admits it itself (architect 2026-11-17,
+    // send U), the two PASTES, Ctrl+P and Ctrl+Shift+P, refused by both. That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. BOTH LISTS ARE ASKED, the two locks composing on a locked tab
@@ -505,10 +505,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              editor (or a value list), whose
     //                              engine-key commits refuse on a locked tab,
     //                              the device keys and the band commit
+    //   - P (no mods)            → the phase-reset copy (architect
+    //                              2026-11-17, send U): the selected run's
+    //                              resets into the session clipboard, no
+    //                              store written; its two pastes stay blocked
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `i`, `'` in the `h` view, the
-    // phase-reset propagate's copy and pastes (bare P, Ctrl+P, Ctrl+Shift+P),
+    // phase-reset propagate's two pastes (Ctrl+P, Ctrl+Shift+P),
     // and undo/redo (Ctrl+Z / Ctrl+Shift+Z) all drop here. (`;`, THE SETTINGS
     // PAGE, IS ADMITTED since 2026-10-21 — the lock governs the keys, not
     // the surface, the 2026-09-04 rule: a row opens the settings editor (or
@@ -548,7 +552,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // state-dependent admission (is_iteration_off_edge, read_only_key_blocked)
     // and the iteration list admits it too, so the lamp goes out from either
     // tab. The iteration side's other admissions (the bound axis, the undo
-    // pair, the clipboard copy, the tie, bare `[`) stay refused on a locked
+    // pair, the tie, bare `[`) stay refused on a locked
     // tab, the wider list eating them as it does with the lamp dark.
     if (authoring_lock_refuses_chord(key, mods, /*read_only_act=*/nullptr)) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE ACT (architect 2026-10-30:
