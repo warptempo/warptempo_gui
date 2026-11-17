@@ -2450,8 +2450,16 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     const ViewportLattice lattice = (new_level != app.zoom_level)
                                         ? ViewportLattice::Exact
                                         : ViewportLattice::Keep;
+    const double level_before = app.zoom_level;
     viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    /*final=*/false, lattice);
+    // A ZOOM FRAME THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom
+    // darkens (architect 2026-11-17, send U; darken_zoom_lamps_if_level_moved):
+    // the pinch and the pen barrel's one-finger zoom alike, the gesture's
+    // first such frame doing it and every later one finding them dark. A pan
+    // frame never asks (its level is the standing one; a clamp it meets is no
+    // zoom of the user's), nor a zoom frame pinned at a level bound.
+    if (!pan) darken_zoom_lamps_if_level_moved(level_before);
 
     if (pan) {
         // THE WALLS' REFUSAL RE-SEATS (re-seat (3) at the arm above): the
@@ -2698,7 +2706,8 @@ bool GuiInputHandler::touch_sweep_armed() const {
     // BOTH ARE INERT IN THE `h` VIEW: TRIM's key is hidden there (the history
     // allowlist naming no bare `w`) and the view cannot edit the trim; ADD
     // SEL's role in there is its diff-flag click alone (bare `k` on the
-    // allowlist), so the drag stays the pan. The bits survive the view.
+    // allowlist), so the drag stays the pan. The view's entry puts both out
+    // (darken_zoom_lamps, architect 2026-11-17, send U).
     return (app.trim_armed || app.add_to_selection) &&
            !app.history_mode.active;
 }
@@ -7299,7 +7308,9 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // hidden, yielded, overflowed) takes ITS HOME STRIP — row 8's fork, a
 // transport-row face its own bottom-strip lane, every other face the top
 // strip — the damage the lit flip's comparator pays (main.cpp).
-// TRIM's lit edge takes this rect too (set_trim_armed): a lit flip moves the
+// TRIM's lamp edges take this rect too (set_trim_armed), and so do FOLLOW's
+// and RESTR's dark edges a user zoom or the `h` view's entry runs
+// (darken_zoom_lamps, architect 2026-11-17, send U): a lit flip moves the
 // face and the glyph's ink, never the legend.
 void GuiInputHandler::invalidate_roster_press_face(int index) {
     const GuiRect painted =

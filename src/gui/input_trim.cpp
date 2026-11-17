@@ -358,6 +358,14 @@ void GuiInputHandler::commit_trim_mutation() {
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();
     target_render.trigger();
+    // A TRIM WRITE PUTS THE TRIM ARM LAMP OUT (architect 2026-11-17, send U:
+    // a trim written by other means than the sweep the lamp armed — the
+    // endcap and bridge drag's release, the bound-set click, a trim preset's
+    // apply, the typed `trim_*=` commit — ends the posture as the sweep
+    // does; AppState::trim_armed), TRIM alone, its face damaged by its
+    // setter. The sweep's own release reaches here having put it out
+    // already (commit_region_sweep's own rule), so this is a no-op there.
+    if (app.trim_armed) set_trim_armed(false);
     // NO PLAYHEAD WRITE (architect 2026-11-07, session 88): the cursor stays
     // where it stood in the music, the rule at this file's head.
 }
@@ -391,6 +399,10 @@ void GuiInputHandler::handle_trim_clear_both() {
         reset_trim_to_full_window();
         viewport.invalidate_waveform_area();
         target_render.trigger();
+        // THE RESET IS A TRIM WRITE, so it puts the TRIM arm lamp out as the
+        // shared tail does (architect 2026-11-17, send U; commit_trim_mutation)
+        // — on this writing arm alone: an already-full reset writes nothing.
+        if (app.trim_armed) set_trim_armed(false);
         // AND THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07, session
         // 88: no trim write moves it, the rule at this file's head). The
         // maximizer is not a SETTER either — it deselects nothing.

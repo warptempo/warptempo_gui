@@ -1236,16 +1236,20 @@ struct GuiInputHandler {
     // (AppState::trim_armed) or THE ADD SEL LAMP (AppState::add_to_selection)
     // lit, outside the `h` view, and false inside it — the view cannot edit
     // the trim, and its own diff-flag selection is the lamp's click role
-    // there, its drag staying the pan; both bits survive the view. The two
+    // there, its drag staying the pan (the view's entry puts both out,
+    // darken_zoom_lamps; ADD SEL may be lit again in there, TRIM not). The two
     // lamps are a radio pair, so the begin picks the one lit former. A state
     // answer, not geometry; the refusals stay begin_touch_region's. Wired at
     // main.cpp's set_touch_nav_hooks call.
     bool touch_sweep_armed() const;
     // THE TRIM ARM LAMP'S ONE WRITER (AppState::trim_armed): bare `w`'s arm
     // (the TRIM key's lift reaches it by synthesizing that press), the
-    // sweep's commit (commit_region_sweep puts it out) and ADD SEL's lit edge
+    // sweep's commit (commit_region_sweep puts it out), ADD SEL's lit edge
     // (bare `k`'s arm puts it out — THE RADIO, architect 2026-11-10, session
-    // 101) are its callers; the dark seat at every project open is the fresh
+    // 101), every other trim write (commit_trim_mutation and the reset's
+    // write, handle_trim_clear_both, put it out — architect 2026-11-17, send
+    // U) and darken_zoom_lamps (a user zoom, the `h` view's entry) are its
+    // callers; the dark seat at every project open is the fresh
     // AppState's. ITS LIT EDGE PUTS ADD SEL OUT (the radio's other half,
     // toggle_follow's shape), damaging that lamp's bottom-row face as bare
     // `k` does. Per-project, history-less. EVERY ACTUAL EDGE DAMAGES TRIM'S
@@ -1253,6 +1257,39 @@ struct GuiInputHandler {
     // 2026-11-10, session 102), so each caller's lamp moves in the frame it
     // was asked for, not at the next timer tick's comparator.
     void set_trim_armed(bool desired);
+    // THE FOUR LAMPS A ZOOM PUTS OUT (architect 2026-11-17, send U: "Trim,
+    // add selection, follow and restrict should be turned off when a zoom
+    // action takes place"): TRIM, ADD SEL, FOLLOW and RESTR, each lit one
+    // darkened through its own off road — TRIM through set_trim_armed, FOLLOW
+    // and RESTR through their toggles' dark edges (toggle_follow /
+    // toggle_restrict, which write nothing else there, so a play in flight
+    // simply stops being followed or restricted), ADD SEL by its bit as bare
+    // `k`'s dark edge writes it — and EACH FACE THAT WENT DARK DAMAGED HERE
+    // in the frame asked (TRIM's by its setter, FOLLOW's and RESTR's by
+    // invalidate_roster_press_face, ADD SEL's row 8 strip as bare `k`
+    // damages it); a dark lamp is left alone and damages nothing. A sweep in
+    // flight runs on to its lift, as under bare `w` or `k`'s dark edge (the
+    // sweep reads its lamp at the begin alone). CALLERS: the user zoom roads,
+    // each through darken_zoom_lamps_if_level_moved below, and the `h` view's
+    // entry (open_history_mode_fresh, which darkens all four whatever the
+    // zoom). A pan, a tab switch, a load in place, an overlay and Play / Stop
+    // darken nothing; the programmatic landings (undo / redo's framing, a
+    // paste's framing, a tab's restore, the loads, a resize, FOLLOW's own
+    // scroll, the A/B audition's centring) reach none of these roads.
+    void darken_zoom_lamps();
+    // THE USER ZOOM ROADS' ONE TEST: the four lamps go dark only when the
+    // act really moved the level — the live AppState::zoom_level after the
+    // act differs from `level_before`, the value the road read before it —
+    // so a zoom at its wall, an idempotent framing or a `c` already at the
+    // working zoom darkens nothing. THE ROADS (architect 2026-11-17, send U):
+    // the zoom keys (the `=` / `-` arm, input_handler.cpp), the pinch and the
+    // pen barrel's one-finger zoom (apply_touch_nav_update's zoom frames, on
+    // every frame that moved the level — idempotent past the first), Zoom to
+    // Fit and its recall (run_overview_command), the span framings
+    // (run_span_framing_command: Shift+0, the trim bar's double-click, a trim
+    // preset's apply) and the centre command (run_center_command, its
+    // `user_zoom` true: `c`, the Center key, both marches, Ctrl+J).
+    void darken_zoom_lamps_if_level_moved(double level_before);
 
     // THE TOUCH REGION HOOKS — THE ARMED SWEEP (architect 2026-11-07, session
     // 87, retiring the region hold of 2026-08-12 — "if I turn it on, it's
@@ -1669,7 +1706,9 @@ struct GuiInputHandler {
     // THE PRESS FACE'S DAMAGE for one roster button — the key's own painted
     // extent, its face and legend (architect 2026-11-16, the beats; the
     // press arc, 2026-11-05; the body's comment, input_pointer.cpp): the
-    // arm's, the lift's and the walk's crossing's, and TRIM's lit edge.
+    // arm's, the lift's and the walk's crossing's, TRIM's lamp edges, and
+    // FOLLOW's and RESTR's put out by darken_zoom_lamps (architect
+    // 2026-11-17, send U).
     void invalidate_roster_press_face(int index);
     // THE SAME FOR ONE DIALOG BUTTON of the published stash (architect
     // 2026-11-16, the beats): its face as painted, in place of the modal's
@@ -2176,7 +2215,12 @@ struct GuiInputHandler {
     // THE ZOOM IS ALWAYS kWorkingZoomLevel (the parameter `0`'s second press
     // filled with its stamped level went with the 2026-09-23 toggle, which
     // restores the stamped view itself).
-    void run_center_command();
+    // `user_zoom` SAYS WHO ASKED (architect 2026-11-17, send U): true, a level
+    // the command moved puts out the four lamps a zoom darkens
+    // (darken_zoom_lamps_if_level_moved) — every caller but one; false for
+    // the A/B audition's centrings alone (GuiAbAudition::apply_working_zoom),
+    // the act's internal `c` and no zoom of the user's.
+    void run_center_command(bool user_zoom);
     // THE CENTRE KEY'S ACT (architect 2026-09-23): bare `c` (the live arm and
     // the `h` view's claim), the Center button's synthesized chord, both
     // steps of the paired march and, since 2026-09-29, the A/B audition's
@@ -2190,7 +2234,9 @@ struct GuiInputHandler {
     // caller is another cluster: the audition opens each of its halves with
     // this act on the tab that half plays, run inside the switch's own frame
     // (ab_audition.h carries the rule and the ordering it owes the sequence).
-    void run_center_key_command();
+    // `user_zoom` is handed to run_center_command as it stands: false from
+    // the audition alone.
+    void run_center_key_command(bool user_zoom);
 
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
@@ -3516,9 +3562,11 @@ private:
     void auto_clear_crossed_trim();
 
     // THE SHARED TRIM COMMIT TAIL, in code rather than in prose: every
-    // trim-SETTING commit runs the same three acts in the same order
+    // trim-SETTING commit runs the same four acts in the same order
     // (auto_clear_crossed_trim, the waveform repaint, the target-render
-    // trigger) and NO PLAYHEAD WRITE (architect 2026-11-07, session 88: no
+    // trigger, and the TRIM arm lamp put out — architect 2026-11-17, send U:
+    // a trim write ends the sweep posture, set_trim_armed) and NO PLAYHEAD
+    // WRITE (architect 2026-11-07, session 88: no
     // trim writer moves the playhead, the rule at the head of
     // input_trim.cpp), and this member is their one spelling. FIVE
     // CALLERS (re-derived 2026-10-28 night, the trim presets list's apply
@@ -3534,8 +3582,8 @@ private:
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
     // handle_trim_clear_both (the Shift+T maximizer resets rather than
-    // auto-clears — a non-setter), which spells its own reset, repaint and
-    // trigger.
+    // auto-clears — a non-setter), which spells its own reset, repaint,
+    // trigger and the TRIM lamp's put-out.
     void commit_trim_mutation();
 
     // Plain trim-bar press routing — the PLAIN press's route into a trim

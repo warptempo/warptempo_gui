@@ -543,7 +543,10 @@ struct GuiPlaybackLifecycle {
     // center is placed on it, one off screen to the left paged in); the dark
     // edge writes nothing else, the camera staying where the scroll left it. The face repaints through the per-tick comparator,
     // so this mutator owes no damage. Refused in the `h` view by the
-    // dispatch (bare `f` is off that mode's allowlist), never here.
+    // dispatch (bare `f` is off that mode's allowlist), never here. ITS DARK
+    // EDGE IS ALSO GuiInputHandler::darken_zoom_lamps' road (architect
+    // 2026-11-17, send U: a user zoom and the `h` view's entry put the lamp
+    // out), which calls it on a lit lamp alone and damages the face itself.
     // THE RADIO (architect 2026-10-29): the lit edge also puts RESTRICT out
     // (AppState::restrict = false); the dark edge leaves it alone.
     void toggle_follow();
@@ -557,7 +560,9 @@ struct GuiPlaybackLifecycle {
     // play stays in the window, and the stop is the tick's alone. The face
     // repaints through the per-tick comparator, so this mutator owes no
     // damage. Refused in the `h` view by the dispatch (bare `r` is off that
-    // mode's allowlist), never here.
+    // mode's allowlist), never here. ITS DARK EDGE IS ALSO
+    // GuiInputHandler::darken_zoom_lamps' road (architect 2026-11-17, send
+    // U), toggle_follow's shape.
     void toggle_restrict();
 
 private:

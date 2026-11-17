@@ -339,8 +339,11 @@ void GuiAbAudition::apply_working_zoom() {
     // obey). AND IT ARMS THE HOLD POSTURE AS THE KEY DOES (architect
     // 2026-09-29): the call is the centre key's act, run_center_key_command
     // — run_center_command, then AppState::camera_hold armed — so the act's
-    // centrings are `c`'s in the posture they leave too.
-    if (input != nullptr) input->run_center_key_command();
+    // centrings are `c`'s in the posture they leave too. BUT NOT IN THE LAMPS
+    // (architect 2026-11-17, send U): the act's internal `c` is no zoom of
+    // the user's, so it passes user_zoom false and puts out none of the four
+    // lamps a user zoom darkens (GuiInputHandler::darken_zoom_lamps).
+    if (input != nullptr) input->run_center_key_command(/*user_zoom=*/false);
 }
 
 void GuiAbAudition::fire_if_due() {

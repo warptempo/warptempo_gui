@@ -2001,7 +2001,8 @@ enum class RedesignButton {
     // architect 2026-09-23, reinstated the evening the Shift+C chase posture
     // that had replaced it that morning was deleted): lit, every project play
     // is followed by the follow scroll (Viewport::follow_scanner); it stays lit across plays and
-    // stops until `f` puts it out. It wears a lamp, reading the live bit its
+    // stops until `f`, RESTR's lit edge, a user zoom or the `h` view's entry
+    // puts it out (AppState::follow). It wears a lamp, reading the live bit its
     // own chord flips. It GREYS IN THE `h` VIEW, whose allowlist does not name
     // `f`, through the derived partition; it does NOT grey on a locked tab or
     // under the grid-iterations lock, bare `f` being navigation.
@@ -2027,8 +2028,9 @@ enum class RedesignButton {
     // whose record holds the whole rule: lit, the next single-contact drag on
     // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
     // its down point instead of the pan; only a second press, a committed
-    // sweep or ADD SEL's lit edge (the radio, 2026-11-10) puts it out; dark
-    // at every project open, lit across a tab switch.
+    // sweep, ADD SEL's lit edge (the radio, 2026-11-10), any other trim
+    // write, a user zoom or the `h` view's entry (architect 2026-11-17, send
+    // U) puts it out; dark at every project open, lit across a tab switch.
     // TRIM IS BAND (input_trim.cpp's head), so it stays LIVE on a locked tab
     // and under the grid-iterations lock (bare `w` on the read-only
     // allowlist, which the iteration gate inherits), greying with no piece
@@ -4777,10 +4779,16 @@ struct AppState {
     // audition's phase and returns under the player.
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_follow, the chokepoint bare
     //     `f` and its icon-row button share — and RESTRICT's lit edge
-    //     (toggle_restrict), which puts it out. Nothing else lights or
-    //     darkens it: no stop, no launch, no pan, no placement click, no load
-    //     in place. Refused in the `h` view (off that mode's allowlist);
-    //     admitted under both locks (navigation).
+    //     (toggle_restrict), which puts it out. A USER ZOOM AND THE `h` VIEW'S
+    //     ENTRY PUT IT OUT TOO (architect 2026-11-17, send U: "Trim, add
+    //     selection, follow and restrict should be turned off when a zoom
+    //     action takes place"; he lights it again after zooming), through
+    //     toggle_follow's dark edge (GuiInputHandler::darken_zoom_lamps, its
+    //     roads and the "real level change" test at its declaration). Nothing
+    //     else lights or darkens it: no stop, no launch, no pan, no tab
+    //     switch, no placement click, no load in place, no overlay, no
+    //     programmatic landing. Refused in the `h` view (off that mode's
+    //     allowlist); admitted under both locks (navigation).
     //   * A RADIO WITH RESTRICT (architect 2026-10-29): lighting either lamp
     //     puts the other out, so one camera posture stands at a time — with
     //     both lit the scroll would carry the window along before RESTRICT's
@@ -4811,8 +4819,10 @@ struct AppState {
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_restrict, the chokepoint
     //     bare `r` and its icon-row button share — and FOLLOW's lit edge
     //     (toggle_follow), which puts it out: THE RADIO, stated at follow
-    //     above. Refused in the `h` view (off that mode's allowlist);
-    //     admitted under both locks (navigation).
+    //     above. A user zoom and the `h` view's entry put it out through its
+    //     dark edge, FOLLOW's rule (architect 2026-11-17, send U;
+    //     GuiInputHandler::darken_zoom_lamps). Refused in the `h` view (off
+    //     that mode's allowlist); admitted under both locks (navigation).
     bool    restrict               = false;
 
     // THE TRIM ARM — THE `w` LAMP (architect 2026-11-07, session 87, the TRIM
@@ -4827,30 +4837,45 @@ struct AppState {
     // (GuiInputHandler::touch_sweep_armed, the platform's sweep-armed query;
     // begin_touch_region). "IF I TURN IT ON, IT'S DELIBERATE AND FOR A SWEEP"
     // — ONLY A SECOND PRESS OF THE LAMP, A COMMITTED SWEEP (one that moved,
-    // commit_region_sweep) OR ADD SEL LIGHTING PUTS IT OUT: a tap on the
-    // waveform (the ordinary
-    // tap), a pinch, the barrel-held zoom, a tab switch, an overlay or a
-    // modal opening all leave it lit — AND ADD SEL'S LIT EDGE PUTS IT OUT,
-    // THE RADIO (architect 2026-11-10, session 101, "1 radio": that lamp arms
+    // commit_region_sweep), ADD SEL LIGHTING, ANY OTHER TRIM WRITE, A USER
+    // ZOOM OR THE `h` VIEW'S ENTRY PUTS IT OUT: a tap on the waveform (the
+    // ordinary tap), a pan, a tab switch, an overlay or a modal opening all
+    // leave it lit. A TRIM WRITE BY OTHER MEANS ENDS THE POSTURE as the
+    // sweep does (architect 2026-11-17, send U: the endcap and bridge drag's
+    // release, the bound-set click, a trim preset's apply, the typed
+    // `trim_*=` commit — the shared tail, commit_trim_mutation — and the
+    // reset's write, handle_trim_clear_both); A USER ZOOM THAT MOVES THE
+    // LEVEL (the zoom keys, the pinch, the barrel-held zoom, FIT and its
+    // recall, the span framings, `c` and the acts that run it) AND THE `h`
+    // VIEW'S ENTRY put out all four of TRIM, ADD SEL, FOLLOW and RESTR (the
+    // same ruling: "Trim, add selection, follow and restrict should be
+    // turned off when a zoom action takes place";
+    // GuiInputHandler::darken_zoom_lamps); AND ADD SEL'S LIT EDGE PUTS IT
+    // OUT, THE RADIO (architect 2026-11-10, session 101, "1 radio": that lamp arms
     // the next waveform drag too, as THE ADD SEL SWEEP; its lit edge, bare
     // `k`'s arm, calls the writer below, and this lamp's lit edge puts ADD
     // SEL out inside it — FOLLOW / RESTRICT's shape; the sweep-armed query
-    // now answers for either lamp). INERT IN THE `h` VIEW, its key hidden
-    // there (bare `w` on no allowlist of the view), the bit surviving the
-    // visit. LIVE on a locked tab and under the grid-iterations lock (TRIM IS
+    // now answers for either lamp). DARK IN THE `h` VIEW, the entry putting
+    // it out and its key hidden there (bare `w` on no allowlist of the
+    // view). LIVE on a locked tab and under the grid-iterations lock (TRIM IS
     // BAND, input_trim.cpp's head: bare `w` on the read-only allowlist the
     // iteration gate inherits).
     //   * ONE WRITER: GuiInputHandler::set_trim_armed — bare `w`'s arm (the
     //     key's lift reaching it by synthesizing that press), the sweep's
-    //     commit and ADD SEL's lit edge (the radio).
+    //     commit, ADD SEL's lit edge (the radio), the other trim writes and
+    //     darken_zoom_lamps (its callers listed at its declaration).
     bool    trim_armed             = false;
 
     // FOLLOW SUSPENDED FOR THE PLAY IN FLIGHT — the pan rule (architect
     // 2026-07-30, "every pan suppresses", kept for the reinstated lamp
     // 2026-09-23): a camera change during a play means the user has taken the
     // viewport away to look elsewhere, so the follow scroll stops snatching
-    // it back until that play ends. The lamp stays lit. Meaningful only while a
-    // project play runs; its value at rest is never read.
+    // it back until that play ends. The lamp stays lit — but a USER ZOOM
+    // that moves the level puts the lamp itself out (architect 2026-11-17,
+    // send U; GuiInputHandler::darken_zoom_lamps), so for those roads the
+    // suspension is moot and it is the pans, the tab and view switches, the
+    // programmatic landings and a moving resize it still serves. Meaningful
+    // only while a project play runs; its value at rest is never read.
     //   * SET by every CHANGED CAMERA at the chokepoint above
     //     (clamp_viewport_start) — the touch pan, the pointer zooms, the zoom
     //     step,
@@ -5294,33 +5319,43 @@ struct AppState {
     // selection_consumed's inventory below).
     //
     // IT STAYS LIT UNTIL AN ACT SPENDS THE SELECTION, ITS OWN SWEEP IS DONE,
-    // TRIM LIGHTS, OR `k` PUTS IT OUT (architect 2026-09-10 for the posture,
-    // 2026-09-12 for the acts, 2026-11-10 for the sweep and the radio). It is
+    // TRIM LIGHTS, A USER ZOOM MOVES THE LEVEL, THE `h` VIEW OPENS, OR `k`
+    // PUTS IT OUT (architect 2026-09-10 for the posture, 2026-09-12 for the
+    // acts, 2026-11-10 for the sweep and the radio, 2026-11-17 for the zoom
+    // and the view's entry, send U). It is
     // a TOOL POSTURE, not a per-selection posture: it says what the POINTER
     // does to a flag and to the next waveform drag, so nothing about the
     // selection's own CONTENT can end it. A Tab walk, Ctrl+Tab, a
     // waveform click, an undo restore and a LOAD IN PLACE all
     // leave it lit, and the plain flag press keeps taking the ctrl branch
     // until an act consumes what was built (a marker drop among those acts
-    // since 2026-11-11, selection_consumed's inventory). ITS OFF EDGES ARE FOUR: the
+    // since 2026-11-11, selection_consumed's inventory). ITS OFF EDGES ARE SIX: the
     // toggle; selection_consumed (the acts that spend a selection, below);
     // THE SWEEP'S COMMIT — a sweep that moved past the slop is the act the
     // lamp armed and spends it, TRIM's one-shot rule (commit_region_sweep;
     // a refused or unmoved begin leaves it lit), WHICH ENDS THE STICKY-CTRL
     // CLICK POSTURE TOO, the consequence the ruling accepted: press the lamp
-    // again to keep adding by click; and TRIM's LIT EDGE, THE RADIO
+    // again to keep adding by click; TRIM's LIT EDGE, THE RADIO
     // (architect 2026-11-10, "1 radio": GuiInputHandler::set_trim_armed puts
     // this out, and this bit's lit edge, bare `k`'s arm, puts TRIM out —
-    // FOLLOW / RESTRICT's shape, each lamp arming the next waveform drag).
+    // FOLLOW / RESTRICT's shape, each lamp arming the next waveform drag);
+    // and A USER ZOOM THAT MOVES THE LEVEL and THE `h` VIEW'S ENTRY
+    // (architect 2026-11-17, send U: "Trim, add selection, follow and
+    // restrict should be turned off when a zoom action takes place";
+    // GuiInputHandler::darken_zoom_lamps, which damages the row 8 face as
+    // bare `k` does). A pan leaves it lit, and inside the `h` view bare `k`
+    // may light it again for the diff flags.
     // That is bare `f`'s posture exactly
     // (AppState::follow): the session lamps are one family, in no settings
     // vocabulary, never serialized, and per-project state for as long as the
     // project stays open. `follow` and `restrict` are written by their two
     // toggles alone, each lit edge putting the other out (the radio,
     // 2026-10-29); this bit took a COMPANION WRITE, the act class
-    // below (selection_consumed), a USE CASE ending, and since 2026-11-10
-    // the radio partner's lit edge (TRIM's) and its own sweep's commit
-    // besides. (Bare `x`'s VALUE DRAG lamp was the
+    // below (selection_consumed), a USE CASE ending, since 2026-11-10 the
+    // radio partner's lit edge (TRIM's) and its own sweep's commit, and
+    // since 2026-11-17 a user zoom and the `h` view's entry besides (the
+    // last two FOLLOW's and RESTRICT's off edges too, through their
+    // toggles). (Bare `x`'s VALUE DRAG lamp was the
     // family's third member from 2026-09-10 until 2026-09-13, when the
     // architect deleted it for a posture derived from the view; bare `[`'s
     // VALUE DRAG LAMP is its third member again since 2026-10-11, its off
@@ -17538,9 +17573,9 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         case RedesignButton::IconRestrict:
             return a.restrict;
         // THE TRIM ARM LAMP (architect 2026-11-07, session 87): the same
-        // toggle pattern, reading the live bit bare `w` flips and a committed
-        // sweep puts out (AppState::trim_armed), so the lit face and the arm
-        // cannot drift; the per-tick comparator repaints the sweep's put-out.
+        // toggle pattern, reading the live bit bare `w` flips and its off
+        // edges put out (AppState::trim_armed), so the lit face and the arm
+        // cannot drift; every edge damages the face itself (set_trim_armed).
         case RedesignButton::IconTrimArm:
             return a.trim_armed;
         // The Waveform Magnification lamp (architect 2026-09-22, reversed

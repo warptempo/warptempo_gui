@@ -1398,6 +1398,13 @@ void GuiInputHandler::open_history_mode_fresh() {
     // product (the rule at stop_playback_if_playing) — below init()'s
     // UNAVAILABLE return, so a mode that does not open silences nothing.
     playback_lifecycle.stop_playback_if_playing();
+    // THE ENTRY PUTS OUT TRIM, ADD SEL, FOLLOW AND RESTR (architect
+    // 2026-11-17, send U; GuiInputHandler::darken_zoom_lamps) — an edge of
+    // its own, the entry moving no camera: the view arrives with no sweep
+    // armed and no camera posture lit.
+    // In here TRIM, FOLLOW and RESTR stay dark (their keys off the view's
+    // allowlist); ADD SEL may be lit again for the diff flags (bare `k`).
+    darken_zoom_lamps();
     fresh.active = true;
     fresh.index  = 0;      // the most recent commit, at every entry
     fresh.focus  = -1;
@@ -2392,9 +2399,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
         cycle_history_diff_flag_focus(true, MarkerLandingFrame::Center);
-        run_center_key_command();
+        run_center_key_command(/*user_zoom=*/true);
         active_views.switch_active_tab_view_to(home);
-        run_center_key_command();
+        run_center_key_command(/*user_zoom=*/true);
         return true;
     }
     // THE STEP'S CAMERA IS THE LIVE WALK'S OWN ANSWER (architect 2026-09-16,
@@ -2503,7 +2510,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // CLAIM alone — `c` is the mode's own vocabulary, so it must return true
     // here rather than fall to the allowlist, which does not admit it.
     if (key == GuiKeys::C) {
-        run_center_key_command();
+        run_center_key_command(/*user_zoom=*/true);
         return true;
     }
 
@@ -7027,9 +7034,13 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 // double-click and Shift+0 (Zoom to Fit's long press) run, called as they
 // call it — run_span_framing_command, a camera act alone (no bound, the
 // playhead and the selection untouched; its applier's chokepoint clears the
-// hold), a proper sub-window framed with the edge margin, the full window the
-// whole song, idempotent where the camera already rests there. It runs on the
-// no-op arm too: the act is "select this preset", and framing is part of it.
+// hold; a level it moves puts out TRIM, ADD SEL, FOLLOW and RESTR, a user
+// zoom's rule, architect 2026-11-17, send U), a proper sub-window framed
+// with the edge margin, the full window the whole song, idempotent where the
+// camera already rests there. A WRITTEN PAIR PUTS TRIM OUT in any case,
+// through the shared tail (commit_trim_mutation, the same ruling). The
+// framing runs on the no-op arm too: the act is "select this preset", and
+// framing is part of it.
 // The framing lands UNDER THE STANDING BOX — the trim bar is the view bar's
 // lane and the waveform under it, both covered while the list stands
 // (folder_overlay.h's head) — and shows at the list's close, whose damage is
@@ -8243,8 +8254,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // next waveform drag, the two sweeps one drag apart; TRIM's face darkens
     // in this frame too, through its setter's own damage (set_trim_armed
     // damages TRIM's own face on every edge). The off edge puts nothing
-    // out. In the `h` view the edge still puts TRIM out (the bit
-    // survives the view).
+    // out. In the `h` view TRIM stands dark: the view's entry puts it out
+    // (darken_zoom_lamps, architect 2026-11-17, send U) and bare `w` is off
+    // the view's allowlist.
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {
         app.add_to_selection = !app.add_to_selection;
         if (app.add_to_selection && app.trim_armed) set_trim_armed(false);
@@ -8594,12 +8606,12 @@ void GuiInputHandler::jump_to_value_source() {
         }
     }
     // THE ONE TAIL, reached by both roads: the five acts in their ruled order.
-    run_center_command();
+    run_center_command(/*user_zoom=*/true);
     active_views.switch_active_tab_view_to(
         app.active_tab_view == 'A' ? 'B' : 'A');
     selection.set_single_selection(destination);
     land_playhead_on_marker(app, audio, viewport, destination);
-    run_center_command();
+    run_center_command(/*user_zoom=*/true);
     // Its closing `c` is an explicit centring, so the jump arms the HOLD
     // posture behind it (AppState::camera_hold).
     app.camera_hold = true;
@@ -8927,10 +8939,10 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
         cycle_marker_focus(true, MarkerLandingFrame::Center);
-        run_center_key_command();
+        run_center_key_command(/*user_zoom=*/true);
         active_views.switch_active_tab_view_to(home);
         cycle_marker_focus(true, MarkerLandingFrame::Center);
-        run_center_key_command();
+        run_center_key_command(/*user_zoom=*/true);
         return true;
     }
 
@@ -9168,7 +9180,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     case GuiKeys::F:
         // Toggle the follow lamp (architect 2026-09-23). The whole body lives
         // in GuiPlaybackLifecycle::toggle_follow, shared with the icon-row
-        // button's synthesized chord and with nothing else. History-less,
+        // button's synthesized chord and, for its dark edge alone, the four
+        // lamps' darkening a user zoom or the `h` view's entry runs
+        // (darken_zoom_lamps, architect 2026-11-17, send U). History-less,
         // legal on a locked tab and under the grid-iterations lock; refused in
         // the `h` view at that mode's allowlist.
         playback_lifecycle.toggle_follow();
@@ -9177,7 +9191,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // Toggle the restrict lamp (architect 2026-10-29), Follow's radio
         // partner. The whole body lives in GuiPlaybackLifecycle::
         // toggle_restrict, shared with the icon-row button's synthesized
-        // chord and with nothing else. History-less, legal on a locked tab and
+        // chord and, for its dark edge alone, darken_zoom_lamps (architect
+        // 2026-11-17, send U). History-less, legal on a locked tab and
         // under the grid-iterations lock; refused in the `h` view at that
         // mode's allowlist. Inside the render player bare `r` is Repeat One,
         // taken by the player's router before this dispatch is reached.
@@ -9187,9 +9202,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // Toggle the TRIM arm lamp (architect 2026-11-07, session 87; the
         // NOISE lamp's toggle stood on the letter 2026-10-28 to 2026-11-05).
         // The setter is GuiInputHandler::set_trim_armed, shared with the
-        // band's TRIM key's synthesized chord, the sweep's commit and ADD
-        // SEL's lit edge; its own lit edge puts ADD SEL out (the radio,
-        // 2026-11-10).
+        // band's TRIM key's synthesized chord and the off edges its
+        // declaration lists (the sweep's commit, ADD SEL's lit edge, every
+        // other trim write, a user zoom and the `h` view's entry); its own
+        // lit edge puts ADD SEL out (the radio, 2026-11-10).
         // History-less, legal on a locked tab and under the grid-iterations
         // lock (trim is band); refused in the `h` view at that mode's
         // allowlist. Silent: the lamp's face shows the new state.
@@ -9246,7 +9262,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // (run_center_key_command; AppState::camera_hold). This arm is
         // unreachable while the mode stands — handle_history_mode_key claims
         // `c` above this dispatch — so the owner's fork decides nothing for it.
-        run_center_key_command();
+        run_center_key_command(/*user_zoom=*/true);
         break;
     case GuiKeys::Home:
         // The trim-begin jump. The body is shared with End and with the two
