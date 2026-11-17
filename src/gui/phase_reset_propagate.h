@@ -48,15 +48,57 @@ std::string format_domain_timestamp(double source_frame, const AppState& app,
 // the P-column question is closed and the family is never widened). Pure:
 // they read the AppState and write nothing.
 //
-// THE COPY'S LAST RUNG, NothingToCopy, is phase_reset_copy_captures below,
-// asked BEFORE the clipboard is touched: until 2026-09-24 the arm ran
+// THE COPY'S NothingToCopy rung is phase_reset_copy_captures below, asked
+// BEFORE the clipboard is touched: until 2026-09-24 the arm ran
 // copy_from_selection first and only then found the clipboard empty, so a
 // copy over a run with nothing to capture ERASED whatever the clipboard held.
 // Now such a copy refuses and the clipboard stands as it was.
+//
+// THE STRUCK RUNG, LAST ON BOTH LADDERS (architect 2026-11-17: "phase rest
+// copy and apste shoudl fails and card saying something like 'range contains
+// struck marker'"; his earlier reason, struck markers "could mess up a
+// copy-paste of phase resets"): the family pairs blocks by the warp markers'
+// LABELS, and a struck marker is one whose label or tempo the render
+// normalizes away (a coincident member, a dangling, ambiguous or
+// extreme-ratio ref, an ambiguous label's definitions), so a struck row in
+// the range can pair the wrong blocks. STRUCK IS THE LANE'S OWN VERDICT,
+// warp_red_flag_set_cached's `red` (warp_frame_map_view.h) — the set the flag
+// pass paints, disabled coincident rows included — never a second test. Both
+// ranges are spans of warp STORE ROWS, every row inside them asked, disabled
+// ones included:
+//   * THE COPY'S (StruckInRange): from the first selected row through the
+//     LAST CAPTURED BLOCK'S EXTENT — the rows [first_sel, end), end the
+//     larger of section_end_index(last captured owner), the row that closes
+//     that block (its own row not in the range: it bounds the block by its
+//     frame, which no strike moves, a struck row still participating), and
+//     last_sel + 1, so every selected row is asked too (a selected tail past
+//     the extent captures nothing, but it is the range the user sees). The
+//     last captured owner is the last selected row warp_marker_propagates
+//     admits, copy_from_selection's own membership, and the extent is the
+//     same section_end_index that body measures its blocks with.
+//   * THE PASTES' (StruckInRange): from the anchor through the extent of the
+//     LAST DESTINATION BLOCK THE LOCKSTEP REACHES — the rows [anchor, end),
+//     end section_end_index of the owner of destination block
+//     min(clipboard blocks, destination blocks) − 1, walk_named_blocks'
+//     membership counted from the anchor (propagate_blocks.h). The lockstep's
+//     WHOLE REACH, not its label-matched prefix: a struck row is what can
+//     make the labels match or diverge falsely, so where the walk would stop
+//     is not to be trusted ahead of it. A walk that pairs no block has no
+//     range and passes this rung (the paste cards kNothingMatched).
+// It is the last rung because each earlier one is the more basic answer and
+// the range needs them: the copy's range has no end without a captured block
+// (NothingToCopy) and none without one run (NotOneRun); the pastes' none
+// without a clipboard and one anchor. Asked at the press, before the
+// clipboard is touched, before the confirmation prompt opens and before
+// either paste writes, AND BY BOTH KEYS' FACES EVERY TICK: the red set is
+// memoized on the warp store's generation and each range walk is linear in
+// the rows it spans, so COPY and PASTE both grey on it.
 enum class PhaseResetCopyRefusal : uint8_t {
     None, NotWarpColumn, NothingSelected, NotOneRun, NothingToCopy,
+    StruckInRange,
 };
-PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app);
+PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app,
+                                               const GuiAudio& audio);
 
 // WOULD copy_from_selection CAPTURE ANYTHING — true iff the selection holds a
 // marker that warp_marker_propagates (in range, LABELED and EFFECTIVELY
@@ -71,11 +113,12 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app);
 // 2026-10-21; the walk stops at the first propagating member).
 bool phase_reset_copy_captures(const AppState& app);
 
-// The two pastes' one ladder (their arms say why).
+// The two pastes' one ladder (their arms say why; the struck rung above).
 enum class PhaseResetPasteRefusal : uint8_t {
-    None, NotWarpColumn, ClipboardEmpty, NotOneAnchor,
+    None, NotWarpColumn, ClipboardEmpty, NotOneAnchor, StruckInRange,
 };
-PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app);
+PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app,
+                                                 const GuiAudio& audio);
 
 // Copy/paste operations for the W-mode phase reset propagate feature.
 // Both methods operate on warp-marker selection in W-mode and mutate
@@ -136,12 +179,16 @@ struct PhaseResetPropagate {
     // full at section_end_index, warpmarkers.h). Non-mutating
     // beyond clipboard state — no undo entry, no marker changes.
     // THE CALLER HAS ALSO ASKED phase_reset_copy_captures (2026-09-24), so
-    // the clipboard this replaces is never replaced by an empty one.
+    // the clipboard this replaces is never replaced by an empty one, and the
+    // ladder's struck rung (2026-11-17), so no row of the copy's range is
+    // struck (the rung's block above).
     void copy_from_selection();
 
     // Build the named-block list for the paste confirmation prompt
     // and stash the anchor on AppState. Caller has verified W-mode +
-    // exactly one warp marker selected and a non-empty clipboard.
+    // exactly one warp marker selected, a non-empty clipboard and no struck
+    // row in the destination range (the paste's ladder,
+    // phase_reset_paste_refusal), so a struck range never raises the prompt.
     void open_paste_confirmation();
 
     // Materialize the paste against the destination anchor stashed in
@@ -154,8 +201,9 @@ struct PhaseResetPropagate {
     // of 2026-10-21): propagate only the disabled/enabled *state* of
     // clipboard placements onto matching destination phase resets,
     // leaving positions untouched. Caller has verified W-mode + exactly
-    // one warp marker selected + non-empty clipboard (the paste's ladder,
-    // phase_reset_paste_refusal). Walks the
+    // one warp marker selected + non-empty clipboard + no struck row in the
+    // destination range (the paste's ladder, phase_reset_paste_refusal,
+    // 2026-11-17). Walks the
     // destination block list in lockstep with the clipboard, stops at
     // the first label divergence or per-block phase-reset count
     // mismatch, and produces at most one undo entry covering all

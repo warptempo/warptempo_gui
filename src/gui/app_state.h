@@ -2878,8 +2878,10 @@ enum class RedesignButton {
     // run with PASTE behind it (kRow8Groups, paint_handler.cpp), and IT
     // ADMITS NOTHING: Ctrl+P and Ctrl+Shift+P, the two pastes, are PASTE's
     // own base chord and hold. THE FACE IS THE COPY'S
-    // (phase_reset_copy_refusal through phase_reset_copy_actionable), one
-    // line of tooltip. The `h` view does not paint it (its allowlist names no
+    // (phase_reset_copy_refusal through phase_reset_copy_actionable), a
+    // struck warp row in the copy's range among its rungs (architect
+    // 2026-11-17: "phase rest copy and apste shoudl fails and card saying
+    // something like 'range contains struck marker'"), one line of tooltip. The `h` view does not paint it (its allowlist names no
     // `p` chord — history_mode_hides_button). NEITHER LOCK GREYS IT
     // (architect 2026-11-17, send U: "We should allow copy in read-only, the
     // copy phase resets button."): bare P is on read_only_key_blocked's
@@ -2896,7 +2898,9 @@ enum class RedesignButton {
     // destination resets in lockstep, positions untouched, no prompt
     // (PhaseResetPropagate::paste_state_apply) — Switch Tab's shape. THE
     // TWIN RULE DECIDES ITS FACE AND IT ORS: lit where either paste would
-    // act (redesign_button_enabled). The `h` view does not paint it, and the
+    // act (redesign_button_enabled), the two pastes' one ladder — a struck
+    // warp row in the destination range among its rungs since 2026-11-17
+    // (phase_reset_paste_refusal, phase_reset_propagate.h). The `h` view does not paint it, and the
     // read-only lock greys it (neither paste chord is on either allowlist).
     // NO LAMP,
     // NO REPEAT (a paste raises a prompt, a state paste repeats onto itself).
@@ -13952,7 +13956,7 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete
 //     is a delete in every column;
-//   * THE CLIPBOARD COPY, bare P, past its three gates;
+//   * THE CLIPBOARD COPY, bare P, past its ladder;
 //   * THE TWO PROPAGATE PASTES — the phase family's confirmed placement
 //     paste and its state paste (PhaseResetPropagate::paste_apply,
 //     ::paste_state_apply), each past its own last refusal;
@@ -15653,12 +15657,14 @@ inline bool reset_trim_would_act(const AppState& a, int64_t total_frames) {
 
 // THE COPY PHASE RESETS KEY'S LADDER TERM (architect 2026-10-24): true iff
 // phase_reset_copy_refusal (phase_reset_propagate.h) answers None — the warp
-// column, a selection, one consecutive run, something to capture. Defined in
+// column, a selection, one consecutive run, something to capture, no struck
+// row in the copy's range (architect 2026-11-17, the rung's record at the
+// ladder; the audio is the strike's sample rate and length). Defined in
 // phase_reset_propagate.cpp beside the ladder, whose header includes this
 // one. ONE READER: the key's face (redesign_button_enabled), which adds no
 // lock term (both locks admit the copy, 2026-11-17); the bare P arm reads the
 // ladder itself to card each rung.
-bool phase_reset_copy_actionable(const AppState& a);
+bool phase_reset_copy_actionable(const AppState& a, const GuiAudio& audio);
 
 // WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR — the ask-ahead
 // composition of the plain launch's own gates in the act's own order (the
@@ -15703,11 +15709,13 @@ inline bool history_view_open_refused_by_publishing(const AppState& a) {
 // WOULD EITHER PHASE-RESET PASTE ACT — the PASTE key's face term (architect
 // 2026-11-08, session 93): the two pastes' ONE cheap ladder
 // (phase_reset_paste_refusal, phase_reset_propagate.h — the warp column, a
-// non-empty clipboard, one selected anchor), which Ctrl+P and Ctrl+Shift+P
-// card on term for term, so the twin rule's OR is this one ladder. Defined in
-// phase_reset_propagate.cpp beside the ladder. ONE READER: the PASTE key's
-// arm in redesign_button_enabled (the lock terms are the face's own).
-bool phase_reset_paste_actionable(const AppState& app);
+// non-empty clipboard, one selected anchor, no struck row in the destination
+// range, architect 2026-11-17, the rung's record at the ladder), which Ctrl+P
+// and Ctrl+Shift+P card on term for term, so the twin rule's OR is this one
+// ladder. Defined in phase_reset_propagate.cpp beside the ladder. ONE READER:
+// the PASTE key's arm in redesign_button_enabled (the lock terms are the
+// face's own).
+bool phase_reset_paste_actionable(const AppState& app, const GuiAudio& audio);
 
 inline bool redesign_button_enabled(const AppState& a,
                                     const GuiAudio& audio,
@@ -16347,7 +16355,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // COPY PHASE RESETS (architect 2026-10-24) GREYS EXACTLY WHERE BARE P
         // WOULD NOT COPY: THE COPY'S LADDER (phase_reset_copy_actionable: the
         // warp column, a selection, one consecutive run, something to
-        // capture) and nothing else. NEITHER LOCK IS A TERM: both admit the
+        // capture, no struck row in the copy's range — 2026-11-17) and
+        // nothing else. NEITHER LOCK IS A TERM: both admit the
         // copy (architect 2026-11-17, send U: "We should allow copy in
         // read-only, the copy phase resets button." — read_only_key_blocked
         // admits bare P, clipboard-only, writing no store, and the iteration
@@ -16358,22 +16367,24 @@ inline bool redesign_button_enabled(const AppState& a,
         // (history_mode_hides_button: no `p` chord is on that view's
         // allowlist).
         case RedesignButton::IconCopyPhaseResets:
-            return phase_reset_copy_actionable(a);
+            return phase_reset_copy_actionable(a, audio);
         // PASTE (architect 2026-11-08, session 93) GREYS WHERE BOTH ITS
         // PRESSES WOULD REFUSE, the twin rule's OR: Ctrl+P (the tap) and
         // Ctrl+Shift+P (the hold) refuse on the read-only lock (no `p` chord
         // on read_only_key_blocked's allowlist), on the iteration lock (the
         // gate admits the copy alone — the membership at iteration_lock_greys)
         // and on their one shared ladder (phase_reset_paste_actionable: the
-        // warp column, a non-empty clipboard, one selected anchor), so the OR
-        // is that ladder once. The deeper verdicts — the lockstep's divergence,
-        // nothing matched — card behind a lit face, as the copy's empty payload
-        // does behind JUMP's. The `h` view hides it (no `p` chord on its
+        // warp column, a non-empty clipboard, one selected anchor, no struck
+        // row in the destination range — 2026-11-17, the range the lockstep
+        // reaches, cheap enough for the tick), so the OR is that ladder once.
+        // The deeper verdicts — the lockstep's divergence, nothing matched —
+        // card behind a lit face, as the copy's empty payload does behind
+        // JUMP's. The `h` view hides it (no `p` chord on its
         // allowlist, history_mode_hides_button).
         case RedesignButton::IconPastePhaseResets:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
-                   phase_reset_paste_actionable(a);
+                   phase_reset_paste_actionable(a, audio);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other

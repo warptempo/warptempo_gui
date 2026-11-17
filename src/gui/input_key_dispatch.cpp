@@ -7511,13 +7511,23 @@ constexpr const char* kPastePhaseOntoWarp =
 // phase copy.
 constexpr const char* kNothingToCopy =
     "No labeled, enabled markers are selected, so nothing was copied";
+// THE FAMILY'S STRUCK-RANGE SENTENCE (architect 2026-11-17: "phase rest copy
+// and apste shoudl fails and card saying something like 'range contains
+// struck marker'"): the struck rung of both ladders (phase_reset_propagate.h,
+// where both ranges are defined), ONE CONSTANT FOR THREE READERS — the bare P
+// arm and the two pastes through card_phase_reset_paste_refusal. Nothing is
+// copied or pasted and the clipboard stands.
+constexpr const char* kRangeHoldsStruckMarker =
+    "The range contains a struck marker";
 
 // THE TWO PASTES' SHARED LADDER, CARDED — phase_reset_paste_refusal
 // (phase_reset_propagate.h) is the decision, read by both arms below; this
-// is its sentences. True = refused and carded.
+// is its sentences, the struck rung's (2026-11-17) asked here, ahead of the
+// confirmation prompt and of either paste's first write. True = refused and
+// carded.
 bool GuiInputHandler::card_phase_reset_paste_refusal() {
     const char* sentence = nullptr;
-    switch (phase_reset_paste_refusal(app)) {
+    switch (phase_reset_paste_refusal(app, audio)) {
         case PhaseResetPasteRefusal::NotWarpColumn:
             sentence = kPastePhaseOntoWarp;
             break;
@@ -7526,6 +7536,9 @@ bool GuiInputHandler::card_phase_reset_paste_refusal() {
             break;
         case PhaseResetPasteRefusal::NotOneAnchor:
             sentence = kSelectOneAnchor;
+            break;
+        case PhaseResetPasteRefusal::StruckInRange:
+            sentence = kRangeHoldsStruckMarker;
             break;
         case PhaseResetPasteRefusal::None:
             return false;
@@ -7574,8 +7587,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // IS TOUCHED (2026-09-24): a run holding no labeled, enabled marker
         // captures nothing, and until that day the copy ran anyway and then
         // found an EMPTY clipboard — having erased whatever it held. Now it
-        // refuses on kNothingToCopy and the clipboard stands.
-        switch (phase_reset_copy_refusal(app)) {
+        // refuses on kNothingToCopy and the clipboard stands. PAST IT THE
+        // STRUCK RUNG (architect 2026-11-17: "phase rest copy and apste
+        // shoudl fails and card saying something like 'range contains struck
+        // marker'"): a struck warp row in the copy's range refuses on
+        // kRangeHoldsStruckMarker, the clipboard standing too.
+        switch (phase_reset_copy_refusal(app, audio)) {
             case PhaseResetCopyRefusal::NotWarpColumn:
                 notifications.notify(AppState::NotificationClass::Normal,
                                      "Phase resets are copied from warp markers");
@@ -7592,6 +7609,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             case PhaseResetCopyRefusal::NothingToCopy:
                 notifications.notify(AppState::NotificationClass::Normal,
                                      kNothingToCopy);
+                return true;
+            case PhaseResetCopyRefusal::StruckInRange:
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kRangeHoldsStruckMarker);
                 return true;
             case PhaseResetCopyRefusal::None:
                 break;
@@ -7616,9 +7637,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // CTRL+P: paste clipboard phase resets onto the destination anchored at
     // the single selected warp marker (architect 2026-10-24; since 2026-11-08
-    // the PASTE key's base chord). W-mode only; the three
-    // gates — the P view, an empty clipboard, and a selection that is not
-    // exactly one marker — EACH SAY SO ON A CARD since 2026-08-30 (the
+    // the PASTE key's base chord). W-mode only; the four
+    // gates — the P view, an empty clipboard, a selection that is not
+    // exactly one marker and, since 2026-11-17, a struck warp row in the
+    // destination range (the ladder's struck rung, asked before the prompt
+    // opens) — EACH SAY SO ON A CARD since 2026-08-30 (the
     // strictness ruling; the sentences are the family's shared literals, so
     // the three clipboard chords answer one state in one wording). They were
     // silent no-ops under the 2026-07-30 "every refusal in this family is
@@ -7637,13 +7660,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // placements onto the matching destination region's phase resets, in
     // order (architect 2026-10-24, PASTE PHASE RESET STATE resurrected; since
     // 2026-11-08 the PASTE key's hold). Positions are not modified. W-mode
-    // only; its three gates are its Ctrl+P sibling's term for term and CARD
+    // only; its four gates are its Ctrl+P sibling's term for term and CARD
     // in that sibling's own sentences (since 2026-08-30), where the
     // rationale is stated. Unlike Ctrl+P, no confirmation prompt — applies
     // directly. Divergence/mismatch is reported as a notification card
     // rather than a modal dialog.
     if (is_phase_reset_state_paste_key(key, mods)) {
-        // THE THREE GATES ARE ITS SIBLING'S, TERM FOR TERM, so they answer in
+        // THE FOUR GATES ARE ITS SIBLING'S, TERM FOR TERM, so they answer in
         // its sentences (2026-08-30): it is the same family, and a silent arm
         // beside two that speak would be drift.
         if (card_phase_reset_paste_refusal()) return true;

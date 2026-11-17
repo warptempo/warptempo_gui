@@ -182,8 +182,69 @@ std::string format_domain_timestamp(double source_frame,
     return format_timestamp(dom_seconds) + " target time";
 }
 
+// -- THE STRUCK RUNG'S RANGES (architect 2026-11-17; the rule, both ranges'
+// exact bounds and why the rung is last are at the ladders' declaration,
+// phase_reset_propagate.h) ------------------------------------------------
+
+namespace {
+
+// Does any warp store row in [lo, hi) stand in the lane's red set — the
+// strike's one verdict (warp_red_flag_set_cached, the set the flag pass
+// paints), memoized on the warp store's generation, so a per-tick face read
+// is one lower_bound.
+bool warp_rows_hold_struck(const AppState& app, const GuiAudio& audio,
+                           int lo, int hi) {
+    if (lo >= hi) return false;
+    const std::set<int>& red =
+        warp_red_flag_set_cached(app, audio.sample_rate(),
+                                 static_cast<long>(audio.total_frames()))
+            .red;
+    const auto it = red.lower_bound(lo);
+    return it != red.end() && *it < hi;
+}
+
+// THE COPY'S RANGE'S END (exclusive): the larger of the row closing the last
+// captured block (section_end_index of the last selected row
+// warp_marker_propagates admits — copy_from_selection's membership and
+// extent) and last_sel + 1. Asked past NotOneRun and NothingToCopy, so the
+// selection is one run in the store's bounds holding a captured owner.
+int phase_reset_copy_range_end(const std::vector<GuiWarpMarker>& mv,
+                               const std::set<int>& selected) {
+    const int last_sel = *selected.rbegin();
+    int end = last_sel + 1;
+    for (auto it = selected.rbegin(); it != selected.rend(); ++it) {
+        if (warp_marker_propagates(mv, *it)) {
+            end = std::max(end, section_end_index(mv, *it));
+            break;
+        }
+    }
+    return end;
+}
+
+// THE PASTES' RANGE'S END (exclusive), or -1 when the walk pairs no block:
+// the destination walk's membership (walk_named_blocks' one predicate,
+// warp_marker_propagates) counted from the anchor up to the clipboard's block
+// count — the lockstep's pair_count — and the row closing the last block so
+// reached (section_end_index, the extent walk_named_blocks measures).
+int phase_reset_paste_range_end(const std::vector<GuiWarpMarker>& mv,
+                                int anchor, size_t clip_blocks) {
+    const int n = static_cast<int>(mv.size());
+    if (anchor < 0 || anchor >= n || clip_blocks == 0) return -1;
+    int last_owner = -1;
+    size_t reached = 0;
+    for (int i = anchor; i < n && reached < clip_blocks; ++i) {
+        if (!warp_marker_propagates(mv, i)) continue;
+        last_owner = i;
+        ++reached;
+    }
+    return last_owner < 0 ? -1 : section_end_index(mv, last_owner);
+}
+
+}  // namespace
+
 // The propagate ladders; the contract is at the declarations.
-PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app) {
+PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app,
+                                               const GuiAudio& audio) {
     if (app.active_markers_view != 'W')
         return PhaseResetCopyRefusal::NotWarpColumn;
     if (app.selected_markers.empty())
@@ -195,6 +256,11 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app) {
         return PhaseResetCopyRefusal::NotOneRun;
     if (!phase_reset_copy_captures(app))
         return PhaseResetCopyRefusal::NothingToCopy;
+    const auto& mv = app.warpmarkers.markers();
+    if (warp_rows_hold_struck(app, audio, *app.selected_markers.begin(),
+                              phase_reset_copy_range_end(
+                                  mv, app.selected_markers)))
+        return PhaseResetCopyRefusal::StruckInRange;
     return PhaseResetCopyRefusal::None;
 }
 
@@ -210,27 +276,35 @@ bool phase_reset_copy_captures(const AppState& app) {
     return false;
 }
 
-PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app) {
+PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app,
+                                                 const GuiAudio& audio) {
     if (app.active_markers_view != 'W')
         return PhaseResetPasteRefusal::NotWarpColumn;
     if (app.phase_reset_clipboard.empty())
         return PhaseResetPasteRefusal::ClipboardEmpty;
     if (app.selected_markers.size() != 1)
         return PhaseResetPasteRefusal::NotOneAnchor;
+    const int anchor = *app.selected_markers.begin();
+    const int end = phase_reset_paste_range_end(
+        app.warpmarkers.markers(), anchor,
+        app.phase_reset_clipboard.blocks().size());
+    if (end >= 0 && warp_rows_hold_struck(app, audio, anchor, end))
+        return PhaseResetPasteRefusal::StruckInRange;
     return PhaseResetPasteRefusal::None;
 }
 
 // THE COPY KEY'S FACE TERM (the declaration, app_state.h): the copy's ladder
-// alone, the lock being the face's own term.
-bool phase_reset_copy_actionable(const AppState& app) {
-    return phase_reset_copy_refusal(app) == PhaseResetCopyRefusal::None;
+// alone, neither lock being a term.
+bool phase_reset_copy_actionable(const AppState& app, const GuiAudio& audio) {
+    return phase_reset_copy_refusal(app, audio) == PhaseResetCopyRefusal::None;
 }
 
 // THE PASTE KEY'S FACE TERM (architect 2026-11-08, session 93; the
 // declaration, app_state.h): the two pastes' one ladder, the locks being the
 // face's own terms.
-bool phase_reset_paste_actionable(const AppState& app) {
-    return phase_reset_paste_refusal(app) == PhaseResetPasteRefusal::None;
+bool phase_reset_paste_actionable(const AppState& app, const GuiAudio& audio) {
+    return phase_reset_paste_refusal(app, audio) ==
+           PhaseResetPasteRefusal::None;
 }
 
 void PhaseResetPropagate::copy_from_selection() {

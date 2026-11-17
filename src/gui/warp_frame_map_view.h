@@ -112,14 +112,21 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // seed is synthetic (no marker) and never reddens. A member's own
 // marker_effective reason (Coincident) is (1)'s, so (2) never counts it twice.
 //
-// WIDENING THE CUE WIDENS NO REFUSAL BUT THE DROP'S: no act or face reads
-// `red`. The act and face readers that ask whether the render normalizes a
-// marker read `collapsed` (the one normalization that is not already walled on
-// the marker's kind — (2) reddens only refs and definitions), so `red` has
-// only painters for readers: the warp flag pass (waveform_cache.cpp's W and M
-// arms) and the open marker-lane field's face (render.cpp). The warp drop
-// refuses a place inside a coincidence by the same predicate
-// (warp_marker_in_vicinity_of below), so no drop makes a strike.
+// WIDENING THE CUE WIDENS TWO REFUSALS: THE DROP'S AND THE PHASE-RESET
+// PROPAGATE'S. The act and face readers that ask whether the render
+// normalizes a marker read `collapsed` (the one normalization that is not
+// already walled on the marker's kind — (2) reddens only refs and
+// definitions). `red` is read by its painters — the warp flag pass
+// (waveform_cache.cpp's W and M arms), the open marker-lane field's face
+// (render.cpp) and the cut-label tooltip's struck run — and by ONE ACT
+// FAMILY, ON THE STRIKE AS PAINTED: the phase-reset copy and its two pastes
+// refuse a range holding a struck row, and COPY and PASTE grey on it
+// (architect 2026-11-17: "phase rest copy and apste shoudl fails and card
+// saying something like 'range contains struck marker'"; the struck rung,
+// phase_reset_propagate.h), since the family pairs blocks by the labels the
+// strike says the render does not keep. The warp drop refuses a place inside
+// a coincidence by the same predicate (warp_marker_in_vicinity_of below), so
+// no drop makes a strike.
 //
 // Keyed on the warp store generation plus the audio identity (total_frames
 // feeds marker_effective's last-segment envelope distance; the sample rate
@@ -136,7 +143,8 @@ struct WarpRedFlagCache {
     long long markers_gen  = -1;
     int       sample_rate  = 0;
     long      total_frames = 0;
-    std::set<int> red;   // red warp-marker store indices — PAINT readers only
+    std::set<int> red;   // red warp-marker store indices — the painters and
+                         // the phase-reset propagate's struck rung
     // THE COINCIDENT MEMBERS ALONE — (1)'s own subset of `red`, the parser
     // classifier's verdict (warp_coincident_members) kept apart from the
     // label fallbacks it is unioned with above. This is the RENDER-TRUTHFUL
