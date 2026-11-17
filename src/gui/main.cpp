@@ -2181,11 +2181,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // copies the focused marker's resolved value (2026-10-14), and Ctrl+J,
     // which jumps to the marker that value came from (both in
     // input_key_dispatch.cpp); Jump to Defining Marker's face and tooltip,
-    // the button carrying both, are the other readers. They are
-    // what the RESOLVED READOUT and its copy became on 2026-08-29: no
-    // surface DISPLAYS a resolved value any more, which is why the gate lost
-    // the "popup" half of its old name. Its terms are documented above its
-    // declaration in app_state.h.
+    // the button carrying both, and the hovered cue's tooltip (TIPS lit;
+    // marker_tooltip_value / marker_tooltip_text, app_state.h) are the other
+    // readers. The readout and its copy became the two acts on 2026-08-29,
+    // when no surface displayed a resolved value and the gate lost the
+    // "popup" half of its old name; since 2026-11-09 (architect, session
+    // 100) the hover tooltip displays the value again, through the same
+    // gate. Its terms are documented above its declaration in app_state.h.
 
     // The drag and selection-shift operations are methods on the
     // GuiWarpMarkersOps struct (warpmarkers_ops.{cpp,h}).

@@ -2220,8 +2220,12 @@ void render_history_diff_flags(
 
     // THE LEFT CULL'S BOUND, DERIVED FROM THIS COMMIT'S OWN TEXT rather than
     // from the marker lane's own worst case, because THESE LABELS ARE NOT CUT.
-    // The live lane truncates because a marker label is free text the user types
-    // and a runaway one would swamp its neighbours; a diff flag's label is the
+    // The live lane cuts a warp cue's TEMPO SCALE, not free text
+    // (flag_display_text: the scale capped to `*N.NN` and, where a scale
+    // stands, the label definition after it, the `...` standing for whatever
+    // was cut — a scale spells min-4 and can run long, and an uncapped one
+    // would swamp its neighbors; a cue with no scale paints its whole
+    // payload, label definition included); a diff flag's label is the
     // SIDECAR'S OWN TOKEN (history_diff_label), and cutting it would throw
     // away the one thing the flag exists to show — a `chorus=1.05` cut at six
     // bytes would read `chorus...`, which names the label and not the value.
