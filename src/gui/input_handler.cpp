@@ -908,6 +908,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // GuiCarTransport::PendingCarPlay, car_transport.h; the count's
         // writers at AppState::gui_transport_press_count).
         ++app.gui_transport_press_count;
+        app.n2_last_space_ms = monotonic_ms();   // N2's diagnostic (the field)
         // Target-view playback gating: refuse Space-to-play while a
         // target render is in flight (current is stale by
         // definition). Space-to-stop is still honored — if playback
@@ -1015,6 +1016,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // A GUI TRANSPORT PRESS, counted ahead of start()'s refusals (the
         // rule at GuiCarTransport::PendingCarPlay, car_transport.h).
         ++app.gui_transport_press_count;
+        app.n2_last_space_ms = monotonic_ms();   // N2's diagnostic (the field)
         ab_audition.start();
         return;
     }

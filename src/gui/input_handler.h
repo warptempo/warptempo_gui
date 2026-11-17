@@ -1610,6 +1610,12 @@ struct GuiInputHandler {
     AppState::ChromePress take_chrome_press();
     void finish_chrome_press_release(const AppState::ChromePress& arm,
                                      const GuiPointerPlace& at);
+    // N2's diagnostic (architect 2026-11-17; the gate and his words at the
+    // definition, input_pointer.cpp): the PLAY key's lift's dispatch with its
+    // one stderr line, to be removed once N2 is understood.
+    void n2_play_key_dispatch(const AppState::ChromePress& arm, int lift_glyph,
+                              GuiKey key, GuiInputState chord,
+                              bool held_to_shift);
 
     // THE LEVEL CASE'S ARM (architect 2026-11-05, the slider; the
     // contract at AppState::ChromePress's Level kind, the ruling at

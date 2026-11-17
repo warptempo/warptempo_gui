@@ -5098,6 +5098,13 @@ struct AppState {
     // not bump it: the player takes the wire and that clear is the tick's
     // own. The car's own bodies never bump it.
     uint64_t gui_transport_press_count = 0;
+    // N2, THE STOP THAT PLAYS (architect 2026-11-17, his words at
+    // ChromePress::painted_glyph): a diagnostic for N2, to be removed once N2
+    // is understood. The monotonic_ms() of the last glass Space or
+    // Shift+Space dispatch (on_key's two transport arms, beside the count's
+    // bumps), -1 before any; its one reader the media road's stderr line
+    // (main.cpp), which tells a console command from a glass press by it.
+    int64_t n2_last_space_ms = -1;
 
     // (THE font_size FIELD IS GONE — architect approval 2026-08-01. It was the
     // GUI-wide monospace text size in points, and row 7 deleted the monospace
@@ -7247,6 +7254,14 @@ struct AppState {
         double   t0            = 0.0;   // the level's travel fraction at the press
         bool     moved         = false; // a motion left the slop: a drag
         bool     level_changed = false; // some motion moved the level: the lift writes
+        // N2, THE STOP THAT PLAYS (architect 2026-11-17: "add the two lines -
+        // i assume these will run only when the button face shows stop and
+        // the button actually does a play?"): a diagnostic for N2, to be
+        // removed once N2 is understood. The Roster kind's painted glyph
+        // index at the down (RedesignButtonFace::glyph), so the PLAY key's
+        // lift can tell the face the user pressed from the face at its lift;
+        // unread by every other kind.
+        int      painted_glyph = 0;
     };
     ChromePress chrome_press;
 

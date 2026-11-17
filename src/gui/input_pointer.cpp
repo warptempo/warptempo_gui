@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 
@@ -7204,9 +7205,10 @@ bool GuiInputHandler::arm_redesign_press(const GuiPointerPlace& at) {
         const int64_t now = monotonic_ms();
         // Designated: the record's fields are its contract, never a position.
         app.chrome_press = AppState::ChromePress{
-            .kind     = AppState::ChromePress::Kind::Roster,
-            .index    = redesign_button_index(tc.id),
-            .press_ms = now};
+            .kind          = AppState::ChromePress::Kind::Roster,
+            .index         = redesign_button_index(tc.id),
+            .press_ms      = now,
+            .painted_glyph = face.glyph};   // N2's diagnostic (the field)
         invalidate_roster_press_face(app.chrome_press.index);
         // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
@@ -7757,9 +7759,86 @@ void GuiInputHandler::finish_chrome_press_release(
         // THE `h` VIEW'S SAVE IS THE PUBLISH CHORD (save_button_publishes).
         if (save_button_publishes(tc.id, app.history_mode.active))
             chord.shift = true;
+        if (tc.id == RedesignButton::TransportPlayStop) {
+            n2_play_key_dispatch(arm, face.glyph, tc.key, chord, held_to_shift);
+            return;
+        }
         on_key(tc.key, chord);
         return;
     }
+}
+
+// N2, THE STOP THAT PLAYS (architect 2026-11-17: "add the two lines - i
+// assume these will run only when the button face shows stop and the button
+// actually does a play?"): a diagnostic for N2, to be removed once N2 is
+// understood. The PLAY key's lift dispatches its chord through on_key as every
+// key does, and one stderr line follows ONLY when the face the user pressed or
+// lifted on was PAINTED Stop (the arm's glyph at the down, the face's at the
+// lift) and the transport is still live after the dispatch (playing, the
+// scanner standing or an A/B act standing) — a launch, or a Stop that did not
+// stop. Silent on every Stop that stops and on every press of a Play face.
+static const char* n2_phase_name(GuiAuditionSequence::Phase p) {
+    using Phase = GuiAuditionSequence::Phase;
+    switch (p) {
+        case Phase::Idle:        return "Idle";
+        case Phase::OtherFirst:  return "OtherFirst";
+        case Phase::OtherSecond: return "OtherSecond";
+        case Phase::HomeFirst:   return "HomeFirst";
+        case Phase::HomeSecond:  return "HomeSecond";
+    }
+    return "?";
+}
+
+void GuiInputHandler::n2_play_key_dispatch(const AppState::ChromePress& arm,
+                                           int lift_glyph, GuiKey key,
+                                           GuiInputState chord,
+                                           bool held_to_shift) {
+    using Phase = GuiAuditionSequence::Phase;
+    const bool live_stop_face =
+        redesign_button_glyph_swapped(app, RedesignButton::TransportPlayStop);
+    const bool scanner_before  = app.playhead_scanner_active;
+    const bool playing_before  = playback.is_playing();
+    const Phase phase_before   = app.audition_sequence.phase;
+    const bool dead_before     = playback.device_unavailable();
+    const uint64_t launches    = playback_lifecycle.n2_launch_count;
+    playback_lifecycle.n2_toggle_branch = "not reached";
+    on_key(key, chord);
+    const Phase phase_after = app.audition_sequence.phase;
+    const bool live_after = playback.is_playing() ||
+                            app.playhead_scanner_active ||
+                            phase_after != Phase::Idle;
+    if ((arm.painted_glyph == 0 && lift_glyph == 0) || !live_after) return;
+    const char* branch = playback_lifecycle.n2_toggle_branch;
+    if (chord.shift) {
+        branch = phase_before != Phase::Idle ? "ab stop"
+               : phase_after  != Phase::Idle ? "ab started"
+                                             : "ab refused";
+    }
+    const int64_t now = monotonic_ms();
+    std::fprintf(stderr,
+        "N2 stop-that-plays: t=%lld ms; face down=%s lift=%s live=%s; "
+        "chord=%s held=%lld ms; before: scanner=%d playing=%d ab=%s "
+        "dead=%d; branch=%s; after: playing=%d scanner=%d ab=%s "
+        "launches=%llu; start=%lld playhead=%lld trim_begin=%lld; "
+        "view=%c%c tab=%c follow=%d restrict=%d\n",
+        static_cast<long long>(now),
+        arm.painted_glyph != 0 ? "Stop" : "Play",
+        lift_glyph != 0 ? "Stop" : "Play",
+        live_stop_face ? "Stop" : "Play",
+        chord.shift ? (held_to_shift ? "Shift+Space (held)" : "Shift+Space")
+                    : "Space",
+        static_cast<long long>(now - arm.press_ms),
+        scanner_before ? 1 : 0, playing_before ? 1 : 0,
+        n2_phase_name(phase_before), dead_before ? 1 : 0, branch,
+        playback.is_playing() ? 1 : 0, app.playhead_scanner_active ? 1 : 0,
+        n2_phase_name(phase_after),
+        static_cast<unsigned long long>(playback_lifecycle.n2_launch_count -
+                                        launches),
+        static_cast<long long>(app.playhead_scanner_sample),
+        static_cast<long long>(app.playhead_cursor_sample),
+        static_cast<long long>(viewport.trim_range().first),
+        app.active_audio_view, app.active_markers_view, app.active_tab_view,
+        app.follow ? 1 : 0, app.restrict ? 1 : 0);
 }
 
 // THE CHROME BUTTON HOLD-REPEAT, fired from the run loop's tick (architect

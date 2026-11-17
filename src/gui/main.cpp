@@ -2234,13 +2234,65 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // CLEARED at the session tail, so a button pressed between two projects
     // is dropped by the platform's null test rather than delivered against a
     // dead set (the hook captures this session's two owners).
+    // N2, THE STOP THAT PLAYS (architect 2026-11-17: "add the two lines - i
+    // assume these will run only when the button face shows stop and the
+    // button actually does a play?"): a diagnostic for N2, to be removed once
+    // N2 is understood. ONE stderr line when a media command STARTS A PLAY —
+    // on the project road a launch the one launch body ran
+    // (GuiPlaybackLifecycle::n2_launch_count moved), on the render player's
+    // its transport going Live from not Live — and nothing otherwise, so his
+    // glass use never prints it. Its two callers: the hook below (every
+    // command) and the tick's car pending play (car_transport.tick, whose
+    // run_pending_play is the one launch a tick of that cluster makes).
+    using N2PlayerTransport = AppState::RenderPlayer::Transport;
+    auto n2_media_play_line = [&](const char* kind, bool player_road,
+                                  uint64_t launches_before,
+                                  bool player_live_before) {
+        const bool played =
+            player_road
+                ? app.render_player.active &&
+                      app.render_player.transport ==
+                          N2PlayerTransport::Live &&
+                      !player_live_before
+                : playback_lifecycle.n2_launch_count != launches_before;
+        if (!played) return;
+        const int64_t now = monotonic_ms();
+        std::fprintf(stderr,
+            "N2 media-play: t=%lld ms; kind=%s; road=%s; start=%lld "
+            "playhead=%lld trim_begin=%lld item=%d; gui_presses=%llu "
+            "last_space=%lld ms ago; view=%c%c tab=%c\n",
+            static_cast<long long>(now), kind,
+            player_road ? "render player" : "main window",
+            static_cast<long long>(player_road ? playback.cursor()
+                                               : app.playhead_scanner_sample),
+            static_cast<long long>(app.playhead_cursor_sample),
+            static_cast<long long>(viewport.trim_range().first),
+            player_road ? app.render_player.item_index : -1,
+            static_cast<unsigned long long>(app.gui_transport_press_count),
+            static_cast<long long>(app.n2_last_space_ms < 0
+                                       ? -1
+                                       : now - app.n2_last_space_ms),
+            app.active_audio_view, app.active_markers_view,
+            app.active_tab_view);
+    };
     gui.set_on_media_command([&](GuiMediaCommand cmd) {
         if (open_unseen()) return;   // the open's hold (the block above)
+        // N2's diagnostic (n2_media_play_line above): the state before.
+        const bool n2_player_road = app.render_player.active;
+        const bool n2_player_live =
+            app.render_player.transport == N2PlayerTransport::Live;
+        const uint64_t n2_launches = playback_lifecycle.n2_launch_count;
         if (app.render_player.active) {
             render_player.on_media_command(cmd);
         } else {
             car_transport.on_media_command(cmd);
         }
+        static constexpr const char* kN2KindNames[kGuiMediaCommandKindCount] = {
+            "Play", "Pause", "PlayPause", "Stop", "Next", "Previous",
+            "FastForward", "Rewind", "SeekTo", "FocusLost",
+            "FocusLostTransient", "FocusGained"};
+        n2_media_play_line(kN2KindNames[static_cast<int>(cmd.kind)],
+                           n2_player_road, n2_launches, n2_player_live);
     });
 
     // THE PLATFORM'S CLOSE REQUEST (the tablet's Back, platform_android.h's
@@ -3341,7 +3393,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // player closed it derives the console's three lines from the tab,
         // the views and the trim and pushes only what changed — the roster's
         // own per-tick comparator pattern, for the reason stated there.
-        car_transport.tick();
+        {
+            // N2's diagnostic (n2_media_play_line, at the media hook): the
+            // car's pending play fired by this tick (Previous / Next's wait).
+            const uint64_t n2_launches = playback_lifecycle.n2_launch_count;
+            car_transport.tick();
+            n2_media_play_line("Previous/Next (pending)", false, n2_launches,
+                               false);
+        }
 
         // THE RENDER PLAYER'S TICK (2026-08-28), forked at the head: while
         // the mode stands the engine plays the player's item, not the

@@ -233,6 +233,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // this one call, which takes the same QUIESCENCE FENCE through its own
         // playback.stop() and then deactivates the scanner, damaging its own
         // rect and the clock cell.
+        n2_toggle_branch = "stop";
         stop_playback_if_playing();
         return;
     }
@@ -251,6 +252,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // belt below never adds a second card to the press (the belt's reopen then
     // finds the stream this one opened, a no-op).
     if (!playback.ensure_device_available_for_play()) {
+        n2_toggle_branch = "device refused";
         notifications.notify(AppState::NotificationClass::Normal,
                              kPlaybackDeviceUnavailableCard);
         return;
@@ -291,11 +293,14 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
             // one-dimensional refusal already at its state says nothing — the
             // playhead resting at the view's end is the whole answer, and the
             // Play button greys on this very predicate.
+            n2_toggle_branch = "end refused";
             return;
         }
         launch_pos = app.playhead_cursor_sample + launch_offset;
     }
-    launch_playback_from(launch_pos);
+    // N2's diagnostic (the record at n2_toggle_branch, playback_lifecycle.h).
+    n2_toggle_branch = launch_playback_from(launch_pos) ? "launch"
+                                                         : "launch refused";
 }
 
 // THE RESTRICT GATE'S QUESTION (architect 2026-10-29, AppState::restrict):
@@ -786,6 +791,8 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     } else {
         playback.play_loop(start, end, loop_begin);
     }
+    // N2's diagnostic (the record at n2_launch_count, playback_lifecycle.h).
+    ++n2_launch_count;
     return true;
 }
 

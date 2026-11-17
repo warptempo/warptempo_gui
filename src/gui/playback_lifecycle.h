@@ -174,6 +174,16 @@ struct GuiPlaybackLifecycle {
     bool display_keep_alive_wanted(int64_t now_ms) const {
         return now_ms < display_keep_alive_until_ms;
     }
+    // N2, THE STOP THAT PLAYS (architect 2026-11-17: "add the two lines - i
+    // assume these will run only when the button face shows stop and the
+    // button actually does a play?"): a diagnostic for N2, to be removed once
+    // N2 is understood. `n2_launch_count` counts the one launch body's
+    // launches that ran; `n2_toggle_branch` names the exit toggle_playback
+    // took last (the PLAY key's lift resets it before its dispatch). Their
+    // readers are the two stderr lines alone: the PLAY key's lift
+    // (finish_chrome_press_release) and the media roads (main.cpp).
+    uint64_t    n2_launch_count  = 0;
+    const char* n2_toggle_branch = "not reached";
 
     GuiPlaybackLifecycle(AppState&         app_,
                          const GuiAudio&   audio_,
