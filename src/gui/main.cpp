@@ -1923,15 +1923,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     undo.input = &input_handler;
     // The prefetch's ready fd is wired HERE rather than beside the other three,
     // because its callback needs the input handler: a drain fills the store AND,
-    // while the view stands, measures the head delta and damages the window for
-    // a walk that just grew.
+    // while the view stands, damages the window for a walk that just grew.
     gui.set_history_prefetch_completion_fd(history_prefetch.completion_fd(),
         [&input_handler]() { input_handler.on_history_prefetch_ready(); });
     // (NO BACK-WIRE FOR THE PROMPT. It had one while the history mode's commit
     // confirmation lived there — its `y` reached the act through the pointer —
     // and both went with the prompt on 2026-08-07, the act now being run by the
-    // input handler itself — the publish chord's act since 2026-10-10,
-    // run_publish_chord.)
+    // input handler itself — the publish chord's act, run_publish_chord.)
 
     // Viewport worker kick: NOTHING REQUESTS IT DIRECTLY ANY MORE. Follow-scroll
     // during playback was the one caller that asked for the new waveform

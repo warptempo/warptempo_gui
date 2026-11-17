@@ -568,15 +568,11 @@ void land_and_frame_active_markers(AppState& app, const GuiAudio& audio,
 // (re-derived 2026-09-01) — the revert act's, on a subject standing on a
 // writable tab (history_revert_actionable — a selected diff flag, else the
 // focused one, and the lock since 2026-08-30), and the
-// load-in-place's, on the active walk carrying a member. THE COMMIT ACT'S TWO
-// LEFT THIS LIST ON 2026-09-01 (architect: a gate's membership test is the
-// CHORD'S ALONE): Ctrl+S — head_delta_empty and history_checkpoint_in_flight —
-// was the instance he hit, a committed-and-current session being told the
-// view's own save chord was "not available in the history view", so the chord
-// is admitted as vocabulary (the act's chord is Ctrl+Shift+S since 2026-10-10)
-// and run_publish_chord answers both states
-// (the publishing card, then the one-dimensional silence), with the Save
-// button's grey reading history_checkpoint_actionable at its own arm. Both
+// load-in-place's, on the active walk carrying a member. THE COMMIT ACT'S
+// CHORD CARRIES NO TERM (architect 2026-09-01: a gate's membership test is the
+// CHORD'S ALONE): the chord, Ctrl+Shift+S, is admitted as vocabulary and
+// run_publish_chord answers the GitHub status, with the Save button's grey
+// reading history_checkpoint_actionable at its own arm. Both
 // readers hand it the
 // same `app` and neither restates a term of it, which is what
 // keeps the key and the face one decision — FOR THE REVERT ACT TOO SINCE
@@ -867,8 +863,8 @@ struct GuiInputHandler {
     // (NO GuiPrompt FRIENDSHIP. The prompt needed one while the history mode's
     // commit confirmation lived there — its `y` reached the private act through
     // a back-pointer — and both went with the prompt on 2026-08-07: the act is
-    // now run by the publish chord's act (run_publish_chord, 2026-10-10), a
-    // private method of this same struct.)
+    // now run by the publish chord's act (run_publish_chord), a private
+    // method of this same struct.)
 
     // KEYBOARD COMMANDS ACT AT THE PRESS. This is the one ranked key
     // dispatch, and ITS PRODUCERS ARE TWO (architect 2026-10-30: the hardware
@@ -3307,13 +3303,12 @@ private:
     // 2026-10-09); on a menu or a list it is the lit row itself moving.
     static constexpr double kPenHotRearmPx = 18.0;
 
-    // THE PUBLISH CHORD'S ACT (architect 2026-10-10) — Ctrl+Shift+S in the
-    // main window and in the `h` view alike, and the `h` view's Save button's
-    // lift: the pull while GitHub is ahead, the check while offline, else
-    // save and commit under the default title with no question asked. Its
-    // one caller is on_key's `s`
-    // arm (is_publish_key, gui_input.h); the fork and its order are at the
-    // definition (input_key_dispatch.cpp). THE COMMIT-TITLE EDITOR it
+    // THE PUBLISH CHORD'S ACT — Ctrl+Shift+S, the `h` view's alone, the
+    // view's Save button's lift (architect 2026-11-17, send U): the pull
+    // while GitHub is behind, the check while offline, else save and commit
+    // under the default title with no question asked. Its one caller is
+    // on_key's `s` arm (is_publish_key, gui_input.h); the fork and its order
+    // are at the definition (input_key_dispatch.cpp). THE COMMIT-TITLE EDITOR it
     // replaces (2026-08-07 to 2026-10-10, itself the replacement of a
     // confirmation prompt) is RETIRED WHOLE: "I'm always just using the same
     // title, the default. And if I make a mistake, a revert is just a quick
@@ -4643,8 +4638,8 @@ private:
     //     ANYWHERE and now has no framing route of its own at all: the window
     //     is the USER'S from before `h` until after it.)
     //   * open_history_mode_fresh is the ONE entry owner, and "fresh" is the
-    //     whole of it: a new session, a new commit walk, a now side captured at
-    //     this instant, and the head delta measured once — OPENING ON THE
+    //     whole of it: a new session, a new commit walk and a now side
+    //     captured at this instant — OPENING ON THE
     //     MOST RECENT COMMIT AT EVERY ENTRY (architect 2026-11-10; no viewed
     //     member is remembered across visits). ONE CALLER since
     //     2026-08-05 — bare `h` — the commit act having stopped re-entering when
@@ -4681,13 +4676,14 @@ private:
     //   * the PUBLISH CHORD'S ACT forks in front of it (run_publish_chord,
     //     declared above, beside the picker), asking nothing (2026-10-10).
     //   * run_history_commit is that act's commit arm: save, rebuild the bytes,
-    //     close a standing view, and hand the captured job to the background
+    //     close the view, and hand the captured job to the background
     //     worker. Its body owns the close partition (THE VIEW CLOSES IFF THE
     //     SAVE LANDED, architect 2026-08-07) and the capture list.
     //   * on_history_checkpoint_complete is the worker's completion, back on
     //     the main thread: it clears the in-flight bit and RAISES A CRITICAL
-    //     NOTIFICATION CARD for each of the three failing verdicts (the two
-    //     endings raise nothing; GuiNotifications owns the card).
+    //     NOTIFICATION CARD for each failing verdict, a normal "Nothing to
+    //     commit" for the clean ending and nothing for Committed
+    //     (GuiNotifications owns the card).
     //     It raised an acknowledge modal until 2026-08-09 and wrote the tab
     //     row's permanent critical chip until 2026-08-29; a card takes
     //     nothing from the keyboard either, so the completion still needs
@@ -4727,15 +4723,13 @@ private:
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit);
     void close_history_mode();
-    // The session is the press's (run_publish_chord's own): the `h` visit's,
-    // or the main window's transient bind.
+    // The session is the `h` visit's own (run_publish_chord's).
     void run_history_commit(const GuiHistoryDiff& session,
                             const std::string&    title);
     void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome,
                                         GuiGitHubStatus         github);
-    // THE PULL (architect 2026-09-27): the publish chord (Ctrl+Shift+S since
-    // 2026-10-10, in either view) while the GitHub status reads Behind, on the
-    // session that press read. The press plans it (plan_history_pull, local
+    // THE PULL (architect 2026-09-27): the `h` view's Save key (the publish
+    // chord) while the GitHub status reads Behind, on the visit's session. The press plans it (plan_history_pull, local
     // and synchronous), asks its OK / Cancel confirmation only when the pull
     // changes the open piece, and runs it (execute_history_pull) at once
     // otherwise — the one road.
@@ -4743,42 +4737,33 @@ private:
     void execute_history_pull(const GuiHistoryPullPlan& plan);
     void on_github_check_complete(GuiGitHubStatus status);
     void run_history_revert();
-    // THE HEAD DELTA'S ONE MEASUREMENT SITE (2026-08-07). Called at the entry
-    // and again at every prefetch drain that appended a member or ended the
-    // run; it measures exactly once — when member 0 first exists, or when the
-    // run finishes having delivered none — and is a no-op forever after.
-    void measure_history_head_delta();
 public:
     // -- THE HISTORY PREFETCH'S THREE PUBLIC EDGES (2026-08-07) -------------
     //
     // START A FRESH SCAN of the loaded source's committed history — the ONE
     // funnel for all four kickers (main.cpp's startup load tail, the
-    // checkpoint completion's re-warm, the staleness kick of the `h` entry and
-    // of the main window's publish chord, and the
-    // pull's re-warm after it wrote the working tree), none of which can fire
+    // checkpoint completion's re-warm, the staleness kick of the `h` entry,
+    // and the pull's re-warm after it wrote the working tree), none of which can fire
     // with a visit standing (the definition carries the proof, and the
     // deferral bit that stood for the case none of them produces was deleted
     // producer-less 2026-08-29).
     void kick_history_prefetch();
     // THE GITHUB CHECK'S ONE DISPATCH (architect 2026-09-27): at every project
     // open (main.cpp's load tail, beside the prefetch kick), every `h` entry
-    // that bootstrapped a clone, and the publish chord in either view (the
-    // `h` Save button's lift included) under Offline (run_publish_chord,
-    // architect 2026-09-28; Ctrl+Shift+S since 2026-10-10). The status reads Checking until the
+    // that bootstrapped a clone, and the `h` view's Save key under Offline
+    // (run_publish_chord, architect 2026-09-28). The status reads Checking until the
     // worker answers (on_github_check_complete). A worker already busy
     // dispatches nothing: a check in flight answers soon, and a checkpoint's
     // completion writes its own reading.
     void dispatch_github_check();
     // The same question with the staleness test in front of it: kick only when
     // the store describes another source, another projects_repo, or a branch tip
-    // that has moved. Public for symmetry with the funnel; its two callers are
-    // the mode's entry owner and the main window's publish chord
-    // (run_publish_chord's transient bind, 2026-10-10).
+    // that has moved. Public for symmetry with the funnel; its one caller is
+    // the mode's entry owner.
     void kick_history_prefetch_if_stale();
     // THE ARRIVAL HOOK, from the platform's prefetch ready fd (main.cpp's
     // wiring): drain the worker's queue into the store and, while the view
-    // stands, react to what arrived — measure the head delta the moment member 0
-    // exists, and damage the window so the lane and the `n/N` corner catch up
-    // with a walk that just grew.
+    // stands, react to what arrived — damage the window so the lane and the
+    // `n/N` corner catch up with a walk that just grew.
     void on_history_prefetch_ready();
 };

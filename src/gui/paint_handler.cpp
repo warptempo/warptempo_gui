@@ -1477,7 +1477,7 @@ static std::string history_walk_line(AppState& app) {
     // GitHub as of the last check — `GitHub: checking...` / `up to date` /
     // `ahead` / `behind` / `diverged` / `offline` / `refused`
     // (github_status_word) — in the line's own `Label: value` shape, on BOTH
-    // walks, because what Ctrl+Shift+S does in the view depends on it
+    // walks, because what the view's Save key does depends on it
     // whichever walk is showing. It stands ahead of the scale because the state cell clips
     // at the right block (paint_bottom_row_buttons_and_clock): where the line
     // is wider than the cell — a narrow window's; the tablet's in-view cell,
@@ -2108,8 +2108,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // are ruled EXCEPTIONS to the never-grey rule above and both are MODE
         // statements — that is what earns them the face, a refusal alone never
         // does. EVERY button standing in this row that the view refuses BY
-        // STATE wears it — the MOMENT-STATE Save (an empty head delta or a
-        // checkpoint in flight), Revert and Load in Place on their session
+        // STATE wears it — the MOMENT-STATE Save (a GitHub status the act
+        // cannot run, history_checkpoint_actionable), Revert and Load in Place on their session
         // terms (below), the walk lamp on a visit with no clone (its own
         // arm, redesign_button_enabled); what the view refuses in EVERY session does not
         // stand in it since 2026-10-07 (history_mode_hides_button: the zoom

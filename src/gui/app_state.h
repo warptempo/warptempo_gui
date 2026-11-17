@@ -3599,7 +3599,7 @@ enum class DialogTrigger {
     // THE PULL'S CONFIRMATION (architect 2026-10-19): "Pull GitHub's newer
     // checkpoint and reload this piece?", OK / Cancel (its OK discards the
     // session). Raised by the publish chord,
-    // Ctrl+Shift+S, in either view, only when the pull
+    // Ctrl+Shift+S, the `h` view's Save key, only when the pull
     // changes the open piece; the plan waits at
     // AppState::pending_history_pull.
     PULL_CONFIRM,
@@ -7647,7 +7647,7 @@ struct AppState {
     //   the SETTINGS button (bare `;`; the menu row's Settings anchor until
     //   2026-10-21).
     //   LIT — the view pairs' four (bare 1/2/3/4), the
-    //   COMMIT-FACED SAVE (Ctrl+Shift+S since 2026-10-10, the act itself), SWITCH TAB
+    //   COMMIT-FACED SAVE (Ctrl+Shift+S, the act itself), SWITCH TAB
     //   (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — a tab switch works in here like everywhere else), the
     //   history button and the WALK LAMP
@@ -7660,8 +7660,8 @@ struct AppState {
     //   buttons. It left the roster with its menu on 2026-08-15, and this list
     //   is a partition of the roster, so it simply has one fewer member.)
     //   TWO OF THE LIT ARE SESSION-CONDITIONAL IN THEIR FACE, each one decision
-    //   serving the key and the face: Save greys with an empty head delta (or a
-    //   checkpoint in flight), and the
+    //   serving the key and the face: Save greys on a GitHub status the act
+    //   cannot run (history_checkpoint_actionable), and the
     //   load-in-place opener greys on a walk with NO MEMBER — one term for both
     //   walks since 2026-08-09, the act loading the VIEWED member and a blank
     //   lane offering none. The Local walk cannot reach it on a live tab (U + R
@@ -7693,9 +7693,8 @@ struct AppState {
     // share one piece. tab_a and tab_b hold a VALUE-SHAPED BAND ALONE (viewport,
     // zoom, playhead, trim, read_only) and share the warp store, the phase-reset
     // store and the engine settings, while the
-    // delta's whole vocabulary is those two stores plus the engine block — so the
-    // walks, the frozen now side and the head delta describe the same piece on
-    // either tab.
+    // delta's whole vocabulary is those two stores plus the scale — so the
+    // walks and the frozen now side describe the same piece on either tab.
     // (The walk has its own lamp in row 4, and the READING is row 4's own
     // Cumulative toggle, over the struct's `cumulative` bit, per visit like
     // the walk.)
@@ -7768,10 +7767,10 @@ struct AppState {
     //
     // THE OTHER ADMITTED MUTATOR IS CTRL+SHIFT+S, AND IT WRITES OUTSIDE THIS
     // SESSION (architect 2026-08-04; rehomed from Ctrl+Alt+R onto Ctrl+S
-    // 2026-08-08 and onto Ctrl+Shift+S, THE PUBLISH CHORD, 2026-10-10, which
-    // runs the same act from the main window too): THE SAVE-AND-COMMIT ACT
-    // (GuiInputHandler::run_publish_chord). Ctrl+S is the plain disk save in
-    // here since that ruling. The Save button stays the act's surface in the
+    // 2026-08-08 and onto Ctrl+Shift+S, THE PUBLISH CHORD, 2026-10-10, bound
+    // in this view alone since 2026-11-17, send U): THE SAVE-AND-COMMIT ACT
+    // (GuiInputHandler::run_publish_chord), the product's one commit road.
+    // Ctrl+S is the plain disk save in here. The Save button stays the act's surface in the
     // view, spelling the publish chord at its lift, because the act runs the
     // ordinary save as its first step; Render kept its own chord and greys in
     // the view with the rest of the consumed roster. IT ASKS NOTHING SINCE
@@ -7784,7 +7783,9 @@ struct AppState {
     // source through its one owner (GuiSaveOps::save — the same act Ctrl+S is,
     // dirty cleared with it) and only then writes the live authoring state as
     // the three sidecars into the piece's directory in the projects repository,
-    // commits those three paths alone under the default title and pushes
+    // commits those three paths alone — whatever change git sees in them, the
+    // view band and the trim included (architect 2026-11-17, send U) — under
+    // the default title and pushes
     // (commit_history_checkpoint, history_diff.h — fetching first and refusing
     // before the COMMIT if GitHub has moved, the save above already standing
     // by then (architect 2026-09-28: withholding it solves nothing, since
@@ -7798,18 +7799,13 @@ struct AppState {
     // its ordinary face over the mode's disabled one; the SAVE button wears the
     // commit icon and the tooltip "Save and Commit" while the mode stands, and
     // reaches the act through its own chord. THE ADMISSION IS UNCONDITIONAL
-    // SINCE 2026-09-01 (architect: a gate's membership is the chord's alone)
-    // and the two states it used to carry are the ACT'S: with nothing to
-    // checkpoint the press is a silent no-op and that button greys
-    // (head_delta_empty, below, owns the bit), and while a checkpoint is
-    // already publishing the press says the publishing sentence and the button
-    // greys too (history_checkpoint_in_flight, which lives on AppState rather
-    // than here because the act outlives the view). Both terms are composed
-    // once at history_checkpoint_actionable, which the face reads; the act
-    // forks on them in that order (run_publish_chord). They were the
-    // allowlist's admission terms from 2026-08-05 and 2026-08-07, which is what
-    // made the gate answer the act's chord with "Ctrl+S is not available in the
-    // history view".
+    // (architect 2026-09-01: a gate's membership is the chord's alone): the
+    // face greys on the GitHub status and on a checkpoint already publishing
+    // (history_checkpoint_in_flight, which lives on AppState rather than here
+    // because the act outlives the view), composed once at
+    // history_checkpoint_actionable, and the act forks on the status
+    // (run_publish_chord); a tree git sees clean ends NothingToCommit, which
+    // cards.
     //
     // EVERYTHING PAST THE SAVE RUNS ON A WORKER (architect 2026-08-07): the git
     // steps are a network act, and freezing the window for them was the one
@@ -7846,8 +7842,8 @@ struct AppState {
     // CONSTRUCTION: the two gates above refuse every route that could change the
     // markers or the engine settings for the whole life of the session EXCEPT
     // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+Shift+S
-    // (the commit act, on Ctrl+Alt+R until 2026-08-08 and Ctrl+S until
-    // 2026-10-10, or the pull while GitHub is ahead, 2026-09-27) and bare `v`
+    // (the commit act, or the pull while GitHub is behind, 2026-09-27) and
+    // bare `v`
     // (the revert
     // act, on Ctrl+H until 2026-09-01;
     // membership re-derived 2026-08-06)
@@ -7997,10 +7993,7 @@ struct AppState {
         // grep on displayed_delta: the flag cache's rebuild (waveform_cache.cpp)
         // and the WALK LINE (row 8's state cell) — it had two more until 2026-08-18,
         // the mode's diff-span framing and paint_trim's diff-span substitution,
-        // both deleted with the trim bar's return to the ordinary framing. The
-        // ONE reader that deliberately does NOT is
-        // head_delta_empty below, which names the COMMIT walk's index 0 and the
-        // Cumulative reading explicitly, and says why.
+        // both deleted with the trim bar's return to the ordinary framing.
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
         // NOT a marker index and touches no selection.
         //
@@ -8143,117 +8136,6 @@ struct AppState {
         // It never wraps in any real session and is never persisted; it is only
         // ever compared for equality.
         unsigned long long generation = 0;
-
-        // IS THERE ANYTHING TO CHECKPOINT? — the HEAD DELTA's emptiness, and
-        // the one term that greys the Save-and-Commit act (architect
-        // 2026-08-05). The head delta is index 0's, the NEWEST eligible
-        // checkpoint, measured against the frozen now side; empty means the
-        // session and that checkpoint carry the same authoring content
-        // (GuiHistoryCommitDelta::is_empty, history_diff.h, owns the terms).
-        //
-        // COMPUTED ONCE, AT THE ONE ENTRY OWNER (open_history_mode_fresh), and
-        // STATIC FOR THE SESSION'S LIFE BY CONSTRUCTION: both sides are fixed
-        // for the visit — the now side is frozen at init(), and EVERY ROUTE THAT
-        // COULD CHANGE THE OTHER SIDE CLOSES THE VIEW. That is the honest
-        // derivation, re-stated 2026-08-06: the allowlist DOES admit an authoring
-        // key — bare `v`, the revert act — so "no authoring route is admitted" is
-        // not what makes the bit safe. What makes it safe is that all THREE of
-        // the mode's mutators (`'`, Ctrl+Shift+S and `v`) end by closing the
-        // view, so no session outlives a write to its own now side. A FUTURE
-        // MUTATOR THAT DOES NOT CLOSE THE VIEW WOULD HAVE TO RECOMPUTE THIS BIT.
-        // It is cleared by the whole-struct reset at close,
-        // like every other field but the generation.
-        //
-        // IT READS INDEX 0 ALWAYS, never the walk position: `,` and `.` step
-        // what is DISPLAYED, while the act always commits on top of the newest
-        // checkpoint, so stepping back to an older one must not offer to
-        // "re-commit" it.
-        //
-        // AND IT READS THE COMMIT WALK ALWAYS, which the LOCAL walk of
-        // 2026-08-07 changes nothing about: the act publishes a checkpoint into
-        // the repository, so "is there anything to checkpoint" is the live state
-        // against the newest COMMIT whatever walk the lane happens to be
-        // showing. Reading the undo stack here would grey the act on a session
-        // that had undone its way back to its own start while the repository
-        // still lacked every one of those changes. Its measurement site
-        // (measure_history_head_delta) therefore names `session` outright, and
-        // Save-and-Commit's reach and face are untouched by the source axis.
-        //
-        // AND IT NAMES THE CUMULATIVE DELTA EXPLICITLY, never the visit's
-        // reading bit (`cumulative` above — this is that bit's one
-        // deliberate non-reader): the act commits THE LIVE STATE, so "is there
-        // anything to checkpoint" is live-vs-newest whatever the lane happens to
-        // be displaying, and a `u` press must not move this face.
-        //
-        // SINCE THE ITERATIVE READING TURNED FORWARD (architect 2026-08-05) the
-        // two readings COINCIDE at index 0 — both are the newest checkpoint
-        // against the live now side — so the explicit naming currently picks the
-        // same delta the bit would. It is KEPT explicit anyway, because the
-        // coincidence is a property of the pairing rather than of this question:
-        // what this field asks is live-vs-newest by definition, and spelling it
-        // is what keeps that true if the pairing ever moves again.
-        //
-        // WHAT IT DELIBERATELY DOES NOT SEE (a recorded asymmetry, architect
-        // 2026-08-05; its vocabulary retold 2026-10-28): the delta's vocabulary
-        // is the two marker columns plus the six engine-block keys (title,
-        // scale, bpm, notes, url, cover; GuiHistoryCommitDelta::engine_block_-
-        // changed), so a session whose only drift is the settings bookkeeping
-        // — the per-tab view band the mode's own navigation moves, and every
-        // other GUI-kind key (viewport, zoom, playhead, trim, read_only, the
-        // active_* keys) — reads EMPTY and greys the act, even though a
-        // byte-level commit would land. Deliberate: a checkpoint is about
-        // authoring content, and the engine block is counted because it is
-        // exactly what the dirty rule counts (AppState::settings_dirty), so
-        // Save and Save-and-Commit classify authoring content one way
-        // (architect 2026-10-28). Only `scale` is DISPLAYED (the walk line's
-        // segment); a notes edit lights the act and shows nothing. A drift of
-        // the view band alone is saved with the next plain Ctrl+S of an
-        // authored change (plain_save_actionable).
-        // The act's own NothingToCommit arm remains the byte-level backstop for
-        // the state where the bit says there IS something and the repository
-        // disagrees.
-        //
-        // ONE READER, TWO CONSUMERS: history_checkpoint_actionable composes it
-        // with the in-flight bit, and the ACT (run_publish_chord,
-        // input_key_dispatch.cpp) and the SAVE button's own arm both take that
-        // one decision — the press a silent no-op under the one-dimensional
-        // rule, the button greyed, never two spellings of it. THE READER WAS
-        // THE `h` ALLOWLIST until 2026-09-01, which made its Ctrl+S ADMISSION
-        // conditional on this and derived the same grey through the partition;
-        // the architect ruled a gate's membership the chord's alone that day
-        // (the gate was answering the view's own save chord with "not available
-        // in the history view"), and the decision moved to the act with the
-        // face following it.
-        //
-        // "MEASURED ONCE AT ENTRY" BECAME "MEASURED ONCE" (2026-08-07, with the
-        // streaming walk): a visit may open before member 0 has arrived, and
-        // there is then nothing to measure. It RESTS TRUE in that window — the
-        // conservative face, the act greyed while the answer is unknown — and
-        // the measurement happens at the first drain that delivers member 0,
-        // after which it is static for the visit exactly as before. Still ONE
-        // measurement site (GuiInputHandler::measure_history_head_delta), which
-        // both the entry and the arrival hook call; `head_delta_measured` below
-        // is what makes it once. The resting TRUE is conservative under UP TO
-        // DATE only: under AHEAD an empty delta selects the untitled push
-        // retry, so there the act and the face ask `head_delta_measured`
-        // itself (architect 2026-09-28; history_checkpoint_actionable).
-        //
-        // AND THE WINDOW HAS A SECOND EXIT since 2026-08-09: a run that reports
-        // DONE having delivered NOTHING. The walk is then finished and empty —
-        // a legal standing state, the view resting at `0/0` — and the answer is
-        // no longer unknown but FALSE: with no eligible checkpoint to measure
-        // against there is by definition everything to checkpoint, and the act
-        // must be live or the empty walk could never gain its first member. Both
-        // exits latch through the same one site.
-        bool head_delta_empty = true;
-
-        // Whether the bit above is an ANSWER rather than the resting default.
-        // False until the walk has answered — either member 0 compared against
-        // the frozen now side, or the run finishing with no member at all; the
-        // one measurement site sets it and nothing clears it inside a visit (the
-        // whole-struct reset at both edges does). Read beside the bit by the
-        // Ahead arms of the checkpoint act and of its face.
-        bool head_delta_measured = false;
 
         // THE VIEW OWNS NO NAVIGATION STATE (architect 2026-08-18, "this
         // removes machinery"). It is a READING OF THE LANE over whatever window
@@ -8466,16 +8348,15 @@ struct AppState {
     //
     // Authoring-class settings — the six engine-block keys (title, scale,
     // bpm, notes, url, cover; editor commits carry undo history) — participate
-    // in dirty via settings_dirty. The commit gate counts the same six and no
-    // other settings key (GuiHistoryCommitDelta::engine_block_changed,
-    // history_diff.h; architect 2026-10-28): one classification of authoring
-    // content for Save and Save-and-Commit. View-state keys — the GUI-kind keys
+    // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, active_audio_view,
     // active_markers_view, active_tab_view, trim,
     // read_only, projects_repo) — do NOT participate: they are persisted
     // only by a save of an authored change (Save greys without one,
-    // plain_save_actionable) and not tracked as dirty, so quitting without
-    // saving simply drops them. The score's five keys are outside this
+    // plain_save_actionable) or by the `h` view's Save and Commit, whose
+    // save runs whatever the flag says and whose commit takes any change git
+    // sees (architect 2026-11-17, send U), and not tracked as dirty, so
+    // quitting without saving simply drops them. The score's five keys are outside this
     // question too: no sidecar carries them, and every change writes the
     // score viewer's own file through (score_viewer_file.h). The DEVICE key
     // gui_scale is outside this question entirely since
@@ -8701,12 +8582,9 @@ struct AppState {
     // different objects.
     //
     // THREE REFUSALS READ IT, single-in-flight and the write race being the two
-    // rules: the COMMIT ACT (run_publish_chord, which says the publishing
-    // sentence in either view, AND the `h` view's Save-and-Commit button, which greys
-    // through history_checkpoint_actionable — one composition of this bit with
-    // the head delta, read by the act and the face alike; it was the
-    // ALLOWLIST'S Ctrl+S ADMISSION until 2026-09-01, when a membership test
-    // became the chord's alone); bare `h`
+    // rules: the `h` view's Save-and-Commit button, which greys through
+    // history_checkpoint_actionable (the commit act itself, run_publish_chord,
+    // never meets the bit: no view stands while it is up); bare `h`
     // itself, which will not open a view whose walk would be measured against a
     // repository the worker is mid-mutation on; and — since 2026-08-08 — EVERY
     // SAVE, globally, at the one save owner (GuiSaveOps::save). That third one
@@ -8726,8 +8604,8 @@ struct AppState {
     // this AppState, written on the MAIN THREAD alone: Checking when a check
     // is dispatched (GuiInputHandler::dispatch_github_check — every project
     // open, an `h` entry while Unchecked or Offline (2026-10-28: a standing
-    // answer is reused, open_history_mode_fresh's head), and the publish
-    // chord, Ctrl+Shift+S, in either view while Offline), the
+    // answer is reused, open_history_mode_fresh's head), and the `h` view's
+    // Save key while Offline), the
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
     // row 8's `h` walk line (its `GitHub: <word>` segment), by the Save
@@ -8735,8 +8613,8 @@ struct AppState {
     // the Check glyph where the chord asks again —
     // history_checkpoint_actionable, history_pull_actionable,
     // history_github_recheck_actionable, redesign_button_glyph) and by
-    // the publish chord's act in either view (run_publish_chord, since
-    // 2026-10-10 — Ctrl+S's in the view before), which forks on it.
+    // the publish chord's act (run_publish_chord, the view's Save key), which
+    // forks on it.
     GuiGitHubStatus github_status = GuiGitHubStatus::Unchecked;
 
     // THE PULL PARKED UNDER ITS QUESTION (architect 2026-09-27): a pull that
@@ -14476,8 +14354,8 @@ inline void clear_audition_sequence(AppState& a) {
 // in-view face reads the same decision THROUGH that gate rather than through
 // a second call: history_mode_disables_button walks the button's chord
 // through the allowlist, and redesign_button_enabled greys on its answer, so
-// the chord's refusal and the glyph are one decision on the head-delta
-// precedent exactly — the cleanest shape this roster has had.
+// the chord's refusal and the glyph are one decision — the cleanest shape
+// this roster has had.
 //
 // THE FACE HALF WENT AND CAME BACK, and both rulings are kept: the derived
 // grey stood from 2026-08-05; THE ARCHITECT REVERSED IT 2026-08-15, for the
@@ -14532,9 +14410,9 @@ inline bool history_revert_actionable(const AppState& a) {
 // no glyph can disagree with its key: the WALK LAMP'S ACT
 // (GuiInputHandler::set_history_delta, which refuses a switch toward the
 // remote walk and cards the reason) and its FACE (redesign_button_enabled's
-// SessionHistory arm); the CHECKPOINT ACT (run_publish_chord, which
-// cards this fact as its OUTERMOST premise) and SAVE'S FACE through the two
-// predicates below; row 8's GitHub SEGMENT (history_walk_line), which stands
+// SessionHistory arm); SAVE'S FACE in the view through the three
+// predicates below, which grey the checkpoint act without a clone (so the
+// act, run_publish_chord, never meets one); row 8's GitHub SEGMENT (history_walk_line), which stands
 // only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
 // (on_history_prefetch_ready), which is the odd one out — it does not refuse
 // an act but CARVES A FALLBACK VISIT OUT of the closer that ends a visit whose
@@ -14548,7 +14426,7 @@ inline bool history_remote_walk_available(const AppState& a) {
 
 // IS SAVE THE PULL? (architect 2026-09-27) — inside the `h` view, on a visit
 // with a clone, while the GitHub status reads BEHIND: the publish chord
-// (Ctrl+Shift+S, 2026-10-10) fast-forwards to what the last check fetched
+// (Ctrl+Shift+S, the view's Save key) fast-forwards to what the last check fetched
 // (GuiInputHandler::run_history_pull_press), and the Save button wears
 // IconVcsPull and "Pull". The glyph's one
 // source (redesign_button_glyph's Save arm) and the pull's admission below.
@@ -14570,50 +14448,39 @@ inline bool history_pull_actionable(const AppState& a) {
 // available — a visit on the local fallback has none), no checkpoint already
 // publishing (single in flight, a bit that OUTLIVES the view, which is why
 // this takes the whole AppState rather than the mode struct), and a GITHUB
-// STATUS THAT ADMITS A COMMIT: UP TO DATE with something to commit (the head
-// delta, measured once per visit), or AHEAD — a committed-but-unpushed branch,
-// whose chord retries the push through the act's clean-but-owing arm, so
-// AHEAD ACTS WHATEVER THE HEAD DELTA SAYS (the session equals the unpushed
-// commit, and the push is still owed) ONCE THE DELTA IS MEASURED (architect
-// 2026-09-28): the act forks on the delta — empty retries the push, non-empty
-// commits and pushes, both under the default title since 2026-10-10 — and
-// the bit RESTS TRUE while unmeasured, which under Ahead would push without
-// asking whether real edits are owed, so the face greys and the key is
-// silent until the measurement lands, as under UP TO DATE. Every other status
-// greys the face — Checking, Refused, Diverged and Unchecked, each carded by
-// the key at the act (run_publish_chord) — Behind is the PULL's face
-// instead (history_pull_actionable above) and Offline the CHECK's
-// (history_github_recheck_actionable below). So an offline device takes no
-// checkpoint (architect 2026-09-27). (Outside
-// the view this face is not asked: the Save button is the plain save there,
-// and the publish chord, Ctrl+Shift+S, has no button of its own.)
+// STATUS THAT ADMITS A COMMIT: UP TO DATE or AHEAD. NO CHANGE IS ASKED FOR
+// (architect 2026-11-17, send U: commit is any change git sees in the
+// sidecars): the act saves first and the worker commits whatever git sees —
+// the view band and the trim included — or pushes what an AHEAD branch
+// already owes, and a tree git sees clean with nothing owed ends
+// NothingToCommit, which cards (on_history_checkpoint_complete). So the face
+// is lit whenever a commit can be made. Every other status greys the face —
+// Checking, Refused, Diverged and Unchecked, each carded by the key at the
+// act (run_publish_chord) for a status that moved inside the painted frame —
+// Behind is the PULL's face instead (history_pull_actionable above) and
+// Offline the CHECK's (history_github_recheck_actionable below). So an
+// offline device takes no checkpoint (architect 2026-09-27). (Outside the
+// view this face is not asked: the Save button is the plain save there, and
+// the commit is the view's alone.)
 //
-// IT EXISTS BECAUSE THE ALLOWLIST STOPPED CARRYING THOSE TERMS. Ctrl+S was
-// admitted into the `h` view's vocabulary only while its terms held from
-// 2026-08-08 until 2026-09-01 — one decision that refused the key and, through
-// the derived partition, greyed the button — and the architect ruled that
-// shape out: a membership test carrying state makes the gate's generic
-// "Ctrl+S is not available in the history view" answer a chord the view
-// exists to run, which is a lie about the vocabulary. So the ACT answers now
+// IT EXISTS BECAUSE THE ALLOWLIST CARRIES NO STATE TERM (architect
+// 2026-09-01): a membership test carrying state would make the gate's
+// generic "not available in the history view" answer a chord the view exists
+// to run, which is a lie about the vocabulary. So the ACT answers
 // (run_publish_chord) and the FACE reads this predicate.
 // ONE READER: redesign_button_enabled's Save arm (scoped to the mode, the
 // button being the plain disk save everywhere else). Like the pull's and the
 // recheck's beside it, a face over the act's own subject refusal: live
 // session state, no data judged, outside the guard topology.
 inline bool history_checkpoint_actionable(const AppState& a) {
-    if (!a.history_mode.active || !history_remote_walk_available(a) ||
-        a.history_checkpoint_in_flight) {
-        return false;
-    }
-    if (a.github_status == GuiGitHubStatus::Ahead) {
-        return a.history_mode.head_delta_measured;
-    }
-    return a.github_status == GuiGitHubStatus::UpToDate &&
-           !a.history_mode.head_delta_empty;
+    return a.history_mode.active && history_remote_walk_available(a) &&
+           !a.history_checkpoint_in_flight &&
+           (a.github_status == GuiGitHubStatus::UpToDate ||
+            a.github_status == GuiGitHubStatus::Ahead);
 }
 
 // WOULD THE PUBLISH CHORD ASK GITHUB AGAIN? (architect 2026-09-28; the
-// chord Ctrl+Shift+S since 2026-10-10) — inside the `h`
+// chord Ctrl+Shift+S, the view's Save key) — inside the `h`
 // view, on a visit with a clone, with no checkpoint publishing, while the
 // GitHub status reads OFFLINE: the reading may be minutes old (the hotspot
 // coming up after the view opened), so the chord and the Save button's lift
@@ -14625,8 +14492,8 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // fourth glyph (redesign_button_glyph), so the key wears CHECK's drawing and
 // its hint "Check GitHub" on exactly these terms. Read by
 // Save's face and its glyph; the act answers the same status at its own fork
-// (run_publish_chord), below the no-clone and in-flight refusals this
-// restates.
+// (run_publish_chord), where a standing view always has its clone and no
+// checkpoint in flight.
 inline bool history_github_recheck_actionable(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
            !a.history_checkpoint_in_flight &&
@@ -15199,10 +15066,10 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
 // IT TAKES THE WHOLE AppState because the gate it asks does: TWO of that
 // gate's admissions are conditional on state (re-derived 2026-09-01 — the revert
 // act's, on history_mode_revert_subject_standing above composed with the lock;
-// and the load-in-place's, on the active walk carrying a member. The COMMIT
-// ACT'S TWO left the gate that day, the architect ruling a membership test the
+// and the load-in-place's, on the active walk carrying a member. The commit
+// act's chord carries no term, the architect ruling a membership test the
 // chord's alone; Save's grey comes off history_checkpoint_actionable at its own
-// arm now), so both readers must
+// arm), so both readers must
 // hand it the SAME state or the face
 // and the key would answer differently. The caller passes `a` and
 // restates none of its terms.
@@ -17292,47 +17159,23 @@ inline bool redesign_button_enabled(const AppState& a,
         // is what repaints the row on both edges of the bit with no damage
         // call at either.
         //
-        // AND SAVE'S THIRD TERM IS THE HEAD DELTA, MODE-SCOPED (2026-09-01):
-        // inside the `h` view this button IS the Save-and-Commit act, and with
-        // the newest checkpoint already carrying the session's authoring
-        // content the act would do nothing, so the face greys. IT USED TO
-        // ARRIVE FROM THE ALLOWLIST — the mode admitted Ctrl+S only while both
-        // of the act's terms held, and the derived partition above turned that
-        // admission into this grey — until the architect ruled a gate's
-        // membership the CHORD'S ALONE (the gate then answered its own
-        // vocabulary with "not available in the history view"). The
-        // admission is unconditional now and the face reads the act's own
-        // predicate instead, so the button greys exactly where it always did.
-        // OUTSIDE THE VIEW THE TERM IS VACUOUS by construction — the predicate
-        // carries the mode bit — the button being the plain disk save there,
-        // which has no delta to ask about and asks the dirty flag instead
-        // (below).
-        //
-        // AND IN THE VIEW THE GITHUB STATUS IS A TERM (architect 2026-09-27):
-        // the face is live where the chord would commit, retry the push,
-        // PULL or — under Offline since 2026-09-28 — ASK GITHUB AGAIN
-        // (history_checkpoint_actionable, history_pull_actionable,
-        // history_github_recheck_actionable), and grey on Checking, Refused,
-        // Diverged and Unchecked, whose cards are the key's.
+        // AND IN THE VIEW SAVE'S THIRD TERM IS THE GITHUB STATUS (architect
+        // 2026-09-27): inside the `h` view this button IS the Save-and-Commit
+        // act (architect 2026-10-10: "the icons in history remain the same";
+        // its lift spells Ctrl+Shift+S there, finish_chrome_press_release), so
+        // the face is live where the press would COMMIT — up to date or
+        // ahead, whatever the session's change, the commit being any change
+        // git sees (architect 2026-11-17, send U) — PULL or, under Offline
+        // since 2026-09-28, ASK GITHUB AGAIN (history_checkpoint_actionable,
+        // history_pull_actionable, history_github_recheck_actionable), and
+        // grey on Checking, Refused, Diverged and Unchecked, whose cards are
+        // the key's. The allowlist carries none of it (architect 2026-09-01:
+        // a gate's membership is the chord's alone).
         //
         // AND OUTSIDE THE VIEW SAVE GREYS WITH NOTHING TO SAVE (architect
         // 2026-10-05, SAVE IS THE DIRTY MARK): plain_save_actionable, the
         // one predicate the keys read too (the ruling and its trade-off are
-        // there).
-        //
-        // AND IN THE VIEW THE BUTTON IS THE PUBLISH CHORD'S (architect
-        // 2026-10-10: "the icons in history remain the same"): its lift spells
-        // Ctrl+Shift+S there (finish_chrome_press_release), Ctrl+S being the
-        // plain save in both views since, so the face above reads that act's
-        // predicates (history_checkpoint_actionable and its two siblings).
-        //
-        // THE SHIFT TWIN (2026-10-11, Ctrl+Shift+S on the long press) ADDS
-        // NO TERM — A RECORDED DEPARTURE FROM THE TWIN
-        // RULE: in the view the twin is the plain act itself; outside it the
-        // publish chord's verdict needs the head delta, which only the
-        // press's own transient bind measures (run_publish_chord), so the
-        // face stays the dirty mark and a clean piece's grey refuses the long
-        // press with the tap (redesign_button_shift_admits records it).
+        // there). It admits no long press (redesign_button_shift_admits).
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
@@ -17829,7 +17672,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
 inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
     switch (b) {
         // SAVE wears the commit glyph in the history view (where its lift is
-        // the publish chord, Ctrl+Shift+S since 2026-10-10) and while a
+        // the publish chord, Ctrl+Shift+S) and while a
         // checkpoint publishes — the PULL glyph in the view while the GitHub
         // status reads Behind, where the chord pulls (history_save_is_pull),
         // and the CHECK glyph where the chord asks GitHub again
@@ -18085,19 +17928,10 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // Ctrl+Shift+O, which binds nothing — Revert's chord keeps its unshifted
 // spelling (is_revert_project_key). The exception is stated at the lift's chord build
 // (finish_chrome_press_release, input_pointer.cpp).)
-// (SAVE JOINED 2026-10-11 with Ctrl+Shift+S, THE PUBLISH CHORD (architect):
-// its row is Ctrl+S and its long press dispatches the row's
-// key under both modifiers, Ctrl+Shift+S — Save and Commit, or the pull
-// while GitHub is ahead (run_publish_chord, by the GitHub status) — Redo's
-// spelling with the shift carried rather than tabled, and no
-// translation. IN THE `h` VIEW its plain lift is already that chord
-// (save_button_publishes), so there the long press runs
-// the same act as the tap and the tooltip carries no second line. ITS FACE
-// STAYS THE DIRTY MARK OUTSIDE THE VIEW (plain_save_actionable): the twin's
-// own verdict there needs the head delta of a transient bind the press
-// alone runs, so the twin term is not composed and a clean piece's greyed
-// Save refuses its long press too — the publish is then the `h` view's
-// Save.)
+// (SAVE ADMITS NOTHING since 2026-11-17 (architect, send U): its long press
+// published from the main window from 2026-10-11, and the commit is the `h`
+// view's alone now, where the plain lift already spells the publish chord
+// (save_button_publishes, input_pointer.cpp); SAVE stays the dirty mark.)
 // (DELETE AND DISABLE JOINED 2026-10-29 with SHIFT+DELETE and CTRL+SHIFT+D
 // (architect: "for symmetry, give it a shift form"): the plain acts touch the
 // selected markers alone, and the shifted twins carry every reference to
@@ -18142,7 +17976,6 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // nothing and its tooltip carries one line.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::OpenProject ||
-           b == RedesignButton::Save ||
            b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
            b == RedesignButton::IconTrimPresets ||
@@ -18318,13 +18151,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the retired File menu row's own word.
         case RedesignButton::OpenProject:
             return {"Open Project", "Hold to revert"};
-        // SAVE (architect 2026-10-11): its second line names the long press's
-        // twin, the publish chord, IN THE ROSTER'S OWN FORM, as Open's "Hold
-        // to revert" — "save and commit" here; the stateful overload
-        // drops the line in the `h` view, where the plain press is already
-        // that chord.
+        // SAVE: one line, its long press no twin (architect 2026-11-17, send
+        // U: the commit is the `h` view's alone, where the stateful overload
+        // names it).
         case RedesignButton::Save:
-            return {"Save", "Hold to save and commit"};
+            return {"Save", nullptr};
         case RedesignButton::Undo:       return {"Undo", nullptr};
         case RedesignButton::Redo:       return {"Redo", nullptr};
         // THE MODIFIER LINE NAMES THE OTHER FUNCTION (architect 2026-07-31),
@@ -19136,13 +18967,13 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 //   greying predicate's own reading; the other answered "Committing the
 //   checkpoint (Ctrl+S)" while a checkpoint published, ranked outermost. Both
 //   were a REASON and a STATE rather than a name, and the face already says
-//   the button is dead in each. The FACTS are untouched: the two keys still
-//   card the bootstrap's reason (bare `g` at the walk's one switch owner,
-//   the publish chord at run_publish_chord, each appending the clone-specific
-//   clause a constant line could never carry), and while a checkpoint
-//   publishes both chords card kCheckpointPublishing — the publish chord at
-//   run_publish_chord, the ordinary save at GuiSaveOps::save's own arm since
-//   2026-09-24.)
+//   the button is dead in each. The FACTS are carded where a key meets them:
+//   bare `g` cards the bootstrap's reason at the walk's one switch owner,
+//   appending the clone-specific clause a constant line could never carry,
+//   and while a checkpoint publishes the ordinary save cards
+//   kCheckpointPublishing at GuiSaveOps::save's own arm since 2026-09-24;
+//   the publish chord meets neither, its face greying on both for the whole
+//   visit, run_publish_chord.)
 //
 //   RENDER, WITH AN EXPLICIT RENDER ACT LIVE (the single render, the sweep,
 //   the queue — never the automatic preview) → the dialog-cancel glyph, the
@@ -19249,14 +19080,9 @@ inline RedesignTooltipText redesign_button_tooltip_forks(
         const AppState& a, const GuiAudio& audio, int64_t total_frames,
         RedesignButton b) {
     // THE SAVE BUTTON'S OVERRIDES: inside the `h` view the button IS the
-    // checkpoint act, so it takes that act's name. It is a one-line form
-    // there — Save's one admission, shift (2026-10-11), spells the same
-    // Ctrl+Shift+S the plain lift spells in the view, so the modified press
-    // does nothing different and the line drops (rule (2) below). OUTSIDE THE
-    // VIEW ITS SECOND LINE NAMES THE TWIN (architect 2026-10-11), in the
-    // roster's own form: the constant table's "Hold to save and commit",
-    // forwarded. A greyed button states no reason; the two chords' cards,
-    // which append the clone-specific clause a constant line could not carry,
+    // checkpoint act, so it takes that act's name, one line like the
+    // constant table's "Save" outside it (Save admits no long press since
+    // 2026-11-17, send U). A greyed button states no reason; the key's cards
     // are where the fact is said.
     // THE PULL (architect 2026-09-27) AND THE CHECK (2026-10-28): while the
     // button is PAINTED as Pull or as Check (its stashed glyph, the Render

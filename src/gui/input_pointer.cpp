@@ -171,10 +171,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // It admits SHIFT — Revert, the one translated twin (the lift's chord
     // build below) — and nothing else; a one-shot act, no repeat.
     {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
-    // SAVE admits SHIFT since 2026-10-11 (architect): its long press is
-    // Ctrl+Shift+S, the publish chord (run_publish_chord) —
-    // the row's own key under both modifiers, no translation.
-    {RedesignButton::Save,       GuiKeys::S,   true,  false, false},   // Ctrl+S (+Shift, and in `h`: Ctrl+Shift+S, save_button_publishes)
+    // SAVE admits nothing (architect 2026-11-17, send U): in the `h` view
+    // its lift is Ctrl+Shift+S, the publish chord (save_button_publishes,
+    // run_publish_chord), and outside it the plain save.
+    {RedesignButton::Save,       GuiKeys::S,   true,  false, false},   // Ctrl+S (in `h`: Ctrl+Shift+S, save_button_publishes)
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false,  true},   // Ctrl+Shift+Z
     // (COPY PHASE RESETS' row stood here 2026-10-25 to 2026-11-07, its key
@@ -1244,11 +1244,10 @@ void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
 // button took its grey from that admission through this walk. The architect
 // ruled a gate's membership the CHORD'S ALONE that day (a state term there made
 // the gate answer the view's own save chord with "not available in the history
-// view"), so the act's chord is admitted outright (Ctrl+Shift+S since
-// 2026-10-10), this walk answers LIVE for Save, and
-// the same two terms reach the face from redesign_button_enabled's own Save arm
-// through history_checkpoint_actionable (app_state.h) — the identical grey off
-// the act's own predicate. It admits BARE `v` — the revert's chord since
+// view"), so the act's chord is admitted outright (Ctrl+Shift+S), this walk
+// answers LIVE for Save, and the face greys from redesign_button_enabled's own
+// Save arm through history_checkpoint_actionable (app_state.h) — the GitHub
+// status and the in-flight bit, the act's own predicate. It admits BARE `v` — the revert's chord since
 // 2026-09-01, Ctrl+H before it — only while a diff flag is selected on a
 // writable tab (history_revert_actionable), so this walk answers DEAD for
 // REVERT with an empty subject or a locked tab — AN ANSWER THE FACE READS
@@ -1265,25 +1264,20 @@ void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
 // at all. The derivation carries all of it
 // for free — this function restates no term of any of them. They differ in
 // cadence and that is the honest difference: the active walk's count grows as
-// the prefetch streams and the revert subject moves with every click, while the
-// terms that left this walk in 2026-09-01 sit at the other end of it — the head
-// delta measured once (at the entry, or at the drain that answers it) and
-// static for the visit, the in-flight bit falling when the worker reports.
+// the prefetch streams and the revert subject moves with every click.
 //
 // THE PARTITION THIS PRODUCES, in full (verified against the roster both ways,
 // 2026-08-04, re-verified 2026-08-05, re-derived 2026-08-13 when the Quit button
 // left the roster for the File menu, and since 2026-10-21 with no hand
 // entries at all, the menu row's anchors gone):
 //   LIVE — the icon row's view pairs, ViewSource/ViewTarget/ViewWarp/ViewPhase (bare 1/2/3/4, the admitted
-//   view selectors), Save (its lift Ctrl+Shift+S in this mode since
-//   2026-10-10, Ctrl+S before — save_button_publishes — the
-//   save-and-commit checkpoint act, wearing the "Save and Commit" face — LIVE
-//   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
-//   allowlist for the act, its own arm in redesign_button_enabled greying it
-//   with an empty head delta or a checkpoint in flight exactly as this walk used
-//   to, and greyed rather than relabelled in either case; it was RENDER's chord
-//   and RENDER's face until 2026-08-08, when the act moved onto the save it
-//   begins with),
+//   view selectors), Save (its lift Ctrl+Shift+S in this mode —
+//   save_button_publishes — the save-and-commit checkpoint act, wearing the
+//   "Save and Commit" face — LIVE FROM THIS WALK SINCE 2026-09-01, its own arm
+//   in redesign_button_enabled greying it on the GitHub status or a checkpoint
+//   in flight (history_checkpoint_actionable), greyed rather than relabelled;
+//   it was RENDER's chord and RENDER's face until 2026-08-08, when the act
+//   moved onto the save it begins with),
 //   ZOOM IN AND ZOOM OUT (2026-10-27; `=` / `-` and their shifted forms on
 //   the allowlist through is_zoom_step_key),
 //   THE LEVEL CASE (2026-11-05, in the NOISE lamp's seat; the lamp's
@@ -1349,8 +1343,7 @@ void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
 //   entry: the allowlist admits its chord only while a diff flag is selected
 //   (history_mode_revert_subject_standing), so this walk answers DEAD with an
 //   empty subject and LIVE the moment a click selects one, from the same
-//   admission with nothing restated here, exactly as Save's head-delta grey
-//   does. ITS FACE READS THAT ANSWER AGAIN SINCE 2026-08-30: from 2026-08-15
+//   admission with nothing restated here. ITS FACE READS THAT ANSWER AGAIN SINCE 2026-08-30: from 2026-08-15
 //   the button was the one place a per-SELECTION fact reached a chrome glyph,
 //   and redesign_button_enabled lifted the four companions over this
 //   partition entirely for the blink rather than the logic; the
@@ -1387,10 +1380,9 @@ void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
 // TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face,
 // which since 2026-08-08 has nothing left to arbitrate on row 2: the ONE button
 // whose shifted twin the mode consumed while its base chord stood — Render —
-// is dead on both shapes now, and Save's shifted press (admitted since
-// 2026-10-11) is the very publish chord its plain lift spells in the view, so
-// its two shapes are one answer here. (The walk asks Save's chord with the
-// shift set, save_button_publishes below.) (2) A
+// is dead on both shapes now, and Save's lift in the view is the publish
+// chord. (The walk asks Save's chord with the shift set,
+// save_button_publishes below.) (2) A
 // button the READ-ONLY tab bit refuses is not this function's business: that
 // refusal is the lock's, and it applies inside the view exactly as outside it.
 // SINCE 2026-08-15 THE LOCK GREYS ITS OWN SET (redesign_button_enabled's
@@ -1436,14 +1428,11 @@ void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
 // same"): while the view stands its lift is Ctrl+Shift+S (is_publish_key,
 // gui_input.h) — the save-and-commit act, the pull or the check — and
 // Ctrl+S, its table chord, is the plain save there, with no button of its
-// own. Outside the view the button is that plain save. Asked by the lift's
-// chord build (finish_chrome_press_release) and by the `h` chord walk below,
-// so the face and the press read one chord. SAVE ADMITS SHIFT since
-// 2026-10-11 (architect: the publish chord as its twin, Open's model): its
-// long press spells Ctrl+Shift+S in EITHER view — outside
-// the view the twin, inside it the same chord this term already spells, so
-// the `h` view's tap and long press run one act. It admits no
-// ctrl.
+// own. Outside the view the button is that plain save, and the publish chord
+// has no producer there (architect 2026-11-17, send U: the commit is the `h`
+// view's alone; Save admits no long press). Asked by the lift's chord build
+// (finish_chrome_press_release) and by the `h` chord walk below, so the face
+// and the press read one chord.
 static bool save_button_publishes(RedesignButton id, bool history_view) {
     return id == RedesignButton::Save && history_view;
 }

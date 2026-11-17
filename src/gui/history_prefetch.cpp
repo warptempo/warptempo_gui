@@ -58,7 +58,6 @@ void GuiHistoryPrefetch::kick(std::string source_audio_path,
     header_seen_ = false;
     header_      = GuiHistoryWalkHeader{};
     members_.clear();
-    done_    = false;
     running_ = true;
     failed_  = false;
     failure_reason_ = GuiFailure{};
@@ -112,7 +111,6 @@ GuiHistoryPrefetch::DrainResult GuiHistoryPrefetch::drain() {
             ++result.members_appended;
             break;
         case Message::Kind::Done:
-            done_              = true;
             running_           = false;
             failed_            = !m.result.ok;
             failure_reason_    = std::move(m.result.unavailable_reason);

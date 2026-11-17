@@ -1276,33 +1276,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // each selected marker's place (2026-11-10) (in the P column it
         // refuses whole since 2026-08-30
         // as already crossed; the act's head) — and CTRL+SHIFT+S PUBLISHES
-        // (2026-10-10, below). Every
+        // in the `h` view (below). Every
         // other modifier combination on `s` is unbound and FALLS OUT OF THIS
         // BLOCK (2026-08-30) to the strict-modifier tail, which says so on a
         // card: this block claims the four spellings it binds and nothing
         // else, so an unbound one is answered by the tail that answers every
         // other unbound chord rather than dying here unremarked.
         //
-        // CTRL+SHIFT+S IS THE PUBLISH CHORD, IN BOTH VIEWS (architect
-        // 2026-10-10 ~18:35: "ctrl shift s should commit to github using the
-        // default title, no modal. this is to help commit quickly from main
-        // page. in history view the hotkey for save then becomes ctrl s and
-        // save and commit becomes ctrl shift s. however the icons in history
-        // remain the same. also ctrl shift s becomes pull if appropriate";
-        // the commit-title editor retired the same night): the pull, the
-        // check or save-and-commit under the default title by the GitHub
-        // status (run_publish_chord owns the fork). The
-        // `h` view's Save button reaches it by spelling this chord at its lift
-        // (finish_chrome_press_release), its face unchanged. CTRL+S IS THE
-        // PLAIN SAVE IN BOTH VIEWS since that ruling (it was the checkpoint
-        // act in the view from 2026-08-08, and the plain save had no key
-        // there). Both chords are admitted by the read-only gate — a save and
-        // a checkpoint of the state the tab already holds author nothing —
-        // and by the `h` view's allowlist; inside a standing PICKER or player
-        // the router answers Ctrl+S as the plain save and
-        // Ctrl+Shift+S as a consumed nothing, and under an editor the
-        // keyboard-modal gate swallows Ctrl+Shift+S on its card.
-        if (is_publish_key(key, mods)) {
+        // CTRL+SHIFT+S IS THE PUBLISH CHORD, THE `h` VIEW'S ALONE (architect
+        // 2026-11-17, send U: the commit is any change git sees, from that
+        // view alone): the pull, the check or save-and-commit under the
+        // default title by the GitHub status (run_publish_chord owns the
+        // fork). Its one producer is the view's Save button, which spells
+        // this chord at its lift (finish_chrome_press_release); outside the
+        // view the chord is unbound (chord_is_bound) and falls out of this
+        // block with the other unbound spellings. CTRL+S IS THE PLAIN SAVE IN
+        // BOTH VIEWS (architect 2026-10-10). Both chords are admitted by the
+        // read-only gate — a save and a checkpoint of the state the tab
+        // already holds author nothing — and by the `h` view's allowlist;
+        // inside a standing PICKER or player the router answers Ctrl+S as the
+        // plain save and Ctrl+Shift+S as a consumed nothing, and under an
+        // editor the keyboard-modal gate swallows Ctrl+Shift+S on its card.
+        if (app.history_mode.active && is_publish_key(key, mods)) {
             run_publish_chord();
             return;
         }

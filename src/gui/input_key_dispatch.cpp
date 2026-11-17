@@ -339,10 +339,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // same ruling that admitted the render chords.
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
-    // THE PUBLISH CHORD (architect 2026-10-10), Ctrl+Shift+S through its
-    // shared predicate, admitted for the save's reason: the act Ctrl+S carried
-    // in the `h` view from 2026-08-08 and ran from a locked tab, in either
-    // view now — a checkpoint, a pull's fast-forward or a check authors
+    // THE PUBLISH CHORD, Ctrl+Shift+S through its shared predicate, the `h`
+    // view's alone (architect 2026-11-17, send U), admitted for the save's
+    // reason: a checkpoint, a pull's fast-forward or a check authors
     // nothing on this tab (a pull that changes the open piece asks first and
     // reopens it through the Revert road, which this gate admits too).
     const bool is_publish = is_publish_key(key, mods);
@@ -1290,7 +1289,7 @@ void GuiInputHandler::republish_history_lane_now() {
 // instead, so the re-entry is gone. This stays a function rather than eight
 // lines inside the toggle because it is the ENTRY OWNER: everything a visit is
 // made of is here, so a future entry inherits the whole shape — walk, index,
-// cleared focus, head delta, generation bump, lane-stash drop — instead of
+// cleared focus, generation bump, lane-stash drop — instead of
 // reproducing part of it.
 //
 // EVERY ENTRY OPENS ON THE MOST RECENT COMMIT (architect 2026-11-10, "more
@@ -1321,7 +1320,7 @@ void GuiInputHandler::republish_history_lane_now() {
 // the GitHub check (dispatch_github_check) when the status reads UNCHECKED (no
 // reading: the project's own check could not classify, or a checkpoint ended
 // WriteFailed before taking one) or OFFLINE (the link may have come up since —
-// the publish chord asks again on the same reasoning, run_publish_chord,
+// the view's Save key asks again on the same reasoning, run_publish_chord,
 // architect 2026-09-28). UP TO DATE, AHEAD, BEHIND, DIVERGED and REFUSED
 // STAND, and row 8's segment says "as of the last check" truthfully, because
 // every act of this program that can move either side writes its own reading:
@@ -1408,10 +1407,6 @@ void GuiInputHandler::open_history_mode_fresh() {
     fresh.active = true;
     fresh.index  = 0;      // the most recent commit, at every entry
     fresh.focus  = -1;
-    // (THE HEAD DELTA IS MEASURED BELOW, once the session is moved in: it may
-    // have nothing to measure yet — a visit can open before the prefetch has
-    // delivered member 0 — so the measurement is its own owner now rather than
-    // two lines here. measure_history_head_delta owns the rule.)
     // EVERY ENTRY IS A NEW GENERATION. The flag cache identifies the mode's
     // content by (active, index, focus, compare) plus this, and two sessions of
     // the same piece open in the same shape — the same index, focus -1, the
@@ -1445,80 +1440,12 @@ void GuiInputHandler::open_history_mode_fresh() {
          app.github_status == GuiGitHubStatus::Offline)) {
         dispatch_github_check();
     }
-    measure_history_head_delta();
     drop_lane_stash_across_history_edge();
     // AND THE LANE IS REPUBLISHED IN THIS PRESS (2026-08-07): the view opens
     // showing the viewed checkpoint's flags rather than an empty lane that fills
     // on the next tick. The edges' one shape — its owner carries the reasoning.
     republish_history_lane_now();
     viewport.invalidate_all();
-}
-
-// THE HEAD DELTA'S ONE MEASUREMENT SITE (architect 2026-08-07, generalizing the
-// entry's own two lines). It answers "is there anything to checkpoint" — index
-// 0, the newest checkpoint, against the now side init() froze — and the answer
-// is static for the visit once made, both sides being fixed for the session's
-// life (the field's own comment, AppState::HistoryMode::head_delta_empty, owns
-// the full reasoning and the recorded asymmetry).
-//
-// WHAT THE STREAMING WALK ADDED is a window in which there is nothing to
-// measure: a visit may open before the prefetch has delivered member 0 at all.
-// The bit RESTS TRUE there — the conservative face under UP TO DATE, since the
-// act is greyed and the chord silent while the answer is unknown; under AHEAD
-// the act and the face ask head_delta_measured itself, TRUE selecting the
-// untitled push retry there — and this runs again at every
-// prefetch arrival while the view stands, taking the measurement the first time
-// member 0 exists. `head_delta_measured` is what makes that "the first time":
-// after it, this is a no-op whatever else arrives.
-//
-// AND A FINISHED WALK WITH NO MEMBER AT ALL ANSWERS COMMIT-WORTHY (architect
-// 2026-08-09, with the empty walk becoming a legal standing state): the window
-// above closes when the run reports DONE, and if nothing arrived in it the
-// answer is not unknown any more — with no eligible baseline to measure
-// against there is BY DEFINITION everything to checkpoint, and the act must be
-// live or the view has no way to create the first member. It is a measurement
-// like any other, so the bit latches and the mid-scan greyed face stands until
-// the run says it is done.
-//
-// CUMULATIVE, EXPLICITLY, and it is the one reader of a delta that names a
-// compare mode rather than passing the session's bit: the act commits the LIVE
-// state, so the question is live-vs-newest whatever reading the lane shows.
-// Since the iterative reading turned FORWARD (architect 2026-08-05) the two
-// coincide at index 0, so the name currently picks the same delta the bit would
-// — kept explicit anyway, the coincidence being a property of the pairing and
-// not of this question.
-//
-// A MISSING DELTA AT A NON-EMPTY WALK leaves the bit untouched and UNMEASURED,
-// so a later arrival can still answer. It is not a reachable state (an available
-// session's index 0 resolves whenever a member exists), and the resting TRUE is
-// the same conservative face the empty window wears.
-//
-// THE READING ITSELF IS read_head_delta, ONE BODY FOR TWO SESSIONS (2026-10-10):
-// this visit's, latched here, and the transient one a main-window publish
-// chord binds for its press (run_publish_chord), which reads it once and
-// keeps nothing.
-struct GuiHeadDeltaReading {
-    bool measured = false;  // false: nothing to measure against yet
-    bool empty    = true;   // the conservative resting answer while unmeasured
-};
-static GuiHeadDeltaReading read_head_delta(GuiHistoryDiff& session) {
-    if (session.commit_count() == 0) {
-        if (!session.walk_finished_empty()) return {false, true};
-        return {true, false};
-    }
-    const GuiHistoryCommitDelta* head =
-        session.delta_at(0, GuiHistoryCompare::Cumulative);
-    if (!head) return {false, true};
-    return {true, head->is_empty()};
-}
-
-void GuiInputHandler::measure_history_head_delta() {
-    if (!app.history_mode.active) return;
-    if (app.history_mode.head_delta_measured) return;
-    const GuiHeadDeltaReading r = read_head_delta(app.history_mode.session);
-    if (!r.measured) return;
-    app.history_mode.head_delta_empty    = r.empty;
-    app.history_mode.head_delta_measured = true;
 }
 
 // -- THE PREFETCH'S THREE EDGES (architect 2026-08-07) ----------------------
@@ -1535,9 +1462,7 @@ void GuiInputHandler::measure_history_head_delta() {
 // bumps the generation, clears the queue and replaces the pending run, so a scan
 // begun against an older tip is abandoned between candidates and its queued
 // members are dropped by tag. The freshness short-circuit that can DECLINE to
-// kick lives one function down, and only the `h` entry and the main window's
-// publish chord (run_publish_chord's transient bind, 2026-10-10) go through
-// it.
+// kick lives one function down, and only the `h` entry goes through it.
 //
 // NO KICK CAN ARRIVE WHILE THE VIEW STANDS, and the four kickers are the whole
 // proof: the startup load tail runs once with the view down and no way to have
@@ -1546,9 +1471,7 @@ void GuiInputHandler::measure_history_head_delta() {
 // checkpoint completion's re-warm runs after run_history_commit has already
 // closed the view, which bare `h` then refuses to reopen while the bit
 // stands; both of the pull's kicks run straight after it closes any
-// standing view, on the GUI thread, in the same call; and the main window's
-// publish chord kicks through the staleness test only with the view down
-// (run_publish_chord, 2026-10-10). (A DEFERRAL BIT stood
+// standing view, on the GUI thread, in the same call. (A DEFERRAL BIT stood
 // here from 2026-08-07 to 2026-08-29 for the case none of the kickers can
 // produce — a kick parked rather than run because a visit is BOUND to the store's
 // generation and a restart would clear the deque its indices name — and it was
@@ -1603,27 +1526,22 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // The DRAIN is unconditional: the store is the app's, not the view's, and it
 // must stay current whether or not anyone is looking. What is conditional is the
 // REACTION, and it is the whole of what a growing walk needs while the view
-// stands:
-//   * the head delta gets its one measurement the moment member 0 exists;
-//   * the window is damaged, because `n/N` in the bottom corner and the diff
-//     lane both read a count that just changed — the lane through the flag
-//     cache's own fingerprint field, which is why an empty-walk entry's first
-//     member repaints rather than sitting blank.
+// stands: the window is damaged, because `n/N` in the bottom corner and the
+// diff lane both read a count that just changed — the lane through the flag
+// cache's own fingerprint field, which is why an empty-walk entry's first
+// member repaints rather than sitting blank.
 // FULL-WINDOW DAMAGE, the mode edges' own class: the corner and the lane are two
 // surfaces and neither is worth a rect.
 //
 // TWO EDGES REACT, NOT ONE (2026-08-09): an APPEND, above, and the run BECOMING
-// DONE, which is the other moment the head delta can be answered — a scan that
-// finishes having delivered nothing turns the act from "unknown, so greyed" into
-// "everything to checkpoint" (measure_history_head_delta owns that rule), and the
-// Save button's face has to follow inside the same frame. A header arriving alone
-// still costs nothing.
+// DONE, the walk's count then final. A header arriving alone still costs
+// nothing.
 //
 // AND A RUN THAT FINISHES FAILED ENDS THE VISIT (2026-08-09). The view's premise
 // is that this session knows the piece's history; a walk of the history that
 // could not be read means it does not, and the `0/0` blank lane would then be a LIE — it
-// says "no checkpoints" where the truth is "unknown" — with the act greyed and
-// no account anywhere of why. So the failure gets the refusal it would have got
+// says "no checkpoints" where the truth is "unknown" — with no account
+// anywhere of why. So the failure gets the refusal it would have got
 // a moment earlier: init's own one-line stderr shape, printed here from the
 // reason the store recorded, and the view CLOSED through the one exit owner, so
 // the lane republishes exactly as any other close does. The next `h` meets init's stable refusal with the same line.
@@ -1701,7 +1619,6 @@ void GuiInputHandler::on_history_prefetch_ready() {
         return;
     }
     if (r.members_appended == 0 && !r.became_done) return;
-    measure_history_head_delta();
     viewport.invalidate_all();
 }
 
@@ -2094,8 +2011,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
                                  kIterationLockCard);
             return true;
         }
-        // NOT WHILE A CHECKPOINT IS PUBLISHING (2026-08-07). The walk, the now
-        // side and the head delta are all measured against the repository at
+        // NOT WHILE A CHECKPOINT IS PUBLISHING (2026-08-07). The walk and the
+        // now side are both measured against the repository at
         // init(), and the worker is mid-mutation on that repository: a view
         // opened now would show a commit list the act is about to add to, or
         // worse, catch it half-written. One consumed no-op and one line, the
@@ -2682,62 +2599,35 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             a legal standing state (the term at the predicate
 //                             says why).
 //   - Ctrl+Shift+S          → THE SAVE-AND-COMMIT ACT, the mode's second
-//                             admitted mutator — THE PUBLISH CHORD since
-//                             2026-10-10 (architect: "in history view the
-//                             hotkey for save then becomes ctrl s and save and
-//                             commit becomes ctrl shift s. however the icons in
-//                             history remain the same"), the same act it is in
-//                             the main window (run_publish_chord: the pull, the
-//                             check, or save and commit under the default title
-//                             with no question asked). It rode Ctrl+S from
-//                             2026-08-08 (moved off Ctrl+Alt+R, a consumed
-//                             nothing in here now, its shifted twin with it)
-//                             until that ruling. The act is save-FIRST by
-//                             definition — it runs the ordinary save through
-//                             its own owner and only then writes, commits and
-//                             pushes. The dispatch is the `s` arm in on_key
-//                             (input_handler.cpp); nothing is dispatched from
-//                             here. The Save button reaches it by spelling
-//                             this chord at its lift while the mode stands
-//                             (finish_chrome_press_release) and wears the
-//                             commit icon and the tooltip "Save and Commit".
-//   - Ctrl+S                → THE PLAIN DISK SAVE since 2026-10-10 (the
-//                             same ruling; until then the view had no plain
-//                             save hotkey and a settings-only drift was saved
-//                             by leaving the view). It writes the state the
-//                             session already holds and touches nothing the
-//                             view froze; it has no button in here.
-//                             THE ACT'S ADMISSION IS UNCONDITIONAL SINCE
-//                             2026-09-01 (architect: a gate's membership is the
-//                             chord's alone — the two terms were what made the
-//                             gate answer this very chord with "not available
-//                             in the history view"). They were the head delta
-//                             (2026-08-05) and the in-flight bit (2026-08-07),
-//                             and they live at the ACT now (run_publish_chord:
-//                             the publishing card, then silence in here for an
-//                             empty delta) with the SAVE button's grey reading
-//                             the same terms through
-//                             history_checkpoint_actionable (app_state.h)
-//                             instead of through this line. With the HEAD DELTA
-//                             EMPTY — the newest checkpoint already carrying
-//                             this session's authoring content — there is
-//                             nothing to do, and that is what the face says.
-//                             The delta bit
-//                             is measured once and cannot change while the mode
-//                             stands (AppState::HistoryMode::head_delta_empty
-//                             owns it, the asymmetry included: "no changes" is
-//                             the delta's vocabulary, the two marker columns
-//                             plus the six engine-block keys (2026-10-28), so
-//                             a drift of the view band alone greys the act
-//                             too). The in-flight
-//                             term is one checkpoint at a time; it is nearly
-//                             unreachable in here (the act closes the view and
-//                             `h` will not reopen one over a publishing
-//                             repository), which is why the act answers it with
-//                             the sentence three other sites already say rather
-//                             than one of its own, while the GLOBAL save lockout
-//                             that DOES show is GuiSaveOps::save's own term,
-//                             mirrored by the Save button's grey.
+//                             admitted mutator — THE PUBLISH CHORD, bound in
+//                             this view alone (architect 2026-11-17, send U:
+//                             commit is any change git sees, from the `h`
+//                             view alone; run_publish_chord: the pull, the
+//                             check, or save and commit under the default
+//                             title with no question asked). The act is
+//                             save-FIRST by definition — it runs the ordinary
+//                             save through its own owner and only then
+//                             writes, commits and pushes. The dispatch is the
+//                             `s` arm in on_key (input_handler.cpp); nothing
+//                             is dispatched from here. The Save button reaches
+//                             it by spelling this chord at its lift while the
+//                             mode stands (finish_chrome_press_release) and
+//                             wears the commit icon and the tooltip "Save and
+//                             Commit".
+//   - Ctrl+S                → THE PLAIN DISK SAVE since 2026-10-10. It
+//                             writes the state the session already holds and
+//                             touches nothing the view froze; it has no
+//                             button in here.
+//                             THE ACT'S ADMISSION IS UNCONDITIONAL (architect
+//                             2026-09-01: a gate's membership is the chord's
+//                             alone): the GitHub status is the act's fork
+//                             (run_publish_chord), the SAVE button's grey
+//                             reading the same status through
+//                             history_checkpoint_actionable and its two
+//                             siblings (app_state.h) instead of through this
+//                             line. The GLOBAL save lockout while a
+//                             checkpoint publishes is GuiSaveOps::save's own
+//                             term, mirrored by the Save button's grey.
 //   - Bare `v`              → THE REVERT ACT, the mode's THIRD admitted mutator
 //                             (architect 2026-08-05, on Ctrl+H until
 //                             2026-09-01) and admitted on the same
@@ -2872,11 +2762,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // and no handler in hand. IT TAKES THE WHOLE AppState alongside key+mods because
 // TWO admissions are conditional on session state (the revert act's, on a
 // subject standing on a writable tab, and the load-in-place's, on the active
-// walk carrying a member). THEY WERE FOUR UNTIL 2026-09-01, when the COMMIT
-// ACT'S TWO — head_delta_empty and history_checkpoint_in_flight, the act's
-// chord's since 2026-08-08 — moved to the act on the architect's ruling that a gate's
-// membership is the chord's alone (a state term here makes the gate answer the
-// view's own chord with "not available in the history view"). Each
+// walk carrying a member). THE COMMIT ACT'S CHORD CARRIES NO TERM HERE
+// (architect 2026-09-01: a gate's membership is the chord's alone — a state
+// term here makes the gate answer the view's own chord with "not available in
+// the history view"). Each
 // condition is decided HERE and restated nowhere, so the face that greys is
 // one decision. THE REVERT ACT'S ADMISSION HAD
 // NO FACE READER from 2026-08-15 to 2026-08-30, a scope rather than a second
@@ -2886,12 +2775,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // reversal of a grey that tracked the diff-flag selection and blinked at
 // interaction cadence; the truthful-buttons ruling deleted that lift, so the
 // face reads this admission through the partition again, recorded at the
-// companions' arm in app_state.h. It took the HistoryMode struct
-// alone until the in-flight bit arrived (that bit living on AppState because
-// the act outlives the view it was launched from); the bit left again with the
-// commit act's terms on 2026-09-01, and the whole AppState stays because the
-// REVERT admission composes the active tab's lock, which is no more the mode's
-// than the worker was.
+// companions' arm in app_state.h. The whole AppState is taken because the
+// REVERT admission composes the active tab's lock, which is not the mode's.
 //
 // ONE BODY, ASKED TWO WAYS (architect 2026-10-07, the `h` roster): `state` is
 // the session the two conditional admissions read, or nullptr to ask about
@@ -2934,7 +2819,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // 2026-08-09: the walk must have a member. The act names THE VIEWED one,
     // so a walk with none has nothing to name and
     // nothing to load, and one decision refuses the key and greys the icon
-    // row's load-in-place button — the head delta's own shape.
+    // row's load-in-place button.
     //
     // IT WAS THE LOCAL ARM'S ALONE until the empty COMMIT walk became a legal
     // standing state: the Local walk carries U + R + 1 members and can only be
@@ -2971,27 +2856,20 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     const bool is_revert_act =
         (key == GuiKeys::V && bare &&
          (state == nullptr || history_revert_actionable(*state)));
-    // CTRL+SHIFT+S IS THE ACT IN HERE (architect 2026-10-10, the publish
-    // chord; Ctrl+S carried it from 2026-08-08, moved off Ctrl+Alt+R), AND IT
-    // IS ADMITTED UNCONDITIONALLY SINCE 2026-09-01 (architect: a gate's
-    // membership test is the CHORD'S ALONE — a chord the mode owns is admitted
-    // as vocabulary, and its ACT answers whatever the session cannot do right
-    // now). IT CARRIED THE ACT'S TWO SESSION TERMS UNTIL THEN — a non-empty
-    // head delta (2026-08-05) and no checkpoint in flight (2026-08-07) — and
-    // that is exactly the shape the architect ruled out: with either failing,
-    // the press fell out of this list into the gate's GENERIC sentence about
-    // the one chord this view exists to run. The act owns both refusals now
-    // (run_publish_chord): a checkpoint in flight says the publishing sentence
-    // three other sites already say, and an EMPTY HEAD DELTA is silent in here
-    // under the one-dimensional rule (nothing to commit is a state the greyed
-    // Save-and-Commit face is already showing).
+    // CTRL+SHIFT+S IS THE ACT IN HERE (the publish chord, the view's alone
+    // since 2026-11-17, send U), AND IT IS ADMITTED UNCONDITIONALLY
+    // (architect 2026-09-01: a gate's membership test is the CHORD'S ALONE —
+    // a chord the mode owns is admitted as vocabulary, and its ACT answers
+    // whatever the session cannot do right now, run_publish_chord, by the
+    // GitHub status: the pull while GitHub is BEHIND, the check while
+    // offline, the commit while up to date or ahead, a card on the rest).
     //
     // THE FACE IS THE ACT'S TOO: the Save button greys inside the view
     // through history_checkpoint_actionable and its two siblings (app_state.h)
     // read by redesign_button_enabled's own Save arm, instead of through this
     // line and the derived partition. One decision for the key and the glyph.
     //
-    // CTRL+S IS THE PLAIN DISK SAVE IN HERE since the same ruling, admitted
+    // CTRL+S IS THE PLAIN DISK SAVE IN HERE (architect 2026-10-10), admitted
     // for the read-only gate's reason: it writes the state the session already
     // holds and moves nothing the view froze.
     const bool is_publish = is_publish_key(key, mods);
@@ -3049,8 +2927,8 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // (viewport, zoom, playhead, trim, read_only) and share the warp store, the
     // phase-reset store and the engine settings,
     // while the displayed delta's whole vocabulary is those two stores plus
-    // the engine block — so the two walks, the frozen now side and the head delta
-    // describe the same piece on either tab.
+    // the scale — so the two walks and the frozen now side describe
+    // the same piece on either tab.
     // The undo/redo stacks the LOCAL walk indexes are session-global for the
     // same reason. What the switch does move is the WINDOW, which the view has
     // not owned since the entry stopped framing and the exit stopped restoring.
@@ -3112,88 +2990,45 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
     return history_mode_allowlist_refuses(key, mods, nullptr);
 }
 
-// -- THE PUBLISH CHORD'S GUI HALF (Ctrl+Shift+S, architect 2026-10-10) -------
+// -- THE PUBLISH CHORD'S GUI HALF (Ctrl+Shift+S, the `h` view's) -----------
 //
 // The act itself is commit_history_checkpoint (history_diff.h): the fetch
 // first, the three writes, the three-path commit, the push, and every stderr
 // line about them. What lives here is THE CHORD'S FORK in front of it (the
-// GitHub status and the head delta), THE SAVE in front of
-// the act (2026-08-04 — the act is "Save and Commit"), the CLOSE of a standing
+// GitHub status), THE SAVE in front of
+// the act (2026-08-04 — the act is "Save and Commit"), the CLOSE of the
 // `h` view behind the save (2026-08-05, re-partitioned 2026-08-07), and the
 // DISPATCH onto the background worker with the report that comes back from it.
 
-// THE CHORD'S ACT, ONE BODY IN BOTH VIEWS (architect 2026-10-10 ~18:35: "ctrl
-// shift s should commit to github using the default title, no modal. this is
-// to help commit quickly from main page ... also ctrl shift s becomes pull if
-// appropriate"; ~23:15, the commit-title editor RETIRED WHOLE: "it's basically
-// useless because I'm always just using the same title, the default. And if I
-// make a mistake, a revert is just a quick load in place away"). Two callers,
-// both on_key's `s` arm for Ctrl+Shift+S (is_publish_key, gui_input.h): the
-// keyboard, in the main window and in the `h` view, and the `h` view's Save
-// button, whose lift spells this chord there (finish_chrome_press_release).
-// Ctrl+S is the plain save in both views.
+// THE CHORD'S ACT, THE `h` VIEW'S ALONE (architect 2026-11-17, send U: commit
+// is any change git sees in the sidecars, from the `h` view alone; the
+// default title with no question asked since 2026-10-10, the commit-title
+// editor retired). ONE CALLER, on_key's `s` arm for Ctrl+Shift+S
+// (is_publish_key, gui_input.h) behind the view's mode test, whose one
+// producer is the view's Save button: its lift spells this chord there
+// (finish_chrome_press_release). Ctrl+S is the plain save in both views.
+// The session is the visit's own.
 //
-// THE SESSION IS THE VIEW'S OR THE PRESS'S: inside the `h` view the act reads
-// the visit's own — its bootstrap verdict, its three strings and its head
-// delta, measured once per visit (measure_history_head_delta); outside it the
-// press binds a TRANSIENT session to the prefetch store exactly as the `h`
-// entry does — the staleness kick first, then GuiHistoryDiff::init, a
-// discovery and two config reads at worst and no strict load — and reads the
-// same head delta off it (read_head_delta). One body for both, so the forks
-// below cannot come to read differently in the two views.
-//
-// THE FORK, in order:
-//   - A CHECKPOINT ALREADY IN FLIGHT cards the publishing sentence
-//     (kCheckpointPublishing) — single in flight, the wait seconds — and is
-//     asked BEFORE the transient bind, so no press kicks a scan of a clone the
-//     worker is mid-mutation on (bare `h`'s own refusal, for its reason).
-//   - NO CLONE TO COMMIT INTO (architect 2026-09-04) cards the bootstrap's
-//     reason under the product's one spelling of the fact, kHistoryUnavailable.
-//   - THE GITHUB STATUS (architect 2026-09-27): Checking, Refused, Unchecked
-//     and Diverged each card their sentence; OFFLINE ASKS GITHUB AGAIN
-//     (dispatch_github_check; architect 2026-09-28) and nothing else, the
-//     answer being what the next press acts on — silent in the view, whose
-//     row 8 shows the word, and a card outside it; BEHIND is the PULL
-//     (run_history_pull_press, its OK / Cancel confirmation when the pull
-//     changes the open piece; the press owns the one road).
-//   - UP TO DATE OR AHEAD, THE HEAD DELTA DECIDES. Unmeasured
-//     (the walk's member 0 not yet delivered — the bit rests TRUE, and reading
-//     that as "nothing new" under AHEAD would push without asking whether real
-//     edits are owed, architect 2026-09-28) or empty under UP TO DATE there is
-//     nothing to commit; AHEAD with a measured empty delta RETRIES THE PUSH
-//     (architect 2026-09-27, the act's clean-but-owing arm); otherwise the act
-//     commits and pushes. Every run is under THE DEFAULT TITLE
-//     (history_checkpoint_title, the one owner of the `Update <id>`
-//     spelling), with no question asked.
-//   THE NOTHING-TO-COMMIT ANSWER IS SILENT IN THE VIEW AND A CARD OUTSIDE IT,
-//   a deliberate asymmetry: in the view the greyed Save-and-Commit face
-//   already shows the state (history_checkpoint_actionable, the face's one
-//   composition of these same terms), while the main window paints no face
-//   for the head delta, so the press says it.
+// THE FORK IS THE GITHUB STATUS (architect 2026-09-27), read live: the face
+// (history_checkpoint_actionable and its two siblings, app_state.h) greys
+// every status the act cannot run, but the lift asks the painted face, so a
+// status that moved inside that frame is answered here — Checking, Refused,
+// Unchecked and Diverged each card their sentence; OFFLINE ASKS GITHUB AGAIN
+// (dispatch_github_check; architect 2026-09-28) and nothing else, the answer
+// being what the next press acts on, silent, row 8 showing the word; BEHIND
+// is the PULL (run_history_pull_press, its OK / Cancel confirmation when the
+// pull changes the open piece; the press owns the one road); UP TO DATE OR
+// AHEAD COMMITS, whatever the session's change is: the act saves first, and
+// the worker commits whatever git sees in the three sidecars — the view band
+// and the trim included — and pushes, or pushes what the branch already
+// owes; a tree git sees clean and a branch owing nothing end NothingToCommit,
+// which cards (on_history_checkpoint_complete).
+// (A standing view never meets a checkpoint in flight — the act closes the
+// view before the bit rises and bare `h` refuses to reopen one while it
+// stands — nor a session without a clone, the face greying there for the
+// whole visit; so this body asks neither.)
 void GuiInputHandler::run_publish_chord() {
-    if (app.history_checkpoint_in_flight) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kCheckpointPublishing);
-        return;
-    }
-    const bool       in_view = app.history_mode.active;
-    GuiHistoryDiff   transient;
-    GuiHistoryDiff*  session = &app.history_mode.session;
-    GuiHeadDeltaReading delta{app.history_mode.head_delta_measured,
-                              app.history_mode.head_delta_empty};
-    if (!in_view) {
-        kick_history_prefetch_if_stale();
-        transient.init(app, history_prefetch);
-        session = &transient;
-        delta   = read_head_delta(transient);
-    }
-    if (!session->available()) {
-        notifications.notify(
-            AppState::NotificationClass::Normal,
-            std::string(kHistoryUnavailable) + ": " +
-                session->unavailable_reason().display);
-        return;
-    }
+    const GuiHistoryDiff& session = app.history_mode.session;
     switch (app.github_status) {
     case GuiGitHubStatus::Checking:
         notifications.notify(AppState::NotificationClass::Normal,
@@ -3208,19 +3043,11 @@ void GuiInputHandler::run_publish_chord() {
         // BE STALE — a view opened while the link was still coming up would
         // read offline for its whole life — so the act never answers from it.
         // The press asks again through the check's one dispatcher and does
-        // nothing else: in the view row 8 turns to `checking...` and then
-        // the answer, and the next press acts on it (Behind puts the Pull
-        // face up; the Save key reads CHECK on these terms in the view,
-        // redesign_button_glyph's fourth glyph, 2026-10-28). No card in the
-        // view — row 8 shows the asking, which the
-        // screen already shows truthfully; OUTSIDE IT row 8 carries no
-        // GitHub word, so the press says what it did (2026-10-10, the
-        // head delta's asymmetry above, for its reason).
+        // nothing else: row 8 turns to `checking...` and then the answer, and
+        // the next press acts on it (Behind puts the Pull face up; the Save
+        // key reads CHECK on these terms, redesign_button_glyph's fourth
+        // glyph, 2026-10-28). No card — row 8 shows the asking.
         dispatch_github_check();
-        if (!in_view) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Asking GitHub again");
-        }
         return;
     case GuiGitHubStatus::Refused:
         notifications.notify(AppState::NotificationClass::Normal,
@@ -3245,29 +3072,18 @@ void GuiInputHandler::run_publish_chord() {
                              "This device and GitHub have both moved");
         return;
     case GuiGitHubStatus::Behind:
-        run_history_pull_press(*session);
+        run_history_pull_press(session);
         return;
     case GuiGitHubStatus::Ahead:
         break;
     }
-    const std::string& dir = session->project_directory();
-    if (dir.empty() || session->sidecar_base_name().empty()) return;
-    const bool owes_push = app.github_status == GuiGitHubStatus::Ahead;
-    if (!delta.measured || (delta.empty && !owes_push)) {
-        if (!in_view) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 delta.measured
-                                     ? "Nothing to commit"
-                                     : "The checkpoints are still being read");
-        }
-        return;
-    }
-    run_history_commit(*session, history_checkpoint_title(dir));
+    const std::string& dir = session.project_directory();
+    if (dir.empty() || session.sidecar_base_name().empty()) return;
+    run_history_commit(session, history_checkpoint_title(dir));
 }
 
 // THEN DO IT — the one caller is run_publish_chord, above, which hands it the
-// session it read (the `h` visit's own, or the transient one it bound for a
-// main-window press) and the default title.
+// `h` visit's own session and the default title.
 //
 // THE BYTES ARE REBUILT FRESH, NEVER THE SESSION'S FROZEN NOW SIDE, and this is
 // the one place in the mode where the difference between them is real. The
@@ -3290,8 +3106,7 @@ void GuiInputHandler::run_publish_chord() {
 // the user has since navigated away from — invisible in the diff (which displays
 // only `scale=`) and wrong on disk.
 //
-// THE ACT CLOSES A STANDING VIEW (architect 2026-08-05; from the main window,
-// 2026-10-10, there is none to close). The view asks one question —
+// THE ACT CLOSES THE VIEW (architect 2026-08-05). The view asks one question —
 // what differs between this session and a checkpoint — and an act that has just
 // made the answer "nothing" has answered it; leaving the user inside an empty
 // view to press `h` is ceremony.
@@ -3318,10 +3133,10 @@ void GuiInputHandler::run_publish_chord() {
 // the close, deliberately: the two strings are the closing session's.
 //
 // SINGLE IN FLIGHT: the in-flight bit goes up at the dispatch below and comes
-// down at the completion, and while it stands the chord's act refuses ahead of
-// this function (run_publish_chord's publishing card; the Save-and-Commit button's grey derives
-// from that same one decision — see the note at the dispatch for why that half
-// is structural rather than visible) and bare `h` will not open a new view.
+// down at the completion, and while it stands bare `h` will not open a new
+// view, so no press reaches this function (the Save-and-Commit button's grey
+// derives from the same bit — see the note at the dispatch for why that half
+// is structural rather than visible).
 //
 // AND SINCE 2026-08-08 THE BIT ALSO LOCKS OUT EVERY SAVE, globally, which is
 // what makes the coincident-write paragraph below safe rather than merely
@@ -3379,7 +3194,7 @@ void GuiInputHandler::run_publish_chord() {
 // buttons because one is to disk and one is to disk and the remote.
 void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
                                          const std::string&    title) {
-    // A SECOND ACT CANNOT ARRIVE HERE — the chord's act refuses while one is in
+    // A SECOND ACT CANNOT ARRIVE HERE — no view stands while one is in
     // flight — and a GitHub check holds the worker only while the status
     // reads Checking, which the act cards; so this guard is unreachable, and
     // it asks THE WORKER rather than
@@ -3417,10 +3232,9 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
     job.title         = title;
     job.bytes         = build_history_now_side(app);
 
-    // A STANDING VIEW CLOSES ON THE SAVE, and the session's three strings — the
+    // THE VIEW CLOSES ON THE SAVE, and the session's three strings — the
     // derived clone, the project directory and the base name — are already
-    // captured above, so the close cannot take them with it. (A main-window
-    // press has no view to close; its transient session dies with the press.)
+    // captured above, so the close cannot take them with it.
     if (app.history_mode.active) close_history_mode();
 
     // THE BIT GOES UP AFTER THE SAVE, WHICH IS THE WHOLE EXEMPTION the act's own
@@ -3454,7 +3268,8 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 // eventfd, main.cpp's wiring). The act has already said everything it has to say
 // on stderr — every verdict prints its own line from the worker thread — so what
 // this owns is the ONE thing a background act cannot do for itself: telling the
-// user, at the window, when the checkpoint he asked for did not happen.
+// user, at the window, when the checkpoint he asked for did not happen — failed,
+// or had nothing to carry.
 //
 // IT RAISES A CRITICAL NOTIFICATION CARD (architect 2026-08-29; the tab
 // row's permanent critical chip from 2026-08-09 until then, and an
@@ -3471,10 +3286,12 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 //
 // THE PARTITION, over the act's EIGHT verdicts (GuiHistoryCommitOutcome,
 // history_diff.h, whose contract comment owns what each one means):
-//   THE TWO ENDINGS, AND THEY RAISE NOTHING — Committed (the branch carries
-//   these bytes and the push succeeded) and NothingToCommit (the newest
-//   checkpoint already carried them and the branch was not ahead of its remote).
-//   Neither is a failure; each says what it has to say on stderr.
+//   THE TWO ENDINGS — Committed (the branch carries these bytes and the push
+//   succeeded), which raises nothing, and NothingToCommit (git saw the three
+//   sidecars clean and the branch was not ahead of its remote), which raises
+//   ONE NORMAL CARD, "Nothing to commit" (architect 2026-11-17, send U: the
+//   face is lit whenever a commit can be made, so a press on a clean tree is
+//   told so). Neither is a failure; each says what it has to say on stderr.
 //   THE THREE FAILURES — WriteFailed (nothing was committed), CommitFailed (a
 //   step refused before anything was published) and CommittedNotPushed (the
 //   bytes are in the local branch and the push did not land).
@@ -3499,8 +3316,9 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 // THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, AND THE RETRY IS THE
 // ACT ITSELF (architect 2026-09-27, superseding the 2026-08-09 "no in-app
 // retry"): a checkpoint that committed and failed to push leaves the GitHub
-// status AHEAD, and the publish chord (Ctrl+Shift+S, either view) runs the act again, whose
-// pre-flight finds the branch still ahead of its remote and pushes it.
+// status AHEAD, and the `h` view's Save key (the publish chord) runs the act
+// again, whose pre-flight finds the branch still ahead of its remote and
+// pushes it.
 //
 // THE GITHUB STATUS TAKES THE ACT'S OWN READING (`github`, the reading its
 // fetch-first step took, and its push's verdict): UpToDate after a push or an
@@ -3569,12 +3387,20 @@ void GuiInputHandler::on_history_checkpoint_complete(
 
     switch (outcome) {
     case GuiHistoryCommitOutcome::Committed:
+        // THE COMMITTED ENDING raises nothing: the checkpoint is committed and
+        // the push succeeded, and a clean ending is not an event the user
+        // needs a card for (a render's completion is ruled the same way). A
+        // failure card standing from an earlier act stands on — it is the
+        // user's to close.
+        break;
     case GuiHistoryCommitOutcome::NothingToCommit:
-        // THE TWO ENDINGS raise nothing: the checkpoint is committed and the
-        // push succeeded, or there was nothing to do, and a clean ending is
-        // not an event the user needs a card for (a render's completion is
-        // ruled the same way). A failure card standing from an earlier act
-        // stands on — it is the user's to close.
+        // A TREE GIT SEES CLEAN CARDS (architect 2026-11-17, send U): the
+        // Save-and-Commit face is lit whenever a commit can be made
+        // (history_checkpoint_actionable), not on a measured change, so the
+        // press that found nothing says so — the NORMAL class, an answer to
+        // the press, not a failure.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Nothing to commit");
         break;
     case GuiHistoryCommitOutcome::WriteFailed:
         notifications.notify(AppState::NotificationClass::Critical,
@@ -3638,11 +3464,9 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
     if (app.history_mode.active) viewport.invalidate_all();
 }
 
-// THE PULL'S PRESS (architect 2026-09-27) — the publish chord, Ctrl+Shift+S
-// (Ctrl+S in the `h` view until 2026-10-10), in either view with the GitHub
-// status BEHIND, reached from run_publish_chord's status fork with the
-// session that press read (the `h` visit's own, or the main window's
-// transient one). SYNCHRONOUS AND NETWORK-FREE: the plan reads the local refs the last
+// THE PULL'S PRESS (architect 2026-09-27) — the publish chord, Ctrl+Shift+S,
+// the `h` view's Save key, with the GitHub status BEHIND, reached from
+// run_publish_chord's status fork with the visit's own session. SYNCHRONOUS AND NETWORK-FREE: the plan reads the local refs the last
 // check fetched (plan_history_pull) and refuses unless the branch is still
 // strictly behind them — a terminal commit or pull since the check is
 // `Pull refused: this device has moved`, the status taking what the refs now
@@ -3714,8 +3538,8 @@ void GuiInputHandler::cancel_history_pull() {
 // question (the prompt was it), so undo and unsaved edits go; one that leaves
 // the open piece alone moves the branch and every other changed file and
 // leaves the session exactly as it was. EITHER WAY THE VIEW CLOSES (the walk
-// and the head delta just changed; every mutator closes the view, the rule
-// that keeps head_delta_empty static) and the walk is re-warmed through the
+// just changed; every mutator closes the view, so no visit outlives a write
+// to what it was measured against) and the walk is re-warmed through the
 // funnel, HEAD having moved. Success is silent; the status reads UpToDate.
 //
 // THE RELOAD IS GATED ON ITS OWN REOPEN (run_history_pull's reopen gate): the

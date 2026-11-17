@@ -128,24 +128,19 @@ public:
         return members_;
     }
 
-    // True once the current run has reported DONE — the term that separates a
-    // walk that is merely still streaming from one that is FINISHED, which is
-    // what the head-delta measurement reads to answer "there is everything to
-    // checkpoint" (GuiHistoryDiff::walk_finished_empty).
-    bool run_done() const { return done_; }
-
     // AND WHETHER THAT FINISH WAS AN ANSWER. A run whose walk of the history
     // could not be read ends DONE and NOT ok, carrying the one line the mode prints when
     // it refuses: an unread history is not an empty one, and with an empty walk
-    // now OPENING the view and telling Save and commit there is everything to
-    // checkpoint, the two had to stop being the same state (GuiHistoryScanResult,
-    // history_diff.h, owns the ruling). Both are reset at kick(), so a later run
-    // that answers clears the failure with nothing to remember.
+    // now OPENING the view, the two had to stop being the same state
+    // (GuiHistoryScanResult, history_diff.h, owns the ruling). Both are reset
+    // at kick(), so a later run that answers clears the failure with nothing
+    // to remember.
     //
     // TWO READERS, and they are the two halves of the same refusal:
     // GuiHistoryDiff::init, which returns UNAVAILABLE with this reason when the
-    // run it bound to failed, and GuiHistoryDiff::walk_finished_empty, which
-    // answers false so the head delta keeps its conservative greyed face.
+    // run it bound to failed, and the arrival hook
+    // (GuiInputHandler::on_history_prefetch_ready), which ends a remote visit
+    // whose run failed under it.
     bool               run_failed() const { return failed_; }
     const GuiFailure&  scan_failure_reason() const { return failure_reason_; }
 
@@ -206,7 +201,6 @@ private:
     bool                                 header_seen_     = false;
     GuiHistoryWalkHeader                 header_;
     std::deque<GuiHistoryCommitSidecars> members_;
-    bool                                 done_    = false;
     bool                                 running_ = false;
     bool                                 failed_  = false;
     GuiFailure                           failure_reason_;

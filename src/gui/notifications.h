@@ -115,12 +115,12 @@
 //     kHistoryViewMovesNoMarkersCard; the off-edge pair below; bare `m`'s
 //     NINE-arm BPM gate, one card per press carrying the first failure (the
 //     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).
-//   * THE MODES: kCheckpointPublishing (below — bare `h`, the
-//     publish chord, the save owner, the picker, Revert); "History
+//   * THE MODES: kCheckpointPublishing (below — bare `h`, the save owner,
+//     the picker, Revert); "History
 //     is unavailable[: <reason>]" (the press that asks for git where the
-//     remote walk could not bootstrap — bare `g` at set_history_delta and the
-//     publish chord, Ctrl+Shift+S, at run_publish_chord — plus the failed-scan
-//     arrival; the entry opens on the local walk and raises none); playback's kPlaybackDeviceUnavailableCard
+//     remote walk could not bootstrap — bare `g` at set_history_delta — plus
+//     the failed-scan arrival; the entry opens on the local walk and raises
+//     none); playback's kPlaybackDeviceUnavailableCard
 //     (playback_lifecycle.h — the one launch body, the two pre-launch gates
 //     and the A/B audition's own tick) and the audition's "One of the two
 //     tabs has nothing to play from here"; kNoRenderRunningCard (the painted
@@ -182,19 +182,20 @@
 //     clipboard_set_text), so no refusal cards. THE EDITORS' OWN Ctrl+C
 //     and Ctrl+V are silent: an editor is its own world with that world's
 //     conventions.
-//   * THE GITHUB CARDS (2026-09-27), the publish chord (Ctrl+Shift+S since
-//     2026-10-10, in either view) forking on the status (run_publish_chord),
-//     each the KEY'S — in the `h` view the Save face
-//     greys on the same status: "GitHub is still being checked", "GitHub
+//   * THE GITHUB CARDS (2026-09-27), the `h` view's Save key (the publish
+//     chord, Ctrl+Shift+S, the view's alone since 2026-11-17) forking on the
+//     status (run_publish_chord), each the KEY'S — the Save face greys on
+//     the same status, so these answer a status that moved inside the
+//     painted frame: "GitHub is still being checked", "GitHub
 //     refused this device", "This device and GitHub have both moved" (stderr
 //     names the fix), "GitHub has not been checked"; the pull's synchronous
 //     refusals "Pull refused: this device has moved", "Pull refused:
 //     GitHub's checkpoint of this piece would not load" and "Pull failed:
-//     nothing was changed"; and outside the view, where no face shows
-//     the head delta, "Nothing to commit" and "The checkpoints are still
-//     being read". UNDER `offline` THE CHORD ASKS GITHUB AGAIN (architect 2026-09-28) and cards nothing in
-//     the view, where row 8's state cell carries the answer, and "Asking
-//     GitHub again" outside it.
+//     nothing was changed"; and the checkpoint's clean ending, "Nothing to
+//     commit" (architect 2026-11-17, send U: the worker found the sidecars
+//     clean and nothing owed, on_history_checkpoint_complete). UNDER
+//     `offline` THE KEY ASKS GITHUB AGAIN (architect 2026-09-28) and cards
+//     nothing, row 8's state cell carrying the answer.
 //     The GitHub CHECK itself raises nothing — its failing readings print one
 //     stderr line each and the status word is state.
 //
@@ -225,8 +226,7 @@
 //     Reset Trim over a full window, the picker's row on the project already
 //     open, the render player's folder-end skips, Backspace at the root and
 //     its idle family (no render loaded, seeking before playback), the
-//     position nudge at its wall in both columns, the publish chord over
-//     an empty head delta in the `h` view and its sibling, a clean session's plain Ctrl+S
+//     position nudge at its wall in both columns, a clean session's plain Ctrl+S
 //     (architect 2026-10-05, GuiSaveOps::save_from_key), and a held
 //     Ctrl+Z / Ctrl+Shift+Z whose repeat runs out of history. THE COUNTER-CLASS IS THE TEST: a command whose effect
 //     would have spread across the screen keeps its card even where its
@@ -531,9 +531,10 @@ inline const char* authoring_lock_card(const AppState& a) {
 // plain Ctrl+S road reaches — on_key, the editors' modal contract, the
 // picker's router, the render player's fall-through —
 // and the close prompt's Save answer; bare `h`'s entry refusal (which also
-// prints it on stderr); the Open project picker's open act and File > Revert;
-// and the commit act's own fork (run_publish_chord), the publish chord,
-// Ctrl+Shift+S. All of them meet AppState::history_checkpoint_in_flight.
+// prints it on stderr); and the Open project picker's open act and File >
+// Revert. All of them meet AppState::history_checkpoint_in_flight. (The
+// commit act asks no in-flight question: no `h` view stands while one
+// publishes, run_publish_chord.)
 // ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
 // shape): the sentence is the instruction. It read "A checkpoint is still
 // publishing; try again when it finishes" until that day.

@@ -64,8 +64,7 @@ struct GuiSaveOps {
     // reaches the owner through this, which asks plain_save_actionable
     // (app_state.h, the ruling and its trade-off) first. WITH NOTHING TO
     // SAVE THE PRESS IS SILENT: no write and no card, the button's grey being
-    // the answer — the `h` view's own Ctrl+S over an empty head delta is the
-    // precedent (notifications.h's one-thing-in-one-place silences). Ctrl+S is
+    // the answer (notifications.h's one-thing-in-one-place silences). Ctrl+S is
     // a chord the product binds (chord_is_bound), and this arm consumes it,
     // so the unbound-key deduction never sees it. A dirty session takes save()
     // whole, its in-flight card and write cards included. The close prompt's

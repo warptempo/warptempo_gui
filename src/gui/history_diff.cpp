@@ -259,10 +259,9 @@ std::vector<int> run_ordinals(const std::vector<std::string>& lines,
 // THE ENGINE BLOCK OF ONE SIDE'S SETTINGS TEXT: each engine-block line's
 // value text, VERBATIM, keyed by its key; a key the side carries no line for is
 // absent from the map. The roster is the parser's own (is_canonical_engine_key,
-// engine_settings.h — title, scale, bpm, notes, url, cover), never a copy here,
-// and it is the dirty rule's authoring-class settings exactly
-// (AppState::settings_dirty), so the commit gate and Save classify authoring
-// content one way (architect 2026-10-28). The line splits at its FIRST '=',
+// engine_settings.h — title, scale, bpm, notes, url, cover), never a copy
+// here; its one reader is the scale pair (scale_token_of). The line splits at
+// its FIRST '=',
 // the loader's own lexing (scan_key_value_file, settings_file.cpp), so a key
 // is matched whole: the view band and the GUI-kind keys never enter.
 std::map<std::string, std::string> engine_block_of(
@@ -1621,20 +1620,6 @@ const std::deque<GuiHistoryCommitSidecars>& GuiHistoryDiff::members() const {
 
 std::size_t GuiHistoryDiff::commit_count() const { return members().size(); }
 
-bool GuiHistoryDiff::walk_finished_empty() const {
-    // The generation test is members()' own, restated here only because the
-    // DONE bit lives on the store rather than in the deque: a store that has
-    // moved to another run is describing another walk, and this session's
-    // answer about its own is "not finished".
-    if (!store_ || store_->generation() != store_generation_) return false;
-    // A FAILED RUN IS NOT AN EMPTY HISTORY. It ends DONE with an empty deque
-    // like a genuinely empty walk does, and answering true here would latch the
-    // head delta commit-worthy off a history nothing ever read. The mode refuses
-    // entry on that run anyway (init, below), so this term guards the state a
-    // run that fails WHILE THE VIEW STANDS would otherwise reach.
-    if (store_->run_failed()) return false;
-    return store_->run_done() && store_->members().empty();
-}
 
 bool GuiHistoryDiff::init(const AppState&           app,
                           const GuiHistoryPrefetch& prefetch) {
@@ -1714,8 +1699,8 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // this site is the shared meaning: the run did not ANSWER, which is a
     // repository this program cannot ask about rather than a piece with no
     // checkpoints. An unread history must never establish an empty walk, an
-    // empty walk being a legal standing state that opens the view and tells Save
-    // and Commit there is everything to checkpoint. The failure travels as the
+    // empty walk being a legal standing state that opens the view as the
+    // piece's whole history. The failure travels as the
     // store's own recorded reason and prints HERE, on the header refusal's one
     // line and in its exact shape.
     //
@@ -1911,18 +1896,10 @@ GuiHistoryCommitDelta compute_commit_delta(
 
     // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
     // whichever side is older in this reading, now whichever is newer, so the
-    // corner's `Scale: [-]a [+]b` says the same kind of thing in both. The
-    // engine-block term is the same two blocks compared whole: a key whose
-    // value text differs, or that one side carries and the other does not,
-    // differs (GuiHistoryCommitDelta::engine_block_changed).
-    const std::map<std::string, std::string> then_block =
-        engine_block_of(then_settings);
-    const std::map<std::string, std::string> now_block =
-        engine_block_of(now_settings);
-    d.then_scale_token     = scale_token_of(then_block);
-    d.now_scale_token      = scale_token_of(now_block);
-    d.scale_changed        = (d.then_scale_token != d.now_scale_token);
-    d.engine_block_changed = (then_block != now_block);
+    // corner's `Scale: [-]a [+]b` says the same kind of thing in both.
+    d.then_scale_token = scale_token_of(engine_block_of(then_settings));
+    d.now_scale_token  = scale_token_of(engine_block_of(now_settings));
+    d.scale_changed    = (d.then_scale_token != d.now_scale_token);
 
     // One line per commit view, at most. The degraded arm is an ALLOCATION
     // guard, not a format leniency: a loader-clean sidecar past the DP caps is
@@ -2358,7 +2335,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // too — the accepted window; the next check reads Diverged. A FAILED PUSH IS
 // RETRIED IN THE APP (architect 2026-09-27, superseding "never by an in-app
 // retry" of 2026-08-09): the status reads Ahead, and the publish chord
-// (Ctrl+Shift+S, either view, 2026-10-10) runs this act again, whose clean-but-owing arm pushes the branch. OUT-OF-APP
+// (the `h` view's Save key) runs this act again, whose clean-but-owing arm
+// pushes the branch. OUT-OF-APP
 // GIT UNDER projects/ is unsanctioned use: a commit racing this act may yield
 // a blunt error rather than a graded diagnosis (git and closed_questions.md
 // carry the history of what this replaced).

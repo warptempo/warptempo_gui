@@ -29,9 +29,9 @@ class GuiHistoryPrefetch;
 // stderr with the store's reason appended; the WALK LAMP'S REFUSAL, which
 // raises that same composed line on a card when bare `g` asks for the remote
 // walk this visit could not bootstrap (GuiInputHandler::set_history_delta);
-// the CHECKPOINT ACT'S, which raises it for the same reason
-// (run_publish_chord); and the prefetch arrival that closes a standing
-// view, which does both. It lives beside the reason it prefixes rather than in one of the
+// and the prefetch arrival that closes a standing view, which does both.
+// (The checkpoint act never meets the fact: its face greys without a clone,
+// run_publish_chord.) It lives beside the reason it prefixes rather than in one of the
 // readers, so no reader can drift from the producer. (TWO DEAD-BUTTON
 // TOOLTIPS said it too from 2026-09-04 to 2026-09-12 — the walk lamp's and
 // Save-and-Commit's, over the faces this fact greys. A tooltip names the act
@@ -246,8 +246,7 @@ enum class GuiHistoryCompare {
 //   walk already speaks.
 //
 // THE DELTA VOCABULARY IS IDENTICAL on both, which is what makes one lane serve
-// them: the six entry vectors, the `scale` pair the walk line displays, and the
-// engine-block term (GuiHistoryCommitDelta::engine_block_changed, 2026-10-28).
+// them: the six entry vectors and the `scale` pair the walk line displays.
 // Viewport, trim and the rest of the GUI band never appear, because they were
 // never undoable in the first place.
 enum class GuiHistoryWalkSource {
@@ -372,42 +371,6 @@ struct GuiHistoryCommitDelta {
     std::string then_scale_token;
     std::string now_scale_token;
     bool        scale_changed = false;
-
-    // ANY OF THE SIX ENGINE-BLOCK KEYS DIFFERS (architect 2026-10-28) — title,
-    // scale, bpm, notes, url, cover, the parser's roster
-    // (is_canonical_engine_key, engine_settings.h): a key whose value text
-    // differs between the two sides, or that one side carries and the other
-    // does not. It is the commit gate's settings term and has no display: a
-    // notes edit lights the commit act and shows no segment on the walk line.
-    // The set is exactly the dirty rule's authoring-class settings
-    // (AppState::settings_dirty), so Save and Save-and-Commit classify
-    // authoring content one way; the view band and every GUI-kind key stay
-    // outside it (the asymmetry recorded at HistoryMode::head_delta_empty).
-    bool        engine_block_changed = false;
-
-    // NOTHING DIFFERS — the whole delta in one word, and the ONE predicate for
-    // it. It lives on the type rather than at a consumer so that "empty" cannot
-    // come to mean two things: every member above is a term, so a member added
-    // here is a term here too, at the one place a reader is already looking.
-    //
-    // ITS READER IS THE COMMIT ACT'S FACE (AppState::HistoryMode::head_delta_-
-    // empty, app_state.h): the mode asks it once, of the NEWEST checkpoint AND
-    // ALWAYS IN THE CUMULATIVE READING, to decide whether there is anything to
-    // commit at all — the act commits the LIVE state, so "nothing to
-    // checkpoint" is live-vs-newest whatever the lane happens to be
-    // displaying. The vocabulary is
-    // exactly this struct's — the two marker columns and the six engine-block
-    // keys (2026-10-28) — which is why a drift of the view band or a GUI-kind
-    // key alone reads as empty here (the asymmetry is recorded at the field,
-    // HistoryMode::head_delta_empty). `scale_changed` stays a term beside
-    // `engine_block_changed`, which implies it: the redundancy is harmless and
-    // keeps "every member is a term" literally true.
-    bool is_empty() const {
-        return warp_added.empty() && warp_removed.empty() &&
-               warp_changed.empty() && phase_reset_added.empty() &&
-               phase_reset_removed.empty() && phase_reset_changed.empty() &&
-               !scale_changed && !engine_block_changed;
-    }
 
     // (frame_span IS DELETED, architect 2026-08-19. It answered WHERE THE DELTA
     // LIES — [lo, hi] over all six entry vectors, in SOURCE frames, false when
@@ -715,8 +678,7 @@ std::string read_history_walk_tip(const std::string& source_audio_path);
 // empty success — the view opens at `0/0` and Save and commit is live — while a
 // read this program could not get an answer out of knows NOTHING about the
 // piece's history, and reading that silence as "no checkpoints" would establish
-// an empty walk, latch the head delta commit-worthy and let the act publish
-// against a baseline nobody ever read.
+// an empty walk the view would then show as the piece's whole history.
 //
 // WHICH IS WHY THE WALK ANSWERS IN TWO SHAPES and never in silence: the walk
 // runs in this process (GuiGitRepo::walk_head), so a walk that read the history
@@ -849,24 +811,6 @@ public:
     // How many eligible commits the bound store has DELIVERED so far. It only
     // ever grows within a visit.
     std::size_t commit_count() const;
-
-    // THE BOUND RUN IS FINISHED AND CARRIES NOTHING — the walk's terminal empty
-    // state, and a LEGAL standing one since 2026-08-09: the view opens on it at
-    // `0/0` over a blank lane rather than refusing, so this is the difference
-    // between "there is no eligible checkpoint" and "one may still arrive".
-    //
-    // ONE READER, GuiInputHandler::measure_history_head_delta, which answers
-    // COMMIT-WORTHY on a true — with no eligible baseline there is by definition
-    // everything to checkpoint, and the conservative greyed face it wears while
-    // a scan is still streaming would otherwise be permanent here. It asks
-    // through the binding rather than the store directly so a generation
-    // mismatch answers the same cold "no" the member list does.
-    //
-    // A RUN THAT FAILED ANSWERS FALSE, on the same reasoning turned around: it
-    // finishes with an empty deque too, and an unread history must not be worth
-    // committing against. init refuses such a run outright, so what this term
-    // covers is a run failing WHILE THE VIEW STANDS.
-    bool walk_finished_empty() const;
 
     // Full 40-char SHA, newest first. Empty for an out-of-range index.
     const std::string& sha_at(std::size_t index) const;
@@ -1165,11 +1109,11 @@ private:
 
 // -- THE COMMIT ACT — the first of the three mutating git routes ------------
 //
-// What the mode reads, it can now also WRITE: the publish chord, Ctrl+Shift+S
-// (2026-10-10, in the main window and the `h` view alike), saves the piece and
-// commits the live authoring state into its directory in the projects
-// repository (the chord was Ctrl+Alt+R until 2026-08-08 and Ctrl+S in the
-// view until 2026-10-10). The GUI half — THE CHORD'S FORK that asks nothing
+// What the mode reads, it can now also WRITE: the publish chord, Ctrl+Shift+S,
+// the `h` view's Save key and the product's one commit road (architect
+// 2026-11-17, send U), saves the piece and commits the live state — any
+// change git sees in the three sidecars — into its directory in the projects
+// repository. The GUI half — THE CHORD'S FORK that asks nothing
 // (run_publish_chord: the pull, the check or the commit by the GitHub
 // status; the commit-title editor that asked for the message
 // from 2026-08-07 retired 2026-10-10), THE
@@ -1219,14 +1163,16 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // the branch already carries AND the pre-flight found the branch owing its
 // remote nothing (status_of's `publication_owed`, compare_with_origin's
 // reading). Committed and published already, nothing to do. It is the
-// one clean ending beside Committed and the caller treats the two alike.
+// one clean ending beside Committed; the caller cards it, "Nothing to
+// commit" (architect 2026-11-17, send U: the face is lit whenever a commit
+// can be made, so the press is told).
 //
 // CommittedNotPushed — THE BYTES ARE IN THE LOCAL BRANCH AND THE PUSH DID NOT
 // LAND, for what only the push can meet: a remote that moved in the seconds
 // since the act's fetch (non-fast-forward), a server-side rejection, the time
 // bound — and the deploy key or the host-key pin only if either changed in
 // those seconds, since the act's own fetch meets them first (RemoteRefused). The GitHub status reads Ahead, and
-// the publish chord (Ctrl+Shift+S) retries: the act's clean-but-owing arm finds the
+// the publish chord (the `h` view's Save key) retries: the act's clean-but-owing arm finds the
 // branch still ahead and pushes it (which is also how a push made IN THE
 // TERMINAL is recognized — the branch is no longer ahead).
 //
@@ -1263,7 +1209,7 @@ enum class GuiHistoryCommitOutcome {
 // THE GITHUB STATUS (architect 2026-09-27) — how this device's branch stands
 // against GitHub, as of the last fetch. Row 8's `h` walk line says it as
 // `GitHub: <word>` (github_status_word), and it selects what the publish
-// chord (Ctrl+Shift+S, either view, 2026-10-10) does: UpToDate commits, Ahead
+// chord (Ctrl+Shift+S, the `h` view's Save key) does: UpToDate commits, Ahead
 // commits or retries the push, Behind pulls, Offline asks GitHub again, and
 // the rest refuse with a card (run_publish_chord).
 //   Unchecked — no reading: the project's first check has not been
@@ -1372,8 +1318,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
 // -- THE PULL (architect 2026-09-27) -----------------------------------------
 //
-// BEHIND, the publish chord (Ctrl+Shift+S since 2026-10-10, in either view;
-// Ctrl+S in the `h` view before) is PULL: a FAST-FORWARD of the checked-out
+// BEHIND, the publish chord (Ctrl+Shift+S, the `h` view's Save key) is PULL: a FAST-FORWARD of the checked-out
 // branch to the remote-tracking ref THE LAST CHECK FETCHED, synchronous on
 // the main thread and NETWORK-FREE (the ref is local; nothing is fetched
 // again). Fast-forward only: a branch that is not strictly behind refuses.

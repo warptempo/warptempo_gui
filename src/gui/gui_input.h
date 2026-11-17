@@ -549,12 +549,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // bind nothing.
         case GuiKeys::J: return cl || cs;
         // Drop on the live column / drop a phase reset from the warp column / save,
-        // and CTRL+SHIFT+S, THE PUBLISH CHORD, in both modes (architect
-        // 2026-10-10, is_publish_key; it dropped a magnification level marker
-        // from 2026-09-15 until that column's deletion 2026-09-23 and was
-        // unbound between). (Alt+S, the Settings title's access key,
-        // 2026-10-10 to 2026-10-21, left with the menu row.)
-        case GuiKeys::S: return bare || sh || cl || cs;
+        // and CTRL+SHIFT+S, THE PUBLISH CHORD, in the `h` view alone
+        // (architect 2026-11-17, send U, is_publish_key: its one producer is
+        // that view's SAVE lift, the commit; outside the view nothing spells
+        // it). (Alt+S, the Settings title's access key, 2026-10-10 to
+        // 2026-10-21, left with the menu row.)
+        case GuiKeys::S: return bare || sh || cl || (cs && history_view);
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
         // THE PHASE-RESET PROPAGATE, ONE LETTER (architect 2026-10-24): bare
@@ -1034,16 +1034,16 @@ static_assert(chord_is_bound(GuiKeys::Return, GuiInputState{}, false) &&
               "Enter binds bare (open the editor) and Shift (paste the "
               "label); Ctrl+Enter, Ctrl+Shift+Enter and the alt spellings "
               "bind nothing");
-// THE PUBLISH CHORD (architect 2026-10-10) binds in both modes; its Alt
-// spelling does not.
-static_assert(chord_is_bound(GuiKeys::S,
-                             GuiInputState{true, true, false}, false) &&
+// THE PUBLISH CHORD binds in the `h` view alone (architect 2026-11-17,
+// send U); its Alt spelling nowhere.
+static_assert(!chord_is_bound(GuiKeys::S,
+                              GuiInputState{true, true, false}, false) &&
                   chord_is_bound(GuiKeys::S,
                                  GuiInputState{true, true, false}, true) &&
                   !chord_is_bound(GuiKeys::S,
-                                  GuiInputState{true, true, true}, false),
-              "Ctrl+Shift+S, the publish chord, binds in both modes; "
-              "Ctrl+Alt+Shift+S stays unbound");
+                                  GuiInputState{true, true, true}, true),
+              "Ctrl+Shift+S, the publish chord, binds in the history view "
+              "alone; Ctrl+Alt+Shift+S stays unbound");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Up,
                                   GuiInputState{true, false, false}, false) &&
@@ -1193,16 +1193,19 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for THE PUBLISH CHORD (architect 2026-10-10 ~18:35): CTRL+SHIFT+S
-// exactly — no alt. In the main window and in the `h` view alike it runs
-// GuiInputHandler::run_publish_chord: the pull while GitHub is ahead, the
+// exactly — no alt. IT BINDS IN THE `h` VIEW ALONE (architect 2026-11-17,
+// send U: the commit is that view's act alone), where it runs
+// GuiInputHandler::run_publish_chord: the pull while GitHub is behind, the
 // check while offline, else save and commit under the default title with no
-// question asked. Ctrl+S beside it is the plain save in both views. THREE
-// READERS, one shape: on_key's `s` arm (input_handler.cpp), the read-only
-// allowlist (read_only_key_blocked, which admits it as it admits the save —
-// a checkpoint of the state the tab already holds authors nothing) and the
-// `h` view's allowlist (history_mode_key_blocked, which admits it as the
-// view's act). The `h` view's Save button spells it at its lift
-// (finish_chrome_press_release).
+// question asked. ITS ONE PRODUCER is the `h` view's Save button, which
+// spells it at its lift (finish_chrome_press_release); outside the view
+// nothing spells it and it is unbound (chord_is_bound). Ctrl+S beside it is
+// the plain save in both views. THREE READERS, one shape: on_key's `s` arm
+// (input_handler.cpp, behind the view's mode test), the read-only allowlist
+// (read_only_key_blocked, which admits it as it admits the save — a
+// checkpoint of the state the tab already holds authors nothing) and the `h`
+// view's allowlist (history_mode_key_blocked, which admits it as the view's
+// act).
 inline bool is_publish_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && mods.ctrl && mods.shift && !mods.alt;
 }
