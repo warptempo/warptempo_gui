@@ -73,23 +73,22 @@ public:
     // says why not EGL's own answer). FALSE, with no GL call made, when there
     // is no texture yet or the backbuffer has no data: the platform then
     // swaps nothing and keeps its damage. The platform swaps on true.
-    // `repair` (2026-11-04, session 33; THE REPAIR at the definition): empty
-    // draws the whole frame; otherwise only its rects, each recomposed
-    // through the whole pass order under a scissor — the buffer's other
-    // pixels being an earlier frame's (the platform's buffer-age history).
+    // EVERY FRAME IS DRAWN WHOLE (architect 2026-11-16 night, send S; THE
+    // WHOLE DRAW at the definition): the damage narrows the upload alone.
     bool present_frame(cairo_surface_t* back, std::span<const GuiGlRect> damage,
-                       std::span<const GuiGlRect> repair,
                        GuiCanvasDrawList* list,
                        int surface_w, int surface_h);
     // Whether present_frame would draw at all (a texture, a backbuffer with
-    // data): the platform asks before it names a frame's damage region to
-    // EGL, so no region is set for a frame that draws nothing.
+    // data): the platform asks before anything of the frame is decided, so
+    // a frame that draws nothing keeps its damage.
     bool ready(cairo_surface_t* back) const;
-    // THE REPAIR'S OWN VERDICT (the definition): true when this frame's
+    // THE UNDESCRIBED CHANGE (the definition): true when this frame's
     // change is not described by its damage — no walk yet on this texture,
     // the canvas clip moved, the score viewer's page stands or stood last
-    // frame, the grow's program is to be rebuilt — so it is drawn whole.
-    bool repair_must_be_full(const GuiCanvasDrawList* list) const;
+    // frame, the grow's program is to be rebuilt — so the frame must
+    // present whatever its damage covers (GuiPlatform::present's NOTHING
+    // VISIBLE CHANGED rule).
+    bool change_undescribed(const GuiCanvasDrawList* list) const;
     // THE CONTEXT'S END (the platform's exit): every name forgotten, the
     // context's destruction having freed the objects themselves — no GL call
     // is made, so it is asked after the platform has released and destroyed
@@ -191,7 +190,7 @@ private:
     int          upload_clip_[4]      = {0, 0, 0, 0};
     bool         upload_floater_      = false;
     bool         upload_seeded_       = false;
-    // Whether the last frame drew the score viewer's page (THE REPAIR's
-    // verdict: the page's leaving is drawn whole too).
+    // Whether the last frame drew the score viewer's page
+    // (change_undescribed: the page's leaving presents too).
     bool         page_stood_          = false;
 };

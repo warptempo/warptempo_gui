@@ -768,8 +768,11 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     //
     // THE SCANNER'S OWN RECT, AFTER THE CAMERA (architect 2026-11-16, send
     // Q: "number 3, narrowing agree"; Viewport::invalidate_standing_scanner),
-    // not the whole waveform area: a few thousand px redrawn in place of
-    // three whole plates across the window's three buffers. ON THE PLATE
+    // not the whole waveform area, which repaints the viewport's lanes down
+    // to the waveform's foot and owes the rows above them a check
+    // (damage_window_top_rows), the chrome redrawn for pixels that did not
+    // change; the GPU draws the frame whole either way (GuiPlatform::present,
+    // send S). ON THE PLATE
     // BASIS, the one the scanner is painted through, so it names the pixels
     // even while a plate is in flight (live viewport new, plate old), whose
     // publication damages the viewport's lanes whole itself. A camera that

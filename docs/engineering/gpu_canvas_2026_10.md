@@ -236,7 +236,10 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    `eglSwapBuffersWithDamageKHR` carrying the frame's own damage — and every
    GPU-visible canvas change owes damage. `GuiPlatform::present`'s THE
    PARTIAL REPAIR and `GuiGlCanvas::present_frame`'s THE REPAIR and DRAWN
-   INTO THE WINDOW'S OWN BUFFER.)*
+   INTO THE WINDOW'S OWN BUFFER.)* *(REVERSED AGAIN 2026-11-16 night, send S: every frame drawn whole and
+   swapped plain — no buffer age, no damage region, no swap with damage; the damage
+   invites the frame and narrows the CPU side alone. `GuiPlatform::present`'s head,
+   `GuiGlCanvas::present_frame`'s THE WHOLE DRAW.)*
 10. **P4 — one rebuild per frame.** `Viewport::kick_waveform_sync` marks the
     rebuild OWED instead of running it; the pre-paint hook runs it once, at
     its tail after the scanner advance and Follow's page (which may kick)

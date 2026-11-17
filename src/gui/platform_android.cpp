@@ -241,59 +241,6 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
     return true;
 }
 
-// THE REPAIR REGION'S MERGE (architect 2026-11-16, the beats;
-// GuiPlatform::present's repair list, its one caller): a rect joins the
-// list by MERGING — while some rect R of the list has
-//     area(bound(R, r)) <= (area(R) + area(r)) · 5 / 4,
-// bound the two's bounding rect, R leaves the list and r becomes
-// bound(R, r); then r is appended. The overlap of R and r counts twice in
-// the sum, as the GPU pays it (each repair rect is cleared and recomposed
-// whole, GuiGlCanvas::present_frame), and containment is the case
-// bound == R or bound == r, so this subsumes the coalescing by containment
-// the damage list keeps (append_coalesced_rect). WHY: the repair region is
-// this frame's change united with the changes of the frames since the
-// acquired buffer was drawn, and what recurs frame after frame recurs
-// beside itself — the scanner's line a few columns on over the same rows,
-// the clock cell on itself — so coalesced by containment alone a scanner
-// frame's region would be several rects for one thing, each a scissored
-// clear, one instanced draw of every instance of the canvas list and the
-// texture's triangle. Merged, neighbors are one rect at no more than a
-// quarter over the pixels they held apart, and two rects far apart (the
-// scanner's line and the clock cell; a lamp and a key) never merge, so a
-// small frame's repair stays its own few pixels. The quarter is the trade's
-// one number:
-// a draw call's fixed cost against redrawn canvas pixels, which on a lit
-// plate are the frame's cost.
-// THE BYTES ARE UNCHANGED: the merged region is a superset of the unmerged
-// one, and present_frame recomposes every repair rect through the whole
-// pass order from the frame's own state (its THE REPAIR), so a pixel drawn
-// that no frame changed is drawn as it stood. THE REPAIR LIST ONLY: the
-// frame's damage, its change (the swap's damage and the history's entry)
-// and every other list keep append_coalesced_rect.
-template <typename Rect>
-void merge_repair_rect(std::vector<Rect>& rects, Rect r) {
-    const auto area = [](const Rect& a) {
-        return static_cast<long long>(a.w) * static_cast<long long>(a.h);
-    };
-    for (bool merged = true; merged;) {
-        merged = false;
-        for (std::size_t i = 0; i < rects.size(); ++i) {
-            const Rect& e = rects[i];
-            const int x0 = std::min(e.x, r.x);
-            const int y0 = std::min(e.y, r.y);
-            const int x1 = std::max(e.x + e.w, r.x + r.w);
-            const int y1 = std::max(e.y + e.h, r.y + r.h);
-            const Rect bound{x0, y0, x1 - x0, y1 - y0};
-            if (area(bound) * 4 > (area(e) + area(r)) * 5) continue;
-            r = bound;
-            rects.erase(rects.begin() + static_cast<std::ptrdiff_t>(i));
-            merged = true;
-            break;
-        }
-    }
-    rects.push_back(r);
-}
-
 // ---------------------------------------------------------------------------
 // The GL canvas's fatal lines (2026-10-13; the road is at present, its GL
 // calls GuiGlCanvas's, gl_canvas.cpp)
@@ -1305,9 +1252,6 @@ void GuiPlatform::ensure_backbuffer(int w, int h) {
         }
         back_w_ = w;
         back_h_ = h;
-        // A NEW SIZE FORGETS THE REPAIR'S HISTORY (present's rule): no
-        // buffer of the old size holds a frame of this one.
-        repair_history_.clear();
     }
     // The texture follows the backbuffer (GuiGlCanvas::ensure_texture's
     // rule), asked with the context current on a surface.
@@ -1439,14 +1383,14 @@ void GuiPlatform::ensure_gl_surface() {
                      reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
                      reinterpret_cast<const char*>(glGetString(GL_VERSION)),
                      p3 ? "accepted" : "refused");
-        // THE EGL CAPABILITY LINE, PERMANENT (2026-11-04), beside the
-        // identity: the four extensions a cheaper present could stand on,
-        // the chosen config's samples and red / alpha depths, and the first
-        // surface's swap behavior. The frame cost arc of 2026-11-04 reads it
-        // to choose between a buffer-age partial repair and a persistent
-        // composite (the Astra consult's (b) / (c), tmp/codex_review.md); a
-        // present advertising an extension is necessary for that road, not
-        // proof of its savings downstream.
+        // THE EGL CAPABILITY LINE, PERMANENT (2026-11-04; architect
+        // 2026-11-16 night, send S), beside the identity: what the present
+        // stands on and nothing it does not — the presentation-time
+        // extension (the one extension present calls) and the chosen
+        // config's samples and red / alpha depths (the byte-space blend's
+        // framebuffer, ensure_gl_context). Every frame is drawn whole and
+        // swapped plain (present's head), so no buffer-age, partial-update
+        // or swap-with-damage extension is asked of the display.
         const char* ext = eglQueryString(dpy, EGL_EXTENSIONS);
         const auto has = [ext](std::string_view name) {
             if (!ext) return false;
@@ -1460,54 +1404,25 @@ void GuiPlatform::ensure_gl_surface() {
             }
             return false;
         };
-        const bool age     = has("EGL_EXT_buffer_age");
-        const bool partial = has("EGL_KHR_partial_update");
-        const bool damage  = has("EGL_KHR_swap_buffers_with_damage");
-        const bool ptime   = has("EGL_ANDROID_presentation_time");
-        EGLint samples = -1, red = -1, alpha = -1, swap = -1;
+        const bool ptime = has("EGL_ANDROID_presentation_time");
+        EGLint samples = -1, red = -1, alpha = -1;
         eglGetConfigAttrib(dpy, static_cast<EGLConfig>(egl_config_),
                            EGL_SAMPLES, &samples);
         eglGetConfigAttrib(dpy, static_cast<EGLConfig>(egl_config_),
                            EGL_RED_SIZE, &red);
         eglGetConfigAttrib(dpy, static_cast<EGLConfig>(egl_config_),
                            EGL_ALPHA_SIZE, &alpha);
-        eglQuerySurface(dpy, surf, EGL_SWAP_BEHAVIOR, &swap);
         std::fprintf(stderr,
-                     "warptempo_gui: EGL capabilities: EGL_EXT_buffer_age "
-                     "%s, EGL_KHR_partial_update %s, "
-                     "EGL_KHR_swap_buffers_with_damage %s, "
+                     "warptempo_gui: EGL capabilities: "
                      "EGL_ANDROID_presentation_time %s; config samples %d, "
-                     "red %d, alpha %d; swap behavior %s (0x%x)\n",
-                     age ? "present" : "absent",
-                     partial ? "present" : "absent",
-                     damage ? "present" : "absent",
+                     "red %d, alpha %d\n",
                      ptime ? "present" : "absent",
                      static_cast<int>(samples), static_cast<int>(red),
-                     static_cast<int>(alpha),
-                     swap == EGL_BUFFER_PRESERVED   ? "preserved"
-                     : swap == EGL_BUFFER_DESTROYED ? "destroyed"
-                                                    : "unknown",
-                     static_cast<unsigned>(swap));
-        // THE PARTIAL REPAIR'S EGL (2026-11-04, session 33; the road at
-        // present): the three extensions, and the two entry points resolved
-        // here, once for the process's display. A missing one is one line:
-        // without the buffer age every frame is drawn whole, without the
-        // swap with damage the swap is the plain one.
-        egl_buffer_age_ext_     = age;
-        egl_partial_update_ext_ = partial;
-        egl_swap_damage_ext_    = damage;
-        if (partial)
-            egl_set_damage_region_ = reinterpret_cast<void*>(
-                eglGetProcAddress("eglSetDamageRegionKHR"));
-        if (damage)
-            egl_swap_with_damage_ = reinterpret_cast<void*>(
-                eglGetProcAddress("eglSwapBuffersWithDamageKHR"));
-        if (partial && !egl_set_damage_region_) egl_partial_update_ext_ = false;
-        if (damage && !egl_swap_with_damage_) egl_swap_damage_ext_ = false;
+                     static_cast<int>(alpha));
         // THE PRESENTATION TIME'S EGL (architect 2026-11-16, the beats;
         // the rule at presentation_stamp_ns, the call at present): the
-        // fourth extension of the line above, its entry point resolved
-        // here like its siblings. Absent or unresolved, one line and no
+        // extension of the line above, its entry point resolved here, once
+        // for the process's display. Absent or unresolved, one line and no
         // frame is stamped.
         if (ptime)
             egl_presentation_time_ = reinterpret_cast<void*>(
@@ -1516,18 +1431,7 @@ void GuiPlatform::ensure_gl_surface() {
             std::fprintf(stderr,
                          "warptempo_gui: no eglPresentationTimeANDROID; "
                          "frames are not stamped\n");
-        if (!egl_buffer_age_ext_)
-            std::fprintf(stderr,
-                         "warptempo_gui: no EGL_EXT_buffer_age; every frame "
-                         "is drawn whole\n");
-        if (!egl_swap_damage_ext_)
-            std::fprintf(stderr,
-                         "warptempo_gui: no eglSwapBuffersWithDamageKHR; the "
-                         "swap is the plain one\n");
     }
-    // A NEW SURFACE FORGETS THE REPAIR'S HISTORY (present's rule): its
-    // buffers hold no frame of ours.
-    repair_history_.clear();
 }
 
 // THE WINDOW'S LOSS (APP_CMD_TERM_WINDOW) and a new window's adoption: the
@@ -1799,8 +1703,19 @@ bool GuiPlatform::paint_one_frame(bool held_frame) {
     // finished picture is on the glass, so the hold and the owed release
     // clear together and the GUI's open_unseen() gates open. A failed post
     // keeps both, as it keeps the damage, and the next vsync's frame retries.
-    if (!present()) return false;
+    // A FRAME WITH NOTHING VISIBLE TO SHOW (present's PresentOutcome::
+    // NothingVisible: every damage rect off the surface, the change
+    // described; architect 2026-11-16 night, send S) CONSUMES ITS DAMAGE as
+    // a presented frame does — so the gate's tail posts no callback for it
+    // and nothing retries — and answers false: nothing reached the window,
+    // so the gate records no painted vsync. The hold's frames are never
+    // this one: the release, the hold's one frame and every adoption damage
+    // the whole surface, which no damage clear but this function's reaches
+    // before their frame, and the whole surface always clips to itself.
+    const PresentOutcome outcome = present();
+    if (outcome == PresentOutcome::Kept) return false;
     damage_.clear();
+    if (outcome == PresentOutcome::NothingVisible) return false;
     if (release_owed_) {
         presentation_held_ = false;
         release_owed_      = false;
@@ -1808,8 +1723,8 @@ bool GuiPlatform::paint_one_frame(bool held_frame) {
     return true;
 }
 
-bool GuiPlatform::present() {
-    if (!window_ || !back_) return false;
+GuiPlatform::PresentOutcome GuiPlatform::present() {
+    if (!window_ || !back_) return PresentOutcome::Kept;
 
     // THE GL CANVAS (2026-10-13; the design record is
     // docs/engineering/gpu_canvas_2026_10.md). The damage list itself, the
@@ -1829,134 +1744,73 @@ bool GuiPlatform::present() {
     // pen's ~500 events a second cost drains and never an extra swap. No
     // glFinish, no glFlush beyond the swap's own, no readback.
     //
-    // THE PARTIAL REPAIR (2026-11-04, session 33; the Astra consult's (b),
-    // tmp/codex_review.md). MEASURED (2026-11-04, the planner's measurement
-    // on the tablet, a free fading line at rest, the panel then pinned at
-    // 90 Hz): before, 90 presents a second, each the whole surface, per
-    // second of wall time the swap 160 ms, the present 30, cairo 15, the
-    // upload 3, the list 1.7, top ~50 %
-    // app / ~50 % SurfaceFlinger; after, 3240 px repaired a frame and no
-    // whole frame at rest, top ~46 % / ~53 % — THE PRESENT IS THE COST (the
-    // swap ~1.7 ms of the loop thread a frame), the pixels were not, and the
-    // draw list's rebuild never was. The tablet's EGL (the capability line, 2026-11-04):
-    // EGL_EXT_buffer_age, EGL_KHR_partial_update and
-    // EGL_KHR_swap_buffers_with_damage present, swap behavior DESTROYED, the
-    // age 3 steady (a triple-buffered swapchain). THE ROAD, three mechanisms
-    // kept apart:
-    //   * THE BUFFER'S AGE, asked of EGL before anything draws: the acquired
-    //     buffer holds the frame `age` presents back (0: unknown contents).
-    //     THE REPAIR REGION is this frame's damage united with the changes
-    //     of the age − 1 frames before it (repair_history_, newest first),
-    //     its rects merged where they neighbor (merge_repair_rect, above;
-    //     architect 2026-11-16, the beats) and capped (kRepairRectCap).
-    //     The frame is drawn WHOLE at age 0, at an age the history cannot
-    //     cover (a new surface, a new size or a failed swap empties it), and
-    //     at GuiGlCanvas::repair_must_be_full's verdict (the clip moved, the
-    //     score viewer's page, the grow's program, no walk yet on the
-    //     texture), whose change the damage does not describe — that frame's
-    //     history entry is then the whole surface, so the older buffers are
-    //     redrawn whole too.
-    //   * THE DAMAGE REGION (EGL_KHR_partial_update): the repair region named
-    //     to EGL once, after the age's query and before the first draw, in
-    //     EGL's bottom-left rects (y' = height − y − h); never called for a
-    //     whole frame (zero rects would mean the whole surface anyway).
-    //   * THE SWAP WITH DAMAGE (EGL_KHR_swap_buffers_with_damage): the swap
-    //     carries THIS FRAME'S CHANGE alone (not the repair region): its
-    //     damage, or the whole surface for an undescribed change; the plain
-    //     swap only where the extension is absent (one line at the
-    //     capability line).
-    // present_frame recomposes each repair rect through the whole pass order,
-    // so the picture's bytes are the whole draw's (its THE REPAIR). IT
-    // STANDS ON THE DAMAGE CONTRACT: every GPU-visible change of the canvas
-    // owes damage on its pixels, the CPU road's rule, now the GPU's too.
+    // EVERY PRESENTED FRAME IS DRAWN WHOLE AND SWAPPED PLAIN (architect
+    // 2026-11-16 night, send S: "given that we've gone to 45, one of the
+    // luxuries that it buys us is not having to worry about this stuff";
+    // "the power draw shouldn't be the deciding factor"). present_frame
+    // clears and composes the whole surface every frame, and the swap is
+    // eglSwapBuffers — his ruling on the swap: the compositor is told the
+    // whole frame changed, so any frame that presents shows the whole
+    // picture and nothing downstream can skip a region. No damage is handed
+    // to EGL. THE DAMAGE STAYS THE FRAME'S INVITATION AND THE CPU'S
+    // NARROWING: a frame paints only when damage stands (the gate), the
+    // chrome is repainted only under it (paint_one_frame's on_redraw calls)
+    // and the texture takes only its rects (present_frame's upload walk);
+    // it no longer selects what the GPU composes. The occasion: a scissored
+    // recompose of a narrow region came out one level off the whole
+    // composite of the same inputs on the plate's antialiased edge, cause
+    // unknown, and the flat-45 beat pays for the whole draw.
+    // NOTHING PRESENTS AT REST, which is what made the present's own cost
+    // matter. MEASURED (2026-11-04, the planner's measurement on the tablet,
+    // a free fading line at rest, the panel then pinned at 90 Hz and a frame
+    // presented every refresh): 90 presents a second, per second of wall
+    // time the swap 160 ms, the present 30, cairo 15, the upload 3, the list
+    // 1.7, top ~50 % app / ~50 % SurfaceFlinger; with only the changed
+    // pixels redrawn, ~46 % / ~53 % — THE PRESENT IS THE COST (the swap
+    // ~1.7 ms of the loop thread a frame), the pixels were not.
+    //
+    // NOTHING VISIBLE CHANGED, NOTHING PRESENTS (architect 2026-11-16 night,
+    // send S): a frame whose every damage rect lies off the surface, and
+    // whose change the damage describes (GuiGlCanvas::change_undescribed
+    // false), draws nothing, stamps nothing and swaps nothing; it answers
+    // NothingVisible, and paint_one_frame consumes its damage as a presented
+    // frame's (its tail). The last present's clock does not move. A change
+    // the damage does not describe (a moved clip, the score viewer's page,
+    // the grow's program, no walk yet) presents whatever its damage.
     //
     // A FAILED SWAP: a lost context is a rare non-silent fault and is fatal
-    // (no recovery code); any other failure is one line and false, the
-    // damage kept and re-posted (paint_one_frame's tail), the history
-    // emptied so the retry is drawn whole.
+    // (no recovery code); any other failure is one line and Kept, the
+    // damage kept and re-posted (paint_one_frame's tail), the retry a whole
+    // frame like every other.
     EGLDisplay dpy  = egl_display_;
     EGLSurface surf = egl_surface_;
-    if (!surf) return false;
-    if (!gl_canvas_.ready(back_)) return false;
+    if (!surf) return PresentOutcome::Kept;
+    if (!gl_canvas_.ready(back_)) return PresentOutcome::Kept;
     // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size the
     // frame was painted at and the texture follows), never eglQuerySurface's
     // answer, which a driver may latch stale; the two are equal at every
     // adoption (the window's own size).
     const int sw = back_w_;
     const int sh = back_h_;
-    const DamageRect whole_surface{0, 0, sw, sh};
 
-    // THIS FRAME'S DAMAGE on the surface, coalesced by containment.
-    std::vector<DamageRect> frame;
+    // ANY DAMAGE ON THE SURFACE (paint_one_frame's guard: damage_ is never
+    // empty here).
+    bool visible = false;
     for (const DamageRect& d : damage_) {
         const int x0 = std::max(d.x, 0);
         const int y0 = std::max(d.y, 0);
         const int x1 = std::min(d.x + d.w, sw);
         const int y1 = std::min(d.y + d.h, sh);
-        if (x1 > x0 && y1 > y0)
-            append_coalesced_rect(frame, DamageRect{x0, y0, x1 - x0, y1 - y0});
-    }
-
-    EGLint age = 0;
-    if (egl_buffer_age_ext_ &&
-        !eglQuerySurface(dpy, surf, EGL_BUFFER_AGE_EXT, &age))
-        age = -2;  // the query failed: drawn whole
-
-    const bool undescribed = gl_canvas_.repair_must_be_full(canvas_frame_);
-    std::vector<DamageRect> change;
-    if (undescribed || frame.empty())
-        change.push_back(whole_surface);
-    else
-        change = frame;
-    const bool full = undescribed || frame.empty() || age <= 0 ||
-                      static_cast<std::size_t>(age - 1) >
-                          repair_history_.size();
-    std::vector<DamageRect> repair;
-    if (!full) {
-        // THE REPAIR REGION, MERGED (architect 2026-11-16, the beats; the
-        // rule at merge_repair_rect): this frame's change and the changes of
-        // the age − 1 frames before it, each rect joining by the merge, so
-        // what recurs beside itself across those frames is one rect.
-        for (const DamageRect& r : change) merge_repair_rect(repair, r);
-        for (int i = 0; i < age - 1; ++i)
-            for (const DamageRect& r : repair_history_[static_cast<std::size_t>(i)])
-                merge_repair_rect(repair, r);
-        // THE LAST RESORT: more rects than the cap become their bounding
-        // rect (kRepairRectCap, platform_android.h, where the count's
-        // reason is).
-        if (repair.size() > kRepairRectCap) {
-            int x0 = sw, y0 = sh, x1 = 0, y1 = 0;
-            for (const DamageRect& r : repair) {
-                x0 = std::min(x0, r.x);
-                y0 = std::min(y0, r.y);
-                x1 = std::max(x1, r.x + r.w);
-                y1 = std::max(y1, r.y + r.h);
-            }
-            repair.assign(1, DamageRect{x0, y0, x1 - x0, y1 - y0});
+        if (x1 > x0 && y1 > y0) {
+            visible = true;
+            break;
         }
-        if (repair.size() == 1 && contains_rect(repair[0], whole_surface))
-            repair.clear();
     }
-    // EGL's rects, bottom-left (x, y', w, h).
-    const auto egl_rects = [sh](const std::vector<DamageRect>& rs) {
-        std::vector<EGLint> v;
-        v.reserve(rs.size() * 4);
-        for (const DamageRect& r : rs) {
-            v.push_back(r.x);
-            v.push_back(sh - (r.y + r.h));
-            v.push_back(r.w);
-            v.push_back(r.h);
-        }
-        return v;
-    };
-    if (!repair.empty() && egl_partial_update_ext_) {
-        std::vector<EGLint> v = egl_rects(repair);
-        reinterpret_cast<PFNEGLSETDAMAGEREGIONKHRPROC>(egl_set_damage_region_)(
-            dpy, surf, v.data(), static_cast<EGLint>(repair.size()));
-    }
-    if (!gl_canvas_.present_frame(back_, damage_, repair, canvas_frame_, sw,
-                                  sh))
-        return false;
+    if (!visible && !gl_canvas_.change_undescribed(canvas_frame_))
+        return PresentOutcome::NothingVisible;
+
+    if (!gl_canvas_.present_frame(back_, damage_, canvas_frame_, sw, sh))
+        return PresentOutcome::Kept;
     // THE FRAME IS TOLD WHEN TO SHOW (architect 2026-11-16, the beats; the
     // rule and every term at presentation_stamp_ns), where both the frame
     // timeline and the extension stand; with either absent no frame is ever
@@ -1979,8 +1833,7 @@ bool GuiPlatform::present() {
     // A NEW SURFACE NEEDS NOTHING RESET for the same reason: its first
     // frame sets its own stamp before its swap. A refused call leaves the
     // surface's last stamp, by then past, and the frame shows at once.
-    // Nothing else of the frame moves: the damage, the age and the repair
-    // above were formed without it.
+    // Nothing else of the frame moves: the draw above was made without it.
     if (egl_presentation_time_ && g_frame_timeline.whole()) {
         const bool invited = painting_due_vsync_ && due_vsync_timeline_;
         const int64_t stamp_ns =
@@ -1991,30 +1844,16 @@ bool GuiPlatform::present() {
             egl_presentation_time_)(dpy, surf,
                                     static_cast<EGLnsecsANDROID>(stamp_ns));
     }
-    bool swapped = false;
-    if (egl_swap_damage_ext_) {
-        std::vector<EGLint> v = egl_rects(change);
-        swapped = reinterpret_cast<PFNEGLSWAPBUFFERSWITHDAMAGEKHRPROC>(
-                      egl_swap_with_damage_)(
-            dpy, surf, v.data(), static_cast<EGLint>(change.size()));
-    } else {
-        swapped = eglSwapBuffers(dpy, surf);
-    }
-    if (!swapped) {
+    if (!eglSwapBuffers(dpy, surf)) {
         const EGLint err = eglGetError();
         if (err == EGL_CONTEXT_LOST) gl_fatal("the context was lost", err);
         std::fprintf(stderr, "warptempo_gui: eglSwapBuffers failed (0x%x)\n",
                      static_cast<unsigned>(err));
-        repair_history_.clear();
-        return false;
+        return PresentOutcome::Kept;
     }
-    // THE HISTORY: this frame's change, newest first.
-    repair_history_.insert(repair_history_.begin(), std::move(change));
-    if (repair_history_.size() > kRepairHistoryDepth)
-        repair_history_.resize(kRepairHistoryDepth);
     // THE LAST PRESENT, the keep-alive's clock (display_keep_alive_due).
     last_present_ms_ = platform_monotonic_ms();
-    return true;
+    return PresentOutcome::Presented;
 }
 
 // THE DISPLAY KEEP-ALIVE'S QUESTION (the contract at the declaration; the
@@ -2357,8 +2196,8 @@ void GuiPlatform::pump() {
         // THE LAST PAINTED VSYNC'S ONE WRITER (the rule at kFrameBeat): the
         // due vsync's frame time is recorded only when its frame reached the
         // window; a paint that presents nothing (the hold, no window, a
-        // failed post) records nothing and leaves the next vsync due at
-        // once.
+        // failed post, a frame with nothing visible to show) records nothing
+        // and leaves the next vsync due at once.
         // THE GATED PAINT'S BIT (architect 2026-11-16, the presentation
         // times): raised round this one call, so present knows the frame
         // it is posting is the due vsync's own and may read that vsync's

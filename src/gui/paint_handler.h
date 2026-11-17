@@ -853,11 +853,9 @@ struct GuiPaintHandler {
     // THE MOST RECTS A REBUILD DECLARES ITS CHANGE AS (the tail's last
     // resort): past this many the change is declared as the whole area.
     // Each damage rect is one on_redraw
-    // call (GuiPlatform::invalidate_surface_rect's note) and, united with
-    // the two frames' before it, a scissored clear and an instanced draw of
-    // the whole canvas list (the repair region, kRepairRectCap,
-    // platform_android.h), so a rebuild that changed many things at once —
-    // a restore, a select-all's stems — is cheaper whole. Twelve holds a
+    // call (GuiPlatform::invalidate_surface_rect's note), so a rebuild that
+    // changed many things at once — a restore, a select-all's stems — is
+    // cheaper whole. Twelve holds a
     // marker drag's frame under a ring — the cue, the stem's two places and
     // the ring's four sides before and after, eleven before any are united —
     // and a value drag's tied cues.

@@ -216,7 +216,8 @@ void ValueDragOps::apply_motion(double mouse_y) {
     }
     // THE CUES THE STEP CHANGED AND NOTHING ELSE, per step (architect
     // 2026-11-16, the beats: a step's frame repaints what it changed, so it
-    // is a small frame, less of the surface redrawn, less GPU). The flag's
+    // is a small repaint, less of the chrome redrawn and uploaded; the GPU
+    // draws every frame whole, GuiPlatform::present). The flag's
     // number (or its cell's) is what moved —
     // and with it, off the same store, whatever other label reads it: a
     // tie follower's cells (the leader's bracket), a strike entering or

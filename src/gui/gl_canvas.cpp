@@ -1528,45 +1528,30 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // plate's fringe their coverage blend, and under a tint the blend toward
 // its word (kListFragmentShader).
 //
-// THE REPAIR (2026-11-04, session 33; the Astra consult's (b),
-// tmp/codex_review.md; the platform's half at GuiPlatform::present): THE
-// FRAME IS DRAWN WHOLE OR ONLY ITS REPAIR REGION. `repair` empty is the
-// whole frame, as above. Otherwise `repair` is the region the platform's
-// buffer-age history says the acquired buffer is missing (this frame's
-// damage and the damage of the frames since the buffer was last drawn), in
-// surface px, top-left, and each of its rects is RECOMPOSED from its own
-// clear through the whole pass order — the clear, the list under the rect
-// ∩ the clip, the texture — under a scissor to the rect, one rect whole
-// before the next; every pixel outside the region is the buffer's own,
-// drawn by an earlier frame on the same passes. THE BYTES ARE THE WHOLE
-// DRAW'S: every pass is deterministic from the clear at the same absolute
-// coordinates on the same state, the plate's shader reads its column data
-// and never the framebuffer, the blends (the plate's fringe, the tint) read
-// the framebuffer only through the GL blend over the records this same
-// pass drew there since the clear, and a scissor changes no fetch,
-// coverage or blend; an overlap of two rects is cleared again before it is
-// drawn again, so nothing blends twice. The texture's upload is still THIS frame's
-// damage alone (the texture is persistent, so every older repaired pixel is
-// already its own). IT STANDS ON THE DAMAGE CONTRACT: a canvas pixel the
-// list changes outside every declared damage rect is not redrawn, so every
-// GPU-visible change of the list owes damage on its old and new pixels
-// (the audit of 2026-11-04 in tmp/s33/done2.md; the owners' damage at each
-// pass's comment). A change the damage cannot describe is drawn whole by
-// repair_must_be_full's verdict.
+// THE WHOLE DRAW (architect 2026-11-16 night, send S; the platform's half,
+// the plain swap, at GuiPlatform::present): EVERY FRAME IS DRAWN WHOLE —
+// the clear, the list or the page under the clip's scissor, the texture
+// over the whole surface — whatever its damage, so every presented frame
+// is the whole picture of the frame's state and no pixel of the acquired
+// buffer is an earlier frame's. THE DAMAGE NARROWS THE UPLOAD ALONE (the
+// texture is persistent: a texel no damage named is already the
+// backbuffer's). THE DAMAGE CONTRACT STILL BINDS (canvas_sink.h's head):
+// damage is what invites a frame, so a GPU-visible change owes damage to
+// be shown at all; an undeclared one shows with the next presented frame,
+// whole.
 // DRAWN INTO THE WINDOW'S OWN BUFFER, NO OFFSCREEN FRAME (architect
 // 2026-11-15, send N: "my leaning is to make use of the additional headroom
 // to go as truthful as we can"): a partly covered pixel's blend rounds as the
 // window's RGBA_8888 buffer rounds it, the picture of every capture before
 // 2026-11-15, where a persistent offscreen target composed and copied out
 // rounded one or two levels the other way on those pixels (measured on the
-// tablet 2026-11-15, about 1.4 % of the canvas). The cost is the re-render: a
-// change over the whole canvas is drawn whole into each window buffer in turn
-// (three, the age steady at 3), each a whole frame with the beat's 22.2 ms
-// (kFrameBeat, platform_android.cpp).
+// tablet 2026-11-15, about 1.4 % of the canvas). Each frame is composed in
+// the window buffer it presents, on the beat's 22.2 ms (kFrameBeat,
+// platform_android.cpp).
 // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
 // 2026-10-24): an empty clip — no list yet, or a paint area the folder
 // overlay emptied — leaves nothing out of any upload and draws no list.
-// present_frame's and repair_must_be_full's one reading.
+// present_frame's and change_undescribed's one reading.
 void GuiGlCanvas::frame_clip(const GuiCanvasDrawList* list, int clip[4],
                              bool& floater) {
     clip[0] = clip[1] = clip[2] = clip[3] = 0;
@@ -1585,17 +1570,18 @@ bool GuiGlCanvas::ready(cairo_surface_t* back) const {
            cairo_image_surface_get_data(back) != nullptr;
 }
 
-// THE REPAIR'S OWN VERDICT (2026-11-04, session 33; the rule at
-// present_frame's THE REPAIR): the frame must be drawn whole when the
-// change it shows is not described by the damage — the texture has had no
-// walk since it was made (a remade texture, the first frame), the canvas
-// clip differs from the last walk's (a keyboard, a folder overlay, a modal
-// box or the score viewer came or went: every pixel the clip gained or lost
-// changes its pass), the score viewer's page stands or stood at the last
-// frame (its textures arrive across presents with no damage of their own),
-// or the list's grow differs from the standing program's (the plate is
-// recompiled, so every fringe moves).
-bool GuiGlCanvas::repair_must_be_full(const GuiCanvasDrawList* list) const {
+// THE UNDESCRIBED CHANGE (2026-11-04, session 33; its reader since
+// architect 2026-11-16 night, send S, GuiPlatform::present's NOTHING
+// VISIBLE CHANGED rule): the frame changes pixels its damage does not name
+// — the texture has had no walk since it was made (a remade texture, the
+// first frame), the canvas clip differs from the last walk's (a keyboard, a
+// folder overlay, a modal box or the score viewer came or went: every pixel
+// the clip gained or lost changes its pass), the score viewer's page stands
+// or stood at the last frame (its textures arrive across presents with no
+// damage of their own), or the list's grow differs from the standing
+// program's (the plate is recompiled, so every fringe moves) — so it must
+// present even where all its damage lies off the surface.
+bool GuiGlCanvas::change_undescribed(const GuiCanvasDrawList* list) const {
     if (!upload_seeded_) return true;
     int  clip[4];
     bool floater = false;
@@ -1611,7 +1597,6 @@ bool GuiGlCanvas::repair_must_be_full(const GuiCanvasDrawList* list) const {
 
 bool GuiGlCanvas::present_frame(cairo_surface_t* back,
                                 std::span<const GuiGlRect> damage,
-                                std::span<const GuiGlRect> repair,
                                 GuiCanvasDrawList* list,
                                 int surface_w, int surface_h) {
     if (!texture_) return false;
@@ -1684,18 +1669,23 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         // every list, so the grow moves only at a commit of the key and
         // the compare is false at every other frame — and a commit of the
         // key is then the next frame's picture with no upload (the tips
-        // do not move), drawn whole (repair_must_be_full).
+        // do not move), presented whatever its damage
+        // (change_undescribed).
         if (list_instances_ > 0 && list->plate_grow != list_program_grow_) {
             glDeleteProgram(list_program_);
             build_list_program(list->plate_grow);
         }
     }
-    // THE LIST'S DRAW under the scissor (x, y, w, h) in surface px, top-left
-    // — the canvas clip, or a repair rect's part of it.
-    const auto draw_list = [&](int x, int y, int w, int h) {
-        if (w <= 0 || h <= 0 || list_instances_ <= 0) return;
+    // THE WHOLE DRAW (the rule at THE WHOLE DRAW above): the clear, the
+    // list or the page under the clip's scissor, the texture over the whole
+    // surface.
+    glClear(GL_COLOR_BUFFER_BIT);
+    if (page_stands) {
+        draw_page(list->page, clip);
+    } else if (list_draws && list_instances_ > 0) {
         glEnable(GL_SCISSOR_TEST);
-        glScissor(x, texture_h_ - (y + h), w, h);
+        glScissor(clip[0], texture_h_ - (clip[1] + clip[3]), clip[2],
+                  clip[3]);
         glUseProgram(list_program_);
         glUniform2f(list_size_uniform_, static_cast<float>(surface_w),
                     static_cast<float>(surface_h));
@@ -1709,52 +1699,10 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);
         glDisable(GL_SCISSOR_TEST);
-    };
-    const auto draw_texture = [&]() {
-        glUseProgram(program_);
-        glUniform1i(height_uniform_, texture_h_);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-    };
-
-    if (repair.empty()) {
-        // THE FULL REPAIR: the clear, the list or the page under the clip's
-        // scissor, the texture over the whole surface.
-        glClear(GL_COLOR_BUFFER_BIT);
-        if (page_stands)
-            draw_page(list->page, clip);
-        else if (list_draws)
-            draw_list(clip[0], clip[1], clip[2], clip[3]);
-        draw_texture();
-    } else {
-        // THE PARTIAL REPAIR (the rule at THE REPAIR above): every repair
-        // rect recomposed from its own clear through the same passes in the
-        // same order — the clear, the list under the rect ∩ the clip, the
-        // texture — each rect whole before the next, so a pixel two rects
-        // share is cleared again before it is drawn again and never blends
-        // twice. Never with the page standing (repair_must_be_full).
-        for (const GuiGlRect& r : repair) {
-            const int rx0 = std::max(r.x, 0);
-            const int ry0 = std::max(r.y, 0);
-            const int rx1 = std::min(r.x + r.w, surface_w);
-            const int ry1 = std::min(r.y + r.h, surface_h);
-            if (rx1 <= rx0 || ry1 <= ry0) continue;
-            glEnable(GL_SCISSOR_TEST);
-            glScissor(rx0, texture_h_ - ry1, rx1 - rx0, ry1 - ry0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glDisable(GL_SCISSOR_TEST);
-            if (list_draws) {
-                const int cx0 = std::max(rx0, clip[0]);
-                const int cy0 = std::max(ry0, clip[1]);
-                const int cx1 = std::min(rx1, clip[0] + clip[2]);
-                const int cy1 = std::min(ry1, clip[1] + clip[3]);
-                draw_list(cx0, cy0, cx1 - cx0, cy1 - cy0);
-            }
-            glEnable(GL_SCISSOR_TEST);
-            glScissor(rx0, texture_h_ - ry1, rx1 - rx0, ry1 - ry0);
-            draw_texture();
-            glDisable(GL_SCISSOR_TEST);
-        }
     }
+    glUseProgram(program_);
+    glUniform1i(height_uniform_, texture_h_);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
     page_stood_ = page_stands;
     return true;
 }

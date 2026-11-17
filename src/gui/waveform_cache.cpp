@@ -1824,7 +1824,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // beats: "I think we should build the most optimistic with regards to
     // the scanner and the marker drag and anything that would follow" — a
     // frame that repaints a moved marker and nothing else is a small one,
-    // less of the surface redrawn, less GPU).
+    // less of the chrome repainted and uploaded; the GPU draws every frame
+    // whole, GuiPlatform::present).
     //
     // WHAT THIS REBUILD PUTS ON THE SCREEN: the surface's CUES, blitted over
     // the marker lane; the STEM STASH it stages, painted live in both halves

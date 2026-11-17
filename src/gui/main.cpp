@@ -1397,10 +1397,9 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 
 // THE SCANNER'S DAMAGE RECT (architect 2026-11-16, the beats: a scanner
 // frame repaints the scanner's own pixels and no chrome above the canvas,
-// which holds nothing of it — a small frame, little of the surface redrawn,
-// little GPU): THE HULL OF ITS
-// LINE'S OWN SPAN
-// OVER THE CANVAS'S ROWS — waveform_line_span (render.h, the line's one
+// which holds nothing of it — a small repaint, little of the chrome redrawn
+// and uploaded; the GPU draws every frame whole, GuiPlatform::present): THE
+// HULL OF ITS LINE'S OWN SPAN OVER THE CANVAS'S ROWS — waveform_line_span (render.h, the line's one
 // rule) at the scanner's exact place `x` (scanner_exact_x's on the PLATE
 // basis: device px from area.x), over `area`'s rows, through hull (render.h,
 // the one conversion to pixels). THE SCANNER IS THAT LINE AND NOTHING ELSE:
@@ -2480,7 +2479,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // last present), and a yes damages THE CLOCK CELL, the audition
         // rest's own road below ("A REST KEEPS THE PAINT CLOCK RUNNING", its
         // reasoning): a cell that always paints and whose repaint changes no
-        // pixel — a small frame, one per kDisplayKeepAliveMs. Past the
+        // pixel — a small repaint, one per kDisplayKeepAliveMs. Past the
         // window nothing is asked and nothing presents at
         // rest. HERE, AT THE HEAD, ahead of every early return, so every mode
         // reaches it — the render player, the score viewer, the blank window,
@@ -2489,8 +2488,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the published cell, or the whole lane while the row has yielded to
         // a modal (the cell then reads zero); either way a rect on screen, so
         // the present follows from the damage alone, whatever the forks below
-        // paint there. Under the score viewer every frame is drawn whole
-        // (GuiGlCanvas::repair_must_be_full), its keep-alive frames too.
+        // paint there.
         if (playback_lifecycle.display_keep_alive_wanted(monotonic_ms()) &&
             gui.display_keep_alive_due())
             invalidate_clock_area();
@@ -2498,7 +2496,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
         // 2026-11-04 night, render_playhead's paragraph, render.h — the
         // tick's per-frame damage of a fading line stood one day and went
-        // with the fade; the partial repair it was measured under stays,
+        // with the fade; its measurement, the present's own cost, at
         // GuiPlatform::present.)
 
         // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,
@@ -2650,8 +2648,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // clock somebody reads unbidden: a run ends by nothing happening, and
         // the last trigger of a run is indistinguishable from the middle of one
         // when it arrives, so no event exists to hang this on. The tick is the
-        // right unbidden reader — the timerfd is a free-running ~125 Hz interval
-        // (arm_playback_timer, half the refresh period), armed whether or not
+        // right unbidden reader — the timerfd is a free-running 5 ms (200 Hz)
+        // interval (arm_playback_timer; detect_refresh_rate_ms, under the
+        // pinned 90 Hz panel's half-period), armed whether or not
         // anything is playing and independent of input and of frame callbacks,
         // so the quiet is noticed within a tick of the window expiring even on a
         // completely idle screen. It is also where the product's other
@@ -2914,8 +2913,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     (the stash rewritten under a clip that covers every key),
             //     so the walk cannot declare one key's rect tick after tick;
             //   * MORE THAN kFaceComparatorKeys drifted keys: each rect is
-            //     one on_redraw call and one repair rect (kRepairRectCap,
-            //     platform_android.h), and a tick that flips many faces at
+            //     one on_redraw call (GuiPlatform::invalidate_surface_rect's
+            //     note), and a tick that flips many faces at
             //     once — a load, an overlay opening over a dead roster, a
             //     selection arriving under row 8's marker verbs — is one
             //     repaint of the strip, as cheap. Four holds what a tap
@@ -3385,9 +3384,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // it stands at kDisplayKeepAliveFastStopMs, playback_lifecycle.h,
         // architect 2026-11-16): while a rest of the act stands, every tick
         // damages the CLOCK CELL, so a frame is presented through the rest
-        // at every due vsync — the clock cell alone, a small frame, one a
-        // beat (kFrameBeat, platform_android.cpp: every second refresh of
-        // the pinned 90 Hz panel).
+        // at every due vsync — the clock cell alone repainted (the GPU draws
+        // every frame whole, GuiPlatform::present), one a beat (kFrameBeat,
+        // platform_android.cpp: every second refresh of the pinned 90 Hz
+        // panel).
         // THE DISPLAY HAS AN IDLE
         // TIMER: the tablet's SurfaceFlinger drops the panel from its pinned
         // rate (90 Hz) to 30 Hz once no layer has presented

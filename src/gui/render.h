@@ -77,8 +77,8 @@ struct GuiRectF {
 // WHERE ITS ARITHMETIC PUTS IT, AT EXACT COVERAGE — no nearbyint, floor,
 // ceil or integer division between a continuous quantity and the paint.
 // WHOLE, each for its own reason:
-//   PIXELS NAMED AS PIXELS — damage rects, culls, repair regions, scissors,
-//     the GL clip, and GuiRect / GuiGlRect as the type of those: they say
+//   PIXELS NAMED AS PIXELS — damage rects, culls, scissors, the GL clip,
+//     and GuiRect / GuiGlRect as the type of those: they say
 //     which pixels are touched, and a pixel is whole. An exact thing's
 //     damage is its hull.
 //   THE LAYOUT'S BOXES — lanes, rows, the keys' faces, fields, panes, the

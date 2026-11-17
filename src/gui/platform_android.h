@@ -596,9 +596,8 @@ private:
     // -- THE GL CANVAS (2026-10-13; the one canvas road since the laptop
     // GUI's drop, architect 2026-10-30; the road at present) --
     // The window goes through EGL / GLES 3.0: the backbuffer above is
-    // uploaded into ONE texture by damage rect and drawn at every swap, whole
-    // or only the buffer's repair region (present's THE PARTIAL REPAIR,
-    // 2026-11-04).
+    // uploaded into ONE texture by damage rect and the whole frame drawn at
+    // every swap (present's head, architect 2026-11-16 night, send S).
     // The EGL handles are spelled void* (each EGL type is one on this
     // platform) so no EGL header reaches this file. THE DISPLAY, CONFIG,
     // CONTEXT AND PROGRAMS ARE THE PROCESS'S, made at the first adoption and
@@ -616,45 +615,12 @@ private:
     struct ANativeWindow* egl_window_  = nullptr;
     // The one-time line naming the driver (adopt_window's road).
     bool                  gl_identity_logged_ = false;
-    // THE PARTIAL REPAIR'S EGL (2026-11-04, session 33; the road at
-    // present): the three extensions it stands on, read at the capability
-    // line, and the two entry points resolved there by eglGetProcAddress
-    // (spelled void* for this header's no-EGL rule; present casts them to
-    // eglext.h's PFNEGLSETDAMAGEREGIONKHRPROC and
-    // PFNEGLSWAPBUFFERSWITHDAMAGEKHRPROC). THE HISTORY: the last frames'
-    // changes, newest first, at most kRepairHistoryDepth — each a
-    // successful present's damage on the surface (or the whole surface for
-    // a change its damage does not describe) — emptied at a new surface, a
-    // new backbuffer size and a failed swap, so the next frame is drawn
-    // whole.
-    bool                  egl_buffer_age_ext_     = false;
-    bool                  egl_partial_update_ext_ = false;
-    bool                  egl_swap_damage_ext_    = false;
-    void*                 egl_set_damage_region_  = nullptr;
-    void*                 egl_swap_with_damage_   = nullptr;
     // THE PRESENTATION TIME'S ENTRY POINT (architect 2026-11-16, the beats;
-    // EGL_ANDROID_presentation_time, resolved at the capability line like
-    // the two above and spelled void* for the same rule; present casts it
-    // to eglext.h's PFNEGLPRESENTATIONTIMEANDROIDPROC). Null where the
-    // extension is absent: no frame is stamped.
+    // EGL_ANDROID_presentation_time, resolved at the capability line by
+    // eglGetProcAddress and spelled void* for this header's no-EGL rule;
+    // present casts it to eglext.h's PFNEGLPRESENTATIONTIMEANDROIDPROC).
+    // Null where the extension is absent: no frame is stamped.
     void*                 egl_presentation_time_  = nullptr;
-    static constexpr std::size_t kRepairHistoryDepth = 8;
-    std::vector<std::vector<GuiGlRect>> repair_history_;
-    // THE REPAIR LIST'S CAP (architect 2026-11-16, the beats; present's
-    // repair region, after its merge — merge_repair_rect,
-    // platform_android.cpp): more than this many rects become their
-    // bounding rect. THE COUNT BOUNDS DRAW CALLS: each repair rect costs a
-    // scissored clear, one instanced draw of EVERY instance of the canvas
-    // list (where the rect meets the canvas) and the texture's triangle
-    // (GuiGlCanvas::present_frame's repair loop), so sixteen is at most
-    // sixteen passes over the list, a few scissored passes each and never
-    // dozens. IT IS THE LAST RESORT, the merge the rule: the merge makes one
-    // rect of what recurs beside itself across the buffer's missed frames
-    // (the scanner's line, the clock cell), so a scanner frame with a
-    // lamp's edge or a key's face beside it stays under the cap and stays
-    // small — its bounding rect would be most of the window, a whole plate
-    // redrawn for a lamp.
-    static constexpr std::size_t kRepairRectCap = 16;
     // THE LAST SUCCESSFUL PRESENT, steady-clock ms (platform_monotonic_ms;
     // present's tail, the one writer: every frame that reaches the window
     // posts through it, gated or not, the hold's one frame included); 0
@@ -953,12 +919,18 @@ private:
     // one call the hold's gate lets through (platform.h's head). True iff
     // the frame was presented (the gate's stamp reads it, pump's tail).
     bool paint_one_frame(bool held_frame = false);
-    // Upload every rect of damage_ into the GL canvas's texture and swap the
-    // whole frame (the definition). Silent false with no window, no
-    // backbuffer or no EGL surface. TRUE MEANS THE PIXELS REACHED THE WINDOW
-    // — the caller clears its damage on that answer and on no other (the
-    // rule is at the call site).
-    bool present();
+    // Upload every rect of damage_ into the GL canvas's texture, draw the
+    // whole frame and swap it plain (the definition). THREE ANSWERS, the
+    // caller's damage following each (the rule at the call site,
+    // paint_one_frame's tail): PRESENTED — the pixels reached the window,
+    // the damage is cleared; NOTHING VISIBLE — every damage rect lay off
+    // the surface and the change is one the damage describes, so nothing
+    // was drawn or swapped and the damage is consumed all the same (architect
+    // 2026-11-16 night, send S); KEPT — nothing reached the window (no
+    // window, no backbuffer, no EGL surface, no texture yet, a failed swap)
+    // and the damage stays for the next frame.
+    enum class PresentOutcome { Presented, NothingVisible, Kept };
+    PresentOutcome present();
     // Deliver the owed first on_resize_ if one is owed. THE ONE OWNER, called
     // from pump()'s head and from paint_one_frame's (contract at its
     // definition).

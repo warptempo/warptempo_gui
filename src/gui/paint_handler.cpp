@@ -5727,8 +5727,9 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 // the zoom anchor's stem — so every line under it is lightened with the
 // canvas (the one exception to the lines' own color, canvas_sink.h's head),
 // and nothing in the list paints over it. A record that changes under it
-// owes the damage it always did: the repair recomposes each damaged rect
-// through the whole list, this tint included (present_frame's THE REPAIR).
+// owes the damage it always did (canvas_sink.h's damage contract); every
+// frame draws the whole list, this tint included (present_frame's THE
+// WHOLE DRAW).
 void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
                                             const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
@@ -9511,10 +9512,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 // The frame's draw list, built by on_redraw's first damage rect that meets
 // the canvas's paint area: the canvas passes in on_redraw's paint order
 // (its authoritative block), each through the sink, WHOLE — no damage
-// rect cuts it and no exposure gates a pass — so whatever part of the
-// canvas the GPU redraws (the whole, or the frame's repair region since
-// 2026-11-04: GuiGlCanvas::present_frame's THE REPAIR) is drawn from one
-// coherent state. The pixels a record changes owe damage of their own
+// rect cuts it and no exposure gates a pass — so the canvas the GPU draws
+// whole every frame (GuiGlCanvas::present_frame's THE WHOLE DRAW) is drawn
+// from one coherent state. The pixels a record changes owe damage of their own
 // (canvas_sink.h's head, the damage contract). THE SWEEP HIGHLIGHT IS THE
 // PLATE BRANCH'S LAST RECORD (architect 2026-11-12, paint_sweep_highlight:
 // over everything in the waveform area); a frame with no audio has no
