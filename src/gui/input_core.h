@@ -924,7 +924,9 @@ private:
     //     count), not routed — a committed gesture, the moved-drag rule's
     //     family (the armed sweep is born of a moved drag; there is no
     //     motionless sub-state to upgrade from). The pinch stays the
-    //     window's: a second down BEFORE the crossing zooms, the lamp lit.
+    //     window's: a second down BEFORE the crossing zooms, the lamp lit
+    //     at its start (a pinch frame that moves the level puts it out, the
+    //     GUI's GuiInputHandler::darken_zoom_lamps_if_level_moved).
     //   * second DOWN during Caret — IGNORED whole, the Region clause's own
     //     terms: the finger becomes nothing, not a pinch pivot inside the
     //     field.

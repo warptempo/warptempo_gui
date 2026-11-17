@@ -1384,9 +1384,10 @@ const char* tempo_cent_step_kind_refusal(const AppState& a,
 //
 // THE ARMS ARE THE DISPATCH'S OWN, IN ITS OWN ORDER, and each is argued at the
 // dispatch where its sentence is raised (input_key_dispatch.cpp's Ctrl+B
-// arm, bare `m` until 2026-09-15). What is worth stating HERE is the one thing the extraction changed:
-// the coincidence test reads warp_red_flag_set_cached's `collapsed`
-// set rather than calling warp_coincident_members fresh. It is the
+// arm, bare `m` until 2026-09-15). What is worth stating HERE is how the
+// coincidence test reads (2026-11-17): every effectively-enabled row of the
+// selected run [owner .. last_sel] is asked of warp_red_flag_set_cached's
+// `collapsed` set rather than of warp_coincident_members fresh. It is the
 // SAME verdict — that cache's pass 1 is that classifier over the same slice of
 // the same committed store (warp_frame_map_view.cpp) — memoized on the store's
 // generation, which is what makes a per-tick face read cost nothing.
@@ -1423,10 +1424,24 @@ BpmSweepPlan bpm_sweep_plan(const AppState& a, const GuiAudio& audio) {
     }
     if (!bpm_popup_eligible_marker(mv[static_cast<size_t>(owner)]))
         return refused(BpmSweepRefusal::OwnerIneligible);
-    if (warp_red_flag_set_cached(a, audio.sample_rate(),
-                                 static_cast<long>(audio.total_frames()))
-            .collapsed.count(owner))
-        return refused(BpmSweepRefusal::OwnerCoincident);
+    // NO ENABLED SELECTED MARKER IS A COINCIDENT MEMBER (2026-11-17): the
+    // resolver renders every enabled member of a coincident run as a plain
+    // 1.00 owner, so one inside [owner .. last_sel] — the owner itself or any
+    // later row — would render its cell at 1.00 whatever the form derived and
+    // the span would not play at the swept tempo. A disabled member renders
+    // nothing and is passed over, and the rows between last_sel and the
+    // boundary are disabled by section_end_index's own rule, so the selected
+    // run is the whole scan.
+    {
+        const std::set<int>& collapsed =
+            warp_red_flag_set_cached(a, audio.sample_rate(),
+                                     static_cast<long>(audio.total_frames()))
+                .collapsed;
+        for (int i = owner; i <= last_sel; ++i) {
+            if (collapsed.count(i) && !effective_disabled(mv, i))
+                return refused(BpmSweepRefusal::SpanCoincident);
+        }
+    }
     for (int i = owner + 1; i <= last_sel; ++i) {
         const GuiWarpMarker& m = mv[static_cast<size_t>(i)];
         if (m.tempo_inherits)      continue;

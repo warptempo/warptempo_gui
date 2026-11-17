@@ -1304,7 +1304,10 @@ struct GuiInputHandler {
     // of input_trim.cpp). A tap
     // under the lit lamp is the ordinary tap (run_nav_click_act), a pinch
     // the ordinary pinch, the barrel-held drag the ordinary one-finger zoom:
-    // the lamp stays lit through all three.
+    // the tap keeps the lamp lit, and a pinch or a barrel zoom keeps it only
+    // while the level does not change — a frame that moves the level puts it
+    // out (architect 2026-11-17, send U; darken_zoom_lamps_if_level_moved,
+    // above).
     //
     // begin_touch_region(x, y) runs THE REGION FORMER'S PRESS HALF at the
     // contact's DOWN point — deselect-all, then the drag arm

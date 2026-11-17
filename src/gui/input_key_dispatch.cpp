@@ -29,7 +29,7 @@
                                   // cycle's playhead-anchored seed)
 #include "warpmarkers.h"
 #include "warp_frame_map_build.h"  // slice_to_warp_markers (the `m` gate's own
-                                   // coincident-owner refusal moved into
+                                   // coincidence refusal moved into
                                    // bpm_sweep_plan on 2026-09-04; the slice
                                    // has other callers here)
 
@@ -7823,8 +7823,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // markers with no effectively-enabled label_ref in
     // [owner .. boundary marker] inclusive and, since 2026-08-26, ONE TEMPO
     // across the run (each selected marker a pass or the owner's own value)
-    // and an owner that is no coincident member; any other selection
-    // is refused, and SAYS WHICH RULE IT BROKE since 2026-08-30 (the arm-by-arm
+    // and no enabled coincident member in the selected run; any other
+    // selection is refused, and SAYS WHICH RULE IT BROKE since 2026-08-30 (the arm-by-arm
     // ruling is at the first test below). THE LADDER IS bpm_sweep_plan SINCE
     // 2026-09-04, a const owner this arm and the BPM Iterations button's face
     // share (the contract is at its declaration, app_state.h).
@@ -7927,24 +7927,24 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                     AppState::NotificationClass::Normal,
                     "The first selected marker must own its tempo and be enabled");
                 return true;
-            // A COINCIDENT OWNER CANNOT TAKE A TEMPO EITHER (2026-08-26,
-            // the ref refusal's own class; the membership widened
-            // 2026-11-17): the resolver's stage 2 renders every enabled
-            // member of a coincident run — the same frame or under one
-            // millisecond from a neighbor, disabled rows counted — as a plain
-            // 1.00 owner, so a span owned from such a member renders at 1.00
-            // in every cell whatever the editor derived — and when the
-            // coincident partner is the boundary itself the span is shorter
-            // than a millisecond or empty, and the sweep derives nothing
-            // worth a batch. The verdict is the classifier's,
-            // warp_coincident_members (warp_frame_map_build.h — the
-            // render's stage 2 and the lane's red cue consult the same one,
-            // and the plan reads it off that cue's own cache), never
-            // re-spelled here.
-            case BpmSweepRefusal::OwnerCoincident:
+            // NO ENABLED SELECTED MARKER MAY BE A COINCIDENT MEMBER
+            // (2026-11-17; the ref refusal's own class): the resolver's
+            // stage 2 renders every enabled member of a coincident run — the
+            // same frame or under one millisecond from a neighbor, disabled
+            // rows counted — as a plain 1.00 owner, so a selected run holding
+            // one, the owner or any later row, renders that cell at 1.00
+            // whatever the editor derived and the span does not play at the
+            // swept tempo (and when the owner's coincident partner is the
+            // boundary itself the span is shorter than a millisecond or
+            // empty). A disabled member renders nothing and passes. The
+            // verdict is the classifier's, warp_coincident_members
+            // (warp_frame_map_build.h — the render's stage 2 and the lane's
+            // red cue consult the same one, and the plan reads it off that
+            // cue's own cache), never re-spelled here.
+            case BpmSweepRefusal::SpanCoincident:
                 notifications.notify(
                     AppState::NotificationClass::Normal,
-                    "The first selected marker coincides with another");
+                    "A selected marker coincides with another");
                 return true;
             // ONE TEMPO IN THE RUN (architect 2026-08-26): every selected
             // marker is a pass or carries the owner's own tempo — cents AND

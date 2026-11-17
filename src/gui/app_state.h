@@ -2791,9 +2791,13 @@ enum class RedesignButton {
     // plain press on a flag's PAYLOAD BOX takes the CTRL BRANCH — toggle
     // membership, land the playhead on the focus the toggle leaves, keep the
     // rest of the selection — and the mode stands until bare `k` or this
-    // button puts it out, or an act SPENDS the selection it built (architect
-    // 2026-09-10 for the posture, 2026-09-12 for the acts; its six silent
-    // auto-clears stay deleted, being selection MUTATORS rather than acts).
+    // button puts it out, an act SPENDS the selection it built, its own
+    // sweep commits, TRIM lights, a user zoom moves the level or the `h`
+    // view opens (architect 2026-09-10 for the posture, 2026-09-12 for the
+    // acts, 2026-11-10 for the sweep and the radio, 2026-11-17 for the zoom
+    // and the view's entry, send U; the six off edges at
+    // AppState::add_to_selection; its six silent auto-clears stay deleted,
+    // being selection MUTATORS rather than acts).
     // THE FOLD STOPS AT THAT BOX (architect 2026-09-19): a plain press on a
     // LOWER or UPPER cell is the ordinary plain press however this lamp stands
     // — single-select, address, land, and the bound value drag armed where the
@@ -14966,9 +14970,11 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // (the sweep derives tempo from source durations — the one member of the warp
 // status/value family deliberately left out of the 2026-08-24 target-view
 // admission), a non-empty selection, an in-range one, CONTIGUITY, no
-// effectively-enabled label ref in [owner .. boundary], an eligible owner, an
-// owner that is no coincident member, and ONE TEMPO across the
-// selected run. Every arm is input routing: it judges the selection's
+// effectively-enabled label ref in [owner .. boundary], an eligible owner, no
+// effectively-enabled coincident member anywhere in the selected run
+// [owner .. last_sel] (2026-11-17: the resolver renders such a member as a
+// plain 1.00 owner, so the span would not play at the derived tempo), and
+// ONE TEMPO across the selected run. Every arm is input routing: it judges the selection's
 // arrangement and the view, not data, and has no producer on disk; its card
 // is a message, not an error arm, and the coincident arm CALLS the render's
 // one collapse classifier rather than re-spelling it.
@@ -14992,7 +14998,7 @@ enum class BpmSweepRefusal {
     NotOneRun,        // the selection is not one contiguous run
     LabelRefInSpan,   // an effectively-enabled ref inside or at the span's end
     OwnerIneligible,  // the first selected marker passes, refs or is disabled
-    OwnerCoincident,  // the first selected marker is a coincident member
+    SpanCoincident,   // an enabled selected marker is a coincident member
     MixedTempos,      // the run's members do not agree on one tempo
 };
 
