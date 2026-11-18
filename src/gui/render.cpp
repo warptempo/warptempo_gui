@@ -941,8 +941,6 @@ TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
     TrimSpanColumns s;
     s.lo = std::max(begin.x, 0.0);
     s.hi = std::min(end.x + 1.0, static_cast<double>(wave_w));
-    s.lo_bound = begin.x >= 0.0;
-    s.hi_bound = end.x + 1.0 <= static_cast<double>(wave_w);
     return s;
 }
 
@@ -1047,39 +1045,73 @@ void render_trim_flags(cairo_t* cr,
 
     // THE SPAN, ARC'S SLIDER — A PILL (architect 2026-11-17, session 140,
     // ruling 4: "The scroll bar and the trough should be accurate to whatever
-    // Arc uses"): the trim window from the begin bound's exact place through
-    // the end bound's (trim_span_columns, the one owner the sweep highlight
-    // reads too: THE TRIM REFLECTS THE WAVEFORM'S COLUMNS, even where the
-    // waveform is wrong, architect 2026-11-03), cut to the waveform's
-    // columns; ITS ROWS trim_pill_h_px (6 W) CENTERED ON THE TROUGH, real
-    // edges, so 3 W of trough above and below at 200 %. ITS ENDS: ROUND,
-    // radius half the pill's height, where the end's trim bound stands on
-    // screen (TrimSpanColumns' lo_bound / hi_bound); CUT SQUARE at the
-    // strip's edge where the span runs past it; A SPAN NARROWER THAN TWO
-    // RADII TAKES HALF ITS WIDTH AS THE RADIUS, so its round ends meet and
-    // never overlap (the rounded rect's own clamp). Painted at each pixel's
-    // exact coverage through the coverage stamp (CoverageStampPass,
-    // cool_edit_paint.h; coverage_of_rounded_rect, coverage_stamp.h) over
-    // the trough laid above; the stamp cuts to the lane's clip. ITS TONE:
+    // Arc uses"). THE SLIDER'S BOX is the trim window from the begin bound's
+    // exact place through the end bound's plus one px, UNCUT (the places
+    // trim_span_columns cuts for the sweep highlight, and the grabs' own:
+    // THE TRIM REFLECTS THE WAVEFORM'S COLUMNS, even where the waveform is
+    // wrong, architect 2026-11-03 — the box, the bounds, the grabs and the
+    // highlight); THE PILL IS ITS VISIBLE CORE (render.h's THE SLIDER'S BOX
+    // AND ITS CORE; architect 2026-11-18: "let's just make it as realistic
+    // as we can"): ITS ROWS trim_pill_h_px (6 W) CENTERED ON THE TROUGH,
+    // real edges, `seat` of trough above and below (the inset, render.h);
+    // ITS ENDS the box's ends drawn in by the same inset, AT THEIR REAL
+    // PLACES WHEREVER THEY FALL, on screen or past the strip's edge, round
+    // at both, radius half the pill's height. THE SHORT SPAN, the one
+    // statement of the rule: the
+    // inset at each end is
+    //     min(seat, max(0, (S − pill height) / 2)),
+    // S the box's width, the end bound's place plus one px less the begin
+    // bound's — continuous in S, no pop under a zoom: a box 12 W wide or
+    // more keeps the whole 3 W at each bound; between 6 W and 12 W the pill
+    // is a 6 W disc centered in the box; under 6 W the pill is the box
+    // itself, a pill narrower than two radii taking half its width as the
+    // radius, so its round ends meet and never overlap (the rounded rect's
+    // own clamp). THE CUT IS THE LANE'S CLIP, set above on the waveform
+    // area's whole columns (the strip's edge, so nothing reaches the frame):
+    // the stamp takes the context's clip boxes and touches no pixel outside
+    // them, each pixel inside at its exact coverage of the whole core
+    // (CoverageStampPass::rounded_rect; cairo's road where the target is
+    // refused fills the same path under the same clip). So a bound on
+    // screen shows its round end 3 W inside it, a core running past the
+    // edge is cut square and flush there ("it goes on"), and a round end
+    // leaving the strip is cut by it column by column — the no-grid rule,
+    // render.h's `hull` block, nothing jumping as a bound crosses the edge
+    // (architect 2026-11-18). An end wholly past the edge is drawn at one
+    // pill height beyond it, its round corners still wholly outside, so the
+    // stamp's whole-cell arithmetic stays bounded and no pixel changes. The
+    // drag look below wears the same geometry. The pill stands inside the
+    // lane's rows and clip, so the trim lane's whole rows, every trim
+    // write's and drag edge's damage (top_trim_row_area), hold it. Painted
+    // at each pixel's exact coverage through the coverage stamp
+    // (CoverageStampPass, cool_edit_paint.h; coverage_of_rounded_rect,
+    // coverage_stamp.h) over the trough laid above. ITS TONE:
     // `trim_span_face` (ScrollbarInnerHandle, Arc's slider) at rest,
     // `selected_fill` (StandbySelectionBackground, Arc's slider:active)
     // WHILE A DRAG MOVES THE SPAN (`dragging`, trim_span_dragging; ruled:
     // the trim bar's own drags and a TRIM sweep alike). No outline, no hover
     // look. NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought
     // we agreed no dots on the trim bar").
-    const TrimSpanColumns span = trim_span_columns(bc, ec, lane_w);
     const double pill_h = std::min(static_cast<double>(trim_pill_h_px()),
                                    static_cast<double>(trough_h));
-    if (span.hi > span.lo && pill_h > 0.0) {
-        const double y0 = static_cast<double>(trough_y) +
-                          (static_cast<double>(trough_h) - pill_h) / 2.0;
-        const double radius = std::min(pill_h / 2.0, (span.hi - span.lo) / 2.0);
+    const double seat = (static_cast<double>(trough_h) - pill_h) / 2.0;
+    const double box_lo = bc.x;
+    const double box_hi = ec.x + 1.0;
+    const double inset =
+        std::min(seat, std::max(0.0, (box_hi - box_lo - pill_h) / 2.0));
+    const double core_lo = box_lo + inset;
+    const double core_hi = box_hi - inset;
+    const double strip_w = static_cast<double>(lane_w);
+    if (core_hi > core_lo && pill_h > 0.0 && core_hi > 0.0 &&
+        core_lo < strip_w) {
+        const double y0 = static_cast<double>(trough_y) + seat;
+        const double radius = std::min(pill_h / 2.0, (core_hi - core_lo) / 2.0);
+        const double draw_lo = std::max(core_lo, -pill_h);
+        const double draw_hi = std::min(core_hi, strip_w + pill_h);
         CoverageStampPass stamp;
         stamp.begin(cr);
-        stamp.rounded_rect(static_cast<double>(lane_x) + span.lo, y0,
-                           static_cast<double>(lane_x) + span.hi, y0 + pill_h,
-                           span.lo_bound ? radius : 0.0,
-                           span.hi_bound ? radius : 0.0,
+        stamp.rounded_rect(static_cast<double>(lane_x) + draw_lo, y0,
+                           static_cast<double>(lane_x) + draw_hi, y0 + pill_h,
+                           radius, radius,
                            dragging ? palette().selected_fill
                                     : palette().trim_span_face);
         stamp.end();
@@ -1091,8 +1123,9 @@ void render_trim_flags(cairo_t* cr,
     // the pixels take, so a zone overrunning the lane claims its visible
     // stretch alone; a window wholly off one side publishes no zone on that
     // side and an empty bridge. REAL EDGES (architect 2026-11-15, the
-    // no-grid arc): the zones stand on the span's two real ends, the ends
-    // the stamp above just drew.
+    // no-grid arc): the zones stand on the span's two real ends, the
+    // slider's box above — the bounds' own places, not the pill's ink 3 W
+    // inside them (architect 2026-11-18).
     const int btn_w = view_bar_grab_w_px();
     const GuiRectF begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
     const GuiRectF end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);

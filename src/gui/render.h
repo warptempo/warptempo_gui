@@ -652,11 +652,16 @@ void install_true_colors(bool on);
 // ScrollbarInnerTrack, Arc's $_scrollbar_bg_color), and on it THE SPAN AS
 // ARC'S SLIDER, A PILL (trim_pill_h_px, 6 W, centered, 3 W of trough above
 // and below), the trim window from the begin bound's exact place to the end
-// bound's (trim_span_columns, architect 2026-11-14, send J), cut to the
-// waveform's columns: AN END IS ROUND, its radius half the pill's height,
-// WHERE ITS BOUND STANDS ON SCREEN, and CUT SQUARE at the strip's edge where
-// the span runs past it; a span narrower than the pill's height has the
-// radius half its width (coverage_of_capsule, coverage_stamp.h). AT REST
+// bound's (architect 2026-11-14, send J) — THE SLIDER'S BOX, the pill its
+// core (architect 2026-11-18, THE SLIDER'S BOX AND ITS CORE in the lanes
+// block below): EACH END 3 W INSIDE ITS BOUND AND ROUND, radius half the
+// pill's height, AT ITS REAL PLACE, and the strip's edge — the lane's clip
+// on the waveform's columns — cutting the core wherever it runs past, so a
+// core that goes on past the edge is cut square and flush there and a
+// round end leaving it is cut column by column (the no-grid rule); a short
+// span narrows the inset (render_trim_flags states the rule) and a pill
+// narrower than its height has the radius half its width
+// (coverage_of_rounded_rect, coverage_stamp.h). AT REST
 // `trim_span_face` (ScrollbarInnerHandle, Arc's slider); WHILE A DRAG
 // MOVES THE SPAN `selected_fill` (StandbySelectionBackground, Arc's
 // slider:active) — the trim bar's own drags from the press that arms them
@@ -2078,7 +2083,25 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed);
 // slider 6, 3 px of trough each side): THE TROUGH 12 W, kTrimTroughW (24
 // device rows on the tablet at 200 %, 12 at 100 %, floor 1), and on it THE
 // PILL 6 W tall, kTrimPillW, centered (3 W of trough above and below), its
-// ends' radius half its height — a full pill (render_trim_flags). THE TRIM
+// ends' radius half its height — a full pill (render_trim_flags). THE
+// SLIDER'S BOX AND ITS CORE (architect 2026-11-18, his "let's just make it
+// as realistic as we can" — Thunar measured, 3 px of trough between a
+// slider's end and the trough's end, the same 3 as along its sides; Arc's
+// `scrollbar slider`, a 4-px transparent border less a 1-px margin): THE
+// BOUNDS' PLACES ARE THE SLIDER'S BOX and the pill is its visible core,
+// ONE INSET INSIDE THE BOX ON EVERY SIDE — above and below, and at each
+// end inside its bound's own place. THE INSET IS ONE NUMBER, the pill's
+// seat across the trough as painted, (trough rows − pill rows) / 2, a real
+// length with no rounding of its own: 3 W at every scale (6 device px on
+// the tablet at 200 %, 4.5 at 150 %). THE CORE STANDS AT ITS REAL PLACE,
+// round at both of its own ends, and the strip's edge cuts it (the no-grid
+// rule, `hull`'s block: what is painted stands where its arithmetic puts
+// it, so nothing jumps as a bound crosses the edge): a bound on screen
+// shows its round end 3 W inside it; a bound past the edge by more than
+// the inset and the radius leaves the core cut square and flush at the
+// edge ("it goes on"); a bound in that band past it shows the core's round
+// end where it is, cut by the edge as it leaves. The short span's rule
+// and the cut: render_trim_flags' pill. THE TRIM
 // LANE: the frame's top line, the trough and the frame's line under it (the
 // line Arc's scrollbar draws in $borders_color on its content side): 14 W,
 // 28 device rows, rows 144 .. 171 at key_height 17 on the tablet, the
@@ -4732,7 +4755,8 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // an in-view bound's x clamped into [0, wave_w − 1], an
 // offscreen one's raw. PAINT AND THE GRABS READ IT (architect 2026-11-15,
 // the no-grid arc: "yes, I'd like to move to fractional hitboxes.") — the
-// span's fill and the TRIM sweep's highlight through trim_span_columns, and
+// pill (render_trim_flags, the slider's box) and the TRIM sweep's
+// highlight through trim_span_columns, and
 // the two end zones and the bridge, published on the span's real ends
 // (trim_endcap_rect, trim_bridge_gap) and tested with the pointer's real
 // place, and the bound-set click's nearest-cap verdict by real distance
@@ -4775,28 +4799,24 @@ struct TrimBridgeGap {
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
                               const TrimBoundColumn& end, int endcap_w);
 
-// THE SPAN'S DRAWN COLUMNS [lo, hi], REAL (waveform-relative device px,
-// EMPTY when hi <= lo; architect 2026-11-14, send J): from the begin
+// THE SPAN'S COLUMNS ON SCREEN [lo, hi], REAL (waveform-relative device
+// px, EMPTY when hi <= lo; architect 2026-11-14, send J): from the begin
 // bound's exact place through the end bound's exact place plus one px —
 // the begin column through the end column inclusive, in reals: [max(xb, 0),
 // min(xe + 1, wave_w)], xb and xe the bounds' `x` (TrimBoundColumn, the
 // EOF-wall clamp already in them) — cut to the effective width
-// [0, wave_w]: the columns the trim bar paints its pill on at each pixel's
-// exact coverage (render_trim_flags: THE TRIM REFLECTS THE WAVEFORM'S
-// COLUMNS, architect 2026-11-03), and THE SWEEP HIGHLIGHT'S on the TRIM
-// former (sweep_highlight_columns, app_state.h; architect 2026-11-12), so
-// the canvas's highlight stands under the bar's span edge for edge. Bounds
-// on whole places answer the whole columns the bounds' columns give. WHICH
-// END IS ITS BOUND'S OWN (architect 2026-11-17, session 140: the pill's end
-// is round where its trim bound stands on screen, cut square where the span
-// runs past the strip's edge): `lo_bound` where the left edge is the begin
-// bound's place, not the cut at 0; `hi_bound` where the right edge is the
-// end bound's, not the cut at wave_w. One owner, two readers.
+// [0, wave_w]: THE TRIM BAR'S SLIDER'S BOX ON SCREEN (THE TRIM REFLECTS
+// THE WAVEFORM'S COLUMNS, architect 2026-11-03 — the box; render_trim_flags
+// draws its pill from the same two places uncut, the pill's ink 3 W inside
+// each bound, as GTK draws a slider, and the lane's clip cutting it,
+// architect 2026-11-18, render.h's THE SLIDER'S BOX AND ITS CORE), read by
+// THE SWEEP HIGHLIGHT on the TRIM former (sweep_highlight_columns,
+// app_state.h; architect 2026-11-12), so the canvas's highlight stands
+// under the bar's box edge for edge. Bounds on whole places answer the
+// whole columns the bounds' columns give.
 struct TrimSpanColumns {
     double lo = 0.0;  // the span's left edge
     double hi = 0.0;  // its right edge (empty when hi <= lo)
-    bool   lo_bound = false;  // the left edge is the begin bound's own
-    bool   hi_bound = false;  // the right edge is the end bound's own
 };
 TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
                                   const TrimBoundColumn& end, int wave_w);
@@ -4823,8 +4843,8 @@ double displayed_trim_ms(int64_t frame,
 // lane, for the hit test (hit_test_trim_endcap reads TrimBarHit, below).
 //
 // A trim bound is an EDGE, not a point, AND THE ZONES STAND ON THE SPAN'S
-// REAL ENDS (architect 2026-11-15, the no-grid arc — the ends the bar
-// paints, trim_span_columns): the begin zone's LEFT edge is the span's left
+// REAL ENDS (architect 2026-11-15, the no-grid arc — the slider's box,
+// trim_span_columns' places): the begin zone's LEFT edge is the span's left
 // end (rect left = strip_x + begin.x), the end zone's RIGHT edge the span's
 // right end (rect right = strip_x + end.x + 1), x each bound's exact place.
 // THE NARROW CASE (architect 2026-10-03): when the
@@ -4888,8 +4908,10 @@ struct TrimBarHit {
 // waveform area's columns, then THE SPAN AS THE PILL — the trim window from
 // the begin bound's exact place through the end bound's, sliding off an
 // edge like any content (architect 2026-10-05: an out-of-view bound reads as
-// the window running on), an end round where its bound stands on screen and
-// cut square at the strip's edge, at exact coverage (CoverageStampPass's
+// the window running on) — the slider's box, the pill's ink 3 W inside
+// each bound and round there at its real place, the lane's clip cutting
+// it at the strip's edge (architect 2026-11-18, the lanes block's THE
+// SLIDER'S BOX AND ITS CORE), at exact coverage (CoverageStampPass's
 // rounded rect), in `trim_span_face`, or `selected_fill` where `dragging`
 // (trim_span_dragging, app_state.h: a drag moves the span); no playhead
 // (the well paragraph above, 2026-10-09 ~14:30). The frame's lines and
@@ -4907,8 +4929,10 @@ struct TrimBarHit {
 // payload; it is a plain-press grab target only (trim is outside the
 // selection system).
 // PUBLISHES WHAT IT PAINTS into `out_hit` when non-null (TrimBarHit above):
-// the lane, the span's two end zones and its body between them, from the
-// very columns this pass fills — and a cold record on every early return.
+// the lane, the span's two end zones and its body between them, on the
+// slider's box this pass paints its pill in (the bounds' own places, the
+// pill's ink 3 W inside them, 2026-11-18) — and a cold record on every
+// early return.
 // The CALLER decides whether this frame may publish at all
 // (GuiPaintHandler::paint_trim passes null unless the damage clip covers the
 // whole lane), so a narrow repaint cannot stamp the stash over pixels it did

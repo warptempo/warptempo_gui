@@ -19921,7 +19921,9 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 //     the displayed map (displayed_or_live_target_map through
 //     displayed_trim_ms), trim_bound_column and trim_span_columns, exactly
 //     paint_trim's chain — so the highlight stands under the bar's span
-//     edge for edge, the song's walls included.
+//     edge for edge, the song's walls included: under the slider's box,
+//     the bounds' own places, the pill's ink 3 W inside each bound
+//     (architect 2026-11-18, render.h's THE SLIDER'S BOX AND ITS CORE).
 // THE PAINTER lays the span through the sink's blended rect at the
 // `sweep_highlight` key's percent; THE DAMAGE SITES take
 // sweep_highlight_rect, THE SPAN'S BOUNDING CELLS — its floor through its

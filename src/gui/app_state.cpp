@@ -137,7 +137,7 @@ SweepHighlightColumns sweep_highlight_columns(const AppState& app,
         // through displayed_trim_ms and the int64 round trip of TrimRange
         // (exact: the mapping returns an integral-valued double), then the
         // bounds at the basis's effective width, and the span's real edges
-        // (trim_span_columns, the bar's own).
+        // (trim_span_columns, the bar's slider's box).
         const ItemViewportBasis basis = item_viewport_basis(app, audio);
         if (basis.area_w <= 0 || basis.spp <= 0.0 ||
             basis.vp_end_frame <= basis.vp_start_frame)
