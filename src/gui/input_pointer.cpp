@@ -927,12 +927,11 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 
 // THE PLACEMENT LANES block — THE TOP STRIP'S TWO PLACEMENT LANES, the RULER
 // and the MARKER lane, each claimed by its band walk's own rect test (a
-// point is in the lanes iff it is in either lane's RECT, BOTH
-// AXES: a lane's membership is its rect's x bounds as well as its y bounds —
-// the window's width since 2026-10-21, when the program frame's inert
-// columns beside every program lane went (strip_row_rect) — the canvas
-// column's inner margins, inside the rect, keeping their recorded answer in
-// on_button_press's ruler band). THEY LEFT THE NAVIGATION SURFACE (architect
+// point is in the lanes iff it is in either lane's PRESS RECT, BOTH AXES:
+// ruler_press_area / marker_lane_press_area, main.cpp — the lane's rows on
+// the waveform area's columns; the margin's ground and the well's frame
+// beside them are no press target, "ground is not a button", architect
+// 2026-11-02). THEY LEFT THE NAVIGATION SURFACE (architect
 // 2026-09-25: "out of both — we want symmetry as much as possible; the
 // horizontal zoom ... was designed to unify the motions for zoom on both
 // devices"): off a flag, a motionless click or tap there places the playhead
@@ -5503,14 +5502,15 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // 2026-08-12 relayout deleted the toolbar lane) were claimed far
             // above and never reach here.
             //
-            // THE BAND IS THE CURRENT GEOMETRY OWNER, top_trim_row_area — the
-            // exact band the plain endcap/bar drags and the span-framing
-            // long press claim, so paint, hit and every trim gesture read ONE
-            // accessor and cannot drift. THE BAND IS THE LANE'S RECT, BOTH
-            // AXES (2026-10-10): the program frame's columns beside it are
-            // inert ground and set no bound (the PLACEMENT LANES block, above point_on_playhead_head).
+            // THE BAND IS trim_bar_press_area (main.cpp) — the exact band the
+            // plain endcap/bar drags and the span-framing long press claim,
+            // so every trim press reads ONE accessor: the lane's rows on the
+            // waveform area's columns. The margin's ground and the well's
+            // frame beside it in those rows are no press target and set no
+            // bound ("ground is not a button", architect 2026-11-02); a
+            // barrel press there falls to the return below.
             if (inside_top) {
-                const GuiRect trim_band = top_trim_row_area(app);
+                const GuiRect trim_band = trim_bar_press_area(app);
                 if (rect_contains(trim_band, x, y)) {
                     // THE PRESS ONLY ARMS — THE ONE SURVIVING DEFERRED CLICK
                     // (2026-08-17; contract at PendingClickAct, app_state.h —
@@ -5579,11 +5579,12 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // a plain waveform press over a stem column falls through to the
             // waveform block below and is the placement press there).
             //
-            // The TRIM BAR (the view bar, top_trim_row_area) is trim's lane
+            // The TRIM BAR (the view bar, trim_bar_press_area) is trim's lane
             // and is claimed BEFORE the marker single-select. The canvas
-            // column's lanes — the trim bar, the ruler (top_ruler_row_area)
-            // and the marker lane (top_marker_row_area), main.cpp's lane
-            // table — are disjoint y-bands, so
+            // column's lanes — the trim bar, the ruler (ruler_press_area)
+            // and the marker lane (marker_lane_press_area), main.cpp's lane
+            // table, each pressed on the waveform area's columns alone — are
+            // disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click consumes the span-framing
             // double-click AT THE PRESS (2026-08-17) and then falls through to
@@ -5603,17 +5604,15 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // No double-click surface here: the marker-create one lives on
             // the MARKER lane's empty stretches — the ruler seeds nothing.
             //
-            // THE BAND IS EXACTLY top_ruler_row_area AND NOTHING BELOW IT (the
-            // claim reads the lane accessor and only the lane accessor), ITS
-            // RECT ON BOTH AXES (2026-10-10): the program frame's columns
-            // outside the lane's inset are inert ground and fall to the empty
-            // spot's consumed nothing below (the PLACEMENT LANES block, above point_on_playhead_head).
-            // The `h` VIEW never reaches this arm — its own gate armed the same
-            // pending with the mode's deferred land far above. A press on the
-            // well's MARGINS (the ground beside
-            // the ruler's face, inside the lane, 2026-10-09) still
-            // arms; its motionless release's click act deselects and seats no
-            // playhead, the placement body's own off-column shape.
+            // THE BAND IS EXACTLY ruler_press_area AND NOTHING BELOW IT (the
+            // claim reads the press accessor and only it), ITS RECT ON BOTH
+            // AXES: the lane's rows on the waveform area's columns. The
+            // margin's ground and the well's frame beside the ruler's face
+            // are no press target and fall to the empty spot's consumed
+            // nothing below (the PLACEMENT LANES block, above
+            // point_on_playhead_head). The `h` VIEW never reaches this arm —
+            // its own gate armed the same pending with the mode's deferred
+            // land far above.
             // ON THE PLAYHEAD'S HEAD AS PAINTED the same pending is THE HEAD
             // DRAG (architect 2026-10-09 ~17:40; point_on_playhead_head,
             // ScrollDragState::head_drag): past the slop every motion places
@@ -5621,7 +5620,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // (mh_index, the one hit above — a cue never stands in the ruler,
             // and the order is stated rather than left to geometry).
             {
-                const GuiRect ruler = top_ruler_row_area(app);
+                const GuiRect ruler = ruler_press_area(app);
                 if (rect_contains(ruler, x, y)) {
                     arm_placement_press(
                         at, /*history=*/false, /*seed_empty_lane=*/false,
@@ -5630,7 +5629,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                     return;
                 }
             }
-            const GuiRect trim_bar = top_trim_row_area(app);
+            const GuiRect trim_bar = trim_bar_press_area(app);
             const bool in_trim_bar = rect_contains(trim_bar, x, y);
             if (in_trim_bar) {
                 // Plain trim-bar press. An endcap/bridge hit ARMS the trim drag
@@ -5701,8 +5700,10 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // Empty top-strip spot — no marker flag under the point (the
                 // trim bar already returned above; mh_index < 0 here).
                 // ONE lane to test: the flag and triangle lanes became the
-                // single marker lane in row 5.
-                const GuiRect marker_lane = top_marker_row_area(app);
+                // single marker lane in row 5, pressed on the waveform area's
+                // columns alone (marker_lane_press_area): the margin and the
+                // well's frame beside it fall to the return below.
+                const GuiRect marker_lane = marker_lane_press_area(app);
                 const bool in_flag_or_tri =
                     rect_contains(marker_lane, x, y);
                 if (in_flag_or_tri) {
@@ -5761,9 +5762,10 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // playhead, no marker, no selection or region change, and no
                 // playback effect either, because this press claimed nothing
                 // and the stops all live at the claims. That covers the
-                // inter-lane gaps (the program frame's top row and its two
-                // columns, inert ground 2026-10-10 to 2026-10-22, are gone),
-                // and any press in the FLEXIBLE GAP 1 band,
+                // margin's ground and the well's frame beside the trim bar,
+                // the ruler and the marker lane in their rows (off the three
+                // press rects, main.cpp's well_lane_press_rect), the
+                // inter-lane gaps, and any press in the FLEXIBLE GAP 1 band,
                 // (the centering rule's remainder, main.cpp's vertical rule: inside
                 // top_strip_area but in no lane, so it falls to exactly this
                 // return with no code of its own —
@@ -8020,7 +8022,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // barrel tap on the waveform arms nothing; the lanes being placement
     // surfaces since 2026-09-25).
     if (ctrl) {
-        const GuiRect lane = top_marker_row_area(app);
+        const GuiRect lane = marker_lane_press_area(app);
         if (rect_contains(lane, x, y)) {
             const int hit = hit_test_flag(app, audio, at.rx, at.ry);
             if (hit >= 0) {
@@ -8042,11 +8044,12 @@ bool GuiInputHandler::handle_history_mode_press(
     // the mode's land at every placement; the diff flags rank first), the
     // trim bar keeps its framing long press, the marker lane splits
     // flag-vs-stretch, and the waveform is the navigation surface. Each lane
-    // is its RECT on both axes, the live walk's (2026-10-10: the program
-    // frame's columns beside the inset lanes are inert ground and fall to the
-    // tail's consumed nothing — the PLACEMENT LANES block, above point_on_playhead_head).
+    // is its PRESS RECT on both axes, the live walk's (main.cpp's
+    // well_lane_press_rect: the margin's ground and the well's frame beside
+    // the lanes fall to the tail's consumed nothing — the PLACEMENT LANES
+    // block, above point_on_playhead_head).
     {
-        const GuiRect ruler = top_ruler_row_area(app);
+        const GuiRect ruler = ruler_press_area(app);
         if (rect_contains(ruler, x, y)) {
             arm_placement_press(
                 at, /*history=*/true, /*seed_empty_lane=*/false,
@@ -8076,7 +8079,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // piece, so a full zoom out shows all of it — the product's own navigation
     // rather than a gesture that meant something different in one mode.
     {
-        const GuiRect trim_bar = top_trim_row_area(app);
+        const GuiRect trim_bar = trim_bar_press_area(app);
         if (rect_contains(trim_bar, x, y)) {
             app.trim_bar_press = TrimBarPressSeed{
                 .active = true, .press_x = at.rx, .press_y = at.ry,
@@ -8084,7 +8087,7 @@ bool GuiInputHandler::handle_history_mode_press(
             return true;
         }
     }
-    const GuiRect lane = top_marker_row_area(app);
+    const GuiRect lane = marker_lane_press_area(app);
     if (rect_contains(lane, x, y)) {
         // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
         // painter's stash holds the diff flags' rects, published by the same

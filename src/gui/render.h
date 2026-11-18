@@ -2644,11 +2644,11 @@ inline int bottom_row_h_px() {
 // derived at the element — the logo lane, the strip pads and the keys
 // following `key_height` (the case block above), the well's lanes (the
 // well's lanes block above). On the tablet at 200 % and key_height 17 the
-// band 144 device rows (72 + 34 + 38), the well's lanes above the canvas 97 (20 + 38
-// + 39) and its foot line 2, the well's foot 2 and row 8 110 (38 + 34 +
-// 38): the canvas 1085 rows of the surface's 1440 (architect 2026-11-04,
-// the unit: "waveform height ok to take from") — main.cpp's lane table the
-// record of each scale.)
+// band 144 device rows (72 + 34 + 38), the well's lanes above the canvas
+// 105 (28 + 38 + 39) and its foot line 2, the well's foot 2 and row 8 110
+// (38 + 34 + 38): the canvas 1077 rows of the surface's 1440 (architect
+// 2026-11-04, the unit: "waveform height ok to take from") — main.cpp's
+// lane table the record of each scale.)
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect

@@ -1696,7 +1696,9 @@ struct DoubleClickCandidate {
 // This is its record, written at the press because only the LIFT can tell a
 // hold from a tap or a drag.
 // WHERE IT STARTS: a PLAIN press anywhere on the trim bar's lane — the pill's
-// ends, its body, or the bare trough beside it — the whole band, the reach the
+// ends, its body, or the bare trough beside it — the whole band
+// (trim_bar_press_area: the lane's rows on the waveform area's columns; the
+// margin's ground and the well's frame beside it arm nothing), the reach the
 // retired double-click had: the gesture frames rather than grabs, so the pill
 // is no boundary for it. A press on the pill arms its pending drag beside
 // this record (route_trim_bar_press); one beside the pill arms this alone, and
@@ -10586,6 +10588,13 @@ GuiRect top_ruler_row_area(const AppState& a);
 // does nothing and a ctrl press is a consumed nothing (the placement lanes
 // lie off the pan zone, ScrollDragState's head drag).
 GuiRect top_marker_row_area(const AppState& a);
+// THE PRESS RECTS OF THOSE THREE LANES — each lane's rows on the waveform
+// area's columns, the margin and the well's frame beside it no press target
+// (the rule at their definitions, main.cpp). Every press gate on these lanes
+// reads these; paint and damage read the lane rects above.
+GuiRect trim_bar_press_area(const AppState& a);
+GuiRect ruler_press_area(const AppState& a);
+GuiRect marker_lane_press_area(const AppState& a);
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): bottom lane 0
 // on the window's foot, the strip pad, the case and the strip pad (the
 // simple layout, 2026-10-22; Cool Edit's dock bar over its content band and
@@ -19933,8 +19942,9 @@ GuiRect sweep_highlight_rect(const AppState& app, const GuiAudio& audio);
 // — the floor through the ceiling, each edge's own cell with it, so an edge
 // that moved inside one cell is held — over the canvas's rows; an edge that
 // did not move gives none; a span that appeared or left (one of the two
-// empty) gives the other's bounding cells as `lo`. The canvas's rows hold
-// the GL list alone, so each rect is a scissored redraw of the list.
+// empty) gives the other's bounding cells as `lo`. Every frame is drawn
+// whole (THE WHOLE DRAW, gl_canvas.cpp): these rects invite the frame and
+// narrow the chrome's redraw and the texture's upload alone.
 struct SweepHighlightChange {
     GuiRect lo{};
     GuiRect hi{};

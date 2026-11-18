@@ -63,8 +63,10 @@
 // BOTH SETS PARSED AT LAUNCH through resvg (svg_icon.h: the wrapper and the
 // error rule), straight from the bundle — never copied into the config
 // folder (load_set, below) — the key's set chosen (select_set), and
-// rasterised lazily, per (drawing, ink px, color), into an ARGB32 surface
-// that a draw copies at an integer device px, no resample.
+// rasterised lazily, per (drawing, ink px, color, x phase, y phase) — the
+// place's fraction in 64ths on each axis — into an ARGB32 surface that a
+// draw copies at the place's whole device px, no resample; each set keeps
+// its own rasters (draw_glyph, below).
 //
 // THE BOUND DRAWING (architect 2026-11-02; the road of 2026-10-10 restored):
 // a file that paints in `currentColor` — every file here — WEARS THE COLOR

@@ -310,9 +310,10 @@ namespace {
 // is ever un-zeroed. That property has NO EXCEPTION LIST among the consumers:
 // every lane-anchored pixel reaches its band through a lane rect computed here.
 // The render.cpp sites that stack marker geometry take their LANE RECT as a
-// parameter, resolved by their callers from top_marker_row_area — the same rect
-// the empty-lane press gate tests — so painted flags and flag hit rects move
-// with the lane by construction and cannot drift from each other.
+// parameter, resolved by their callers from top_marker_row_area — whose rows
+// the empty-lane press gate tests (marker_lane_press_area) — so painted flags
+// and flag hit rects move with the lane by construction and cannot drift from
+// each other.
 //
 // NO ASSET SPANS A SEAM (2026-10-09): a marker's cue — its triangle and its
 // label — stands inside the marker lane, and the playhead's head on the
@@ -622,10 +623,11 @@ GuiRect waveform_area(const AppState& a) {
 // window midline (`h - inset - lane_h`).
 //
 // ACROSS, EVERY LANE SPANS THE WINDOW (architect 2026-10-21: "every row
-// grows 1 W px each side"): the program lanes stood one frame line in from
-// each side, inside the program frame's columns, 2026-10-10 to 2026-10-21. Every hit rect, damage
-// rect and painter reads its lane here, so the width is one geometry for
-// paint and hit.
+// grows 1 W px each side"). Every damage rect and painter reads its lane
+// here, and every hit rect its rows: the well's three upper lanes are
+// pressed on the waveform area's columns alone (their press rects, below
+// top_marker_row_area), the margin's ground and the well's frame beside
+// them painted in the lane but no press target.
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 1 (the ruler lane
 // 2, the marker lane lane 3 and the lane's foot line lane 4), and
@@ -708,6 +710,37 @@ GuiRect top_ruler_row_area(const AppState& a) {
 
 GuiRect top_marker_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, kTopMarkerLane);
+}
+
+// THE WELL'S LANES' PRESS RECTS — what a press on the trim bar, the ruler or
+// the marker lane claims: THE LANE'S WHOLE ROWS ON THE WAVEFORM AREA'S
+// COLUMNS, where each lane paints its face (the trough and its pill, the
+// ruler's face, the marker lane's cues). The lane rects above span the
+// window, and paint and damage keep them: the margin's ground beside the
+// well and the well's frame in a lane's rows are painted there but are no
+// press target — "ground is not a button" (architect 2026-11-02, R5 / R11),
+// and the frame is chrome, inert to every gesture. A press there falls to
+// the router's consumed nothing, as on any other ground. THE TRIM BAR'S HIT
+// THE LANE'S WHOLE ROWS (architect 2026-11-17, ruling 4). A gesture begun
+// inside one runs on over the margin and the frame until the lift: the drags'
+// motions and releases never re-test these.
+namespace {
+GuiRect well_lane_press_rect(const AppState& a, const GuiRect& lane) {
+    const GuiRect area = waveform_area(a);
+    return GuiRect{area.x, lane.y, area.w, lane.h};
+}
+} // namespace
+
+GuiRect trim_bar_press_area(const AppState& a) {
+    return well_lane_press_rect(a, top_trim_row_area(a));
+}
+
+GuiRect ruler_press_area(const AppState& a) {
+    return well_lane_press_rect(a, top_ruler_row_area(a));
+}
+
+GuiRect marker_lane_press_area(const AppState& a) {
+    return well_lane_press_rect(a, top_marker_row_area(a));
 }
 
 // THE WELL'S COLUMNS, THE LANE'S FOOT LINE (top lane 4) and THE WELL'S FOOT
