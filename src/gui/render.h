@@ -650,12 +650,13 @@ void install_true_colors(bool on);
 // frame's top line, THE TROUGH (trim_trough_h_px, 12 W, 24 device rows at
 // 200 %) across the waveform area's columns in `trim_bar_face` (Live's
 // ScrollbarInnerTrack, Arc's $_scrollbar_bg_color), and on it THE SPAN AS
-// ARC'S SLIDER, A PILL (trim_pill_h_px, 6 W, centered, 3 W of trough above
+// ARC'S SLIDER, A PILL (trim_pill_h_px, 6 W, centered, the seat of trough above
 // and below), the trim window from the begin bound's exact place to the end
-// bound's (architect 2026-11-14, send J) — THE SLIDER'S BOX, the pill its
-// core (architect 2026-11-18, THE SLIDER'S BOX AND ITS CORE in the lanes
-// block below): EACH END 3 W INSIDE ITS BOUND AND ROUND, radius half the
-// pill's height, AT ITS REAL PLACE, and the strip's edge — the lane's clip
+// bound's (architect 2026-11-14, send J) — THE SLIDER'S BOX, the pill its core
+// (architect 2026-11-18, THE SLIDER'S BOX AND ITS CORE in the lanes block
+// below, which states the seat): EACH END THE SEAT INSIDE ITS BOUND AND ROUND,
+// radius half the pill's height, AT ITS REAL PLACE, and the strip's edge — the
+// lane's clip
 // on the waveform's columns — cutting the core wherever it runs past, so a
 // core that goes on past the edge is cut square and flush there and a
 // round end leaving it is cut column by column (the no-grid rule); a short
@@ -2082,22 +2083,30 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed);
 // Arc uses"; D1: "Let's use the real 12W" — Thunar measured, trough 12,
 // slider 6, 3 px of trough each side): THE TROUGH 12 W, kTrimTroughW (24
 // device rows on the tablet at 200 %, 12 at 100 %, floor 1), and on it THE
-// PILL 6 W tall, kTrimPillW, centered (3 W of trough above and below), its
+// PILL 6 W tall, kTrimPillW, centered (the seat of trough above and below,
+// below), its
 // ends' radius half its height — a full pill (render_trim_flags). THE
 // SLIDER'S BOX AND ITS CORE (architect 2026-11-18, his "let's just make it
 // as realistic as we can" — Thunar measured, 3 px of trough between a
 // slider's end and the trough's end, the same 3 as along its sides; Arc's
 // `scrollbar slider`, a 4-px transparent border less a 1-px margin): THE
-// BOUNDS' PLACES ARE THE SLIDER'S BOX and the pill is its visible core,
+// BOUNDS' PLACES ARE THE SLIDER'S BOX — their exact places, unclamped
+// (TrimBoundColumn::x_raw; the EOF-wall clamp is the grabs' alone) — and
+// the pill is its visible core,
 // ONE INSET INSIDE THE BOX ON EVERY SIDE — above and below, and at each
-// end inside its bound's own place. THE INSET IS ONE NUMBER, the pill's
-// seat across the trough as painted, (trough rows − pill rows) / 2, a real
-// length with no rounding of its own: 3 W at every scale (6 device px on
-// the tablet at 200 %, 4.5 at 150 %). THE CORE STANDS AT ITS REAL PLACE,
+// end inside its bound's own place. THE INSET IS ONE NUMBER, THE SEAT — its
+// one statement, every other mention of it naming it so — the pill's seat
+// across the trough as painted, (trough rows − pill rows) / 2, half
+// the difference of the two painted heights, a real length with no
+// rounding of its own: 3 W wherever both heights are whole numbers of
+// device rows at the scale (6 device px on the tablet at 200 %, 4.5 at
+// 150 %, 3 at 100 %), and off it by the rounding where one is not (125 %:
+// the trough 15 rows, the pill's 7.5 rounded to 8, the seat 3.5 px, 2.8
+// W). THE CORE STANDS AT ITS REAL PLACE,
 // round at both of its own ends, and the strip's edge cuts it (the no-grid
 // rule, `hull`'s block: what is painted stands where its arithmetic puts
 // it, so nothing jumps as a bound crosses the edge): a bound on screen
-// shows its round end 3 W inside it; a bound past the edge by more than
+// shows its round end the seat inside it; a bound past the edge by more than
 // the inset and the radius leaves the core cut square and flush at the
 // edge ("it goes on"); a bound in that band past it shows the core's round
 // end where it is, cut by the edge as it leaves. The short span's rule
@@ -4724,7 +4733,7 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // during an async plate-publish window; the promoted mirror closed that window,
 // and the trim painter later joined the same basis when it went live.)
 //
-// The x_raw denominator is the PAINTERS' q, given back by the span
+// The place's denominator is the PAINTERS' q, given back by the span
 // (vp_end - vp_start) over wave_w (recovered_painter_spp,
 // warp_frame_map_view.h) — the sixteenth-frame q exactly — NOT
 // current_samples_per_pixel. The two are
@@ -4736,7 +4745,15 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 //
 // EOF-WALL CLAMP (the one copy, formerly installed at three sites at once):
 // an IN-VIEW bound's exact place `x` clamps into [0, wave_w − 1], the last
-// column's left edge, in reals.
+// column's left edge, in reals. IN VIEW, EXACTLY (Sol's review,
+// 2026-11-18): the bound at or right of the viewport's named start
+// (displayed_ms >= vp_start, the left verdict as it always was, so a bound
+// on the start a fraction of a px left of the strip's real left edge still
+// holds its begin zone whole at column 0) and its exact place left of the
+// strip's real right edge, x_raw < wave_w — not the rounded vp_end, which at
+// a fractional rest can stand a frame short of that edge (52,921 frames at
+// q 23.375 at the right wall: vp_end 52,920, while the last frame's place
+// is 2251.957 of 2252) and so drop a visible last frame's clamp.
 // The inclusive END wall T-1 at full zoom-out stands within a px of the
 // surface's right edge; left unclamped, the right-edge-anchored end CAP loses
 // its bound-edge pixel to the lane clip. Clamping lands the wall on the last
@@ -4749,24 +4766,28 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // body growing into its room. The painter clips everything it draws to the
 // effective width [0, wave_w), so the well's frame beside it never paints.
 // THE BOUND'S EXACT PLACE IS THE WHOLE ANSWER (architect 2026-11-14,
-// send J; no column rides beside it since the no-grid arc): `x` is
-// displayed_x_at on the caller's basis, device px
-// from the lane's first column, WITH THE EOF-WALL CLAMP APPLIED IN REALS —
-// an in-view bound's x clamped into [0, wave_w − 1], an
-// offscreen one's raw. PAINT AND THE GRABS READ IT (architect 2026-11-15,
-// the no-grid arc: "yes, I'd like to move to fractional hitboxes.") — the
-// pill (render_trim_flags, the slider's box) and the TRIM sweep's
-// highlight through trim_span_columns, and
-// the two end zones and the bridge, published on the span's real ends
+// send J; no column rides beside it since the no-grid arc): `x_raw` is
+// displayed_x_at on the caller's basis, device px from the lane's first
+// column, and `x` is that place WITH THE EOF-WALL CLAMP APPLIED IN REALS —
+// an in-view bound's clamped into [0, wave_w − 1], an offscreen one's raw.
+// THE CLAMP IS THE GRABS' ALONE (Sol's review, 2026-11-18): the two end
+// zones and the bridge, published on the span's real ends
 // (trim_endcap_rect, trim_bridge_gap) and tested with the pointer's real
-// place, and the bound-set click's nearest-cap verdict by real distance
-// (trim_bound_click, input_trim.cpp).
+// place (architect 2026-11-15, the no-grid arc: "yes, I'd like to move to
+// fractional hitboxes."), and the bound-set click's nearest-cap verdict by
+// real distance (trim_bound_click, input_trim.cpp), read `x`; THE SLIDER'S
+// BOX — the pill (render_trim_flags) and the TRIM sweep's highlight
+// through trim_span_columns — reads `x_raw`, so as an end leaves the strip
+// the pill's end moves with it px for px and is cut by the lane's clip,
+// never stepping where the clamp holds the zone.
 struct TrimBoundColumn {
     double ms;          // displayed-domain position (already mapped)
-    bool   in_viewport; // ms in [vp_start, vp_end), the unrounded verdict
-    double x;           // the bound's exact place; clamped into
-                        // [0, wave_w − 1] in view (the EOF-wall clamp), raw
-                        // off it
+    bool   in_viewport; // ms >= vp_start and x_raw < wave_w, the exact
+                        // verdict
+    double x_raw;       // the bound's exact place, unclamped: the slider's
+                        // box (the pill, the sweep highlight)
+    double x;           // that place clamped into [0, wave_w − 1] in view
+                        // (the EOF-wall clamp), raw off it: the grabs
 };
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
@@ -4803,12 +4824,16 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 // px, EMPTY when hi <= lo; architect 2026-11-14, send J): from the begin
 // bound's exact place through the end bound's exact place plus one px —
 // the begin column through the end column inclusive, in reals: [max(xb, 0),
-// min(xe + 1, wave_w)], xb and xe the bounds' `x` (TrimBoundColumn, the
-// EOF-wall clamp already in them) — cut to the effective width
+// min(xe + 1, wave_w)], xb and xe the bounds' `x_raw` (TrimBoundColumn,
+// unclamped: the EOF-wall clamp is the grabs', and the box the pill's own
+// places, so box and highlight agree edge for edge — where the clamp would
+// differ, an end in the last column reaches wave_w either way and a begin
+// there starts at its own place, not at the column's left edge) — cut to
+// the effective width
 // [0, wave_w]: THE TRIM BAR'S SLIDER'S BOX ON SCREEN (THE TRIM REFLECTS
 // THE WAVEFORM'S COLUMNS, architect 2026-11-03 — the box; render_trim_flags
-// draws its pill from the same two places uncut, the pill's ink 3 W inside
-// each bound, as GTK draws a slider, and the lane's clip cutting it,
+// draws its pill from the same two places uncut, the pill's ink the seat
+// inside each bound, as GTK draws a slider, and the lane's clip cutting it,
 // architect 2026-11-18, render.h's THE SLIDER'S BOX AND ITS CORE), read by
 // THE SWEEP HIGHLIGHT on the TRIM former (sweep_highlight_columns,
 // app_state.h; architect 2026-11-12), so the canvas's highlight stands
@@ -4843,10 +4868,14 @@ double displayed_trim_ms(int64_t frame,
 // lane, for the hit test (hit_test_trim_endcap reads TrimBarHit, below).
 //
 // A trim bound is an EDGE, not a point, AND THE ZONES STAND ON THE SPAN'S
-// REAL ENDS (architect 2026-11-15, the no-grid arc — the slider's box,
-// trim_span_columns' places): the begin zone's LEFT edge is the span's left
-// end (rect left = strip_x + begin.x), the end zone's RIGHT edge the span's
-// right end (rect right = strip_x + end.x + 1), x each bound's exact place.
+// REAL ENDS (architect 2026-11-15, the no-grid arc): the begin zone's LEFT
+// edge is the span's left end (rect left = strip_x + begin.x), the end
+// zone's RIGHT edge the span's right end (rect right = strip_x + end.x + 1),
+// x each bound's GRAB place (TrimBoundColumn::x, the EOF-wall clamp in it)
+// — NOT the slider's box (`x_raw`, trim_span_columns' places, the pill's):
+// where the clamp holds an in-view bound on the last column's left edge,
+// the end zone stands up to a px left of the box's end, and a begin on the
+// named start a fraction of a px left of the strip has its zone at 0.
 // THE NARROW CASE (architect 2026-10-03): when the
 // drawn width end.x − begin.x + 1 is under two zones — the places read
 // wherever they stand, on screen or off (architect 2026-10-05) — the begin
@@ -4908,7 +4937,7 @@ struct TrimBarHit {
 // waveform area's columns, then THE SPAN AS THE PILL — the trim window from
 // the begin bound's exact place through the end bound's, sliding off an
 // edge like any content (architect 2026-10-05: an out-of-view bound reads as
-// the window running on) — the slider's box, the pill's ink 3 W inside
+// the window running on) — the slider's box, the pill's ink the seat inside
 // each bound and round there at its real place, the lane's clip cutting
 // it at the strip's edge (architect 2026-11-18, the lanes block's THE
 // SLIDER'S BOX AND ITS CORE), at exact coverage (CoverageStampPass's
@@ -4931,7 +4960,8 @@ struct TrimBarHit {
 // PUBLISHES WHAT IT PAINTS into `out_hit` when non-null (TrimBarHit above):
 // the lane, the span's two end zones and its body between them, on the
 // slider's box this pass paints its pill in (the bounds' own places, the
-// pill's ink 3 W inside them, 2026-11-18) — and a cold record on every
+// pill's ink the seat inside them, 2026-11-18; the zones read the grabs'
+// clamped places, trim_endcap_rect) — and a cold record on every
 // early return.
 // The CALLER decides whether this frame may publish at all
 // (GuiPaintHandler::paint_trim passes null unless the damage clip covers the

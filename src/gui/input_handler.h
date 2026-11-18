@@ -3643,7 +3643,10 @@ private:
     void update_trim_drag(double mouse_x);   // motion: writes the live store
     // mouse_x → source-domain frame double, the single conversion both the
     // drag anchor (begin) and the live cursor (update) read so they can never
-    // diverge. Returns false (out untouched) when audio/zoom state is unusable.
+    // diverge — the inverse map alone; the source's end at the displayed
+    // total is the motion arm's, at the strip clamp and the towed place
+    // (trim_source_frame_reaching_end, input_trim.cpp). Returns false (out
+    // untouched) when audio/zoom state is unusable.
     bool trim_mouse_x_to_source_frame(double mouse_x, double& out_frame);
     // mouse_x → active-domain frame: the whole frame nearest the displayed
     // frame under the pen's real place, the move-both-bounds drag's
@@ -3658,8 +3661,10 @@ private:
     // NEAREST the clicked place to it (architect 2026-11-10; a begin click
     // and a held end click until then) — the frame under the pen's real
     // place (authored_frame_at_x_on_basis over the displayed paint map on the
-    // item viewport basis; architect 2026-11-15, the no-grid arc), walls
-    // [0, total-1], then the shared commit tail.
+    // item viewport basis; architect 2026-11-15, the no-grid arc), a place
+    // at or past the displayed total answering the source's end
+    // (trim_source_frame_reaching_end), walls [0, total-1], then the shared
+    // commit tail.
     // NEAREST is the decider's verdict, BY REAL DISTANCE ON THE BAR (the caps'
     // exact places as the trim bar's painter draws them, on the click's own
     // basis), a tie the begin's but right of both caps, where it is the

@@ -174,9 +174,11 @@
 //   * THE PROPAGATE REPORTS: the phase-reset pastes' "Stopped at …",
 //     kNothingMatched (propagate_blocks.h, two readers) and the two
 //     "nothing changed" sentences (architect 2026-11-18, "E. Agree."):
-//     kPhaseResetStateAlreadyMatches, PASTE's hold that paired blocks and
+//     kPhaseResetStateAlreadyMatches, PASTE's hold that compared resets and
 //     flipped none, and kPhaseResetsAlreadyMatch, the tap's byte-equal paste
-//     (its wording the planner's, pending his word); a paste that wrote no
+//     whose blocks held resets (its wording the planner's, pending his
+//     word) — blocks that held no reset on either side say nothing; a paste
+//     that wrote no
 //     block skips the switch to target view,
 //     the card being the whole answer, while a paste that paired blocks
 //     lands even byte-equal.

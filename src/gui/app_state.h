@@ -146,10 +146,11 @@ constexpr double kUnloadedZoomLevel = 2.0;
 // later load in the process computes its own rate's column from that held
 // width, so nothing re-derives it on a resize, a mode change, a hot-plug or a
 // later open. The visible strip keeps its own jobs (the covering question at
-// fit_zoom_level and effective_max_zoom_level, the sixteenth gutter, the
-// landings); only the column's W is the display's. The column lives on the
-// loaded audio (GuiAudio::working_column, set by GuiAudio::load, its one
-// writer), and its readers assert it positive.
+// fit_zoom_level and effective_max_zoom_level, the walls, the landings), at
+// its own width — the window less the two margins and the frame's two
+// sides (waveform_area); only the column's W is the display's. The column
+// lives on the loaded audio (GuiAudio::working_column, set by
+// GuiAudio::load, its one writer), and its readers assert it positive.
 inline int64_t working_column_frames(int sample_rate, int display_width_px) {
     return static_cast<int64_t>(std::nearbyint(
         (24.0 * static_cast<double>(sample_rate)) /
@@ -1233,6 +1234,13 @@ struct TrimDragState {
     // matching warp-marker drag — so the bound tracks the grab point with no
     // initial snap. See DragState::anchor_mouse_time_frame.
     double anchor_frame     = 0.0;
+    // THE GRAB'S PIXEL OFFSET (Sol's review, 2026-11-18): the press's place
+    // less the grabbed bound's exact place, device px, waveform-relative on
+    // the item basis (begin_trim_drag). The motion's TOWED PLACE, the pen's
+    // place less this, is where the cap stands at the grab's own offset;
+    // where its displayed frame is at or past the displayed total the bound
+    // answers the source's end (update_trim_drag). Single-bound arm only.
+    double grab_offset_px   = 0.0;
 
     // Inter-endcap bridge (top-strip trim-bar span) move-both-bounds drag: both
     // bounds translate together by
@@ -19911,7 +19919,7 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 //     displayed_trim_ms), trim_bound_column and trim_span_columns, exactly
 //     paint_trim's chain — so the highlight stands under the bar's span
 //     edge for edge, the song's walls included: under the slider's box,
-//     the bounds' own places, the pill's ink 3 W inside each bound
+//     the bounds' own places, the pill's ink the seat inside each bound
 //     (architect 2026-11-18, render.h's THE SLIDER'S BOX AND ITS CORE).
 // THE PAINTER lays the span through the sink's blended rect at the
 // `sweep_highlight` key's percent; THE DAMAGE SITES take

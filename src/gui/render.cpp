@@ -901,22 +901,26 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long lattice_origin, int wave_w) {
     TrimBoundColumn out;
     out.ms = displayed_ms;
-    // The unrounded verdict: a bound in [vp_start, vp_end) is in view.
-    out.in_viewport = displayed_ms >= static_cast<double>(vp_start) &&
-                      displayed_ms <  static_cast<double>(vp_end);
     // The painters' q, given back by the span over wave_w
     // (recovered_painter_spp, warp_frame_map_view.h: vp_end is
     // vp_start + nearbyint(wave_w·q), and the recovery is q exactly).
     const double samples_per_pixel =
         recovered_painter_spp(static_cast<int64_t>(vp_end - vp_start), wave_w);
     // THE EXACT PLACE on the caller's UNIFIED displayed basis (this file's
-    // header block above): displayed_x_at, warp_frame_map_view.h. THE
-    // EOF-WALL CLAMP, an IN-VIEW bound's alone (render.h): its place can
+    // header block above): displayed_x_at, warp_frame_map_view.h.
+    out.x_raw = displayed_x_at(displayed_ms, static_cast<double>(vp_start),
+                               samples_per_pixel, lattice_origin);
+    // THE IN-VIEW VERDICT (render.h): the left edge the viewport's named
+    // start, the right edge the strip's real right edge, x = wave_w — never
+    // the rounded vp_end, which at a fractional rest can stand a frame short
+    // of the strip's edge and put a visible last frame out of view.
+    out.in_viewport = displayed_ms >= static_cast<double>(vp_start) &&
+                      out.x_raw < static_cast<double>(wave_w);
+    // THE EOF-WALL CLAMP, an IN-VIEW bound's alone (render.h): its place can
     // stand past the last column's left edge, and the clamp keeps its end
     // zone whole. An offscreen bound keeps its own place, so its zone stands
     // where the bound is and the lane's clip cuts it (architect 2026-10-05).
-    out.x = displayed_x_at(displayed_ms, static_cast<double>(vp_start),
-                           samples_per_pixel, lattice_origin);
+    out.x = out.x_raw;
     if (out.in_viewport && wave_w > 0)
         out.x = std::clamp(out.x, 0.0, static_cast<double>(wave_w - 1));
     return out;
@@ -935,12 +939,12 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 
 TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
                                   const TrimBoundColumn& end, int wave_w) {
-    // Contract at the declaration: the bounds' exact places, the end's one
-    // px past its own, cut to the effective width (an offscreen bound keeps
-    // its raw place, trim_bound_column, which the cut then holds).
+    // Contract at the declaration: the bounds' exact places, unclamped (the
+    // slider's box, the pill's own), the end's one px past its own, cut to
+    // the effective width.
     TrimSpanColumns s;
-    s.lo = std::max(begin.x, 0.0);
-    s.hi = std::min(end.x + 1.0, static_cast<double>(wave_w));
+    s.lo = std::max(begin.x_raw, 0.0);
+    s.hi = std::min(end.x_raw + 1.0, static_cast<double>(wave_w));
     return s;
 }
 
@@ -1006,9 +1010,10 @@ void render_trim_flags(cairo_t* cr,
     if (viewport_end_sample <= viewport_start_sample) return;
     if (waveform_area.w <= 0) return;
 
-    // Both bounds resolve through the ONE shared column owner: .col is the
-    // bound's column, an offscreen one past the lane's edge. The bar spans
-    // between them wherever they stand, so the columns are computed
+    // Both bounds resolve through the ONE shared place owner: .x_raw is the
+    // bound's exact place (the slider's box), .x the grabs' (the EOF-wall
+    // clamp in it), an offscreen one's past the lane's edge. The bar spans
+    // between them wherever they stand, so the places are computed
     // unconditionally.
     const TrimBoundColumn bc = trim_bound_column(
         static_cast<double>(trim.begin), viewport_start_sample,
@@ -1046,14 +1051,16 @@ void render_trim_flags(cairo_t* cr,
     // THE SPAN, ARC'S SLIDER — A PILL (architect 2026-11-17, session 140,
     // ruling 4: "The scroll bar and the trough should be accurate to whatever
     // Arc uses"). THE SLIDER'S BOX is the trim window from the begin bound's
-    // exact place through the end bound's plus one px, UNCUT (the places
-    // trim_span_columns cuts for the sweep highlight, and the grabs' own:
-    // THE TRIM REFLECTS THE WAVEFORM'S COLUMNS, even where the waveform is
-    // wrong, architect 2026-11-03 — the box, the bounds, the grabs and the
-    // highlight); THE PILL IS ITS VISIBLE CORE (render.h's THE SLIDER'S BOX
-    // AND ITS CORE; architect 2026-11-18: "let's just make it as realistic
-    // as we can"): ITS ROWS trim_pill_h_px (6 W) CENTERED ON THE TROUGH,
-    // real edges, `seat` of trough above and below (the inset, render.h);
+    // exact place through the end bound's plus one px, UNCUT, ON THE BOUNDS'
+    // UNCLAMPED PLACES (TrimBoundColumn::x_raw — the places
+    // trim_span_columns cuts for the sweep highlight; the EOF-wall clamp is
+    // the grabs' alone, render.h: THE TRIM REFLECTS THE WAVEFORM'S COLUMNS,
+    // even where the waveform is wrong, architect 2026-11-03 — the box, the
+    // bounds, the grabs and the highlight); THE PILL IS ITS VISIBLE CORE
+    // (render.h's THE SLIDER'S BOX AND ITS CORE; architect 2026-11-18:
+    // "let's just make it as realistic as we can"): ITS ROWS
+    // trim_pill_h_px (6 W) CENTERED ON THE TROUGH, real edges, `seat` of
+    // trough above and below (the inset, render.h);
     // ITS ENDS the box's ends drawn in by the same inset, AT THEIR REAL
     // PLACES WHEREVER THEY FALL, on screen or past the strip's edge, round
     // at both, radius half the pill's height. THE SHORT SPAN, the one
@@ -1061,10 +1068,11 @@ void render_trim_flags(cairo_t* cr,
     // inset at each end is
     //     min(seat, max(0, (S − pill height) / 2)),
     // S the box's width, the end bound's place plus one px less the begin
-    // bound's — continuous in S, no pop under a zoom: a box 12 W wide or
-    // more keeps the whole 3 W at each bound; between 6 W and 12 W the pill
-    // is a 6 W disc centered in the box; under 6 W the pill is the box
-    // itself, a pill narrower than two radii taking half its width as the
+    // bound's — continuous in S, no pop under a zoom: a box at least the
+    // pill's height plus two seats wide keeps the whole seat at each bound;
+    // between the pill's height and that, the pill is a disc of the pill's
+    // height centered in the box; under the pill's height the pill is the
+    // box itself, a pill narrower than two radii taking half its width as the
     // radius, so its round ends meet and never overlap (the rounded rect's
     // own clamp). THE CUT IS THE LANE'S CLIP, set above on the waveform
     // area's whole columns (the strip's edge, so nothing reaches the frame):
@@ -1072,14 +1080,16 @@ void render_trim_flags(cairo_t* cr,
     // them, each pixel inside at its exact coverage of the whole core
     // (CoverageStampPass::rounded_rect; cairo's road where the target is
     // refused fills the same path under the same clip). So a bound on
-    // screen shows its round end 3 W inside it, a core running past the
+    // screen shows its round end the seat inside it, a core running past the
     // edge is cut square and flush there ("it goes on"), and a round end
     // leaving the strip is cut by it column by column — the no-grid rule,
     // render.h's `hull` block, nothing jumping as a bound crosses the edge
-    // (architect 2026-11-18). An end wholly past the edge is drawn at one
-    // pill height beyond it, its round corners still wholly outside, so the
-    // stamp's whole-cell arithmetic stays bounded and no pixel changes. The
-    // drag look below wears the same geometry. The pill stands inside the
+    // (architect 2026-11-18): the box reads the unclamped places, so the
+    // grab's EOF-wall clamp never holds a core end while its bound moves.
+    // An end wholly past the edge is drawn at one pill height beyond it, its
+    // round corners still wholly outside, so the stamp's whole-cell arithmetic
+    // stays bounded and no pixel changes. The drag look below wears the same
+    // geometry. The pill stands inside the
     // lane's rows and clip, so the trim lane's whole rows, every trim
     // write's and drag edge's damage (top_trim_row_area), hold it. Painted
     // at each pixel's exact coverage through the coverage stamp
@@ -1094,8 +1104,8 @@ void render_trim_flags(cairo_t* cr,
     const double pill_h = std::min(static_cast<double>(trim_pill_h_px()),
                                    static_cast<double>(trough_h));
     const double seat = (static_cast<double>(trough_h) - pill_h) / 2.0;
-    const double box_lo = bc.x;
-    const double box_hi = ec.x + 1.0;
+    const double box_lo = bc.x_raw;
+    const double box_hi = ec.x_raw + 1.0;
     const double inset =
         std::min(seat, std::max(0.0, (box_hi - box_lo - pill_h) / 2.0));
     const double core_lo = box_lo + inset;
@@ -1123,9 +1133,14 @@ void render_trim_flags(cairo_t* cr,
     // the pixels take, so a zone overrunning the lane claims its visible
     // stretch alone; a window wholly off one side publishes no zone on that
     // side and an empty bridge. REAL EDGES (architect 2026-11-15, the
-    // no-grid arc): the zones stand on the span's two real ends, the
-    // slider's box above — the bounds' own places, not the pill's ink 3 W
-    // inside them (architect 2026-11-18).
+    // no-grid arc): the zones stand on the span's two real ends — the
+    // bounds' own places, not the pill's ink the seat inside them (architect
+    // 2026-11-18) — AS THE GRABS HAVE THEM, `x`, the EOF-wall clamp in it
+    // (render.h's TrimBoundColumn): an in-view bound past the last column's
+    // left edge stands on it, so at the strip's right edge a zone can stand
+    // up to a px left of the slider's box, whose places are unclamped
+    // (`x_raw`), and a begin on the named start a fraction of a px left of
+    // the strip's left edge has its zone at 0, inside the box's edge.
     const int btn_w = view_bar_grab_w_px();
     const GuiRectF begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
     const GuiRectF end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);

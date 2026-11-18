@@ -66,16 +66,20 @@ inline constexpr const char* kNothingMatched =
 // for the tap's paste that writes nothing). A paste that walked its blocks
 // clean and left the store byte-equal still lands in the P column (the
 // 2026-08-31 ruling), and that scene cannot say whether anything was written,
-// so the words do — "Nothing to commit"'s shape for a successful no-op.
+// so the words do — "Nothing to commit"'s shape for a successful no-op. BOTH
+// NEED RESETS THERE TO MATCH: blocks that paired with no reset in their
+// windows on either side (COPY keeps such blocks) matched nothing, and that
+// walk is silent.
 // TWO SENTENCES, ONE READER EACH, because "state" is the hold's word in the
 // product (PASTE's tooltip, "Hold to paste their state"): after the tap it
 // would read as if only the enabled bit were compared, while the tap's
 // compare is the whole row, placement and state.
 //   * kPhaseResetStateAlreadyMatches — PASTE's hold (Ctrl+Shift+P) that
-//     paired blocks and flipped no reset (PhaseResetPropagate::
-//     paste_state_apply).
-//   * kPhaseResetsAlreadyMatch — PASTE's tap (Ctrl+P) that matched blocks
-//     and rewrote every row as it stood (PhaseResetPropagate::paste_apply,
+//     compared resets and flipped none (PhaseResetPropagate::
+//     paste_state_apply, compared_resets > 0 and !any_change).
+//   * kPhaseResetsAlreadyMatch — PASTE's tap (Ctrl+P) whose matched blocks
+//     held resets and that rewrote every row as it stood
+//     (PhaseResetPropagate::paste_apply, block_resets > 0 and
 //     !store_changed). Its wording is the planner's, pending his word.
 inline constexpr const char* kPhaseResetStateAlreadyMatches =
     "The phase resets already match the copied state";

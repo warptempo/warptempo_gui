@@ -558,13 +558,13 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 //     as MarkerStem::x), the zoom anchor's stem (strip_anchor_stem_x
 //     below), the lead-in ring's sides and runs
 //     (GuiPaintHandler::phase_reset_overlay_band) and the TRIM sweep's
-//     highlight (trim_bound_column's x through trim_span_columns);
+//     highlight (trim_bound_column's x_raw through trim_span_columns);
 //   IN THE CHROME'S LANES, the coverage stamp (CoverageStampPass,
 //     cool_edit_paint.h) — the cues' chips and the stems' head segments
 //     (the same exact_x), the ruler's ticks (RulerComb::tick_x,
 //     paint_handler.cpp) and its head (playhead_exact_x), the trim bar's
-//     span (the slider's box, the bounds' places; its pill 3 W inside each
-//     bound at its real place, the lane's clip cutting it,
+//     span (the slider's box, the bounds' places; its pill the seat inside
+//     each bound at its real place, the lane's clip cutting it,
 //     render_trim_flags, 2026-11-18);
 //   AND THE TEXT THAT STANDS WITH ITS MARK (architect 2026-11-15, the
 //     no-grid arc: the glide's trial of 2026-11-14 is the rule) — a cue's

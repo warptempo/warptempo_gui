@@ -5586,10 +5586,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // table, each pressed on the waveform area's columns alone — are
             // disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
-            // handling below. The PLAIN click consumes the span-framing
-            // double-click AT THE PRESS (2026-08-17) and then falls through to
-            // the same cap/bridge arm every plain press takes, else — on an
-            // unclaimed spot — is a CONSUMED NOTHING; the bound-set click
+            // handling below. The PLAIN press records the long press that
+            // frames the trim (TrimBarPressSeed, architect 2026-11-18; the
+            // lift decides) and arms the cap/bridge drag every plain press
+            // takes where it lands on one; a quick tap that never becomes a
+            // drag is a CONSUMED NOTHING; the bound-set click
             // is the ctrl claim above. The plain press stops no playback: the
             // trim bar's stop belongs to the DRAG's first accepted bound change
             // (input_trim.cpp).
@@ -5640,8 +5641,10 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // 2026-08-07 — the band's read-only return is deleted below. Either
                 // way the trim bar CONSUMES the press — it never falls to the
                 // marker handling.
-                // A PLAIN TRIM-BAR CLICK THAT NEVER BECOMES A DRAG IS NOW A
-                // CONSUMED NOTHING (architect 2026-07-30). Its entire act was
+                // A QUICK PLAIN TRIM-BAR TAP THAT NEVER BECOMES A DRAG IS A
+                // CONSUMED NOTHING (architect 2026-07-30) — a still press held
+                // kHoldDelayMs is the long press below, which frames the trim
+                // at the lift. The tap's entire act was
                 // PUBLISHING the trim window as a region highlight, and that
                 // coupling is retired outright with the SPAN FORM — so the two
                 // highlight-only arms that stood here (the read-only press's
@@ -5760,9 +5763,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 }
                 // Every other empty top-strip spot: NOTHING AT ALL — no
                 // playhead, no marker, no selection or region change, and no
-                // playback effect either, because this press claimed nothing
-                // and the stops all live at the claims. That covers the
-                // margin's ground and the well's frame beside the trim bar,
+                // stop of its own, because this press claimed nothing and the
+                // stops all live at the claims; a standing A/B audition still
+                // ends, as at every press, before any claim
+                // (end_audition_for_press, the global A/B rule). That covers
+                // the margin's ground and the well's frame beside the trim bar,
                 // the ruler and the marker lane in their rows (off the three
                 // press rects, main.cpp's well_lane_press_rect), the
                 // inter-lane gaps, and any press in the FLEXIBLE GAP 1 band,

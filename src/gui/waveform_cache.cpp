@@ -1495,22 +1495,57 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const GuiHistoryWalkSource history_source = app.history_mode.source;
     const std::size_t        history_local_index = app.history_mode.local_index;
 
+    // The width the flag column mapping recovers the painters' q at, from the
+    // displayed span (recovered_painter_spp, warp_frame_map_view.h) — the same
+    // width the live trim pass and the hit tests use (this pass stages it
+    // for them at the tail), so flags stay column-aligned with the trim/stem
+    // verticals below them. The surface stays the window's width; the
+    // columns beside the waveform's (the well's frame and the margin) stay
+    // unpainted.
+    //
+    // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
+    // resize-window basis split). The numerator here is the DISPLAYED span
+    // (fp_vp_end - fp_vp_start); dividing it by the LIVE effective width mixed
+    // two epochs, so during an async plate publish after a resize the flags,
+    // their stems, their hit rects and the trim geometry were mapped at a
+    // samples-per-pixel the blitted ink did not have — while the playhead, the
+    // region columns and the ruler, which all read plate_viewport_basis
+    // (fp_vp_end - fp_vp_start over fp_area_w), had it right. The plate is
+    // blitted 1:1 at its own scale, never stretched, so an overlay that wants
+    // to sit on its ink must use the width that ink was rendered at. Both
+    // bases are now the one expression. THE FINGERPRINT KEYS IT BY ITS OWN
+    // FIELD (FlagCache::fp_plate_w, Sol's review, 2026-11-18): the span does
+    // not catch a width change — q moves with the width where the camera
+    // re-solves its level for it (the whole-song fit: 2252 px at q 71.1875
+    // and 2278 px at q 70.375 both span 160,314 frames) — and the window
+    // width and the scale (fp_area_w, fp_gui_scale_percent), the two inputs
+    // of the live width, re-key when the LIVE width changes, which can be a
+    // tick before the worker publishes a plate at it; that publish's inline
+    // call of this rebuild then re-keys on the plate's own width.
+    //
+    // The live-width fallback mirrors plate_viewport_basis's own cold arm: the
+    // fp_rendered gate above makes it unreachable in practice (a plate that has
+    // published rendered at a positive width), and it costs one compare.
+    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
+                                              : waveform_area(app).w;
+
     // THE FINGERPRINT IN TWO PARTS (architect 2026-11-16, the beats; the
     // split is the tail's, where the rebuild's damage is decided): THE
     // MARKER-DRIVEN CONTENT — the four fields that change what cues, stems
     // and ring show on a surface that otherwise stands: both stores'
     // generations, the drag overlay and the selection (a marker's motion, an edit, a select) — and
     // THE FRAME, every other field: the surface itself, the basis it is laid
-    // out on (the displayed span, the lattice origin, the target bit, the
-    // map), the band's size and origin, the scale, the palette, the column,
-    // the iteration verdict, the editor's suppression and the history
-    // mode's nine. A miss in the content alone repaints cues on a surface
-    // whose every other cue stands where it stood.
+    // out on (the displayed span, the plate's width, the lattice origin, the
+    // target bit, the map), the band's size and origin, the scale, the palette,
+    // the column, the iteration verdict, the editor's suppression and the
+    // history mode's nine. A miss in the content alone repaints cues on a
+    // surface whose every other cue stands where it stood.
     const bool frame_matches =
         flag_cache.surface &&
         flag_cache.fp_vp_start                == vp_start &&
         flag_cache.fp_vp_end                  == vp_end &&
         flag_cache.fp_lattice_origin          == lattice_origin &&
+        flag_cache.fp_plate_w                 == wave_w &&
         flag_cache.fp_area_w                  == surface_w &&
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_origin_y                == origin_y &&
@@ -1585,36 +1620,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // as its `top_strip_area`: each pass clips its ink to these rows
     // (clip_to_waveform_columns), exactly the surface's.
     const GuiRect local_top_strip{0, origin_y, surface_w, surface_h};
-    // The width the flag column mapping recovers the painters' q at, from the
-    // displayed span (recovered_painter_spp, warp_frame_map_view.h) — the same
-    // width the live trim pass and the hit tests use (this pass stages it
-    // for them at the tail), so flags stay column-aligned with the trim/stem
-    // verticals below them. The surface stays the window's width; the
-    // columns beside the waveform's (the well's frame and the margin) stay
-    // unpainted.
-    //
-    // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
-    // resize-window basis split). The numerator here is the DISPLAYED span
-    // (fp_vp_end - fp_vp_start); dividing it by the LIVE effective width mixed
-    // two epochs, so during an async plate publish after a resize the flags,
-    // their stems, their hit rects and the trim geometry were mapped at a
-    // samples-per-pixel the blitted ink did not have — while the playhead, the
-    // region columns and the ruler, which all read plate_viewport_basis
-    // (fp_vp_end - fp_vp_start over fp_area_w), had it right. The plate is
-    // blitted 1:1 at its own scale, never stretched, so an overlay that wants
-    // to sit on its ink must use the width that ink was rendered at. Both
-    // bases are now the one expression, and the fingerprint still catches
-    // every width change transitively: fp_vp_end = vp_start + nearbyint(w·q)
-    // (viewport_end_sample) and q >= 20 frames/px (the deepest-zoom floor,
-    // kDeepestZoomMinFramesPerPx), so a width change of even one px moves
-    // the span by 19 frames or more and none can leave the displayed span
-    // untouched.
-    //
-    // The live-width fallback mirrors plate_viewport_basis's own cold arm: the
-    // fp_rendered gate above makes it unreachable in practice (a plate that has
-    // published rendered at a positive width), and it costs one compare.
-    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
-                                              : waveform_area(app).w;
     const int sr = audio.sample_rate();
 
     const std::vector<WarpFrameMapSegment>* tmap_arg =
@@ -1735,6 +1740,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_vp_start                = vp_start;
     flag_cache.fp_vp_end                  = vp_end;
     flag_cache.fp_lattice_origin          = lattice_origin;
+    flag_cache.fp_plate_w                 = wave_w;
     flag_cache.fp_area_w                  = surface_w;
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_origin_y                = origin_y;
@@ -1769,10 +1775,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // deleting that duplicate is safe exactly because THIS rebuild remains the
     // stage owner on every viewport/map/dimension change — every one of those
     // changes moves a field of this cache's fingerprint (fp_vp span, map hash,
-    // target bit, the surface band's dims and origin, the scale; wave_w is the PLATE's width
-    // now and cannot move without moving the fp_vp span with it — the
-    // derivation is at wave_w — and the window width moves surface_w besides),
-    // so the rebuild fires and re-stages. A trim-only
+    // target bit, the plate's width wave_w — keyed by its own field, since a
+    // width change need not move the span (the reason is at wave_w) — the
+    // surface band's dims and origin, the scale), so the rebuild fires and
+    // re-stages. A trim-only
     // change no longer stages anything, which is correct: trim never entered
     // the staged basis values, and the live trim pass reads the promoted basis
     // per frame. Ruling at the selector.

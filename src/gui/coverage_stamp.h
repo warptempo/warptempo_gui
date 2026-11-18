@@ -127,7 +127,7 @@ inline double coverage_of_triangle(int px, int py, double ax, double ay,
 
 // A PIXEL'S COVERAGE BY A ROUNDED RECT (architect 2026-11-17, session 140,
 // ruling 4: the trim bar's span is Arc's scrollbar slider, A PILL, its
-// edges at real places — 3 W inside each bound, 2026-11-18 — at exact
+// edges at real places — the seat inside each bound, 2026-11-18 — at exact
 // coverage): the rect [x0, x1] x [y0, y1] with
 // real edges whose LEFT two corners are quarter disks of radius `rl` and
 // whose RIGHT two are quarter disks of radius `rr` — a radius of 0 a square

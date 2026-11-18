@@ -453,6 +453,18 @@ struct FlagCache {
     int64_t   fp_vp_start            = 0;
     int64_t   fp_vp_end              = 0;
     int64_t   fp_lattice_origin      = 0;
+    // THE PLATE'S WIDTH these flags were column-mapped at and the rebuild
+    // staged as the item basis's (waveform_cache.cpp's wave_w, the
+    // published plate's fp_area_w), keyed BY FIELD (Sol's review,
+    // 2026-11-18): a width change can leave the displayed span untouched —
+    // q moves with the width at the whole-song fit (a 160,250-frame piece:
+    // 2252 px at q 71.1875 and 2278 px at q 70.375 both span 160,314
+    // frames) — and the window width and the scale below, which do move
+    // with it, are keyed when the LIVE width changes, which can be a tick
+    // before the worker publishes the plate at that width; without this
+    // field that publish's inline rebuild would match and keep the old
+    // width's mapping and staged basis.
+    int       fp_plate_w             = 0;
     int       fp_area_w              = 0;
     int       fp_area_h              = 0;
     // THE BAND'S ORIGIN ROW these pixels were laid out at (origin_y above,
@@ -768,15 +780,18 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (28 fields, RE-DERIVED 2026-11-11 off the compare in
+    // (28 fields, RE-DERIVED 2026-11-18 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
-    //   - GEOMETRY, five fields off the displayed plate (wf_cache.fp_*):
-    //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash, and
+    //   - GEOMETRY, six fields off the displayed plate (wf_cache.fp_*):
+    //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash,
     //     fp_lattice_origin (architect 2026-10-31) — no flag pixel reads the
     //     lattice (the flags place by displayed_column_at's offsets), but the
     //     rebuild STAGES the displayed basis, the lattice origin with the
     //     span (AppState::displayed_lattice_origin), so a plate that moved
-    //     its lattice alone must re-stage;
+    //     its lattice alone must re-stage — and fp_plate_w, the plate's
+    //     width, which the flags are column-mapped at and the rebuild stages
+    //     as the item basis's width: a width change need not move the span
+    //     (fp_plate_w's own comment);
     //   - GEOMETRY, three fields off the LIVE surface band (not the plate —
     //     this surface holds strip rows, not the waveform): fp_area_w the
     //     window's width (top_strip_area's), fp_area_h the band's height, the

@@ -196,10 +196,12 @@ struct PhaseResetPropagate {
     // in lockstep with the clipboard, stops on the first name divergence,
     // and produces a single undo entry covering all materialized blocks. A
     // divergence cards its `Stopped at …`; a walk that matched no block cards
-    // kNothingMatched and stays still; a clean walk that matched blocks and
+    // kNothingMatched and stays still; a clean walk whose matched blocks held
+    // resets (the destination's cleared or the clipboard's materialized) and
     // left the store byte-equal cards kPhaseResetsAlreadyMatch (architect
-    // 2026-11-18, propagate_blocks.h) and still lands; one that changed the
-    // store is silent.
+    // 2026-11-18, propagate_blocks.h) and still lands; one whose matched
+    // blocks held no reset on either side, or that changed the store, is
+    // silent.
     void paste_apply();
 
     // Ctrl+Shift+P (architect 2026-10-24; Ctrl+Alt+Shift+P until its removal
@@ -215,10 +217,11 @@ struct PhaseResetPropagate {
     // aligned blocks. A divergence/mismatch is reported as a notification
     // card (GuiNotifications::notify); a run that paired no block at all
     // (one side produced none) cards kNothingMatched, the placement paste's
-    // sentence (propagate_blocks.h); a clean run that paired blocks and
-    // flipped none cards kPhaseResetStateAlreadyMatches (architect
-    // 2026-11-18), one that flipped a reset is silent. No confirmation
-    // prompt: it applies
+    // sentence (propagate_blocks.h); a clean run that compared resets (paired
+    // reset against reset) and flipped none cards
+    // kPhaseResetStateAlreadyMatches (architect 2026-11-18); one whose paired
+    // blocks held no reset on either side, or that flipped a reset, is
+    // silent. No confirmation prompt: it applies
     // directly. A run that paired a block lands with the resets it FLIPPED
     // selected, the playhead on the first and the set framed (the tail
     // below; architect 2026-11-17, send U).
