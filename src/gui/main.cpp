@@ -676,7 +676,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // count's authority; twenty-seven stand outside the `h` view and eighteen
 // inside it, re-counted 2026-10-29 with the Restrict lamp), the toolbar band. Lane 1 is the
 // TRIM lane (the trim bar: the span and its two ends, every trim
-// gesture and the span-framing double-click), the first lane UNDER GAP 1
+// gesture and the span-framing long press), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
 // ladder and the playhead's head; a placement lane); lane 3 is the MARKER
 // lane (the cues); lane 4 is THE LANE'S FOOT LINE, the frame's line, whose
@@ -907,7 +907,7 @@ double samples_per_pixel_at(double zoom_level, int64_t column_frames) {
 // seconds at 1920 px). UNCLAMPED: the callers own their bounds. Two readers:
 // effective_max_zoom_level below (the whole song) and the span framer
 // frame_span_into_view (input_handler.cpp), whose own two callers are the
-// trim-bar double-click (run_span_framing_command, input_handler.cpp) and the
+// span framing (run_span_framing_command, input_handler.cpp) and the
 // cannot-fit arm of land_and_frame_active_markers (input_handler.cpp: the
 // group undo/redo restore and the phase-reset pastes' landing).
 double fit_zoom_level(double span_frames, int width_px, int64_t column_frames) {

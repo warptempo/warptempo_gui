@@ -521,7 +521,7 @@ struct Viewport {
     // zoom_to_start_would_move (app_state.h), asked at the head before any
     // write (2026-10-25), the one owner the Zoom to Fit key's face also reads
     // through span_framing_would_act. Its callers: the span
-    // framer frame_span_into_view (the trim-bar double-click and the
+    // framer frame_span_into_view (run_span_framing_command and the
     // cannot-fit arm of land_and_frame_active_markers — the group undo/redo
     // restore and the phase-reset pastes' landing) and bare `0`'s restore of
     // its stamped view

@@ -1120,8 +1120,9 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start,
         clamp_viewport_start(app, audio, ViewportLattice::Exact);
 
     // Past the head's return either the level or the start really moved, so
-    // this is a zoom, a pan, or both at once — the trim bar's span-framing
-    // double-click, the zoom-out-to-fit arm of land_and_frame_active_markers
+    // this is a zoom, a pan, or both at once — the span framing
+    // (run_span_framing_command), the zoom-out-to-fit arm of
+    // land_and_frame_active_markers
     // (the group undo/redo restore and the phase-reset pastes' landing) and
     // bare `0`'s restore being what reach here.
 

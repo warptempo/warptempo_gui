@@ -1282,7 +1282,7 @@ struct GuiInputHandler {
     // pen barrel's one-finger zoom (apply_touch_nav_update's zoom frames, on
     // every frame that moved the level — idempotent past the first), Zoom to
     // Fit and its recall (run_overview_command), the span framings
-    // (run_span_framing_command: Shift+0, the trim bar's double-click, a trim
+    // (run_span_framing_command: Shift+0, the trim bar's long press, a trim
     // preset's apply) and the centre command (run_center_command, its
     // `user_zoom` true: `c`, the Center key, both marches, Ctrl+J).
     void darken_zoom_lamps_if_level_moved(double level_before);
@@ -2580,14 +2580,17 @@ private:
     // posture. The rationale is at the definition.
     void run_overview_command();
 
-    // THE SPAN-FRAMING command, run by the TRIM BAR LANE's DOUBLE-CLICK:
-    // ZOOM TO A SPAN, never the working zoom. TWO ARMS since 2026-08-18 (the
+    // THE SPAN-FRAMING command, run by Shift+0, the TRIM BAR LANE's LONG
+    // PRESS (architect 2026-11-18, TrimBarPressSeed) and a trim preset's
+    // apply (the three callers at the definition): ZOOM TO A SPAN, never
+    // the working zoom. TWO ARMS since 2026-08-18 (the
     // region arm above them died with the separate region state) — a proper
     // trim SUB-WINDOW (expressed in the active domain) → the whole
     // song (full zoom-out, which the FULL trim window also takes). The trim span is framed with the edge margin
     // per side (kViewportEdgeMarginFraction, app_state.h); the fit level and span-start are set through the clamp chokepoints
     // via Viewport::apply_zoom_to_start (NOT apply_zoom_change — no playhead
-    // recenter). Idempotent: a second click with the viewport unchanged no-ops.
+    // recenter). Idempotent: a second press with the viewport unchanged
+    // no-ops.
     void run_span_framing_command();
 
     // Render-trigger chords: Ctrl+Alt+R and Ctrl+Alt+Shift+R, and nothing else.
@@ -2939,7 +2942,7 @@ private:
     //       tab already holds is the store's own no-op, the tap still
     //       highlighting. THEN THE PRESET IS FRAMED (2026-10-28 night, his
     //       glass on 852a28d9), on the no-op arm too: the trim bar's
-    //       double-click's and Shift+0's one framer,
+    //       long press's and Shift+0's one framer,
     //       run_span_framing_command, landing under the standing box. A
     //       member of the trim-write membership at input_trim.cpp's head.
     //     trim_presets_save_as: SAVE AS, and SAVE's press on an empty list
@@ -4617,12 +4620,13 @@ private:
     //     acts: true when the press was consumed (as one of the mode's own acts
     //     or as a refusal), false for the navigation gestures the mode lets
     //     through untouched. Its own comment carries the admitted list and the
-    //     four acts. It takes the press's DOUBLE-CLICK SNAPSHOT because one of
-    //     those acts is a double-click (the trim bar's framing) and on_button_-
-    //     press clears the shared field before this is reached. IT ACTS AT THE
-    //     PRESS for the framing and for all three diff-flag clicks (2026-08-17,
-    //     reverting the one-day lift deferral: the mode has no drag for any of
-    //     them to become): the two bodies below are called from this router's
+    //     acts. No act of the mode is a double-click (the trim bar's framing
+    //     is its long press since 2026-11-18, resolved at the lift by
+    //     on_button_release's one resolver, TrimBarPressSeed), so it takes no
+    //     double-click snapshot. IT ACTS AT THE PRESS for all three diff-flag
+    //     clicks (2026-08-17, reverting the one-day lift deferral: the mode
+    //     has no drag for any of them to become): the two bodies below are
+    //     called from this router's
     //     own flag claims, the PLAIN one forking on the Add to selection lamp
     //     since 2026-09-17.
     //   * focus_history_diff_flag is the PLAIN focus click's body — the flag
@@ -4653,8 +4657,9 @@ private:
     //   (THE MODE'S TWO FRAMING OWNERS ARE DELETED — 2026-08-18.
     //     frame_viewed_commit_diff_span framed the viewed checkpoint's whole
     //     delta, an ON-DEMAND ACT from 2026-08-05 with the trim bar's plain
-    //     DOUBLE-CLICK as its one caller; that gesture runs the ORDINARY span
-    //     framing now (run_span_framing_command), the bar having stopped
+    //     DOUBLE-CLICK as its one caller; the bar's framing gesture (its long
+    //     press since 2026-11-18) runs the ORDINARY span framing now
+    //     (run_span_framing_command), the bar having stopped
     //     displaying the diff span, so the act went producer-less.
     //     frame_history_view_whole_song was the full zoom out it fell through
     //     to on an empty delta, and that empty arm was its last caller — the
@@ -4743,8 +4748,7 @@ private:
     void set_history_delta(GuiHistoryWalkSource source,
                            GuiHistoryCompare    compare);
     bool handle_history_mode_press(const GuiPointerPlace& at,
-                                   GuiInputState mods,
-                                   const DoubleClickCandidate& dc_at_press);
+                                   GuiInputState mods);
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit);
     void close_history_mode();

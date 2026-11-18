@@ -113,7 +113,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const HeldRepeatDispatchScope repeat_scope(app, mods.synthesized_repeat);
     // Double-click lifecycle, KEY half: any chord between two clicks (a
     // roster lift, an on-screen keyboard key) breaks EVERY pending
-    // double-click candidate (TrimBar, Marker,
+    // double-click candidate (Marker and
     // EmptyLane alike) at this one chokepoint — no legitimate double-click types
     // a key between its two presses, and a cross-context consume (seed a
     // candidate, run a command, click again to consume in a different context)
@@ -448,7 +448,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              was stamped in; a silent no-op with
     //                              nothing to return to (run_overview_command)
     //   - Shift+0                → frame the trim (2026-10-24), the trim
-    //                              bar's double-click (run_span_framing_command):
+    //                              bar's long press (run_span_framing_command):
     //                              the camera alone
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
@@ -1173,7 +1173,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // produce, or a stamp from the other audio view) it is a silent no-op
     // and its button greys. Neither press arms or keeps a
     // camera posture: both clear HOLD and CHASE through the one chokepoint
-    // clear (clamp_viewport_start). The trim-bar double-click
+    // clear (clamp_viewport_start). The trim bar's long press
     // deliberately
     // DIVERGES from this (run_span_framing_command — it zooms to the
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
@@ -1190,12 +1190,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
     // SHIFT+0 FRAMES THE TRIM (architect 2026-10-24, Zoom to Fit's shifted
-    // press and long press): the trim bar's double-click EXACTLY — the one
+    // press and long press): the trim bar's long press EXACTLY — the one
     // command both run (run_span_framing_command: a proper trim sub-window
     // with the edge margin each side, else the whole song), so the key, the
     // button and the gesture are one act. A camera act: no trim bound, the
     // playhead and the selection untouched, admitted on a locked tab, under
-    // the iteration lock and in the `h` view as the double-click is
+    // the iteration lock and in the `h` view as the bar's long press is
     // (is_trim_frame_key, gui_input.h, the three readers).
     if (is_trim_frame_key(key, mods)) {
         run_span_framing_command();
@@ -2581,7 +2581,7 @@ void GuiInputHandler::run_overview_command() {
     //
     // THE TWO RECORDS are this function's alone: it is the stamp's one writer
     // and the whole-song state's one setter (both declarations, app_state.h).
-    // The trim-bar DOUBLE-CLICK and Shift+0 DIVERGE from this
+    // The trim bar's LONG PRESS and Shift+0 DIVERGE from this
     // (run_span_framing_command): they frame the trim / whole-song SPAN.
     //
     // A PRESS THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom darkens
@@ -2732,7 +2732,7 @@ std::optional<SpanFramingLanding> span_framing_landing(const AppState& app,
     return SpanFramingLanding{target_level, target_start};
 }
 
-// THE SPAN SHIFT+0 AND THE TRIM BAR'S DOUBLE-CLICK FRAME — the target of
+// THE SPAN SHIFT+0 AND THE TRIM BAR'S LONG PRESS FRAME — the target of
 // run_span_framing_command as a pure question (2026-10-25, lifted beside the
 // landing above for the same reader). TWO READERS: run_span_framing_command
 // and span_framing_would_act below. No span (nullopt) where the command has
@@ -2871,14 +2871,16 @@ bool span_framing_would_act(const AppState& app, const GuiAudio& audio) {
 }
 
 void GuiInputHandler::run_span_framing_command() {
-    // The trim-bar double-click and Shift+0 (since 2026-10-24, Zoom to Fit's
-    // shifted press) ZOOM TO A SPAN, their own route beside bare `0`'s
+    // THREE CALLERS (re-grepped 2026-11-18): Shift+0 (since 2026-10-24, Zoom
+    // to Fit's long press), the trim bar's long press (architect 2026-11-18,
+    // TrimBarPressSeed; the bar's double-click retired that day) and a trim
+    // preset's apply. They ZOOM TO A SPAN, their own route beside bare `0`'s
     // whole-piece toggle (run_overview_command) and `c`'s marker-jump working
     // zoom. It only ever FRAMES a span,
     // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
     // SUB-WINDOW, else the whole song (full zoom-out — which is also where the
-    // FULL trim window lands, it being the whole song). The region arm above
-    // them died with the separate region state. The framing is idempotent — a second double-click with
+    // FULL trim window lands, it being the whole song). The framing is
+    // idempotent — a second press with
     // the viewport unchanged is a no-op (apply_zoom_to_start's current-vs-target
     // compare, zoom_to_start_would_move — which is also why the Zoom to Fit
     // key greys over a framed full trim, span_framing_would_act), while any
@@ -2892,7 +2894,7 @@ void GuiInputHandler::run_span_framing_command() {
     // A FRAMING THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom
     // darkens (architect 2026-11-17, send U; darken_zoom_lamps_if_level_moved).
     // HERE AND NOT IN THE SHARED FRAMER: this command's callers are all user
-    // roads (Shift+0, the trim bar's double-click, a trim preset's apply),
+    // roads (the three above),
     // while frame_span_into_view also serves the programmatic landings
     // (land_and_frame_active_markers: undo / redo's group restore, the
     // pastes), which darken nothing.

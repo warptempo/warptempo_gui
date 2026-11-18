@@ -81,14 +81,18 @@ namespace GuiKeys {
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
 // thing before the rest crosses into its held meaning. It is the delay of
-// THE ONE HOLD and of nothing else, THE CHROME SHIFT LONG PRESS
-// (chrome_shift_hold_ms, app_state.h), at all three of its read sites — the
-// roster lift, the RENDER PLAYER'S MODAL ROW, which joined 2026-08-28 (its
-// skips and Delete admit a modified press, and their long press reaches it),
-// and THE NOTIFICATION CARD'S LIFT, which joined 2026-10-01 (a long press on
-// any card dismisses every card) — one value and one term (the trim bar's
-// barrel bound set left 2026-11-10: a long press means nothing there,
-// PendingClickAct, app_state.h). It has NO VISUAL
+// THE PRODUCT'S TWO HOLDS and of nothing else (re-grepped 2026-11-18):
+//   * THE CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at
+//     all three of its read sites — the roster lift, the RENDER PLAYER'S
+//     MODAL ROW, which joined 2026-08-28 (its skips and Delete admit a
+//     modified press, and their long press reaches it), and THE
+//     NOTIFICATION CARD'S LIFT, which joined 2026-10-01 (a long press on any
+//     card dismisses every card) — one value and one term;
+//   * THE TRIM BAR'S LONG PRESS (architect 2026-11-18, "Trim bar long press.
+//     Yes"; TrimBarPressSeed, app_state.h), a plain press on the bar's lane
+//     held still, which frames the trim — on_button_release's resolver. The
+//     barrel's press there reads no clock (PendingClickAct, app_state.h).
+// It has NO VISUAL
 // ANNOUNCEMENT: the span is measured where the act runs (the lift) and
 // nothing on screen marks the moment
 // it is crossed. (The touch pan zone's region hold, its second reader, is
@@ -1241,7 +1245,7 @@ inline bool is_trim_reset_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for the chord that FRAMES THE TRIM (GuiInputHandler::
-// run_span_framing_command, the trim bar's double-click exactly — a proper
+// run_span_framing_command, the trim bar's long press exactly — a proper
 // trim sub-window with the edge margin each side, else the whole song):
 // SHIFT+0 exactly — shift, no ctrl, no alt (architect 2026-10-24; it was the
 // reset until then). Bare `0` is Zoom to Fit's toggle and untouched;
