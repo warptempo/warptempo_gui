@@ -225,8 +225,8 @@ struct TrimRange {
 // each file is recolored to `currentColor` and painted in THE TONE the
 // caller passes as the installed theme's sRGB word (installed_theme():
 // `text`, `key_dim_ink` on a disabled key, `text_on_lit` on a lit key's
-// accent or purple face and `text_on_lit_dim` on a lit disabled one's
-// dimmed face,
+// accent or purple face and `text_on_lit_dim` (a radio key's
+// `radio_text_on_lit_dim`) on a lit disabled one's dimmed face,
 // materials.h's key_ink; icons.h's THE BOUND DRAWING) — the one place an
 // antialiased picture is copied whole.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
@@ -234,8 +234,8 @@ struct TrimRange {
 // and the selection's grey; `text_on_lit` over a lit key's accent face, lit
 // or lit under press, a glyph and the on-screen keyboard's lit cap alike,
 // and `text_on_lit_dim` over a lit-but-inert key's (architect 2026-11-11,
-// session 106) — over a radio key's purple faces the same two (session
-// 107).
+// session 106) — over a radio key's purple faces `text_on_lit` and its own
+// inert print `radio_text_on_lit_dim` (sessions 107 and 140).
 // STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
 // HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
 // never had one; the lists' lit rows are a selection, not a button face.
@@ -361,8 +361,10 @@ struct TrimRange {
 // LIVE'S STATUS BAR'S ORANGE, `card_ground` = `card_face` (Default's E76942), its border
 // `card_frame` the same orange, so NO BORDER SHOWS (the ring is layout),
 // its words at the body size and its class glyph in `card_text` = `card_ink`
-// 2A2A2A, Live's own text on that bar — both measured on his Live 12 shot of
-// 2026-10-31 (materials.h's THE CARDS). THIS PARAGRAPH IS THE RULE'S ONE
+// 070707, the theme's StandbySelectionForeground, the print on a lit face
+// (architect 2026-11-17, session 140, D4: "white card words", Arc's
+// $warning_fg_color on its warning orange) — the orange measured on his
+// Live 12 shot of 2026-10-31 (materials.h's THE CARDS). THIS PARAGRAPH IS THE RULE'S ONE
 // STATEMENT.
 // THE CANVAS STANDS IN THE WELL'S FRAME (architect 2026-11-17, session 140;
 // render.h's THE WELL'S FRAME): its two channels' wells are parted by one
@@ -377,8 +379,8 @@ struct TrimRange {
 // no key prints a word since
 // 2026-11-02), its face the rest face — A DEAD LIT KEY DIMS FACE AND GLYPH
 // TOGETHER, the dimmed accent `lit_dim_fill` (a radio key's dimmed purple,
-// `radio_lit_dim_fill`) under `text_on_lit_dim`
-// (architect 2026-11-11, session 106; materials.h's THE KEY; under an
+// `radio_lit_dim_fill`) under `text_on_lit_dim` (a radio key's
+// `radio_text_on_lit_dim`) (architect 2026-11-11, session 106; materials.h's THE KEY; under an
 // overlay too, session 107); a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (`text_dim` (Default's 757575), paint_folder_overlay,
@@ -666,7 +668,8 @@ void install_true_colors(bool on);
 // press need not land on the pill — and they paint nothing of their own.
 //
 // THE RULER IS COOL EDIT'S, FLIPPED, IN LIVE'S TONES (paint_ruler_row):
-// FLAT `ruler_face` (Default's 363636) directly under the frame's line, on
+// FLAT `ruler_face`, THE CANVAS'S TONE (Default's 393939; architect
+// 2026-11-17, session 140, ruling 3) directly under the frame's line, on
 // the waveform area's columns, NO LINE OF ITS OWN ON
 // ITS TOP; THE TICKS `ruler_tick` (Default's 919191), ONE W WIDE (the canvas's line,
 // waveform_line_px, 2026-11-04), EACH CENTERED ON ITS OWN EXACT TIME'S

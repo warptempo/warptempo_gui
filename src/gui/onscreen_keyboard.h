@@ -546,8 +546,9 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" latched or
 // resting; what says the latch is the key's LIT FACE — THE ACCENT, `cue`,
-// Default's FFAD56, its cap `text_on_lit`, Default's 111111 (architect
-// 2026-11-11, session 106, the keyboard following the lamps; materials.h's
+// Default's FFAD56, its cap `text_on_lit`, Default's 070707 (architect
+// 2026-11-11, session 106, the keyboard following the lamps; the print the
+// selection's text since 2026-11-17, session 140; materials.h's
 // THE KEY and key_ink), which this key and the page key (while the symbols
 // page stands) wear off their lamps — a press on a lit one the accent
 // darkened, `lit_press_fill`, Default's C68743, a press on an unlit key

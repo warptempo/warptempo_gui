@@ -341,8 +341,8 @@ namespace {
 // THE PURPLE, `radio_lit_fill`, Default's B595FC, darkened to
 // `radio_lit_press_fill`, Default's 8D74C4 (session 107). A DISABLED button
 // wears the rest face, its glyph and legend dimmed by the caller; A DEAD
-// CHECKED BUTTON THE DIMMED ACCENT, `lit_dim_fill`, Default's 83592C (a
-// radio key's dimmed purple, `radio_lit_dim_fill`, Default's 5D4D81), its
+// CHECKED BUTTON THE DIMMED ACCENT, `lit_dim_fill`, Default's C88B4A (a
+// radio key's dimmed purple, `radio_lit_dim_fill`, Default's 9179C6), its
 // glyph dimmed with it (materials.h's key_ink) — under an overlay too, the
 // roster publishing a dead key's own lit bit there (2026-11-11, session
 // 107). NO HOT FACE. `face` is
@@ -353,12 +353,17 @@ namespace {
 // RADIO KEYS WEAR THE PURPLE): the roster's two key walks — the band's
 // (its `h` view stand-ins included) and row 8's — hand paint_key the class
 // `id` belongs to (redesign_button_is_radio, app_state.h, the one owner),
-// so the class is never decided by lane.
+// so the class is never decided by lane — and the glyph on the face the
+// same class (paint_key_glyph: a lit dead radio key's print is its own,
+// key_ink; architect 2026-11-17, session 140, D5): roster_lit_class, the
+// one translation of the predicate into the class.
+KeyLitClass roster_lit_class(RedesignButton id) {
+    return redesign_button_is_radio(id) ? KeyLitClass::Radio
+                                        : KeyLitClass::Lamp;
+}
 void paint_roster_case(cairo_t* cr, const GuiRect& face, KeyLook look,
                        bool enabled, RedesignButton id) {
-    paint_key(cr, face, look, enabled,
-              redesign_button_is_radio(id) ? KeyLitClass::Radio
-                                           : KeyLitClass::Lamp);
+    paint_key(cr, face, look, enabled, roster_lit_class(id));
 }
 
 // THE LEVEL CASE'S PAINTER (architect 2026-11-05, session 46, his "yes"
@@ -657,10 +662,14 @@ std::string key_legend_word(std::string_view word) {
 // on a half px rather than half a px off, every key glyph keeping the one
 // ink size (a raster size, whole). ITS TONE
 // FOLLOWS THE FACE (materials.h's key_ink; architect 2026-11-11, session
-// 106): `text_on_lit` (Default's 111111) when the key paints LIT (`look`,
+// 106): `text_on_lit` (Default's 070707) when the key paints LIT (`look`,
 // key_look's answer: checked), on the accent or a radio key's purple and on
-// their darkened press faces alike, or `text_on_lit_dim` (Default's 090909)
-// on a lit key that is disabled, its face dimmed with it; else `text` (Default's B5B5B5) on a
+// their darkened press faces alike, or on a lit key that is disabled, its
+// face dimmed with it, the inert print of its lit class `cls` —
+// `text_on_lit_dim` (Default's 2E2114), a radio key's
+// `radio_text_on_lit_dim` (231E2D; architect 2026-11-17, session 140, D5),
+// the roster passing roster_lit_class, every other surface Lamp; else
+// `text` (Default's B5B5B5) on a
 // resting or pressed face, or `key_dim_ink` (Default's 5D5D5D) when the
 // key is disabled. The glyph is
 // clipped to the face's whole pixels (its hull): a face smaller than the
@@ -670,7 +679,7 @@ std::string key_legend_word(std::string_view word) {
 // 8 below an 18-row ink.
 constexpr double kKeyGlyphInkPerKeySide = 9.0 / 17.0;
 void paint_key_glyph(cairo_t* cr, const GuiRectF& face, icons::Icon icon,
-                     bool enabled, KeyLook look) {
+                     bool enabled, KeyLook look, KeyLitClass cls) {
     const GuiRectF& key = face;
     if (!(key.w > 0.0) || !(key.h > 0.0)) return;
     const int ink = scaled_px(kKeyGlyphInkPerKeySide * key_height_w(), 1);
@@ -678,7 +687,7 @@ void paint_key_glyph(cairo_t* cr, const GuiRectF& face, icons::Icon icon,
     if (size.w <= 0 || size.h <= 0) return;
     const double x = key.x + (key.w - static_cast<double>(size.w)) * 0.5;
     const double y = key.y + (key.h - static_cast<double>(size.h)) * 0.5;
-    const uint32_t tone = key_ink(look, enabled);
+    const uint32_t tone = key_ink(look, enabled, cls);
     const GuiRect clip = hull(key);
     cairo_save(cr);
     cairo_rectangle(cr, clip.x, clip.y, clip.w, clip.h);
@@ -2168,7 +2177,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // view pair under grid iterations, any lit key under an overlay)
         // keeps its lit face, in the dimmed accent `lit_dim_fill` (a radio
         // key's dimmed purple, `radio_lit_dim_fill`), its glyph
-        // `text_on_lit_dim` (materials.h's paint_key and key_ink; architect
+        // `text_on_lit_dim` (a radio key's `radio_text_on_lit_dim`;
+        // materials.h's paint_key and key_ink; architect
         // 2026-11-11, session 106, "so both read as a unit"), its legend
         // dimmed as every dead key's: the mode cannot change that state, so
         // hiding it would be a lie, and the dimmed face and print say "true,
@@ -2213,7 +2223,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // (redesign_button_glyph) and drawing are what the per-tick
         // comparator repaints the key on (main.cpp).
         paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
-                        face.enabled, look);
+                        face.enabled, look, roster_lit_class(def.id));
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -3081,7 +3091,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (redesign_button_is_radio; architect 2026-11-11, session 107) — and
     // TOGGLE VALUE DRAG beside it the accent. A checked button a mode greys
     // keeps its lit face dimmed (`lit_dim_fill`, a radio key's
-    // `radio_lit_dim_fill`), its glyph dimmed with it (`text_on_lit_dim`)
+    // `radio_lit_dim_fill`), its glyph dimmed with it (`text_on_lit_dim`, a
+    // radio key's `radio_text_on_lit_dim`)
     // and its legend dimmed, the band's own composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         const GuiRect key{x, btn_y, btn_w, btn_h};   // the face
@@ -3109,7 +3120,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // legend through their one seats, the tones the face's and the
         // ground's).
         paint_key_glyph(cr, key, redesign_button_icon(app, audio, def.id),
-                        face.enabled, look);
+                        face.enabled, look, roster_lit_class(def.id));
         paint_key_legend(cr, key, legend, face.enabled);
     };
 
@@ -3986,7 +3997,8 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // FACE — a flat box in LIVE'S STATUS BAR'S ORANGE (`card_ground`,
 // materials.h's `card_face` (Default's E76942)), its one-W ring painted in the same fill
 // (`card_frame`), so no border shows, its words and its class glyph in
-// Live's own text on that bar (`card_text`, `card_ink` (Default's 2A2A2A)); both classes
+// the theme's selection text (`card_text`, `card_ink` (Default's 070707), D4 of
+// 2026-11-17); both classes
 // alike, the glyph telling them apart (render.h's palette block, THE CARD
 // FACE) — square, NO DROP SHADOW, through the one popup box painter
 // (paint_popup_chrome, the tooltip's too, in its own look); inside the
@@ -4206,7 +4218,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // DialogInformation on a normal card, DialogError on a critical one
         // (architect 2026-11-02, R14: the 10-10 transcriptions, the mark cut
         // out of the filled square), in the words' own tone (the chrome's
-        // `card_text`, `card_ink`: the glyph and the words one tone, Live's).
+        // `card_text`, `card_ink`: the glyph and the words one tone).
         paint_popup_chrome(cr, card, palette().card_frame,
                            palette().card_ground);
         {
@@ -7992,7 +8004,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 : render_player_button_icon(plan[i].player_act,
                                             plan[i].play_face);
         if (icon)
-            paint_key_glyph(cr, key, *icon, enabled, look);
+            paint_key_glyph(cr, key, *icon, enabled, look, KeyLitClass::Lamp);
         const std::string legend =
             !plan[i].glyph
                 ? key_legend_word(plan[i].word)
@@ -8105,7 +8117,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // faces the roster's (key_look, materials.h; architect 2026-11-11, session
 // 106, the keyboard following the lamps):
 //   LIT       — THE ACCENT FACE, `cue` (Default's FFAD56), its cap
-//               `text_on_lit` (Default's 111111), the face darkened to
+//               `text_on_lit` (Default's 070707), the face darkened to
 //               `lit_press_fill` (Default's C68743) under the finger, its
 //               cap still `text_on_lit`:
 //               SHIFT while it is latched (sticky since 2026-11-08) and THE
@@ -8239,7 +8251,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // glyph key is ever lit).
             if (const std::optional<icons::Icon> icon =
                     onscreen_keyboard::cap_icon(k)) {
-                paint_key_glyph(cr, r, *icon, /*enabled=*/true, look);
+                paint_key_glyph(cr, r, *icon, /*enabled=*/true, look,
+                                KeyLitClass::Lamp);
                 return;
             }
 
@@ -8266,7 +8279,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             // the key by redesign_baseline: the text tone on an unlit key,
             // `text_on_lit` on a lit one's accent face, the press moving
             // neither (materials.h's key_ink; no key here is ever disabled).
-            set_palette_source(cr, hex(key_ink(look, true)));
+            set_palette_source(cr,
+                               hex(key_ink(look, true, KeyLitClass::Lamp)));
             text_shape::show_shaped_run(cr, run, cap_x, baseline);
         });
 
@@ -8576,7 +8590,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // focused selection) under `list_press_text` (070707) — the
             // highlighted row too while a press stands on it; THE
             // HIGHLIGHTED ROW at rest takes the selection pair — its fill
-            // 637E86 (pal.selected_fill) under the 111111 print; every
+            // 637E86 (pal.selected_fill) under the 070707 print; every
             // other row takes NO FILL and the pane shows through it.
             const bool lit = highlighted;
             if (pressed)
@@ -8602,7 +8616,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // places it; the no-grid arc, 2026-11-15), its
             // first ink column kListGlyphXW = 18 px past the pane's left
             // edge (the text seat), in the row text's tone — `text` at
-            // rest, `selection_text` 111111 on the lit row (the selection
+            // rest, `selection_text` 070707 on the lit row (the selection
             // pair, materials.h); the name at kListNameXW = 62 (the
             // names' column above). THE PLAYING
             // RENDER'S ROW IS NOT MARKED (architect 2026-10-23: "the plain

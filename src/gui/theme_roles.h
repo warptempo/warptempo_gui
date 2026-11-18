@@ -115,24 +115,17 @@
 //                                     arrangement's floor, his "#56" on Classic
 //                                     Medium Light over the panels' DADADA)
 //     lane                   2A2A2A = Desktop (the marker lane)
-//     card ink               2A2A2A = Desktop
 //     key press face         2A2A2A = Desktop (the press arc, 2026-11-05: his
 //                                     pick p2 over ControlBackground 1E1E1E —
 //                                     "press in skeumorphic is darker")
-//     key face, ruler face, pane, time field, magnify core
+//     key face, pane, time field, magnify core
 //                            363636 = SurfaceBackground (the core below)
-//     cue outline, text on lit
-//                            111111 = ControlContrastFrame — THE ENABLED
+//     cue outline            111111 = ControlContrastFrame — THE ENABLED
 //                                     CHIP'S OUTLINE (a disabled chip's is
 //                                     the DERIVED block's inactive cue
 //                                     outline), THE SELECTION STEM on every
 //                                     selected chip, the rings, the ruler
-//                                     head's outline; THE PRINT ON A
-//                                     LIT KEY'S FACE too, its glyph and the
-//                                     on-screen keyboard's lit cap, near-black
-//                                     on the accent (architect 2026-11-11,
-//                                     session 106: the text tone on the accent
-//                                     is about 1.1 : 1; key_ink, materials.h)
+//                                     head's outline
 //     text                   B5B5B5 = ControlForeground (the keys' glyphs and
 //                                     legends, the markers' labels)
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
@@ -177,10 +170,21 @@
 //                                     accent alone)
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
-//     selection text         070707 = StandbySelectionForeground (architect
-//                                     2026-11-06, session 75: Live's own
-//                                     partner of the bar; ControlContrastFrame
-//                                     before it, our mispairing)
+//     selection text, text on lit, card ink
+//                            070707 = StandbySelectionForeground — THE
+//                                     SELECTION'S TEXT, Live's own partner of
+//                                     the bar (architect 2026-11-06, session
+//                                     75); THE PRINT ON A LIT KEY'S
+//                                     FACE too, its glyph and the on-screen
+//                                     keyboard's lit cap, and THE CARDS'
+//                                     WORDS AND GLYPH (architect 2026-11-17,
+//                                     session 140: Arc prints its
+//                                     $selected_fg_color white on its checked
+//                                     blue, and D4, "white card words", its
+//                                     warning text on the warning orange; on
+//                                     Live's own files the partner is
+//                                     near-black, so the print stays dark on
+//                                     the accent; key_ink, materials.h)
 //     list press fill        B0DDEB = SelectionBackground (the press arc,
 //                                     2026-11-05: "lighter for list
 //                                     (highlight)")
@@ -258,9 +262,18 @@
 //                                     border" — Arc's $borders_color, Live's
 //                                     clip frame; render.h's THE WELL'S
 //                                     FRAME)
-//     ruler tick             919191 = DetailViewRulerMarkings over
-//                                     SurfaceBackground (the ruler face; Live's
-//                                     light ticks)
+//     ruler face             393939 = THE CANVAS (the composite above):
+//                                     THE RULER WEARS THE CANVAS'S TONE
+//                                     (architect 2026-11-17, session 140,
+//                                     ruling 3: "otherwise it looks too
+//                                     bright"; "the ruler lane is light, the
+//                                     marker lane is dark, and then the canvas
+//                                     is lighter. That makes sense, and I
+//                                     prefer to use that")
+//     ruler tick             919191 = DetailViewRulerMarkings over the ruler
+//                                     face, the canvas (Live's light ticks;
+//                                     Arc's scale marks, D3DAE366 -> 7B818C,
+//                                     session 140)
 //   The grid, the key dim ink, the trim span and the ruler tick were each a
 //   Default mix of two roles; the role nearest it in hex on Default is the
 //   faithful reading, so every theme now reads Live's own number (architect
@@ -273,8 +286,8 @@
 //   above and every tone below but the inactive cue outline are ONE BODY
 //   (fill_dependent_tones, theme_roles.cpp) reading the row's own words, so
 //   the install recomputes them off the mixed bright tones (THE BRIGHT MIX,
-//   below) — the text on lit dim among them, off the print on a lit face,
-//   which is never mixed, so it never moves:
+//   below) — the inert prints among them, over the mixed inert faces, the
+//   print itself and the ground never mixed:
 //     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
 //                                     EXACTLY HALF WAY to the head on every
 //                                     theme (architect 2026-11-12, session
@@ -337,36 +350,31 @@
 //                                     than the key face the lit press comes
 //                                     out lighter — Live's numbers, no rule
 //     lit dim fill, text on lit dim
-//                            83592C, 090909 = THE LIT-BUT-INERT PAIR: the
-//                                     accent (cue) and the print on it (text
-//                                     on lit), each moved by ONE SCALAR for
-//                                     both tones and their three channels so
-//                                     each keeps its hue, the means over the
-//                                     three sRGB bytes, rounded half to even
-//                                     and clamped, IN THE DIRECTION THE
-//                                     DISABLED INK LIES FROM THE TEXT
-//                                     (architect 2026-11-11, session 109,
-//                                     his pick (a): "the same rule in
-//                                     negative" on a light theme). A DARK
-//                                     THEME, mean(text) >= mean(key dim ink):
-//                                     EACH · (mean(key dim ink) / mean(text)),
-//                                     toward black (93 / 181 on Default:
-//                                     FFAD56 -> 83592C, 111111 -> 090909); a
-//                                     theme whose text and key dim ink are
-//                                     both black (no divisor) keeps both
-//                                     whole, ratio 1. A LIGHT THEME,
-//                                     mean(text) < mean(key dim ink): toward
-//                                     white, 255 − (255 − tone) · ((255 −
-//                                     mean(key dim ink)) / (255 −
-//                                     mean(text))), the divisor never zero
-//                                     (150 / 255 on Classic Medium Light:
-//                                     FFB901 -> FFD66A, 383838 -> 8A8A8A).
-//                                     The face and the glyph of A
-//                                     CHECKED-BUT-DISABLED KEY (a lamp on a
-//                                     locked tab or under grid iterations,
-//                                     a lit key under an overlay, 2026-11-11,
-//                                     session 107), dimmed as the disabled
-//                                     glyph is dimmed against the resting one
+//                            C88B4A, 2E2114 = THE LIT-BUT-INERT PAIR, ARC'S
+//                                     INSENSITIVE-ACTIVE (architect
+//                                     2026-11-17, session 140, D5: Arc draws
+//                                     a checked insensitive control as its
+//                                     color at 75 % and its print at 80 %):
+//                                     the face THE ACCENT AT 75 % OVER THE
+//                                     GROUND, ground + 0.75 · (cue − ground)
+//                                     (Default: FFAD56 over 242424 ->
+//                                     C88B4A; Arc 5294E2 over 2F343F ->
+//                                     497CB9), the glyph THE PRINT ON A LIT
+//                                     FACE AT 80 % OVER THAT FACE, face + 0.8
+//                                     · (text on lit − face) (Default 070707
+//                                     -> 2E2114; Arc FFFFFF -> DBE5F1), per
+//                                     channel, rounded half to even and
+//                                     clamped. The ground is the theme's
+//                                     own, never mixed; the accent the
+//                                     installed one, so the pair follows THE
+//                                     BRIGHT MIX. One rule on every theme, a
+//                                     light one too (the Live light themes
+//                                     set aside, ruling 7). The face and the
+//                                     glyph of A CHECKED-BUT-DISABLED KEY (a
+//                                     lamp on a locked tab or under grid
+//                                     iterations, a lit key under an overlay,
+//                                     2026-11-11, session 107) — the state
+//                                     reads true and dead as one unit
 //                                     (architect 2026-11-11, session 106: "dim
 //                                     the accent and the glyph so both read as
 //                                     a unit"; paint_key and key_ink,
@@ -379,18 +387,17 @@
 //                                     key's face under a standing press
 //                                     (architect 2026-11-11, session 107),
 //                                     the black key face's ratio 1 as above
-//     radio lit dim fill     5D4D81 = the radio lit fill moved by THE SAME
-//                                     DIM SCALAR on the same branch, per
-//                                     channel, one code path with the lit dim
-//                                     fill: toward black on a dark theme (93 /
-//                                     181 on Default: B595FC -> 5D4D81),
-//                                     toward white on a light one (150 / 255
-//                                     on Classic Medium Light: BE98FF ->
-//                                     D9C2FF) — a checked-but-disabled radio
-//                                     key's face, under the same
-//                                     `text_on_lit_dim` glyph (the same
-//                                     rulings), the both-black ratio 1 as
-//                                     above
+//     radio lit dim fill, radio text on lit dim
+//                            9179C6, 231E2D = THE RADIO KEY'S LIT-BUT-INERT
+//                                     PAIR, the same rule on the purple (D5):
+//                                     the face the radio lit fill at 75 % over
+//                                     the ground (Default: B595FC -> 9179C6;
+//                                     Arc 73D216 -> 62AA20), the glyph the
+//                                     print on a lit face at 80 % over that
+//                                     face (Default 231E2D; Arc E0EED2) — a
+//                                     tone of its own, since the print is over
+//                                     its own face; key_ink parts it by the
+//                                     key's lit class
 //
 // THE BRIGHT MIX (architect 2026-11-13, session 119, on real tablet captures
 // of Riparian and Gunmetal: "the whole point of it is that it dims ... the
@@ -409,7 +416,9 @@
 // (ground − tone) per channel, rounded half to even and clamped like every
 // mix here, k THE `bright_mix` DEVICE KEY (device_config.h: whole percent
 // in [0, 100], 100 the theme's own numbers, 0 every bright tone the ground
-// itself). ONE NUMBER FOR EVERY THEME, the light ones included, where the
+// itself; ITS DEFAULT 100 since 2026-11-17, architect session 140: "let's
+// go with 100 for everything" — the key stays, a ruled number keeping its
+// key). ONE NUMBER FOR EVERY THEME, the light ones included, where the
 // mix lifts the tones toward a light ground (his "we can deal with that
 // when the time comes by just adjusting" the key; no per-theme value: "I
 // don't think it's worth redoing the presets so that each preset gets its
@@ -424,17 +433,19 @@
 // the selection background getting the rule"). EVERY TONE DERIVED FROM A
 // BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
 // body): the cue fill — the markers wear the mixed accent — the lit press
-// and lit dim fills, the radio press and dim fills, and the playhead line,
-// white half way to the mixed head. NEVER MIXED: the text tones ("never the
-// glyph color itself": the text, the dim text, the key dim ink — the keys'
-// glyphs and legends, the markers' labels), the print on a lit face and its
-// dim, the selection and list press texts, the faces, the lanes (the trim
+// and lit dim fills, the radio press and dim fills, the two inert prints
+// over the mixed inert faces, and the playhead line, white half way to the
+// mixed head. NEVER MIXED: the text tones ("never the glyph color itself":
+// the text, the dim text, the key dim ink — the keys' glyphs and legends,
+// the markers' labels), the print on a lit face, the selection and list
+// press texts, the cards' words, the faces, the lanes (the trim
 // bar's trough and the well's frame among them, 2026-11-17), the waveform's
 // tones, the cue outline, the inactive cue and its outline
 // (dark: "those weren't bright to begin with") and the scanner (below). At
 // 75 on the reference row: the accent FFAD56 -> C88B4A, the purple B595FC
 // -> 9179C6, the head 03C3D5 -> 0B9BA9 and its line 81E1EA -> 85CDD4
-// (bright_mixed_tones, the code).
+// (bright_mixed_tones, the code); at the default 100 every row is painted
+// at its own numbers.
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,

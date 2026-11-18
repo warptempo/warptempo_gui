@@ -59,13 +59,14 @@
 // no `lit_fill` stands beside it holding the same tone; its two other faces
 // are the two roles
 // above; WHAT IS PRINTED ON IT has none either — the glyph road takes the
-// theme row's WORD, so `text_on_lit` and `text_on_lit_dim` are read by
-// key_ink off installed_theme(), as `text` and `key_dim_ink` are for a
-// glyph. No door class: the seven overlay openers light as the lamps do.
+// theme row's WORD, so `text_on_lit`, `text_on_lit_dim` and
+// `radio_text_on_lit_dim` are read by key_ink off installed_theme(), as
+// `text` and `key_dim_ink` are for a glyph. No door class: the seven overlay openers light as the lamps do.
 // THE LIT RADIO KEY (architect 2026-11-11, session 107, materials.h's THE
 // RADIO KEYS) HAS ALL THREE FACES HERE — the purple is no program role, so
 // its face at rest is a chrome role of its own, `radio_lit_fill`, beside
-// its press and inert faces; the print on it is the lamps' words.
+// its press and inert faces; the print on it is the lamps' `text_on_lit`,
+// its inert print `radio_text_on_lit_dim` (2026-11-17, session 140).
 // TWO ROLES
 // MAY SHARE A TONE — a
 // role is what it paints, not its value: `label`, `field_text` and `text`

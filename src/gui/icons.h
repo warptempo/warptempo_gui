@@ -19,10 +19,12 @@
 //   rest shared drawings) —
 //   centered on its face (paint_key_glyph, paint_handler.cpp), `text`
 //   B5B5B5 at rest and pressed, `key_dim_ink` (Default's 5D5D5D) on a disabled key,
-//   `text_on_lit` (Default's 111111) on a lit one's accent face (a radio
+//   `text_on_lit` (Default's 070707) on a lit one's accent face (a radio
 //   key's purple, 2026-11-11, session 107), pressed or
-//   not, and `text_on_lit_dim` (Default's 090909) on a lit disabled one's
-//   dimmed face (materials.h's key_ink; architect 2026-11-11, session 106).
+//   not, and `text_on_lit_dim` (Default's 2E2114; a radio key's
+//   `radio_text_on_lit_dim`, 231E2D) on a lit disabled one's dimmed face
+//   (materials.h's key_ink; architect 2026-11-11, session 106; 2026-11-17,
+//   session 140).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note
 //   (MusicNote16th, BPM's glyph too) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_logo_lane), the list rows'

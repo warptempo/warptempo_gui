@@ -59,7 +59,7 @@
 // UNDER PRESS `lit_press_fill`, Default's C68743 — the accent scaled by the
 // press face's ratio to the resting face (42 / 54 = 0.778 on Default; the
 // derivation, theme_roles.h's head), the same push in from the accent's own
-// starting point; LIT BUT INERT `lit_dim_fill`, Default's 83592C — a
+// starting point; LIT BUT INERT `lit_dim_fill`, Default's C88B4A — a
 // checked key that is disabled (below).
 // THE RADIO KEYS WEAR THE PURPLE (architect 2026-11-11, session 107: "when
 // you double up on the orange or any accent color, it starts looking too
@@ -73,21 +73,27 @@
 // `radio_lit_fill`, Default's B595FC (his "the flat sharp key that you see
 // in the Ableton screenshots"); LIT UNDER PRESS `radio_lit_press_fill`,
 // Default's 8D74C4, the purple by the same press ratio; LIT BUT INERT
-// `radio_lit_dim_fill`, Default's 5D4D81, the purple by the same dim
-// scalar (the derivation, theme_roles.h's DERIVED block). Every theme reads its own ScaleAwareness,
-// so "the purple" is that theme's role. What is printed on it is the
-// accent's print, `text_on_lit` / `text_on_lit_dim` (key_ink below parts no
-// class). THE PAINTER LEARNS THE CLASS AT ONE SITE: paint_key's
-// `KeyLitClass` (below), read for a lit key alone, the roster's painter
-// passing the predicate's answer (paint_roster_case, paint_handler.cpp);
-// every other key surface — the controls rows, the on-screen keyboard, the
-// level case, the scrub's thumb — says Lamp.
-// WHAT IS PRINTED ON A LIT FACE IS NEAR-BLACK: `text_on_lit`, Default's
-// 111111 (ControlContrastFrame) — the key's Breeze glyph and the on-screen
-// keyboard's cap — on the accent and on the darkened accent alike (the text
-// tone on the accent, B5B5B5 on FFAD56, is about 1.1 : 1; his "agree"), and
-// on the purple's faces alike; on a resting or pressed unlit face `text`
-// (key_ink below).
+// `radio_lit_dim_fill`, Default's 9179C6, the purple at 75 % over the
+// ground as the accent's (the derivation, theme_roles.h's DERIVED block).
+// Every theme reads its own ScaleAwareness, so "the purple" is that theme's
+// role. What is printed on it is the accent's print, `text_on_lit`, and on
+// its inert face its own inert print, `radio_text_on_lit_dim` (the print at
+// 80 % over the radio key's inert face; key_ink below parts the two inert
+// prints by the class). THE PAINTER LEARNS THE CLASS AT ONE SITE PER ROAD:
+// paint_key's and key_ink's `KeyLitClass` (below), read for a lit key
+// alone, the roster's painters passing the predicate's answer
+// (roster_lit_class, paint_handler.cpp: paint_roster_case and the glyph's
+// paint_key_glyph); every other key surface — the controls rows, the
+// on-screen keyboard, the level case, the scrub's thumb — says Lamp.
+// WHAT IS PRINTED ON A LIT FACE IS THE SELECTION'S TEXT: `text_on_lit`,
+// Default's 070707 (StandbySelectionForeground; architect 2026-11-17,
+// session 140: Arc prints its $selected_fg_color white on its checked blue,
+// so the print is the theme's own partner of its selection, near-black on
+// Live's files) — the key's Breeze
+// glyph and the on-screen keyboard's cap — on the accent and on the
+// darkened accent alike (the text tone on the accent, B5B5B5 on FFAD56, is
+// about 1.1 : 1; his "agree"), and on the purple's faces alike; on a
+// resting or pressed unlit face `text` (key_ink below).
 // EVERY OTHER CHECKED KEY WEARS THE ACCENT: the state lamps (MAGNIFY, Read
 // Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
 // Drag), the render player's Repeat One, AND THE DOORS, the seven overlay
@@ -137,15 +143,14 @@
 // on a locked tab or under grid iterations, the chosen view pair under grid
 // iterations, any lit key an overlay leaves dead — DIMS ITS FACE AND
 // ITS GLYPH AS ONE (architect 2026-11-11, session 106: "dim the accent and
-// the glyph so both read as a unit"): the face `lit_dim_fill`, the accent,
-// and the glyph `text_on_lit_dim`, the print on it, BOTH MOVED BY THE ONE
-// RATIO the dim glyph bears to the resting one, toward black on a dark
-// theme, mean(key dim ink) / mean(text) (Default 93 / 181: FFAD56 ->
-// 83592C, 111111 -> 090909), toward white on a light one (architect
-// 2026-11-11, session 109; the derivation, theme_roles.h's DERIVED block) —
-// a radio key's face
-// `radio_lit_dim_fill`, the purple by the same scalar (B595FC -> 5D4D81),
-// under the same glyph — still the lamp's hue, so the
+// the glyph so both read as a unit") IN ARC'S INSENSITIVE-ACTIVE (architect
+// 2026-11-17, session 140, D5): the face `lit_dim_fill`, the accent at 75 %
+// over the ground (Default FFAD56 over 242424 -> C88B4A), and the glyph
+// `text_on_lit_dim`, the print at 80 % over that face (070707 -> 2E2114;
+// the derivation, theme_roles.h's DERIVED block) — a radio key's face
+// `radio_lit_dim_fill`, the purple by the same rule (B595FC -> 9179C6),
+// under its own glyph `radio_text_on_lit_dim` (231E2D) — still the lamp's
+// hue, so the
 // state reads true, dimmed as every dead glyph is; its legend `key_dim_ink`
 // as every dead key's; no press stands on a dead key, so the pair has no
 // pressed look. UNDER AN OVERLAY A DEAD LIT KEY STAYS LIT, DIMMED
@@ -197,12 +202,14 @@
 // (2026-11-02) and their legends (2026-11-03) — and `text_dim`, Default's
 // 757575 (TextDisabled), for the settings page's inert rows and the
 // tooltip's hint line. ON A LIT KEY'S FACE the print — its glyph, the
-// on-screen keyboard's lit cap — is `text_on_lit`, Default's 111111
-// (ControlContrastFrame), in place of `text` (architect 2026-11-11, session
-// 106, THE KEY above); on a lit disabled key's dimmed face
-// `text_on_lit_dim`, Default's 090909. THE
-// CARDS' words and glyph wear their own ink, `card_ink`, Default's 2A2A2A
-// (Desktop) on Live's orange (THE CARDS, below; 2026-11-04 night). A
+// on-screen keyboard's lit cap — is `text_on_lit`, Default's 070707
+// (StandbySelectionForeground, the selection's text; architect 2026-11-17,
+// session 140), in place of `text` (architect 2026-11-11, session 106, THE
+// KEY above); on a lit disabled key's dimmed face `text_on_lit_dim`,
+// Default's 2E2114, a radio key's `radio_text_on_lit_dim`, 231E2D. THE
+// CARDS' words and glyph wear their own ink, `card_ink`, Default's 070707
+// (StandbySelectionForeground, the same print) on Live's orange (THE CARDS,
+// below; 2026-11-04 night; the print's tone since 2026-11-17, D4). A
 // DISABLED KEY'S glyph and legend take their own tone, `key_dim_ink`,
 // Default's 5D5D5D (ViewCheckControlDisabledOff over the key face, Live's
 // own number on every theme since 2026-11-07, theme_roles.h's head; architect
@@ -227,14 +234,17 @@
 // ground; Live's track is transparent), and on it THE PILL, the span,
 // `trim_span_face`, Default's 696969, or `selected_fill` while a drag
 // moves it (render_trim_flags); the frame's line; THE RULER `ruler_face`,
-// Default's 363636, with the `text` digits and the `ruler_tick` ticks,
-// Default's 919191; the frame's line; THE MARKER LANE `lane_face`,
+// THE CANVAS'S TONE, Default's 393939 (architect 2026-11-17, session 140,
+// ruling 3: "the ruler lane is light, the marker lane is dark, and then the
+// canvas is lighter"), with the `text` digits and the `ruler_tick` ticks,
+// Default's 919191 (DetailViewRulerMarkings over the ruler); the frame's
+// line; THE MARKER LANE `lane_face`,
 // Default's 2A2A2A (architect 2026-11-03, the retrofit: Live's next real
 // fill above the 242424 ground — Desktop); the frame's line; THE CANVAS
 // (the palette's `waveform_canvas`), its stereo divider the frame's tone.
 // Every Default number is Live's, measured on his Live 12 shots (the
-// ruler and its ticks the time ruler, the lane the clip view's marker
-// lane). Where a theme makes the lane, the trough, the frame or the dim
+// ruler's ticks the time ruler's, the lane the clip view's marker lane; the
+// ruler's face the canvas's). Where a theme makes the lane, the trough, the frame or the dim
 // text coincide with the ground, that is Live's own number — ACCEPTED, not
 // a bug, no backstop (architect 2026-11-05).
 // THE TIME FIELDS are flat `key_face` boxes, no ring (2026-11-01 night,
@@ -288,8 +298,10 @@
 // 111111 ink): every notification card, both classes alike, is A FLAT BOX in
 // `card_face`, Default's E76942 — LIVE'S STATUS BAR'S ORANGE (Alert),
 // measured on his Live 12 shot of 2026-10-31 (231 105 66) — its words and
-// its class glyph in `card_ink`, Default's 2A2A2A, Live's own text on that
-// bar (42 42 42; Desktop), and NO VISIBLE BORDER: the one-W ring's rows and
+// its class glyph in `card_ink`, THE PRINT ON A LIT FACE, the theme's
+// StandbySelectionForeground, Default's 070707 (architect 2026-11-17,
+// session 140, D4, "white card words": Arc's $warning_fg_color FFFFFF on its
+// warning orange), and NO VISIBLE BORDER: the one-W ring's rows and
 // columns stay in the layout, painted in the fill (the chrome's
 // `card_ground`, `card_text` and `card_frame`, theme_file.h; render.h's THE
 // CARD FACE) — Live's status-bar orange, a message rather than a state, not
@@ -329,8 +341,10 @@ inline constexpr bool key_look_pressed(KeyLook look) {
 // Radio — the purple, `radio_lit_fill`, with `radio_lit_press_fill` /
 // `radio_lit_dim_fill`, the eight of redesign_button_is_radio (app_state.h,
 // the one owner of the roster's membership). Read by paint_key for a lit
-// look alone; an unlit key's faces are one for both classes, and key_ink
-// reads no class (the print on both is `text_on_lit`'s). A REQUIRED
+// look alone, and by key_ink for a lit disabled key alone (its inert print,
+// `text_on_lit_dim` or `radio_text_on_lit_dim`; architect 2026-11-17,
+// session 140, D5); an unlit key's faces and prints are one for both
+// classes, and a live lit key's print is `text_on_lit` in both. A REQUIRED
 // ARGUMENT, so every key surface says its class: the roster's painter the
 // predicate's answer, every other surface Lamp.
 enum class KeyLitClass { Lamp, Radio };
@@ -339,13 +353,20 @@ enum class KeyLitClass { Lamp, Radio };
 // on-screen keyboard's cap (the head's THE KEY and THE TEXT TONES; architect
 // 2026-11-11, session 106) — as the installed theme's sRGB word (the Breeze
 // glyph road takes the word, icons::draw_glyph): ON A LIT FACE, pressed or
-// not, `text_on_lit`, or, the key disabled, `text_on_lit_dim` on its dimmed
-// face; on an unlit key `text`, or `key_dim_ink` on a disabled one — the
-// same word on the press face as on the resting one. The legend under the
-// key is not this ink's (paint_key_legend, paint_handler.cpp: never lit).
-inline uint32_t key_ink(KeyLook look, bool enabled) {
+// not, `text_on_lit`, or, the key disabled, the print of its dimmed face —
+// `text_on_lit_dim` on a lamp-class key's, `radio_text_on_lit_dim` on a
+// radio key's (architect 2026-11-17, session 140, D5: each inert print is
+// the print at 80 % over its own inert face, so the class parts it); on an
+// unlit key `text`, or `key_dim_ink` on a disabled one — the same word on
+// the press face as on the resting one, the class read for a lit disabled
+// key alone. The legend under the key is not this ink's (paint_key_legend,
+// paint_handler.cpp: never lit).
+inline uint32_t key_ink(KeyLook look, bool enabled, KeyLitClass cls) {
     const GuiThemeTones& t = installed_theme().tones;
-    if (key_look_lit(look)) return enabled ? t.text_on_lit : t.text_on_lit_dim;
+    if (key_look_lit(look))
+        return enabled                   ? t.text_on_lit
+             : cls == KeyLitClass::Radio ? t.radio_text_on_lit_dim
+                                         : t.text_on_lit_dim;
     return enabled ? t.text : t.key_dim_ink;
 }
 

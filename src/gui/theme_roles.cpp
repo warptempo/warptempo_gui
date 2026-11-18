@@ -170,18 +170,10 @@ Rgb mix(const Rgb& a, const Rgb& b, double t) {
                clamp_byte(a.b + t * (b.b - a.b))};
 }
 
-// c · ratio, per channel, rounded and clamped (the lit key's derived tones).
+// c · ratio, per channel, rounded and clamped (the lit press faces).
 Rgb scale(const Rgb& c, double ratio) {
     return Rgb{clamp_byte(c.r * ratio), clamp_byte(c.g * ratio),
                clamp_byte(c.b * ratio)};
-}
-
-// 255 − (255 − c) · ratio, per channel, rounded and clamped as `scale`: the
-// lit-but-inert tones on a light theme, scaled toward white (derive).
-Rgb scale_toward_white(const Rgb& c, double ratio) {
-    return Rgb{clamp_byte(255.0 - (255 - c.r) * ratio),
-               clamp_byte(255.0 - (255 - c.g) * ratio),
-               clamp_byte(255.0 - (255 - c.b) * ratio)};
 }
 
 double mean(const Rgb& c) { return (c.r + c.g + c.b) / 3.0; }
@@ -214,61 +206,45 @@ constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
 };
 
 // THE TONES DERIVED FROM A ROW'S OWN WORDS (the head's DERIVED block: the
-// lit key's three and the print on its inert face, the radio keys' two, the
-// enabled chip's fill and the playhead's line), ONE BODY for both roads:
-// derive() fills them off the theme's own numbers, bright_mixed_tones off
-// the mixed bright tones, so each formula is written once. Every input is a
-// word of the row — the key face (SurfaceBackground), the press face
-// (Desktop), the text (ControlForeground), the key dim ink, the print on a
-// lit face (ControlContrastFrame), the accent, the purple and the head —
-// each the same bytes derive() reads off the roles, so the doubles and
-// their order are the derivation's own (Python's, bit for bit).
+// lit key's press and inert faces and the print on its inert face, the
+// radio keys' three, the enabled chip's fill and the playhead's line), ONE
+// BODY for both roads: derive() fills them off the theme's own numbers,
+// bright_mixed_tones off the mixed bright tones, so each formula is written
+// once. Every input is a word of the row — the key face
+// (SurfaceBackground), the press face (Desktop), the ground (SurfaceArea,
+// never mixed), the print on a lit face (StandbySelectionForeground, never
+// mixed), the accent, the purple and the head — each the same bytes
+// derive() reads off the roles, so the doubles and their order are the
+// derivation's own (Python's, bit for bit).
 void fill_dependent_tones(GuiThemeTones& t) {
     const Rgb face     = unpacked(t.key_face);
     const Rgb desktop  = unpacked(t.key_press_face);
-    const Rgb text     = unpacked(t.text);
-    const Rgb dim_ink  = unpacked(t.key_dim_ink);
-    const Rgb contrast = unpacked(t.text_on_lit);
+    const Rgb ground   = unpacked(t.ground);
+    const Rgb print    = unpacked(t.text_on_lit);
     const Rgb on       = unpacked(t.cue);
     const Rgb radio    = unpacked(t.radio_lit_fill);
     const Rgb range    = unpacked(t.playhead_head);
     const Rgb white    = Rgb{255, 255, 255};
-    // THE LIT KEY'S DERIVED TONES (the head's DERIVED block; architect
-    // 2026-11-11, session 106). THE LIT PRESS FILL: the accent scaled by the
-    // ratio the press face bears to the key face, mean over mean; a black
-    // key face (no divisor) leaves the accent as it is. THE LIT-BUT-INERT
-    // PAIR: the accent and the print on it, both moved by the one ratio the
-    // disabled key's ink bears to the text, in the direction the disabled
-    // ink lies from the text (architect 2026-11-11, session 109, his pick
-    // (a): "the same rule in negative" on a light theme). Where mean(text)
-    // >= mean(dim ink), a dark theme, each tone is scaled toward black by
-    // mean(dim ink) / mean(text); the divisor is zero only when the text
-    // and the dim ink are both black, and that answer is ratio 1, both
-    // tones whole. Where mean(text) < mean(dim ink), a light theme, each
-    // tone is scaled toward white by (255 − mean(dim ink)) / (255 −
-    // mean(text)) on its distance from white; that divisor is never zero
-    // (mean(text) < mean(dim ink) <= 255). THE RADIO KEYS' PRESS AND INERT
-    // FACES (architect 2026-11-11, session 107): the purple by the same two
-    // ratios, the inert one on the same branch.
+    // THE LIT PRESS FILLS (the head's DERIVED block; architect 2026-11-11,
+    // sessions 106 / 107): the accent, and the purple, scaled by the ratio
+    // the press face bears to the key face, mean over mean; a black key face
+    // (no divisor) leaves each as it is.
     const double face_mean   = mean(face);
     const double press_ratio =
         face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
-    const double text_mean   = mean(text);
-    const double dim_mean    = mean(dim_ink);
-    const bool   dim_to_white = text_mean < dim_mean;
-    const double dim_ratio   =
-        dim_to_white      ? (255.0 - dim_mean) / (255.0 - text_mean)
-        : text_mean == 0.0 ? 1.0
-                           : dim_mean / text_mean;
-    const auto dim_tone = [&](const Rgb& c) {
-        return dim_to_white ? scale_toward_white(c, dim_ratio)
-                            : scale(c, dim_ratio);
-    };
     t.lit_press_fill       = packed(scale(on, press_ratio));
-    t.lit_dim_fill         = packed(dim_tone(on));
-    t.text_on_lit_dim      = packed(dim_tone(contrast));
     t.radio_lit_press_fill = packed(scale(radio, press_ratio));
-    t.radio_lit_dim_fill   = packed(dim_tone(radio));
+    // THE LIT-BUT-INERT PAIRS, ARC'S INSENSITIVE-ACTIVE (the head's DERIVED
+    // block; architect 2026-11-17, session 140, D5): the face the lit color
+    // at 75 % over the ground, mix(ground, color, 0.75); the print on it the
+    // print on a lit face at 80 % over that face, mix(face, print, 0.8) —
+    // the accent's pair and the purple's, each its own print.
+    const Rgb lit_dim   = mix(ground, on, 0.75);
+    const Rgb radio_dim = mix(ground, radio, 0.75);
+    t.lit_dim_fill          = packed(lit_dim);
+    t.text_on_lit_dim       = packed(mix(lit_dim, print, 0.8));
+    t.radio_lit_dim_fill    = packed(radio_dim);
+    t.radio_text_on_lit_dim = packed(mix(radio_dim, print, 0.8));
     // The enabled chip wears the accent (the head's ROLE-NAMED, cue).
     t.cue_fill             = packed(on);
     // The playhead's line, white exactly half way to the head (the head's
@@ -278,8 +254,8 @@ void fill_dependent_tones(GuiThemeTones& t) {
 
 // One theme's tones AT ITS OWN NUMBERS (the head's DERIVATION; the bright
 // mix is the install's, bright_mixed_tones). Total: every tone is a role, a
-// composite, a mix or a scaled role, and each of the two ratios' zero
-// divisor has its own answer (fill_dependent_tones).
+// composite, a mix or a scaled role, and the press ratio's zero divisor has
+// its own answer (fill_dependent_tones).
 GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
     const Rgb desktop  = opaque(roles["Desktop"]);
@@ -312,7 +288,9 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb dim_ink    = over(rgba(roles["ViewCheckControlDisabledOff"]), face_a);
     const Rgb span_role  = over(rgba(roles["ScrollbarInnerHandle"]),
                                 rgba(roles["Desktop"]));
-    const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), face_a);
+    // The ruler's ticks over the ruler they stand on, the canvas (architect
+    // 2026-11-17, session 140, ruling 3: the ruler wears the canvas's tone).
+    const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), canvas_a);
     // The trim bar's trough and the well's frame, each Live's role over the
     // ground they stand on (the head's COMPOSITED block; architect
     // 2026-11-17, session 140).
@@ -324,13 +302,13 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.ground              = packed(ground);
     t.text                = packed(text);
     t.text_dim            = packed(dim);
-    t.text_on_lit         = packed(contrast);
+    t.text_on_lit         = packed(standby_text);
     t.key_dim_ink         = packed(dim_ink);
     t.key_face            = packed(face);
     t.key_press_face      = packed(desktop);
     t.radio_lit_fill      = packed(radio);
     t.well_frame          = packed(dim);
-    t.ruler_face          = packed(face);
+    t.ruler_face          = packed(canvas);
     t.ruler_tick          = packed(tick_role);
     t.lane_face           = packed(desktop);
     t.trim_bar_face       = packed(trough);
@@ -343,7 +321,7 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.pane_face           = packed(face);
     t.score_pane_face     = packed(ink);
     t.card_face           = packed(alert);
-    t.card_ink            = packed(desktop);
+    t.card_ink            = packed(standby_text);
     t.clip_lamp           = packed(vu_max);
     t.level_fill          = packed(lvl_fill);
     t.waveform_canvas     = packed(canvas);

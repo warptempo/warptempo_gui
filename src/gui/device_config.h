@@ -320,9 +320,10 @@
 //                            number, its key, grammar and row going then;
 //                            the first-run value the defaults file's
 //   bright_mix=<pct>         THE BRIGHT TONES' MIX (architect 2026-11-13,
-//                            session 119: "I like all 75"; "a universal
-//                            rule of 75 should work"; theme_roles.h's THE
-//                            BRIGHT MIX): the whole PERCENT of itself each
+//                            session 119; its default 100 since
+//                            2026-11-17, session 140: "let's go with 100
+//                            for everything"; theme_roles.h's THE BRIGHT
+//                            MIX): the whole PERCENT of itself each
 //                            bright tone of the installed theme keeps as it
 //                            is mixed toward the theme's ground — the
 //                            accent, the radio keys' purple, the playhead's
@@ -828,8 +829,8 @@ struct DeviceConfig {
     // list; a tuning key): required; the construction state is 10.
     int         sweep_highlight   = 10;
     // THE BRIGHT TONES' MIX in whole percent (2026-11-13, the head's list; a
-    // tuning key): required; the construction state is 75.
-    int         bright_mix        = 75;
+    // tuning key): required; the construction state is 100 (2026-11-17).
+    int         bright_mix        = 100;
     // THE PLATE'S FADE START in hundredths of a device px (2026-11-14, the
     // head's list; a tuning key): required; the construction state is
     // 1 px (kWaveformFadeDefaultHundredths below).
@@ -1400,14 +1401,15 @@ inline std::optional<int> parse_sweep_highlight(std::string_view v) {
 
 // THE bright_mix GRAMMAR (architect 2026-11-13, session 119: "whole
 // integers. Sounds good") — an integer of whole PERCENT in [0, 100] in
-// canonical spelling ("75", never "075" or "+75": the int tuning keys'
+// canonical spelling ("100", never "0100" or "+100": the int tuning keys'
 // grammar, sweep_highlight's), the one owner the reader, the writer, the
 // settings editor's commit and its recall read (format_bright_mix,
 // parse_bright_mix). The number is how much of itself each bright tone
 // keeps as the install mixes it toward the theme's ground: tone + (1 − p /
 // 100) · (ground − tone) per channel (bright_mixed_tones, theme_roles.h's
 // THE BRIGHT MIX). THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE
-// FIRST-RUN VALUES above; 75, his "a universal rule of 75 should work"). The
+// FIRST-RUN VALUES above; 100, every theme at its own numbers — architect
+// 2026-11-17, session 140: "let's go with 100 for everything"). The
 // range: 100 paints every theme's own numbers; 0 paints every bright tone
 // the ground itself. The settings page opens the LINE EDITOR on it, not a
 // value list (101 values is no short domain, kSettingsValueListKeys' rule).
