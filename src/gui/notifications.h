@@ -171,10 +171,15 @@
 //     in the refused field, selected whole (text_editor::refuse; the field
 //     changes no colour, architect 2026-10-03, so the card is the refusal's
 //     one statement).
-//   * THE PROPAGATE REPORTS: the phase-reset pastes' "Stopped at …" and
-//     kNothingMatched (propagate_blocks.h, two readers); a paste that wrote
-//     no block skips the switch to target view, the card being the whole
-//     answer, while a paste that paired blocks lands even byte-equal.
+//   * THE PROPAGATE REPORTS: the phase-reset pastes' "Stopped at …",
+//     kNothingMatched (propagate_blocks.h, two readers) and the two
+//     "nothing changed" sentences (architect 2026-11-18, "E. Agree."):
+//     kPhaseResetStateAlreadyMatches, PASTE's hold that paired blocks and
+//     flipped none, and kPhaseResetsAlreadyMatch, the tap's byte-equal paste
+//     (its wording the planner's, pending his word); a paste that wrote no
+//     block skips the switch to target view,
+//     the card being the whole answer, while a paste that paired blocks
+//     lands even byte-equal.
 //   * THE CLIPBOARD WRITES, the one class of success that cards (nothing
 //     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+Shift+J)
 //     and "Copied the selected markers' phase resets" (bare P); and the
@@ -253,7 +258,9 @@
 //     the dirty mark going out being its answer (architect 2026-08-30: "the
 //     disc writes — there is something that paints"), the Save button
 //     greying since 2026-10-05 (plain_save_actionable); a clean
-//     propagate walk; a landed checkpoint or pull; and the crossed-trim reset
+//     propagate walk that changed the store, its landing selecting what
+//     changed (a clean paste that changed nothing cards, above); a
+//     landed checkpoint or pull; and the crossed-trim reset
 //     (auto_clear_crossed_trim — the endcaps snapping to the song's edges is
 //     the cue, and a full window changes no output).
 //   * A CHORD THIS PRODUCT BINDS NOWHERE IN THE STANDING MODE, wherever it is

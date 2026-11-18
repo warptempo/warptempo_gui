@@ -44,10 +44,10 @@ constexpr double kPropagateBoundaryGuardSeconds = 0.100;
 
 // THE TWO PASTES' SHARED "NOTHING HAPPENED" SENTENCE (architect 2026-08-30, the
 // strictness ruling; kept 2026-08-31 when the switch under it left). TWO
-// READERS, re-greped 2026-09-19: the placement paste's matched==0 arm (where
+// READERS, re-greped 2026-11-18: the placement paste's matched==0 arm (where
 // the destination produced no owned block) and the state paste's
-// pair_count==0 arm. A CLEAN PARTIAL WALK is not this: it pasted what it had,
-// and a success says nothing.
+// pair_count==0 arm. A CLEAN PARTIAL WALK is not this: it pasted what it had
+// (a paste that changed nothing says so, the sentences below).
 //
 // THE SENTENCE OUTLIVED ITS ORIGINAL ARGUMENT AND STANDS ON ITS OWN. It was
 // raised because both pastes ended on the ALWAYS-SWITCH to target view — a
@@ -60,6 +60,27 @@ constexpr double kPropagateBoundaryGuardSeconds = 0.100;
 // it stood — and the words need no scene change to make sense.
 inline constexpr const char* kNothingMatched =
     "Nothing matched, so nothing was pasted";
+
+// THE TWO PASTES' "NOTHING CHANGED" SENTENCES (architect 2026-11-18, "E.
+// Agree.": a card when PASTE's hold pairs resets and flips none, and the same
+// for the tap's paste that writes nothing). A paste that walked its blocks
+// clean and left the store byte-equal still lands in the P column (the
+// 2026-08-31 ruling), and that scene cannot say whether anything was written,
+// so the words do — "Nothing to commit"'s shape for a successful no-op.
+// TWO SENTENCES, ONE READER EACH, because "state" is the hold's word in the
+// product (PASTE's tooltip, "Hold to paste their state"): after the tap it
+// would read as if only the enabled bit were compared, while the tap's
+// compare is the whole row, placement and state.
+//   * kPhaseResetStateAlreadyMatches — PASTE's hold (Ctrl+Shift+P) that
+//     paired blocks and flipped no reset (PhaseResetPropagate::
+//     paste_state_apply).
+//   * kPhaseResetsAlreadyMatch — PASTE's tap (Ctrl+P) that matched blocks
+//     and rewrote every row as it stood (PhaseResetPropagate::paste_apply,
+//     !store_changed). Its wording is the planner's, pending his word.
+inline constexpr const char* kPhaseResetStateAlreadyMatches =
+    "The phase resets already match the copied state";
+inline constexpr const char* kPhaseResetsAlreadyMatch =
+    "The phase resets already match the copied ones";
 
 // One named block resolved from a warp-marker walk. `label` is the owning
 // marker's label name (empty markers don't produce entries); `start` is the

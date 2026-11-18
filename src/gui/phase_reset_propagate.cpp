@@ -470,8 +470,8 @@ void PhaseResetPropagate::paste_apply() {
 
     // Distinguish "stopped on divergence" (matched < pair_count: the loop
     // broke at a label mismatch) from "one side ran out" (matched ==
-    // pair_count: a clean partial walk — no message, mirroring
-    // paste_state's silent partial-run rule).
+    // pair_count: a clean partial walk — no stop message, as in
+    // paste_state_apply).
     std::string stop_message;
     if (matched < pair_count) {
         stop_message = "Stopped at " +
@@ -501,7 +501,7 @@ void PhaseResetPropagate::paste_apply() {
         // unchanged.
         // A CLEAN PARTIAL WALK (one side simply ran out, with blocks matched)
         // is not this path at all: it pasted what it had, so it lands, and a
-        // success says nothing.
+        // success says nothing unless it changed nothing (the tail's card).
         if (!stop_message.empty()) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  std::move(stop_message));
@@ -681,12 +681,20 @@ void PhaseResetPropagate::paste_apply() {
         target_render.trigger();
     }
 
-    // Partial paste that stopped on a divergence: matched prefix is
-    // pasted AND the divergence is reported. A clean full paste leaves
-    // stop_message empty and shows nothing.
+    // AT MOST ONE CARD (this path matched at least one block). Partial paste
+    // that stopped on a divergence: matched prefix is pasted AND the
+    // divergence is reported. A CLEAN WALK THAT CHANGED NOTHING SAYS SO
+    // (architect 2026-11-18, "E. Agree."; kPhaseResetsAlreadyMatch,
+    // propagate_blocks.h): the byte-equal paste (store_changed false) pushed
+    // nothing and still lands below, a scene that cannot tell a written paste
+    // from a skipped one. A clean paste that changed the store says nothing:
+    // the landing selects what it created.
     if (!stop_message.empty()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              std::move(stop_message));
+    } else if (!store_changed) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kPhaseResetsAlreadyMatch);
     }
 
     // Land in the P column of the audio view the paste was pressed in (S+W to
@@ -897,20 +905,25 @@ void PhaseResetPropagate::paste_state_apply() {
         target_render.trigger();
     }
 
-    // ONE CARD FOR THE PRESS, and only where the run paired nothing at all:
-    // pair_count == 0 means one of the two sides produced no block, so the
-    // lockstep loop never ran and no flag could flip — the state a sentence
-    // exists for (architect 2026-08-30, the strictness ruling; the literal is
-    // its sibling's, kNothingMatched above). A DIVERGENCE or a count mismatch
-    // has its own `Stopped at …` report and wins here, and a run that paired
-    // blocks and flipped nothing stays silent: it walked what it had, and a
-    // clean walk says nothing.
+    // AT MOST ONE CARD FOR THE PRESS. A DIVERGENCE or a count mismatch has
+    // its own `Stopped at …` report and wins here. pair_count == 0 means one
+    // of the two sides produced no block, so the lockstep loop never ran and
+    // no flag could flip (architect 2026-08-30, the strictness ruling; the
+    // literal is its sibling's, kNothingMatched above). A CLEAN WALK THAT
+    // FLIPPED NOTHING SAYS SO (architect 2026-11-18, "E. Agree.";
+    // kPhaseResetStateAlreadyMatches, propagate_blocks.h): it still lands
+    // below with nothing selected and nothing moved, a scene that cannot tell
+    // a written state from a skipped one. A clean walk that flipped a reset
+    // says nothing: the landing selects what it flipped.
     if (!stop_message.empty()) {
         notifications.notify(AppState::NotificationClass::Normal,
                              std::move(stop_message));
     } else if (pair_count == 0) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kNothingMatched);
+    } else if (!any_change) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kPhaseResetStateAlreadyMatches);
     }
 
     // AND A RUN THAT WROTE NO BLOCK DOES NOT MOVE (architect 2026-08-31 —
@@ -936,7 +949,8 @@ void PhaseResetPropagate::paste_state_apply() {
     // STILL LANDS. A paste that paired stands as a paste: it walked its blocks
     // and wrote the state they were asked for, and the switch shows a TRUE
     // result (the destination in the P column, already carrying what was
-    // pasted). It is not the misleading scene the switch was retired for, which
+    // pasted), its card saying the state already matched (above). It is not
+    // the misleading scene the switch was retired for, which
     // is a paste that touched no block at all. This is a RULING, not an
     // oversight, and the same line holds for paste_apply's byte-equal
     // self-paste, which lands too.
