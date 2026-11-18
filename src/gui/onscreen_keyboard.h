@@ -77,7 +77,7 @@
 // under the editor); A STICKY SHIFT, a latch (a press lights it, a second
 // puts it out; lit, the letters type capital and LEFT / RIGHT extend the
 // selection — THE SELECTION'S ONE ROAD, the field's double tap retired the
-// same day); and BREEZE GLYPHS on the function keys that act on the text
+// same day); and GLYPHS, the `icons` set's, on the function keys that act on the text
 // (Tab, Bksp, Enter, Copy, Paste, LEFT, RIGHT, the pass key; cap_word).
 // WHAT IT DELIBERATELY HAS NOT GOT: no language switching (one layout), no
 // hide act (it leaves with the editor that raised it), no long-press
@@ -468,7 +468,8 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 //
 // THE GLYPH KEYS (architect 2026-11-08, sessions 95 / 96, reversing "no
 // glyphs" of 2026-08-27 / 2026-09-01 / 2026-10-29 night): the function keys
-// that act on the text wear a BREEZE GLYPH — Tab `format-indent-more`
+// that act on the text wear A GLYPH, the `icons` set's (Breeze's names
+// here) — Tab `format-indent-more`
 // (FormatIndentMore), Bksp `edit-clear` (EditClear, the leftward key with
 // its X), Enter `key-enter` (KeyEnter), Copy and Paste row 8's EditCopy /
 // EditPaste, LEFT and RIGHT the chevrons GoPrevious / GoNext, the pass key

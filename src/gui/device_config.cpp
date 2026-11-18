@@ -23,7 +23,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY-TWO keys since 2026-11-14, the
+// REQUIRED SET, every one of them (TWENTY-THREE keys since 2026-11-17, the
+// icon set `icons` appended at the end — a permanent key, Breeze's or
+// Papirus's drawings, icons.h's head; TWENTY-TWO from 2026-11-14, the
 // plate's fade start `waveform_fade_px` appended at the end — a tuning key,
 // the bar width in device px at which the waveform's finer level starts to
 // appear;
@@ -130,6 +132,11 @@ namespace {
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
+//
+// THE ICON SET (2026-11-17): `icons` FOLLOWS `waveform_fade_px`, THE ONE
+// PERMANENT KEY PAST THE TUNING KEYS — appended at the file's end as the
+// joined key (session 141's brief), where a tuning key's leaving moves
+// nothing past it.
 // (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
 // 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
 // kNoiseFadeOutMs; the tooltip's gap `tooltip_gap` after `tooltip_delay_ms`
@@ -164,6 +171,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "sweep_highlight",
     "bright_mix",
     "waveform_fade_px",
+    "icons",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -423,6 +431,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The fade start's canonical decimal
             // (format_waveform_fade_px).
             s += format_waveform_fade_px(cfg.waveform_fade_hundredths);
+        } else if (k == "icons") {
+            // The set's word (format_icons, the grammar's owner).
+            s += format_icons(cfg.icons);
         }
         s += '\n';
     }
@@ -693,6 +704,17 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kWaveformFadeGrammarReason);
             }
             out.waveform_fade_hundredths = *hundredths;
+            return {};
+        }
+        // THE ICON SET (2026-11-17, a permanent key): one of the two words
+        // under its one owner (parse_icons, device_config.h), required like
+        // every key; any other word the launch's hard fail.
+        if (key == "icons") {
+            const std::optional<GuiIconSet> set = parse_icons(value);
+            if (!set) {
+                return bad_value(ln, key, value, kIconsGrammarReason);
+            }
+            out.icons = *set;
             return {};
         }
         return warptempo_parse::prefix_line_error(

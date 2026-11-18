@@ -1447,8 +1447,9 @@ constexpr int kMinWindowHeightPx = 480;
 // legend's runs, the note, the pipe, the glyph — BUT THE TWO LAMPS, which
 // wear their own faces (THE TWO LAMPS below; logo_legend_extent,
 // paint_handler.cpp, the legend's damage rect, the lamps inside it):
-//   ON THE LEFT, THE NOTE: Breeze's MusicNote16th (architect 2026-11-01,
-//     M7: Breeze only — the BPM key's own drawing) on the ink-box road
+//   ON THE LEFT, THE NOTE: the `icons` set's MusicNote16th (Breeze's 16th
+//     note, architect 2026-11-01, M7, or Papirus's single note, 2026-11-17
+//     — the BPM key's own drawing) on the ink-box road
 //     (icons.h's THE INK BOX), the ink box's larger side kLogoNoteInkW =
 //     9 W (18 device px at 200 %; architect 2026-11-04 night, his pick g1 of
 //     tmp/s38: "1w down in size" — the 10 W before it replaced; 12 x 18
@@ -1656,10 +1657,11 @@ constexpr int kMinWindowHeightPx = 480;
 //     every arm (arm_clip_lamp_press). Unstruck, the square claims nothing.
 //   THE GLYPH CELL, ONE SIZE WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
-//     move"): THE TWO DRAWINGS are Breeze's (2026-11-02, M7: Breeze only) —
+//     move"): THE TWO DRAWINGS are the `icons` set's (icons.h's head) —
 //     Battery000Charging (CHARGING: any power source attached, 100 %
 //     included, and a host with no battery; GuiLogoGlyph's rule) and
-//     Battery000 (DISCHARGING, or the plug state unknown) — ONE OUTLINE, a
+//     Battery000 (DISCHARGING, or the plug state unknown). UNDER BREEZE
+//     (2026-11-02, M7) ONE OUTLINE, a
 //     horizontal battery with its nub to the right, the charging one
 //     carrying a plug inside it, so their ink boxes are one box. THE CELL IS
 //     THAT BOX on the ink-box road (icons.h's THE INK BOX) at ONE LENGTH for
@@ -1685,6 +1687,25 @@ constexpr int kMinWindowHeightPx = 480;
 //     and one W, above; the cell the larger of the two drawings' ink boxes
 //     on each axis so no state can move it, each drawing centered in it
 //     exactly. Painted in the text tone.
+//     UNDER PAPIRUS (architect 2026-11-17, session 140, his pair the parked
+//     battery-000 / battery-000-charging: "The exclamation mark is what I
+//     would look for to see if it's discharging"; SMALLER, "otherwise it
+//     looks like it's falling out of the line"): two UPRIGHT batteries, the
+//     discharging one's body at 35 % opacity beside a solid exclamation
+//     mark, the charging one's body at 35 % too, a bolt cut through it
+//     (the drawings' own opacities, kept by the recolor rule), their ink boxes
+//     11 x 15 and 10 x 14 user units in their 16-unit canvas — THE GLYPH'S
+//     HEIGHT IS THE LEGEND RUNS' INK ROWS (the digits' band, the same rows
+//     the pipe stands on; paint_handler.cpp's logo_glyph_ink_px), its larger
+//     side being its height, and THE CELL'S TOP THE RUNS' INK TOP as under
+//     Breeze, so on the tablet the cell stands on the digits' own 15 rows
+//     from 28.5 to 43.5, 11 columns wide (Battery000 at zoom 1, the charging
+//     one at 15 / 14, 11 x 15 too; measured with resvg's renderer), against
+//     Breeze's 22 x 14 and the parked 22 rows of session 123. The airs are
+//     unchanged: the cell's right edge kLogoPipeAirW from the pipe, its left
+//     the space advance and kLogoGlyphAirW from the percent run, which
+//     moves right with the narrower cell, the lamps with it. Not judged on
+//     glass yet; a tuning of the height would take a tuning key.
 //   (Liberation's own arrows ↑ / ↓ as the glyphs and "nothing" as the
 //   discharging glyph were judged on the same sheets and not taken,
 //   docs/engineering/closed_questions.md; the drawn pipe, declined there

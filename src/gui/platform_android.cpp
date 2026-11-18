@@ -869,7 +869,8 @@ std::expected<DeviceConfig, std::string> GuiPlatform::device_config_defaults() {
 // THE ICON BUNDLE IS THE APK'S ASSET DIRECTORY (contract at the
 // declaration, bundled_icon_files): build_apk.sh copies the repository's
 // assets/icons/*.svg (each symlink as the file it names, icons.h's
-// kIconNames) into assets/icons/ — and its themes/system/ and themes/extra/
+// kIconNames) into assets/icons/ and assets/icons/papirus/*.svg into
+// assets/icons/papirus/ — and its themes/system/ and themes/extra/
 // into assets/themes/ (bundled_theme_files) — and one reader lists an asset directory
 // (AAssetManager_openDir lists FILES only) and reads every name ending one of
 // `suffixes` whole. The manager is the activity's, off the
@@ -913,10 +914,16 @@ read_asset_dir(const std::string& dir_name,
 
 // AAssetManager_openDir answers an EMPTY listing, not a failure, for a
 // directory the APK lacks, so icons missing from the package reach the load
-// as missing files, the first named — the same hard fail.
-std::expected<std::map<std::string, std::string>, std::string>
+// as missing files, the first named — the same hard fail. The two sets
+// (contract at the declaration): `icons` lists Breeze's files alone, the
+// `papirus` subfolder being no file of it.
+std::expected<GuiPlatform::BundledIconFiles, std::string>
 GuiPlatform::bundled_icon_files() {
-    return read_asset_dir("icons", {".svg"});
+    auto breeze = read_asset_dir("icons", {".svg"});
+    if (!breeze) return std::unexpected(std::move(breeze.error()));
+    auto papirus = read_asset_dir("icons/papirus", {".svg"});
+    if (!papirus) return std::unexpected(std::move(papirus.error()));
+    return BundledIconFiles{std::move(*breeze), std::move(*papirus)};
 }
 
 // The two theme groups, read as the icons are (contract at the declaration,

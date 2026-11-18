@@ -3655,6 +3655,13 @@ void GuiInputHandler::apply_theme(const GuiTheme& theme, int bright_mix) {
     viewport.invalidate_all();
 }
 
+void GuiInputHandler::apply_icons(GuiIconSet set) {
+    // The apply shape is at the declaration (input_handler.h).
+    icons::select_set(set);
+    icons::drop_rasters();
+    viewport.invalidate_all();
+}
+
 void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     // The contract — sole writer, band resolved by tab, damage only when the
     // named band is the active one, history-less — is at the declaration

@@ -1,16 +1,27 @@
 #pragma once
 
-// THE ICONS (architect 2026-10-06; BREEZE ONLY, EVERYWHERE 2026-11-01, M7:
-// "we should use breeze glyphs only. ok to modify eg to make them
-// monochrome"). An Icon is a drawing the GUI paints, ONE FILE PER ENUMERATOR
-// in ONE FLAT FOLDER, assets/icons/, each file NAMED BY ITS ENUMERATOR
-// (`<Name>.svg`; the folder's README the drawings, their provenance and
-// their licence). EVERY DRAWING IS KDE's BREEZE (breeze-icons 6.31.0's dark
-// theme, the 22-px folders), RECOLORED to `currentColor` by
-// tools/icons/import_breeze.py (the README's RECOLOR RULE; its one table is
-// the enumerator -> source list) and PAINTED IN THE TEXT TONES — a lit
-// key's in the print of its accent or purple face — (materials.h)
-// at ONE ROAD, THE INK BOX (below), each seat naming its own ink length:
+// THE ICONS (architect 2026-10-06), TWO SETS, THE `icons` DEVICE KEY
+// CHOOSING (architect 2026-11-14, session 123: "the icons get their own
+// device key", NOT tied to the theme — the theme files stay palette-only and
+// either set goes with any theme; 2026-11-17, session 140: "No breeze glyphs
+// at all", HIS SET PAPIRUS, the key's first-run value). An Icon is a drawing
+// the GUI paints, ONE FILE PER ENUMERATOR PER SET, each set ONE FLAT FOLDER,
+// each file NAMED BY ITS ENUMERATOR (`<Name>.svg`; assets/icons/README.md
+// the drawings, their provenance and their licences):
+//   BREEZE, assets/icons/ (BREEZE ONLY, EVERYWHERE from 2026-11-01, M7, to
+//   2026-11-17: "we should use breeze glyphs only. ok to modify eg to make
+//   them monochrome") — KDE's breeze-icons 6.31.0 dark theme, the 22-px
+//   folders, written by tools/icons/import_breeze.py;
+//   PAPIRUS, assets/icons/papirus/ — papirus-icon-theme 33d971eb, its 16-px
+//   symbolic set and three drawings of its 16-px actions tree, written by
+//   tools/icons/import_papirus.py, the roster the parked picks of session
+//   123 with five re-picked by the architect 2026-11-17 (the importer's
+//   table).
+// Both are RECOLORED to `currentColor` by the one RECOLOR RULE (the README's;
+// each importer's one table the enumerator -> source list) and PAINTED IN
+// THE TEXT TONES — a lit key's in the print of its accent or purple face —
+// (materials.h) at ONE ROAD, THE INK BOX (below), each seat naming its own
+// ink length (the battery's the set's, render.h's LOGO LANE block):
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
 //   visual size; its printed legend under the key again since 2026-11-03,
 //   paint_key_legend): every key carries one — and since 2026-11-08 the
@@ -31,25 +42,29 @@
 //   folder and double note (Folder / ViewMediaTrack, SOURCE's glyph too,
 //   paint_folder_overlay), the cards' class glyphs (DialogInformation /
 //   DialogError, paint_notifications).
-// THE ROSTER IS AS RULED (architect 2026-11-02, R12 / R14 / R15); a re-pick
-// is a row of the importer's table and a rerun. EVERY FILE IS A DISTINCT
-// DRAWING (by realpath and path data; Breeze's names are often symlinks, so
-// one drawing is one enumerator — WindowClose is dialog-close too) SAVE THE
-// ONE DELIBERATE SHARE R15 records: GoPreviousViewPage / GoNextViewPage, the
-// score viewer's page keys, are GoPrevious's / GoNext's drawings. THE TWO
-// CARDS ARE THE ONE PAIR NOT IMPORTED: DialogError and DialogInformation are
-// the 10-10 hand transcriptions, the mark CUT OUT of the filled square
-// (even-odd) so one color shows it (R14 (3)); the importer checks them and
-// never writes them (its HAND list; assets/icons/README.md's provenance).
+// THE ROSTERS ARE AS RULED (Breeze's: architect 2026-11-02, R12 / R14 /
+// R15; Papirus's: 2026-11-17, session 140); a re-pick is a row of its
+// importer's table and a rerun. EVERY FILE OF A SET IS A DISTINCT DRAWING
+// (by realpath and path data; the icon themes' names are often symlinks,
+// so one drawing is one enumerator — Breeze's WindowClose is dialog-close
+// too)
+// SAVE BREEZE'S ONE DELIBERATE SHARE R15 records: GoPreviousViewPage /
+// GoNextViewPage, the score viewer's page keys, are GoPrevious's / GoNext's
+// drawings (Papirus's are chevrons of their own, no share). THE TWO CARDS:
+// Breeze's DialogError and DialogInformation are the 10-10 hand
+// transcriptions, the mark CUT OUT of the filled square (even-odd) so one
+// color shows it (R14 (3)), which its importer checks and never writes (its
+// HAND list); Papirus's are imported, its discs already cutting the mark out
+// (assets/icons/README.md's provenance).
 // THE LAUNCHER ICON is assets/icons/AppIcon.svg, a relative symlink to
-// MusicNote16th.svg, which apk/build_apk.sh renders at every build; no
-// enumerator names it (no painter draws it, and the load reads only the
-// enumerators' files).
-// PARSED AT LAUNCH through resvg (svg_icon.h: the wrapper and the error
-// rule), straight from the bundle — never copied into the config folder
-// (load_set, below) — and rasterised lazily, per (drawing, ink px, color),
-// into an ARGB32 surface that a draw copies at an integer device px, no
-// resample.
+// Breeze's MusicNote16th.svg, whatever set the key chooses, which
+// apk/build_apk.sh renders at every build; no enumerator names it (no
+// painter draws it, and the load reads only the enumerators' files).
+// BOTH SETS PARSED AT LAUNCH through resvg (svg_icon.h: the wrapper and the
+// error rule), straight from the bundle — never copied into the config
+// folder (load_set, below) — the key's set chosen (select_set), and
+// rasterised lazily, per (drawing, ink px, color), into an ARGB32 surface
+// that a draw copies at an integer device px, no resample.
 //
 // THE BOUND DRAWING (architect 2026-11-02; the road of 2026-10-10 restored):
 // a file that paints in `currentColor` — every file here — WEARS THE COLOR
@@ -70,6 +85,7 @@
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU (nor svg_icon's, nor resvg).
 
+#include "device_config.h" // GuiIconSet, the `icons` key's two sets
 #include "render.h"        // scaled_px
 
 #include <cairo/cairo.h>
@@ -81,16 +97,18 @@
 
 namespace icons {
 
-// THE DRAWINGS, Breeze's, in the importer's table order
-// (tools/icons/import_breeze.py's ROSTER, which writes `<Name>.svg` for each;
-// the two hand-transcribed cards, its HAND list, after Folder):
-// ONE LIST, spelled once, from which the enumerators and their file names
-// are both made (Icon and kIconNames below), so the two cannot part. Which
+// THE DRAWINGS, in the importers' table order
+// (tools/icons/import_breeze.py's ROSTER, which writes `<Name>.svg` for each,
+// Breeze's two hand-transcribed cards, its HAND list, after Folder;
+// tools/icons/import_papirus.py's ROSTER, every row):
+// ONE LIST FOR BOTH SETS, spelled once, from which the enumerators and their
+// file names are both made (Icon and kIconNames below), so the two cannot
+// part and the sets cannot hold different rosters. Which
 // seat wears which is its owner's: the keys' act vocabularies
 // (redesign_button_icon, app_state.h; render_player_button_icon,
 // score_viewer_button_icon, modal_word_icon, paint_handler.cpp /
 // score_viewer.h) and the off-key seats' painters (the head).
-#define WARPTEMPO_BREEZE_ICONS(X)                                        \
+#define WARPTEMPO_ICONS(X)                                        \
     X(DocumentOpen) X(DocumentSave) X(DocumentSaveAs) X(VcsPull)         \
     X(NetworkConnect) X(VcsCommit) X(EditUndo) X(EditRedo)               \
     X(MediaRecord) X(DialogCancel) X(EditCopy) X(EditPaste) X(ZoomIn)    \
@@ -115,46 +133,57 @@ namespace icons {
     X(DialogError) X(Battery000) X(Battery000Charging)                   \
     X(FormatIndentMore) X(KeyEnter)
 
-// The drawings, one per file of assets/icons/ (each file named by its
+// The drawings, one per file of each set's folder (each file named by its
 // enumerator — kIconNames below).
 enum class Icon {
 #define WARPTEMPO_ICON_ENUM(name) name,
-    WARPTEMPO_BREEZE_ICONS(WARPTEMPO_ICON_ENUM)
+    WARPTEMPO_ICONS(WARPTEMPO_ICON_ENUM)
 #undef WARPTEMPO_ICON_ENUM
 };
 
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator).
 #define WARPTEMPO_ICON_ONE(name) +1
-inline constexpr int kIconCount = 0 WARPTEMPO_BREEZE_ICONS(WARPTEMPO_ICON_ONE);
+inline constexpr int kIconCount = 0 WARPTEMPO_ICONS(WARPTEMPO_ICON_ONE);
 #undef WARPTEMPO_ICON_ONE
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
-// file in assets/icons/ is `<name>.svg`. A misspelling is a missing file at
-// the next launch, which fails it. (The one repeat — GoPreviousViewPage
-// is GoPrevious's drawing, GoNextViewPage GoNext's, the head's deliberate
-// share — is two files, each written by the importer from its own source
-// name. The folder's one symlink,
+// file in each set's folder is `<name>.svg`. A misspelling is a missing file
+// at the next launch, which fails it. (Breeze's one repeat —
+// GoPreviousViewPage is GoPrevious's drawing, GoNextViewPage GoNext's, the
+// head's deliberate share — is two files, each written by the importer from
+// its own source name. The Breeze folder's one symlink,
 // AppIcon.svg -> MusicNote16th.svg, is the launcher's and no enumerator's;
 // the bundle's road dereferences it, build_apk.sh's cp -L.)
 inline constexpr const char* kIconNames[] = {
 #define WARPTEMPO_ICON_NAME(name) #name,
-    WARPTEMPO_BREEZE_ICONS(WARPTEMPO_ICON_NAME)
+    WARPTEMPO_ICONS(WARPTEMPO_ICON_NAME)
 #undef WARPTEMPO_ICON_NAME
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
-// THE LOAD, once, in gui_main before the window: the folder's files fetched
-// from the bundle (GuiPlatform::bundled_icon_files — the APK's icons/
-// assets; READ IN PLACE, never copied into the config folder: nobody authors
-// an icon on the device), then per enumerator in enum order `<name>.svg` parsed
-// (svg_icon::parse), all before any draw; files of other names (the README,
-// the licence text, AppIcon.svg) ignored. THE ERROR ARM'S PRODUCERS: the
-// bundle unreadable (IO), the file not there, or a file not well-formed SVG
-// (a build defect) — "icons: Folder.svg: missing", the first only, which
+// THE LOAD, once, in gui_main before the window: BOTH SETS' files fetched
+// from the bundle (GuiPlatform::bundled_icon_files — the APK's icons/ and
+// icons/papirus/ assets; READ IN PLACE, never copied into the config folder:
+// nobody authors an icon on the device), then per set, Breeze first, per
+// enumerator in enum order `<name>.svg` parsed (svg_icon::parse), all before
+// any draw, so a live switch of the key meets a parsed set; files of other
+// names (the README, the licence text, AppIcon.svg) ignored. THE ERROR ARM'S
+// PRODUCERS: the bundle unreadable (IO), a file not there in EITHER set, or a
+// file not well-formed SVG (a build defect) — "icons: Folder.svg: missing"
+// (Breeze's) or "icons: papirus/Folder.svg: missing", the first only, which
 // gui_main prints and exits on (the validation doctrine's class (1)). A
 // construct resvg does not draw passes the load (svg_icon.h's error rule).
+// The set drawn is Papirus until select_set names one.
 std::optional<std::string> load_set();
+
+// THE SET EVERY PAINTER DRAWS (the `icons` device key, device_config.h):
+// chosen at launch from the config after load_set and before the window
+// (gui_main), and at the key's live commit (GuiInputHandler::apply_icons,
+// which drops the rasters and repaints whole). Every draw and every fit
+// reads the chosen set's drawings; the other set's parses stay, idle.
+void select_set(GuiIconSet set);
+GuiIconSet selected_set();
 
 // THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale)
 // and on a flip of True Colors (GuiInputHandler::apply_true_colors — the
@@ -163,7 +192,9 @@ std::optional<std::string> load_set();
 // fits with them; the parsed drawings stay (a bound parse keys its sRGB
 // color, which neither change moves), AND ON A THEME COMMIT
 // (GuiInputHandler::apply_theme: a raster keys on its sRGB color, which the
-// theme moves, render.h's install_palette). A key's lit edge drops nothing:
+// theme moves, render.h's install_palette), AND ON AN ICON SET COMMIT
+// (GuiInputHandler::apply_icons: both sets' rasters and fits, the chosen
+// set's refilling as it is drawn). A key's lit edge drops nothing:
 // the print on a lit face is one more color key beside the text tones.
 void drop_rasters();
 
@@ -184,7 +215,8 @@ void drop_rasters();
 // (kKeyGlyphInkPerKeySide, paint_key_glyph, 9 W at the default 17, 18
 // device px on the tablet, 2026-11-04 night, his pick d1, one W over the 8
 // W before it), the logo lane's note scaled_px(9) (kLogoNoteInkW) and
-// battery glyph scaled_px(11) (kLogoGlyphInkW, render.h), the list rows'
+// battery glyph — Breeze's scaled_px(11) (kLogoGlyphInkW), Papirus's the
+// legend digits' ink rows (render.h's LOGO LANE block) — the list rows'
 // scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' .525 of the first
 // line's inside height (kNotificationGlyphRatio, notifications.h). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and

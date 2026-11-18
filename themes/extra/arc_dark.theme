@@ -1,9 +1,12 @@
-# Arc Dark -- written by hand from the arc-theme sources, not converted from an .ask
-# Source: jnsh/arc-theme (the fork Arch packages), commit 94ac8c7d67d68de0cc688bbd4c3105b9815b446e
-# (2025-10-18), variant 'dark', transparency off: common/gtk-3.0/sass/_colors.scss, _common.scss and
-# common/xfwm4/dark/assets.svg. Sass lighten / darken / mix resolved to sRGB bytes. Arc-Dark is dark
-# throughout (no light content panel; Arc-Darker, which has them, not used). Scratch look test,
-# architect 2026-11-13, session 123.
+# Arc Dark -- A SHIPPED EXTRA THEME (since 2026-11-17, session 140's arc; its look a scratch test of
+# 2026-11-13, session 123, parked until then), WRITTEN BY HAND from the arc-theme sources, not converted
+# from an .ask: THE ROLE VALUES ALONE, read from arc-theme's sass and xfwm4 assets (no file of arc-theme
+# ships; THIRD_PARTY.md credits it). Source: jnsh/arc-theme (the fork Arch packages), commit
+# 94ac8c7d67d68de0cc688bbd4c3105b9815b446e (2025-10-18), GPL-3.0, variant 'dark', transparency off:
+# common/gtk-3.0/sass/_colors.scss, _common.scss and common/xfwm4/dark/assets.svg. Sass lighten /
+# darken / mix resolved to sRGB bytes. Arc-Dark is dark throughout (no light content panel; Arc-Darker,
+# which has them, not used). It carries the architect's rulings of sessions 123 and 140, below (his
+# picks of 2026-11-14 and 2026-11-17).
 # THE CLOSE RED: Arc-Dark's xfwm4 / headerbar close disc, wm_button_close_bg CC575D (hover D7787D,
 # pressed BE3841), on THE CLIP LAMP ALONE (architect 2026-11-14, session 123: red reads as a warning
 # or a close; the limiter lamp and the cards stay Arc's warning orange). The playhead's head is Arc's

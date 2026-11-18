@@ -55,7 +55,7 @@ struct GuiInputHandler;
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
 //   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the twenty-five,
+//      `=` yet, a COMPLETE key — any key this editor recalls, the twenty-six,
 //      the engine's and the per-tab band keys alike — and a PREFIX that ONE
 //      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
 //      the key and `=`, AND STOP THERE, the caret at the end (architect
@@ -73,7 +73,8 @@ struct GuiInputHandler;
 //      (format_engine_setting_value, recall_gui_setting_value).
 //   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
 //      short closed list — `true_colors`'s `on` / `off` (2026-10-21), `theme`'s
-//      slugs (2026-11-05, the themes' list's order, theme_roles.h) — the
+//      slugs (2026-11-05, the themes' list's order, theme_roles.h), `icons`'s
+//      `breeze` / `papirus` (2026-11-17) — the
 //      prefix completes
 //      against those words by the same rule as the keys
 //      (complete_closed_value); `projects_path=<prefix>` completes against the
@@ -86,7 +87,7 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// TWENTY editable ones the per-device config carries — gui_scale and
+// TWENTY-ONE editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only (the color key waveform, editable
@@ -108,7 +109,8 @@ struct GuiInputHandler;
 // sweep highlight's alpha's tuning key sweep_highlight, and since 2026-11-13
 // (architect) the bright tones' mix's tuning key bright_mix, and since
 // 2026-11-14 (architect) the plate's fade start's tuning key
-// waveform_fade_px (the
+// waveform_fade_px, and since 2026-11-17 (architect, sessions 123 / 140) the
+// icon set icons (the
 // LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
 // the glow settled at a constant, then retired with the LED, 2026-11-01; the
 // tooltip's gap's tuning key tooltip_gap, editable for session 90 of
@@ -140,7 +142,7 @@ struct GuiInputHandler;
 //    true_colors, theme, waveform_grow, noise, noise_attenuation_level,
 //    noise_crossfade_s, key_height, key_width, run_gap, osk_key_w,
 //    osk_key_h, osk_font_px, lamp_hold_ms, tooltip_delay_ms,
-//    sweep_highlight, bright_mix and waveform_fade_px — in ONE body,
+//    sweep_highlight, bright_mix, waveform_fade_px and icons — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other): the key's own grammar
 //    owner in device_config.h
@@ -181,7 +183,9 @@ struct GuiInputHandler;
 //    the window repainted (GuiInputHandler::apply_theme), no card; the
 //    plate's fade start at once, the plate re-rendered and the window
 //    repainted (GuiInputHandler::apply_waveform_fade_px), no card (the
-//    waveform is the answer).
+//    waveform is the answer); the icon set at once, the other set's
+//    drawings chosen, the icon rasters dropped and the window repainted
+//    (GuiInputHandler::apply_icons), no card (the glyphs are the answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -235,11 +239,12 @@ struct GuiInputHandler;
 // content behind the settings page's row for its key, whose row tap commits
 // at once — apply_device_setting, this editor's own road. THE SETTINGS
 // PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
-// nothing, each opening this line editor. FIVE SINCE 2026-11-05: the two
+// nothing, each opening this line editor. FIVE FROM 2026-11-05: the two
 // levels' lists left with the band's two sliders and their decimal grammar,
-// kSettingsValueListKeys below, and their rows that night.)
+// kSettingsValueListKeys below, and their rows that night; SIX SINCE
+// 2026-11-17, `icons` joining.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE TWENTY-FIVE (the cues' four tuning
+// THE KEYS TAB COMPLETES — ONE TABLE, THE TWENTY-SIX (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
@@ -259,13 +264,14 @@ struct GuiInputHandler;
 // settled; the sweep highlight's alpha `sweep_highlight` 2026-11-12, at the
 // device keys' tail; the bright tones' mix `bright_mix` 2026-11-13, at the
 // device keys' tail; the plate's fade start `waveform_fade_px`
-// 2026-11-14, at the device keys' tail):
+// 2026-11-14, at the device keys' tail; the icon set `icons` 2026-11-17, at
+// the device keys' tail as the config writes it):
 // the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's twenty editable keys in that file's
+// CONFIG's twenty-one editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor, nor has the level, below). The other keys this editor
 // commits (`scale`, `bpm`,
@@ -296,7 +302,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
     "key_height", "key_width", "run_gap", "osk_key_w", "osk_key_h",
     "osk_font_px", "lamp_hold_ms", "tooltip_delay_ms", "sweep_highlight",
-    "bright_mix", "waveform_fade_px",
+    "bright_mix", "waveform_fade_px", "icons",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two groups split the table here, and the asserts pin
@@ -342,8 +348,9 @@ consteval bool settings_page_piece_keys_pinned() {
 }
 static_assert(settings_page_piece_keys_pinned());
 
-// THE KEYS WITH A VALUE LIST — ONE TABLE, THE FIVE (architect 2026-10-28
-// night for four, 2026-10-31 for `waveform_grow`, 2026-11-05 for `theme`;
+// THE KEYS WITH A VALUE LIST — ONE TABLE, THE SIX (architect 2026-10-28
+// night for four, 2026-10-31 for `waveform_grow`, 2026-11-05 for `theme`,
+// 2026-11-17 for `icons`;
 // the first, `waveform`'s presets of 2026-10-25, went with the presets
 // 2026-11-01; the two levels, listed 2026-10-31 night and 2026-10-28 night,
 // LEFT 2026-11-05 with the level cases — their domain
@@ -357,7 +364,7 @@ static_assert(settings_page_piece_keys_pinned());
 // 2026-10-28 night). Every other page row opens the line editor. Each is a device
 // key with a short domain the list can show whole: the two words, the
 // folders under `noise/`, the crossfade's 30 whole seconds, the grow's
-// 9 quarters and the themes' slugs. A LIST IS A SEQUENCE OF GROUPS
+// 9 quarters, the themes' slugs and the icon set's two words. A LIST IS A SEQUENCE OF GROUPS
 // (value_list_groups below; 2026-11-05): `theme`'s one per group of the
 // themes' list (architect 2026-11-11, session 110: SYSTEM — `default`
 // first — then EXTRA, then USER-DEFINED; theme_roles.h), each
@@ -376,6 +383,7 @@ static_assert(settings_page_piece_keys_pinned());
 // 101.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "theme", "waveform_grow", "noise", "noise_crossfade_s",
+    "icons",
 };
 inline bool settings_key_has_value_list(std::string_view key) {
     for (const char* k : kSettingsValueListKeys)
@@ -476,9 +484,10 @@ struct GuiSettingsEditor {
     // directories through a link, no dot-directory) that the key's grammar
     // admits (is_noise_folder_name), so every row commits; no folder there,
     // or no config home, is a list with no rows; `noise_crossfade_s` 1 up
-    // to 30; `waveform_grow` 0 up to 2 in quarters (2026-10-31). Every value is
+    // to 30; `waveform_grow` 0 up to 2 in quarters (2026-10-31); `icons`
+    // (2026-11-17) kIconsWords (`breeze`, `papirus`). Every value is
     // the key's writer spelling (format_noise_crossfade_s,
-    // format_waveform_grow),
+    // format_waveform_grow, format_icons),
     // so the seat compares it with setting_value byte for byte. Listed afresh
     // at each call; nothing is cached.
     std::vector<std::string> value_choices(const std::string& key) const;
@@ -534,8 +543,9 @@ struct GuiSettingsEditor {
     // alone), `run_gap=` (2026-11-07, the line's door alone),
     // `tooltip_delay_ms=` (2026-11-07, the line's door alone),
     // `sweep_highlight=` (2026-11-12, the line's door alone),
-    // `bright_mix=` (2026-11-13, the line's door alone) and
-    // `waveform_fade_px=` (2026-11-14, the line's door alone) — ONE BODY,
+    // `bright_mix=` (2026-11-13, the line's door alone),
+    // `waveform_fade_px=` (2026-11-14, the line's door alone) and `icons=`
+    // (2026-11-17) — ONE BODY,
     // TWO DOORS
     // (architect 2026-10-25, 2026-10-28 night for the value lists' keys): the
     // typed line's commit (commit_device_setting, below, the editor's door)
@@ -620,7 +630,8 @@ private:
     // closed list. The value side is a PREFIX (byte compare, the words being
     // ASCII) of the key's words — `on` and
     // `off` (kTrueColorsWords, device_config.h) for `true_colors`, the
-    // themes' slugs (value_choices, the list's spelling) for `theme` — and the
+    // themes' slugs (value_choices, the list's spelling) for `theme`,
+    // `breeze` and `papirus` (kIconsWords) for `icons` — and the
     // buffer advances by the matches' longest common prefix past it: a
     // UNIQUE match completes the word WITH NO TRAILING CHARACTER (a name is
     // not a folder), an ambiguous prefix stops at the common prefix (he

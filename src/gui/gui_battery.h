@@ -42,10 +42,11 @@ struct GuiBattery {
 // battery (power is attached); DISCHARGING while discharging — and while
 // the plug state is UNKNOWN (the cold answer before the tablet's first
 // broadcast, an unreadable sysfs node): the charging glyph claims power, so
-// a state that cannot claim it takes the other. The drawings are Breeze's
-// battery outline with and without its plug (Battery000Charging /
-// Battery000, 2026-11-02; the drawn bolt and battery of 2026-10-24 retired),
-// render.h's logo lane block.
+// a state that cannot claim it takes the other. The drawings are the
+// `icons` set's (Battery000Charging / Battery000; icons.h's head): Breeze's
+// battery outline with and without its plug (2026-11-02; the drawn bolt and
+// battery of 2026-10-24 retired), Papirus's upright battery with its bolt
+// or its exclamation mark (2026-11-17), render.h's logo lane block.
 enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 
 // THE LEGEND — "92% <glyph> | 2:12 PM" — AS THREE COMPOSED PARTS, laid right

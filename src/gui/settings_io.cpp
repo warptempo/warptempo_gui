@@ -448,6 +448,10 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "waveform_fade_px" && app.device_config != nullptr)
         return format_waveform_fade_px(
             app.device_config->waveform_fade_hundredths);
+    // THE ICON SET (2026-11-17): the set's word through its one owner
+    // (format_icons, device_config.h), the writer's own spelling.
+    if (key == "icons" && app.device_config != nullptr)
+        return std::string(format_icons(app.device_config->icons));
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

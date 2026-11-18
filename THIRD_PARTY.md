@@ -8,9 +8,14 @@ The licence texts live in each pinned source; this file is the list. The faces a
 `fonts/README.md` and `assets/icons/README.md` (the icon SVGs, the launcher's drawing among them: `AppIcon.svg`,
 the logo lane's note through its symlink) carry their provenance and licence texts. The face is packed into the
 APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1, the text in
-`fonts/LICENSE-Liberation-OFL.txt`). Every icon is packed into the APK too, and every one is KDE's breeze-icons
-(6.31.0; LGPL-3.0-or-later, the text in `assets/icons/LICENSE-LGPL-3.txt`): recolored copies of its dark theme's 22-px
-drawings written by `tools/icons/import_breeze.py`, their provenance table in `assets/icons/README.md`.
+`fonts/LICENSE-Liberation-OFL.txt`). Every icon is packed into the APK too, in two sets the `icons` device key
+chooses between (`src/gui/icons.h`): KDE's breeze-icons (6.31.0; LGPL-3.0-or-later, the text in
+`assets/icons/LICENSE-LGPL-3.txt`), recolored copies of its dark theme's 22-px drawings written by
+`tools/icons/import_breeze.py` into `assets/icons/`; and papirus-icon-theme
+(https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, commit 33d971eb; GPL-3.0, the text in
+`assets/icons/papirus/LICENSE-GPL-3.txt`), recolored copies of its 16-px symbolic drawings and three of its 16-px
+`actions/` drawings written by `tools/icons/import_papirus.py` into `assets/icons/papirus/`. Both provenance tables
+are in `assets/icons/README.md`.
 
 ## The themes
 
@@ -18,9 +23,13 @@ The themes are NUMBERS. The repository's `themes/system/` and `themes/extra/` fi
 APK) are role color values read from Ableton AG's Live 12 stock theme files (`.ask`, Ableton's theme XML; Live's
 `Resources/Themes`) and from the Sonic Bloom theme pack, converted once by `tools/themes/ask_to_theme.py`; six of the
 Sonic Bloom files (`…_mod`) and `immaterial_mod` (Live's Immaterial with one color shaded) are hand-edited, each file's
-header saying what changed. NO `.ask` FILE IS IN THIS REPOSITORY OR THE APK. One theme is compiled in as the reference,
-`default_dark_neutral_medium` (`src/gui/gui_theme.h`'s `kGuiReferenceThemeTones`): a table of colors derived from Live
-12's Default Dark Neutral Medium. Every theme's tones come from its values through the derivation at
+header saying what changed. NO `.ask` FILE IS IN THIS REPOSITORY OR THE APK. One EXTRA theme,
+`themes/extra/arc_dark.theme`, is no conversion: its role values were read by hand from arc-theme
+(https://github.com/jnsh/arc-theme, commit 94ac8c7d; GPL-3.0) — its GTK 3 sass (`common/gtk-3.0/sass/_colors.scss`,
+`_common.scss`) and its xfwm4 assets (`common/xfwm4/dark/assets.svg`), the Arc-Dark variant — and no file of arc-theme
+is in this repository or the APK; the theme file's header names each role's source. One theme is compiled in as the
+reference, `default_dark_neutral_medium` (`src/gui/gui_theme.h`'s `kGuiReferenceThemeTones`): a table of colors derived
+from Live 12's Default Dark Neutral Medium. Every theme's tones come from its values through the derivation at
 `src/gui/theme_roles.h`'s head; files the user places beside the device config (`themes/*.theme`) are read the same way.
 
 ## The tablet's APK

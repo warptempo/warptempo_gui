@@ -8515,7 +8515,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the twenty-five keys the
+    // 2026-10-28: the Settings button and bare `;`; the twenty-six keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened PREFILLED on the row's line once
@@ -8523,7 +8523,8 @@ struct AppState {
     // list swapped in under the same session); and the VALUE LIST
     // (2026-10-28 night for `true_colors`,
     // `noise` and `noise_crossfade_s`, 2026-10-31 for `waveform_grow`,
-    // 2026-11-05 for `theme`; the two levels' lists went 2026-11-05 with
+    // 2026-11-05 for `theme`, 2026-11-17 for `icons`; the two levels'
+    // lists went 2026-11-05 with
     // their decimal grammar, their rows opening the line editor; reached
     // through the page's row for its key alone; the key's values as rows, the open act
     // the value's commit through the typed line's own body, then the return
@@ -9072,7 +9073,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's twenty-five keys as
+    // (architect 2026-10-28), with the settings editor's twenty-six keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
@@ -9080,7 +9081,8 @@ struct AppState {
     // it in every time" — "brief it as a scrolling list", "Yes"), since
     // 2026-10-28 night `true_colors`'s two words, the folders under
     // `noise/`, the 31 levels and the 30 crossfades, and since 2026-10-31
-    // the grow's nine quarters — the page's row for that key's content; and
+    // the grow's nine quarters, and since 2026-11-17 the icon set's two
+    // words — the page's row for that key's content; and
     // since 2026-10-28 night THE TRIM PRESETS LIST, the piece's named trim
     // windows (`trim/presets.txt`, trim_presets_file.h), the TRIM key's; and
     // since 2026-10-29 THE BPM FORM, the sweep's three values as `key=value`
@@ -9219,7 +9221,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its twenty-five editable key lines and the two
+    // rows (its two headings, its twenty-six editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
@@ -18746,13 +18748,16 @@ inline const char* redesign_button_legend(const AppState& a,
 // PLAYER the headphones; BPM shares the logo's single note, SOURCE the
 // wav rows' double notes and LOAD the word buttons' OK / YES checkmark
 // (the same act, architect 2026-11-03, modal_word_icon), all deliberate) —
-// the Breeze drawing centered on each roster key's face
-// (paint_handler.cpp's paint_key_glyph, icons.h's
-// head), the key's legend under it (redesign_button_legend, above; back
+// the enumerator's drawing in the `icons` set (Breeze's or Papirus's,
+// icons.h's head; one enumerator per key whatever the set) centered on
+// each roster key's face (paint_handler.cpp's paint_key_glyph), the key's
+// legend under it (redesign_button_legend, above; back
 // 2026-11-03), the act's name the tooltip's (redesign_button_tooltip,
 // above). THIS TABLE IS EACH KEY'S RESTING GLYPH; THE PAINTERS READ THE
 // STATEFUL OVERLOAD BELOW. A re-pick is a row here (and, for a drawing not
-// yet imported, a row of tools/icons/import_breeze.py's table and a rerun).
+// yet imported, a row of both importers' tables, tools/icons/
+// import_breeze.py and import_papirus.py, and a rerun); a re-pick of one
+// set's drawing alone is a row of its importer's table.
 // (The rows' comments name a key by its legend, OPEN, SAVE ….)
 inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
     using icons::Icon;

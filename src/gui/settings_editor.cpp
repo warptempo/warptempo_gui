@@ -382,6 +382,8 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     } else if (key == "noise_crossfade_s") {
         for (int s = kNoiseCrossfadeMinS; s <= kNoiseCrossfadeMaxS; ++s)
             out.push_back(format_noise_crossfade_s(s));
+    } else if (key == "icons") {
+        for (const char* word : kIconsWords) out.emplace_back(word);
     } else {
         assert(false && "a key with no value list");
     }
@@ -1225,7 +1227,8 @@ void GuiSettingsEditor::commit() {
 // (2026-11-13) at once and no card, the theme's live act at the new
 // percent, its arm after it, and the plate's fade start
 // `waveform_fade_px` (2026-11-14) at once and no card, the plate
-// re-rendered, its arm last
+// re-rendered, its arm after them, and the icon set `icons` (2026-11-17) at
+// once and no card, the other set's drawings painted, its arm last
 // (`bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
@@ -1236,8 +1239,9 @@ void GuiSettingsEditor::commit() {
 // 2026-10-03..10-08, a chrome theme file read at launch, left with that key)
 // the same, at once and no card, its arm after true_colors'. (`icons` and
 // `font` had arms here 2026-10-09..10-12; each left
-// with its key; `waveform`, the color presets' key, 2026-10-14..11-01.) The
-// commit is the OK's or Enter's, and for the five keys
+// with its key, and an `icons` arm of another meaning, the icon set, joined
+// 2026-11-17; `waveform`, the color presets' key, 2026-10-14..11-01.) The
+// commit is the OK's or Enter's, and for the six keys
 // with a value list (kSettingsValueListKeys, settings_editor.h) also a
 // list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
 // the choice rows' list rows of 2026-10-07..10-14, which showed a value and
@@ -1246,8 +1250,9 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. (The keys with a value list
-// are five since 2026-11-05, `theme` the newest and the two levels gone to
-// the band's sliders that day, `waveform_grow` among them.)
+// were five from 2026-11-05, the two levels gone to the band's sliders that
+// day, `waveform_grow` among them; six since 2026-11-17, `icons` the
+// newest.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     switch (apply_device_setting(key, value)) {
@@ -1641,6 +1646,29 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
+    // THE ICON SET (architect 2026-11-14, session 123: its own key, not the
+    // theme's; 2026-11-17, session 140: his set Papirus): one of the two
+    // words under its one owner (parse_icons, device_config.h), APPLIED LIVE
+    // AT THE COMMIT, which is the OK's (or Enter's) or the value list's row
+    // tap, through the set's one live act (GuiInputHandler::apply_icons —
+    // the set chosen, the icon rasters dropped, the whole window), so NO
+    // CARD: the glyphs on screen are the answer; a failed write keeps the
+    // live value for the session, the card saying the persist failed, and
+    // the set already in force is the unchanged no-op. The page opens its
+    // VALUE LIST (`breeze`, `papirus`, kSettingsValueListKeys); Tab
+    // completes a typed prefix against the two words
+    // (complete_closed_value); stage 2's recall is the writer's word
+    // (recall_gui_setting_value).
+    if (key == "icons") {
+        const std::optional<GuiIconSet> set = parse_icons(value);
+        if (!set) return reject(kIconsGrammarReason);
+        if (*set == app.device_config->icons) return unchanged();
+        app.device_config->icons = *set;
+        input->apply_icons(*set);
+        (void)persist();
+        return applied();
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1762,6 +1790,8 @@ bool GuiSettingsEditor::complete_closed_value(const std::string& key,
     std::string append;
     if (key == "true_colors")
         append = closed_list_advance(value, kTrueColorsWords);
+    else if (key == "icons")
+        append = closed_list_advance(value, kIconsWords);
     else if (key == "theme")
         append = closed_list_advance(value, value_choices(key));
     if (append.empty()) return false;
@@ -1790,7 +1820,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (eq == std::string::npos) {
         const std::string typed = ltrim_ws(pending);
         // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty-five and
+        // one key does — any key the recall knows, the table's twenty-six and
         // the keys typed whole alike; the value is the next Tab's.
         if (!typed.empty() && recall(typed))
             return append_at_line_end(app, viewport, "=");
@@ -1815,7 +1845,8 @@ bool GuiSettingsEditor::autocomplete_value() {
     // folder's name under `noise/` beside the device config
     // (complete_noise_value), its no-advance cases Tabs that walk. THE CLOSED
     // DOMAINS TOO (architect 2026-10-14 and 2026-10-21; `theme` 2026-11-05):
-    // a non-empty value side on `true_colors` or `theme` is a prefix of the
+    // a non-empty value side on `true_colors`, `theme` or `icons` (2026-11-17)
+    // is a prefix of the
     // key's words (complete_closed_value), its no-advance cases Tabs that
     // walk.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {

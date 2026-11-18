@@ -13,8 +13,13 @@
 #include <string_view>
 #include <system_error>
 
+// THE ICON SET's two values (the `icons` key, 2026-11-17; the head's list
+// and THE icons GRAMMAR below): which of the APK's two drawing sets every
+// painter draws (icons.h's head, icons::select_set).
+enum class GuiIconSet { Breeze, Papirus };
+
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Twenty-two keys live here and nowhere else,
+// piece (architect 2026-08-27). Twenty-three keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -371,6 +376,32 @@
 //                            Settings row, REQUIRED like every key while it
 //                            stands; the first-run value the defaults
 //                            file's
+//   icons=<breeze|papirus>   THE ICON SET (architect 2026-11-14, session
+//                            123: "the icons get their own device key", NOT
+//                            tied to the theme — the theme files stay
+//                            palette-only and either set goes with any
+//                            theme; 2026-11-17, session 140: "No breeze
+//                            glyphs at all", his set Papirus): which of the
+//                            two drawings sets the APK carries every painter
+//                            draws (icons.h's head) — `breeze`, KDE's, or
+//                            `papirus`, papirus-icon-theme's — the two
+//                            lowercase words and nothing else, any other
+//                            word the launch's hard fail (THE icons GRAMMAR
+//                            below); REQUIRED, read at launch to choose the
+//                            set before the window exists and applied LIVE
+//                            at the settings editor's OK and at the
+//                            settings page's value list's tap, the icon
+//                            rasters dropped and a whole repaint, no card
+//                            (GuiInputHandler::apply_icons, the theme's
+//                            apply shape); a permanent key, appended at the
+//                            file's end; the first-run value the defaults
+//                            file's (`papirus`). A config from before the
+//                            key stops the startup on the missing line, as
+//                            every joined key's did (no migration; the sync
+//                            script's setup adds the line on the tablet).
+//                            (An `icons` key of another meaning — a
+//                            vocabulary of drawings — stood 2026-10-09 to
+//                            2026-10-12, below.)
 //   (audio_level=<dB>, THE PROJECT VOICE'S LEVEL, everything the program
 //                            itself played scaled by one level under THE
 //                            LEVEL GRAMMAR, set by the band's AUDIO case, a
@@ -528,7 +559,9 @@
 // tuning keys keeping the end; the bright tones' mix `bright_mix` APPENDED
 // after `sweep_highlight` 2026-11-13, the tuning keys keeping the end; the
 // plate's fade start `waveform_fade_px` APPENDED after `bright_mix`
-// 2026-11-14, the tuning keys keeping the end);
+// 2026-11-14, the tuning keys keeping the end; the icon set `icons`
+// APPENDED after `waveform_fade_px` 2026-11-17, a permanent key at the
+// file's end, session 141's brief);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -673,7 +706,7 @@
 // (architect 2026-11-08, session 95: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty-two lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty-three lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -693,7 +726,7 @@
 // program-written — the first run stamps it from the defaults file and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the
-// twenty-two keys and each at most once, EVERY KEY REQUIRED (architect
+// twenty-three keys and each at most once, EVERY KEY REQUIRED (architect
 // 2026-10-12, deferred, his "yes" 2026-10-14: "if one of these lines is not
 // in place, it means something's wrong with the config or the setup" — the
 // writer emits every line and the defaults file spells every key, so an absent
@@ -734,6 +767,7 @@
 // tuning keys `run_gap` and `tooltip_delay_ms`, and since 2026-11-12 the
 // tuning key `sweep_highlight`, and since 2026-11-13 the tuning key
 // `bright_mix`, and since 2026-11-14 the tuning key `waveform_fade_px`,
+// and since 2026-11-17 the icon set `icons`,
 // among them
 // (kSettingsEditorKeys) — then a key's current
 // value, then a closed value's words, and committing each through this
@@ -760,8 +794,9 @@
 // (THE FIRST-RUN VALUES above, 2026-11-09), every key spelled there
 // (architect 2026-10-14: every key required). EVERY KEY
 // WRITES ITS LINE, so a first run stamps the
-// whole file and its read-back loads. (The `icons` and `font` keys left
-// 2026-10-12: the icons and Liberation Sans are hard-coded.)
+// whole file and its read-back loads. (The `font` key left 2026-10-12:
+// Liberation Sans is hard-coded; the `icons` key of that day left with it,
+// and a key of that name, the icon set, joined again 2026-11-17.)
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -835,6 +870,9 @@ struct DeviceConfig {
     // head's list; a tuning key): required; the construction state is
     // 1 px (kWaveformFadeDefaultHundredths below).
     int         waveform_fade_hundredths = 100;
+    // THE ICON SET (2026-11-17, the head's list; a permanent key): required;
+    // Papirus the construction state (his set, 2026-11-17, session 140).
+    GuiIconSet  icons = GuiIconSet::Papirus;
 };
 
 // THE PROJECTS REPOSITORY AS CONSTRUCTED — AppState's `projects_repo`
@@ -998,6 +1036,24 @@ inline const char* format_true_colors(bool on) {
 inline std::optional<bool> parse_true_colors(std::string_view v) {
     if (v == kTrueColorsOn)  return true;
     if (v == kTrueColorsOff) return false;
+    return std::nullopt;
+}
+
+// THE icons GRAMMAR (2026-11-17) — the two lowercase words, exactly; the one
+// owner the reader, the writer, the settings editor's commit and its recall
+// read (format_icons, parse_icons), and the words its value list shows and
+// its Tab completes (kIconsWords), Breeze first as the sets were made.
+inline constexpr const char* kIconsBreeze  = "breeze";
+inline constexpr const char* kIconsPapirus = "papirus";
+inline constexpr const char* kIconsWords[] = {kIconsBreeze, kIconsPapirus};
+inline constexpr const char* kIconsGrammarReason =
+    "must be breeze or papirus";
+inline const char* format_icons(GuiIconSet set) {
+    return set == GuiIconSet::Breeze ? kIconsBreeze : kIconsPapirus;
+}
+inline std::optional<GuiIconSet> parse_icons(std::string_view v) {
+    if (v == kIconsBreeze)  return GuiIconSet::Breeze;
+    if (v == kIconsPapirus) return GuiIconSet::Papirus;
     return std::nullopt;
 }
 

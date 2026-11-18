@@ -8,12 +8,14 @@
 // vocabulary's card seat, notification_stack_bound), newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, THE CLASS GLYPH AT THE LEFT AGAIN since 2026-10-24 (the
-// planner's i and X then) — BREEZE'S since 2026-11-02 (architect
-// 2026-11-01, M7: Breeze only, everywhere; the drawings ruled 2026-11-02,
-// R14): DialogInformation, the i cut out of a filled square, on a normal
-// card and DialogError, the X cut out of one, on a critical one — Breeze's
-// dialog-information and dialog-error as the 10-10 cut-out transcriptions,
-// the mark showing the card's face through one color — on the ink-box road
+// planner's i and X then) — THE `icons` SET'S since 2026-11-17 (icons.h's
+// head; Breeze's from 2026-11-02, architect 2026-11-01, M7, the drawings
+// ruled 2026-11-02, R14): DialogInformation on a normal card and
+// DialogError on a critical one, each the mark cut out of its shape —
+// Breeze's the i and the X cut out of a filled square, its
+// dialog-information and dialog-error as the 10-10 cut-out transcriptions;
+// Papirus's the i and the ! cut out of a disc, its own — the mark showing
+// the card's face through one color — on the ink-box road
 // (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
 // content on all four sides (notification_pad_px below; P18, architect
 // 2026-10-24), ON THE CARD FACE — A FLAT BOX IN LIVE'S STATUS BAR'S ORANGE,

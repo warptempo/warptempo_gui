@@ -1684,10 +1684,20 @@ LogoTextInk logo_text_ink(GuiFace face, const char* set) {
     const GuiInkBand b = gui_font_ink_band(gui_font(face), set);
     return LogoTextInk{b.above, b.below};
 }
+// THE BATTERY'S INK LENGTH, THE SET'S (render.h's THE GLYPH CELL; the
+// `icons` key, icons::selected_set): Breeze's kLogoGlyphInkW, its outline's
+// larger side, its width; Papirus's THE LEGEND RUNS' INK ROWS — the
+// drawings stand upright, so their larger side is their height, and the
+// cell is the digits' own band (architect 2026-11-17, session 140).
+int logo_glyph_ink_px() {
+    if (icons::selected_set() == GuiIconSet::Papirus)
+        return logo_text_ink(GuiFace::Body, kLogoLegendInkSet).rows();
+    return scaled_px(kLogoGlyphInkW, 1);
+}
 // THE GLYPH CELL: the two battery drawings' common ink box at the one
 // length, the larger of the two on each axis.
 icons::InkSize logo_glyph_cell() {
-    const int glyph_ink = scaled_px(kLogoGlyphInkW, 1);
+    const int glyph_ink = logo_glyph_ink_px();
     const icons::InkSize on =
         icons::glyph_ink_size(icons::Icon::Battery000Charging, glyph_ink);
     const icons::InkSize off =
@@ -1804,7 +1814,7 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
     // the note, the brand, the legend and its glyph, on the band's ground
     // paint_icon_row already put down — nothing else on the lane. NO SHADOW
     // (the flat look, architect 2026-11-01): the words and the drawings in
-    // the text tone `text` (M13, 2026-11-02; Breeze's, M7).
+    // the text tone `text` (M13, 2026-11-02; the `icons` set's, icons.h).
     const GuiRect lane{band.x, band.y, band.w,
                        std::min(band.h, logo_lane_h_px())};
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -1876,15 +1886,16 @@ void GuiPaintHandler::paint_logo_lane(cairo_t* cr, const GuiRect& band) {
                                             : p.key_face);
     }
 
-    // THE GLYPH, Breeze's battery by the plug state (GuiLogoGlyph's rule),
-    // its ink box centered in the cell exactly (one box for both today, so
-    // flush), at the cell's real place, in the text tone.
+    // THE GLYPH, the set's battery by the plug state (GuiLogoGlyph's rule),
+    // its ink box centered in the cell exactly (Breeze's one box for both,
+    // so flush; Papirus's two boxes, the cell their larger, render.h), at
+    // the cell's real place, in the text tone.
     {
         const icons::Icon glyph =
             app.logo_legend.glyph == GuiLogoGlyph::Charging
                 ? icons::Icon::Battery000Charging
                 : icons::Icon::Battery000;
-        const int glyph_ink = scaled_px(kLogoGlyphInkW, 1);
+        const int glyph_ink = logo_glyph_ink_px();
         const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
         icons::draw_glyph(
             cr, glyph,
@@ -8605,7 +8616,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // 2026-10-23, read as a bevel on the flat field.
 
             // THE ROW'S GLYPH (architect 2026-10-23, a folder icon beside
-            // the audio's; Breeze only since 2026-11-01, M7): BY THE ROW'S
+            // the audio's; the `icons` set's since 2026-11-17): BY THE ROW'S
             // KIND — ViewMediaTrack, the double notes, on a wav row (SOURCE's
             // drawing, architect 2026-11-02, R14 (4) / R15 (Q4); the logo's
             // single note no longer), Folder on a folder or
