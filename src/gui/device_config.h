@@ -1283,7 +1283,7 @@ inline std::optional<int> parse_key_width(std::string_view v) {
 // program_run_gap_px): the band's runs, row 8's groups, the render player's
 // and every controls row's group spaces. On the tablet at 200 % and
 // key_width 35 the band fits whole across the key's whole range (THE FIT at
-// paint_icon_row's width math, paint_handler.cpp: 2200 of the well's 2260
+// paint_icon_row's width math, paint_handler.cpp: 2200 of the well's 2256
 // at 44 W); a wider key brings the overflow rule back. The settings page opens the LINE EDITOR on it, not a
 // value list (43 values is no short domain, kSettingsValueListKeys' rule). A
 // TUNING KEY: when he rules the number, the key, these functions and its

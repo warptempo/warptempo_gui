@@ -2721,8 +2721,8 @@ std::optional<SpanFramingLanding> span_framing_landing(const AppState& app,
     // the deepest zoom and nothing at a coarse one, inside the edge margin
     // either way — and the start is nearbyint(flo) less that residue. The
     // ceiling-saturated whole-song case (mid = total/2, W·q_t >= total ->
-    // start <= 0) is clamped to 0 by clamp_viewport_start's visible >= total
-    // branch.
+    // start <= 0) is clamped to 0 by clamp_viewport_start's whole-song
+    // branch (whole_song_fits_painted_span, main.cpp: q·w >= total).
     const double mid       = 0.5 * (flo + fhi);
     const double visible_t =
         painter_quantized_spp(samples_per_pixel_at(target_level, column)) *

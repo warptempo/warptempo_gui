@@ -975,9 +975,9 @@ bool point_on_playhead_head(const AppState& app, double x, double y) {
 // touch road's (touch_point_in_pan_zone reads this owner).
 //
 // The waveform BAND is THE CANVAS'S INTERIOR, waveform_area exactly
-// (2026-10-09, the canvas framed): the well's margins either side — the
-// ground and the grid floor's leftover
-// split between them — are the program's panel, not waveform, and answer nothing, as
+// (2026-10-09, the canvas framed): the well's frame and the margin of
+// ground beside it either side are the program's panel, not waveform, and
+// answer nothing, as
 // the frame's lines above and below do (the right gutter counted as waveform
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
 // BAR, the lanes and the flexible GAP band are outside it.

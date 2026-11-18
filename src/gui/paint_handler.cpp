@@ -1978,30 +1978,30 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // run at
     //   1666 + 44 + 358 = 2068
     // device px outside the view (1420 inside it) — the faces' span the
-    // well's 2260 on the tablet (its frame's outer columns, 2026-11-17), with
-    // 192 px (96 W) of ground between the left runs and the right run beyond
-    // the run gap. Off the painted walk (the face scaled_px(key_width), the
-    // key gap scaled_px(1), the run gap scaled_px(run_gap), the ends
-    // well_columns'): at the tablet's 200 % (faces 70, the well 22 .. 2281)
-    // the left runs' faces on x 22..1687, the right run's 1924..2281 (its
-    // last face ending on 2281); at 100 % on a 1920-px window (faces 35, the
-    // key gap 1, the run gap 22, the well 15 .. 1904) the left runs' faces on
-    // x 15..847, the right run's 1726..1904. A roster move restates these
-    // numbers.
+    // well's 2256 on the tablet (its frame's outer columns, 12 W from the
+    // glass, architect 2026-11-18), with 188 px (94 W) of ground between the
+    // left runs and the right run beyond the run gap. Off the painted walk
+    // (the face scaled_px(key_width), the key gap scaled_px(1), the run gap
+    // scaled_px(run_gap), the ends well_columns'): at the tablet's 200 %
+    // (faces 70, the well 24 .. 2279) the left runs' faces on x 24..1689, the
+    // right run's 1922..2279 (its last face ending on 2279); at 100 % on a
+    // 1920-px window (faces 35, the key gap 1, the run gap 22, the well
+    // 12 .. 1907) the left runs' faces on x 12..844, the right run's
+    // 1729..1907. A roster move restates these numbers.
     // THE FIT, the one statement every other site points to: the band is 27
     // faces, 23 key gaps and three run gaps outside the view (18, 14 and
     // three inside it) against the well — 1034 W outside, 710 W inside at
-    // key_width 35 — so the tablet's 2304 holds it whole up to about 215 %
-    // outside the view and about 310 % inside it, and at 100 % a window down
-    // to about 1070 device px outside the view and 740 inside it; past either
+    // key_width 35 — so the tablet's 2304 holds it whole up to 218 %
+    // outside the view and 312 % inside it, and at 100 % a window down to
+    // 1058 device px outside the view and 734 inside it; past either
     // the overflow rule (kIconRowViewPairs) answers. ON THE TABLET AT 200 %
     // THE WIDTH TUNES THE FIT: outside the view the band is 54 · key_width +
-    // 178 device px against the well's 2260, so it holds whole up to
+    // 178 device px against the well's 2256, so it holds whole up to
     // key_width 38 W (2230) and from 39 W (2284) the overflow rule answers —
     // the left runs clipped one run gap short of the history opener (x
-    // 2230 − 10 · key_width), the third run's faces cut or published empty
+    // 2228 − 10 · key_width), the third run's faces cut or published empty
     // from its tail, the right run whole: NOISE cut from 39 W and gone from
-    // 41, TIPS from 42, SETUP (the
+    // 40, TIPS from 42, SETUP (the
     // settings page's one opener on glass) from 44, SCORE from 46 (the run's
     // order of 2026-11-10), LOCK from 48, PLAYER at
     // the grammar's ceiling, 50 (the first two runs whole up to it). THE RUN
@@ -2009,12 +2009,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // session 87; render.h's run gap paragraph): the three run gaps of the
     // walk and the one before the history opener all read it, so outside the
     // view the band is 54 · key_width + 46 + 6 · run_gap device px against
-    // the well's 2260 — at key_width 35 whole across the key's whole range,
-    // 2200 at its ceiling, 44 W (the left runs' limit 1924 − 2 · run_gap
+    // the well's 2256 — at key_width 35 whole across the key's whole range,
+    // 2200 at its ceiling, 44 W (the left runs' limit 1922 − 2 · run_gap
     // never reached; until the AUDIO case's retirement, 2026-11-11, the
     // overflow answered from 42 W). The gap
     // before the history opener stays exactly one run gap of clip; the
-    // ground beyond it (192 px at the defaults) is what the left runs leave.
+    // ground beyond it (188 px at the defaults) is what the left runs leave.
     // No assert stands on the fit: the clip and the cut
     // publication are the whole answer at every width.
     //
@@ -2712,7 +2712,7 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // since 2026-11-04 night: seven tabular digits at 0.556 em, the colon at
 // 0.333 and the point at 0.278): on the tablet at 200 % and a 22-px em,
 // 99.08 device px, its ink box 0 .. 98.84 -> the cell 99 (0 .. 98), the
-// field 123 (x 22 .. 144 on the 2304-px panel); at 100 % an 11-px em, the
+// field 123 (x 24 .. 146 on the 2304-px panel); at 100 % an 11-px em, the
 // advance 49.59, the ink 0 .. 49.47 -> the cell 50, the field 62. THE
 // PLAYER'S ROW HOLDS THEM: its scrub is
 // what the fixed terms leave (player_row_layout), the two fields and their
@@ -2881,14 +2881,14 @@ static double time_field_run_x(int field_x) {
 // SEAT where its right-aligned cluster ends — THE WELL'S COLUMNS
 // (render.h's well_columns, the well's frame's outer columns, architect
 // 2026-11-17, session 140): the left seat its first column, the right seat
-// one past its last column, 22 and 2282 at 200 % on the tablet's 2304, 15
-// and 1905 on a 1920-px window at 100 % — and THE KEYS' ENDS, CASES_LEFT and
+// one past its last column, 24 and 2280 at 200 % on the tablet's 2304, 12
+// and 1908 on a 1920-px window at 100 % — and THE KEYS' ENDS, CASES_LEFT and
 // CASES_RIGHT, where a row's first key's face starts and its last key's
 // face ends: the seats themselves (the face is the key, materials.h's THE
 // FACE AND ITS GAP, 2026-11-04), so THE OUTERMOST FACES stand on the well's
 // first and last columns — the band's ends (icon_row_seats) and the modal
 // pane's (modal_box_interior_rect) — both strips and the controls row flush
-// with the well at every scale (the faces 22 .. 2281 on the tablet);
+// with the well at every scale (the faces 24 .. 2279 on the tablet);
 // THE CASE the strip pad under the row's top (icon_case_top_offset_px, the
 // band's own seat). Text and fields (the clocks) start on the left seat. The
 // two rows differ only in `row`: row 8's lane (bottom_row_area), or the
@@ -3168,41 +3168,41 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // two, the verbs eight, the step-and-walk four, the nudge-and-play five),
     // 16 key gaps and four run gaps, 71 + 71 + 287 + 143 + 179 + 4·22 = 839 W
     // = 1678 px, its last face ending at the faces' right end
-    // (bottom_row_seats' cases_right, 2282, one past the well's last column
-    // 2281, the frame's) — on the tablet's 2304 the faces on x 604..2281 (the
-    // duo 604..745, COPY 604..673 and PASTE 676..745, the skips 790..931, the
-    // verbs 976..1549, the walk 1594..1879, the nudge 1924..2281, Play
-    // 2212..2281); the clock's field on the well's first
-    // column, from x 22 — the cell (the widest-digit specimen "DD:DD.DDD"'s ink box in the
-    // program face's 22 px, kerning off, floored first ink to ceiled last
+    // (bottom_row_seats' cases_right, 2280, one past the well's last column
+    // 2279, the frame's) — on the tablet's 2304 the faces on x 602..2279 (the
+    // duo 602..743, COPY 602..671 and PASTE 674..743, the skips 788..929, the
+    // verbs 974..1547, the walk 1592..1877, the nudge 1922..2279, Play
+    // 2210..2279); the clock's field on the well's first column, from
+    // x 24 — the cell (the widest-digit specimen "DD:DD.DDD"'s ink box in
+    // the program face's 22 px, kerning off, floored first ink to ceiled last
     // ink: 99 px; kTimeShape's block) and its two 12-px pads, a 123-px field,
-    // x 22..144 — then the name's first ink 14 px past it (x 159), the state
+    // x 24..146 — then the name's first ink 14 px past it (x 161), the state
     // line's 14 px past the name's advance, clipped one run gap short of the
-    // block (x 560), the room the existing clip leaves it. AT THE
+    // block (x 558), the room the existing clip leaves it. AT THE
     // ARCHITECT'S TABLET VALUE, run_gap 9 W (18 px; his "I've turned down the
     // spacing between the sections to 9W"), the block is 751 + 4·9 = 787 W =
-    // 1574 px from x 708 (the duo 708..849), the state line clipped at x 690.
+    // 1574 px from x 706 (the duo 706..847), the state line clipped at x 688.
     // On a 1920-px window at 100 % (faces 35, the key gap 1,
     // the run gap 22, the program face 11 px) the block is 839 px of faces
-    // from x 1066, the clock's field 62 px on x 15..76, the name from x 84.
+    // from x 1069, the clock's field 62 px on x 12..73, the name from x 81.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor,
     // Toggle Value Drag, COPY and PASTE hidden there with the verbs — the duo
     // whole, its run gap with it — Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
     // not standing, 142 + 70 + 142 + 286 + 3·44 = 772 px on the tablet, from x
-    // 1510 at the defaults. THE WIDTH AND THE GAP TUNE THE BLOCK (the
+    // 1508 at the defaults. THE WIDTH AND THE GAP TUNE THE BLOCK (the
     // `key_width` and `run_gap` tuning keys, 2026-11-06 / 2026-11-07): 21 faces
     // of 2 · key_width, 16 key gaps of 2 and four run gaps of 2 · run_gap, so
     // the block is 42 · key_width + 32 + 8 · run_gap device px on the tablet,
-    // from x 2250 − 42 · key_width − 8 · run_gap. At run_gap 22 it clears the
-    // clock's field (x 22..144) to key_width 45 (x 184), reaches the field from
+    // from x 2248 − 42 · key_width − 8 · run_gap. At run_gap 22 it clears the
+    // clock's field (x 24..146) to key_width 45 (x 182), reaches the field from
     // 46, and runs past the well's first column from 49 — at the grammar's
-    // ceiling, 50 W, 2308 px from x −26, its first 26 px off the panel's left
+    // ceiling, 50 W, 2308 px from x −28, its first 28 px off the panel's left
     // edge (the row carries no collision rule, below). At run_gap 9 it clears
-    // the field to key_width 48 (x 162) and stays on the panel through 50
-    // (x 78). At key_width 35 and run_gap's ceiling, 44 W, the block is 1854
-    // px from x 428, the state line clipped shorter and nothing else moved.
+    // the field to key_width 48 (x 160) and stays on the panel through 50
+    // (x 76). At key_width 35 and run_gap's ceiling, 44 W, the block is 1854
+    // px from x 426, the state line clipped shorter and nothing else moved.
     // THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
@@ -4716,8 +4716,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         text_shape::show_shaped_run(cr, run, x, baseline);
     };
     // THE WALK'S CLIP: the waveform's columns [0, wave_w) over the ruler's
-    // rows, so a tick past the last column and the leftover strip a
-    // non-multiple-of-16 window leaves beside wave_w carry nothing.
+    // rows, so a tick past the last column carries nothing onto the well's
+    // frame beside wave_w.
     cairo_save(cr);
     cairo_rectangle(cr, cx, lane.y, wave_w, ruler_bottom - lane.y);
     cairo_clip(cr);
@@ -4933,8 +4933,8 @@ GuiPaintHandler::PlateViewportBasis
 GuiPaintHandler::plate_viewport_basis() const {
     PlateViewportBasis b;
     b.spp = wf_cache.fp_area_w > 0
-        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-          static_cast<double>(wf_cache.fp_area_w)
+        ? recovered_painter_spp(wf_cache.fp_vp_end - wf_cache.fp_vp_start,
+                                wf_cache.fp_area_w)
         : painter_samples_per_pixel(app, audio, waveform_area(app));
     b.vp_start = static_cast<double>(wf_cache.fp_vp_start);
     b.lattice_origin = wf_cache.fp_lattice_origin;
@@ -7202,8 +7202,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // word (Cancel or Close by content, kModalCancelLabel's rule) and the
     // trim presets list's four (its highlight pair, the player's, directly
     // before them in the one cluster) and the BPM form's two — the last
-    // one's face ending on the pane's last column (x 2281 on the tablet, the
-    // well's last, the frame's; its cell on the box's outer column, 2282),
+    // one's face ending on the pane's last column (x 2279 on the tablet, the
+    // well's last, the frame's; its cell on the box's outer column, 2280),
     // today's button
     // gap between them; the render player's row and the score viewer's
     // read from the left, their other keys first and their transport flush
@@ -7695,7 +7695,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    button, ON THE MODAL FAMILY'S CONTROLS ROW (architect,
         //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
         //    ALONE, FLUSH RIGHT, ITS FACE ENDING ON THE PANE'S LAST COLUMN
-        //    (x 2281 on the tablet, the well's last, the frame's; its cell on
+        //    (x 2279 on the tablet, the well's last, the frame's; its cell on
         //    the box's outer column).
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
         //    shape instead — the highlight pair and four words, one cluster

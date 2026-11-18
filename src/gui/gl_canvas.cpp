@@ -1866,7 +1866,7 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // so a texture sized to the count would be reallocated every frame. Its
 // width is the widest row any pack has asked, rounded up to
 // kColumnsCapacityStep texels, and its height the most rows any has (the
-// tablet's plate, at most 2 · (2256 + 6) = 4524 bars in the fade band's
+// tablet's plate, at most 2 · (2252 + 6) = 4516 bars in the fade band's
 // fine row just past a landing and up to four rows, settles at 5120 x 4;
 // architect 2026-11-14, send K; send O, 2026-11-15);
 // a growth reallocates with no data (glTexImage2D, a handful of times in a

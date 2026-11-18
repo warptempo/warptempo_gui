@@ -849,9 +849,9 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // Split-playhead: during playback zoom tracks the audio under review
     // (scanner); otherwise tracks the cursor. The scanner is meaningful only
     // while active, so the ternary below takes the cursor at rest. At the
-    // effective ceiling samples_visible >= total, so
-    // clamp_viewport_start's visible >= total branch parks the start at 0
-    // (whole song visible) without any mode test.
+    // effective ceiling the painted span q·w >= total, so
+    // clamp_viewport_start's whole-song branch (whole_song_fits_painted_span,
+    // main.cpp) parks the start at 0 without any mode test.
     const int64_t target = app.playhead_scanner_active
         ? app.playhead_scanner_sample
         : app.playhead_cursor_sample;
@@ -909,7 +909,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // just assigned, so this is q(new_level); for a pure pan
     // (level unchanged) it reproduces the caller's post-pan viewport exactly,
     // recovered by nearbyint. At the effective ceiling the anchor cannot pin a
-    // column (the whole song is visible); clamp_viewport_start's visible >= total
+    // column (the whole song is visible); clamp_viewport_start's whole-song
     // branch parks the start at 0 and the drag is inert.
     //
     // THE PLACEMENT'S LATTICE IS THE CALLER'S RULE (architect 2026-10-31; the
@@ -1583,15 +1583,16 @@ void Viewport::follow_scanner() {
 //     test is the same one): NOTHING MOVES, at every zoom;
 //   * CANNOT FIT: the range is wider than 1 − 2 × the edge margin of the
 //     PAINTED window at the live zoom (samples_visible, W·q on the
-//     sixteenth-frame grid — the span the centring below places the subject
-//     in and the geometry fit_zoom_level solves in) — the room the span
-//     framer's margin arm (frame_span_into_view, input_handler.cpp) leaves a
-//     span. One geometry on both sides guarantees the caller's zoom-out never
-//     zooms in: a refused range's margined span exceeds W·q = W·n/16, so the
-//     framer's fit takes at least n + 1 sixteenths, above the live level's
-//     spp (within half a sixteenth of q); and an accepted range keeps the
-//     painted margin. RETURNS FALSE HAVING WRITTEN NOTHING: the zoom-out fit
-//     is the caller's;
+//     sixteenth-frame grid to the nearest frame — the span the centring
+//     below places the subject in and the geometry fit_zoom_level solves
+//     in) — the room the span framer's margin arm (frame_span_into_view,
+//     input_handler.cpp) leaves a span. One geometry on both sides
+//     guarantees the caller's zoom-out never zooms in: a refused range's
+//     margined span exceeds W·q = W·n/16 less at most half a frame, so the
+//     framer's fit takes at least n sixteenths (n + 1 but where the span
+//     lies within that half frame), never under the live level's q; and an
+//     accepted range keeps the painted margin. RETURNS FALSE HAVING
+//     WRITTEN NOTHING: the zoom-out fit is the caller's;
 //   * OFF SCREEN AND FITS: CENTRED on its midpoint AT EVERY ZOOM, coarse
 //     included; never a page-in.
 // THE HOLD POSTURE (AppState::camera_hold) IS ARMED, OF THIS OWNER'S ANSWERS,
@@ -1631,10 +1632,12 @@ void Viewport::follow_scanner() {
 // Exact, architect 2026-11-15, the no-grid arc: the centred midpoint stands
 // at the window's exact middle and the paged-in subject exactly the edge
 // margin in, each to the start's whole frame); the changed path takes the
-// discrete move's tail. AT THE RIGHT WALL a subject in the song's last half-column
-// paints at grid point w at every viewport the clamp allows, so it never
-// counts as on screen there; its landing clamps onto the wall, and once the
-// camera rests there the start compares unchanged and nothing repaints.
+// discrete move's tail. AT THE RIGHT WALL a subject that paints at grid
+// point w there (one in the strip's last half-column at the wall,
+// max_viewport_start_grid's head) paints at w or past it at every viewport
+// the clamp allows, each lying at or left of the wall, so it never counts as
+// on screen; its landing clamps onto the wall, and once the camera rests
+// there the start compares unchanged and nothing repaints.
 //
 // RULED OUT, never to be re-proposed (architect 2026-09-24):
 //   * LEAST MOVEMENT as a camera (2026-09-22 to 2026-09-24): it "sounds good

@@ -54,9 +54,9 @@
 // two channels' wells with the stereo divider between them in the frame's
 // tone — and the frame's bottom line, the well's foot, its sides one W
 // beside them; then ROW 8, THE STRIP PAD, the case, THE STRIP PAD, on the
-// window's foot. THE WELL STANDS 9 W IN FROM EACH SIDE of the window's
-// client area on the ground (column_margin_px) and half the grid floor's
-// leftover, then the frame's W, the lanes on THE WAVEFORM AREA's columns,
+// window's foot. THE WELL STANDS 12 W IN FROM EACH SIDE of the window's
+// client area on the ground (column_margin_px), then the frame's W, the
+// lanes on THE WAVEFORM AREA's columns,
 // the frame's outer columns the outermost keys' faces' outer columns (THE
 // EDGE RULE; render.h's well_columns). (The band's head and foot lines and its panes,
 // the tab strip under it, the column's air, the column's foot, the dock bar,
@@ -105,10 +105,10 @@ struct ProgramSpec {
     // THE STRIPS' ENDS ARE THE WELL'S FIRST AND LAST COLUMNS, NEVER THE
     // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
     // to the ring, the well's columns since the flat well — THE EDGE RULE;
-    // render.h's well_columns the one owner), so the
-    // strips and the well coincide at every scale whatever the grid floor's
-    // leftover. BOTH STRIPS ARE FLUSH WITH THE WELL at both ends (architect
-    // 2026-10-23, "shouldn't row 8 take the same rule as top strip?" — yes):
+    // render.h's well_columns the one owner), so the strips and the well
+    // coincide at every scale. BOTH STRIPS ARE FLUSH WITH THE WELL at both
+    // ends (architect 2026-10-23, "shouldn't row 8 take the same rule as
+    // top strip?" — yes):
     // the band's first face and row 8's clock field start on the well's
     // first column, the band's right run's and row 8's block's last face
     // end on its last column (the face the key, 2026-11-04) — the modals'
@@ -126,14 +126,15 @@ struct ProgramSpec {
     // THE WELL'S SIDE MARGIN (Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much ground from each side of the window's
-    // client area, then half the grid floor's leftover (main.cpp's
-    // waveform_area), then THE WELL'S FRAME's one W (architect 2026-11-17,
+    // client area, then THE WELL'S FRAME's one W (architect 2026-11-17,
     // session 140; render.h's THE WELL'S FRAME), then the waveform area —
     // the trim bar's, the ruler's, the marker lane's and the canvas's
-    // columns. 9 W SINCE THE REBASE TO 200 % (architect 2026-11-05: Cool
-    // Edit's 6 times 1.5, so the tablet's 18 device px; the frame's sides
-    // on columns 22 .. 23 and 2280 .. 2281 and the area 24 .. 2279 since
-    // 2026-11-17).
+    // columns, every column the two leave (main.cpp's waveform_area). 12 W
+    // (architect 2026-11-18, "I'll take your recommend.", the 16-px floor
+    // dropped; session 140's ruling of 2026-11-17: the keys' outer faces,
+    // which stand on the frame's outer columns, 12 W from the glass): the
+    // tablet's 24 device px, the frame's sides on columns 24 .. 25 and
+    // 2278 .. 2279 and the area 26 .. 2277; 12 px at 100 %.
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each
@@ -156,7 +157,7 @@ struct ProgramSpec {
 
 inline constexpr ProgramSpec kProgramSpec = {
     .case_hot_face      = false,
-    .column_margin_px      = 9,
+    .column_margin_px      = 12,
     .grid_divisions        = 4,
 };
 

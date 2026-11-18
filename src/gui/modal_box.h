@@ -60,16 +60,17 @@
 // 72-row logo lane in device px; the hairline one W, 2 device px): the
 // box's top rows 144–145 (the trim lane's first rows, the well's frame's
 // top line directly under the band's rows 0–143, the logo lane 0–71), its
-// bottom rows 1328–1329 (the well's foot) and its columns 20–21 and
-// 2282–2283 (one hairline outside the well's columns, the frame's), those
-// rows and columns ground, the PANE x 22..2281 (the well's first and last
-// columns, the frame's outer ones, 2260 wide; architect 2026-11-17, session
-// 140) and y 146..1327 (the main canvas's own last row 1327); the controls
-// row 1330–1439, its face rows 1368–1401, its first face's columns 22–91
-// and its last 2212–2281 — the faces on the pane's outer columns. A
-// DIALOG'S TEXT (THE TEXT SEAT, below) on the list rows' seat, 18 px in
-// from the pane's edges: its pen on column 40, its ascender line on row
-// 164, its wrap ending one past column 2263, its foot clip one past row
+// bottom rows 1328–1329 (the well's foot) and its columns 22–23 and
+// 2280–2281 (one hairline outside the well's columns, the frame's), those
+// rows and columns ground, the PANE x 24..2279 (the well's first and last
+// columns, the frame's outer ones, 2256 wide, 12 W from the glass;
+// architect 2026-11-17, session 140, and 2026-11-18) and y 146..1327 (the
+// main canvas's own last row 1327); the controls row 1330–1439, its face
+// rows 1368–1401, its first face's columns 24–93 and its last 2210–2279 —
+// the faces on the pane's outer columns. A DIALOG'S TEXT (THE TEXT SEAT,
+// below) on the list rows' seat, 18 px in from the pane's edges: its pen on
+// column 42, its ascender line on row 164, its wrap ending one past column
+// 2261, its foot clip one past row
 // 1309.
 //
 // THE ON-SCREEN KEYBOARD STANDS UNDER THE STACK (architect 2026-10-14,
@@ -174,7 +175,7 @@ inline GuiRect modal_box_rect(const AppState& a, int keyboard_h) {
 // side (hairline_px: 2 device px on the tablet at 200 %, 1 at 100 %; the
 // box's outer rows and columns the ground), the pane every member stands on
 // — across, the well's own columns (modal_box_rect), the frame's outer
-// ones, 22 .. 2281 on the tablet — and
+// ones, 24 .. 2279 on the tablet — and
 // the lists' rows stand ONE HAIRLINE OF AIR inside it
 // (modal_box_content_pad_px) on the left, the top and the right, so the lit
 // row's bar reaches to one W from the pane's edges and the first row stands
@@ -247,8 +248,8 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 // Its readers, which cannot drift apart:
 //   THE BOX'S TEXT — a prompt's question, the progress modal's sentence and
 //     the dialog editors' line, symmetric on all four sides: THE PEN the
-//     seat in from the pane's left column (column 40 on the tablet), THE WRAP
-//     ending the seat short of its right edge (one past 2263), THE FIRST
+//     seat in from the pane's left column (column 42 on the tablet), THE WRAP
+//     ending the seat short of its right edge (one past 2261), THE FIRST
 //     ROW'S ASCENDER LINE — the face's own "l" ink top,
 //     gui_font_ascender_ink_px, never the line box's top: the air he sees is
 //     the ink's — the seat under its top row (row 164; modal_box_text_

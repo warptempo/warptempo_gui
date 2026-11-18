@@ -260,9 +260,9 @@ namespace {
 // gui_scale — AND THE WELL'S LANES ARE DERIVED IN DEVICE PX AT THE ELEMENT
 // (render.h's well lanes block). THE CANVAS — THE WELL'S INTERIOR — ON THE
 // TABLET AT 200 % AND key_height 17 IS 1077 DEVICE ROWS (the
-// rule at centered_leftover_h below), AND ITS WIDTH 2256 OF THE TABLET'S
-// 2304, 24 device px in from the left (waveform_area: the margin, 18 px,
-// half the flooring's leftover, 4, and the well's frame, 2). Per
+// rule at centered_leftover_h below), AND ITS WIDTH 2252 OF THE TABLET'S
+// 2304, 26 device px in from the left (waveform_area: the margin, 24 px,
+// and the well's frame, 2; no floor, architect 2026-11-18). Per
 // scale the well above the canvas is the trim lane (the frame's top line +
 // the trough + the frame's line) + the ruler lane (pad + the digits' ink +
 // pad, + the frame's line) + the marker lane (the time field's height:
@@ -284,9 +284,9 @@ namespace {
 //   the waveform 1077 on rows 251–1327 (its two wells 537 rows each round
 //   the divider's rows 788–789, the spare row 1327 the canvas's last,
 //   render.h's waveform_divider), both gaps 0 — 144 / 0 / 107 / 1077 / 0 /
-//   112; the waveform 2256 wide, 24 px in (columns 24–2279), the frame's
-//   sides on columns 22–23 and 2280–2281, the well's columns 22 and 2282
-//   (one past 2281). (The unit of 2026-11-04 took rows from the canvas,
+//   112; the waveform 2252 wide, 26 px in (columns 26–2277), the frame's
+//   sides on columns 24–25 and 2278–2279, the well's columns 24 and 2280
+//   (one past 2279). (The unit of 2026-11-04 took rows from the canvas,
 //   architect: "waveform height ok to take from"; the unit of 2 that night
 //   gave five back; the 12-W trough took eight, 2026-11-17. The
 //   laptop geometries once worked here — 1920 x H, 1024 x 600 — are gone
@@ -531,45 +531,30 @@ GuiRect waveform_area(const AppState& a) {
     // rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
-    // Effective waveform width: the largest multiple of the grid step not
-    // exceeding the room the column's two sides leave (below), the remainder
-    // (<= 15 px) split into the two margins' face.
-    //
-    // The step is 16 because the painter grid is quantized to sixteenths of
-    // a frame (painter_quantized_spp, warp_frame_map_view.h), so at a
-    // multiple-of-16 width W·q is a WHOLE number of frames at every level,
-    // whole or fractional — the right wall, the viewport grid and the visible
-    // span stay integral. Every whole level's spp is the whole working
-    // column times a power of two (a half at level 1), so at whole levels q is
-    // the logical spp exactly at every rate.
-    constexpr int kGridStepPx = 16;
     // THE CANVAS'S INTERIOR ACROSS (architect 2026-10-09, the third part;
     // program_spec.h's column_margin_px): the margin's ground stands in from
     // each side of the window (column_margin_w_px), then THE WELL'S FRAME's
     // one W each side (well_frame_w_px; architect 2026-11-17, session 140,
-    // render.h's THE WELL'S FRAME), and the interior is what those leave,
-    // floored to the grid step. THE FRAME IS TAKEN OUT OF THE ROOM BEFORE THE
-    // FLOOR, SO IT STANDS ONE W OUTSIDE THE AREA and the area keeps a whole
-    // multiple of the step (a frame inset into the area would break the
-    // floor: 2256 − 4 is no multiple of 16). THE LEFTOVER OF FLOORING THE
-    // WIDTH TO THE PAINTER GRID STEP IS SPLIT BETWEEN THE TWO MARGINS, THE
-    // ODD PIXEL TO THE RIGHT (architect 2026-10-09, symmetry strict), all
-    // ground, outside the frame; the trim bar, the ruler and the marker lane
-    // follow the canvas's columns, inside it. On the tablet's 2304 at 200 %:
-    // the area 24 device px in and 2256 wide (the margin's 18, half the
-    // flooring's 8, the frame's 2), the frame's sides on columns 22 .. 23 and
-    // 2280 .. 2281 — the area and the plate where they stood before the frame
-    // came. On a 1920-px window at 100 %: 16 in and 1888 wide (9, half its
-    // 12, the frame's 1). The working column, the zoom map, every column
-    // mapping and hit test and the damage boxes read this rect (ON SCREEN IS
-    // AS PAINTED); THE EDGE RULE reads the frame's outer columns
-    // (render.h's well_columns).
+    // render.h's THE WELL'S FRAME), and the interior is what those two leave,
+    // EVERY COLUMN OF IT — NO FLOOR (architect 2026-11-18, "I'll take your
+    // recommend."): the width is free because every basis that carries a
+    // span recovers the painter's q exactly at any width over 16 px
+    // (recovered_painter_spp, warp_frame_map_view.h, the proof). So the
+    // frame stands right inside the margin, 12 W from the glass, and with it
+    // the keys' outer faces, which stand on the frame's outer columns (THE
+    // EDGE RULE, render.h's well_columns; session 140's ruling, 2026-11-17).
+    // The trim bar, the ruler and the marker lane follow the
+    // canvas's columns, inside the frame. On the tablet's 2304 at 200 %: the
+    // frame on columns 24 .. 25 and 2278 .. 2279, the area 26 device px in
+    // and 2252 wide (the margin's 24, the frame's 2). On a 1920-px window at
+    // 100 %: the frame on columns 12 and 1907, the area 13 in and 1894 wide.
+    // The working column, the zoom map, every column mapping and hit test and
+    // the damage boxes read this rect (ON SCREEN IS AS PAINTED); THE EDGE
+    // RULE reads the frame's outer columns (render.h's well_columns).
     const int side = column_margin_w_px();
     const int frame = well_frame_w_px();
-    const int inner_room = std::max(0, w - 2 * side - 2 * frame);
-    const int slack = inner_room % kGridStepPx;
-    const int effective_w = inner_room - slack;
-    const int inner_x = side + slack / 2 + frame;
+    const int effective_w = std::max(0, w - 2 * side - 2 * frame);
+    const int inner_x = side + frame;
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, a constructive DOMAIN INVARIANT
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
@@ -913,8 +898,9 @@ double samples_per_pixel_at(double zoom_level, int64_t column_frames) {
 // not a patch: the exact solve of spp·width == span would leave q to round to
 // the NEAREST sixteenth, half the time below spp — a painted span up to
 // width/32 frames SHORT of the span, so a whole song would not fit its
-// whole-song level (whole_song_visible and clamp_viewport_start's visible >=
-// total branch would fail, the whole-song view panning one column). The
+// whole-song level (whole_song_visible and the walls' whole-song test,
+// whole_song_fits_painted_span, would fail, the whole-song view panning one
+// column). The
 // overshoot is under one sixteenth of a frame per column — under width/16
 // frames of silence past the span's end, which is under one column once a
 // column holds more than width/16 frames (any span longer than about five
@@ -949,12 +935,13 @@ double effective_min_zoom_level(int64_t column_frames) {
 // The per-file effective zoom-out ceiling: the fit level of the whole song
 // (fit_zoom_level above — the level whose painted span width·q covers
 // total_frames), clamped into [effective floor, kMaxZoom]; full zoom-out
-// rests here (whole-song-visible, Ableton behavior), where samples_visible >=
-// total_frames and clamp_viewport_start parks the start at 0. It moves with
+// rests here (whole-song-visible, Ableton behavior), where the painted span
+// q·w >= total_frames in reals (whole_song_fits_painted_span) and
+// clamp_viewport_start parks the start at 0. It moves with
 // the waveform's width (the whole-song state follows it, ViewState::
 // whole_song_visible). A degenerate tiny file (fit_level under the floor,
 // effective_min_zoom_level) collapses the range to the floor —
-// clamp_viewport_start's visible >= total branch owns that start = 0
+// clamp_viewport_start's whole-song branch owns that start = 0
 // display. Because kMaxZoom is derived from audio_io's
 // structural source caps (see settings_file.h), fit_level is below kMaxZoom
 // for every loadable file at every window size on the deployed displays, so
@@ -999,10 +986,12 @@ int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
     // spp no longer needs the total, but dropping the evaluation would move the
     // cache-rebuild/diagnostic timing — deliberately kept identical.
     (void)live_total_frames(a, audio);
-    // THE PAINTED SPAN, w·q on the sixteenth-frame grid — a whole number of
-    // frames at every level (painter_quantized_spp) — so the keep-visible
-    // tests, the centring, the right wall and the whole-song test all measure
-    // the span the waveform actually shows.
+    // THE PAINTED SPAN, w·q on the sixteenth-frame grid to the nearest frame
+    // (viewport_end_sample's rounding: w·q itself wherever it is whole, within
+    // half a frame of it otherwise) — so the keep-visible tests and the
+    // centring measure the span the waveform actually shows, to the frame.
+    // THE WALLS read q·w itself (whole_song_fits_painted_span,
+    // max_viewport_start_grid).
     const double spp = samples_per_pixel_at(a.zoom_level, audio.working_column());
     return static_cast<int64_t>(std::nearbyint(
         painter_quantized_spp(spp) * static_cast<double>(area.w)));
@@ -1030,23 +1019,57 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
     return { lo, hi };
 }
 
+namespace {
+// THE WALLS' WHOLE-SONG TEST — THE REAL PAINTED SPAN (architect 2026-11-18,
+// the 16-px floor dropped): the whole song fits iff q·w >= total in reals,
+// q the painter's step and w the waveform's width, never the rounded
+// samples_visible, which may stand half a frame either side of q·w where
+// w·q is not whole. ONE NOTION FOR EVERY SITE THAT DECIDES A WALL:
+// max_viewport_start_grid, resting_viewport_start and
+// resting_parked_viewport_start, and fit_zoom_level's covering ceiling
+// (width·n/16 >= span in reals) lands the whole-song level inside it. q·w is
+// exact in a double (q a whole number of sixteenths). A non-numeric zoom
+// (q <= 0) keeps the rounded span's answer.
+bool whole_song_fits_painted_span(const AppState& a, const GuiAudio& audio) {
+    const int64_t total = live_total_frames(a, audio);
+    const GuiRect area  = waveform_area(a);
+    const double  q     = painter_samples_per_pixel(a, audio, area);
+    if (q <= 0.0) return samples_visible(a, audio) >= total;
+    return q * static_cast<double>(area.w) >= static_cast<double>(total);
+}
+} // namespace
+
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
-    // The rightmost ON-grid viewport start: the smallest FRAME-0 lattice point
-    // >= max_start (= total - visible). Grid points viewport_grid_point(k, q) are
-    // strictly increasing at numeric zoom (q >> 1), so starting at
-    // floor(max_start/q) and stepping up finds it in O(1). Resting here shows
-    // under one column of inert padding past EOF (get_peak_range clamps
-    // past-EOF reads to silence). `visible` is the painted span w·q
-    // (samples_visible), a whole number of frames. A frame in the song's last
-    // half-column still rounds to grid point w, one past the last column, so
-    // at the wall it is off the edge: the playhead shows only its ruler
-    // head's left half there (the half-head rule, paint_ruler_row), a marker
-    // only its flag's left border (the flag iterator's cull, render.cpp), and no
-    // position nudge or drop at the playhead authors a marker there
-    // (source_frame_off_right_edge, warp_frame_map_view.h, which reads this
-    // wall). The flush-right viewport is a true grid point — unlike the off-grid max_start it replaces, this keeps
-    // exact-grid marker commits and pixel anchoring simultaneously valid at
-    // maximum scroll.
+    // The rightmost ON-grid viewport start: THE FRAME-0 LATTICE'S POINT
+    // S = viewport_grid_point(k, q) = nearbyint(k·q) of the smallest k whose
+    // strip ends at or past the song's end, (k + w)·q >= total — THE REAL
+    // PAINTED SPAN q·w ON THE LATTICE'S OWN INDEX (architect 2026-11-18, the
+    // 16-px floor dropped). Every place on the wall's viewport is measured
+    // from its index k (displayed_x_at and its inverse, origin 0 there,
+    // viewport_lattice_index), so the frame at the strip's right edge x = w
+    // is (k + w)·q exactly, and this test is the one that puts the song's
+    // end, frame total, at or left of that edge — neither the rounded
+    // samples_visible (half a frame either side of q·w where it is not
+    // whole) nor the rounded point S (half a frame either side of k·q at a
+    // fractional step) can promise it. At a whole step q (every whole level
+    // from 2 up, the deepest-zoom floor's 20) k·q is S itself and q·w is
+    // samples_visible itself, so this is the same integer the rounded
+    // compare gave. Grid points are strictly increasing at numeric zoom
+    // (q >> 1), so starting at floor((total − q·w) / q) and stepping up finds
+    // it in O(1); k·q and q·w are exact in a double (q a whole number of
+    // sixteenths). Resting here shows under one column of inert padding past
+    // EOF (get_peak_range clamps past-EOF reads to silence): (k + w)·q lies
+    // in [total, total + q), so the song's last frame stands at a place
+    // under w, inside the strip, and a frame in the strip's last half-column
+    // rounds to grid point w, one past the last column, so it is off the
+    // edge: the playhead shows only its ruler head's left half there (the
+    // half-head rule, paint_ruler_row), a marker only its flag's left border
+    // (the flag iterator's cull, render.cpp), and no position nudge or drop
+    // at the playhead authors a marker there (source_frame_off_right_edge,
+    // warp_frame_map_view.h, which reads this wall). The flush-right
+    // viewport is a true grid point — unlike the off-grid total − q·w it
+    // replaces, this keeps exact-grid marker commits and pixel anchoring
+    // simultaneously valid at maximum scroll.
     //
     // THE WALL IS THE FRAME-0 LATTICE'S UNDER EVERY LATTICE RULE (architect
     // 2026-10-31; the rule at AppState::viewport_lattice_origin): a rest on
@@ -1058,17 +1081,19 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // of it, source_frame_off_right_edge, which asks where a frame paints at
     // it, and hold_derived_on_arrival (viewport.cpp), which refuses the hold
     // to a centring whose start lies past it.
-    // Degenerate branches: visible >= total
-    // (the whole song fits) → 0; q <= 0 (non-numeric zoom) → max(0, max_start).
-    const int64_t visible = samples_visible(a, audio);
-    const int64_t total   = live_total_frames(a, audio);
-    if (visible >= total) return 0;
-    const int64_t max_start = total - visible;
-    const double  q = painter_samples_per_pixel(a, audio, waveform_area(a));
-    if (q <= 0.0) return std::max<int64_t>(0, max_start);
-    int64_t k = static_cast<int64_t>(std::floor(max_start / q));
+    // Degenerate branches: the whole song fits (whole_song_fits_painted_span)
+    // → 0; q <= 0 (non-numeric zoom) → max(0, total − the rounded span).
+    if (whole_song_fits_painted_span(a, audio)) return 0;
+    const int64_t total = live_total_frames(a, audio);
+    const GuiRect area  = waveform_area(a);
+    const double  q     = painter_samples_per_pixel(a, audio, area);
+    if (q <= 0.0)
+        return std::max<int64_t>(0, total - samples_visible(a, audio));
+    const double span  = q * static_cast<double>(area.w);
+    const double total_d = static_cast<double>(total);
+    int64_t k = static_cast<int64_t>(std::floor((total_d - span) / q));
     if (k < 0) k = 0;
-    while (viewport_grid_point(k, q) < max_start) ++k;
+    while (static_cast<double>(k) * q + span < total_d) ++k;
     return viewport_grid_point(k, q);
 }
 
@@ -1116,13 +1141,13 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
 // so it rests at 0 either way).
 ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
                                     int64_t start, ViewportLattice rule) {
-    const int64_t visible = samples_visible(a, audio);
-    const int64_t total   = live_total_frames(a, audio);
-    if (visible >= total) return {0, 0};
+    // The whole-song park, on the walls' one notion of the span
+    // (whole_song_fits_painted_span: q·w in reals).
+    if (whole_song_fits_painted_span(a, audio)) return {0, 0};
 
     // The rightmost frame-0 rest, through the shared right-wall owner.
-    // max_viewport_start_grid re-derives visible/total/q and returns
-    // max(0, total-visible) when q is non-numeric.
+    // max_viewport_start_grid re-derives total/q and the span and returns
+    // max(0, total − the rounded span) when q is non-numeric.
     const int64_t max_start_grid = max_viewport_start_grid(a, audio);
 
     const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
@@ -1183,7 +1208,7 @@ ViewportRest resting_parked_viewport_start(const AppState& a,
     const ViewportRest exact =
         resting_viewport_start(a, audio, start, ViewportLattice::Exact);
     if (exact.start != start) return exact;   // a wall or a parked-at-0 view
-    if (samples_visible(a, audio) >= live_total_frames(a, audio)) return exact;
+    if (whole_song_fits_painted_span(a, audio)) return exact;
     const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
     if (q <= 0.0) return exact;
     if (2.0 * std::fabs(static_cast<double>(parked_origin)) > q + 1.0)

@@ -954,8 +954,10 @@ struct GuiPaintHandler {
     // class plus a pointer here. The MARKER STEMS are deliberately not among
     // them: they paint from the flag painter's own stash, on the basis those
     // boxes were laid out against, so a stem cannot leave its flag.
-    // spp falls back to the LIVE current_samples_per_pixel when no
-    // plate has published a span yet (fp_area_w <= 0, cold before the first
+    // spp is the q the published span over fp_area_w gives back
+    // (recovered_painter_spp, warp_frame_map_view.h: the plate's own q at
+    // any width), and falls back to the LIVE painter_samples_per_pixel when
+    // no plate has published a span yet (fp_area_w <= 0, cold before the first
     // completion). The ONE owner of that recipe; each caller keeps its own
     // spp <= 0 guard where it has one today.
     //

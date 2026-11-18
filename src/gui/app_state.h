@@ -128,9 +128,9 @@ constexpr double kUnloadedZoomLevel = 2.0;
 // tablet's 2304 at 44.1 kHz: 46; at 48 kHz 50 — and a strip narrower than the
 // display (chrome inside the window) keeps that same column and so shows a
 // little less than 2.4 s: a resize never moves the grid. THE STRIP IS NOT
-// THE DISPLAY even full screen: the waveform stands inside its side margins,
-// floored to the painter's 16-px grid (waveform_area, main.cpp) — on the
-// tablet 2256 of the display's 2304 device px — so W is the display's alone
+// THE DISPLAY even full screen: the waveform stands inside its side margins
+// and the well's frame (waveform_area, main.cpp) — on the tablet 2252 of the
+// display's 2304 device px — so W is the display's alone
 // and the column is 46 there (the strip's width would give 47).
 // W is GuiPlatform::display_width_px (the surface's width; the contract at
 // platform_android.h).
@@ -10763,7 +10763,7 @@ inline DialogEditorStop dialog_editor_byte_at(
 //   * LEFT-ALIGNED ON THE FACE: box.x = face.x, one expression whether the
 //     box is wider or narrower than its face;
 //   * THEN HELD BETWEEN THE KEYS' OUTER COLUMNS (render.h's well_columns,
-//     THE EDGE RULE; architect 2026-11-02, M11 ruling 4: x 22 .. 2281 on the
+//     THE EDGE RULE; architect 2026-11-02, M11 ruling 4: x 24 .. 2279 on the
 //     tablet, the well's frame's outer columns since 2026-11-17) — the right clamp first, so a box that would run past the right
 //     one is pulled in to end on it, then the left, so a box wider than the
 //     span pins its left edge there;
@@ -12772,8 +12772,9 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 // do not reintroduce one, since the only basis these pixels have is the plate's).
 // Use it from on_redraw to align the cursor/scanner paint with the cached layers
 // (waveform, marker stems, flags) — those layers render against
-// wf_cache.fp_vp_start at the displayed spp (derivable as
-// (fp_vp_end - fp_vp_start) / fp_area_w) on fp_lattice_origin's lattice
+// wf_cache.fp_vp_start at the displayed spp (the q recovered from
+// fp_vp_end - fp_vp_start over fp_area_w, recovered_painter_spp) on
+// fp_lattice_origin's lattice
 // (GuiPaintHandler::plate_viewport_basis carries all three), including the
 // 1-2 paint frames while
 // the worker rebuilds against a viewport change. Threading ALL THREE parameters
@@ -19599,8 +19600,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
 // live trim pass last DREW — trim_bridge_gap (render.h, the one owner the
 // painter's midpoint mark also fits against) over the painted bound columns,
 // clipped by the painter to its own effective width, so the grabbable bridge
-// is the drawn one and the inert non-multiple-of-16 right gutter neither
-// paints the bar nor answers true here. Nothing is re-derived on the store's
+// is the drawn one and the well's frame beside the lane neither paints the
+// bar nor answers true here. Nothing is re-derived on the store's
 // pair.
 //
 // THE ARROW BUTTONS ARE NOT IN IT: trim_bridge_gap insets each end by its
@@ -19805,9 +19806,11 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // vp_end/area_w triple the LAST COMMITTED frame's flag cache was built
 // against — the {fp_vp span, fp_area_w} pair the rebuild staged, the plate's
 // own span over the plate's own width (waveform_cache.cpp's wave_w) — so
-// `spp` == (vp_end - vp_start) / area_w is the flags' OWN samples-per-pixel,
-// exact on the committing frame, not just at rest. Cold (nothing promoted yet — first paint / view flip / just-after-load)
-// it falls back to the LIVE viewport {viewport_start_sample, viewport_end_sample
+// `spp`, the q that span over area_w gives back (recovered_painter_spp,
+// warp_frame_map_view.h), is the flags' OWN samples-per-pixel, exact on the
+// committing frame, not just at rest. Cold (nothing promoted yet — first
+// paint / view flip / just-after-load) it falls back to the LIVE viewport
+// {viewport_start_sample, viewport_end_sample
 // at current_samples_per_pixel, effective width}, matching the live-map cold
 // fallback of displayed_or_live_target_map (and the pre-mirror live basis the
 // flag and trim hits read before either had a stash).

@@ -88,9 +88,11 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
 // The viewport twin of displayed_or_live_target_map (full rationale at the
 // declaration): the vp_start/vp_end/area_w the flag item cache was painted
 // with on the last committed frame, so the endcap and editor-box pixels ride
-// the same basis the flag pixels do. The warm spp is (vp_end - vp_start) /
-// area_w — the flags' OWN samples-per-pixel (span over the effective waveform
-// width the item render used), exact on the committing frame. Cold (area_w == 0,
+// the same basis the flag pixels do. The warm spp is the q the span
+// (vp_end - vp_start) over area_w gives back (recovered_painter_spp,
+// warp_frame_map_view.h) — the flags' OWN samples-per-pixel (the span over the
+// effective waveform width the item render used), exact on the committing
+// frame. Cold (area_w == 0,
 // nothing promoted yet) falls back to the live viewport span at the effective
 // waveform width, bit-for-bit the pre-mirror hit-test live basis.
 ItemViewportBasis item_viewport_basis(const AppState& app,
@@ -110,10 +112,8 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
         b.lattice_origin = app.viewport_lattice_origin;
     }
     b.vp_start = static_cast<double>(b.vp_start_frame);
-    b.spp = b.area_w > 0
-        ? static_cast<double>(b.vp_end_frame - b.vp_start_frame) /
-          static_cast<double>(b.area_w)
-        : 0.0;
+    b.spp = recovered_painter_spp(b.vp_end_frame - b.vp_start_frame,
+                                  b.area_w);
     return b;
 }
 
@@ -243,9 +243,9 @@ bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
     // THE PAINTER'S STASH, the endcap test's twin (AppState::trim_bar_hit):
     // the interval is the span's body between its two end zones as
     // render_trim_flags last DREW it — trim_bridge_gap over the painted
-    // columns, already clipped to the lane's painted width, so the inert
-    // non-multiple-of-16 right gutter answers false exactly as it paints no
-    // bar. Nothing here reads app.trim. Cold answers false — which is also
+    // columns, already clipped to the lane's painted width, so the well's
+    // frame beside it answers false exactly as it paints no bar. Nothing
+    // here reads app.trim. Cold answers false — which is also
     // the no-audio answer, the trim pass painting only over loaded audio.
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return false;

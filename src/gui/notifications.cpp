@@ -56,8 +56,8 @@ GuiRect notification_stack_bound(const AppState& a) {
     // OUTER COLUMN AT THE RIGHT, THE PANEL'S PAD AT THE FOOT. THE RIGHT EDGE IS
     // THE KEYS' OUTER COLUMN (THE EDGE RULE, as the tooltip's clamp,
     // tooltip_box_rect; architect 2026-11-02, M11's and M14's record
-    // pictures): the card's right edge on the well's last column, 2281 on
-    // the tablet (well_columns' end, 2282, one past it; the well's columns
+    // pictures): the card's right edge on the well's last column, 2279 on
+    // the tablet (well_columns' end, 2280, one past it; the well's columns
     // its frame's outer ones since 2026-11-17; the panel's pad from the
     // window's edge until 2026-11-02). The foot is the
     // panel's own pad, folder_overlay::pad_px (architect 2026-08-30; one W,

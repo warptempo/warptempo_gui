@@ -213,14 +213,17 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // drag the end as far as it goes): a pen AT OR PAST THE LAST FRAME'S PLACE
 // answers a frame >= total-1 and the wall clamps it there. At the right wall
 // the strip's right edge is past that place by construction — the wall's
-// start S is the frame-0 lattice point with S >= total − w·q
-// (max_viewport_start_grid, main.cpp) and at the whole-song zoom the start
-// is 0 with w·q >= total (fit_zoom_level's ceil), so the frame at x = w,
-// S + w·q, is >= total — and a click's or a sweep's place past the strip's
-// right edge is held at x = w by its caller, so a sweep carried past the
-// edge rests its end on total-1, what Reset Trim writes; inside the strip
-// the pen reaches it from the last frame's own place,
-// x >= (total − 1 − S) / q − half a frame, rightward. (The endcap and bridge
+// lattice index k is the smallest with (k + w)·q >= total, the real span on
+// the lattice's own index (max_viewport_start_grid, main.cpp), and at the
+// whole-song zoom the start is 0, k = 0, with w·q >= total
+// (fit_zoom_level's ceil), so the frame at x = w, (k + w)·q on the item
+// basis (displayed_frame_at_x, origin 0 at both), is >= total in the
+// displayed domain, in either view, before any map — and a click's or a
+// sweep's place past the strip's right edge is held at x = w by its
+// caller, so a sweep carried past the edge rests its end on total-1, what
+// Reset Trim writes; inside the strip the pen reaches it from the last
+// frame's own place, x >= (total − 1) / q − k less half a frame,
+// rightward. (The endcap and bridge
 // DRAGS reach the same wall by their own road, the bound's proposal held to
 // the strip's extent and the walls: update_trim_drag.)
 //
@@ -835,7 +838,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // place less the bound's, in px) the proposal reaches the frame at x = w
     // once the pen stands at w + g, and the frame at x = 0 once it stands at
     // g. At the right wall and at the whole-song zoom the frame at x = w is
-    // at or past total (S + w·q >= total, trim_bound_frame_at_x's head), so
+    // at or past total ((k + w)·q >= total, trim_bound_frame_at_x's head), so
     // the end rests on total-1 there; at the left wall the frame at x = 0 is
     // frame 0. THE PEN'S TRAVEL PAST THE EDGE IS THE GRAB'S OWN OFFSET: an
     // end zone ends one px right of its bound (trim_endcap_rect), so g < 1

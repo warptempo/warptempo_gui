@@ -82,7 +82,7 @@ struct GuiRectF {
 //     which pixels are touched, and a pixel is whole. An exact thing's
 //     damage is its hull.
 //   THE LAYOUT'S BOXES — lanes, rows, the keys' faces, fields, panes, the
-//     waveform area (its 16-px floor) and the well's columns: every box
+//     waveform area and the well's columns: every box
 //     another thing is laid out against. Their sizes are whole W through
 //     scaled_px (rounded at the element, its own rule, below) or the
 //     whole-px hull of a font metric (a row's pitch from the line height, the
@@ -625,9 +625,10 @@ void install_true_colors(bool on);
 // tone's owner). THE EDGE RULE (architect 2026-11-01 night, "the rightmost
 // button's right edge lines up with the trim/time/marker/canvas region, and
 // the same for the left"): the frame's outer columns are the well's columns
-// (well_columns below), the outermost keys' faces' outer columns, 22 ..
-// 2281 on the tablet's 2304 at 200 %, the ground beside them. THE LANES AND
-// THE CANVAS STAND ON THE WAVEFORM AREA'S COLUMNS, 24 .. 2279, one W inside
+// (well_columns below), the outermost keys' faces' outer columns, 24 ..
+// 2279 on the tablet's 2304 at 200 % (12 W from the glass, architect
+// 2026-11-18), the ground beside them. THE LANES AND THE CANVAS STAND ON
+// THE WAVEFORM AREA'S COLUMNS, 26 .. 2277, one W inside
 // the frame: the canvas's interior — the waveform area every painter and
 // hit test reads — and nothing more, so no column of canvas without ink
 // stands inside the frame. Every line in the well is ONE W, rounded at the
@@ -1476,9 +1477,9 @@ constexpr int kMinWindowHeightPx = 480;
 //     after the note went to 9 W; the e1 / e2 reason, "it needs more
 //     padding from the text", still the gap's reason against the 4 W
 //     before, mock v4) after the note's last ink column
-//     (text_shape::ink_left_px): at 200 % the note's ink on columns 22..33
-//     (the well's first column, its frame's, since 2026-11-17), the
-//     brand's first ink column 48.
+//     (text_shape::ink_left_px): at 200 % the note's ink on columns 24..35
+//     (the well's first column, its frame's, 12 W from the glass), the
+//     brand's first ink column 50.
 //     (The gap is the retired caption's title gap. The cards'
 //     glyph-seat-to-text gap read it too, a glyph then words, until the
 //     gap left 8; the architect kept the cards' 8 the same night ("keep the
@@ -2477,12 +2478,10 @@ inline int cue_chip_hit_right_px() {
 // (well_foot_h_px), between the canvas and row 8 (the program ring's last row
 // until the flat well; the modal family's box keeps its last row on it,
 // modal_box.h). Across, the well stands column_margin_w_px of the ground in
-// from each side of the window, then the floor's leftover's half, then THE
-// FRAME'S SIDE, one W (well_frame_w_px), then THE WAVEFORM AREA, its width
-// floored to the grid step and the floor's leftover (under 16 device px)
-// split between the two margins, the odd pixel to the right (main.cpp's
-// waveform_area owns the split; column_margin_w_px is the side before it):
-// the side 9 W, 18 device px on the tablet at 200 %, 9 at 100 %. EVERY LINE
+// from each side of the window, then THE FRAME'S SIDE, one W
+// (well_frame_w_px), then THE WAVEFORM AREA, every column those leave, no
+// floor (main.cpp's waveform_area owns it; architect 2026-11-18): the side
+// 12 W, 24 device px on the tablet at 200 %, 12 at 100 %. EVERY LINE
 // OF THE FRAME IS ONE W, rounded at the element (hairline_px, the line rule:
 // 2 device px at 200 %, 1 at 100 %; architect 2026-11-04, the unit), so the
 // waveform area, which every canvas painter and hit test reads, is the
@@ -2495,7 +2494,7 @@ inline int cue_chip_hit_right_px() {
 // trim lane's first row, its bottom line the well's foot, its sides one
 // column each side outside the waveform area, from the top line's first row
 // through the bottom line's last (on the tablet at key_height 17: rows 144
-// .. 1329, the sides columns 22 .. 23 and 2280 .. 2281) — AND THE LINES
+// .. 1329, the sides columns 24 .. 25 and 2278 .. 2279) — AND THE LINES
 // INSIDE IT IN THE SAME TONE across the frame's whole width: the trim lane's
 // last row (under the trough), the ruler lane's last row (under the ruler)
 // and the lane's foot line (top lane 4, between the marker lane and the
@@ -2531,12 +2530,13 @@ GuiRect well_foot_area(const AppState& a);
 // THE WELL'S COLUMNS (2026-10-23, the one owner; THE EDGE RULE of 2026-11-01
 // night; THE FRAME'S OUTER COLUMNS since 2026-11-17, architect, session
 // 140): its first column and one past its last — the frame's, the waveform
-// area's x less the frame's W and x + w plus it, so the grid floor's
-// leftover decides them and no inset does: 22 and 2282 on the tablet's 2304
-// at 200 % (the margin's 18, the leftover 8 split 4 / 4, the frame 22 .. 23
-// and 2280 .. 2281, the area 24 .. 2279); 15 and 1905 on a 1920-px window at
-// 100 %. EVERY STRIP AND BOX OF THE EDGE RULE READS THEM HERE (architect
-// 2026-10-23, "yes" to tying both strips' ends to the well; 2026-11-01
+// area's x less the frame's W and x + w plus it, so the margin decides them
+// and no inset does: 24 and 2280 on the tablet's 2304 at 200 % (the
+// margin's 24, 12 W from the glass, the frame 24 .. 25 and 2278 .. 2279,
+// the area 26 .. 2277; architect 2026-11-18); 12 and 1908 on a 1920-px
+// window at 100 %. EVERY STRIP AND BOX OF THE EDGE RULE READS THEM HERE
+// (architect 2026-10-23, "yes" to tying both strips' ends to the well;
+// 2026-11-01
 // night, "the rightmost button's right edge lines up with the
 // trim/time/marker/canvas region, and the same for the left"; 2026-11-17,
 // the mock m13: the keys flush with the frame): the frame itself
@@ -4468,8 +4468,8 @@ struct WaveformBandColumns {
 // Memory: THE LIVE ENTRIES are four rows' — a main row at most W + 6
 // entries and a fine row at most 2 · (W + 6), W the plate's device width,
 // 16 bytes each — so at most 6 · (W + 6) entries in all: at the tablet's
-// 2256 px 13 572 entries, about 217 KB, and the scratch's live entries at
-// most one row's, 4 524 (about 72 KB). The allocation is not bounded by
+// 2252 px 13 548 entries, about 217 KB, and the scratch's live entries at
+// most one row's, 4 516 (about 72 KB). The allocation is not bounded by
 // that: each row's vector and the scratch keep their capacity (nothing
 // shrinks them, and a victim row is emptied and rekeyed with its
 // capacity), and std::vector's growth can leave a grown row's capacity
@@ -4701,9 +4701,10 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // during an async plate-publish window; the promoted mirror closed that window,
 // and the trim painter later joined the same basis when it went live.)
 //
-// The x_raw denominator is the PAINTERS' quantized-span form
-// (vp_end - vp_start)/wave_w — the sixteenth-frame q exactly
-// (viewport_end_sample) — NOT current_samples_per_pixel. The two are
+// The x_raw denominator is the PAINTERS' q, given back by the span
+// (vp_end - vp_start) over wave_w (recovered_painter_spp,
+// warp_frame_map_view.h) — the sixteenth-frame q exactly — NOT
+// current_samples_per_pixel. The two are
 // identical at whole zoom levels and differ by under a thirty-second of a
 // frame per column at a fractional zoom rest; adopting it at the hit sites too (they
 // formerly divided by spp) was the one deliberate byte change of the collapse
@@ -4723,7 +4724,7 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // button stands where the bound is and the lane's clip cuts it, so a panned
 // end leaves the view column by column instead of vanishing whole with the
 // body growing into its room. The painter clips everything it draws to the
-// effective width [0, wave_w), so the inert gutter never paints.
+// effective width [0, wave_w), so the well's frame beside it never paints.
 // THE BOUND'S EXACT PLACE IS THE WHOLE ANSWER (architect 2026-11-14,
 // send J; no column rides beside it since the no-grid arc): `x` is
 // displayed_x_at on the caller's basis, device px
@@ -4765,8 +4766,8 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // occupies. This interval is returned
 // UNCLAMPED, offscreen columns included; it is NOT a drawn interval. The
 // painter clamps it ONCE per use: the published bridge intersects it with the
-// effective width [0, wave_w), so the inert non-multiple-of-16 gutter
-// [wave_w, strip_w) answers no hit.
+// effective width [0, wave_w), so the well's frame and the margin beside
+// it answer no hit.
 struct TrimBridgeGap {
     double lo;  // the gap's left edge, inclusive
     double hi;  // its right edge, exclusive (empty gap when hi <= lo)

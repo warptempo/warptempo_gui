@@ -1563,9 +1563,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // client row origin_y is the surface's row 0, and the painters never see
     // the surface's own rows.
     // THE COLUMNS' ORIGIN is the canvas's (waveform_area's x, the column's
-    // margin, its frame column and half the grid floor's leftover,
-    // 2026-10-09) — a function of the scale and the window's width, both of
-    // which the fingerprint keys (fp_gui_scale_percent, fp_area_w).
+    // margin and the well's frame, 2026-10-09 / 2026-11-18) — a function of
+    // the scale and the window's width, both of which the fingerprint keys
+    // (fp_gui_scale_percent, fp_area_w).
     const FlagLaneRects flag_lanes{top_marker_row_area(app),
                                    waveform_area(app).x};
 
@@ -1585,11 +1585,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // as its `top_strip_area`: each pass clips its ink to these rows
     // (clip_to_waveform_columns), exactly the surface's.
     const GuiRect local_top_strip{0, origin_y, surface_w, surface_h};
-    // The width the flag column mapping divides the displayed span by — the same
-    // denominator the live trim pass and the hit tests use (this pass stages it
+    // The width the flag column mapping recovers the painters' q at, from the
+    // displayed span (recovered_painter_spp, warp_frame_map_view.h) — the same
+    // width the live trim pass and the hit tests use (this pass stages it
     // for them at the tail), so flags stay column-aligned with the trim/stem
-    // verticals below them. The surface stays the window's width; a
-    // non-multiple-of-16 window leaves the gutter columns unpainted.
+    // verticals below them. The surface stays the window's width; the
+    // columns beside the waveform's (the well's frame and the margin) stay
+    // unpainted.
     //
     // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
     // resize-window basis split). The numerator here is the DISPLAYED span
@@ -1598,14 +1600,15 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // their stems, their hit rects and the trim geometry were mapped at a
     // samples-per-pixel the blitted ink did not have — while the playhead, the
     // region columns and the ruler, which all read plate_viewport_basis
-    // ((fp_vp_end - fp_vp_start)/fp_area_w), had it right. The plate is blitted
-    // 1:1 at its own scale, never stretched, so an overlay that wants to sit on
-    // its ink must use the width that ink was rendered at. Both bases are now
-    // the one expression, and the fingerprint still catches every width change
-    // transitively: fp_vp_end = vp_start + w·q (viewport_end_sample) and the
-    // effective width moves in steps of 16 at q >= working column / 2 frames/px
-    // (23 or more on every deployed device), so no width change can leave the
-    // displayed span untouched.
+    // (fp_vp_end - fp_vp_start over fp_area_w), had it right. The plate is
+    // blitted 1:1 at its own scale, never stretched, so an overlay that wants
+    // to sit on its ink must use the width that ink was rendered at. Both
+    // bases are now the one expression, and the fingerprint still catches
+    // every width change transitively: fp_vp_end = vp_start + nearbyint(w·q)
+    // (viewport_end_sample) and q >= 20 frames/px (the deepest-zoom floor,
+    // kDeepestZoomMinFramesPerPx), so a width change of even one px moves
+    // the span by 19 frames or more and none can leave the displayed span
+    // untouched.
     //
     // The live-width fallback mirrors plate_viewport_basis's own cold arm: the
     // fp_rendered gate above makes it unreachable in practice (a plate that has

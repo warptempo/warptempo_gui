@@ -904,11 +904,11 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
     // The unrounded verdict: a bound in [vp_start, vp_end) is in view.
     out.in_viewport = displayed_ms >= static_cast<double>(vp_start) &&
                       displayed_ms <  static_cast<double>(vp_end);
-    // The painters' quantized-span denominator: (vp_end - vp_start)/wave_w,
-    // where vp_end itself was derived as vp_start + wave_w·q
-    // (viewport_end_sample), so this is q exactly.
-    const double span = static_cast<double>(vp_end - vp_start);
-    const double samples_per_pixel = span / static_cast<double>(wave_w);
+    // The painters' q, given back by the span over wave_w
+    // (recovered_painter_spp, warp_frame_map_view.h: vp_end is
+    // vp_start + nearbyint(wave_w·q), and the recovery is q exactly).
+    const double samples_per_pixel =
+        recovered_painter_spp(static_cast<int64_t>(vp_end - vp_start), wave_w);
     // THE EXACT PLACE on the caller's UNIFIED displayed basis (this file's
     // header block above): displayed_x_at, warp_frame_map_view.h. THE
     // EOF-WALL CLAMP, an IN-VIEW bound's alone (render.h): its place can
@@ -1135,9 +1135,9 @@ namespace {
 // THE WAVEFORM'S COLUMNS ARE THE MARKER LANE'S CLIP (architect 2026-09-26):
 // every flag box, every flag-editor box and every hit rect either publishes
 // is confined to window x in [x0, x0 + w) — the columns the waveform paints —
-// so a non-multiple-of-16 window's leftover strip beside w carries nothing of
-// a flag, and a flag running past the last column is cut off at it exactly as
-// at a multiple-of-16 window's own edge. These two are the one spelling of
+// so the well's frame and the margin beside w carry nothing of a flag, and a
+// flag running past the last column is cut off at it. These two are the one
+// spelling of
 // that clip: the paint clip each painter sets before it draws (vertically the
 // band it paints in, unchanged) and the hit rect's matching trim, so the claim
 // is the painted rect clipped the same way — strictly as painted. A rect the
@@ -1212,15 +1212,14 @@ void iterate_visible_flags_impl(
     // not UNDER-state.
     double cull_width_px,
     Emit&& emit) {
-    const double span = static_cast<double>(viewport_end_sample -
-                                            viewport_start_sample);
-    // Map columns against the EFFECTIVE waveform width, not the strip's own
-    // full width, so a flag shares the marker stem's samples-per-pixel and
-    // stays column-aligned with it at every window width (they diverge only
-    // when the two widths differ — a non-multiple-of-16 window; at
-    // 1920/2560/3840 they are equal and this is a no-op).
-    const double samples_per_pixel =
-        span / static_cast<double>(waveform_width);
+    // Map columns at the painters' q, given back by the span over the
+    // EFFECTIVE waveform width (recovered_painter_spp,
+    // warp_frame_map_view.h), never over the surface's own full width, so a
+    // flag stands on the very q the plate's bars and the marker stems are
+    // placed at, at every window width.
+    const double samples_per_pixel = recovered_painter_spp(
+        static_cast<int64_t>(viewport_end_sample - viewport_start_sample),
+        waveform_width);
     if (samples_per_pixel <= 0.0) return;
 
     // THE CULL IS ASYMMETRIC BECAUSE THE CUE IS. A cue's label runs
@@ -1239,8 +1238,8 @@ void iterate_visible_flags_impl(
     // the last column (the song's last half-column at the right wall, or a
     // marker just past the viewport's end mid-song) is admitted and paints
     // its triangle's left part ALONE on the last columns — every caller clips
-    // its paint and its hit rect to [0, w), so nothing paints in the leftover
-    // strip a non-multiple-of-16 window leaves beside w. Its STEM is
+    // its paint and its hit rect to [0, w), so nothing paints on the well's
+    // frame beside w. Its STEM is
     // published where any of the one-W line reaches the columns
     // (stem_meets_waveform), and source_frame_off_right_edge
     // (warp_frame_map_view.h) still refuses AUTHORING there — a triangle's
@@ -2867,8 +2866,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // `area` is read above, superseding "the window is the clip"): a box past
     // the left edge falls off at column 0 and a box past the last column is
     // cut off at it, exactly as the cached flag pass clips its resting boxes,
-    // so nothing of the field paints in the leftover strip a non-multiple-of-16
-    // window leaves beside the waveform. A field cut off at an edge is READ BY
+    // so nothing of the field paints on the well's frame beside the
+    // waveform. A field cut off at an edge is READ BY
     // Esc, A PAN AND A REOPEN (architect 2026-10-25): the marker-lane editors
     // are modals since that day, so nothing pans while one stands, and the
     // open does not pan to it either — the field travels with its marker,
