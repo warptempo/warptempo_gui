@@ -32,7 +32,10 @@ namespace {
 // ScrollbarInnerHandle and DetailViewRulerMarkings, the grid, the disabled
 // key's ink, the trim span and the ruler's ticks, 2026-11-07; RangeEditField,
 // the NOISE level case's fill, and ScaleAwareness, THE RADIO KEYS' PURPLE,
-// 2026-11-11).
+// 2026-11-11; ScrollbarInnerTrack, THE TRIM BAR'S TROUGH, and ClipBorder,
+// THE WELL'S FRAME AND ITS LINES, 2026-11-17, architect 2026-11-17, session
+// 140 — each added by hand to every shipped file from that file's own .ask,
+// a `_mod` file from its original's).
 constexpr std::string_view kThemeRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -44,6 +47,7 @@ constexpr std::string_view kThemeRoles[] = {
     "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
     "StandardVuMeter/Maximum",
+    "ScrollbarInnerTrack", "ClipBorder",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
@@ -309,6 +313,12 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb span_role  = over(rgba(roles["ScrollbarInnerHandle"]),
                                 rgba(roles["Desktop"]));
     const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), face_a);
+    // The trim bar's trough and the well's frame, each Live's role over the
+    // ground they stand on (the head's COMPOSITED block; architect
+    // 2026-11-17, session 140).
+    const Rgba ground_a  = rgba(roles["SurfaceArea"]);
+    const Rgb trough     = over(rgba(roles["ScrollbarInnerTrack"]), ground_a);
+    const Rgb border     = over(rgba(roles["ClipBorder"]), ground_a);
     const Rgb white    = Rgb{255, 255, 255};
     GuiThemeTones t{};
     t.ground              = packed(ground);
@@ -323,8 +333,9 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.ruler_face          = packed(face);
     t.ruler_tick          = packed(tick_role);
     t.lane_face           = packed(desktop);
-    t.trim_bar_face       = packed(desktop);
+    t.trim_bar_face       = packed(trough);
     t.trim_span_face      = packed(span_role);
+    t.well_border         = packed(border);
     t.selection_fill      = packed(standby);
     t.selection_text      = packed(standby_text);
     t.list_press_fill     = packed(sel_bg);

@@ -1,0 +1,71 @@
+# Arc Dark -- written by hand from the arc-theme sources, not converted from an .ask
+# Source: jnsh/arc-theme (the fork Arch packages), commit 94ac8c7d67d68de0cc688bbd4c3105b9815b446e
+# (2025-10-18), variant 'dark', transparency off: common/gtk-3.0/sass/_colors.scss, _common.scss and
+# common/xfwm4/dark/assets.svg. Sass lighten / darken / mix resolved to sRGB bytes. Arc-Dark is dark
+# throughout (no light content panel; Arc-Darker, which has them, not used). Scratch look test,
+# architect 2026-11-13, session 123.
+# THE CLOSE RED: Arc-Dark's xfwm4 / headerbar close disc, wm_button_close_bg CC575D (hover D7787D,
+# pressed BE3841), on THE CLIP LAMP ALONE (architect 2026-11-14, session 123: red reads as a warning
+# or a close; the limiter lamp and the cards stay Arc's warning orange). The playhead's head is Arc's
+# fg D3DAE3, the icon glyph color; the markers' chips the accent, Arc's selection blue 5294E2
+# (architect 2026-11-17, session 140: "the marker should take selection blue ... the playhead can be the
+# glyph color"), shown at Arc's own numbers by bright_mix 100. THE CANVAS ON ARC'S CONTENT BASE 404552,
+# Thunar's list (architect 2026-11-17: "Thunar's is the official"; the ruler wears the canvas's tone, a
+# derivation rule, not this file).
+# One line per role:
+#   SurfaceArea                 2F343F  $header_bg (also wm_bg): Arc's headerbar / titlebar, the darkest main chrome
+#   Desktop                     353945  $dark_sidebar_bg (= text_view_bg): between header_bg and bg_color
+#   SurfaceBackground           444A58  $button_bg (lighten($base_color, 2%)); a headerbar button, 40 % lighten(header_bg, 22%) over header_bg, is 424958
+#   ControlContrastFrame        21252B  the xfwm4 frame's edge fill (assets.svg); _common.scss's dark window outline,
+#                                       darken($header_bg, 7%), resolves to about 20232B
+#   ControlForeground           D3DAE3  $fg_color
+#   TextDisabled                7E838F  $insensitive_fg_color (fg at 45 % alpha) over $bg_color, read flat
+#   BackgroundClip              666A74  $wm_icon_unfocused_bg, the titlebar glyph of an unfocused window
+#   ViewCheckControlEnabledOn   5294E2  $selected_bg_color, THE ACCENT
+#   RangeDefault                D3DAE3  $fg_color: the playhead's head, near-white (above)
+#   StandbySelectionBackground  5294E2  $selected_bg_color (Arc has one selection)
+#   StandbySelectionForeground  FFFFFF  $selected_fg_color
+#   SelectionBackground         A9CAF1  $link_color (lighten($selected_bg_color, 20%)): the lighter list press
+#   SelectionForeground         2F343F  $wm_icon_close_bg (= header_bg): Arc's dark print on a colored disc
+#   Alert                       F27835  $warning_color
+#   WaveformColor               262A33  $header_border (darken($header_bg, 4%)): the ink one step above the stem
+#                                       (ControlContrastFrame 21252B), CIELAB L* 2.50 (the stem-over-ink rule's 3.61, ballpark)
+#   DetailViewBackground        404552  $base_color: Arc's content base, Thunar's list view (the canvas and the ruler)
+#   DetailGridTiles             404552  the same, opaque: the canvas is DetailViewBackground itself
+#   ScaleAwareness              73D216  $success_color: the radio keys' lit face, Arc's one color distinct from the blue
+#   RangeEditField              5294E2  $selected_bg_color: the NOISE fill, Arc's scale highlight (architect 2026-11-17, D3)
+#   TakeLaneTrackNotHighlighted 2B2E3959 $borders_color (darken($bg_color, 6%)), Arc's separator, at 35 % over the canvas -> 393D49
+#   ViewCheckControlDisabledOff 666A74  $wm_icon_unfocused_bg, the inactive titlebar glyph: the disabled key's glyph
+#   ScrollbarInnerHandle        767B87  Arc's scrollbar slider, mix($fg_color, $bg_color, 40%) (the trim span's pill)
+#   ScrollbarInnerTrack         3E434F  Arc's scrollbar trough, $_scrollbar_bg_color = darken($base_color, 1%)
+#                                       (the trim bar's lane; a NEW required role, session 140's plan)
+#   DetailViewRulerMarkings     D3DAE366 Arc's scale marks, gtkalpha(currentColor, 0.4) of $fg_color, over the ruler (the canvas) -> 7B818C
+#   StandardVuMeter/Maximum     CC575D  $wm_button_close_bg, THE CLOSE RED (the clip lamp)
+#   ClipBorder                  2B2E39  $borders_color: Thunar's pane border, the well's frame and its lines (a NEW
+#                                       required role, architect 2026-11-17, D2)
+SurfaceArea=2F343F
+Desktop=353945
+SurfaceBackground=444A58
+ControlContrastFrame=21252B
+ControlForeground=D3DAE3
+TextDisabled=7E838F
+BackgroundClip=666A74
+ViewCheckControlEnabledOn=5294E2
+RangeDefault=D3DAE3
+StandbySelectionBackground=5294E2
+StandbySelectionForeground=FFFFFF
+SelectionBackground=A9CAF1
+SelectionForeground=2F343F
+Alert=F27835
+WaveformColor=262A33
+DetailViewBackground=404552
+DetailGridTiles=404552
+ScaleAwareness=73D216
+RangeEditField=5294E2
+TakeLaneTrackNotHighlighted=2B2E3959
+ViewCheckControlDisabledOff=666A74
+ScrollbarInnerHandle=767B87
+ScrollbarInnerTrack=3E434F
+DetailViewRulerMarkings=D3DAE366
+StandardVuMeter/Maximum=CC575D
+ClipBorder=2B2E39

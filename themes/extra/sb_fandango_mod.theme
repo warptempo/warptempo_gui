@@ -1,5 +1,6 @@
 # SB Fandango_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
 # Modified by hand from the pack's SB Fandango: WaveformColor 110E0C -> 1C1815, TakeLaneTrackNotHighlighted 352E2A -> 29231F (architect 2026-11-07..11)
+# ScrollbarInnerTrack and ClipBorder added by hand from SB Fandango.ask (architect 2026-11-17, session 140)
 SurfaceArea=191513
 Desktop=2F2925
 SurfaceBackground=3A332E
@@ -24,3 +25,5 @@ ViewCheckControlDisabledOff=645B53
 ScrollbarInnerHandle=72685E
 DetailViewRulerMarkings=BEB3A5
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=2F2925

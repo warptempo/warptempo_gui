@@ -10761,8 +10761,8 @@ inline DialogEditorStop dialog_editor_byte_at(
 //   * LEFT-ALIGNED ON THE FACE: box.x = face.x, one expression whether the
 //     box is wider or narrower than its face;
 //   * THEN HELD BETWEEN THE KEYS' OUTER COLUMNS (render.h's well_columns,
-//     THE EDGE RULE; architect 2026-11-02, M11 ruling 4: x 24 .. 2279 on the
-//     tablet) — the right clamp first, so a box that would run past the right
+//     THE EDGE RULE; architect 2026-11-02, M11 ruling 4: x 22 .. 2281 on the
+//     tablet, the well's frame's outer columns since 2026-11-17) — the right clamp first, so a box that would run past the right
 //     one is pulled in to end on it, then the left, so a box wider than the
 //     span pins its left edge there;
 //   * NEVER ABOVE THE WINDOW'S TOP: y ≥ 0, the box laying over its face's
@@ -19952,6 +19952,26 @@ struct SweepHighlightChange {
 SweepHighlightChange sweep_highlight_change(
     const AppState& app, const SweepHighlightColumns& before,
     const SweepHighlightColumns& after);
+
+// A DRAG IS MOVING THE TRIM SPAN — the trim bar's pill wears
+// `selected_fill` (render_trim_flags; architect 2026-11-17, session 140,
+// ruling 4: Arc's slider:active, "ruled: both"): THE TRIM BAR'S OWN DRAGS,
+// either end's grab or the body, from the press that arms them
+// (pending_trim_drag, its crossing handing over to trim_drag) to the lift,
+// and A TRIM SWEEP from its first accepted write (region_drag.wrote_trim,
+// the TRIM former alone) to the lift. Read off those records, no flag of
+// its own. EVERY EDGE OF IT DAMAGES THE TRIM LANE (top_trim_row_area): the
+// arm and the pending's disarm (arm_pending_trim_drag /
+// disarm_pending_trim_drag), the drag's commit (commit_trim_drag), the
+// crossing's refused begin, the sweep's first accepted write (its every
+// write damages the lane) and its commit (commit_region_sweep). The
+// barrel's bound-set press is a click until its crossing, which arms the
+// pending, so a barrel click lights nothing.
+inline bool trim_span_dragging(const AppState& app) {
+    return app.pending_trim_drag.active || app.trim_drag.active ||
+           (app.region_drag.active && !app.region_drag.select &&
+            app.region_drag.wrote_trim);
+}
 
 // Promoted from a lambda in main(). Eligible iff the warp marker at `idx` has
 // a RESOLVED value worth reaching for — i.e. its flag does not already display

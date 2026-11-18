@@ -121,6 +121,7 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"lane_face",       &GuiPalette::lane_face,       &GuiThemeTones::lane_face},
     {"trim_bar_face",   &GuiPalette::trim_bar_face,   &GuiThemeTones::trim_bar_face},
     {"trim_span_face",  &GuiPalette::trim_span_face,  &GuiThemeTones::trim_span_face},
+    {"well_border",     &GuiPalette::well_border,     &GuiThemeTones::well_border},
     {"pane_face",       &GuiPalette::pane_face,       &GuiThemeTones::pane_face},
     {"score_pane_face", &GuiPalette::score_pane_face, &GuiThemeTones::score_pane_face},
     {"list_press_fill", &GuiPalette::list_press_fill, &GuiThemeTones::list_press_fill},

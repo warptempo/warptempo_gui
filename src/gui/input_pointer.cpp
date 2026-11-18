@@ -978,7 +978,7 @@ bool point_on_playhead_head(const AppState& app, double x, double y) {
 // (2026-10-09, the canvas framed): the well's margins either side — the
 // ground and the grid floor's leftover
 // split between them — are the program's panel, not waveform, and answer nothing, as
-// the rows of ground above and below do (the right gutter counted as waveform
+// the frame's lines above and below do (the right gutter counted as waveform
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
 // BAR, the lanes and the flexible GAP band are outside it.
 //
@@ -5295,7 +5295,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // beside the clock (2026-10-22). THE CLOCK'S FIELD IS ON A BUTTON: the
     // PLAY key's second rect (architect 2026-10-27,
     // RedesignButtonFace::field), so a press there is the key's. ABOVE it stand
-    // the well's foot (inert chrome, a row of ground) and
+    // the well's foot (inert chrome, the frame's bottom line) and
     // GAP 2's blank window ground — outside every band here and falling
     // through to the tail's consumed nothing, the ground as window ground by
     // the vertical rule (main.cpp).
@@ -6020,6 +6020,11 @@ void GuiInputHandler::commit_region_sweep() {
     // (sweep_highlight_rect) while the record still answers it.
     viewport.invalidate_rect(sweep_highlight_rect(app, audio));
     const bool wrote = app.region_drag.wrote_trim;
+    // THE PILL'S DRAG LOOK ENDS WITH A SWEEP THAT WROTE (trim_span_dragging,
+    // app_state.h; architect 2026-11-17, session 140): its edge damages the
+    // trim lane here, whatever the commit tail below damages.
+    if (wrote && !app.region_drag.select)
+        viewport.invalidate_rect(top_trim_row_area(app));
     const bool moved = app.region_drag.moved;
     const bool select = app.region_drag.select;
     const int swept_focus = app.region_drag.swept_focus;
@@ -9136,7 +9141,9 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
             // A REFUSED BEGIN IS A GESTURE END TOO (no pair / no audio): the
             // pending was cleared a line above and nothing took its place, so
             // the trim cue it was holding goes with it at the loop's tail, the
-            // same route every other end takes.
+            // same route every other end takes — and the pill's drag look with
+            // it, its edge damaged (trim_span_dragging, app_state.h).
+            viewport.invalidate_rect(top_trim_row_area(app));
             return;
         }
         update_trim_drag(at.rx);

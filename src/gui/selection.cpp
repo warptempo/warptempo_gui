@@ -107,7 +107,7 @@ void Selection::damage_overlay_on_subject_change(
 // STRIP IS NOT DAMAGED HERE: NOTHING PAINTED IN ITS ROWS
 // READS THE SELECTION — a cue's chip and label are the same selected or not
 // (resolve_flag_face: the selection is the stem's alone), the stem's head
-// on the lane's last row and the ground line is inside the stem's own
+// on the lane's last row and the frame's line is inside the stem's own
 // rect, the ring is the canvas's, and every key's face, whatever it asks,
 // is the tick's comparator's (main.cpp; the marker verbs' keys stand in
 // row 8) — AND NO CALLER LEANS ON SUCH A DAMAGE for a change of its own

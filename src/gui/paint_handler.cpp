@@ -1939,8 +1939,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 35 W (architect 2026-11-06; render.h's case block), the one-W gap and
     // the run gap the `run_gap` tuning key's 22 W (architect 2026-11-07)
     // (the ends the well's columns since 2026-10-23, the faces' since
-    // 2026-11-03, the well the waveform area since 2026-11-03; key_height
-    // moves none of it): in the tablet's device px at 200 % (one W = 2), the
+    // 2026-11-03, the well's columns its frame's outer ones since 2026-11-17;
+    // key_height moves none of it): in the tablet's device px at 200 % (one W = 2), the
     // runs, each n faces of 70 with a key gap of 2 between two
     // (key_group_w_px: 70n + 2(n − 1)), 44 of ground (the run gap) between
     // two runs' faces; the right run 5 · 70 + 4 · 2 = 358, its last FACE
@@ -1958,15 +1958,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // run at
     //   1666 + 44 + 358 = 2068
     // device px outside the view (1420 inside it) — the faces' span the
-    // well's 2256 on the tablet, with 188 px (94 W) of ground between the
-    // left runs and the right run beyond the run gap. Off the painted walk
-    // (the face scaled_px(key_width), the key gap scaled_px(1), the run gap
-    // scaled_px(run_gap), the ends well_columns'): at the tablet's 200 % (faces
-    // 70, the well 24 .. 2279) the left runs' faces on x 24..1689, the right
-    // run's 1922..2279 (its last face ending on 2279); at 100 % on a 1920-px
-    // window (faces 35, the key gap 1, the run gap 22, the well 16 .. 1903)
-    // the left runs' faces on x 16..848, the right run's 1725..1903. A roster
-    // move restates these numbers.
+    // well's 2260 on the tablet (its frame's outer columns, 2026-11-17), with
+    // 192 px (96 W) of ground between the left runs and the right run beyond
+    // the run gap. Off the painted walk (the face scaled_px(key_width), the
+    // key gap scaled_px(1), the run gap scaled_px(run_gap), the ends
+    // well_columns'): at the tablet's 200 % (faces 70, the well 22 .. 2281)
+    // the left runs' faces on x 22..1687, the right run's 1924..2281 (its
+    // last face ending on 2281); at 100 % on a 1920-px window (faces 35, the
+    // key gap 1, the run gap 22, the well 15 .. 1904) the left runs' faces on
+    // x 15..847, the right run's 1726..1904. A roster move restates these
+    // numbers.
     // THE FIT, the one statement every other site points to: the band is 27
     // faces, 23 key gaps and three run gaps outside the view (18, 14 and
     // three inside it) against the well — 1034 W outside, 710 W inside at
@@ -1975,12 +1976,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // to about 1070 device px outside the view and 740 inside it; past either
     // the overflow rule (kIconRowViewPairs) answers. ON THE TABLET AT 200 %
     // THE WIDTH TUNES THE FIT: outside the view the band is 54 · key_width +
-    // 178 device px against the well's 2256, so it holds whole up to
+    // 178 device px against the well's 2260, so it holds whole up to
     // key_width 38 W (2230) and from 39 W (2284) the overflow rule answers —
     // the left runs clipped one run gap short of the history opener (x
-    // 2228 − 10 · key_width), the third run's faces cut or published empty
+    // 2230 − 10 · key_width), the third run's faces cut or published empty
     // from its tail, the right run whole: NOISE cut from 39 W and gone from
-    // 40, TIPS from 42, SETUP (the
+    // 41, TIPS from 42, SETUP (the
     // settings page's one opener on glass) from 44, SCORE from 46 (the run's
     // order of 2026-11-10), LOCK from 48, PLAYER at
     // the grammar's ceiling, 50 (the first two runs whole up to it). THE RUN
@@ -1988,12 +1989,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // session 87; render.h's run gap paragraph): the three run gaps of the
     // walk and the one before the history opener all read it, so outside the
     // view the band is 54 · key_width + 46 + 6 · run_gap device px against
-    // the well's 2256 — at key_width 35 whole across the key's whole range,
-    // 2200 at its ceiling, 44 W (the left runs' limit 1922 − 2 · run_gap
+    // the well's 2260 — at key_width 35 whole across the key's whole range,
+    // 2200 at its ceiling, 44 W (the left runs' limit 1924 − 2 · run_gap
     // never reached; until the AUDIO case's retirement, 2026-11-11, the
     // overflow answered from 42 W). The gap
     // before the history opener stays exactly one run gap of clip; the
-    // ground beyond it (188 px at the defaults) is what the left runs leave.
+    // ground beyond it (192 px at the defaults) is what the left runs leave.
     // No assert stands on the fit: the clip and the cut
     // publication are the whole answer at every width.
     //
@@ -2690,7 +2691,7 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // since 2026-11-04 night: seven tabular digits at 0.556 em, the colon at
 // 0.333 and the point at 0.278): on the tablet at 200 % and a 22-px em,
 // 99.08 device px, its ink box 0 .. 98.84 -> the cell 99 (0 .. 98), the
-// field 123 (x 24 .. 146 on the 2304-px panel); at 100 % an 11-px em, the
+// field 123 (x 22 .. 144 on the 2304-px panel); at 100 % an 11-px em, the
 // advance 49.59, the ink 0 .. 49.47 -> the cell 50, the field 62. THE
 // PLAYER'S ROW HOLDS THEM: its scrub is
 // what the fixed terms leave (player_row_layout), the two fields and their
@@ -2857,16 +2858,16 @@ static double time_field_run_x(int field_x) {
 // (architect 2026-10-23, "shouldn't row 8 take the same rule as top
 // strip?" — yes): the LEFT SEAT where a row's content starts and the RIGHT
 // SEAT where its right-aligned cluster ends — THE WELL'S COLUMNS
-// (render.h's well_columns, the waveform area's, architect 2026-11-03): the
-// left seat its first column, the right seat one past its last column, 24
-// and 2280 at 200 % on the tablet's 2304, 16 and 1904 on a 1920-px window at
-// 100 % — and THE KEYS' ENDS, CASES_LEFT and
+// (render.h's well_columns, the well's frame's outer columns, architect
+// 2026-11-17, session 140): the left seat its first column, the right seat
+// one past its last column, 22 and 2282 at 200 % on the tablet's 2304, 15
+// and 1905 on a 1920-px window at 100 % — and THE KEYS' ENDS, CASES_LEFT and
 // CASES_RIGHT, where a row's first key's face starts and its last key's
 // face ends: the seats themselves (the face is the key, materials.h's THE
 // FACE AND ITS GAP, 2026-11-04), so THE OUTERMOST FACES stand on the well's
 // first and last columns — the band's ends (icon_row_seats) and the modal
 // pane's (modal_box_interior_rect) — both strips and the controls row flush
-// with the well at every scale (the faces 24 .. 2279 on the tablet);
+// with the well at every scale (the faces 22 .. 2281 on the tablet);
 // THE CASE the strip pad under the row's top (icon_case_top_offset_px, the
 // band's own seat). Text and fields (the clocks) start on the left seat. The
 // two rows differ only in `row`: row 8's lane (bottom_row_area), or the
@@ -3145,41 +3146,41 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // two, the verbs eight, the step-and-walk four, the nudge-and-play five),
     // 16 key gaps and four run gaps, 71 + 71 + 287 + 143 + 179 + 4·22 = 839 W
     // = 1678 px, its last face ending at the faces' right end
-    // (bottom_row_seats' cases_right, 2280, one past the well's last column
-    // 2279) — on the tablet's 2304 the faces on x 602..2279 (the duo
-    // 602..743, COPY 602..671 and PASTE 674..743, the skips 788..929, the
-    // verbs 974..1547, the walk 1592..1877, the nudge 1922..2279, Play
-    // 2210..2279); the clock's field on the well's first
-    // column, from x 24 — the cell (the widest-digit specimen "DD:DD.DDD"'s ink box in the
+    // (bottom_row_seats' cases_right, 2282, one past the well's last column
+    // 2281, the frame's) — on the tablet's 2304 the faces on x 604..2281 (the
+    // duo 604..745, COPY 604..673 and PASTE 676..745, the skips 790..931, the
+    // verbs 976..1549, the walk 1594..1879, the nudge 1924..2281, Play
+    // 2212..2281); the clock's field on the well's first
+    // column, from x 22 — the cell (the widest-digit specimen "DD:DD.DDD"'s ink box in the
     // program face's 22 px, kerning off, floored first ink to ceiled last
     // ink: 99 px; kTimeShape's block) and its two 12-px pads, a 123-px field,
-    // x 24..146 — then the name's first ink 14 px past it (x 161), the state
+    // x 22..144 — then the name's first ink 14 px past it (x 159), the state
     // line's 14 px past the name's advance, clipped one run gap short of the
-    // block (x 558), the room the existing clip leaves it. AT THE
+    // block (x 560), the room the existing clip leaves it. AT THE
     // ARCHITECT'S TABLET VALUE, run_gap 9 W (18 px; his "I've turned down the
     // spacing between the sections to 9W"), the block is 751 + 4·9 = 787 W =
-    // 1574 px from x 706 (the duo 706..847), the state line clipped at x 688.
+    // 1574 px from x 708 (the duo 708..849), the state line clipped at x 690.
     // On a 1920-px window at 100 % (faces 35, the key gap 1,
     // the run gap 22, the program face 11 px) the block is 839 px of faces
-    // from x 1065, the clock's field 62 px on x 16..77, the name from x 85.
+    // from x 1066, the clock's field 62 px on x 15..76, the name from x 84.
     // IN THE `h` VIEW (the hide, 2026-10-07; Play, Open Text Editor,
     // Toggle Value Drag, COPY and PASTE hidden there with the verbs — the duo
     // whole, its run gap with it — Down
     // and Up with them) the block is the two skips + 1 verb + the walk pair
     // + Switch Tab, Center and Older / Newer in the nudge pair's seats, Play
     // not standing, 142 + 70 + 142 + 286 + 3·44 = 772 px on the tablet, from x
-    // 1508 at the defaults. THE WIDTH AND THE GAP TUNE THE BLOCK (the
+    // 1510 at the defaults. THE WIDTH AND THE GAP TUNE THE BLOCK (the
     // `key_width` and `run_gap` tuning keys, 2026-11-06 / 2026-11-07): 21 faces
     // of 2 · key_width, 16 key gaps of 2 and four run gaps of 2 · run_gap, so
     // the block is 42 · key_width + 32 + 8 · run_gap device px on the tablet,
-    // from x 2248 − 42 · key_width − 8 · run_gap. At run_gap 22 it clears the
-    // clock's field (x 24..146) to key_width 45 (x 182), reaches the field from
+    // from x 2250 − 42 · key_width − 8 · run_gap. At run_gap 22 it clears the
+    // clock's field (x 22..144) to key_width 45 (x 184), reaches the field from
     // 46, and runs past the well's first column from 49 — at the grammar's
-    // ceiling, 50 W, 2308 px from x −28, its first 28 px off the panel's left
+    // ceiling, 50 W, 2308 px from x −26, its first 26 px off the panel's left
     // edge (the row carries no collision rule, below). At run_gap 9 it clears
-    // the field to key_width 48 (x 160) and stays on the panel through 50
-    // (x 76). At key_width 35 and run_gap's ceiling, 44 W, the block is 1854
-    // px from x 426, the state line clipped shorter and nothing else moved.
+    // the field to key_width 48 (x 162) and stays on the panel through 50
+    // (x 78). At key_width 35 and run_gap's ceiling, 44 W, the block is 1854
+    // px from x 428, the state line clipped shorter and nothing else moved.
     // THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window. THE
@@ -4279,7 +4280,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //     the line rule at its exact place), STANDING ON ITS FOOT — majors 4
 //     W, minors 1 W (8 and 2 device rows on the tablet), overlaying the
 //     ruler's bottom pad — and the digits Bold Small 8 W in the text tone,
-//     bare, their ink centered on the ruler; then a row of ground. (Kdenlive's
+//     bare, their ink centered on the ruler; then the frame's line. (Kdenlive's
 //     look — the majors rising above the flags, the etched ticks — stood
 //     2026-08-01 to 2026-10-09; Cool Edit's E0E0E0 on the dark ground until
 //     the flat well; git history.)
@@ -4422,6 +4423,61 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
 
 } // namespace
 
+// -- THE WELL'S FRAME ---------------------------------------------------------
+//
+// THE WELL'S FRAME'S ONE PAINTER (render.h's THE WELL'S FRAME, the rule and
+// its rows; architect 2026-11-17, session 140, ruling 5 and D2): every part
+// of the frame inside the rows [y0, y1) — its top line (the trim lane's
+// first row), the line under the trough (the trim lane's last), the line
+// under the ruler (the ruler lane's last), the lane's foot line and the
+// well's foot, each across the frame's whole width (well_columns), and its
+// two sides, the columns between the frame's outer columns and the
+// waveform area's, from the top line through the foot — all flat
+// `well_border`, whole cells. Each painter that owns rows of the well calls
+// it over its own rows after its fills (paint_trim, paint_ruler_row,
+// paint_canvas_column_frame; on_redraw over the upper lanes on a frame with
+// no audio), so the frame's cells in a lane's rows are repainted wherever
+// that lane's damage reaches. The caller's clip holds.
+namespace {
+void paint_well_frame_rows(cairo_t* cr, const AppState& app, int y0, int y1) {
+    const WellColumns well = well_columns(app);
+    const GuiRect area = waveform_area(app);
+    const GuiRect trim = top_trim_row_area(app);
+    const GuiRect ruler = top_ruler_row_area(app);
+    const GuiRect foot_line = lane_foot_line_area(app);
+    const GuiRect foot = well_foot_area(app);
+    const int lw = well_frame_w_px();
+    const int top = trim.y;
+    const int bot = foot.y + foot.h;
+    const int lo = std::max(y0, top);
+    const int hi = std::min(y1, bot);
+    const int fw = well.end - well.x;
+    if (fw <= 0 || hi <= lo) return;
+    const GuiColor tone = palette().well_border;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // One part, its rows cut to the band asked.
+    const auto part = [&](int x, int y, int w, int h) {
+        const int ry0 = std::max(y, lo);
+        const int ry1 = std::min(y + h, hi);
+        if (w <= 0 || ry1 <= ry0) return;
+        paint_cell_rect(cr, GuiRect{x, ry0, w, ry1 - ry0}, tone);
+    };
+    // THE LINES, across the frame's whole width.
+    part(well.x, trim.y, fw, std::min(lw, trim.h));
+    part(well.x, trim.y + trim.h - std::min(lw, trim.h), fw,
+         std::min(lw, trim.h));
+    part(well.x, ruler.y + ruler.h - std::min(lw, ruler.h), fw,
+         std::min(lw, ruler.h));
+    part(well.x, foot_line.y, fw, foot_line.h);
+    part(well.x, foot.y, fw, foot.h);
+    // THE SIDES, outside the waveform area's columns.
+    part(well.x, top, area.x - well.x, bot - top);
+    part(area.x + area.w, top, well.end - (area.x + area.w), bot - top);
+    cairo_restore(cr);
+}
+} // namespace
+
 void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const GuiRect lane   = top_ruler_row_area(app);
     const GuiRect marker = top_marker_row_area(app);
@@ -4461,16 +4517,19 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     cairo_save(cr);
     // THE LANES (architect 2026-11-01 night, the flat well; render.h's well
-    // paragraph): the lanes' margins beside the well and the ruler lane's
-    // last row THE GROUND (the palette's `face`, `ground`); the ruler FLAT
-    // `ruler_face` across the well's columns; the marker lane FLAT
-    // `lane_face` across them (render.h's well_columns: THE EDGE RULE, the
-    // well the waveform area), no ring, no line.
+    // paragraph): the lanes' margins beside the well THE GROUND (the
+    // palette's `face`, `ground`); the ruler FLAT `ruler_face` across the
+    // waveform area's columns; the marker lane FLAT `lane_face` across them;
+    // then THE WELL'S FRAME over both lanes' rows — its sides beside them and
+    // the line under the ruler, the ruler lane's last row
+    // (paint_well_frame_rows; architect 2026-11-17, session 140). Nothing
+    // below paints on the frame's columns: the walk, the head and the cues
+    // stand inside the waveform area's.
     const GuiPalette& pal = palette();
     const int ruler_h = ruler_h_px();
-    const WellColumns well = well_columns(app);
-    const int well_x0 = well.x;
-    const int well_x1 = well.end;
+    const GuiRect lanes_area = waveform_area(app);
+    const int well_x0 = lanes_area.x;
+    const int well_x1 = lanes_area.x + lanes_area.w;
     paint_cell_rect(cr, lane, pal.face);
     if (marker.w > 0 && marker.h > 0) {
         const int in0 = std::clamp(well_x0, marker.x, marker.x + marker.w);
@@ -4487,6 +4546,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             paint_cell_rect(cr, GuiRect{in0, marker.y, in1 - in0, marker.h},
                             palette().lane_face);
     }
+    // THE FRAME over the two lanes' rows (the head of this block).
+    {
+        const int rows_end =
+            marker.h > 0 ? marker.y + marker.h : lane.y + lane.h;
+        paint_well_frame_rows(cr, app, lane.y, rows_end);
+    }
 
     // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
     // pixels actually on screen, so it reads the same plate epoch the playheads
@@ -4502,7 +4567,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
     // THE RULER'S COLUMNS ARE THE CANVAS'S (2026-10-09, the column's
     // margins): every tick, digit and the head from the waveform area's x,
-    // which is the well's first column (architect 2026-11-03).
+    // one W inside the well's frame (render.h's THE WELL'S FRAME,
+    // 2026-11-17).
     const GuiRect area = waveform_area(app);
     const int cx = area.x;
 
@@ -4527,10 +4593,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         return;
     }
     // THE RULER'S FACE (the head of this body): flat `ruler_face` across the
-    // well's columns over the ruler's rows, the lane's last row the
-    // ground laid above. The face reads the LIVE area (well_columns), as the
-    // well's ground does (paint_canvas_column_frame); the walk below reads
-    // the plate's width.
+    // waveform area's columns over the ruler's rows, the lane's last row the
+    // frame's line laid above. The face reads the LIVE area, as the frame
+    // does (paint_well_frame_rows); the walk below reads the plate's width.
     paint_cell_rect(cr, GuiRect{well_x0, lane.y, well_x1 - well_x0,
                                 std::min(ruler_h, lane.h)},
                     palette().ruler_face);
@@ -4693,7 +4758,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // palette's `playhead_head` (Live's cyan 03C3D5 since 2026-11-01), NO
     // SHADOW (2026-11-02), the head's own tone apart from the line's static
     // `playhead_line` (render_playhead), THE OUTER ON THE RULER'S LAST
-    // cue_chip_h_px DEVICE ROWS (200 %: rows 187 .. 199), its apex on THE
+    // cue_chip_h_px DEVICE ROWS (200 %: rows 195 .. 207), its apex on THE
     // BOTTOM EDGE OF THE RULER'S FOOT ROW, over the ticks' feet (2026-10-09
     // ~21:00; the ruler's foot since the flat well). It stands over the
     // ticks and digits the walk above laid down, covering whatever lies
@@ -4704,7 +4769,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // label. NO SNAP, NO AVOIDANCE: it may stand on a marker's column, the
     // cue's chip being in the marker lane below (render.h's playhead
     // paragraph). It draws NOTHING across the trim bar, the marker lane and
-    // the rows of ground; its canvas line is paint_playheads'.
+    // the frame's lines; its canvas line is paint_playheads'.
     //
     // The whole head is the RESTING CURSOR'S: the `h` view, the render player
     // and the audition reach it through this one block, and the scanner keeps
@@ -5282,9 +5347,9 @@ void GuiPaintHandler::phase_reset_ring_damage(
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
 
-// The LIVE trim pass: every trim pixel — the bar's two flat fills, the
-// outside and the span (render_trim_flags) — paints here per frame, entirely inside its
-// lane,
+// The LIVE trim pass: every trim pixel — the lane's ground, the well's
+// frame's share of it, the trough and the pill (render_trim_flags) — paints
+// here per frame, entirely inside its lane,
 // which no later pass paints on; its slot is in the paint-order block in
 // on_redraw (the one authoritative sequence).
 //
@@ -5345,14 +5410,19 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
-    // THE TRIM LANE'S OWN GROUND (the theme's `ground` (Default's 242424, materials.h), the palette's
-    // `face`), under the bar: the lane's first row (the row of ground above
-    // the bar) and the well's margins beside it (render_trim_flags spans the
-    // canvas's columns alone, the well's); the bar's two
-    // fills render_trim_flags'.
+    // THE TRIM LANE'S OWN GROUND (the theme's `ground` (Default's 242424,
+    // materials.h), the palette's `face`), the well's margins beside it, and
+    // over it THE WELL'S FRAME's share of the lane — its top line on the
+    // lane's first row, its line under the trough on the last, its sides
+    // (paint_well_frame_rows; architect 2026-11-17, session 140); the trough
+    // and the pill render_trim_flags', on the waveform area's columns. The
+    // frame paints before the early returns below, so it stands whatever
+    // the bar does.
     const GuiRect trim_row = top_trim_row_area(app);
-    if (trim_row.w > 0 && trim_row.h > 0)
+    if (trim_row.w > 0 && trim_row.h > 0) {
         paint_cell_rect(cr, trim_row, palette().face);
+        paint_well_frame_rows(cr, app, trim_row.y, trim_row.y + trim_row.h);
+    }
     // The ITEM basis (free owner; the member plate_viewport_basis is the other
     // epoch — see the header comment above), read ahead of the gate below
     // because the covering test measures the lane at its painted width.
@@ -5413,13 +5483,15 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // NO WAVEFORM STEMS (architect 2026-08-01): the view bar is the trim
     // window's WHOLE RESTING display — the sweep's transient canvas
     // highlight the one exception (paint_sweep_highlight, 2026-11-12).
-    // NO HELD FACE (2026-10-09): the view bar draws no caps, so a grab shows
-    // nothing pressed (the held scroll arrow of 2026-10-03 went with them).
+    // THE DRAG LOOK (architect 2026-11-17, session 140): while a drag moves
+    // the span the pill wears `selected_fill` (trim_span_dragging,
+    // app_state.h, its edges' damage there); no caps, no hover look.
     // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "no dots on the
     // trim bar"; render.h's view-bar paragraph).
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame,
-                      basis.lattice_origin, trim, out_hit);
+                      basis.lattice_origin, trim, trim_span_dragging(app),
+                      out_hit);
 }
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
@@ -5485,7 +5557,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // (architect 2026-11-16, the beats; maybe_rebuild_flag_cache,
 // waveform_cache.cpp): for every exact place a stem left or arrived on, the
 // stem's own rect (marker_stem_damage_rect below — every cell its line
-// touches, the canvas's rows with the lane's last row and the ground line
+// touches, the canvas's rows with the lane's last row and the frame's line
 // above them, in one rect), and the window's rows from the viewport's lanes
 // through the waveform area's foot wherever the rebuild's miss is more than
 // the marker-driven content (its tail's list). THE COINCIDENT LINES RIDE
@@ -5497,15 +5569,15 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 //
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
-// row — THROUGH THE ONE-W ROW OF GROUND under the lane TO THE CANVAS'S LAST
-// ROW (200 %: rows 240 .. 1327, on the line's real span of columns: at a
-// whole place the column left of the marker's and the marker's own), so no
-// gap of ground stands between the apex and
-// the stem (his "small gap": the rows of ground under the lane, 241 .. 242,
+// row — THROUGH THE ONE-W FRAME LINE under the lane (the well's frame's,
+// 2026-11-17) TO THE CANVAS'S LAST ROW (200 %: rows 248 .. 1327, on the
+// line's real span of columns: at a whole place the column left of the
+// marker's and the marker's own), so no gap stands between the apex and
+// the stem (his "small gap": the rows under the lane, 249 .. 250 today,
 // the canvas-only stem left). TWO PAINTERS, ONE DECISION:
 // the canvas's rows are the GPU's (this pass, through the sink, whose list
 // is scissored to the canvas paint area), the lane's last row and the
-// ground line the chrome's (paint_marker_stem_heads, on the backbuffer after
+// frame's line the chrome's (paint_marker_stem_heads, on the backbuffer after
 // the flag blit), and BOTH take THE SAME REAL SPAN OF COLUMNS from
 // standing_stem_spans, off the one stash — each pixel at its exact
 // coverage by that span, the sink's blended rect on the canvas and the
@@ -5583,18 +5655,18 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 
 // THE STEM'S HEAD SEGMENT, the chrome's half of the selection stem
 // (paint_marker_stems' head, the rule): the marker lane's last row and the
-// row of ground under the lane, on the standing stems' real spans of
+// frame's line under the lane, on the standing stems' real spans of
 // columns, in the `cue_outline` — painted after the flag blit, so it stands
 // over the chip's apex, which is on its center (the outer triangle's tip:
 // the `cue_outline` already on an enabled chip, a disabled chip's
-// `inactive_cue_outline` the stem covers there) and over the ground line,
+// `inactive_cue_outline` the stem covers there) and over the frame's line,
 // and under every later
 // surface (the flag editor's box, the keyboard slot, the modal box).
 // THROUGH THE COVERAGE STAMP (architect 2026-11-14, send J;
 // CoverageStampPass, cool_edit_paint.h): each stem one rect with real
 // column edges — the very span its canvas half hands the sink — on these
 // whole rows, each pixel the outline's word blended over what the lane and
-// the ground line hold there by the pixel's exact coverage; a span on whole
+// the frame's line hold there by the pixel's exact coverage; a span on whole
 // columns writes the word itself on its cells.
 void GuiPaintHandler::paint_marker_stem_heads(cairo_t* cr) {
     if (app.marker_stems.empty()) return;
@@ -7107,8 +7179,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // word (Cancel or Close by content, kModalCancelLabel's rule) and the
     // trim presets list's four (its highlight pair, the player's, directly
     // before them in the one cluster) and the BPM form's two — the last
-    // one's face ending on the pane's last column (x 2279 on the tablet, the
-    // well's last; its cell on the box's outer column, 2280), today's button
+    // one's face ending on the pane's last column (x 2281 on the tablet, the
+    // well's last, the frame's; its cell on the box's outer column, 2282),
+    // today's button
     // gap between them; the render player's row and the score viewer's
     // read from the left, their other keys first and their transport flush
     // right (architect 2026-11-10; their branches below). (From 2026-08-13 a prompt's message and an
@@ -7599,8 +7672,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    button, ON THE MODAL FAMILY'S CONTROLS ROW (architect,
         //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
         //    ALONE, FLUSH RIGHT, ITS FACE ENDING ON THE PANE'S LAST COLUMN
-        //    (x 2279 on the tablet, the well's last; its cell on the box's outer
-        //    column).
+        //    (x 2281 on the tablet, the well's last, the frame's; its cell on
+        //    the box's outer column).
         //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
         //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above
@@ -8615,10 +8688,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // since 2026-11-01 night, THE EDGE RULE; program_spec.h's column_margin_px,
 // render.h's well-edge accessors.) ONE PAINTER for the rows from the lane's
 // foot line (top lane 4) through the well's foot (bottom lane 1): THE
-// GROUND across them — the margins beside the canvas, the lane's foot line
-// and the well's foot, no ring, no frame. The well is the waveform area
-// (architect 2026-11-03), so the ground meets the canvas directly on both
-// sides. It runs before render_canvas.
+// GROUND across them — the margins beside the frame — and over it THE
+// WELL'S FRAME's share of those rows: the lane's foot line, the well's foot
+// and the frame's two sides beside the canvas (paint_well_frame_rows;
+// architect 2026-11-17, session 140), the frame meeting the canvas, which
+// stands on the waveform area's columns. It runs before render_canvas.
 // THE HOLE (2026-10-13, canvas_sink.h's transparency invariant): the ground
 // skips `hole`, the canvas's paint area, which on_redraw clears for the GPU.
 namespace {
@@ -8640,6 +8714,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     });
     cairo_clip(cr);
     paint_cell_rect(cr, face, p.face);
+    paint_well_frame_rows(cr, app, top.y, y1);
     cairo_restore(cr);
 }
 } // namespace
@@ -9108,8 +9183,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                                 part.h);
                           });
     // THE GROUND SPLIT: the chrome erase above covers the exposed rect less
-    // the canvas's paint area; the well's margins and rows of ground then
-    // take the ground (paint_canvas_column_frame, above), and the waveform area is the GPU's
+    // the canvas's paint area; the well's margins then take the ground and
+    // the frame's lines and sides their tone (paint_canvas_column_frame,
+    // above), and the waveform area is the GPU's
     // (the block above): its `waveform_canvas` ground with the horizontal
     // grid over it (render_canvas, render.h's row-6 canvas paragraph) is the
     // list's first record, so a cold frame (loading, no audio, or no plate
@@ -9161,6 +9237,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     that moves nothing keeps the backbuffer and its bytes.
     {
         paint_canvas_column_frame(cr, app, canvas_paint);
+        // THE FRAME OVER THE UPPER LANES ON A FRAME WITH NO AUDIO (render.h's
+        // THE WELL'S FRAME): their own painters (paint_trim,
+        // paint_ruler_row) run in the plate branch alone, so here, where
+        // render_background left those lanes the ground, the frame's share of
+        // the trim lane's top through the marker lane's foot is painted
+        // here, and the frame stands whole in every frame class.
+        if (!plate_branch) {
+            const GuiRect trim_lane = top_trim_row_area(app);
+            const GuiRect marker_lane = top_marker_row_area(app);
+            paint_well_frame_rows(cr, app, trim_lane.y,
+                                  marker_lane.y + marker_lane.h);
+        }
         if (canvas_paint_whole) {
             if (!canvas_clear_skip) {
                 cairo_save(cr);

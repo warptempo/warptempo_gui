@@ -272,7 +272,8 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
 // THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; flat
 // since 2026-11-01 night; the rule and its row at render.h's
 // waveform_divider, the one geometry owner): across the area's columns, ONE
-// ROW OF THE GROUND (the palette's `face`, `ground`) cut to the area's rows —
+// LINE OF THE WELL'S FRAME'S TONE (the palette's `well_border`; architect
+// 2026-11-17, session 140, D2) cut to the area's rows —
 // CHROME ON THE CANVAS, painted through the sink so the GL canvas draws it
 // from its list (canvas_sink.h's head). ITS OWN PASS, AFTER THE PLATE AND THE CENTER
 // LINES and BEFORE EVERY VERTICAL LINE (build_canvas_list's order): the
@@ -290,7 +291,7 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     const GuiRect r = canvas_divider_rect(area);
     if (r.w <= 0 || r.h <= 0) return;
-    sink.rects(std::span<const GuiRect>(&r, 1), palette().face);
+    sink.rects(std::span<const GuiRect>(&r, 1), palette().well_border);
 }
 
 // -- The relief helpers (the contract at the declaration, render.h) ---------
@@ -940,6 +941,8 @@ TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
     TrimSpanColumns s;
     s.lo = std::max(begin.x, 0.0);
     s.hi = std::min(end.x + 1.0, static_cast<double>(wave_w));
+    s.lo_bound = begin.x >= 0.0;
+    s.hi_bound = end.x + 1.0 <= static_cast<double>(wave_w);
     return s;
 }
 
@@ -995,6 +998,7 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        long long viewport_lattice_origin,
                        const TrimRange& trim,
+                       bool dragging,
                        TrimBarHit* out_hit) {
     // COLD FIRST, so every early return below publishes "nothing grabbable"
     // over a lane that painted no bar (the contract at the declaration).
@@ -1015,57 +1019,69 @@ void render_trim_flags(cairo_t* cr,
         static_cast<double>(trim.end), viewport_start_sample,
         viewport_end_sample, viewport_lattice_origin, waveform_area.w);
 
-    // THE BAR'S COLUMNS ARE THE WELL'S (THE EDGE RULE, 2026-11-01 night):
-    // waveform_area's x and its effective width, which are the well's
-    // columns (THE WELL IS THE WAVEFORM AREA, architect 2026-11-03).
+    // THE BAR'S COLUMNS ARE THE WAVEFORM AREA'S: waveform_area's x and its
+    // effective width, one W inside the well's frame (render.h's THE WELL'S
+    // FRAME, architect 2026-11-17, session 140), whose columns and lines
+    // paint_trim paints.
     const int lane_x   = waveform_area.x;
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
-    // THE BAR (render.h's well paragraph; architect 2026-11-03, mock z2):
-    // under the lane's first row of ground (the caller's), THE FILL'S ROWS
-    // (trim_bar_fill_h_px) a FLAT `trim_bar_face` across the well's columns,
-    // NO FRAME; the bar's last row the caller's
-    // ground too (paint_trim erases the whole lane first), the one-W line
-    // between the bar and the ruler, nothing painted over it here.
+    // THE TROUGH (render.h's well paragraph; architect 2026-11-17, session
+    // 140, ruling 4 and D1): under the frame's top line, the trough's rows
+    // (trim_trough_h_px, 12 W) a FLAT `trim_bar_face` across the waveform
+    // area's columns; the frame's line under it paint_trim's.
     const int px = hairline_px();
-    const int bar_y = lane_y + px;
-    const int fill_h = std::min(trim_bar_fill_h_px(), lane_h - px);
+    const int trough_y = lane_y + px;
+    const int trough_h = std::min(trim_trough_h_px(), lane_h - px);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (fill_h > 0)
-        paint_cell_rect(cr, GuiRect{lane_x, bar_y, lane_w, fill_h},
+    if (trough_h > 0)
+        paint_cell_rect(cr, GuiRect{lane_x, trough_y, lane_w, trough_h},
                         palette().trim_bar_face);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
 
-    // THE SPAN — the trim window's columns, the begin column through the end
-    // column inclusive, sliding off an edge like any content, cut to the
-    // waveform's columns (trim_span_columns, the one owner the sweep
-    // highlight reads too: THE TRIM REFLECTS THE WAVEFORM'S COLUMNS, even
-    // where the waveform is wrong (architect 2026-11-03) — the bar's columns
-    // are the waveform area's, nothing more, so a trim spanning the view
-    // fills the bar end to end): A
-    // FLAT `trim_span_face` FILL on the fill's rows, no outline of its own
-    // (architect 2026-11-03, mock z2), ITS TWO ENDS AT THE BOUNDS' EXACT
-    // PLACES (architect 2026-11-14, send J): one rect with real column
-    // edges through the coverage stamp (CoverageStampPass,
-    // cool_edit_paint.h) over the bar's face laid above, each pixel an end
-    // crosses the span's tone over the face's by its coverage; the stamp
-    // cuts to the lane's clip. NO PLAYHEAD IN THE BAR (architect
-    // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
+    // THE SPAN, ARC'S SLIDER — A PILL (architect 2026-11-17, session 140,
+    // ruling 4: "The scroll bar and the trough should be accurate to whatever
+    // Arc uses"): the trim window from the begin bound's exact place through
+    // the end bound's (trim_span_columns, the one owner the sweep highlight
+    // reads too: THE TRIM REFLECTS THE WAVEFORM'S COLUMNS, even where the
+    // waveform is wrong, architect 2026-11-03), cut to the waveform's
+    // columns; ITS ROWS trim_pill_h_px (6 W) CENTERED ON THE TROUGH, real
+    // edges, so 3 W of trough above and below at 200 %. ITS ENDS: ROUND,
+    // radius half the pill's height, where the end's trim bound stands on
+    // screen (TrimSpanColumns' lo_bound / hi_bound); CUT SQUARE at the
+    // strip's edge where the span runs past it; A SPAN NARROWER THAN TWO
+    // RADII TAKES HALF ITS WIDTH AS THE RADIUS, so its round ends meet and
+    // never overlap (the rounded rect's own clamp). Painted at each pixel's
+    // exact coverage through the coverage stamp (CoverageStampPass,
+    // cool_edit_paint.h; coverage_of_rounded_rect, coverage_stamp.h) over
+    // the trough laid above; the stamp cuts to the lane's clip. ITS TONE:
+    // `trim_span_face` (ScrollbarInnerHandle, Arc's slider) at rest,
+    // `selected_fill` (StandbySelectionBackground, Arc's slider:active)
+    // WHILE A DRAG MOVES THE SPAN (`dragging`, trim_span_dragging; ruled:
+    // the trim bar's own drags and a TRIM sweep alike). No outline, no hover
+    // look. NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought
+    // we agreed no dots on the trim bar").
     const TrimSpanColumns span = trim_span_columns(bc, ec, lane_w);
-    if (span.hi > span.lo && fill_h > 0) {
+    const double pill_h = std::min(static_cast<double>(trim_pill_h_px()),
+                                   static_cast<double>(trough_h));
+    if (span.hi > span.lo && pill_h > 0.0) {
+        const double y0 = static_cast<double>(trough_y) +
+                          (static_cast<double>(trough_h) - pill_h) / 2.0;
+        const double radius = std::min(pill_h / 2.0, (span.hi - span.lo) / 2.0);
         CoverageStampPass stamp;
         stamp.begin(cr);
-        stamp.rect(static_cast<double>(lane_x) + span.lo,
-                   static_cast<double>(bar_y),
-                   static_cast<double>(lane_x) + span.hi,
-                   static_cast<double>(bar_y + fill_h),
-                   palette().trim_span_face);
+        stamp.rounded_rect(static_cast<double>(lane_x) + span.lo, y0,
+                           static_cast<double>(lane_x) + span.hi, y0 + pill_h,
+                           span.lo_bound ? radius : 0.0,
+                           span.hi_bound ? radius : 0.0,
+                           dragging ? palette().selected_fill
+                                    : palette().trim_span_face);
         stamp.end();
     }
 
@@ -2976,7 +2992,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // its rows the lane's whole rows, both fills at exact coverage (the
     // exact fill, render.h) over the lane — the lane's face and the cues the
     // flag blit laid, opaque under every pixel the box can reach (its rows
-    // are the lane's alone: the row of ground under the lane and the canvas
+    // are the lane's alone: the frame's line under the lane and the canvas
     // under that are never touched), inside the one clip rectangle set
     // above.
     const GuiRectF field_box{bx - static_cast<double>(u),
@@ -3110,7 +3126,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // open gates, and `phase` already answered that question for the box
     // above.
     if (ride_cells) {
-        const int well_end = well_columns(app).end;
+        // The marker lane's last column, one past it: the waveform area's
+        // (the lane's face stands on the area's columns, inside the well's
+        // frame, render.h's THE WELL'S FRAME; this painter's clip holds the
+        // same columns).
+        const int well_end = area.x + area.w;
         // The cells, off the ONE composer and the ONE measurer the flag pass
         // reads (`ride_text`, composed above), so the re-paint cannot show a
         // different token or a different width from the cell it stands in
@@ -3158,9 +3178,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                               static_cast<double>(pad_r);
             // The face box over the gap and the segment, as the resting
             // label's one box covers its gaps — the lane's flat `lane_face`
-            // (paint_cues' box) through the well's columns, the ground past
-            // them (the run is not clipped, so a ride near the right edge
-            // reaches the margin). ON REAL EDGES (the no-grid arc,
+            // (paint_cues' box) through the lane's columns, the ground past
+            // them, which the painter's clip (the waveform's columns, above)
+            // cuts, so nothing lands on the well's frame. ON REAL EDGES (the no-grid arc,
             // 2026-11-15): the box's two edges are the field's right edge
             // plus real offsets, filled at exact coverage over the lane's
             // cues — an opaque box laid at its real edges hides a

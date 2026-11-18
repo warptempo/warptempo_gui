@@ -1053,7 +1053,7 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // starts ABOVE the waveform (the view bar's top row since 2026-10-14; the
 // panel's ceiling first moved above the waveform 2026-09-02), so every
 // waveform pass is clipped out whole while it stands, and the LANES it also
-// covers (the trim bar, the ruler, the marker lane, the well's rows of ground and
+// covers (the trim bar, the ruler, the marker lane, the well's frame and
 // row 8; the icon row stands above the box, every icon greyed under the folder overlay but the
 // ones it leaves live) are not spared this way — their painters
 // run and the panel covers them, because they publish the roster's hit rects

@@ -46,8 +46,12 @@
 // (GuiPlatform::bundled_theme_files) — each converted ONCE on the laptop
 // from Live's or the pack's `.ask` (Ableton's theme XML) by
 // tools/themes/ask_to_theme.py, never by hand but for the `_mod` files'
-// recorded edits; NO .ASK FILE IS IN THE REPOSITORY OR THE APK, and the app
-// reads none. THE USER'S files are `themes/*.theme` FLAT beside the device
+// recorded edits and the two roles of 2026-11-17 (ScrollbarInnerTrack and
+// ClipBorder, each file's from its own .ask, its header line the record) —
+// AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
+// it, its header the record of every role (architect 2026-11-17, session
+// 140); NO .ASK FILE IS IN THE REPOSITORY OR THE APK, and the app reads
+// none. THE USER'S files are `themes/*.theme` FLAT beside the device
 // config (device_config_path()'s parent / "themes", the noise's
 // composition): each regular file directly there whose name ends `.theme`;
 // a subfolder, or any other file, is ignored silently; a MISSING OR
@@ -76,7 +80,8 @@
 //   EXTRA         every file of `themes/extra/` by slug: the Sonic Bloom
 //                 pack as he curated it (2026-11-07) less Gunmetal, the five
 //                 `_mod` files his hand edits, each recorded in its header
-//                 comment.
+//                 comment, and `arc_dark` (Arc-Dark, written by hand,
+//                 2026-11-17, session 140).
 //   USER-DEFINED  his own files beside the config, by slug (then by file
 //                 name). A user file whose slug a shipped row bears
 //                 (`default`, `default_dark_neutral_medium` and every SYSTEM
@@ -109,7 +114,7 @@
 //     ground                 242424 = SurfaceArea (ruling 2, 2026-11-05: the
 //                                     arrangement's floor, his "#56" on Classic
 //                                     Medium Light over the panels' DADADA)
-//     lane, trim bar outside 2A2A2A = Desktop
+//     lane                   2A2A2A = Desktop (the marker lane)
 //     card ink               2A2A2A = Desktop
 //     key press face         2A2A2A = Desktop (the press arc, 2026-11-05: his
 //                                     pick p2 over ControlBackground 1E1E1E —
@@ -229,16 +234,40 @@
 //                                     D3D3D340 on SB Cielo / Onyx) — a
 //                                     disabled key's glyph and legend, the
 //                                     struck clip lamp's square
-//     trim span              696969 = ScrollbarInnerHandle over Desktop (the
-//                                     trim bar's outside)
+//     trim span              696969 = ScrollbarInnerHandle over Desktop —
+//                                     THE TRIM BAR'S PILL at rest (an opaque
+//                                     word in every shipped file, so the
+//                                     surface under it changes no byte)
+//     trim bar (the trough)  242424 = ScrollbarInnerTrack over the ground
+//                                     (SurfaceArea): THE TRIM BAR'S 12-W
+//                                     TROUGH under the pill, Live's scrollbar
+//                                     track, the handle's partner (architect
+//                                     2026-11-17, session 140, ruling 4: "the
+//                                     scroll bar and the trough should be
+//                                     accurate to whatever Arc uses" — Arc's
+//                                     $_scrollbar_bg_color in arc_dark's
+//                                     file). Live's own files carry it
+//                                     00000000, transparent, so on them the
+//                                     trough is the ground itself
+//     well border            2A2A2A = ClipBorder over the ground: THE WELL'S
+//                                     FRAME — its one-W border round trim,
+//                                     ruler, marker lane and canvas, the
+//                                     three lane lines inside it and the
+//                                     stereo divider (architect 2026-11-17,
+//                                     session 140, D2: "lets use the thunar
+//                                     border" — Arc's $borders_color, Live's
+//                                     clip frame; render.h's THE WELL'S
+//                                     FRAME)
 //     ruler tick             919191 = DetailViewRulerMarkings over
 //                                     SurfaceBackground (the ruler face; Live's
 //                                     light ticks)
-//   Each of these four was a Default mix of two roles; the role nearest it in
-//   hex on Default is the faithful reading, so every theme now reads Live's own
-//   number (architect 2026-11-07, session 82). Default's key dim ink 5D5D5D
-//   equals inactive cue's BackgroundClip — Live's own number, accepted. The four
-//   are present in every shipped file and in Default.
+//   The grid, the key dim ink, the trim span and the ruler tick were each a
+//   Default mix of two roles; the role nearest it in hex on Default is the
+//   faithful reading, so every theme now reads Live's own number (architect
+//   2026-11-07, session 82). Default's key dim ink 5D5D5D equals inactive
+//   cue's BackgroundClip — Live's own number, accepted. Every composited role
+//   is present in every shipped file and in Default (the trough's and the
+//   frame's added by hand 2026-11-17, each file's from its own .ask).
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
 //   (b − a) per channel, rounded half to even and clamped). The cue fill
 //   above and every tone below but the inactive cue outline are ONE BODY
@@ -399,8 +428,9 @@
 // white half way to the mixed head. NEVER MIXED: the text tones ("never the
 // glyph color itself": the text, the dim text, the key dim ink — the keys'
 // glyphs and legends, the markers' labels), the print on a lit face and its
-// dim, the selection and list press texts, the faces, the lanes, the
-// waveform's tones, the cue outline, the inactive cue and its outline
+// dim, the selection and list press texts, the faces, the lanes (the trim
+// bar's trough and the well's frame among them, 2026-11-17), the waveform's
+// tones, the cue outline, the inactive cue and its outline
 // (dark: "those weren't bright to begin with") and the scanner (below). At
 // 75 on the reference row: the accent FFAD56 -> C88B4A, the purple B595FC
 // -> 9179C6, the head 03C3D5 -> 0B9BA9 and its line 81E1EA -> 85CDD4
@@ -414,13 +444,16 @@
 // canonically full white", his Live 12 reference shot). It is never proposed
 // as a role or a mix.
 //
-// Where a theme makes the lane, the trim's outside or the dim text coincide
-// with the ground, that is Live's own number — accepted, not a bug, no
-// backstop (architect 2026-11-05).
+// Where a theme makes the lane, the trim bar's trough, the well's frame or
+// the dim text coincide with the ground, that is Live's own number —
+// accepted, not a bug, no backstop (architect 2026-11-05; the trough
+// 2026-11-17: Live's transparent ScrollbarInnerTrack).
 //
 // THE SONIC BLOOM FILES' UNDEFINED ROLES: a pack file may carry a role it does
 // not use as 000000 (ScrollbarInnerHandle black on 12 SB files,
-// DetailViewRulerMarkings on 4). NO RULE CORRECTS IT: he edits the individual
+// DetailViewRulerMarkings on 4; of the shipped files, ScrollbarInnerTrack an
+// opaque 000000 on SB Cielo, Dash, Elegance, Onyx, Rosequartz and Viridian,
+// ClipBorder on SB Dash, Elegance, Rosequartz and Viridian). NO RULE CORRECTS IT: he edits the individual
 // theme by hand, a `_mod` file of the shipped themes (architect 2026-11-07,
 // session 82: "i'd rather manually fix individual sb themes than make rules
 // around their missing colors").

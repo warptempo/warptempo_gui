@@ -1,5 +1,6 @@
 # SB Rosequartz_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
 # Modified by hand from the pack's SB Rosequartz: ViewCheckControlDisabledOff 333333 -> 5A5A5A, ScrollbarInnerHandle 000000 -> 454545 (architect 2026-11-07..11)
+# ScrollbarInnerTrack and ClipBorder added by hand from SB Rosequartz.ask (architect 2026-11-17, session 140)
 SurfaceArea=191919
 Desktop=111111
 SurfaceBackground=353535
@@ -24,3 +25,5 @@ ViewCheckControlDisabledOff=5A5A5A
 ScrollbarInnerHandle=454545
 DetailViewRulerMarkings=D9DCE0
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=000000
+ClipBorder=000000

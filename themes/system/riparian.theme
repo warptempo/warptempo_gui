@@ -1,4 +1,5 @@
 # Riparian.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from Riparian.ask (architect 2026-11-17, session 140)
 SurfaceArea=0F2026
 Desktop=16282E
 SurfaceBackground=26383F
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=607175
 ScrollbarInnerHandle=728283
 DetailViewRulerMarkings=B0B5A3
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=16282E

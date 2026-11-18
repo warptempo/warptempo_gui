@@ -15,6 +15,7 @@
 #     session-114 head B3B4BD, the icon glyph color, and its line D9DADE
 #     superseded); its line the derived half toward white, EFF0E7, before
 #     THE BRIGHT MIX (src/gui/theme_roles.h), which mixes the head first.
+# ScrollbarInnerTrack and ClipBorder added by hand from SB Gunmetal.ask (architect 2026-11-17, session 140)
 SurfaceArea=1F2128
 Desktop=24262D
 SurfaceBackground=2E313A
@@ -39,3 +40,5 @@ ViewCheckControlDisabledOff=535763
 ScrollbarInnerHandle=5D6170
 DetailViewRulerMarkings=808699
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=24262D

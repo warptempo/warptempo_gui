@@ -42,8 +42,9 @@ struct GuiThemeTones {
     uint32_t ruler_face;          // the ruler (SurfaceBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the face)
     uint32_t lane_face;           // the marker lane (Desktop)
-    uint32_t trim_bar_face;       // the trim bar outside the trim (Desktop)
-    uint32_t trim_span_face;      // the trim bar inside the trim (ScrollbarInnerHandle over Desktop)
+    uint32_t trim_bar_face;       // the trim bar's trough, the 12-W lane under the pill (ScrollbarInnerTrack over the ground)
+    uint32_t trim_span_face;      // the trim bar's pill at rest, the span (ScrollbarInnerHandle over Desktop)
+    uint32_t well_border;         // THE WELL'S FRAME: its one-W border round trim, ruler, marker lane and canvas, its three lane lines and the stereo divider (ClipBorder over the ground)
     uint32_t selection_fill;      // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
     uint32_t selection_text;      // the selection pair's text; `selected_text` (StandbySelectionForeground, the bar's own partner)
     uint32_t list_press_fill;     // a list row's fill while a press stands on it (SelectionBackground)
@@ -121,7 +122,10 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // the way toward Desktop, the marker lane's floor (architect 2026-11-12,
 // session 114, and 2026-11-13, session 121; theme_roles.h's DERIVED block)
 // AND THE ENABLED CHIP'S FILL FFAD56, the accent
-// (ViewCheckControlEnabledOn; architect 2026-11-13, session 119).
+// (ViewCheckControlEnabledOn; architect 2026-11-13, session 119) AND THE
+// TRIM BAR'S TROUGH 242424, Default's ScrollbarInnerTrack 00000000 over the
+// ground — Live's transparent track, so the ground itself — and THE WELL'S
+// FRAME 2A2A2A, Default's ClipBorder (architect 2026-11-17, session 140).
 // THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
 // 119): like every row of the list it holds the theme's own numbers,
 // and the install mixes its bright tones at the `bright_mix` key as it mixes
@@ -147,8 +151,9 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x363636, // ruler_face
     0x919191, // ruler_tick
     0x2A2A2A, // lane_face
-    0x2A2A2A, // trim_bar_face
+    0x242424, // trim_bar_face
     0x696969, // trim_span_face
+    0x2A2A2A, // well_border
     0x637E86, // selection_fill
     0x070707, // selection_text
     0xB0DDEB, // list_press_fill

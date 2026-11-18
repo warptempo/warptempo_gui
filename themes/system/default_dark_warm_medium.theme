@@ -1,4 +1,5 @@
 # Default Dark Warm Medium.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from Default Dark Warm Medium.ask (architect 2026-11-17, session 140)
 SurfaceArea=29231F
 Desktop=2F2925
 SurfaceBackground=3C342F
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=645B53
 ScrollbarInnerHandle=72685E
 DetailViewRulerMarkings=9B8F82
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=2F2925

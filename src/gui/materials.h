@@ -21,10 +21,11 @@
 // nothing outside the installed palette names a color.
 //
 // THE GROUND IS ONE FLAT COLOR, `ground` — Default's 242424 (SurfaceArea) —
-// everywhere outside the well's regions and the keys: the band and its logo
-// lane, row 8, the well's side margins and its rows of ground (the ruler's
-// and the marker lane's foot lines, the stereo divider, the row above the
-// trim bar and the row under the canvas, each one W, render.h's
+// everywhere outside the well's regions, its frame and the keys: the band
+// and its logo lane, row 8 and the well's side margins (the well's lines —
+// the frame round it, the lines under the trough, the ruler and the marker
+// lane, the stereo divider — the frame's tone since 2026-11-17, each one W,
+// render.h's
 // hairline_px), the gaps between keys, the on-screen keyboard's band, the
 // modal family's controls row.
 // NO BAKE, NO GRAIN, NO GRADIENT, NO LINE, NO BEVEL, NO SHADOW: every pixel
@@ -178,8 +179,9 @@
 // walk stepping the face and the gap (key_group_pitch_px below), so every
 // face is the same, a group's ends included. THE EDGE RULE IS THE FACES':
 // the band's, row 8's and the controls rows' outermost FACES stand on the
-// well's first and last columns (render.h's well_columns, the waveform
-// area's, architect 2026-11-03; the seats' walks, paint_handler.cpp). THE
+// well's first and last columns (render.h's well_columns, the well's
+// frame's outer columns, architect 2026-11-17, session 140; the seats'
+// walks, paint_handler.cpp). THE
 // GROUND IS NOT PRESSABLE (architect 2026-11-02, R5: "ground is not a
 // button"): THE PAINTED FACE IS THE HIT BOX (point_on_key below), so a
 // press, a lift and the tooltip answer on the face alone and
@@ -212,23 +214,29 @@
 // every word, digit, tick and triangle is ink alone.
 //
 // THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h;
-// M13's text tones 2026-11-02; the text round's lengths 2026-11-03): FLAT
-// REGIONS ON THE GROUND, no frame, no ring, no bevel, its columns the keys'
-// faces' outer columns (render.h's well_columns, THE EDGE RULE), top to
-// bottom — THE TRIM BAR two flat fills, no frame (architect 2026-11-03,
-// mock z2): `trim_bar_face`, Default's 2A2A2A, outside the trim,
-// `trim_span_face`, Default's 696969, on the span, one row of ground under
-// them; THE RULER `ruler_face`, Default's 363636, with the `text` digits and
-// the `ruler_tick` ticks, Default's 919191; one row of ground; THE MARKER
-// LANE `lane_face`, Default's 2A2A2A (architect 2026-11-03, the retrofit:
-// Live's next real fill above the 242424 ground — Desktop); one row of
-// ground; THE CANVAS (the palette's `waveform_canvas`), its stereo divider
-// one row of ground. Every Default number is Live's, measured on his Live
-// 12 shots (the trim bar the arrangement's overview, the ruler and its
-// ticks the time ruler, the lane the clip view's marker lane). Where a
-// theme makes the lane, the trim's outside or the dim text coincide with
-// the ground, that is Live's own number — ACCEPTED, not a bug, no backstop
-// (architect 2026-11-05).
+// M13's text tones 2026-11-02; the text round's lengths 2026-11-03; THE
+// FRAME and THE TROUGH architect 2026-11-17, session 140): FLAT REGIONS
+// INSIDE ONE FRAME, no ring, no bevel, the frame's outer columns the keys'
+// faces' outer columns (render.h's well_columns, THE EDGE RULE). THE
+// FRAME, `well_border`, Default's 2A2A2A (ClipBorder; Arc's
+// $borders_color, Thunar's pane border, D2): one W round the trim bar, the
+// ruler, the marker lane and the canvas, the lines between them and the
+// stereo divider in the same tone (render.h's THE WELL'S FRAME). Inside it,
+// top to bottom — THE TRIM BAR, ARC'S SCROLLBAR (ruling 4): the 12-W
+// trough `trim_bar_face`, Default's 242424 (ScrollbarInnerTrack over the
+// ground; Live's track is transparent), and on it THE PILL, the span,
+// `trim_span_face`, Default's 696969, or `selected_fill` while a drag
+// moves it (render_trim_flags); the frame's line; THE RULER `ruler_face`,
+// Default's 363636, with the `text` digits and the `ruler_tick` ticks,
+// Default's 919191; the frame's line; THE MARKER LANE `lane_face`,
+// Default's 2A2A2A (architect 2026-11-03, the retrofit: Live's next real
+// fill above the 242424 ground — Desktop); the frame's line; THE CANVAS
+// (the palette's `waveform_canvas`), its stereo divider the frame's tone.
+// Every Default number is Live's, measured on his Live 12 shots (the
+// ruler and its ticks the time ruler, the lane the clip view's marker
+// lane). Where a theme makes the lane, the trough, the frame or the dim
+// text coincide with the ground, that is Live's own number — ACCEPTED, not
+// a bug, no backstop (architect 2026-11-05).
 // THE TIME FIELDS are flat `key_face` boxes, no ring (2026-11-01 night,
 // M5m; cool_edit_paint.h's paint_ce_time_field).
 //
@@ -236,13 +244,13 @@
 // (architect 2026-11-02, M14 "d"), Default's 757575 (TextDisabled, the dim
 // text's own role): the scrub's one-W channel (render.h's scrub block) and
 // the tooltip's one-W border (paint_shift_tooltip; the cards wear
-// `card_face` instead since 2026-11-04 night). THE TRIM BAR'S TWO FILLS
-// (architect 2026-11-03, mock z2; render_trim_flags): `trim_bar_face`, the
-// bar outside the trim, IS THE LANE'S TONE — the same Live role (Desktop),
-// named for what it paints as `pane_face` is `key_face`'s; `trim_span_face`
-// is Live's ScrollbarInnerHandle over Desktop (the bar's outside), the ruler's
-// ticks Live's DetailViewRulerMarkings over the ruler face, on every theme
-// (architect 2026-11-07, session 82; theme_roles.h's head).
+// `card_face` instead since 2026-11-04 night). It is not THE WELL'S FRAME,
+// `well_border` (THE WELL above), a tone of its own. THE TRIM BAR'S TWO
+// TONES (render_trim_flags): `trim_bar_face`, the trough, is Live's
+// ScrollbarInnerTrack over the ground (architect 2026-11-17, session 140);
+// `trim_span_face`, the pill, is Live's ScrollbarInnerHandle over Desktop,
+// the ruler's ticks Live's DetailViewRulerMarkings over the ruler face, on
+// every theme (architect 2026-11-07, session 82; theme_roles.h's head).
 //
 // THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
 // selection): a flat bar in `selection_fill`, Default's 637E86

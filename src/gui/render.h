@@ -364,12 +364,13 @@ struct TrimRange {
 // 2A2A2A, Live's own text on that bar — both measured on his Live 12 shot of
 // 2026-10-31 (materials.h's THE CARDS). THIS PARAGRAPH IS THE RULE'S ONE
 // STATEMENT.
-// THE CANVAS HAS NO FRAME since the well's flat look (architect 2026-11-01
-// night, "THE MAIN PAGE IS SETTLED"): its two channels' wells are parted by
-// one row of the ground (waveform_divider), its edges the well's columns,
-// rows of ground above and below it (the palette block's well paragraph;
-// the ring of the panel's tones round each well stood 2026-10-09 to
-// 2026-11-02).
+// THE CANVAS STANDS IN THE WELL'S FRAME (architect 2026-11-17, session 140;
+// render.h's THE WELL'S FRAME): its two channels' wells are parted by one
+// line of the frame's tone (waveform_divider), its edges the waveform
+// area's columns, the frame's sides beside them and its lines above and
+// below (the palette block's well paragraph; the ring of the panel's tones
+// round each well stood 2026-10-09 to 2026-11-02, the flat well with no
+// frame from 2026-11-01 night to 2026-11-17).
 //
 // THE DISABLED FACES (2026-10-23; the key's own dim tone, Default's 5D5D5D,
 // since 2026-11-02): a dead key DIMS ITS GLYPH (`key_dim_ink`, paint_key_glyph;
@@ -460,8 +461,9 @@ struct GuiPalette {
     GuiColor ruler_face;      // the ruler
     GuiColor ruler_tick;      // the ruler's ticks
     GuiColor lane_face;       // the marker lane
-    GuiColor trim_bar_face;   // the trim bar outside the trim
-    GuiColor trim_span_face;  // the trim bar inside the trim
+    GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
+    GuiColor trim_span_face;  // the trim bar's pill at rest, the span
+    GuiColor well_border;     // THE WELL'S FRAME, its lane lines and the stereo divider (paint_well_frame_rows, render_waveform_divider)
     GuiColor pane_face;       // the modal family's box interior, the tooltip's face
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor list_press_fill; // a list row's fill under a standing press
@@ -612,49 +614,60 @@ void install_true_colors(bool on);
 // THE WELL — THE CANVAS COLUMN, COOL EDIT'S GRAMMAR IN LIVE'S FLAT LOOK
 // (architect 2026-10-09, the program is Cool Edit; 2026-11-01 night, "THE
 // MAIN PAGE IS SETTLED", M5h, M13's text tones 2026-11-02, and the text
-// round's lengths 2026-11-03): THE TRIM BAR, THE RULER FLIPPED and THE MARKER
-// LANE OF CUES directly under the band, THE CANVAS under them (row 6's
-// canvas paragraph) — FLAT REGIONS ON THE GROUND, NO FRAME, NO RING, NO
-// BEVEL, NO SHADOW, parted by rows of the ground itself (materials.h's THE
-// WELL, every tone's owner). THE EDGE RULE (architect 2026-11-01 night, "the
-// rightmost button's right edge lines up with the trim/time/marker/canvas
-// region, and the same for the left"): every region spans the well's
-// columns (well_columns below), the outermost keys' faces' outer columns,
-// 24 .. 2279 on the tablet's 2304 at 200 %, the ground beside them. THE WELL IS THE WAVEFORM
-// AREA (architect 2026-11-03): its columns are the canvas's interior — the
-// waveform area every painter and hit test reads — and nothing more, so no
-// column of canvas without ink frames it. Every line in the well is ONE W,
-// rounded at the element (hairline_px, the line rule; architect 2026-11-04,
-// the unit, reversing the one device px at every scale of M5h; one W = 2
-// device px on the tablet at 200 % since the rebase of 2026-11-05; the
-// ruler's ticks and every canvas line the same W, waveform_line_px). THE
-// ROWS ON THE TABLET (200 %; main.cpp's lane table the record; at
-// key_height 17, its default): rows 144 .. 145 ground, the trim bar 146 .. 163 (its
-// fill 146 .. 161, rows 162 .. 163 ground), the ruler 164 .. 199, rows 200
-// .. 201 ground, the marker lane 202 .. 240, rows 241 .. 242 ground, the
-// canvas 243 .. 1327, rows 1328 .. 1329 ground (architect: "waveform height
-// ok to take from").
+// round's lengths 2026-11-03; THE FRAME 2026-11-17): THE TRIM BAR, THE RULER
+// FLIPPED and THE MARKER LANE OF CUES directly under the band, THE CANVAS
+// under them (row 6's canvas paragraph) — FLAT REGIONS, NO RING, NO BEVEL,
+// NO SHADOW, INSIDE ONE FRAME of one W in `well_border` whose lines part
+// them (architect 2026-11-17, session 140, ruling 5 and D2; THE WELL'S
+// FRAME at the well-edge accessors below; materials.h's THE WELL, every
+// tone's owner). THE EDGE RULE (architect 2026-11-01 night, "the rightmost
+// button's right edge lines up with the trim/time/marker/canvas region, and
+// the same for the left"): the frame's outer columns are the well's columns
+// (well_columns below), the outermost keys' faces' outer columns, 22 ..
+// 2281 on the tablet's 2304 at 200 %, the ground beside them. THE LANES AND
+// THE CANVAS STAND ON THE WAVEFORM AREA'S COLUMNS, 24 .. 2279, one W inside
+// the frame: the canvas's interior — the waveform area every painter and
+// hit test reads — and nothing more, so no column of canvas without ink
+// stands inside the frame. Every line in the well is ONE W, rounded at the
+// element (hairline_px, the line rule; architect 2026-11-04, the unit,
+// reversing the one device px at every scale of M5h; one W = 2 device px on
+// the tablet at 200 % since the rebase of 2026-11-05; the ruler's ticks and
+// every canvas line the same W, waveform_line_px). THE ROWS ON THE TABLET
+// (200 %; main.cpp's lane table the record; at key_height 17, its default):
+// rows 144 .. 145 the frame's top line, the trough 146 .. 169, rows 170 ..
+// 171 the frame's line, the ruler 172 .. 207, rows 208 .. 209 the frame's
+// line, the marker lane 210 .. 248, rows 249 .. 250 the frame's line, the
+// canvas 251 .. 1327, rows 1328 .. 1329 the frame's bottom line (architect:
+// "waveform height ok to take from"; the trough's 4 W taken from the
+// canvas, 2026-11-17).
 //
-// THE TRIM BAR IS LIVE'S OVERVIEW BAR (render_trim_flags owns the drawing,
-// trim_lane_h_px the rows; architect 2026-11-03, mock z2): one row of ground
-// under the band (the row the retired program ring stood on), then THE
-// BAR'S FILL ROWS (trim_bar_fill_h_px, 8 W, 16 device px at 200 %) across the
-// well's columns, NO FRAME — OUTSIDE THE TRIM a
-// flat `trim_bar_face` (Default's 2A2A2A) (the marker lane's tone), INSIDE IT, THE SPAN,
-// the trim window's columns from the begin column through the end column
-// clipped to the waveform's columns (so a trim spanning the view fills the
-// bar end to end), its two ends at the bounds' exact places (architect
-// 2026-11-14, send J; trim_span_columns), a flat `trim_span_face`
-// (Default's 696969) — and the bar's last rows ONE
-// W OF GROUND across the well's columns, the span included, the
-// line between the bar and the ruler (no line above: the row above the bar
-// is the lane's ground). NO PLAYHEAD IN THE BAR (architect 2026-10-09
-// ~14:30, "I thought we agreed no dots on the trim bar"). No track, no caps,
-// no pressed face: the lane's grabs are the span's two ends and its body
-// (TrimBarHit, below), and they paint nothing of their own.
+// THE TRIM BAR IS ARC'S SCROLLBAR (render_trim_flags owns the drawing,
+// trim_lane_h_px the rows; architect 2026-11-17, session 140, ruling 4 and
+// D1, reversing 2026-11-03's overview bar of two flat fills): under the
+// frame's top line, THE TROUGH (trim_trough_h_px, 12 W, 24 device rows at
+// 200 %) across the waveform area's columns in `trim_bar_face` (Live's
+// ScrollbarInnerTrack, Arc's $_scrollbar_bg_color), and on it THE SPAN AS
+// ARC'S SLIDER, A PILL (trim_pill_h_px, 6 W, centered, 3 W of trough above
+// and below), the trim window from the begin bound's exact place to the end
+// bound's (trim_span_columns, architect 2026-11-14, send J), cut to the
+// waveform's columns: AN END IS ROUND, its radius half the pill's height,
+// WHERE ITS BOUND STANDS ON SCREEN, and CUT SQUARE at the strip's edge where
+// the span runs past it; a span narrower than the pill's height has the
+// radius half its width (coverage_of_capsule, coverage_stamp.h). AT REST
+// `trim_span_face` (ScrollbarInnerHandle, Arc's slider); WHILE A DRAG
+// MOVES THE SPAN `selected_fill` (StandbySelectionBackground, Arc's
+// slider:active) — the trim bar's own drags from the press that arms them
+// to the lift and a TRIM sweep from its first accepted write to the lift
+// (ruled: both; trim_span_dragging, app_state.h). No outline, no hover
+// look. Then the frame's line under the trough, across the frame's width.
+// NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought we agreed
+// no dots on the trim bar"). No caps: the lane's grabs are the span's two
+// ends and its body (TrimBarHit, below) over the lane's whole rows — a
+// press need not land on the pill — and they paint nothing of their own.
 //
 // THE RULER IS COOL EDIT'S, FLIPPED, IN LIVE'S TONES (paint_ruler_row):
-// FLAT `ruler_face` (Default's 363636) directly under the bar's ground line, NO LINE ON
+// FLAT `ruler_face` (Default's 363636) directly under the frame's line, on
+// the waveform area's columns, NO LINE OF ITS OWN ON
 // ITS TOP; THE TICKS `ruler_tick` (Default's 919191), ONE W WIDE (the canvas's line,
 // waveform_line_px, 2026-11-04), EACH CENTERED ON ITS OWN EXACT TIME'S
 // PLACE at its exact coverage (architect 2026-11-14, send J; the line rule,
@@ -665,7 +678,7 @@ void install_true_colors(bool on);
 // tone `text` (Default's B5B5B5)
 // (architect 2026-11-02, the font audit: Live's own ruler digits), bare,
 // THEIR INK CENTERED ON THE RULER between two 6-W pads (ruler_baseline_px,
-// the ruler block below; HIS RULE, 2026-11-03); then ONE ROW OF GROUND, one
+// the ruler block below; HIS RULE, 2026-11-03); then THE FRAME'S LINE, one
 // W, the ruler lane's last (ruler_lane_h_px).
 
 // THE PLAYHEAD IS COOL EDIT'S CURSOR (architect 2026-10-09) IN LIVE'S TONES:
@@ -696,7 +709,7 @@ void install_true_colors(bool on);
 // 2026-11-04 night, mock n1, after the measured cost of a fading line; the
 // head its own cyan; render_playhead; paint_playheads); nothing of it is
 // damaged at rest. Across the trim bar (architect 2026-10-09 ~14:30, "no
-// dots on the trim bar"), the marker lane and the row of ground under it it
+// dots on the trim bar"), the marker lane and the frame's line under it it
 // draws nothing. IT MAY STAND ON A MARKER — NO SNAP, NO AVOIDANCE
 // (architect 2026-10-09): the head and a cue's chip stand in different
 // lanes, and ON A SELECTED MARKER, enabled or disabled, the marker's
@@ -757,7 +770,7 @@ void install_true_colors(bool on);
 // at 200 %, 4 at 100 %; Cool Edit's own 9 by 5): the outer triangle in the
 // outline's tone (26 x 13 at 200 %) round the fill's, inset one W across
 // each edge, on the lane's last rows, its apex ON THE STEM'S CENTER on the
-// bottom edge of the lane's last row, directly above the row of ground
+// bottom edge of the lane's last row, directly above the frame's line
 // under the lane, NO SHADOW (2026-11-02);
 // THE LABEL — the marker's one label, at rest in the text tone `text`
 // B5B5B5 (materials.h; M13, 2026-11-02), NO SHADOW (2026-11-02; its shadow
@@ -782,7 +795,7 @@ void install_true_colors(bool on);
 // the marker's frame at its exact place (architect 2026-11-14, send J, the
 // line rule at waveform_line_span),
 // FROM THE CHIP'S APEX ROW (the
-// lane's last) through the row of ground under the lane down the canvas's
+// lane's last) through the frame's line under the lane down the canvas's
 // whole height (waveform_line_px;
 // paint_marker_stems and its head segment, paint_marker_stem_heads;
 // architect 2026-11-04, mock j1, "3 yes"): THE SELECTION STEM (architect
@@ -1064,8 +1077,8 @@ void install_true_colors(bool on);
 // row — against its well's edge. NO BOUNDARY LINES (architect 2026-10-09,
 // "we have very limited vertical real estate"): Cool Edit's Bndy clip guides
 // are not drawn. BETWEEN THE CHANNELS STANDS THE STEREO DIVIDER (architect
-// 2026-10-16, waveform_divider below; one row of the ground since the flat
-// well), a chrome row the plate and the horizontal lines leave alone, every
+// 2026-10-16, waveform_divider below; one line of the well's frame's tone
+// since 2026-11-17), a chrome row the plate and the horizontal lines leave alone, every
 // vertical line crosses (architect 2026-11-02: "the divider is just another
 // grid line now") and every input leaves alone (point_on_waveform_divider). The chrome's
 // two-line sunken well that stood round the area (the theme's quartet,
@@ -1459,8 +1472,9 @@ constexpr int kMinWindowHeightPx = 480;
 //     after the note went to 9 W; the e1 / e2 reason, "it needs more
 //     padding from the text", still the gap's reason against the 4 W
 //     before, mock v4) after the note's last ink column
-//     (text_shape::ink_left_px): at 200 % the note's ink on columns 24..35,
-//     the brand's first ink column 50.
+//     (text_shape::ink_left_px): at 200 % the note's ink on columns 22..33
+//     (the well's first column, its frame's, since 2026-11-17), the
+//     brand's first ink column 48.
 //     (The gap is the retired caption's title gap. The cards'
 //     glyph-seat-to-text gap read it too, a glyph then words, until the
 //     gap left 8; the architect kept the cards' 8 the same night ("keep the
@@ -1740,10 +1754,10 @@ inline int logo_lane_h_px() {
 // ROUNDED AT THE ELEMENT, FLOORED AT ONE DEVICE PX — 2 on the tablet at
 // 200 %, 1 at 100 % — the chokepoint beside scaled_px for every LINE the
 // skin draws:
-// THE WELL'S ROWS OF GROUND (the trim bar's ground line and the row above
-// the bar, the ruler's and the marker lane's foot rows, the stereo
-// divider's row and the well's foot), the trim bar's fill's top part
-// (trim_bar_fill_h_px), the modal box's outer rows and columns of ground
+// THE WELL'S FRAME (its top line and sides, the lines under the trough,
+// the ruler and the marker lane, the stereo divider and the well's foot;
+// well_frame_w_px, THE WELL'S FRAME below), the modal box's outer rows and
+// columns of ground
 // round its pane and the lists' air inside it (modal_box.h), the cards' and
 // the tooltip's border and the scrub's channel, the dialog editors' and the
 // flag editor's carets (paint_modal_dialog, render.cpp's flag editor) — AND
@@ -1839,7 +1853,7 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // own constants (paint_handler.cpp's kListGlyph*, 2026-10-23).
 // (THE PROGRAM RING'S LINE SLOT — program_line_px, one W, the area the view
 // bar's and the ruler's lines stood on, 2026-10-23 — RETIRED with the flat
-// well, 2026-11-02: the well's lines and rows of ground are the hairline
+// well, 2026-11-02: the well's lines, its frame's since 2026-11-17, are the hairline
 // itself, the well's lanes block below.)
 // THE FACE'S WIDTH, the `key_width` tuning key's live value, and ITS
 // HEIGHT, the `key_height` tuning key's (their seats above; the case
@@ -2015,43 +2029,47 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed);
 // W, hairline_px for a line — one W, rounded at the element (architect
 // 2026-11-04, the unit) — the faces' own metrics for the text's bands).
 // The device rows below are the tablet's, 200 %:
-//   THE TRIM   a row of ground, the bar's fill (one hairline and the
-//              field), the bar's ground line (trim_lane_h_px): 10 W, 20
-//              device rows (2 + 2 + 14 + 2).
+//   THE TRIM   the well's frame's top line, THE TROUGH, the frame's line
+//              under it (trim_lane_h_px): 14 W, 28 device rows (2 + 24 +
+//              2).
 //   THE RULER  the ruler (ruler_h_px: the pad, the digits' ink, the pad;
-//              the ticks overlay its foot) and a row of ground
+//              the ticks overlay its foot) and the frame's line under it
 //              (ruler_lane_h_px): 36 + 2 = 38 device rows (12 + 12 + 12).
 //   THE MARKER the time field's height, the editor's box on its whole rows
 //              (marker_lane_h_px: the outline, the pad above, the legal
 //              set's band, the pad below, the outline, the x band centered):
 //              39 device rows (2 + 6 + 22 + 7 + 2); the cue's chip its last
 //              rows (cue_chip_h_px, 13).
-//   THE LINE   the row of ground between the lane and the canvas, one
+//   THE LINE   the frame's line between the lane and the canvas, one
 //              hairline (lane_foot_line_h_px, below): 2 device rows, 1 W.
-// THE TRIM BAR'S FIELD, 7 W on the one road (architect 2026-11-01 night,
-// M5c / M5h; 7 W since 2026-11-04 night; program_spec.h's view_bar_field_w
-// the owner of the number): 14 device px on the tablet at 200 %, 7 at
-// 100 %, floor 1.
-inline int view_bar_field_h_px() {
-    return scaled_px(kProgramSpec.view_bar_field_w, 1);
+// Every one-W line of the well is THE WELL'S FRAME's tone, `well_border`
+// (THE WELL'S FRAME, below; architect 2026-11-17, session 140), across the
+// frame's whole width; the lanes' own fills stand on the waveform area's
+// columns inside it.
+//
+// THE TRIM BAR IS ARC'S SCROLLBAR (architect 2026-11-17, session 140,
+// ruling 4: "The scroll bar and the trough should be accurate to whatever
+// Arc uses"; D1: "Let's use the real 12W" — Thunar measured, trough 12,
+// slider 6, 3 px of trough each side): THE TROUGH 12 W, kTrimTroughW (24
+// device rows on the tablet at 200 %, 12 at 100 %, floor 1), and on it THE
+// PILL 6 W tall, kTrimPillW, centered (3 W of trough above and below), its
+// ends' radius half its height — a full pill (render_trim_flags). THE TRIM
+// LANE: the frame's top line, the trough and the frame's line under it (the
+// line Arc's scrollbar draws in $borders_color on its content side): 14 W,
+// 28 device rows, rows 144 .. 171 at key_height 17 on the tablet, the
+// trough 146 .. 169. The modal family's box keeps its seat on the lane's
+// first row (modal_box.h), and the cards theirs one hairline below, on the
+// trough's first row (notification_stack_bound, ruled kept 2026-11-03).
+inline constexpr double kTrimTroughW = 12.0;
+inline constexpr double kTrimPillW   = 6.0;
+inline int trim_trough_h_px() {
+    return scaled_px(kTrimTroughW, 1);
 }
-// THE TRIM BAR'S FILL (architect 2026-11-03, mock z2: the two fills,
-// render_trim_flags): one hairline and the field, 8 W, 16 device rows on
-// the tablet — the bar's rows less its ground line. THE TRIM BAR, the fill
-// and its ground line (9 W, 18 device rows), and THE TRIM LANE: the row of ground above
-// it (the row the retired program ring stood on, so the modal family's box
-// keeps its seat on the lane's first row, modal_box.h, and the cards theirs
-// one hairline below, on the bar's first fill row, notification_stack_bound,
-// ruled kept 2026-11-03) and the bar (10 W, 20 device rows: rows 144 .. 163
-// at key_height 17 on the tablet, the bar 146 .. 163).
-inline int trim_bar_fill_h_px() {
-    return hairline_px() + view_bar_field_h_px();
-}
-inline int trim_bar_h_px() {
-    return trim_bar_fill_h_px() + hairline_px();
+inline int trim_pill_h_px() {
+    return scaled_px(kTrimPillW, 1);
 }
 inline int trim_lane_h_px() {
-    return hairline_px() + trim_bar_h_px();
+    return hairline_px() + trim_trough_h_px() + hairline_px();
 }
 // THE RULER'S TICKS (architect 2026-11-01 night, M5b / M5c / M5h; the major
 // 2026-11-03; the width one W since 2026-11-04, the unit; the rows 4 W and
@@ -2144,12 +2162,12 @@ inline int cue_triangle_rows() {
 // √2 no longer rounded to a row; the triangle is stamped at exact coverage,
 // cool_edit_paint.h): cue_chip_h_exact_px, 8 + 2 + 2.83 = 12.83 on the
 // tablet at 200 %, 4 + 1 + 1.41 = 6.41 at 100 %. THE CHIP'S APEX STANDS ON
-// THE BOTTOM EDGE OF THE LANE'S LAST ROW (at 200 %, lane rows 202 .. 240,
-// its apex on the edge under row 240, its top edge 12.83 above it, inside
-// row 228). THE RULER'S HEAD IS
+// THE BOTTOM EDGE OF THE LANE'S LAST ROW (at 200 %, lane rows 210 .. 248,
+// its apex on the edge under row 248, its top edge 12.83 above it, inside
+// row 236). THE RULER'S HEAD IS
 // THE SAME CHIP (architect 2026-11-04, mock k1, "4 accept overlap"), its
 // apex on the bottom edge of the ruler's last row (200 %: ruler rows
-// 164 .. 199), so its top reaches into the ruler's
+// 172 .. 207), so its top reaches into the ruler's
 // digits where it stands under a label — ACCEPTED ("timestamp not really
 // important for fine tune, just ballpark"): it paints over them as a chip
 // paints over a label (paint_ruler_row).
@@ -2428,28 +2446,56 @@ inline int cue_chip_hit_right_px() {
 }
 // THE WELL'S EDGES AND MARGINS (architect 2026-10-09, the third part;
 // program_spec.h's column_margin_px; flat since 2026-11-01 night, THE EDGE
-// RULE): under the marker lane THE ROW OF GROUND between the lane and the
-// canvas is a lane of its own, top lane 4, one hairline
-// (lane_foot_line_h_px — the 242424 line of the record); under the canvas
-// THE WELL'S FOOT, one hairline of ground, a bottom lane of its own
+// RULE; THE FRAME since 2026-11-17): under the marker lane THE FRAME'S LINE
+// between the lane and the canvas is a lane of its own, top lane 4, one
+// hairline (lane_foot_line_h_px); under the canvas THE WELL'S FOOT, the
+// frame's bottom line, one hairline, a bottom lane of its own
 // (well_foot_h_px), between the canvas and row 8 (the program ring's last row
 // until the flat well; the modal family's box keeps its last row on it,
 // modal_box.h). Across, the well stands column_margin_w_px of the ground in
-// from each side of the window, then THE WAVEFORM AREA, which is the well
-// (architect 2026-11-03), its width floored to the grid step and the floor's
-// leftover (under 16 device px) split between the two margins, the odd pixel
-// to the right (main.cpp's waveform_area owns the split; column_margin_w_px
-// is the side before it): the side 9 W, 18 device px on the tablet at
-// 200 %, 9 at 100 %. THE ROWS OF GROUND ARE ONE W, rounded at the element
-// (hairline_px, the line rule: 2 device px at 200 %, 1 at 100 %; architect
-// 2026-11-04, the unit), and the ground beside the area across is the
-// margin and half the flooring's leftover, so the waveform area, which every
-// canvas painter and hit test reads, is the canvas's whole interior with
-// nothing between it and the ground.
+// from each side of the window, then the floor's leftover's half, then THE
+// FRAME'S SIDE, one W (well_frame_w_px), then THE WAVEFORM AREA, its width
+// floored to the grid step and the floor's leftover (under 16 device px)
+// split between the two margins, the odd pixel to the right (main.cpp's
+// waveform_area owns the split; column_margin_w_px is the side before it):
+// the side 9 W, 18 device px on the tablet at 200 %, 9 at 100 %. EVERY LINE
+// OF THE FRAME IS ONE W, rounded at the element (hairline_px, the line rule:
+// 2 device px at 200 %, 1 at 100 %; architect 2026-11-04, the unit), so the
+// waveform area, which every canvas painter and hit test reads, is the
+// canvas's whole interior with the frame round it and the ground beyond.
+//
+// THE WELL'S FRAME (architect 2026-11-17, session 140, ruling 5 and D2:
+// "lets use the thunar border" — Arc's $borders_color, Thunar's pane border;
+// the tone `well_border`, Live's ClipBorder, theme_roles.h): ONE W ROUND THE
+// TRIM BAR, THE RULER, THE MARKER LANE AND THE CANVAS — its top line the
+// trim lane's first row, its bottom line the well's foot, its sides one
+// column each side outside the waveform area, from the top line's first row
+// through the bottom line's last (on the tablet at key_height 17: rows 144
+// .. 1329, the sides columns 22 .. 23 and 2280 .. 2281) — AND THE LINES
+// INSIDE IT IN THE SAME TONE across the frame's whole width: the trim lane's
+// last row (under the trough), the ruler lane's last row (under the ruler)
+// and the lane's foot line (top lane 4, between the marker lane and the
+// canvas), and on the canvas THE STEREO DIVIDER (render_waveform_divider).
+// ONE PAINTER for its parts within a band of rows, paint_well_frame_rows
+// (paint_handler.cpp), called by each painter that owns rows of the well —
+// paint_trim (the trim lane), paint_ruler_row (the ruler and marker lanes)
+// and paint_canvas_column_frame (the foot line through the well's foot) —
+// after its own fills, so a lane's damage, which spans the window's width
+// (strip_row_rect), repaints the frame's cells in its rows; on a frame with
+// no audio loaded, whose lanes those painters leave as the ground,
+// on_redraw paints the upper lanes' share itself. NOTHING A LANE PAINTS
+// LANDS ON THE FRAME'S COLUMNS: every lane's content stands on the
+// waveform area's columns (render_trim_flags' clip, paint_ruler_row's and
+// the flag pass's clip_to_waveform_columns, the flag editor's box). The
+// rows of ground above it (the band's strip pad) and below it (row 8's
+// pad) stay the ground.
 inline int lane_foot_line_h_px() {
     return hairline_px();
 }
 inline int well_foot_h_px() {
+    return hairline_px();
+}
+inline int well_frame_w_px() {
     return hairline_px();
 }
 inline int column_margin_w_px() {
@@ -2459,34 +2505,38 @@ inline int column_margin_w_px() {
 GuiRect lane_foot_line_area(const AppState& a);
 GuiRect well_foot_area(const AppState& a);
 // THE WELL'S COLUMNS (2026-10-23, the one owner; THE EDGE RULE of 2026-11-01
-// night; THE WELL IS THE WAVEFORM AREA, architect 2026-11-03): its first
-// column and one past its last — waveform_area's x and x + w, so the grid
-// floor's leftover decides them and no inset does: 24 and 2280 on the
-// tablet's 2304 at 200 % (the margin's 18, the leftover 12 split 6 / 6, the
-// area 24 .. 2279); 16 and 1904 on a 1920-px window at 100 %. EVERY
-// REGION, STRIP AND BOX STANDING ON THEM READS THEM HERE (architect
+// night; THE FRAME'S OUTER COLUMNS since 2026-11-17, architect, session
+// 140): its first column and one past its last — the frame's, the waveform
+// area's x less the frame's W and x + w plus it, so the grid floor's
+// leftover decides them and no inset does: 22 and 2282 on the tablet's 2304
+// at 200 % (the margin's 18, the leftover 8 split 4 / 4, the frame 22 .. 23
+// and 2280 .. 2281, the area 24 .. 2279); 15 and 1905 on a 1920-px window at
+// 100 %. EVERY STRIP AND BOX OF THE EDGE RULE READS THEM HERE (architect
 // 2026-10-23, "yes" to tying both strips' ends to the well; 2026-11-01
 // night, "the rightmost button's right edge lines up with the
-// trim/time/marker/canvas region, and the same for the left"): the well's
-// regions (render_trim_flags, paint_ruler_row, the marker lane's face), the
-// modal family's box and its controls row (modal_box_rect,
-// modal_controls_seats), the band's ends (icon_row_seats) and row 8's
-// (bottom_row_seats, the controls row's seats too), the logo lane's items,
-// the cards' stack and the tooltip's clamp, so they coincide at every
-// scale; both strips and the controls row stand flush with them at both
-// ends, no inset — the outermost keys' FACES on the well's first and last
-// columns (the face is the key, 2026-11-04).
+// trim/time/marker/canvas region, and the same for the left"; 2026-11-17,
+// the mock m13: the keys flush with the frame): the frame itself
+// (paint_well_frame_rows), the modal family's box and its controls row
+// (modal_box_rect, modal_controls_seats), the band's ends (icon_row_seats)
+// and row 8's (bottom_row_seats, the controls row's seats too), the logo
+// lane's items, the cards' stack and the tooltip's clamp, so they coincide
+// at every scale; both strips and the controls row stand flush with them
+// at both ends, no inset — the outermost keys' FACES on the frame's first
+// and last columns (the face is the key, 2026-11-04). THE WELL'S LANES DO
+// NOT READ THEM: the trim bar, the ruler, the marker lane and the canvas
+// stand on the waveform area's columns (waveform_area), inside the frame.
 // THE EDGE RULE'S STATEMENT (architect 2026-11-03: "everything that sits
 // closest to the window edge on all screens should align to the waveform
-// canvas — icons, modal, etc."): THE OUTERMOST PAINTED THING ON EVERY
-// SURFACE STANDS ON THESE COLUMNS — the keys' faces, the logo lane's ink,
-// row 8, the cards' and the tooltip's boxes and THE MODAL PANE (modal_box.h:
-// the box's outer ground columns one hairline outside them). The on-screen
-// keyboard is exempt, a small block seated on the window's center by his
-// ruling (onscreen_keyboard.h's block_x_px).
+// canvas — icons, modal, etc."; the well's outermost painted thing its
+// frame since 2026-11-17): THE OUTERMOST PAINTED THING ON EVERY SURFACE
+// STANDS ON THESE COLUMNS — the well's frame, the keys' faces, the logo
+// lane's ink, row 8, the cards' and the tooltip's boxes and THE MODAL PANE
+// (modal_box.h: the box's outer ground columns one hairline outside them).
+// The on-screen keyboard is exempt, a small block seated on the window's
+// center by his ruling (onscreen_keyboard.h's block_x_px).
 struct WellColumns {
-    int x   = 0;   // the well's first column (the waveform area's x)
-    int end = 0;   // one past its last column (the area's x + w)
+    int x   = 0;   // the frame's first column (the waveform area's x less the frame's W)
+    int end = 0;   // one past the frame's last column (the area's x + w plus the frame's W)
 };
 WellColumns well_columns(const AppState& a);
 
@@ -3344,13 +3394,14 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // x 208, the right at x 1872 — "ok to
 // implement the bevel divider, but make sure it has no separation from the
 // main chrome"): Cool Edit draws a stereo file as two wells, one per
-// channel, with a seam between them; THE FLAT WELL'S SEAM IS ONE ROW OF THE
-// GROUND, `ground` (Default's 242424), ONE W (hairline_px, the line rule of 2026-11-04;
-// architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED": "the stereo divider one 242424 row" —
-// the hi-fi skin's light line, ground row and dark line, 2026-10-23 to
-// 2026-11-02, retired), across the waveform area, which is the well
-// (architect 2026-11-03), so it meets the ground of the margins on both
-// sides with no separation. CHROME, NOT WAVEFORM:
+// channel, with a seam between them; THE FLAT WELL'S SEAM IS ONE LINE OF
+// THE WELL'S FRAME'S TONE, `well_border` (Default's 2A2A2A; architect
+// 2026-11-17, session 140, D2: the frame's lines and the stereo divider in
+// one tone — the ground, 242424, from 2026-11-01 night, "the stereo divider
+// one 242424 row", until then), ONE W (hairline_px, the line rule of
+// 2026-11-04; the hi-fi skin's light line, ground row and dark line,
+// 2026-10-23 to 2026-11-02, retired), across the waveform area, so it meets
+// the frame's two sides with no separation. CHROME, NOT WAVEFORM:
 // inert to every input (point_on_waveform_divider below). THE ROW STANDS
 // INSIDE THE WAVEFORM AREA (every column mapping, hit test and damage box
 // reads it as before) and comes out of the two channels' rows: the area's
@@ -3367,11 +3418,11 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // ring's sides, the scanner and the zoom anchor's
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). On the tablet at 200 % and
-// key_height 17 (its default) the canvas is 1085 rows, 243-1327 (main.cpp's
-// lane table, re-derived 2026-11-04 night): the
-// upper well's band 541 rows (243-783), the divider rows 784-785 (one W),
-// the lower well's band 541 rows (786-1326) and THE SPARE ROW 1327, the
-// canvas's last (1085 less the divider's 2 is odd; ONE CHANNEL'S BAND
+// key_height 17 (its default) the canvas is 1077 rows, 251-1327 (main.cpp's
+// lane table, re-derived 2026-11-17 with the 12-W trough): the
+// upper well's band 537 rows (251-787), the divider rows 788-789 (one W),
+// the lower well's band 537 rows (790-1326) and THE SPARE ROW 1327, the
+// canvas's last (1077 less the divider's 2 is odd; ONE CHANNEL'S BAND
 // below).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
@@ -4705,16 +4756,22 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 // the begin column through the end column inclusive, in reals: [max(xb, 0),
 // min(xe + 1, wave_w)], xb and xe the bounds' `x` (TrimBoundColumn, the
 // EOF-wall clamp already in them) — cut to the effective width
-// [0, wave_w]: the columns the trim bar paints its `trim_span_face` on at
-// each pixel's exact coverage (render_trim_flags: THE TRIM REFLECTS THE
-// WAVEFORM'S COLUMNS, architect 2026-11-03), and THE SWEEP HIGHLIGHT'S on
-// the TRIM former (sweep_highlight_columns, app_state.h; architect
-// 2026-11-12), so the canvas's highlight stands under the bar's span edge
-// for edge. Bounds on whole places answer the whole columns the bounds'
-// columns give. One owner, two readers.
+// [0, wave_w]: the columns the trim bar paints its pill on at each pixel's
+// exact coverage (render_trim_flags: THE TRIM REFLECTS THE WAVEFORM'S
+// COLUMNS, architect 2026-11-03), and THE SWEEP HIGHLIGHT'S on the TRIM
+// former (sweep_highlight_columns, app_state.h; architect 2026-11-12), so
+// the canvas's highlight stands under the bar's span edge for edge. Bounds
+// on whole places answer the whole columns the bounds' columns give. WHICH
+// END IS ITS BOUND'S OWN (architect 2026-11-17, session 140: the pill's end
+// is round where its trim bound stands on screen, cut square where the span
+// runs past the strip's edge): `lo_bound` where the left edge is the begin
+// bound's place, not the cut at 0; `hi_bound` where the right edge is the
+// end bound's, not the cut at wave_w. One owner, two readers.
 struct TrimSpanColumns {
     double lo = 0.0;  // the span's left edge
     double hi = 0.0;  // its right edge (empty when hi <= lo)
+    bool   lo_bound = false;  // the left edge is the begin bound's own
+    bool   hi_bound = false;  // the right edge is the end bound's own
 };
 TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
                                   const TrimBoundColumn& end, int wave_w);
@@ -4799,22 +4856,26 @@ struct TrimBarHit {
     double        bridge_hi = 0.0;   // screen x, exclusive
 };
 
-// Draws THE TRIM BAR — the whole trim lane but its first row (architect
-// 2026-10-09, the program is Cool Edit; flat since 2026-11-01 night; the
-// palette block's well paragraph for its look, trim_lane_h_px for its rows):
-// the bar's two flat fills across the well's columns (no frame since mock
-// z2, 2026-11-03), then THE SPAN — the trim window's columns, the begin
-// column through the end column inclusive, no verticals, sliding off an edge
-// like any content (architect 2026-10-05: an out-of-view bound reads as the
-// window running on); no playhead (the well paragraph above, 2026-10-09
-// ~14:30). All pixel-bound integer fills. The lane band is
+// Draws THE TRIM BAR — the trough and the pill on it, between the frame's
+// two lines (architect 2026-10-09, the program is Cool Edit; ARC'S
+// SCROLLBAR since 2026-11-17, session 140; the well paragraph for its look,
+// trim_lane_h_px for its rows): the trough's flat `trim_bar_face` across the
+// waveform area's columns, then THE SPAN AS THE PILL — the trim window from
+// the begin bound's exact place through the end bound's, sliding off an
+// edge like any content (architect 2026-10-05: an out-of-view bound reads as
+// the window running on), an end round where its bound stands on screen and
+// cut square at the strip's edge, at exact coverage (CoverageStampPass's
+// rounded rect), in `trim_span_face`, or `selected_fill` where `dragging`
+// (trim_span_dragging, app_state.h: a drag moves the span); no playhead
+// (the well paragraph above, 2026-10-09 ~14:30). The frame's lines and
+// sides and the lane's ground are paint_trim's. The lane band is
 // the `trim_bar` PARAMETER — the caller passes top_trim_row_area(app), and
 // the band painted in is published as TrimBarHit::lane, the y-gate both
 // trim hits read, so paint and hit take the band as one value;
 // `waveform_area` is read for its `.x` and `.w` — the canvas's columns, the
 // interior's and the span's (2026-10-09: the column's margins), `.w` also
-// the column-mapping denominator — which are the well's columns (THE WELL IS
-// THE WAVEFORM AREA, architect 2026-11-03); the lane's ground beyond is
+// the column-mapping denominator — one W inside the well's frame (render.h's
+// THE WELL'S FRAME, 2026-11-17); the lane's ground and the frame beyond are
 // paint_trim's.
 // `top_strip_area` is a validity guard only. Column placement is on the displayed viewport basis — `trim.begin` /
 // `trim.end` are already in the displayed domain. The span has NO editable
@@ -4835,6 +4896,7 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        long long viewport_lattice_origin,
                        const TrimRange& trim,
+                       bool dragging,
                        TrimBarHit* out_hit);
 
 // The top-strip lane the cues occupy, exactly as the lane accessor reports

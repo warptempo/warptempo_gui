@@ -1,5 +1,6 @@
 # SB Dash_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
 # Modified by hand from the pack's SB Dash: WaveformColor FFFFFF -> EAEAEA, TakeLaneTrackNotHighlighted 262626 -> 181919, ScrollbarInnerHandle 000000 -> 666666 (architect 2026-11-07..11)
+# ScrollbarInnerTrack and ClipBorder added by hand from SB Dash.ask (architect 2026-11-17, session 140)
 SurfaceArea=111111
 Desktop=232323
 SurfaceBackground=191B1C
@@ -24,3 +25,5 @@ ViewCheckControlDisabledOff=2D3D3B
 ScrollbarInnerHandle=666666
 DetailViewRulerMarkings=CCCCCC
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=000000
+ClipBorder=000000

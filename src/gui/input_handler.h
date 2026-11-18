@@ -3628,13 +3628,13 @@ private:
     bool route_trim_bar_press(double mouse_x, double mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
     // only once on_motion crosses grab_moved_threshold_px() from the press.
-    // ONE SURFACE ARMS IT, the 10 px bar's endcaps and bridge (the waveform
+    // ONE SURFACE ARMS IT, the trim bar's endcaps and bridge (the waveform
     // overlay armed it too from 2026-08-18 until its resting form was deleted
     // on 2026-09-22).
     void arm_pending_trim_drag(bool is_begin, bool both, double press_x,
                                double press_y);
     // The pending's end without a crossing (lift, lost button, force-end):
-    // disarm, raising a held cap (input_trim.cpp).
+    // disarm, the pill's drag look ending (input_trim.cpp).
     void disarm_pending_trim_drag();
     void begin_trim_drag(TrimHit which, double mouse_x, bool both = false);
     void update_trim_drag(double mouse_x);   // motion: writes the live store

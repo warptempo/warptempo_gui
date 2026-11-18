@@ -52,24 +52,25 @@ int notification_card_max_w_px(const AppState& a) {
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
-    // THE STACK'S MARGINS: THE TRIM BAR'S FIRST FILL ROW ABOVE, THE KEYS'
+    // THE STACK'S MARGINS: THE TRIM BAR'S FIRST TROUGH ROW ABOVE, THE KEYS'
     // OUTER COLUMN AT THE RIGHT, THE PANEL'S PAD AT THE FOOT. THE RIGHT EDGE IS
     // THE KEYS' OUTER COLUMN (THE EDGE RULE, as the tooltip's clamp,
     // tooltip_box_rect; architect 2026-11-02, M11's and M14's record
-    // pictures): the card's right edge on the well's last column, 2279 on
-    // the tablet (well_columns' end, 2280, one past it; the well the waveform
-    // area, architect 2026-11-03; the panel's pad from the window's
-    // edge until 2026-11-02). The foot is the
+    // pictures): the card's right edge on the well's last column, 2281 on
+    // the tablet (well_columns' end, 2282, one past it; the well's columns
+    // its frame's outer ones since 2026-11-17; the panel's pad from the
+    // window's edge until 2026-11-02). The foot is the
     // panel's own pad, folder_overlay::pad_px (architect 2026-08-30; one W,
     // 2 device px on the tablet, since 2026-11-04 night). THE TOP IS ONE RULE FOR
     // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
     // "it looks like absolute positioning where it should be relative to the
-    // elements"): THE TRIM BAR'S FIRST FILL ROW, the row under the trim
-    // lane's first row of ground (render_trim_flags' bar, one hairline down),
-    // THE FIRST CARD'S TOP BORDER ON THE BAR'S FIRST FILL ROW — RULED KEPT
-    // (architect 2026-11-03, over the bar's two fills; first ruled 2026-11-02,
-    // M14 "d": "the card's top border one line with the trim bar's frame
-    // row"; row 146 on the tablet at key_height 17, the trim lane's ground one W).
+    // elements"): THE TRIM BAR'S FIRST TROUGH ROW, the row under the well's
+    // frame's top line, the trim lane's first row (render_trim_flags'
+    // trough, one hairline down), THE FIRST CARD'S TOP BORDER ON THE
+    // TROUGH'S FIRST ROW — RULED KEPT (architect 2026-11-03, over the bar's
+    // two fills; first ruled 2026-11-02, M14 "d": "the card's top border one
+    // line with the trim bar's frame row"; the trough since 2026-11-17; row
+    // 146 on the tablet at key_height 17, the frame's line one W).
     // The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well).

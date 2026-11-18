@@ -1,4 +1,5 @@
 # Immaterial.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from Immaterial.ask (architect 2026-11-17, session 140)
 SurfaceArea=1D1F23
 Desktop=22242A
 SurfaceBackground=2F3138
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=5C6069
 ScrollbarInnerHandle=6D7079
 DetailViewRulerMarkings=A1A3A9
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=22242A

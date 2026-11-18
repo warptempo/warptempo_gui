@@ -144,8 +144,9 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill,
 // edge crosses (identical on whole edges). The road's conditions are
 // render.h's THE DIRECT ROAD.
 // THE SHAPES: a rect with real edges — the selection stem's head segment
-// (GuiPaintHandler::paint_marker_stem_heads), the ruler's ticks
-// (paint_ruler_row) and the trim bar's span (render_trim_flags); the
+// (GuiPaintHandler::paint_marker_stem_heads) and the ruler's ticks
+// (paint_ruler_row); THE ROUNDED RECT, the trim bar's pill
+// (render_trim_flags; architect 2026-11-17, session 140); the
 // down-pointing 45° triangle; and THE CHIP, two of them (THE CUE'S CHIP
 // above: the lane's cues, paint_cues, and the ruler's head).
 class CoverageStampPass {
@@ -155,6 +156,13 @@ public:
     // in `color` (an authored color; the word cue_fill_pixel makes of it):
     // nothing where x1 <= x0 or y1 <= y0.
     void rect(double x0, double y0, double x1, double y1, GuiColor color);
+    // THE ROUNDED RECT [x0, x1] x [y0, y1], real edges, its left corners
+    // quarter disks of radius `rl` and its right ones of `rr` (0 a square
+    // corner; each at most half the rect's width and height —
+    // coverage_of_rounded_rect's shape, coverage_stamp.h), in `color`:
+    // nothing where x1 <= x0 or y1 <= y0.
+    void rounded_rect(double x0, double y0, double x1, double y1, double rl,
+                      double rr, GuiColor color);
     // THE DOWN-POINTING 45° TRIANGLE of apex (ax, ay) and height `h` in the
     // context's user space (coverage_of_triangle's shape, coverage_stamp.h),
     // in `color`: nothing where h <= 0.

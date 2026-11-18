@@ -870,9 +870,10 @@ int notification_card_max_w_px(const AppState& a);
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
 // right-aligned on the keys' outer column (well_columns, THE EDGE RULE;
 // architect 2026-11-02, M11 / M14), from THE CARD SEAT — the trim bar's
-// first fill row, read off the live lane table, so the first card's top
-// border stands on the bar's first fill row (architect 2026-10-08,
-// 2026-11-02; RULED KEPT 2026-11-03; the reasoning at the definition) — DOWN
+// first trough row, read off the live lane table, so the first card's top
+// border stands on the trough's first row (architect 2026-10-08,
+// 2026-11-02; RULED KEPT 2026-11-03; the trough 2026-11-17; the reasoning
+// at the definition) — DOWN
 // TO THE PANEL'S PAD OF AIR (folder_overlay::pad_px, one W) ABOVE THE
 // BOTTOM ROW'S LANE.
 //
@@ -891,7 +892,7 @@ int notification_card_max_w_px(const AppState& a);
 // the cards as painted against the cards as the painter will lay them out —
 // the room is that owner's answer only where it cannot ask the painter).
 // The painted cards lie inside the room by construction. A window with no
-// room between the card seat (the trim bar's first fill row) and the bottom
+// room between the card seat (the trim bar's first trough row) and the bottom
 // row answers a zero
 // height and paints nothing — a window with no waveform at all, in the
 // contrived class.

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <numbers>
 #include <vector>
 
 // The rules are at the declarations (cool_edit_paint.h).
@@ -150,6 +151,80 @@ void CoverageStampPass::rect(double x0, double y0, double x1, double y1,
                     stamp_pixel(row + xx, word,
                                 coverage_of_span(xx, dx0, dx1) * ay);
             }
+        }
+        grow_dirty(GuiRect{cx0, cy0, cx1 - cx0, cy1 - cy0});
+    }
+}
+
+void CoverageStampPass::rounded_rect(double x0, double y0, double x1,
+                                     double y1, double rl, double rr,
+                                     GuiColor color) {
+    if (x1 <= x0 || y1 <= y0) return;
+    if (!direct_) {
+        // CAIRO'S ROAD: the same shape as a path — the straight edges and
+        // each rounded corner's quarter arc — at cairo's default
+        // antialiasing.
+        cairo_save(cr_);
+        cairo_set_antialias(cr_, CAIRO_ANTIALIAS_DEFAULT);
+        cairo_new_path(cr_);
+        const double half_pi = std::numbers::pi / 2.0;
+        cairo_move_to(cr_, x0 + rl, y0);
+        cairo_line_to(cr_, x1 - rr, y0);
+        if (rr > 0.0) cairo_arc(cr_, x1 - rr, y0 + rr, rr, -half_pi, 0.0);
+        cairo_line_to(cr_, x1, y1 - rr);
+        if (rr > 0.0) cairo_arc(cr_, x1 - rr, y1 - rr, rr, 0.0, half_pi);
+        cairo_line_to(cr_, x0 + rl, y1);
+        if (rl > 0.0)
+            cairo_arc(cr_, x0 + rl, y1 - rl, rl, half_pi, 2.0 * half_pi);
+        cairo_line_to(cr_, x0, y0 + rl);
+        if (rl > 0.0)
+            cairo_arc(cr_, x0 + rl, y0 + rl, rl, 2.0 * half_pi, 3.0 * half_pi);
+        cairo_close_path(cr_);
+        set_palette_source(cr_, color);
+        cairo_fill(cr_);
+        cairo_restore(cr_);
+        return;
+    }
+    // THE STAMP: the shape in device px, the cells it touches its floor
+    // through its ceiling, cut to each clip box. ON A ROW COVERED WHOLE the
+    // columns clear of both rounded ends — whole columns from the left
+    // radius's reach to the right radius's — are covered whole and take the
+    // word by a store; every other pixel its exact coverage
+    // (coverage_of_rounded_rect), 0 leaving the target's word.
+    const double dx0 = x0 + static_cast<double>(target_.dx);
+    const double dx1 = x1 + static_cast<double>(target_.dx);
+    const double dy0 = y0 + static_cast<double>(target_.dy);
+    const double dy1 = y1 + static_cast<double>(target_.dy);
+    const int bx0 = static_cast<int>(std::floor(dx0));
+    const int bx1 = static_cast<int>(std::ceil(dx1));
+    const int by0 = static_cast<int>(std::floor(dy0));
+    const int by1 = static_cast<int>(std::ceil(dy1));
+    const int fx0 = static_cast<int>(std::ceil(dx0 + rl));
+    const int fx1 = static_cast<int>(std::floor(dx1 - rr));
+    const uint32_t word = word_of(color);
+    for (const GuiRect& r : target_.clip) {
+        const int cx0 = std::max(bx0, r.x);
+        const int cx1 = std::min(bx1, r.x + r.w);
+        const int cy0 = std::max(by0, r.y);
+        const int cy1 = std::min(by1, r.y + r.h);
+        if (cx1 <= cx0 || cy1 <= cy0) continue;
+        const int wx0 = std::clamp(fx0, cx0, cx1);
+        const int wx1 = std::clamp(fx1, wx0, cx1);
+        for (int yy = cy0; yy < cy1; ++yy) {
+            uint32_t* const row = reinterpret_cast<uint32_t*>(
+                target_.data + static_cast<std::size_t>(yy) * target_.stride);
+            const bool whole_row = coverage_of_span(yy, dy0, dy1) >= 1.0;
+            const int run0 = whole_row ? wx0 : cx1;
+            const int run1 = whole_row ? wx1 : cx1;
+            for (int xx = cx0; xx < run0; ++xx)
+                stamp_pixel(row + xx, word,
+                            coverage_of_rounded_rect(xx, yy, dx0, dy0, dx1,
+                                                     dy1, rl, rr));
+            std::fill(row + run0, row + run1, word);
+            for (int xx = run1; xx < cx1; ++xx)
+                stamp_pixel(row + xx, word,
+                            coverage_of_rounded_rect(xx, yy, dx0, dy0, dx1,
+                                                     dy1, rl, rr));
         }
         grow_dirty(GuiRect{cx0, cy0, cx1 - cx0, cy1 - cy0});
     }

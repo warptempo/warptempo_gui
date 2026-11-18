@@ -1,4 +1,5 @@
 # SB Bronze.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from SB Bronze.ask (architect 2026-11-17, session 140)
 SurfaceArea=191919
 Desktop=1E1E1E
 SurfaceBackground=333333
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=5B5954
 ScrollbarInnerHandle=6B675E
 DetailViewRulerMarkings=DBD0B1
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=282828

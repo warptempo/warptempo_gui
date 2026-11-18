@@ -1,4 +1,5 @@
 # Default Light Neutral High.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from Default Light Neutral High.ask (architect 2026-11-17, session 140)
 SurfaceArea=5B5B5B
 Desktop=777777
 SurfaceBackground=A8A8A8
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=5B5B5B
 ScrollbarInnerHandle=434343
 DetailViewRulerMarkings=222222
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=000000

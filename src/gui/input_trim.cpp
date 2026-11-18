@@ -666,9 +666,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
     // 2026-07-30), and the deselect then rests (nothing restores it — pointer
     // gestures have no cancel). A press that never moves commits no bound change
     // and is a consumed nothing.
-    // (No damage for the held cap here: it has painted pressed since the
+    // (No damage for the pill's drag look here: it has stood since the
     // PRESS, arm_pending_trim_drag's, and the crossing changes nothing about
-    // it; commit_trim_drag damages its release.)
+    // it; commit_trim_drag damages its end.)
 }
 
 void GuiInputHandler::update_trim_drag(double mouse_x) {
@@ -775,7 +775,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
             // the lane is taken whole because the bar's hit stash
             // republishes only under a clip that covers it
             // (AppState::trim_bar_hit, paint_trim's gate) — which also holds
-            // each of the bar's two fills, real-edged, in one clip
+            // the trough and the pill, real-edged, in one clip
             // rectangle. The keys whose face reads the trim are the tick's
             // comparator's (main.cpp); the release's commit keeps the whole
             // waveform area (commit_trim_mutation).
@@ -971,8 +971,9 @@ void GuiInputHandler::commit_trim_drag() {
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }
-    // The held cap rises (arm_pending_trim_drag's damage, the other edge).
-    if (!app.trim_drag.both) viewport.invalidate_rect(top_trim_row_area(app));
+    // The pill returns to its rest look (arm_pending_trim_drag's damage, the
+    // other edge; trim_span_dragging, app_state.h).
+    viewport.invalidate_rect(top_trim_row_area(app));
     app.trim_drag = TrimDragState{};
 }
 
@@ -1330,14 +1331,15 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     app.pending_trim_drag.both     = both;
     app.pending_trim_drag.press_x  = press_x;
     app.pending_trim_drag.press_y  = press_y;
-    // THE HELD CAP GOES DOWN AT THE PRESS (architect 2026-10-03, paint_trim's
-    // `pressed`), as a push button's face does: a single-bound arm damages the
-    // lane now, and the cap stays pressed through the crossing into the drag
-    // until the gesture's end damages it again — commit_trim_drag for a drag,
-    // disarm_pending_trim_drag for a press that never crossed. The lane is the
-    // damage rect at both edges: the cap's own rect is the painter's stash,
-    // and the lane holds it whatever the drag did to the bound meanwhile.
-    if (!both) viewport.invalidate_rect(top_trim_row_area(app));
+    // THE PILL TAKES ITS DRAG LOOK AT THE PRESS (architect 2026-11-17,
+    // session 140, ruling 4: Arc's slider:active, `selected_fill`;
+    // trim_span_dragging, app_state.h): every arm — an end's grab or the
+    // body — damages the lane now, and the look stands through the crossing
+    // into the drag until the gesture's end damages it again —
+    // commit_trim_drag for a drag, disarm_pending_trim_drag for a press that
+    // never crossed. The lane is the damage rect at both edges: it holds the
+    // pill whatever the drag did to the bounds meanwhile.
+    viewport.invalidate_rect(top_trim_row_area(app));
     // Five fields, no captures: the pre-gesture selection + region this used to
     // copy existed for an Esc-cancel, and pointer gestures have no cancel
     // (2026-07-29 — the rule at the drag-modal gate, input_handler.cpp). The drag
@@ -1347,11 +1349,11 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
 
 // THE PENDING'S END WITHOUT A CROSSING — the lift, the lost button (the touch
 // layer's hard end included) and the force-end finalizer, each of which
-// commits nothing: disarm, and raise a held cap (the other edge of
-// arm_pending_trim_drag's damage). The crossing does not come here: it hands
-// the arm to begin_trim_drag, and the cap stays pressed.
+// commits nothing: disarm, and return the pill to its rest look (the other
+// edge of arm_pending_trim_drag's damage). The crossing does not come here:
+// it hands the arm to begin_trim_drag, and the drag look stands.
 void GuiInputHandler::disarm_pending_trim_drag() {
-    if (app.pending_trim_drag.active && !app.pending_trim_drag.both)
+    if (app.pending_trim_drag.active)
         viewport.invalidate_rect(top_trim_row_area(app));
     app.pending_trim_drag = PendingTrimDrag{};
 }

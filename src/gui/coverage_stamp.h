@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 
 // THE CHROME'S COVERAGE ARITHMETIC (architect 2026-11-14, send J: "the
@@ -122,4 +123,103 @@ inline double coverage_of_triangle(int px, int py, double ax, double ay,
         area += hi - lo;
     }
     return std::clamp(area, 0.0, 1.0);
+}
+
+// A PIXEL'S COVERAGE BY A ROUNDED RECT (architect 2026-11-17, session 140,
+// ruling 4: the trim bar's span is Arc's scrollbar slider, A PILL, at the
+// bounds' exact places, exact coverage): the rect [x0, x1] x [y0, y1] with
+// real edges whose LEFT two corners are quarter disks of radius `rl` and
+// whose RIGHT two are quarter disks of radius `rr` — a radius of 0 a square
+// corner, each radius at most half the rect's width and half its height (the
+// caller's clamp), so no two corners' cut-outs meet. THE ANSWER IS THE EXACT
+// AREA of the pixel (px, py) inside it, in [0, 1]: the rect's coverage
+// (coverage_of_rect) less, at every rounded corner whose square the pixel
+// meets, the part of the pixel in the corner's square and outside its
+// quarter disk — that square's part of the cell less the disk's part of it
+// (area_of_disk_in_rect: the disk's portion inside the corner's square is
+// exactly the quarter disk). EXACT in real arithmetic, every piece a closed
+// form (the circle's strip integral, an arcsine); in doubles a few
+// last-place roundings of numbers under a few tens.
+namespace coverage_detail {
+// ∫₀ᵗ √(r² − u²) du, t held to [−r, r]: (t·√(r² − t²) + r²·asin(t / r)) / 2.
+inline double disk_strip_area(double t, double r) {
+    const double c = std::clamp(t, -r, r);
+    const double rr = r * r;
+    const double cc = c * c;
+    const double root = std::sqrt(std::max(rr - cc, 0.0));
+    const double tri = c * root;
+    const double arc = rr * std::asin(c / r);
+    const double sum = tri + arc;
+    return 0.5 * sum;
+}
+// ∫ over u in [u0, u1] of clamp(v, −s(u), s(u)), s(u) = √(r² − u²) on
+// |u| <= r and 0 beyond — the signed part of the chord at u between the
+// disk's center row and the row v. clamp(v, −s, s) = sign(v) · min(|v|, s),
+// and min(|v|, s(u)) is |v| on |u| <= w = √(r² − v²) (where the chord
+// reaches past the row; nowhere when |v| >= r) and s(u) beyond.
+inline double disk_signed_column_integral(double u0, double u1, double v,
+                                          double r) {
+    if (u1 <= u0) return 0.0;
+    const double av = std::abs(v);
+    const double w = av < r ? std::sqrt(r * r - av * av) : 0.0;
+    const double i0 = std::max(u0, -w);
+    const double i1 = std::min(u1, w);
+    const double whole = disk_strip_area(u1, r) - disk_strip_area(u0, r);
+    double inside = 0.0;   // ∫ s over [i0, i1], replaced by |v| there
+    double flat = 0.0;
+    if (i1 > i0) {
+        inside = disk_strip_area(i1, r) - disk_strip_area(i0, r);
+        flat = av * (i1 - i0);
+    }
+    const double mag = whole - inside + flat;
+    return v < 0.0 ? -mag : mag;
+}
+} // namespace coverage_detail
+
+// THE AREA OF THE DISK of center (cx, cy) and radius r INSIDE THE RECT
+// [x0, x1] x [y0, y1] (0 for an empty rect or radius): over the columns the
+// two share, the chord's length between the rect's two rows, as the
+// difference of the two rows' signed integrals
+// (coverage_detail::disk_signed_column_integral).
+inline double area_of_disk_in_rect(double cx, double cy, double r, double x0,
+                                   double y0, double x1, double y1) {
+    if (r <= 0.0 || x1 <= x0 || y1 <= y0) return 0.0;
+    const double u0 = std::max(x0 - cx, -r);
+    const double u1 = std::min(x1 - cx, r);
+    if (u1 <= u0) return 0.0;
+    const double hi =
+        coverage_detail::disk_signed_column_integral(u0, u1, y1 - cy, r);
+    const double lo =
+        coverage_detail::disk_signed_column_integral(u0, u1, y0 - cy, r);
+    return std::max(hi - lo, 0.0);
+}
+
+inline double coverage_of_rounded_rect(int px, int py, double x0, double y0,
+                                       double x1, double y1, double rl,
+                                       double rr) {
+    double cov = coverage_of_rect(px, py, x0, y0, x1, y1);
+    if (cov <= 0.0) return 0.0;
+    const double cx0 = static_cast<double>(px);
+    const double cy0 = static_cast<double>(py);
+    const double cx1 = cx0 + 1.0;
+    const double cy1 = cy0 + 1.0;
+    // One corner: its square [sx0, sx1] x [sy0, sy1] and its disk's center
+    // (dx, dy), radius r.
+    const auto cut = [&](double r, double sx0, double sx1, double sy0,
+                         double sy1, double dx, double dy) {
+        if (r <= 0.0) return;
+        const double ix0 = std::max(cx0, sx0);
+        const double ix1 = std::min(cx1, sx1);
+        const double iy0 = std::max(cy0, sy0);
+        const double iy1 = std::min(cy1, sy1);
+        if (ix1 <= ix0 || iy1 <= iy0) return;
+        const double part = (ix1 - ix0) * (iy1 - iy0);
+        const double disk = area_of_disk_in_rect(dx, dy, r, ix0, iy0, ix1, iy1);
+        cov -= part - disk;
+    };
+    cut(rl, x0, x0 + rl, y0, y0 + rl, x0 + rl, y0 + rl);
+    cut(rl, x0, x0 + rl, y1 - rl, y1, x0 + rl, y1 - rl);
+    cut(rr, x1 - rr, x1, y0, y0 + rr, x1 - rr, y0 + rr);
+    cut(rr, x1 - rr, x1, y1 - rr, y1, x1 - rr, y1 - rr);
+    return std::clamp(cov, 0.0, 1.0);
 }

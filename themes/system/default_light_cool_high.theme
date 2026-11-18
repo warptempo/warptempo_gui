@@ -1,4 +1,5 @@
 # Default Light Cool High.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from Default Light Cool High.ask (architect 2026-11-17, session 140)
 SurfaceArea=575B67
 Desktop=737782
 SurfaceBackground=A4A8B1
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=575B67
 ScrollbarInnerHandle=3F434F
 DetailViewRulerMarkings=1E222D
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=000000

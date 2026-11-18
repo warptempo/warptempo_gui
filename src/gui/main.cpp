@@ -158,13 +158,15 @@ namespace {
 // 2026-11-03), on the
 // flat ground — render.h's program block),
 // then FLEXIBLE GAP 1, then THE CENTERED
-// BLOCK's four, THE WELL — THE PROGRAM'S CANVAS COLUMN, flat regions on the
-// ground (architect 2026-10-09, the program is Cool Edit; 2026-11-01 night,
-// "THE MAIN PAGE IS SETTLED"; render.h's well paragraph and its lanes block):
-// the TRIM lane (trim_lane_h_px(), a row of ground and Live's overview bar,
-// 10 W, 20 device px on the tablet — the bar's two fills and its ground
-// line), the RULER lane (ruler_lane_h_px(), Cool Edit's flipped ruler in
-// Live's tones, 36 rows and a row of ground (38 device rows on the tablet)
+// BLOCK's four, THE WELL — THE PROGRAM'S CANVAS COLUMN, flat regions inside
+// one frame (architect 2026-10-09, the program is Cool Edit; 2026-11-01
+// night, "THE MAIN PAGE IS SETTLED"; THE FRAME 2026-11-17, session 140;
+// render.h's well paragraph, its lanes block and THE WELL'S FRAME):
+// the TRIM lane (trim_lane_h_px(), the frame's top line, Arc's 12-W
+// scrollbar trough with its pill and the frame's line under it, 14 W, 28
+// device px on the tablet), the RULER lane (ruler_lane_h_px(), Cool Edit's
+// flipped ruler in Live's tones, 36 rows and the frame's line (38 device
+// rows on the tablet)
 // — the Bold Small (8 W, 16 device px) timestamps' ink
 // centered between two pads, the ticks and the PLAYHEAD'S HEAD on its foot
 // rows — and a
@@ -176,10 +178,11 @@ namespace {
 // the tablet,
 // Cool Edit's cues, the label's box and the flag editor's the whole lane)
 // and THE LANE'S FOOT
-// LINE (lane_foot_line_h_px(), one hairline of ground), whose bottom edge is
-// the waveform top. EVERY LANE rides the gui_scale axis, the well's lines
-// one W rounded at the element (render.h's line rule, 2026-11-04). The BOTTOM strip
-// is TWO LANES: THE WELL'S FOOT (well_foot_h_px(), a hairline of ground)
+// LINE (lane_foot_line_h_px(), one hairline, the frame's line), whose bottom
+// edge is the waveform top. EVERY LANE rides the gui_scale axis, the well's
+// lines one W rounded at the element (render.h's line rule, 2026-11-04). The
+// BOTTOM strip is TWO LANES: THE WELL'S FOOT (well_foot_h_px(), a hairline,
+// the frame's bottom line)
 // directly under the waveform, and THE UNIFIED BOTTOM ROW,
 // bottom_row_h_px() tall — the strip pad, the case, the strip pad, on the
 // window's foot — the clock in its flat time field, the active tab's
@@ -239,9 +242,9 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-11-04 night rather than adjusted (every line one W, 2 device px on
+// 2026-11-17 rather than adjusted (every line one W, 2 device px on
 // the tablet; the Program 11 W text, the ruler's Bold Small 8 W, the trim
-// bar's field 7 W; the 36-W logo lane, the key and the strip pad 19
+// bar's trough 12 W; the 36-W logo lane, the key and the strip pad 19
 // W; the device rows below the tablet's at 200 %, the unit the integer W
 // since the rebase of 2026-11-05), AT key_height 17 (the construction state's value, the template's until 2026-11-09; a tune moves the band's and
 // row 8's case rows and the well by their difference; key_width moves no
@@ -256,15 +259,15 @@ namespace {
 // key's W (icon_case_h_px), the pad 19 W (strip_pad_px), each SCALED WITH
 // gui_scale — AND THE WELL'S LANES ARE DERIVED IN DEVICE PX AT THE ELEMENT
 // (render.h's well lanes block). THE CANVAS — THE WELL'S INTERIOR — ON THE
-// TABLET AT 200 % AND key_height 17 IS 1085 DEVICE ROWS (the
+// TABLET AT 200 % AND key_height 17 IS 1077 DEVICE ROWS (the
 // rule at centered_leftover_h below), AND ITS WIDTH 2256 OF THE TABLET'S
 // 2304, 24 device px in from the left (waveform_area: the margin, 18 px,
-// and half the flooring's leftover, 6). Per
-// scale the well above the canvas is the trim lane (ground + the fill, a
-// hairline and the field, + the ground line) + the ruler lane (pad + the
-// digits' ink + pad, + ground) + the marker lane (the time field's height:
-// outline + pad + band + pad + outline) + the lane's foot line: 20 (2 + 2
-// + 14 + 2) + 38 (12 + 12 + 12 + 2) + 39 (2 + 6 + 22 + 7 + 2) + 2 = 99
+// half the flooring's leftover, 4, and the well's frame, 2). Per
+// scale the well above the canvas is the trim lane (the frame's top line +
+// the trough + the frame's line) + the ruler lane (pad + the digits' ink +
+// pad, + the frame's line) + the marker lane (the time field's height:
+// outline + pad + band + pad + outline) + the lane's foot line: 28 (2 + 24
+// + 2) + 38 (12 + 12 + 12 + 2) + 39 (2 + 6 + 22 + 7 + 2) + 2 = 107
 // device rows on the tablet; the band the logo lane + the key + the strip
 // pad, 72 + 34 + 38 = 144; row 8 38 + 34 + 38 = 110.
 //   2304x1440 AT gui_scale 200, THE GLASS HOST AND THE ONE HOST (the
@@ -272,18 +275,20 @@ namespace {
 //   2026-10-01 — MainActivity.java's head — NO CAPTION since 2026-10-24;
 //   200 since the rebase of 2026-11-05, every device row below what it was
 //   at the 300 of 2026-10-06 .. 2026-11-05): the lanes are 144 band (72 + 34 + 38,
-//   rows 0–143, the logo lane 0–71, the faces 72–105) + 20 trim (rows
-//   144–145 ground, the bar 146–163: its fill 146–161, rows 162–163
-//   ground) + 38 ruler (164–199, rows 200–201 ground) + 39 marker (202–240)
-//   + 2 foot line (241–242) = 243 above (144 the band, 99 the block) and
-//   112 below (the well's foot 1328–1329 and row 8 on 1330–1439, its faces
-//   1368–1401), leftover 1085: the waveform 1085 on rows 243–1327 (its two
-//   wells 541 rows each round the divider's rows 784–785, the spare row
-//   1327 the canvas's last, render.h's waveform_divider), both gaps 0 —
-//   144 / 0 / 99 / 1085 / 0 / 112; the waveform 2256 wide, 24 px in
-//   (columns 24–2279), the well's columns 24 and 2280 (one past 2279). (The
-//   unit of 2026-11-04 took rows from the canvas, architect: "waveform
-//   height ok to take from"; the unit of 2 that night gave five back. The
+//   rows 0–143, the logo lane 0–71, the faces 72–105) + 28 trim (rows
+//   144–145 the frame's top line, the trough 146–169, rows 170–171 the
+//   frame's line) + 38 ruler (172–207, rows 208–209 the frame's line) + 39
+//   marker (210–248) + 2 foot line (249–250) = 251 above (144 the band,
+//   107 the block) and 112 below (the well's foot, the frame's bottom line,
+//   1328–1329 and row 8 on 1330–1439, its faces 1368–1401), leftover 1077:
+//   the waveform 1077 on rows 251–1327 (its two wells 537 rows each round
+//   the divider's rows 788–789, the spare row 1327 the canvas's last,
+//   render.h's waveform_divider), both gaps 0 — 144 / 0 / 107 / 1077 / 0 /
+//   112; the waveform 2256 wide, 24 px in (columns 24–2279), the frame's
+//   sides on columns 22–23 and 2280–2281, the well's columns 22 and 2282
+//   (one past 2281). (The unit of 2026-11-04 took rows from the canvas,
+//   architect: "waveform height ok to take from"; the unit of 2 that night
+//   gave five back; the 12-W trough took eight, 2026-11-17. The
 //   laptop geometries once worked here — 1920 x H, 1024 x 600 — are gone
 //   with the laptop GUI, 2026-10-30: no host runs them.)
 //
@@ -339,10 +344,10 @@ static void clamp_dims(int& w, int& h) {
 
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
-// LANE IN BOTH STRIPS BUT THE WELL'S TWO ROWS OF GROUND is an authored length
+// LANE IN BOTH STRIPS BUT THE WELL'S TWO FRAME LINES is an authored length
 // on the GUI-SCALE axis, a composite of its rounded parts (icon_row_h_px(),
 // the well's first three — trim_lane_h_px(), ruler_lane_h_px(),
-// marker_lane_h_px() — and bottom_row_h_px()); THE TWO ROWS OF GROUND
+// marker_lane_h_px() — and bottom_row_h_px()); THE TWO FRAME LINES
 // (lane_foot_line_h_px(), well_foot_h_px()) are ONE W, the hairline itself
 // (hairline_px: 2 device rows on the tablet at 200 %, 1 at 100 % and
 // below, the unit of 2026-11-04). The lanes' rulings are at those
@@ -353,8 +358,8 @@ namespace {
 // BAND, the logo lane, the key (its height the `key_height` tuning key,
 // 2026-10-29) and the strip pad (render.h's program and logo lane blocks,
 // icon_row_h_px), the well's four lanes the trim bar, the ruler, the marker
-// lane and the lane's foot line (render.h's well lanes block): 20 + 38 + 39
-// + 2 = 99 device rows on the tablet — THE
+// lane and the lane's foot line (render.h's well lanes block): 28 + 38 + 39
+// + 2 = 107 device rows on the tablet — THE
 // WELL'S FOOT one W too (well_foot_h_px), and the UNIFIED BOTTOM ROW the strip again
 // (bottom_row_h_px; the simple layout, 2026-10-22).
 constexpr int kTopLaneCount    = 5;
@@ -388,7 +393,7 @@ int top_lane_height(int lane) {
         case kTopTrimLane:    return trim_lane_h_px();      // the trim bar
         case kTopRulerLane:   return ruler_lane_h_px();     // ruler / placement
         case kTopMarkerLane:  return marker_lane_h_px();    // the cues
-        // THE LANE'S FOOT LINE, a row of ground; bottom edge = waveform top.
+        // THE LANE'S FOOT LINE, the frame's line; bottom edge = waveform top.
         case kTopLaneFootLane: return lane_foot_line_h_px();
         default: return 0;
     }
@@ -397,8 +402,8 @@ int top_lane_height(int lane) {
 // every lane table here: lane 0 is THE UNIFIED BOTTOM ROW on the window's
 // foot (2026-08-12, rows 8 and 9 merged: the clock left, the buttons flush
 // right; the layout is paint_bottom_row_buttons_and_clock's), lane 1 THE
-// WELL'S FOOT (a row of ground, the program ring's last row until the flat
-// well). THE ORDER IS FIXED: no tenant of the row moves a lane — the
+// WELL'S FOOT (the well's frame's bottom line since 2026-11-17, a row of
+// ground from the flat well, the program ring's last row before it). THE ORDER IS FIXED: no tenant of the row moves a lane — the
 // modal family's box and controls row stand over these rows (modal_box.h)
 // and the on-screen keyboard's band over them (onscreen_keyboard.h's
 // placement block). GAP 2 sits ABOVE the two, in bottom_strip_h's total
@@ -410,7 +415,7 @@ constexpr int kBottomWellFootLane = 1;
 int bottom_lane_height(int lane) {
     switch (lane) {
         case kBottomRowLane:      return bottom_row_h_px();
-        // THE WELL'S FOOT, a row of ground; top edge = waveform bottom.
+        // THE WELL'S FOOT, the frame's bottom line; top edge = waveform bottom.
         case kBottomWellFootLane: return well_foot_h_px();
         default: return 0;
     }
@@ -433,8 +438,8 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 200 and key_height 17 the lanes leave 1440 − 243 − 112 = 1085
-// device rows (2026-11-04 night). No
+// gui_scale 200 and key_height 17 the lanes leave 1440 − 251 − 112 = 1077
+// device rows (2026-11-17). No
 // color moves a lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -540,40 +545,47 @@ GuiRect waveform_area(const AppState& a) {
     constexpr int kGridStepPx = 16;
     // THE CANVAS'S INTERIOR ACROSS (architect 2026-10-09, the third part;
     // program_spec.h's column_margin_px): the margin's ground stands in from
-    // each side of the window (column_margin_w_px), and the interior is what
-    // the two sides leave, floored to the grid step — THE WELL IS THIS AREA
-    // (architect 2026-11-03: render.h's well_columns reads its x and x + w).
-    // THE LEFTOVER OF FLOORING THE WIDTH TO THE PAINTER GRID STEP IS SPLIT
-    // BETWEEN THE TWO MARGINS, THE ODD PIXEL TO THE RIGHT (architect
-    // 2026-10-09, symmetry strict), all ground, the trim bar, the ruler and
-    // the marker lane following the canvas's columns. On the tablet's 2304:
-    // 24 device px in and 2256 wide at 200 % (the margin's 18 and half the
-    // flooring's 12), 16 in and 2272 wide at 100 % (9 and half its 14). On a
-    // 1920-px window at 100 %: 16 in and 1888 wide (9 and half its 14). The
-    // working column, the zoom map, every column mapping and hit test and
-    // the damage boxes read this rect (ON SCREEN IS AS PAINTED).
+    // each side of the window (column_margin_w_px), then THE WELL'S FRAME's
+    // one W each side (well_frame_w_px; architect 2026-11-17, session 140,
+    // render.h's THE WELL'S FRAME), and the interior is what those leave,
+    // floored to the grid step. THE FRAME IS TAKEN OUT OF THE ROOM BEFORE THE
+    // FLOOR, SO IT STANDS ONE W OUTSIDE THE AREA and the area keeps a whole
+    // multiple of the step (a frame inset into the area would break the
+    // floor: 2256 − 4 is no multiple of 16). THE LEFTOVER OF FLOORING THE
+    // WIDTH TO THE PAINTER GRID STEP IS SPLIT BETWEEN THE TWO MARGINS, THE
+    // ODD PIXEL TO THE RIGHT (architect 2026-10-09, symmetry strict), all
+    // ground, outside the frame; the trim bar, the ruler and the marker lane
+    // follow the canvas's columns, inside it. On the tablet's 2304 at 200 %:
+    // the area 24 device px in and 2256 wide (the margin's 18, half the
+    // flooring's 8, the frame's 2), the frame's sides on columns 22 .. 23 and
+    // 2280 .. 2281 — the area and the plate where they stood before the frame
+    // came. On a 1920-px window at 100 %: 16 in and 1888 wide (9, half its
+    // 12, the frame's 1). The working column, the zoom map, every column
+    // mapping and hit test and the damage boxes read this rect (ON SCREEN IS
+    // AS PAINTED); THE EDGE RULE reads the frame's outer columns
+    // (render.h's well_columns).
     const int side = column_margin_w_px();
-    const int inner_room = std::max(0, w - 2 * side);
+    const int frame = well_frame_w_px();
+    const int inner_room = std::max(0, w - 2 * side - 2 * frame);
     const int slack = inner_room % kGridStepPx;
     const int effective_w = inner_room - slack;
-    const int inner_x = side + slack / 2;
+    const int inner_x = side + slack / 2 + frame;
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, a constructive DOMAIN INVARIANT
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
     // the vocabulary reaches it: the lanes scale with gui_scale (lane by
     // lane, each from its rounded parts, which is not one multiply of the
-    // sum), the well's rows of ground one W each (2026-11-04), and at the
+    // sum), the well's frame lines one W each (2026-11-04), and at the
     // 1000 % ceiling (architect 2026-10-05) they PASS the tablet's 1440 rows
     // at key_height's default 17: the band 360 + 170 + 190 = 720 and row 8
-    // 190 + 170 + 190 = 550 take 1270 before the well's lanes (the trim 100,
+    // 190 + 170 + 190 = 550 take 1270 before the well's lanes (the trim 140,
     // the foot lines 10 + 10, the ruler round its 80-device-px face, the
     // marker lane round the time field's 110), so the top of the vocabulary lands on this floor
     // (since the rebase of 2026-11-05: one W is 10 device px there). (The
     // host runs far below it: the tablet at 200 % on its 1440-tall surface,
-    // where they take 355 at the default key and leave the waveform 1085,
-    // the stack record at the lane table above; re-derived 2026-11-04
-    // night.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // where they take 363 at the default key and leave the waveform 1077,
+    // the stack record at the lane table above; re-derived 2026-11-17.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
@@ -682,7 +694,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // gesture and the span-framing double-click), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
 // ladder and the playhead's head; a placement lane); lane 3 is the MARKER
-// lane (the cues); lane 4 is THE LANE'S FOOT LINE, a row of ground, whose
+// lane (the cues); lane 4 is THE LANE'S FOOT LINE, the frame's line, whose
 // bottom edge is
 // flush with the waveform area top. Every lane spans the window
 // (strip_row_rect, 2026-10-21). (top_caption_row_area and the sizing
@@ -714,12 +726,15 @@ GuiRect top_marker_row_area(const AppState& a) {
 }
 
 // THE WELL'S COLUMNS, THE LANE'S FOOT LINE (top lane 4) and THE WELL'S FOOT
-// (bottom lane 1) — render.h's well-edge accessors; the rows' one painter is
-// paint_canvas_column_frame (paint_handler.cpp). THE WELL IS THE WAVEFORM
-// AREA (architect 2026-11-03): its columns are the area's, nothing more.
+// (bottom lane 1) — render.h's well-edge accessors; the frame's one painter
+// is paint_well_frame_rows (paint_handler.cpp), the foot line's and the
+// foot's rows paint_canvas_column_frame's. THE WELL'S COLUMNS ARE ITS
+// FRAME'S OUTER COLUMNS (architect 2026-11-17, session 140): the waveform
+// area widened by the frame's W on each side.
 WellColumns well_columns(const AppState& a) {
     const GuiRect area = waveform_area(a);
-    return WellColumns{area.x, area.x + area.w};
+    const int frame = well_frame_w_px();
+    return WellColumns{area.x - frame, area.x + area.w + frame};
 }
 
 GuiRect lane_foot_line_area(const AppState& a) {
@@ -1377,7 +1392,7 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
     // its head on the ruler's last rows (paint_ruler_row, 2026-10-09; the
     // view bar carries no mark since ~14:30) and its line on the canvas's
     // rows (paint_playheads). The lanes between and above them — the view
-    // bar, the marker lane, the row of ground — hold nothing of the
+    // bar, the marker lane, the frame's lines — hold nothing of the
     // playhead; they are inside because the rect is ONE rect, the head and
     // the line whole in one clip, and they repaint as they stand (each
     // lane's painter is clip-driven; a stash a narrow clip does not cover is

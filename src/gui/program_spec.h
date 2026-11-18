@@ -42,22 +42,23 @@
 // 2026-11-07; render.h's program_run_gap_px; the hi-fi's
 // lengths again since 2026-11-03, the retrofit, rounded to the unit on
 // 2026-11-04 night); then THE WELL,
-// flat regions on
-// the ground (render.h's well paragraph and its lanes block, which derive
-// every length at the element) — a row of ground, THE TRIM BAR (its two
-// flat fills on view_bar_field_w's 14 px and one hairline, a row of
-// ground under them), THE RULER FLIPPED, a row
-// of ground, THE MARKER LANE of Cool Edit's cues (the flag editor's box on
-// its whole rows, "right now it's too small to click"; usability over
-// accuracy, render.h's row-6 canvas paragraph), a row of ground, THE CANVAS
-// — the waveform area, its grid and its center lines, its two channels'
-// wells with the stereo divider's row of ground between them — and a row of
-// ground, the well's foot; then ROW 8, THE STRIP PAD, the case, THE STRIP
-// PAD, on the window's foot. THE WELL STANDS 6 W IN FROM EACH SIDE of the
-// window's client area on the ground (column_margin_px) and half the grid
-// floor's leftover, THE WELL THE WAVEFORM AREA (architect 2026-11-03), its
-// regions sharing the area's columns (render.h's well_columns, the outermost
-// keys' faces' outer columns: THE EDGE RULE). (The band's head and foot lines and its panes,
+// flat regions
+// inside ONE FRAME (render.h's well paragraph, its lanes block, which
+// derives every length at the element, and THE WELL'S FRAME; architect
+// 2026-11-17, session 140) — the frame's top line, THE TRIM BAR (Arc's
+// scrollbar: the 12-W trough, the pill on it), the frame's line, THE RULER
+// FLIPPED, the frame's line, THE MARKER LANE of Cool Edit's cues (the flag
+// editor's box on its whole rows, "right now it's too small to click";
+// usability over accuracy, render.h's row-6 canvas paragraph), the frame's
+// line, THE CANVAS — the waveform area, its grid and its center lines, its
+// two channels' wells with the stereo divider between them in the frame's
+// tone — and the frame's bottom line, the well's foot, its sides one W
+// beside them; then ROW 8, THE STRIP PAD, the case, THE STRIP PAD, on the
+// window's foot. THE WELL STANDS 9 W IN FROM EACH SIDE of the window's
+// client area on the ground (column_margin_px) and half the grid floor's
+// leftover, then the frame's W, the lanes on THE WAVEFORM AREA's columns,
+// the frame's outer columns the outermost keys' faces' outer columns (THE
+// EDGE RULE; render.h's well_columns). (The band's head and foot lines and its panes,
 // the tab strip under it, the column's air, the column's foot, the dock bar,
 // row 8's bars and the border under row 8 stood 2026-10-09 to 2026-10-22;
 // the program ring round the column 2026-10-22 to 2026-11-02; git history.)
@@ -126,11 +127,13 @@ struct ProgramSpec {
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much ground from each side of the window's
     // client area, then half the grid floor's leftover (main.cpp's
-    // waveform_area), then the well, which is the waveform area (architect
-    // 2026-11-03) — the trim bar's, the ruler's, the marker lane's and the
-    // canvas's columns. 9 W SINCE THE REBASE TO 200 % (architect 2026-11-05:
-    // Cool Edit's 6 times 1.5, so the tablet's 18 device px and its well,
-    // columns 24 .. 2279, stand).
+    // waveform_area), then THE WELL'S FRAME's one W (architect 2026-11-17,
+    // session 140; render.h's THE WELL'S FRAME), then the waveform area —
+    // the trim bar's, the ruler's, the marker lane's and the canvas's
+    // columns. 9 W SINCE THE REBASE TO 200 % (architect 2026-11-05: Cool
+    // Edit's 6 times 1.5, so the tablet's 18 device px; the frame's sides
+    // on columns 22 .. 23 and 2280 .. 2281 and the area 24 .. 2279 since
+    // 2026-11-17).
     int  column_margin_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each
@@ -138,18 +141,10 @@ struct ProgramSpec {
     // division above and below the zero (render_canvas, render.h's row-6
     // canvas paragraph).
     int  grid_divisions;
-    // THE TRIM BAR'S FIELD, IN W (architect 2026-11-01 night, M5c / M5h,
-    // "good"; the two fills on it and one hairline, the ground line under
-    // them, mock z2, 2026-11-03; 7 W since 2026-11-04 night, so the fill is
-    // 8 W and the bar rows 146 .. 163 on the tablet): THE RULING IS THE
-    // TABLET'S 14 DEVICE PX, read on the one road (render.h's
-    // view_bar_field_h_px through scaled_px, floor 1: 14 at 200 %, 7 at
-    // 100 %; the bar's rows trim_bar_h_px). (THE RULER'S GROUND, TICKS AND
-    // BASELINE and THE MARKER LANE'S W ROWS, QUANTA AND FILL, the hi-fi
-    // well's fields 2026-10-09 to 2026-11-02, and THE STEREO DIVIDER'S FACE
-    // left with the flat well: render.h's well lanes block derives them at
-    // the element.)
-    int  view_bar_field_w;
+    // (THE TRIM BAR'S HEIGHT is render.h's since 2026-11-17, the 12-W
+    // trough kTrimTroughW in its well lanes block, which derives every
+    // length of the well at the element; the 7-W field of 2026-11-01 night
+    // retired with it.)
     // (THE CUE'S HORIZONTAL LENGTHS — the selected fill's pad and the
     // segment gap, in label quanta until 2026-11-03 — are render.h's skin
     // lengths since, cue_fill_pad_px and cue_segment_gap_px.)
@@ -163,7 +158,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_hot_face      = false,
     .column_margin_px      = 9,
     .grid_divisions        = 4,
-    .view_bar_field_w  = 7,
 };
 
 // (THE AUTHORED TOTALS — the band's and row 8's strip pads, the lane

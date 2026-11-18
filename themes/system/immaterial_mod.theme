@@ -20,6 +20,7 @@
 # own rule over Immaterial.ask 2026-11-05 .. 11-11 (src/gui/theme_ask.cpp,
 # git history); since 2026-11-11, session 110, it is this file's one baked
 # word.
+# ScrollbarInnerTrack and ClipBorder added by hand from Immaterial.ask (architect 2026-11-17, session 140)
 SurfaceArea=1D1F23
 Desktop=22242A
 SurfaceBackground=2F3138
@@ -44,3 +45,5 @@ ViewCheckControlDisabledOff=5C6069
 ScrollbarInnerHandle=6D7079
 DetailViewRulerMarkings=A1A3A9
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=22242A

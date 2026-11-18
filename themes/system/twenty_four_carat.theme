@@ -1,4 +1,5 @@
 # Twenty-Four Carat.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from Twenty-Four Carat.ask (architect 2026-11-17, session 140)
 SurfaceArea=222222
 Desktop=282828
 SurfaceBackground=343434
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=63605A
 ScrollbarInnerHandle=726C63
 DetailViewRulerMarkings=C9AB7C
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=00000000
+ClipBorder=282828

@@ -1,4 +1,5 @@
 # SB Cielo.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
+# ScrollbarInnerTrack and ClipBorder added by hand from SB Cielo.ask (architect 2026-11-17, session 140)
 SurfaceArea=282828
 Desktop=1B1718
 SurfaceBackground=414141
@@ -23,3 +24,5 @@ ViewCheckControlDisabledOff=D3D3D340
 ScrollbarInnerHandle=828282
 DetailViewRulerMarkings=D8D8D8
 StandardVuMeter/Maximum=FF0A0A
+ScrollbarInnerTrack=000000
+ClipBorder=FFFFFF
