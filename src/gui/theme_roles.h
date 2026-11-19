@@ -14,7 +14,7 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — PLUS THREE ROLES OF OUR OWN (THE
+// own role names, never a derived tone — PLUS SIX ROLES OF OUR OWN (THE
 // FORMAT, below), and the derivation, this file's, turns each into a row of
 // GuiThemeTones at the launch's read.
 //
@@ -26,11 +26,13 @@
 // of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
 // flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
 // the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
-// AND OUR OWN THREE, WindowBackground, TitleForeground and SidebarForeground,
-// kOwnThemeRoles: no Live role names them),
+// AND OUR OWN SIX, WindowBackground, TitleForeground and SidebarForeground,
+// and the three fills TooltipBackground, CardBackground and
+// CardStandingBackground, kOwnThemeRoles: no Live role names them),
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
 // an 8-digit word's last byte its straight alpha — kept raw, the derivation
-// compositing it (the COMPOSITED block). Every role of the table exactly
+// compositing it (the COMPOSITED block) or, for the three fills, CARRYING
+// IT TO THE PAINTER (the CARRIED block). Every role of the table exactly
 // once, in any order (the converter writes the table's). THE SLUG is the
 // file's stem through THE SLUG RULE (theme_slug_of_stem, gui_theme.h), and a
 // shipped file is named by its own slug (`default_dark_cool_medium.theme`,
@@ -51,9 +53,10 @@
 // tools/themes/ask_to_theme.py, never by hand but for the `_mod` files'
 // recorded edits, the two roles of 2026-11-17 (ScrollbarInnerTrack and
 // ClipBorder, each file's from its own .ask, its header line the record)
-// and our own three of 2026-11-19 (each file's own SurfaceArea and
-// ControlForeground copied, the ROLE-NAMED block's OUR OWN, its header line
-// the record; the converter writes them the same way) —
+// and our own six of 2026-11-19 (each file's own SurfaceArea and
+// ControlForeground copied, the ROLE-NAMED block's OUR OWN, and its own
+// SurfaceBackground and Alert for the three fills, the CARRIED block, each
+// header line the record; the converter writes them the same way) —
 // AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
 // it, its header the record of every role (architect 2026-11-17, session
 // 140); NO .ASK FILE IS IN THE REPOSITORY OR THE APK, and the app reads
@@ -137,8 +140,9 @@
 //                                     head's outline
 //     text                   B5B5B5 = ControlForeground (the keys' glyphs, the
 //                                     clocks, the status bar)
-//     dim text, well frame   757575 = TextDisabled (the scrub channel and the
-//                                     tooltip border)
+//     dim text, well frame   757575 = TextDisabled (the scrub channel; the
+//                                     tooltip's border retired with Arc's
+//                                     tooltip, send AA's stage D1)
 //     inactive cue           5D5D5D = BackgroundClip
 //     cue, cue fill          FFAD56 = ViewCheckControlEnabledOn, THE
 //                                     ACCENT: A LIT OR PRESSED KEY'S FACE
@@ -182,12 +186,15 @@
 //                                     the bar (architect 2026-11-06, session
 //                                     75); THE PRINT ON A LIT KEY'S
 //                                     FACE too, its glyph and the on-screen
-//                                     keyboard's lit cap, and THE CARDS'
-//                                     WORDS AND GLYPH (architect 2026-11-17,
-//                                     session 140: Arc prints its
-//                                     $selected_fg_color white on its checked
-//                                     blue, and D4, "white card words", its
-//                                     warning text on the warning orange; on
+//                                     keyboard's lit cap, and A STANDING
+//                                     CARD'S WORDS AND GLYPH (Arc's white on
+//                                     its destructive red, send AA's stage
+//                                     D1, 2026-11-19; every card's from
+//                                     2026-11-17, session 140, D4, "white
+//                                     card words" on the warning orange, a
+//                                     normal card's `sidebar_text` since D1;
+//                                     Arc prints its $selected_fg_color white
+//                                     on its checked blue too; on
 //                                     Live's own files the partner is
 //                                     near-black, so the print stays dark on
 //                                     the accent; key_ink, materials.h)
@@ -195,9 +202,14 @@
 //                                     2026-11-05: "lighter for list
 //                                     (highlight)")
 //     list press text        070707 = SelectionForeground
-//     card face              E76942 = Alert (the cards; THE LIMITER LAMP too,
-//                                     architect 2026-11-05: "orange for limiter
-//                                     and red for clipper" — a warning)
+//     limiter lamp           E76942 = Alert, THE LIMITER LAMP's lit face
+//                                     (architect 2026-11-05: "orange for
+//                                     limiter and red for clipper" — a
+//                                     warning; Arc's warning orange). The
+//                                     cards' face too until send AA's stage
+//                                     D1 (2026-11-19), when the cards took
+//                                     their own fills (the CARRIED block) and
+//                                     the lamp kept Alert as its own tone
 //     clip lamp              FF0A0A = StandardVuMeter/Maximum, the one NESTED
 //                                     role: Live's own meter clip box — THE
 //                                     CLIP LAMP's lit face (architect
@@ -229,8 +241,44 @@
 //     sidebar text           B5B5B5 = SidebarForeground, Arc's
 //                                     $dark_sidebar_fg (arc_dark BAC3CF): the
 //                                     marker labels' ink since the send's
-//                                     stage B, the tooltip's and the cards'
-//                                     in its stage D
+//                                     stage B, the tooltip's words and a
+//                                     normal card's words and glyph since
+//                                     send AA's stage D1
+//   CARRIED (our own three fills, send AA's stage D1, architect 2026-11-19 —
+//   DESIGN §6 / §9, his "good to build" on tmp/sendZ/VIEW/Z_07 and "if we
+//   can do the transparency, we might as well"): a fill PAINTED OVER
+//   WHATEVER LIES UNDER IT — the chrome, the lanes, the canvas — so no
+//   surface is known to composite it over at the derivation: ITS ALPHA IS
+//   CARRIED TO THE PAINTER, the role's three bytes the row word's low 24
+//   bits and its alpha byte the word's TOP BYTE (FF for a 6-digit word,
+//   opaque; packed_carried, theme_roles.cpp), read back by tone_alpha
+//   (render.h) and painted through set_palette_source_alpha (cairo over the
+//   chrome; the floater bit's blend over the canvas, canvas_sink.h's THE
+//   TRANSPARENCY INVARIANT). Every other row word's top byte is 0. EVERY
+//   FILE BUT ARC'S CARRIES ITS OWN NEAREST EXISTING VALUE, OPAQUE
+//   (kOwnThemeRoles' source), so a Live theme's tooltip and cards are
+//   today's tones:
+//     tooltip fill        FF363636 = TooltipBackground (arc_dark 4B5162F2,
+//                                     Arc's $osd_bg_color at .95 — the byte
+//                                     F2, .949; a Live theme's
+//                                     SurfaceBackground, the pane it wore):
+//                                     THE TOOLTIP'S BOX (paint_shift_tooltip)
+//     card fill           FFE76942 = CardBackground (arc_dark 353945F2,
+//                                     xfce4-notifyd's bubble under Arc at .95;
+//                                     a Live theme's Alert, the orange it
+//                                     wore): A NORMAL (TIMED) CARD'S BOX.
+//                                     NOT A BRIGHT TONE — a surface, notifyd's
+//                                     grey at Arc's own number — so on a Live
+//                                     theme at a bright mix under 100 a normal
+//                                     card shows its Alert unmixed
+//     card standing fill  FFE76942 = CardStandingBackground (arc_dark
+//                                     F04A50F2, Arc's destructive red,
+//                                     button.destructive-action G3:216, at
+//                                     .95; a Live theme's Alert): A STANDING
+//                                     (CRITICAL) CARD'S BOX, A BRIGHT TONE
+//                                     (THE BRIGHT MIX below, its top byte
+//                                     riding the mix: arc_dark C0444C at 75)
+//   (notifications.h's THE LOOK, render.h's THE FLOATING SURFACES.)
 //   ROLE-NAMED, continued:
 //     core                   363636 = SurfaceBackground, THE KEY FACE, on
 //                                     every theme (architect 2026-11-07,
@@ -484,8 +532,10 @@
 // when the time comes by just adjusting" the key; no per-theme value: "I
 // don't think it's worth redoing the presets so that each preset gets its
 // own value"). THE BRIGHT TONES, his list (kBrightTones, theme_roles.cpp):
-// the accent `cue`, the playhead head (RangeDefault), the card face
-// (Alert, the cards and the limiter lamp), the clip lamp
+// the accent `cue`, the playhead head (RangeDefault), the limiter lamp
+// (Alert; the cards' face until send AA's stage D1), the standing card's
+// fill (CardStandingBackground, Arc's destructive red, 2026-11-19 — its
+// carried alpha byte riding the mix untouched), the clip lamp
 // (StandardVuMeter/Maximum), the selection fill
 // (StandbySelectionBackground) and the list press fill
 // (SelectionBackground) — the two selection fills together ("standby
@@ -498,7 +548,8 @@
 // mixed head. NEVER MIXED: the text tones ("never the glyph color itself":
 // the text, the dim text, the key dim ink, the title, sidebar and ruler
 // texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection and list
-// press texts, the cards' words, the faces, the lanes (the trim
+// press texts, the cards' words, the tooltip's and the normal card's fills
+// (surfaces, not highlights), the faces, the lanes (the trim
 // bar's trough and the well's lines among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,
 // the ruler's digits, the disabled key's face and border), the waveform's
@@ -507,7 +558,8 @@
 // the default 75 on the reference row: the accent FFAD56 -> C88B4A, the
 // head 03C3D5 -> 0B9BA9 and its line 81E1EA
 // -> 85CDD4 (bright_mixed_tones, the code); on Arc-Dark the accent 5294E2 ->
-// 497CB9, the head D3DAE3 -> AAB0BA; at 100 every row is painted at its own
+// 497CB9, the head D3DAE3 -> AAB0BA, the standing card F04A50 -> C0444C, the
+// limiter lamp F27835 -> C16738; at 100 every row is painted at its own
 // numbers.
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,

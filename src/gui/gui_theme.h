@@ -29,7 +29,7 @@ struct GuiThemeTones {
     uint32_t body_face;           // THE BODY TONE, the ground of everything under the title bar (WindowBackground, our own role; a Live theme's SurfaceArea): the palette's `face`, both icon rows, the status bar, the erase, the modal pane's and the keyboard's ground
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t title_text;          // the title bar's text and drawings (TitleForeground, our own role; a Live theme's ControlForeground; paint_title_bar)
-    uint32_t sidebar_text;        // the live marker labels' ink, later the tooltip's and the cards' (SidebarForeground, our own role; a Live theme's ControlForeground)
+    uint32_t sidebar_text;        // the live marker labels' ink, the tooltip's words and a normal card's words and glyph (SidebarForeground, our own role; a Live theme's ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
     uint32_t text_on_lit;         // what is printed on a lit key's face, its glyph and the on-screen keyboard's lit cap (StandbySelectionForeground, the selection's text); a word alone, read by key_ink (materials.h)
     uint32_t key_dim_ink;         // a disabled key's glyph (ViewCheckControlDisabledOff over the face)
@@ -40,7 +40,7 @@ struct GuiThemeTones {
     uint32_t key_press_face;      // the scrub's thumb's and the on-screen keyboard's unlit key under a press, awaiting send Z's stage D (Desktop)
     uint32_t lit_press_fill;      // the on-screen keyboard's lit key under the finger, awaiting stage D: the accent darkened (cue · mean(key_press_face) / mean(key_face))
     uint32_t lit_dim_fill;        // a checked-but-disabled key's face: (the accent at 75 % over the body tone) at 60 % over the body tone, Arc's numbers
-    uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
+    uint32_t well_frame;          // the scrub's channel (TextDisabled)
     uint32_t ruler_face;          // the ruler and Arc's entry's fill (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the ruler face, the canvas)
     uint32_t ruler_text;          // the ruler's digits (the text at 80 % over the ruler face, theme_roles.h's DERIVED block; paint_ruler_row)
@@ -52,11 +52,18 @@ struct GuiThemeTones {
     uint32_t selection_text;      // the selection pair's text; `selected_text` (StandbySelectionForeground, the bar's own partner)
     uint32_t list_press_fill;     // a list row's fill while a press stands on it (SelectionBackground)
     uint32_t list_press_text;     // a list row's text and glyph under that press (SelectionForeground)
-    uint32_t pane_face;           // the modal family's box interior and the tooltip's face (SurfaceBackground)
+    uint32_t pane_face;           // the modal family's box interior (SurfaceBackground)
     uint32_t score_pane_face;     // the score viewer's pane, the page's mat (= the ink)
-    uint32_t card_face;           // the cards' box and their ring; `card_ground` / `card_frame` (Alert)
-    uint32_t card_ink;            // the cards' words and class glyph; `card_text` (StandbySelectionForeground, the selection's text)
-    uint32_t clip_lamp;           // the title bar's clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face
+    // THE THREE CARRIED FILLS (theme_roles.h's CARRIED block; send AA's stage
+    // D1, 2026-11-19): each word 0xAARRGGBB, THE TOP BYTE ITS OPACITY (FF
+    // opaque; every other member's top byte is 0), painted at it over
+    // whatever lies under the box — tone_alpha (render.h) reads it.
+    uint32_t tooltip_fill;        // the tooltip's box (TooltipBackground, our own role; arc_dark 4B5162 at F2, Arc's $osd_bg_color at .95; a Live theme's SurfaceBackground, opaque)
+    uint32_t card_fill;           // a normal (timed) card's box (CardBackground, our own role; arc_dark 353945 at F2, notifyd's bubble; a Live theme's Alert, opaque)
+    uint32_t card_standing_fill;  // a standing (critical) card's box, A BRIGHT TONE (CardStandingBackground, our own role; arc_dark F04A50 at F2, Arc's destructive red; a Live theme's Alert, opaque)
+    uint32_t card_ink;            // a standing card's words and class glyph; `card_text` (StandbySelectionForeground, the selection's text, the print on a lit face)
+    uint32_t limiter_lamp;        // the title bar's limiter lamp, lit (Alert, a bright tone: Arc's warning orange; the cards' face until send AA's stage D1)
+    uint32_t clip_lamp;           // the title bar's clip lamp, lit (StandardVuMeter / Maximum)
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
@@ -139,7 +146,11 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // (ViewCheckControlEnabledOn; architect 2026-11-13, session 119) AND THE
 // TRIM BAR'S TROUGH 242424, Default's ScrollbarInnerTrack 00000000 over the
 // ground — Live's transparent track, so the ground itself — and THE WELL'S
-// FRAME 2A2A2A, Default's ClipBorder (architect 2026-11-17, session 140).
+// FRAME 2A2A2A, Default's ClipBorder (architect 2026-11-17, session 140)
+// AND THE THREE CARRIED FILLS, each opaque at the tone it replaced (send
+// AA's stage D1, 2026-11-19): the tooltip's 363636 (SurfaceBackground), a
+// normal card's and a standing card's E76942 (Alert), the limiter lamp
+// keeping Alert's E76942 as its own tone.
 // THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
 // 119): like every row of the list it holds the theme's own numbers,
 // and the install mixes its bright tones at the `bright_mix` key as it mixes
@@ -177,8 +188,11 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x070707, // list_press_text
     0x363636, // pane_face
     0x191919, // score_pane_face
-    0xE76942, // card_face
+    0xFF363636, // tooltip_fill
+    0xFFE76942, // card_fill
+    0xFFE76942, // card_standing_fill
     0x070707, // card_ink
+    0xE76942, // limiter_lamp
     0xFF0A0A, // clip_lamp
     0x393939, // waveform_canvas
     0x191919, // waveform_ink

@@ -187,9 +187,9 @@
 //
 // THE WELL'S FRAME TONE. `well_frame` is THE GRAMMAR'S ONE FRAME TONE
 // (architect 2026-11-02, M14 "d"), Default's 757575 (TextDisabled, the dim
-// text's own role): the scrub's one-W channel (render.h's scrub block) and
-// the tooltip's one-W border (paint_shift_tooltip; the cards wear
-// `card_face` instead since 2026-11-04 night). It is not the well's lines'
+// text's own role): the scrub's one-W channel (render.h's scrub block) —
+// the tooltip's one-W border in it retired with Arc's tooltip (send AA's
+// stage D1, 2026-11-19: no border). It is not the well's lines'
 // `well_border` (THE WELL above), a tone of its own. THE TRIM BAR'S TWO
 // TONES (render_trim_flags): `trim_bar_face`, the trough, is Live's
 // ScrollbarInnerTrack over the ground (architect 2026-11-17, session 140);
@@ -223,24 +223,21 @@
 // `key_face` (SurfaceBackground), named for what it paints: the modal
 // family's box interior, flat, with no frame, ring, shadow or row separator
 // (modal_box.h's head; the score viewer's darker pane, `score_pane_face`,
-// the one exception, is recorded there), and the tooltip's face inside its
-// one-W `well_frame` border (the grammar's one frame tone;
-// paint_shift_tooltip through paint_popup_chrome). The cards wear
-// `card_face` (below).
+// the one exception, is recorded there).
 //
-// THE CARDS (architect 2026-11-04 night, his pick h1 of tmp/s38 over h0, the
-// tooltip's pane and frame they wore until then, and h2, the orange under
-// 111111 ink): every notification card, both classes alike, is A FLAT BOX in
-// `card_face`, Default's E76942 — LIVE'S STATUS BAR'S ORANGE (Alert),
-// measured on his Live 12 shot of 2026-10-31 (231 105 66) — its words and
-// its class glyph in `card_ink`, THE PRINT ON A LIT FACE, the theme's
-// StandbySelectionForeground, Default's 070707 (architect 2026-11-17,
-// session 140, D4, "white card words": Arc's $warning_fg_color FFFFFF on its
-// warning orange), and NO VISIBLE BORDER: the one-W ring's rows and
-// columns stay in the layout, painted in the fill (the chrome's
-// `card_ground`, `card_text` and `card_frame`, theme_file.h; render.h's THE
-// CARD FACE) — Live's status-bar orange, a message rather than a state, not
-// the accent of the lit keys (`cue`, Default's FFAD56).
+// THE FLOATING SURFACES ARE ARC'S AND NOTIFYD'S (architect 2026-11-19, send
+// Z, "good to build" on Z_07; send AA's stage D1): THE TOOLTIP Arc's — its
+// box the carried fill `tooltip_fill` (arc_dark 4B5162 at .95), rounded,
+// no border, Arc's shadow under it, its words `sidebar_text` (render.h's THE
+// TOOLTIP IS ARC'S); THE CARDS notifyd's bubble — a normal card
+// `card_fill` (353945 at .95) under `sidebar_text`, a standing card Arc's
+// destructive red `card_standing_fill` (F04A50 at .95, a bright tone) under
+// `card_ink`, the print on a lit face (notifications.h's THE LOOK). On a
+// Live theme the tooltip's fill is its SurfaceBackground and both cards'
+// its Alert, opaque. (The tooltip's pane in a one-W `well_frame` border,
+// 2026-11-02, and the cards' flat box in Live's status-bar orange, both
+// classes alike, 2026-11-04 night, his pick h1 of tmp/s38, retired with
+// it.) THE LIMITER LAMP keeps Alert as `limiter_lamp`, its own tone.
 
 // -- ARC'S BUTTON: THE KEY'S STATES, ITS LINKED GROUP, THE WORD BUTTON AND
 //    THE ENTRY (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §3, the

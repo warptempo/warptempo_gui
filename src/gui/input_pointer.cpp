@@ -7982,7 +7982,8 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit) {
 // the one thing that changes — no key wears a hover face, the rows under it
 // read nothing of it — and its pixels are exactly the published rect
 // (AppState::RedesignTooltip::rect, the painter's as-painted record: the
-// box's hull, held until a run's clip has repainted where it stood, so it
+// box's hull grown by Arc's shadow's reach — tooltip_painted_extent, send
+// AA's stage D1 — held until a run's clip has repainted where it stood, so it
 // names the box for as long as any pixel of it may stand; empty where no
 // box was ever painted). That is why every edge that takes a hint away must
 // come through here rather than leave it to a hover walk: the box hangs
@@ -8030,14 +8031,15 @@ void GuiInputHandler::hide_shift_tooltip() {
 // clock and Play's key under a standing box moves nothing.
 // IT DAMAGES THE BOX'S OWN RECT (architect 2026-11-16, the beats: the box's
 // rect, shown and taken down): the rect the painter will lay this owner's
-// box out on, asked of the painter itself (Viewport::tooltip_box_for_show_
+// box out on, grown by Arc's shadow's reach (send AA's stage D1,
+// tooltip_painted_extent), asked of the painter itself (Viewport::tooltip_box_for_show_
 // — the box's size is its shaped words', which no one else derives), so the
 // frame this schedules paints the box under a clip that holds it whole and
 // publishes it. THE SHOW IS MARKED PENDING for the words comparators
 // (AppState::RedesignTooltip::show_pending). Where the painter would lay
 // out no box, or the hook is unwired, the band every seat of a box lies in
-// — the full-width band of tooltip_damage_h_px() rows ending on the gap over
-// the owner's face (tooltip_damage_band). A box whose seat moves between
+// — the full-width band of tooltip_damage_h_px() rows on the box's side of
+// the owner's face, the shadow's reach either side (tooltip_damage_band). A box whose seat moves between
 // this show and its frame moves with a damage that holds it (a relayout's
 // whole window, a cue's flag rebuild — whole while a cue's box stands — a
 // dialog's area), and a paint whose clip still missed the box is the

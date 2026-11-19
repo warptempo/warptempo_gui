@@ -2,34 +2,30 @@
 
 #include "folder_overlay.h"   // pad_px, the panel's air (one accessor read)
 #include "paint_handler.h"    // the lane table
+#include "warp_frame_map_view.h"   // warp_red_flag_set_cached, the strike
+#include "warpmarkers.h"      // format_warpmarkers_text, the authored bytes
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
 
-int notification_pad_px() {
-    // P18 (the ruling at the declaration): an area, rounded at the element.
-    return scaled_px(kNotificationPadW, 1);
-}
-
 int notification_gap_px() {
-    // One W, the line rule's (the ruling at the declaration).
-    return hairline_px();
+    // notifyd's 6 W (the ruling at the declaration), floored at one px.
+    return scaled_px(kNotificationGapW, 1);
 }
 
-int notification_cap_px() {
-    return static_cast<int>(
-        std::nearbyint(gui_font_cap_px(gui_font(GuiFace::Body))));
+int notification_line_px() {
+    // The body face's line box in W, whole (the declaration): 14 W, 28
+    // device px on the tablet.
+    return scaled_px(gui_font_line_box_w(gui_font(GuiFace::Body)).line(), 1);
 }
 
 int notification_card_h_px() {
-    // border + pad + cap + pad + border, each its own rounded part (the
-    // composite rule, scaled_px's head): 2 + 18 + 17 + 18 + 2 = 57 device
-    // rows on the tablet at 200 % (the border one W, 2 device px, the pad 9
-    // W and the Body face 12 W Regular, 24 device px, its cap 16.51 rounded;
-    // send Z — the cards' own look is its stage D).
-    return 2 * hairline_px() + 2 * notification_pad_px() +
-           notification_cap_px();
+    // top pad + one line box + bottom pad, each its own rounded part (the
+    // composite rule, scaled_px's head): 28 + 28 + 28 = 84 device rows on
+    // the tablet at 200 % (DESIGN §9's 42 W).
+    return scaled_px(kNotificationPadTopW, 1) + notification_line_px() +
+           scaled_px(kNotificationPadBottomW, 1);
 }
 
 int notification_card_max_w_px(const AppState& a) {
@@ -48,50 +44,36 @@ int notification_card_max_w_px(const AppState& a) {
     // the ROOM the painter clips to and publishes within (a bound under
     // the floor would strand pixels outside it).
     const WellColumns well = well_columns(a);
-    const int room_w = well.end - well.x;
+    const int room_w = well.end - well.x - 2 * scaled_px(kNotificationSeatW);
     return std::max(floor_w, std::min(ceiling_w, room_w));
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
-    // THE STACK'S MARGINS: THE TRIM BAR'S FIRST TROUGH ROW ABOVE, THE PANEL'S
-    // LAST COLUMN AT THE RIGHT, THE PANEL'S PAD AT THE FOOT. THE RIGHT EDGE IS
-    // HELD INSIDE THE PANEL (THE EDGE RULE, as the tooltip's clamp,
-    // tooltip_box_rect; the well's columns the panel's since 2026-11-19, send
-    // Z: edge to edge): the card's right edge on the panel's last column,
-    // 2303 on the tablet (the cards' own seat and look are send Z's stage D).
-    // The foot is the
-    // panel's own pad, folder_overlay::pad_px (architect 2026-08-30; one W,
-    // 2 device px on the tablet, since 2026-11-04 night). THE TOP IS ONE RULE FOR
-    // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
-    // "it looks like absolute positioning where it should be relative to the
-    // elements"): THE TRIM BAR'S FIRST TROUGH ROW, the row under the well's
-    // frame's top line, the trim lane's first row (render_trim_flags'
-    // trough, one hairline down), THE FIRST CARD'S TOP BORDER ON THE
-    // TROUGH'S FIRST ROW — RULED KEPT (architect 2026-11-03, over the bar's
-    // two fills; first ruled 2026-11-02, M14 "d": "the card's top border one
-    // line with the trim bar's frame row"; the trough since 2026-11-17; row
-    // 144 on the tablet at key_height 28, the line above it one W).
-    // The cards have no bevels, so
-    // they sit over the bar's well and not in it (the color picker's
-    // bevelled card, 2026-10-07..14, was tucked inside the waveform's well).
-    // It is anchored on
-    // the trim lane and not on the icon row, so whatever stands between the
-    // band's cases and the trim lane — the strip pad since 2026-10-22, the
-    // tab strip and the canvas column's air before — the card meets the bar
-    // the same way at every scale. No chrome spec field: no vocabulary needs another anchor (the
-    // note among ChromeSpec's fields).
-    // The card's INTERNAL pad is a different number and a different concept —
-    // notification_pad_px(), the chrome inside the box rather than the box's
-    // placement.
+    // THE STACK'S MARGINS: NOTIFYD'S SEAT ABOVE AND AT THE RIGHT, THE PANEL'S
+    // PAD AT THE FOOT (architect 2026-11-19, send Z, DESIGN §9: the first
+    // card's top 16 W under the top icon row's line, its right edge 16 W
+    // inside the panel — rows from 176 and columns to 2271 on the tablet at
+    // key_height 28; flush with the glass on the trim trough's first row
+    // until send AA's stage D1). THE TOP IS READ OFF THE LIVE LANE TABLE
+    // (architect 2026-10-08: "it looks like absolute positioning where it
+    // should be relative to the elements"): the trim lane's first row is the
+    // top icon row's line (one W, 142..143 on the tablet), so the row under
+    // it is the trim lane's top plus one hairline, and the seat
+    // kNotificationSeatW under that — whatever stands between the band's
+    // keys and the trim lane, the card meets the lanes the same way at every
+    // scale. The foot is the panel's own pad, folder_overlay::pad_px
+    // (architect 2026-08-30; one W). The card's INTERNAL pads are a
+    // different concept — notifyd's, the box's own (notifications.h).
     //
     // THE ANSWER IS THE ROOM, NOT A TIGHT BOUND (the whole reasoning at the
     // declaration): a wrapped card is taller than a line and no window
     // arithmetic can say how much taller, so this is the space the stack has
     // to grow into and the painter clips to it.
     const int pad     = folder_overlay::pad_px();
+    const int seat    = scaled_px(kNotificationSeatW);
     const int w       = notification_card_max_w_px(a);
-    const int x       = well_columns(a).end - w;
-    const int y       = top_trim_row_area(a).y + hairline_px();
+    const int x       = well_columns(a).end - seat - w;
+    const int y       = top_trim_row_area(a).y + hairline_px() + seat;
     const int floor_y = bottom_row_area(a).y - pad;
     return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }
@@ -379,6 +361,72 @@ void GuiNotifications::rebank(uint64_t id, int64_t now) {
         n->remaining_ms = left;
         n->expiry_ms    = 0;
     }
+}
+
+void GuiNotifications::sync_struck_card(int sample_rate, long total_frames) {
+    // THE ONE DERIVATION (notifications.h's THE STRUCK CARD, architect
+    // 2026-11-19). THE STORE'S GENERATION IS THE TRIGGER: every write to the
+    // warp markers bumps it (marker_store.h), so a tick whose generation has
+    // not moved owes nothing — and a card standing then already says the
+    // count this store holds, which only a write could change. (The card's
+    // own dismissal moves no generation: tapped away, it stays away until
+    // the store moves.)
+    AppState::Notifications& st = app.notifications;
+    const long long gen = app.warpmarkers.generation();
+    if (gen == st.struck_seen_gen) return;
+    const bool first_look = st.struck_seen_gen < 0;
+    st.struck_seen_gen = gen;
+    // AN EDIT IS A CHANGE OF THE AUTHORED MARKERS — their `.warpmarkers`
+    // bytes, exactly what a save would write (format_warpmarkers_text) —
+    // not every bump of the generation: the store's mutable accessors bump
+    // it on any call (marker_store.h, "a spurious bump"), and a session's
+    // iteration bracket rides the marker unsaved, so a bump that leaves the
+    // file's bytes as they were is no edit and does not bring a tapped-away
+    // card back. The piece's first look (the project's open) counts as one.
+    std::string text = format_warpmarkers_text(app.warpmarkers.markers());
+    const bool edited = first_look || text != st.struck_seen_text;
+    st.struck_seen_text = std::move(text);
+    const int count = static_cast<int>(
+        warp_red_flag_set_cached(app, sample_rate, total_frames)
+            .collapsed.size());
+    AppState::Notification* card =
+        st.struck_card_id != 0 ? find(st.struck_card_id) : nullptr;
+    // CLEARED BY ITSELF: no warp marker coincides, so the state the card
+    // said is no longer true (an undo, a delete, a move apart).
+    if (count == 0) {
+        if (card != nullptr) {
+            const uint64_t id = card->id;
+            if (st.hovered_id == id) set_hover(0);
+            std::erase_if(st.cards, [id](const AppState::Notification& n) {
+                return n.id == id;
+            });
+            viewport.invalidate_notification_stack();
+        }
+        st.struck_card_id = 0;
+        return;
+    }
+    // THE WORDS (the head's, agreed 2026-11-19): a coincident run holds two
+    // or more members, so the count is 2 or more and the plural holds.
+    std::string words = std::to_string(count) + " warp markers coincide";
+    if (card != nullptr) {
+        // RE-WORDED IN PLACE: the same card, its seat in the stack kept. ITS
+        // OWN PAINTED RECT IS DAMAGED (new words on an unmoved rect — the
+        // width floor holds every short card at one width, so "2" and "3"
+        // lay out alike — are a change the stack's rect compare cannot
+        // see), and the stack's owner damages what a new width moved.
+        if (card->text != words) {
+            card->text = std::move(words);
+            for (const AppState::NotificationPainted& p : st.painted)
+                if (p.id == card->id) viewport.invalidate_rect(p.rect);
+            viewport.invalidate_notification_stack();
+        }
+        return;
+    }
+    // TAPPED AWAY (or never raised): it stands again only after an edit (or
+    // at the piece's first look) that leaves a marker struck.
+    if (!edited) return;
+    notify(AppState::NotificationClass::Critical, std::move(words));
+    st.struck_card_id = st.cards.front().id;
 }
 
 void GuiNotifications::press_hold_edge(uint64_t id) {

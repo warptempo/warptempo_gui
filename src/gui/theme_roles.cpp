@@ -23,7 +23,7 @@ namespace {
 // THE ROLE TABLE: the roles a theme file holds, each exactly once — EXACTLY
 // THE ROLES A TONE READS (the head's DERIVATION), Live's names, the one
 // nested role flattened to `StandardVuMeter/Maximum` (the head's THE
-// FORMAT), and last OUR OWN THREE (kOwnThemeRoles below). The converter
+// FORMAT), and last OUR OWN SIX (kOwnThemeRoles below). The converter
 // (tools/themes/ask_to_theme.py) reads the names out of this initializer,
 // so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
 // when it joined (the press arc's SelectionBackground and
@@ -36,7 +36,9 @@ namespace {
 // 140 — each added by hand to every shipped file from that file's own .ask,
 // a `_mod` file from its original's); WindowBackground, TitleForeground and
 // SidebarForeground, OUR OWN, 2026-11-19 (architect, send Z, the Arc page;
-// kOwnThemeRoles below). (RangeEditField, the NOISE case's fill, and
+// kOwnThemeRoles below), and TooltipBackground, CardBackground and
+// CardStandingBackground, OUR OWN THREE FILLS CARRYING THEIR ALPHA, the same
+// day (send AA's stage D1: Arc's tooltip and notifyd's two bubbles). (RangeEditField, the NOISE case's fill, and
 // ScaleAwareness, the radio keys' purple, both of 2026-11-11, left the table
 // and every file 2026-11-19, send Z's stage C: Arc's entry progress wears
 // the accent and the radio keys light the one accent, so no tone reads
@@ -53,6 +55,7 @@ constexpr std::string_view kThemeRoles[] = {
     "StandardVuMeter/Maximum",
     "ScrollbarInnerTrack", "ClipBorder",
     "WindowBackground", "TitleForeground", "SidebarForeground",
+    "TooltipBackground", "CardBackground", "CardStandingBackground",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
@@ -67,7 +70,10 @@ constexpr std::size_t role_index(std::string_view name) {
 // OUR OWN ROLES (the head's THE FORMAT; architect 2026-11-19, send Z): the
 // roles of the table that are no Live role, each with THE LIVE ROLE A FILE
 // WITHOUT AN ARC VALUE COPIES — so a Live theme's line is its own existing
-// value and changes no look. The one enumeration of the pairs: the converter
+// value and changes no look (the three fills of send AA's stage D1 copy the
+// tone each replaces: the tooltip's SurfaceBackground, today's pane, and the
+// cards' Alert, today's card face — opaque, as every source word is). The
+// one enumeration of the pairs: the converter
 // (tools/themes/ask_to_theme.py) reads this initializer too, writing each
 // own role as its source role's word (an .ask holds none of them).
 struct OwnThemeRole {
@@ -78,6 +84,9 @@ constexpr OwnThemeRole kOwnThemeRoles[] = {
     {"WindowBackground",  "SurfaceArea"},
     {"TitleForeground",   "ControlForeground"},
     {"SidebarForeground", "ControlForeground"},
+    {"TooltipBackground", "SurfaceBackground"},
+    {"CardBackground",    "Alert"},
+    {"CardStandingBackground", "Alert"},
 };
 constexpr bool own_roles_in_table() {
     for (const OwnThemeRole& o : kOwnThemeRoles) {
@@ -214,6 +223,16 @@ uint32_t packed(const Rgb& c) {
            (static_cast<uint32_t>(c.g) << 8) | static_cast<uint32_t>(c.b);
 }
 
+// A CARRIED FILL'S WORD (the head's CARRIED block): the role's three bytes
+// and, in the top byte, ITS OPACITY — an 8-digit word's own alpha byte,
+// FF for a 6-digit one (opaque). The one road a role's alpha takes to the
+// painter (tone_alpha, render.h, reads it back).
+uint32_t packed_carried(const std::string& word) {
+    const uint32_t alpha =
+        word.size() == 8 ? static_cast<uint32_t>(hex_byte(word, 6)) : 0xFFu;
+    return (alpha << 24) | packed(opaque(word));
+}
+
 // A row's word back to its three bytes: exactly the Rgb `packed` was given,
 // so a tone recomputed off a row's words is the one derive() computed off
 // the roles (fill_dependent_tones).
@@ -223,12 +242,15 @@ Rgb unpacked(uint32_t word) {
                static_cast<int>(word & 0xFFu)};
 }
 
-// THE BRIGHT TONES, the head's BRIGHT MIX block's six in the row's member
-// order: the one enumeration bright_mixed_tones walks.
+// THE BRIGHT TONES, the head's BRIGHT MIX block's seven in the row's member
+// order: the one enumeration bright_mixed_tones walks. A word's top byte —
+// a CARRIED fill's opacity (the head's CARRIED block; the standing card's
+// red is the one bright tone among them) — rides the mix untouched.
 constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
     &GuiThemeTones::selection_fill,
     &GuiThemeTones::list_press_fill,
-    &GuiThemeTones::card_face,
+    &GuiThemeTones::card_standing_fill,
+    &GuiThemeTones::limiter_lamp,
     &GuiThemeTones::clip_lamp,
     &GuiThemeTones::cue,
     &GuiThemeTones::playhead_head,
@@ -361,8 +383,18 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.list_press_text     = packed(sel_fg);
     t.pane_face           = packed(face);
     t.score_pane_face     = packed(ink);
-    t.card_face           = packed(alert);
+    // THE THREE CARRIED FILLS (the head's CARRIED block), each its role's
+    // bytes with its opacity in the top byte, painted at that opacity over
+    // whatever lies under the box (paint_shift_tooltip,
+    // paint_notifications).
+    t.tooltip_fill        = packed_carried(roles["TooltipBackground"]);
+    t.card_fill           = packed_carried(roles["CardBackground"]);
+    t.card_standing_fill  = packed_carried(roles["CardStandingBackground"]);
     t.card_ink            = packed(standby_text);
+    // THE LIMITER LAMP, ITS OWN TONE OFF Alert (send AA's stage D1: the
+    // cards left Alert for their own fills, the lamp keeps Arc's warning
+    // orange; paint_title_bar's lamps).
+    t.limiter_lamp        = packed(alert);
     t.clip_lamp           = packed(vu_max);
     t.waveform_canvas     = packed(canvas);
     t.waveform_ink        = packed(ink);
@@ -568,7 +600,7 @@ const GuiTheme& default_gui_theme() {
 }
 
 GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent) {
-    // The rule, the six and the number are the head's BRIGHT MIX block
+    // The rule, the seven and the number are the head's BRIGHT MIX block
     // (theme_roles.h). Each bright tone moved toward the row's ground keeping
     // `percent` of itself — mix(tone, ground, 1 − percent / 100), the
     // derivation's own mix — then every tone derived from one recomputed off
@@ -579,7 +611,8 @@ GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent) {
     const Rgb ground = unpacked(own.ground);
     const double toward_ground = 1.0 - percent / 100.0;
     for (uint32_t GuiThemeTones::* m : kBrightTones)
-        t.*m = packed(mix(unpacked(own.*m), ground, toward_ground));
+        t.*m = (own.*m & 0xFF000000u) |
+               packed(mix(unpacked(own.*m), ground, toward_ground));
     fill_dependent_tones(t);
     return t;
 }

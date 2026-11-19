@@ -219,8 +219,9 @@ void drop_rasters();
 // note (the drawing's ink in a 12 W box,
 // ink_in_box below) and battery (the cap band's height, render.h's title
 // bar block) — the list rows'
-// scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' .525 of the first
-// line's inside height (kNotificationGlyphRatio, notifications.h). The fit
+// scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' drawing as
+// its whole canvas in a 16 W box (kNotificationGlyphBoxW, notifications.h,
+// ink_in_box; send AA's stage D1, 2026-11-19). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and
 // shared by the colors; the cropped raster per (drawing, ink px, color,
 // phase — draw_glyph below),

@@ -111,10 +111,12 @@ private:
                            bool& floater);
 
     GuiGlCanvasHost host_{};
-    // The texture triangle's program and its one uniform, and THE BACKBUFFER'S
-    // TEXTURE with its size (ensure_texture).
+    // The texture triangle's program and its two uniforms (the height, and
+    // u_over: the floater bit's blend, kCanvasFragmentShader), and THE
+    // BACKBUFFER'S TEXTURE with its size (ensure_texture).
     unsigned int program_        = 0;
     int          height_uniform_ = -1;
+    int          over_uniform_   = -1;
     unsigned int texture_        = 0;
     int          texture_w_      = 0;
     int          texture_h_      = 0;

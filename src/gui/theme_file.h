@@ -37,9 +37,10 @@
 // THE ROLES are the role table below — THE ONE ENUMERATION of the chrome's:
 // its name, the GuiPalette field it fills (render.h, whose palette block
 // owns what each role paints) and the theme tone that fills it. The first
-// eight are Windows' own element names (ButtonFace, ButtonText, Hilight /
-// HilightText, WindowText, InfoWindow / InfoText and the tooltip's border),
-// the chrome's painters written against them; the TWENTY-FIVE after them
+// six are Windows' own element names (ButtonFace, ButtonText, Hilight /
+// HilightText, WindowText and InfoText; InfoWindow and the cards' ring left
+// with the cards' orange, send AA's stage D1, 2026-11-19), the chrome's
+// painters written against them; the TWENTY-NINE after them
 // are the flat look's tones (materials.h's head, 2026-11-01..05: the
 // twelve of the look, the press arc's three, 2026-11-05 — the key's press
 // face and the lists' press pair — the lamp arc's clip lamp the same night,
@@ -49,7 +50,9 @@
 // 2026-11-19, send Z: the body tone, the title bar's text, the sidebar
 // text, the ruler's digits and the disabled key's face and border; the
 // level case's fill and the radio keys' three retired 2026-11-19, send Z's
-// stage C), members since the theme arc so every painter reads palette() —
+// stage C; THE POPUPS' FOUR the same day, send AA's stage D1: the tooltip's,
+// the normal card's and the standing card's carried fills and the limiter
+// lamp), members since the theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
 // clock pair retired 2026-11-02 with the overlays' flat pass). THE LIT KEY
@@ -67,18 +70,20 @@
 // TWO ROLES
 // MAY SHARE A TONE — a
 // role is what it paints, not its value: `label`, `field_text` and `text`
-// all read the theme's text; `card_ground` and `card_frame` its card face.
+// all read the theme's text; `card_fill` and `card_standing_fill` the same
+// Alert on every Live theme.
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15), as the
 // captures show them; the tablet converts each at the painter's entry
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's thirty-three (the eight
-// of 2026-10-04 — the caption's six, 2026-10-05..10-21, left with the
-// captions; the seven unread ones, 2026-11-02, with the overlays' rings —
-// and the twenty-five flat-look tones, the press arc's three, the clip
-// lamp, the lit key's two, the trough, the well's frame and the Arc page's
-// six among them). The
+// 2026-10-04), in GuiPalette's order: the chrome's thirty-five (the six
+// of 2026-10-04's eight left — the caption's six, 2026-10-05..10-21, left
+// with the captions; the seven unread ones, 2026-11-02, with the overlays'
+// rings; the cards' ground and ring, send AA's stage D1 — and the
+// twenty-nine flat-look tones, the press arc's three, the two lamps, the
+// lit key's two, the trough, the well's frame, the Arc page's six and the
+// popups' three carried fills among them). The
 // program's roles are the palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
 // palette_file.cpp's coverage proof walks it, so a role cannot be valued and
@@ -97,15 +102,17 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"selected_fill",   &GuiPalette::selected_fill,   &GuiThemeTones::selection_fill},
     {"selected_text",   &GuiPalette::selected_text,   &GuiThemeTones::selection_text},
     {"field_text",      &GuiPalette::field_text,      &GuiThemeTones::text},
-    {"card_ground",     &GuiPalette::card_ground,     &GuiThemeTones::card_face},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
-    {"card_frame",      &GuiPalette::card_frame,      &GuiThemeTones::card_face},
-    // THE FLAT LOOK'S TWENTY-FIVE (materials.h's head: the text tones, the
+    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head: the text tones, the
     // key and its press face, the lit key's press and inert faces, the
-    // well's tones, the panes, the lists' press pair, the clip lamp; and THE
+    // well's tones, the panes, the lists' press pair, the two lamps; THE
     // ARC PAGE'S SIX, architect 2026-11-19, send Z, theme_roles.h's head —
     // the body tone, the title bar's text, the sidebar text, the ruler's
-    // digits, the disabled key's face and border).
+    // digits, the disabled key's face and border; and THE POPUPS' FOUR, send
+    // AA's stage D1 the same day — the three carried fills, each the color
+    // of its row word, its opacity that word's top byte (tone_alpha,
+    // render.h), and the limiter lamp, its own tone off Alert since the
+    // cards left it).
     {"body_face",       &GuiPalette::body_face,       &GuiThemeTones::body_face},
     {"text",            &GuiPalette::text,            &GuiThemeTones::text},
     {"title_text",      &GuiPalette::title_text,      &GuiThemeTones::title_text},
@@ -128,8 +135,12 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"well_border",     &GuiPalette::well_border,     &GuiThemeTones::well_border},
     {"pane_face",       &GuiPalette::pane_face,       &GuiThemeTones::pane_face},
     {"score_pane_face", &GuiPalette::score_pane_face, &GuiThemeTones::score_pane_face},
+    {"tooltip_fill",    &GuiPalette::tooltip_fill,    &GuiThemeTones::tooltip_fill},
+    {"card_fill",       &GuiPalette::card_fill,       &GuiThemeTones::card_fill},
+    {"card_standing_fill", &GuiPalette::card_standing_fill, &GuiThemeTones::card_standing_fill},
     {"list_press_fill", &GuiPalette::list_press_fill, &GuiThemeTones::list_press_fill},
     {"list_press_text", &GuiPalette::list_press_text, &GuiThemeTones::list_press_text},
+    {"limiter_lamp",    &GuiPalette::limiter_lamp,    &GuiThemeTones::limiter_lamp},
     {"clip_lamp",       &GuiPalette::clip_lamp,       &GuiThemeTones::clip_lamp},
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);

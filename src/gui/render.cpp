@@ -2627,6 +2627,10 @@ void set_waveform_source(cairo_t* cr, GuiColor c) {
     const GuiColor d = display_color(c);
     cairo_set_source_rgb(cr, d.r, d.g, d.b);
 }
+void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha) {
+    const GuiColor d = display_color(c);
+    cairo_set_source_rgba(cr, d.r, d.g, d.b, alpha);
+}
 
 // -- The active palette (the contract is at its declaration, render.h) -----
 
@@ -2670,7 +2674,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // tone derived from them recomputed) and copied for the word readers
     // (installed_theme), its slug and group the list row's; then THE
     // PROGRAM'S THIRTEEN off the palette's role table (palette_file.h), THE
-    // CHROME'S THIRTY-THREE off the chrome's (theme_file.h), each member the mixed
+    // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the mixed
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.

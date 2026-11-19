@@ -809,8 +809,12 @@ GuiRect tooltip_damage_band(const AppState& a) {
     if (face.w <= 0 || face.h <= 0) return GuiRect{0, 0, 0, 0};
     // The bound's rows on the box's side: starting on the gap's bottom under
     // a band face, else ending on the gap's top — or from the window's top
-    // where they would rise past it, which holds the clamped seat too.
+    // where they would rise past it, which holds the clamped seat too — AND
+    // THE SHADOW'S REACH ON BOTH SIDES OF THEM (Arc's shadow, send AA's
+    // stage D1: it hangs outside the box, over the gap and the face's rows
+    // too; tooltip_shadow_reach, render.h).
     const int band_h = tooltip_damage_h_px();
+    const TooltipShadowReach reach = tooltip_shadow_reach();
     const GuiRectF facef{static_cast<double>(face.x),
                          static_cast<double>(face.y),
                          static_cast<double>(face.w),
@@ -818,7 +822,8 @@ GuiRect tooltip_damage_band(const AppState& a) {
     const int y = tooltip_face_in_band(a, facef)
                       ? face.y + face.h + tooltip_gap_px()
                       : std::max(0, face.y - tooltip_gap_px() - band_h);
-    return GuiRect{0, y, a.width, band_h};
+    const int y0 = std::max(0, y - reach.top);
+    return GuiRect{0, y0, a.width, y + band_h + reach.bottom - y0};
 }
 
 // (THE STATUS BAR IS BACK — architect 2026-11-18 / 2026-11-19, send Z,
@@ -2559,6 +2564,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the remembered pointer, so a card that slid up under a resting
         // pointer pauses.
         notifications.fire_if_due();
+
+        // THE STRUCK CARD, ON EVERY TICK ONCE A PIECE IS LOADED (architect
+        // 2026-11-19, send Z; notifications.h's THE STRUCK CARD, its one
+        // derivation GuiNotifications::sync_struck_card): state worn as a
+        // card, derived here from the warp store as it stands rather than at
+        // each of the edits that move it — a drop, a drag, a nudge, a paste,
+        // an undo or redo, a load in place, a revert and the project's open
+        // all reach it through the store's generation, which a tick that
+        // finds unmoved answers with one compare. Before the load (the
+        // open's held frame) there is no piece and no strike to ask about.
+        if (audio.total_frames() > 0 && !app.loading)
+            notifications.sync_struck_card(audio.sample_rate(),
+                                           audio.total_frames());
 
         // THE TITLE BAR'S RIGHT GROUP, ON EVERY TICK for the same reason: the
         // wall clock and the battery move whatever the project is doing

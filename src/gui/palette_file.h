@@ -48,7 +48,7 @@
 // 2026-11-13, session 121, the same block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-five words with its literal (the press arc's four, 2026-11-05, among
+// forty-eight words with its literal (the press arc's four, 2026-11-05, among
 // them — the key press face, the list press pair and the lit press fill —
 // the lamp arc's clip lamp the same night, the lit-but-inert key's face and
 // its glyph of 2026-11-11, and the disabled chip's outline and the enabled
@@ -57,14 +57,16 @@
 // the cards' ink, the ruler and the two inert pairs retold that day,
 // session 140; the body tone, the title bar's text, the sidebar text, the
 // ruler's digits and the disabled key's face and border of 2026-11-19, send
-// Z, with the two inert pairs retold).
+// Z, with the two inert pairs retold; the three carried fills, each opaque
+// (its top byte FF), and the limiter lamp of send AA's stage D1 the same
+// day, the cards' face retired into them).
 //
 // THE ROWS ARE THE THEMES' OWN NUMBERS; THE PALETTE INSTALLED IS THE ROW
 // MIXED (architect 2026-11-13, session 119; theme_roles.h's THE BRIGHT
 // MIX): install_palette fills every member off the row with its bright
 // tones — of this table `cue`, `cue_fill` and the playhead's two, of the
 // chrome's the lit key's press and inert faces, the selection and list
-// press fills, the cards and the clip lamp — mixed toward its ground at the
+// press fills, the standing card and the two lamps — mixed toward its ground at the
 // `bright_mix` key. Every "Default N"
 // below is the reference row's own number, the record; at 100 the screen
 // shows exactly it, at the key's default 75 (architect 2026-11-18, send Y)
@@ -311,8 +313,11 @@ static_assert(kDefault.pane_face       == 0x363636);
 static_assert(kDefault.score_pane_face == 0x191919);
 static_assert(kDefault.list_press_fill == 0xB0DDEB);
 static_assert(kDefault.list_press_text == 0x070707);
-static_assert(kDefault.card_face       == 0xE76942);
+static_assert(kDefault.tooltip_fill    == 0xFF363636);
+static_assert(kDefault.card_fill       == 0xFFE76942);
+static_assert(kDefault.card_standing_fill == 0xFFE76942);
 static_assert(kDefault.card_ink        == 0x070707);
+static_assert(kDefault.limiter_lamp    == 0xE76942);
 static_assert(kDefault.clip_lamp       == 0xFF0A0A);
 // THE PALETTE (the head's thirteen).
 static_assert(kDefault.waveform_canvas == 0x393939);

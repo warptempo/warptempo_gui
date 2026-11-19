@@ -1,6 +1,7 @@
 # Default Light Neutral Medium.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
 # ScrollbarInnerTrack and ClipBorder added by hand from Default Light Neutral Medium.ask (architect 2026-11-17, session 140)
 # WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
+# TooltipBackground, CardBackground and CardStandingBackground, our own fills (not Live's), added by hand: TooltipBackground this file's SurfaceBackground, CardBackground and CardStandingBackground its Alert, opaque, so nothing here changes look (send AA's stage D1, 2026-11-19)
 SurfaceArea=6E6E6E
 Desktop=818181
 SurfaceBackground=A5A5A5
@@ -28,3 +29,6 @@ ClipBorder=000000
 WindowBackground=6E6E6E
 TitleForeground=121212
 SidebarForeground=121212
+TooltipBackground=A5A5A5
+CardBackground=FF7D43
+CardStandingBackground=FF7D43

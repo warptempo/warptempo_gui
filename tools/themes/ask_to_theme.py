@@ -37,8 +37,10 @@ OUR OWN ROLES (architect 2026-11-19, send Z; theme_roles.h's THE FORMAT) are
 no Live role, so an .ask holds none of them: each is written as the word of
 its SOURCE ROLE, the pairs read out of kOwnThemeRoles in the same C++ file
 (WindowBackground the file's SurfaceArea, TitleForeground and
-SidebarForeground its ControlForeground), after the --set replacements, and
-a --set on an own role itself wins.
+SidebarForeground its ControlForeground; send AA's stage D1, 2026-11-19:
+TooltipBackground its SurfaceBackground, CardBackground and
+CardStandingBackground its Alert), after the --set replacements, and a
+--set on an own role itself wins.
 
 OPTIONS, for the files the app ships modified (a `_mod` theme), so that every
 role line is still this tool's output:

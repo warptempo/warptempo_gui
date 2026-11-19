@@ -3,31 +3,39 @@
 // THE NOTIFICATION CARDS (architect design 2026-08-29; THIS HEADER IS THE
 // RULING WHOLE — the split, the two classes, the inventory of what is and is
 // not notified, and the words on a card). The product's surface for EVENTS:
-// something happened that answers an act, or that the user was not watching.
-// A small card stacked top-right from the icon row (the live chrome
-// vocabulary's card seat, notification_stack_bound), newest on
-// top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
-// the one sans, THE CLASS GLYPH AT THE LEFT AGAIN since 2026-10-24 (the
-// planner's i and X then) — THE `icons` SET'S since 2026-11-17 (icons.h's
-// head; Breeze's from 2026-11-02, architect 2026-11-01, M7, the drawings
-// ruled 2026-11-02, R14): DialogInformation on a normal card and
-// DialogError on a critical one, each the mark cut out of its shape —
-// Breeze's the i and the X cut out of a filled square, its
-// dialog-information and dialog-error as the 10-10 cut-out transcriptions;
-// Papirus's the i and the ! cut out of a disc, its own — the mark showing
-// the card's face through one color — on the ink-box road
-// (icons.h) in the card text's tone — and ONE PAD of plain face between the border and the
-// content on all four sides (notification_pad_px below; P18, architect
-// 2026-10-24), ON THE CARD FACE — A FLAT BOX IN LIVE'S STATUS BAR'S ORANGE,
-// `card_ground` (materials.h's `card_face` (Default's E76942)), its one-W ring
-// `card_frame` painted in the same fill so no border shows, its words and
-// its glyph `card_text` (`card_ink` (Default's 070707), the theme's selection text,
-// D4 of 2026-11-17: Arc's white warning text on its orange), both
-// classes alike (architect 2026-11-04 night, his pick h1 of tmp/s38; the
-// tooltip's look, which the cards wore from 2026-10-06, is the tooltip's
-// alone; render.h's palette block, THE CARD FACE): the one popup box
-// painter's (paint_popup_chrome), square, with no drop shadow
-// (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
+// something happened that answers an act, or that the user was not watching
+// — and ONE STATE WORN AS A CARD, the struck warp markers' (the critical
+// class below, 2026-11-19).
+// A small card stacked top-right under the top icon row (the card seat,
+// notification_stack_bound), newest on top, EVERY CARD IN THE STACK
+// VISIBLE, UP TO kNotificationMaxLines lines of the one sans.
+//
+// THE LOOK IS XFCE4-NOTIFYD'S BUBBLE UNDER ARC (architect 2026-11-19, send
+// Z: "Agree" to "normal cards the grey notifyd bubble, standing cards Arc's
+// red", and "good to build" on tmp/sendZ/VIEW/Z_07; DESIGN §6 / §9, built in
+// send AA's stage D1): A ROUNDED BOX (kNotificationRadiusW), NO BORDER, NO
+// SHADOW (notifyd draws none, measured), ITS FILL A CARRIED FILL AT ITS
+// OPACITY OVER WHAT LIES UNDER IT (theme_roles.h's CARRIED block; the
+// canvas's pixels composited by the GPU, canvas_sink.h's THE TRANSPARENCY
+// INVARIANT) — A NORMAL (timed) CARD notifyd's grey `card_fill` (arc_dark
+// 353945 at .95) with its words and glyph in `sidebar_text` (BAC3CF), A
+// STANDING (critical) CARD Arc's destructive red `card_standing_fill`
+// (F04A50 at .95, a bright tone: C0444C at bright_mix 75) with its words
+// and glyph in `card_text`, the print on a lit face (FFFFFF); on a Live
+// theme both fills its Alert, opaque. INSIDE IT notifyd's pads
+// (kNotificationPadTopW / BottomW / LeftW / RightW, 14 / 14 / 14 / 15 W),
+// THE CLASS GLYPH in a kNotificationGlyphBoxW drawing box at the left —
+// THE `icons` SET'S (icons.h's head): DialogInformation on a normal card,
+// DialogError on a standing one, each the mark cut out of its shape
+// (Papirus's i and ! cut out of a disc, Breeze's i and X out of a filled
+// square, the 10-10 cut-out transcriptions), the mark showing the card's
+// face through one color — then kNotificationGlyphGapW, then THE CLAUSE,
+// Regular 12 W, its first baseline +25 W and further lines one line box
+// (14 W) apart. (Live's status-bar orange box in a one-W ring of the same
+// fill, both classes alike — architect 2026-11-04 night, his pick h1 of
+// tmp/s38 — and its .525 glyph and nine-W pads retired with send AA's
+// stage D1; the box painter it shared with the tooltip, paint_popup_chrome,
+// with them.) THE WHOLE CARD IS ONE BUTTON (architect
 // 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
 // from 2026-08-29 is retired, and a click or tap anywhere on the card
 // dismisses it at the lift (the hit section below). A sentence too long for
@@ -212,10 +220,12 @@
 //     The GitHub CHECK itself raises nothing — its failing readings print one
 //     stderr line each and the status word is state.
 //
-// CRITICAL — never TIMED OUT and never BUMPED (architect 2026-08-30:
-// "critical cards keep standing"): no clock, and a later success clears
-// nothing. Down only by a DELIBERATE dismissal: a click or tap on it, or the
-// whole stack's dismissal (a long press on any card). THE PRODUCERS, and nothing else (re-greped 2026-09-30): the three
+// CRITICAL (STANDING) — never TIMED OUT and never BUMPED (architect
+// 2026-08-30: "critical cards keep standing"): no clock, and a later success
+// clears nothing. Down only by a DELIBERATE dismissal: a click or tap on it,
+// or the whole stack's dismissal (a long press on any card) — THE ONE
+// EXCEPTION the struck card below, which also clears by itself. THE
+// PRODUCERS, and nothing else (re-greped 2026-11-19): the three
 // checkpoint failures ("Checkpoint failed: nothing was committed", "Checkpoint
 // failed: files written but not committed", "Checkpoint committed but not
 // pushed") and the three pre-commit refusals ("Checkpoint refused: GitHub has
@@ -226,7 +236,40 @@
 // clone left for the user to finish by hand); and the render player's
 // "Could not delete '<folder>': <system words>" (render_player.cpp, one card
 // per folder, since files may be half gone and the listing is all that says
-// which).
+// which); and THE STRUCK CARD below.
+//
+// THE STRUCK CARD, STATE WORN AS A CARD (architect 2026-11-19, send Z: "I
+// lean towards giving them a red card. There's never a reason to leave a
+// struct marker, so the red card is the permanent one ... the card could be
+// cleared if the user undoes it or deletes the struct marker. That way the
+// user is alerted immediately, not by a little status bar that they may or
+// may not look at"; its words and its return "Agree"; built in send AA's
+// stage D1): ONE STANDING CARD while any warp marker of the open piece is
+// STRUCK BY COINCIDENCE — a member of a coincident run, the parser's
+// verdict (warp_coincident_members, read through warp_red_flag_set_cached's
+// `collapsed`, warp_frame_map_view.h; disabled rows counted) — its words
+// "N warp markers coincide", N the members' count (a run has two or more,
+// so N >= 2 and the plural always holds). The label-reference strikes
+// (`red`'s other members) are no coincidence and raise nothing. ITS ONE
+// DERIVATION is GuiNotifications::sync_struck_card, on the run loop's tick
+// (main.cpp, beside the cards' clock), from the warp store as it stands:
+//   * RAISED the moment the count leaves zero after AN EDIT — any change of
+//     the authored warp markers (their `.warpmarkers` bytes,
+//     format_warpmarkers_text: a drop, a drag, a nudge, a paste, an undo or
+//     redo, a load in place or a revert) — AND AT THE PROJECT'S OPEN, the
+//     loaded piece's first look counting as one;
+//   * RE-WORDED IN PLACE while it stands, its count following the store
+//     (the same card, its id and its seat kept; never a second card);
+//   * CLEARED BY ITSELF the moment no warp marker coincides — the one
+//     critical card a state takes down (it says what is true now, so a
+//     state that stopped being true leaves no message about the past);
+//   * TAPPED AWAY (the lift on it, or the whole stack's dismissal) it STAYS
+//     AWAY until THE NEXT EDIT AFTER WHICH THE COUNT IS NON-ZERO, or the
+//     next project's open (a fresh AppState), and then stands again.
+// It follows THE PIECE, not a tab: both tabs read the one warp store. THE
+// HISTORY VIEW authors nothing and leaves the live store as it stands, so
+// the card stands or not as the live piece is; the diff's own struck items
+// are a commit's, not the piece's, and raise nothing.
 //
 // WHAT IS NOT A CARD, by ruling — these and no others:
 //   * A BENIGN REFUSAL OF A ONE-DIMENSIONAL COMMAND ALREADY AT ITS STATE
@@ -301,7 +344,8 @@
 //     every QUESTION (the prompts and the dialog editors); the peaks-cache
 //     rebuild lines (audio.cpp, stderr — they self-heal); the `h` entry's
 //     fallback onto the local walk (its stderr line; the press that asks for
-//     git is what cards); and what is TRUE NOW — the two state strings.
+//     git is what cards); and what is TRUE NOW — the two state strings
+//     (the struck warp markers the one state that cards, above).
 //
 // THE WORDS ON A CARD (the product's text rules are stated once at
 // paint_handler.cpp's text-rules block; a card is a DESCRIPTION, sentence case):
@@ -754,7 +798,13 @@ inline std::string lowercase_initial(std::string_view s) {
 // above are the device numbers). At the Windows pixel the pair shaped to
 // about 140 and 137 px at that day's 13-px face, and the chrome — three 5-px
 // pads, the 3-px inset and the 22-px box, 40 px — put them near 180, the
-// floor answering for both.
+// floor answering for both. NOR DID NOTIFYD'S BUBBLE (send AA's stage D1,
+// 2026-11-19): its chrome is 14 + 16 + 6 + 15 = 51 W, so the pair at 12 W
+// Regular stays far under the floor, which still answers for both — and
+// for every short card, THE STRUCK CARD "2 warp markers coincide" among
+// them, 594 device px wide on the tablet where the approved picture
+// (tmp/sendZ/VIEW/Z_07) drew it at its content's 363: the floor is a
+// ruling the design did not take up, kept until he rules it.
 inline constexpr double kNotificationMinWidthPx = 297.0;
 
 // THE CARD'S CEILING, THE LAPTOP'S CARD WIDTH (its source), AUTHORED AND SCALED (architect
@@ -775,15 +825,14 @@ inline constexpr double kNotificationMinWidthPx = 297.0;
 // its sentence reaches the ceiling).
 inline constexpr double kNotificationMaxWidthPx = 698.0;
 
-// THE GAP BETWEEN TWO CARDS IN THE STACK (architect 2026-10-01, ruled on the
-// S4 mock: "reduce the distance between the cards to one pixel at a hundred
-// percent"): ONE W, the line rule's hairline_px (render.h: 2 device px on
-// the tablet at 200 %, 1 at 100 % and below, floored at one so the cards
-// never touch; architect 2026-11-04 night, the unit — the 1-Windows-px gap
-// of 2026-10-02 re-authored on the unit). It was the
-// icon row's button gap (2) read by the card, a borrowing; the card owns its
-// own gap since that night, read by the painter (paint_notifications) and
-// the room's count (notification_capacity) and by nothing else.
+// THE GAP BETWEEN TWO CARDS IN THE STACK: kNotificationGapW, 6 W
+// (notifyd's stack, measured; architect 2026-11-19, send Z, DESIGN §9 — the
+// one-W gap of 2026-10-01, "reduce the distance between the cards to one
+// pixel at a hundred percent", retired with Live's orange box), 12 device px
+// on the tablet, scaled_px floored at one so the cards never touch; read by
+// the painter (paint_notifications) and the room's count
+// (notification_capacity) and by nothing else.
+inline constexpr double kNotificationGapW = 6.0;
 int notification_gap_px();
 
 // HOW MANY LINES A SENTENCE MAY TAKE (architect 2026-08-30, "a few"): a card
@@ -795,77 +844,50 @@ inline constexpr int kNotificationMaxLines = 3;
 
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
-// THE CARD'S ONE PAD (architect 2026-10-24, "P18" off the 16 / 17 / 18
-// series): 9 W OF PLAIN FIELD (18 device px on the tablet at 200 %) between
-// the card's one-W ring (hairline_px) and its content on ALL FOUR SIDES
-// — ring -> glyph box at the left, the text's last pen -> ring at the right,
-// ring -> the first line's cap top above, the last line -> ring below. AN
-// AREA, so it scales through scaled_px, rounded at the element and floored at
-// one px (9 at 100 %); the ring is a line, one W,
-// rounded at the element (the line rule, render.h's hairline_px, 2026-11-04). (The Windows-era pad — the 28-W card's
-// vertical margin round the small toolbar case's 22-W box, 3 W, 2026-08-30
-// to 2026-10-23 — and the box's 16-W glyph and 3-W leads are git history.)
-inline constexpr double kNotificationPadW = 9.0;
-int notification_pad_px();
+// NOTIFYD'S BUBBLE'S LENGTHS (architect 2026-11-19, send Z, DESIGN §9;
+// measured on his xfce4-notifyd shots at 16 px, carried to the 12 W text
+// unchanged — tmp/sendZ/REPORT_mock3.md), each a whole W through scaled_px,
+// rounded at the element:
+//   THE PADS — the box's edge to the content: 14 W above the first line's
+//     line box, 14 W under the last's, 14 W left of the glyph's box, 15 W
+//     right of the text's room;
+//   THE GLYPH'S DRAWING BOX — 16 W square, the class drawing's whole canvas
+//     scaled into it (icons::ink_in_box), its top floor((card − 16) / 2) W
+//     down a one-line card — 13 W, GTK centering it — kept there on a
+//     wrapped card (the text grows downward under it, nothing reflows);
+//   THE GLYPH'S GAP — 6 W from the glyph's box to the text's pen;
+//   THE RADIUS — 2 W at each corner (Arc's);
+//   THE SEAT — the stack's first card's top 16 W under the top icon row's
+//     line and every card's right edge 16 W inside the panel
+//     (notification_stack_bound).
+inline constexpr double kNotificationPadTopW    = 14.0;
+inline constexpr double kNotificationPadBottomW = 14.0;
+inline constexpr double kNotificationPadLeftW   = 14.0;
+inline constexpr double kNotificationPadRightW  = 15.0;
+inline constexpr double kNotificationGlyphBoxW  = 16.0;
+inline constexpr double kNotificationGlyphGapW  = 6.0;
+inline constexpr double kNotificationRadiusW    = 2.0;
+inline constexpr double kNotificationSeatW      = 16.0;
 
-// THE GLYPH'S INK, .525 OF THE FIRST LINE'S INSIDE HEIGHT (architect
-// 2026-10-24): the inside height pad + cap + pad,
-// and the ratio the retired caption's (21 of its 40-px lane) and the list
-// rows' (26 of their 52-px row since the unit of 2, 2026-11-04 night; 27
-// of 51 before) — the one proportion every off-key glyph keeps to its line. Since
-// 2026-11-02 (Breeze's cut-out DialogInformation and
-// DialogError, M7 / R14) it is
-// the ink box's LARGER SIDE on the ink-box road (icons.h), rounded at the
-// element (the ink is already live px, derived from the live pad and cap).
-inline constexpr double kNotificationGlyphRatio = 0.525;
+// THE CARD'S LINE PITCH, device px: the body face's LINE BOX (the line-box
+// rule, gui_font_line_box_w — 11 + 3 = 14 W at Regular 12 W), whole: a
+// line box stacked on a line box, Pango's lines in notifyd's one label, 28
+// device px on the tablet. The first line's baseline stands its ascent
+// (11 W) under the top pad: +25 W.
+int notification_line_px();
 
-// THE GLYPH'S SEAT WIDTH, device px, for an ink of `ink_px` live device px
-// (2026-11-02): the box the retired boxed glyph stood in — the ink's 40 / 27
-// tall and 34 / 40 of that wide — kept
-// as the seat so THE TEXT'S COLUMN did not move when Breeze's drawing,
-// placed by its own ink, replaced the planner's i and X (the column derived
-// from the same ink length, never from the new drawing's width). THE RATIO
-// ITSELF, UNROUNDED (architect 2026-11-15, the no-grid arc): ink · 34 / 27,
-// a real length — 33.72 device px on the tablet for the 26.78-px ink
-// length. The
-// card's text pen stands this seat plus the glyph gap (below) past ring + pad
-// (paint_notifications).
-inline double notification_glyph_seat_w_px(double ink_px) {
-    return ink_px * 34.0 / 27.0;
-}
-
-// THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN: kNotificationGlyphGapW
-// = 4 W (8 device px on the tablet at 200 %), scaled_px, rounded at the
-// element. A number of the cards' own (architect 2026-11-04: "keep the
-// cards spacing"; the cards' look is send Z's stage D).
-inline constexpr double kNotificationGlyphGapW = 4.0;
-
-// THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
-// own "H" ink (gui_font_cap_px, the one cap measure redesign_baseline
-// reads), rounded to whole px so the first line's rows are whole — A SIZE
-// FOR THE CARD'S BOX, which stays whole (a floating surface's, render.h's
-// hull); the text's baseline centers the face's REAL cap in those rows
-// (paint_notifications).
-int notification_cap_px();
-
-// A ONE-LINE card's height, and the height every card's FIRST line occupies
-// (architect 2026-10-24): border + pad + THE BODY FACE'S CAP + pad + border
-// — the text's CAP BAND, not its ascender, between the two pads (the clock
-// field's and the mock's rule; the modal box's ascender rule is not the
-// card's), so the first line's cap top stands at border + pad; 56 rows on
-// the tablet (architect 2026-11-02, M11: the border where the ring stood;
-// the border one W and the cap 14 since the unit, 2026-11-04). AT THE FIRST
-// LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30: the text
-// grows downward under the glyph, nothing reflows beside it). A card of
-// `lines` lines is this plus (lines - 1) line spacings, which only the
-// painter can know — a line count needs a shaped run, and shaping needs the
-// paint's own font — so no pure function of the window states a card's real
-// height and none is offered here.
+// A ONE-LINE card's height, and the height every card's FIRST line occupies:
+// the top pad + one line box + the bottom pad — 14 + 14 + 14 = 42 W, 84
+// device rows on the tablet (DESIGN §9). A card of `lines` lines is this
+// plus (lines - 1) line pitches, which only the painter can know — a line
+// count needs a shaped run, and shaping needs the paint's own font — so no
+// pure function of the window states a card's real height and none is
+// offered here.
 int notification_card_h_px();
 
 // The card's largest possible width at this window and scale: the scaled
-// ceiling above, and — where the window cannot even hold that — the window
-// itself less the stack's two side margins. THE WINDOW TERM IS A SAFETY AND
+// ceiling above, and — where the window cannot even hold that — the panel
+// itself less the stack's two side seats (kNotificationSeatW each side). THE WINDOW TERM IS A SAFETY AND
 // NOT A DESIGN (architect 2026-08-31, retiring `window / 3`): the ceiling is
 // what the design says a card is wide, and the clamp only keeps a card inside
 // a window too narrow for it (the tablet's portrait panel, a contrived
@@ -878,14 +900,13 @@ int notification_card_h_px();
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
-// right-aligned on the panel's last column (well_columns, THE EDGE RULE;
-// architect 2026-11-02, M11 / M14), from THE CARD SEAT — the trim bar's
-// first trough row, read off the live lane table, so the first card's top
-// border stands on the trough's first row (architect 2026-10-08,
-// 2026-11-02; RULED KEPT 2026-11-03; the trough 2026-11-17; the reasoning
-// at the definition) — DOWN
-// TO THE PANEL'S PAD OF AIR (folder_overlay::pad_px, one W) ABOVE THE
-// BOTTOM ROW'S LANE.
+// its right edge kNotificationSeatW (16 W) inside the panel's last column
+// (well_columns), from THE CARD SEAT — kNotificationSeatW under the top
+// icon row's line, read off the live lane table (notifyd's seat on his
+// desktop; architect 2026-11-19, send Z, DESIGN §9; anchored on the lanes
+// since 2026-10-08, "relative to the elements"; flush with the glass and on
+// the trough's first row until send AA's stage D1) — DOWN TO THE PANEL'S
+// PAD OF AIR (folder_overlay::pad_px, one W) ABOVE THE BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
 // was "three cards of one line each", which a wrapped card outgrows, and no
@@ -926,10 +947,10 @@ GuiRect notification_stack_bound(const AppState& a);
 // on the tablet at its scale of that day it was 12 (1107 over 84 + 3), its
 // window being the whole 2304 x 1440 panel since the activity went full
 // screen (2026-10-01; the stacks are recorded at main.cpp's vertical-stack
-// owner). The card shrank since (56 device px on the tablet with P18 and
-// the unit, 2026-11-04; the gap one W, 2 device px, since 2026-11-04
-// night), so every count is higher: every window
-// this product runs in holds more cards than the architect will ever stack.
+// owner). On the tablet today (send AA's stage D1: the card 84 device px,
+// the gap 12, the room rows 176 .. 1305 less the pad) it is about 11:
+// every window this product runs in holds more cards than the architect
+// will ever stack.
 int notification_capacity(const AppState& a);
 
 // Whether `id` names a card that is IN THE LIVE STACK — which is the same as
@@ -1010,6 +1031,17 @@ struct GuiNotifications {
     // the remembered pointer (a card that slid up under a motionless pointer
     // pauses from this tick on).
     void fire_if_due();
+
+    // THE STRUCK CARD'S ONE DERIVATION (the head's THE STRUCK CARD; architect
+    // 2026-11-19), on the run loop's tick once a piece is loaded: when the
+    // warp store's generation has moved since the last look, the struck
+    // count (warp_red_flag_set_cached's `collapsed`) and whether the
+    // authored markers changed (their file bytes against the last look's,
+    // the piece's first look counting as a change) — then the card raised,
+    // re-worded in place or cleared as the head says. `sample_rate` and
+    // `total_frames` the loaded audio's (the strike's cache key). A tick
+    // whose store has not moved asks nothing more than one compare.
+    void sync_struck_card(int sample_rate, long total_frames);
 
     // The hover walk, from the motion handler and the tick: which card the
     // pointer rests on. Entering a visible normal card banks its remaining

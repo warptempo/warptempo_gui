@@ -13,7 +13,8 @@
 # picks of 2026-11-14 and 2026-11-17).
 # THE CLOSE RED: Arc-Dark's xfwm4 / headerbar close disc, wm_button_close_bg CC575D (hover D7787D,
 # pressed BE3841), on THE CLIP LAMP ALONE (architect 2026-11-14, session 123: red reads as a warning
-# or a close; the limiter lamp and the cards stay Arc's warning orange). The playhead's head is Arc's
+# or a close; the limiter lamp stays Arc's warning orange — the cards wear notifyd's grey and Arc's
+# destructive red since send AA's stage D1, 2026-11-19, below). The playhead's head is Arc's
 # fg D3DAE3, the icon glyph color; the markers' chips the accent, Arc's selection blue 5294E2
 # (architect 2026-11-17, session 140: "the marker should take selection blue ... the playhead can be the
 # glyph color"), Arc's own numbers at bright_mix 100 (the default 75 mixes them toward the ground,
@@ -35,7 +36,7 @@
 #   StandbySelectionForeground  FFFFFF  $selected_fg_color
 #   SelectionBackground         A9CAF1  $link_color (lighten($selected_bg_color, 20%)): the lighter list press
 #   SelectionForeground         2F343F  $wm_icon_close_bg (= header_bg): Arc's dark print on a colored disc
-#   Alert                       F27835  $warning_color
+#   Alert                       F27835  $warning_color: the limiter lamp (the cards' face until send AA's stage D1)
 #   WaveformColor               262A33  $header_border (darken($header_bg, 4%)): the ink one step above the stem
 #                                       (ControlContrastFrame 21252B), CIELAB L* 2.50 (the stem-over-ink rule's 3.61, ballpark)
 #   DetailViewBackground        404552  $base_color: Arc's content base, Thunar's list view (the canvas and the ruler)
@@ -55,7 +56,16 @@
 #   WindowBackground            383C4A  $bg_color: THE BODY TONE, the ground of everything under the title bar
 #                                       (SurfaceArea, $header_bg, stays the title bar's)
 #   TitleForeground             AFB8C5  xfwm4's title text on the title bar
-#   SidebarForeground           BAC3CF  $dark_sidebar_fg: the marker labels' ink (the tooltip's and the cards' later)
+#   SidebarForeground           BAC3CF  $dark_sidebar_fg: the marker labels' ink, the tooltip's words, a normal card's
+#                                       words and glyph
+# OUR OWN FILLS, CARRYING THEIR ALPHA (the 8-digit word's last byte reaches the painter, the box painted at it over
+# whatever lies under; src/gui/theme_roles.h's CARRIED block), send AA's stage D1, 2026-11-19 (DESIGN §6 / §9, his
+# "good to build" on tmp/sendZ/VIEW/Z_07); .95 is the byte F2 (242.25 rounded, .949):
+#   TooltipBackground           4B5162F2 $osd_bg_color, rgba(75, 81, 98, .95) (G3:1430): the tooltip's box
+#   CardBackground              353945F2 xfce4-notifyd's bubble under Arc ($dark_sidebar_bg at .95): a normal (timed) card
+#   CardStandingBackground      F04A50F2 $destructive_color, button.destructive-action (G3:216), at .95: a standing
+#                                       (critical) card, A BRIGHT TONE (C0444C at bright_mix 75); its words and glyph
+#                                       StandbySelectionForeground FFFFFF
 SurfaceArea=2F343F
 Desktop=353945
 SurfaceBackground=444A58
@@ -83,3 +93,6 @@ ClipBorder=2B2E39
 WindowBackground=383C4A
 TitleForeground=AFB8C5
 SidebarForeground=BAC3CF
+TooltipBackground=4B5162F2
+CardBackground=353945F2
+CardStandingBackground=F04A50F2

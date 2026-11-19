@@ -32,6 +32,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <limits>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -1121,9 +1122,9 @@ constexpr IconRowDef kIconRowRightRun[] = {
 
 // -- THE FLOATING SURFACES: the hover tooltip and the notification cards --
 //
-// The tooltip's chrome is the floating surfaces' one box
-// (paint_popup_chrome); its type and its box are its painter's
-// (paint_shift_tooltip, kdenlive's form since 2026-10-31), its seat, its
+// The tooltip is Arc's (send AA's stage D1, 2026-11-19): its type, its box
+// and its shadow are its painter's (paint_shift_tooltip, on the floating
+// surfaces' rounded box, paint_floating_box), its lengths, its seat, its
 // timing and its damage bound render.h's.
 // (The damage BOUND on the height and the timing constants live in render.h —
 // the tooltip's clock reads them, for the deadlines and for the band beside
@@ -1176,9 +1177,9 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // on the text seat's baseline, modal_box_text_baseline0) — the dialog
 // editors' lines on their rows, the on-screen keyboard's caps and the
 // folder overlay's rows. The
-// notification card's first line states the same centering on its own cap
-// (pad + cap + pad, notification_card_h_px); the hover tooltip
-// seats its own caps under one pad (paint_shift_tooltip); the title bar's
+// notification card and the hover tooltip seat their lines by the line-box
+// rule under their own pads (paint_notifications, paint_shift_tooltip; send
+// AA's stage D1, 2026-11-19); the title bar's
 // note centers its ink on the bar's rows and its text stands on
 // title_baseline (paint_title_bar).
 //
@@ -1711,14 +1712,16 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     // 2026-11-15, the no-grid arc): exact rects off the runs' real ink
     // edges, filled at exact coverage over the bar's fill — the block in the
     // title text's tone; each lamp its face at rest (`key_face`) or lit (the
-    // limiter `card_ground`; the clip `clip_lamp`); the clip lamp, while
+    // limiter `limiter_lamp`, Alert, Arc's warning orange — its own tone
+    // since send AA's stage D1, the cards having left Alert for notifyd's
+    // fills; the clip `clip_lamp`); the clip lamp, while
     // struck, THE WHOLE SQUARE in `key_dim_ink`, WINNING OVER ITS LIT BIT
     // (architect 2026-11-05 night, session 52) — one three-way pick, struck,
     // else lit, else rest — from the three bits the tick writes
     // (refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS).
     paint_ink_rect(cr, l.pipe, ink);
     paint_ink_rect(cr, l.limiter_lamp,
-                   app.limiter_lamp_lit ? p.card_ground : p.key_face);
+                   app.limiter_lamp_lit ? p.limiter_lamp : p.key_face);
     paint_ink_rect(cr, l.clip_lamp,
                    app.clip_lamp_struck ? p.key_dim_ink
                    : app.clip_lamp_lit  ? p.clip_lamp
@@ -3068,34 +3071,164 @@ void GuiPaintHandler::paint_status_bar(cairo_t* cr) {
 
 // -- The floating surfaces ---------------------------------------------------
 
-void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRectF& r,
-                                         GuiColor frame, GuiColor ground) {
-    // ONE BOX PAINTER FOR EVERY FLOATING SURFACE, TWO LOOKS — the tooltip and
-    // every notification card, whose words their painters set (render.h's
-    // THE CARD FACE, the rule's one statement): A FLAT `ground` BOX inside a
-    // ONE-W `frame` BORDER (hairline_px, 2026-11-04) on its own outer rows
-    // and columns, all four sides one tone — the border laid as the whole
-    // box, the face over its inside. No ring tones, no shadow. THE TOOLTIP
-    // passes the pane `pane_face` in the frame tone `well_frame` (architect
-    // 2026-11-02, M11 with M14 "d"); THE CARDS pass the chrome's
-    // `card_ground` and `card_frame`, both Live's status-bar orange `card_face`
-    // (architect 2026-11-04 night, h1 of tmp/s38), so no border shows and the
-    // ring stays layout. The tooltip and each card keep their own height
-    // rule and pad (paint_shift_tooltip, notification_pad_px), the border
-    // inside their heights. THE BOX STANDS ON ITS REAL EDGES (architect
-    // 2026-11-15, the no-grid arc; render.h's hull holds the rule): `r` an
-    // exact rect, the border one W inside it on all four sides, both fills
-    // at exact coverage (the exact fill, paint_cell_rect on a GuiRectF) —
-    // a box with whole edges painted as the whole road paints it; its
-    // caller damages the box's hull.
-    if (!(r.w > 0.0) || !(r.h > 0.0)) return;
-    const double px = static_cast<double>(hairline_px());
-    paint_cell_rect(cr, r, frame);
-    paint_cell_rect(cr,
-                    GuiRectF{r.x + px, r.y + px, r.w - 2.0 * px,
-                             r.h - 2.0 * px},
-                    ground);
+namespace {
+
+// A ROUNDED BOX'S PATH, a new sub-path: [x0, x1] x [y0, y1], every corner a
+// quarter circle of radius `r` (0 a square corner) — the floating surfaces'
+// one shape (the tooltip and its shadow's mask, the cards).
+void floating_box_path(cairo_t* cr, double x0, double y0, double x1,
+                       double y1, double r) {
+    const double half_pi = std::numbers::pi / 2.0;
+    cairo_new_sub_path(cr);
+    if (r <= 0.0) {
+        cairo_rectangle(cr, x0, y0, x1 - x0, y1 - y0);
+        return;
+    }
+    cairo_arc(cr, x1 - r, y0 + r, r, -half_pi, 0.0);
+    cairo_arc(cr, x1 - r, y1 - r, r, 0.0, half_pi);
+    cairo_arc(cr, x0 + r, y1 - r, r, half_pi, 2.0 * half_pi);
+    cairo_arc(cr, x0 + r, y0 + r, r, 2.0 * half_pi, 3.0 * half_pi);
+    cairo_close_path(cr);
 }
+
+// A FLOATING SURFACE'S BOX (send AA's stage D1, 2026-11-19: Arc's tooltip
+// and notifyd's bubbles, un-shared — each painter its own look): the whole
+// box `r` rounded by `radius`, filled in `fill` AT `alpha` OVER WHAT LIES
+// UNDER IT (set_palette_source_alpha: the chrome blended here, the canvas
+// by the GPU — canvas_sink.h's THE TRANSPARENCY INVARIANT, the floater
+// bit's blend), at cairo's default antialiasing; no border, no ring.
+void paint_floating_box(cairo_t* cr, const GuiRect& r, double radius,
+                        GuiColor fill, double alpha) {
+    if (r.w <= 0 || r.h <= 0) return;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    floating_box_path(cr, r.x, r.y, r.x + r.w, r.y + r.h, radius);
+    set_palette_source_alpha(cr, fill, alpha);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+// GTK 3.24'S BOX BLUR, transcribed (gtkcairoblur.c — blur_xspan, blur_rows,
+// flip_buffer, _boxblur; the fetched copy tmp/sendZ/mock3/src_fetch/): one
+// pass of width `d` over a row of `n` bytes, the window ending `offset`
+// past each output (d / 2 for odd d, (d − shift) / 2 for even), zeros
+// outside the row, each output (sum + d / 2) / d in integers.
+void gtk_blur_xspan(uint8_t* row, uint8_t* tmp, int n, int d, int shift) {
+    const int offset = (d % 2 == 1) ? d / 2 : (d - shift) / 2;
+    int sum = 0;
+    for (int i = -d + offset; i < n + offset; ++i) {
+        if (i >= 0 && i < n) sum += row[i];
+        if (i >= offset) {
+            if (i >= d) sum -= row[i - d];
+            tmp[i - offset] = static_cast<uint8_t>((sum + d / 2) / d);
+        }
+    }
+    std::memcpy(row, tmp, static_cast<size_t>(n));
+}
+// THREE PASSES a row (blur_rows): odd d three centered; even d (d, +1),
+// (d, −1), then (d + 1) centered — a symmetric blur, the SVG technique GTK
+// names.
+void gtk_blur_rows(uint8_t* buf, uint8_t* tmp, int width, int height,
+                   int d) {
+    for (int i = 0; i < height; ++i) {
+        uint8_t* row = buf + static_cast<size_t>(i) * width;
+        if (d % 2 == 1) {
+            gtk_blur_xspan(row, tmp, width, d, 0);
+            gtk_blur_xspan(row, tmp, width, d, 0);
+            gtk_blur_xspan(row, tmp, width, d, 0);
+        } else {
+            gtk_blur_xspan(row, tmp, width, d, 1);
+            gtk_blur_xspan(row, tmp, width, d, -1);
+            gtk_blur_xspan(row, tmp, width, d + 1, 0);
+        }
+    }
+}
+// _boxblur with GTK_BLUR_X | GTK_BLUR_Y: the columns first (the buffer
+// transposed, its rows blurred, transposed back), then the rows; the
+// buffer `width` bytes a row (GTK hands the A8 surface's stride).
+void gtk_boxblur(uint8_t* buf, int width, int height, int d) {
+    if (d <= 1 || width <= 0 || height <= 0) return;
+    std::vector<uint8_t> flipped(static_cast<size_t>(width) * height);
+    std::vector<uint8_t> tmp(static_cast<size_t>(std::max(width, height)));
+    for (int i = 0; i < width; ++i)
+        for (int j = 0; j < height; ++j)
+            flipped[static_cast<size_t>(i) * height + j] =
+                buf[static_cast<size_t>(j) * width + i];
+    gtk_blur_rows(flipped.data(), tmp.data(), height, width, d);
+    for (int i = 0; i < width; ++i)
+        for (int j = 0; j < height; ++j)
+            buf[static_cast<size_t>(j) * width + i] =
+                flipped[static_cast<size_t>(i) * height + j];
+    gtk_blur_rows(buf, tmp.data(), width, height, d);
+}
+
+// THE SHADOW'S MASK FOR ONE BOX SIZE, kept: the mask depends on the box's
+// size and the scale's lengths alone, and the tooltip repaints under every
+// damage that meets it (a scanner passing under it), so the blur runs once
+// a box size — the last one held, a new size replacing it.
+struct TooltipShadowMask {
+    int w = 0, h = 0, spread = 0, offset = 0, d = 0, radius = 0;
+    int mw = 0, mh = 0, margin = 0;
+    cairo_surface_t* surface = nullptr;
+};
+TooltipShadowMask& tooltip_shadow_mask_cache() {
+    static TooltipShadowMask m;
+    return m;
+}
+
+// ARC'S TOOLTIP SHADOW AS GTK DRAWS IT (render.h's ARC'S TOOLTIP SHADOW, the
+// rule and its numbers): the whole box `box` moved down the offset, grown
+// the spread, its radius the box's plus the spread, filled into an A8 mask
+// with `margin` px of zeros round it (the blur's reach and one more), the
+// mask blurred (gtk_boxblur), then black at kTooltipShadowAlpha painted
+// through it under a clip of the mask's rect LESS THE BOX (even-odd, the
+// box's own rounded path at cairo's coverage), so nothing lands inside the
+// box and the box's fill alone stands there.
+void paint_tooltip_shadow(cairo_t* cr, const GuiRect& box, int radius) {
+    const int s = tooltip_shadow_spread_px();
+    const int o = tooltip_shadow_offset_px();
+    const int d = tooltip_shadow_box_px();
+    const int margin = tooltip_shadow_blur_reach_px() + 1;
+    TooltipShadowMask& m = tooltip_shadow_mask_cache();
+    if (!m.surface || m.w != box.w || m.h != box.h || m.spread != s ||
+        m.offset != o || m.d != d || m.radius != radius) {
+        if (m.surface) cairo_surface_destroy(m.surface);
+        m = TooltipShadowMask{};
+        m.w = box.w; m.h = box.h; m.spread = s; m.offset = o; m.d = d;
+        m.radius = radius; m.margin = margin;
+        m.mw = box.w + 2 * s + 2 * margin;
+        m.mh = box.h + 2 * s + 2 * margin;
+        m.surface = cairo_image_surface_create(CAIRO_FORMAT_A8, m.mw, m.mh);
+        cairo_t* c = cairo_create(m.surface);
+        cairo_set_antialias(c, CAIRO_ANTIALIAS_DEFAULT);
+        floating_box_path(c, margin, margin, margin + box.w + 2 * s,
+                          margin + box.h + 2 * s,
+                          radius > 0 ? static_cast<double>(radius + s) : 0.0);
+        cairo_set_source_rgba(c, 0.0, 0.0, 0.0, 1.0);
+        cairo_fill(c);
+        cairo_destroy(c);
+        cairo_surface_flush(m.surface);
+        gtk_boxblur(cairo_image_surface_get_data(m.surface),
+                    cairo_image_surface_get_stride(m.surface), m.mh, d);
+        cairo_surface_mark_dirty(m.surface);
+    }
+    const int mx = box.x - s - m.margin;
+    const int my = box.y + o - s - m.margin;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    cairo_rectangle(cr, mx, my, m.mw, m.mh);
+    floating_box_path(cr, box.x, box.y, box.x + box.w, box.y + box.h,
+                      static_cast<double>(radius));
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+    cairo_clip(cr);
+    set_palette_source_alpha(cr, GuiColor{0.0, 0.0, 0.0}, kTooltipShadowAlpha);
+    cairo_mask_surface(cr, m.surface, mx, my);
+    cairo_restore(cr);
+}
+
+} // namespace
 
 GuiRect GuiPaintHandler::tooltip_box_for_show() {
     // The contract is at the declaration: the painter's own layout, on a
@@ -3254,40 +3387,28 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    // KDENLIVE'S TOOLTIP (architect 2026-10-31, on the hint-ink mock: the
-    // name, and under it a smaller, dimmer hint; "think 90s Japanese
-    // hi-fi"). THE NAME LINE wears the flags' face, GuiFace::Program (12 W
-    // Regular, 24 device px on the tablet since send Z, "the tooltips font
-    // size should be the same as the flags", 2026-10-23) in the text tone
-    // `text`; THE HINT LINE its own face, GuiFace::Hint (12 W since send Z:
-    // every text 12 W; the tooltip's look is its stage D), in the
-    // dim tone `text_dim` (Live's 757575, architect 2026-11-02, M11's
-    // ruling 3; materials.h's text tones).
-    // Neither wears a shadow.
+    // ARC'S TOOLTIP (architect 2026-11-19, send Z, his "good to build" on
+    // tmp/sendZ/VIEW/Z_07; render.h's THE TOOLTIP IS ARC'S, the rule and its
+    // numbers): THE LINES Regular 12 W — the name line in GuiFace::Program,
+    // the hint line in GuiFace::Hint, both 12 W Regular — BOTH IN
+    // `sidebar_text` (Arc's tooltip label, BAC3CF; the hint line the same
+    // size and tone, Arc printing one label), each line one line box
+    // (gui_font_line_box_w, 11 + 3 W) under the pads; THE BOX the carried
+    // fill `tooltip_fill` at its opacity over what lies under it, radius
+    // kTooltipRadiusW, no border; ARC'S SHADOW outside it
+    // (paint_tooltip_shadow above). (Kdenlive's two-ink tooltip of
+    // 2026-10-31, its frame in `well_frame` and its pane face, retired
+    // with send AA's stage D1.)
     //
-    // THE BOX IS SEATED BY CAP AND BASELINE UNDER ONE PAD, derived with
-    // nothing authored but the pad: the frame (hairline_px, one W), the pad,
-    // the name's cap band [, the pad, the hint's cap band], the pad, the frame
-    // down; the frame and the pad each side of the wider run across. THE PAD
-    // IS THE TIME FIELD'S (time_field_pad_px, 6 W, 12 device px on the tablet: the architect's
-    // row-8 clock, "a nice padding for the font size and resolution"; "the
-    // tooltips should also increase padding", 2026-11-03), on both axes and
-    // between the two lines. Each cap is the face's own (gui_font_cap_px),
-    // UNROUNDED, and THE BOX'S GEOMETRY IS ITS TEXT'S EXACT SIZE (architect
-    // 2026-11-15, the no-grid arc): its width the wider line's real width
-    // and the insets, its height the caps' real heights under the pads, each
-    // baseline at its cap's real bottom edge, so a descender hangs into the
-    // pad below it — and THE TEXT STANDS IN THAT EXACT BOX, its pen one
-    // inset from the box's real left edge. THE BOX IS PAINTED ON ITS HULL,
-    // whole edges (render.h's hull: a floating surface's box stays whole —
-    // it stands over the canvas, where the backbuffer may hold alpha 0 or
-    // 255 alone, canvas_sink.h's THE TRANSPARENCY INVARIANT), so the pad at
-    // its top and at the side the text does not start from is the real pad
-    // and under one px more; its published rect — the damage — is that
-    // hull. On the tablet at 200 % a one-line box is 2 + 12 + 15.14 + 12 +
-    // 2 = 43.14 device rows painted on 44, a two-line one 2 + 12 + 15.14 +
-    // 12 + 12.38 + 12 + 2 = 67.52 on 68 (the Hint face's cap 12.38), its
-    // bottom edge whole on the gap over the face.
+    // THE BOX IS WHOLE PX, SIZED BY ITS LINE BOXES (the line-box rule,
+    // render.h's line_box_baseline): kTooltipPadW above and below the
+    // lines' line boxes, which stack one on the other, and kTooltipPadW
+    // either side of the wider line's advance, ceiled — so one line is
+    // 10 + 14 + 10 = 34 W tall (68 device rows on the tablet) and two
+    // 10 + 14 + 14 + 10 = 48 W (96). THE BASELINES each its line box's
+    // ascent under that box's top: +21 W, then +14 W a line. THE PEN one pad
+    // in from the box's real left edge (`box`, exact: a cue's box seats its
+    // text origin on the label's pen, below); the box is painted on its hull.
     //
     // A HISTORY ITEM'S ONE LINE (architect 2026-11-11, session 107: "both in
     // one line with the old one struck and the old one listed first") is two
@@ -3308,7 +3429,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     const bool two_line = (line2 != nullptr);
     const text_shape::ShapedRun r1 =
         text_shape::shape_text_run(name_font, line1);
-    const double cap1 = gui_font_cap_px(name_font);
+    const GuiLineBoxW box1 = gui_font_line_box_w(name_font);
     text_shape::ShapedRun rs;
     double line1_w  = r1.width_px;
     double plain_dx = 0.0;   // the plain run's pen past line 1's
@@ -3319,52 +3440,57 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         line1_w  = line1[0] != '\0' ? plain_dx + r1.width_px : rs.width_px;
     }
 
-    double cap2 = 0.0;
     double w2 = 0.0;
     text_shape::ShapedRun r2;
+    GuiLineBoxW box2;
     if (two_line) {
         r2 = text_shape::shape_text_run(hint_font, line2);
-        cap2 = gui_font_cap_px(hint_font);
+        box2 = gui_font_line_box_w(hint_font);
         w2 = r2.width_px;
     }
 
-    const int frame = hairline_px();
-    const int pad   = time_field_pad_px();
-    const int inset = frame + pad;
-    const double w = std::max(line1_w, w2) + static_cast<double>(2 * inset);
-    const double h = static_cast<double>(2 * inset) + cap1 +
-                     (two_line ? static_cast<double>(pad) + cap2 : 0.0);
+    // Each part rounded at the element (scaled_px's head): the pad, each
+    // line box, each ascent.
+    const int pad     = tooltip_pad_px();
+    const int line1_h = scaled_px(box1.line());
+    const int line2_h = two_line ? scaled_px(box2.line()) : 0;
+    const double w = static_cast<double>(2 * pad) +
+                     std::ceil(std::max(line1_w, w2));
+    const double h = static_cast<double>(2 * pad + line1_h + line2_h);
 
     // OFF THE OWNER'S FACE ALONE (architect 2026-11-07, sessions 90 and 91):
     // UNDER a top-row key's face and ABOVE every other (send Z, 2026-11-19:
     // the title bar no longer holds a band key's box), one W between
-    // (render.h's kTooltipGapW), its left edge on `btn`'s — then held inside
-    // the panel (the edge rule) and under the window's top, the box never
-    // shrinking (a truncated hint would be worse than one
-    // that shifted). The rule's one statement is tooltip_box_rect
-    // (app_state.h).
+    // (render.h's kTooltipGapW) — THE GAP MEASURED TO THE BOX, the shadow
+    // hanging outside it over the gap and the face — its left edge on
+    // `btn`'s — then held inside the panel (the edge rule) and under the
+    // window's top, the box never shrinking (a truncated hint would be
+    // worse than one that shifted). The rule's one statement is
+    // tooltip_box_rect (app_state.h).
     // A CUE'S BOX (architect 2026-11-09, session 100: "the first char on the
     // left of the tooltip should align horizontally with the first char of
-    // the marker") seats its TEXT ORIGIN, x + inset below, on the label's
+    // the marker") seats its TEXT ORIGIN, x + pad below, on the label's
     // pen as the cue pass drew it — marker_tooltip_box_rect, app_state.h,
     // over the same rule, and a history item's the same
     // (history_tooltip_box_rect); `btn` stays its vertical seat.
     const GuiRectF box =
         owner.surface == AppState::RedesignTooltip::Surface::Marker
-            ? marker_tooltip_box_rect(app, owner.index, inset, w, h)
+            ? marker_tooltip_box_rect(app, owner.index, pad, w, h)
         : owner.surface == AppState::RedesignTooltip::Surface::History
-            ? history_tooltip_box_rect(app, owner.index, inset, w, h)
+            ? history_tooltip_box_rect(app, owner.index, pad, w, h)
             : tooltip_box_rect(app, btn, w, h);
     const double x = box.x;
     const double y = box.y;
-    // THE PAINTED BOX AND THE PUBLISHED RECT ARE THE BOX'S HULL (render.h;
-    // the block above): whole edges, what the hide edge and the words
-    // comparator damage.
+    // THE PAINTED BOX IS THE BOX'S HULL (render.h); THE PUBLISHED RECT IS
+    // THE PAINTED EXTENT — the hull grown by the shadow's reach
+    // (tooltip_painted_extent, render.h), every pixel the tooltip lays
+    // down: what the hide edge and the words comparators damage.
     const GuiRect box_hull = hull(box);
-    // THE MEASURE FORM ENDS HERE (tooltip_box_for_show): the hull the show
-    // will damage, nothing painted and nothing published.
+    const GuiRect extent   = tooltip_painted_extent(box_hull);
+    // THE MEASURE FORM ENDS HERE (tooltip_box_for_show): the extent the
+    // show will damage, nothing painted and nothing published.
     if (tooltip_measuring_) {
-        tooltip_measured_ = box_hull;
+        tooltip_measured_ = extent;
         cairo_restore(cr);
         return;
     }
@@ -3372,48 +3498,55 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // (AppState::RedesignTooltip::show_pending), whatever the clip below
     // covers.
     app.redesign_tooltip.show_pending = false;
-    // PUBLISHED AS PAINTED: a clip that covers the box draws it whole, so the
-    // rect and the words are exactly this frame's; a clip that does not (the
-    // player's clock and scrub cells at scanner cadence, which recompose a
-    // modal button's words on the stash above without reaching the box)
+    // PUBLISHED AS PAINTED: a clip that covers the extent draws it whole, so
+    // the rect and the words are exactly this frame's; a clip that does not
+    // (the player's clock and scrub cells at scanner cadence, which recompose
+    // a modal button's words on the stash above without reaching the box)
     // leaves the old box's pixels where they stood, so the rect grows to the
     // union of the two and the words stay the last ones really drawn —
     // main.cpp's comparator sees that drift and damages the box whole.
-    if (clip_covers_drawable(cr, app, box_hull)) {
-        app.redesign_tooltip.rect          = box_hull;
+    if (clip_covers_drawable(cr, app, extent)) {
+        app.redesign_tooltip.rect          = extent;
         app.redesign_tooltip.painted_line1 = line1;
         app.redesign_tooltip.painted_line2 = line2 != nullptr ? line2 : "";
         app.redesign_tooltip.painted_struck = struck != nullptr ? struck : "";
     } else {
         app.redesign_tooltip.rect =
             (prev_rect.w > 0 && prev_rect.h > 0)
-                ? union_rect(prev_rect, box_hull)
-                : box_hull;
+                ? union_rect(prev_rect, extent)
+                : extent;
     }
 
-    // THE TOOLTIP'S LOOK, the flat look's tones off the installed palette
-    // (`pane_face`, `well_frame`, the text pair): the pane in the one frame
-    // tone (render.h's THE CARD FACE).
+    // THE SHADOW, THEN THE BOX (the order GTK paints a box-shadow under its
+    // background): the shadow outside the box alone, the box's carried fill
+    // over whatever lies under it, the chrome on the CPU and the canvas on
+    // the GPU (canvas_sink.h's THE TRANSPARENCY INVARIANT).
     const GuiPalette& p = palette();
-    paint_popup_chrome(cr, box_hull, p.well_frame, p.pane_face);
+    const int radius = tooltip_radius_px();
+    paint_tooltip_shadow(cr, box_hull, radius);
+    paint_floating_box(cr, box_hull, static_cast<double>(radius),
+                       p.tooltip_fill,
+                       tone_alpha(installed_theme().tones.tooltip_fill));
 
-    // THE BASELINES (the box above), exact: the name's at its cap's bottom
-    // edge under the frame and the pad, the hint's one pad and its own cap
-    // lower; the pen one inset in from the box's real left edge.
-    const double base1 = y + static_cast<double>(inset) + cap1;
-    const double pen1  = x + static_cast<double>(inset);
+    // THE BASELINES (the block above): line 1's its line box's ascent under
+    // the top pad, line 2's its own ascent under line 1's box; the pen one
+    // pad in from the box's real left edge.
+    const double base1 =
+        y + static_cast<double>(pad + scaled_px(box1.ascent));
+    const double pen1 = x + static_cast<double>(pad);
     if (struck != nullptr) {
-        set_palette_source(cr, p.text);
+        set_palette_source(cr, p.sidebar_text);
         text_shape::show_shaped_run(cr, rs, pen1, base1);
         paint_ink_rect(cr, struck_run_bar(name_font, pen1, rs.width_px, base1),
-                       p.text);
+                       p.sidebar_text);
     }
-    set_palette_source(cr, p.text);
+    set_palette_source(cr, p.sidebar_text);
     text_shape::show_shaped_run(cr, r1, pen1 + plain_dx, base1);
     if (two_line) {
-        set_palette_source(cr, p.text_dim);
-        text_shape::show_shaped_run(cr, r2, pen1,
-                                    base1 + static_cast<double>(pad) + cap2);
+        set_palette_source(cr, p.sidebar_text);
+        text_shape::show_shaped_run(
+            cr, r2, pen1,
+            y + static_cast<double>(pad + line1_h + scaled_px(box2.ascent)));
     }
 
     cairo_restore(cr);
@@ -3421,20 +3554,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
 namespace {
 
-// THE CARD'S LINE SPACING: the body face's OWN line height (the file's
-// ascender, descender and line gap at the live size; gui_font.h's head,
-// 2026-10-23 — the recorded 13-W Windows cell retired with the skin's type
-// table), UNROUNDED (gui_font_line_exact_px; architect 2026-11-15, the
-// no-grid arc: text stands where its metrics put it), so a wrapped card's
-// baselines step by the face's own pitch and each row sits exactly as the
-// face intends. Read ONCE per paint and handed down — it is the only thing
-// that turns a line count into a card height, and THE CARD'S OUTER BOX STAYS
-// WHOLE PIXELS: its height is the first line's whole rows plus the whole
-// hull (ceil) of the further lines' exact pitch, a box over the canvas's
-// hole being whole on its outer edges (render.h's hull, its last item).
-double notification_line_px(const GuiFont& font) {
-    return gui_font_line_exact_px(font);
-}
+// (THE CARD'S LINE SPACING, the body face's exact line height, is the line
+// box's since send AA's stage D1, 2026-11-19: notification_line_px,
+// notifications.h — 14 W, whole.)
 
 // THE WRAP, and the ONE place a card's text is broken into lines (architect
 // 2026-08-30). GREEDY WORD WRAP AT ASCII SPACES ON MEASURED ADVANCES: each
@@ -3513,45 +3635,31 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // -- GuiPaintHandler::paint_notifications ---------------------------------
 //
 // THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
-// classes, the hit rule and the inventory at notifications.h). THE WHOLE
-// STACK — AppState::Notifications::cards, newest first, every one of them on
-// screen since the queue retired 2026-08-30 — painted top-right, right-aligned
-// on the keys' outer column, its first card's top border on the trim bar's
-// first row, read off the live lane table (architect 2026-10-08: "it looks
-// like absolute positioning where it should be relative to the elements";
-// 2026-11-02, M14; the rule and the margins at
-// notification_stack_bound) — growing
-// DOWN over whatever lies there (the icon row's empty right, the thin lanes,
-// the waveform), the cards notification_gap_px apart (the card's own gap,
-// one W since 2026-11-04 night, 2 device px on the tablet — the ruling at the
-// declaration).
+// classes, the hit rule, the inventory and THE LOOK at notifications.h). THE
+// WHOLE STACK — AppState::Notifications::cards, newest first, every one of
+// them on screen since the queue retired 2026-08-30 — painted top-right at
+// notifyd's seat, 16 W inside the panel's right edge and 16 W under the top
+// icon row's line, read off the live lane table (architect 2026-10-08: "it
+// looks like absolute positioning where it should be relative to the
+// elements"; the seat send Z's, DESIGN §9, 2026-11-19; the rule and the
+// margins at notification_stack_bound) — growing DOWN over whatever lies
+// there (the lanes, the waveform), the cards notification_gap_px apart (6
+// W, 12 device px on the tablet).
 //
-// THE LOOK (architect 2026-11-04 night, his pick h1 of tmp/s38): THE CARD
-// FACE — a flat box in LIVE'S STATUS BAR'S ORANGE (`card_ground`,
-// materials.h's `card_face` (Default's E76942)), its one-W ring painted in the same fill
-// (`card_frame`), so no border shows, its words and its class glyph in
-// the theme's selection text (`card_text`, `card_ink` (Default's 070707), D4 of
-// 2026-11-17); both classes
-// alike, the glyph telling them apart (render.h's palette block, THE CARD
-// FACE) — square, NO DROP SHADOW, through the one popup box painter
-// (paint_popup_chrome, the tooltip's too, in its own look); inside the
-// border ONE PAD of plain face on all four sides (P18, architect
-// 2026-10-24; notification_pad_px), the first line THE BODY FACE'S CAP tall
-// between the pads (notification_card_h_px), THE CLASS GLYPH at its left —
-// Breeze's cut-out DialogInformation or DialogError (icons.h's ink-box
-// road; architect 2026-11-02, R14),
-// its ink .525 of the first line's inside height (kNotificationGlyphRatio),
-// at its seat (notification_glyph_seat_w_px) — then the glyph gap
-// (kNotificationGlyphGapW, 4 W, 8 device px on the tablet), then THE SENTENCE (the layout
-// block in the body).
-// (A window-close X stood in a second button box at the right from
-// 2026-08-29, wearing the icon button's hover face; it retired 2026-10-01
-// when the whole card became the button — "whole card dismisses, X gone" —
-// and the card wears no hover face and no pressed face.)
-// The card's width
-// is its content's, clamped to [kNotificationMinWidthPx,
+// THE LOOK (architect 2026-11-19, send Z, "good to build" on Z_07; built in
+// send AA's stage D1): NOTIFYD'S BUBBLE — a rounded box (kNotificationRadiusW)
+// in its class's carried fill AT ITS OPACITY over what lies under it
+// (paint_floating_box: a normal card `card_fill`, a standing one
+// `card_standing_fill`), no border, no shadow; notifyd's pads; THE CLASS
+// GLYPH, the `icons` set's DialogInformation or DialogError, its whole
+// drawing in a 16 W box at the left pad (icons::ink_in_box), the box's top
+// 13 W down — then the glyph gap (6 W), then THE SENTENCE, Regular 12 W,
+// its first baseline +25 W; the words and the glyph one tone, a normal
+// card's `sidebar_text`, a standing card's `card_text`. The card wears no
+// hover face and no pressed face.
+// The card's width is its content's, clamped to [kNotificationMinWidthPx,
 // notification_card_max_w_px] — the authored ceiling since 2026-08-31, scaled
-// like every other length, with the window itself as a safety under it.
+// like every other length, with the panel itself as a safety under it.
 //
 // THE TEXT GROWS DOWNWARD (architect 2026-08-30). The
 // width rule is unchanged — the WHOLE sentence's shaped width sets it, inside
@@ -3559,10 +3667,10 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // was; a longer one wraps through notification_text_lines above to at most
 // kNotificationMaxLines, the last of which clips at the run's right edge (no
 // ellipsis — the folder overlay rows' precedent). THE CARD GROWS, NOTHING
-// REFLOWS: the first line keeps the one-line card's baseline, each further line sits
-// one face line-height lower, and the air under the last line is the first
-// line's own by construction — the one pad still rules every edge. The
-// stack's `y` then advances by each card's OWN height.
+// REFLOWS: the first line keeps the one-line card's baseline and the glyph
+// its seat, each further line sits one line box (14 W) lower, and the card
+// grows by that pitch, its bottom pad under the last line. The stack's `y`
+// then advances by each card's OWN height and the gap.
 //
 // IT PUBLISHES WHAT IT DREW: each card's rect, and their union,
 // into AppState::Notifications (the owner-tag doctrine at
@@ -3613,39 +3721,33 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const GuiFont font = gui_font(GuiFace::Body);
 
     const int line1_h  = notification_card_h_px();
-    const double line_px = notification_line_px(font);
+    const int line_px  = notification_line_px();
     const int max_w    = notification_card_max_w_px(app);
     const int min_w    = scaled_px(kNotificationMinWidthPx);
     const int gap      = notification_gap_px();
-    // THE LAYOUT (architect 2026-10-24, P18 with I1 / X1; the glyph Breeze's
-    // since 2026-11-02): the border (`ring`, one W), ONE PAD of
-    // plain face (notifications.h, every side), the class glyph's SEAT, the
-    // glyph gap (kNotificationGlyphGapW), the text's pen; the wrap's room ends one pad
-    // short of the right border. The first line's INSIDE rows are pad + cap
-    // + pad; the glyph's ink box's larger side is kNotificationGlyphRatio of
-    // them (icons.h's THE INK BOX), its first ink column at ring + pad and
-    // its rows centered on the inside rows exactly. THE
-    // SEAT'S WIDTH, which places the text, is notification_glyph_seat_w_px
-    // (notifications.h) — the same ink length's retired box's ratio, exact,
-    // so the text's column did not move with the drawing.
-    const int ring     = hairline_px();
-    const int pad      = notification_pad_px();
-    const int cap      = notification_cap_px();
-    const int inside_h = pad + cap + pad;
-    const double glyph_ink_px =
-        kNotificationGlyphRatio * static_cast<double>(inside_h);
-    const int glyph_ink = std::max(
-        1, static_cast<int>(std::nearbyint(glyph_ink_px)));
-    // THE TEXT'S COLUMN IS EXACT (architect 2026-11-15, the no-grid arc):
-    // the seat's width the ratio itself, unrounded
-    // (notification_glyph_seat_w_px), so the pen stands a real length past
-    // the card's left edge. The glyph's INK stays whole (a raster size).
-    const double glyph_w = notification_glyph_seat_w_px(glyph_ink_px);
+    // THE LAYOUT (notifyd's bubble, notifications.h's lengths; architect
+    // 2026-11-19, send Z, DESIGN §9): the left pad, the glyph's 16 W box,
+    // the glyph gap, the text's pen; the wrap's room ends the right pad
+    // short of the box's right edge. Every part a whole W through
+    // scaled_px, rounded at the element: on the tablet the pen 28 + 32 + 12
+    // = 72 device px in, the right pad 30, the first baseline 28 + 22 = 50
+    // rows down, the glyph's box rows 26 .. 57 of the card's 84.
+    const int pad_top   = scaled_px(kNotificationPadTopW, 1);
+    const int pad_left  = scaled_px(kNotificationPadLeftW, 1);
+    const int pad_right = scaled_px(kNotificationPadRightW, 1);
+    const int glyph_box = scaled_px(kNotificationGlyphBoxW, 1);
     const int glyph_gap = scaled_px(kNotificationGlyphGapW);
-    const double lead_w   = static_cast<double>(ring + pad) + glyph_w +
-                            static_cast<double>(glyph_gap);
-    const int    tail_w   = pad + ring;
-    const double chrome_w = lead_w + static_cast<double>(tail_w);
+    const GuiLineBoxW line_box = gui_font_line_box_w(font);
+    const int ascent    = scaled_px(line_box.ascent);
+    // The glyph's box top: floor((card − box) / 2) W in W, GTK's centering
+    // on the one-line card (13 W), whole W through scaled_px.
+    const int glyph_top = scaled_px(
+        (static_cast<int>(kNotificationPadTopW) + line_box.line() +
+         static_cast<int>(kNotificationPadBottomW) -
+         static_cast<int>(kNotificationGlyphBoxW)) / 2);
+    const double radius = static_cast<double>(scaled_px(kNotificationRadiusW, 0));
+    const int    lead_w   = pad_left + glyph_box + glyph_gap;
+    const double chrome_w = static_cast<double>(lead_w + pad_right);
     const int right_x  = room.x + room.w;
     // WHAT IS PUBLISHED IS WHAT IS VISIBLE: the room clips the paint, so it
     // clips the publication too, or the hit would claim a press on pixels
@@ -3704,7 +3806,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // std::max keeps the clamp's own precondition stated at the call.
         const int w = std::clamp(wanted, min_w, std::max(min_w, max_w));
         const int card_x       = right_x - w;
-        const double text_x    = static_cast<double>(card_x) + lead_w;
+        const double text_x    = static_cast<double>(card_x + lead_w);
         // The room from the pen to the right pad; a card not clamped under
         // its content holds the whole sentence by the ceiling above (the
         // max keeps the last bit of the two sums from breaking a line).
@@ -3714,15 +3816,12 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                 : static_cast<double>(w) - chrome_w;
         std::vector<text_shape::ShapedRun> lines =
             notification_text_lines(font, n.text, whole, text_room);
-        // THE CARD GROWS DOWNWARD BY ITS LINES' EXACT PITCH, its box the
-        // whole hull of it; its first line is a one-line card and the first
-        // baseline sits in it.
+        // THE CARD GROWS DOWNWARD BY ONE LINE BOX A LINE; its first line is
+        // a one-line card and the first baseline sits in it.
         const GuiRect card{
             card_x, y, w,
-            line1_h + static_cast<int>(std::ceil(
-                          static_cast<double>(
-                              lines.empty() ? 0 : lines.size() - 1) *
-                          line_px))};
+            line1_h + static_cast<int>(lines.empty() ? 0 : lines.size() - 1) *
+                          line_px};
         laid.push_back(LaidCard{&n, card, text_x, text_room, std::move(lines)});
         y += card.h + gap;
     }
@@ -3746,28 +3845,33 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const double text_x    = c.text_x;
         const double text_room = c.text_room;
         const std::vector<text_shape::ShapedRun>& lines = c.lines;
-        // The box, then the class glyph at its seat on the first line's
-        // inside rows (the layout block above): Breeze's cut-out
-        // DialogInformation on a normal card, DialogError on a critical one
-        // (architect 2026-11-02, R14: the 10-10 transcriptions, the mark cut
-        // out of the filled square), in the words' own tone (the chrome's
-        // `card_text`, `card_ink`: the glyph and the words one tone).
-        paint_popup_chrome(cr, card, palette().card_frame,
-                           palette().card_ground);
+        // THE CLASS'S LOOK (notifications.h's THE LOOK): a standing card
+        // Arc's destructive red under the print on a lit face, a normal card
+        // notifyd's grey under the sidebar text; the fill at its carried
+        // opacity, the glyph and the words one tone.
+        const bool standing = n.cls == AppState::NotificationClass::Critical;
+        const GuiPalette& p = palette();
+        const GuiColor ink  = standing ? p.card_text : p.sidebar_text;
+        const uint32_t fill_word = standing
+                                       ? installed_theme().tones.card_standing_fill
+                                       : installed_theme().tones.card_fill;
+        paint_floating_box(cr, card, radius,
+                           standing ? p.card_standing_fill : p.card_fill,
+                           tone_alpha(fill_word));
         {
-            const icons::Icon glyph =
-                n.cls == AppState::NotificationClass::Critical
-                    ? icons::Icon::DialogError
-                    : icons::Icon::DialogInformation;
-            // Its ink box centered EXACTLY on the first line's inside rows
-            // (half the spare above and below, no half rounded), at the
-            // card's whole left seat.
-            const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
-            icons::draw_glyph(
-                cr, glyph, static_cast<double>(card.x + ring + pad),
-                static_cast<double>(card.y + ring) +
-                    static_cast<double>(inside_h - s.h) / 2.0,
-                glyph_ink, argb32_opaque_word(palette().card_text));
+            // THE CLASS GLYPH, the drawing's whole canvas in the 16 W box at
+            // the left pad, the box's top glyph_top down (icons::ink_in_box:
+            // the ink's size and its offset in the box).
+            const icons::Icon glyph = standing
+                                          ? icons::Icon::DialogError
+                                          : icons::Icon::DialogInformation;
+            const icons::InkInBox fit = icons::ink_in_box(glyph, glyph_box);
+            if (fit.ink_px > 0)
+                icons::draw_glyph(
+                    cr, glyph,
+                    static_cast<double>(card.x + pad_left) + fit.left,
+                    static_cast<double>(card.y + glyph_top) + fit.top,
+                    fit.ink_px, argb32_opaque_word(ink));
         }
 
         if (text_room > 0.0) {
@@ -3776,22 +3880,11 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
             // end are real x, and a line too long for the room is cut there
             // at exact coverage with no cairo clip).
             const text_raster::XSpan room_span{text_x, text_x + text_room};
-            set_palette_source(cr, palette().card_text);
-            // The FIRST line's baseline CENTERS ITS CAP BAND IN THE FIRST
-            // LINE EXACTLY (architect 2026-10-24; exact since the no-grid
-            // arc, 2026-11-15): the line's inside rows are pad + the cap's
-            // whole rows + pad (notification_card_h_px, a layout size — the
-            // card is a floating surface's box and stays whole, render.h's
-            // hull), and the face's real cap band (gui_font_cap_px,
-            // unrounded) stands in the middle of them, so the air above the
-            // caps and under the baseline is the same real length —
-            // redesign_baseline's centering, on the card's own rows.
-            // Each further line is one face line-height lower (the whole
-            // pitch the card grows by).
-            const double base =
-                redesign_baseline(font,
-                                  static_cast<double>(card.y + ring),
-                                  static_cast<double>(inside_h));
+            set_palette_source(cr, ink);
+            // THE FIRST BASELINE its line box's ascent under the top pad
+            // (+25 W, the line-box rule), each further line one line box
+            // lower (the pitch the card grows by).
+            const double base = static_cast<double>(card.y + pad_top + ascent);
             for (size_t li = 0; li < lines.size(); ++li) {
                 text_shape::show_shaped_run_within(
                     cr, lines[li], text_x,

@@ -8566,6 +8566,18 @@ struct AppState {
         // where the event arrives cannot drift from the event the way a
         // parameter copied down a dozen call chains would.
         bool                             held_repeat_dispatch = false;
+        // THE STRUCK CARD'S STATE (notifications.h's THE STRUCK CARD; its one
+        // writer GuiNotifications::sync_struck_card, architect 2026-11-19):
+        // the card's id while it was last raised (0 none; a card no longer
+        // in the stack was tapped away or cleared), the warp store
+        // generation the derivation last looked at (-1 before the piece's
+        // first look) and the authored markers' `.warpmarkers` bytes at that
+        // look (format_warpmarkers_text), what tells an edit from a store
+        // bump that changed no authored field. Per AppState, so per project:
+        // a project's open is a fresh look.
+        uint64_t                         struck_card_id  = 0;
+        long long                        struck_seen_gen = -1;
+        std::string                      struck_seen_text;
     };
     Notifications notifications;
 
@@ -10620,8 +10632,9 @@ inline DialogEditorStop dialog_editor_byte_at(
 // box height's bound) on the box's side of the owner's face — starting on
 // the gap's bottom under a top-row key's face, ending on the gap's top over
 // every other face, or from the window's top where it would rise past it —
-// so the box, at any width
-// and either line count, clamped or not, lies inside it. A BAND, NOT THE
+// GROWN BY ARC'S SHADOW'S REACH above and below (tooltip_shadow_reach,
+// render.h; send AA's stage D1, 2026-11-19), so the box and its shadow, at
+// any width and either line count, clamped or not, lie inside it. A BAND, NOT THE
 // EXACT BOX, because the box's size is not known before its paint: a dialog
 // owner's words are composed by paint_modal_dialog in the frame that paints
 // the box, and a roster owner's need the shaping pass and the audio the

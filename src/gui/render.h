@@ -100,14 +100,20 @@ struct GuiRectF {
 //     upscaling or downscaling. It should be 100%. And if that's required,
 //     if that requires whole pixels, then so be it.").
 //   A BOX PAINTED OVER THE CANVAS'S HOLE — the canvas is the GPU's, and
-//     the backbuffer over it holds alpha 0 or alpha 255 alone
-//     (canvas_sink.h's THE TRANSPARENCY INVARIANT: the texture's draw is
-//     unblended), so an edge at a fraction there would leave a partly
-//     covered pixel nothing composites: whatever chrome stands over the
-//     hole is whole pixels on its OUTER edges — the floating surfaces' boxes
-//     (the tooltip's and the notification cards'), the on-screen keyboard's
-//     outer edge, and any other chrome that reaches over it. What is
-//     painted IN such a box — its text, its inner marks — is exact.
+//     the backbuffer over it holds alpha 0 or alpha 255 but where a
+//     floating surface stands (canvas_sink.h's THE TRANSPARENCY INVARIANT:
+//     the texture's draw is unblended but under the floater bit), so an
+//     edge at a fraction there would leave a partly covered pixel nothing
+//     composites: whatever chrome other than the floaters stands over the
+//     hole is whole pixels on its OUTER edges — the on-screen keyboard's
+//     outer edge, and any other chrome that reaches over it. THE FLOATING
+//     SURFACES' BOXES (the tooltip's and the notification cards') COMPOSITE
+//     TRULY since send AA's stage D1 (2026-11-19: their carried fills at
+//     .95, their rounded corners, the tooltip's shadow — the floater bit's
+//     blend), and stay whole px as LAYOUT: their sizes the ceiling of their
+//     text under whole-W pads, their seats a face's and the panel's whole
+//     edges. What is painted IN such a box — its text, its inner marks — is
+//     exact.
 inline GuiRect hull(const GuiRectF& r) {
     const int x0 = static_cast<int>(std::floor(r.x));
     const int y0 = static_cast<int>(std::floor(r.y));
@@ -273,10 +279,9 @@ struct TrimRange {
 // Windows 95's DrawEdge grammar, its one-device-px mitred hairline ring of
 // 2026-10-23 and the ring tones it wore are git history. THE CHROME'S LINES
 // are flat ONE-W lines (hairline_px, below, the line rule of 2026-11-04) of ONE TONE,
-// materials.h's `well_frame` (Default's 757575): the scrub's channel (the scrub block)
-// and the tooltip's border (THE CARD FACE, below; the cards' ring is painted
-// in their own fill, so no border shows); the modal
-// family's box has none (modal_box.h's head).
+// materials.h's `well_frame` (Default's 757575): the scrub's channel (the
+// scrub block); the floating surfaces have none (THE FLOATING SURFACES,
+// below), the modal family's box none (modal_box.h's head).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
@@ -305,9 +310,10 @@ struct TrimRange {
 //                 folder overlay's resting names on the pane (architect
 //                 2026-10-06, paint_folder_overlay) — and THE FLAG EDITOR'S
 //                 text and caret (architect 2026-10-09; EDITING, below);
-//   card trio     every notification card (THE CARD FACE, below; the
-//                 tooltip reads no role, its tones the flat look's
-//                 constants);
+//   card_text     a standing notification card's words and glyph (THE
+//                 FLOATING SURFACES, below; the cards' ground and ring
+//                 retired with send AA's stage D1, 2026-11-19, their fills
+//                 the flat look's carried fills);
 //   (THE CAPTION and THE WINDOW BORDER went 2026-10-24, the
 //                 app painting no window chrome — the caption's six roles,
 //                 a scheme's start, gradient end and text, active and
@@ -340,29 +346,27 @@ struct TrimRange {
 //                 the program's band, row 8 and the canvas column's lanes)
 //                 is the flat ground (the theme's `ground` (Default's 242424, materials.h)), no palette
 //                 role.
-// THE CARD FACE — ONE BOX PAINTER, TWO LOOKS (paint_popup_chrome): a flat box
-// INSIDE A ONE-W BORDER on all four sides (hairline_px, the line rule,
-// 2026-11-04), the border standing on the box's own outer rows and columns,
-// so the card is 56 rows and the one-line tooltip 44 on the tablet (200 %); NO RING
-// TONES, NO SHADOW. THE TOOLTIP (architect 2026-10-04, the period's tooltip;
-// flat since 2026-11-02, M11 with M14 "d"): the pane, materials.h's
-// `pane_face` (Default's 363636), in `well_frame` (Default's 757575), the
-// grammar's one frame tone — the flat look's tones, read from palette()
-// like every role; ITS NAME LINE the flags' own
-// program face (2026-10-23, "the same as the flags", Program 12 W Regular,
-// 24 device px at 200 %, send Z) in the text tone `text`, ITS HINT LINE the
-// hint face (Hint 12 W since send Z, every text 12 W) in the dim tone
-// `text_dim` (architect 2026-10-31; Live's 757575 since M11, 2026-11-02,
-// paint_shift_tooltip). EVERY NOTIFICATION CARD, both classes alike
-// (architect 2026-11-04 night, his pick h1 of tmp/s38 over h0, the
-// tooltip's look they wore from 2026-10-06, and h2, 111111 ink): a box in
-// LIVE'S STATUS BAR'S ORANGE, `card_ground` = `card_face` (Default's E76942), its border
-// `card_frame` the same orange, so NO BORDER SHOWS (the ring is layout),
-// its words at the body size and its class glyph in `card_text` = `card_ink`
-// 070707, the theme's StandbySelectionForeground, the print on a lit face
-// (architect 2026-11-17, session 140, D4: "white card words", Arc's
-// $warning_fg_color on its warning orange) — the orange measured on his
-// Live 12 shot of 2026-10-31 (materials.h's THE CARDS). THIS PARAGRAPH IS THE RULE'S ONE
+// THE FLOATING SURFACES — ARC'S TOOLTIP AND NOTIFYD'S CARDS (architect
+// 2026-11-19, send Z: his "good to build" on tmp/sendZ/VIEW/Z_07, "if we
+// can do the transparency, we might as well"; built in send AA's stage D1),
+// each its own look on the one rounded box (paint_floating_box,
+// paint_handler.cpp: no border, no ring), ITS FILL A CARRIED FILL PAINTED
+// AT ITS OPACITY OVER WHAT LIES UNDER IT (theme_roles.h's CARRIED block;
+// set_palette_source_alpha over the chrome, the floater bit's blend over the
+// canvas — canvas_sink.h's THE TRANSPARENCY INVARIANT): THE TOOLTIP
+// `tooltip_fill` (Arc's $osd_bg_color, arc_dark 4B5162 at .95), radius 2 W,
+// its words `sidebar_text`, ARC'S SHADOW outside it (the tooltip block's
+// THE TOOLTIP IS ARC'S and ARC'S TOOLTIP SHADOW); A NORMAL CARD notifyd's
+// grey `card_fill` (353945 at .95) under `sidebar_text`, A STANDING CARD
+// Arc's destructive red `card_standing_fill` (F04A50 at .95, a bright
+// tone) under `card_text` (= `card_ink`, the theme's
+// StandbySelectionForeground, the print on a lit face), radius 2 W, no
+// shadow (notifications.h's THE LOOK). On a Live theme the tooltip's fill
+// is its SurfaceBackground and both cards' its Alert, all opaque. (THE CARD
+// FACE — one box painter, two looks, paint_popup_chrome: the tooltip's
+// pane in a one-W `well_frame` border, 2026-11-02, the cards' box in Live's
+// status-bar orange in a ring of its own fill, 2026-11-04 night, his pick
+// h1 of tmp/s38 — retired with it.) THIS PARAGRAPH IS THE RULE'S ONE
 // STATEMENT.
 // THE CANVAS RUNS THE PANEL'S WHOLE WIDTH (architect 2026-11-19, send Z,
 // edge to edge; render.h's THE WELL'S EDGES): its two channels' wells are
@@ -399,9 +403,11 @@ struct TrimRange {
 
 // -- THE CHOKEPOINTS ----------------------------------------------------------
 //
-// EVERY COLOUR THIS PRODUCT HANDS CAIRO GOES THROUGH ONE OF THESE TWO, and
-// no site calls cairo_set_source_rgb itself (re-grepped 2026-10-03: none
-// outside render.cpp's bodies): set_palette_source for the chrome — every
+// EVERY COLOUR THIS PRODUCT HANDS CAIRO GOES THROUGH ONE OF THESE THREE,
+// and no site calls cairo_set_source_rgb(a) itself (re-grepped 2026-10-03:
+// none outside render.cpp's bodies): set_palette_source for the chrome —
+// its translucent twin set_palette_source_alpha for the carried fills and
+// the tooltip's shadow (send AA's stage D1, 2026-11-19) — every
 // word, glyph cell and mark, and every surface, the flat ground and the keys
 // among them (the flat look, materials.h; the baked grounds and their
 // surface chokepoint went with the hi-fi panel, 2026-11-01) — and
@@ -416,6 +422,22 @@ struct TrimRange {
 // sets its ink through set_palette_source, never a surface's.
 void set_palette_source(cairo_t* cr, GuiColor c);
 void set_waveform_source(cairo_t* cr, GuiColor c);
+// THE CHROME'S SOURCE AT AN OPACITY (send AA's stage D1, 2026-11-19): the
+// color converted as set_palette_source converts it, handed to cairo with
+// `alpha` (0..1) — THE CARRIED FILLS (the tooltip's and the cards' boxes at
+// their row's opacity, tone_alpha) and the tooltip's shadow's black. The
+// palette's one translucent road: a box painted through it composites over
+// what lies under it, the chrome on the CPU and the canvas on the GPU
+// (canvas_sink.h's THE TRANSPARENCY INVARIANT, the floater bit's blend).
+void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha);
+
+// A CARRIED FILL'S OPACITY (theme_roles.h's CARRIED block): the top byte of
+// its row word over 255 — FF opaque on every Live theme, F2 (.949) on
+// arc_dark's three. Read off installed_theme()'s word, the palette's
+// GuiColor holding the color alone.
+inline constexpr double tone_alpha(uint32_t word) {
+    return static_cast<double>((word >> 24) & 0xFFu) / 255.0;
+}
 
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
@@ -426,7 +448,9 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // kGuiThemeRoles' order (theme_file.h), the program's in kGuiPaletteRoles'
 // (palette_file.h), and the panel's `face` — the tables covering the struct
 // exactly (palette_file.cpp's static_asserts); the mapping above says what
-// each paints. Every field is a solid byte triple.
+// each paints. Every field is a solid byte triple; THE THREE CARRIED FILLS'
+// opacity is no field — it rides the installed row's word (tone_alpha
+// below), so the tables still cover the struct in GuiColors alone.
 struct GuiPalette {
     // THE CHROME (Windows' element names; the values the installed theme's,
     // theme_file.h's role table).
@@ -435,10 +459,8 @@ struct GuiPalette {
     GuiColor selected_fill;   // COLOR_HIGHLIGHT
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_text;      // COLOR_WINDOWTEXT
-    GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
-    GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
-    GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S TWENTY-FIVE (materials.h's head owns each rule;
+    GuiColor card_text;       // COLOR_INFOTEXT (a standing card's words and glyph; a normal card's are sidebar_text)
+    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the three press tones the
     // press arc's, the same day; the clip lamp the lamp arc's, the same
@@ -446,7 +468,9 @@ struct GuiPalette {
     // the trough and the well's lines 2026-11-17; THE ARC PAGE'S SIX
     // 2026-11-19, send Z, theme_roles.h's head: the body tone, the title,
     // sidebar and ruler texts, the disabled key's face and border; the level
-    // fill and the radio keys' three retired in its stage C).
+    // fill and the radio keys' three retired in its stage C; THE POPUPS' FOUR
+    // 2026-11-19, send AA's stage D1: the three carried fills and the
+    // limiter lamp, the cards' ground and ring retired).
     GuiColor body_face;       // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
@@ -459,7 +483,7 @@ struct GuiPalette {
     GuiColor key_press_face;  // the scrub's thumb's and the on-screen keyboard's unlit key under a press (awaiting send Z's stage D)
     GuiColor lit_press_fill;  // the on-screen keyboard's lit key under the finger, the accent darkened (awaiting stage D)
     GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
-    GuiColor well_frame;      // the scrub's channel, the tooltip's border
+    GuiColor well_frame;      // the scrub's channel
     GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h)
     GuiColor ruler_tick;      // the ruler's ticks
     GuiColor ruler_text;      // the ruler's digits on the Arc page (the text at 80 % over the ruler)
@@ -467,11 +491,18 @@ struct GuiPalette {
     GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
     GuiColor trim_span_face;  // the trim bar's pill at rest, the span
     GuiColor well_border;     // THE WELL'S LINES, the stereo divider and the status bar's line (paint_well_frame_rows, render_waveform_divider, paint_status_bar); the keys', word buttons' and entries' rings
-    GuiColor pane_face;       // the modal family's box interior, the tooltip's face
+    GuiColor pane_face;       // the modal family's box interior
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
+    // THE THREE CARRIED FILLS (send AA's stage D1, theme_roles.h's CARRIED
+    // block): each the role's color here, ITS OPACITY the installed row's
+    // word's top byte (tone_alpha below), painted at it over what lies under.
+    GuiColor tooltip_fill;    // the tooltip's box (paint_shift_tooltip)
+    GuiColor card_fill;       // a normal (timed) card's box (paint_notifications)
+    GuiColor card_standing_fill; // a standing (critical) card's box, a bright tone
     GuiColor list_press_fill; // a list row's fill under a standing press
     GuiColor list_press_text; // that row's text and glyph
-    GuiColor clip_lamp;       // the title bar's clip lamp, lit and not struck (THE TWO LAMPS, the title bar block; the limiter lamp lit wears card_ground)
+    GuiColor limiter_lamp;    // the title bar's limiter lamp, lit (Alert, its own tone since send AA's stage D1: the cards left Alert)
+    GuiColor clip_lamp;       // the title bar's clip lamp, lit and not struck (THE TWO LAMPS, the title bar block)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -1478,7 +1509,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     rows and the gap 2026-11-06, session 63): two kLogoLampW = 8 W squares
 //     (16 x 16 device px), "LIMITER LEFT, CLIP RIGHT, mirroring the level
 //     sliders", THEIR TOP ON THE CAP BAND'S TOP. THEIR FACES: AT REST
-//     `key_face`; LIT, THE LIMITER `card_ground` ("a warning") and THE CLIP
+//     `key_face`; LIT, THE LIMITER `limiter_lamp` (Alert, "a warning"; its
+//     own tone since send AA's stage D1, the cards' until then) and THE CLIP
 //     `clip_lamp` ("a fault"); a key's lit look REFUSED ("clip indicator is
 //     not a button"). No outline, nothing printed on them. Both squares are
 //     part of logo_legend_layout and of its extent (the limiter the
@@ -1653,8 +1685,8 @@ inline int title_bar_h_px() {
 // trough, the ruler and the marker lane, the stereo divider and the well's
 // foot; THE WELL'S EDGES below), the status bar's line, the modal box's
 // outer rows of ground
-// round its pane and the lists' air inside it (modal_box.h), the cards' and
-// the tooltip's border and the scrub's channel, the dialog editors' and the
+// round its pane and the lists' air inside it (modal_box.h), the scrub's
+// channel, the dialog editors' and the
 // flag editor's carets (paint_modal_dialog, render.cpp's flag editor) — AND
 // EVERY LINE ON THE CANVAS, waveform_line_px below being this one (the
 // grid, the center lines, the stems, the cursor, the scanner, the anchor,
@@ -1744,9 +1776,9 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because the
 // case is not one row's: paint_handler.cpp's three rows read it. THE CARD AND THE FOLDER OVERLAY'S LIST
-// ROWS ARE NOT THE CASE: a card's glyph stands at its own pad and
-// ratio (notifications.h's kNotificationPadW and
-// kNotificationGlyphRatio, 2026-10-24), and a list row's at the painter's
+// ROWS ARE NOT THE CASE: a card's glyph stands in its own 16 W box at its
+// own pad (notifications.h's notifyd lengths, send AA's stage D1,
+// 2026-11-19), and a list row's at the painter's
 // own constants (paint_handler.cpp's kListGlyph*, 2026-10-23).
 // (THE PROGRAM RING'S LINE SLOT — program_line_px, one W, the area the view
 // bar's and the ruler's lines stood on, 2026-10-23 — RETIRED with the flat
@@ -2202,19 +2234,11 @@ inline int cue_label_lead_px() {
 inline int cue_fill_lead_px() {
     return cue_label_lead_px() - cue_fill_pad_px();
 }
-// THE TOOLTIP'S PAD (architect 2026-10-23, "symmetrical and much tighter";
-// 2026-11-03, mock u3; the hover tooltip's box pads every side with it,
-// paint_shift_tooltip; architect 2026-10-31, the clock "has a nice padding
-// for the font size and resolution"): kTimeFieldPadW, 6 W (12 device px on
-// the tablet at 200 %; scaled_px, rounded at the element, floored at one px)
-// — the time fields' pad it was named for, until every time field became
-// Arc's entry (send Z's stage C, 2026-11-19: paint_handler.cpp's THE TIME
-// FIELDS block, its pen and its width the entry's own), the tooltip keeping
-// it until its own restyle (send Z's stage D).
-inline constexpr double kTimeFieldPadW = 6.0;
-inline int time_field_pad_px() {
-    return scaled_px(kTimeFieldPadW, 1);
-}
+// (THE TOOLTIP'S PAD, kTimeFieldPadW — 6 W, the clock's pad, architect
+// 2026-10-31, "a nice padding for the font size and resolution", the time
+// fields' until send Z's stage C and the tooltip's until send AA's stage
+// D1, 2026-11-19 — RETIRED with its last reader: the tooltip pads by Arc's
+// kTooltipPadW, the tooltip block.)
 // THE MARKER LANE IS THUNAR'S ROW AT 9 pt (architect 2026-11-19, send Z;
 // DESIGN §1 / §4, measured on his 9 pt desktop shot: Thunar's side-pane and
 // list rows at a pitch of 20): kMarkerLaneW, 20 W through scaled_px — 40
@@ -2393,9 +2417,11 @@ inline int edge_inset_px() {
 // LINES AND THE CANVAS RUN THESE COLUMNS; THE KEYS' OUTERMOST FACES AND THE
 // TITLE BAR'S FIRST AND LAST INK STAND kEdgeInsetW INSIDE THEM (the band's
 // ends, icon_row_seats; the bottom icon row's and the controls rows',
-// bottom_row_seats; the title bar's, paint_title_bar); THE CARDS' STACK,
-// THE TOOLTIP'S BOX AND THE MODAL PANE ARE HELD INSIDE THEM (the cards'
-// stack and the tooltip's clamp; modal_box_rect on these columns). The
+// bottom_row_seats; the title bar's, paint_title_bar); THE TOOLTIP'S BOX
+// AND THE MODAL PANE ARE HELD INSIDE THEM (the tooltip's clamp — its
+// shadow may hang past them — and modal_box_rect on these columns); THE
+// CARDS' STACK STANDS kNotificationSeatW (16 W) INSIDE THEM, notifyd's seat
+// (notification_stack_bound, send AA's stage D1). The
 // on-screen keyboard is exempt, a small block seated on the window's
 // center by his ruling (onscreen_keyboard.h's block_x_px).
 struct WellColumns {
@@ -2885,13 +2911,92 @@ inline int view_bar_grab_w_px() {
 // (device_config.h), read live.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
-// from the two faces' caps under the time field's pad (paint_shift_tooltip,
-// 2026-10-31), so the run loop only needs to know it can never exceed this:
-// 75 W (the 50 Windows px of 2026-10-31 times 1.5 at the rebase to 200 %,
-// 2026-11-05), 150 device rows on the tablet against the two-line box's 68.
+// from its lines' line boxes under its pads (paint_shift_tooltip; Arc's
+// since send AA's stage D1, 2026-11-19, below), so the run loop only needs
+// to know it can never exceed this: 75 W (the 50 Windows px of 2026-10-31
+// times 1.5 at the rebase to 200 %, 2026-11-05), 150 device rows on the
+// tablet against the two-line box's 96. THE SHADOW HANGS OUTSIDE IT
+// (tooltip_shadow_reach below): the damage band adds its reach on both
+// sides of the box's rows (tooltip_damage_band, app_state.h).
 inline constexpr int     kTooltipDamageHeightPx = 75;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
+}
+
+// THE TOOLTIP IS ARC'S (architect 2026-11-19, send Z, his "good to build" on
+// tmp/sendZ/VIEW/Z_07 and "if we can do the transparency, we might as well";
+// DESIGN §6 / §9, built in send AA's stage D1): Arc-Dark's `tooltip`
+// (G3:1428-1436) — ITS BOX THE CARRIED FILL `tooltip_fill` (Arc's
+// $osd_bg_color, rgba(75, 81, 98, .95)) AT ITS OPACITY OVER WHAT LIES UNDER
+// IT, radius kTooltipRadiusW, NO BORDER — and ITS LINES in `sidebar_text`
+// (BAC3CF), Regular 12 W, one line box (gui_font_line_box_w: 11 + 3 W) a
+// line, the hint line the same size and tone; between the box's edges and
+// the lines' line boxes kTooltipPadW on all four sides (GTK's tooltip
+// window margin 6 + Arc's label padding 4, measured on his shots A8a / A8c),
+// so the first baseline stands +21 W, one line's box is 34 W tall, two
+// lines' 48 W — 68 and 96 device rows on the tablet. THE BOX IS WHOLE PX
+// (its width the ceiling of the widest line's advance under the pads): a
+// floating surface's box, the hull rule's (render.h's hull).
+inline constexpr int kTooltipPadW    = 10;
+inline constexpr int kTooltipRadiusW = 2;
+inline int tooltip_pad_px()    { return scaled_px(kTooltipPadW, 1); }
+inline int tooltip_radius_px() { return scaled_px(kTooltipRadiusW, 0); }
+
+// ARC'S TOOLTIP SHADOW (G3:1528, `tooltip.csd decoration { box-shadow: 0 1px
+// 3px 1px rgba(0,0,0,.25) }`; his settings leave show_popup_shadow off, so
+// the CSS shadow is the one drawn) AS GTK 3.24 DRAWS AN OUTSET BOX-SHADOW
+// (gtkcssshadowvalue.c's paint_box over gtkcairoblur.c; the fetched copies
+// tmp/sendZ/mock3/src_fetch/, reproduced to the byte on his shots by the mock
+// kit, tmp/sendZ/mocks/scripts/arc_kit_z3.py): THE BOX MOVED DOWN
+// kTooltipShadowOffsetW AND GROWN kTooltipShadowSpreadW on every side, its
+// corner radius the box's plus the spread (3 W), filled into an 8-bit mask
+// and BLURRED BY THREE BOX PASSES kTooltipShadowBoxW wide — GTK's
+// (int) (3 √(2π) / 4 · 3) = 5 px at its blur 3, laid in W, so 10 device px
+// on the tablet (even: GTK's (d, +1), (d, −1), (d + 1, centered) form) —
+// first down the columns, then along the rows, in GTK's integer arithmetic;
+// then BLACK AT kTooltipShadowAlpha painted through it, OUTSIDE THE BOX ONLY
+// (paint_tooltip_shadow, paint_handler.cpp). The seat is measured to the
+// box: the shadow may leave the panel or cover the owner's face.
+inline constexpr int    kTooltipShadowOffsetW = 1;
+inline constexpr int    kTooltipShadowSpreadW = 1;
+inline constexpr int    kTooltipShadowBoxW    = 5;
+inline constexpr double kTooltipShadowAlpha   = 0.25;
+inline int tooltip_shadow_offset_px() { return scaled_px(kTooltipShadowOffsetW, 0); }
+inline int tooltip_shadow_spread_px() { return scaled_px(kTooltipShadowSpreadW, 0); }
+inline int tooltip_shadow_box_px()    { return scaled_px(kTooltipShadowBoxW, 1); }
+// THE BLUR'S REACH, device px, each side: what the three passes spread one
+// mask pixel — a pass of width d whose window ends `offset` past its output
+// spreads an input `offset` px one way and d − 1 − offset the other; odd d
+// is centered (offset d / 2), even d's two halves offset (d − 1) / 2 and
+// (d + 1) / 2 and its third, d + 1 wide, centered — the same on both sides
+// in sum: 3 (d / 2) for odd d, 3 d / 2 − 1 for even. 14 on the tablet (d 10),
+// 6 at 100 % (d 5).
+inline int tooltip_shadow_blur_reach_px() {
+    const int d = tooltip_shadow_box_px();
+    if (d <= 1) return 0;
+    return d % 2 == 1 ? 3 * (d / 2) : 3 * d / 2 - 1;
+}
+// THE SHADOW'S REACH OUTSIDE THE BOX, device px, per side — the spread and
+// the blur, the offset taken from the top and given to the bottom: 16 at
+// each side, 14 above and 18 below on the tablet (7 / 6 / 8 at 100 %; the
+// outermost of them may round to nothing). The painter's extent and every
+// tooltip damage read it (paint_shift_tooltip, tooltip_damage_band).
+struct TooltipShadowReach {
+    int left = 0, top = 0, right = 0, bottom = 0;
+};
+inline TooltipShadowReach tooltip_shadow_reach() {
+    const int s = tooltip_shadow_spread_px();
+    const int o = tooltip_shadow_offset_px();
+    const int b = tooltip_shadow_blur_reach_px();
+    return TooltipShadowReach{s + b, std::max(0, s - o + b), s + b,
+                              s + o + b};
+}
+// The box's hull grown by the shadow's reach: everything the tooltip paints.
+inline GuiRect tooltip_painted_extent(const GuiRect& box) {
+    if (box.w <= 0 || box.h <= 0) return box;
+    const TooltipShadowReach r = tooltip_shadow_reach();
+    return GuiRect{box.x - r.left, box.y - r.top, box.w + r.left + r.right,
+                   box.h + r.top + r.bottom};
 }
 
 // THE SEAT IS THE OWNER'S FACE'S (architect 2026-11-07, session 90; the

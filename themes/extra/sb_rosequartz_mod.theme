@@ -2,6 +2,7 @@
 # Modified by hand from the pack's SB Rosequartz: ViewCheckControlDisabledOff 333333 -> 5A5A5A, ScrollbarInnerHandle 000000 -> 454545 (architect 2026-11-07..11)
 # ScrollbarInnerTrack and ClipBorder added by hand from SB Rosequartz.ask (architect 2026-11-17, session 140)
 # WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
+# TooltipBackground, CardBackground and CardStandingBackground, our own fills (not Live's), added by hand: TooltipBackground this file's SurfaceBackground, CardBackground and CardStandingBackground its Alert, opaque, so nothing here changes look (send AA's stage D1, 2026-11-19)
 SurfaceArea=191919
 Desktop=111111
 SurfaceBackground=353535
@@ -29,3 +30,6 @@ ClipBorder=000000
 WindowBackground=191919
 TitleForeground=FFF9EA
 SidebarForeground=FFF9EA
+TooltipBackground=353535
+CardBackground=7F0072
+CardStandingBackground=7F0072

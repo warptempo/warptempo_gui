@@ -71,19 +71,30 @@ constexpr const char* kCanvasVertexShader =
 // AN ALPHA-0 TEXEL IS DISCARDED (2026-10-13, the canvas sink's transparency
 // invariant, canvas_sink.h): the backbuffer's canvas paint area is cleared
 // to 0 where no overlay stands, so the canvas the list drew under it shows
-// there, and every other texel is opaque and placed as above.
+// there. Every other texel is placed as above, its alpha written 1 — EXCEPT
+// WHILE A FLOATING SURFACE STANDS (u_over 1, the list's floater bit; send
+// AA's stage D1, 2026-11-19, the tooltip's .95 fill and its shadow, the
+// cards' .95 fills): then the texel goes out as cairo holds it,
+// PREMULTIPLIED (t.bgr, t.a), under the blend present_frame enables for
+// this draw — the fixed state's premultiplied source-over — so a partly
+// covered texel over the canvas composites over what the list drew there,
+// G · (1 − a) + texel, rounded once, the framebuffer's alpha staying 1 (the
+// list and the clear leave it 1, and a + 1 · (1 − a) is 1); AN OPAQUE TEXEL
+// LANDS EXACTLY AS UNBLENDED (texel · 1 + G · 0), so every pixel outside a
+// floater's own partial pixels is the same bytes either way.
 constexpr const char* kCanvasFragmentShader =
     "#version 300 es\n"
     "precision highp float;\n"
     "precision highp int;\n"
     "uniform highp sampler2D u_tex;\n"
     "uniform int u_height;\n"
+    "uniform int u_over;\n"
     "out vec4 o_color;\n"
     "void main() {\n"
     "    ivec2 p = ivec2(int(gl_FragCoord.x), u_height - 1 - int(gl_FragCoord.y));\n"
     "    vec4 t = texelFetch(u_tex, p, 0);\n"
     "    if (t.a == 0.0) discard;\n"
-    "    o_color = vec4(t.bgr, 1.0);\n"
+    "    o_color = vec4(t.bgr, u_over != 0 ? t.a : 1.0);\n"
     "}\n";
 
 // THE CANVAS LIST'S PROGRAM (2026-10-13; the records at GuiCanvasPrimitive,
@@ -1341,8 +1352,10 @@ void GuiGlCanvas::build_list_program(int grow) {
 // surface road calls it right after its make current): nothing dithers or
 // tests, and THE BLEND IS OFF AT REST — its function set once here, the
 // premultiplied source-over the plate's fringe and the tint need
-// (kListFragmentShader's composite and tint arm), and enabled for the canvas list's draw alone (present_frame,
-// 2026-10-30) — so a texel and an opaque list word reach the framebuffer as
+// (kListFragmentShader's composite and tint arm), and enabled for the canvas list's draw (present_frame,
+// 2026-10-30) and for the texture's draw while a floating surface stands
+// (the floater bit; send AA's stage D1, 2026-11-19, kCanvasFragmentShader)
+// alone — so a texel and an opaque list word reach the framebuffer as
 // written.
 void GuiGlCanvas::bind_fixed_state() {
     glDisable(GL_DITHER);
@@ -1363,6 +1376,7 @@ void GuiGlCanvas::ensure_programs() {
         glUseProgram(prog);
         glUniform1i(glGetUniformLocation(prog, "u_tex"), 0);
         height_uniform_ = glGetUniformLocation(prog, "u_height");
+        over_uniform_   = glGetUniformLocation(prog, "u_over");
         program_ = prog;
     }
     // THE CANVAS LIST'S OBJECTS (2026-10-13; kListVertexShader's head): the
@@ -1508,7 +1522,10 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // triangle over the surface's own viewport, the fragment shader placing
 // each texel at its pixel and DISCARDING an alpha-0 one, so the canvas
 // shows wherever the backbuffer's interior is clear and every other
-// pixel is the backbuffer's (kCanvasFragmentShader). The frame is
+// pixel is the backbuffer's (kCanvasFragmentShader) — WHILE A FLOATING
+// SURFACE STANDS (the list's floater bit) drawn under the premultiplied
+// blend, so the tooltip's and the cards' translucent pixels composite over
+// the canvas the list drew (send AA's stage D1, 2026-11-19). The frame is
 // cleared first, opaque black: with discards a pixel neither draw writes
 // would otherwise hold a recycled buffer's bytes, though by the
 // invariant none exists (the list's first record is the canvas's ground,
@@ -1518,9 +1535,10 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // scissor: the field's word and the held page's gray bytes, the window's
 // bytes by GuiCanvasPage's rule.
 // THE PICTURE IS THE BACKBUFFER'S BYTES EXACTLY outside the clip and
-// under every overlay: an 8-bit UNORM texel
+// under every opaque overlay: an 8-bit UNORM texel
 // fetched without a filter round-trips to the same 8-bit value in the
-// RGBA8 framebuffer, dithering is off, the texture's draw is unblended, and
+// RGBA8 framebuffer, dithering is off, the texture's draw is unblended (or,
+// under a floater, blended, which lands an opaque texel exactly), and
 // the framebuffer is plain RGBA (the passthrough colorspace encodes nothing
 // — never an sRGB framebuffer, which is what makes the plate's blend the
 // byte-space blend ruled); inside the clip it is the list's words, each a
@@ -1700,9 +1718,19 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         glActiveTexture(GL_TEXTURE0);
         glDisable(GL_SCISSOR_TEST);
     }
+    // THE TEXTURE, BLENDED WHILE A FLOATER STANDS (kCanvasFragmentShader's
+    // u_over; send AA's stage D1): the floater bit — a tooltip or a card
+    // standing, the bit the upload walk already reads — enables the blend
+    // for this one draw and has the shader write the premultiplied texel,
+    // so the floater's translucent pixels composite over the canvas; with
+    // no floater the draw is the unblended one it always was. No pass is
+    // added: the same draw, its blend on for the frames a floater stands.
     glUseProgram(program_);
     glUniform1i(height_uniform_, texture_h_);
+    glUniform1i(over_uniform_, floater ? 1 : 0);
+    if (floater) glEnable(GL_BLEND);
     glDrawArrays(GL_TRIANGLES, 0, 3);
+    if (floater) glDisable(GL_BLEND);
     page_stood_ = page_stands;
     return true;
 }
@@ -1713,6 +1741,7 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
 void GuiGlCanvas::forget() {
     program_   = 0;
     height_uniform_ = -1;
+    over_uniform_   = -1;
     texture_   = 0;
     texture_w_ = 0;
     texture_h_ = 0;

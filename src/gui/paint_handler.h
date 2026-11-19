@@ -860,7 +860,9 @@ struct GuiPaintHandler {
     // THE BOX A TOOLTIP'S SHOW IS ABOUT TO PAINT (architect 2026-11-16, the
     // beats: the tooltip's show damages its box's own rect, not a band the
     // window's width): the hull paint_shift_tooltip lays the standing
-    // owner's box out on, ASKED OF THE PAINTER ITSELF — the box's size is
+    // owner's box out on GROWN BY ITS SHADOW'S REACH (Arc's shadow, send
+    // AA's stage D1, 2026-11-19: tooltip_painted_extent, render.h — the
+    // painter's published rect the same extent), ASKED OF THE PAINTER ITSELF — the box's size is
     // its shaped words under its pads and its seat its owner's face, which
     // only that body derives, so this runs it in its MEASURE form on a
     // target that holds no pixel: the body composes the words, lays the box
@@ -1244,7 +1246,8 @@ private:
     // note in the .cpp.)
 
     // THE TOOLTIP, painted TOPMOST — after every row pass, so it overlaps the
-    // rows it hangs over. It PUBLISHES the rect it painted
+    // rows it hangs over. It PUBLISHES the rect it painted (its box and its
+    // shadow's reach)
     // (AppState::redesign_tooltip.rect) only so the hide edge can damage it,
     // and empties it when no box stands and the run's clip has repainted
     // where the last one stood (the rule at the body's head, 2026-11-16).
@@ -1267,16 +1270,11 @@ private:
     // every real run.
     std::vector<AppState::NotificationPainted>* notifications_measured_ =
         nullptr;
-    // THE BOX every floating surface draws (the tooltip and the
-    // notification cards), ONE PAINTER, TWO LOOKS: a flat `ground` box inside
-    // a one-W `frame` border on all four sides — the tooltip the pane in
-    // `well_frame` (architect 2026-11-02, M11 with M14 "d"), the cards Live's
-    // orange with the frame in the fill (2026-11-04 night; render.h's
-    // palette block, THE CARD FACE) — ON AN EXACT RECT, the box and its
-    // border at exact coverage on the box's real edges (architect
-    // 2026-11-15, the no-grid arc; a whole box is handed as it is).
-    void paint_popup_chrome(cairo_t* cr, const GuiRectF& r, GuiColor frame,
-                            GuiColor ground);
+    // (THE ONE BOX PAINTER both floating surfaces shared, paint_popup_chrome
+    // — a flat box in a one-W border — retired with send AA's stage D1,
+    // 2026-11-19: the tooltip is Arc's and the cards notifyd's, each its own
+    // look, both on paint_floating_box's rounded box at its carried
+    // opacity, paint_handler.cpp.)
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box — above every lane and the
     // keyboard slot, below the pointer-transient tooltip and above the modal (the order is on_redraw's step 13). It

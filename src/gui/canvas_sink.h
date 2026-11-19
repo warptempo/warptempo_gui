@@ -86,10 +86,18 @@
 // known clear already, 2026-10-14) — the chrome ground and the column's face
 // skip it — so every CPU pixel inside the canvas paint area is EITHER ALPHA 0
 // (the GPU's: the texture shader discards it and the canvas drawn from the
-// list shows) OR ALPHA 255 (an overlay's: every overlay over the well is an
-// opaque integral rectangle whose antialiasing blends against its own ground
-// alone, design record §2). A partial alpha there is a design violation — a
-// translucent or non-rectangular overlay would have to composite on the CPU.
+// list shows) OR ALPHA 255 (an overlay's: every opaque overlay over the well
+// is an integral rectangle whose antialiasing blends against its own ground
+// alone, design record §2) — OR, WHERE A FLOATING SURFACE STANDS, ANY
+// PREMULTIPLIED ALPHA (send AA's stage D1, 2026-11-19: Arc's tooltip, its
+// .95 fill, rounded corners and GTK's shadow, and notifyd's .95 cards —
+// "if we can do the transparency, we might as well"): cairo lays the
+// floater over the cleared zeros, so its texels are its own premultiplied
+// color, and WHILE THE FLOATER BIT STANDS the texture's draw blends them
+// source-over the canvas the list drew (GuiGlCanvas::present_frame,
+// kCanvasFragmentShader), an opaque texel landing as unblended. No other
+// surface may leave a partial alpha there: it would show with no floater
+// to turn the blend on.
 // THE HOLE IS ONE RECT, ITS TENANT THE CANVAS OR THE PAGE (architect
 // 2026-10-27, "1 a", the GPU page; design record §3.13): the list's clip is
 // the canvas paint area, or — while the score viewer's page stands
@@ -99,8 +107,8 @@
 // paint_modal_box CLEARS at every rect that meets it, after every pass that
 // paints under the box (the lanes paint their exposure under it and the box
 // covers them, on_redraw's paint-order block step 12). The invariant is the
-// same inside it: alpha 0, or an opaque overlay's 255 (the tooltip and the
-// cards, the floater bit's two). The two tenants never stand together, so
+// same inside it: alpha 0, an opaque overlay's 255, or a floater's
+// premultiplied alpha (the tooltip and the cards, the floater bit's two). The two tenants never stand together, so
 // the scissor, the rect every upload leaves out and the floater bit's
 // whole-walk rule are one rule for both.
 //
