@@ -14,7 +14,7 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — PLUS EIGHT ROLES OF OUR OWN (THE
+// own role names, never a derived tone — PLUS NINE ROLES OF OUR OWN (THE
 // FORMAT, below), and the derivation, this file's, turns each into a row of
 // GuiThemeTones at the launch's read.
 //
@@ -26,10 +26,11 @@
 // of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
 // flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
 // the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
-// AND OUR OWN EIGHT, WindowBackground, TitleForeground and SidebarForeground,
+// AND OUR OWN NINE, WindowBackground, TitleForeground and SidebarForeground,
 // the three fills TooltipBackground, CardBackground and
-// CardStandingBackground, and TitleHighlight and ScaleTrough (send AA's
-// stage D2), kOwnThemeRoles: no Live role names them),
+// CardStandingBackground, TitleHighlight and ScaleTrough (send AA's
+// stage D2) and ScaleSliderBorder (send AA's stage D3), kOwnThemeRoles: no
+// Live role names them),
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
 // an 8-digit word's last byte its straight alpha — kept raw, the derivation
 // compositing it (the COMPOSITED block) or, for the three fills, CARRYING
@@ -58,8 +59,9 @@
 // ControlForeground copied, the ROLE-NAMED block's OUR OWN, and its own
 // SurfaceBackground and Alert for the three fills, the CARRIED block; and
 // our own two of send AA's stage D2, each file's own SurfaceArea and
-// ScrollbarInnerTrack copied, the ROLE-NAMED block's OUR OWN; each
-// header line the record; the converter writes them the same way) —
+// ScrollbarInnerTrack copied, and of stage D3, its own ClipBorder, the
+// ROLE-NAMED block's OUR OWN; each header line the record; the converter
+// writes them the same way) —
 // AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
 // it, its header the record of every role (architect 2026-11-17, session
 // 140); NO .ASK FILE IS IN THE REPOSITORY OR THE APK, and the app reads
@@ -126,13 +128,6 @@
 //                                     arrangement's floor, his "#56" on Classic
 //                                     Medium Light over the panels' DADADA)
 //     lane                   2A2A2A = Desktop (the marker lane)
-//     key press face         2A2A2A = Desktop (the press arc, 2026-11-05: his
-//                                     pick p2 over ControlBackground 1E1E1E —
-//                                     "press in skeumorphic is darker"); since
-//                                     send Z's stage C (2026-11-19) the scrub's
-//                                     thumb's and the on-screen keyboard's
-//                                     press alone, awaiting stage D — every
-//                                     other key's press is Arc's lit look
 //     key face, magnify core
 //                            363636 = SurfaceBackground (the core below)
 //     cue outline            111111 = ControlContrastFrame — THE SELECTION
@@ -142,9 +137,7 @@
 //                                     2026-11-19, send AA)
 //     text                   B5B5B5 = ControlForeground (the keys' glyphs, the
 //                                     clocks, the status bar)
-//     dim text, well frame   757575 = TextDisabled (the scrub channel; the
-//                                     tooltip's border retired with Arc's
-//                                     tooltip, send AA's stage D1)
+//     dim text               757575 = TextDisabled
 //     inactive cue           5D5D5D = BackgroundClip
 //     cue, cue fill          FFAD56 = ViewCheckControlEnabledOn, THE
 //                                     ACCENT: A LIT OR PRESSED KEY'S FACE
@@ -258,10 +251,17 @@
 //                                     itself
 //     scale trough           242424 = ScaleTrough over the ground (arc_dark
 //                                     2D303B, Arc's progress and scale
-//                                     trough): the progress dialog's bar, the
-//                                     scrub's to come; a Live theme's
+//                                     trough): the progress dialog's bar and
+//                                     the scrub's trough; a Live theme's
 //                                     ScrollbarInnerTrack, so its trim
 //                                     trough's tone
+//   AND ONE MORE FOR THE SCRUB (send AA's stage D3, 2026-11-19: Arc's scale,
+//   render.h's scrub block), the same way:
+//     scale slider border    2A2A2A = ScaleSliderBorder over the ground
+//                                     (arc_dark 262933, Arc's slider border):
+//                                     the scrub's knob's rim at rest; a Live
+//                                     theme's ClipBorder, so its well's
+//                                     lines' tone
 //   and the window's FRAME EDGE, no role of its own: = ControlContrastFrame
 //   (111111; arc_dark 21252B, xfwm's frame edge), the cue outline's role.
 //   CARRIED (our own three fills, send AA's stage D1, architect 2026-11-19 —
@@ -423,30 +423,6 @@
 //                                     here. HALF WAY TO THE MIXED HEAD at the
 //                                     install (architect 2026-11-13, session
 //                                     119: "that rule should stay the same")
-//     lit press fill         C68743 = THE ACCENT DARKENED BY THE PRESS RATIO:
-//                                     the accent (cue) · (mean(press face) /
-//                                     mean(key face)) per channel, the means
-//                                     over the three sRGB bytes, rounded half
-//                                     to even and clamped (42 / 54 = 0.778 on
-//                                     Default: FFAD56 -> C68743) — THE
-//                                     ON-SCREEN KEYBOARD'S LIT KEY UNDER THE
-//                                     FINGER alone since send Z's stage C
-//                                     (2026-11-19; awaiting stage D: every
-//                                     other key's press is Arc's lit look,
-//                                     materials.h) (architect 2026-11-11,
-//                                     session 106: "if
-//                                     it's a lit lamp, it gets darkened based
-//                                     on the starting point of the accent
-//                                     color"; the press arc's ruling of
-//                                     2026-11-05, his "ratio" on mocks d1 / i1
-//                                     of tmp/s45). THE RATIO, NOT THE
-//                                     DIFFERENCE: the ratio keeps the theme's
-//                                     lit hue and scales with its own press
-//                                     step. A theme whose key face is black
-//                                     (no divisor) keeps the accent whole,
-//                                     ratio 1; where the press face is lighter
-//                                     than the key face the lit press comes
-//                                     out lighter — Live's numbers, no rule
 //     lit dim fill, text on lit dim
 //                            86623B, 2A221A = THE LIT-BUT-INERT PAIR ON ARC'S
 //                                     OWN NUMBERS (architect 2026-11-19, send
@@ -530,8 +506,8 @@
 // (StandbySelectionBackground) ("standby selection should get the rule",
 // beside the list press fill that left with send AA's stage D2). EVERY TONE DERIVED FROM A
 // BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
-// body): the cue fill — the markers wear the mixed accent — the lit press
-// and lit dim fills, the inert print over the mixed inert face, and the
+// body): the cue fill — the markers wear the mixed accent — the lit dim
+// fill, the inert print over the mixed inert face, and the
 // playhead line, white half way to the
 // mixed head. NEVER MIXED: the text tones ("never the glyph color itself":
 // the text, the dim text, the key dim ink, the title, sidebar and ruler

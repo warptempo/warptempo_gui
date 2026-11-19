@@ -71,11 +71,6 @@ struct ChromeSpec {
     // (THE TIME FIELD'S HEIGHT AND PAD left the spec 2026-10-08: every time
     // field is the program's since 2026-10-09, Cool Edit's dark field under
     // every chrome, its height and its 5-W pad program_spec.h's.)
-    // (THE SCRUB THUMB'S GRAB BOX, scrub_handle_box_px — WIN2000 14, the
-    // 11-px trackbar thumb widened to it, the inset the mapping took half of
-    // at each end — left the spec 2026-10-25: the thumb's center runs to the
-    // channel's ends and the thumb itself is the grab band, render.h's scrub
-    // block.)
     // (THE DROPDOWN's item height and margin, Windows' popup menu, went with
     // the Settings popup, 2026-10-21.)
     // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: ONE RULE FOR EVERY

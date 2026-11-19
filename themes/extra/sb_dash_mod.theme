@@ -4,6 +4,7 @@
 # WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
 # TooltipBackground, CardBackground and CardStandingBackground, our own fills (not Live's), added by hand: TooltipBackground this file's SurfaceBackground, CardBackground and CardStandingBackground its Alert, opaque, so nothing here changes look (send AA's stage D1, 2026-11-19)
 # TitleHighlight and ScaleTrough, our own roles (not Live's), added by hand: TitleHighlight this file's SurfaceArea, ScaleTrough its ScrollbarInnerTrack, so nothing here changes look; SelectionBackground and SelectionForeground left the file, no tone reading them (send AA's stage D2, 2026-11-19)
+# ScaleSliderBorder, our own role (not Live's), added by hand: this file's ClipBorder, so nothing here changes look (send AA's stage D3, 2026-11-19)
 SurfaceArea=111111
 Desktop=232323
 SurfaceBackground=191B1C
@@ -34,3 +35,4 @@ CardBackground=A81E00
 CardStandingBackground=A81E00
 TitleHighlight=111111
 ScaleTrough=000000
+ScaleSliderBorder=000000

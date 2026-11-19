@@ -4262,20 +4262,21 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // -- THE PLAY-SCRUB'S POINTER HALF (2026-08-28) --------------------------------
 //
 // Over the painter's published track (AppState::ModalDialogGeometry::scrub,
-// the whole SLIDER ITEM — zero under every owner but the player and read only
+// the whole SCALE ITEM — zero under every owner but the player and read only
 // through a stash that names the live player session). The mapping between a
 // place and a frame is the one the painter's handle uses
-// (render_player_scrub_x_of / _frame_at, app_state.h: the resting thumb at
+// (render_player_scrub_x_of / _frame_at, app_state.h: the resting knob at
 // its frame's exact place, a held one at the real place the pointer
-// carries it to — architect 2026-11-15, the no-grid arc), whose travel runs the
-// thumb's center from the channel's first column to its last (2026-10-25).
+// carries it to — architect 2026-11-15, the no-grid arc), whose travel runs
+// the knob's center from half a knob inside the trough's left end to half a
+// knob inside its right (render.h's scrub block, Arc's scale).
 // THE THUMB DRAGS, WINDOWS' TRACKBAR (architect
 // 2026-10-02 — the fix for "the thumb doesn't drag"; the drag itself stood
 // since the player's birth, but only from the handle's own box, and a press
 // on the track elsewhere seeked at the press and armed nothing): EVERY PRESS
-// ON THE ITEM ARMS THE THUMB DRAG. On THE THUMB'S GRAB BAND — the painted
-// thumb, its overhang past the channel's ends included, through the one test
-// (render_player_scrub_handle_hit) — the thumb is TAKEN WHERE IT IS, the grab
+// ON THE ITEM ARMS THE THUMB DRAG. On THE KNOB — its painted disc, through
+// the one test (render_player_scrub_handle_hit) — the knob is TAKEN WHERE IT
+// IS, the grab
 // offset kept so it does not jump under the pointer; ANYWHERE ELSE on the
 // item's band the thumb JUMPS to the press's real place and the same press
 // continues as the drag. Either way the thumb's painted x follows the
@@ -4326,14 +4327,15 @@ static void invalidate_scrub_clock(Viewport& viewport, const AppState& app) {
 // painted handle sits inside its own track at every point of a drag and the
 // release's seek reads the same span the mapping does. The carried center
 // is A REAL PLACE (architect 2026-11-15, the no-grid arc: the pointer's real
-// x less the grab offset, so a held thumb stands where the pen holds it) on
-// the channel's travel (render_player_scrub_travel_x0, the trough's left
-// edge to its right), the clamp onto that real interval; a travel with no
-// span answers its one place.
+// x less the grab offset, so a held knob stands where the pen holds it) on
+// the knob's travel (render_player_scrub_travel_x0 / _usable_span: half a
+// knob inside each end of the trough, render.h's scrub block), the clamp
+// onto that real interval — a pen place outside it carries the knob to its
+// end; a travel with no span answers its one place.
 double GuiInputHandler::clamp_player_scrub_marker_x(double x) const {
-    const GuiRect channel = app.modal_dialog.scrub_channel;
-    const double x0 = render_player_scrub_travel_x0(channel);
-    const int span  = render_player_scrub_usable_span(channel);
+    const GuiRect item = app.modal_dialog.scrub;
+    const double x0 = render_player_scrub_travel_x0(item);
+    const int span  = render_player_scrub_usable_span(item);
     if (span <= 0) return x0;
     return std::clamp(x, x0, x0 + static_cast<double>(span));
 }
@@ -4361,7 +4363,7 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     // retirement record is at render_player.h, where the shared sentences
     // used to be spelled). The thumb STANDS there with no item since
     // 2026-10-25 (render.h's scrub block), painted at frame 0; a press on it
-    // or on the channel is consumed here and seeks nothing. IT IS ALSO THE
+    // or on the trough is consumed here and seeks nothing. IT IS ALSO THE
     // SCRUB'S REST WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
     // Audacious's own slider — dead while stopped), IDLE being no item bound
     // (the invariant at AppState::RenderPlayer::transport).
@@ -4381,7 +4383,7 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     // band (architect 2026-11-15, the no-grid arc: the thumb is taken
     // exactly where it stands, no step onto a column) and zero elsewhere,
     // so the thumb jumps to an off-thumb press and keeps its seat under an
-    // on-thumb one. The grab band is asked with the real point
+    // on-thumb one. The knob's disc is asked with the real point
     // (render_player_scrub_handle_hit).
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     const bool on_thumb =
@@ -4392,9 +4394,9 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     drag.on_thumb = on_thumb;
     drag.grab_dx  = on_thumb ? at.rx - thumb_x : 0.0;
     // THE CARRIED x IS A THUMB CENTRE, so it is clamped onto the thumb's OWN
-    // TRAVEL and not onto the item — the painter draws the thumb at it, and a
-    // centre past either end of that travel would hang the thumb off its
-    // channel (the
+    // TRAVEL and not onto the item — the painter draws the knob at it, and a
+    // centre past either end of that travel would hang the knob off its
+    // trough (the
     // travel is the mapping's, one owner: render_player_scrub_usable_span).
     drag.marker_x = clamp_player_scrub_marker_x(at.rx - drag.grab_dx);
     // THE SOUND PAUSES WHILE THE SCRUB IS HELD (the block head): a live item
@@ -4415,9 +4417,11 @@ void GuiInputHandler::update_player_scrub_motion(double x) {
     if (track.w <= 0) return;
     const double mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (mx == drag.marker_x) return;
+    // THE MOVE'S DAMAGE: the knob's old and new discs and the trough between,
+    // where the played part changed (render.h's scrub block).
+    viewport.invalidate_rect(scale_knob_move_rect(track, drag.marker_x, mx));
     drag.marker_x = mx;
     drag.moved    = true;
-    viewport.invalidate_rect(track);
     // The timestamp follows the thumb (the block head).
     invalidate_scrub_clock(viewport, app);
 }
@@ -4544,7 +4548,7 @@ bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
     if (mods.ctrl) return true;
     if (!app.score) return true;
     // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED), its published exact
-    // center: on its grab band the press takes it where it stands, the grab
+    // center: on its disc the press takes it where it stands, the grab
     // offset kept against that painted center (the render player's claim);
     // anywhere else on the item the thumb jumps to the press.
     const double thumb_x = app.modal_dialog.scrub_thumb_x;
@@ -4591,9 +4595,10 @@ void GuiInputHandler::update_score_scrub_motion(double x) {
     if (track.w <= 0) return;
     const double mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (mx == drag.marker_x) return;
+    // The move's damage (the render player's motion).
+    viewport.invalidate_rect(scale_knob_move_rect(track, drag.marker_x, mx));
     drag.marker_x = mx;
     drag.moved    = true;
-    viewport.invalidate_rect(track);
     // The soundtrack's timestamp follows the thumb (the block head).
     invalidate_scrub_clock(viewport, app);
     // THE PAGE UNDER THE CARRIED CENTER IS SHOWN (the block head), display

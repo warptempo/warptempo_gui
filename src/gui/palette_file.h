@@ -44,12 +44,12 @@
 // theme_roles.h's DERIVED block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-seven words with its literal (the press arc's key press face and lit
-// press fill of 2026-11-05 among them — its list press pair retired with send
-// AA's stage D2, 2026-11-19, when the dialogs' three joined: the window's
-// frame edge 111111, ControlContrastFrame; its title bar's highlight row and
-// the progress bar's trough 242424, SurfaceArea and ScrollbarInnerTrack over
-// the ground, a Live theme's own numbers —
+// forty-five words with its literal (the dialogs' three of send AA's stage
+// D2, 2026-11-19: the window's frame edge 111111, ControlContrastFrame; its
+// title bar's highlight row and the progress bar's trough 242424,
+// SurfaceArea and ScrollbarInnerTrack over the ground, a Live theme's own
+// numbers — and the scale's rim of stage D3, 2A2A2A, ClipBorder over the
+// ground —
 // the lamp arc's clip lamp the same night, the lit-but-inert key's face and
 // its glyph of 2026-11-11, and the enabled chip's fill of 2026-11-12, retold
 // 2026-11-13; the trough and the
@@ -65,8 +65,8 @@
 // MIXED (architect 2026-11-13, session 119; theme_roles.h's THE BRIGHT
 // MIX): install_palette fills every member off the row with its bright
 // tones — of this table `cue`, `cue_fill` and the playhead's two, of the
-// chrome's the lit key's press and inert faces, the selection and list
-// press fills, the standing card and the two lamps — mixed toward its ground at the
+// chrome's the lit key's inert face, the selection fill, the standing card
+// and the two lamps — mixed toward its ground at the
 // `bright_mix` key. Every "Default N"
 // below is the reference row's own number, the record; at 100 the screen
 // shows exactly it, at the key's default 75 (architect 2026-11-18, send Y)
@@ -187,9 +187,8 @@
 // 2026-11-11, session 106): the one program role a chrome painter reads —
 // and the one no well painter reads, the chip reading `cue_fill`, the same
 // word (2026-11-13, session 119), kept in this table where it stood; the
-// lit key's press
-// and inert faces are the chrome's (`lit_press_fill`, `lit_dim_fill`,
-// theme_file.h), derived from it (materials.h's THE KEY).
+// lit key's inert face is the chrome's (`lit_dim_fill`, theme_file.h),
+// derived from it (materials.h's THE KEY).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -228,11 +227,10 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // the theme files' of 2026-11-11, every row equal to the .ask reader's).
 // The lamp arc's one (2026-11-05 night) is Live's own word read
 // off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum).
-// THE LIT KEY'S FOUR (architect 2026-11-11, session 106: a lit key's face is
+// THE LIT KEY'S THREE (architect 2026-11-11, session 106: a lit key's face is
 // the accent, `cue` FFAD56; theme_roles.h's head): THE PRINT ON A LIT FACE
 // 070707, Default's StandbySelectionForeground (architect 2026-11-17,
-// session 140); THE LIT PRESS FILL C68743, the accent × 42 / 54, the ratio
-// mean(press face 2A2A2A) / mean(key face 363636); and THE LIT-BUT-INERT
+// session 140); and THE LIT-BUT-INERT
 // PAIR on Arc's own numbers (architect 2026-11-19, send Z: "let's do arcs
 // numbers"), a checked-but-disabled key's face 86623B — (the accent at 75 %
 // over the body tone 242424, C88B4A) at 60 % over the body tone — and its
@@ -279,10 +277,7 @@ static_assert(kDefault.key_dim_face    == 0x2E2E2E);
 static_assert(kDefault.key_dim_border  == 0x272727);
 static_assert(kDefault.text_on_lit_dim == 0x2A221A);
 static_assert(kDefault.key_face        == 0x363636);
-static_assert(kDefault.key_press_face  == 0x2A2A2A);
-static_assert(kDefault.lit_press_fill  == 0xC68743);
 static_assert(kDefault.lit_dim_fill    == 0x86623B);
-static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x393939);
 static_assert(kDefault.ruler_tick      == 0x919191);
 static_assert(kDefault.ruler_text      == 0x9C9C9C);
@@ -296,6 +291,7 @@ static_assert(kDefault.score_pane_face == 0x191919);
 static_assert(kDefault.frame_edge      == 0x111111);
 static_assert(kDefault.title_highlight == 0x242424);
 static_assert(kDefault.scale_trough    == 0x242424);
+static_assert(kDefault.scale_slider_border == 0x2A2A2A);
 static_assert(kDefault.tooltip_fill    == 0xFF363636);
 static_assert(kDefault.card_fill       == 0xFFE76942);
 static_assert(kDefault.card_standing_fill == 0xFFE76942);

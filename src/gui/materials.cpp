@@ -114,12 +114,3 @@ void paint_entry(cairo_t* cr, const GuiRect& box,
     }
     pass.end();
 }
-
-void paint_flat_key(cairo_t* cr, const GuiRectF& r, KeyLook look) {
-    const GuiPalette& p = palette();
-    const GuiColor tone = look == KeyLook::Lit      ? p.cue
-                        : look == KeyLook::LitPress ? p.lit_press_fill
-                        : look == KeyLook::Press    ? p.key_press_face
-                                                    : p.key_face;
-    paint_ink_rect(cr, r, tone);
-}

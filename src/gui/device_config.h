@@ -524,8 +524,7 @@ enum class GuiIconSet { Breeze, Papirus };
 // and a gap of 8 (render.h's cue_triangle_rows and cue_label_lead_px,
 // cool_edit_paint.h's THE CUE'S CHIP, gui_font.h's Label size since 2026-11-01 night,
 // the gap 12 since 2026-11-02, the rows 9, the size 24 and the gap 13 on
-// 2026-11-03, today's numbers those owners' — the rows 4 W, 8 device rows
-// on the tablet, since 2026-11-12; an old line is the
+// 2026-11-03, today's numbers those owners'; an old line is the
 // ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
 // keys together; the level APPENDED after the permanent keys 2026-10-28,
 // and the crossfade after it — the two fade tuning keys after it

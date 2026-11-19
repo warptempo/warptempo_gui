@@ -42,8 +42,7 @@
 // the window as it converts every color (display_color), so True Colors
 // holds with no cache of its own. The palette's `face` IS THE BODY TONE
 // (render.cpp's install_palette), the chrome's `ground` role the title tone
-// (theme_file.h). (The flag editor's field keeps `ground` until send Z's
-// stage D restyles the entries.)
+// (theme_file.h).
 //
 // THE KEY IS ARC'S BUTTON (architect 2026-11-18 / 2026-11-19, send Z;
 // DESIGN §3, the approved pictures Z_01 / Z_02 and the mock kit's
@@ -62,8 +61,8 @@
 // DRAWING the set's 16 W canvas centered on the box (paint_key_glyph,
 // paint_handler.cpp). NO LED, NO GLOW, NO DEPTH, NO SHADOW.
 // THE STATES ARE ARC'S (key_state below; architect 2026-11-19: "Arc's own
-// answer", superseding the darker press of 2026-11-05 on every key but the
-// two that await stage D below; "we can let go of the green"; "lit but
+// answer", superseding the darker press of 2026-11-05 on every key; "we can
+// let go of the green"; "lit but
 // inert: let's do arcs numbers"): REST the face under the drawing in
 // `text`; PRESSED, LIT AND LIT UNDER PRESS ONE LOOK — `:active` and
 // `:checked` are one in Arc — THE ACCENT `cue` (Default FFAD56,
@@ -115,12 +114,18 @@
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and a
 // dialog editor's field are Arc's entry (paint_entry), NOISE's level its
 // progress line, a dialog editor's its focus line (send AA's stage D2); THE
-// TIME FIELDS are plain text since 2026-11-19 (send AA; paint_handler.cpp's
-// THE TIME FIELDS). THE ON-SCREEN
-// KEYBOARD'S KEYS are one grid of Arc's button tones with shared lines
-// since send AA's stage D2 (paint_handler.cpp's paint_onscreen_keyboard);
-// THE SCRUB'S THUMB AWAITS THE NEXT STAGE: today's flat key and today's
-// press look (paint_flat_key below).
+// MARKER LANE'S EDITORS are GTK's in-place cell editor, the entry's fill in
+// a one-W accent border (render.h's EDITING paragraph); THE TIME FIELDS are
+// plain text since 2026-11-19 (send AA; paint_handler.cpp's THE TIME
+// FIELDS). THE ON-SCREEN KEYBOARD'S KEYS are one grid of Arc's button tones
+// with shared lines since send AA's stage D2 (paint_handler.cpp's
+// paint_onscreen_keyboard); THE SCRUB IS ARC'S SCALE — its trough
+// `scale_trough`, its played part the accent, its knob `key_face` in a
+// one-W `scale_slider_border` rim, held the whole disc the accent
+// (render.h's scrub block, paint_scale; architect 2026-11-18 / 19, send Z's
+// design, built in send AA: "I'm hoping we're gonna have a proper arc
+// thumb"). EVERY KEY SURFACE IS ARC'S (architect 2026-11-18 / 19, send Z):
+// nothing in the product wears the flat key of 2026-11-01.
 //
 // THE EDGE RULE IS THE KEYS': both icon rows' and the controls rows'
 // outermost BOXES stand kEdgeInsetW (6 W) inside the panel's first and last
@@ -188,15 +193,10 @@
 // text coincide with the ground, that is Live's own number — ACCEPTED, not
 // a bug, no backstop (architect 2026-11-05).
 // ARC'S ENTRY (NOISE's case, a dialog editor's field; paint_entry below):
-// the ruler's — the canvas's — tone in a one-W `well_border` ring.
+// the ruler's — the canvas's — tone in a one-W `well_border` ring; the
+// marker lane's cell editor the same fill in the accent's square border.
 //
-// THE WELL'S FRAME TONE. `well_frame` is THE GRAMMAR'S ONE FRAME TONE
-// (architect 2026-11-02, M14 "d"), Default's 757575 (TextDisabled, the dim
-// text's own role): the scrub's one-W channel (render.h's scrub block) —
-// the tooltip's one-W border in it retired with Arc's tooltip (send AA's
-// stage D1, 2026-11-19: no border). It is not the well's lines'
-// `well_border` (THE WELL above), a tone of its own. THE TRIM BAR'S TWO
-// TONES (render_trim_flags): `trim_bar_face`, the trough, is Live's
+// THE TRIM BAR'S TWO TONES (render_trim_flags): `trim_bar_face`, the trough, is Live's
 // ScrollbarInnerTrack over the ground (architect 2026-11-17, session 140);
 // `trim_span_face`, the pill, is Live's ScrollbarInnerHandle over Desktop,
 // the ruler's ticks Live's DetailViewRulerMarkings over the ruler face, on
@@ -237,10 +237,8 @@
 // destructive red `card_standing_fill` (F04A50 at .95, a bright tone) under
 // `card_ink`, the print on a lit face (notifications.h's THE LOOK). On a
 // Live theme the tooltip's fill is its SurfaceBackground and both cards'
-// its Alert, opaque. (The tooltip's pane in a one-W `well_frame` border,
-// 2026-11-02, and the cards' flat box in Live's status-bar orange, both
-// classes alike, 2026-11-04 night, his pick h1 of tmp/s38, retired with
-// it.) THE LIMITER LAMP keeps Alert as `limiter_lamp`, its own tone.
+// its Alert, opaque. THE LIMITER LAMP keeps Alert as `limiter_lamp`, its
+// own tone.
 
 // -- ARC'S BUTTON: THE KEY'S STATES, ITS LINKED GROUP, THE WORD BUTTON AND
 //    THE ENTRY (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §3, the
@@ -412,22 +410,6 @@ inline uint32_t mix_word(uint32_t a, uint32_t b, double t) {
     }
     return out;
 }
-
-// THE SCRUB'S THUMB, AWAITING THE NEXT STAGE: today's flat key — a flat box,
-// no border, no corner — and today's press look, alone of every key surface:
-// the face `key_face` at rest, `key_press_face` (Desktop) under a press
-// (the lit looks, the accent and `lit_press_fill`, the on-screen keyboard's
-// until send AA's stage D2, are never asked of the thumb). KeyLook folds the
-// two bits.
-enum class KeyLook { Rest, Press, Lit, LitPress };
-inline constexpr KeyLook key_look(bool checked, bool pressed) {
-    return checked ? (pressed ? KeyLook::LitPress : KeyLook::Lit)
-         : pressed ? KeyLook::Press
-                   : KeyLook::Rest;
-}
-// The flat face on real edges (the exact fill, paint_ink_rect on a
-// GuiRectF; render.h's hull holds the rule).
-void paint_flat_key(cairo_t* cr, const GuiRectF& r, KeyLook look);
 
 // A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
 // KEY; architect 2026-11-02, R5 / R11, "ground is not a button"): `key` the

@@ -220,8 +220,8 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — the chrome's flat-look tones among them
 // (materials.h, 2026-11-01: the ground, the key's faces (rest, disabled
-// and its border, a lit key's inert face, its lit face the palette's `cue`;
-// the flat press faces the keyboard keeps), the
+// and its border, a lit key's inert face, its lit face the palette's
+// `cue`), the scale's trough and rim, the
 // text tones, the well's tones — the trim bar, its frame, the ruler, its
 // ticks, the marker lane — the panes and the selection pair; members of the
 // struct since 2026-11-05) — or
@@ -278,10 +278,9 @@ struct TrimRange {
 // part 2026-11-02): no edge in the product is raised, sunken or two-toned —
 // Windows 95's DrawEdge grammar, its one-device-px mitred hairline ring of
 // 2026-10-23 and the ring tones it wore are git history. THE CHROME'S LINES
-// are flat ONE-W lines (hairline_px, below, the line rule of 2026-11-04) of ONE TONE,
-// materials.h's `well_frame` (Default's 757575): the scrub's channel (the
-// scrub block); the floating surfaces have none (THE FLOATING SURFACES,
-// below), the modal family's box none (modal_box.h's head).
+// are flat ONE-W lines (hairline_px, below, the line rule of 2026-11-04) in
+// `well_border` (the well's lines, THE WELL'S EDGES; the keys' rings); the
+// floating surfaces have none (THE FLOATING SURFACES, below).
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
@@ -361,12 +360,8 @@ struct TrimRange {
 // tone) under `card_text` (= `card_ink`, the theme's
 // StandbySelectionForeground, the print on a lit face), radius 2 W, no
 // shadow (notifications.h's THE LOOK). On a Live theme the tooltip's fill
-// is its SurfaceBackground and both cards' its Alert, all opaque. (THE CARD
-// FACE — one box painter, two looks, paint_popup_chrome: the tooltip's
-// pane in a one-W `well_frame` border, 2026-11-02, the cards' box in Live's
-// status-bar orange in a ring of its own fill, 2026-11-04 night, his pick
-// h1 of tmp/s38 — retired with it.) THIS PARAGRAPH IS THE RULE'S ONE
-// STATEMENT.
+// is its SurfaceBackground and both cards' its Alert, all opaque. THIS
+// PARAGRAPH IS THE RULE'S ONE STATEMENT.
 // THE CANVAS RUNS THE PANEL'S WHOLE WIDTH (architect 2026-11-19, send Z,
 // edge to edge; render.h's THE WELL'S EDGES): its two channels' wells are
 // parted by one line of `well_border` (waveform_divider), its edges the
@@ -459,17 +454,16 @@ struct GuiPalette {
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_text;      // COLOR_WINDOWTEXT
     GuiColor card_text;       // COLOR_INFOTEXT (a standing card's words and glyph; a normal card's are sidebar_text)
-    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-SEVEN (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
-    // theme's — Default's quoted at materials.h; the three press tones the
-    // press arc's, the same day; the clip lamp the lamp arc's, the same
-    // night; the lit key's press and inert faces 2026-11-11, session 106;
-    // the trough and the well's lines 2026-11-17; THE ARC PAGE'S SIX
+    // theme's — Default's quoted at materials.h; the clip lamp the lamp
+    // arc's, the same night; the lit key's inert face 2026-11-11, session
+    // 106; the trough and the well's lines 2026-11-17; THE ARC PAGE'S SIX
     // 2026-11-19, send Z, theme_roles.h's head: the body tone, the title,
-    // sidebar and ruler texts, the disabled key's face and border; the level
-    // fill and the radio keys' three retired in its stage C; THE POPUPS' FOUR
-    // 2026-11-19, send AA's stage D1: the three carried fills and the
-    // limiter lamp, the cards' ground and ring retired).
+    // sidebar and ruler texts, the disabled key's face and border; THE
+    // POPUPS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
+    // and the limiter lamp; THE DIALOGS' THREE, stage D2; THE SCALE'S RIM,
+    // stage D3).
     GuiColor body_face;       // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
@@ -478,12 +472,9 @@ struct GuiPalette {
     GuiColor key_dim_ink;     // a disabled key's glyph, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
     GuiColor key_dim_face;    // a disabled key's face (the key face at 55 % over the body tone; paint_linked_group, paint_word_button)
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
-    GuiColor key_face;        // a key's face at rest; the two lamps at rest
-    GuiColor key_press_face;  // the scrub's thumb's and the on-screen keyboard's unlit key under a press (awaiting send Z's stage D)
-    GuiColor lit_press_fill;  // the on-screen keyboard's lit key under the finger, the accent darkened (awaiting stage D)
+    GuiColor key_face;        // a key's face at rest; the two lamps at rest; the scrub's knob (paint_scale)
     GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
-    GuiColor well_frame;      // the scrub's channel
-    GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h)
+    GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h) and the flag editor's (render_flag_editor_box)
     GuiColor ruler_tick;      // the ruler's ticks
     GuiColor ruler_text;      // the ruler's digits on the Arc page (the text at 80 % over the ruler)
     GuiColor lane_face;       // the marker lane
@@ -493,7 +484,8 @@ struct GuiPalette {
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor frame_edge;      // the dialog window's frame edge (xfwm's)
     GuiColor title_highlight; // the dialog window's title bar's second row
-    GuiColor scale_trough;    // the progress dialog's bar's trough
+    GuiColor scale_trough;    // the progress dialog's bar's trough and the scrub's (paint_scale)
+    GuiColor scale_slider_border; // the scrub's knob's rim at rest (paint_scale)
     // THE THREE CARRIED FILLS (send AA's stage D1, theme_roles.h's CARRIED
     // block): each the role's color here, ITS OPACITY the installed row's
     // word's top byte (tone_alpha below), painted at it over what lies under.
@@ -723,11 +715,11 @@ void install_true_colors(bool on);
 // "4 accept overlap") — A SMOOTH-EDGED TRIANGLE AT THE PLAYHEAD'S EXACT
 // PLACE, its apex on the line's center (architect 2026-11-14 night, send J;
 // cool_edit_paint.h's THE CUE'S CHIP, the lengths the cue block's below),
-// IN THE CHIP'S ONE-W `cue_outline` 111111 (the
-// outer 26 x 13 at 200 %) — its fill THE PALETTE'S `playhead_head`
-// (architect 2026-10-09 ~11:50; Live's playhead cyan 03C3D5 since
-// 2026-11-01, palette_file.h), NO SHADOW (2026-11-02), THE OUTER
-// ON THE RULER'S LAST cue_chip_h_px DEVICE ROWS, its apex on the bottom
+// NO OUTLINE (2026-11-19, send AA; 16 x 8 at 200 %), the whole triangle
+// THE PALETTE'S `playhead_head` (architect 2026-10-09 ~11:50; Live's
+// playhead cyan 03C3D5 since 2026-11-01, palette_file.h), NO SHADOW
+// (2026-11-02), ON THE RULER'S LAST cue_chip_h_px DEVICE ROWS, its apex on
+// the bottom
 // edge of the ruler's foot row over the ticks' feet — it covers what stands
 // under it (2026-10-09 ~21:00), the digits included where it stands under a
 // label (ACCEPTED, architect 2026-11-04: "timestamp not really important
@@ -799,23 +791,23 @@ void install_true_colors(bool on);
 // the drawing render_flag_boxes_impl's): on the lane's FLAT `lane_face` (Default's 2A2A2A)
 // (architect 2026-11-01 night, Live's clip-view marker lane; Live's next
 // fill above the ground since 2026-11-03, the retrofit; materials.h),
-// THE CHIP — COOL EDIT'S TRIANGLE IN A ONE-W OUTLINE (architect 2026-11-04,
-// mock g1), A SMOOTH-EDGED TRIANGLE AT THE MARKER'S EXACT PLACE (architect
-// 2026-11-14 night, send J: "I think the chips should also go
-// anti-aliased"; cool_edit_paint.h's THE CUE'S CHIP owns the drawing, the
-// cue block below its lengths: its rows scaled, cue_triangle_rows, 4 W, 8
-// at 200 %, 4 at 100 %; Cool Edit's own 9 by 5): the outer triangle in the
-// outline's tone (26 x 13 at 200 %) round the fill's, inset one W across
-// each edge, on the lane's last rows, its apex ON THE STEM'S CENTER on the
+// THE CHIP — COOL EDIT'S TRIANGLE, NO OUTLINE (architect 2026-11-19, send
+// AA, RULINGS §11: "the smaller version without the outline"), A
+// SMOOTH-EDGED TRIANGLE AT THE MARKER'S EXACT PLACE (architect 2026-11-14
+// night, send J: "I think the chips should also go anti-aliased";
+// cool_edit_paint.h's THE CUE'S CHIP owns the drawing, the cue block below
+// its lengths: its rows scaled, cue_triangle_rows, 4 W, 8 at 200 %, 4 at
+// 100 %; Cool Edit's own 9 by 5): the triangle of the nominal rows (16 x 8
+// at 200 %), on the lane's last rows, its apex ON THE STEM'S CENTER on the
 // bottom edge of the lane's last row, directly above the well's line
 // under the lane, NO SHADOW (2026-11-02);
 // THE LABEL — the marker's one label, at rest in `sidebar_text` (Arc's
 // sidebar text, arc_dark BAC3CF; an inert label `text_dim`; architect
 // 2026-11-19, send Z; resolve_flag_face's table), NO SHADOW (2026-11-02), in
 // THE LABEL FACE, REGULAR Label 12 W, 24 device px at 200 % (gui_font.h's
-// kGuiFaceSizes; send Z: "yes, regular is good"), starting the fill's reach
-// right, the outline's W and a gap of 6 W
-// right of the mark (cue_label_lead_px: 11 W, 22 device px at 200 %) —
+// kGuiFaceSizes; send Z: "yes, regular is good"), starting the chip's reach
+// right and a gap of 5 W
+// right of the mark (cue_label_lead_px: 9 W, 18 device px at 200 %) —
 // STANDING WITH ITS MARK EXACTLY, its pen the cue's exact place plus that
 // lead, a real x (architect 2026-11-15, the no-grid arc: "looks better
 // because it just feels more cohesive now. The whole thing is just one
@@ -974,38 +966,38 @@ void install_true_colors(bool on);
 // SELECTION — every live reset's, a coincident one's too, its struck label
 // the mark (2026-10-26); a disabled reset paints no ring.
 //
-// EDITING: THE FIELD IS AN EDIT FIELD ON THE LANE'S WHOLE ROWS (architect
-// 2026-10-09, reversing 2026-10-07 ~09:45's flag-in-its-selected-face; its
-// look 2026-11-01 night, M5g / M5h and the marker lane's metrics rule; the
-// drawing render_flag_editor_box's): a field of THE GROUND `ground` (Default's 242424) in
-// A THREE-DEVICE-PX `text` (Default's B5B5B5) OUTLINE ("as today",
-// cue_editor_outline_px), the text and the caret in the field text (the
-// text tone), over the edited segment's box on THE WHOLE LANE'S ROWS (the
-// outline on the lane's first and last rows and just outside the pads),
-// the text at the segment's own seat ON THE LANE'S ONE BASELINE — the
-// resting label's (cue_baseline_px) — with the fill's pad either side of
-// its run (cue_fill_pad_px), its descenders inside the field (the text's
-// clip the field's inner rows), THE CARET AND THE SELECTION BAND THE LEGAL
-// SET'S BAND (cue_band_top_px, cue_band_h_px: the warp line's grammar's ink
-// with the x-height band centered in it, THE METRICS RULE at
-// marker_lane_h_px) — at 200 % lane rows 8 .. 29 of the 39, six rows of
-// field above it and seven below inside the outline. A selected glyph's ink past the band takes the
-// field text, the field ink's clip the band's complement in both its columns
-// and its rows. The field grows and shrinks with what is typed, the
-// segments to its right riding its edge in their resting look; and THE
-// SELECTED SUBSTRING IN THE CHROME'S SELECTED PAIR, `selected_text` 111111 on
-// `selected_fill` 637E86 (Live's browser selection, materials.h's
-// `selection_fill` / `selection_text`). A COINCIDENT MARKER'S FIELD IS
-// THE SAME FIELD, its text and caret the field's own, NEVER STRUCK (the text
-// there is being edited), its riding segments struck as at rest. WHY A
-// FIELD: it is the legibility guarantee ("when you're looking very closely
-// at a label it has to be legible"), and the selection pair is the highlight
-// "precisely to avoid this problem". THE BOX PAINTS OVER THE LANE, the
-// triangle and any neighbouring label ("it may overlap with the flag and
-// other elements, that's fine"). Outside the editor a selected label is its
-// resting text, no fill and no box (SELECTED, above); the open
-// editor shows its whole text selected in the selected pair inside the
-// field.
+// EDITING: THE FIELD IS GTK'S IN-PLACE CELL EDITOR ON THE LANE'S WHOLE ROWS
+// (architect 2026-11-18 / 19, send Z's design, built in send AA: P2's
+// overlays §F, the kit's cell_entry — Arc's `treeview entry:focus`, G3:111-113;
+// a field since 2026-10-09, reversing 2026-10-07 ~09:45's
+// flag-in-its-selected-face; the drawing render_flag_editor_box's), THE
+// PAYLOAD EDITOR AND THE ITERATION-BOUND EDITOR ALIKE: A SQUARE-CORNERED
+// BOX, its fill the entry's tone (`ruler_face`, what paint_entry lays;
+// arc_dark 404552), its BORDER ONE W OF THE ACCENT (`cue`) on all four
+// sides (cue_editor_border_px), no radius; the text Regular 12 W in the
+// field text (`field_text`, the text tone), THE CARET ONE W in it, THE
+// SELECTED SUBSTRING the selection pair (`selected_fill` under
+// `selected_text`: on arc_dark the accent under the lit print) — the
+// caret and the selection band on THE TEXT'S LINE BOX ROWS
+// (cue_line_box_top_px, cue_line_box_h_px), which in the 16 W lane inside
+// the one-W border are the box's whole inner 14 W (the dialog editor's
+// rule, one look for both editors). THE GEOMETRY IS THE SEGMENT'S: the box
+// over the edited segment's box on THE WHOLE LANE'S ROWS (the border on the
+// lane's first and last rows and just outside the fill's pads, one W
+// either side of the run, cue_fill_pad_px), the text at the segment's own
+// seat ON THE LANE'S ONE BASELINE — the resting label's (cue_baseline_px)
+// — so the text does not move when the editor opens. The field grows and
+// shrinks with what is typed, the segments to its right riding its edge in
+// their resting look. A COINCIDENT MARKER'S FIELD IS THE SAME FIELD, its
+// text and caret the field's own, NEVER STRUCK (the text there is being
+// edited), its riding segments struck as at rest. WHY A FIELD: it is the
+// legibility guarantee ("when you're looking very closely at a label it has
+// to be legible"), and the selection pair is the highlight "precisely to
+// avoid this problem". THE BOX PAINTS OVER THE LANE, the triangle and any
+// neighbouring label ("it may overlap with the flag and other elements,
+// that's fine"). Outside the editor a selected label is its resting text,
+// no fill and no box (SELECTED, above); the open editor shows its whole
+// text selected in the selected pair inside the field.
 //
 // A REFUSED ENTER RECOLORS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
@@ -1688,8 +1680,9 @@ inline int title_bar_h_px() {
 // two line rows and the on-screen keyboard's top line and its grid's lines
 // (modal_box.h, onscreen_keyboard.h), the dialog window's frame edge and its
 // title bar's highlight row (paint_handler.cpp's THE DIALOG WINDOW), the
-// focused entry's accent line, the scrub's channel, the dialog editors' and the
-// flag editor's carets (paint_modal_dialog, render.cpp's flag editor) — AND
+// focused entry's accent line, the flag editor's border, the scrub's knob's
+// rim, the dialog editors' and the flag editor's carets (paint_modal_dialog,
+// render.cpp's flag editor and paint_scale) — AND
 // EVERY LINE ON THE CANVAS, waveform_line_px below being this one (the
 // grid, the center lines, the stems, the cursor, the scanner, the anchor,
 // the lead-in ring, the ruler's ticks; the lit
@@ -1801,11 +1794,12 @@ inline int icon_case_w_px() {
 inline int icon_case_h_px() {
     return scaled_px(key_height_w(), 3);
 }
-// THE GROUND BETWEEN TWO FLAT KEYS (architect 2026-11-04 night): kKeyGapW,
+// THE ONE W BETWEEN TWO FACES (architect 2026-11-04 night): kKeyGapW,
 // ONE W through scaled_px — 2 device px on the tablet at 200 %, 1 at 100 %
 // — FLOORED AT ONE DEVICE PX so two faces stand apart at every scale: the
-// on-screen keyboard's (onscreen_keyboard.h's key_gap_px, flat until send
-// Z's stage D) and the title bar's two lamps' (logo_legend_layout). The
+// on-screen keyboard's (onscreen_keyboard.h's key_gap_px, its grid's shared
+// one-W lines since send AA's stage D2) and the title bar's two lamps'
+// (logo_legend_layout). The
 // band's, the bottom icon row's and the controls rows' keys share a seam
 // instead since send Z's linked groups (materials.h's key_link_pitch_px).
 inline constexpr double kKeyGapW = 1.0;
@@ -1873,8 +1867,8 @@ inline int icon_row_h_px() {
 // clipped one run gap short of the history opener, the third run's keys
 // cut or published empty from its tail, the right run whole; the bottom
 // icon row's block grows leftward over the tab's name, and the player's and
-// the score viewer's rows take the gap from the scrub's channel, which
-// their floor of two thumbs drops whole when too little is left.
+// the score viewer's rows take the gap from the scrub's trough, which
+// their floor of two knobs drops whole when too little is left.
 inline int program_run_gap_px() {
     return scaled_px(run_gap_w());
 }
@@ -1887,80 +1881,74 @@ inline int program_run_gap_px() {
 // LINKED GROUP — one ring, the keys sharing one seam column each — and every
 // word button and entry its own ring (materials.h's paint_linked_group,
 // paint_word_button, paint_entry; their exact-coverage road the coverage
-// stamp's rounded shapes, cool_edit_paint.h). The scrub's thumb and the
-// on-screen keyboard's keys keep today's square flat face until send Z's
-// stage D (materials.h's paint_flat_key).
+// stamp's rounded shapes, cool_edit_paint.h). The scrub is Arc's scale (the
+// block below) and the on-screen keyboard Arc's buttons in one grid
+// (onscreen_keyboard.h).
 
-// -- THE PLAY-SCRUB (architect 2026-10-02; flat 2026-11-01 night, M7) -------
+// -- THE PLAY-SCRUB IS ARC'S PLAIN SCALE (architect 2026-11-18 / 19, send Z's
+//    design, built in send AA: DESIGN §6, P2's overlays §C, the kit's
+//    plain_scale; his "I'm hoping we're gonna have a proper arc thumb,
+//    right? ... it touches ... When I'm dragging it, it's dark with no
+//    outline", RULINGS §8) ----------------------------------------------------
 //
 // The render player's controls row and the score viewer's (its media face
-// and its page road's face alike) carry ONE SCRUB, Live's flat slider
-// (architect 2026-11-01 night, M7, "agree both"; M9 A2 for the score viewer):
-//   THE CHANNEL — ONE W (scrub_channel_h_px, hairline_px, the line rule:
-//     2 device px on the tablet at 200 %, 1 at 100 %, architect 2026-11-04)
-//     of materials.h's `well_frame` (Default's 757575), the grammar's frame tone, CENTERED
-//     ON THE FACE EXACTLY — (face rows − channel rows) / 2 below the face's
-//     top, the half kept (scrub_channel_above_px; the exact fill):
-//     rows 1351..1352 at 200 % on the keys' face rows 1324..1379 at
-//     key_height 28 —
-//     across the channel's own columns, from the thumb's center at frame 0
-//     to its center at the last frame (at 200 % x 282..1515 in the player),
-//     nothing else: no fill, no played extent, nothing that reads the
-//     window's focus.
-//   THE THUMB — A BLANK FLAT KEY BLOCK (paint_scrub_thumb: the key painter,
-//     never lit — it is dragged, not turned on or off, the flat look's
-//     ruling, materials.h — wearing the key's press face while the owner's
-//     drag holds it by the thumb (the press arc, 2026-11-05), with no
-//     glyph) kScrubThumbWidthPx = 12 W
-//     wide, 24 device px on the tablet at 200 % (architect 2026-10-23, on the
-//     installed player: "too tiny … the thumb itself should be larger"; the
-//     8 Windows px of that day times 1.5 at the rebase of 2026-11-05), by THE KEY'S
-//     HEIGHT (architect 2026-10-29: "Shrink it to the height of the key.";
-//     scrub_thumb_h_px is the key's height, icon_case_h_px — the face is the
-//     key since 2026-11-04 — following the `key_height` tuning key live), so
-//     it stands on the faces' rows beside it; AT ITS POSITION'S EXACT PLACE
-//     (architect 2026-11-15, the no-grid arc; the rule at hull, above): its
-//     center the real x of its frame or page (the owners' mappings,
-//     render_player_scrub_x_of, score_scrub_x_of / _of_frame), its box that
-//     center ± half its width on real edges (scrub_thumb_box, the one
-//     geometry), painted at exact coverage; ITS HIT ZONE ITS PAINTED RECT
-//     (render_player_scrub_handle_hit: on screen is as painted).
-// The painter is paint_modal_dialog's paint_scrub_item; the press is
-// claim_player_scrub_press (the score viewer's its own claim).
-// THE THUMB ALWAYS STANDS (architect 2026-10-25, "agreed"): whenever the
-// channel has a width, at frame 0 while no item is loaded — the clock's own
-// zeros — so the player opens with its thumb at the channel's left end
-// rather than a bare channel that grew a thumb at the first Play. A press on
-// it or on the channel with no item is consumed and seeks nothing, as
-// before (claim_player_scrub_press's frames <= 0 arm).
-// THE THUMB IS CENTERED ON THE TROUGH'S END (architect 2026-10-25, "centered
-// on the trough's end"): NO INSET — frame 0's place is the channel's LEFT
-// EDGE and the last frame's its RIGHT EDGE (render_player_scrub_x_of: the
-// trough's real ends since the no-grid arc, 2026-11-15), the
-// thumb's center the frame's place, so HALF THE THUMB OVERHANGS the channel
-// at each end, over the group space beside it (a fader knob at the end of
-// its slot: 12 of the 24 device px on the tablet). THE PUBLISHED ITEM is therefore the
-// channel widened by that overhang at each end (AppState::
-// ModalDialogGeometry::scrub, the press router's outer gate and the
-// per-position damage — a whole rect, the hull of every place the thumb's
-// box can stand), so a press on the overhanging half takes the thumb
-// and a moving thumb, old place and new, is always inside the damage. (The 14-W
-// grab box the mapping inset the channel by — half of it at each end, a
-// leftover of the pointed Windows thumb — stood 2026-10-02 to 2026-10-25.)
-inline constexpr double kScrubThumbWidthPx  = 12.0;
-// The thumb's width floors at three device px; its height is the face's,
-// one row at least (scrub_thumb_h_px).
-inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
-// THE THUMB ON ITS BOX `box` (scrub_thumb_box below: scrub_thumb_w_px by
-// scrub_thumb_h_px on real edges, painted at exact coverage, materials.h's
-// paint_flat_key, awaiting send Z's stage D): the
-// flat key, at rest or — `pressed`, the owner's ScrubDrag armed ON THE
-// THUMB (RenderPlayer::ScrubDrag::on_thumb, ScoreViewer::ScrubDrag's; a
-// press on the track beside it carries the thumb but presses no key) — in
-// the key's press face from the grab to the lift (the press arc, architect
-// 2026-11-05; materials.h's key_look). The grab and the lift damage the
-// track (the scrub claims and releases, input_pointer.cpp).
-void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed);
+// and its page road's face alike) carry ONE SCRUB, GTK's `scale` under Arc
+// (G3's scale, C4g), one widget:
+//   THE TROUGH — kScaleTroughW, 5 W thick (10 device px on the tablet at
+//     200 %), a full pill (radius half its thickness), `scale_trough` (our
+//     own ScaleTrough, arc_dark 2D303B; the progress dialog's trough too),
+//     CENTERED EXACTLY ON THE KEYS' ROWS (the tablet at key_height 28: keys
+//     1324..1379, the trough rows 1347..1356), across the item's columns.
+//     THE PLAYED PART — Arc's `scale highlight` — from the trough's left end
+//     to the knob's center, THE ACCENT (`cue`, the progress bar's done
+//     part's tone), the same pill cut at the knob's center: the scrub shows
+//     how much has played (reversing 2026-11-01 night's "no fill, no played
+//     extent", M7).
+//   THE KNOB — kScaleKnobW, a 17 W DISC (34 device px), centered on the
+//     trough's center row (the tablet: rows 1335..1368), its fill
+//     `key_face` in a ONE-W RIM of `scale_slider_border` (our own
+//     ScaleSliderBorder, Arc's slider border 262933 on arc_dark; a Live
+//     theme's ClipBorder, its well_border); HELD — the owner's ScrubDrag
+//     armed ON THE KNOB (RenderPlayer::ScrubDrag::on_thumb, the score
+//     viewer's the same; a press on the trough beside it carries the knob
+//     at rest) — THE WHOLE DISC THE ACCENT, no rim (Arc's slider:active).
+//     No glyph, no lit state, no hover. AT ITS POSITION'S EXACT PLACE (the
+//     no-grid rule, hull above): its center the real x of its frame or page
+//     (the owners' mappings, render_player_scrub_x_of, score_scrub_x_of /
+//     _of_frame), painted at exact coverage through the coverage stamp's
+//     rounded shapes (paint_scale).
+//   THE KNOB STAYS INSIDE THE TROUGH, GTK'S WAY: its center travels from
+//     the trough's left end plus half the knob (8.5 W) to its right end less
+//     half the knob — frame 0 / the first page at the first, the last frame
+//     / page at the second (reversing 2026-10-25's "centered on the
+//     trough's end"; scale_travel_x0 / scale_travel_span below; the
+//     mappings, app_state.h and score_viewer.h, and their inverses in the
+//     press and drag roads read them), a place outside the travel clamping
+//     to its end. THE PUBLISHED ITEM (AppState::ModalDialogGeometry::scrub,
+//     scale_item_rect) is the trough's columns by the knob's rows, nothing
+//     overhanging: the press router's outer gate, the tick's per-position
+//     damage, and what every place of the knob, the trough and the played
+//     part lie inside.
+//   THE HIT (on screen is as painted): a press on THE KNOB'S DISC takes the
+//     knob where it stands (scale_knob_hit, the disc itself, tested with the
+//     pointer's real place: a press in the disc's bounding square but off
+//     the disc lands on the trough or the pane beside it, so it is the
+//     trough's); anywhere else on the item — the trough's columns by the
+//     knob's rows, the rows above and below the trough included — the knob
+//     JUMPS to the press and the same press carries it (claim_player_scrub_
+//     press, the score viewer's its own claim).
+//   THE DAMAGE: the grab and the lift damage the item; A MOVING KNOB OWES
+//     ITS OLD AND NEW DISCS AND THE TROUGH BETWEEN (the played part changes
+//     there), scale_knob_move_rect, the drag's motion; the tick's
+//     per-position damage while the transport plays stays the item whole
+//     (the tick reads the cursor before the paint reads it again, so a span
+//     from the tick's place could miss the painted one).
+// THE KNOB ALWAYS STANDS (architect 2026-10-25, "agreed"): whenever the
+// item has a width, at frame 0 while no item is loaded — the clock's own
+// zeros — so the player opens with its knob at the travel's start rather
+// than a bare trough that grew a knob at the first Play. A press on it or
+// on the trough with no item is consumed and seeks nothing
+// (claim_player_scrub_press's frames <= 0 arm).
 
 // (THE TAB STRIP — Cool Edit's Organizer tabs, "Tab A" and "Tab B", a 21-W
 // lane under the band 2026-10-18 to 2026-10-22 — IS REMOVED, architect
@@ -1981,9 +1969,9 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed);
 //              centered in it; the ticks overlay its foot) and its line
 //              (ruler_lane_h_px): 16 W + 1 W, 32 + 2 device rows.
 //   THE MARKER 16 W, the editor's box on its whole rows (marker_lane_h_px:
-//              the outline, the pad above, the legal set's band on the
-//              line-box baseline, the pad below, the outline): 32 device
-//              rows; the cue's chip its last rows (cue_chip_h_px, 13).
+//              the one-W border, the label's 14 W line box on the
+//              line-box baseline, the border): 32 device rows; the cue's
+//              chip its last rows (cue_chip_h_px, 8).
 //   THE LINE   the line between the lane and the canvas, one hairline
 //              (lane_foot_line_h_px, below): 2 device rows, 1 W.
 // Every one-W line of the well is `well_border` (THE WELL'S EDGES, below;
@@ -2106,15 +2094,11 @@ inline int ruler_lane_h_px() {
 // and the ruler's head A SMOOTH-EDGED TRIANGLE AT EVERY POSITION, its apex
 // exactly on the mark's exact x — "I think the chips should also go
 // anti-aliased", "Agree on both."; the drawing and its rule at
-// cool_edit_paint.h's THE CUE'S CHIP). ITS SIZE IS WHAT THE STAIRCASE'S
-// WAS: the lengths below are the whole-cell chip's own numbers (architect
-// 2026-10-26, "I think we should make the triangle smaller"; 2026-11-04,
-// the one-W outline's band, mock g1; 2026-11-12, the 4 W rows), read now as
-// device px of a triangle with real edges. NO OUTLINE SINCE 2026-11-19
-// (architect, send AA, his pick A 2: "the scroll bar has no outline";
-// "no outline, the outer size kept"): the fill takes the whole outer
-// triangle, so every length below — the outline's band among them — is
-// still the chip's.
+// cool_edit_paint.h's THE CUE'S CHIP). THE CHIP IS THE BARE TRIANGLE OF THE
+// NOMINAL ROWS, NO OUTLINE (architect 2026-11-19, send AA, RULINGS §11, fork
+// A 3 of Z_10: "I think I prefer the smaller version without the outline";
+// the outline gone because "the scroll bar has no outline", RULINGS §8): the
+// fill's own triangle, the outline's band and its lengths gone with it.
 //
 // THE TRIANGLE'S NOMINAL ROWS: 4 W through scaled_px (8
 // device px on the tablet at 200 %), rounded at the element like every
@@ -2123,48 +2107,39 @@ inline int ruler_lane_h_px() {
 // only real surface. later tablets may have higher dpi, but not lower" —
 // "yes" to the planner's proposal). 4 W SINCE 2026-11-12 (architect,
 // session 114: "shorter triangles, yes, and then move labels one W left,
-// yes"), one W under the 5 W of his pick on mock v4, "chip 10", 2026-11-04
-// night, its apex on the same row ("it stays touching the border ... they
-// don't rise up as far by one Windows pixel"), the label's lead, which
-// reads these rows, moving every label one W left with it
-// (cue_label_lead_px below). 8 at 200 %, 4 at 100 %, 2 at the scale's floor
-// of 50 % (is_gui_scale_percent, device_config.h) — no floor, no clamp.
-// READERS: the chip's height (cue_chip_h_px below) and the label's lead
-// (cue_label_lead_px, the rows' reach).
+// yes"; "it stays touching the border ... they don't rise up as far"). 8 at
+// 200 %, 4 at 100 %, 2 at the scale's floor of 50 % (is_gui_scale_percent,
+// device_config.h) — no floor, no clamp. READERS: the chip's height
+// (cue_chip_h_exact_px below) and the label's lead (cue_label_lead_px, the
+// rows' reach).
 inline constexpr double kCueTriangleRowsW = 4.0;
 inline int cue_triangle_rows() {
     return scaled_px(kCueTriangleRowsW);
 }
 // THE CHIP'S HEIGHT H, the triangle's height and half-base in device px —
-// and the ruler's head's: THE NOMINAL ROWS, ONE W ABOVE THEM AND W · √2
-// BELOW (architect 2026-11-04, mock g1: the triangle "in a one-W 111111
-// outline", the outline's band kept as fill since 2026-11-19, send AA; the
-// one-W band across a 45° side is √2 W along a row), W
-// hairline_px — THE EXACT SUM (architect 2026-11-15, the no-grid arc: the
-// √2 no longer rounded to a row; the triangle is stamped at exact coverage,
-// cool_edit_paint.h): cue_chip_h_exact_px, 8 + 2 + 2.83 = 12.83 on the
-// tablet at 200 %, 4 + 1 + 1.41 = 6.41 at 100 %. THE CHIP'S APEX STANDS ON
-// THE BOTTOM EDGE OF THE LANE'S LAST ROW (at 200 %, lane rows 204 .. 235,
-// its apex on the edge under row 235, its top edge 12.83 above it, inside
-// row 223). THE RULER'S HEAD IS
-// THE SAME CHIP (architect 2026-11-04, mock k1, "4 accept overlap"), its
-// apex on the bottom edge of the ruler's last row (200 %: ruler rows
-// 170 .. 201, the head's hull rows 189 .. 201), so its top reaches into the ruler's
-// digits where it stands under a label — ACCEPTED ("timestamp not really
-// important for fine tune, just ballpark"): it paints over them as a chip
-// paints over a label (paint_ruler_row).
-// THE WHOLE TRIANGLE IS THE FILL (architect 2026-11-19, send AA): a cue's
-// `cue_fill` or `inactive_cue`, the head's `playhead_head`, one triangle of
-// height H, no outline (CoverageStampPass::chip).
+// and the ruler's head's: THE NOMINAL ROWS ALONE (architect 2026-11-19, send
+// AA, above), cue_chip_h_exact_px, 8 on the tablet at 200 %, 4 at 100 %; its
+// sides at 45°. THE CHIP'S APEX STANDS ON THE BOTTOM EDGE OF THE LANE'S LAST
+// ROW, THE CHIP SITTING ON THE LANE'S FOOT as it always has (the fork's mock
+// floated the bare fill W · √2 above the foot, where the outline had held
+// it: not taken) — at 200 %, lane rows 204 .. 235, its apex on the edge
+// under row 235, its top edge 8 above it, the chip's rows 228 .. 235. THE
+// RULER'S HEAD IS THE SAME CHIP (architect 2026-11-04, mock k1, "4 accept
+// overlap"), its apex on the bottom edge of the ruler's last row (200 %:
+// ruler rows 170 .. 201, the head's rows 194 .. 201), so its top can reach
+// into the ruler's digits where it stands under a label — ACCEPTED
+// ("timestamp not really important for fine tune, just ballpark"): it
+// paints over them as a chip paints over a label (paint_ruler_row).
+// THE WHOLE TRIANGLE IS THE FILL: a cue's `cue_fill` or `inactive_cue`, the
+// head's `playhead_head`, one triangle of height H (CoverageStampPass::chip).
 // ONE SIZE, AND ITS WHOLE HULL DERIVED HERE: cue_chip_h_px is ceil(H), the
-// rows and half-columns that hold the chip — 13 on the tablet, 7 at 100 % —
+// rows and half-columns that hold the chip — 8 on the tablet, 4 at 100 % —
 // what every WHOLE reader takes: the lane's seat (cue_above_chip_h_px), the
 // two extents (cue_chip_paint_reach_px, the hit pair) and so every cull,
 // damage box and published rect. The painter alone reads the exact H
 // (CoverageStampPass::chip).
 inline double cue_chip_h_exact_px() {
-    const double w = static_cast<double>(hairline_px());
-    return static_cast<double>(cue_triangle_rows()) + w + w * std::sqrt(2.0);
+    return static_cast<double>(cue_triangle_rows());
 }
 inline int cue_chip_h_px() {
     return static_cast<int>(std::ceil(cue_chip_h_exact_px()));
@@ -2201,35 +2176,29 @@ inline int cue_segment_gap_px() {
 inline int cue_segment_text_gap_px() {
     return 2 * cue_fill_pad_px() + cue_segment_gap_px();
 }
-// THE LABEL'S LEAD from the marker's column to its text IS THE NOMINAL
-// ROWS' REACH RIGHT, ONE W AND THE GAP (architect 2026-10-26 ~12:40, on
-// the glass at nine rows: "It seems the lead-in was not scaled — increasing
-// rows seems to not move text, but it should, relative to what I tuned it
-// to"; the outline's W 2026-11-04, mock g1 shifting every label one W
-// right): the nominal reach (the rows, cue_triangle_rows), one W
-// (hairline_px, the outline's band, the fill's own since 2026-11-19, send
-// AA — the lead unchanged by the outline's retirement), then THE GAP,
-// 6 W (kCueLabelGapW; 12 device px on the tablet at 200 %; architect
-// 2026-11-02, "flag text lead in at 12 pixels"; 13 device px from the text
-// round, 2026-11-03, back to 12, the whole W, with the unit, 2026-11-04)
-// through scaled_px, rounded at the element —
-// so the label follows the rows and keeps the gap. THE GAP IS MEASURED FROM
-// THE NOMINAL ONE-W EDGE BESIDE THE ROWS' REACH, not from the
-// chip's own widest reach: the triangle's top corner stands H = rows + W +
-// W · √2 from the mark, so from it to the text's origin stand
-// the gap less W · √2 px, 9.17 on the tablet, AT EVERY ROW
-// COUNT — the lead and the chip's reach move together with the rows (the
-// triangles one W shorter, the labels one W left, architect 2026-11-12,
-// session 114: the chip's edge to the label's ink unchanged on his mock).
-// At 200 %: 8 + 2 + 12 = 22 device px; at 100 %: 4 + 1 + 6 = 11. The gap is
-// never negative, so the text never stands under the flag. THE FILL'S LEAD
-// IS THE LEAD LESS THE FILL'S PAD (cue_fill_lead_px): the text stands one
-// pad inside its fill (cue_segment_boxes, render.cpp). Readers: the segment
-// boxes (cue_segment_boxes), the cull bounds (marker_flag_max_width_px
-// below, the history lane's).
-inline constexpr double kCueLabelGapW = 6.0;
+// THE LABEL'S LEAD from the marker's column to its text IS THE CHIP'S
+// REACH RIGHT AND THE GAP (architect 2026-10-26 ~12:40, on the glass at nine
+// rows: "It seems the lead-in was not scaled — increasing rows seems to not
+// move text, but it should, relative to what I tuned it to"): the chip's
+// reach (the rows, cue_triangle_rows — the bare triangle's half-base, its
+// top corner's distance from the mark), then THE GAP, 5 W (kCueLabelGapW;
+// 10 device px on the tablet at 200 %) through scaled_px, rounded at the
+// element — so the label follows the rows and keeps the gap. THE GAP IS
+// MEASURED FROM THE CHIP'S OWN TOP CORNER to the text's origin (architect
+// 2026-11-19, send AA, RULINGS §11, with the smaller chip: "the text should
+// move left to make sure that the margin remains the same" — the margin the
+// outlined chip's corner kept to the text, 9.17 device px on the tablet,
+// 4.59 W, OFF THE GRID, TAKEN AT THE NEAREST WHOLE W, 5 W, 10 device px),
+// AT EVERY ROW COUNT. At 200 %: 8 + 10 = 18 device px; at 100 %: 4 + 5 = 9.
+// The gap is never negative, so the text never stands under the flag. THE
+// FILL'S LEAD IS THE LEAD LESS THE FILL'S PAD (cue_fill_lead_px): the text
+// stands one pad inside its fill (cue_segment_boxes, render.cpp). Readers:
+// the segment boxes (cue_segment_boxes), the cull bounds
+// (marker_flag_max_width_px below, the history lane's), the flag editor's
+// field (render_flag_editor_box, at the edited segment's seat).
+inline constexpr double kCueLabelGapW = 5.0;
 inline int cue_label_lead_px() {
-    return cue_triangle_rows() + hairline_px() + scaled_px(kCueLabelGapW);
+    return cue_triangle_rows() + scaled_px(kCueLabelGapW);
 }
 inline int cue_fill_lead_px() {
     return cue_label_lead_px() - cue_fill_pad_px();
@@ -2251,44 +2220,20 @@ inline int cue_fill_lead_px() {
 // face's 14 W line box (Regular 12 W, 11 + 3) centered in 16, its top
 // floor(2 / 2) = 1 W down, the baseline the ascent under it, +12 W (24
 // device rows) under the lane's top (cue_baseline_px). ITS WHOLE
-// ROWS ARE THE FLAG EDITOR'S BOX — its outline (kCueEditorOutlineW, one W)
-// on the lane's first and last rows — and THE EDITOR'S BAND (the caret and
-// the selection) STANDS ON THAT BASELINE, the editor's text at the label's
-// seat: THE LEGAL SET'S BAND (cue_band_above_px / cue_band_below_px) — the
-// ink of the warp line's legal set (is_valid_label_format,
-// warpmarkers_parse.cpp — lowercase, digits, `.`, `+`, `-`, `:`) with the
-// x-height band centered in it, k = max(ascender − x-height, descender)
-// each side of the x band (the label face's "l" ink, its "x" ink and its
-// descent), so the band is x + k above the baseline and k below it — AND
-// THE PADS BETWEEN THE OUTLINE AND THE BAND DERIVED from the two seats, not
-// authored (cue_editor_pad_above_px, cue_editor_pad_below_px). ON THE TABLET
-// AT 200 % (Liberation Sans Regular 24 px: ascender ink 17.39, x 12.68,
-// descent 5.09): k 5.09, the band 17.77 above the baseline and 5.09 below
-// (22.86), so from 6.23 to 29.09 under the lane's top: the pads 4.23 above
-// and 0.91 below inside the 2-row outlines (the band's foot, the face's
-// descent, under one device row clear of the bottom outline's first row,
-// 30; both pads positive). The band and the baseline are real y on the
-// face's metrics (the no-grid rule), the lane's height whole. The chip's
-// rows are the lane's bottom rows (cue_above_chip_h_px the remainder above
-// its hull: 32 − 13 = 19 on the tablet).
+// ROWS ARE THE FLAG EDITOR'S BOX, GTK's in-place cell editor (the EDITING
+// paragraph above): its ONE-W BORDER (kCueEditorBorderW) on the lane's
+// first and last rows, and inside it THE LINE BOX'S ROWS (the caret's and
+// the selection's, cue_line_box_top_px / cue_line_box_h_px below) — in the
+// 16 W lane the 14 W line box stands 1 W down, so the border and the line
+// box tile the lane: on the tablet at 200 % the border rows 0..1 and
+// 30..31 under the lane's top, the line box rows 2..29 (28 rows), the
+// baseline 24. The chip's rows are the lane's bottom rows
+// (cue_above_chip_h_px the remainder above its hull: 32 − 8 = 24 on the
+// tablet).
 inline constexpr double kMarkerLaneW = 16.0;
-inline constexpr double kCueEditorOutlineW = 1.0;
-inline int cue_editor_outline_px() {
-    return scaled_px(kCueEditorOutlineW, 1);
-}
-inline double cue_band_x_px() {
-    return gui_font_x_ink_px(gui_font(GuiFace::Label));
-}
-inline double cue_band_k_px() {
-    const GuiFont f = gui_font(GuiFace::Label);
-    return std::max(gui_font_ascender_ink_px(f) - gui_font_x_ink_px(f),
-                    gui_font_descent_exact_px(f));
-}
-inline double cue_band_above_px() {
-    return cue_band_x_px() + cue_band_k_px();
-}
-inline double cue_band_below_px() {
-    return cue_band_k_px();
+inline constexpr double kCueEditorBorderW = 1.0;
+inline int cue_editor_border_px() {
+    return scaled_px(kCueEditorBorderW, 1);
 }
 inline int marker_lane_h_px() {
     return scaled_px(kMarkerLaneW, 1);
@@ -2309,13 +2254,15 @@ inline int cue_fill_h_px() {
 // [box_y, box_y + box_h) exactly, a real y (no half rounded). The surfaces
 // send Z has not restyled yet keep it (the overlays, the keys' numbers).
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
-// THE CUE LABEL'S BASELINE AND THE EDITOR'S BAND under the marker lane's top
-// (the lane's rule above), REAL y: THE BASELINE the line-box rule's, +12 W
-// (24 device rows on the tablet at 200 %); THE BAND — the flag editor's
-// caret and selection band (render_flag_editor_box reads cue_band_top_px
-// and cue_band_h_px, never a second derivation) — its part above the
-// baseline over it (6.23 .. 29.09 on the tablet); THE PADS between the
-// outline and the band what the two leave.
+// THE CUE LABEL'S BASELINE AND THE EDITOR'S LINE BOX under the marker
+// lane's top (the lane's rule above): THE BASELINE the line-box rule's,
+// +12 W (24 device rows on the tablet at 200 %); THE LINE BOX — the flag
+// editor's caret and selection rows (render_flag_editor_box reads
+// cue_line_box_top_px and cue_line_box_h_px, never a second derivation;
+// the dialog editor's rule, one look for both editors) — the Label face's
+// ascent above the baseline and its descent below, whole W (the face's
+// line box, gui_font_line_box_w): rows 2 .. 29 under the lane's top on the
+// tablet, 1 .. 14 at 100 %.
 // Every label segment — the resting label, the bound cells, the history's
 // two halves — and the flag editor's text ride the baseline (the editor's
 // text sits at the label's seat).
@@ -2323,18 +2270,14 @@ inline double cue_baseline_px() {
     return line_box_baseline(gui_font(GuiFace::Label), 0.0,
                              static_cast<int>(kMarkerLaneW));
 }
-inline double cue_band_top_px() {
-    return cue_baseline_px() - cue_band_above_px();
+inline double cue_line_box_top_px() {
+    return cue_baseline_px() -
+           static_cast<double>(
+               scaled_px(gui_font_line_box_w(gui_font(GuiFace::Label)).ascent));
 }
-inline double cue_band_h_px() {
-    return cue_band_above_px() + cue_band_below_px();
-}
-inline double cue_editor_pad_above_px() {
-    return cue_band_top_px() - static_cast<double>(cue_editor_outline_px());
-}
-inline double cue_editor_pad_below_px() {
-    return static_cast<double>(marker_lane_h_px()) - cue_band_top_px() -
-           cue_band_h_px() - static_cast<double>(cue_editor_outline_px());
+inline double cue_line_box_h_px() {
+    return static_cast<double>(
+        scaled_px(gui_font_line_box_w(gui_font(GuiFace::Label)).line()));
 }
 // THE CHIP'S TWO EXTENTS (architect 2026-11-14, send J), H the chip's
 // height's whole hull (cue_chip_h_px) — the marker's chip
@@ -2342,15 +2285,15 @@ inline double cue_editor_pad_below_px() {
 //   THE PAINTED REACH, cue_chip_paint_reach_px = H + 1 EACH SIDE: the chip
 //     is painted at its mark's exact x, the real interval [x − H, x + H]
 //     with x within half a px of col, so the pixels it can touch are the
-//     columns [col − H − 1, col + H + 1) — 14 each side on the tablet. ITS
+//     columns [col − H − 1, col + H + 1) — 9 each side on the tablet. ITS
 //     READERS, every CULL and DAMAGE BOX: the flag iterator's right cull
 //     (iterate_visible_flags_impl, render.cpp), the head's cull
 //     (paint_ruler_row), the playhead's cull (render_playhead) and its
 //     damage box (playhead_invalidate_rect, main.cpp), so no repaint can
 //     be narrower than what the head painted.
 //   THE HIT EXTENT, cue_chip_hit_left_px = H − 1 left and
-//     cue_chip_hit_right_px = H right of the mark, 12 and 13 device px on
-//     the tablet at 200 %, 6 and 7 at 100 %: the box every PRESS AND
+//     cue_chip_hit_right_px = H right of the mark, 7 and 8 device px on
+//     the tablet at 200 %, 3 and 4 at 100 %: the box every PRESS AND
 //     PUBLISHED RECT keeps. ITS READERS: THE CUE'S, OFF THE CUE'S EXACT x
 //     (architect 2026-11-15, the no-grid arc) — [x − (H − 1), x + H), the
 //     published chip box and the label's occluding box from its own chip's
@@ -2360,7 +2303,9 @@ inline double cue_editor_pad_below_px() {
 //     THE POINTER'S REAL PLACE, half-open ("yes, I'd like to move to
 //     fractional hitboxes."): hit_test_flag's walk and
 //     point_on_playhead_head read the place the panel reported, never the
-//     pixel that holds it.
+//     pixel that holds it. The head's drag takes the same hit, with the
+//     smaller chip of 2026-11-19 a smaller one: no floor (the pen makes a
+//     target's size nearly irrelevant; reach speed is what counts).
 // The chip's rows are [yb − H, yb), yb the bottom edge of the row its apex
 // stands on.
 inline int cue_chip_paint_reach_px() {
@@ -2548,54 +2493,86 @@ inline int status_bar_lane_h_px() {
 // canvas's own x (waveform_area's, the panel's left edge since the canvas
 // went edge to edge, send Z, 2026-11-19) — and
 // the flag iterator admits a marker whose triangle can reach into them (its
-// painted reach cue_chip_paint_reach_px left of its column, 14 device px on
+// painted reach cue_chip_paint_reach_px left of its column, 9 device px on
 // the tablet at 200 %), so a marker just past the last
 // column shows the left half of its chip there, and of its stem the part
 // of the one-W line that still lies inside the columns (the stem stash's
 // gate is the line's own span, stem_meets_waveform, render.cpp).
-// THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because the channel is a
-// hairline (the slider's block, with its constants, is above): the channel
-// ONE W (hairline_px, the line rule, architect 2026-11-04); the thumb THE
-// KEY'S HEIGHT (architect 2026-10-29, "Shrink it to the height of the
-// key."), icon_case_h_px itself — the face is the key, 2026-11-04 — so it
-// fills the controls row's face band exactly and follows `key_height` live.
-inline int scrub_channel_h_px() {
-    return hairline_px();
+// THE SCALE'S LENGTHS AND ITS ONE GEOMETRY (the scrub's block above; Arc's
+// CSS numbers, G3's scale: the trough 5 px thick, the slider 17 px — one Arc
+// px one W), each through scaled_px, rounded at the element: the trough
+// kScaleTroughW (10 device px on the tablet at 200 %, 5 at 100 %), the knob
+// kScaleKnobW (34 and 17). Every box below derives from THE ITEM, the
+// published GuiRect (scale_item_rect), so the painter, the hit and the
+// damage read one geometry: the trough and the knob centered EXACTLY on the
+// item's rows (no half rounded), the knob's center a real x.
+inline constexpr double kScaleTroughW = 5.0;
+inline constexpr double kScaleKnobW   = 17.0;
+inline int scale_trough_h_px() { return scaled_px(kScaleTroughW, 1); }
+inline int scale_knob_px() { return scaled_px(kScaleKnobW, 3); }
+// THE ITEM: the trough's columns [x0, x0 + w) by THE KNOB'S ROWS, the knob
+// centered exactly on `band`'s rows (the controls row's key rows) — the
+// knob's hull, so whole: on the tablet 1335..1368 under keys 1324..1379.
+inline GuiRect scale_item_rect(int x0, int w, const GuiRect& band) {
+    const double d = static_cast<double>(scale_knob_px());
+    const GuiRect rows = hull(GuiRectF{
+        static_cast<double>(x0),
+        static_cast<double>(band.y) + (static_cast<double>(band.h) - d) / 2.0,
+        static_cast<double>(w), d});
+    return GuiRect{x0, rows.y, w, rows.h};
 }
-inline int scrub_thumb_h_px() {
-    return icon_case_h_px();
+// The row the trough and the knob center on: the item's middle, which is
+// the band's middle (the item is the knob's hull about it).
+inline double scale_center_y(const GuiRect& item) {
+    return static_cast<double>(item.y) + static_cast<double>(item.h) / 2.0;
 }
-// The channel's rows below the thumb's top: CENTERED ON THE FACE EXACTLY
-// (architect 2026-11-15, the no-grid arc), (face − channel) / 2 with its
-// half kept — 27 on the tablet at 200 % on the 56-row face at key_height 28
-// (the 2-row channel on rows 1351..1352), 13.5 at 100 % (the 28-row face,
-// the 1-row channel); where the two differ in parity the channel stands half a
-// row on each side of two rows' edge, painted at that coverage.
-inline double scrub_channel_above_px() {
-    return static_cast<double>(scrub_thumb_h_px() - scrub_channel_h_px()) /
-           2.0;
+inline GuiRectF scale_trough_box(const GuiRect& item) {
+    const double t = static_cast<double>(scale_trough_h_px());
+    return GuiRectF{static_cast<double>(item.x), scale_center_y(item) - t / 2.0,
+                    static_cast<double>(item.w), t};
 }
-// THE THUMB'S BOX — THE ONE GEOMETRY (architect 2026-11-15, the no-grid
-// arc; the scrub's block above): on the published item `track` (the
-// controls row's case band) with its center at the real x `center_x`, the
-// thumb's width about that center and its rows CENTERED EXACTLY in the
-// track's band, no half rounded on either axis. THREE READERS, so the
-// thumb is hit where it is painted and damaged where it stands: the painter
-// (paint_modal_dialog's paint_scrub_item, the box itself through
-// paint_scrub_thumb), the press's grab band
-// (render_player_scrub_handle_hit, app_state.h: the pointer's real place
-// against this real box, architect 2026-11-15, the no-grid arc) and
-// the damage, which is the track — every box this answers for a center on
-// the travel lies inside it (the mapping's ends, render_player_scrub_
-// travel_x0 / _usable_span).
-inline GuiRectF scrub_thumb_box(const GuiRect& track, double center_x) {
-    const double w = static_cast<double>(scrub_thumb_w_px());
-    const double h = static_cast<double>(scrub_thumb_h_px());
-    return GuiRectF{center_x - w / 2.0,
-                    static_cast<double>(track.y) +
-                        (static_cast<double>(track.h) - h) / 2.0,
-                    w, h};
+inline GuiRectF scale_knob_box(const GuiRect& item, double center_x) {
+    const double d = static_cast<double>(scale_knob_px());
+    return GuiRectF{center_x - d / 2.0, scale_center_y(item) - d / 2.0, d, d};
 }
+// THE KNOB'S TRAVEL: its center from the trough's left end plus half the
+// knob to its right end less half the knob — the mappings' one pair (an
+// item narrower than the knob has no span and answers its start).
+inline double scale_travel_x0(const GuiRect& item) {
+    return static_cast<double>(item.x) +
+           static_cast<double>(scale_knob_px()) / 2.0;
+}
+inline int scale_travel_span(const GuiRect& item) {
+    return std::max(0, item.w - scale_knob_px());
+}
+// THE KNOB'S HIT: the real point (x, y) inside the disc of the knob whose
+// center stands at `center_x`, the disc's boundary out (the block above).
+inline bool scale_knob_hit(const GuiRect& item, double center_x, double x,
+                           double y) {
+    if (item.w <= 0 || item.h <= 0) return false;
+    const double r  = static_cast<double>(scale_knob_px()) / 2.0;
+    const double dx = x - center_x;
+    const double dy = y - scale_center_y(item);
+    return dx * dx + dy * dy < r * r;
+}
+// A MOVING KNOB'S DAMAGE (the block above): the hull of its discs at the
+// real places `from_x` and `to_x` and the trough between, on the item's
+// rows, cut to the item.
+inline GuiRect scale_knob_move_rect(const GuiRect& item, double from_x,
+                                    double to_x) {
+    const double half = static_cast<double>(scale_knob_px()) / 2.0;
+    const double lo = std::min(from_x, to_x) - half;
+    const double hi = std::max(from_x, to_x) + half;
+    const GuiRect cols = hull(GuiRectF{lo, static_cast<double>(item.y),
+                                       hi - lo, static_cast<double>(item.h)});
+    const int x0 = std::max(cols.x, item.x);
+    const int x1 = std::min(cols.x + cols.w, item.x + item.w);
+    if (x1 <= x0) return GuiRect{item.x, item.y, 0, 0};
+    return GuiRect{x0, item.y, x1 - x0, item.h};
+}
+// THE SCALE PAINTED on `item` (render.cpp): the trough, the played part to
+// the knob's center `knob_x`, the knob at rest or `held`.
+void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held);
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas has none (row 6's canvas
 // paragraph), the rows and columns of ground stand outside the area.
 // THE WAVEFORM'S LINE WIDTH — ONE W, THE LINE RULE'S (architect 2026-11-04,
@@ -5227,16 +5204,16 @@ struct FlagEditorBox {
 // and the editor's text is drawn in it — kdenlive's flag-becomes-the-text-
 // box, on Cool Edit's cue since 2026-10-09.
 //
-// THE FIELD IS AN EDIT FIELD ON THE LANE'S WHOLE ROWS (architect
-// 2026-10-09; the look 2026-11-01 night; the ruling and its reason at the
-// palette block's editing paragraph): the ground `ground` inside a
-// three-px `text` outline (cue_editor_outline_px), its text and caret `field_text` on the
-// label's own baseline and seat, the caret and the selection band THE LEGAL
-// SET'S BAND (cue_band_top_px, cue_band_h_px — the metrics rule at
-// marker_lane_h_px; the selected ink past the band taking the field text is
-// the EDITING paragraph's), so opening an editor changes the label's SIZE
-// and nothing about where its text stands — the selected substring in the
-// chrome's SELECTED PAIR, the ordinary highlight. The box paints over the lane, the triangle and any neighbouring
+// THE FIELD IS GTK'S IN-PLACE CELL EDITOR ON THE LANE'S WHOLE ROWS
+// (architect 2026-10-09; the look 2026-11-18 / 19, send Z's design, built in
+// send AA; the ruling and its reason at the cue block's EDITING paragraph):
+// the entry's fill `ruler_face` inside a one-W border of the accent
+// (cue_editor_border_px), square-cornered, its text and caret `field_text`
+// on the label's own baseline and seat, the caret and the selection band
+// THE TEXT'S LINE BOX ROWS (cue_line_box_top_px, cue_line_box_h_px), so
+// opening an editor changes the label's SIZE and nothing about where its
+// text stands — the selected substring in the chrome's SELECTED PAIR, the
+// ordinary highlight. The box paints over the lane, the triangle and any neighbouring
 // label it reaches. Since no field buys a caret column, the
 // size only changes where the resting label was capped, the field opening at
 // the committed run's own width and growing only with what is typed past it;

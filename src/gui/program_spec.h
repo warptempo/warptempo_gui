@@ -56,26 +56,26 @@
 //
 // THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN SKIN LENGTHS (render.h's cue
 // block and the label's lengths beside it): THE MARKER'S CHIP IS A
-// SMOOTH-EDGED TRIANGLE IN A ONE-W OUTLINE AT ITS MARK'S EXACT PLACE, its
-// apex on the stem's center (architect 2026-11-14 night, send J: "I think
-// the chips should also go anti-aliased", "Agree on both.";
-// cool_edit_paint.h's THE CUE'S CHIP), at the size the whole-cell chip had
-// (architect 2026-10-26: "I think we should make the triangle smaller";
-// the one-W outline 2026-11-04, mock g1; render.h's cue_chip_h_px: the
-// outer 13 device px tall and 26 wide on the tablet at 200 %, 6 and 12 at
-// 100 %), the ruler's head the same chip. ITS
+// SMOOTH-EDGED TRIANGLE, NO OUTLINE, AT ITS MARK'S EXACT PLACE, its apex on
+// the stem's center (architect 2026-11-14 night, send J: "I think the
+// chips should also go anti-aliased", "Agree on both."; cool_edit_paint.h's
+// THE CUE'S CHIP), the bare triangle of the nominal rows (architect
+// 2026-11-19, send AA: "the smaller version without the outline";
+// render.h's cue_chip_h_px: 8 device px tall and 16 wide on the tablet at
+// 200 %, 4 and 8 at 100 %), the ruler's head the same chip. ITS
 // ROW COUNT IS NO FIELD HERE: it is a skin length, 4 W through scaled_px,
 // rounded at the element (architect 2026-10-26 ~13:40, "why not just
 // simple scale? tablet is only real surface"; render.h's cue_triangle_rows
 // and kCueTriangleRowsW, the one owner — 8 px at 200 %, 4 at 100 %). THE
 // LABEL'S LENGTHS ARE SKIN LENGTHS TOO, scaled with the text they place
 // (the text round, architect 2026-11-03): the fill's pad, the segment gap
-// and the flag editor's outline (render.h's cue_fill_pad_px,
-// cue_segment_gap_px, cue_editor_outline_px), and THE LABEL'S LEAD from the
-// column, THE BARE TRIANGLE'S REACH RIGHT, THE OUTLINE'S W AND A GAP OF 6 W
+// and the flag editor's border (render.h's cue_fill_pad_px,
+// cue_segment_gap_px, render_flag_editor_box), and THE LABEL'S LEAD from
+// the column, THE CHIP'S REACH RIGHT AND A GAP OF 5 W FROM ITS CORNER
 // (render.h's cue_label_lead_px and kCueLabelGapW, architect 2026-10-26
-// ~12:40: the label follows the rows; the W 2026-11-04: 8 + 2 + 12 = 22
-// device px on the tablet since the rows' 4 W, 2026-11-12). Every line down the canvas is
+// ~12:40: the label follows the rows; 2026-11-19, send AA: "the text should
+// move left to make sure that the margin remains the same" — 8 + 10 = 18
+// device px on the tablet). Every line down the canvas is
 // solid, one W (no dotted line since 2026-11-04). THE WELL'S
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
@@ -131,8 +131,8 @@ inline constexpr ProgramSpec kProgramSpec = {
 // the well's lanes are device px derived at the element, render.h's well
 // lanes block.)
 // (THE LABEL CLEARS THE CHIP BY CONSTRUCTION: render.h's
-// cue_label_lead_px is the bare triangle's reach right, the outline's W and
-// the gap, never negative, at every scale.)
+// cue_label_lead_px is the chip's reach right and the gap, never negative,
+// at every scale.)
 // (The label's text stands one fill pad inside its fill — the fill's lead
 // and pad are the label's lead: render.h's cue_fill_lead_px.)
 

@@ -40,17 +40,16 @@
 // six are Windows' own element names (ButtonFace, ButtonText, Hilight /
 // HilightText, WindowText and InfoText; InfoWindow and the cards' ring left
 // with the cards' orange, send AA's stage D1, 2026-11-19), the chrome's
-// painters written against them; the TWENTY-NINE after them
+// painters written against them; the TWENTY-SEVEN after them
 // are the flat look's tones (materials.h's head, 2026-11-01..05: the
-// twelve of the look, the press arc's three, 2026-11-05 — the key's press
-// face and the lists' press pair — the lamp arc's clip lamp the same night,
-// the lit key's two of 2026-11-11, session 106 — `lit_press_fill` and
-// `lit_dim_fill` — the trough and the well's frame of 2026-11-17, session
+// look's own, the lamp arc's clip lamp of 2026-11-05 night, the lit key's
+// inert face of 2026-11-11, session 106, `lit_dim_fill`, the trough and
+// the well's frame of 2026-11-17, session
 // 140, `trim_bar_face` and `well_border`, and THE ARC PAGE'S SIX of
 // 2026-11-19, send Z: the body tone, the title bar's text, the sidebar
-// text, the ruler's digits and the disabled key's face and border; the
-// level case's fill and the radio keys' three retired 2026-11-19, send Z's
-// stage C; THE POPUPS' FOUR the same day, send AA's stage D1: the tooltip's,
+// text, the ruler's digits and the disabled key's face and border; THE
+// SCALE'S RIM, send AA's stage D3; THE POPUPS' FOUR the same day, send AA's
+// stage D1: the tooltip's,
 // the normal card's and the standing card's carried fills and the limiter
 // lamp), members since the theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
@@ -61,8 +60,7 @@
 // paint_linked_group reads the palette's `cue`, THE ACCENT, a program role
 // (the markers' chip wears the same word as `cue_fill`, 2026-11-13, session
 // 119), so no `lit_fill` stands beside it holding the same tone; its inert
-// face is `lit_dim_fill` above (`lit_press_fill` the on-screen keyboard's
-// alone, awaiting stage D); WHAT IS PRINTED ON IT has none either — the
+// face is `lit_dim_fill` above; WHAT IS PRINTED ON IT has none either — the
 // glyph road takes the theme row's WORD, so `text_on_lit` and
 // `text_on_lit_dim` are read by key_ink off installed_theme(), as `text` and
 // `key_dim_ink` are for a glyph. No door class and no radio class: every
@@ -77,13 +75,13 @@
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's thirty-five (the six
+// 2026-10-04), in GuiPalette's order: the chrome's thirty-three (the six
 // of 2026-10-04's eight left — the caption's six, 2026-10-05..10-21, left
 // with the captions; the seven unread ones, 2026-11-02, with the overlays'
 // rings; the cards' ground and ring, send AA's stage D1 — and the
-// twenty-nine flat-look tones, the press arc's three, the two lamps, the
-// lit key's two, the trough, the well's frame, the Arc page's six and the
-// popups' three carried fills among them). The
+// twenty-seven flat-look tones, the two lamps, the lit key's inert face,
+// the trough, the well's frame, the Arc page's six, the popups' three
+// carried fills, the dialogs' three and the scale's rim among them). The
 // program's roles are the palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
 // palette_file.cpp's coverage proof walks it, so a role cannot be valued and
@@ -103,12 +101,12 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"selected_text",   &GuiPalette::selected_text,   &GuiThemeTones::selection_text},
     {"field_text",      &GuiPalette::field_text,      &GuiThemeTones::text},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
-    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head: the text tones, the
-    // key and its press face, the lit key's press and inert faces, the
-    // well's tones, the score viewer's pane, the two lamps; THE DIALOGS'
-    // THREE, send AA's stage D2, 2026-11-19 — the window's frame edge, its
-    // title bar's highlight row and the progress bar's trough, in place of
-    // the modal pane and the lists' press pair, retired that day; THE
+    // THE FLAT LOOK'S TWENTY-SEVEN (materials.h's head: the text tones, the
+    // key, the lit key's inert face, the well's tones, the score viewer's
+    // pane, the two lamps; THE DIALOGS' THREE, send AA's stage D2,
+    // 2026-11-19 — the window's frame edge, its title bar's highlight row
+    // and the progress bar's trough; THE SCALE'S RIM, send AA's stage D3,
+    // the scrub's knob; THE
     // ARC PAGE'S SIX, architect 2026-11-19, send Z, theme_roles.h's head —
     // the body tone, the title bar's text, the sidebar text, the ruler's
     // digits, the disabled key's face and border; and THE POPUPS' FOUR, send
@@ -125,10 +123,7 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"key_dim_face",    &GuiPalette::key_dim_face,    &GuiThemeTones::key_dim_face},
     {"key_dim_border",  &GuiPalette::key_dim_border,  &GuiThemeTones::key_dim_border},
     {"key_face",        &GuiPalette::key_face,        &GuiThemeTones::key_face},
-    {"key_press_face",  &GuiPalette::key_press_face,  &GuiThemeTones::key_press_face},
-    {"lit_press_fill",  &GuiPalette::lit_press_fill,  &GuiThemeTones::lit_press_fill},
     {"lit_dim_fill",    &GuiPalette::lit_dim_fill,    &GuiThemeTones::lit_dim_fill},
-    {"well_frame",      &GuiPalette::well_frame,      &GuiThemeTones::well_frame},
     {"ruler_face",      &GuiPalette::ruler_face,      &GuiThemeTones::ruler_face},
     {"ruler_tick",      &GuiPalette::ruler_tick,      &GuiThemeTones::ruler_tick},
     {"ruler_text",      &GuiPalette::ruler_text,      &GuiThemeTones::ruler_text},
@@ -140,6 +135,7 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"frame_edge",      &GuiPalette::frame_edge,      &GuiThemeTones::frame_edge},
     {"title_highlight", &GuiPalette::title_highlight, &GuiThemeTones::title_highlight},
     {"scale_trough",    &GuiPalette::scale_trough,    &GuiThemeTones::scale_trough},
+    {"scale_slider_border", &GuiPalette::scale_slider_border, &GuiThemeTones::scale_slider_border},
     {"tooltip_fill",    &GuiPalette::tooltip_fill,    &GuiThemeTones::tooltip_fill},
     {"card_fill",       &GuiPalette::card_fill,       &GuiThemeTones::card_fill},
     {"card_standing_fill", &GuiPalette::card_standing_fill, &GuiThemeTones::card_standing_fill},

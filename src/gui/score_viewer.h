@@ -530,9 +530,9 @@ inline const char* score_viewer_button_shift_hint(
 }
 
 // THE PAGE SCRUB'S MAPPING (the page road) over the painter's PUBLISHED
-// channel (AppState::ModalDialogGeometry::scrub_channel), the player's
-// travel exactly
-// (render_player_scrub_travel_x0 / _usable_span): the range's first page at
+// item (AppState::ModalDialogGeometry::scrub), the player's travel exactly,
+// the knob inside the trough (render_player_scrub_travel_x0 /
+// _usable_span, render.h's scrub block): the range's first page at
 // the travel's start, its last at its end, page i at EXACTLY
 // (i − first) / (count − 1) of the travel — the resting thumb's center, a
 // real x, nothing rounded onto a column (architect 2026-11-15, the no-grid
@@ -542,9 +542,9 @@ inline const char* score_viewer_button_shift_hint(
 // changes in). One page: the thumb at the left, the scrub dead (the press
 // claim).
 inline double score_scrub_x_of(const AppState& a, int page) {
-    const GuiRect channel = a.modal_dialog.scrub_channel;
-    const double x0 = render_player_scrub_travel_x0(channel);
-    const int span  = render_player_scrub_usable_span(channel);
+    const GuiRect item = a.modal_dialog.scrub;
+    const double x0 = render_player_scrub_travel_x0(item);
+    const int span  = render_player_scrub_usable_span(item);
     const ScoreViewerRange r = score_viewer_range(a);
     if (span <= 0 || r.count() <= 1) return x0;
     const double t = static_cast<double>(page - r.first) /
@@ -552,9 +552,9 @@ inline double score_scrub_x_of(const AppState& a, int page) {
     return x0 + t * static_cast<double>(span);
 }
 inline int score_scrub_page_at(const AppState& a, double x) {
-    const GuiRect channel = a.modal_dialog.scrub_channel;
-    const double x0 = render_player_scrub_travel_x0(channel);
-    const int span  = render_player_scrub_usable_span(channel);
+    const GuiRect item = a.modal_dialog.scrub;
+    const double x0 = render_player_scrub_travel_x0(item);
+    const int span  = render_player_scrub_usable_span(item);
     const ScoreViewerRange r = score_viewer_range(a);
     if (span <= 0 || r.count() <= 1) return r.first;
     const double cx = std::clamp(x, x0, x0 + static_cast<double>(span));
@@ -570,9 +570,9 @@ inline int score_scrub_page_at(const AppState& a, double x) {
 // rounds to a frame alone); a zero item or an empty range the travel's
 // start and the first frame.
 inline double score_scrub_x_of_frame(const AppState& a, int64_t frame) {
-    const GuiRect channel = a.modal_dialog.scrub_channel;
-    const double x0 = render_player_scrub_travel_x0(channel);
-    const int span  = render_player_scrub_usable_span(channel);
+    const GuiRect item = a.modal_dialog.scrub;
+    const double x0 = render_player_scrub_travel_x0(item);
+    const int span  = render_player_scrub_usable_span(item);
     const ScoreFrameRange fr = score_viewer_frame_range(a);
     if (span <= 0 || fr.length() <= 0) return x0;
     const int64_t f = std::clamp(frame, fr.begin, fr.end);
@@ -581,9 +581,9 @@ inline double score_scrub_x_of_frame(const AppState& a, int64_t frame) {
     return x0 + t * static_cast<double>(span);
 }
 inline int64_t score_scrub_frame_at(const AppState& a, double x) {
-    const GuiRect channel = a.modal_dialog.scrub_channel;
-    const double x0 = render_player_scrub_travel_x0(channel);
-    const int span  = render_player_scrub_usable_span(channel);
+    const GuiRect item = a.modal_dialog.scrub;
+    const double x0 = render_player_scrub_travel_x0(item);
+    const int span  = render_player_scrub_usable_span(item);
     const ScoreFrameRange fr = score_viewer_frame_range(a);
     if (span <= 0 || fr.length() <= 0) return fr.begin;
     const double cx = std::clamp(x, x0, x0 + static_cast<double>(span));

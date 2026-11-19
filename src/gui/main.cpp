@@ -1390,16 +1390,16 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // (2026-10-09, ON SCREEN IS AS PAINTED; the reach architect 2026-11-14,
 // send J): the head is the chip's drawing at the playhead's exact x, so the
 // columns it can touch are [col − H − 1, col + H + 1), H the chip's height
-// (cue_chip_paint_reach_px, render.h: 14 each side, 28 device px on the
-// tablet at 200 %, 7 each side at 100 %) — its rows the envelope's, below —
+// (cue_chip_paint_reach_px, render.h: 9 each side, 18 device px on the
+// tablet at 200 %, 5 each side at 100 %) — its rows the envelope's, below —
 // which also holds the one-W line of
 // the cursor at its exact place: the line's x lies within half a px of
 // `col`, so the cells its real interval [x − t / 2, x + t / 2] touches lie
 // in [col − t / 2 − 1, col + t / 2 + 1), t waveform_line_px — two columns
 // either side of the column's left edge on the tablet, and inside the box
-// at every scale (H is the fill's two rows or more, t above and t or more
-// below, cue_chip_h_px, so the box reaches at least 2 t + 3 columns each
-// side) — so a move repaints every column the head and the line stood on.
+// at every scale (H is the chip's rows, 4 W, cue_chip_h_px, and t one W,
+// so the box reaches 4 t + 1 columns or more each side) — so a move
+// repaints every column the head and the line stood on.
 // `col` is the waveform's own column (offset from area.x, as every
 // playhead pixel is) — THE PAINTED COLUMN, playhead_pixel_x's on the plate
 // basis, the same number render_playhead

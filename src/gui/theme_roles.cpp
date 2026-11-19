@@ -23,7 +23,7 @@ namespace {
 // THE ROLE TABLE: the roles a theme file holds, each exactly once — EXACTLY
 // THE ROLES A TONE READS (the head's DERIVATION), Live's names, the one
 // nested role flattened to `StandardVuMeter/Maximum` (the head's THE
-// FORMAT), and last OUR OWN SIX (kOwnThemeRoles below). The converter
+// FORMAT), and last OUR OWN NINE (kOwnThemeRoles below). The converter
 // (tools/themes/ask_to_theme.py) reads the names out of this initializer,
 // so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
 // when it joined (StandbySelectionForeground 2026-11-06;
@@ -40,7 +40,8 @@ namespace {
 // day (send AA's stage D1: Arc's tooltip and notifyd's two bubbles), and
 // TitleHighlight and ScaleTrough, OUR OWN TWO MORE, the same day (send AA's
 // stage D2: xfwm's title bar's highlight row, the dialogs' frame, and Arc's
-// progress / scale trough). (RangeEditField, the NOISE case's fill, and
+// progress / scale trough), and ScaleSliderBorder, the same day (send AA's
+// stage D3: the rim of Arc's scale's knob, the scrub). (RangeEditField, the NOISE case's fill, and
 // ScaleAwareness, the radio keys' purple, both of 2026-11-11, left the table
 // and every file 2026-11-19, send Z's stage C: Arc's entry progress wears
 // the accent and the radio keys light the one accent, so no tone reads
@@ -59,7 +60,7 @@ constexpr std::string_view kThemeRoles[] = {
     "ScrollbarInnerTrack", "ClipBorder",
     "WindowBackground", "TitleForeground", "SidebarForeground",
     "TooltipBackground", "CardBackground", "CardStandingBackground",
-    "TitleHighlight", "ScaleTrough",
+    "TitleHighlight", "ScaleTrough", "ScaleSliderBorder",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
@@ -93,6 +94,7 @@ constexpr OwnThemeRole kOwnThemeRoles[] = {
     {"CardStandingBackground", "Alert"},
     {"TitleHighlight",    "SurfaceArea"},
     {"ScaleTrough",       "ScrollbarInnerTrack"},
+    {"ScaleSliderBorder", "ClipBorder"},
 };
 constexpr bool own_roles_in_table() {
     for (const OwnThemeRole& o : kOwnThemeRoles) {
@@ -216,14 +218,6 @@ Rgb mix(const Rgb& a, const Rgb& b, double t) {
                clamp_byte(a.b + t * (b.b - a.b))};
 }
 
-// c · ratio, per channel, rounded and clamped (the lit press faces).
-Rgb scale(const Rgb& c, double ratio) {
-    return Rgb{clamp_byte(c.r * ratio), clamp_byte(c.g * ratio),
-               clamp_byte(c.b * ratio)};
-}
-
-double mean(const Rgb& c) { return (c.r + c.g + c.b) / 3.0; }
-
 uint32_t packed(const Rgb& c) {
     return (static_cast<uint32_t>(c.r) << 16) |
            (static_cast<uint32_t>(c.g) << 8) | static_cast<uint32_t>(c.b);
@@ -262,33 +256,21 @@ constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
 };
 
 // THE TONES DERIVED FROM A ROW'S OWN WORDS (the head's DERIVED block: the
-// lit key's press and inert faces and the print on its inert face, the
-// enabled chip's fill and the playhead's line), ONE
+// lit key's inert face and the print on it, the enabled chip's fill and
+// the playhead's line), ONE
 // BODY for both roads: derive() fills them off the theme's own numbers,
 // bright_mixed_tones off the mixed bright tones, so each formula is written
-// once. Every input is a word of the row — the key face
-// (SurfaceBackground), the press face (Desktop), the body tone
+// once. Every input is a word of the row — the body tone
 // (WindowBackground, never mixed), the print on a lit face
 // (StandbySelectionForeground, never mixed), the accent and the head —
 // each the same bytes derive() reads off the roles, so the doubles
 // and their order are the derivation's own (Python's, bit for bit).
 void fill_dependent_tones(GuiThemeTones& t) {
-    const Rgb face     = unpacked(t.key_face);
-    const Rgb desktop  = unpacked(t.key_press_face);
     const Rgb body     = unpacked(t.body_face);
     const Rgb print    = unpacked(t.text_on_lit);
     const Rgb on       = unpacked(t.cue);
     const Rgb range    = unpacked(t.playhead_head);
     const Rgb white    = Rgb{255, 255, 255};
-    // THE LIT PRESS FILL (the head's DERIVED block; architect 2026-11-11,
-    // session 106; since send Z's stage C, 2026-11-19, the on-screen
-    // keyboard's lit key under the finger alone, awaiting stage D): the
-    // accent scaled by the ratio the press face bears to the key face, mean
-    // over mean; a black key face (no divisor) leaves it as it is.
-    const double face_mean   = mean(face);
-    const double press_ratio =
-        face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
-    t.lit_press_fill       = packed(scale(on, press_ratio));
     // THE LIT-BUT-INERT PAIRS ON ARC'S OWN NUMBERS (the head's DERIVED
     // block; architect 2026-11-19, send Z: "let's do arcs numbers"): the
     // face (the lit color at 75 % over the body tone) at 60 % over the body
@@ -310,8 +292,7 @@ void fill_dependent_tones(GuiThemeTones& t) {
 
 // One theme's tones AT ITS OWN NUMBERS (the head's DERIVATION; the bright
 // mix is the install's, bright_mixed_tones). Total: every tone is a role, a
-// composite, a mix or a scaled role, and the press ratio's zero divisor has
-// its own answer (fill_dependent_tones).
+// composite or a mix (fill_dependent_tones).
 GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
     const Rgb body     = opaque(roles["WindowBackground"]);
@@ -371,8 +352,6 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.key_dim_face        = packed(dim_face);
     t.key_dim_border      = packed(dim_border);
     t.key_face            = packed(face);
-    t.key_press_face      = packed(desktop);
-    t.well_frame          = packed(dim);
     t.ruler_face          = packed(canvas);
     t.ruler_tick          = packed(tick_role);
     t.ruler_text          = packed(ruler_fg);
@@ -395,6 +374,10 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.frame_edge          = packed(contrast);
     t.title_highlight     = packed(opaque(roles["TitleHighlight"]));
     t.scale_trough        = packed(over(rgba(roles["ScaleTrough"]), ground_a));
+    // ARC'S SLIDER BORDER (send AA's stage D3, 2026-11-19: the scrub's knob,
+    // render.h's scrub block): our own ScaleSliderBorder over the ground
+    // (262933; a Live theme's ClipBorder, so its well_border's tone).
+    t.scale_slider_border = packed(over(rgba(roles["ScaleSliderBorder"]), ground_a));
     // THE THREE CARRIED FILLS (the head's CARRIED block), each its role's
     // bytes with its opacity in the top byte, painted at that opacity over
     // whatever lies under the box (paint_shift_tooltip,

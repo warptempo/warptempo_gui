@@ -19,10 +19,11 @@ struct GuiTargetRender;
 // BPM form's field commit and its RENDER gate (architect 2026-10-29), and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
 //
-// AN OPEN IS WINDOWS' EDIT FIELD (architect 2026-10-09, every chrome): the
-// marker-lane editors paint a box in the chrome's field pair with a
-// one-quantum outline in the field text over the edited segment, the
-// selected substring in the chrome's selected pair — the picture is
+// AN OPEN IS GTK'S IN-PLACE CELL EDITOR (a field since architect
+// 2026-10-09; Arc's look 2026-11-18 / 19, send Z's design, built in send
+// AA): the marker-lane editors paint a square box in the entry's fill with
+// a one-W border of the accent over the edited segment, the selected
+// substring in the chrome's selected pair — the picture is
 // render_flag_editor_box's (render.h's EDITING paragraph owns the look and
 // the ruling's reason).
 struct GuiFlagEditor {

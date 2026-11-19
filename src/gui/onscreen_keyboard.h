@@ -414,8 +414,9 @@ inline constexpr Page page_of_key_index(int index) {
 // THE PAGE KEY IS THE ONE KEY WHOSE OWN PRESS MOVES THE LIVE PAGE OUT FROM
 // UNDER ITS INDEX before the paint, so an index test against the new page's
 // walk finds no held key and the page key paints its lit or rest face
-// under the finger; the press face must follow the finger (materials.h's
-// paint_flat_key and key_look), and the finger is on the slot.
+// under the finger; the press face must follow the finger (Arc's lit look,
+// paint_handler.cpp's paint_onscreen_keyboard), and the finger is on the
+// slot.
 // A negative index — `pressed_key`'s "nothing held" — is on no slot.
 inline constexpr bool same_slot(int a, int b) {
     constexpr int base  = static_cast<int>(kStableCodeBase);
@@ -476,10 +477,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // arm: the same act, `pass` inherits). AT THE PROGRAM KEYS' ONE SIZE,
 // centered on the face (paint_key_glyph, paint_handler.cpp — the one owner
 // of the size, the set's 16 W canvas since send Z, 2026-11-19, never of
-// osk_key_h), in the key's ink (materials.h's flat_key_ink: the text tone
-// at rest and under the press; text_on_lit on a lit face, which no glyph key
-// wears — only Shift and the page key light, and they keep their words; no
-// key here is ever disabled). A null answer: the key wears its
+// osk_key_h), in the key's ink (paint_onscreen_keyboard: the text tone at
+// rest, `text_on_lit` on a lit face — a latched key or a key under the
+// finger; no key here is ever disabled). A null answer: the key wears its
 // word or its character.
 inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
     using icons::Icon;
@@ -548,13 +548,11 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // resting; what says the latch is the key's LIT FACE — THE ACCENT, `cue`,
 // Default's FFAD56, its cap `text_on_lit`, Default's 070707 (architect
 // 2026-11-11, session 106, the keyboard following the lamps; the print the
-// selection's text since 2026-11-17, session 140; materials.h's
-// paint_flat_key and flat_key_ink, today's flat key awaiting send Z's stage
-// D), which this key and the page key (while the symbols
-// page stands) wear off their lamps — a press on a lit one the accent
-// darkened, `lit_press_fill`, Default's C68743, a press on an unlit key
-// the press face, Default's 2A2A2A, from the press to the lift (the press
-// arc, 2026-11-05) — and the letter
+// selection's text since 2026-11-17, session 140; Arc's lit look since send
+// AA's stage D2, paint_handler.cpp's paint_onscreen_keyboard), which this
+// key and the page key (while the symbols page stands) wear off their lamps
+// — a key under the finger wearing the same lit look from the press to the
+// lift (Arc's `:active` and `:checked` one) — and the letter
 // caps themselves, every one of which turns capital while the latch stands.
 inline const char* cap_word(const KeyDef& k, Page page) {
     switch (k.role) {

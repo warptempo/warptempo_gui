@@ -30,8 +30,9 @@
 // (THE KEY — every key of the band, the bottom icon row and the controls
 // rows, the word buttons and the entries — is Arc's button since send Z's
 // stage C, 2026-11-19, materials.h's paint_linked_group, paint_word_button
-// and paint_entry, on this file's coverage stamp; the scrub's thumb and the
-// on-screen keyboard keep the flat key, paint_flat_key, until stage D.)
+// and paint_entry, on this file's coverage stamp; the on-screen keyboard's
+// keys Arc's buttons in one grid and the scrub Arc's scale (render.cpp's
+// paint_scale) on the same stamp since send AA.)
 
 // (THE QUAVER'S PAINTER — paint_quaver, the mock's vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is
@@ -61,13 +62,13 @@
 // stem's center, and 2026-10-26's aliased staircase). The geometry is
 // render.h's cue block (cue_chip_h_exact_px), with H the chip's height and
 // yb THE BOTTOM EDGE of the row the apex stands on: apex (x, yb), height
-// and half-base H, its sides at 45°, ALL OF IT THE FILL — NO OUTLINE
-// (architect 2026-11-19, send AA, RULINGS §8 / §9, his pick A 2 of Z_10:
-// "I would consider removing the outline of the chips because, for
-// example, the scroll bar has no outline"; "no outline, the outer size
-// kept"): the fill takes the whole triangle the outline had, so the
-// footprint, the apex, the hull, the two extents and the label's lead are
-// what they were. NO SHADOW (architect 2026-11-02, the well's part of the
+// and half-base H, its sides at 45°, ALL OF IT THE FILL — NO OUTLINE, THE
+// BARE TRIANGLE OF THE NOMINAL ROWS (architect 2026-11-19, send AA,
+// RULINGS §8 / §11, fork A 3 of Z_10: "I would consider removing the
+// outline of the chips because, for example, the scroll bar has no
+// outline"; "I think I prefer the smaller version without the outline"),
+// the apex still on the row's bottom edge. NO SHADOW (architect
+// 2026-11-02, the well's part of the
 // flat look). The color is resolve_flag_face's for a cue (render.cpp, the
 // one table: `cue_fill`, a disabled chip's `inactive_cue`) and the
 // `playhead_head` for the playhead's head (the same chip, mock k1,

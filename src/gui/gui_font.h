@@ -238,16 +238,6 @@ GuiLineBoxW gui_font_line_box_w(const GuiFont& f);
 // redesign_baseline centers in a chrome box (paint_handler.cpp): the em
 // times the use's file's own "H" ink per em.
 double gui_font_cap_px(const GuiFont& f);
-// THE ASCENDER LINE in device px above the baseline at the font's scale,
-// unrounded: the em times the use's file's own "l" ink per em (Liberation
-// Sans 1484 / 2048 units) — the top of the lowercase ink (the modal box's
-// text seat measured it, 2026-10-23 to send AA's stage D2, 2026-11-19).
-double gui_font_ascender_ink_px(const GuiFont& f);
-// THE X-HEIGHT in device px at the font's scale, unrounded: the em times the
-// use's file's own "x" ink per em (Liberation Sans 1082 / 2048 units, 11.6
-// px at 200 %'s 22) — the band the eye centers in the marker lane (render.h's
-// cue band, architect 2026-11-01 night, M5h).
-double gui_font_x_ink_px(const GuiFont& f);
 
 // THE INK BAND OF A GLYPH SET (architect 2026-11-03, the text round: "the
 // digits' ink centered on the ruler"; "logo should be centered in logo

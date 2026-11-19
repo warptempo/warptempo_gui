@@ -36,12 +36,9 @@ struct GuiThemeTones {
     uint32_t key_dim_face;        // a disabled key's and word button's face (the key face at 55 % over the body tone, theme_roles.h's DERIVED block)
     uint32_t key_dim_border;      // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone, the same block)
     uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face ((text_on_lit at 80 % over the accent at 75 % over the body tone) at 60 % over the body tone, theme_roles.h's DERIVED block); a word alone, read by key_ink
-    uint32_t key_face;            // a key's and a word button's face at rest (SurfaceBackground)
-    uint32_t key_press_face;      // the scrub's thumb's and the on-screen keyboard's unlit key under a press, awaiting send Z's stage D (Desktop)
-    uint32_t lit_press_fill;      // the on-screen keyboard's lit key under the finger, awaiting stage D: the accent darkened (cue · mean(key_press_face) / mean(key_face))
+    uint32_t key_face;            // a key's and a word button's face at rest, the scrub's knob's fill (SurfaceBackground)
     uint32_t lit_dim_fill;        // a checked-but-disabled key's face: (the accent at 75 % over the body tone) at 60 % over the body tone, Arc's numbers
-    uint32_t well_frame;          // the scrub's channel (TextDisabled)
-    uint32_t ruler_face;          // the ruler and Arc's entry's fill (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
+    uint32_t ruler_face;          // the ruler, Arc's entry's fill and the flag editor's (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the ruler face, the canvas)
     uint32_t ruler_text;          // the ruler's digits (the text at 80 % over the ruler face, theme_roles.h's DERIVED block; paint_ruler_row)
     uint32_t lane_face;           // the marker lane (Desktop)
@@ -53,7 +50,8 @@ struct GuiThemeTones {
     uint32_t score_pane_face;     // the score viewer's pane, the page's mat (= the ink)
     uint32_t frame_edge;          // the dialog window's frame edge, its outer W round the window (ControlContrastFrame; xfwm's frame, paint_xfwm_window)
     uint32_t title_highlight;     // the dialog window's title bar's second row (TitleHighlight, our own role; arc_dark 353B48; a Live theme's SurfaceArea)
-    uint32_t scale_trough;        // the progress dialog's bar's trough, the scrub's to come (ScaleTrough, our own role, over the ground; arc_dark 2D303B; a Live theme's ScrollbarInnerTrack)
+    uint32_t scale_trough;        // the progress dialog's bar's trough and the scrub's (ScaleTrough, our own role, over the ground; arc_dark 2D303B; a Live theme's ScrollbarInnerTrack)
+    uint32_t scale_slider_border; // the scrub's knob's one-W rim at rest (ScaleSliderBorder, our own role, over the ground; arc_dark 262933, Arc's slider border; a Live theme's ClipBorder, its well_border)
     // THE THREE CARRIED FILLS (theme_roles.h's CARRIED block; send AA's stage
     // D1, 2026-11-19): each word 0xAARRGGBB, THE TOP BYTE ITS OPACITY (FF
     // opaque; every other member's top byte is 0), painted at it over
@@ -69,7 +67,7 @@ struct GuiThemeTones {
     uint32_t waveform_core;       // the magnified inner bar's solid fill (SurfaceBackground, = the key face)
     uint32_t grid;                // the canvas's quarter lines (TakeLaneTrackNotHighlighted over the canvas)
     uint32_t center;              // each channel's zero line (= the ink)
-    uint32_t cue;                 // THE ACCENT: a lit or pressed key's face, every checked key's, NOISE's progress line, the on-screen keyboard's lit keys too (ViewCheckControlEnabledOn)
+    uint32_t cue;                 // THE ACCENT: a lit or pressed key's face, every checked key's, NOISE's progress line, the on-screen keyboard's lit keys, the scrub's played part and its held knob, the flag editor's border (ViewCheckControlEnabledOn)
     uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (= the accent, cue)
     uint32_t cue_outline;         // the selection stem, the lead-in ring (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
@@ -167,10 +165,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x272727, // key_dim_border
     0x2A221A, // text_on_lit_dim
     0x363636, // key_face
-    0x2A2A2A, // key_press_face
-    0xC68743, // lit_press_fill
     0x86623B, // lit_dim_fill
-    0x757575, // well_frame
     0x393939, // ruler_face
     0x919191, // ruler_tick
     0x9C9C9C, // ruler_text
@@ -184,6 +179,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x111111, // frame_edge
     0x242424, // title_highlight
     0x242424, // scale_trough
+    0x2A2A2A, // scale_slider_border
     0xFF363636, // tooltip_fill
     0xFFE76942, // card_fill
     0xFFE76942, // card_standing_fill

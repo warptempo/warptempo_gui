@@ -11,7 +11,7 @@
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "theme_file.h"     // kGuiThemeRoles (the chrome's roles)
 #include "theme_roles.h"    // bright_mixed_tones (the install's mix)
-#include "materials.h"      // paint_flat_key, KeyLook
+#include "materials.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -400,14 +400,39 @@ void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
 // hi-fi skin's caption and border that replaced them went 2026-10-24,
 // render.h's caption note.)
 
-// THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key on
-// its box's real edges (materials.h's paint_flat_key, the exact fill;
-// today's flat key and press look, awaiting send Z's stage D) — never lit
-// (it is dragged, not turned on or off) — the press face while `pressed`,
-// the owner's grab on the thumb (the press arc, architect 2026-11-05; the
-// rule at the declaration).
-void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed) {
-    paint_flat_key(cr, box, key_look(/*checked=*/false, pressed));
+// THE SCALE (render.h's scrub block, Arc's plain scale; architect
+// 2026-11-18 / 19, send Z's design, built in send AA): one coverage-stamp
+// pass at exact coverage — the trough's pill in `scale_trough`; the played
+// part, the same pill cut at the knob's center, in the accent; the knob's
+// disc — at rest `key_face` inside a one-W `scale_slider_border` rim, held
+// the whole disc the accent.
+void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held) {
+    if (item.w <= 0 || item.h <= 0) return;
+    const GuiPalette& p = palette();
+    const GuiRectF tr   = scale_trough_box(item);
+    const GuiRectF kn   = scale_knob_box(item, knob_x);
+    const double tr_r   = tr.h / 2.0;
+    const double kn_r   = kn.w / 2.0;
+    const double b      = static_cast<double>(hairline_px());
+    CoverageStampPass pass;
+    pass.begin(cr);
+    pass.rounded_rect(tr.x, tr.y, tr.x + tr.w, tr.y + tr.h, tr_r, tr_r,
+                      p.scale_trough);
+    if (knob_x > tr.x)
+        pass.rounded_rect_cut(tr.x, tr.y, tr.x + tr.w, tr.y + tr.h, tr_r, tr_r,
+                              tr.x, tr.y, std::min(knob_x, tr.x + tr.w),
+                              tr.y + tr.h, p.cue);
+    if (held) {
+        pass.rounded_rect(kn.x, kn.y, kn.x + kn.w, kn.y + kn.h, kn_r, kn_r,
+                          p.cue);
+    } else {
+        const double in_r = std::max(0.0, kn_r - b);
+        pass.rounded_rect(kn.x + b, kn.y + b, kn.x + kn.w - b, kn.y + kn.h - b,
+                          in_r, in_r, p.key_face);
+        pass.rounded_ring(kn.x, kn.y, kn.x + kn.w, kn.y + kn.h, kn_r, b,
+                          p.scale_slider_border);
+    }
+    pass.end();
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
@@ -1300,7 +1325,7 @@ void iterate_visible_flags_impl(
     // reaches half a W from its place and its place lies within half a px of
     // the column, so a line that touches the columns has its column within
     // W / 2 + 1 of them — inside the chip's reach on the right (H + 1, H the
-    // fill's rows and more than a W) and inside the label's width bound on
+    // chip's rows, 4 W) and inside the label's width bound on
     // the left — and no cull here drops a stem the gate would draw.
     const int reach = cue_chip_paint_reach_px();
     const double cull_lo = static_cast<double>(viewport_start_sample) -
@@ -1459,9 +1484,9 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 // label's horizontal lengths), as offsets from the marker's EXACT PLACE: the
 // first present segment's box opens the fill lead past the mark (the
 // label's lead less the fill's pad, render.h's cue_fill_lead_px — the lead
-// the chip's nominal rows, one W and the gap, so the
-// boxes follow the triangle's rows, architect 2026-10-26 ~12:40; the W
-// 2026-11-04), each box
+// the chip's rows and the gap, so the boxes follow the triangle's rows,
+// architect 2026-10-26 ~12:40; the gap from the chip's own corner since
+// 2026-11-19, send AA), each box
 // is ITS TEXT'S OWN WIDTH, UNROUNDED, with the fill's pad either side (the
 // text at its box's start plus the pad — the label's lead), and each next
 // box stands the segment gap past the one before — REAL OFFSETS (architect
@@ -1536,10 +1561,10 @@ struct FlagFace {
 // 2026-11-13, session 119: "we revert the rule so that markers get accent
 // color instead of icon glyph color, and we simply tune the accent
 // itself"; theme_roles.h's THE BRIGHT MIX), selected or not, WITH NO
-// OUTLINE — the fill takes the whole triangle the outline had, the chip's
-// footprint unchanged (architect 2026-11-19, send AA, RULINGS §8 / §9, his
-// pick A 2: "I would consider removing the outline of the chips because,
-// for example, the scroll bar has no outline"). EVERY
+// OUTLINE — the bare triangle of the nominal rows (architect 2026-11-19,
+// send AA, RULINGS §8 / §11: "I would consider removing the outline of the
+// chips because, for example, the scroll bar has no outline"; "I think I
+// prefer the smaller version without the outline"). EVERY
 // SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
 // 2026-11-11, session 106: "disabled markers also get the dark stem, same as
 // enabled ones") — a solid one-W `cue_outline` line from the chip's apex
@@ -2667,7 +2692,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // tone derived from them recomputed) and copied for the word readers
     // (installed_theme), its slug and group the list row's; then THE
     // PROGRAM'S TWELVE off the palette's role table (palette_file.h), THE
-    // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the mixed
+    // CHROME'S THIRTY-THREE off the chrome's (theme_file.h), each member the mixed
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.
@@ -2775,7 +2800,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // exactly where the resting segment's box does.
     const GuiRect lane = top_marker_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
-    const int u      = cue_editor_outline_px();   // the field's outline
+    const int u      = cue_editor_border_px();    // the field's border
     const int fill_h = cue_fill_h_px();
 
     cairo_save(cr);
@@ -2987,24 +3012,22 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                       app, audio.sample_rate(),
                       static_cast<long>(audio.total_frames()))
                           .red.count(idx) > 0;
-    // THE FIELD IS AN EDIT FIELD (architect 2026-10-09 ~12:15, reversing
-    // 2026-10-07 ~09:45's "the flag in its selected face, no box and no
-    // frame"; its look 2026-11-01 night, M5g: "the box's tones as mocked"):
-    // THE GROUND `ground` (Default's 242424) inside a `text` (Default's B5B5B5) outline, the text
-    // and the caret the chrome's `field_text` (the text tone) — on every
-    // state of the marker, disabled included (the chip carries the
-    // state). WHY: the field is the legibility guarantee ("when you're
-    // looking very closely at a label it has to be legible"), and THE
-    // SELECTED SUBSTRING takes the chrome's SELECTED PAIR, `selected_text`
-    // 111111 on `selected_fill` 637E86 (Live's browser selection,
-    // materials.h's `selection_fill` / `selection_text`), the ordinary highlight
-    // — the pair that exists "precisely to avoid this problem" — part of the
-    // chrome, as every selection in the product is. A COINCIDENT
-    // MARKER'S FIELD IS THE SAME FIELD, its text and caret the field's own,
-    // unstruck; `struck` marks its riding segments alone.
+    // THE FIELD IS GTK'S IN-PLACE CELL EDITOR (architect 2026-11-18 / 19,
+    // send Z's design, built in send AA; render.h's EDITING paragraph): the
+    // entry's fill `ruler_face` (arc_dark 404552) inside a one-W border of
+    // the accent `cue`, square-cornered, the text and the caret the
+    // chrome's `field_text` (the text tone) — on every state of the marker,
+    // disabled included (the chip carries the state). WHY: the field is the
+    // legibility guarantee ("when you're looking very closely at a label it
+    // has to be legible"), and THE SELECTED SUBSTRING takes the chrome's
+    // SELECTED PAIR, `selected_text` on `selected_fill` (on arc_dark the
+    // accent under the lit print, the dialog editor's pair), the ordinary
+    // highlight — the pair that exists "precisely to avoid this problem".
+    // A COINCIDENT MARKER'S FIELD IS THE SAME FIELD, its text and caret the
+    // field's own, unstruck; `struck` marks its riding segments alone.
     const GuiPalette& pal = palette();
-    const GuiColor field_fill    = pal.ground;
-    const GuiColor field_outline = pal.text;
+    const GuiColor field_fill    = pal.ruler_face;
+    const GuiColor field_border  = pal.cue;
     const GuiColor field_ink     = pal.field_text;
     const GuiColor sel_fill   = pal.selected_fill;
     const GuiColor sel_text   = pal.selected_text;
@@ -3020,10 +3043,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    box's since 2026-11-01 night, render.h's marker_lane_h_px): the
     //    segment's box — its run and the fill's pad either side, the text
     //    standing exactly where the resting label's does — with THE
-    //    EDITOR'S OUTLINE (render.h's cue_editor_outline_px, one W, 2 device
-    //    px on the tablet) in `text` round it, outside the pads on the left and
-    //    right and on the lane's first and last outline rows, the ground
-    //    inside. IT PAINTS OVER THE LANE — the
+    //    EDITOR'S BORDER (render.h's cue_editor_border_px, one W, 2 device
+    //    px on the tablet) in the accent round it, outside the pads on the
+    //    left and right and on the lane's first and last rows, the entry's
+    //    fill inside, square-cornered. IT PAINTS OVER THE LANE — the
     //    triangle's right edge and any neighbouring label it reaches
     //    (architect 2026-10-09: "it may overlap with the flag and other
     //    elements, that's fine"). A refused Enter recolors nothing
@@ -3043,24 +3066,21 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                              static_cast<double>(lane.y),
                              box_w + static_cast<double>(2 * u),
                              static_cast<double>(fill_h)};
-    paint_cell_rect(cr, field_box, field_outline);
+    paint_cell_rect(cr, field_box, field_border);
     paint_cell_rect(cr,
                     GuiRectF{field_box.x + u, field_box.y + u,
                              field_box.w - 2 * u, field_box.h - 2 * u},
                     field_fill);
 
-    // THE CARET AND THE SELECTION BAND ARE THE LEGAL SET'S BAND (architect
-    // 2026-11-01 night, M5g / M5h: the warp line's grammar's ink, the
-    // x-height band centered in it; render.h's EDITING paragraph): the
-    // band's top and height are read off the one derivation
-    // (cue_band_top_px, cue_band_h_px, render.h), never re-derived here —
-    // real y, on the tablet from 6.23 to 29.09 under the lane's 32 rows,
-    // 4.23 of field above and 0.91 below inside the 2-row outlines (the 16 W
-    // lane, 2026-11-19, send AA). THE TEXT stands on the
-    // lane's whole inner height, so a descender or a history bracket below
-    // the baseline paints whole.
-    const double band_y = static_cast<double>(lane.y) + cue_band_top_px();
-    const double band_h = cue_band_h_px();
+    // THE CARET AND THE SELECTION BAND ARE THE TEXT'S LINE BOX ROWS
+    // (architect 2026-11-18 / 19, send Z's design, built in send AA: the
+    // dialog editor's rule, one look for both editors; render.h's EDITING
+    // paragraph): read off the one derivation (cue_line_box_top_px,
+    // cue_line_box_h_px, render.h), never re-derived here — on the tablet
+    // rows 2 .. 29 under the lane's 32, the box's whole inner 14 W inside
+    // the 2-row border.
+    const double band_y = static_cast<double>(lane.y) + cue_line_box_top_px();
+    const double band_h = cue_line_box_h_px();
 
     // NO CLIP STANDS ROUND THE TEXT (architect 2026-11-15, the no-grid arc):
     // the viewport is exactly the run and the caret's column (the box is the
@@ -3211,10 +3231,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // "it may overlap with the flag and other elements, that's fine").
         double cursor_x = run_x0;
         const double lower_seam = cursor_x;
-        // The field's outline columns stand in the first gap's first columns
-        // (field_box reaches one outline past the pads), so the riding face
+        // The field's border columns stand in the first gap's first columns
+        // (field_box reaches one border past the pads), so the riding face
         // starts after it: the run stays where the resting label's is and the
-        // outline is never painted over.
+        // border is never painted over.
         const double face_x0 = run_x0 + static_cast<double>(u);
         const auto ride = [&](const text_shape::ShapedRun& seg_run,
                               double seg_w) {
@@ -3272,7 +3292,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // the FIELD, published as `box` and claimed by the caret. Nothing is
         // published where nothing rode — the cold marker_index -1 and the
         // zero rect, which contains no point. It carries no triangle: the
-        // triangle stays the flag pass's. It begins after the field's outline
+        // triangle stays the flag pass's. It begins after the field's border
         // column, as its face does: that column is the field's, claimed by
         // `box`. It ends where the pixels end.
         const double ride_w = cursor_x - face_x0;
@@ -3303,7 +3323,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // rects take: a press on a pad is a press on this editor, and it maps to
     // the nearest byte boundary (the box-is-the-claim clause at
     // FlagEditorBox), so the I-beam covers every column the field painted,
-    // its outline included.
+    // its border included.
     //
     // AND IT IS CLIPPED TO THE WAVEFORM'S COLUMNS as its pixels are (the clip
     // above): a field cut off at the last column claims its visible part, and

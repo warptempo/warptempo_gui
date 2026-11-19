@@ -4346,15 +4346,16 @@ private:
     // callers.)
 
     // THE PLAY-SCRUB'S POINTER HALF (bodies in input_pointer.cpp), over the
-    // painter's published slider item (AppState::ModalDialogGeometry::scrub):
+    // painter's published scale item (AppState::ModalDialogGeometry::scrub,
+    // Arc's scale, render.h's scrub block):
     // EVERY PRESS ON THE ITEM ARMS THE THUMB DRAG (architect 2026-10-02,
-    // Windows' trackbar) — on the thumb's grab band (the one test,
-    // render_player_scrub_handle_hit) the thumb is taken where it stands, and
-    // anywhere else on the band it JUMPS to the press and the same press
+    // Windows' trackbar) — on the knob's disc (the one test,
+    // render_player_scrub_handle_hit) the knob is taken where it stands, and
+    // anywhere else on the item it JUMPS to the press and the same press
     // drags it on — its painted x follows the pointer with nothing seeked,
     // and the RELEASE commits the seek to the thumb's carried center, a REAL
     // place (architect 2026-11-15, the no-grid arc: `x` below is the
-    // pointer's real x, and the grab band is asked with its real place) (the
+    // pointer's real x, and the disc is asked with its real place) (the
     // product's
     // deferred-click shape; a motionless tap on the thumb seeks nothing).
     // Until that day a press off the handle's box seeked at the press and

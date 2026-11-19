@@ -61,7 +61,10 @@
 #   TitleHighlight              353B48  xfwm4's frame (assets.svg): the title bar's second row, the highlight under
 #                                       the frame's edge (ControlContrastFrame 21252B the edge itself)
 #   ScaleTrough                 2D303B  Arc's progress / scale trough (G3's progressbar trough, $_trough_bg_color):
-#                                       the progress dialog's bar (the scrub's trough to share it)
+#                                       the progress dialog's bar and the scrub's trough
+# OUR OWN ONE MORE, send AA's stage D3, 2026-11-19 (Arc's scale, the scrub; GTK's scale slider):
+#   ScaleSliderBorder           262933  Arc's scale slider's border, the knob's 1 px rim (measured on his Arc-Dark
+#                                       desktop, the scale shot C4g): the scrub's knob at rest
 # (SelectionBackground A9CAF1 and SelectionForeground 2F343F, the lighter list press, left the file with send AA's
 # stage D2: Thunar's pressed row wears the selection pair.)
 # OUR OWN FILLS, CARRYING THEIR ALPHA (the 8-digit word's last byte reaches the painter, the box painted at it over
@@ -102,3 +105,4 @@ CardBackground=353945F2
 CardStandingBackground=F04A50F2
 TitleHighlight=353B48
 ScaleTrough=2D303B
+ScaleSliderBorder=262933
