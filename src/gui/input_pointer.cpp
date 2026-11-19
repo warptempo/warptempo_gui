@@ -2604,6 +2604,15 @@ bool GuiInputHandler::touch_point_in_pan_zone(
     // card is opaque to the pointer everywhere else too (the hover walk), so
     // the zone agrees with it.
     if (notification_card_at(app, x, y) != 0) return false;
+    // AND IT YIELDS WHOLE UNDER A QUESTION AND THE PROGRESS MODAL (send AA's
+    // stage D2, 2026-11-19): their window floats over the main page, the
+    // waveform painted under it, so a finger landing on an answer inside the
+    // pan zone would become the phone-model pan and deliver no press on
+    // contact. Answering false lets every finger resolve to the pointer
+    // translation, whose press arms the window's buttons or is consumed by
+    // the veil (on_button_press's prompt and progress gates); the pan itself
+    // is refused under both (the touch frame's refusal list).
+    if (app.prompt.active || app.batch_progress.active) return false;
     // (THE ZONE YIELDED INSIDE THE SHOWN TRIM REGION OVERLAY from 2026-08-15,
     // so a finger could reach the overlay's endcap and bridge drags. Both are
     // DELETED with the resting overlay, architect 2026-09-22 — the pen reaches

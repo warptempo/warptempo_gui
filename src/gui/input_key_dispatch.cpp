@@ -6675,6 +6675,9 @@ void GuiInputHandler::settings_page_commit(int index) {
         viewport.invalidate_all();
         return;
     }
+    // THE EDITOR'S BACKDROP AND TITLE (AppState::dialog_backdrop): the page
+    // as it stands, under the editor's window, and the row's key.
+    open_dialog_backdrop(key);
     close_picker();
     settings_editor.open(line);
 }
@@ -6904,6 +6907,9 @@ void GuiInputHandler::trim_presets_save_as() {
             ? ov.trim_presets[static_cast<std::size_t>(h)].name
             : std::string();
     trim_name_presets_ = ov.trim_presets;
+    // THE EDITOR'S BACKDROP AND TITLE (AppState::dialog_backdrop): the list
+    // under the editor's window, and the button's word.
+    open_dialog_backdrop("Save As");
     close_picker();
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
@@ -7160,6 +7166,9 @@ void GuiInputHandler::bpm_form_commit(int index) {
     if (folder_overlay::row_is_inert(app, index)) return;
     const std::string line =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
+    // THE EDITOR'S BACKDROP AND TITLE (AppState::dialog_backdrop): the form
+    // under the editor's window, and the row's key.
+    open_dialog_backdrop(line.substr(0, line.find('=')));
     close_picker();
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
@@ -7353,6 +7362,16 @@ void GuiInputHandler::picker_move_highlight(int delta) {
 // damage is the whole window, as the open's is — the band's pixels sit over
 // the waveform, the modal row goes back to its tenants and the roster's grey
 // lifts with them.
+// THE DIALOG EDITOR'S BACKDROP (AppState::dialog_backdrop, the contract
+// there): the standing list copied as it stands, its press dropped, and the
+// window's title — written by the three openers of a dialog editor just
+// before their close_picker.
+void GuiInputHandler::open_dialog_backdrop(std::string title) {
+    app.dialog_backdrop.page       = app.folder_overlay;
+    app.dialog_backdrop.page.press = AppState::FolderOverlayPress{};
+    app.dialog_backdrop.title      = std::move(title);
+}
+
 void GuiInputHandler::close_picker() {
     if (!app.picker.active) return;
     app.picker         = AppState::Picker{};

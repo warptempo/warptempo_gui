@@ -34,8 +34,6 @@
 #   RangeDefault                D3DAE3  $fg_color: the playhead's head, near-white (above)
 #   StandbySelectionBackground  5294E2  $selected_bg_color (Arc has one selection)
 #   StandbySelectionForeground  FFFFFF  $selected_fg_color
-#   SelectionBackground         A9CAF1  $link_color (lighten($selected_bg_color, 20%)): the lighter list press
-#   SelectionForeground         2F343F  $wm_icon_close_bg (= header_bg): Arc's dark print on a colored disc
 #   Alert                       F27835  $warning_color: the limiter lamp (the cards' face until send AA's stage D1)
 #   WaveformColor               262A33  $header_border (darken($header_bg, 4%)): the ink one step above the stem
 #                                       (ControlContrastFrame 21252B), CIELAB L* 2.50 (the stem-over-ink rule's 3.61, ballpark)
@@ -58,6 +56,14 @@
 #   TitleForeground             AFB8C5  xfwm4's title text on the title bar
 #   SidebarForeground           BAC3CF  $dark_sidebar_fg: the marker labels' ink, the tooltip's words, a normal card's
 #                                       words and glyph
+# OUR OWN TWO MORE, send AA's stage D2, 2026-11-19 (THE DIALOGS: xfwm's window round a question, the line editor
+# and the progress dialog; GTK's progress bar):
+#   TitleHighlight              353B48  xfwm4's frame (assets.svg): the title bar's second row, the highlight under
+#                                       the frame's edge (ControlContrastFrame 21252B the edge itself)
+#   ScaleTrough                 2D303B  Arc's progress / scale trough (G3's progressbar trough, $_trough_bg_color):
+#                                       the progress dialog's bar (the scrub's trough to share it)
+# (SelectionBackground A9CAF1 and SelectionForeground 2F343F, the lighter list press, left the file with send AA's
+# stage D2: Thunar's pressed row wears the selection pair.)
 # OUR OWN FILLS, CARRYING THEIR ALPHA (the 8-digit word's last byte reaches the painter, the box painted at it over
 # whatever lies under; src/gui/theme_roles.h's CARRIED block), send AA's stage D1, 2026-11-19 (DESIGN §6 / §9, his
 # "good to build" on tmp/sendZ/VIEW/Z_07); .95 is the byte F2 (242.25 rounded, .949):
@@ -77,8 +83,6 @@ ViewCheckControlEnabledOn=5294E2
 RangeDefault=D3DAE3
 StandbySelectionBackground=5294E2
 StandbySelectionForeground=FFFFFF
-SelectionBackground=A9CAF1
-SelectionForeground=2F343F
 Alert=F27835
 WaveformColor=262A33
 DetailViewBackground=404552
@@ -96,3 +100,5 @@ SidebarForeground=BAC3CF
 TooltipBackground=4B5162F2
 CardBackground=353945F2
 CardStandingBackground=F04A50F2
+TitleHighlight=353B48
+ScaleTrough=2D303B

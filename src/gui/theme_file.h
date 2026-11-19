@@ -105,7 +105,10 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
     // THE FLAT LOOK'S TWENTY-NINE (materials.h's head: the text tones, the
     // key and its press face, the lit key's press and inert faces, the
-    // well's tones, the panes, the lists' press pair, the two lamps; THE
+    // well's tones, the score viewer's pane, the two lamps; THE DIALOGS'
+    // THREE, send AA's stage D2, 2026-11-19 — the window's frame edge, its
+    // title bar's highlight row and the progress bar's trough, in place of
+    // the modal pane and the lists' press pair, retired that day; THE
     // ARC PAGE'S SIX, architect 2026-11-19, send Z, theme_roles.h's head —
     // the body tone, the title bar's text, the sidebar text, the ruler's
     // digits, the disabled key's face and border; and THE POPUPS' FOUR, send
@@ -133,13 +136,13 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"trim_bar_face",   &GuiPalette::trim_bar_face,   &GuiThemeTones::trim_bar_face},
     {"trim_span_face",  &GuiPalette::trim_span_face,  &GuiThemeTones::trim_span_face},
     {"well_border",     &GuiPalette::well_border,     &GuiThemeTones::well_border},
-    {"pane_face",       &GuiPalette::pane_face,       &GuiThemeTones::pane_face},
     {"score_pane_face", &GuiPalette::score_pane_face, &GuiThemeTones::score_pane_face},
+    {"frame_edge",      &GuiPalette::frame_edge,      &GuiThemeTones::frame_edge},
+    {"title_highlight", &GuiPalette::title_highlight, &GuiThemeTones::title_highlight},
+    {"scale_trough",    &GuiPalette::scale_trough,    &GuiThemeTones::scale_trough},
     {"tooltip_fill",    &GuiPalette::tooltip_fill,    &GuiThemeTones::tooltip_fill},
     {"card_fill",       &GuiPalette::card_fill,       &GuiThemeTones::card_fill},
     {"card_standing_fill", &GuiPalette::card_standing_fill, &GuiThemeTones::card_standing_fill},
-    {"list_press_fill", &GuiPalette::list_press_fill, &GuiThemeTones::list_press_fill},
-    {"list_press_text", &GuiPalette::list_press_text, &GuiThemeTones::list_press_text},
     {"limiter_lamp",    &GuiPalette::limiter_lamp,    &GuiThemeTones::limiter_lamp},
     {"clip_lamp",       &GuiPalette::clip_lamp,       &GuiThemeTones::clip_lamp},
 };

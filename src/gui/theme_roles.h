@@ -14,7 +14,7 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — PLUS SIX ROLES OF OUR OWN (THE
+// own role names, never a derived tone — PLUS EIGHT ROLES OF OUR OWN (THE
 // FORMAT, below), and the derivation, this file's, turns each into a row of
 // GuiThemeTones at the launch's read.
 //
@@ -26,9 +26,10 @@
 // of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
 // flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
 // the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
-// AND OUR OWN SIX, WindowBackground, TitleForeground and SidebarForeground,
-// and the three fills TooltipBackground, CardBackground and
-// CardStandingBackground, kOwnThemeRoles: no Live role names them),
+// AND OUR OWN EIGHT, WindowBackground, TitleForeground and SidebarForeground,
+// the three fills TooltipBackground, CardBackground and
+// CardStandingBackground, and TitleHighlight and ScaleTrough (send AA's
+// stage D2), kOwnThemeRoles: no Live role names them),
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
 // an 8-digit word's last byte its straight alpha — kept raw, the derivation
 // compositing it (the COMPOSITED block) or, for the three fills, CARRYING
@@ -55,7 +56,9 @@
 // ClipBorder, each file's from its own .ask, its header line the record)
 // and our own six of 2026-11-19 (each file's own SurfaceArea and
 // ControlForeground copied, the ROLE-NAMED block's OUR OWN, and its own
-// SurfaceBackground and Alert for the three fills, the CARRIED block, each
+// SurfaceBackground and Alert for the three fills, the CARRIED block; and
+// our own two of send AA's stage D2, each file's own SurfaceArea and
+// ScrollbarInnerTrack copied, the ROLE-NAMED block's OUR OWN; each
 // header line the record; the converter writes them the same way) —
 // AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
 // it, its header the record of every role (architect 2026-11-17, session
@@ -130,7 +133,7 @@
 //                                     thumb's and the on-screen keyboard's
 //                                     press alone, awaiting stage D — every
 //                                     other key's press is Arc's lit look
-//     key face, pane, time field, magnify core
+//     key face, magnify core
 //                            363636 = SurfaceBackground (the core below)
 //     cue outline            111111 = ControlContrastFrame — THE ENABLED
 //                                     CHIP'S OUTLINE (a disabled chip's is
@@ -198,10 +201,11 @@
 //                                     Live's own files the partner is
 //                                     near-black, so the print stays dark on
 //                                     the accent; key_ink, materials.h)
-//     list press fill        B0DDEB = SelectionBackground (the press arc,
-//                                     2026-11-05: "lighter for list
-//                                     (highlight)")
-//     list press text        070707 = SelectionForeground
+//     (THE LIST PRESS PAIR — SelectionBackground B0DDEB under
+//     SelectionForeground 070707, the press arc's lighter list row of
+//     2026-11-05 — left the derivation and every file with send AA's stage
+//     D2, 2026-11-19: Thunar's pressed row wears the selection pair, so no
+//     tone reads either role.)
 //     limiter lamp           E76942 = Alert, THE LIMITER LAMP's lit face
 //                                     (architect 2026-11-05: "orange for
 //                                     limiter and red for clipper" — a
@@ -244,6 +248,23 @@
 //                                     stage B, the tooltip's words and a
 //                                     normal card's words and glyph since
 //                                     send AA's stage D1
+//   AND TWO MORE OF OUR OWN FOR THE DIALOGS (send AA's stage D2, 2026-11-19:
+//   xfwm's window round a question, the line editor and the progress
+//   dialog, and GTK's progress bar; paint_handler.cpp's THE DIALOG WINDOW),
+//   each file but Arc's its own nearest value, so no Live theme sees them:
+//     title highlight        242424 = TitleHighlight (arc_dark 353B48,
+//                                     xfwm4's assets.svg): the window's
+//                                     title bar's second row; a Live
+//                                     theme's SurfaceArea, the title tone
+//                                     itself
+//     scale trough           242424 = ScaleTrough over the ground (arc_dark
+//                                     2D303B, Arc's progress and scale
+//                                     trough): the progress dialog's bar, the
+//                                     scrub's to come; a Live theme's
+//                                     ScrollbarInnerTrack, so its trim
+//                                     trough's tone
+//   and the window's FRAME EDGE, no role of its own: = ControlContrastFrame
+//   (111111; arc_dark 21252B, xfwm's frame edge), the cue outline's role.
 //   CARRIED (our own three fills, send AA's stage D1, architect 2026-11-19 —
 //   DESIGN §6 / §9, his "good to build" on tmp/sendZ/VIEW/Z_07 and "if we
 //   can do the transparency, we might as well"): a fill PAINTED OVER
@@ -536,19 +557,16 @@
 // (Alert; the cards' face until send AA's stage D1), the standing card's
 // fill (CardStandingBackground, Arc's destructive red, 2026-11-19 — its
 // carried alpha byte riding the mix untouched), the clip lamp
-// (StandardVuMeter/Maximum), the selection fill
-// (StandbySelectionBackground) and the list press fill
-// (SelectionBackground) — the two selection fills together ("standby
-// selection should get the rule. Otherwise, it's going to look odd next to
-// the selection background getting the rule"). EVERY TONE DERIVED FROM A
+// (StandardVuMeter/Maximum) and the selection fill
+// (StandbySelectionBackground) ("standby selection should get the rule",
+// beside the list press fill that left with send AA's stage D2). EVERY TONE DERIVED FROM A
 // BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
 // body): the cue fill — the markers wear the mixed accent — the lit press
 // and lit dim fills, the inert print over the mixed inert face, and the
 // playhead line, white half way to the
 // mixed head. NEVER MIXED: the text tones ("never the glyph color itself":
 // the text, the dim text, the key dim ink, the title, sidebar and ruler
-// texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection and list
-// press texts, the cards' words, the tooltip's and the normal card's fills
+// texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection's text, the cards' words, the tooltip's and the normal card's fills
 // (surfaces, not highlights), the faces, the lanes (the trim
 // bar's trough and the well's lines among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,

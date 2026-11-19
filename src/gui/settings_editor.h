@@ -27,13 +27,15 @@ struct GuiInputHandler;
 // opens this editor PREFILLED WITH THAT ROW'S LINE, the caret at its end —
 // the line still `key=value`, edited by hand and Tab. It is the flag
 // editor's primitive (text_editor::State, kind-dispatched keyboard
-// vocabulary, the whole text selected and a card on a refusal) painted IN THE
-// MODAL FAMILY'S BOX (architect 2026-10-14, modal_box.h: the box is the edit
-// control, the whole line on its pane on the box's text seat,
-// soft-wrapped at its width and never scrolling, OK and Cancel flush right on
-// the controls row under it, NO LABEL — "Setting:" removed, "pointless that
-// far away"), the on-screen keyboard standing inside the frame under it on
-// the glass as under every dialog editor. OK or Enter commits the line, Esc
+// vocabulary, the whole text selected and a card on a refusal) painted AS
+// THUNAR'S RENAME DIALOG in xfwm's window (send AA's stage D2, 2026-11-19;
+// paint_handler.cpp's THE DIALOG WINDOW: the whole line in Arc's focused
+// entry, soft-wrapped at its width and never scrolling, Cancel and OK its
+// window's own buttons, the window titled the row's key with the key and a
+// colon its label — Z_06's words; the label of 2026-10-14, "Setting:", was
+// removed as "pointless that far away"), centered in the room above the
+// on-screen keyboard, the page it was opened from standing under it there
+// (AppState::dialog_backdrop). OK or Enter commits the line, Esc
 // or Cancel closes it, and EITHER WAY THE PAGE COMES BACK, seated on the row
 // the editor was opened from (architect 2026-10-28 night: "otherwise it's
 // assumed I am editing one key only" — the editor a sub-page of the page, as

@@ -50,10 +50,10 @@ struct GuiThemeTones {
     uint32_t well_border;         // THE WELL'S LINES: its one-W lines across the panel (under the top icon row, the trough, the ruler, the marker lane, the well's foot), the stereo divider and the status bar's line (ClipBorder over the ground)
     uint32_t selection_fill;      // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
     uint32_t selection_text;      // the selection pair's text; `selected_text` (StandbySelectionForeground, the bar's own partner)
-    uint32_t list_press_fill;     // a list row's fill while a press stands on it (SelectionBackground)
-    uint32_t list_press_text;     // a list row's text and glyph under that press (SelectionForeground)
-    uint32_t pane_face;           // the modal family's box interior (SurfaceBackground)
     uint32_t score_pane_face;     // the score viewer's pane, the page's mat (= the ink)
+    uint32_t frame_edge;          // the dialog window's frame edge, its outer W round the window (ControlContrastFrame; xfwm's frame, paint_xfwm_window)
+    uint32_t title_highlight;     // the dialog window's title bar's second row (TitleHighlight, our own role; arc_dark 353B48; a Live theme's SurfaceArea)
+    uint32_t scale_trough;        // the progress dialog's bar's trough, the scrub's to come (ScaleTrough, our own role, over the ground; arc_dark 2D303B; a Live theme's ScrollbarInnerTrack)
     // THE THREE CARRIED FILLS (theme_roles.h's CARRIED block; send AA's stage
     // D1, 2026-11-19): each word 0xAARRGGBB, THE TOP BYTE ITS OPACITY (FF
     // opaque; every other member's top byte is 0), painted at it over
@@ -184,10 +184,10 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x2A2A2A, // well_border
     0x637E86, // selection_fill
     0x070707, // selection_text
-    0xB0DDEB, // list_press_fill
-    0x070707, // list_press_text
-    0x363636, // pane_face
     0x191919, // score_pane_face
+    0x111111, // frame_edge
+    0x242424, // title_highlight
+    0x242424, // scale_trough
     0xFF363636, // tooltip_fill
     0xFFE76942, // card_fill
     0xFFE76942, // card_standing_fill

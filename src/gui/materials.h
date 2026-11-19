@@ -33,7 +33,7 @@
 // own role WindowBackground; arc_dark 383C4A, Arc's $bg_color): both icon
 // rows and their pads, the gaps between keys, the status bar, the erase
 // (render_background), the on-screen keyboard's band, the modal family's
-// panel and controls row. The well's lines — under the top icon row, the
+// controls row and the dialogs' client. The well's lines — under the top icon row, the
 // trough, the ruler and the marker lane, the stereo divider, the well's
 // foot and the status bar's line — are `well_border`, each one W
 // (render.h's hairline_px). NO BAKE, NO GRAIN, NO GRADIENT, NO BEVEL, NO
@@ -98,8 +98,8 @@
 // TIMING, NO HOLD, NO ANIMATION; the press arms — the slide-off feint, the
 // hold-repeat and the long press — are unchanged; THE OTHER FEEDBACK STAYS:
 // the act itself, a stateful key's drawing showing the act its next press
-// runs. THE LISTS' ROWS go lighter under a press (THE SELECTION PAIR,
-// below), a list row being no key. UNDER AN OVERLAY A DEAD LIT KEY STAYS
+// runs. A LIST ROW UNDER A PRESS wears the selection pair, the highlight's
+// own look (THE SELECTION PAIR, below), a list row being no key. UNDER AN OVERLAY A DEAD LIT KEY STAYS
 // LIT, DIMMED (architect 2026-11-11, session 107: "for consistency, they
 // should keep that look of darkened. But lit."): every roster key the
 // standing overlay leaves dead is disabled with its lit bit kept
@@ -113,9 +113,12 @@
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE AND THE
-// TIME FIELDS are Arc's entry (paint_entry), NOISE's level its progress line.
-// THE SCRUB'S THUMB AND THE ON-SCREEN KEYBOARD'S KEYS AWAIT STAGE D: today's
-// flat key and today's press look (paint_flat_key below).
+// TIME FIELDS are Arc's entry (paint_entry), NOISE's level its progress line,
+// a dialog editor's its focus line (send AA's stage D2). THE ON-SCREEN
+// KEYBOARD'S KEYS are one grid of Arc's button tones with shared lines
+// since send AA's stage D2 (paint_handler.cpp's paint_onscreen_keyboard);
+// THE SCRUB'S THUMB AWAITS THE NEXT STAGE: today's flat key and today's
+// press look (paint_flat_key below).
 //
 // THE EDGE RULE IS THE KEYS': both icon rows' and the controls rows'
 // outermost BOXES stand kEdgeInsetW (6 W) inside the panel's first and last
@@ -132,10 +135,10 @@
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
 // on every word, digit and drawing the chrome prints — the clocks, the tab
-// name, the status bar, the lists, the prompts, the editors, the keyboard's
-// caps, the keys' glyphs (2026-11-02) — and `text_dim`, Default's 757575
-// (TextDisabled), for the settings page's inert rows, the tooltip's hint
-// line and an inert marker label. ON THE ARC PAGE (architect 2026-11-19,
+// name, the status bar, the lists and their drawings, the dialogs' words,
+// the keyboard's caps, the keys' glyphs (2026-11-02) — and `text_dim`,
+// Default's 757575 (TextDisabled), for the settings page's disabled rows,
+// the tooltip's hint line and an inert marker label. ON THE ARC PAGE (architect 2026-11-19,
 // send Z) the title bar wears `title_text`, the marker labels
 // `sidebar_text` and the ruler's digits `ruler_text` (theme_roles.h's head). ON A LIT KEY'S FACE the print — its glyph, the
 // on-screen keyboard's lit cap — is `text_on_lit`, Default's 070707
@@ -202,28 +205,26 @@
 // (StandbySelectionBackground), under `selection_text`, Default's 070707
 // (StandbySelectionForeground, Live's own partner of the bar; architect
 // 2026-11-06, session 75 — ControlContrastFrame's 111111 before it, our
-// mispairing) — the flag editor's and the dialog editors'
-// selected substring and the lists' highlighted row (the chrome's
-// `selected_fill` / `selected_text`, theme_file.h). THE LIST ROW UNDER A
-// PRESS IS LIGHTER (architect 2026-11-05, the press arc: "a list is not a
-// button so going lighter seems ok … lighter for list (highlight)"): the
-// row a press stands on — the feint's inside bit, FolderOverlayPress's —
-// wears `list_press_fill`, Default's B0DDEB (SelectionBackground, Live's
-// focused selection), under `list_press_text`, Default's 070707
-// (SelectionForeground), its glyph in that text too, in every list of the
-// folder overlay (the picker, the settings page and its value lists, the
-// trim presets, the render player's list); the highlighted row keeps the
-// standby pair at rest and shows the press pair while a press stands on
-// it; an inert row (Group, Disabled) shows no press — its press arms the
-// scroll drag alone; a press that has become the scroll drag presses no
-// row (paint_handler.cpp's paint_folder_overlay).
+// mispairing; arc_dark Arc's one selection, the accent 5294E2 under FFFFFF)
+// — the flag editor's and the dialog editors' selected substring and the
+// lists' highlighted row, across the view's whole width (the chrome's
+// `selected_fill` / `selected_text`, theme_file.h). A LIST ROW UNDER A
+// PRESS WEARS THE SAME PAIR (send AA's stage D2, 2026-11-19: Thunar is
+// single-click, a pressed row a selected one; the lighter press row of
+// 2026-11-05, Live's SelectionBackground under SelectionForeground,
+// retired with it): the row a press stands on — the feint's inside bit,
+// FolderOverlayPress's — in every list of the folder overlay; an inert row
+// (Group, Disabled) shows no press — its press arms the scroll drag alone;
+// a press that has become the scroll drag presses no row
+// (paint_handler.cpp's paint_list_view).
 //
-// THE PANE (architect 2026-11-01 night, M6 A; 2026-11-02, M11 / M14): Live's
-// panel face, which is the keys' face — `pane_face`, THE SAME LIVE ROLE as
-// `key_face` (SurfaceBackground), named for what it paints: the modal
-// family's box interior, flat, with no frame, ring, shadow or row separator
-// (modal_box.h's head; the score viewer's darker pane, `score_pane_face`,
-// the one exception, is recorded there).
+// THE VIEW (send AA's stage D2, 2026-11-19; Thunar's list view): the modal
+// family's box interior, the canvas's tone `ruler_face` (Arc's $base_color
+// 404552), flat, between the box's two lines, with no frame, ring, shadow
+// or row separator (modal_box.h's head; the score viewer's darker pane,
+// `score_pane_face`, the one exception, is recorded there). (Live's panel
+// face, the keys' face, the pane of 2026-11-01 night, M6 A, retired with
+// it.)
 //
 // THE FLOATING SURFACES ARE ARC'S AND NOTIFYD'S (architect 2026-11-19, send
 // Z, "good to build" on Z_07; send AA's stage D1): THE TOOLTIP Arc's — its
@@ -384,11 +385,17 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state);
 // padding box (its own inner corners) CUT to its last kEntryProgressW (2 W)
 // rows and to its first t of its width, in the accent `cue` — so the line's
 // left end follows the inner corner's arc and its right end stands at its
-// real x. Every edge at exact coverage over the ground the caller laid; one
-// stamp pass, nothing drawn inside it; the text is the caller's.
+// real x. FOCUSED (`focused`; send AA's stage D2, 2026-11-19: a dialog
+// editor's entry while its field holds the focus — the kit's body_entry
+// focused, Arc's entry:focus) AN INNER ONE-W LINE OF THE ACCENT `cue` on all
+// four sides inside the ring: the padding box in the accent, the fill one W
+// further in over it (its corners one W less). Every edge at exact coverage
+// over the ground the caller laid; one stamp pass, nothing drawn inside it;
+// the text is the caller's.
 inline constexpr double kEntryProgressW = 2.0;
 void paint_entry(cairo_t* cr, const GuiRect& box,
-                 std::optional<double> progress = std::nullopt);
+                 std::optional<double> progress = std::nullopt,
+                 bool focused = false);
 
 // A PAINT-TIME MIX OF TWO INSTALLED WORDS, `t` of `b` over `a`, per channel,
 // rounded half to even (the derivation's rounding, theme_roles.h): the
@@ -405,24 +412,17 @@ inline uint32_t mix_word(uint32_t a, uint32_t b, double t) {
     return out;
 }
 
-// THE SCRUB'S THUMB AND THE ON-SCREEN KEYBOARD'S KEYS, AWAITING SEND Z'S
-// STAGE D: today's flat key — a flat box, no border, no corner — and today's
-// press look, alone of every key surface: the face `key_face` at rest,
-// `key_press_face` (Desktop) under a press, the accent `cue` lit (the
-// keyboard's latched Shift and its symbols page key), `lit_press_fill` (the
-// accent × mean(Desktop) / mean(key face)) lit under the finger. KeyLook
-// folds the two bits; flat_key_ink the print on it (`text`, or
-// `text_on_lit` lit). Neither surface is ever disabled.
+// THE SCRUB'S THUMB, AWAITING THE NEXT STAGE: today's flat key — a flat box,
+// no border, no corner — and today's press look, alone of every key surface:
+// the face `key_face` at rest, `key_press_face` (Desktop) under a press
+// (the lit looks, the accent and `lit_press_fill`, the on-screen keyboard's
+// until send AA's stage D2, are never asked of the thumb). KeyLook folds the
+// two bits.
 enum class KeyLook { Rest, Press, Lit, LitPress };
 inline constexpr KeyLook key_look(bool checked, bool pressed) {
     return checked ? (pressed ? KeyLook::LitPress : KeyLook::Lit)
          : pressed ? KeyLook::Press
                    : KeyLook::Rest;
-}
-inline uint32_t flat_key_ink(KeyLook look) {
-    const GuiThemeTones& t = installed_theme().tones;
-    return look == KeyLook::Lit || look == KeyLook::LitPress ? t.text_on_lit
-                                                             : t.text;
 }
 // The flat face on real edges (the exact fill, paint_ink_rect on a
 // GuiRectF; render.h's hull holds the rule).

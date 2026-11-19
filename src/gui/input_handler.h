@@ -1871,6 +1871,10 @@ struct GuiInputHandler {
     // picker cluster below, private beside its openers); public for that one
     // caller, exactly as the editors' body above is.
     void close_picker();
+    // THE DIALOG EDITOR'S BACKDROP (AppState::dialog_backdrop): the standing
+    // list and the editor window's `title`, written by the three openers of
+    // a dialog editor before their close.
+    void open_dialog_backdrop(std::string title);
 
     // THE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // — THE DEFECT IS WHY THIS EXISTS, and it is worth stating before the
@@ -3281,8 +3285,8 @@ private:
     // default 36 — materials.h's key_link_pitch_px; a key_width under 19 W
     // brings the pitch inside the slop while the width is tuned), and below
     // a move to
-    // the next lit row, a list row (26 W, 52 device px — folder_overlay.h's
-    // kListRowW, 2026-11-04 night), so one row's deliberate step rearms.
+    // the next lit row, a list row (20 W, 40 device px — folder_overlay.h's
+    // kListRowW, send AA's stage D2), so one row's deliberate step rearms.
     // Authored in W as every chrome length, though the drift is physical:
     // the tablet is the one pen device. 18 W SINCE THE REBASE TO 200 %
     // (architect 2026-11-05): the 12 Windows px of 2026-10-02 times 1.5, so

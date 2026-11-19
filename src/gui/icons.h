@@ -218,8 +218,9 @@ void drop_rasters();
 // their native size; send Z, 2026-11-19, ink_in_box below), the title bar's
 // note (the drawing's ink in a 12 W box,
 // ink_in_box below) and battery (the cap band's height, render.h's title
-// bar block) — the list rows'
-// scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' drawing as
+// bar block) — the list rows' drawing as its whole canvas in a 16 W box
+// (kListDrawingBoxW, paint_handler.cpp's THE LIST VIEW; send AA's stage D2,
+// 2026-11-19), the cards' drawing as
 // its whole canvas in a 16 W box (kNotificationGlyphBoxW, notifications.h,
 // ink_in_box; send AA's stage D1, 2026-11-19). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and

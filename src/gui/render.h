@@ -491,16 +491,16 @@ struct GuiPalette {
     GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
     GuiColor trim_span_face;  // the trim bar's pill at rest, the span
     GuiColor well_border;     // THE WELL'S LINES, the stereo divider and the status bar's line (paint_well_frame_rows, render_waveform_divider, paint_status_bar); the keys', word buttons' and entries' rings
-    GuiColor pane_face;       // the modal family's box interior
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
+    GuiColor frame_edge;      // the dialog window's frame edge (xfwm's)
+    GuiColor title_highlight; // the dialog window's title bar's second row
+    GuiColor scale_trough;    // the progress dialog's bar's trough
     // THE THREE CARRIED FILLS (send AA's stage D1, theme_roles.h's CARRIED
     // block): each the role's color here, ITS OPACITY the installed row's
     // word's top byte (tone_alpha below), painted at it over what lies under.
     GuiColor tooltip_fill;    // the tooltip's box (paint_shift_tooltip)
     GuiColor card_fill;       // a normal (timed) card's box (paint_notifications)
     GuiColor card_standing_fill; // a standing (critical) card's box, a bright tone
-    GuiColor list_press_fill; // a list row's fill under a standing press
-    GuiColor list_press_text; // that row's text and glyph
     GuiColor limiter_lamp;    // the title bar's limiter lamp, lit (Alert, its own tone since send AA's stage D1: the cards left Alert)
     GuiColor clip_lamp;       // the title bar's clip lamp, lit and not struck (THE TWO LAMPS, the title bar block)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
@@ -1659,9 +1659,8 @@ inline int title_bar_h_px() {
 // the one shape of every text field of the modal dialogs, the choice
 // editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
 // re-authored) — IS GONE with the field, architect 2026-10-14: a dialog
-// editor's line stands in the modal family's box, its text on the box's own
-// text seat (modal_box.h's modal_box_text_seat_px, M8b: 9 W in from the
-// pane's edges, 18 device px at 200 %, from the pane since 2026-11-04).
+// editor's line stands in Arc's entry in its rename dialog since send AA's
+// stage D2, 2026-11-19 (paint_handler.cpp's THE DIALOG WINDOW).
 // THE TIME FIELDS were never this field: row 8's clock and the render
 // player's position and length are Cool Edit's dark field, its height and
 // its pad program_spec.h's own, the pad 5 W since 2026-10-10, equal to this
@@ -1684,9 +1683,10 @@ inline int title_bar_h_px() {
 // THE WELL'S LINES (the line under the top icon row, the lines under the
 // trough, the ruler and the marker lane, the stereo divider and the well's
 // foot; THE WELL'S EDGES below), the status bar's line, the modal box's
-// outer rows of ground
-// round its pane and the lists' air inside it (modal_box.h), the scrub's
-// channel, the dialog editors' and the
+// two line rows and the on-screen keyboard's top line and its grid's lines
+// (modal_box.h, onscreen_keyboard.h), the dialog window's frame edge and its
+// title bar's highlight row (paint_handler.cpp's THE DIALOG WINDOW), the
+// focused entry's accent line, the scrub's channel, the dialog editors' and the
 // flag editor's carets (paint_modal_dialog, render.cpp's flag editor) — AND
 // EVERY LINE ON THE CANVAS, waveform_line_px below being this one (the
 // grid, the center lines, the stems, the cursor, the scanner, the anchor,
@@ -1717,12 +1717,15 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // lane spans the window (strip_row_rect) and row 8 is the window's lowest
 // lane.)
 // WHAT STANDS OVER THE PROGRAM (architect 2026-10-14; the simple layout
-// 2026-10-22): every modal — the render player, the picker, a prompt, a
-// dialog editor — is the modal family's box and controls row (modal_box.h),
-// the box (one flat pane, no ring) from the trim lane's first row to the
-// well's foot and the controls row on row 8's rows; the on-screen keyboard's
-// band stands on the window's foot across the lanes (onscreen_keyboard.h's
-// placement block), a dialog editor's controls row on it.
+// 2026-10-22; send AA's stage D2, 2026-11-19): every overlay — the render
+// player, the picker's contents, the score viewer — is the modal family's
+// box and controls row (modal_box.h), the box (the view between two lines)
+// from the trim lane's first row to the well's foot and the controls row on
+// the bottom icon row's rows; a question, a dialog editor and the progress
+// modal are dialogs in xfwm's window over what stands (paint_handler.cpp's
+// THE DIALOG WINDOW); the on-screen keyboard stands at the view's foot
+// across the lanes (onscreen_keyboard.h's placement block), a dialog
+// editor's window in the room above it.
 
 // THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 0,
 // at the surface's top since 2026-10-24 (architect 2026-10-09: the program is Cool
@@ -1779,7 +1782,7 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // ROWS ARE NOT THE CASE: a card's glyph stands in its own 16 W box at its
 // own pad (notifications.h's notifyd lengths, send AA's stage D1,
 // 2026-11-19), and a list row's at the painter's
-// own constants (paint_handler.cpp's kListGlyph*, 2026-10-23).
+// own constants (paint_handler.cpp's THE LIST VIEW, send AA's stage D2).
 // (THE PROGRAM RING'S LINE SLOT — program_line_px, one W, the area the view
 // bar's and the ruler's lines stood on, 2026-10-23 — RETIRED with the flat
 // well, 2026-11-02: the well's lines, its frame's since 2026-11-17, are the hairline
@@ -2456,10 +2459,11 @@ WellColumns well_columns(const AppState& a);
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
 // and then barred groups and the border under it stood 2026-10-09 to
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
-// Every modal — the render player, the project picker, a prompt, a dialog
-// editor — stands its controls on these rows, THE MODAL FAMILY'S CONTROLS
-// ROW (modal_box.h), or, under a dialog editor on the glass, on the same
-// rows lifted onto the on-screen keyboard's band.
+// Every overlay — the render player, the project picker's contents, the
+// score viewer — stands its controls on these rows, THE MODAL FAMILY'S
+// CONTROLS ROW (modal_box.h); under a question, a dialog editor and the
+// progress modal the rows stand empty, their answers the dialog window's
+// own (send AA's stage D2, 2026-11-19).
 inline int bottom_row_h_px() {
     return strip_h_px();
 }

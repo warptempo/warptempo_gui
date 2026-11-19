@@ -3,6 +3,7 @@
 # ScrollbarInnerTrack and ClipBorder added by hand from SB Elegance.ask (architect 2026-11-17, session 140)
 # WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
 # TooltipBackground, CardBackground and CardStandingBackground, our own fills (not Live's), added by hand: TooltipBackground this file's SurfaceBackground, CardBackground and CardStandingBackground its Alert, opaque, so nothing here changes look (send AA's stage D1, 2026-11-19)
+# TitleHighlight and ScaleTrough, our own roles (not Live's), added by hand: TitleHighlight this file's SurfaceArea, ScaleTrough its ScrollbarInnerTrack, so nothing here changes look; SelectionBackground and SelectionForeground left the file, no tone reading them (send AA's stage D2, 2026-11-19)
 SurfaceArea=343D3D
 Desktop=474747
 SurfaceBackground=333333
@@ -14,8 +15,6 @@ ViewCheckControlEnabledOn=FFD87F
 RangeDefault=CC6933
 StandbySelectionBackground=4B5454
 StandbySelectionForeground=FFF9EA
-SelectionBackground=496868
-SelectionForeground=FFF9EA
 Alert=CC3507
 WaveformColor=191816
 DetailViewBackground=333333
@@ -33,3 +32,5 @@ SidebarForeground=FFF9EA
 TooltipBackground=333333
 CardBackground=CC3507
 CardStandingBackground=CC3507
+TitleHighlight=343D3D
+ScaleTrough=000000

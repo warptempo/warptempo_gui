@@ -26,8 +26,7 @@ namespace {
 // FORMAT), and last OUR OWN SIX (kOwnThemeRoles below). The converter
 // (tools/themes/ask_to_theme.py) reads the names out of this initializer,
 // so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
-// when it joined (the press arc's SelectionBackground and
-// SelectionForeground 2026-11-05; StandbySelectionForeground 2026-11-06;
+// when it joined (StandbySelectionForeground 2026-11-06;
 // TakeLaneTrackNotHighlighted, ViewCheckControlDisabledOff,
 // ScrollbarInnerHandle and DetailViewRulerMarkings, the grid, the disabled
 // key's ink, the trim span and the ruler's ticks, 2026-11-07;
@@ -38,17 +37,21 @@ namespace {
 // SidebarForeground, OUR OWN, 2026-11-19 (architect, send Z, the Arc page;
 // kOwnThemeRoles below), and TooltipBackground, CardBackground and
 // CardStandingBackground, OUR OWN THREE FILLS CARRYING THEIR ALPHA, the same
-// day (send AA's stage D1: Arc's tooltip and notifyd's two bubbles). (RangeEditField, the NOISE case's fill, and
+// day (send AA's stage D1: Arc's tooltip and notifyd's two bubbles), and
+// TitleHighlight and ScaleTrough, OUR OWN TWO MORE, the same day (send AA's
+// stage D2: xfwm's title bar's highlight row, the dialogs' frame, and Arc's
+// progress / scale trough). (RangeEditField, the NOISE case's fill, and
 // ScaleAwareness, the radio keys' purple, both of 2026-11-11, left the table
 // and every file 2026-11-19, send Z's stage C: Arc's entry progress wears
 // the accent and the radio keys light the one accent, so no tone reads
-// either.)
+// either. SelectionBackground and SelectionForeground, the press arc's
+// lighter list row of 2026-11-05, left the same way with send AA's stage
+// D2, 2026-11-19: Thunar's pressed row wears the selection pair.)
 constexpr std::string_view kThemeRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
     "ViewCheckControlEnabledOn", "RangeDefault", "StandbySelectionBackground",
     "StandbySelectionForeground",
-    "SelectionBackground", "SelectionForeground",
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
     "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
@@ -56,6 +59,7 @@ constexpr std::string_view kThemeRoles[] = {
     "ScrollbarInnerTrack", "ClipBorder",
     "WindowBackground", "TitleForeground", "SidebarForeground",
     "TooltipBackground", "CardBackground", "CardStandingBackground",
+    "TitleHighlight", "ScaleTrough",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
@@ -71,7 +75,7 @@ constexpr std::size_t role_index(std::string_view name) {
 // roles of the table that are no Live role, each with THE LIVE ROLE A FILE
 // WITHOUT AN ARC VALUE COPIES — so a Live theme's line is its own existing
 // value and changes no look (the three fills of send AA's stage D1 copy the
-// tone each replaces: the tooltip's SurfaceBackground, today's pane, and the
+// tone each replaces: the tooltip's SurfaceBackground, the pane it wore, and the
 // cards' Alert, today's card face — opaque, as every source word is). The
 // one enumeration of the pairs: the converter
 // (tools/themes/ask_to_theme.py) reads this initializer too, writing each
@@ -87,6 +91,8 @@ constexpr OwnThemeRole kOwnThemeRoles[] = {
     {"TooltipBackground", "SurfaceBackground"},
     {"CardBackground",    "Alert"},
     {"CardStandingBackground", "Alert"},
+    {"TitleHighlight",    "SurfaceArea"},
+    {"ScaleTrough",       "ScrollbarInnerTrack"},
 };
 constexpr bool own_roles_in_table() {
     for (const OwnThemeRole& o : kOwnThemeRoles) {
@@ -242,13 +248,12 @@ Rgb unpacked(uint32_t word) {
                static_cast<int>(word & 0xFFu)};
 }
 
-// THE BRIGHT TONES, the head's BRIGHT MIX block's seven in the row's member
+// THE BRIGHT TONES, the head's BRIGHT MIX block's six in the row's member
 // order: the one enumeration bright_mixed_tones walks. A word's top byte —
 // a CARRIED fill's opacity (the head's CARRIED block; the standing card's
 // red is the one bright tone among them) — rides the mix untouched.
 constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
     &GuiThemeTones::selection_fill,
-    &GuiThemeTones::list_press_fill,
     &GuiThemeTones::card_standing_fill,
     &GuiThemeTones::limiter_lamp,
     &GuiThemeTones::clip_lamp,
@@ -322,8 +327,6 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb range    = opaque(roles["RangeDefault"]);
     const Rgb standby  = opaque(roles["StandbySelectionBackground"]);
     const Rgb standby_text = opaque(roles["StandbySelectionForeground"]);
-    const Rgb sel_bg   = opaque(roles["SelectionBackground"]);
-    const Rgb sel_fg   = opaque(roles["SelectionForeground"]);
     const Rgb alert    = opaque(roles["Alert"]);
     const Rgb vu_max   = opaque(roles["StandardVuMeter/Maximum"]);
     const Rgba face_a  = rgba(roles["SurfaceBackground"]);
@@ -379,10 +382,19 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.well_border         = packed(border);
     t.selection_fill      = packed(standby);
     t.selection_text      = packed(standby_text);
-    t.list_press_fill     = packed(sel_bg);
-    t.list_press_text     = packed(sel_fg);
-    t.pane_face           = packed(face);
     t.score_pane_face     = packed(ink);
+    // THE DIALOG WINDOW'S FRAME (send AA's stage D2, 2026-11-19: xfwm's
+    // frame round a question, the line editor and the progress dialog,
+    // paint_handler.cpp's paint_xfwm_window): its edge ControlContrastFrame
+    // (arc_dark 21252B, xfwm's assets.svg), its title bar's highlight row
+    // our own TitleHighlight (353B48; a Live theme's SurfaceArea, the title
+    // tone, so the row is not seen there); AND ARC'S PROGRESS / SCALE TROUGH
+    // our own ScaleTrough over the ground (2D303B; a Live theme's
+    // ScrollbarInnerTrack, so its trim trough's tone), the progress dialog's
+    // bar.
+    t.frame_edge          = packed(contrast);
+    t.title_highlight     = packed(opaque(roles["TitleHighlight"]));
+    t.scale_trough        = packed(over(rgba(roles["ScaleTrough"]), ground_a));
     // THE THREE CARRIED FILLS (the head's CARRIED block), each its role's
     // bytes with its opacity in the top byte, painted at that opacity over
     // whatever lies under the box (paint_shift_tooltip,
@@ -600,7 +612,7 @@ const GuiTheme& default_gui_theme() {
 }
 
 GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent) {
-    // The rule, the seven and the number are the head's BRIGHT MIX block
+    // The rule, the six and the number are the head's BRIGHT MIX block
     // (theme_roles.h). Each bright tone moved toward the row's ground keeping
     // `percent` of itself — mix(tone, ground, 1 − percent / 100), the
     // derivation's own mix — then every tone derived from one recomputed off

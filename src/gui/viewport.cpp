@@ -184,17 +184,18 @@ void Viewport::invalidate_tab_name_area() {
 // The OPENERS do not come through here — nothing is
 // painted before a surface's first paint, so they invalidate the whole
 // window. Caller inventory at the declaration.
-// A PROMPT, A DIALOG EDITOR OR THE PROGRESS MODAL STANDS IN THE MODAL
-// FAMILY'S BOX (2026-10-14, modal_box.h): its question, its line or its
-// sentence in the box over the canvas column,
-// its buttons on the controls row — so while one stands, OR WHILE THE LAST
-// PAINT DREW ONE (the stash's owner, which a closer reads before any paint:
-// its surface is gone from the state but not yet from the screen), the
-// damage is the lane UNITED WITH THE MODAL FAMILY'S WHOLE AREA without the
-// keyboard (modal_area_rect at keyboard height 0 — the view bar's top row to
-// the window's foot, which contains the stack's lifted form over a
-// standing keyboard too), so a close erases the box and brings the lanes,
-// the canvas and row 8 back. A dialog editor's close takes the keyboard with
+// A PROMPT, A DIALOG EDITOR OR THE PROGRESS MODAL IS A DIALOG IN XFWM'S
+// WINDOW (send AA's stage D2, 2026-11-19; paint_handler.cpp's THE DIALOG
+// WINDOW), a dialog editor's standing in the box's room above the keyboard
+// — so while one stands, OR WHILE THE LAST PAINT DREW ONE (the stash's
+// owner, which a closer reads before any paint: its surface is gone from
+// the state but not yet from the screen), the damage is the lane UNITED
+// WITH THE MODAL FAMILY'S WHOLE AREA without the keyboard (modal_area_rect
+// at keyboard height 0 — the line under the top icon row to the bottom
+// icon row's foot, which contains the room and the keyboard) AND THE
+// WINDOW'S PAINTED EXTENT as last published (the window and its shadow's
+// reach, ModalDialogGeometry::box), so a close erases the window and its
+// shadow and brings the lanes, the canvas and the bottom icon row back. A dialog editor's close takes the keyboard with
 // it, and the slot's hide edge damages that band (onscreen_keyboard::
 // slot_damage_rect, reconcile_slot_standing's). Under the render player and
 // the picker the controls row is the lane's own rows, and their
@@ -210,6 +211,11 @@ void Viewport::invalidate_modal_dialog_area() {
         painted == AppState::ModalDialogOwner::Progress ||
         painted == AppState::ModalDialogOwner::Score)
         invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
+    if (app.modal_dialog.valid &&
+        (painted == AppState::ModalDialogOwner::Prompt ||
+         painted == AppState::ModalDialogOwner::Editor ||
+         painted == AppState::ModalDialogOwner::Progress))
+        invalidate_rect(app.modal_dialog.box);
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
     // published rect and the band every seat of it lies in
     // (tooltip_damage_band), which holds the recomposed box whole.
@@ -221,12 +227,15 @@ void Viewport::invalidate_modal_dialog_area() {
     }
 }
 
-// A STANDING DIALOG EDITOR'S EDIT — the box's interior at the keyboard height
-// it stands on, the box the editor's line paints in (the rule and the caller
-// inventory at the declaration, viewport.h).
+// A STANDING DIALOG EDITOR'S EDIT — the room at the keyboard height it
+// stands on (the box's interior, where the editor's window stands centered
+// and never past it) GROWN BY THE WINDOW'S SHADOW'S REACH (modal_box.h's
+// xfwm_shadow_rect, the room as a window): a wrap that grows or shrinks the
+// window moves its frame and its shadow, both inside that rect (the rule
+// and the caller inventory at the declaration, viewport.h).
 void Viewport::invalidate_dialog_editor_box() {
-    invalidate_rect(modal_box_interior_rect(
-        app, onscreen_keyboard::modal_keyboard_h_px(app)));
+    invalidate_rect(xfwm_shadow_rect(modal_box_interior_rect(
+        app, onscreen_keyboard::modal_keyboard_h_px(app))));
 }
 
 // THE NOTIFICATION STACK'S DAMAGE — the one bound of the cards that

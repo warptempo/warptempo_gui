@@ -1385,23 +1385,26 @@ private:
     // definition.
     void paint_sweep_highlight(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
-    // THE MODAL (2026-08-13): every modal's controls on the modal family's
-    // controls row, and a prompt's question or a dialog editor's line in the
-    // family's box (modal_box.h, 2026-10-14) — row 8's own painter yields the
-    // lane to it. Painted from on_redraw right after the keyboard slot,
+    // THE MODAL (2026-08-13): the overlays' controls on the modal family's
+    // controls row (modal_box.h, 2026-10-14), and a question, a dialog
+    // editor and the progress modal in xfwm's window floating over what
+    // stands (send AA's stage D2) — the bottom icon row's own painter yields
+    // the lane to it. `exposed` the damage rect the frame paints (the
+    // dialog editor's backdrop culls its rows by it). Painted from on_redraw
+    // right after the keyboard slot,
     // unconditionally: it publishes AppState::modal_dialog and
     // AppState::dialog_editor_text, the geometry the pointer path's veil,
     // button claims and click-to-caret read. The full design record is at the
     // definition.
-    void paint_modal_dialog(cairo_t* cr);
+    void paint_modal_dialog(cairo_t* cr, const GuiRect& exposed);
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — its
-    // band across the program lanes on the window's foot, its block of keys
-    // seated in it (onscreen_keyboard.h's placement block), over row 8 and
-    // the waveform area's lower part. It paints AFTER every waveform pass and
+    // band across the program lanes at the view's foot, its block of keys
+    // seated in it (onscreen_keyboard.h's placement block), over the
+    // waveform area's lower part. It paints AFTER every waveform pass and
     // BEFORE the modal and the floating surfaces, which is where it sits in
     // the picture: the flag editor is above it in the marker lane, a dialog
-    // editor's stack above it in the modal family's box, and the waveform
+    // editor's window in the room above it, and the waveform
     // under it is simply not painted where this paints.
     //
     // GATED WHOLE ON onscreen_keyboard::stands (onscreen_keyboard.h — the

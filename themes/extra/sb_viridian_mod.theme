@@ -3,6 +3,7 @@
 # ScrollbarInnerTrack and ClipBorder added by hand from SB Viridian.ask (architect 2026-11-17, session 140)
 # WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
 # TooltipBackground, CardBackground and CardStandingBackground, our own fills (not Live's), added by hand: TooltipBackground this file's SurfaceBackground, CardBackground and CardStandingBackground its Alert, opaque, so nothing here changes look (send AA's stage D1, 2026-11-19)
+# TitleHighlight and ScaleTrough, our own roles (not Live's), added by hand: TitleHighlight this file's SurfaceArea, ScaleTrough its ScrollbarInnerTrack, so nothing here changes look; SelectionBackground and SelectionForeground left the file, no tone reading them (send AA's stage D2, 2026-11-19)
 SurfaceArea=171918
 Desktop=070707
 SurfaceBackground=333333
@@ -14,8 +15,6 @@ ViewCheckControlEnabledOn=FF7B07
 RangeDefault=A3D1AA
 StandbySelectionBackground=3B4C3E
 StandbySelectionForeground=E5E5E5
-SelectionBackground=637F68
-SelectionForeground=E5E5E5
 Alert=A30606
 WaveformColor=000000
 DetailViewBackground=333333
@@ -33,3 +32,5 @@ SidebarForeground=F0F0F0
 TooltipBackground=333333
 CardBackground=A30606
 CardStandingBackground=A30606
+TitleHighlight=171918
+ScaleTrough=000000

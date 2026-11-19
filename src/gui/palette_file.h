@@ -48,8 +48,12 @@
 // 2026-11-13, session 121, the same block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-eight words with its literal (the press arc's four, 2026-11-05, among
-// them — the key press face, the list press pair and the lit press fill —
+// forty-eight words with its literal (the press arc's key press face and lit
+// press fill of 2026-11-05 among them — its list press pair retired with send
+// AA's stage D2, 2026-11-19, when the dialogs' three joined: the window's
+// frame edge 111111, ControlContrastFrame; its title bar's highlight row and
+// the progress bar's trough 242424, SurfaceArea and ScrollbarInnerTrack over
+// the ground, a Live theme's own numbers —
 // the lamp arc's clip lamp the same night, the lit-but-inert key's face and
 // its glyph of 2026-11-11, and the disabled chip's outline and the enabled
 // chip's fill of 2026-11-12, both retold 2026-11-13; the trough and the
@@ -309,10 +313,10 @@ static_assert(kDefault.trim_span_face  == 0x696969);
 static_assert(kDefault.well_border     == 0x2A2A2A);
 static_assert(kDefault.selection_fill  == 0x637E86);
 static_assert(kDefault.selection_text  == 0x070707);
-static_assert(kDefault.pane_face       == 0x363636);
 static_assert(kDefault.score_pane_face == 0x191919);
-static_assert(kDefault.list_press_fill == 0xB0DDEB);
-static_assert(kDefault.list_press_text == 0x070707);
+static_assert(kDefault.frame_edge      == 0x111111);
+static_assert(kDefault.title_highlight == 0x242424);
+static_assert(kDefault.scale_trough    == 0x242424);
 static_assert(kDefault.tooltip_fill    == 0xFF363636);
 static_assert(kDefault.card_fill       == 0xFFE76942);
 static_assert(kDefault.card_standing_fill == 0xFFE76942);

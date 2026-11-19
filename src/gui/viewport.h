@@ -716,18 +716,19 @@ struct Viewport {
     // for the hint changes no row damage carries (the previous-track window's
     // edge under a playing item, which only the clock's cell damages).
     void invalidate_modal_dialog_area();
-    // A STANDING DIALOG EDITOR'S EDIT (2026-10-14): THE BOX'S INTERIOR ALONE
-    // (modal_box_interior_rect at the live keyboard height), never the
+    // A STANDING DIALOG EDITOR'S EDIT (2026-10-14): THE ROOM GROWN BY THE
+    // WINDOW'S SHADOW'S REACH (modal_box.h's xfwm_shadow_rect of the box's
+    // interior at the live keyboard height; send AA's stage D2), never the
     // family's whole area. WHY: under a box the GL canvas's clip is empty and
     // every damage rect uploads whole (GuiGlCanvas::present_frame), so the
     // family's area on every keystroke was ~11.8 MB on the tablet, sustained under
     // key repeat. WHAT AN EDIT CAN CHANGE, re-derived from the painters: the
-    // line's text, its soft-wrapped rows, the selection and the caret, all
-    // painted clipped to the interior (paint_modal_dialog's editor arm); the
-    // box's geometry is a fact of the lanes and the keyboard, never of the
-    // text, so the wrap never resizes it. Nothing outside it moves with an
-    // edit: the controls row's OK and Cancel never grey or relabel, their
-    // hints with them; a refusal's or a full field's card damages its own
+    // line's text, its soft-wrapped rows, the selection and the caret, the
+    // entry's height with its rows and so the editor's window, re-centered in
+    // the room, and its shadow (paint_dialog_window's editor arm: the window
+    // never past the room, so the shadow never past this rect). Nothing
+    // outside it moves with an edit: the window's Cancel and OK never grey
+    // or relabel, their hints with them; a refusal's or a full field's card damages its own
     // stack (GuiNotifications::notify); the focus ring's walk, the button
     // press arms and their lifts damage the stash's box themselves
     // (route_modal_dialog_focus_key, return_modal_focus_to_field,

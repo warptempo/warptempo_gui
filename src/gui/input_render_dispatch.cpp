@@ -665,9 +665,15 @@ void GuiInputHandler::set_batch_progress_index(int index) {
     AppState::BatchProgress& bp = app.batch_progress;
     if (!bp.active || bp.index == index) return;
     bp.index = index;
-    // THE SENTENCE'S DAMAGE: the box's interior, where it stands (no keyboard
-    // stands under this modal — the keyboard is an editor's alone).
-    viewport.invalidate_rect(modal_box_interior_rect(app, /*keyboard_h=*/0));
+    // THE COUNT'S AND THE BAR'S DAMAGE: the progress dialog's window as last
+    // painted (ModalDialogGeometry::box, its window and shadow's reach — a
+    // fixed size, centered, so the extent is the same window's), or the whole
+    // window before its first paint (send AA's stage D2).
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    viewport.invalidate_rect(
+        dlg.valid && dlg.owner == AppState::ModalDialogOwner::Progress
+            ? dlg.box
+            : GuiRect{0, 0, app.width, app.height});
 }
 
 void GuiInputHandler::close_batch_progress() {

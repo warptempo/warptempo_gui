@@ -5919,9 +5919,10 @@ struct AppState {
             int    begin    = 0;
             int    end      = 0;
             double origin_x = 0.0;
-            // The band's top, a REAL y (the first row's band stands where
-            // its baseline lands on the text seat's, exactly; the pitch
-            // between rows is whole), and its whole height.
+            // The band's top, a REAL y (the row's line box in the entry:
+            // the first row's under the entry's line-box baseline, exactly;
+            // the pitch between rows the line box, whole), and its whole
+            // height.
             double y        = 0.0;
             int    h        = 0;
             bool   hard     = false;
@@ -6568,7 +6569,11 @@ struct AppState {
     // press on the field, a finger's caret drag in it and the editor act's
     // own dispatch each return it to -1 through the one owner,
     // GuiInputHandler::return_modal_focus_to_field (input_pointer.cpp), so a
-    // button that took it by a press gives it back with the caret.
+    // button that took it by a press gives it back with the caret. THE
+    // FIELD'S FOCUS IS PAINTED since send AA's stage D2 (2026-11-19, the
+    // design's §E: Arc's entry:focus): the entry's inner one-W accent line,
+    // with the caret, while this is -1 (paint_dialog_window); a button's
+    // focus wears nothing (NO FOCUS LOOK on a button, architect 2026-10-23).
     //
     // AND THE INDEX IS ONLY MEANINGFUL WHILE THE STASH IS CURRENT, because it
     // names a slot in the painter's published button list. Between a raise and
@@ -8597,11 +8602,13 @@ struct AppState {
     // THE PROGRESS MODAL (architect 2026-10-10 evening; its shape 2026-10-14
     // on his progress mock) — THE MODAL FAMILY'S FIFTH
     // MEMBER (modal_box.h, ModalDialogOwner::Progress). EVERY BATCH — the grid
-    // iterations and the BPM sweep — opens it AT THE RENDER PRESS: the box with
-    // THE FACE INSIDE (a surface you only read), the sentence on its first row
-    // at the list's row metrics, and CANCEL ALONE flush right on the controls
-    // row, the modal's one road. The sentence is
-    // `sentence()` below, rewritten as each entry starts.
+    // iterations and the BPM sweep — opens it AT THE RENDER PRESS: THUNAR'S
+    // PROGRESS DIALOG in xfwm's window centered on the panel (send AA's stage
+    // D2, 2026-11-19; paint_handler.cpp's THE DIALOG WINDOW) — its sentence,
+    // the bar over the entries done, the count under it, and CANCEL ALONE,
+    // the window's one button, the modal's one road. The lines are
+    // `sentence()` and `count()` below, the count rewritten as each entry
+    // starts.
     //   `active`   it stands — from the press (GuiInputHandler::
     //              open_batch_progress: at the batch's first dispatch, or at
     //              the park when the batch waits out a killed render's drain)
@@ -8626,13 +8633,25 @@ struct AppState {
         uint64_t session = 0;
         int      index   = 0;
         int      total   = 0;
-        // THE SENTENCE (architect 2026-10-14: "Rendering 3 of 11...", WITH THE
-        // ELLIPSIS, his word), spelled as the product spells every ellipsis it
-        // paints: three periods, as "Updating...", a single render's
-        // "Rendering..." and the flag truncation's "..." are.
-        std::string sentence() const {
-            return "Rendering " + std::to_string(index) + " of " +
-                   std::to_string(total) + "...";
+        // THE ELLIPSIS (architect 2026-10-14, his word) is spelled as the
+        // product spells every ellipsis it paints: three periods, as
+        // "Updating..." and the flag truncation's "..." are.
+        // THE PROGRESS DIALOG'S TWO LINES (send AA's stage D2, 2026-11-19:
+        // Thunar's progress dialog, the operation over the bar and its count
+        // under it): THE SENTENCE the batch's operation, "Rendering...", the
+        // single render's own word with its ellipsis, and THE COUNT the
+        // entry rendering of the batch, "3 of 11" — his sentence of
+        // 2026-10-14, "Rendering 3 of 11...", parted across the two lines
+        // (no new word). THE FRACTION the bar shows is the entries done,
+        // (index − 1) / total.
+        std::string sentence() const { return "Rendering..."; }
+        std::string count() const {
+            return std::to_string(index) + " of " + std::to_string(total);
+        }
+        double done_fraction() const {
+            return total > 0 ? static_cast<double>(index - 1) /
+                                   static_cast<double>(total)
+                             : 0.0;
         }
     };
     BatchProgress batch_progress;
@@ -9117,6 +9136,29 @@ struct AppState {
         FolderOverlayPress press;
     };
     FolderOverlay folder_overlay;
+
+    // THE DIALOG EDITOR'S BACKDROP AND ITS WINDOW'S TITLE (send AA's stage
+    // D2, 2026-11-19; the architect's approved tmp/sendZ/VIEW/Z_06: the line
+    // editor over the settings page). THE THREE OPENERS OF A DIALOG EDITOR
+    // — the settings page's row (GuiInputHandler::settings_page_commit), the
+    // trim presets list's Save As (trim_presets_save_as) and the BPM form's
+    // row (bpm_form_commit) — each close the list as they always did (the
+    // overlay and the keyboard never both stand) and write here, first, THE
+    // PAGE AS IT STOOD (`page`: its rows, its highlight and its scroll, the
+    // press dropped) and THE TITLE the editor's window wears (`title`: the
+    // row's key — the line's text before its `=` — or "Save As", the button's
+    // word). paint_modal_dialog paints `page` in the room above the keyboard
+    // and its window's title and label off `title` while a dialog editor
+    // stands, and reads neither otherwise; the next opener overwrites both.
+    // Paint alone: nothing presses the backdrop (the editor's veil), and the
+    // page the editor's OK or Cancel returns to is rebuilt as before
+    // (GuiInputHandler::return_to_settings_page, open_bpm_form, the trim
+    // list's reopen).
+    struct DialogBackdrop {
+        FolderOverlay page;
+        std::string   title;
+    };
+    DialogBackdrop dialog_backdrop;
 
     // -- THE RENDER PLAYER'S WHOLE STATE (2026-08-28) -----------------------
     //
@@ -10465,9 +10507,9 @@ GuiRect status_bar_area(const AppState& a);
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
 // laid over the window's foot, 2026-10-10 to 2026-10-14 — IS GONE with the
-// overlay: the prompts and the dialog editors stand in the modal family's
-// box and controls row (modal_box.h, modal_box_dialog_stands), as the render
-// player and the picker do.)
+// overlay: the prompts and the dialog editors are dialogs in xfwm's window
+// since send AA's stage D2, a dialog editor's in the modal family's room,
+// modal_box.h.)
 
 // THE DIALOG EDITOR'S WRAPPED LINE AS PAINTED (DialogEditorText's contract):
 // the row a byte's caret stands on — the row whose range holds it, the

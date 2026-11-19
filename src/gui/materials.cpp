@@ -84,7 +84,7 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state) {
 }
 
 void paint_entry(cairo_t* cr, const GuiRect& box,
-                 std::optional<double> progress) {
+                 std::optional<double> progress, bool focused) {
     if (box.w <= 0 || box.h <= 0) return;
     const GuiPalette& p = palette();
     const double b  = static_cast<double>(key_border_px());
@@ -96,7 +96,14 @@ void paint_entry(cairo_t* cr, const GuiRect& box,
     const double y1 = y0 + static_cast<double>(box.h);
     CoverageStampPass pass;
     pass.begin(cr);
-    pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, p.ruler_face);
+    if (focused) {
+        pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, p.cue);
+        const double r2 = std::max(0.0, r - b);
+        pass.rounded_rect(x0 + 2 * b, y0 + 2 * b, x1 - 2 * b, y1 - 2 * b, r2,
+                          r2, p.ruler_face);
+    } else {
+        pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, p.ruler_face);
+    }
     pass.rounded_ring(x0, y0, x1, y1, R, b, p.well_border);
     if (progress && *progress > 0.0) {
         const double t   = std::min(*progress, 1.0);

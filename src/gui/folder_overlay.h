@@ -55,11 +55,13 @@
 // icon and a name; glyph-less PLAIN rows, a name alone (the value list's
 // values since 2026-10-25, the settings page's key lines since 2026-10-28,
 // the trim presets since 2026-10-28 night, the BPM form's three lines since
-// 2026-10-29); and the INERT rows in the dim print (`text_dim`), which the
+// 2026-10-29); and the INERT rows, which the
 // highlight never stands on (row_is_inert, the walk below): the page's and
-// the BPM form's GROUP rows, a heading each, and the page's DISABLED rows,
-// the `scale` and `bpm` lines (architect 2026-10-29). A LISTING IN WHICH NO ROW WEARS A GLYPH
-// starts its text at the glyph's own column, not past an empty icon column
+// the BPM form's GROUP rows, a heading each (Thunar's section header, in
+// the text tone, Bold), and the page's DISABLED rows in the dim print
+// (`text_dim`), the `scale` and `bpm` lines (architect 2026-10-29). A
+// LISTING IN WHICH NO ROW WEARS A DRAWING starts its text at its own
+// column, not past an empty icon column
 // (architect 2026-10-28 night; the painter's names' column,
 // paint_folder_overlay) (a glyph-less TEXT kind went with
 // the AV Sync Stats panel on 2026-09-30, and an UP row, `..`, was a kind
@@ -69,7 +71,7 @@
 // modal_box.h, the one owner of the shape: "overlays/modals can take over the
 // area from the trim bar on down, with just the bottom new border
 // remaining"; the simple layout 2026-10-22): from THE VIEW BAR'S TOP ROW
-// down, one box — the flat pane on the ground, no frame — and under it the CONTROLS
+// down, one box — THE VIEW between two lines, no frame — and under it the CONTROLS
 // ROW on row 8's rows (the modal dialog's, paint_modal_dialog) — so EVERY
 // LANE FROM THE VIEW BAR TO ROW 8 is under it, and THE ICON ROW STANDS ABOVE
 // IT, as the main window paints it, the icon row
@@ -91,8 +93,8 @@
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces
 // to a zero-height rect, its top above the canvas's) while the lanes it
-// covers paint and are covered. THE PANE'S EDGE IS THE BAND'S ONE EDGE; the
-// FIRST ROW STANDS AT THE PANE'S TOP, one pad under it (the folder-name
+// covers paint and are covered. THE VIEW'S EDGE IS THE BAND'S ONE EDGE; the
+// FIRST ROW STANDS ON THE VIEW'S TOP ROW (the folder-name
 // header that stood above the player's list 2026-10-10 to 2026-10-14 is
 // removed, content_rect's note).
 // The architect's ruling (2026-08-28):
@@ -120,7 +122,7 @@
 //     FIXED, every time it stands, whatever the listing's length — architect
 //     2026-08-28: "we should automatically make the height ... so that it's
 //     not a fluid height — it's always a fixed height". A
-//     SHORT LISTING LEAVES THE REST OF THE BOX AS GROUND and a long one
+//     SHORT LISTING LEAVES THE REST OF THE VIEW EMPTY and a long one
 //     scrolls. The fixed height retired the growing half of the day's
 //     earlier ceiling ruling (which read "it grows with its content up to
 //     that cap, then scrolls") the same day, the panel having jumped under
@@ -129,33 +131,34 @@
 //     2026-09-02, the icon row's foot from 2026-09-09 and the view bar's top
 //     row since 2026-10-14. The content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
-//   * THE ROW IS WINDOWS' LIST ROW (architect 2026-10-02): 17 Windows px
-//     tall at the normal face, as Windows' list boxes with 16-px icons, one
-//     Windows px between rows — ON THE UNIT SINCE 2026-11-04 night, the row
-//     26 W (52 device px on the tablet) and one W between rows (kListRowW and
-//     button_row_gap_px below), the glyph centred in the row's height. It was the icon row's BUTTON, the toolbar case's
-//     height, from 2026-08-28 ("we've gone for the button analogy"; "the
-//     buttons are good enough size for my finger"). A
+//   * THE ROW IS THUNAR'S DETAILS ROW (architect 2026-11-19, send Z: "use
+//     tunar"; send AA's stage D2): 20 W, a group heading 24 W, edge to edge,
+//     no gap (kListRowW and kListHeadingW below) — Windows' list row of
+//     2026-10-02 (26 W and one W apart on the unit) before it, the icon
+//     row's BUTTON from 2026-08-28 before that ("we've gone for the button
+//     analogy"). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
-//     ("project and file names will be short"), the painter clipping it to
-//     the row. (The AV Sync Stats panel's text rows stood at a monospace
-//     line's pitch, the row geometry's one fork, from 2026-09-03 until the
-//     panel's deletion on 2026-09-30.)
-// The panel's own authored number is the row below (kListRowW); its
-// pad and its row gap are one W, the line rule's (2026-11-04 night).
+//     ("project and file names will be short"), the painter cutting it at
+//     the row's right edge. (The AV Sync Stats panel's text rows stood at a
+//     monospace line's pitch, the row geometry's one fork, from 2026-09-03
+//     until the panel's deletion on 2026-09-30.)
+// The panel's own authored numbers are the two row heights below.
 //
-// THE FACES ARE LIVE'S BROWSER LIST (architect 2026-11-01 night, M6 A; the
-// ladder at the painter): the box's interior is THE PANE, `pane_face` with the
-// field text, a surface you pick from (modal_box.h's ONE GROUND, ONE PANE),
-// no frame round it. IT COVERS EVERY CONTENT,
-// this one widget being every
-// Windows list in the product (the player's folders and wavs, the project
-// picker's projects, the settings page's keys, the value list's values, the
-// trim presets); the controls row under it — the transport, the scrub,
-// the buttons — stands on the ground. A
-// resting row paints no fill at all, and the highlighted row is a flat fill
-// in the theme's selected pair (render.h's palette block), focused or not.
-// No hover face and NO ALTERNATING ROWS.
+// THE FACES ARE THUNAR'S LIST UNDER ARC (architect 2026-11-19, send Z, his
+// approval of tmp/sendZ/VIEW/Z_04; send AA's stage D2; the ladder at the
+// painter, paint_list_view): the box's interior is THE VIEW, the canvas's
+// tone (`ruler_face`, Arc's $base_color 404552), a surface you pick from,
+// a line above and below it and no frame. IT COVERS EVERY CONTENT, this one
+// widget being every list in the product (the player's folders and wavs,
+// the project picker's projects, the settings page's keys, the value
+// list's values, the trim presets, the BPM form); the controls row under it
+// — the transport, the scrub, the buttons — stands on the body tone. A
+// resting row paints no fill at all, and the highlighted row — and the row
+// under a press, the same look (Thunar is single-click) — is a flat fill in
+// the theme's selection pair across the view's whole width. No hover face,
+// NO ALTERNATING ROWS, no scrollbar. (Live's browser list on the pane,
+// 2026-11-01 night, M6 A, and its lighter press row of 2026-11-05 retired
+// with send AA's stage D2.)
 //
 // THE ROWS ARE CHROME (the timing doctrine at GuiInputHandler::on_key): a
 // row press ARMS —
@@ -205,61 +208,53 @@ namespace folder_overlay {
 
 // -- The geometry ------------------------------------------------------------
 //
-// THE ROW IS WINDOWS' LIST ROW (the ruling above): the panel owns its row
-// height, its pad and its row gap; the row's glyph and its name stand
-// at the painter's own constants (paint_handler.cpp's kListGlyphInkW,
-// kListGlyphXW, kListNameXW, 2026-10-23).
+// THE ROW IS THUNAR'S DETAILS ROW AT 9 pt (architect 2026-11-19, send Z,
+// "use tunar", his approval of tmp/sendZ/VIEW/Z_04; send AA's stage D2; the
+// design tmp/sendY/P2_design_overlays.md §B at 12 W text, the mock kit's
+// list_row / group_heading the reference): the panel owns the two row
+// heights; the row's drawing and its name stand at the painter's own
+// constants (paint_handler.cpp's THE LIST VIEW, kListDrawing*).
 
-// THE PANEL'S OUTER INSET — the margin between the band's edge and the rows,
-// at the top, the bottom and both sides: ONE W, the line rule's hairline_px
-// (render.h: 2 device px on the tablet at 200 %, 1 at 100 % and below;
-// architect 2026-11-04 night, the unit — the 1-Windows-px pad of 2026-10-02
-// re-authored on the unit as every former one-px gap was). pcmanfm-qt's
-// compact view keeps 1 px between an item and the frame
-// and the architect's ruling lets it "grow proportionally with the taller
-// rows" (2026-10-02). (Its one reader since 2026-10-23 is the notification
-// stack's foot margin, notifications.cpp: the rows stand at row_inset_px
-// below.)
+// THE CARDS' FOOT MARGIN (notifications.cpp, its one reader since
+// 2026-10-23): ONE W, the line rule's hairline_px (render.h: 2 device px on
+// the tablet at 200 %, 1 at 100 % and below). The rows themselves stand
+// with no inset since send AA's stage D2 (below).
 inline int pad_px()               { return hairline_px(); }
-// THE GAP BETWEEN TWO ROWS, the panel's own since the roster's buttons
-// began to touch (architect 2026-10-02): ONE W, hairline_px (2 device px on
-// the tablet at 200 %, 1 at 100 % and below; the unit, 2026-11-04 night).
-inline int button_row_gap_px()    { return hairline_px(); }
 
-// THE ROW BOX: kListRowW = 26 W (52 device px on the tablet at 200 %;
-// architect 2026-11-04 night, the unit, "yes, put on todo": the hi-fi's 51
-// device px — 17 Windows px of the 2026-10-02 unit from 2026-11-03, the
-// retrofit, after the text round's 56 — re-authored as a whole W and
-// rounded up), through scaled_px, rounded at the element: 52 at 200 %, 26
-// at 100 %, floored at one. EVERY LIST STANDS ON IT — the render
-// player's folders and wavs, the project picker, the settings page, its
-// value list, the trim presets — and the modal box's text rows pitch on it
-// (row + gap, 27 W, 54 device rows on the tablet; paint_modal_dialog), the panel's row gap under
-// it; the row's glyph is the painter's (2026-10-23; Windows' small 16-px
-// icon until then; Breeze's since 2026-11-02). A folder row wears
-// icons::Icon::Folder and a wav row icons::Icon::ViewMediaTrack, the double
-// notes — SOURCE's drawing, a deliberate share (architect 2026-11-02, R14
-// (4) / R15 (Q4): "keep just one"); a plain, a group and a disabled row
-// wear none, and a listing of them alone starts its text at the glyph's
-// column (paint_folder_overlay's names' column, 2026-10-28 night). (The
-// glyph-less TEXT kind went with the AV Sync Stats panel on 2026-09-30, and
-// the UP kind, which wore the folder glyph because it named a folder, with
-// the player's move inside `tmp/` on 2026-09-01.) The accessor keeps the
-// name it had while a row was a wide button.
-inline constexpr double kListRowW = 26.0;
-inline int button_row_height_px() { return scaled_px(kListRowW, 1); }
-// THE ROWS' INSET INSIDE THE BOX'S INTERIOR — left, top and right, and the
-// listing's foot: THE CONTENT'S ONE HAIRLINE OF AIR (modal_box.h's THE
-// PANE, architect 2026-10-23: "at most one device pixel"; one W since
-// 2026-11-04, the unit), so the lit row's bar stands one W from the pane's
-// edges and the first row one W under its top row.
-inline int row_inset_px()         { return modal_box_content_pad_px(); }
-// (THE ROW'S GLYPH AT WINDOWS' SMALL 16-W ICON, its 3-W lead and its 6-W
-// gap to the name stood 2026-10-02 to 2026-10-23; the glyph's geometry is
-// the painter's since, paint_handler.cpp's kListGlyph*.)
+// THE TWO ROW HEIGHTS (architect 2026-11-19, send Z; send AA's stage D2):
+// A LIST ROW kListRowW = 20 W (40 device px on the tablet at 200 %; Thunar's
+// details row at 9 pt, measured on his shot: the 14 W line box and 3 W of
+// air above and below it) and A GROUP HEADING ROW kListHeadingW = 24 W (48
+// device px; Thunar's side-pane section header at 9 pt, 5 + 14 + 5), each
+// through scaled_px, rounded at the element, floored at one. THE ROWS STAND
+// EDGE TO EDGE IN THE VIEW: no inset at its sides or its top, no gap
+// between rows (Thunar's list draws none) — so the lit row's bar runs the
+// view's whole width. EVERY LIST STANDS ON THEM — the render player's
+// folders and wavs, the project picker, the settings page, its value lists,
+// the trim presets, the BPM form — the heading the Group rows' (the
+// settings page's DEVICE / PIECE, `theme`'s three groups, the BPM form's
+// one); every other kind a list row. (The 26 W row of 2026-11-04 night,
+// one W apart and one W inside the pane, retired with send AA's stage D2.)
+inline constexpr double kListRowW     = 20.0;
+inline constexpr double kListHeadingW = 24.0;
+inline int list_row_height_px()     { return scaled_px(kListRowW, 1); }
+inline int list_heading_height_px() { return scaled_px(kListHeadingW, 1); }
+// A ROW'S HEIGHT BY ITS KIND: a Group row the heading's, every other kind
+// the list row's.
+inline int row_height_px(const AppState::FolderOverlayRow& row) {
+    return row.kind == AppState::FolderOverlayRow::Kind::Group
+               ? list_heading_height_px()
+               : list_row_height_px();
+}
+// IS A ROW OF THIS KIND INERT (the walk's row_is_inert below asks it of an
+// index): a Group or a Disabled row.
+inline bool row_kind_is_inert(AppState::FolderOverlayRow::Kind kind) {
+    return kind == AppState::FolderOverlayRow::Kind::Group ||
+           kind == AppState::FolderOverlayRow::Kind::Disabled;
+}
 
-// (THE BAND OWNS NO LINE OF ITS OWN — its one edge is the modal family's
-// pane meeting the ground, modal_box.h.)
+// (THE BAND OWNS NO LINE OF ITS OWN — the lines above and below the view are
+// the modal family's box's outer rows, modal_box.h.)
 
 // -- Standing ----------------------------------------------------------------
 
@@ -274,21 +269,23 @@ inline bool stands(const AppState& a) {
 
 // -- The surface's rect ------------------------------------------------------
 
-// The content's whole height: the pad at both ends, every row and the gaps
-// between them. Zero for an empty listing.
+// The content's whole height: every row's height, top to bottom (no pad, no
+// gap since send AA's stage D2). Zero for an empty listing.
 // IT SIZES NOTHING (the band's height is fixed since 2026-08-28): its ONE
 // consumer is the scroll ceiling below, which is how far the content runs
 // past the band.
+inline int content_height_px(const AppState::FolderOverlay& ov) {
+    int h = 0;
+    for (const AppState::FolderOverlayRow& row : ov.rows) h += row_height_px(row);
+    return h;
+}
 inline int content_height_px(const AppState& a) {
-    const int n = static_cast<int>(a.folder_overlay.rows.size());
-    if (n <= 0) return 0;
-    return 2 * row_inset_px() + n * button_row_height_px() +
-           (n - 1) * button_row_gap_px();
+    return content_height_px(a.folder_overlay);
 }
 
 // THE BAND: THE MODAL FAMILY'S PANEL (architect 2026-10-14, modal_box.h —
-// the box's pane and its margins of ground, from the view
-// bar's top row to the controls row's top), a FIXED height
+// the box, from the line under the top icon row to the line over the bottom
+// icon row), a FIXED height
 // whatever the listing's length (2026-08-28, the ruling above). Like the
 // keyboard's own accessor it does not ask whether the panel stands.
 //
@@ -312,8 +309,8 @@ inline int content_height_px(const AppState& a) {
 // first preset is saved or over a file read as malformed (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
-// twenty-eight key rows (the twenty-six editable keys plus the inert `scale` and
-// `bpm`, under two group rows), the BPM form its four, and every other value list its key's
+// key rows under two group rows (the editable keys plus the inert `scale` and
+// `bpm`), the BPM form its four, and every other value list its key's
 // whole domain).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.
@@ -321,12 +318,13 @@ inline GuiRect surface_rect(const AppState& a) {
     return modal_panel_rect(a, /*keyboard_h=*/0);
 }
 
-// The rows' band: THE BOX'S INTERIOR, the pane (modal_box_interior_rect).
+// The rows' band: THE BOX'S INTERIOR, THE VIEW (modal_box_interior_rect) —
+// from the row under the top icon row's line to the row over the bottom icon
+// row's line, the panel's whole width (send Z, edge to edge).
 // Every geometry below reads this and not the surface — the rows,
 // the scroll ceiling, the keep-visible walk, the painter's row-walk clip and
-// row_at's containment — so a row can never paint onto the ground round the
-// pane or be pressed through it. THE FIRST ROW STANDS AT THE PANE'S TOP, one
-// hairline under it (row_inset_px).
+// row_at's containment — so a row can never paint onto the lines round the
+// view or be pressed through them. THE FIRST ROW STANDS ON THE VIEW'S TOP ROW.
 // (THE FOLDER NAME ABOVE THE PLAYLIST — the viewed folder's name in one list
 // row and an etched pair under it, the render player's alone, 2026-10-10 to
 // 2026-10-14 — IS REMOVED, architect 2026-10-14: "it was icon padding but no
@@ -341,10 +339,14 @@ inline GuiRect content_rect(const AppState& a) {
 
 // -- The scroll state --------------------------------------------------------
 
-// The scroll offset's ceiling: how much of the content lies past the band.
+// The scroll offset's ceiling over a band `band`: how much of the content
+// lies past it.
+inline int max_scroll_px(const AppState::FolderOverlay& ov,
+                         const GuiRect& band) {
+    return std::max(0, content_height_px(ov) - band.h);
+}
 inline int max_scroll_px(const AppState& a) {
-    const GuiRect band = content_rect(a);
-    return std::max(0, content_height_px(a) - band.h);
+    return max_scroll_px(a.folder_overlay, content_rect(a));
 }
 
 // THE ONE CLAMP of the scroll offset onto [0, max_scroll_px]. Every writer
@@ -361,47 +363,65 @@ inline void clamp_scroll(AppState& a) {
 
 // -- The rows ----------------------------------------------------------------
 
-// Row `index`'s PAINTED rect under the live scroll offset — full band width
-// less the rows' inset on both sides, at the button's row pitch (the painter
-// and the press router read their rects from here and nowhere else). It may
-// lie partly or wholly outside the band; the painter clips and the hit test
-// asks the band first. A REAL RECT (architect 2026-11-15, the no-grid arc):
-// its columns, its height and the pitch between rows are whole, its rows
-// stand where the real scroll offset puts them — the painter fills it
-// through the exact fill and seats its glyph and its name on it exactly, the
-// press router asks it with the pointer's real place, and a damage site
-// takes its hull (render.h).
-inline GuiRectF row_rect(const AppState& a, int index) {
-    const GuiRect band = content_rect(a);
-    const int h = button_row_height_px();
-    const double y =
-        static_cast<double>(band.y + row_inset_px() +
-                            index * (h + button_row_gap_px())) -
-        a.folder_overlay.scroll_px;
-    return GuiRectF{static_cast<double>(band.x + row_inset_px()), y,
-                    static_cast<double>(band.w - 2 * row_inset_px()),
-                    static_cast<double>(h)};
-}
-
 // THE ONE WALK OVER THE ROWS, and the reason paint and hit cannot drift: both
-// go through it. `fn(index, row, rect)` is called for every row in listing
-// order with its painted rect under the live scroll offset.
+// go through it. `fn(index, row, rect)` is called for every row of `ov` in
+// listing order with its painted rect in the band `band` under the scroll
+// offset `scroll` — the band's whole width, each row its kind's height
+// (row_height_px), the next row on its foot. A REAL RECT (architect
+// 2026-11-15, the no-grid arc): its columns and its height whole, its rows
+// where the real scroll offset puts them — the painter fills it through the
+// exact fill and seats its drawing and its name on it exactly, the press
+// router asks it with the pointer's real place, and a damage site takes its
+// hull (render.h). It may lie partly or wholly outside the band; the painter
+// clips and the hit test asks the band first. THE VIEW'S FORM (below) walks
+// the standing overlay in its own band; the dialog editor's backdrop walks
+// the page it was opened from in the room above the keyboard
+// (paint_handler.cpp's paint_list_view).
+template <class Fn>
+inline void for_each_row(const AppState::FolderOverlay& ov,
+                         const GuiRect& band, double scroll, Fn&& fn) {
+    const int n = static_cast<int>(ov.rows.size());
+    double y = static_cast<double>(band.y) - scroll;
+    for (int i = 0; i < n; ++i) {
+        const AppState::FolderOverlayRow& row = ov.rows[static_cast<size_t>(i)];
+        const int h = row_height_px(row);
+        fn(i, row,
+           GuiRectF{static_cast<double>(band.x), y,
+                    static_cast<double>(band.w), static_cast<double>(h)});
+        y += static_cast<double>(h);
+    }
+}
 template <class Fn>
 inline void for_each_row(const AppState& a, Fn&& fn) {
-    const int n = static_cast<int>(a.folder_overlay.rows.size());
-    for (int i = 0; i < n; ++i) {
-        fn(i, a.folder_overlay.rows[static_cast<size_t>(i)], row_rect(a, i));
-    }
+    for_each_row(a.folder_overlay, content_rect(a), a.folder_overlay.scroll_px,
+                 fn);
+}
+
+// Row `index`'s PAINTED rect under the live scroll offset (the walk's own
+// rect; a zero rect off the listing).
+inline GuiRectF row_rect(const AppState::FolderOverlay& ov, const GuiRect& band,
+                         double scroll, int index) {
+    GuiRectF out{0.0, 0.0, 0.0, 0.0};
+    for_each_row(ov, band, scroll,
+                 [&](int i, const AppState::FolderOverlayRow&,
+                     const GuiRectF& r) {
+                     if (i == index) out = r;
+                 });
+    return out;
+}
+inline GuiRectF row_rect(const AppState& a, int index) {
+    return row_rect(a.folder_overlay, content_rect(a),
+                    a.folder_overlay.scroll_px, index);
 }
 
 // The row under the pointer's REAL place (x, y), or -1 (half-open against
-// each row's real rect, so two rows never share a point and the gap between
-// them answers none) — a point outside the ROWS' BAND (content_rect,
+// each row's real rect, so two rows never share a point) — a point outside
+// the ROWS' BAND (content_rect,
 // the box's interior, whole) answers -1 whatever row's rect would contain it, so a
-// row scrolled out of the band cannot be pressed through the ground round
-// the pane or the controls row below. It is the content rect and not the
+// row scrolled out of the band cannot be pressed through the lines round
+// the view or the controls row below. It is the content rect and not the
 // surface because the surface is the band's outer CLAIM (the press router's
-// own test, one call up) while the rows live in the content — the pane.
+// own test, one call up) while the rows live in the content — the view.
 // The painter clips its row walk to this same rect, so paint and hit agree on
 // every pixel of the band.
 inline int row_at(const AppState& a, double x, double y) {
@@ -415,24 +435,36 @@ inline int row_at(const AppState& a, double x, double y) {
     return hit;
 }
 
-// Scroll so row `index` lies wholly inside the band (its inset respected) —
-// the keyboard row walk's owner of "keep the focused row visible", moving the
-// offset by the least amount that does it and nothing when the row already
-// shows. Clamps.
+// THE LEAST MOVE THAT SHOWS ROW `index` WHOLE in the band `band`, from the
+// offset `scroll`, clamped onto the listing's walls there: the offset the
+// keyboard row walk's "keep the focused row visible" writes (below), and
+// the dialog editor's backdrop's view of the page it stands over
+// (paint_list_view's caller, which writes nothing).
+inline double scroll_showing_row(const AppState::FolderOverlay& ov,
+                                 const GuiRect& band, double scroll,
+                                 int index) {
+    const int n = static_cast<int>(ov.rows.size());
+    if (index >= 0 && index < n) {
+        const GuiRectF r = row_rect(ov, band, scroll, index);
+        const double top    = static_cast<double>(band.y);
+        const double bottom = static_cast<double>(band.y + band.h);
+        if (r.y < top)                scroll -= (top - r.y);
+        else if (r.y + r.h > bottom)  scroll += (r.y + r.h) - bottom;
+    }
+    return std::clamp(scroll, 0.0,
+                      static_cast<double>(max_scroll_px(ov, band)));
+}
+
+// Scroll so row `index` lies wholly inside the band — the keyboard row
+// walk's owner of "keep the focused row visible", moving the offset by the
+// least amount that does it and nothing when the row already shows
+// (scroll_showing_row). Clamps.
 inline void scroll_row_into_view(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const GuiRect  band = content_rect(a);
-    const GuiRectF r    = row_rect(a, index);
-    const double top    = static_cast<double>(band.y + row_inset_px());
-    const double bottom =
-        static_cast<double>(band.y + band.h - row_inset_px());
-    if (r.y < top) {
-        a.folder_overlay.scroll_px -= (top - r.y);
-    } else if (r.y + r.h > bottom) {
-        a.folder_overlay.scroll_px += (r.y + r.h) - bottom;
-    }
-    clamp_scroll(a);
+    a.folder_overlay.scroll_px =
+        scroll_showing_row(a.folder_overlay, content_rect(a),
+                           a.folder_overlay.scroll_px, index);
 }
 
 // THE OPEN'S LANDING (architect 2026-10-26: "normally you'd expect a drop
@@ -486,10 +518,8 @@ inline bool scroll_row_centered(AppState& a, int index) {
 inline bool row_is_inert(const AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return false;
-    const AppState::FolderOverlayRow::Kind kind =
-        a.folder_overlay.rows[static_cast<size_t>(index)].kind;
-    return kind == AppState::FolderOverlayRow::Kind::Group ||
-           kind == AppState::FolderOverlayRow::Kind::Disabled;
+    return row_kind_is_inert(
+        a.folder_overlay.rows[static_cast<size_t>(index)].kind);
 }
 
 // Seat the highlight on `index`, clamped into the listing (-1 for an empty
