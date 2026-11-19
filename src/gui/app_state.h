@@ -1210,19 +1210,42 @@ struct TrimDragState {
     bool is_begin = false;   // which bound the cursor is dragging
     bool moved    = false;   // whether motion actually changed the bound
     // Dragged bound's pre-drag value (an at-rest copy of the store's
-    // authored int64 frame); base for the drag delta.
+    // authored int64 frame): the bound a drag with no travel keeps, and the
+    // unmapped arm's base for its delta (update_trim_drag).
     int64_t orig_frame      = 0;
-    // Press position in source-frame doubles, captured at drag-begin.
-    // Motion applies the cursor's displacement from here (anchor-relative),
-    // matching warp-marker drag — so the bound tracks the grab point with no
-    // initial snap. See DragState::anchor_mouse_time_frame.
+    // Press position in source-frame doubles, captured at drag-begin (in
+    // every domain). ITS ONE READER IS THE UNMAPPED ARM (Source view, or a
+    // target view with no map; update_trim_drag): motion applies the
+    // cursor's source-frame displacement from here (anchor-relative), so the
+    // bound tracks the grab point with no initial snap — there the
+    // displacement is the pen's pixel travel times q exactly. A MAPPED
+    // DOMAIN DOES NOT READ IT (architect 2026-11-18): there the bound is the
+    // source frame under the towed place (grab_offset_px below), since a
+    // source displacement takes the inverse map's slope at the PEN's place,
+    // not the bound's.
     double anchor_frame     = 0.0;
-    // THE GRAB'S PIXEL OFFSET (Sol's review, 2026-11-18): the press's place
-    // less the grabbed bound's exact place, device px, waveform-relative on
-    // the item basis (begin_trim_drag). The motion's TOWED PLACE, the pen's
-    // place less this, is where the cap stands at the grab's own offset;
-    // where its displayed frame is at or past the displayed total the bound
-    // answers the source's end (update_trim_drag). Single-bound arm only.
+    // THE PRESS'S REAL PLACE (window px, the single-bound arm's begin x):
+    // the mapped arm's no-travel test — a pen at exactly this x has not
+    // travelled, and the bound stays as found, the inverse's floating hair
+    // never written (update_trim_drag).
+    double press_x          = 0.0;
+    // THE GRAB'S PIXEL OFFSET (Sol's review, 2026-11-18; architect
+    // 2026-11-18, send Y): the press's place less the grabbed bound's place,
+    // device px, waveform-relative on the item basis (begin_trim_drag) —
+    // on the identity the bound's exact painted place (trim_bound_place_x),
+    // in a mapped domain the place of its UNROUNDED image
+    // (trim_bound_image_place_x; the painter rounds the image to a whole
+    // displayed frame, and the offset from that rounding would start the
+    // drag from the rounded image's inverse, under a speed-up up to half
+    // the ratio's frames off the bound). The motion's TOWED PLACE, the
+    // pen's place less this, is the bound's image plus the pen's travel.
+    // Its readers are update_trim_drag's two single-bound arms: the MAPPED
+    // arm's bound is the source frame whose image stands under the towed
+    // place (ON SCREEN IS AS PAINTED: the cap follows the pen for the whole
+    // drag, within half a displayed frame of the painter's rounding); the
+    // UNMAPPED arm reads it only where the towed place is at or past the
+    // displayed total, to answer the source's end. The bridge (pair) drag
+    // does not read it.
     double grab_offset_px   = 0.0;
 
     // Inter-endcap bridge (top-strip trim-bar span) move-both-bounds drag: both
@@ -10811,9 +10834,10 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // unmoved marker being the answer.
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
 // placed / moved / edited / deleted in target view"): their acts run now.
-// SIX CALL SITES, re-grepped 2026-09-13 (every one answers TRUE in
+// FIVE CALL SITES, re-grepped 2026-11-18 (every one answers TRUE in
 // every P-column state through this body's own P arm, S+P and T+P alike):
-// the keyboard drop (input_handler.cpp), the `m` bpm open
+// the keyboard drop (the bare-`s` arm, input_handler.cpp,
+// whose card is "Markers are placed in source view"), the `m` bpm open
 // (bpm_sweep_plan, warpmarkers_ops.cpp — its own warp-column test sits ahead,
 // so `m` is W-only regardless), the BARE LEFT/RIGHT NUDGE'S DISPATCH (input_handler.cpp
 // — the marker-lane branch, whose card "Markers are moved in source view" is
@@ -10821,15 +10845,11 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // the composed horizontal_arrow_step_actionable, and DIRECTLY AGAIN since
 // 2026-08-31, when that predicate grew the marker's own wall term for the
 // buttons' face and a wall stopped being something this sentence may be raised
-// for), the COMPOSED PREDICATE horizontal_arrow_step_actionable (the Left /
-// Right buttons' face, which composes this rule with the wall), the DROP
-// BUTTON'S FACE (redesign_button_enabled, the twin rule's arm) and the ONE
-// TOOLTIP READER left — the arrow pair's fork
-// (redesign_button_tooltip's overload), which DROPS THE STEP-LADDER LINE
-// where every rung refuses alike. The Drop button's fork read this too from
-// 2026-09-01 to 2026-09-12, saying the card's own sentence over a lit button;
-// a tooltip states no reason now, and the plain lift still reaches the chord,
-// which cards.
+// for), the COMPOSED PREDICATE horizontal_arrow_step_actionable (app_state.h,
+// the Left / Right buttons' face, which composes this rule with the wall) and
+// the DROP BUTTON'S FACE (redesign_button_enabled, app_state.h, the twin
+// rule's arm). NO TOOLTIP READS IT: a tooltip states no reason, and the plain
+// lift still reaches the chord, which cards.
 // marker_selection_verb_-
 // actionable LEFT the callers with the opening: its P-column home term
 // became structurally true and the predicate is the selection atom alone

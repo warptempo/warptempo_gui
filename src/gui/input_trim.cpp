@@ -211,9 +211,10 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // a target view with no map, the displayed frame is the source frame and
 // the rule changes nothing. The readers: the trim's conversions alone —
 // trim_bound_frame_at_x (the bound-set click, the TRIM sweep) and the
-// endcap drag's strip clamp and towed place (update_trim_drag; never its
-// anchor or pen, whose difference is its travel); the bridge drag keeps
-// its own form at its active-domain ceiling (update_trim_drag). The marker
+// endcap drag's strip clamp and towed place (update_trim_drag; never the
+// unmapped arm's anchor or pen, whose difference is its travel); the bridge
+// drag keeps its own form at its active-domain ceiling (update_trim_drag).
+// The marker
 // roads convert on their own and keep their off-edge refusals.
 double trim_source_frame_reaching_end(const AppState& app,
                                       const GuiAudio& audio,
@@ -308,18 +309,21 @@ int64_t trim_bound_frame_at_x(const AppState& app, const GuiAudio& audio,
 // whatever surface the press came from, measured off waveform_area's x.
 //
 // THE PEN'S PLACE IS NOT HELD INTO THE STRIP (architect 2026-11-15, the
-// no-grid arc): both drags are ANCHOR-RELATIVE — the bound moves by the
-// pen's displacement from its grab — so what they need of a pen past either
-// end of the strip is its REAL displacement, and the conversion is linear,
-// meaningful at any x. WHAT IS HELD IS THE BOUND'S PROPOSAL, by the motion
+// no-grid arc): both drags follow the pen at the grab's own offset — the
+// pair by the pen's displacement from its grab, the single bound by the
+// frame under its TOWED PLACE, the pen's place less the grab's offset (on
+// the identity, the same thing as the displacement; architect 2026-11-18)
+// — so what they need of a pen past either end of the strip is its REAL
+// place, and the conversion is linear, meaningful at any x. WHAT IS HELD IS
+// THE BOUND'S PROPOSAL, by the motion
 // arms (update_trim_drag): the single bound into the strip's own extent, the
 // frame at x = 0 through the frame at x = w, then the song's walls, then its
 // partner; the pair by its wall-held shared delta. Holding the pen instead
 // would stop a bound short of its wall by the grab's own offset: an end
 // grabbed a fraction of a px right of its bound could then never be pushed
-// the last frames to total-1 (Sol's review, 2026-11-16). The roads that are
-// NOT anchor-relative — the bound-set click and the TRIM sweep's ends, whose
-// place IS the frame — hold the place into [0, w] themselves
+// the last frames to total-1 (Sol's review, 2026-11-16). The roads with no
+// grab offset — the bound-set click and the TRIM sweep's ends, whose place
+// IS the frame — hold the place into [0, w] themselves
 // (trim_bound_click, apply_region_drag_motion). False (out untouched) on
 // unusable geometry.
 bool trim_displayed_frame_at_mouse_x(const AppState& app,
@@ -340,7 +344,8 @@ bool trim_displayed_frame_at_mouse_x(const AppState& app,
 // has it (GuiPaintHandler::paint_trim's chain on the same item basis and
 // displayed map: displayed_trim_ms, then trim_bound_column's unclamped
 // x_raw — the slider box's place, not the grab's clamp). The endcap drag's
-// grab offset is measured against it (begin_trim_drag).
+// grab offset is measured against it on the identity (begin_trim_drag; a
+// mapped domain's against trim_bound_image_place_x below).
 double trim_bound_place_x(const AppState& app, const GuiAudio& audio,
                           int64_t frame) {
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
@@ -348,6 +353,24 @@ double trim_bound_place_x(const AppState& app, const GuiAudio& audio,
         displayed_or_live_target_map(app, audio);
     return trim_bound_column(
         displayed_trim_ms(frame, map.empty() ? nullptr : &map),
+        basis.vp_start_frame, basis.vp_end_frame, basis.lattice_origin,
+        basis.area_w).x_raw;
+}
+
+// A TRIM BOUND'S UNROUNDED IMAGE'S PLACE, waveform-relative, in a MAPPED
+// domain (architect 2026-11-18, send Y): trim_bound_place_x's chain on the
+// same item basis and displayed map, the image taken straight from the one
+// forward map (map_source_to_target) without displayed_trim_ms's rounding to
+// a whole displayed frame. The endcap drag's mapped arm measures its grab
+// offset against it (begin_trim_drag), so its towed place at zero travel is
+// the bound's own image and the first motion continues from the bound.
+double trim_bound_image_place_x(const AppState& app, const GuiAudio& audio,
+                                int64_t frame) {
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
+    return trim_bound_column(
+        map_source_to_target(static_cast<double>(frame), map),
         basis.vp_start_frame, basis.vp_end_frame, basis.lattice_origin,
         basis.area_w).x_raw;
 }
@@ -672,22 +695,25 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(double mouse_x,
     // (displayed_or_live_target_map — the SAME map the trim bar and its ends
     // are painted with; identity in source view), in full double precision
     // like the marker drag's anchor, on the map the bar is painted with,
-    // stale or fresh; the single-bound motion's snap_authored_frame of the
-    // anchor-relative delta owns the one fractional-to-authored rounding.
-    // The delta is a SOURCE-domain one, so the bound keeps the pen's pixel
-    // travel while the pen and the grab stand in one tempo section, and
-    // takes the pen's own section's slope across one (past the map's end,
-    // the identity slope); what reaches the song's end regardless is the
-    // towed place's rule (update_trim_drag). A PLACE LEFT OF THE MAP'S START
-    // CONTINUES AT THE IDENTITY SLOPE, the mirror of the map's own rule past
-    // its last segment (the map itself holds every earlier time on its first
-    // frame): the pen's displacement stays real on both sides of the piece,
-    // which is what an anchor-relative drag reads (the conversion's head
-    // above). The conversion is the inverse map alone: the source's end at
-    // the displayed total (trim_source_frame_reaching_end) is applied by the
-    // motion arm where a BOUND stands there — the strip clamp's right edge
-    // and the towed bound's place — never to the anchor or the pen, whose
-    // difference is the drag's travel.
+    // stale or fresh; the single-bound motion's snap_authored_frame owns
+    // the one fractional-to-authored rounding. THE TRIM'S ONE INVERSE: its
+    // readers are the single-bound drag's — the anchor and the cursor of
+    // the unmapped arm (an identity there, their difference the pen's pixel
+    // travel times q), and the mapped arm's TOWED PLACE, whose source frame
+    // is the bound (architect 2026-11-18: the frame whose image stands under
+    // the cap's place, in every tempo section and past either end of the
+    // map) — and the strip clamp's two edges (update_trim_drag). A PLACE
+    // LEFT OF THE MAP'S START CONTINUES AT THE IDENTITY SLOPE, the mirror of
+    // the map's own rule past its last segment (the map itself holds every
+    // earlier time on its first frame): a place left of the piece answers a
+    // frame left of the map's first, strictly monotone in the place, so a
+    // towed place left of the strip's left edge answers a frame left of the
+    // frame at x = 0, which the strip clamp holds there. The conversion is
+    // the inverse map alone: the source's end at the displayed total
+    // (trim_source_frame_reaching_end) is applied by the motion arm where a
+    // BOUND stands there — the strip clamp's right edge and the towed
+    // bound's place — never to the unmapped arm's anchor or pen, whose
+    // difference is that arm's travel.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     out_frame = map_target_to_source(g, dmap);
@@ -723,12 +749,15 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
     // have no cancel.
     // Grab anchor: each arm captures exactly what its motion path consumes —
     // the pair path reads anchor_active_frame (active-domain, for the rigid
-    // both-bounds delta); the single-bound path reads anchor_frame (source-
-    // domain press position, motion applying the cursor's displacement from
-    // here — anchor-relative like the marker drag, though that drag's anchor
-    // now lives in the active domain, see DragState). A bad conversion
-    // leaves the anchor at 0; harmless since the same unusable state makes
-    // update_trim_drag early-return too.
+    // both-bounds delta); the single-bound path captures the press's real
+    // place, its source-domain frame and the grab's pixel offset, of which
+    // the UNMAPPED arm reads anchor_frame (motion applying the cursor's
+    // source displacement from here — anchor-relative like the marker drag,
+    // though that drag's anchor now lives in the active domain, see
+    // DragState) and the MAPPED arm press_x and grab_offset_px (the towed
+    // place, update_trim_drag). A bad conversion leaves the anchor at 0;
+    // harmless since the same unusable state makes update_trim_drag
+    // early-return too.
     if (both) {
         int64_t af = 0;
         if (trim_mouse_x_to_active_frame(mouse_x, af))
@@ -737,13 +766,30 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
         double anchor = 0.0;
         if (trim_mouse_x_to_source_frame(mouse_x, anchor))
             app.trim_drag.anchor_frame = anchor;
+        app.trim_drag.press_x = mouse_x;
         // THE GRAB'S PIXEL OFFSET (TrimDragState::grab_offset_px): the
-        // press's place less the bound's exact place as the trim bar's
-        // painter has it (trim_bound_place_x), both waveform-relative on the
-        // item basis — the motion's towed place is the pen's less this.
-        app.trim_drag.grab_offset_px =
-            (mouse_x - static_cast<double>(waveform_area(app).x)) -
-            trim_bound_place_x(app, audio, app.trim_drag.orig_frame);
+        // press's place less the bound's place, both waveform-relative on
+        // the item basis — the motion's towed place is the pen's less this.
+        // The bound's place per domain, the fork update_trim_drag takes
+        // (architect 2026-11-18, send Y): on the identity its exact place as
+        // the trim bar's painter has it (trim_bound_place_x — there the
+        // bound's image is its own frame, whole, and the painter's rounding
+        // changes nothing); in a mapped domain its UNROUNDED image's place
+        // (trim_bound_image_place_x), so the towed place at zero travel is
+        // the bound's own image, whose inverse is the bound, and the first
+        // motion continues from it — never from the rounded image's inverse,
+        // which under a speed-up stands up to half the ratio's frames off
+        // the bound, either side.
+        const double press_place =
+            mouse_x - static_cast<double>(waveform_area(app).x);
+        if (displayed_or_live_target_map(app, audio).empty())
+            app.trim_drag.grab_offset_px =
+                press_place -
+                trim_bound_place_x(app, audio, app.trim_drag.orig_frame);
+        else
+            app.trim_drag.grab_offset_px =
+                press_place -
+                trim_bound_image_place_x(app, audio, app.trim_drag.orig_frame);
     }
     // The BEGIN only captures drag state — no deselect and no stop here; both
     // ride the FIRST ACCEPTED bound change at motion/commit (architect
@@ -913,57 +959,106 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         return;
     }
 
-    // Anchor-relative motion (single-bound path only): the dragged bound moves
-    // by the cursor's displacement from the grab point, not to the absolute
-    // cursor column. cursor_frame is converted identically to the begin-drag
-    // anchor, so the bound stays the same distance under the cursor for the
-    // whole drag. The pair path above works in the active domain and never
-    // consumes this source-domain conversion, so it is computed only here.
-    double cursor_frame = 0.0;
-    if (!trim_mouse_x_to_source_frame(mouse_x, cursor_frame)) return;
-    const double delta_frames = cursor_frame - app.trim_drag.anchor_frame;
+    // THE SINGLE BOUND'S PROPOSAL, ONE ARM PER DOMAIN (architect 2026-11-18,
+    // send X's decision, built in send Y: IN TARGET VIEW A DRAGGED TRIM CAP
+    // STANDS UNDER THE PEN FOR THE WHOLE DRAG, at the grab's own offset — ON
+    // SCREEN IS AS PAINTED, the promise Source view already kept). The fork
+    // is the displayed paint basis's map (displayed_or_live_target_map, the
+    // map the trim bar and its caps are painted with): empty — Source view,
+    // or a target view with no map — the identity; else a mapped domain.
+    // The pair path above works in the active domain and reads neither arm.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    int64_t src_frame = app.trim_drag.orig_frame;
+    if (dmap.empty()) {
+        // THE UNMAPPED ARM — anchor-relative motion: the dragged bound moves
+        // by the cursor's displacement from the grab point, not to the
+        // absolute cursor column. cursor_frame is converted identically to
+        // the begin-drag anchor, so the bound stays the same distance under
+        // the cursor for the whole drag: on the identity the source
+        // displacement is the pen's pixel travel times q, and the cap tracks
+        // the pen exactly.
+        double cursor_frame = 0.0;
+        if (!trim_mouse_x_to_source_frame(mouse_x, cursor_frame)) return;
+        const double delta_frames = cursor_frame - app.trim_drag.anchor_frame;
 
-    // Single-bound: pre-drag frame plus the anchor-relative delta. The
-    // pointer-derived delta rounds once into the integer domain through
-    // snap_authored_frame — the value lands in an authored store field
-    // below, so the conversion goes through the single double-to-authored
-    // chokepoint like every other authored write; everything after is
-    // int64 arithmetic.
-    int64_t src_frame = app.trim_drag.orig_frame +
-        snap_authored_frame(delta_frames);
+        // Pre-drag frame plus the anchor-relative delta. The pointer-derived
+        // delta rounds once into the integer domain through
+        // snap_authored_frame — the value lands in an authored store field
+        // below, so the conversion goes through the single double-to-authored
+        // chokepoint like every other authored write; everything after is
+        // int64 arithmetic. A drag with no travel (delta 0) keeps its bound
+        // as found.
+        src_frame = app.trim_drag.orig_frame +
+            snap_authored_frame(delta_frames);
 
-    // THE TOWED PLACE ANSWERS THE SOURCE'S END (Sol's review, 2026-11-18;
-    // ON SCREEN IS AS PAINTED: the cap follows the pen at the grab's own
-    // offset). The towed place is the pen's place less the grab's pixel
-    // offset (TrimDragState::grab_offset_px); where the displayed frame
-    // under it is at or past the displayed total, the bound answers at
-    // least the source's total (trim_source_frame_reaching_end, the one
-    // rule), which the strip clamp and the wall below then hold on total-1.
-    // WHY THE PROPOSAL ALONE IS NOT ENOUGH: the delta above is a SOURCE one,
-    // the inverse map's slope at the pen's place, and past the map's end
-    // that slope is 1 — so in Target view under a speed-up a cap grabbed
-    // OUTBOARD of its bound (the pen right of the bound's place) buys
-    // almost nothing for the pen's travel past the strip's edge: Sol's 4.00
-    // x 2.00 piece at FIT, the end at x 2220 (1,776,000) grabbed at 2228,
-    // stops at 1,797,703 with the pen at the panel's edge, 3,899 frames
-    // short. Left of the displayed total the proposal stands exactly as
-    // computed; a drag with no travel (delta 0) keeps its bound as found,
-    // so a cap that merely rests at the displayed total is never moved by
-    // a crossing without travel. THE LEFT END NEEDS NO TWIN: a begin zone
-    // starts on its bound (trim_endcap_rect), so its grab is never
-    // outboard-left and the anchor stands no more than half a displayed
-    // frame's source left of the bound (its painted place is its rounded
-    // image); the pen at the strip's left edge — frame 0 at the left wall,
-    // the map starting at (0, 0) — carries the proposal to within that
-    // half frame's source of 0 (3 frames on Sol's piece), and half a px of
-    // travel past it, where the conversion continues at the identity
-    // slope, carries it under 0, which the strip clamp holds on 0.
-    if (delta_frames != 0.0) {
+        // THE TOWED PLACE AT OR PAST THE DISPLAYED TOTAL ANSWERS THE SOURCE'S
+        // END (Sol's review, 2026-11-18; trim_source_frame_reaching_end, the
+        // one rule): the towed place is the pen's place less the grab's
+        // pixel offset (TrimDragState::grab_offset_px). On the identity the
+        // towed place's frame and the proposal above are one number up to
+        // floating error, so the rule can only raise to the total a proposal
+        // already at total-1 or past it, which the wall below holds on
+        // total-1 either way; it stands here as written so this arm's
+        // arithmetic is the one Source view has always run.
+        if (delta_frames != 0.0) {
+            double towed = 0.0;
+            if (trim_displayed_frame_at_mouse_x(
+                    app, audio, mouse_x - app.trim_drag.grab_offset_px, towed))
+                src_frame = static_cast<int64_t>(trim_source_frame_reaching_end(
+                    app, audio, towed, static_cast<double>(src_frame)));
+        }
+    } else if (mouse_x != app.trim_drag.press_x) {
+        // THE MAPPED ARM — THE CAP'S PLACE IS THE TOWED PLACE (architect
+        // 2026-11-18): the pen's place less the grab's pixel offset
+        // (TrimDragState::grab_offset_px, the press less the place of the
+        // bound's UNROUNDED image, trim_bound_image_place_x), so its
+        // displayed frame is the bound's image plus the pen's displayed
+        // travel. THE BOUND IS THE SOURCE FRAME
+        // WHOSE IMAGE STANDS THERE: the displayed frame under the towed place
+        // (trim_displayed_frame_at_mouse_x) mapped back through the trim's
+        // one inverse (trim_mouse_x_to_source_frame — the displayed map, and
+        // left of the map's start the identity slope), raised to the
+        // source's total where that displayed frame is at or past the
+        // displayed total (trim_source_frame_reaching_end), and rounded once
+        // through snap_authored_frame; the strip clamp, the wall and the
+        // partner below as for every proposal. At the right a towed place at
+        // or past the displayed total answers the source's end, so an end
+        // dragged as far as it goes rests on total-1 (the wall); at the left
+        // a towed place left of the map's start continues at the identity
+        // slope (the inverse's head) and the strip clamp holds it on the
+        // frame at x = 0, frame 0 at the left wall. A source-frame DELTA cannot
+        // serve here: it takes the inverse map's slope where the PEN stands,
+        // not where the bound stands, so with the pen in another tempo
+        // section than the bound, or past the map's end, the cap would fall
+        // behind or run ahead of the pen. The towed place's own frame has
+        // neither fault, in every section and past either end of the map.
+        // WHAT THE CAP DOES: the trim bar paints it at its frame's image
+        // ROUNDED to a whole displayed frame (trim_bound_place_x), so it
+        // stands within half a displayed frame of the towed place's frame
+        // plus the image of half a source frame, at every travel, the
+        // grab's own included (half a displayed frame is 1/40 px at most,
+        // q >= 20) — under a speed-up several source frames share one
+        // painted place and the bound steps among them under a still cap;
+        // under a slow-down one source frame spans its ratio of displayed
+        // frames and the cap steps by that width, the grid's own truth,
+        // never lag. THE FIRST MOTION CONTINUES FROM THE BOUND: at zero
+        // travel the towed place's frame is the bound's image and its inverse
+        // the bound to floating error, so a sub-pixel travel answers the
+        // bound or its neighbor on the travel's side, never a frame against
+        // it. THE PEN AT ITS PRESS'S X HAS NOT TRAVELLED
+        // (TrimDragState::press_x), and the bound stays as found — the else
+        // of this arm: a press that never moves writes nothing, not even the
+        // round trip's floating hair, and a crossing made by vertical travel
+        // alone commits nothing.
+        const double towed_x = mouse_x - app.trim_drag.grab_offset_px;
         double towed = 0.0;
-        if (trim_displayed_frame_at_mouse_x(
-                app, audio, mouse_x - app.trim_drag.grab_offset_px, towed))
-            src_frame = static_cast<int64_t>(trim_source_frame_reaching_end(
-                app, audio, towed, static_cast<double>(src_frame)));
+        double source = 0.0;
+        if (!trim_displayed_frame_at_mouse_x(app, audio, towed_x, towed) ||
+            !trim_mouse_x_to_source_frame(towed_x, source))
+            return;
+        src_frame = snap_authored_frame(
+            trim_source_frame_reaching_end(app, audio, towed, source));
     }
 
     // Viewport clamp: keep the grabbed bound within THE STRIP'S OWN EXTENT,
@@ -977,16 +1072,15 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // viewport_marker_bounds, would stop the end a column short of it).
     // THIS, THE BOUND'S PROPOSAL, IS WHAT IS HELD — NOT THE PEN (the
     // conversion's head, trim_displayed_frame_at_mouse_x): the proposal above
-    // is the bound's own frame plus the pen's real displacement from its
-    // grab, wherever the pen has gone, so FOR ANY GRAB OFFSET g (the grab's
-    // place less the bound's, in px) the proposal reaches the frame at x = w
-    // once the pen stands at w + g, and the frame at x = 0 once it stands at
-    // g — in Source view, where the delta is the pen's pixel travel times
-    // q. In Target view the delta takes the inverse map's slope at the
-    // pen's place, so where the pen stands in another tempo section than
-    // the grab, or past the map's end, the proposal falls behind or runs
-    // ahead of the towed place; at the end the towed place's rule above
-    // answers the source's end all the same. At the right wall and at the
+    // is the frame under the TOWED PLACE, the pen's place less the grab's
+    // offset, wherever the pen has gone — on the identity the bound's own
+    // frame plus the pen's real displacement from its grab, which is that
+    // frame; in a mapped domain the source frame whose image stands at the
+    // towed place, in every tempo section and past either end of the map
+    // (architect 2026-11-18) — so FOR ANY GRAB OFFSET g (the grab's place
+    // less the bound's, in px) the proposal reaches the frame at x = w once
+    // the pen stands at w + g, and the frame at x = 0 once it stands at g,
+    // in either view. At the right wall and at the
     // whole-song zoom the frame at x = w is at or past total ((k + w)·q >=
     // total, trim_bound_frame_at_x's head) — in source frames too, the
     // displayed total answering the source's end in Target view

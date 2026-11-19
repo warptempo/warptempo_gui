@@ -3616,9 +3616,11 @@ private:
     void disarm_pending_trim_drag();
     void begin_trim_drag(TrimHit which, double mouse_x, bool both = false);
     void update_trim_drag(double mouse_x);   // motion: writes the live store
-    // mouse_x → source-domain frame double, the single conversion both the
-    // drag anchor (begin) and the live cursor (update) read so they can never
-    // diverge — the inverse map alone; the source's end at the displayed
+    // mouse_x → source-domain frame double, the trim's one inverse: the
+    // single-bound drag's anchor (begin) and live cursor (update) on the
+    // identity, read alike so they can never diverge, and in a mapped domain
+    // its towed place, whose frame is the bound (architect 2026-11-18;
+    // update_trim_drag) — the inverse map alone; the source's end at the displayed
     // total is the motion arm's, at the strip clamp and the towed place
     // (trim_source_frame_reaching_end, input_trim.cpp). Returns false (out
     // untouched) when audio/zoom state is unusable.
