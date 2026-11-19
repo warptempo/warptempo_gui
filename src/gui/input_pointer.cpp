@@ -8304,7 +8304,9 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
     // through the sweep's one place->trim route (sweep_trim_frame_at_x,
     // on the painted item basis, architect 2026-09-24), so the writer needs no
     // domain hop — a pen at or past the strip's right edge answers the frame
-    // there, behind which the wall rests the end on the source's last frame.
+    // there, the wall holding it on the source's last frame where it is past
+    // it and nothing raising it otherwise (trim_bound_frame_at_x's head,
+    // architect 2026-11-19).
     const double rel = std::clamp(at.rx - static_cast<double>(area.x), 0.0,
                                   static_cast<double>(area.w));
     // THE TRIM WRITE — the sweep IS a trim write (architect 2026-08-18): from

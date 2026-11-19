@@ -1244,10 +1244,10 @@ struct TrimDragState {
     // place (ON SCREEN IS AS PAINTED: the cap follows the pen for the whole
     // drag, off the towed place by the bound's rounding to a whole source
     // frame plus the painter's to a whole displayed frame — the error's one
-    // statement, its bound and its px figures, at that arm); the
-    // UNMAPPED arm reads it only where the towed place is at or past the
-    // displayed total, to answer the source's end. The bridge (pair) drag
-    // does not read it.
+    // statement, its bound and its px figures, at that arm). The UNMAPPED
+    // arm does not read it (its motion is the anchor-relative delta, which
+    // on the identity is the towed place's own frame), nor does the bridge
+    // (pair) drag.
     double grab_offset_px   = 0.0;
 
     // Inter-endcap bridge (top-strip trim-bar span) move-both-bounds drag: both
