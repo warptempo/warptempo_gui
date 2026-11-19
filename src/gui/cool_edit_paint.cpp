@@ -12,12 +12,6 @@
 
 // The rules are at the declarations (cool_edit_paint.h).
 
-void paint_ce_time_field(cairo_t* cr, const GuiRectF& f) {
-    // THE FLAT KEY FACE, no ring (the declaration's rule), on the field's
-    // real edges (the exact fill, render.h).
-    paint_cell_rect(cr, f, palette().key_face);
-}
-
 
 namespace {
 
@@ -228,6 +222,152 @@ void CoverageStampPass::rounded_rect(double x0, double y0, double x1,
         }
         grow_dirty(GuiRect{cx0, cy0, cx1 - cx0, cy1 - cy0});
     }
+}
+
+// THE GENERIC STAMP (the declaration's): each row of the box inside each
+// clip box, the skipped run untouched, every other pixel its coverage.
+template <class Cov, class Skip>
+void CoverageStampPass::stamp_each(int bx0, int by0, int bx1, int by1,
+                                   uint32_t word, Cov&& cov, Skip&& skip) {
+    for (const GuiRect& r : target_.clip) {
+        const int cx0 = std::max(bx0, r.x);
+        const int cx1 = std::min(bx1, r.x + r.w);
+        const int cy0 = std::max(by0, r.y);
+        const int cy1 = std::min(by1, r.y + r.h);
+        if (cx1 <= cx0 || cy1 <= cy0) continue;
+        for (int yy = cy0; yy < cy1; ++yy) {
+            uint32_t* const row = reinterpret_cast<uint32_t*>(
+                target_.data + static_cast<std::size_t>(yy) * target_.stride);
+            int s0 = cx1, s1 = cx1;
+            skip(yy, s0, s1);
+            s0 = std::clamp(s0, cx0, cx1);
+            s1 = std::clamp(s1, s0, cx1);
+            for (int xx = cx0; xx < s0; ++xx)
+                stamp_pixel(row + xx, word, cov(xx, yy));
+            for (int xx = s1; xx < cx1; ++xx)
+                stamp_pixel(row + xx, word, cov(xx, yy));
+        }
+        grow_dirty(GuiRect{cx0, cy0, cx1 - cx0, cy1 - cy0});
+    }
+}
+
+namespace {
+// A ROUNDED RECT'S PATH for the cairo road (the same quarter arcs as
+// CoverageStampPass::rounded_rect's road), a new sub-path.
+void rounded_rect_path(cairo_t* cr, double x0, double y0, double x1,
+                       double y1, double rl, double rr) {
+    const double half_pi = std::numbers::pi / 2.0;
+    cairo_new_sub_path(cr);
+    cairo_move_to(cr, x0 + rl, y0);
+    cairo_line_to(cr, x1 - rr, y0);
+    if (rr > 0.0) cairo_arc(cr, x1 - rr, y0 + rr, rr, -half_pi, 0.0);
+    cairo_line_to(cr, x1, y1 - rr);
+    if (rr > 0.0) cairo_arc(cr, x1 - rr, y1 - rr, rr, 0.0, half_pi);
+    cairo_line_to(cr, x0 + rl, y1);
+    if (rl > 0.0) cairo_arc(cr, x0 + rl, y1 - rl, rl, half_pi, 2.0 * half_pi);
+    cairo_line_to(cr, x0, y0 + rl);
+    if (rl > 0.0)
+        cairo_arc(cr, x0 + rl, y0 + rl, rl, 2.0 * half_pi, 3.0 * half_pi);
+    cairo_close_path(cr);
+}
+} // namespace
+
+void CoverageStampPass::rounded_ring(double x0, double y0, double x1,
+                                     double y1, double r, double bw,
+                                     GuiColor color) {
+    if (x1 <= x0 || y1 <= y0 || bw <= 0.0) return;
+    const double ri = std::max(r - bw, 0.0);
+    const double ix0 = x0 + bw, iy0 = y0 + bw, ix1 = x1 - bw, iy1 = y1 - bw;
+    if (!direct_) {
+        // CAIRO'S ROAD: the outer and the padding box as two sub-paths, the
+        // even-odd rule leaving the ring.
+        cairo_save(cr_);
+        cairo_set_antialias(cr_, CAIRO_ANTIALIAS_DEFAULT);
+        cairo_set_fill_rule(cr_, CAIRO_FILL_RULE_EVEN_ODD);
+        cairo_new_path(cr_);
+        rounded_rect_path(cr_, x0, y0, x1, y1, r, r);
+        if (ix1 > ix0 && iy1 > iy0)
+            rounded_rect_path(cr_, ix0, iy0, ix1, iy1, ri, ri);
+        set_palette_source(cr_, color);
+        cairo_fill(cr_);
+        cairo_restore(cr_);
+        return;
+    }
+    const double dx = static_cast<double>(target_.dx);
+    const double dy = static_cast<double>(target_.dy);
+    const double ox0 = x0 + dx, oy0 = y0 + dy, ox1 = x1 + dx, oy1 = y1 + dy;
+    const double px0 = ix0 + dx, py0 = iy0 + dy, px1 = ix1 + dx, py1 = iy1 + dy;
+    const bool inner = px1 > px0 && py1 > py0;
+    const uint32_t word = word_of(color);
+    stamp_each(
+        static_cast<int>(std::floor(ox0)), static_cast<int>(std::floor(oy0)),
+        static_cast<int>(std::ceil(ox1)), static_cast<int>(std::ceil(oy1)),
+        word,
+        [&](int xx, int yy) {
+            const double co =
+                coverage_of_rounded_rect(xx, yy, ox0, oy0, ox1, oy1, r, r);
+            const double ci =
+                inner ? coverage_of_rounded_rect(xx, yy, px0, py0, px1, py1,
+                                                 ri, ri)
+                      : 0.0;
+            return std::clamp(co - ci, 0.0, 1.0);
+        },
+        [&](int yy, int& a, int& b) {
+            // The padding box's whole pixels on this row: covered whole by
+            // both shapes, so the ring covers none of them.
+            if (!inner) return;
+            const double band = ri;
+            if (coverage_of_span(yy, py0 + band, py1 - band) >= 1.0) {
+                a = static_cast<int>(std::ceil(px0));
+                b = static_cast<int>(std::floor(px1));
+            } else if (coverage_of_span(yy, py0, py1) >= 1.0) {
+                a = static_cast<int>(std::ceil(px0 + band));
+                b = static_cast<int>(std::floor(px1 - band));
+            }
+        });
+}
+
+void CoverageStampPass::rounded_rect_cut(double x0, double y0, double x1,
+                                         double y1, double rl, double rr,
+                                         double cx0, double cy0, double cx1,
+                                         double cy1, GuiColor color) {
+    const double qx0 = std::max(x0, cx0), qx1 = std::min(x1, cx1);
+    const double qy0 = std::max(y0, cy0), qy1 = std::min(y1, cy1);
+    if (qx1 <= qx0 || qy1 <= qy0) return;
+    if (!direct_) {
+        // CAIRO'S ROAD: the shape's path under the cut rect as a clip.
+        cairo_save(cr_);
+        cairo_set_antialias(cr_, CAIRO_ANTIALIAS_DEFAULT);
+        cairo_new_path(cr_);
+        cairo_rectangle(cr_, qx0, qy0, qx1 - qx0, qy1 - qy0);
+        cairo_clip(cr_);
+        cairo_new_path(cr_);
+        rounded_rect_path(cr_, x0, y0, x1, y1, rl, rr);
+        set_palette_source(cr_, color);
+        cairo_fill(cr_);
+        cairo_restore(cr_);
+        return;
+    }
+    const double dx = static_cast<double>(target_.dx);
+    const double dy = static_cast<double>(target_.dy);
+    const double sx0 = x0 + dx, sy0 = y0 + dy, sx1 = x1 + dx, sy1 = y1 + dy;
+    const double kx0 = qx0 + dx, ky0 = qy0 + dy, kx1 = qx1 + dx, ky1 = qy1 + dy;
+    const uint32_t word = word_of(color);
+    stamp_each(
+        static_cast<int>(std::floor(kx0)), static_cast<int>(std::floor(ky0)),
+        static_cast<int>(std::ceil(kx1)), static_cast<int>(std::ceil(ky1)),
+        word,
+        [&](int xx, int yy) {
+            const double cx = static_cast<double>(xx);
+            const double cy = static_cast<double>(yy);
+            return std::clamp(
+                area_of_rounded_rect_in_rect(
+                    sx0, sy0, sx1, sy1, rl, rr, std::max(cx, kx0),
+                    std::max(cy, ky0), std::min(cx + 1.0, kx1),
+                    std::min(cy + 1.0, ky1)),
+                0.0, 1.0);
+        },
+        [](int, int&, int&) {});
 }
 
 void CoverageStampPass::triangle(double ax, double ay, double h,

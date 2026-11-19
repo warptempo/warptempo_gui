@@ -40,8 +40,6 @@
 #                                       (ControlContrastFrame 21252B), CIELAB L* 2.50 (the stem-over-ink rule's 3.61, ballpark)
 #   DetailViewBackground        404552  $base_color: Arc's content base, Thunar's list view (the canvas and the ruler)
 #   DetailGridTiles             404552  the same, opaque: the canvas is DetailViewBackground itself
-#   ScaleAwareness              73D216  $success_color: the radio keys' lit face, Arc's one color distinct from the blue
-#   RangeEditField              5294E2  $selected_bg_color: the NOISE fill, Arc's scale highlight (architect 2026-11-17, D3)
 #   TakeLaneTrackNotHighlighted 2B2E3959 $borders_color (darken($bg_color, 6%)), Arc's separator, at 35 % over the canvas -> 393D49
 #   ViewCheckControlDisabledOff 7F8591  an insensitive button's drawing, measured on his Arc-Dark desktop (shot B3b,
 #                                       2026-11-18): the disabled key's glyph (architect 2026-11-19, send Z; 666A74,
@@ -75,8 +73,6 @@ Alert=F27835
 WaveformColor=262A33
 DetailViewBackground=404552
 DetailGridTiles=404552
-ScaleAwareness=73D216
-RangeEditField=5294E2
 TakeLaneTrackNotHighlighted=2B2E3959
 ViewCheckControlDisabledOff=7F8591
 ScrollbarInnerHandle=767B87

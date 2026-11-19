@@ -15,9 +15,9 @@
 # [0, 1], sRGB-encoded, rounded half to even and clamped: D6B762. The plain
 # ECCA6D read "too bright" (+61 L over the ground). The accent is the
 # markers' chip and a lit key's face, and the lit press fill and the
-# lit-but-inert face derive from it; every other role is Immaterial's, its
-# ScaleAwareness (the radio keys' purple) among them. The shade was the app's
-# own rule over Immaterial.ask 2026-11-05 .. 11-11 (src/gui/theme_ask.cpp,
+# lit-but-inert face derive from it; every other role is Immaterial's. The
+# shade was the app's own rule over Immaterial.ask 2026-11-05 .. 11-11
+# (src/gui/theme_ask.cpp,
 # git history); since 2026-11-11, session 110, it is this file's one baked
 # word.
 # ScrollbarInnerTrack and ClipBorder added by hand from Immaterial.ask (architect 2026-11-17, session 140)
@@ -39,8 +39,6 @@ Alert=E76942
 WaveformColor=121417EF
 DetailViewBackground=373A41
 DetailGridTiles=0A0A0A19
-ScaleAwareness=B595FC
-RangeEditField=008493
 TakeLaneTrackNotHighlighted=282B31
 ViewCheckControlDisabledOff=5C6069
 ScrollbarInnerHandle=6D7079

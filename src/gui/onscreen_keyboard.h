@@ -415,7 +415,7 @@ inline constexpr Page page_of_key_index(int index) {
 // UNDER ITS INDEX before the paint, so an index test against the new page's
 // walk finds no held key and the page key paints its lit or rest face
 // under the finger; the press face must follow the finger (materials.h's
-// paint_key and key_look), and the finger is on the slot.
+// paint_flat_key and key_look), and the finger is on the slot.
 // A negative index — `pressed_key`'s "nothing held" — is on no slot.
 inline constexpr bool same_slot(int a, int b) {
     constexpr int base  = static_cast<int>(kStableCodeBase);
@@ -473,13 +473,13 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // its X), Enter `key-enter` (KeyEnter), Copy and Paste row 8's EditCopy /
 // EditPaste, LEFT and RIGHT the chevrons GoPrevious / GoNext, the pass key
 // the INHERIT key's InsertLink (redesign_button_icon's IconMarkerInherit
-// arm: the same act, `pass` inherits). AT THE PROGRAM KEYS' ONE INK SIZE,
+// arm: the same act, `pass` inherits). AT THE PROGRAM KEYS' ONE SIZE,
 // centered on the face (paint_key_glyph, paint_handler.cpp — the one owner
-// of the size, kKeyGlyphInkPerKeySide of `key_height`, never of osk_key_h),
-// in the key's ink (materials.h's key_ink: the text tone at rest and under
-// the press; text_on_lit on a lit face, which no glyph key wears — only
-// Shift and the page key light, and they keep their words; key_dim_ink on a
-// disabled key, of which there is none). A null answer: the key wears its
+// of the size, the set's 16 W canvas since send Z, 2026-11-19, never of
+// osk_key_h), in the key's ink (materials.h's flat_key_ink: the text tone
+// at rest and under the press; text_on_lit on a lit face, which no glyph key
+// wears — only Shift and the page key light, and they keep their words; no
+// key here is ever disabled). A null answer: the key wears its
 // word or its character.
 inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
     using icons::Icon;
@@ -549,7 +549,8 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // Default's FFAD56, its cap `text_on_lit`, Default's 070707 (architect
 // 2026-11-11, session 106, the keyboard following the lamps; the print the
 // selection's text since 2026-11-17, session 140; materials.h's
-// THE KEY and key_ink), which this key and the page key (while the symbols
+// paint_flat_key and flat_key_ink, today's flat key awaiting send Z's stage
+// D), which this key and the page key (while the symbols
 // page stands) wear off their lamps — a press on a lit one the accent
 // darkened, `lit_press_fill`, Default's C68743, a press on an unlit key
 // the press face, Default's 2A2A2A, from the press to the lift (the press

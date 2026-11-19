@@ -28,8 +28,8 @@
 // `default_dark_neutral_medium`; no file ships it) IS THE 2026-11-01..05
 // MEASURED PALETTE TO THE BYTE but the selection
 // pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
-// SurfaceBackground, since 2026-11-07), the level fill, the lit-but-inert
-// key's pair and the radio keys' three (2026-11-11), the playhead's line
+// SurfaceBackground, since 2026-11-07), the lit-but-inert key's pair
+// (2026-11-11), the playhead's line
 // (2026-11-12), the disabled chip's outline (2026-11-12, toward the marker
 // lane's Desktop, 2026-11-13), the enabled chip's fill (the accent, 2026-11-13)
 // and the print on a lit face, the cards' ink and the ruler (2026-11-17,
@@ -48,13 +48,12 @@
 // 2026-11-13, session 121, the same block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// fifty words with its literal (the press arc's four, 2026-11-05, among
+// forty-five words with its literal (the press arc's four, 2026-11-05, among
 // them — the key press face, the list press pair and the lit press fill —
-// the lamp arc's clip lamp the same night, the six of 2026-11-11: the level
-// fill, the lit-but-inert key's face and its glyph, and the radio keys'
-// three faces, and the disabled chip's outline and the enabled chip's fill
-// of 2026-11-12, both retold 2026-11-13; the trough, the well's frame and
-// the radio key's inert print of 2026-11-17, with the print on a lit face,
+// the lamp arc's clip lamp the same night, the lit-but-inert key's face and
+// its glyph of 2026-11-11, and the disabled chip's outline and the enabled
+// chip's fill of 2026-11-12, both retold 2026-11-13; the trough and the
+// well's frame of 2026-11-17, with the print on a lit face,
 // the cards' ink, the ruler and the two inert pairs retold that day,
 // session 140; the body tone, the title bar's text, the sidebar text, the
 // ruler's digits and the disabled key's face and border of 2026-11-19, send
@@ -64,9 +63,9 @@
 // MIXED (architect 2026-11-13, session 119; theme_roles.h's THE BRIGHT
 // MIX): install_palette fills every member off the row with its bright
 // tones — of this table `cue`, `cue_fill` and the playhead's two, of the
-// chrome's the radio keys', the lit key's press and inert faces, the
-// selection and list press fills, the cards, the clip lamp and the level
-// fill — mixed toward its ground at the `bright_mix` key. Every "Default N"
+// chrome's the lit key's press and inert faces, the selection and list
+// press fills, the cards and the clip lamp — mixed toward its ground at the
+// `bright_mix` key. Every "Default N"
 // below is the reference row's own number, the record; at 100 the screen
 // shows exactly it, at the key's default 75 (architect 2026-11-18, send Y)
 // the accent C88B4A where it says FFAD56.
@@ -114,11 +113,13 @@
 //                            (render_center_lines) — Live's zero line IS the
 //                            ink
 //   cue              FFAD56  THE ACCENT (ViewCheckControlEnabledOn, the
-//                            orange of Live's start marker): A LIT KEY'S
-//                            WHOLE FACE, read by the key's painter
-//                            (paint_key, materials.h; architect 2026-11-11,
-//                            session 106), a radio key's but (the chrome's
-//                            `radio_lit_fill`, session 107); the markers
+//                            orange of Live's start marker): A LIT OR
+//                            PRESSED KEY'S FACE, read by the key's painters
+//                            (paint_linked_group, paint_word_button, and
+//                            NOISE's progress line, paint_entry, materials.h;
+//                            architect 2026-11-11, session 106; every lit
+//                            key since the radio keys' class retired,
+//                            2026-11-19, send Z); the markers
 //                            wear the same word as `cue_fill` (below), so
 //                            no well painter reads `cue` itself (the head's
 //                            last paragraph)
@@ -199,10 +200,7 @@
 // word (2026-11-13, session 119), kept in this table where it stood; the
 // lit key's press
 // and inert faces are the chrome's (`lit_press_fill`, `lit_dim_fill`,
-// theme_file.h), derived from it (materials.h's THE KEY). A LIT RADIO KEY'S
-// THREE FACES are the chrome's alone (`radio_lit_fill`,
-// `radio_lit_press_fill`, `radio_lit_dim_fill`; architect 2026-11-11,
-// session 107): the purple is no program color.
+// theme_file.h), derived from it (materials.h's THE KEY).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -235,16 +233,14 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the fifty words with its literal, so
+// 2026-11-01..05 — every one of the forty-five words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
 // the theme files' of 2026-11-11, every row equal to the .ask reader's).
 // The lamp arc's one (2026-11-05 night) is Live's own word read
 // off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum).
-// THE LEVEL FILL 007383 is Default's RangeEditField, Live's volume color
-// (architect 2026-11-11, session 105; theme_roles.h's COMPOSITED block). THE
-// LIT KEY'S FOUR (architect 2026-11-11, session 106: a lit key's face is
+// THE LIT KEY'S FOUR (architect 2026-11-11, session 106: a lit key's face is
 // the accent, `cue` FFAD56; theme_roles.h's head): THE PRINT ON A LIT FACE
 // 070707, Default's StandbySelectionForeground (architect 2026-11-17,
 // session 140); THE LIT PRESS FILL C68743, the accent × 42 / 54, the ratio
@@ -254,12 +250,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // over the body tone 242424, C88B4A) at 60 % over the body tone — and its
 // glyph 2A221A, (the print at 80 % over C88B4A) at 60 % over the body
 // tone, dimmed with the button as GTK's opacity dims it — each per channel,
-// rounded half to even (the DERIVED block). THE RADIO KEYS' FOUR (architect
-// 2026-11-11, session 107: a lit radio key wears the purple): the face
-// B595FC, Default's ScaleAwareness; its press 8D74C4, the purple × 42 / 54;
-// its inert face 655785, the purple by the same rule (9179C6 at 60 % over
-// the body tone), under its own glyph 232029 by the same rule
-// (the DERIVED block). THE RULER 393939 is the canvas's tone and THE CARDS'
+// rounded half to even (the DERIVED block). THE RULER 393939 is the canvas's tone and THE CARDS'
 // INK 070707 the print's (architect 2026-11-17, session 140, ruling 3 and
 // D4). OUR OWN THREE ROLES (architect 2026-11-19, send Z; theme_roles.h's
 // THE FORMAT) are Default's own numbers: THE BODY TONE 242424, its
@@ -306,10 +297,6 @@ static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.lit_press_fill  == 0xC68743);
 static_assert(kDefault.lit_dim_fill    == 0x86623B);
-static_assert(kDefault.radio_lit_fill  == 0xB595FC);
-static_assert(kDefault.radio_lit_press_fill == 0x8D74C4);
-static_assert(kDefault.radio_lit_dim_fill   == 0x655785);
-static_assert(kDefault.radio_text_on_lit_dim == 0x232029);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x393939);
 static_assert(kDefault.ruler_tick      == 0x919191);
@@ -327,7 +314,6 @@ static_assert(kDefault.list_press_text == 0x070707);
 static_assert(kDefault.card_face       == 0xE76942);
 static_assert(kDefault.card_ink        == 0x070707);
 static_assert(kDefault.clip_lamp       == 0xFF0A0A);
-static_assert(kDefault.level_fill      == 0x007383);
 // THE PALETTE (the head's thirteen).
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);

@@ -96,9 +96,8 @@ struct ToolbarChord {
     // roster button, and the selector's arm in GuiInputHandler::on_key
     // resolves a press on the standing value to its axis's other value, so
     // the button and its key are one rule with no flag here. A hold on the
-    // lit member keeps it lit, its purple face (a radio key,
-    // redesign_button_is_radio, 2026-11-11) darkened by the press ratio
-    // (materials.h's key_look, LitPress).)
+    // lit member keeps it lit, Arc's one look for pressed and checked
+    // (materials.h's key_state).)
     // REPEATS: a held press on this button synthesizes its own chord over and
     // over — the hold-repeat.
     //
@@ -2854,9 +2853,10 @@ void GuiInputHandler::end_touch_caret_drag() {
 int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
     if (!app.modal_dialog.valid) return -1;
     for (size_t i = 0; i < app.modal_dialog.buttons.size(); ++i) {
-        // The published rect is the PAINTED face (the ground round it is not
-        // pressable, architect 2026-11-02, R5; point_on_key, materials.h).
-        if (point_on_key(app.modal_dialog.buttons[i].rect, x, y))
+        // The published rect is the PAINTED BOX, border included, less the
+        // seam its linked neighbor on the left owns (the ground round it is
+        // not pressable, architect 2026-11-02, R5; point_on_key, materials.h).
+        if (app.modal_dialog.buttons[i].hit(x, y))
             return static_cast<int>(i);
     }
     return -1;
@@ -2909,8 +2909,8 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // and the same tick the roster's walk uses, keyed on the Dialog half of
     // the owner's index space. THE TARGET IS THE BUTTON'S COLUMN, not the
     // face the press above reads (architect 2026-11-07, session 87;
-    // tooltip_column_rect, render.h: the face and half the gap each side —
-    // every dialog button is a key on a controls row). EVERY dialog button
+    // tooltip_column_rect, render.h: the key's box less the seam its left
+    // neighbor owns — the hit box itself). EVERY dialog button
     // has a hint, so there is
     // no membership term here — the column alone decides, and the painter's
     // stash carries the text. A held press starts no wait here either (the
@@ -2937,7 +2937,8 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     if (app.modal_dialog.valid) {
         for (size_t i = 0; i < app.modal_dialog.buttons.size(); ++i) {
             const GuiRect column =
-                tooltip_column_rect(app.modal_dialog.buttons[i].rect);
+                tooltip_column_rect(app.modal_dialog.buttons[i].rect,
+                                    app.modal_dialog.buttons[i].seam);
             if (rect_contains(column, x, y)) {
                 tip        = static_cast<int>(i);
                 tip_column = column;
@@ -6528,14 +6529,14 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // pass it by.
         if (under_pointer && hot < 0) hot = i;
         // THE TOOLTIP'S TARGET IS THE KEY'S COLUMN (architect 2026-11-07,
-        // session 87; tooltip_column_rect, render.h): the face and half the
-        // gap each side — wider than the face the press
-        // reads — and Play's clock field beside it. The rect the pointer is
-        // in goes to the writer with the owner (the bypass chain measures
-        // from it at the leave). The columns of a run tile, so the walk's
-        // first hit is the only one.
+        // session 87; tooltip_column_rect, render.h): the key's box less the
+        // seam its left neighbor owns — the hit box itself since send Z's
+        // linked groups — and Play's clock field beside it. The rect the
+        // pointer is in goes to the writer with the owner (the bypass chain
+        // measures from it at the leave). The columns of a group tile, so the
+        // walk's first hit is the only one.
         if (modal_veil || under_card) continue;
-        const GuiRect column = tooltip_column_rect(f.rect);
+        const GuiRect column = tooltip_column_rect(f.rect, f.seam);
         const bool on_column = rect_contains(column, mx, my);
         if (!on_column &&
             !rect_contains(f.field, app.last_mouse_rx, app.last_mouse_ry))
@@ -6944,11 +6945,12 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // lift and the walk's inside crossing (the press arc, architect 2026-11-05)
 // — IS THE KEY'S OWN PAINTED EXTENT (architect 2026-11-16, the beats: the
 // key, not the whole strip, every key press and release):
-// RedesignButtonFace::painted, the face as the row's painter last laid it
-// out (whole px; the printed legend under it retired 2026-11-18, send Z).
-// WHAT A PRESS EDGE CHANGES IS INSIDE IT: the face's fill, a whole-W box
-// (paint_key's four looks), and the glyph repainted over it, centered inside
-// the face — and publish_button_face refreshes a key's as-painted bits only
+// RedesignButtonFace::painted, the key's box as the row's painter last laid
+// it out (whole px, border included). WHAT A PRESS EDGE CHANGES IS INSIDE
+// IT: the key's accent between its group's border rows over both its seams,
+// its group's rounded corner where it ends the group, and the drawing
+// repainted over it (materials.h's paint_linked_group: every pixel a
+// member's state moves lies inside its own box) — and publish_button_face refreshes a key's as-painted bits only
 // under a clip that covers its painted extent, so a rect that is that
 // extent keeps this frame a publishing one and the tick's comparator
 // reading what is on screen; the rows' painters being clip-driven, nothing

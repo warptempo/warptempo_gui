@@ -11,7 +11,7 @@
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "theme_file.h"     // kGuiThemeRoles (the chrome's roles)
 #include "theme_roles.h"    // bright_mixed_tones (the install's mix)
-#include "materials.h"      // paint_key, KeyLook, KeyLitClass
+#include "materials.h"      // paint_flat_key, KeyLook
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -401,15 +401,13 @@ void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
 // render.h's caption note.)
 
 // THE SCRUB'S THUMB (render.h's scrub block, 2026-10-23): the flat key on
-// its box's real edges (materials.h's paint_key on a GuiRectF, the exact
-// fill) — never lit (it is dragged, not turned
-// on or off), so the enabled bit and the lit class, which part a lit key's
-// faces alone, have nothing to say here (Lamp, every non-roster surface's
-// class) — the press face while `pressed`, the owner's grab on the thumb
-// (the press arc, architect 2026-11-05; the rule at the declaration).
+// its box's real edges (materials.h's paint_flat_key, the exact fill;
+// today's flat key and press look, awaiting send Z's stage D) — never lit
+// (it is dragged, not turned on or off) — the press face while `pressed`,
+// the owner's grab on the thumb (the press arc, architect 2026-11-05; the
+// rule at the declaration).
 void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed) {
-    paint_key(cr, box, key_look(/*checked=*/false, pressed),
-              /*enabled=*/true, KeyLitClass::Lamp);
+    paint_flat_key(cr, box, key_look(/*checked=*/false, pressed));
 }
 
 // THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
@@ -2672,7 +2670,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // tone derived from them recomputed) and copied for the word readers
     // (installed_theme), its slug and group the list row's; then THE
     // PROGRAM'S THIRTEEN off the palette's role table (palette_file.h), THE
-    // CHROME'S THIRTY off the chrome's (theme_file.h), each member the mixed
+    // CHROME'S THIRTY-THREE off the chrome's (theme_file.h), each member the mixed
     // row's tone, and THE PANEL'S FACE the theme's ground (the flat look,
     // materials.h's head) — the tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.

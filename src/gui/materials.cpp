@@ -1,35 +1,118 @@
 #include "materials.h"
 
+#include "cool_edit_paint.h"   // CoverageStampPass, the exact-coverage road
+
+#include <cstddef>
+
 // The rules are at the declarations (materials.h).
 
-// THE KEY'S FACE TONE for a look, the enabled bit and the lit class — the
-// one choice both paint_key roads fill with (the head's THE KEY,
-// materials.h): the lit key's three faces — its class's color (the accent,
-// or the purple for a radio key), darkened under a press, dimmed when the
-// key is dead — and the unlit key's two; the enabled bit and the class are
-// read for a lit key alone.
-static GuiColor key_face_tone(KeyLook look, bool enabled, KeyLitClass cls) {
+void paint_linked_group(cairo_t* cr, int x, int y,
+                        std::span<const KeyState> states) {
+    const int n = static_cast<int>(states.size());
+    if (n <= 0) return;
     const GuiPalette& p = palette();
-    const bool pressed = key_look_pressed(look);
-    const bool radio   = cls == KeyLitClass::Radio;
-    return key_look_lit(look)
-               ? (!enabled ? (radio ? p.radio_lit_dim_fill : p.lit_dim_fill)
-                  : pressed ? (radio ? p.radio_lit_press_fill
-                                     : p.lit_press_fill)
-                            : (radio ? p.radio_lit_fill : p.cue))
-               : (pressed ? p.key_press_face : p.key_face);
+    const double b  = static_cast<double>(key_border_px());
+    const double R  = static_cast<double>(key_corner_px());
+    const double r  = static_cast<double>(key_inner_corner_px());
+    const double w  = static_cast<double>(icon_case_w_px());
+    const double h  = static_cast<double>(icon_case_h_px());
+    const double x0 = static_cast<double>(x);
+    const double y0 = static_cast<double>(y);
+    const double x1 = x0 + static_cast<double>(linked_group_w_px(n));
+    const double y1 = y0 + h;
+    const auto box_x = [&](int i) {
+        return x0 + static_cast<double>(i * key_link_pitch_px());
+    };
+    CoverageStampPass pass;
+    pass.begin(cr);
+    // (1) THE BORDER, the group's rounded box.
+    pass.rounded_rect(x0, y0, x1, y1, R, R, p.well_border);
+    // (2) A DISABLED MEMBER'S STRETCH OF THE RING: its box's columns, the
+    //     outer corners where it ends the group.
+    for (int i = 0; i < n; ++i) {
+        if (states[static_cast<std::size_t>(i)] != KeyState::Disabled) continue;
+        pass.rounded_rect(box_x(i), y0, box_x(i) + w, y1, i == 0 ? R : 0.0,
+                          i == n - 1 ? R : 0.0, p.key_dim_border);
+    }
+    // (3) THE FACES: each member from one border inside its box to one
+    //     border inside the next box (its right seam its own), the last to
+    //     one border inside its own right edge.
+    for (int i = 0; i < n; ++i) {
+        const KeyState s = states[static_cast<std::size_t>(i)];
+        const GuiColor face = s == KeyState::Disabled ? p.key_dim_face
+                            : s == KeyState::LitInert ? p.lit_dim_fill
+                                                      : p.key_face;
+        const double fx0 = box_x(i) + b;
+        const double fx1 = i == n - 1 ? box_x(i) + w - b : box_x(i + 1) + b;
+        pass.rounded_rect(fx0, y0 + b, fx1, y1 - b, i == 0 ? r : 0.0,
+                          i == n - 1 ? r : 0.0, face);
+    }
+    // (4) A LIT MEMBER'S ACCENT over its box's whole columns between the
+    //     border's rows, the inner box's own edge and corners where it ends
+    //     the group.
+    for (int i = 0; i < n; ++i) {
+        if (states[static_cast<std::size_t>(i)] != KeyState::Lit) continue;
+        const double lx0 = i == 0 ? x0 + b : box_x(i);
+        const double lx1 = i == n - 1 ? x1 - b : box_x(i) + w;
+        pass.rounded_rect(lx0, y0 + b, lx1, y1 - b, i == 0 ? r : 0.0,
+                          i == n - 1 ? r : 0.0, p.cue);
+    }
+    pass.end();
 }
 
-void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look, bool enabled,
-               KeyLitClass cls) {
-    if (r.w <= 0 || r.h <= 0) return;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_ink_rect(cr, r, key_face_tone(look, enabled, cls));
-    cairo_restore(cr);
+void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state) {
+    if (box.w <= 0 || box.h <= 0) return;
+    const GuiPalette& p = palette();
+    const GuiColor face = state == KeyState::Lit      ? p.cue
+                        : state == KeyState::Disabled ? p.key_dim_face
+                        : state == KeyState::LitInert ? p.lit_dim_fill
+                                                      : p.key_face;
+    const GuiColor ring =
+        state == KeyState::Disabled ? p.key_dim_border : p.well_border;
+    const double b  = static_cast<double>(key_border_px());
+    const double R  = static_cast<double>(key_corner_px());
+    const double r  = static_cast<double>(key_inner_corner_px());
+    const double x0 = static_cast<double>(box.x);
+    const double y0 = static_cast<double>(box.y);
+    const double x1 = x0 + static_cast<double>(box.w);
+    const double y1 = y0 + static_cast<double>(box.h);
+    CoverageStampPass pass;
+    pass.begin(cr);
+    pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, face);
+    pass.rounded_ring(x0, y0, x1, y1, R, b, ring);
+    pass.end();
 }
 
-void paint_key(cairo_t* cr, const GuiRectF& r, KeyLook look, bool enabled,
-               KeyLitClass cls) {
-    paint_ink_rect(cr, r, key_face_tone(look, enabled, cls));
+void paint_entry(cairo_t* cr, const GuiRect& box,
+                 std::optional<double> progress) {
+    if (box.w <= 0 || box.h <= 0) return;
+    const GuiPalette& p = palette();
+    const double b  = static_cast<double>(key_border_px());
+    const double R  = static_cast<double>(key_corner_px());
+    const double r  = static_cast<double>(key_inner_corner_px());
+    const double x0 = static_cast<double>(box.x);
+    const double y0 = static_cast<double>(box.y);
+    const double x1 = x0 + static_cast<double>(box.w);
+    const double y1 = y0 + static_cast<double>(box.h);
+    CoverageStampPass pass;
+    pass.begin(cr);
+    pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, p.ruler_face);
+    pass.rounded_ring(x0, y0, x1, y1, R, b, p.well_border);
+    if (progress && *progress > 0.0) {
+        const double t   = std::min(*progress, 1.0);
+        const double ix0 = x0 + b, ix1 = x1 - b, iy1 = y1 - b;
+        const double line = static_cast<double>(scaled_px(kEntryProgressW, 1));
+        pass.rounded_rect_cut(ix0, y0 + b, ix1, iy1, r, r, ix0, iy1 - line,
+                              ix0 + t * (ix1 - ix0), iy1, p.cue);
+    }
+    pass.end();
+}
+
+void paint_flat_key(cairo_t* cr, const GuiRectF& r, KeyLook look) {
+    const GuiPalette& p = palette();
+    const GuiColor tone = look == KeyLook::Lit      ? p.cue
+                        : look == KeyLook::LitPress ? p.lit_press_fill
+                        : look == KeyLook::Press    ? p.key_press_face
+                                                    : p.key_face;
+    paint_ink_rect(cr, r, tone);
 }

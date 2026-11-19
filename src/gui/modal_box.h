@@ -34,8 +34,8 @@
 //      the inner pad 8 W, the key (key_width wide and key_height tall,
 //      render.h's icon_case_w_px / icon_case_h_px), the outer pad 7 W
 //      (strip_h_px) — on the body tone, no line, bar or border, its
-//      outermost FACES 6 W INSIDE THE PANEL (render.h's kEdgeInsetW;
-//      materials.h's THE FACE AND ITS GAP);
+//      outermost BOXES 6 W INSIDE THE PANEL (render.h's kEdgeInsetW;
+//      materials.h's THE KEY);
 //   3. under both, THE STATUS BAR on the window's foot, never covered
 //      (render.h's status bar block: it keeps its process line under every
 //      modal and drops its selection count).
@@ -49,11 +49,13 @@
 // the lists, a prompt's question, the progress modal's sentence, a dialog
 // editor's line ("the user shouldn't be typing on a non-flat color",
 // 2026-10-23). THE ONE EXCEPTION IS THE SCORE VIEWER'S PANE,
-// `score_pane_face` (Default's 191919) (below). EVERY BUTTON THE FLAT KEY
-// with its glyph on it, a word button's word its glyph's key and its
-// tooltip (paint_handler.cpp's modal_word_buttons and modal_word_icon)
-// (paint_modal_box). (The overlays' own look — lists, entries, word
-// buttons, the centered dialogs — is send Z's stage D.)
+// `score_pane_face` (Default's 191919) (below). EVERY BUTTON ARC'S (send
+// Z's stage C, 2026-11-19; materials.h's THE KEY): a glyph key Arc's linked
+// button, a word button Arc's text button, its word alone on it and its
+// tooltip the word (paint_handler.cpp's modal_word_buttons and
+// paint_modal_dialog's button row) (paint_modal_box). (The overlays' own
+// look — lists, the centered dialogs, the editors' entry — is send Z's
+// stage D.)
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the controls row), and
 // it lands on the well's foot. At the tablet's 2304 x 1440, 200 % and the
 // keys' defaults, key_width 36 and key_height 28 (the 72 x 56 face, the

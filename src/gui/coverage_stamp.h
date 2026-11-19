@@ -224,3 +224,41 @@ inline double coverage_of_rounded_rect(int px, int py, double x0, double y0,
     cut(rr, x1 - rr, x1, y1 - rr, y1, x1 - rr, y1 - rr);
     return std::clamp(cov, 0.0, 1.0);
 }
+
+// THE AREA OF A ROUNDED RECT INSIDE A RECT (architect 2026-11-19, send Z:
+// the entry's progress line, Arc's entry progress, cut at its real end): the
+// rounded rect of coverage_of_rounded_rect's shape — [x0, x1] x [y0, y1],
+// left corners of radius `rl`, right of `rr`, the same clamp owed — inside
+// the rect [qx0, qx1] x [qy0, qy1], in the same closed forms: the two
+// rects' overlap less, at every rounded corner whose square meets it, the
+// part of that square in the overlap outside its quarter disk. Over a pixel's
+// unit cell it is that pixel's coverage; over the cell cut to a narrower
+// rect, the coverage of the shape cut there.
+inline double area_of_rounded_rect_in_rect(double x0, double y0, double x1,
+                                           double y1, double rl, double rr,
+                                           double qx0, double qy0,
+                                           double qx1, double qy1) {
+    const double ox0 = std::max(x0, qx0);
+    const double ox1 = std::min(x1, qx1);
+    const double oy0 = std::max(y0, qy0);
+    const double oy1 = std::min(y1, qy1);
+    if (ox1 <= ox0 || oy1 <= oy0) return 0.0;
+    double area = (ox1 - ox0) * (oy1 - oy0);
+    const auto cut = [&](double r, double sx0, double sx1, double sy0,
+                         double sy1, double dx, double dy) {
+        if (r <= 0.0) return;
+        const double ix0 = std::max(ox0, sx0);
+        const double ix1 = std::min(ox1, sx1);
+        const double iy0 = std::max(oy0, sy0);
+        const double iy1 = std::min(oy1, sy1);
+        if (ix1 <= ix0 || iy1 <= iy0) return;
+        const double part = (ix1 - ix0) * (iy1 - iy0);
+        const double disk = area_of_disk_in_rect(dx, dy, r, ix0, iy0, ix1, iy1);
+        area -= part - disk;
+    };
+    cut(rl, x0, x0 + rl, y0, y0 + rl, x0 + rl, y0 + rl);
+    cut(rl, x0, x0 + rl, y1 - rl, y1, x0 + rl, y1 - rl);
+    cut(rr, x1 - rr, x1, y0, y0 + rr, x1 - rr, y0 + rr);
+    cut(rr, x1 - rr, x1, y1 - rr, y1, x1 - rr, y1 - rr);
+    return std::max(area, 0.0);
+}

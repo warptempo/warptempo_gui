@@ -332,8 +332,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            MIX): the whole PERCENT of itself each
 //                            bright tone of the installed theme keeps as it
 //                            is mixed toward the theme's ground — the
-//                            accent, the radio keys' purple, the playhead's
-//                            head, the level case's fill, the cards, the
+//                            accent, the playhead's head, the cards, the
 //                            clip lamp and the two selection fills, and
 //                            every tone derived from them — an integer in
 //                            [0, 100] in canonical spelling (parse_bright_mix

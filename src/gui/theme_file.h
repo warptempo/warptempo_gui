@@ -39,38 +39,31 @@
 // owns what each role paints) and the theme tone that fills it. The first
 // eight are Windows' own element names (ButtonFace, ButtonText, Hilight /
 // HilightText, WindowText, InfoWindow / InfoText and the tooltip's border),
-// the chrome's painters written against them; the TWENTY-NINE after them
+// the chrome's painters written against them; the TWENTY-FIVE after them
 // are the flat look's tones (materials.h's head, 2026-11-01..05: the
 // twelve of the look, the press arc's three, 2026-11-05 — the key's press
 // face and the lists' press pair — the lamp arc's clip lamp the same night,
-// the level case's fill, `level_fill`, 2026-11-11, the lit key's two
-// the same day, session 106 — `lit_press_fill` and `lit_dim_fill`, its
-// face under a press and its face when inert — and the radio keys' three,
-// session 107 — `radio_lit_fill`, `radio_lit_press_fill` and
-// `radio_lit_dim_fill`, the purple at rest, under a press and inert — the
-// trough and the well's frame of 2026-11-17, session 140, `trim_bar_face`
-// and `well_border`, and THE ARC PAGE'S SIX of 2026-11-19, send Z, read by
-// no painter until its stages B and C: the body tone, the title bar's text,
-// the sidebar text, the ruler's digits and the disabled key's face and
-// border), members since the theme arc so every painter reads palette() —
+// the lit key's two of 2026-11-11, session 106 — `lit_press_fill` and
+// `lit_dim_fill` — the trough and the well's frame of 2026-11-17, session
+// 140, `trim_bar_face` and `well_border`, and THE ARC PAGE'S SIX of
+// 2026-11-19, send Z: the body tone, the title bar's text, the sidebar
+// text, the ruler's digits and the disabled key's face and border; the
+// level case's fill and the radio keys' three retired 2026-11-19, send Z's
+// stage C), members since the theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
 // clock pair retired 2026-11-02 with the overlays' flat pass). THE LIT KEY
-// (architect 2026-11-11, session 106, materials.h's THE KEY): ITS FACE AT
-// REST HAS NO ROLE HERE — paint_key reads the palette's `cue`, THE ACCENT,
-// a program role (the markers' chip wears the same word as `cue_fill`,
-// 2026-11-13, session 119), so
-// no `lit_fill` stands beside it holding the same tone; its two other faces
-// are the two roles
-// above; WHAT IS PRINTED ON IT has none either — the glyph road takes the
-// theme row's WORD, so `text_on_lit`, `text_on_lit_dim` and
-// `radio_text_on_lit_dim` are read by key_ink off installed_theme(), as
-// `text` and `key_dim_ink` are for a glyph. No door class: the seven overlay openers light as the lamps do.
-// THE LIT RADIO KEY (architect 2026-11-11, session 107, materials.h's THE
-// RADIO KEYS) HAS ALL THREE FACES HERE — the purple is no program role, so
-// its face at rest is a chrome role of its own, `radio_lit_fill`, beside
-// its press and inert faces; the print on it is the lamps' `text_on_lit`,
-// its inert print `radio_text_on_lit_dim` (2026-11-17, session 140).
+// (architect 2026-11-11, session 106; Arc's lit button since 2026-11-19,
+// send Z, materials.h's THE KEY): ITS FACE HAS NO ROLE HERE —
+// paint_linked_group reads the palette's `cue`, THE ACCENT, a program role
+// (the markers' chip wears the same word as `cue_fill`, 2026-11-13, session
+// 119), so no `lit_fill` stands beside it holding the same tone; its inert
+// face is `lit_dim_fill` above (`lit_press_fill` the on-screen keyboard's
+// alone, awaiting stage D); WHAT IS PRINTED ON IT has none either — the
+// glyph road takes the theme row's WORD, so `text_on_lit` and
+// `text_on_lit_dim` are read by key_ink off installed_theme(), as `text` and
+// `key_dim_ink` are for a glyph. No door class and no radio class: every
+// checked key lights in the one accent.
 // TWO ROLES
 // MAY SHARE A TONE — a
 // role is what it paints, not its value: `label`, `field_text` and `text`
@@ -80,12 +73,12 @@
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's thirty-seven (the eight
+// 2026-10-04), in GuiPalette's order: the chrome's thirty-three (the eight
 // of 2026-10-04 — the caption's six, 2026-10-05..10-21, left with the
 // captions; the seven unread ones, 2026-11-02, with the overlays' rings —
-// and the twenty-nine flat-look tones, the press arc's three, the clip
-// lamp, the level fill, the lit key's two, the radio keys' three, the
-// trough, the well's frame and the Arc page's six among them). The
+// and the twenty-five flat-look tones, the press arc's three, the clip
+// lamp, the lit key's two, the trough, the well's frame and the Arc page's
+// six among them). The
 // program's roles are the palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
 // palette_file.cpp's coverage proof walks it, so a role cannot be valued and
@@ -107,14 +100,12 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"card_ground",     &GuiPalette::card_ground,     &GuiThemeTones::card_face},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
     {"card_frame",      &GuiPalette::card_frame,      &GuiThemeTones::card_face},
-    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head: the text tones, the
+    // THE FLAT LOOK'S TWENTY-FIVE (materials.h's head: the text tones, the
     // key and its press face, the lit key's press and inert faces, the
-    // radio key's three lit faces, the well's tones, the panes, the lists'
-    // press pair, the clip lamp, the level case's fill; and THE ARC PAGE'S
-    // SIX, architect 2026-11-19, send Z, theme_roles.h's head — the body
-    // tone, the title bar's text, the sidebar text, the ruler's digits, the
-    // disabled key's face and border — no painter reading them before the
-    // send's stages B and C).
+    // well's tones, the panes, the lists' press pair, the clip lamp; and THE
+    // ARC PAGE'S SIX, architect 2026-11-19, send Z, theme_roles.h's head —
+    // the body tone, the title bar's text, the sidebar text, the ruler's
+    // digits, the disabled key's face and border).
     {"body_face",       &GuiPalette::body_face,       &GuiThemeTones::body_face},
     {"text",            &GuiPalette::text,            &GuiThemeTones::text},
     {"title_text",      &GuiPalette::title_text,      &GuiThemeTones::title_text},
@@ -127,9 +118,6 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"key_press_face",  &GuiPalette::key_press_face,  &GuiThemeTones::key_press_face},
     {"lit_press_fill",  &GuiPalette::lit_press_fill,  &GuiThemeTones::lit_press_fill},
     {"lit_dim_fill",    &GuiPalette::lit_dim_fill,    &GuiThemeTones::lit_dim_fill},
-    {"radio_lit_fill",  &GuiPalette::radio_lit_fill,  &GuiThemeTones::radio_lit_fill},
-    {"radio_lit_press_fill", &GuiPalette::radio_lit_press_fill, &GuiThemeTones::radio_lit_press_fill},
-    {"radio_lit_dim_fill",   &GuiPalette::radio_lit_dim_fill,   &GuiThemeTones::radio_lit_dim_fill},
     {"well_frame",      &GuiPalette::well_frame,      &GuiThemeTones::well_frame},
     {"ruler_face",      &GuiPalette::ruler_face,      &GuiThemeTones::ruler_face},
     {"ruler_tick",      &GuiPalette::ruler_tick,      &GuiThemeTones::ruler_tick},
@@ -143,7 +131,6 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"list_press_fill", &GuiPalette::list_press_fill, &GuiThemeTones::list_press_fill},
     {"list_press_text", &GuiPalette::list_press_text, &GuiThemeTones::list_press_text},
     {"clip_lamp",       &GuiPalette::clip_lamp,       &GuiThemeTones::clip_lamp},
-    {"level_fill",      &GuiPalette::level_fill,      &GuiThemeTones::level_fill},
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);
 

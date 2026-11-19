@@ -1789,8 +1789,8 @@ enum class RedesignButton {
     // arm). No lamp: an act, not a mode.
     //
     // SAVE, UNDO, REDO AND RENDER STAND BEHIND IT IN THE
-    // SAME RUN, the five keys' faces one W of ground apart
-    // (materials.h's THE CELL AND ITS FACE, 2026-11-03; architect
+    // SAME RUN, the five keys ONE LINKED GROUP (send Z, 2026-11-19;
+    // materials.h's THE KEY; architect
     // 2026-10-22, the
     // simple layout: "push all icons together … add a spacing after render",
     // the run gap after Render the run's end; redesign_button_opens_icon_run).
@@ -1908,8 +1908,8 @@ enum class RedesignButton {
     // the touch region hold retired for it), directly after Restrict and
     // ahead of the presets key: BARE `w`, wearing TRIM and the scissors
     // (Icon::EditCut, the presets key's glyph until that day), A LAMP —
-    // lit in the radio keys' purple, a radio with ADD SEL
-    // (redesign_button_is_radio, 2026-11-11) — over AppState::trim_armed,
+    // lit in the accent, a radio with ADD SEL (2026-11-10; its own color
+    // retired 2026-11-19, send Z) — over AppState::trim_armed,
     // whose record holds the whole rule: lit, the next single-contact drag on
     // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
     // its down point instead of the pan; only a second press, a committed
@@ -2206,8 +2206,9 @@ enum class RedesignButton {
     // modifier and does not repeat.
     IconTooltips,
     // THE LEVEL CASE, NOISE (architect 2026-11-05, session 46, his "yes" on
-    // mock s46_m1 of tmp/s46), the band's third run's LAST, directly after
-    // the tooltip lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28 to
+    // mock s46_m1 of tmp/s46), the band's third run's LAST — its own entry
+    // a run gap after the run's linked group since 2026-11-19 — directly
+    // after the tooltip lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28 to
     // 2026-11-05, RETIRED with its chord and its raindrop glyph): the
     // `noise_level` device key's SLIDER (device_config.h's THE LEVEL
     // GRAMMAR). (THE AUDIO CASE, the project voice's level slider
@@ -2219,18 +2220,18 @@ enum class RedesignButton {
     // it out), no lit look, no press face (a slider shows its value; its
     // fill is the feedback — confirmed by the architect 2026-11-05 night,
     // "no press face on the cases", paint_level_case, paint_handler.cpp), no
-    // hold-repeat, no hold twin, no barrel. THE FACE: the key at rest under a
-    // FILL FROM ITS LEFT EDGE IN LIVE'S VOLUME COLOR, `level_fill`, the
-    // theme's RangeEditField (architect 2026-11-11: "at 0 it wears the full
-    // vol color, and at -inf it wears the button case color";
-    // paint_level_case) — exactly t · face width
-    // device px wide, the face's full height, no border, no inset, where t is
-    // the level's TRAVEL FRACTION (level_travel_fraction below, the
-    // square-law taper); THE NUMBER over it, the level to one decimal
+    // hold-repeat, no hold twin, no barrel. THE FACE: ARC'S ENTRY, its own
+    // box a run gap after the band's third group (architect 2026-11-19, send
+    // Z; paint_level_case), THE LEVEL ITS ENTRY PROGRESS — a 2 W line of the
+    // accent along its foot inside the border from the left over t of the
+    // inner width (the volume-colored fill of 2026-11-11 retired), none at
+    // -inf — where t is the level's TRAVEL FRACTION (level_travel_fraction below, the
+    // square-law taper); THE NUMBER in it, the level to one decimal
     // ("0.0", "-9.0", "-inf", format_level_db_face; the file keeps the exact
-    // value) in the Body face, the text tone on the fill and the face alike,
-    // AT -inf TOO (architect 2026-11-17, send U: the case is still enabled
-    // there), centered by its cap band and its ink. THE CASE IS THE LEVEL'S
+    // value) in the Body face, the text tone, AT -inf TOO (architect
+    // 2026-11-17, send U: the case is still enabled there), at the entry's
+    // pen on its line-box baseline; disabled, the number at 35 % over the
+    // entry's fill and no line. THE CASE IS THE LEVEL'S
     // ONE ROAD: no
     // Settings row (architect 2026-11-05 night, a key shown and edited on
     // the main page gets none, kSettingsEditorKeys).
@@ -3558,8 +3559,8 @@ enum class DialogTrigger {
 // ONE ANSWER OF A PROMPT: `key` the char activate_response forks on (a
 // lowercase letter, or '\x1b' for Cancel, the one answer every prompt
 // shares), and `word`
-// the button's plain word, in Title Case — its glyph's key
-// (modal_word_icon) and its tooltip. The char is the answer's dispatch identity alone,
+// the button's plain word, in Title Case — the word on its button (Arc's
+// text button, paint_modal_dialog) and its tooltip. The char is the answer's dispatch identity alone,
 // reached by its button's press, never typed (architect 2026-10-30: no key
 // reaches a prompt).
 struct PromptAnswer {
@@ -5676,6 +5677,11 @@ struct AppState {
     // refused dispatches and its act answers for itself.
     struct RedesignButtonFace {
         GuiRect rect{0, 0, 0, 0};
+        // THE SEAM (send Z, 2026-11-19, Arc's linked buttons): the columns
+        // at the box's left edge that belong to the key on its left
+        // (linked_key_seam_px, materials.h) — one border on every member of
+        // a group but its first, 0 there, on NOISE and on an empty rect.
+        int     seam = 0;
         bool    enabled       = true;
         bool    selected      = false;
         // The painted glyph's index (redesign_button_glyph: 0 the table
@@ -5711,17 +5717,18 @@ struct AppState {
         // the ordinary Roster press on Play (the key wears its press face
         // while the pointer stays on either rect — `contains`, the walk's
         // inside bit — the clock changes nothing; the act shows).
-        // THE FIELD IS ITS REAL RECT (architect 2026-11-15, the no-grid arc:
-        // time_field_rect's, the rect the field's painter fills, its rows
-        // real), tested half-open with the pointer's real place.
+        // THE FIELD IS THE CLOCK'S ENTRY AS PAINTED (row8_clock_rect,
+        // paint_handler.cpp; Arc's entry since send Z, 2026-11-19), tested
+        // half-open with the pointer's real place.
         GuiRectF field{0.0, 0.0, 0.0, 0.0};
-        // `rect` IS THE PAINTED FACE (architect 2026-11-02, R5: the ground
-        // is not pressable; materials.h's THE CELL AND ITS FACE), asked
-        // through the keys' one predicate, point_on_key — a whole box, so
+        // `rect` IS THE PAINTED BOX, border included (architect 2026-11-02,
+        // R5: the ground is not pressable; send Z, 2026-11-19: "the border
+        // is clickable"), asked less its seam through the keys' one
+        // predicate, point_on_key's linked form — a whole box, so
         // the place's pixel answers it; the clock's field
         // is no key.
         bool contains(const GuiPointerPlace& at) const {
-            return point_on_key(rect, at.x, at.y) ||
+            return point_on_key(rect, seam, at.x, at.y) ||
                    rect_contains(field, at.rx, at.ry);
         }
         // THE TOOLTIP'S FACE (tooltip_box_rect's `face`; architect
@@ -6202,9 +6209,17 @@ struct AppState {
     // answer. The faces are bpm_form_button_enabled's.
     enum class BpmFormButtonAct { None, Render, Cancel };
     struct ModalDialogButton {
-        // The PAINTED face — the hit box (point_on_key, materials.h; the
-        // ground round it not pressable, architect 2026-11-02, R5).
+        // The PAINTED BOX, border included (send Z, 2026-11-19: "the
+        // border is clickable") — the hit box (point_on_key, materials.h; the
+        // ground round it not pressable, architect 2026-11-02, R5), the
+        // press damage and the tooltip's seat.
         GuiRect     rect{0, 0, 0, 0};
+        // THE SEAM: the columns at the box's left edge that belong to the
+        // key on its left in a linked group (linked_key_seam_px,
+        // materials.h) — 0 on a group's first key and on a word button.
+        int         seam = 0;
+        // The hit test's one question (point_on_key's linked form).
+        bool hit(int x, int y) const { return point_on_key(rect, seam, x, y); }
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
@@ -6471,9 +6486,9 @@ struct AppState {
     // `modal_dialog_press_inside` below is the pointer's answer about it
     // (the release re-hits the button at the lift's own coordinates,
     // take_modal_dialog_release):
-    //   pointer ON the armed button   -> the key's PRESS FACE
-    //                                    (`key_press_face`, materials.h's
-    //                                    key_look, the press arc 2026-11-05);
+    //   pointer ON the armed button   -> the key's PRESS LOOK, Arc's lit
+    //                                    look since 2026-11-19 (materials.h's
+    //                                    key_state);
     //                                    the release COMMITS
     //   pointer OFF it                -> the button rests (the passive
     //                                    focus the press gave it, unpainted
@@ -7121,12 +7136,13 @@ struct AppState {
     // the `tooltip_delay_ms` tuning key (device_config.h, read live; render.h's
     // tooltip block), and these rules:
     //   * THE TARGET IS THE KEY'S COLUMN (tooltip_column_rect, render.h): its
-    //     face and half the key gap on each side, so a run's columns tile with no hole and the pen
-    //     sliding along a run never leaves one. The same column on every
+    //     box less the seam its linked neighbor owns — its hit box — so a
+    //     group's columns tile with no hole and the pen sliding along a
+    //     group never leaves one. The same column on every
     //     tooltip-bearing key surface — the band (the level case among it),
     //     row 8 (Play's clock field an owner's rect beside its column), the
-    //     dialogs' and overlays' controls rows. PRESSES STAY FACE-ONLY
-    //     (point_on_key): the column is the tooltip's hover target alone.
+    //     dialogs' and overlays' controls rows. The presses ask the same box
+    //     (point_on_key's linked form).
     //     A CUE'S TARGET IS ITS PRESS TARGET (2026-11-09): the marker lane's
     //     published hit rects, no column (the Marker owner, below).
     //   * EVERY ARRIVAL WAITS THE DELAY: the walk handing in an owner other
@@ -9575,8 +9591,8 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // overlay's lit opener says its word too, as THAT KEY'S TOOLTIP under its
 // overlay (overlay_leave_word below), whether or not the row also carries
 // the button. ONE OWNER FOR BOTH WORDS AND THIS RULE, here, where the
-// tooltip's arm (app_state.h) and the word buttons' builder and glyph table
-// (paint_modal_dialog, modal_word_icon, paint_handler.cpp) both read them. The words are plain, no letter
+// tooltip's arm (app_state.h) and the word buttons' builder
+// (paint_modal_dialog, paint_handler.cpp) both read them. The words are plain, no letter
 // underlined (architect 2026-10-30: the buttons are the dialogs' one road,
 // no keyboard standing under them), and the word buttons' layout reads
 // their count alone (modal_word_buttons), so a word changes no geometry.
@@ -13157,7 +13173,7 @@ inline bool authoring_locked(const AppState& a) {
 //     fourth, S+P, since 2026-10-12): bare
 //     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
 //     disabled face (2026-10-01) — the glyph dimmed, the selected view's
-//     lit face, in the dimmed purple (radio keys, redesign_button_is_radio),
+//     lit state, Arc's lit-and-inert look (materials.h's THE KEY),
 //     still saying where you stand — and
 //     the KEY's card
 //     carries the sentence.
@@ -16778,8 +16794,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // GRID ITERATIONS, LIT (architect 2026-10-11 ~01:45: the lamp is
         // permanent there, value_drag_armed): the press could change nothing,
         // so the face is the view selectors' look under the same mode — the
-        // lit face dimmed (the dimmed accent; theirs the dimmed purple, being
-        // radio keys), still saying the drag is armed
+        // lit state dimmed (Arc's lit-and-inert look, materials.h), still
+        // saying the drag is armed
         // (iteration_lock_greys' account) — and bare `[`, which the
         // iteration gate admits (its delta (b)), cards the reason at its own
         // arm (kValueDragIterationsCard). THE `h` VIEW greys and
@@ -17090,7 +17106,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // show inactive under the overlays"): no term here asks the overlays, so
 // the bit is the state's own under every overlay, and a key the overlay
 // leaves dead (redesign_button_enabled's overlay arm) wears THE
-// LIT-BUT-INERT LOOK — the dimmed accent, or a radio key's dimmed purple,
+// LIT-BUT-INERT LOOK — Arc's button:disabled:checked, the dimmed accent
 // under the dimmed print (materials.h's THE KEY) — exactly
 // as a key dead on a locked tab or under grid iterations does: ONE RULE for a
 // dead checked key everywhere. The opener and the tooltip lamp, the keys an
@@ -17125,9 +17141,8 @@ inline std::string view_pair_label(char audio, char column) {
 // says A SURFACE STANDS rather than A MODE IS ON — each sits lit while its
 // overlay stands and closes it (redesign_button_selected's overlay arms
 // below). THEY LIGHT AS THE LAMPS DO (architect 2026-11-11, session 106):
-// the whole face the accent, darkened under a press, no fill of the
-// class's own, so no painter asks this (the one lit class a painter asks is
-// the radio keys', redesign_button_is_radio below). Exactly the seven: the
+// the whole face the accent (Arc's lit button since 2026-11-19, send Z), no
+// fill of the class's own, so no painter asks this. Exactly the seven: the
 // history opener (the `h` view), Open Project (the picker), Play Renders (the
 // render player),
 // Settings (the settings page and its value list), Presets (the trim
@@ -17151,51 +17166,16 @@ inline constexpr bool redesign_button_is_door(RedesignButton b) {
     }
 }
 
-// THE RADIO KEYS — THE ONE OWNER OF THE MEMBERSHIP (architect 2026-11-11,
-// session 107; materials.h's THE KEY): the keys that stand in a RADIO GROUP,
-// two keys of which at most one is lit, A LIT ONE WEARING THE PURPLE —
-// Live's ScaleAwareness, `radio_lit_fill`, Default's B595FC, darkened under
-// a press and dimmed on a dead key by the accent's own ratios — in place of
-// the accent every other lit key wears. His reason: "the top [right]
-// buttons are always on, and there's two of them, and when you double up on
-// the orange or any accent color, it starts looking too bright, and it's in
-// the top right of my field of vision. ... If we give that to radio
-// buttons, then the problem goes away, because the purple is perfectly fine
-// in my peripheral field of vision." Exactly the four groups, each one's
-// exclusion at its own site:
-//   SOURCE / TARGET and WARP / PHASE — the view pairs: each pair reads ONE
-//     AXIS (redesign_button_selected's view arms: `active_audio_view` 'S' /
-//     'T', `active_markers_view` 'W' / 'P'), so exactly one member of each
-//     is lit, by construction;
-//   FOLLOW / RESTR — GuiPlaybackLifecycle::toggle_follow puts
-//     AppState::restrict out at FOLLOW's lit edge, toggle_restrict puts
-//     AppState::follow out at RESTR's (playback_lifecycle.cpp);
-//   TRIM / ADD SEL — GuiInputHandler::set_trim_armed puts
-//     AppState::add_to_selection out at TRIM's lit edge (input_handler.cpp),
-//     bare `k`'s arm puts the trim arm out through that setter at ADD SEL's
-//     (input_key_dispatch.cpp) — his words: "trim and add selection are
-//     radio buttons because they toggle each other off, so they would be
-//     purple as well under this rule".
-// Every other key lights in the accent: the doors, MAGNIFY, ITER, DRAG,
-// TIPS, LOCK, CUMUL, the walk lamp, and off the roster the render player's
-// Repeat One and the on-screen keyboard's latched Shift and symbols key.
-// One reader: the roster's key painter (paint_roster_case, paint_handler.cpp),
-// which hands paint_key the class (KeyLitClass, materials.h).
-inline constexpr bool redesign_button_is_radio(RedesignButton b) {
-    switch (b) {
-        case RedesignButton::ViewSource:
-        case RedesignButton::ViewTarget:
-        case RedesignButton::ViewWarp:
-        case RedesignButton::ViewPhase:
-        case RedesignButton::IconFollow:
-        case RedesignButton::IconRestrict:
-        case RedesignButton::IconTrimArm:
-        case RedesignButton::IconAddToSelection:
-            return true;
-        default:
-            return false;
-    }
-}
+// (THE RADIO KEYS' CLASS — redesign_button_is_radio, the eight keys of four
+// exclusive pairs, SOURCE / TARGET, WARP / PHASE, FOLLOW / RESTR and TRIM /
+// ADD SEL, lit in Live's ScaleAwareness, the purple, from 2026-11-11, session
+// 107 — RETIRED 2026-11-19, send Z's stage C: "we can let go of the green";
+// every lit key wears the one accent, Arc's. Its one reader was the roster's
+// key painter. Each pair's exclusion stays at its own site:
+// redesign_button_selected's view arms read one axis per pair;
+// GuiPlaybackLifecycle::toggle_follow / toggle_restrict put each other out
+// (playback_lifecycle.cpp); GuiInputHandler::set_trim_armed and bare `k`'s
+// arm put TRIM and ADD SEL out (input_handler.cpp, input_key_dispatch.cpp).)
 
 inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
                                      RedesignButton b) {
@@ -17256,9 +17236,9 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // picker content or the score viewer opened — the one state that
         // greys it lit, the enum's ITS GATES ARE ITS OWN), which the shared key
         // painter already handles: a disabled checked key keeps its lit
-        // face, in the dimmed purple, ADD SEL being a radio key
-        // (redesign_button_is_radio), under its dimmed glyph (materials.h's
-        // paint_key and key_ink; the head, 2026-11-11, session 107).
+        // state, Arc's lit-and-inert look, under its dimmed drawing
+        // (materials.h's key_state and key_ink; the head, 2026-11-11, session
+        // 107).
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the
@@ -18402,11 +18382,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // R14 / R15: the draft won on EDIT, HISTORY, SOURCE, TARGET, SESSION and
 // LOCK — one glyph, no state swap — the last Breeze drawing elsewhere,
 // PLAYER the headphones; BPM shares the logo's single note, SOURCE the
-// wav rows' double notes and LOAD the word buttons' OK / YES checkmark
-// (the same act, architect 2026-11-03, modal_word_icon), all deliberate) —
+// wav rows' double notes and LOAD the render player's LOAD checkmark (the
+// same act; the word buttons carry no drawing since 2026-11-18), all
+// deliberate) —
 // the enumerator's drawing in the `icons` set (Breeze's or Papirus's,
 // icons.h's head; one enumerator per key whatever the set) centered on
-// each roster key's face (paint_handler.cpp's paint_key_glyph), the act's
+// each roster key's box (paint_handler.cpp's paint_key_glyph), the act's
 // name the tooltip's (redesign_button_tooltip, above; the printed legend
 // under the key retired 2026-11-18, send Z). THIS TABLE IS EACH KEY'S RESTING GLYPH; THE PAINTERS READ THE
 // STATEFUL OVERLOAD BELOW. A re-pick is a row here (and, for a drawing not

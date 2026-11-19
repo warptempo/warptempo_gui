@@ -30,14 +30,17 @@ namespace {
 // SelectionForeground 2026-11-05; StandbySelectionForeground 2026-11-06;
 // TakeLaneTrackNotHighlighted, ViewCheckControlDisabledOff,
 // ScrollbarInnerHandle and DetailViewRulerMarkings, the grid, the disabled
-// key's ink, the trim span and the ruler's ticks, 2026-11-07; RangeEditField,
-// the NOISE level case's fill, and ScaleAwareness, THE RADIO KEYS' PURPLE,
-// 2026-11-11; ScrollbarInnerTrack, THE TRIM BAR'S TROUGH, and ClipBorder,
+// key's ink, the trim span and the ruler's ticks, 2026-11-07;
+// ScrollbarInnerTrack, THE TRIM BAR'S TROUGH, and ClipBorder,
 // THE WELL'S FRAME AND ITS LINES, 2026-11-17, architect 2026-11-17, session
 // 140 — each added by hand to every shipped file from that file's own .ask,
 // a `_mod` file from its original's); WindowBackground, TitleForeground and
 // SidebarForeground, OUR OWN, 2026-11-19 (architect, send Z, the Arc page;
-// kOwnThemeRoles below).
+// kOwnThemeRoles below). (RangeEditField, the NOISE case's fill, and
+// ScaleAwareness, the radio keys' purple, both of 2026-11-11, left the table
+// and every file 2026-11-19, send Z's stage C: Arc's entry progress wears
+// the accent and the radio keys light the one accent, so no tone reads
+// either.)
 constexpr std::string_view kThemeRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -45,7 +48,6 @@ constexpr std::string_view kThemeRoles[] = {
     "StandbySelectionForeground",
     "SelectionBackground", "SelectionForeground",
     "Alert", "WaveformColor", "DetailViewBackground", "DetailGridTiles",
-    "ScaleAwareness", "RangeEditField",
     "TakeLaneTrackNotHighlighted", "ViewCheckControlDisabledOff",
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
     "StandardVuMeter/Maximum",
@@ -221,29 +223,27 @@ Rgb unpacked(uint32_t word) {
                static_cast<int>(word & 0xFFu)};
 }
 
-// THE BRIGHT TONES, the head's BRIGHT MIX block's eight in the row's member
+// THE BRIGHT TONES, the head's BRIGHT MIX block's six in the row's member
 // order: the one enumeration bright_mixed_tones walks.
 constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
-    &GuiThemeTones::radio_lit_fill,
     &GuiThemeTones::selection_fill,
     &GuiThemeTones::list_press_fill,
     &GuiThemeTones::card_face,
     &GuiThemeTones::clip_lamp,
-    &GuiThemeTones::level_fill,
     &GuiThemeTones::cue,
     &GuiThemeTones::playhead_head,
 };
 
 // THE TONES DERIVED FROM A ROW'S OWN WORDS (the head's DERIVED block: the
 // lit key's press and inert faces and the print on its inert face, the
-// radio keys' three, the enabled chip's fill and the playhead's line), ONE
+// enabled chip's fill and the playhead's line), ONE
 // BODY for both roads: derive() fills them off the theme's own numbers,
 // bright_mixed_tones off the mixed bright tones, so each formula is written
 // once. Every input is a word of the row — the key face
 // (SurfaceBackground), the press face (Desktop), the body tone
 // (WindowBackground, never mixed), the print on a lit face
-// (StandbySelectionForeground, never mixed), the accent, the purple and the
-// head — each the same bytes derive() reads off the roles, so the doubles
+// (StandbySelectionForeground, never mixed), the accent and the head —
+// each the same bytes derive() reads off the roles, so the doubles
 // and their order are the derivation's own (Python's, bit for bit).
 void fill_dependent_tones(GuiThemeTones& t) {
     const Rgb face     = unpacked(t.key_face);
@@ -251,18 +251,17 @@ void fill_dependent_tones(GuiThemeTones& t) {
     const Rgb body     = unpacked(t.body_face);
     const Rgb print    = unpacked(t.text_on_lit);
     const Rgb on       = unpacked(t.cue);
-    const Rgb radio    = unpacked(t.radio_lit_fill);
     const Rgb range    = unpacked(t.playhead_head);
     const Rgb white    = Rgb{255, 255, 255};
-    // THE LIT PRESS FILLS (the head's DERIVED block; architect 2026-11-11,
-    // sessions 106 / 107): the accent, and the purple, scaled by the ratio
-    // the press face bears to the key face, mean over mean; a black key face
-    // (no divisor) leaves each as it is.
+    // THE LIT PRESS FILL (the head's DERIVED block; architect 2026-11-11,
+    // session 106; since send Z's stage C, 2026-11-19, the on-screen
+    // keyboard's lit key under the finger alone, awaiting stage D): the
+    // accent scaled by the ratio the press face bears to the key face, mean
+    // over mean; a black key face (no divisor) leaves it as it is.
     const double face_mean   = mean(face);
     const double press_ratio =
         face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
     t.lit_press_fill       = packed(scale(on, press_ratio));
-    t.radio_lit_press_fill = packed(scale(radio, press_ratio));
     // THE LIT-BUT-INERT PAIRS ON ARC'S OWN NUMBERS (the head's DERIVED
     // block; architect 2026-11-19, send Z: "let's do arcs numbers"): the
     // face (the lit color at 75 % over the body tone) at 60 % over the body
@@ -271,15 +270,10 @@ void fill_dependent_tones(GuiThemeTones& t) {
     // label (send Z's stage B, 2026-11-19, correcting stage A's kit reading):
     // (the print on a lit face at 80 % over the color-at-75 % face) at 60 %
     // over the body tone, mix(body, mix(mix(body, color, 0.75), print, 0.8),
-    // 0.6), each inner word rounded — the accent's pair and the purple's,
-    // each its own print.
+    // 0.6), each inner word rounded.
     const Rgb lit_75    = mix(body, on, 0.75);
-    const Rgb radio_75  = mix(body, radio, 0.75);
     t.lit_dim_fill          = packed(mix(body, lit_75, 0.6));
     t.text_on_lit_dim       = packed(mix(body, mix(lit_75, print, 0.8), 0.6));
-    t.radio_lit_dim_fill    = packed(mix(body, radio_75, 0.6));
-    t.radio_text_on_lit_dim =
-        packed(mix(body, mix(radio_75, print, 0.8), 0.6));
     // The enabled chip wears the accent (the head's ROLE-NAMED, cue).
     t.cue_fill             = packed(on);
     // The playhead's line, white exactly half way to the head (the head's
@@ -303,7 +297,6 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb dim      = opaque(roles["TextDisabled"]);
     const Rgb clip     = opaque(roles["BackgroundClip"]);
     const Rgb on       = opaque(roles["ViewCheckControlEnabledOn"]);
-    const Rgb radio    = opaque(roles["ScaleAwareness"]);
     const Rgb range    = opaque(roles["RangeDefault"]);
     const Rgb standby  = opaque(roles["StandbySelectionBackground"]);
     const Rgb standby_text = opaque(roles["StandbySelectionForeground"]);
@@ -312,9 +305,6 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb alert    = opaque(roles["Alert"]);
     const Rgb vu_max   = opaque(roles["StandardVuMeter/Maximum"]);
     const Rgba face_a  = rgba(roles["SurfaceBackground"]);
-    // The level case's fill, Live's volume color over the key face it paints
-    // on (the head's COMPOSITED block).
-    const Rgb lvl_fill = over(rgba(roles["RangeEditField"]), face_a);
     const Rgb core     = face;  // the magnify core = SurfaceBackground (the head)
     const Rgba detail  = rgba(roles["DetailViewBackground"]);
     const Rgb ink      = over(rgba(roles["WaveformColor"]), detail);
@@ -357,7 +347,6 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.key_dim_border      = packed(dim_border);
     t.key_face            = packed(face);
     t.key_press_face      = packed(desktop);
-    t.radio_lit_fill      = packed(radio);
     t.well_frame          = packed(dim);
     t.ruler_face          = packed(canvas);
     t.ruler_tick          = packed(tick_role);
@@ -375,7 +364,6 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.card_face           = packed(alert);
     t.card_ink            = packed(standby_text);
     t.clip_lamp           = packed(vu_max);
-    t.level_fill          = packed(lvl_fill);
     t.waveform_canvas     = packed(canvas);
     t.waveform_ink        = packed(ink);
     t.waveform_core       = packed(core);
@@ -580,7 +568,7 @@ const GuiTheme& default_gui_theme() {
 }
 
 GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent) {
-    // The rule, the eight and the number are the head's BRIGHT MIX block
+    // The rule, the six and the number are the head's BRIGHT MIX block
     // (theme_roles.h). Each bright tone moved toward the row's ground keeping
     // `percent` of itself — mix(tone, ground, 1 − percent / 100), the
     // derivation's own mix — then every tone derived from one recomputed off

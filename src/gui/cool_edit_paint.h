@@ -28,31 +28,20 @@
 // one drawing, two 45° triangles stamped at exact coverage
 // (CoverageStampPass::chip, below).
 
-// (THE KEY — every case of the band, row 8, the controls rows, the word
-// buttons, the scrub's thumb and the on-screen keyboard — is the flat
-// look's, materials.h's paint_key, since 2026-11-01.)
+// (THE KEY — every key of the band, the bottom icon row and the controls
+// rows, the word buttons and the entries — is Arc's button since send Z's
+// stage C, 2026-11-19, materials.h's paint_linked_group, paint_word_button
+// and paint_entry, on this file's coverage stamp; the scrub's thumb and the
+// on-screen keyboard keep the flat key, paint_flat_key, until stage D.)
 
 // (THE QUAVER'S PAINTER — paint_quaver, the mock's vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is
 // retired with his pick; the title bar's and the lists' note is Breeze's
 // MusicNote16th since 2026-11-02, icons.h's THE INK BOX.)
 
-// -- THE TIME FIELD ---------------------------------------------------------------
-
-// THE TIME FIELD on `field` (architect 2026-11-01 night, M5m, "add 1px to
-// clock and other related fields to make the spacing even"; Live's numeric
-// fields, the transport's position and tempo boxes): A FLAT `key_face` (Default's 363636)
-// BOX, NO RING. Its digits are the caller's, the text tone `text`, no
-// shadow — every time field in the program face's 22 px, row 8's clock
-// (architect 2026-10-26 ~11:30), the render player's two (~12:10, "yes" to
-// symmetry; gui_font.h's table) and the score viewer's — centred on both
-// axes (render.h's time_field_pad_px / time_field_h_px own the 12-px pads
-// and the 39-px height derived from them, 2026-11-04, the unit). ON ITS REAL
-// EDGES (architect 2026-11-15, the no-grid arc): `field` is an exact rect —
-// its rows centered exactly on the key face beside it, half a row over the
-// face above and below where their parities differ (paint_handler.cpp's
-// time_field_rect) — filled at exact coverage over the strip's ground.
-void paint_ce_time_field(cairo_t* cr, const GuiRectF& field);
+// (THE TIME FIELD'S PAINTER — paint_ce_time_field, a flat `key_face` box,
+// no ring, 2026-11-01 night to 2026-11-19 — is retired: every time field is
+// Arc's entry since send Z's stage C, materials.h's paint_entry.)
 
 // (THE TAB STRIP — paint_ce_tab_strip, ce_tab_strip_layout, kCeTabCount and
 // ce_tab_growth_px, Cool Edit's Organizer tabs, 2026-10-18 — IS REMOVED with
@@ -146,7 +135,10 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill,
 // THE SHAPES: a rect with real edges — the selection stem's head segment
 // (GuiPaintHandler::paint_marker_stem_heads) and the ruler's ticks
 // (paint_ruler_row); THE ROUNDED RECT, the trim bar's pill
-// (render_trim_flags; architect 2026-11-17, session 140); the
+// (render_trim_flags; architect 2026-11-17, session 140) and Arc's keys'
+// borders, faces and accents (materials.h's paint_linked_group, send Z,
+// 2026-11-19); THE ROUNDED RING, a word button's and an entry's border;
+// THE ROUNDED RECT CUT, NOISE's progress line (paint_entry); the
 // down-pointing 45° triangle; and THE CHIP, two of them (THE CUE'S CHIP
 // above: the lane's cues, paint_cues, and the ruler's head).
 class CoverageStampPass {
@@ -163,6 +155,21 @@ public:
     // nothing where x1 <= x0 or y1 <= y0.
     void rounded_rect(double x0, double y0, double x1, double y1, double rl,
                       double rr, GuiColor color);
+    // THE ROUNDED RING (send Z, 2026-11-19: a GTK box's border, the word
+    // buttons' and the entries'): the rounded rect [x0, x1] x [y0, y1] of
+    // radius `r` on all four corners LESS its padding box — `bw` inside it
+    // on every side, of radius max(r − bw, 0) — each pixel the outer's
+    // coverage less the padding box's (the kit's gtk_box), in `color`.
+    void rounded_ring(double x0, double y0, double x1, double y1, double r,
+                      double bw, GuiColor color);
+    // THE ROUNDED RECT CUT TO A RECT (send Z, 2026-11-19: Arc's entry
+    // progress, the entry's inner box cut at the level's real end and to its
+    // foot's rows): rounded_rect's shape, left corners `rl`, right `rr`,
+    // inside [cx0, cx1] x [cy0, cy1], each pixel the shape's area inside the
+    // cut rect over the cell (area_of_rounded_rect_in_rect), in `color`.
+    void rounded_rect_cut(double x0, double y0, double x1, double y1,
+                          double rl, double rr, double cx0, double cy0,
+                          double cx1, double cy1, GuiColor color);
     // THE DOWN-POINTING 45° TRIANGLE of apex (ax, ay) and height `h` in the
     // context's user space (coverage_of_triangle's shape, coverage_stamp.h),
     // in `color`: nothing where h <= 0.
@@ -176,6 +183,13 @@ public:
 
 private:
     void grow_dirty(const GuiRect& box);
+    // THE GENERIC STAMP the ring and the cut take: every pixel of the device
+    // box [bx0, bx1) x [by0, by1) inside the clip boxes at the coverage
+    // `cov(px, py)` answers, in device px; `skip(py, a, b)` may name a run
+    // of columns [a, b) on that row whose coverage is 0.
+    template <class Cov, class Skip>
+    void stamp_each(int bx0, int by0, int bx1, int by1, uint32_t word,
+                    Cov&& cov, Skip&& skip);
     // The color's word (cue_fill_pixel), from the pass's kept colors.
     uint32_t word_of(GuiColor color);
     cairo_t*          cr_        = nullptr;

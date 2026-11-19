@@ -2,8 +2,12 @@
 
 #include "render.h"           // GuiRect, GuiColor, palette(), the chokepoints
 
+#include <algorithm>
 #include <cairo/cairo.h>
+#include <cmath>
 #include <cstdint>
+#include <optional>
+#include <span>
 
 // THE MATERIALS — THE FLAT LOOK (architect 2026-11-01, reversing the hi-fi
 // panel of 2026-10-23: "whatever ruling it needs to, we need to reverse to go
@@ -41,157 +45,89 @@
 // (theme_file.h). (The flag editor's field keeps `ground` until send Z's
 // stage D restyles the entries.)
 //
-// THE KEY (paint_key below; every key alike — the band's, row 8's, the
-// controls rows', the word buttons, the scrub's thumb, the on-screen
-// keyboard's): A FLAT BOX, NO OUTLINE, NO LED, NO GLOW, NO DEPTH, AND A LIT
-// KEY IS ITS WHOLE FACE IN THE ACCENT — A RADIO KEY'S IN THE PURPLE (THE
-// RADIO KEYS, below) — (architect 2026-11-11, session 106:
-// "I think we should go back to where the accent color is the background of
-// the lit lamp ... during the press, it's darkened. So depending on the
-// state, if it's an unlit lamp, it gets darkened as it does now. And if
-// it's a lit lamp, it gets darkened based on the starting point of the
-// accent color"). THE FACES: AT REST `key_face`, Default's 363636
-// (SurfaceBackground); UNDER PRESS `key_press_face`, Default's 2A2A2A
-// (Desktop) — DARKER THAN THE FACE, the push in; LIT — A CHECKED KEY, its
-// whole face — THE ACCENT, `cue`, Default's FFAD56
-// (ViewCheckControlEnabledOn), Live's "on", no fill of the lit key's own
-// beside it (the markers' chips wear the same word, `cue_fill`, since
-// 2026-11-13, session 119); EVERY LIT FACE BELOW INSTALLED MIXED TOWARD THE
-// GROUND at the `bright_mix` key, its press and inert faces derived from
-// the mixed word (theme_roles.h's THE BRIGHT MIX; the Default numbers here
-// the reference row's own); LIT
-// UNDER PRESS `lit_press_fill`, Default's C68743 — the accent scaled by the
-// press face's ratio to the resting face (42 / 54 = 0.778 on Default; the
-// derivation, theme_roles.h's head), the same push in from the accent's own
-// starting point; LIT BUT INERT `lit_dim_fill`, Default's 86623B — a
-// checked key that is disabled (below).
-// THE RADIO KEYS WEAR THE PURPLE (architect 2026-11-11, session 107: "when
-// you double up on the orange or any accent color, it starts looking too
-// bright, and it's in the top right of my field of vision. ... If we give
-// that to radio buttons, then the problem goes away, because the purple is
-// perfectly fine in my peripheral field of vision"): A LIT KEY OF A RADIO
-// GROUP — the eight of redesign_button_is_radio (app_state.h, the
-// membership's one owner, where each group's exclusion is named): SOURCE /
-// TARGET, WARP / PHASE, FOLLOW / RESTR and TRIM / ADD SEL — wears THE SAME
-// THREE LIT FACES IN LIVE'S ScaleAwareness in place of the accent: LIT
-// `radio_lit_fill`, Default's B595FC (his "the flat sharp key that you see
-// in the Ableton screenshots"); LIT UNDER PRESS `radio_lit_press_fill`,
-// Default's 8D74C4, the purple by the same press ratio; LIT BUT INERT
-// `radio_lit_dim_fill`, Default's 655785, the purple by the accent's rule
-// (the derivation, theme_roles.h's DERIVED block).
-// Every theme reads its own ScaleAwareness, so "the purple" is that theme's
-// role. What is printed on it is the accent's print, `text_on_lit`, and on
-// its inert face its own inert print, `radio_text_on_lit_dim` (the print
-// dimmed over the radio key's own inert face; key_ink below parts the two
-// inert prints by the class). THE PAINTER LEARNS THE CLASS AT ONE SITE PER ROAD:
-// paint_key's and key_ink's `KeyLitClass` (below), read for a lit key
-// alone, the roster's painters passing the predicate's answer
-// (roster_lit_class, paint_handler.cpp: paint_roster_case and the glyph's
-// paint_key_glyph); every other key surface — the controls rows, the
-// on-screen keyboard, the level case, the scrub's thumb — says Lamp.
-// WHAT IS PRINTED ON A LIT FACE IS THE SELECTION'S TEXT: `text_on_lit`,
-// Default's 070707 (StandbySelectionForeground; architect 2026-11-17,
-// session 140: Arc prints its $selected_fg_color white on its checked blue,
-// so the print is the theme's own partner of its selection, near-black on
-// Live's files) — the key's Breeze
-// glyph and the on-screen keyboard's cap — on the accent and on the
-// darkened accent alike (the text tone on the accent, B5B5B5 on FFAD56, is
-// about 1.1 : 1; his "agree"), and on the purple's faces alike; on a
-// resting or pressed unlit face `text` (key_ink below).
-// EVERY OTHER CHECKED KEY WEARS THE ACCENT: the state lamps (MAGNIFY, Read
+// THE KEY IS ARC'S BUTTON (architect 2026-11-18 / 2026-11-19, send Z;
+// DESIGN §3, the approved pictures Z_01 / Z_02 and the mock kit's
+// linked_group the reference; G3 `button`, `.linked`; paint_linked_group,
+// paint_word_button and paint_entry below): every key of the band, the
+// bottom icon row and the controls rows — A BOX 36 x 28 W at the defaults
+// (the `key_width` x `key_height` tuning keys, render.h's case block; 72 x
+// 56 device px on the tablet at 200 %), BORDER INCLUDED ("the border is
+// clickable"), in A ONE-W `well_border` RING (Default 2A2A2A, ClipBorder;
+// arc_dark 2B2E39) WITH 3 W OUTER CORNERS (kKeyCornerW, the faces' 2 W
+// inside it), its face `key_face` (Default 363636, SurfaceBackground;
+// arc_dark 444A58), every edge at exact coverage. THE KEYS OF ONE GROUP ARE
+// ARC'S LINKED BUTTONS: neighbors SHARE ONE SEAM COLUMN, one ring round the
+// group, its four outer corners rounded, the seam wearing the face at rest —
+// no divider line (key_link_pitch_px / linked_group_w_px below). THE
+// DRAWING the set's 16 W canvas centered on the box (paint_key_glyph,
+// paint_handler.cpp). NO LED, NO GLOW, NO DEPTH, NO SHADOW.
+// THE STATES ARE ARC'S (key_state below; architect 2026-11-19: "Arc's own
+// answer", superseding the darker press of 2026-11-05 on every key but the
+// two that await stage D below; "we can let go of the green"; "lit but
+// inert: let's do arcs numbers"): REST the face under the drawing in
+// `text`; PRESSED, LIT AND LIT UNDER PRESS ONE LOOK — `:active` and
+// `:checked` are one in Arc — THE ACCENT `cue` (Default FFAD56,
+// ViewCheckControlEnabledOn; arc_dark 5294E2, Arc's selection blue) OVER THE
+// KEY'S OWN COLUMNS BETWEEN THE GROUP'S BORDER ROWS, both its seams
+// included, the border kept `well_border`, the drawing in `text_on_lit`
+// (Default 070707, StandbySelectionForeground; arc_dark FFFFFF);
+// DISABLED the face `key_dim_face` (the key face at 55 % over the body
+// tone), the border `key_dim_border` (the well's border at 55 % over it) on
+// the key's own stretch of the ring, the drawing `key_dim_ink`; LIT AND
+// INERT — checked and disabled — the face `lit_dim_fill` under
+// `text_on_lit_dim` (Arc's button:disabled:checked under the button's
+// opacity; theme_roles.h's DERIVED block). A SEAM BETWEEN TWO KEYS OF
+// DIFFERENT STATES WEARS THE LEFT KEY'S FACE, a lit key taking both its
+// seams (the kit's paint order, paint_linked_group). THE ACCENT IS
+// INSTALLED MIXED TOWARD THE GROUND at the `bright_mix` key, its inert face
+// derived from the mixed word (theme_roles.h's THE BRIGHT MIX).
+// EVERY CHECKED KEY WEARS THE ONE ACCENT: the state lamps (MAGNIFY, Read
 // Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
-// Drag), the render player's Repeat One, AND THE DOORS, the seven overlay
+// Drag), the render player's Repeat One, THE DOORS, the seven overlay
 // openers (redesign_button_is_door, app_state.h — the class names the keys
-// that may carry a twin on their hold and parts no look: no door fill, no
-// painter asks it), AND ON THE ON-SCREEN KEYBOARD a latched Shift and the
-// symbols page's key, the accent face under the `text_on_lit` cap. (THE
-// LEVEL CASE, NOISE, is never checked and never pressed-faced:
-// a slider, its fill its value, the fill a tone of its own, `level_fill`,
-// on the rest face — paint_level_case, paint_handler.cpp.)
-// THE PRESS IS DARKER (architect 2026-11-05, the press arc, his pick p2 of
-// tmp/s45 over p1's ControlBackground 1E1E1E, reversing 2026-11-04's "no
-// press look anywhere" — that look was Live's HOVER tones, 6A6A6A / FFC281,
-// lighter than the face, and it read as a blink under the pen; his reason:
-// "hover is not press - press in skeumorphic is darker. but a list is not a
-// button so going lighter seems ok - darker for button (push in) lighter
-// for list (highlight)"): A KEY UNDER A STANDING PRESS wears its darker
-// face on EVERY key surface — the band, row 8, the controls rows,
-// the render player, the score viewer, the trim presets, the dialogs' word
-// buttons, the scrub's thumb and the on-screen keyboards' keys — from the
-// press on the face to the lift or the slide-off, exactly the press arm's
-// own "on" (point_on_key below: the feint's inside bit, the face returning
-// to rest while the pointer is off it and pressing again when it slides
-// back; the on-screen keyboard's key and the scrub's thumb, which act at
-// the press or carry the finger, from the press to the lift): an unchecked
-// key the press face, A LIT KEY THE ACCENT DARKENED BY THE SAME RATIO — the
-// accent times mean(press face) / mean(resting face), per channel, the
-// derived word `lit_press_fill` (a radio key's purple by the same ratio,
-// `radio_lit_press_fill`), computed at the theme's read and not at
-// paint time; the ratio rather than the difference because it keeps the
-// theme's lit hue and scales with the theme's own press step. A DISABLED
-// KEY UNDER PRESS IS
-// UNCHANGED (his "disable no press is right"): a dead key arms nothing
-// (every press arm refuses a painted-dead face), so no press stands on it.
-// What a key carries keeps its ink on the darker face: the glyph and the
-// cap `text`, or `text_on_lit` when lit (key_ink below).
-// THE LISTS' ROWS go the other way, lighter (THE SELECTION PAIR, below).
-// NO TIMING, NO HOLD, NO ANIMATION: the face follows the press bit as
-// painted; the press arms — the slide-off feint, the hold-repeat and the long
-// press — are unchanged. THE OTHER FEEDBACK STAYS: the act
-// itself, a stateful key's glyph showing the act its next press runs, the
-// typed character, the selection pair landing on a row. A DISABLED key
-// wears the rest face, its glyph in `key_dim_ink`, Default's
-// 5D5D5D. A LIT-BUT-INERT KEY — checked and disabled: the value drag lamp
-// on a locked tab or under grid iterations, the chosen view pair under grid
-// iterations, any lit key an overlay leaves dead — DIMS ITS FACE AND
-// ITS GLYPH AS ONE (architect 2026-11-11, session 106: "dim the accent and
-// the glyph so both read as a unit") ON ARC'S OWN NUMBERS (architect
-// 2026-11-19, send Z: "let's do arcs numbers"): the face `lit_dim_fill`,
-// (the accent at 75 % over the body tone) at 60 % over the body tone
-// (Default FFAD56 over 242424 -> C88B4A -> 86623B), and the glyph
-// `text_on_lit_dim`, the print dimmed with the button as GTK's opacity dims
-// it (070707 -> 2A221A; the derivation, theme_roles.h's DERIVED block) — a
-// radio key's face `radio_lit_dim_fill`, the purple by the same rule (B595FC
-// -> 655785), under its own glyph `radio_text_on_lit_dim` (232029) — still
-// the lamp's hue, so the state reads true, dimmed as every dead glyph is;
-// no press stands on a dead key, so the pair has no
-// pressed look. UNDER AN OVERLAY A DEAD LIT KEY STAYS LIT, DIMMED
-// (architect 2026-11-11, session 107: "for consistency, they should keep
-// that look of darkened. But lit."):
-// while the render player, a picker content or the score viewer stands,
-// every roster key it leaves dead is disabled with its lit bit kept
+// that may carry a twin on their hold and parts no look), AND THE FOUR
+// EXCLUSIVE PAIRS — SOURCE / TARGET, WARP / PHASE, FOLLOW / RESTR, TRIM /
+// ADD SEL — whose separate color (Live's ScaleAwareness, the radio keys'
+// purple of 2026-11-11, session 107, arc_dark's green) retired with its
+// class 2026-11-19 ("I guess we can let go of the green in order to be more
+// truthful"). A DISABLED KEY UNDER PRESS IS UNCHANGED (his "disable no press
+// is right"): a dead key arms nothing (every press arm refuses a
+// painted-dead face). THE PRESS FOLLOWS THE PRESS ARM'S OWN "on"
+// (point_on_key below: the feint's inside bit, the key returning to rest
+// while the pointer is off it and pressing again when it slides back); NO
+// TIMING, NO HOLD, NO ANIMATION; the press arms — the slide-off feint, the
+// hold-repeat and the long press — are unchanged; THE OTHER FEEDBACK STAYS:
+// the act itself, a stateful key's drawing showing the act its next press
+// runs. THE LISTS' ROWS go lighter under a press (THE SELECTION PAIR,
+// below), a list row being no key. UNDER AN OVERLAY A DEAD LIT KEY STAYS
+// LIT, DIMMED (architect 2026-11-11, session 107: "for consistency, they
+// should keep that look of darkened. But lit."): every roster key the
+// standing overlay leaves dead is disabled with its lit bit kept
 // (redesign_button_enabled's overlay arm; redesign_button_selected,
-// app_state.h, whose head owns the rule), so a lit one wears the lit-but-inert look
-// above and an unlit one the rest face, both under the dim glyph — ONE
-// RULE for a dead checked key wherever it is dead; the overlay's opener and
-// the tooltip lamp, live there, keep their live looks, lit in the accent. A
-// MODAL changes no key behind it. NOTHING IS PRINTED UNDER A KEY (the
-// legends retired 2026-11-18, send Z: "That's from the hi-fi theme"); the
-// tooltip names the act.
+// app_state.h, whose head owns the rule), so a lit one wears the lit and
+// inert look and an unlit one the disabled look — ONE RULE for a dead key
+// wherever it is dead; the overlay's opener and the tooltip lamp, live
+// there, keep their live states. A MODAL changes no key behind it. NOTHING
+// IS PRINTED UNDER A KEY (the legends retired 2026-11-18, send Z: "That's
+// from the hi-fi theme"); the tooltip names the act.
+// THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
+// alone, no glyph"; paint_word_button): each its own ring, the same states,
+// the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE AND THE
+// TIME FIELDS are Arc's entry (paint_entry), NOISE's level its progress line.
+// THE SCRUB'S THUMB AND THE ON-SCREEN KEYBOARD'S KEYS AWAIT STAGE D: today's
+// flat key and today's press look (paint_flat_key below).
 //
-// THE FACE AND ITS GAP (architect 2026-11-04, the unit: his "1 agree" to
-// the hi-fi's face and "grow the box instead of adding a border"; the hi-fi
-// key metrics of 2026-11-03's retrofit; the unit of 2 that night, mock v4:
-// the face 70 x 34 and the gap 2, the pitch 72 kept): THE KEY IS ITS
-// PAINTED FACE, render.h's case — the `key_width` tuning key wide (architect
-// 2026-11-06) by the `key_height` tuning key tall (icon_case_w_px /
-// icon_case_h_px), 36 x 28 W at the defaults since send Z (Arc's icon
-// button), 72 x 56 device px on the tablet at 200 % — NO OUTLINE, NO INSET
-// (the border and the linked group are send Z's stage C), and TWO KEYS OF
-// A GROUP STAND ONE W OF GROUND APART (render.h's key_gap_px: 2 device px
-// on the tablet, 1 at 100 %), the
-// walk stepping the face and the gap (key_group_pitch_px below), so every
-// face is the same, a group's ends included. THE EDGE RULE IS THE FACES':
-// both icon rows' and the controls rows' outermost FACES stand kEdgeInsetW
-// (6 W) inside the panel's first and last columns (render.h's THE EDGE RULE
-// at well_columns; architect 2026-11-19, send Z; the seats' walks,
-// paint_handler.cpp). THE
-// GROUND IS NOT PRESSABLE (architect 2026-11-02, R5: "ground is not a
-// button"): THE PAINTED FACE IS THE HIT BOX (point_on_key below), so a
-// press, a lift and the tooltip answer on the face alone and
-// the ground round it — the gaps, the run gaps, the pads — answers
-// nothing; the on-screen keyboard's gaps alike (R11), the same gap
-// (onscreen_keyboard.h's key_gap_px, 2026-11-04).
+// THE EDGE RULE IS THE KEYS': both icon rows' and the controls rows'
+// outermost BOXES stand kEdgeInsetW (6 W) inside the panel's first and last
+// columns (render.h's THE EDGE RULE at well_columns; architect 2026-11-19,
+// send Z; the seats' walks, paint_handler.cpp), two groups a run gap apart
+// (render.h's program_run_gap_px, 6 W at the default). THE GROUND IS NOT
+// PRESSABLE (architect 2026-11-02, R5: "ground is not a button"): THE
+// PAINTED BOX IS THE HIT BOX (point_on_key below), a seam belonging to the
+// key on its left, so a press, a lift and the tooltip answer on the box
+// alone and the ground round it — the run gaps, the pads — answers nothing;
+// the on-screen keyboard's gaps alike (R11; onscreen_keyboard.h's
+// key_gap_px).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
@@ -206,7 +142,7 @@
 // (StandbySelectionForeground, the selection's text; architect 2026-11-17,
 // session 140), in place of `text` (architect 2026-11-11, session 106, THE
 // KEY above); on a lit disabled key's dimmed face `text_on_lit_dim`,
-// Default's 2A221A, a radio key's `radio_text_on_lit_dim`, 232029. THE
+// Default's 2A221A. THE
 // CARDS' words and glyph wear their own ink, `card_ink`, Default's 070707
 // (StandbySelectionForeground, the same print) on Live's orange (THE CARDS,
 // below; 2026-11-04 night; the print's tone since 2026-11-17, D4). A
@@ -246,8 +182,8 @@
 // ruler's face the canvas's). Where a theme makes the lane, the trough, the lines or the dim
 // text coincide with the ground, that is Live's own number — ACCEPTED, not
 // a bug, no backstop (architect 2026-11-05).
-// THE TIME FIELDS are flat `key_face` boxes, no ring (2026-11-01 night,
-// M5m; cool_edit_paint.h's paint_ce_time_field).
+// THE TIME FIELDS are Arc's entry since 2026-11-19 (send Z; paint_entry
+// below): the ruler's — the canvas's — tone in a one-W `well_border` ring.
 //
 // THE WELL'S FRAME TONE. `well_frame` is THE GRAMMAR'S ONE FRAME TONE
 // (architect 2026-11-02, M14 "d"), Default's 757575 (TextDisabled, the dim
@@ -306,136 +242,223 @@
 // CARD FACE) — Live's status-bar orange, a message rather than a state, not
 // the accent of the lit keys (`cue`, Default's FFAD56).
 
-// THE KEY'S FOUR LOOKS (the head's THE KEY): LitPress when checked with a
-// press standing on the key; else Lit when checked; else Press while a
-// press stands on the key (the press arc, architect 2026-11-05); else Rest.
-// key_look is the one place the checked and the pressed bits are folded —
-// every key painter asks it with its own two bits (paint_roster_case and
-// the modal row, paint_onscreen_keyboard, paint_handler.cpp;
-// paint_scrub_thumb, render.cpp) — and its two readers each take the look
-// and the key's ENABLED bit, which parts the lit-but-inert key (architect
-// 2026-11-11, session 106): paint_key answers the FACE, key_ink the PRINT
-// on it — paint_key alone also taking the lit class (KeyLitClass below,
-// session 107).
+// -- ARC'S BUTTON: THE KEY'S STATES, ITS LINKED GROUP, THE WORD BUTTON AND
+//    THE ENTRY (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §3, the
+//    mock kit's linked_group / word_button / body_entry the reference) -----
+
+// A KEY'S FOUR STATES, ARC'S (G3 `button`: `:active` and `:checked` are one
+// look; architect 2026-11-19, send Z, "Arc's own answer" superseding the
+// darker press of 2026-11-05, "we can let go of the green", "lit but inert:
+// let's do arcs numbers"): REST; LIT — checked, or a press standing on a
+// live key, or both, ONE LOOK (the accent `cue` over the key's own columns
+// between the group's border rows, the print `text_on_lit`); DISABLED (the
+// face `key_dim_face`, the border `key_dim_border` on the key's own stretch
+// of the ring, the drawing `key_dim_ink`); LIT AND INERT — checked and
+// disabled (the face `lit_dim_fill`, the print `text_on_lit_dim`, Arc's
+// button:disabled:checked under the button's opacity: theme_roles.h's
+// DERIVED block). A DISABLED KEY UNDER PRESS IS UNCHANGED (his "disable no
+// press is right", 2026-11-05): a dead key arms nothing (every press arm
+// refuses a painted-dead face), so the press bit is read for a live key
+// alone. key_state is the one place the three bits are folded; every Arc
+// button's painter asks it (the band's and the bottom icon row's walks, the
+// controls rows, paint_handler.cpp).
+enum class KeyState { Rest, Lit, Disabled, LitInert };
+inline constexpr KeyState key_state(bool checked, bool pressed, bool enabled) {
+    if (!enabled) return checked ? KeyState::LitInert : KeyState::Disabled;
+    return (checked || pressed) ? KeyState::Lit : KeyState::Rest;
+}
+
+// THE INK OF A KEY'S DRAWING for its state, the installed theme's sRGB word
+// (the glyph road takes the word, icons::draw_glyph): `text` at rest,
+// `text_on_lit` lit, `key_dim_ink` disabled, `text_on_lit_dim` lit and inert.
+inline uint32_t key_ink(KeyState s) {
+    const GuiThemeTones& t = installed_theme().tones;
+    switch (s) {
+        case KeyState::Lit:      return t.text_on_lit;
+        case KeyState::Disabled: return t.key_dim_ink;
+        case KeyState::LitInert: return t.text_on_lit_dim;
+        case KeyState::Rest:     break;
+    }
+    return t.text;
+}
+// THE INK OF A WORD BUTTON'S WORD (the kit's word_button; brief of send Z's
+// stage C): the drawing's but disabled, where the word wears `text_dim`, the
+// dim text of every inert word (a word button is never checked, so its lit
+// and inert print is never asked).
+inline uint32_t word_button_ink(KeyState s) {
+    return s == KeyState::Disabled ? installed_theme().tones.text_dim
+                                   : key_ink(s);
+}
+
+// THE KEY'S LENGTHS (the head's THE KEY; render.h's case block owns the
+// box): THE BOX the `key_width` x `key_height` tuning keys (icon_case_w_px /
+// icon_case_h_px, 36 x 28 W at the defaults, 72 x 56 device px on the tablet
+// at 200 %), BORDER INCLUDED ("the border is clickable"); THE BORDER one W
+// (hairline_px, the line rule: 2 device px on the tablet, floored at one);
+// THE OUTER CORNER kKeyCornerW, 3 W (Arc's button border-radius, G3), 6
+// device px, floored at one; the faces' corners inside the border the outer
+// less the border (GTK's padding box), 4 device px. Each through scaled_px,
+// rounded at the element.
+inline constexpr double kKeyCornerW = 3.0;
+inline int key_border_px() { return hairline_px(); }
+inline int key_corner_px() { return scaled_px(kKeyCornerW, 1); }
+inline int key_inner_corner_px() {
+    return std::max(0, key_corner_px() - key_border_px());
+}
+
+// THE LINKED GROUP'S PITCH (Arc's `.linked`, G3; the kit's group_w): two
+// neighbors SHARE ONE SEAM COLUMN, so a key stands one box less one border
+// right of the one before it — 70 device px on the tablet (72 − 2), 35 at
+// 100 % — and A GROUP OF n IS key + (n − 1)(key − 1 W) WIDE, each part
+// rounded on its own (0 for none): every group walk's (the band's
+// icon_row_seats, the bottom icon row's row8_block_walk, the controls rows'
+// layouts, paint_handler.cpp). The ground between two GROUPS is the run gap
+// (render.h's program_run_gap_px).
+inline int key_link_pitch_px() {
+    return icon_case_w_px() - key_border_px();
+}
+inline int linked_group_w_px(int n) {
+    return n > 0 ? icon_case_w_px() + (n - 1) * key_link_pitch_px() : 0;
+}
+// MEMBER i's BOX in the group whose first box stands at (x, y): the whole
+// key, both its seam columns included — the published rect, the damage, the
+// tooltip's seat.
+inline GuiRect linked_key_box(int x, int y, int i) {
+    return GuiRect{x + i * key_link_pitch_px(), y, icon_case_w_px(),
+                   icon_case_h_px()};
+}
+// THE SEAM A MEMBER'S BOX SHARES WITH THE KEY ON ITS LEFT, in device px: its
+// first border's columns, which BELONG TO THE LEFT KEY for every press and
+// hover (architect 2026-11-18 via the design: "a seam column belongs to the
+// left key") — one border on every member but a group's first, 0 there.
+inline int linked_key_seam_px(int i) {
+    return i > 0 ? key_border_px() : 0;
+}
+
+// ONE LINKED GROUP on the backbuffer: n = states.size() keys from (x, y),
+// each linked_key_box(x, y, i) — THE KIT'S linked_group, in its paint order,
+// every edge at exact coverage over the ground the caller laid under the
+// same clip: (1) THE BORDER, the group's rounded box (its four outer corners
+// key_corner_px) in `well_border`; (2) a DISABLED member's stretch of it —
+// its box's columns, both seams included, the outer corners where it ends
+// the group — in `key_dim_border`; (3) THE FACES, the group's inner box (its
+// corners key_inner_corner_px) cut at each member's own columns: from one
+// border inside its box's left edge to one border inside the NEXT box's
+// left edge — so A SEAM WEARS THE LEFT KEY'S FACE — the last to one border
+// inside its own right edge, each in its state's face (`key_face` at rest,
+// `key_dim_face` disabled, `lit_dim_fill` lit and inert; a lit member's
+// `key_face`, under its accent); (4) A LIT MEMBER'S ACCENT, `cue`, over its
+// box's whole columns — both seams — between the border's top and bottom
+// rows (the inner box's own columns and corners where it ends the group), so
+// the border stays `well_border` round it and a lit key takes both its seams
+// whatever its neighbors. EVERY PIXEL A MEMBER'S STATE MOVES LIES INSIDE ITS
+// OWN BOX, its corners included (a seam column is inside both boxes it
+// joins): a member's damage is its box, and a repaint under any clip paints
+// every member from its own state as published. THE ROAD: one
+// CoverageStampPass (cool_edit_paint.h), every shape a rounded rect with real
+// edges stamped straight into the target in the order above — NOTHING
+// ELSE IS DRAWN between begin() and end() (the drawings go on after, the
+// caller's paint_key_glyph), so the stamp and cairo never interleave. The
+// glyphs are the caller's.
+void paint_linked_group(cairo_t* cr, int x, int y,
+                        std::span<const KeyState> states);
+
+// ONE WORD BUTTON on `box` (Arc's text button; architect 2026-11-18, his
+// ruling "the word alone, no glyph", Delete a plain button; the kit's
+// word_button, through GTK's box order, the kit's gtk_box): THE FACE on the
+// padding box (`box` one border in, its corners key_inner_corner_px), THEN THE
+// RING over it — the outer rounded box (key_corner_px) less the padding box
+// — each at exact coverage, so an outer corner mixes the ground and the ring
+// alone and an inner corner pixel all three: at rest `key_face` in
+// `well_border`; lit (pressed) the accent `cue` in `well_border`; disabled
+// `key_dim_face` in `key_dim_border`. The word is the caller's
+// (word_button_ink). One stamp pass, nothing drawn inside it.
+void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state);
+
+// ARC'S ENTRY on `box` (architect 2026-11-19, send Z; DESIGN §3, the kit's
+// body_entry; G3 `entry`) — NOISE's case, the bottom icon row's clock and
+// the controls rows' time fields (the render player's two, the score
+// viewer's clock and page cell), ONE PAINTER: GTK's box order as the word
+// button's — THE FILL on the padding box (`box` one border in, corners
+// key_inner_corner_px) in `ruler_face`, the canvas's tone (Arc's
+// $base_color, 404552 on arc_dark), THEN THE RING over it (the outer rounded
+// box, corners key_corner_px, less the padding box) in `well_border` — and,
+// with `progress` t in (0, 1], ARC'S ENTRY PROGRESS over the fill: the
+// padding box (its own inner corners) CUT to its last kEntryProgressW (2 W)
+// rows and to its first t of its width, in the accent `cue` — so the line's
+// left end follows the inner corner's arc and its right end stands at its
+// real x. Every edge at exact coverage over the ground the caller laid; one
+// stamp pass, nothing drawn inside it; the text is the caller's.
+inline constexpr double kEntryProgressW = 2.0;
+void paint_entry(cairo_t* cr, const GuiRect& box,
+                 std::optional<double> progress = std::nullopt);
+
+// A PAINT-TIME MIX OF TWO INSTALLED WORDS, `t` of `b` over `a`, per channel,
+// rounded half to even (the derivation's rounding, theme_roles.h): the
+// disabled entry's number, the text at 35 % over the entry's fill (Arc's
+// insensitive entry).
+inline uint32_t mix_word(uint32_t a, uint32_t b, double t) {
+    uint32_t out = 0;
+    for (int shift = 0; shift < 24; shift += 8) {
+        const double ca = static_cast<double>((a >> shift) & 0xFFu);
+        const double cb = static_cast<double>((b >> shift) & 0xFFu);
+        const double v  = std::nearbyint(ca + t * (cb - ca));
+        out |= static_cast<uint32_t>(std::clamp(v, 0.0, 255.0)) << shift;
+    }
+    return out;
+}
+
+// THE SCRUB'S THUMB AND THE ON-SCREEN KEYBOARD'S KEYS, AWAITING SEND Z'S
+// STAGE D: today's flat key — a flat box, no border, no corner — and today's
+// press look, alone of every key surface: the face `key_face` at rest,
+// `key_press_face` (Desktop) under a press, the accent `cue` lit (the
+// keyboard's latched Shift and its symbols page key), `lit_press_fill` (the
+// accent × mean(Desktop) / mean(key face)) lit under the finger. KeyLook
+// folds the two bits; flat_key_ink the print on it (`text`, or
+// `text_on_lit` lit). Neither surface is ever disabled.
 enum class KeyLook { Rest, Press, Lit, LitPress };
 inline constexpr KeyLook key_look(bool checked, bool pressed) {
     return checked ? (pressed ? KeyLook::LitPress : KeyLook::Lit)
          : pressed ? KeyLook::Press
                    : KeyLook::Rest;
 }
-// A LIT KEY, pressed or not: its face the accent, or a radio key's purple
-// (KeyLitClass below) — darkened under the press, dimmed on a dead key —
-// and what is printed on it `text_on_lit`'s (paint_key and key_ink below).
-inline constexpr bool key_look_lit(KeyLook look) {
-    return look == KeyLook::Lit || look == KeyLook::LitPress;
-}
-// A PRESS STANDING ON THE KEY, checked or not: the darker face of its
-// state (paint_key below).
-inline constexpr bool key_look_pressed(KeyLook look) {
-    return look == KeyLook::Press || look == KeyLook::LitPress;
-}
-// WHICH LIT COLOR A CHECKED KEY WEARS (the head's THE RADIO KEYS WEAR THE
-// PURPLE, architect 2026-11-11, session 107): Lamp — the accent, `cue`, with
-// `lit_press_fill` / `lit_dim_fill`, every lit key but the radio keys';
-// Radio — the purple, `radio_lit_fill`, with `radio_lit_press_fill` /
-// `radio_lit_dim_fill`, the eight of redesign_button_is_radio (app_state.h,
-// the one owner of the roster's membership). Read by paint_key for a lit
-// look alone, and by key_ink for a lit disabled key alone (its inert print,
-// `text_on_lit_dim` or `radio_text_on_lit_dim`; architect 2026-11-17,
-// session 140, D5); an unlit key's faces and prints are one for both
-// classes, and a live lit key's print is `text_on_lit` in both. A REQUIRED
-// ARGUMENT, so every key surface says its class: the roster's painter the
-// predicate's answer, every other surface Lamp.
-enum class KeyLitClass { Lamp, Radio };
-
-// THE INK OF WHAT A KEY CARRIES ON ITS FACE — its Breeze glyph, or the
-// on-screen keyboard's cap (the head's THE KEY and THE TEXT TONES; architect
-// 2026-11-11, session 106) — as the installed theme's sRGB word (the Breeze
-// glyph road takes the word, icons::draw_glyph): ON A LIT FACE, pressed or
-// not, `text_on_lit`, or, the key disabled, the print of its dimmed face —
-// `text_on_lit_dim` on a lamp-class key's, `radio_text_on_lit_dim` on a
-// radio key's (architect 2026-11-17, session 140, D5: each inert print is
-// derived over its own inert face, so the class parts it); on an
-// unlit key `text`, or `key_dim_ink` on a disabled one — the same word on
-// the press face as on the resting one, the class read for a lit disabled
-// key alone.
-inline uint32_t key_ink(KeyLook look, bool enabled, KeyLitClass cls) {
+inline uint32_t flat_key_ink(KeyLook look) {
     const GuiThemeTones& t = installed_theme().tones;
-    if (key_look_lit(look))
-        return enabled                   ? t.text_on_lit
-             : cls == KeyLitClass::Radio ? t.radio_text_on_lit_dim
-                                         : t.text_on_lit_dim;
-    return enabled ? t.text : t.key_dim_ink;
+    return look == KeyLook::Lit || look == KeyLook::LitPress ? t.text_on_lit
+                                                             : t.text;
 }
-
-// -- THE KEY'S PAINTERS ------------------------------------------------------
-
-// ONE KEY on `r`, ITS PAINTED FACE — the key itself (the head's THE KEY and
-// THE FACE AND ITS GAP), off the look (key_look, the caller's checked and
-// pressed bits), the key's enabled bit and its lit class: AN UNLIT KEY
-// palette().key_face, or palette().key_press_face while a press stands on
-// it; A LIT LAMP-CLASS KEY THE ACCENT, palette().cue, or
-// palette().lit_press_fill while a press stands on it, or — `enabled`
-// false, the lit-but-inert key — palette().lit_dim_fill, which no press
-// moves (a dead key arms none); A LIT RADIO-CLASS KEY THE PURPLE,
-// palette().radio_lit_fill, radio_lit_press_fill or radio_lit_dim_fill on
-// the same terms (KeyLitClass above). The enabled bit and the class part
-// the lit faces alone: an unlit key's face is the same dead or live and in
-// either class, its glyph saying so. Nothing else is painted.
-// What a key carries is its caller's — the roster's and the
-// controls rows' glyph on the face (paint_key_glyph, paint_handler.cpp), the on-screen
-// keyboard's caps — the glyph and the cap in key_ink's tone, the same look
-// and the same enabled bit.
-void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look, bool enabled,
-               KeyLitClass cls);
-// THE SAME KEY ON REAL EDGES (architect 2026-11-15, the no-grid arc;
-// render.h's hull holds the rule): a key block whose place is a continuous
-// value — the scrub's thumb — the same face tone through the exact fill
-// (paint_ink_rect on a GuiRectF), every edge pixel at its coverage. A box
-// with whole edges writes the whole road's bytes.
-void paint_key(cairo_t* cr, const GuiRectF& r, KeyLook look, bool enabled,
-               KeyLitClass cls);
-
-// THE GROUP'S PITCH (the head's THE FACE AND ITS GAP): the face and one key
-// gap — the step from a key's face to the next one's in its group, every
-// group walk's (the band's icon_row_seats, row 8's row8_block_walk, the
-// modal family's controls-row layouts, paint_handler.cpp): key_width + 1 W,
-// at the default 36 W, 72 device px on the tablet at 200 % (70 + 2), 36 at
-// 100 % (35 + 1). The ground
-// between two GROUPS is the run gap
-// (render.h's program_run_gap_px), between their faces.
-inline int key_group_pitch_px() {
-    return icon_case_w_px() + key_gap_px();
-}
-// A GROUP'S WIDTH: `n` faces and the n − 1 gaps between them (0 for none),
-// from its first face's first column to one past its last face's last.
-inline int key_group_w_px(int n) {
-    return n > 0 ? n * icon_case_w_px() + (n - 1) * key_gap_px() : 0;
-}
+// The flat face on real edges (the exact fill, paint_ink_rect on a
+// GuiRectF; render.h's hull holds the rule).
+void paint_flat_key(cairo_t* cr, const GuiRectF& r, KeyLook look);
 
 // A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
-// FACE AND ITS GAP; architect 2026-11-02, R5 / R11): `key` the PAINTED
-// face — the walk's own rect for every grouped key (the band, row 8, the
-// modal family's controls rows), the on-screen keyboard's walk rect for its
-// own (onscreen_keyboard::for_each_key, its gap already outside it). THE
-// ONE PREDICATE every key hit test asks: the roster's face
+// KEY; architect 2026-11-02, R5 / R11, "ground is not a button"): `key` the
+// PAINTED BOX — border included since send Z ("the border is clickable") —
+// the walk's own rect for every key of the band, the bottom icon row and the
+// controls rows, the on-screen keyboard's walk rect for its own
+// (onscreen_keyboard::for_each_key, its gap already outside it). THE ONE
+// PREDICATE every key hit test asks: the roster's face
 // (AppState::RedesignButtonFace::contains — the press, the lift, the band's
-// modifier gate, the tooltip's owner), the
-// modal family's buttons (GuiInputHandler::modal_dialog_button_hit — the
-// press and the lift) and the keyboard's
-// (onscreen_keyboard::key_at). Each painter PUBLISHES the face it paints, so
-// a reader re-shapes nothing. A gesture already begun keeps its rules: a
-// press that slides off its key reads "outside" as ever, the face being what
-// "on" means.
+// modifier gate, the tooltip's owner), the modal family's buttons
+// (GuiInputHandler::modal_dialog_button_hit — the press and the lift) and
+// the keyboard's (onscreen_keyboard::key_at). Each painter PUBLISHES the box
+// it paints, so a reader re-shapes nothing. A gesture already begun keeps
+// its rules: a press that slides off its key reads "outside" as ever.
 inline bool point_on_key(const GuiRect& key, int x, int y) {
     return rect_contains(key, x, y);
+}
+// A MEMBER OF A LINKED GROUP: its box less the `seam` columns at its left
+// edge, which belong to the key on its left (linked_key_seam_px), so a
+// group's members tile with no shared point and the ground between two
+// groups presses nothing.
+inline bool point_on_key(const GuiRect& key, int seam, int x, int y) {
+    return rect_contains(key, x, y) && x >= key.x + seam;
 }
 // THE SAME PREDICATE FOR A FACE WITH REAL EDGES (architect 2026-11-15, the
 // no-grid arc: "yes, I'd like to move to fractional hitboxes."): the
 // on-screen keyboard's faces, whose edges its tuning keys make fractional,
 // asked with the pointer's REAL place — half-open on both axes, so two keys
-// never share a point and the ground between them presses nothing. A whole
-// face answers the overload above with its pixel, and the two agree on it.
+// never share a point and the ground between them presses nothing.
 inline bool point_on_key(const GuiRectF& key, double x, double y) {
     return rect_contains(key, x, y);
 }

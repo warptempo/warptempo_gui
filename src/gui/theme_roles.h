@@ -122,7 +122,11 @@
 //     lane                   2A2A2A = Desktop (the marker lane)
 //     key press face         2A2A2A = Desktop (the press arc, 2026-11-05: his
 //                                     pick p2 over ControlBackground 1E1E1E —
-//                                     "press in skeumorphic is darker")
+//                                     "press in skeumorphic is darker"); since
+//                                     send Z's stage C (2026-11-19) the scrub's
+//                                     thumb's and the on-screen keyboard's
+//                                     press alone, awaiting stage D — every
+//                                     other key's press is Arc's lit look
 //     key face, pane, time field, magnify core
 //                            363636 = SurfaceBackground (the core below)
 //     cue outline            111111 = ControlContrastFrame — THE ENABLED
@@ -137,15 +141,20 @@
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
 //     cue, cue fill          FFAD56 = ViewCheckControlEnabledOn, THE
-//                                     ACCENT: A LIT KEY'S WHOLE FACE, the
-//                                     lamps', the seven doors' and the
-//                                     on-screen keyboard's two lit keys alike
-//                                     (architect 2026-11-11, session 106: "we
-//                                     should go back to where the accent color
-//                                     is the background of the lit lamp" —
-//                                     Live's "on"; materials.h's THE KEY) —
-//                                     every lit key but the radio keys'
-//                                     (below) — AND EVERY ENABLED MARKER'S
+//                                     ACCENT: A LIT OR PRESSED KEY'S FACE
+//                                     (Arc's `:checked` and `:active`, one
+//                                     look since send Z, 2026-11-19), every
+//                                     checked key's — the lamps', the seven
+//                                     doors', the four exclusive pairs' (the
+//                                     radio keys' ScaleAwareness retired that
+//                                     day) and the on-screen keyboard's two
+//                                     lit keys alike (architect 2026-11-11,
+//                                     session 106: "we should go back to where
+//                                     the accent color is the background of
+//                                     the lit lamp" — Live's "on";
+//                                     materials.h's THE KEY) — ARC'S ENTRY
+//                                     PROGRESS on NOISE (send Z) — AND EVERY
+//                                     ENABLED MARKER'S
 //                                     CHIP, the `h` view's added and changed
 //                                     items too: `cue_fill`, its own member,
 //                                     the same word (architect 2026-11-13,
@@ -160,19 +169,11 @@
 //                                     chip is the mixed accent). immaterial_mod's
 //                                     file carries its shaded gold here, its
 //                                     header the recipe
-//     radio lit fill         B595FC = ScaleAwareness, THE PURPLE: A LIT RADIO
-//                                     KEY'S WHOLE FACE, the eight of
-//                                     redesign_button_is_radio — SOURCE /
-//                                     TARGET, WARP / PHASE, FOLLOW / RESTR,
-//                                     TRIM / ADD SEL (architect 2026-11-11,
-//                                     session 107: two always-lit keys in the
-//                                     accent read too bright at the top right
-//                                     of his field of vision, "the purple is
-//                                     perfectly fine in my peripheral field of
-//                                     vision"; materials.h's THE RADIO KEYS).
-//                                     Every theme's own role, immaterial_mod's
-//                                     Immaterial's (its file changes the
-//                                     accent alone)
+//     (radio lit fill        = ScaleAwareness, the radio keys' purple of
+//                                     2026-11-11, session 107, RETIRED with
+//                                     the class and the role 2026-11-19, send
+//                                     Z's stage C: "we can let go of the
+//                                     green")
 //     playhead head          03C3D5 = RangeDefault
 //     selection fill         637E86 = StandbySelectionBackground
 //     selection text, text on lit, card ink
@@ -250,16 +251,12 @@
 //   even, clamped):
 //     ink                    191919 = WaveformColor over DetailViewBackground
 //     canvas                 393939 = DetailGridTiles over DetailViewBackground
-//     level fill             007383 = RangeEditField over SurfaceBackground
-//                                     (Live's volume color) — THE NOISE LEVEL
-//                                     CASE'S FILL on the key face
-//                                     (paint_level_case; architect 2026-11-11:
-//                                     "give noise the volume color from the
-//                                     ask ... so at 0 it wears the full vol
-//                                     color, and at -inf it wears the button
-//                                     case color"); a file's 8-digit word
-//                                     composited over the face, never stripped
-//                                     (architect 2026-11-06, session 81)
+//     (level fill            = RangeEditField over SurfaceBackground, the
+//                                     NOISE case's volume-colored fill of
+//                                     2026-11-11, RETIRED with the role
+//                                     2026-11-19, send Z's stage C: NOISE is
+//                                     Arc's entry, its level Arc's entry
+//                                     progress in the accent)
 //     center                 = ink (a role is what it paints: the zero line IS
 //                                   the ink, palette_file.h)
 //     score pane             = ink (modal_box.h's score pane: "from ableton
@@ -393,9 +390,13 @@
 //                                     mean(key face)) per channel, the means
 //                                     over the three sRGB bytes, rounded half
 //                                     to even and clamped (42 / 54 = 0.778 on
-//                                     Default: FFAD56 -> C68743) — A CHECKED
-//                                     KEY'S FACE UNDER A STANDING PRESS
-//                                     (architect 2026-11-11, session 106: "if
+//                                     Default: FFAD56 -> C68743) — THE
+//                                     ON-SCREEN KEYBOARD'S LIT KEY UNDER THE
+//                                     FINGER alone since send Z's stage C
+//                                     (2026-11-19; awaiting stage D: every
+//                                     other key's press is Arc's lit look,
+//                                     materials.h) (architect 2026-11-11,
+//                                     session 106: "if
 //                                     it's a lit lamp, it gets darkened based
 //                                     on the starting point of the accent
 //                                     color"; the press arc's ruling of
@@ -453,31 +454,11 @@
 //                                     reads true and dead as one unit
 //                                     (architect 2026-11-11, session 106: "dim
 //                                     the accent and the glyph so both read as
-//                                     a unit"; paint_key and key_ink,
-//                                     materials.h)
-//     radio lit press fill   8D74C4 = the radio lit fill · THE SAME PRESS
-//                                     RATIO, mean(press face) / mean(key
-//                                     face), per channel, one code path with
-//                                     the lit press fill (42 / 54 on Default:
-//                                     B595FC -> 8D74C4) — a checked radio
-//                                     key's face under a standing press
-//                                     (architect 2026-11-11, session 107),
-//                                     the black key face's ratio 1 as above
-//     radio lit dim fill, radio text on lit dim
-//                            655785, 232029 = THE RADIO KEY'S LIT-BUT-INERT
-//                                     PAIR, the same rule on the purple
-//                                     (2026-11-19): the face (the radio lit
-//                                     fill at 75 % over the body tone) at 60 %
-//                                     over the body tone (Default: B595FC ->
-//                                     9179C6 -> 655785; Arc at 100 73D216 ->
-//                                     527F33), the glyph by the accent's rule
-//                                     on the purple (Default 232029; Arc at
-//                                     100 9DA79C) — a tone of its own, since
-//                                     the print is over its own face;
-//                                     key_ink parts it by the key's lit class.
-//                                     The radio class's own tones retire in
-//                                     the send's stage C ("we can let go of
-//                                     the green")
+//                                     a unit"; paint_linked_group and
+//                                     key_ink, materials.h)
+//     (the radio keys' press, inert face and inert print, the purple by the
+//     same rules, 2026-11-11 / 2026-11-19, RETIRED with their class
+//     2026-11-19, send Z's stage C: "we can let go of the green")
 //
 // THE BRIGHT MIX (architect 2026-11-13, session 119, on real tablet captures
 // of Riparian and Gunmetal: "the whole point of it is that it dims ... the
@@ -503,9 +484,8 @@
 // when the time comes by just adjusting" the key; no per-theme value: "I
 // don't think it's worth redoing the presets so that each preset gets its
 // own value"). THE BRIGHT TONES, his list (kBrightTones, theme_roles.cpp):
-// the accent `cue`, the radio lit fill (ScaleAwareness), the playhead head
-// (RangeDefault), the level fill (the composite, mixed as it is painted),
-// the card face (Alert, the cards and the limiter lamp), the clip lamp
+// the accent `cue`, the playhead head (RangeDefault), the card face
+// (Alert, the cards and the limiter lamp), the clip lamp
 // (StandardVuMeter/Maximum), the selection fill
 // (StandbySelectionBackground) and the list press fill
 // (SelectionBackground) — the two selection fills together ("standby
@@ -513,8 +493,8 @@
 // the selection background getting the rule"). EVERY TONE DERIVED FROM A
 // BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
 // body): the cue fill — the markers wear the mixed accent — the lit press
-// and lit dim fills, the radio press and dim fills, the two inert prints
-// over the mixed inert faces, and the playhead line, white half way to the
+// and lit dim fills, the inert print over the mixed inert face, and the
+// playhead line, white half way to the
 // mixed head. NEVER MIXED: the text tones ("never the glyph color itself":
 // the text, the dim text, the key dim ink, the title, sidebar and ruler
 // texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection and list
@@ -525,7 +505,7 @@
 // tones, the cue outline, the inactive cue and its outline
 // (dark: "those weren't bright to begin with") and the scanner (below). At
 // the default 75 on the reference row: the accent FFAD56 -> C88B4A, the
-// purple B595FC -> 9179C6, the head 03C3D5 -> 0B9BA9 and its line 81E1EA
+// head 03C3D5 -> 0B9BA9 and its line 81E1EA
 // -> 85CDD4 (bright_mixed_tones, the code); on Arc-Dark the accent 5294E2 ->
 // 497CB9, the head D3DAE3 -> AAB0BA; at 100 every row is painted at its own
 // numbers.

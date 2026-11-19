@@ -2989,25 +2989,31 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // completion), the glyph predicate reading queue_running itself
             // with no per-tick mirror between them (architect 2026-09-24).
             // THE DAMAGE IS THE DRIFTED KEY'S OWN (architect 2026-11-16, the
-            // beats: the face, not the whole strip — a lamp tapped during a
+            // beats: the key, not the whole strip — a lamp tapped during a
             // play adds a key's few pixels to the scanner's frames, not the
             // strip): ONE RECT A DRIFTED KEY, THE UNION OF ITS STASHED PAINTED
-            // EXTENT AND ITS FACE (RedesignButtonFace::painted and ::rect —
-            // the key paints nothing outside its face since the printed
-            // legend under it retired, 2026-11-18, send Z). That rect holds
-            // every pixel the drift can change — the face and the glyph on it
-            // — and it is exactly the coverage publish_button_face asks
-            // before it refreshes the key's stash, so the frame repaints the
-            // key and republishes it and this walk finds no drift at the next
-            // tick. A drift never widens a key or moves a neighbor (the faces'
-            // pitch is the row's), so no other key's seat follows a drift.
+            // EXTENT AND ITS BOX (RedesignButtonFace::painted and ::rect —
+            // the key's box, border included, since send Z's linked groups,
+            // 2026-11-19; NOISE's the entry). That rect holds every pixel the
+            // drift can change — every pixel a linked member's state moves
+            // lies inside its own box, its seams and its group's corners
+            // included (materials.h's paint_linked_group), and the repaint
+            // under it paints the whole group from each member's state as
+            // published — and it is exactly the coverage publish_button_face
+            // asks before it refreshes the key's stash, so the frame repaints
+            // the key and republishes it and this walk finds no drift at the
+            // next tick. A drift never widens a key or moves a neighbor (the
+            // groups' pitch is the row's), so no other key's seat follows a
+            // drift.
             // THE HOME STRIP STAYS, WHOLE, for a strip on which this tick
             // finds any of:
             //   * a drifted key with NO PAINTED EXTENT (the cold case; a key
             //     hidden, yielded or overflowed has an empty rect and its
             //     stash refreshes unconditionally, so it does not drift), or
-            //     whose published face is NOT THE WHOLE FACE (cut at the
-            //     band's overflow column: its stash is the cut face);
+            //     whose published box is not whole — not the key's height,
+            //     or its painted extent not its box (since send Z's stage C
+            //     the band's overflow publishes a member empty rather than
+            //     cut, so no live key fails this; the test stays the guard);
             //   * A KEY THAT STILL DRIFTS AFTER A FRAME PAINTED ITS OWN RECT
             //     (face_narrow_frame: the frames begun when the rect was
             //     declared, against GuiPaintHandler::frames_begun now) — the
@@ -3055,8 +3061,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 uint64_t& declared = face_narrow_frame[static_cast<size_t>(i)];
                 const bool whole_face =
                     f.painted.w > 0 && f.painted.h > 0 &&
-                    f.rect.w == icon_case_w_px() &&
-                    f.rect.h == icon_case_h_px();
+                    f.rect.h == icon_case_h_px() &&
+                    f.painted.x == f.rect.x && f.painted.w == f.rect.w;
                 const bool painted_since = declared != 0 &&
                                            declared != frame_now;
                 if (!whole_face || painted_since ||

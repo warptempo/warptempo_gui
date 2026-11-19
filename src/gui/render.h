@@ -190,13 +190,11 @@ struct TrimRange {
 // row, Live's Default, that measured palette to the byte but the selection
 // pair's text, gui_theme.h; every bright tone installed mixed toward the
 // ground at the `bright_mix` key, theme_roles.h's THE BRIGHT MIX); A
-// LIT KEY'S FACE IS THE ACCENT, the palette's role `cue` (the markers' chip
-// the same word, `cue_fill`, 2026-11-13) — its press and its
-// inert faces the
-// chrome's `lit_press_fill` and `lit_dim_fill` (architect 2026-11-11,
-// session 106, materials.h's THE KEY), A LIT RADIO KEY'S THE PURPLE, the
-// chrome's `radio_lit_fill`, `radio_lit_press_fill` and
-// `radio_lit_dim_fill` (architect 2026-11-11, session 107); THE
+// LIT OR PRESSED KEY'S FACE IS THE ACCENT, the palette's role `cue` (the
+// markers' chip the same word, `cue_fill`, 2026-11-13) — its inert face the
+// chrome's `lit_dim_fill` (architect 2026-11-11, session 106; Arc's states
+// since 2026-11-19, send Z, materials.h's THE KEY; the radio keys' purple
+// retired that day); THE
 // PANEL'S FACE is the flat ground (the theme's `ground`, Default's 242424,
 // the flat look, architect 2026-11-01), and THE CHROME'S ROLES are the
 // theme's tones, one per role (theme_file.h's role table, the one owner;
@@ -215,9 +213,9 @@ struct TrimRange {
 // DERIVATION).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — the chrome's flat-look tones among them
-// (materials.h, 2026-11-01: the ground, the key's faces (rest and press;
-// a lit key's press and inert faces, its lit face the palette's `cue`; a
-// radio key's three lit faces), the
+// (materials.h, 2026-11-01: the ground, the key's faces (rest, disabled
+// and its border, a lit key's inert face, its lit face the palette's `cue`;
+// the flat press faces the keyboard keeps), the
 // text tones, the well's tones — the trim bar, its frame, the ruler, its
 // ticks, the marker lane — the panes and the selection pair; members of the
 // struct since 2026-11-05) — or
@@ -225,8 +223,7 @@ struct TrimRange {
 // each file is recolored to `currentColor` and painted in THE TONE the
 // caller passes as the installed theme's sRGB word (installed_theme():
 // `text`, `key_dim_ink` on a disabled key, `text_on_lit` on a lit key's
-// accent or purple face and `text_on_lit_dim` (a radio key's
-// `radio_text_on_lit_dim`) on a lit disabled one's dimmed face,
+// accent face and `text_on_lit_dim` on a lit disabled one's dimmed face,
 // materials.h's key_ink; icons.h's THE BOUND DRAWING) — the one place an
 // antialiased picture is copied whole.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
@@ -234,14 +231,15 @@ struct TrimRange {
 // and the selection's grey; `text_on_lit` over a lit key's accent face, lit
 // or lit under press, a glyph and the on-screen keyboard's lit cap alike,
 // and `text_on_lit_dim` over a lit-but-inert key's (architect 2026-11-11,
-// session 106) — over a radio key's purple faces `text_on_lit` and its own
-// inert print `radio_text_on_lit_dim` (sessions 107 and 140).
-// STILL OPAQUE, STILL NO PAINT-TIME COMPOSITING, NO ROUNDED CORNERS, NO
-// HOVER FACE ON ANY BUTTON: the keys have none and the chrome's buttons
-// never had one; the lists' lit rows are a selection, not a button face.
-// Every colour is a solid fill of integer cells — EXCEPT, on the canvas,
-// THE WAVEFORM PLATE'S EDGE (antialiased and blended on the GPU since
-// 2026-10-30, render_waveform_columns' head). (The color
+// session 106).
+// STILL OPAQUE, NO HOVER FACE ON ANY BUTTON: the keys have none and the
+// chrome's buttons never had one; the lists' lit rows are a selection, not
+// a button face. THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 W outer corners,
+// send Z, 2026-11-19: Arc's button and entry, A BUTTON IS ARC'S BUTTON
+// below), their edges at exact coverage, as every mark placed by time is
+// (THE COVERAGE STAMP, cool_edit_paint.h), and THE WAVEFORM PLATE'S EDGE is
+// antialiased and blended on the GPU (since 2026-10-30,
+// render_waveform_columns' head). (The color
 // picker's hue ring and SV triangle, 2026-10-07..14, were the one place the
 // product painted colors that were not roles; THE PROGRAM CASE'S SHADOW
 // RAMP, 2026-10-09 to 2026-10-23, and THE CAPTION'S GRADIENT, 2026-10-05 to
@@ -374,12 +372,11 @@ struct TrimRange {
 // 2026-10-09 to 2026-11-02, the well's frame 2026-11-17 to 2026-11-19).
 //
 // THE DISABLED FACES (2026-10-23; the key's own dim tone, Default's 5D5D5D,
-// since 2026-11-02): a dead key DIMS ITS GLYPH (`key_dim_ink`, paint_key_glyph;
-// no key prints a word since
-// 2026-11-02), its face the rest face — A DEAD LIT KEY DIMS FACE AND GLYPH
-// TOGETHER, the dimmed accent `lit_dim_fill` (a radio key's dimmed purple,
-// `radio_lit_dim_fill`) under `text_on_lit_dim` (a radio key's
-// `radio_text_on_lit_dim`) (architect 2026-11-11, session 106; materials.h's THE KEY; under an
+// since 2026-11-02; Arc's disabled button since 2026-11-19, send Z): a dead
+// key DIMS ITS DRAWING (`key_dim_ink`, paint_key_glyph), its face
+// `key_dim_face` and its stretch of the ring `key_dim_border` — A DEAD LIT
+// KEY DIMS FACE AND DRAWING TOGETHER, the dimmed accent `lit_dim_fill`
+// under `text_on_lit_dim` (architect 2026-11-11, session 106; materials.h's THE KEY; under an
 // overlay too, session 107); a CUE'S inert label is the
 // palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (`text_dim` (Default's 757575), paint_folder_overlay,
@@ -441,45 +438,40 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-FIVE (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the three press tones the
     // press arc's, the same day; the clip lamp the lamp arc's, the same
-    // night; the level fill and the lit key's press and inert faces
-    // 2026-11-11, session 106; the radio keys' three the same day, session
-    // 107; the trough and the well's lines 2026-11-17; THE ARC PAGE'S SIX
+    // night; the lit key's press and inert faces 2026-11-11, session 106;
+    // the trough and the well's lines 2026-11-17; THE ARC PAGE'S SIX
     // 2026-11-19, send Z, theme_roles.h's head: the body tone, the title,
-    // sidebar and ruler texts read since its stage B, the disabled key's
-    // face and border not before its stage C).
+    // sidebar and ruler texts, the disabled key's face and border; the level
+    // fill and the radio keys' three retired in its stage C).
     GuiColor body_face;       // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
     GuiColor sidebar_text;    // the marker labels' ink on the Arc page, later the tooltip's and the cards' (SidebarForeground)
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor key_dim_ink;     // a disabled key's glyph, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
-    GuiColor key_dim_face;    // a disabled key's face on the Arc page (the key face at 55 % over the body tone)
-    GuiColor key_dim_border;  // a disabled key's border on the Arc page (well_border at 55 % over the body tone)
-    GuiColor key_face;        // an unchecked key at rest; the time fields, the two lamps at rest
-    GuiColor key_press_face;  // an unchecked key's face under a standing press
-    GuiColor lit_press_fill;  // a checked key's face under a standing press, the accent darkened (its face at rest is `cue`, below)
-    GuiColor lit_dim_fill;    // a checked-but-disabled key's face, the accent dimmed
-    GuiColor radio_lit_fill;  // a checked RADIO key's whole face, the purple (materials.h's THE RADIO KEYS)
-    GuiColor radio_lit_press_fill; // a checked radio key's face under a standing press, the purple darkened
-    GuiColor radio_lit_dim_fill;   // a checked-but-disabled radio key's face, the purple dimmed
+    GuiColor key_dim_face;    // a disabled key's face (the key face at 55 % over the body tone; paint_linked_group, paint_word_button)
+    GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
+    GuiColor key_face;        // a key's face at rest; the two lamps at rest
+    GuiColor key_press_face;  // the scrub's thumb's and the on-screen keyboard's unlit key under a press (awaiting send Z's stage D)
+    GuiColor lit_press_fill;  // the on-screen keyboard's lit key under the finger, the accent darkened (awaiting stage D)
+    GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
     GuiColor well_frame;      // the scrub's channel, the tooltip's border
-    GuiColor ruler_face;      // the ruler
+    GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h)
     GuiColor ruler_tick;      // the ruler's ticks
     GuiColor ruler_text;      // the ruler's digits on the Arc page (the text at 80 % over the ruler)
     GuiColor lane_face;       // the marker lane
     GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
     GuiColor trim_span_face;  // the trim bar's pill at rest, the span
-    GuiColor well_border;     // THE WELL'S LINES, the stereo divider and the status bar's line (paint_well_frame_rows, render_waveform_divider, paint_status_bar)
+    GuiColor well_border;     // THE WELL'S LINES, the stereo divider and the status bar's line (paint_well_frame_rows, render_waveform_divider, paint_status_bar); the keys', word buttons' and entries' rings
     GuiColor pane_face;       // the modal family's box interior, the tooltip's face
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor list_press_fill; // a list row's fill under a standing press
     GuiColor list_press_text; // that row's text and glyph
     GuiColor clip_lamp;       // the title bar's clip lamp, lit and not struck (THE TWO LAMPS, the title bar block; the limiter lamp lit wears card_ground)
-    GuiColor level_fill;      // the NOISE level case's fill, Live's RangeEditField over the key face (paint_level_case, paint_handler.cpp; 2026-11-11)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -1707,31 +1699,25 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // THE CASE IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader
 // takes the accessors below, so the three rows cannot drift apart.
 //
-// THE KEY'S FACE IS THE KEY (architect 2026-11-04, the unit, his "1 agree"
-// to the hi-fi's face and "grow the box instead of adding a border"; the
-// hi-fi key metrics of 2026-11-03's retrofit, the square key of 2026-11-02
-// reversed; mock v4 that night: the face 70 x 34 device px, the gap 2, so
-// every key keeps its pitch of 72 device px and its seat): THE `key_width`
-// TUNING KEY'S W WIDE (key_width_w, its seat above; 36 its default since
-// send Z) by THE `key_height` TUNING KEY'S W TALL (key_height_w, its seat
-// above; 28 its default since send Z — Arc's icon button, 36 x 28 W,
-// architect 2026-11-18: "about 72 device pixel width ... the border is
-// clickable"), both through scaled_px, rounded at the element: at the
-// defaults, 72 x 56 device px on the tablet at 200 %, the group pitch 74
-// device px (the border and the linked group are stage C's). THE PAINTED FACE
-// IS THE WHOLE KEY — NO OUTLINE, NO INSET — and ITS NEIGHBOR IN A GROUP
-// STANDS ONE W OF GROUND AWAY (kKeyGapW, key_gap_px below: 2 device px at
-// 200 %, 1 at 100 %; materials.h's THE
-// FACE AND ITS GAP and key_group_pitch_px, the face and the gap). The face
-// is the key's hit box and its glyph's seat.
-// Every key carries a Breeze glyph centered on its face (paint_key_glyph,
-// paint_handler.cpp; icons.h's THE KEYS), its ink box's larger side
-// FOLLOWING THE KEY'S HEIGHT, 9 * key_height / 17 W — 9 W, 18 device px on
-// the tablet, at the default 17 (architect 2026-11-04 night, his pick d1 of
-// tmp/s36, every key glyph grown one W; 16 / 34 device px before it, 16 /
-// 33 off mocks s0..s4 2026-11-03), one size for every key. NO PRINTED
-// LEGEND UNDER IT (retired 2026-11-18, send Z: "That's from the hi-fi
-// theme"); the tooltip names the act.
+// THE KEY IS ARC'S ICON BUTTON, ITS BOX BORDER INCLUDED (architect
+// 2026-11-18 / 2026-11-19, send Z; DESIGN §3; materials.h's THE KEY owns its
+// look): THE `key_width` TUNING KEY'S W WIDE (key_width_w, its seat above;
+// 36 its default) by THE `key_height` TUNING KEY'S W TALL (key_height_w,
+// its seat above; 28 its default — Arc's icon button, 36 x 28 W, architect
+// 2026-11-18: "about 72 device pixel width ... the border is clickable"),
+// both through scaled_px, rounded at the element: at the defaults, 72 x 56
+// device px on the tablet at 200 %. THE BOX IS THE WHOLE KEY, its one-W ring
+// included, and THE KEYS OF A GROUP ARE LINKED, NEIGHBORS SHARING ONE SEAM
+// COLUMN (materials.h's key_link_pitch_px and linked_group_w_px: the pitch
+// 70 device px on the tablet, a group of n 72 + 70 (n − 1)); the box is the
+// key's hit box (a seam its left key's) and its drawing's seat. (The face
+// one W of ground from its neighbor, 2026-11-04 to 2026-11-19, went with
+// the flat key.)
+// Every key carries its set's drawing, the 16 W canvas centered on its box
+// (paint_key_glyph, paint_handler.cpp; icons.h's THE KEYS), one size for
+// every key (send Z; the 9 / 17 share of `key_height` of 2026-11-04 night
+// retired). NO PRINTED LEGEND UNDER IT (retired 2026-11-18, send Z: "That's
+// from the hi-fi theme"); the tooltip names the act.
 //
 // THE BAND — THE TITLE BAR AND THE TOP ICON ROW (architect 2026-11-18 /
 // 2026-11-19, send Z; DESIGN §1): THE TITLE BAR (title_bar_h_px, its block
@@ -1747,10 +1733,10 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // under it. (The band's pads off the on-screen keyboard's key height had
 // no reader left here; the keyboard's own band pad stays its own,
 // onscreen_keyboard.h's edge_pad_floor_px.) Its runs are paint_icon_row's
-// walk (icon_row_seats: the faces one key gap apart inside a run, the run
-// gap of ground between two runs' faces, program_run_gap_px). The hit target
-// is the painted face (point_on_key, materials.h); the ground round the
-// faces, between runs and in the pads, is inert for input.
+// walk (icon_row_seats: each run one linked group, the run gap of ground
+// between two groups, program_run_gap_px). The hit target is the painted
+// box (point_on_key, materials.h); the ground round the groups, between
+// them and in the pads, is inert for input.
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because the
 // case is not one row's: paint_handler.cpp's three rows read it. THE CARD AND THE FOLDER OVERLAY'S LIST
@@ -1767,21 +1753,20 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // paragraph): scaled_px, floored at three device px so a key never shrinks
 // to a sliver at a tiny scale. icon_case_w_px is THE ONE READER of the
 // width: every key surface's walk, seat and hit box takes it (or
-// key_group_pitch_px, materials.h, built on it).
+// key_link_pitch_px / linked_group_w_px, materials.h, built on it).
 inline int icon_case_w_px() {
     return scaled_px(key_width_w(), 3);
 }
 inline int icon_case_h_px() {
     return scaled_px(key_height_w(), 3);
 }
-// THE GROUND BETWEEN TWO KEYS OF A GROUP (the case paragraph; architect
-// 2026-11-04 night): kKeyGapW, ONE W through scaled_px — 2 device px on
-// the tablet at 200 %, 1 at 100 % — FLOORED AT ONE DEVICE PX so two faces
-// stand apart at every scale. Every key surface's gap: the
-// band's, row 8's and the controls rows' groups (materials.h's
-// key_group_pitch_px) and the on-screen keyboard's (onscreen_keyboard.h's
-// key_gap_px, architect 2026-11-04: "the same face and gap on every key
-// surface").
+// THE GROUND BETWEEN TWO FLAT KEYS (architect 2026-11-04 night): kKeyGapW,
+// ONE W through scaled_px — 2 device px on the tablet at 200 %, 1 at 100 %
+// — FLOORED AT ONE DEVICE PX so two faces stand apart at every scale: the
+// on-screen keyboard's (onscreen_keyboard.h's key_gap_px, flat until send
+// Z's stage D) and the title bar's two lamps' (logo_legend_layout). The
+// band's, the bottom icon row's and the controls rows' keys share a seam
+// instead since send Z's linked groups (materials.h's key_link_pitch_px).
 inline constexpr double kKeyGapW = 1.0;
 inline int key_gap_px() {
     return scaled_px(kKeyGapW, 1);
@@ -1853,9 +1838,17 @@ inline int program_run_gap_px() {
     return scaled_px(run_gap_w());
 }
 
-// A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
-// its box is the key's (materials.h's paint_key), and no corner in the
-// chrome is rounded.
+// A BUTTON IS ARC'S BUTTON, ITS OUTER CORNERS ROUNDED (architect 2026-11-18
+// / 2026-11-19, send Z, reversing 2026-10-02's square corner of the
+// Windows-95 design): every key of both icon rows and of the controls rows
+// a box in a one-W `well_border` ring whose outer corners are 3 W
+// (materials.h's kKeyCornerW, the faces' inside it 2 W), a group of keys one
+// LINKED GROUP — one ring, the keys sharing one seam column each — and every
+// word button and entry its own ring (materials.h's paint_linked_group,
+// paint_word_button, paint_entry; their exact-coverage road the coverage
+// stamp's rounded shapes, cool_edit_paint.h). The scrub's thumb and the
+// on-screen keyboard's keys keep today's square flat face until send Z's
+// stage D (materials.h's paint_flat_key).
 
 // -- THE PLAY-SCRUB (architect 2026-10-02; flat 2026-11-01 night, M7) -------
 //
@@ -1919,7 +1912,7 @@ inline constexpr double kScrubThumbWidthPx  = 12.0;
 inline int scrub_thumb_w_px() { return scaled_px(kScrubThumbWidthPx, 3); }
 // THE THUMB ON ITS BOX `box` (scrub_thumb_box below: scrub_thumb_w_px by
 // scrub_thumb_h_px on real edges, painted at exact coverage, materials.h's
-// paint_key on a GuiRectF): the
+// paint_flat_key, awaiting send Z's stage D): the
 // flat key, at rest or — `pressed`, the owner's ScrubDrag armed ON THE
 // THUMB (RenderPlayer::ScrubDrag::on_thumb, ScoreViewer::ScrubDrag's; a
 // press on the track beside it carries the thumb but presses no key) — in
@@ -2205,37 +2198,18 @@ inline int cue_label_lead_px() {
 inline int cue_fill_lead_px() {
     return cue_label_lead_px() - cue_fill_pad_px();
 }
-// THE TIME FIELD'S PAD AND ITS HEIGHT (architect 2026-10-23, "symmetrical
-// and much tighter"; the rule 2026-11-03, the text round; the number
-// 2026-11-03, mock u3) — ONE OWNER, read by the time fields
-// (paint_handler.cpp's THE TIME FIELDS block: the bottom icon row's clock,
-// the render player's two, the score viewer's rows) and the hover tooltip,
-// whose box pads every side with it (paint_shift_tooltip; architect
-// 2026-10-31, the clock "has a nice padding for the font size and
-// resolution"): THE PAD IS EQUAL ON ALL FOUR SIDES OF THE DIGITS' INK —
-// above and below their cap band, left and right of the widest-digit
-// specimen's ink box in whole px (the cell, paint_handler.cpp's
-// time_field_metrics and kTimeShape's block) — kTimeFieldPadW, 6 W (12
-// device px on the tablet at 200 %; scaled_px, rounded at the element,
-// floored at one px) — and THE HEIGHT IS DERIVED, the pad, the Program
-// face's cap rows (gui_font_cap_px, rounded at the element) and the pad: 12
-// + 17 + 12 = 41 device rows on the tablet at the Regular 12 W (the 24-px
-// face's cap 16.51; send Z); THE WIDTH the same way at the painter, the
-// pad, the cell and the pad (time_field_w_px). THE FIELD IS NO KEY
-// (architect 2026-10-29): it does not take the key's height, centred on
-// the case's rows (paint_handler.cpp's time_field_rect) — 41 rows on the
-// 56-row face at key_height 28. (THE MARKER LANE read this height until
-// 2026-11-19; it is a stated 20 W since, send Z. The clock as Arc's entry
-// is send Z's stage C.)
+// THE TOOLTIP'S PAD (architect 2026-10-23, "symmetrical and much tighter";
+// 2026-11-03, mock u3; the hover tooltip's box pads every side with it,
+// paint_shift_tooltip; architect 2026-10-31, the clock "has a nice padding
+// for the font size and resolution"): kTimeFieldPadW, 6 W (12 device px on
+// the tablet at 200 %; scaled_px, rounded at the element, floored at one px)
+// — the time fields' pad it was named for, until every time field became
+// Arc's entry (send Z's stage C, 2026-11-19: paint_handler.cpp's THE TIME
+// FIELDS block, its pen and its width the entry's own), the tooltip keeping
+// it until its own restyle (send Z's stage D).
 inline constexpr double kTimeFieldPadW = 6.0;
 inline int time_field_pad_px() {
     return scaled_px(kTimeFieldPadW, 1);
-}
-inline int time_field_h_px() {
-    return time_field_pad_px() +
-           static_cast<int>(std::nearbyint(
-               gui_font_cap_px(gui_font(GuiFace::Program)))) +
-           time_field_pad_px();
 }
 // THE MARKER LANE IS THUNAR'S ROW AT 9 pt (architect 2026-11-19, send Z;
 // DESIGN §1 / §4, measured on his 9 pt desktop shot: Thunar's side-pane and
@@ -2943,25 +2917,21 @@ inline int tooltip_gap_px() {
 // with the model, closed_questions.md.)
 
 // THE KEY'S COLUMN — THE TOOLTIP'S HOVER TARGET (architect 2026-11-07,
-// session 87: "always show"; the model at AppState::RedesignTooltip): a key's
-// painted face PLUS HALF THE KEY GAP ON EACH SIDE — the left side the gap's
-// floor half (key_gap_px() / 2), the right side its ceiling half (the rest),
-// so the two halves of an in-run gap sum to the gap whatever its parity and a
-// run's columns TILE with no hole and no overlap: on the tablet at 200 % the
-// gap is 2 device px, one each side; at 100 % it is 1, the left neighbour's
-// column taking it. Ground beyond — a run gap's rest, the pads above and
-// below the faces — is no column (the strip pad under the face, where the
-// printed legend stood, left the column with the legend, 2026-11-18, send
-// Z). A face that does not stand (a zero rect) has no column. PRESSES STAY
-// FACE-ONLY (point_on_key, materials.h): this is the tooltip's target alone,
-// read by the two hover walks (recompute_redesign_button_hover,
-// update_modal_dialog_hover) and by nothing that presses.
-inline GuiRect tooltip_column_rect(const GuiRect& face) {
-    if (face.w <= 0 || face.h <= 0) return GuiRect{0, 0, 0, 0};
-    const int gap   = key_gap_px();
-    const int left  = gap / 2;
-    const int right = gap - left;
-    return GuiRect{face.x - left, face.y, face.w + left + right, face.h};
+// session 87: "always show"; the model at AppState::RedesignTooltip): THE
+// KEY'S BOX, border included, LESS THE SEAM its linked neighbor on the left
+// owns (`seam`, materials.h's linked_key_seam_px) — exactly the hit box
+// since send Z's linked groups (2026-11-19: Arc's linked buttons share one
+// seam column and leave no gap inside a group, so a group's columns TILE
+// with no hole and no overlap), the half key gaps of 2026-11-07 gone with
+// the gap. The ground between two groups and the pads above and below the
+// keys is no column. A box that does not stand (a zero rect) has no column.
+// Read by the two hover walks (recompute_redesign_button_hover,
+// update_modal_dialog_hover); the presses ask point_on_key (materials.h),
+// the same box.
+inline GuiRect tooltip_column_rect(const GuiRect& box, int seam) {
+    if (box.w <= 0 || box.h <= 0) return GuiRect{0, 0, 0, 0};
+    const int s = std::clamp(seam, 0, box.w);
+    return GuiRect{box.x + s, box.y, box.w - s, box.h};
 }
 
 // THE BYPASS CHAIN'S REACH (architect 2026-11-07, session 87): once a box

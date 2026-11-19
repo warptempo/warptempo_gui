@@ -19,7 +19,7 @@
 //   table).
 // Both are RECOLORED to `currentColor` by the one RECOLOR RULE (the README's;
 // each importer's one table the enumerator -> source list) and PAINTED IN
-// THE TEXT TONES — a lit key's in the print of its accent or purple face —
+// THE TEXT TONES — a lit key's in the print of its accent face —
 // (materials.h) at ONE ROAD, THE INK BOX (below), each seat naming its own
 // ink length (the battery's the title bar's cap band, render.h's title bar
 // block):
@@ -29,12 +29,11 @@
 //   on-screen keyboard's glyph keys, at the same one size
 //   (onscreen_keyboard::cap_icon: Tab FormatIndentMore, Enter KeyEnter, the
 //   rest shared drawings) —
-//   centered on its face (paint_key_glyph, paint_handler.cpp), `text`
-//   B5B5B5 at rest and pressed, `key_dim_ink` (Default's 5D5D5D) on a disabled key,
-//   `text_on_lit` (Default's 070707) on a lit one's accent face (a radio
-//   key's purple, 2026-11-11, session 107), pressed or
-//   not, and `text_on_lit_dim` (Default's 2A221A; a radio key's
-//   `radio_text_on_lit_dim`, 232029) on a lit disabled one's dimmed face
+//   its 16 W canvas centered on its box (paint_key_glyph, paint_handler.cpp;
+//   send Z, 2026-11-19), `text` (Default's B5B5B5) at rest,
+//   `key_dim_ink` (Default's 5D5D5D) on a disabled key, `text_on_lit`
+//   (Default's 070707) on a lit or pressed one's accent face, and
+//   `text_on_lit_dim` (Default's 2A221A) on a lit disabled one's dimmed face
 //   (materials.h's key_ink; architect 2026-11-11, session 106; 2026-11-17,
 //   session 140; 2026-11-19, send Z).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the title bar's note
@@ -109,7 +108,7 @@ namespace icons {
 // part and the sets cannot hold different rosters. Which
 // seat wears which is its owner's: the keys' act vocabularies
 // (redesign_button_icon, app_state.h; render_player_button_icon,
-// score_viewer_button_icon, modal_word_icon, paint_handler.cpp /
+// score_viewer_button_icon, paint_handler.cpp /
 // score_viewer.h) and the off-key seats' painters (the head).
 #define WARPTEMPO_ICONS(X)                                        \
     X(DocumentOpen) X(DocumentSave) X(DocumentSaveAs) X(VcsPull)         \
@@ -214,10 +213,10 @@ void drop_rasters();
 // it: a probe at zoom 8 measures the ink in user units, the zoom is `ink_px`
 // over its larger side, and the zoom steps down by 1 % while the rim's
 // extra row makes it overrun. THE SEATS' LENGTHS, each its owner's: the
-// keys' scaled_px of 9 / 17 of the `key_height` tuning key's W
-// (kKeyGlyphInkPerKeySide, paint_key_glyph, 9 W at the default 17, 18
-// device px on the tablet, 2026-11-04 night, his pick d1, one W over the 8
-// W before it), the title bar's note (the drawing's ink in a 12 W box,
+// keys' drawing as its whole canvas in a 16 W box (kKeyDrawingBoxW,
+// paint_key_glyph, 32 device px on the tablet: Papirus's 16-px drawings at
+// their native size; send Z, 2026-11-19, ink_in_box below), the title bar's
+// note (the drawing's ink in a 12 W box,
 // ink_in_box below) and battery (the cap band's height, render.h's title
 // bar block) — the list rows'
 // scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' .525 of the first

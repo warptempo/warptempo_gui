@@ -91,9 +91,9 @@ struct ProgramSpec {
     // (THE STRIPS' RUN GAP AND PADS are render.h's: the `run_gap` tuning
     // key, the toolbar pads, the panel's inset kEdgeInsetW — THE EDGE RULE
     // at well_columns, the strips' seats paint_handler.cpp's icon_row_seats
-    // and bottom_row_seats. THE TIME FIELD'S HEIGHT AND PAD are render.h's,
-    // kTimeFieldPadW; THE TAB'S NAME'S AIR past the clock field
-    // paint_handler.cpp's kTabNameAirW.)
+    // and bottom_row_seats. THE TIME FIELDS are Arc's entry since send Z's
+    // stage C, their lengths paint_handler.cpp's (kEntryPadsW, kEntryPenW),
+    // the tab's name's pen past the clock's entry its kTabNameGapW.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
     // (THE WELL'S SIDE MARGIN, 12 W round the frame of 2026-11-17, retired
