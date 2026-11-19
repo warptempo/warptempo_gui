@@ -673,8 +673,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // (Bare `t` and `p`, the S <-> T and W <-> P toggles, are gone: the two
     // axes are reachable through the four selectors below alone — the keys
-    // and the icon row's two view pairs. handle_active_audio_view_toggle is
-    // the body `t` called; it stays.)
+    // and the icon row's two view pairs.)
 
     // BARE 1 / 2 / 3 / 4 ARE THE SELECTORS, ONE AXIS EACH (architect
     // 2026-10-14, the icon row's two radio pairs): `1` is Source and `2`
@@ -750,10 +749,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE WHOLE VISIBLE CUE since row 7 deleted the bottom strip's
     // "(read-only)" token as a restatement of it.
     // The write and the damage that goes with it live in set_tab_read_only
-    // (its contract is at the declaration, input_handler.h), which this road
-    // shares with the settings editor's `tab_a_read_only=` /
-    // `tab_b_read_only=` commit — the bit's second and only other writer, and
-    // the reason the setter takes a tab rather than assuming the active one.
+    // (its contract is at the declaration, input_handler.h), and this road
+    // is its one caller.
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {
         set_tab_read_only(app.active_tab_view,
                           !active_view_state(app).read_only);
@@ -2959,15 +2956,6 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
     return std::move(*r);
 }
 
-// THE FLIP, one line over the set-to form below — ONE CALLER since bare `t`
-// was deleted on 2026-09-15, the settings editor's `active_audio_view=`
-// commit. Every invariant the switch owns lives in
-// the one body; the contract for both spellings is at the declaration
-// (input_handler.h).
-void GuiInputHandler::handle_active_audio_view_toggle() {
-    switch_active_audio_view_to(app.active_audio_view == 'S' ? 'T' : 'S');
-}
-
 void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // Audio must be loaded — the switch is a silent no-op in blank state.
     // (The blank/loading guard near the top of on_key already covers
@@ -3068,9 +3056,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // would have to be re-derived in the new domain. Closing it is simpler
     // than re-landing it, and it is what the flip already does to everything
     // else around the caret. Guarded internally on an active editor, so this
-    // is a no-op when none is open. Only `t` and the settings-editor
-    // `active_audio_view=` commit route here — Ctrl+Tab never changes
-    // active_audio_view — so this is the one place either edge is handled.
+    // is a no-op when none is open. Ctrl+Tab never changes
+    // active_audio_view, so this is the one place either edge is handled.
     // THE CLOSE IS KIND-AGNOSTIC: every top-strip editor kind tears down on
     // T->S (architect 2026-08-25: "we want symmetry as much as possible").
     flag_editor.exit_top_flag_edit_no_commit();
@@ -3099,9 +3086,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // ALL: it lives in target view alone, bare `i` crossing S -> T through
     // this very chokepoint before it lights, and every caller that could name
     // 'S' under a lit lamp refusing ahead of it (bare 1 and its three fellow
-    // selectors at the iteration lock's gate, the settings editor's typed
-    // `active_audio_view=S`, and the undo/redo restore, which the lock
-    // refuses whole) — the invariant is at AppState::iteration_mode_enabled,
+    // selectors at the iteration lock's gate, and the undo/redo restore,
+    // which the lock refuses whole) — the invariant is at AppState::iteration_mode_enabled,
     // and this body takes no term for it.)
 
     // Target-view playback is rebound to the rendered target buffer once it is
@@ -3160,9 +3146,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // promote the wrong geometry at the next paint — to the cold live-map
     // fallback for the one tick until the flag item cache rebuilds,
     // stage the new view's map, and a frame promotes it — the recorded
-    // cold-state seam, not a new one. This is the sole gesture toggle
-    // chokepoint (the `t` key and the settings-editor `active_audio_view=`
-    // commit both route here). Ruling at the selector.
+    // cold-state seam, not a new one. This is the sole S/T chokepoint, every
+    // caller routing here (the inventory below). Ruling at the selector.
     app.displayed_target_warp_frame_map.clear();
     app.staged_displayed_target_warp_frame_map.clear();
     // The displayed-viewport mirror (sibling of the map) resets to cold too, so
@@ -3211,8 +3196,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-10-14: the
     // absolute Source / Target selectors on bare 1 / 2 (and the icon row's
     // Source / Target pair, which synthesizes them),
-    // the settings editor's `active_audio_view=` GUI-key twin, bare `i`'s own
-    // crossing into target, and the undo/redo restore's audio-view tag.
+    // bare `i`'s own crossing into target, and the undo/redo restore's
+    // audio-view tag.
     // (Shift+S called it until 2026-10-12, when the crossing chord learned to
     // stay in its audio view, and the phase-reset propagate paste's landing
     // tail until 2026-10-14, when the paste learned the same.) A carried
@@ -3650,9 +3635,8 @@ void GuiInputHandler::apply_icons(GuiIconSet set) {
 void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     // The contract — sole writer, band resolved by tab, damage only when the
     // named band is the active one, history-less — is at the declaration
-    // (input_handler.h). The two callers are the bare-`o` arm above, which the
-    // icon row's Read-Only button reaches by synthesizing that press, and the
-    // settings editor's per-tab read_only commit.
+    // (input_handler.h). The one caller is the bare-`o` arm above, which the
+    // icon row's Read-Only button reaches by synthesizing that press.
     ViewState& band = (tab_view == 'B') ? app.tab_b : app.tab_a;
     if (band.read_only == value) return;
     band.read_only = value;

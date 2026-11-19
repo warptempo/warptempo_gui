@@ -131,8 +131,8 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            page's value list's tap, the resident
 //                            recordings freed and the new folder loaded
 //                            where the level is audible
-//                            (GuiNoise::change_folder); the list shows and
-//                            Tab completes the folders there. PERMANENT and
+//                            (GuiNoise::change_folder); the list shows the
+//                            folders there. PERMANENT and
 //                            REQUIRED; the first-run value the defaults
 //                            file's (`rain` there). A name
 //                            with no folder LOADS and greys the NOISE case
@@ -755,8 +755,9 @@ enum class GuiIconSet { Breeze, Papirus };
 // The chokepoints are the callers inventory at write_device_config below.
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
-// SETTINGS EDITOR (settings_editor.h), its typed `key=value` line, Tab
-// completing the key names — `gui_scale`, `projects_repo`, `projects_path`,
+// SETTINGS PAGE's row (settings_editor.h) — its value list, or the line
+// editor holding the value alone (architect 2026-11-19, send AA) — for
+// `gui_scale`, `projects_repo`, `projects_path`,
 // `true_colors`, since 2026-11-05 `theme`, since 2026-10-31 `waveform_grow`,
 // since 2026-10-28 `noise`, since 2026-11-05 night
 // `noise_attenuation_level`, `noise_crossfade_s` and since 2026-10-29 the
@@ -768,9 +769,9 @@ enum class GuiIconSet { Breeze, Papirus };
 // `bright_mix`, and since 2026-11-14 the tuning key `waveform_fade_px`,
 // and since 2026-11-17 the icon set `icons`,
 // among them
-// (kSettingsEditorKeys) — then a key's current
-// value, then a closed value's words, and committing each through this
-// file's writer under the key's own grammar below. THE LEVEL,
+// (kSettingsEditorKeys) — Tab recalling a key's current value and
+// completing the path key's folders, each committed through this file's
+// writer under the key's own grammar below. THE LEVEL,
 // `noise_level`, is edited on the main page alone, the band's NOISE case,
 // whose lift writes through the same writer
 // (architect 2026-11-05 night: a key shown and edited on the main page gets
@@ -1023,8 +1024,8 @@ inline bool is_projects_repo(const std::string& v) {
 
 // THE true_colors GRAMMAR (2026-10-21) — the two lowercase words, exactly;
 // the one owner the reader, the writer, the settings editor's commit and its
-// recall read (format_true_colors, parse_true_colors), and the words its Tab
-// completes (kTrueColorsWords).
+// recall read (format_true_colors, parse_true_colors), and the words its
+// value list shows (kTrueColorsWords).
 inline constexpr const char* kTrueColorsOn  = "on";
 inline constexpr const char* kTrueColorsOff = "off";
 inline constexpr const char* kTrueColorsWords[] = {kTrueColorsOn,
@@ -1041,8 +1042,8 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
 
 // THE icons GRAMMAR (2026-11-17) — the two lowercase words, exactly; the one
 // owner the reader, the writer, the settings editor's commit and its recall
-// read (format_icons, parse_icons), and the words its value list shows and
-// its Tab completes (kIconsWords), Breeze first as the sets were made.
+// read (format_icons, parse_icons), and the words its value list shows
+// (kIconsWords), Breeze first as the sets were made.
 inline constexpr const char* kIconsBreeze  = "breeze";
 inline constexpr const char* kIconsPapirus = "papirus";
 inline constexpr const char* kIconsWords[] = {kIconsBreeze, kIconsPapirus};
@@ -1121,7 +1122,7 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
 // (parse_noise_attenuation_db: the bed's switch is noise_level's alone).
 // The readers: the config's reader and writer, the case's lift (the
 // drag persists through the writer) and its painter (the face's
-// formatter); the attenuation's typed arm and its recall
+// formatter); the attenuation's line-editor arm and its recall
 // (apply_device_setting, recall_gui_setting_value). 0 dB is the recordings
 // as they are; the project voice plays at 0 dB, summed unscaled with the bed
 // before the clip (playback_common.h's head), and the tablet's own volume
@@ -1652,8 +1653,8 @@ inline bool is_last_project_name(const std::string& v) {
 // NOISE case greys (noise.h's head). CLOSED (closed_questions.md, this its
 // owner): an empty `noise=` line. THE CHOICE OF SOUND FROM INSIDE THE APP is
 // the settings page's `noise` row (architect 2026-10-28 night): a value list
-// of the folders there, a tap committing the name through the typed line's
-// own commit; Tab still completes the typed name.
+// of the folders there, a tap committing the name through the device keys'
+// one body (apply_device_setting).
 inline constexpr const char* kNoiseFolderGrammarReason =
     "must be one folder name under noise/, not empty and not a path";
 inline bool is_noise_folder_name(const std::string& v) {

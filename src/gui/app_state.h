@@ -2163,7 +2163,8 @@ enum class RedesignButton {
     // the tooltip lamp (architect 2026-10-01: help comes after settings):
     // bare `;`, THE SETTINGS PAGE (architect 2026-10-28: the editor's keys
     // as `key=value` rows in the folder overlay, a row opening the settings
-    // editor prefilled on its line — open_settings_page), wearing Settings.
+    // editor on its key, prefilled with its value — open_settings_page),
+    // wearing Settings.
     // The button IS the key, its plain press alone ("plain press only.
     // retire long press"), so it greys exactly where
     // `;` refuses — the `h` view (off that mode's allowlist, through the
@@ -8304,8 +8305,9 @@ struct AppState {
     // independent (the in-practice mutual exclusion comes from the flag
     // editor swallowing all keys while active).
     // THE DIALOG LINE EDITOR'S ONE BUFFER, THREE KINDS:
-    // Kind::SettingsAssignment, the settings editor's `key=value` line
-    // (GuiSettingsEditor::open);
+    // Kind::SettingsAssignment, the settings editor's value for the row's
+    // key, the value alone (architect 2026-11-19, send AA; the key the
+    // open's, GuiSettingsEditor::open / page_key);
     // Kind::TrimPresetName, the trim preset's name (2026-10-28 night, the
     // trim presets list's Save As, GuiInputHandler::trim_presets_save_as);
     // and Kind::BpmField, one field of the BPM form, its value alone
@@ -8331,7 +8333,8 @@ struct AppState {
     // 2026-10-28: the Settings button and bare `;`; the twenty-six keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
-    // open act the editor opened PREFILLED on the row's line once
+    // open act the editor opened on the row's key, PREFILLED with its value
+    // (2026-11-19, send AA), once
     // the page has closed — or, on the row of a key with a value list, that
     // list swapped in under the same session); and the VALUE LIST
     // (2026-10-28 night for `true_colors`,
@@ -8953,7 +8956,8 @@ struct AppState {
     //                 the listings carry no `..` row and Up is a button and
     //                 Backspace), under the project picker reopens the row's
     //                 project, under the settings page opens the settings
-    //                 editor prefilled on the row's line (whose OK and
+    //                 editor on the row's key, prefilled with its value
+    //                 (whose OK and
     //                 Cancel reopen the page on that row) or swaps in the
     //                 key's value list (settings_page_commit), and under the
     //                 value list commits the row's value to the listed key,
@@ -8961,8 +8965,8 @@ struct AppState {
     //                 under the trim presets list applies the row's preset
     //                 to the active tab's trim, the list standing
     //                 (trim_presets_apply), and under the BPM form opens
-    //                 the line editor prefilled on the row's line (whose
-    //                 OK and Cancel reopen the form on that row,
+    //                 the line editor prefilled with the row's value
+    //                 (whose OK and Cancel reopen the form on that row,
     //                 bpm_form_commit); the lift's
     //                 highlight is every owner's alike (a picker's band IS
     //                 its whole state — there is no field to feed), an inert

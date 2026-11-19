@@ -408,9 +408,8 @@ struct GuiHistoryNowSide {
 struct GuiHistoryGuiSide;
 
 // Capture it off the live state. The active tab's band takes the save path's
-// pre-write stash (viewport / zoom / playhead / trim) on a LOCAL copy, exactly
-// as the settings editor's autocomplete recall does, so the bytes match a save
-// while this const read mutates nothing.
+// pre-write stash (viewport / zoom / playhead / trim) on a LOCAL copy, so the
+// bytes match a save while this const read mutates nothing.
 std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
     const AppState& app);
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "active_views.h"
 #include "app_state.h"
 #include "audio.h"
 #include "notifications.h"
@@ -12,167 +11,155 @@
 #include <string_view>
 #include <vector>
 
+struct Selection;
 struct Undo;
 struct GuiTargetRender;
 struct GuiInputHandler;
 
-// THE SETTINGS EDITOR — THE ONE ROAD TO EVERY SETTING (architect 2026-10-21
-// ~21:05, with the menu row's removal: "settings could gain a tab autocomplete
-// for the keys, making the dropdown less useful" — "yes"). IT OPENS FROM THE
-// SETTINGS PAGE (architect 2026-10-28): the band's Settings button and its
-// chord, bare `;`, raise the page, the folder overlay's list of
-// kSettingsEditorKeys below, one `key=value` row each, `scale` and `bpm`
+// THE SETTINGS EDITOR — THE LINE EDITOR OF THE SETTINGS PAGE'S ROWS. IT
+// OPENS FROM THE SETTINGS PAGE (architect 2026-10-28): the band's Settings
+// button and its chord, bare `;`, raise the page, the folder overlay's list
+// of kSettingsEditorKeys below, one `key=value` row each, `scale` and `bpm`
 // shown beside them as disabled rows (kSettingsPagePieceKeys, architect
-// 2026-10-29) (GuiInputHandler::open_settings_page), and an editable row's tap closes the page and
-// opens this editor PREFILLED WITH THAT ROW'S LINE, the caret at its end —
-// the line still `key=value`, edited by hand and Tab. It is the flag
-// editor's primitive (text_editor::State, kind-dispatched keyboard
-// vocabulary, the whole text selected and a card on a refusal) painted AS
-// THUNAR'S RENAME DIALOG in xfwm's window (send AA's stage D2, 2026-11-19;
-// paint_handler.cpp's THE DIALOG WINDOW: the whole line in Arc's focused
-// entry, Cancel and OK its window's own buttons, the window titled the row's
-// key with the key and a colon its label — Z_06's words; the label of
-// 2026-10-14, "Setting:", was removed as "pointless that far away"),
-// centered in the room above the on-screen keyboard, the page it was opened
-// from standing under it there (AppState::dialog_backdrop). THE WINDOW IS
-// Z_06's AND NEVER GROWS WITH THE TEXT (architect 2026-11-19, send AA:
-// "large enough that ... the title ... doesn't get ridiculous, but not so
-// large that the majority of the keys, which are tiny, don't look like
+// 2026-10-29) (GuiInputHandler::open_settings_page), and the tap of an
+// editable row whose key has no value list closes the page and opens this
+// editor ON THAT ROW'S KEY, ITS ENTRY PREFILLED WITH THE VALUE THE KEY HOLDS,
+// the caret at its end. It is the flag editor's primitive (text_editor::State,
+// kind-dispatched keyboard vocabulary, the whole text selected and a card on
+// a refusal) painted AS THUNAR'S RENAME DIALOG in xfwm's window (send AA's
+// stage D2, 2026-11-19; paint_handler.cpp's THE DIALOG WINDOW: the value in
+// Arc's focused entry, Cancel and OK its window's own buttons, the window
+// titled the row's key with the key and a colon its label — Z_06's words;
+// the label of 2026-10-14, "Setting:", was removed as "pointless that far
+// away"), centered in the room above the on-screen keyboard, the page it was
+// opened from standing under it there (AppState::dialog_backdrop). THE
+// WINDOW IS Z_06's AND NEVER GROWS WITH THE TEXT (architect 2026-11-19, send
+// AA: "large enough that ... the title ... doesn't get ridiculous, but not
+// so large that the majority of the keys, which are tiny, don't look like
 // they're sitting in a big empty space"): 308 W, its entry 276 W, wider only
-// for a title that would not fit its bar. THE ENTRY IS ONE LINE AND A LINE
+// for a title that would not fit its bar. THE ENTRY IS ONE LINE AND A VALUE
 // LONGER THAN IT SCROLLS SIDEWAYS, GTK'S WAY (the same ruling, reversing
 // 2026-10-14's "long lines can wrap": "The pen does have a good way to
 // scroll, and those are the left and right arrows of the keyboard. That's
 // exactly why they're there."): the text cut at the entry's inner edges and
 // scrolled just enough to keep the caret in view, the keyboard's LEFT /
 // RIGHT and their hold-repeat the scroll's road, a tap seating the caret
-// through the offset (text_editor::State::view_offset_px). THE LINE IS
-// `key=value`, THE FREE LINE: a row's line retyped to another key —
-// `tab_a_read_only=false`, `scale=`, the view and band keys, the score's
-// range — is the one typed road to the keys the page does not list (the
-// head's items 2 and 3), so the value-alone shape Z_06 shows (the BPM
-// form's field's since 2026-11-19) is not taken here while that road
-// stands. OK or Enter commits the line, Esc
-// or Cancel closes it, and EITHER WAY THE PAGE COMES BACK, seated on the row
-// the editor was opened from (architect 2026-10-28 night: "otherwise it's
-// assumed I am editing one key only" — the editor a sub-page of the page, as
-// the value lists are; GuiInputHandler::handle_settings_editor_key, the one
-// return hook); a refused commit leaves the editor standing and reopens
-// nothing. (THE
-// SETTINGS POPUP — a pull-down hanging from the Settings button — and its
-// "True Colors" command row stood 2026-07-31 to 2026-10-21; True Colors is
-// the `true_colors` device key, and the page is the popup's list in the
-// folder overlay.)
+// through the offset (text_editor::State::view_offset_px).
 //
-// TAB COMPLETES, IN THREE STAGES, under the ONE AUTOCOMPLETE MODEL
-// (route_modal_editor_key, input_key_dispatch.cpp: a Tab that advanced the
-// buffer is consumed, one that did not walks the dialog's focus ring onto
-// OK and Cancel — so a second Tab, or a Tab on a prefix that completes to
+// THE ENTRY HOLDS THE VALUE ALONE (architect 2026-11-19, send AA, asked
+// whether the key could no longer be retyped, the line's retyping being the
+// only typed road to the keys the page lists no editable row for: "One,
+// agree." — Z_06's "25", the BPM form's field's shape). The key is the
+// open's (page_key) and nothing typed changes it; OK or Enter COMPOSES the
+// assignment from that key and the entry's value — its surrounding
+// whitespace trimmed, a `=` or a space inside it kept (a url's `?v=`, a
+// notes line) — and commits it through the key's own road below. So the
+// keys with no editable row — a tab's read-only bit, the view keys, the
+// per-tab viewport, zoom, playhead and trim, the score's range and
+// positions, `scale` and `bpm` — have no road through this editor: each is
+// written by its own lever (the padlock key, the view keys and Ctrl+Tab, the
+// gestures, Reset Trim, the score viewer's START / END and its pages, the
+// BPM form and the loads), the per-tab keys his "I won't set it manually"
+// (2026-10-28). Esc or Cancel closes it, and EITHER WAY THE PAGE COMES BACK,
+// seated on the row the editor was opened from (architect 2026-10-28 night:
+// "otherwise it's assumed I am editing one key only" — the editor a sub-page
+// of the page, as the value lists are;
+// GuiInputHandler::handle_settings_editor_key, the one return hook); a
+// refused commit leaves the editor standing, its whole text selected, and
+// reopens nothing. (THE SETTINGS POPUP — a pull-down hanging from the
+// Settings button — and its "True Colors" command row stood 2026-07-31 to
+// 2026-10-21; True Colors is the `true_colors` device key, and the page is
+// the popup's list in the folder overlay.)
+//
+// TAB COMPLETES, IN TWO STAGES, on the open's key, under the ONE
+// AUTOCOMPLETE MODEL (route_modal_editor_key, input_key_dispatch.cpp: a Tab
+// that advanced the buffer is consumed, one that did not walks the dialog's
+// focus ring onto OK and Cancel — so a second Tab, or a Tab that completes
 // nothing, is the walk; Tab shows no list, the popups being gone — THE LISTS
 // are the settings page's keys and THE VALUE LISTS, a listed key's values in
 // the folder overlay (kSettingsValueListKeys below), opened by the page's
 // row for that key, never by Tab, a pick committing through this editor's
 // own body, apply_device_setting):
-//   1. THE KEY AND ITS `=` WHEN THE LINE NAMES ONE KEY. On a line with no
-//      `=` yet, a COMPLETE key — any key this editor recalls, the twenty-six,
-//      the engine's and the per-tab band keys alike — and a PREFIX that ONE
-//      key in kSettingsEditorKeys starts with both complete, in ONE Tab, to
-//      the key and `=`, AND STOP THERE, the caret at the end (architect
-//      2026-10-21 ~23:40, "no, the unambiguous should stop at the =":
-//      `true` to `true_colors=`; the key, `=` and value in one Tab lived
-//      one commit that evening, e7fc8d10, and from ~21:05 a prefix took the
-//      key alone). A prefix several keys start with stops at their longest
-//      common prefix (the path completer's rule; `projects_` against
-//      `projects_repo` and `projects_path`); no match, an empty line or a prefix
-//      already at the common prefix advances nothing.
-//   2. THE KEY'S CURRENT VALUE. On `key=` with nothing after the `=` — the
-//      first Tab's stop — the next Tab fills THE VALUE THE KEY HOLDS (the
-//      2026-08-13 recall, unchanged), so a value is edited and never
-//      retyped. The value is what the writer writes, byte for byte
-//      (format_engine_setting_value, recall_gui_setting_value).
-//   3. A CLOSED VALUE'S WORDS. On `key=<prefix>` where the key's domain is a
-//      short closed list — `true_colors`'s `on` / `off` (2026-10-21), `theme`'s
-//      slugs (2026-11-05, the themes' list's order, theme_roles.h), `icons`'s
-//      `breeze` / `papirus` (2026-11-17) — the
-//      prefix completes
-//      against those words by the same rule as the keys
-//      (complete_closed_value); `projects_path=<prefix>` completes against the
-//      filesystem (complete_path_value, 2026-09-02), and `noise=<prefix>`
-//      against the folders under `noise/` beside the device config
-//      (complete_noise_value, 2026-10-28). Every other non-empty value side
-//      advances nothing.
-// Every advance lands at the LINE'S END through text_editor::replace_selection,
-// the one incoming filter.
+//   1. THE KEY'S CURRENT VALUE. On an EMPTY entry (whitespace alone counts
+//      as empty) Tab fills THE VALUE THE KEY HOLDS (the 2026-08-13 recall,
+//      the open's own prefill), so a value cleared by hand comes back and is
+//      edited, never retyped. The value is what the writer writes, byte for
+//      byte (setting_value: format_engine_setting_value,
+//      recall_gui_setting_value, recall_score_viewer_value).
+//   2. THE PATH. On a non-empty entry, `projects_path`'s value is a path
+//      prefix and completes against the filesystem (complete_path_value,
+//      2026-09-02); every other key's non-empty entry advances nothing. (The
+//      key-name stage — a prefix to its key and `=` — retired with the typed
+//      key, and the closed words' and the noise folders' stages with it: the
+//      keys they served, `true_colors`, `theme`, `icons` and `noise`, open
+//      their value lists and never this editor.)
+// Every advance lands through text_editor::replace_selection, the one
+// incoming filter.
 //
-// The editor is a keyboard front-end to EVERY key the product persists that a
-// user edits in-app: every key that can appear in a `.settings` file, plus the
-// TWENTY-ONE editable ones the per-device config carries — gui_scale and
-// projects_repo, which left the sidecar 2026-08-27 and kept this surface,
-// since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only (the color key waveform, editable
-// 2026-10-14..11-01, left with its key and the presets, one palette since),
-// since 2026-10-21 true_colors (the popup's command row made a key), since
-// 2026-11-05 (architect) the window's theme, Live 12's own, since
-// 2026-10-31 (architect) the waveform plate's grow waveform_grow, and since
-// 2026-10-28 (architect) the noise's folder noise, since 2026-11-05 night
-// its fixed attenuation noise_attenuation_level, and its crossfade in
-// seconds noise_crossfade_s, and since 2026-10-29
-// (architect) the tuning key key_height, the key case's height, and the
-// same evening the on-screen keyboard's key box's two tuning keys osk_key_w
-// and osk_key_h, and that night its cap size's tuning key osk_font_px, and
-// since 2026-11-05 night (architect) the two lamps' hold's tuning key
-// lamp_hold_ms, and since 2026-11-06 (architect) the tuning key key_width,
-// the key case's face width, and since 2026-11-07 (architect) the tuning
-// key run_gap, the ground between two runs, and the same day the tooltip's
-// delay's tuning key tooltip_delay_ms, and since 2026-11-12 (architect) the
-// sweep highlight's alpha's tuning key sweep_highlight, and since 2026-11-13
-// (architect) the bright tones' mix's tuning key bright_mix, and since
-// 2026-11-14 (architect) the plate's fade start's tuning key
-// waveform_fade_px, and since 2026-11-17 (architect, sessions 123 / 140) the
-// icon set icons (the
-// LED glow's tuning key, editable 2026-10-23..10-26, left with its key,
-// the glow settled at a constant, then retired with the LED, 2026-11-01; the
-// tooltip's gap's tuning key tooltip_gap, editable for session 90 of
-// 2026-11-07, left with its key in session 91, the gap settled at 1 W
-// (render.h's kTooltipGapW); the
-// two levels, noise_level and the project voice's (retired 2026-11-11 with
-// its AUDIO case), editable 2026-10-28 / 10-31 night to 2026-11-05 night,
-// left the editor for the band's cases — the main-page rule at
-// kSettingsEditorKeys; the
-// strip pad's key, editable 2026-10-22..10-23, left with it, the pad
-// settled at a constant, 19 W since 2026-11-04 night (render.h's
-// strip_pad_px); the
-// two bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow, editable
-// 2026-10-21..10-22, left with its key, the shadow one scaled px; icons
-// and font, editable 2026-10-09..10-12, the vocabulary chrome,
-// editable 2026-10-07..10-10, and theme,
-// editable 2026-10-03..10-08, its level and the twelve
-// program colour keys, editable 2026-10-03..04, left with their keys; the
-// config's key last_project is the program's own and has no editor; the
-// waveform's height cap, editable 2026-09-13..10-07, left with its key, the
-// waveform being the lanes' leftover; the hold delay's
-// key, editable for its
-// one-day tuning phase 2026-09-29, is struck, the value hard-coded as
-// kHoldDelayMs; `audio_player`, once
-// the third editable device key, retired whole 2026-08-28 with the in-app
-// render player). It funnels each key into the SAME code its gesture uses (no
-// parallel writers). commit() routes the typed key through:
+// The editor is a keyboard front-end to THE EDITABLE KEYS THE SETTINGS PAGE
+// LISTS whose domain is no short list: the piece's `title`, `notes`, `url`
+// and `cover` and the score's folder `score_path`, and the per-device
+// config's `gui_scale` and every editable device key without a value list —
+// gui_scale and projects_repo, which left the sidecar 2026-08-27 and kept
+// this surface, since 2026-09-02 (architect) projects_path, which had been
+// hand-edited only, since 2026-11-05 night its fixed attenuation
+// noise_attenuation_level, and since 2026-10-29 (architect) the tuning key
+// key_height, the key case's height, and the same evening the on-screen
+// keyboard's key box's two tuning keys osk_key_w and osk_key_h, and that
+// night its cap size's tuning key osk_font_px, and since 2026-11-05 night
+// (architect) the two lamps' hold's tuning key lamp_hold_ms, and since
+// 2026-11-06 (architect) the tuning key key_width, the key case's face
+// width, and since 2026-11-07 (architect) the tuning key run_gap, the ground
+// between two runs, and the same day the tooltip's delay's tuning key
+// tooltip_delay_ms, and since 2026-11-12 (architect) the sweep highlight's
+// alpha's tuning key sweep_highlight, and since 2026-11-13 (architect) the
+// bright tones' mix's tuning key bright_mix, and since 2026-11-14
+// (architect) the plate's fade start's tuning key waveform_fade_px; the six
+// keys with a value list — true_colors (since 2026-10-21), theme (since
+// 2026-11-05, Live 12's own), waveform_grow (since 2026-10-31), the noise's
+// folder noise and its crossfade noise_crossfade_s (since 2026-10-28) and
+// the icon set icons (since 2026-11-17, sessions 123 / 140) — commit
+// through this editor's own body from their lists (the color key waveform,
+// editable 2026-10-14..11-01, left with its key and the presets, one palette
+// since; the LED glow's tuning key, editable 2026-10-23..10-26, left with
+// its key, the glow settled at a constant, then retired with the LED,
+// 2026-11-01; the tooltip's gap's tuning key tooltip_gap, editable for
+// session 90 of 2026-11-07, left with its key in session 91, the gap settled
+// at 1 W (render.h's kTooltipGapW); the two levels, noise_level and the
+// project voice's (retired 2026-11-11 with its AUDIO case), editable
+// 2026-10-28 / 10-31 night to 2026-11-05 night, left the editor for the
+// band's cases — the main-page rule at kSettingsEditorKeys; the strip pad's
+// key, editable 2026-10-22..10-23, left with it, the pad settled at a
+// constant, 19 W since 2026-11-04 night (render.h's strip_pad_px); the two
+// bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow,
+// editable 2026-10-21..10-22, left with its key, the shadow one scaled px;
+// icons and font, editable 2026-10-09..10-12, the vocabulary chrome,
+// editable 2026-10-07..10-10, and theme, editable 2026-10-03..10-08, its
+// level and the twelve program colour keys, editable 2026-10-03..04, left
+// with their keys; the config's key last_project is the program's own and
+// has no editor; the waveform's height cap, editable 2026-09-13..10-07, left
+// with its key, the waveform being the lanes' leftover; the hold delay's
+// key, editable for its one-day tuning phase 2026-09-29, is struck, the
+// value hard-coded as kHoldDelayMs; `audio_player`, once the third editable
+// device key, retired whole 2026-08-28 with the in-app render player). It
+// funnels each key into the SAME code its other door uses (no parallel
+// writers). commit() routes the open's key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
 //    true_colors, theme, waveform_grow, noise, noise_attenuation_level,
 //    noise_crossfade_s, key_height, key_width, run_gap, osk_key_w,
 //    osk_key_h, osk_font_px, lamp_hold_ms, tooltip_delay_ms,
 //    sweep_highlight, bright_mix, waveform_fade_px and icons — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
-//    the value list the other): the key's own grammar
-//    owner in device_config.h
-//    decides (a refused commit and its card), the
-//    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
-//    that write is the whole persist, Ctrl+S carrying only the sidecar keys.
+//    the value list the other, the six listed keys reaching it through the
+//    list alone): the key's own grammar owner in device_config.h decides (a
+//    refused commit and its card), the live struct takes the value, and the
+//    commit WRITES THE DEVICE CONFIG — that write is the whole persist,
+//    Ctrl+S carrying only the sidecar keys.
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; true_colors at once, applied live
-//    at the OK, no card (the screen is the answer); theme the same, the
+//    card; true_colors at once, applied live at the list's tap, no card (the
+//    screen is the answer); theme the same, the
 //    palette reinstalled and the window repainted
 //    (GuiInputHandler::apply_theme), no card; waveform_grow the same,
 //    the window repainted (GuiInputHandler::apply_waveform_grow), no card
@@ -205,40 +192,25 @@ struct GuiInputHandler;
 //    waveform is the answer); the icon set at once, the other set's
 //    drawings chosen, the icon rasters dropped and the window repainted
 //    (GuiInputHandler::apply_icons), no card (the glyphs are the answer).
-//    gui_scale, the
-//    one other
-//    editable device key, stays in the GUI-kind router
-//    below because it HAS a chokepoint (apply_gui_scale) and the router's job
-//    is to reach one.
-// 2. GUI-kind keys (viewport / zoom / playhead / active_audio_view /
-//    active_markers_view / active_tab_view / per-tab trim /
-//    per-tab read_only / gui_scale, and since 2026-10-26 the score's five —
-//    score_path, which reads its folder at the commit, the range pair, which
-//    takes the authoring lock, and the per-tab score_position, under their
-//    own grammar owner and WRITTEN THROUGH to the score viewer's file at the
-//    commit, score_viewer_file.h):
-//    commit_gui_setting
-//    parses strictly (a refused commit on any malformed or out-of-vocabulary value,
-//    mirroring the load schema) then applies through the key's own gesture
-//    chokepoint. These are launch/view state: no undo entry, no dirty; a
+// 2. `gui_scale` and `score_path` (commit_gui_setting): gui_scale, the one
+//    other editable device key, stays out of the body because it HAS a
+//    chokepoint of its own (apply_gui_scale, which writes the device config
+//    itself); score_path is the score viewer's file's key, under that file's
+//    grammar owner, its folder READ at the commit and WRITTEN THROUGH to the
+//    file (score_viewer_file.h). Neither has an undo entry or a dirty bit; a
 //    same-value commit no-op-deactivates like the engine no-op gate.
-//    per-tab read_only was the one arm that wrote its band directly, and so
-//    left the icon row's Read-Only glyph stale on a typed self-lock or self-unlock;
-//    since 2026-09-04 it goes through set_tab_read_only (input_handler.h) with
-//    bare `o`, and the promise above holds for every key in the list.
-// 3. Canonical engine keys go through validate_engine_setting; on success
-//    the typed field of app.engine_settings is updated and a settings-undo
-//    entry pushed. Non-engine, non-canonical keys are rejected ("unknown
-//    engine key") with a refused commit and no write. This arm is also where the
-//    read-only lock lives since 2026-09-04 (architect: the lock governs the
-//    keys, not the surface): an engine key IS the piece, so a locked active
-//    tab refuses it with the lock's own card, while items 1 and 2 above —
-//    the device keys and the band — commit on a locked tab. The opener
-//    refuses no lock; the account is at GuiSettingsEditor::open. (Its road
-//    onto a locked tab is the settings page's rows, the page opened by bare
-//    `;` and the Settings button, both on the read-only allowlist the
-//    iteration gate inherits, so the commit arms' lock refusals are where a
-//    locked key refuses.)
+// 3. The piece's four editable engine keys, `title`, `notes`, `url` and
+//    `cover`, go through validate_engine_setting; on success the field of
+//    app.engine_settings is updated and a settings-undo entry pushed. This
+//    arm is also where the read-only lock lives since 2026-09-04 (architect:
+//    the lock governs the keys, not the surface): an engine key IS the
+//    piece, so a locked active tab refuses it with the lock's own card,
+//    while items 1 and 2 above commit on a locked tab. The opener refuses no
+//    lock; the account is at GuiSettingsEditor::open. (Its road onto a
+//    locked tab is the settings page's rows, the page opened by bare `;` and
+//    the Settings button, both on the read-only allowlist the iteration gate
+//    inherits, so the commit arm's lock refusal is where a locked key
+//    refuses.)
 //
 // NO CHOICE EDITOR (architect 2026-10-14, ~12:25: "we can remove dropdowns
 // for chrome/caption and leave the autocomplete as the only help. dropdowns
@@ -246,24 +218,21 @@ struct GuiInputHandler;
 // not worth it"). THE CHOICE EDITOR — a Settings row whose key's domain was a
 // short closed list opening this editor with a combo box where the field
 // stood and its list dropping over the well — stood 2026-10-07 to 2026-10-14
-// and is removed whole; a closed domain's help is Tab (stage 3 above), and
-// the commit is OK's and Enter's — the screen changing at the commit, never
-// before. (SEVEN KEYS HAVE A LIST AGAIN — the architect reversing this
-// 2026-10-25: "we rejected drop downs because it was too much work to make
-// them Windows identical, but now we don't have the responsibility";
+// and is removed whole. (SIX KEYS HAVE A LIST AGAIN — the architect reversing
+// this 2026-10-25: "we rejected drop downs because it was too much work to
+// make them Windows identical, but now we don't have the responsibility";
 // `true_colors`, `noise` and `noise_crossfade_s` since 2026-10-28 night,
 // the same shape; `waveform_grow` since 2026-10-31; `theme` since
-// 2026-11-05, its list under two inert group rows. A list is no
-// choice editor and no drop-down: the VALUE LIST, the folder overlay's
-// content behind the settings page's row for its key, whose row tap commits
-// at once — apply_device_setting, this editor's own road. THE SETTINGS
-// PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit
-// nothing, each opening this line editor. FIVE FROM 2026-11-05: the two
-// levels' lists left with the band's two sliders and their decimal grammar,
-// kSettingsValueListKeys below, and their rows that night; SIX SINCE
-// 2026-11-17, `icons` joining.)
+// 2026-11-05, its list under inert group rows; `icons` since 2026-11-17. A
+// list is no choice editor and no drop-down: the VALUE LIST, the folder
+// overlay's content behind the settings page's row for its key, whose row
+// tap commits at once — apply_device_setting, this editor's own road. THE
+// SETTINGS PAGE IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows
+// commit nothing, each opening this line editor. The two levels' lists left
+// 2026-11-05 with the band's two sliders and their decimal grammar,
+// kSettingsValueListKeys below, and their rows that night.)
 //
-// THE KEYS TAB COMPLETES — ONE TABLE, THE TWENTY-SIX (the cues' four tuning
+// THE EDITABLE KEYS — ONE TABLE, THE TWENTY-SIX (the cues' four tuning
 // keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
 // `score_path` joined the same day; the noise's three 2026-10-28; the
 // tuning key `key_height` 2026-10-29, at the device keys' tail, and the
@@ -292,23 +261,21 @@ struct GuiInputHandler;
 // folder, architect 2026-10-26), then the DEVICE
 // CONFIG's twenty-one editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
-// no editor, nor has the level, below). The other keys this editor
-// commits (`scale`, `bpm`,
-// the view and per-tab band keys, the score's range and positions, which
-// the score viewer writes) are typed whole, Tab recalling their
-// values once complete; a key added to the product's editable set joins this
-// table by hand. THE TABLE IS ALSO THE SETTINGS PAGE'S EDITABLE ROSTER,
-// EXACTLY (architect 2026-10-28: the per-tab keys stay off, "I won't set it
-// manually", and so does every key with a GUI lever — follow, read-only, the
-// view keys — EXCEPT `scale` and `bpm`, which the BPM key writes: the page
-// SHOWS those two as DISABLED rows, architect 2026-10-29, "bpm and scale
-// should be viewable but disabled. they are useful for notes", and they stay
-// out of this table, so neither Tab nor the page's rows ever offer them to
-// the line editor; kSettingsPagePieceKeys below). A KEY SHOWN AND EDITED ON
+// no editor, nor has the level, below). THE TABLE IS THE SETTINGS PAGE'S
+// EDITABLE ROSTER, EXACTLY, AND THE ONLY KEYS THIS EDITOR WRITES (architect
+// 2026-10-28: the per-tab keys stay off, "I won't set it manually", and so
+// does every key with a GUI lever — follow, read-only, the view keys —
+// EXCEPT `scale` and `bpm`, which the BPM key writes: the page SHOWS those
+// two as DISABLED rows, architect 2026-10-29, "bpm and scale should be
+// viewable but disabled. they are useful for notes", and they stay out of
+// this table, so the page's rows never offer them to the line editor;
+// kSettingsPagePieceKeys below; architect 2026-11-19, send AA, the line's
+// typed road to every key off this table retired); a key added to the
+// product's editable set joins this table by hand. A KEY SHOWN AND EDITED ON
 // THE MAIN PAGE GETS NO SETTINGS ROW (architect 2026-11-05 night, session
 // 49): the level, `noise_level`, is seen and set on the band's NOISE case
 // (RedesignButton::IconNoiseLevel, app_state.h), so it is not here — no
-// row, no typed arm, no recall, no Tab — and stays REQUIRED in the config,
+// row, no arm, no recall — and stays REQUIRED in the config,
 // persisted by the case's lift and written by the config's writer with
 // every key.
 // GuiInputHandler::build_settings_page_rows lists the device keys under a
@@ -333,8 +300,8 @@ static_assert(std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount 
               std::string_view(kSettingsEditorKeys[kSettingsEditorPieceKeyCount]) ==
                   "gui_scale");
 
-// IS `key` ONE OF kSettingsEditorKeys — a key the line editor's Tab offers
-// and the settings page lists as an editable row?
+// IS `key` ONE OF kSettingsEditorKeys — a key the settings page lists as an
+// editable row, and so one this editor or its value list writes?
 inline constexpr bool is_settings_editor_key(std::string_view key) {
     for (const char* k : kSettingsEditorKeys)
         if (key == k) return true;
@@ -350,7 +317,7 @@ inline constexpr bool is_settings_editor_key(std::string_view key) {
 // GuiSettingsEditor::setting_line spells it, in the dim print (`text_dim`), never
 // seated and taking no press (folder_overlay::row_is_inert). The assert pins
 // the table's editable keys to the editor table's piece keys, in order, so
-// the page and Tab cannot drift apart.
+// the page's two groups and the editor's roster cannot drift apart.
 inline constexpr const char* kSettingsPagePieceKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover", "score_path",
 };
@@ -378,7 +345,7 @@ static_assert(settings_page_piece_keys_pinned());
 // page's row for one of these swaps the folder overlay's content to THE
 // KEY'S VALUES (GuiInputHandler::build_value_list_rows, its rows from
 // GuiSettingsEditor::value_choices below), and a row's tap commits that value
-// at once through apply_device_setting, the typed line's own body, then
+// at once through apply_device_setting, the device keys' one body, then
 // returns to the page on that key's row (the list a sub-page of the page,
 // 2026-10-28 night). Every other page row opens the line editor. Each is a device
 // key with a short domain the list can show whole: the two words, the
@@ -388,8 +355,9 @@ static_assert(settings_page_piece_keys_pinned());
 // themes' list (architect 2026-11-11, session 110: SYSTEM — `default`
 // first — then EXTRA, then USER-DEFINED; theme_roles.h), each
 // under an inert Group row like the settings page's own DEVICE / PIECE;
-// every other key one headless group. The typed line still names every one
-// of them, its arms and completers unchanged (the list is a second door).
+// every other key one headless group. THE LIST IS THE KEY'S ONE DOOR: its
+// row never opens the line editor (settings_page_commit), so its value
+// reaches apply_device_setting through the list's tap alone.
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
 // are no short domain, so its row opens the line editor; nor is its
 // sibling `key_width`, 41; nor the run gap `run_gap`, 43; nor are the
@@ -416,11 +384,10 @@ struct GuiSettingsEditor {
     Viewport&             viewport;
     // The engine-key commit rebuilds the warp map, so it clears any resting
     // region AND the selection with it (architect 2026-07-29 — the
-    // teardown is at that commit's tail). Also the `tab_X_playhead=` commit's
-    // deselect. This member exists for those clears; it acquired no other use when
-    // the never-span-less collapse it once served was deleted.
+    // teardown is at that commit's tail). This member exists for that clear;
+    // it acquired no other use when the never-span-less collapse it once
+    // served was deleted.
     Selection&            selection;
-    GuiActiveViews&       active_views;
     Undo&                 undo;
     GuiTargetRender&   target_render;
     GuiPlaybackLifecycle& playback_lifecycle;
@@ -436,17 +403,16 @@ struct GuiSettingsEditor {
     // constructed (the input handler holds this editor by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
     // the same shape as the viewport request_* callbacks). Used to reach the
-    // gesture chokepoints that live on GuiInputHandler:
-    // handle_active_audio_view_toggle, apply_gui_scale, apply_true_colors,
-    // commit_trim_mutation, set_tab_read_only, and the open project's engine
-    // (`playback`, the project's engine).
+    // live acts that live on GuiInputHandler: apply_gui_scale and the device
+    // keys' apply_* (apply_true_colors, apply_theme, apply_waveform_grow,
+    // apply_key_height, apply_key_width, apply_run_gap, apply_osk_key_size,
+    // apply_osk_font_px, apply_waveform_fade_px, apply_icons).
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,
                       GuiAudio&             audio_,
                       Viewport&             viewport_,
                       Selection&            selection_,
-                      GuiActiveViews&       active_views_,
                       Undo&                 undo_,
                       GuiTargetRender&   target_render_,
                       GuiPlaybackLifecycle& playback_lifecycle_,
@@ -455,52 +421,49 @@ struct GuiSettingsEditor {
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
-          active_views(active_views_),
           undo(undo_),
           target_render(target_render_),
           playback_lifecycle(playback_lifecycle_),
           notifications(notifications_) {}
 
-    // THE ONE OPEN (the head, architect 2026-10-28): the editor on `line`,
-    // the settings page's row as painted (GuiInputHandler::
-    // settings_page_commit, its one caller, after the page's close), landed
+    // THE ONE OPEN (the head, architect 2026-10-28; the value alone since
+    // 2026-11-19, send AA): the editor on `key`, an editable row's key that
+    // opens no value list (GuiInputHandler::settings_page_commit, its one
+    // caller, after the page's close; asserted), its entry prefilled with
+    // THE VALUE THE KEY HOLDS (setting_value, the writer's spelling), landed
     // as every Tab advance lands — through text_editor::replace_selection,
-    // the one incoming filter, the caret at the LINE'S END and nothing
-    // selected. It RECORDS THE LINE'S KEY (page_key, below), the row the
-    // page reopens on when this editor closes.
-    void open(const std::string& line);
-    // THE ROW THE PAGE RETURNS TO (architect 2026-10-28 night, the editor a
-    // sub-page of the settings page): the key `line` named at the open, the
-    // text before its first `=`, recorded by open() and read by the one
-    // return hook (GuiInputHandler::handle_settings_editor_key) when the
-    // editor closes. It is THE OPEN'S key, not the typed one: a line whose
-    // key was retyped into another key still returns to the row it came
-    // from, the row he tapped.
+    // the one incoming filter, the caret at the VALUE'S END and nothing
+    // selected. It RECORDS THE KEY (page_key, below).
+    void open(const std::string& key);
+    // THE OPEN'S KEY (architect 2026-10-28 night, the editor a sub-page of
+    // the settings page; 2026-11-19, send AA, the key the commit writes):
+    // recorded by open() and read by commit(), which composes the
+    // assignment from it and the entry's value, and by the one return hook
+    // (GuiInputHandler::handle_settings_editor_key), which reopens the page
+    // on its row when the editor closes. Nothing typed changes it.
     const std::string& page_key() const { return page_key_; }
-    // THE LINE THE EDITOR WOULD OPEN WITH for `key`: `key=` and the key's
-    // current value as the recall gives it (recall_setting_value,
-    // settings_editor.cpp — Tab's stage 2 and this one owner). Read by the
+    // THE SETTINGS PAGE'S ROW TEXT for `key`: `key=` and the key's current
+    // value as the recall gives it (setting_value below). Read by the
     // settings page's builder for each of kSettingsEditorKeys and for the
     // page's disabled `scale` and `bpm` (kSettingsPagePieceKeys, engine keys
     // the recall formats), every one of which recalls by construction (the
     // head's roads); a key that recalls nothing is a program bug and asserts.
     std::string setting_line(const std::string& key) const;
     // THE KEY'S CURRENT VALUE as the recall gives it, the writer's spelling
-    // — setting_line's value side, and the value list's seat (the row whose
-    // value is this). Asserts for a key that recalls nothing, as
-    // setting_line does.
+    // (recall_setting_value, settings_editor.cpp, this its one reader) —
+    // setting_line's value side, the value list's seat (the row whose value
+    // is this), the line editor's prefill at the open and Tab's stage 1.
+    // Asserts for a key that recalls nothing, as setting_line does.
     std::string setting_value(const std::string& key) const;
     // THE VALUE LIST'S VALUES for `key`, one of kSettingsValueListKeys, in
     // the list's order, each value in the key's own spelling, which the
-    // row shows, unitless, and its tap commits — the flat list, the closed
-    // domains' Tab completer's words (complete_closed_value); the list's
+    // row shows, unitless, and its tap commits — the flat list; the list's
     // rows are value_list_groups' below: `true_colors`
     // kTrueColorsWords (`on`, `off`); `theme` (2026-11-05) the slugs of
     // the themes' list in its order (theme_roles.h), `default` first; `noise`
     // the folders under `noise/` beside the device config, sorted by byte —
-    // the names the noise completer lists for an empty prefix
-    // (complete_noise_value's listing, settings_editor.cpp's folder_names:
-    // directories through a link, no dot-directory) that the key's grammar
+    // settings_editor.cpp's folder_names for an empty prefix (directories
+    // through a link, no dot-directory) — that the key's grammar
     // admits (is_noise_folder_name), so every row commits; no folder there,
     // or no config home, is a list with no rows; `noise_crossfade_s` 1 up
     // to 30; `waveform_grow` 0 up to 2 in quarters (2026-10-31); `icons`
@@ -529,18 +492,13 @@ struct GuiSettingsEditor {
     void exit_no_commit();
     void commit();
     // THE COMPLETION, run on BARE TAB with the focus in the field — the head's
-    // three stages: with no `=` on the line, a complete key or a prefix
-    // naming one key taking the key and its `=` (complete_key_name the
-    // prefix's), an ambiguous prefix its common prefix; with `key=` and an
-    // empty
-    // value side, that key's current live value; with a non-empty value side,
-    // the path key's filesystem (complete_path_value), the noise key's
-    // folders (complete_noise_value) or a closed domain's words
-    // (complete_closed_value), and nothing for every other key. The
-    // value recalled is byte-identical to what a Ctrl+S (or, for a device
-    // key, the config's writer) would write, UTF-8 provenance text included
-    // since the 2026-08-02 relaxation (the remaining edge is stated at the
-    // definition). An unknown key recalls nothing.
+    // two stages, on the open's key (page_key): on an EMPTY entry the value
+    // the key holds (setting_value, the open's own prefill); on a non-empty
+    // one the path key's filesystem (complete_path_value) and nothing for
+    // every other key. The value recalled is byte-identical to what a Ctrl+S
+    // (or, for a device key, the config's writer) would write, UTF-8
+    // provenance text included since the 2026-08-02 relaxation (the remaining
+    // edge is stated at the definition).
     //
     // IT RETURNS WHETHER THE BUFFER CHANGED, which is the ONE AUTOCOMPLETE
     // MODEL's whole question (architect 2026-08-13: "we should use one model
@@ -551,26 +509,20 @@ struct GuiSettingsEditor {
     // no-op answers false, so each is a Tab that walks.
     bool autocomplete_value();
 
-    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `true_colors=`, `theme=` (2026-11-05), `waveform_grow=` (2026-10-31),
-    // `noise=`, `noise_attenuation_level=` (2026-11-05 night, the line's
-    // door alone, having no value list),
-    // `noise_crossfade_s=` and the tuning keys `key_height=`, `osk_key_w=`,
-    // `osk_key_h=` and `osk_font_px=` (2026-10-29, the line's door alone,
-    // having no value list), `lamp_hold_ms=` (2026-11-05 night, the
-    // line's door alone), `key_width=` (2026-11-06, the line's door
-    // alone), `run_gap=` (2026-11-07, the line's door alone),
-    // `tooltip_delay_ms=` (2026-11-07, the line's door alone),
-    // `sweep_highlight=` (2026-11-12, the line's door alone),
-    // `bright_mix=` (2026-11-13, the line's door alone),
-    // `waveform_fade_px=` (2026-11-14, the line's door alone) and `icons=`
-    // (2026-11-17) — ONE BODY,
-    // TWO DOORS
-    // (architect 2026-10-25, 2026-10-28 night for the value lists' keys): the
-    // typed line's commit (commit_device_setting, below, the editor's door)
-    // and a VALUE LIST's pick (GuiInputHandler::value_list_commit) both land
-    // here, so the typed commit and the list's commit are one body per key
-    // (the head's item 1). The key's grammar decides, a refusal printed and
+    // THE DEVICE KEYS' COMMIT — ONE BODY, TWO DOORS (architect 2026-10-25,
+    // 2026-10-28 night for the value lists' keys): the line editor's commit
+    // (commit_device_setting, below, the editor's door) for `projects_repo`,
+    // `projects_path`, `noise_attenuation_level` (2026-11-05 night), the
+    // tuning keys `key_height`, `osk_key_w`, `osk_key_h` and `osk_font_px`
+    // (2026-10-29), `lamp_hold_ms` (2026-11-05 night), `key_width`
+    // (2026-11-06), `run_gap` and `tooltip_delay_ms` (2026-11-07),
+    // `sweep_highlight` (2026-11-12), `bright_mix` (2026-11-13) and
+    // `waveform_fade_px` (2026-11-14), and a VALUE LIST's pick
+    // (GuiInputHandler::value_list_commit) for `true_colors`, `theme`
+    // (2026-11-05), `waveform_grow` (2026-10-31), `noise`,
+    // `noise_crossfade_s` and `icons` (2026-11-17), each key reaching it by
+    // its one door since the line's key is its row's (architect 2026-11-19,
+    // send AA) — one body per key (the head's item 1). The key's grammar decides, a refusal printed and
     // carded ("Settings edit rejected: <reason>"); a value the key already
     // holds is the unchanged no-op, a stderr line and nothing written;
     // otherwise the live struct takes it, the key's live apply runs and the
@@ -600,13 +552,13 @@ private:
     // true when `key` is a device key, the commit then fully handled — the
     // field refused and its text selected on a refusal, the editor closed on
     // an applied or unchanged value; false otherwise, so commit() goes on to
-    // the routers.
+    // commit_gui_setting and the engine arm.
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
     // THE PATH COMPLETER (2026-09-02), autocomplete_value's arm for the path
-    // key — `projects_path` — when the value side is
-    // NON-EMPTY: the value side is split at its last `/`, the directory the
-    // head names is listed afresh (absolute only, the grammar's own rule; a
+    // key — `projects_path` — when the entry is NON-EMPTY: the value is split
+    // at its last `/`, the directory the head names is listed afresh
+    // (absolute only, the grammar's own rule; a
     // relative head completes nothing, and so does a listing error), the
     // DIRECTORIES whose names start with the tail (byte compare — the key
     // names a folder) are the matches, and the buffer advances by their longest
@@ -614,61 +566,14 @@ private:
     // Nothing is cached. The append rides text_editor::replace_selection — the
     // one incoming filter — so the bytes are UTF-8-transparent exactly as a
     // paste is. Returns whether the buffer advanced, the one autocomplete
-    // model's question; `value` is the raw value side (untrimmed: the
-    // completion works on what is literally typed).
+    // model's question; `value` is the entry less its leading whitespace
+    // (ltrim_ws's reasons, settings_editor.cpp).
     bool complete_path_value(const std::string& value);
-    // THE NOISE COMPLETER (2026-10-28), autocomplete_value's arm for the
-    // `noise` key when the value side is NON-EMPTY: the value side is a
-    // folder's name PREFIX, completed against THE SUBFOLDERS OF `noise/`
-    // beside the device config, listed afresh — directories only (through a
-    // link), dot-directories only when asked for, byte compare, the common
-    // prefix on a codepoint boundary, the path completer's own rules through
-    // their one body (folder_name_advance, settings_editor.cpp) — and A
-    // SINGLE MATCH COMPLETED WHOLE WITH NO TRAILING `/` (the value is a name,
-    // not a path). The append at the line's end; every no-advance case (no
-    // match, an ambiguous prefix already at the common prefix, no folder
-    // there) a Tab that walks. The empty value side keeps recalling the live
-    // name (stage 2). Returns whether the buffer advanced; `value` is the raw
-    // value side less its leading whitespace (ltrim_ws's reasons).
-    bool complete_noise_value(const std::string& value);
-    // THE KEY COMPLETER (architect 2026-10-21, the popup's retirement), the
-    // head's stage 1: `prefix` — the line less its leading whitespace, no `=`
-    // on it — against kSettingsEditorKeys by byte compare (the keys are
-    // ASCII), the buffer advancing at the line's end: a UNIQUE match
-    // completes the key AND APPENDS ITS `=`, stopping there (architect
-    // 2026-10-21 ~23:40; its value the next Tab's), an ambiguous prefix
-    // stops at the matches' longest common prefix (`projects_` against `projects_repo` and `projects_path`), and no
-    // advance — no match, an empty line, a prefix already at the common
-    // prefix — is a Tab that walks. Returns whether the buffer advanced.
-    bool complete_key_name(const std::string& prefix);
-    // THE CLOSED-VALUE COMPLETER (architect 2026-10-14 afternoon, CONFIRMED:
-    // "ok to add autocomplete", "agree all"; `true_colors`'s two words
-    // since 2026-10-21, its one key from the color presets' going
-    // 2026-11-01 to `theme`'s joining 2026-11-05), the head's stage 3: the
-    // path completer's model on a
-    // closed list. The value side is a PREFIX (byte compare, the words being
-    // ASCII) of the key's words — `on` and
-    // `off` (kTrueColorsWords, device_config.h) for `true_colors`, the
-    // themes' slugs (value_choices, the list's spelling) for `theme`,
-    // `breeze` and `papirus` (kIconsWords) for `icons` — and the
-    // buffer advances by the matches' longest common prefix past it: a
-    // UNIQUE match completes the word WITH NO TRAILING CHARACTER (a name is
-    // not a folder), an ambiguous prefix stops at the common prefix (he
-    // accepts that a prefix completer cannot show the list), and no advance
-    // — no match, a prefix already at the common prefix, a key with no
-    // closed domain — is a Tab that walks. The empty value side keeps
-    // recalling the live value (stage 2). The commit's grammar and its live
-    // apply (commit_device_setting) are unchanged. Returns whether the buffer
-    // advanced; `value` is the raw value side less its leading whitespace
-    // (ltrim_ws's reasons).
-    bool complete_closed_value(const std::string& key,
-                               const std::string& value);
-    // GUI-kind key router. Returns true when `key` is a recognized GUI-kind
-    // key, in which case the commit is fully handled inside (applied +
-    // deactivated, or refused with a card); false when `key` is not a
-    // GUI-kind key, so
-    // commit() falls through to the engine-key path. Each apply routes through
-    // the key's own gesture chokepoint — no parallel state writer.
+    // THE TWO KEYS OF THEIR OWN (the head's item 2): `gui_scale` and
+    // `score_path`. Returns true for either, the commit then fully handled
+    // inside (applied + deactivated, or refused with a card); false for any
+    // other key, so commit() goes on to the engine arm. Each apply routes
+    // through the key's own chokepoint — no parallel state writer.
     bool commit_gui_setting(const std::string& key, const std::string& value);
     // The open's key (page_key above); written by open() alone.
     std::string page_key_;

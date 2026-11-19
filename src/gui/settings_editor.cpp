@@ -14,7 +14,6 @@
 #include "score_viewer.h"      // score_folder_changed
 #include "score_viewer_file.h" // the score's five keys: grammar, recall, write-through
 
-#include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
 
 #include <algorithm>
@@ -31,8 +30,9 @@
 
 namespace {
 
-// The commit line's interactive latitude: strip surrounding whitespace from the
-// typed key and value (the FILE boundary is byte-exact and trims nothing).
+// The commit's interactive latitude: strip surrounding whitespace from the
+// entry's value (the FILE boundary is byte-exact and trims nothing); the
+// empty-entry test of the Tab's recall reads it too.
 //
 // IT CANNOT SPLIT A MULTI-BYTE CHARACTER, which matters now that values carry
 // UTF-8. `std::isspace` is consulted in the "C" locale — nothing in this
@@ -53,7 +53,7 @@ std::string trim_ws(const std::string& s) {
 // The leading half of the trim above, for the path completer alone: commit()
 // trims both sides, so a value typed with a leading space is a path prefix
 // like any other and Tab should complete it. The trailing side is deliberately
-// left on, because the completer appends at the LINE'S end — a value that does
+// left on, because the completer appends at the ENTRY'S end — a value that does
 // not end where the buffer ends has nothing to append to, and letting the
 // trailing bytes stay in the tail is what makes such a Tab match no name and
 // walk the ring instead of writing the completion past the gap.
@@ -62,11 +62,6 @@ std::string ltrim_ws(const std::string& s) {
     while (a < s.size() &&
            std::isspace(static_cast<unsigned char>(s[a]))) ++a;
     return s.substr(a);
-}
-
-bool is_key_char(char c) {
-    const unsigned char uc = static_cast<unsigned char>(c);
-    return std::isalnum(uc) || c == '_';
 }
 
 // THE PATH KEY — the device config's `projects_path`, the one key whose Tab
@@ -111,9 +106,9 @@ std::string common_prefix_on_codepoint_boundary(
     return lcp;
 }
 
-// THE FOLDER-NAME LISTING — the path completer's, the noise completer's and
-// the noise value list's one listing body (2026-10-28, factored out of
-// complete_path_value; the rules at their declarations): `dir` LISTED AFRESH
+// THE FOLDER-NAME LISTING — the path completer's and the noise value list's
+// one listing body (2026-10-28, factored out of complete_path_value; the
+// rules at their declarations): `dir` LISTED AFRESH
 // AT EVERY CALL, with an error_code, so a directory that is not there, not
 // readable or not a directory — or a listing error midway — lists nothing.
 // The names are the DIRECTORIES whose names start with `tail` (byte compare
@@ -149,13 +144,13 @@ std::vector<std::string> folder_names(const std::filesystem::path& dir,
     return matches;
 }
 
-// THE FOLDER-NAME MATCH — the two completers' one advance over that listing:
+// THE FOLDER-NAME MATCH — the path completer's advance over that listing:
 // a Tab that completes nothing walks the ring (the one autocomplete model).
 // The answer is the matches' count and the ADVANCE past `tail`, their longest
 // common prefix on a codepoint boundary less the tail (empty when the
 // boundary cut took it to the tail or below: the matches diverge inside one
-// character, or a single match is the tail already). Each caller decides what
-// a single match takes after it.
+// character, or a single match is the tail already). The caller decides what
+// a single match takes after it (a path's `/`).
 struct FolderNameAdvance {
     std::size_t count = 0;
     std::string append;
@@ -175,19 +170,19 @@ FolderNameAdvance folder_name_advance(const std::filesystem::path& dir,
 }
 
 // THE NOISE'S FOLDERS' HOME — `noise/` beside the device config
-// (GuiNoise::probe's own composition, noise.h), read by the noise completer
-// and the noise value list; empty with no config home, which lists nothing.
+// (GuiNoise::probe's own composition, noise.h), read by the noise value
+// list; empty with no config home, which lists nothing.
 std::filesystem::path noise_home() {
     const std::filesystem::path config = device_config_path();
     if (config.empty()) return {};
     return config.parent_path() / "noise";
 }
 
-// THE BUFFER'S ADVANCE, the four completers' shared tail: `append` lands at
-// the LINE'S END whatever the caret was doing, through the one incoming
-// filter, as the recall's does; its over-capacity refusal is silent for the
-// recall's reason (the text is the product's own, not the user's), and
-// answers false because the buffer stood still.
+// THE BUFFER'S ADVANCE, the path completer's tail: `append` lands at the
+// ENTRY'S END whatever the caret was doing, through the one incoming filter,
+// as the recall's does; its over-capacity refusal is silent for the recall's
+// reason (the text is the product's own, not the user's), and answers false
+// because the buffer stood still.
 bool append_at_line_end(AppState& app, Viewport& viewport,
                                const std::string& append) {
     const std::string before = app.settings_editor.pending;
@@ -199,31 +194,13 @@ bool append_at_line_end(AppState& app, Viewport& viewport,
     return app.settings_editor.pending != before;
 }
 
-// THE PREFIX RULE over a closed list of ASCII words — the key completer's and
-// the closed-value completer's one body (the rules at their declarations):
-// the matches' longest common prefix past `typed`, or nothing. The words are
-// ASCII, so the codepoint cut cuts nothing and is called for the one rule's
-// sake (the path completer's).
-template <typename Words>
-std::string closed_list_advance(const std::string& typed,
-                                       const Words& words) {
-    std::vector<std::string> matches;
-    for (std::string_view w : words) {
-        if (w.size() >= typed.size() && w.compare(0, typed.size(), typed) == 0)
-            matches.emplace_back(w);
-    }
-    if (matches.empty()) return {};
-    const std::string lcp = common_prefix_on_codepoint_boundary(matches);
-    if (lcp.size() <= typed.size()) return {};
-    return lcp.substr(typed.size());
-}
-
 // THE RECALL — `key`'s current value as the writer writes it (the engine
-// key's through format_engine_setting_value, every other settable key's
-// through recall_gui_setting_value), or nothing for a key this editor does
-// not know. autocomplete_value reads it for a complete key (whether the
-// line names a key it knows) and for an empty value side (the value), and
-// GuiSettingsEditor::setting_line for the settings page's rows (2026-10-28).
+// key's through format_engine_setting_value, the device keys' through
+// recall_gui_setting_value, `score_path` through recall_score_viewer_value),
+// or nothing for a key none of them writes. Its one reader is
+// GuiSettingsEditor::setting_value, which asserts the answer: the page's
+// rows and its disabled `scale` / `bpm` (setting_line), the value list's
+// seat, the open's prefill and the empty entry's Tab.
 std::optional<std::string> recall_setting_value(const AppState& app,
                                                 const std::string& key) {
     std::optional<std::string> cur =
@@ -238,23 +215,16 @@ std::optional<std::string> recall_setting_value(const AppState& app,
 // The one opener, and it carries no read-only decision at all: the lock
 // governs the keys, not the surface (architect 2026-09-04).
 //
-// The gate this function held from 2026-08-07 to 2026-09-04 was reasoned for
-// the engine keys — the surface authors the engine settings, which the lock
-// protects by the ruling's own vocabulary (read_only_key_blocked,
-// input_key_dispatch.cpp: read-only protects the authored musical content, the
-// two marker stores and the engine settings, and nothing else). What sitting at
-// the surface could not see is that the same editor authors the per-device
-// keys, which belong to no piece (device_config.h: no undo, no dirty, no
-// Ctrl+S), so a locked tab killed the one road to `projects_path`,
-// `projects_repo` and the scale (and now the waveform cap) — and on the
-// tablet the menu
-// was that road. The decision sits at each key's own commit arm now: the
-// engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
-// the selected text every other refusal there leaves, while commit_device_setting's
-// keys and the `gui_scale` arm commit regardless, and the GUI-kind keys —
-// band rather than authored content: view state, the per-tab viewport, zoom,
-// playhead, trim and the read_only bit itself, read-only-legal since
-// 2026-08-07 — owe no read-only gate here either.
+// The editor authors the per-device keys, which belong to no piece
+// (device_config.h: no undo, no dirty, no Ctrl+S), as well as the piece's
+// engine keys, which the lock protects by the ruling's own vocabulary
+// (read_only_key_blocked, input_key_dispatch.cpp: read-only protects the
+// authored musical content, the two marker stores and the engine settings,
+// and nothing else). So the decision sits at each key's own commit arm: the
+// engine-key arm in commit() refuses under the lock with the lock's own card
+// and the selected text every other refusal there leaves, while
+// commit_device_setting's keys, the `gui_scale` arm and the `score_path` arm
+// commit regardless.
 //
 // THE OPENER IS LIVE UNDER EITHER LOCK, ONE LEVEL UP TOO (2026-10-21, the
 // planner's ruling by the 2026-09-04 rule): bare `;` — the SETTINGS PAGE's
@@ -263,56 +233,25 @@ std::optional<std::string> recall_setting_value(const AppState& app,
 // (read_only_key_blocked's is_settings_page), which the iteration gate
 // inherits, and the band's Settings button — the chord's pointer spelling —
 // stays lit under both, so a locked ACTIVE tab keeps its road to the device
-// keys. The line opened is free text (a self-unlock typed as
-// `tab_X_read_only=false` among what it admits). THE LOCK ARMS BELOW ARE THE
-// KEYS' OWN RULE: the engine-key arm's, and the iteration lock's three.
-//
-// THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
-// (architect 2026-09-10). It governs the keys by the identical rule — the
-// engine-key arm in commit() asks authoring_locked for both locks at once —
-// but its keyboard gate refuses SIX chords the read-only allowlist admits
-// (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp: bare `o`,
-// the four absolute view selectors and the paired march — bare `k` left that
-// delta 2026-09-19 with the sticky ctrl's narrowing, and bare
-// `t`/`p`, the individual axis toggles, were deleted with their view lamps
-// 2026-09-15, so the four selectors are the column/audio-view switch's only
-// keys now),
-// so a GUI-kind key whose chokepoint is one of those chords owes a gate of
-// its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
-// validate_gui_setting's whole key set (2026-09-13), THREE KEYS OWE ONE AND
-// ALL THREE CARRY IT, EACH IN THE SHAPE ITS OWN CHORD REFUSES IN:
-//   * `active_markers_view=` — the column half of the four selectors (bare `p`, the
-//     individual toggle, is gone) — BOTH DIRECTIONS, the gate standing AHEAD
-//     of the no-op gate: the chord refuses whichever column it is pressed in,
-//     so a typed same-column commit is that same press asking the same
-//     question, and the mode is lit for the column it was pressed in.
-//   * `tab_X_read_only=` — bare `o`, THE ACTIVE TAB'S KEY ALONE (architect
-//     2026-10-13) — ONE DIRECTION, the gate standing BEHIND the no-op gate
-//     and asking the REQUESTED value: a lock of the active tab refuses while
-//     an UNLOCK commits, an unlock only widening what is reachable; the
-//     other tab's key commits either way, the lamp's exclusion being the
-//     active tab's; and an unchanged value is the ordinary no-op.
-//   * `active_audio_view=` — the audio half of the four selectors (bare `t`, the
-//     individual toggle, is gone), since 2026-09-13, when grid iterations
-//     became target-view-only — asking the REQUESTED value, `S` refused:
-//     under a lit lamp the view IS target (AppState::iteration_mode_enabled's
-//     invariant), so a typed `S` is the one spelling that could move it and a
-//     typed `T` is the ordinary no-op.
-// AND THE REST DO NOT, each because its own chord is live under a lit lamp:
-// `active_tab_view=` is Ctrl+Tab, and the per-tab
-// `viewport_start`/`zoom`/`playhead_cursor`/`trim_begin`/`trim_end` are
-// viewport and trim band, which neither lock protects. The delta's other
-// chord — the paired march — has no key in this schema at all, so nothing
-// here can spell it (bare `k` was a second such chord until 2026-09-19 and
-// had no key here either). A change to that delta needs a hand edit
-// here.
-void GuiSettingsEditor::open(const std::string& line) {
+// keys. The entry holds THE OPENED KEY'S VALUE ALONE (architect 2026-11-19,
+// send AA: "One, agree."): nothing typed names another key, so no key
+// without an editable row — a tab's read-only bit, the view keys, the
+// per-tab band, the score's range and positions, `scale` and `bpm` — has a
+// road through this editor; each has its own lever (the head). THE ONE LOCK
+// ARM BELOW IS THE KEYS' OWN RULE: the engine-key arm's, which asks
+// authoring_locked for both locks at once — the read-only bit and grid
+// iterations (architect 2026-09-10) — the editable keys owing no other gate,
+// none of them a chord either lock's keyboard gate refuses.
+void GuiSettingsEditor::open(const std::string& key) {
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole
     // answer. (Its one caller is the settings page's row, which no press
     // reaches under the editor's veil; the arm is the opener's own shape.)
     if (text_editor::is_active(app.settings_editor)) return;
-    // THE ROW THE CLOSE RETURNS TO (page_key's contract, settings_editor.h).
-    page_key_ = line.substr(0, line.find('='));
+    // THE KEY THE COMMIT WRITES AND THE ROW THE CLOSE RETURNS TO (page_key's
+    // contract, settings_editor.h): an editable row's, by the one caller.
+    assert(is_settings_editor_key(key) && !settings_key_has_value_list(key) &&
+           "the line editor opens on an editable row's key");
+    page_key_ = key;
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past the return above — the
     // `h` view's own load raise takes the same shape ("playback halts only
     // when the modal actually opens, so a refused open leaves a listening
@@ -325,12 +264,15 @@ void GuiSettingsEditor::open(const std::string& line) {
                        /*target=*/0,
                        /*initial_pending=*/"",
                        text_editor::Kind::SettingsAssignment);
-    // THE PREFILL LANDS AS EVERY TAB ADVANCE LANDS (the head): through the
-    // one incoming filter at the empty line's end, so the caret stands at
-    // the line's end with nothing selected. Its over-capacity refusal is
+    // THE PREFILL IS THE VALUE THE KEY HOLDS (setting_value, the writer's
+    // spelling) and it lands as every Tab advance lands (the head): through
+    // the one incoming filter into the empty entry, so the caret stands at
+    // the value's end with nothing selected. Its over-capacity refusal is
     // silent for the recall's reason (the text is the product's own recall,
-    // autocomplete_value's account).
-    (void)text_editor::replace_selection(app.settings_editor, line);
+    // autocomplete_value's account; kMaxPendingCharsSettings says what it
+    // leaves).
+    (void)text_editor::replace_selection(app.settings_editor,
+                                         setting_value(key));
     // A MODAL OPEN damages the whole window: the modal's rect does not exist
     // before its first paint (the stash is the painter's), so the status-row
     // owner's modal rider cannot cover it here. Every later repaint of the
@@ -350,9 +292,10 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
 
 // THE VALUE LISTS' ROWS (the domains at the declaration). Each arm is
 // its key's own domain owner read whole — the switch's
-// words, the folder listing the noise completer reads, the grow's quarters,
-// the three integer grammars' ranges — with every value in the writer's spelling, so the row
-// the tap commits is a line the typed commit would take byte for byte. A
+// words, the noise's folder listing, the grow's quarters, the crossfade's
+// seconds, the themes' slugs — with every value in the writer's spelling, so
+// the row the tap commits is a value the key's grammar takes byte for byte
+// and the live value's row is found by a byte compare. A
 // row's text carries NO UNIT (architect 2026-10-28 night: "the units are not
 // present in the setup main page, so let's remove it from the lists.
 // consistent with linux unitless values (ffmpeg, etc)"): it is the value as
@@ -419,22 +362,17 @@ void GuiSettingsEditor::exit_no_commit() {
     text_editor::deactivate(app.settings_editor);
 }
 
-// GUI-kind key router. It hands (key, value) to the single grammar owner
-// validate_gui_setting (src/parser/settings_file.cpp — the same check the load
-// schema runs), refuses (text_editor::refuse) AND CARDS with the returned reason
-// on any
-// malformed or out-of-vocabulary value (2026-08-30: one composed sentence, the
-// stderr line and the card its two readers), and otherwise applies the typed
-// value through the
-// key's own gesture chokepoint — no parallel state writer, no grammar spelled
-// twice. ITS ONE ARM AHEAD OF THAT OWNER is `gui_scale`, which left the load
-// schema 2026-08-27 for the per-device config and reaches its grammar owner
-// there instead; the rule is unchanged, only the file the value lands in.
-// GUI-kind commits touch no undo history and no dirty state (launch/view
-// state); a same-value commit no-op-deactivates like the
-// engine no-op gate. Playback is already stopped (the editor is modal), so the
-// appliers need no playback special-casing. Returns false when `key` is not a
-// GUI-kind key, so the caller falls through to the engine-key path.
+// THE TWO KEYS OUTSIDE BOTH THE DEVICE BODY AND THE ENGINE ARM (the head's
+// item 2): `gui_scale` and `score_path`, each through its own grammar owner
+// and its own chokepoint — no parallel state writer, no grammar spelled
+// twice. A refusal is the refused field AND A CARD with the owner's reason
+// (2026-08-30: one composed sentence, the stderr line and the card its two
+// readers). Neither touches undo history or dirty state (the scale is the
+// device's, the score folder the score viewer's file's); a same-value
+// commit no-op-deactivates like the engine no-op gate. Playback is already
+// stopped (the editor is modal), so the appliers need no playback
+// special-casing. Returns false for any other key, so the caller goes on to
+// the engine arm.
 bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                            const std::string& value) {
     // ONE COMPOSER, TWO READERS (architect 2026-08-30): the refusal sentence
@@ -462,19 +400,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         text_editor::deactivate(app.settings_editor);
     };
 
-    // THE DEVICE CONFIG'S SCALE, ahead of the shared schema owner because it is
-    // not in that schema any more (2026-08-27): `gui_scale` is a per-DEVICE
-    // preference living in its own file, and this editor is still its authoring
-    // surface. THE GRAMMAR IS SPELLED ONCE ANYWAY — the canonical integer
-    // spelling through parse_authored_frame and the RANGE through
-    // is_gui_scale_percent (device_config.h), which is the very predicate that
-    // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other four editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, and since 2026-10-21 true_colors and the
-    // later device keys — take their one
-    // direct-set body in
-    // commit(),
-    // commit_device_setting, ahead of this router.)
+    // THE DEVICE CONFIG'S SCALE (2026-08-27): `gui_scale` is a per-DEVICE
+    // preference living in its own file, and this editor is its authoring
+    // surface. THE GRAMMAR IS SPELLED ONCE: the canonical integer spelling
+    // through parse_authored_frame and the RANGE through is_gui_scale_percent
+    // (device_config.h), which is the very predicate that file's reader runs,
+    // so "loadable iff it commits" holds. (It stays out of
+    // commit_device_setting's body because it HAS a chokepoint of its own,
+    // apply_gui_scale, which writes the device config itself.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -495,14 +428,15 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
 
-    // THE SCORE VIEWER'S FIVE KEYS (architect 2026-10-26 night), ahead of
-    // the shared schema owner because they are not in that schema: they
-    // live in the score viewer's own file, whose grammar owner
-    // (validate_score_viewer_value, score_viewer_file.h) this asks, and
-    // every committed change WRITES THAT FILE THROUGH at once (the device
-    // keys' road, never the save's). Band-class like every key of this
-    // router: no undo, no dirty.
-    if (auto sv = validate_score_viewer_value(key, value)) {
+    // THE SCORE'S FOLDER (architect 2026-10-26 night), the one key of the
+    // score viewer's own file this editor writes (the range and the
+    // positions are the viewer's own, its START / END and its pages):
+    // its grammar owner is that file's (validate_score_viewer_value,
+    // score_viewer_file.h), and a committed change WRITES THAT FILE THROUGH
+    // at once (the device keys' road, never the save's).
+    if (key == "score_path") {
+        const auto sv = validate_score_viewer_value(key, value);
+        assert(sv && "score_path is the score viewer file's key");
         if (!*sv) {
             reject(sv->error());
             return true;
@@ -516,488 +450,94 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // and one stderr line); an ABSENT folder commits, the key grey and a
         // card saying where nothing was found (the folder may arrive by the
         // sync script later). The empty value is no score.
-        if (key == "score_path") {
-            if (v.text == app.score_path) { unchanged(); return true; }
-            if (v.text.empty()) {
-                app.score.reset();
-                app.score_path.clear();
-                score_folder_changed(app);
-                write_score_viewer_file(app);
-                applied(); return true;
-            }
-            const std::filesystem::path folder = score_folder_of(
-                score_viewer_project_folder(app), v.text);
-            auto score = read_score_folder(folder);
-            if (!score) {
-                reject("invalid score in '" +
-                       shown_project_path(folder / "pages.txt") + "': " +
-                       score.error());
-                return true;
-            }
-            app.score_path = v.text;
-            write_score_viewer_file(app);
-            if (score->pages) {
-                app.score = std::move(score->pages);
-            } else {
-                app.score.reset();
-                std::fprintf(stderr, "warptempo_gui: %s; no score\n",
-                             score->advisory.c_str());
-                notifications.notify(AppState::NotificationClass::Normal,
-                                     "No score at '" +
-                                         shown_project_path(folder) + "'");
-            }
-            // The soundtrack and the page cache follow the folder
-            // (score_folder_changed: the old load joined, the new one
-            // started on its worker).
+        if (v.text == app.score_path) { unchanged(); return true; }
+        if (v.text.empty()) {
+            app.score.reset();
+            app.score_path.clear();
             score_folder_changed(app);
-            applied(); return true;
-        }
-        // THE VIEWING RANGE: the score viewer's START / END typed
-        // (score_viewer.h), AUTHORING like them — a read-only tab and grid
-        // iterations refuse it with the lock's own card, the engine-key
-        // arm's shape — and refused where the pair would cross
-        // (score_range_crossed, the file's one cross-key rule), so a crossed
-        // pair is never written. A number past the page count commits (the
-        // viewer clamps at use). The gray store follows the new range at the
-        // viewer's next feed (GuiScoreViewer::scope_gray_to_range, the
-        // scope's one owner), so nothing here trims it.
-        if (key == "score_first_page" || key == "score_last_page") {
-            if (authoring_locked(app)) {
-                const char* card = authoring_lock_card(app);
-                text_editor::refuse(app.settings_editor);
-                viewport.invalidate_dialog_editor_box();
-                std::fprintf(stderr, "warptempo_gui: %s\n", card);
-                notifications.notify(AppState::NotificationClass::Normal, card);
-                return true;
-            }
-            const bool first = (key == "score_first_page");
-            int64_t& bound = first ? app.score_first_page : app.score_last_page;
-            if (v.i64 == bound) { unchanged(); return true; }
-            const int64_t f = first ? v.i64 : app.score_first_page;
-            const int64_t l = first ? app.score_last_page : v.i64;
-            if (score_range_crossed(f, l)) {
-                reject("score_first_page would pass score_last_page");
-                return true;
-            }
-            bound = v.i64;
             write_score_viewer_file(app);
             applied(); return true;
         }
-        // THE REMEMBERED POSITION (`tab_a_` / `tab_b_score_position`):
-        // band-only on both tabs, the viewer reading it at its next open
-        // (score_viewer.h) — display scratch, no clamp here.
-        ViewState& band = (key == "tab_b_score_position") ? app.tab_b : app.tab_a;
-        if (v.i64 == band.score_position) { unchanged(); return true; }
-        band.score_position = v.i64;
+        const std::filesystem::path folder = score_folder_of(
+            score_viewer_project_folder(app), v.text);
+        auto score = read_score_folder(folder);
+        if (!score) {
+            reject("invalid score in '" +
+                   shown_project_path(folder / "pages.txt") + "': " +
+                   score.error());
+            return true;
+        }
+        app.score_path = v.text;
         write_score_viewer_file(app);
-        applied(); return true;
-    }
-
-    // The shared grammar/vocabulary owner. std::nullopt: `key` is not a
-    // GUI-kind key — fall through to the engine path. An error: malformed or
-    // out-of-vocabulary value — refused with the returned reason. Otherwise
-    // route the typed value through the key's gesture chokepoint below. The
-    // editor's state-dependent refusals (the trim walls; the read-only-tab trim
-    // refusal that stood beside them was deleted 2026-08-07) stay here.
-    auto g = warptempo_settings::validate_gui_setting(key, value);
-    if (!g) return false;
-    if (!*g) { reject((*g).error()); return true; }
-    const warptempo_settings::GuiSettingValue& gv = **g;
-
-    // -- non-tab GUI keys ------------------------------------------------
-    // (`follow=`, `centered=` and `center_on_next_marker=` had arms here
-    // until 2026-09-11. The three camera postures left the schema whole that
-    // day, so they are UNKNOWN to this editor now and take the unknown-key
-    // refusal below — the refused field and a card — like any other name that is not
-    // a settable key. The two surviving lamps are reached by their own bare
-    // chords and their own icon-row buttons and by nothing else; the third,
-    // center_on_next_marker, was deleted 2026-09-13, the Tab walk's framing
-    // being the zoom's at the landing.)
-    if (key == "active_audio_view") {
-        // THE ITERATION LOCK REFUSES THE SWITCH BACK TO SOURCE (architect
-        // 2026-09-13: grid iterations lives in target view alone) — bare `t`
-        // carried this same refusal at the keyboard gate until the architect
-        // deleted the key with its view lamp 2026-09-15; this typed road is
-        // what is left of it (iteration_lock_key_blocked's delta (a)). It asks
-        // the REQUESTED value rather than the direction of a flip: under a lit
-        // lamp the view is target by invariant, so `S` is the only value that
-        // could move it, and a typed `T` falls to the no-op below. The refused
-        // field plus card, the column arm's own shape and sentence.
-        if (app.iteration_mode_enabled && gv.c == 'S') {
-            text_editor::refuse(app.settings_editor);
-            viewport.invalidate_dialog_editor_box();
-            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kIterationLockCard);
-            return true;
-        }
-        if (gv.c == app.active_audio_view) { unchanged(); return true; }
-        // THE BODY BARE `t` USED TO CALL (no editor-state guard); it flips
-        // S<->T. Bare `t` itself was deleted with its view lamp 2026-09-15;
-        // bare 1 / 2 reach this same body now. The column stays
-        // where it is, both columns pairing with both audio views (architect
-        // 2026-10-12, S+P's return), and no coincidence auto-select runs — a
-        // typed audio view is no column entry.
-        input->handle_active_audio_view_toggle();
-        applied(); return true;
-    }
-    if (key == "active_markers_view") {
-        // THE ITERATION LOCK REFUSES THE COLUMN SWITCH (architect 2026-09-10)
-        // — the typed spelling of bare `p`'s own refusal at the keyboard gate
-        // until the architect deleted that key with its view lamp 2026-09-15
-        // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp,
-        // which still eats the four absolute view selectors): the mode is
-        // LIT FOR THE COLUMN IT WAS PRESSED IN and the column is frozen with
-        // it, so a typed `active_markers_view=P` under a lit lamp would leave
-        // the cells painted and the sweep aimed at a column the brackets were
-        // never authored on. The lock governs the KEYS and not the surface,
-        // and the editor's field is free text, so without this arm the editor
-        // would be a second road onto the state the ruling exists to delete
-        // (`;` opens it under the lock, the open's account); it is the sibling
-        // of the tab_X_read_only refusal below, which answers bare `o` the
-        // same way.
-        //
-        // IT REFUSES IN BOTH DIRECTIONS, ahead of the unchanged() no-op gate
-        // rather than behind it: the chord refused whichever column it was
-        // pressed in, and a typed same-column commit is the same press asking
-        // the same question. One press, one answer, whatever the column.
-        // The refused field plus card, this surface's shape, on the GENERIC sentence
-        // (kIterationLockCard) the gate itself says for every chord it eats.
-        if (app.iteration_mode_enabled) {
-            text_editor::refuse(app.settings_editor);
-            viewport.invalidate_dialog_editor_box();
-            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kIterationLockCard);
-            return true;
-        }
-        if (gv.c == app.active_markers_view) { unchanged(); return true; }
-        // The absolute column entry bare 3 / 4 take
-        // (GuiActiveViews::select_active_markers_view), in the audio view
-        // that stands: both columns pair with both audio views (architect
-        // 2026-10-12, S+P's return — a typed `P` crossed to target first
-        // from 2026-09-21 until then).
-        active_views.select_active_markers_view(gv.c);
-        applied(); return true;
-    }
-    if (key == "active_tab_view") {
-        if (gv.c == app.active_tab_view) { unchanged(); return true; }
-        // NO ITERATION-LOCK REFUSAL: this commits under a lit lamp exactly
-        // as Ctrl+Tab does, INTO A LOCKED TAB included (architect 2026-10-13;
-        // authoring_locked, app_state.h).
-        // Exactly the Ctrl+Tab pair.
-        active_views.switch_active_tab_view_to(gv.c);
-        target_render.trigger();
-        applied(); return true;
-    }
-
-    // -- per-tab GUI keys ------------------------------------------------
-    char tab_char = 0;
-    std::string suffix;
-    if (key.rfind("tab_a_", 0) == 0) { tab_char = 'A'; suffix = key.substr(6); }
-    else if (key.rfind("tab_b_", 0) == 0) { tab_char = 'B'; suffix = key.substr(6); }
-    if (tab_char == 0) return false;   // not a GUI-kind key
-
-    const bool active = (tab_char == app.active_tab_view);
-    // The tab's band. active_view_state(app) returns exactly this band when the
-    // tab is active; read_only lives here (never mirrored to a live field), so
-    // the band is authoritative for read_only in both tabs.
-    ViewState& band = (tab_char == 'B') ? app.tab_b : app.tab_a;
-
-    if (suffix == "viewport_start") {
-        const int64_t v = gv.i64;
-        if (active) {
-            if (v == app.viewport_start_sample) { unchanged(); return true; }
-            // Assign-then-clamp: the same idiom every viewport mutation uses;
-            // the clamp owns out-of-range constructively.
-            app.viewport_start_sample = v;
-            clamp_viewport_start(app, audio, ViewportLattice::Exact);
-            viewport.invalidate_waveform_area();
-            viewport.kick_waveform_sync();
+        if (score->pages) {
+            app.score = std::move(score->pages);
         } else {
-            if (v == band.viewport_start_sample) { unchanged(); return true; }
-            band.viewport_start_sample = v;   // the restore clamps at tab-in
-        }
-        applied(); return true;
-    }
-    if (suffix == "zoom") {
-        // validate_gui_setting already accepted the one continuous
-        // [kMinZoom, kMaxZoom] double vocabulary and refused anything else
-        // (the refused field and its card)
-        // (0 and 0.5 included); gv.d carries the level.
-        const double v = gv.d;
-        if (active) {
-            if (v == app.zoom_level) { unchanged(); return true; }
-            // A discrete zoom through the applier.
-            viewport.apply_zoom_change(v);
-        } else {
-            if (v == band.zoom_level) { unchanged(); return true; }
-            // Stored verbatim, unclamped against today's per-file effective
-            // ceiling: the ceiling is width- and domain-dependent (a narrower
-            // window raises it; target view computes it against the deformed
-            // total), and this parked band activates later under whatever
-            // width and view are live then, so a store-time clamp against the
-            // current context could destroy a value honorable at activation.
-            // Parked zoom is display-scratch like the persisted
-            // viewport/playhead fields -- clamp_viewport_start's level-clamp
-            // is the sole owner of honoring it, at tab-in.
-            // AND THE PARKED BAND'S WHOLE-SONG STATE GOES WITH IT (2026-09-02):
-            // a typed level is a zoom write like any other, and
-            // leaving the bit standing would have the tab-in clamp pin this
-            // very value back to the ceiling (the inventory of the four clears
-            // is at ViewState::whole_song_visible).
-            band.zoom_level = v;
-            band.whole_song_visible = false;
-        }
-        applied(); return true;
-    }
-    if (suffix == "playhead_cursor") {
-        const int64_t v = gv.i64;
-        if (active) {
-            if (v == app.playhead_cursor_sample) { unchanged(); return true; }
-            // THE NAVIGATION-JUMP CLASS (architect 2026-07-29, no exemptions):
-            // this is a playhead jump to an arbitrary typed position — a
-            // non-marker spot — so it LEAVES the marker lane exactly as Home/End
-            // do, and it clears the SELECTION the way they do
-            // (the precedent and its rationale live at the Home/End arms in
-            // input_key_dispatch.cpp: a flag left selected would go on claiming
-            // to be the playhead at its own position, and the next bare arrow
-            // would tow the playhead back onto the marker, silently discarding
-            // the jump). Collapse is cheap. The movement is move_playhead_to's
-            // below, which ends an A/B audition as every movement does, so this
-            // arm spells only its selection clear. The INACTIVE arm
-            // below writes the other tab's stored cursor, moves nothing live,
-            // and stays out of this entirely (it reaches no owner, which is
-            // exactly right).
-            if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
-                selection.clear_selection();
-                viewport.invalidate_waveform_area();
-            }
-            // The live chokepoint; its clamp owns out-of-range constructively.
-            viewport.move_playhead_to(v);
-        } else {
-            if (v == band.playhead_cursor_sample) { unchanged(); return true; }
-            band.playhead_cursor_sample = v;
-        }
-        applied(); return true;
-    }
-    if (suffix == "read_only") {
-        // Navigation-class (allowed even while the tab is read-only), and the
-        // remote-unlock route for the OTHER tab. read_only lives in the band for
-        // both tabs.
-        // IT WAS THE REMOTE ROUTE ONLY UNTIL 2026-09-04, when the lock moved
-        // from this surface to the keys (the account is at open()): the editor
-        // did not raise on a locked ACTIVE tab, so the arm was reached only by
-        // typing `tab_X_read_only=false` from an unlocked tab about the other
-        // one. The Settings dropdown raised the editor on a locked tab from
-        // then until it retired, 2026-10-21, and the settings page's rows do
-        // since (the open's account), so a self-unlock can be typed here — the
-        // `tab_X_read_only=false` of the locked active tab — beside the
-        // remote route. This key is band, not authored content,
-        // navigation-class on the read-only allowlist's own reading, and the
-        // ordinary unlock is bare `o` or the icon row's toggle.
-        if (gv.b == band.read_only) { unchanged(); return true; }
-        // THE ITERATION LOCK REFUSES A LOCK OF THE ACTIVE TAB (architect
-        // 2026-09-10; scoped to the active tab 2026-10-13), the typed
-        // spelling of bare `o`'s own refusal and scoped as the exclusion is
-        // scoped — the ACTIVE TAB's, like every other read-only refusal
-        // (architect 2026-10-13: "allow iterations mode … on a tab if it does
-        // not have readonly set, even if the other does"; authoring_locked,
-        // app_state.h). A REMOTE lock (`tab_B_read_only=true` typed from tab
-        // A) therefore COMMITS under a lit lamp, as the lamp could have been
-        // lit with tab B already locked. AN UNLOCK IN EITHER DIRECTION
-        // COMMITS: it can only widen what is reachable, which is why the
-        // `gv.b` term is the whole of the direction test. The refused field
-        // plus card, this surface's shape, on the gate's own sentence.
-        // Without this arm the editor — the lock governing the keys and not
-        // the surface (`;` opens it under a lit lamp) —
-        // would be a second road onto the state the padlock refuses.
-        if (gv.b && active && app.iteration_mode_enabled) {
-            text_editor::refuse(app.settings_editor);
-            viewport.invalidate_dialog_editor_box();
-            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
+            app.score.reset();
+            std::fprintf(stderr, "warptempo_gui: %s; no score\n",
+                         score->advisory.c_str());
             notifications.notify(AppState::NotificationClass::Normal,
-                                 kIterationLockCard);
-            return true;
+                                 "No score at '" +
+                                     shown_project_path(folder) + "'");
         }
-        // The bit's one setter, shared with bare `o` (the contract is at
-        // GuiInputHandler::set_tab_read_only, input_handler.h): it writes the
-        // named band and, when that band is the active one, damages the top
-        // strip so the icon row's Read-Only glyph stops showing the state the tab
-        // just left. applied() below damages the modal area alone, so a typed
-        // self-lock or self-unlock would otherwise close the editor onto a
-        // stale padlock.
-        input->set_tab_read_only(tab_char, gv.b);
-        applied(); return true;
-    }
-    if (suffix == "trim_begin" || suffix == "trim_end") {
-        const bool is_begin = (suffix == "trim_begin");
-        // THE LIVE / PARKED SPLIT, which both value arms below branch on
-        // (`active`). A tab_A key edited while tab A is active writes the LIVE
-        // trim, and that commit is a trim SETTER: it DESELECTS like every other
-        // route that commits the live window (architect 2026-07-30, "a typed
-        // commit is a commit"). A tab_B
-        // key edited from tab A writes only the PARKED band — no live trim,
-        // nothing visible changed — so it deselects nothing; the entering tab
-        // rests its pair bare either way (the Ctrl+Tab pull is an entry route,
-        // not a setter).
-        // NO READ-ONLY REFUSAL (architect 2026-08-07, deleting the one this arm
-        // carried): read-only protects the AUTHORED MUSICAL CONTENT — the two
-        // marker stores and the engine settings — and trim is BAND, sitting in
-        // ViewState beside the viewport, the zoom, the playhead and the
-        // read_only bit itself, all four of which were already allowed here.
-        // The refusal existed to mirror the trim GESTURES' read-only returns,
-        // and those are deleted the same day, so mirroring them now means
-        // committing. It covered BOTH arms below (the guard read the NAMED tab's
-        // band, not the active one), so a parked `tab_b_trim_*=` written from a
-        // writable tab A while B is locked commits too — the same rule, and the
-        // weaker case of it: that write moves nothing visible at all. The full
-        // ruling is at read_only_key_blocked (input_key_dispatch.cpp).
-        // THE `-1` UNSET ARM IS GONE (architect approval 2026-07-30): the trim
-        // window is always set, so there is nothing to unset. A typed `-1` now
-        // fails the SHARED validator (validate_gui_setting, settings_file.h —
-        // the same grammar the whole-file load runs, so a spelling is loadable
-        // iff it commits) and refuses with its card like any other
-        // invalid value, with no
-        // second spelling of the refusal here. Reset Trim (Shift+T) is the maximizer.
-        const int64_t v = gv.i64;
-        // Per-bound walls, exactly the load guard's compare: both bounds
-        // 0..EOF-1, the unified inclusive [0, total-1] authored domain. The
-        // typed route's OWNER, not a backstop, and it re-spells
-        // first_past_eof_wall_defect's compare because validate_gui_setting is
-        // audio-blind: without it the GUI could save a bound both products
-        // then refuse at load.
-        const int64_t total = audio.total_frames();
-        const int64_t wall = total - 1;
-        if (v < 0 || v > wall) {
-            reject("trim bound is past its wall"); return true;
-        }
-        TrimState& t = active ? app.trim : band.trim;
-        int64_t& fr = is_begin ? t.begin_frame : t.end_frame;
-        if (fr == v) { unchanged(); return true; }
-        fr = v;
-        if (active) {
-            // The same commit tail trim gestures use, through their one owner
-            // (GuiInputHandler::commit_trim_mutation, input_trim.cpp): the
-            // crossed-commit reset first — a bound committed onto/across its
-            // partner resets the pair to the song edges — then the
-            // waveform repaint and the target-render trigger.
-            // History-less, like all trim. THE PLAYHEAD STAYS WHERE IT IS
-            // (architect 2026-11-07, session 88: no trim writer moves it, the
-            // membership stated at the head of input_trim.cpp). The
-            // INACTIVE-band arm below writes a PARKED pair, not the live
-            // window, and moves nothing visible.
-            input->commit_trim_mutation();
-            // THE SETTER'S DESELECT after the bound commit + auto_clear
-            // (architect 2026-07-30). Past every refusal (the
-            // wall range check, the unchanged early return), so a refused commit
-            // deselects nothing.
-            selection.clear_selection();
-        } else if (!trim_is_full_window(t, total) &&
-                   t.end_frame <= t.begin_frame) {
-            // Inactive band: the load convention — a crossed/equal resulting
-            // pair RESETS both bounds to the song edges, one stderr line. The
-            // full-window recognition runs first so a one-frame source's
-            // canonical [0, 0] is not read as crossed (the same precedence
-            // auto_clear_crossed_trim and the render orchestrators use).
-            t = full_trim_window(total);
-            std::fprintf(stderr,
-                "warptempo_gui: tab_%c trim crossed (end <= begin); both "
-                "bounds reset to the song edges\n",
-                (tab_char == 'B') ? 'b' : 'a');
-        }
+        // The soundtrack and the page cache follow the folder
+        // (score_folder_changed: the old load joined, the new one
+        // started on its worker).
+        score_folder_changed(app);
         applied(); return true;
     }
 
-    // A tab_a_/tab_b_ prefix with an unrecognized suffix is not a GUI-kind
-    // key; fall through to the common fallback's "unknown settings key".
     return false;
 }
 
 void GuiSettingsEditor::commit() {
     if (!text_editor::is_active(app.settings_editor)) return;
-    const std::string& pending = app.settings_editor.pending;
 
-    // Shape: split on the first `=`. The key is everything before it
-    // (validated whitespace-free below, so it never contains `=`); the
-    // value is everything after and may itself contain `=`, so a free-text
-    // value such as a url= with a `?v=` query parameter or a notes= line
-    // commits intact. This matches the settings schema reader
-    // (read_settings_file), which also splits on the first `=`.
-    const size_t eq = pending.find('=');
-    // The shape's twin above (commit_gui_setting's own): one composed
-    // sentence, the stderr line and the card its two readers.
-    auto reject = [&](const char* reason) {
-        text_editor::refuse(app.settings_editor);
-        viewport.invalidate_dialog_editor_box();
-        const std::string refusal =
-            std::string("Settings edit rejected: ") + reason;
-        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
-        notifications.notify(AppState::NotificationClass::Normal, refusal);
-    };
-    if (eq == std::string::npos) { reject("missing '='"); return; }
-    const std::string key   = trim_ws(pending.substr(0, eq));
-    const std::string value = trim_ws(pending.substr(eq + 1));
-    if (key.empty()) { reject("empty key"); return; }
-    for (char c : key) {
-        if (!is_key_char(c)) { reject("invalid character in key"); return; }
-    }
+    // THE ASSIGNMENT IS COMPOSED, NEVER PARSED (architect 2026-11-19, send
+    // AA: "One, agree."): the key is the open's (page_key_, an editable
+    // row's), the value the entry's whole text with its surrounding
+    // whitespace trimmed (trim_ws, the interactive latitude; the FILE
+    // boundary trims nothing). Nothing is split, so a value holding `=` or
+    // spaces — a url with a `?v=` query, a notes line — commits intact, and
+    // nothing typed can name another key.
+    const std::string& key   = page_key_;
+    const std::string  value = trim_ws(app.settings_editor.pending);
 
-    // 2. The twelve device keys other than the scale — one body, ahead of the
+    // 1. The device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
 
-    // 3a. GUI-kind keys. Every key that can appear in a `.settings` file is
-    // settable here: the router parses strictly and applies through the key's
-    // own gesture chokepoint (no parallel writer). It returns true when it has
-    // fully handled the commit (applied + deactivated, or refused with a
-    // card); false
-    // when `key` is not a GUI-kind key, so we fall through to the engine path.
+    // 2. `gui_scale` and `score_path` (the head's item 2): fully handled
+    //    inside, applied and closed or refused with a card; false for the
+    //    piece's engine keys, which go on to the engine arm.
     if (commit_gui_setting(key, value)) return;
 
-    // 3b. Canonical engine-key write. Reject any key that is not in the
-    // canonical engine set; validate the value through the same helper
-    // the file-load deserializer uses. Capture-before-mutate so the
-    // snapshot on the undo stack reflects the pre-edit settings.
-    //
-    // THE NOUN IS `settings key`, NOT `engine key`, and that is the accurate
-    // one: this is the COMMON FALLBACK — every road above it has declined the
-    // key, so what lands here is a device key misspelt, a GUI key misspelt, a
-    // RETIRED key typed from memory (the three camera postures) or a word that
-    // was never a key at all, and only the last group has anything to do with
-    // the engine. Naming the engine told the user the key was in the wrong
-    // FAMILY when the truth is that the product has no such key. No shim and no
-    // special case for the retired three: they are unknown keys and they hear
-    // the unknown key's sentence.
-    if (!is_canonical_engine_key(key)) {
-        text_editor::refuse(app.settings_editor);
-        viewport.invalidate_dialog_editor_box();
-        const std::string refusal =
-            "Settings edit rejected: unknown settings key '" + key + "'";
-        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
-        notifications.notify(AppState::NotificationClass::Normal, refusal);
-        return;
-    }
+    // 3. The engine-key write (the head's item 3): the piece's four editable
+    // keys, every other editable row's key having been taken above, so the
+    // key is a canonical engine key by construction. The value is validated
+    // through the same helper the file-load deserializer uses;
+    // capture-before-mutate so the snapshot on the undo stack reflects the
+    // pre-edit settings.
+    assert(is_canonical_engine_key(key) &&
+           "an editable row's key that no arm above takes is an engine key");
 
     // The lock, and this is the whole of it for this surface (architect
     // 2026-09-04, moving the decision off GuiSettingsEditor::open — the
     // account is there). An engine key IS the piece: read-only protects the
     // authored musical content, the two marker stores and the engine settings
-    // (read_only_key_blocked, input_key_dispatch.cpp), so every engine key
-    // (the four sidecar keys among them) refuses here while the device
-    // keys and the GUI-kind band above commit on a locked tab. It sits past
-    // is_canonical_engine_key so an unknown key still hears that it is
-    // unknown, and ahead of the value validator because the lock outranks the
+    // (read_only_key_blocked, input_key_dispatch.cpp), so the four editable
+    // engine keys (`title`, `notes`, `url`, `cover`) refuse here while the
+    // device keys, `gui_scale` and `score_path` above commit on a locked tab.
+    // It sits ahead of the value validator because the lock outranks the
     // grammar: a locked tab refuses the key whatever the value would have
-    // been. The refused field plus card, the shape every refusal on this surface
-    // wears.
+    // been. The refused field plus card, the shape every refusal on this
+    // surface wears.
     //
     // IT IS BOTH LOCKS SINCE 2026-09-10 (authoring_locked, app_state.h): an
     // engine key is a map input and its commit pushes a settings undo entry,
     // so grid iterations refuses it exactly as the read-only bit does, and the
-    // SAME division holds — the device keys and the GUI-kind band still commit
-    // under a lit lamp, because the lock governs the KEYS and not the surface.
+    // SAME division holds — the keys above still commit under a lit lamp,
+    // because the lock governs the KEYS and not the surface.
     // The sentence forks at the one composer (authoring_lock_card,
     // notifications.h) because this site knows its act and needs no chord in
     // it. (The editor opens under either lock — bare `;` and the SETUP
@@ -1173,7 +713,7 @@ void GuiSettingsEditor::commit() {
 // is_projects_repo, is_projects_path, never a second spelling
 // — and a refusal is the refused field and the card with the grammar's own
 // reason, through the composer every other key uses. A value byte-equal to
-// the live one is the consumed no-op every routed GUI-kind key takes (the
+// the live one is the consumed no-op every key of this editor takes (the
 // empty value included) and writes nothing. On success the LIVE STRUCT takes
 // the value (AppState::device_config, the loop's one — so the other keys
 // travel as they stand, the ownership rule at write_device_config) and THIS
@@ -1241,18 +781,18 @@ void GuiSettingsEditor::commit() {
 // `font` had arms here 2026-10-09..10-12; each left
 // with its key, and an `icons` arm of another meaning, the icon set, joined
 // 2026-11-17; `waveform`, the color presets' key, 2026-10-14..11-01.) The
-// commit is the OK's or Enter's, and for the six keys
-// with a value list (kSettingsValueListKeys, settings_editor.h) also a
-// list row's tap, ONE BODY BEHIND BOTH DOORS (apply_device_setting below;
-// the choice rows' list rows of 2026-10-07..10-14, which showed a value and
-// committed nothing, went with the choice editor).
+// commit is the line editor's OK or Enter for the keys whose row opens it,
+// and a list row's tap for the six keys with a value list
+// (kSettingsValueListKeys, settings_editor.h), whose rows open the list and
+// never the line editor — ONE BODY BEHIND BOTH DOORS (apply_device_setting
+// below; the choice rows' list rows of 2026-10-07..10-14, which showed a
+// value and committed nothing, went with the choice editor).
 //
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
-// with its text selected, or the editor closed. (The keys with a value list
-// were five from 2026-11-05, the two levels gone to the band's sliders that
-// day, `waveform_grow` among them; six since 2026-11-17, `icons` the
-// newest.)
+// with its text selected, or the editor closed. The key is the open's, one
+// of the line editor's rows (architect 2026-11-19, send AA), so the six
+// listed keys' arms below are reached through the list's door alone.
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     switch (apply_device_setting(key, value)) {
@@ -1325,21 +865,19 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
 
     // THE THEME (architect 2026-11-05, the theme arc; palette_file.h's head):
     // the slug of a row of the themes' list (find_gui_theme, theme_roles.h —
-    // the list as the launch read it; a slug no row bears, which only a typed
-    // line can name, refused with kThemeGrammarReason, device_config.h: the
-    // reader's shape test is not this commit's, architect 2026-11-06),
-    // APPLIED LIVE AT THE COMMIT, which is the OK's (or Enter's) or the value
-    // list's row tap, through the theme's own apply shape
-    // (GuiInputHandler::apply_theme — the palette reinstalled off the row
-    // at the live `bright_mix`, the icon rasters, the plate or the flag
-    // cache, the whole window), so NO
-    // CARD: the colors on screen are the answer; a failed write keeps the
-    // live value for the session, the card saying the persist failed, and
-    // the slug already in force is the unchanged no-op. The page opens its
-    // VALUE LIST (the slugs under their groups' headings, SYSTEM first,
-    // kSettingsValueListKeys); Tab completes a typed prefix against the slugs
-    // (complete_closed_value); stage 2's recall is the slug verbatim
-    // (recall_gui_setting_value).
+    // the list as the launch read it; a slug no row bears, which the value list
+    // never names, refused with kThemeGrammarReason, device_config.h: the
+    // reader's shape test is not this commit's, architect 2026-11-06), APPLIED
+    // LIVE AT THE COMMIT, which is the OK's (or Enter's) or the value list's
+    // row tap, through the theme's own apply shape
+    // (GuiInputHandler::apply_theme — the palette reinstalled off the row at
+    // the live `bright_mix`, the icon rasters, the plate or the flag cache, the
+    // whole window), so NO CARD: the colors on screen are the answer; a failed
+    // write keeps the live value for the session, the card saying the persist
+    // failed, and the slug already in force is the unchanged no-op. The page
+    // opens its VALUE LIST (the slugs under their groups' headings, SYSTEM
+    // first, kSettingsValueListKeys), its one door (recall_gui_setting_value
+    // the list's seat, the slug verbatim).
     if (key == "theme") {
         const GuiTheme* theme = find_gui_theme(value);
         if (theme == nullptr) return reject(kThemeGrammarReason);
@@ -1353,18 +891,16 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // THE NOISE'S FOLDER (architect 2026-10-28; noise.h owns the sound): one
     // folder name under its one grammar owner (is_noise_folder_name,
     // device_config.h), the value trimmed as every string key's; a same-name
-    // commit is the unchanged no-op, so GuiNoise::change_folder never sees
-    // one. Otherwise the live struct takes the name and the one GuiNoise
-    // CHANGES FOLDER — THE MEMORY IS DUMPED ON EVERY NAME CHANGE, audible or
-    // not (his ruling: "whatever's in memory is dumped if we change the
-    // subfolder name"), the new folder probed and, under an audible level,
-    // loaded at once (the level is the switch, noise.h) — and the file is
-    // written. NO CARD: the NOISE case's face is the
-    // answer, live with a folder there and grey when it is absent or refused,
-    // exactly as a launch with that name would show (the absent-folder rule,
-    // noise.h). Tab completes the value against the folders there
-    // (complete_noise_value); stage 2's recall is the name verbatim
-    // (recall_gui_setting_value).
+    // commit is the unchanged no-op, so GuiNoise::change_folder never sees one.
+    // Otherwise the live struct takes the name and the one GuiNoise CHANGES
+    // FOLDER — THE MEMORY IS DUMPED ON EVERY NAME CHANGE, audible or not (his
+    // ruling: "whatever's in memory is dumped if we change the subfolder
+    // name"), the new folder probed and, under an audible level, loaded at once
+    // (the level is the switch, noise.h) — and the file is written. NO CARD:
+    // the NOISE case's face is the answer, live with a folder there and grey
+    // when it is absent or refused, exactly as a launch with that name would
+    // show (the absent-folder rule, noise.h). Its value list is its one door
+    // (recall_gui_setting_value the list's seat, the name verbatim).
     if (key == "noise") {
         if (!is_noise_folder_name(value))
             return reject(kNoiseFolderGrammarReason);
@@ -1376,15 +912,14 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     }
 
     // THE WAVEFORM PLATE'S GROW (architect 2026-10-31, a permanent key;
-    // render.h's `waveform_grow` seat): a multiple of 0.25 device px under
-    // its one grammar owner (parse_waveform_grow, device_config.h), APPLIED
-    // LIVE AT THE COMMIT — the live struct, then the one live act
-    // (GuiInputHandler::apply_waveform_grow: the renderer's seat and the
-    // window repainted, no plate re-render — the grow is the GPU's alone)
-    // — and persisted, so NO CARD: the waveform is the answer. The page
-    // opens its VALUE LIST (9 values, kSettingsValueListKeys); Tab
-    // completes no value (a number is typed, or picked from the list);
-    // stage 2's recall is the writer's spelling (recall_gui_setting_value).
+    // render.h's `waveform_grow` seat): a multiple of 0.25 device px under its
+    // one grammar owner (parse_waveform_grow, device_config.h), APPLIED LIVE AT
+    // THE COMMIT — the live struct, then the one live act
+    // (GuiInputHandler::apply_waveform_grow: the renderer's seat and the window
+    // repainted, no plate re-render — the grow is the GPU's alone) — and
+    // persisted, so NO CARD: the waveform is the answer. The page opens its
+    // VALUE LIST (9 values, kSettingsValueListKeys), its one door
+    // (recall_gui_setting_value the list's seat).
     if (key == "waveform_grow") {
         const std::optional<int> quarters = parse_waveform_grow(value);
         if (!quarters) return reject(kWaveformGrowGrammarReason);
@@ -1399,16 +934,15 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // THE NOISE'S ATTENUATION (architect 2026-11-05 night, session 49: "then
     // the slider maintains its current behavior and law"; noise.h's head): a
     // fixed dB under the NOISE case's number, the bed at noise_level + this,
-    // under its one grammar owner (parse_noise_attenuation_db,
-    // device_config.h: THE LEVEL GRAMMAR less -inf, the bed's switch being
-    // the level's), APPLIED LIVE AT THE COMMIT — the live struct, then the
-    // one GuiNoise's setter (the gain recomputed from both, the switch
-    // untouched: the attenuation never lights or darkens the voice) — and
-    // persisted, so NO CARD: the sound is the answer. A value the key
-    // already holds is the unchanged no-op (the exact double: "-9.0" for
-    // "-9"). The page opens the line editor on it (no value list, a
-    // decimal); Tab completes no value; stage 2's recall is the writer's
-    // canonical spelling (recall_gui_setting_value).
+    // under its one grammar owner (parse_noise_attenuation_db, device_config.h:
+    // THE LEVEL GRAMMAR less -inf, the bed's switch being the level's), APPLIED
+    // LIVE AT THE COMMIT — the live struct, then the one GuiNoise's setter (the
+    // gain recomputed from both, the switch untouched: the attenuation never
+    // lights or darkens the voice) — and persisted, so NO CARD: the sound is
+    // the answer. A value the key already holds is the unchanged no-op (the
+    // exact double: "-9.0" for "-9"). The page opens the line editor on it (no
+    // value list, a decimal); Tab on an empty entry recalls the writer's
+    // spelling (recall_gui_setting_value).
     if (key == "noise_attenuation_level") {
         const std::optional<double> db = parse_noise_attenuation_db(value);
         if (!db) return reject(kNoiseAttenuationGrammarReason);
@@ -1420,15 +954,13 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE NOISE'S CROSSFADE (architect 2026-10-28; noise.h owns the sound):
-    // an integer under its one grammar owner (parse_noise_crossfade_s,
-    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then
-    // the one GuiNoise's setter (the crossfade, in the key's seconds, at the
-    // next transition's draw) — and persisted, so NO CARD: the sound is the
-    // answer. Tab completes no value (complete_closed_value and
-    // complete_noise_value name it not: a number is typed, or picked from
-    // the value list); stage 2's recall is the writer's spelling
-    // (recall_gui_setting_value).
+    // THE NOISE'S CROSSFADE (architect 2026-10-28; noise.h owns the sound): an
+    // integer under its one grammar owner (parse_noise_crossfade_s,
+    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then the
+    // one GuiNoise's setter (the crossfade, in the key's seconds, at the next
+    // transition's draw) — and persisted, so NO CARD: the sound is the answer.
+    // Its value list is its one door (recall_gui_setting_value the list's
+    // seat).
     if (key == "noise_crossfade_s") {
         const std::optional<int> s = parse_noise_crossfade_s(value);
         if (!s) return reject(kNoiseCrossfadeGrammarReason);
@@ -1446,8 +978,8 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // the renderer's seat and the window re-laid-out at once, the scale's
     // relayout tail) — and persisted, so NO CARD: the keys on screen are the
     // answer. The page opens the line editor on it (no value list, its 79
-    // values no short domain); Tab completes no value (a number is typed);
-    // stage 2's recall is the writer's spelling (recall_gui_setting_value).
+    // values no short domain); Tab on an empty entry recalls the writer's
+    // spelling (recall_gui_setting_value).
     if (key == "key_height") {
         const std::optional<int> px = parse_key_height(value);
         if (!px) return reject(kKeyHeightGrammarReason);
@@ -1463,9 +995,8 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // grammar owner (parse_key_width, device_config.h), APPLIED LIVE AT THE
     // COMMIT (GuiInputHandler::apply_key_width: the renderer's seat and the
     // window re-laid-out at once) and persisted, NO CARD. The page opens the
-    // line editor on it (no value list, its 41 values no short domain); Tab
-    // completes no value; stage 2's recall is the writer's spelling
-    // (recall_gui_setting_value).
+    // line editor on it (no value list, its 41 values no short domain); Tab on
+    // an empty entry recalls the writer's spelling (recall_gui_setting_value).
     if (key == "key_width") {
         const std::optional<int> w = parse_key_width(value);
         if (!w) return reject(kKeyWidthGrammarReason);
@@ -1481,9 +1012,8 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // grammar owner (parse_run_gap, device_config.h), APPLIED LIVE AT THE
     // COMMIT (GuiInputHandler::apply_run_gap: the renderer's seat and the
     // window re-laid-out at once) and persisted, NO CARD. The page opens the
-    // line editor on it (no value list, its 43 values no short domain); Tab
-    // completes no value; stage 2's recall is the writer's spelling
-    // (recall_gui_setting_value).
+    // line editor on it (no value list, its 43 values no short domain); Tab on
+    // an empty entry recalls the writer's spelling (recall_gui_setting_value).
     if (key == "run_gap") {
         const std::optional<int> w = parse_run_gap(value);
         if (!w) return reject(kRunGapGrammarReason);
@@ -1494,17 +1024,16 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning
-    // keys; render.h's `osk_key_w` / `osk_key_h` seat): each an integer under
-    // the one grammar owner (parse_osk_key_size, device_config.h), APPLIED
-    // LIVE AT THE COMMIT — the live struct, then the one live act
-    // (GuiInputHandler::apply_osk_key_size: the renderer's seat and the
-    // window re-laid-out at once, the band's height moving the modal stack
-    // that stands on it) — and persisted, so NO CARD: the keyboard standing
-    // under this very editor is the answer. The page opens the line editor
-    // on each (no value list, 137 values no short domain); Tab completes no
-    // value; stage 2's recall is the writer's spelling
-    // (recall_gui_setting_value).
+    // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning keys;
+    // render.h's `osk_key_w` / `osk_key_h` seat): each an integer under the one
+    // grammar owner (parse_osk_key_size, device_config.h), APPLIED LIVE AT THE
+    // COMMIT — the live struct, then the one live act
+    // (GuiInputHandler::apply_osk_key_size: the renderer's seat and the window
+    // re-laid-out at once, the band's height moving the modal stack that stands
+    // on it) — and persisted, so NO CARD: the keyboard standing under this very
+    // editor is the answer. The page opens the line editor on each (no value
+    // list, 137 values no short domain); Tab on an empty entry recalls the
+    // writer's spelling (recall_gui_setting_value).
     if (key == "osk_key_w" || key == "osk_key_h") {
         const std::optional<int> px = parse_osk_key_size(value);
         if (!px) return reject(kOskKeySizeGrammarReason);
@@ -1520,14 +1049,13 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
 
     // THE ON-SCREEN KEYBOARD'S CAP SIZE (architect 2026-10-29 night, a tuning
     // key; render.h's `osk_font_px` seat): an integer under its one grammar
-    // owner (parse_osk_font_px, device_config.h), APPLIED LIVE AT THE COMMIT
-    // — the live struct, then the one live act
-    // (GuiInputHandler::apply_osk_font_px: the renderer's seat and the
-    // window repainted, no relayout) — and persisted, so NO
-    // CARD: the keyboard standing under this very editor is the answer. The
-    // page opens the line editor on it (no value list, 37 values no short
-    // domain); Tab completes no value; stage 2's recall is the writer's
-    // spelling (recall_gui_setting_value).
+    // owner (parse_osk_font_px, device_config.h), APPLIED LIVE AT THE COMMIT —
+    // the live struct, then the one live act
+    // (GuiInputHandler::apply_osk_font_px: the renderer's seat and the window
+    // repainted, no relayout) — and persisted, so NO CARD: the keyboard
+    // standing under this very editor is the answer. The page opens the line
+    // editor on it (no value list, 37 values no short domain); Tab on an empty
+    // entry recalls the writer's spelling (recall_gui_setting_value).
     if (key == "osk_font_px") {
         const std::optional<int> px = parse_osk_font_px(value);
         if (!px) return reject(kOskFontPxGrammarReason);
@@ -1539,16 +1067,16 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     }
 
     // THE TWO LAMPS' HOLD (architect 2026-11-05 night, session 49, a tuning
-    // key; render.h's THE TWO LAMPS): an integer of milliseconds under its
-    // one grammar owner (parse_lamp_hold_ms, device_config.h), STORED INTO
-    // THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT AND NO
-    // DAMAGE: nothing is laid out or painted by it; the tick reads
+    // key; render.h's THE TWO LAMPS): an integer of milliseconds under its one
+    // grammar owner (parse_lamp_hold_ms, device_config.h), STORED INTO THE LIVE
+    // STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT AND NO DAMAGE: nothing
+    // is laid out or painted by it; the tick reads
     // app.device_config->lamp_hold_ms at every refresh (refresh_logo_lamps,
     // main.cpp), so the commit takes effect at the next tick, the next event
     // stamping its hold with the new number (a lamp lit under the old hold
     // keeps the stamp it was given). The page opens the line editor on it (no
-    // value list, 981 values no short domain); Tab completes no value;
-    // stage 2's recall is the writer's spelling (recall_gui_setting_value).
+    // value list, 981 values no short domain); Tab on an empty entry recalls
+    // the writer's spelling (recall_gui_setting_value).
     if (key == "lamp_hold_ms") {
         const std::optional<int> ms = parse_lamp_hold_ms(value);
         if (!ms) return reject(kLampHoldGrammarReason);
@@ -1558,18 +1086,17 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE TOOLTIP'S DELAY (architect 2026-11-07, session 87, a tuning key;
-    // the model at AppState::RedesignTooltip): an integer of milliseconds
-    // under its one grammar owner (parse_tooltip_delay_ms, device_config.h),
-    // STORED INTO THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT
-    // AND NO DAMAGE: nothing is laid out or painted by it; the wait's writer
-    // reads app.device_config->tooltip_delay_ms at every arrival and the
-    // tooltip's clock at every tick (note_tooltip_hover, tick_tooltip), so a
-    // wait or a bypass window already running keeps the deadline it was
-    // given and the next one takes the new number. The page opens the line
-    // editor on it (no value list, 1001 values no short domain); Tab
-    // completes no value; stage 2's recall is the writer's spelling
-    // (recall_gui_setting_value).
+    // THE TOOLTIP'S DELAY (architect 2026-11-07, session 87, a tuning key; the
+    // model at AppState::RedesignTooltip): an integer of milliseconds under its
+    // one grammar owner (parse_tooltip_delay_ms, device_config.h), STORED INTO
+    // THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT AND NO
+    // DAMAGE: nothing is laid out or painted by it; the wait's writer reads
+    // app.device_config->tooltip_delay_ms at every arrival and the tooltip's
+    // clock at every tick (note_tooltip_hover, tick_tooltip), so a wait or a
+    // bypass window already running keeps the deadline it was given and the
+    // next one takes the new number. The page opens the line editor on it (no
+    // value list, 1001 values no short domain); Tab on an empty entry recalls
+    // the writer's spelling (recall_gui_setting_value).
     if (key == "tooltip_delay_ms") {
         const std::optional<int> ms = parse_tooltip_delay_ms(value);
         if (!ms) return reject(kTooltipDelayGrammarReason);
@@ -1579,17 +1106,16 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE SWEEP HIGHLIGHT'S ALPHA (architect 2026-11-12, session 114, a
-    // tuning key; the picture at paint_sweep_highlight): an integer of whole
-    // percent under its one grammar owner (parse_sweep_highlight,
-    // device_config.h), STORED INTO THE LIVE STRUCT AND PERSISTED, so NO
-    // CARD — and NO LIVE ACT AND NO DAMAGE: the painter reads
-    // app.device_config->sweep_highlight at every list build, and no sweep
-    // stands under the Settings page (the folder overlay's veil refuses the
-    // sweep's begin), so nothing on screen wears the old number; the next
-    // sweep takes the new one. The page opens the line editor on it (no value
-    // list, 101 values no short domain); Tab completes no value; stage 2's
-    // recall is the writer's spelling (recall_gui_setting_value).
+    // THE SWEEP HIGHLIGHT'S ALPHA (architect 2026-11-12, session 114, a tuning
+    // key; the picture at paint_sweep_highlight): an integer of whole percent
+    // under its one grammar owner (parse_sweep_highlight, device_config.h),
+    // STORED INTO THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT
+    // AND NO DAMAGE: the painter reads app.device_config->sweep_highlight at
+    // every list build, and no sweep stands under the Settings page (the folder
+    // overlay's veil refuses the sweep's begin), so nothing on screen wears the
+    // old number; the next sweep takes the new one. The page opens the line
+    // editor on it (no value list, 101 values no short domain); Tab on an empty
+    // entry recalls the writer's spelling (recall_gui_setting_value).
     if (key == "sweep_highlight") {
         const std::optional<int> pct = parse_sweep_highlight(value);
         if (!pct) return reject(kSweepHighlightGrammarReason);
@@ -1599,19 +1125,18 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE BRIGHT TONES' MIX (architect 2026-11-13, session 119, a tuning
-    // key; the rule at theme_roles.h's THE BRIGHT MIX): an integer of whole
-    // percent under its one grammar owner (parse_bright_mix,
-    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then
-    // THE THEME'S OWN LIVE ACT (GuiInputHandler::apply_theme: the palette
-    // reinstalled at the new percent, the icon rasters, the flag cache, the
-    // whole window) off THE INSTALLED ROW'S LIST ENTRY, found by the
-    // installed row's slug — not the config's `theme`, which a launch's
-    // fallback leaves naming no row while `default` is installed (main.cpp)
-    // — and persisted, so NO CARD: the colors on screen are the answer. The
-    // page opens the line editor on it (no value list, 101 values no short
-    // domain); Tab completes no value; stage 2's recall is the writer's
-    // spelling (recall_gui_setting_value).
+    // THE BRIGHT TONES' MIX (architect 2026-11-13, session 119, a tuning key;
+    // the rule at theme_roles.h's THE BRIGHT MIX): an integer of whole percent
+    // under its one grammar owner (parse_bright_mix, device_config.h), APPLIED
+    // LIVE AT THE COMMIT — the live struct, then THE THEME'S OWN LIVE ACT
+    // (GuiInputHandler::apply_theme: the palette reinstalled at the new
+    // percent, the icon rasters, the flag cache, the whole window) off THE
+    // INSTALLED ROW'S LIST ENTRY, found by the installed row's slug — not the
+    // config's `theme`, which a launch's fallback leaves naming no row while
+    // `default` is installed (main.cpp) — and persisted, so NO CARD: the colors
+    // on screen are the answer. The page opens the line editor on it (no value
+    // list, 101 values no short domain); Tab on an empty entry recalls the
+    // writer's spelling (recall_gui_setting_value).
     if (key == "bright_mix") {
         const std::optional<int> pct = parse_bright_mix(value);
         if (!pct) return reject(kBrightMixGrammarReason);
@@ -1625,16 +1150,15 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     }
 
     // THE PLATE'S FADE START (architect 2026-11-14, send H, a tuning key;
-    // render.h's `waveform_fade_px` seat and THE PLATE'S BARS): a decimal
-    // of device px under its one grammar owner (parse_waveform_fade_px,
-    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then
-    // the one live act (GuiInputHandler::apply_waveform_fade_px: the
-    // renderer's seat, the plate re-rendered — its row of bars is a function
-    // of the start — and the window repainted) — and persisted, so NO CARD:
-    // the waveform is the answer. The page opens the line editor on it (no
-    // value list, its 101 values no short domain); Tab completes no value (a
-    // number is typed); stage 2's recall is the writer's spelling
-    // (recall_gui_setting_value).
+    // render.h's `waveform_fade_px` seat and THE PLATE'S BARS): a decimal of
+    // device px under its one grammar owner (parse_waveform_fade_px,
+    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then the
+    // one live act (GuiInputHandler::apply_waveform_fade_px: the renderer's
+    // seat, the plate re-rendered — its row of bars is a function of the start
+    // — and the window repainted) — and persisted, so NO CARD: the waveform is
+    // the answer. The page opens the line editor on it (no value list, its 101
+    // values no short domain); Tab on an empty entry recalls the writer's
+    // spelling (recall_gui_setting_value).
     if (key == "waveform_fade_px") {
         const std::optional<int> hundredths = parse_waveform_fade_px(value);
         if (!hundredths) return reject(kWaveformFadeGrammarReason);
@@ -1647,18 +1171,16 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     }
 
     // THE ICON SET (architect 2026-11-14, session 123: its own key, not the
-    // theme's; 2026-11-17, session 140: his set Papirus): one of the two
-    // words under its one owner (parse_icons, device_config.h), APPLIED LIVE
-    // AT THE COMMIT, which is the OK's (or Enter's) or the value list's row
-    // tap, through the set's one live act (GuiInputHandler::apply_icons —
-    // the set chosen, the icon rasters dropped, the whole window), so NO
-    // CARD: the glyphs on screen are the answer; a failed write keeps the
-    // live value for the session, the card saying the persist failed, and
-    // the set already in force is the unchanged no-op. The page opens its
-    // VALUE LIST (`breeze`, `papirus`, kSettingsValueListKeys); Tab
-    // completes a typed prefix against the two words
-    // (complete_closed_value); stage 2's recall is the writer's word
-    // (recall_gui_setting_value).
+    // theme's; 2026-11-17, session 140: his set Papirus): one of the two words
+    // under its one owner (parse_icons, device_config.h), APPLIED LIVE AT THE
+    // COMMIT, which is the OK's (or Enter's) or the value list's row tap,
+    // through the set's one live act (GuiInputHandler::apply_icons — the set
+    // chosen, the icon rasters dropped, the whole window), so NO CARD: the
+    // glyphs on screen are the answer; a failed write keeps the live value for
+    // the session, the card saying the persist failed, and the set already in
+    // force is the unchanged no-op. The page opens its VALUE LIST (`breeze`,
+    // `papirus`, kSettingsValueListKeys), its one door
+    // (recall_gui_setting_value the list's seat, the writer's word).
     if (key == "icons") {
         const std::optional<GuiIconSet> set = parse_icons(value);
         if (!set) return reject(kIconsGrammarReason);
@@ -1744,60 +1266,6 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
     return append_at_line_end(app, viewport, append);
 }
 
-bool GuiSettingsEditor::complete_noise_value(const std::string& value) {
-    // The folder the noise's names live in (noise_home). No config home
-    // completes nothing.
-    const std::filesystem::path home = noise_home();
-    if (home.empty()) return false;
-    // The value side is the name's PREFIX whole — a name has no head — and a
-    // single match is completed WITH NO TRAILING `/`: the value is a name,
-    // not a path. A typed `/` matches no folder's name, so it completes
-    // nothing, as the commit would refuse it.
-    const FolderNameAdvance found = folder_name_advance(home, value);
-    if (found.count == 0 || found.append.empty()) return false;
-    return append_at_line_end(app, viewport, found.append);
-}
-
-bool GuiSettingsEditor::complete_key_name(const std::string& prefix) {
-    // ONE MATCH STOPS AT ITS `=` (architect 2026-10-21 ~23:40, "no, the
-    // unambiguous should stop at the ="): the key's rest and `=` in one
-    // append, the caret at the line's end, the value the next Tab's (the
-    // empty value side's recall). Several matches stop at their common
-    // prefix.
-    const char* only = nullptr;
-    int count = 0;
-    for (const char* k : kSettingsEditorKeys) {
-        const std::string_view w(k);
-        if (w.size() >= prefix.size() &&
-            w.compare(0, prefix.size(), prefix) == 0) {
-            only = k;
-            ++count;
-        }
-    }
-    if (count == 1)
-        return append_at_line_end(
-            app, viewport, std::string(only).substr(prefix.size()) + "=");
-    const std::string append = closed_list_advance(prefix, kSettingsEditorKeys);
-    if (append.empty()) return false;
-    return append_at_line_end(app, viewport, append);
-}
-
-// THE CLOSED-VALUE COMPLETER (the ruling and its examples at the declaration,
-// architect 2026-10-14 and 2026-10-21): the key names its closed domain, and
-// a key with none advances nothing.
-bool GuiSettingsEditor::complete_closed_value(const std::string& key,
-                                              const std::string& value) {
-    std::string append;
-    if (key == "true_colors")
-        append = closed_list_advance(value, kTrueColorsWords);
-    else if (key == "icons")
-        append = closed_list_advance(value, kIconsWords);
-    else if (key == "theme")
-        append = closed_list_advance(value, value_choices(key));
-    if (append.empty()) return false;
-    return append_at_line_end(app, viewport, append);
-}
-
 // Returns whether the buffer CHANGED — the one autocomplete model's question
 // (the rule is stated at route_modal_editor_key's Tab arm,
 // input_key_dispatch.cpp): true consumes the Tab that ran it, false lets that
@@ -1806,112 +1274,53 @@ bool GuiSettingsEditor::autocomplete_value() {
     if (!text_editor::is_active(app.settings_editor)) return false;
     const std::string pending = app.settings_editor.pending;
 
-    // THE RECALL (recall_setting_value; the account below).
-    const auto recall = [this](const std::string& key) {
-        return recall_setting_value(app, key);
-    };
-
-    const size_t eq = pending.find('=');
-    // NO `=` YET: THE KEY AND ITS `=` (the head's stage 1, architect
-    // 2026-10-21 ~23:40).
-    // The typed text less its leading whitespace — the trailing side kept,
-    // ltrim_ws's reason: a key that does not end where the line ends has
-    // nothing to append to, so it matches nothing and the Tab walks.
-    if (eq == std::string::npos) {
-        const std::string typed = ltrim_ws(pending);
-        // A COMPLETE KEY takes its `=` and stops there, as a prefix naming
-        // one key does — any key the recall knows, the table's twenty-six and
-        // the keys typed whole alike; the value is the next Tab's.
-        if (!typed.empty() && recall(typed))
-            return append_at_line_end(app, viewport, "=");
-        // A PREFIX completes against the table (complete_key_name): one
-        // match to the key and its `=`, several to their common prefix.
-        return complete_key_name(typed);
+    // A NON-EMPTY ENTRY (the head's stage 2): the path key's value is a path
+    // PREFIX, completed against the filesystem (complete_path_value, its
+    // no-advance cases Tabs that walk); every other key's typed value
+    // advances nothing. Leading whitespace off, trailing whitespace kept —
+    // the reasons are at ltrim_ws (commit() trims both sides, so a
+    // `  /home` completes as the value it commits as).
+    if (!trim_ws(pending).empty()) {
+        if (is_path_completed_key(page_key_))
+            return complete_path_value(ltrim_ws(pending));
+        return false;
     }
 
-    const std::string key = trim_ws(pending.substr(0, eq));
-    // Only fill an empty value side, so an in-progress value is never
-    // overwritten. Whitespace-only counts as empty. THIS is what makes a
-    // SECOND Tab walk with no state to remember the first: the completion just
-    // written is a non-empty value side. THE PATH KEY IS THE EXCEPTION
-    // (2026-09-02): a non-empty value side there is a path PREFIX, and Tab
-    // completes it against the filesystem — the recall below still answers
-    // the empty side, so a bare `projects_path=` Tab behaves as every other
-    // key's does, and the path road opens only once something has been
-    // typed. The path completer's own no-advance cases (an ambiguous prefix
-    // already at the common prefix, no match, a relative or unlistable head)
-    // are Tabs that walk, exactly as here. THE NOISE KEY TAKES THE SAME ROAD
-    // (2026-10-28): a non-empty value side on `noise` is a prefix of a
-    // folder's name under `noise/` beside the device config
-    // (complete_noise_value), its no-advance cases Tabs that walk. THE CLOSED
-    // DOMAINS TOO (architect 2026-10-14 and 2026-10-21; `theme` 2026-11-05):
-    // a non-empty value side on `true_colors`, `theme` or `icons` (2026-11-17)
-    // is a prefix of the
-    // key's words (complete_closed_value), its no-advance cases Tabs that
-    // walk.
-    if (!trim_ws(pending.substr(eq + 1)).empty()) {
-        // Leading whitespace off, trailing whitespace kept — the reasons are
-        // at ltrim_ws. The completer used to be handed the raw substring, so a
-        // `projects_path= /home` never completed although commit() trims and
-        // accepts exactly that value.
-        if (is_path_completed_key(key))
-            return complete_path_value(ltrim_ws(pending.substr(eq + 1)));
-        if (key == "noise")
-            return complete_noise_value(ltrim_ws(pending.substr(eq + 1)));
-        return complete_closed_value(key, ltrim_ws(pending.substr(eq + 1)));
-    }
-
-    // Recall the current live value for ANY settable key. Engine keys read
-    // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, true_colors, theme and the
-    // rest of the device config's editable keys — gui_scale and the rest the
-    // device config's — per-tab
-    // trim / read_only)
-    // read through recall_gui_setting_value — which produces byte-identical
-    // output to what a Ctrl+S (or, for a device key, the config's writer)
-    // would write, so recall and save never diverge.
-    // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).
-    // Only a truly unknown key is not recallable.
+    // AN EMPTY ENTRY (the head's stage 1; whitespace-only counts as empty):
+    // THE VALUE THE KEY HOLDS (setting_value, the open's own prefill), so a
+    // value cleared by hand comes back with one Tab. THIS is what makes a
+    // SECOND Tab walk with no state to remember the first: the recall just
+    // written is a non-empty entry, and a non-path key's non-empty entry
+    // advances nothing.
     //
-    // THE RECALL PRESERVES EVERY BYTE OF A VALUE, NO UTF-8 EXCEPTION
-    // (architect 2026-08-02, the UTF-8 relaxation). The seed below lands through
-    // text_editor::replace_selection, whose filter now passes well-formed UTF-8
-    // verbatim — and the free-text provenance values (title/bpm/notes/url/cover)
-    // are exactly what the strict load takes verbatim
-    // (engine_settings_io.cpp), so a value carrying non-ASCII text recalls
-    // unchanged and commits back unchanged. The one-way hole this note used to
-    // record — a hand-edited non-ASCII value recalling stripped, and committing
-    // that stripped line — is CLOSED for TEXT, which is the whole of what the
-    // exception was ever about. What the filter still drops is ASCII control
-    // bytes and malformed byte sequences: not text, authorable by nothing in
-    // the product (the typed path encodes real codepoints and the file writer
-    // writes what it held), and reachable only by hand-editing a value into a
-    // state the GUI cannot express.
-    const std::optional<std::string> cur = recall(key);
-    if (!cur) return false;  // unknown key: nothing to recall
-
-    // Rebuild as `<prefix>=<current value>`, cap-aware, cursor at end. The
-    // prefix is the typed text up to and including the first `=`, kept
-    // verbatim; replace_selection fills the value at the cursor.
-    app.settings_editor.pending          = pending.substr(0, eq + 1);
-    app.settings_editor.cursor_pos       =
-        static_cast<int>(app.settings_editor.pending.size());
+    // THE RECALL PRESERVES EVERY BYTE OF A VALUE, NO UTF-8 EXCEPTION (architect
+    // 2026-08-02, the UTF-8 relaxation). The seed below lands through
+    // text_editor::replace_selection, whose filter passes well-formed UTF-8
+    // verbatim — and the free-text provenance values (title/notes/url/cover)
+    // are exactly what the strict load takes verbatim (engine_settings_io.cpp),
+    // so a value carrying non-ASCII text recalls unchanged and commits back
+    // unchanged. What the filter drops is ASCII control bytes and malformed
+    // byte sequences: not text, authorable by nothing in the product (the typed
+    // path encodes real codepoints and the file writer writes what it held),
+    // and reachable only by hand-editing a value into a state the GUI cannot
+    // express.
+    app.settings_editor.pending.clear();
+    app.settings_editor.cursor_pos       = 0;
     app.settings_editor.selection_anchor = -1;
-    // THE RECALL'S OWN OVER-CAPACITY REFUSAL IS SILENT, and it is the one
-    // replace_selection caller that says nothing (2026-08-30). The strictness
-    // ruling's two capacity sentences answer what the USER just supplied — a
-    // typed character, a pasted clipboard — while this text is the product's
-    // own recall of a value it already holds, so a field too short for it is a
-    // cap that needs widening, not a refusal to explain. Nothing marks it, and
-    // Tab still walks (the buffer advanced, the prefix having been rewritten
-    // above).
-    (void)text_editor::replace_selection(app.settings_editor, *cur);
+    // THE RECALL'S OWN OVER-CAPACITY REFUSAL IS SILENT, and it is one of the
+    // replace_selection callers that say nothing (2026-08-30; the open's
+    // prefill the other). The strictness ruling's two capacity sentences
+    // answer what the USER just supplied — a typed character, a pasted
+    // clipboard — while this text is the product's own recall of a value it
+    // already holds (kMaxPendingCharsSettings says what it leaves).
+    (void)text_editor::replace_selection(app.settings_editor,
+                                         setting_value(page_key_));
 
     viewport.invalidate_dialog_editor_box();
     // The literal answer, compared against the buffer this call started from:
-    // recalling an EMPTY value (a blank free-text key such as `projects_repo=`
-    // or an empty `title=`)
-    // onto an already-bare `key=` writes the same bytes back and is honestly
-    // no advance, so its Tab walks.
+    // recalling an EMPTY value (a blank free-text key such as an empty `url`
+    // or `projects_repo`) onto an empty entry writes nothing and is honestly
+    // no advance, so its Tab walks; a whitespace-only entry recalled empty is
+    // a change (the blanks cleared) and consumes its Tab.
     return app.settings_editor.pending != pending;
 }

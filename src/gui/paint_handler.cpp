@@ -3900,7 +3900,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 // (THE DROPDOWN'S PAINTER — paint_dropdown, Windows 95's popup menu hanging
 // from its anchor, its lit row, its access-key underlines, its separators and
 // the True Colors row's menu check mark — RETIRED 2026-10-21 with the Settings
-// popup, its last menu: the settings editor completes the keys on Tab.)
+// popup, its last menu: the settings page lists the keys.)
 
 // -- THE RULER LANE (top lane 5) ---------------------------------------------
 //
@@ -5787,7 +5787,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // player's, the picker's contents' (the project picker, the settings page,
 // the value list, the trim presets, the BPM form) and the score viewer's —
 // and THE THREE DIALOGS: THE PROMPTS, THE ONE dialog editor (the settings
-// editor's buffer in its three kinds: settings line, trim preset name, BPM
+// editor's buffer in its three kinds: settings value, trim preset name, BPM
 // form field) and THE PROGRESS MODAL. The top-strip FLAG editor is
 // deliberately NOT a dialog — it is positional, editing the marker where it
 // stands (render_flag_editor_box), a modal by its veil alone
@@ -6611,8 +6611,9 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         //    2026-10-14), none under Save As (below); THE ENTRY's TEXT the
         //    buffer — the BPM field's value alone under its key's label
         //    (architect 2026-11-19, send AA: "I agree with your
-        //    recommendation"), the settings line `key=value` (the free line,
-        //    settings_editor.h's head), the preset's name; THE ENTRY Arc's,
+        //    recommendation"), the settings row's value alone the same way
+        //    (the same day, "One, agree."; settings_editor.h's head), the
+        //    preset's name; THE ENTRY Arc's,
         //    FOCUSED — stage C's entry
         //    (paint_entry) with an inner one-W line of the accent on its four
         //    sides while the field holds the focus — its text Regular 12 W at

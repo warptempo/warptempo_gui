@@ -109,10 +109,9 @@ constexpr SettingDescriptor kSettingsOrder[] = {
 // The on-disk value text for one non-engine descriptor kind, given the
 // writer's live inputs (the NonEngineSettingsSnapshot the caller built). The
 // single byte definition for GUI-kind value serialization:
-// write_settings_file emits `key=<this>` and the settings editor's
-// autocomplete recall (recall_gui_setting_value) reads it back, so the two
-// can never diverge. Every key emits a concrete value — the trim bounds
-// ALWAYS write actual frames now (the `-1` unset spelling died with the unset
+// write_settings_file emits `key=<this>` and the GitHub recheck's "now"
+// side reads the same text (format_settings_text). Every key emits a
+// concrete value — the trim bounds ALWAYS write actual frames now (the `-1` unset spelling died with the unset
 // state, 2026-07-30). Returns
 // std::nullopt only for EnginePassthrough (engine kinds serialize through
 // format_engine_field_value).
@@ -341,8 +340,8 @@ std::string format_settings_text(
             data += '\n';
             continue;
         }
-        // Non-engine kinds share their value serialization with the settings
-        // editor's autocomplete recall, and every one emits a line (the trim
+        // Non-engine kinds serialize through format_nonengine_value, the one
+        // byte definition, and every one emits a line (the trim
         // bounds always write actual frames). nullopt is EnginePassthrough-only,
         // already handled above; the guard below is defensive.
         std::optional<std::string> v = format_nonengine_value(desc.kind, gui);
@@ -369,8 +368,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // because they are not in it (2026-08-27; the path key 2026-09-02)
     // and the settings editor edits them — the whole rationale is at the
     // declaration. Each recalls through the device config's own serializer or
-    // verbatim, so a recall and that file agree byte for byte exactly as a
-    // `.settings` recall and a Ctrl+S do. The path key has no
+    // verbatim, so a recall and that file agree byte for byte. The path key has no
     // field
     // beside the live struct's own, which is never null while the GUI runs
     // (AppState::device_config); the test is the belt every pointer read
@@ -453,36 +451,8 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "icons" && app.device_config != nullptr)
         return std::string(format_icons(app.device_config->icons));
 
-    const SettingDescriptor* desc = nullptr;
-    for (const auto& d : kSettingsOrder) {
-        if (key == d.key) { desc = &d; break; }
-    }
-    // Not a canonical GUI-kind key. Engine keys and unknown keys both land
-    // here: the caller falls back to format_engine_setting_value for engine
-    // keys and reports nothing recallable for the truly unknown.
-    if (desc == nullptr || desc->kind == SettingKind::EnginePassthrough) {
-        return std::nullopt;
-    }
-
-    // Recall exactly what a Ctrl+S at this instant would write. The save path
-    // runs refresh_active_tab_view_from_app first, stashing the live
-    // viewport / zoom / playhead / trim into the ACTIVE tab's band before the
-    // writer reads it; mirror that stash onto local copies so recall and save
-    // never diverge. read_only is not mirrored to a live field (it lives in
-    // the band, toggled by bare `o`), so it needs no overlay.
-    ViewState eff_a = app.tab_a;
-    ViewState eff_b = app.tab_b;
-    ViewState& eff_active = (app.active_tab_view == 'B') ? eff_b : eff_a;
-    eff_active.viewport_start_sample  = app.viewport_start_sample;
-    eff_active.zoom_level             = app.zoom_level;
-    eff_active.playhead_cursor_sample = app.playhead_cursor_sample;
-    eff_active.trim                   = app.trim;
-
-    // desc->kind is non-EnginePassthrough here (guarded above), so
-    // format_nonengine_value always yields a value — a trim bound recalls as its
-    // actual frame (`tab_a_trim_begin=0`), matching what Ctrl+S writes.
-    const NonEngineSettingsSnapshot gui{
-        eff_a, eff_b,
-        app.active_audio_view, app.active_markers_view, app.active_tab_view};
-    return format_nonengine_value(desc->kind, gui);
+    // Every other key — the piece's engine keys, `score_path`, a key none
+    // of these files writes — recalls nothing here: the caller falls back to
+    // format_engine_setting_value and the score viewer's own recall.
+    return std::nullopt;
 }

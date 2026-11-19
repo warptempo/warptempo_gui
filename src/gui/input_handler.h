@@ -368,13 +368,11 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // routine above in the same body, and it is invoked once from the startup tick,
 // before any input exists.
 // THE COMMAND WRAPPERS DO NOT SPELL IT — Ctrl+Tab keeps its call because it IS
-// the writer, while select_active_markers_view and
-// handle_active_audio_view_toggle each lost (or never had) a call of their own
-// to the writer they delegate to, so there is ONE spelling of the rule per
+// the writer, while select_active_markers_view never had a call of its own
+// to the writer it delegates to, so there is ONE spelling of the rule per
 // write.
-// The four view selectors, the icon row's view pairs (the two icon-row
-// VIEW LAMPS deleted 2026-09-15) and the settings keys all compose those
-// writers and inherit it.
+// The four view selectors and the icon row's view pairs (the two icon-row
+// VIEW LAMPS deleted 2026-09-15) compose those writers and inherit it.
 //
 // WHICH HALF IS CORRECTNESS AND WHICH IS THE FRESH-GRIP RULE, said plainly
 // because the two read alike at the call site: an S/T write CHANGES WHAT THE
@@ -844,12 +842,11 @@ struct GuiInputHandler {
             [this] { return dispatch_pending_archival_command(); };
     }
 
-    // The settings editor is a keyboard front-end that funnels each `:`-typed
-    // GUI-kind key into the SAME gesture chokepoint the key's gesture uses.
-    // Three of those chokepoints are private methods here
-    // (handle_active_audio_view_toggle, apply_gui_scale,
-    // commit_trim_mutation); the friendship lets the editor reach them
-    // through its back-pointer without a parallel writer.
+    // The settings editor funnels each row's commit into the SAME live act
+    // the key's other door uses; those acts are private methods here
+    // (apply_gui_scale and the device keys' apply_*); the friendship lets
+    // the editor reach them through its back-pointer without a parallel
+    // writer.
     friend struct GuiSettingsEditor;
     // (THE PROPAGATE PASTE'S FRIENDSHIP AND BACK-POINTER went 2026-10-14: its
     // landing tail crossed into target view through the set-to spelling until
@@ -3747,8 +3744,10 @@ private:
     // what the act finds decides only whether it pays the stop's fence.
     void scrub_press_at(double click_rel_x);
 
-    // THE S/T CHOKEPOINT, in its two spellings. The BODY is the set-to form:
-    // put app.active_audio_view at 'S' or 'T', a no-op when it is already
+    // THE S/T CHOKEPOINT, the set-to form (its flip spelling,
+    // handle_active_audio_view_toggle, retired 2026-11-19 with its last
+    // caller, the settings editor's typed `active_audio_view=`): put
+    // app.active_audio_view at 'S' or 'T', a no-op when it is already
     // there. Stops any current playback before switching domains. Source →
     // Target translates app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level through the current warp_frame_map in place and enters target
@@ -3759,17 +3758,12 @@ private:
     // is allowed once the target buffer is ready; target render
     // update-in-progress gates playback elsewhere.
     //
-    // `handle_active_audio_view_toggle` is the FLIP — bare `t` until its
-    // 2026-09-15 deletion, and still the settings editor's `active_audio_view=`
-    // commit — and it is one line over the set-to
-    // form, so both spellings own the same translation, the same target-view
-    // entry gate, the same flag-editor teardown and the same history-focus
-    // clear. THE COLUMN IS NOT ITS BUSINESS: both columns pair with both
+    // THE COLUMN IS NOT ITS BUSINESS: both columns pair with both
     // audio views (architect 2026-10-12, S+P's return; from 2026-09-21 until
     // then leaving target view landed the phase-reset column on W), so the
     // switch carries either column across the flip.
-    // The SET-TO form exists for the callers that name a view rather than
-    // an axis: the Source / Target selectors (bare 1 / 2), — since 2026-08-28 —
+    // Its callers each name a view: the Source / Target selectors (bare
+    // 1 / 2), — since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
     // each through that axis's owner, and — since
@@ -3780,7 +3774,6 @@ private:
     // phase-reset propagate's paste tail landed in target through it until
     // 2026-10-14; both stay in their audio view since.)
     void switch_active_audio_view_to(char target_view);
-    void handle_active_audio_view_toggle();
 
     // SHIFT+S — DROP A PHASE RESET FROM THE WARP COLUMN, STAYING IN THE AUDIO
     // VIEW (architect 2026-10-12: "source stays source, target stays target"
@@ -4011,13 +4004,13 @@ private:
     // to drop.
     void apply_icons(GuiIconSet set);
 
-    // The read-only bit's one setter (2026-09-04, after the two roads
-    // had drifted apart on damage). Two roads write the
-    // bit: bare `o` on the active tab, which the icon row's Read-Only button
-    // reaches by synthesizing that press, and the settings editor's
-    // `tab_a_read_only=` / `tab_b_read_only=` commit, which may name either
-    // tab. Both come here, so the damage is decided once. `tab_view` is 'A' or
-    // 'B' and resolves the band exactly as every other per-tab route does;
+    // The read-only bit's one setter (2026-09-04, after two roads had
+    // drifted apart on damage). One road writes the bit in-app: bare `o` on
+    // the active tab, which the icon row's Read-Only button reaches by
+    // synthesizing that press (the settings editor's typed
+    // `tab_a_read_only=` / `tab_b_read_only=`, the second road, retired
+    // 2026-11-19, send AA: "One, agree."). `tab_view` is 'A' or 'B' and
+    // resolves the band exactly as every other per-tab route does;
     // read_only lives in the band for both tabs and is never mirrored to a
     // live field.
     //
@@ -4036,8 +4029,7 @@ private:
     //
     // History-less, like every band key: no undo entry, no dirty bit; the
     // value persists on the next ordinary Ctrl+S, which a locked tab may run
-    // itself. A same-value write is a no-op here as well as at the editor's
-    // own unchanged() gate one step earlier.
+    // itself. A same-value write is a no-op.
     void set_tab_read_only(char tab_view, bool value);
 
     // THE UNDO / REDO COMMAND, ONE BODY (factored out of on_key's Ctrl+Z arm

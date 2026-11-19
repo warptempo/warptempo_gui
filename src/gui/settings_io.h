@@ -131,22 +131,18 @@ std::string format_settings_text(
     const NonEngineSettingsSnapshot& gui,
     const EngineSettings& engine);
 
-// The on-disk value text that write_settings_file would emit for GUI-kind
-// `key` given the current live AppState — byte-identical to a Ctrl+S at this
-// instant (it mirrors the pre-write refresh_active_tab_view_from_app stash for
-// the active tab). Shared with the writer through format_nonengine_value so
-// recall and save can never diverge. Returns std::nullopt for engine keys (the
-// settings editor falls back to format_engine_setting_value) and for unknown
-// keys; a trim bound recalls as its actual frame, exactly as the writer emits
-// it. Used by the settings prompt's Tab autocomplete.
-//
-// THE DEVICE CONFIG'S EDITABLE KEYS RECALL HERE TOO, off the live
-// AppState and the live struct it points at, even though they are not in the
-// `.settings` schema: the settings editor is their authoring surface — its
-// Tab on a complete key (`gui_scale` → `gui_scale=138`) recalls through this
-// very call — so a recall that answered nothing for them would leave the
-// value to be retyped (the Settings dropdown's rows prefilled through it
-// 2026-09-02..10-21). What they recall is byte-identical to what the device
+// THE DEVICE CONFIG'S EDITABLE KEYS' RECALL, off the live AppState and the
+// live struct it points at: the settings editor is their authoring surface —
+// the settings page's rows, the value list's seat, the line editor's prefill
+// and its Tab on an empty entry all read through this very call
+// (GuiSettingsEditor::setting_value). Returns std::nullopt for every other
+// key (the editor falls back to format_engine_setting_value for the piece's
+// engine keys and to recall_score_viewer_value for `score_path`). THE
+// `.settings` FILE'S GUI-KIND KEYS — the view keys and the per-tab band —
+// RECALL NOTHING HERE since 2026-11-19 (architect, send AA: "One, agree."):
+// no settings page row opens them and the line editor's key is its row's,
+// so nothing asks; their bytes are format_nonengine_value's, the writer's.
+// What the device keys recall is byte-identical to what the device
 // config file carries, through that file's own serializers
 // (format_gui_scale_percent, device_config.h)
 // or verbatim for the two
@@ -172,10 +168,8 @@ std::string format_settings_text(
 // 2026-11-13, a tuning key, through format_bright_mix), or the plate's
 // fade start (`waveform_fade_px`, 2026-11-14, a tuning key, through
 // format_waveform_fade_px), or the icon set's word (`icons`, 2026-11-17,
-// through format_icons), the
-// same
-// "recall and the file can never diverge" rule the
-// `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is
+// through format_icons), so the recall and the file can never diverge.
+// (`last_project` is not editable and recalls nothing: it is
 // the program's own; nor does the level, `noise_level`, since 2026-11-05
 // night: set on the band's NOISE case alone, kSettingsEditorKeys.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,

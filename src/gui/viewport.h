@@ -137,8 +137,7 @@ struct Viewport {
     //    active_markers_view is a flag-cache FINGERPRINT field and this is the
     //    route that lands the flag rebuild in the damaged frame; it joins the
     //    class rather than growing a second flag-only kick (the reason is stated
-    //    at its site, active_views.cpp), and the settings active_markers_view=
-    //    key rides it through the same function. Bare 1/2/3/4, the ABSOLUTE VIEW
+    //    at its site, active_views.cpp). Bare 1/2/3/4, the ABSOLUTE VIEW
     //    SELECTORS (2026-08-01), add NO fourth site: they run the audio
     //    view's and the column's handlers themselves, so their kicks are those
     //    two entries and this list is unchanged by them.

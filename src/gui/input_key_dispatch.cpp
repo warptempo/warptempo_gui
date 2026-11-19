@@ -121,8 +121,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // admission beside the horizontal arrows' lane term.
 // `;`, THE SETTINGS EDITOR, IS ADMITTED (2026-10-21, the planner's ruling by
 // the architect's 2026-09-04 rule — THE LOCK GOVERNS THE KEYS, NOT THE
-// EDITOR): the editor authors the device keys and the band as well as the
-// engine settings, and its engine-key commit refuses under the lock inside
+// EDITOR): the editor authors the device keys as well as the piece's
+// engine keys, and its engine-key commit refuses under the lock inside
 // it (settings_editor.cpp), so dropping the opener here would leave a locked
 // tab no road to the device keys at all — the Settings popup's rows were that
 // road from 2026-09-04 until the popup retired the same day, and the key was
@@ -133,10 +133,9 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // drag arm) — stay as the cross-tab and pointer paths' own refusals, no longer the
 // primary surface for these chords.
 // THE POINTER TRIM REFUSALS ARE GONE WITH THIS RULING rather than merely
-// bypassed: the plain trim-bar press's band gate (input_pointer.cpp),
-// trim_bound_click's first gate (input_trim.cpp) and the settings editor's
-// typed trim arm (settings_editor.cpp) were all deleted the same day, so the
-// whole trim family — keyboard, pointer and typed — is read-only-legal by ONE
+// bypassed: the plain trim-bar press's band gate (input_pointer.cpp) and
+// trim_bound_click's first gate (input_trim.cpp) were deleted the same day,
+// so the whole trim family — keyboard and pointer — is read-only-legal by ONE
 // rule with no site left to disagree with it.
 // THE LOCK HAS A FACE, AND THIS FUNCTION OWNS THE CHORD HALF OF IT (architect
 // 2026-08-15): a roster button wears the disabled face while the active tab is
@@ -476,9 +475,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // the lock per key, and its value lists write a device key, never the
     // piece. Bare-exact, the dispatch arm's own
     // spelling. THE ITERATION LOCK INHERITS THE ADMISSION
-    // (iteration_lock_key_blocked falls through to this list), its three
-    // typed refusals inside the editor (the column, the audio view's `S`,
-    // the active tab's lock) and the engine-key arm answering per key.
+    // (iteration_lock_key_blocked falls through to this list), the editor's
+    // engine-key arm answering per key.
     const bool is_settings_page =
         (key == GuiKeys::Semicolon && !ctrl && !shift && !alt);
     // THE TOOLTIP LAMP, bare backslash (architect 2026-09-29): a chrome
@@ -604,9 +602,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // and the padlock greys and cards `Turn off grid iterations first` there. ITS
 // UNLOCK DIRECTION IS ADMITTED: on a locked tab reached by a switch under the
 // lamp, `o` is the read-only lock's own way out — the reason that tab's
-// authoring cards name — and an unlock only widens what is reachable, the
-// settings editor's typed `tab_X_read_only=false` committing under the lamp
-// on the same reason.
+// authoring cards name — and an unlock only widens what is reachable.
 //
 // (BARE `k`, ADD TO SELECTION, WAS A FOURTH MEMBER from 2026-09-10 until
 // 2026-09-19, and the architect retired it by NARROWING THE MODE instead. The
@@ -647,9 +643,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // press that would cross back to source refused unconditionally — the mode's
 // own invariant means the only direction bare `t` could have was the refused
 // one). The architect deleted the key itself 2026-09-15 with its view lamp,
-// so there is nothing left for this delta to refuse: `active_audio_view=S`
-// still refuses under the lock at its own site (the settings editor), on the
-// same card this member used to raise, but the keyboard road is gone.
+// so there is nothing left for this delta to refuse.
 // Ctrl+Tab IS NOT ONE of them, and that is by construction rather than by
 // exception — the two tabs SHARE the warp and phase-reset stores, so a bracket
 // is common to both tabs and a plain switch can strand nothing.
@@ -4099,7 +4093,7 @@ void GuiInputHandler::run_history_revert() {
 }
 
 // The DIALOG editors alone (the settings editor's buffer in its three kinds,
-// the settings line, the trim preset's name and the BPM form's line) — the
+// the settings value, the trim preset's name and the BPM form's value) — the
 // membership is AppState::dialog_editor_session's and nothing here restates
 // it. It answers
 // a dialog's own questions (its field, its buttons, its ring); modality is
@@ -6146,8 +6140,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // advanced, and the key is consumed; did not, and the key falls through to the
 // focus ring. "Second Tab" and "Tab on a string that completes to nothing" ARE
 // THE SAME CONDITION and need no state to tell apart: after a successful
-// completion the next Tab cannot advance (the settings editor's value side is
-// no longer empty), so it walks by that one test. THERE IS NO PRESS COUNTER, NO TIMER
+// completion the next Tab cannot advance (the settings editor's entry is no
+// longer empty), so it walks by that one test. THERE IS NO PRESS COUNTER, NO TIMER
 // AND NO "last key was Tab" BIT anywhere in this model, deliberately — wanting
 // one means the rule has been mis-derived.
 //
@@ -6579,7 +6573,7 @@ void GuiInputHandler::open_settings_page(std::string_view seat_key) {
 // but disabled. they are useful for notes"); the DEVICE keys first and the
 // PIECE rows after (the mock he verified), these in the settings file's
 // order (kSettingsPagePieceKeys, settings_editor.h), each group under its
-// inert Group row. Every key's text is THE LINE THE EDITOR WOULD OPEN WITH
+// inert Group row. Every key's text is ITS `key=value` LINE
 // (GuiSettingsEditor::setting_line, the recall's one owner), an editable
 // key's on a Plain row, a disabled one's on an inert Disabled row, which is
 // never seated and opens nothing (folder_overlay::row_is_inert). THE SEAT is
@@ -6656,10 +6650,11 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // (return_to_settings_page). On every other row THE PAGE
 // CLOSES (close_picker — the overlay and the on-screen keyboard never both
 // stand, and the editor is a modal in the same box) AND THE SETTINGS EDITOR
-// OPENS PREFILLED WITH THE ROW'S LINE as painted, the caret at its end
-// (GuiSettingsEditor::open), a sub-page too: its OK and Cancel reopen this
-// page on the row's key (handle_settings_editor_key, architect 2026-10-28
-// night).
+// OPENS ON THE ROW'S KEY, ITS ENTRY THE VALUE THE KEY HOLDS, the caret at its
+// end (GuiSettingsEditor::open; architect 2026-11-19, send AA: "One,
+// agree." — the value alone, Z_06's "25", the key the window's title and
+// label), a sub-page too: its OK and Cancel reopen this page on the row's
+// key (handle_settings_editor_key, architect 2026-10-28 night).
 void GuiInputHandler::settings_page_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -6679,7 +6674,7 @@ void GuiInputHandler::settings_page_commit(int index) {
     // as it stands, under the editor's window, and the row's key.
     open_dialog_backdrop(key);
     close_picker();
-    settings_editor.open(line);
+    settings_editor.open(key);
 }
 
 // -- THE VALUE LIST (architect 2026-10-25, 2026-10-28 night for its keys;
@@ -6745,9 +6740,9 @@ void GuiInputHandler::build_value_list_rows(const std::string& key) {
 
 // THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
 // press-and-lift) and Enter on the highlight, one body: THE ROW'S VALUE IS
-// COMMITTED AT ONCE through the typed line's own body for the listed key
+// COMMITTED AT ONCE through the device keys' one body for the listed key
 // (GuiSettingsEditor::apply_device_setting — the grammar, the live apply,
-// the device-config write, and a failure carding as the typed commit's; the
+// the device-config write, and a failure carding as the line editor's; the
 // row already live is its unchanged no-op and commits nothing), THEN THE
 // SETTINGS PAGE RETURNS whatever the outcome, seated on the key's row, its
 // line now carrying the value (return_to_settings_page, architect
@@ -6848,8 +6843,7 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 // highlight, one body: THE ROW'S PAIR BECOMES THE ACTIVE TAB'S LIVE TRIM and
 // THE LIST STAYS STANDING, the highlight on the row. Both bounds are written
 // and the trim family's one commit tail runs ONCE (commit_trim_mutation),
-// then the setter's deselect — the typed `trim_*=` arm's shape
-// (settings_editor.cpp), setting the pair rather than one bound. NO PLAYBACK
+// then the setter's deselect, the trim setters' shape. NO PLAYBACK
 // STOP OF ITS OWN: the list's open took the modal stop and nothing plays
 // under it. THE PAIR THE TAB ALREADY HOLDS is the store's own no-op, nothing
 // written, the tap still highlighting. The pair is in its walls by the read's
@@ -9190,15 +9184,13 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 //
 // THE VALUE COMPLETION IS BARE TAB'S, under the one autocomplete model stated
 // at route_modal_editor_key (architect 2026-08-13: "we should use one model for
-// all autocompletes"). The TYPED `=` carried this completion for part of that
-// day and the trigger is REVERTED with the ruling: an `=` is once more an
-// ordinary character, and this route says nothing about it. Tab offers the
-// completion first and walks the focus ring when it did not advance the
-// buffer, so the completion's own refusals (2026-10-21: a key prefix with no
-// match or already at its common prefix, a value side that adds nothing —
-// the Tab after the value's recall: the first Tab on a key stops at its `=`,
-// the second recalls the value, the third steps — and an unknown key) are
-// exactly the Tabs that step.
+// all autocompletes"). An `=` is an ordinary character, and this route says
+// nothing about it. Tab offers the completion first and walks the focus ring
+// when it did not advance the buffer, so the completion's own refusals (the
+// head of settings_editor.h: a non-empty entry on any key but the path key,
+// a path prefix with no match or already at its common prefix, an empty
+// value recalled onto an empty entry — the first Tab on an emptied entry
+// recalls the value, the second steps) are exactly the Tabs that step.
 //
 // THE EDITOR'S CLOSE RETURNS TO THE SETTINGS PAGE (architect 2026-10-28
 // night, "1 yes": "otherwise it's assumed I am editing one key only" — the
@@ -9212,9 +9204,9 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // Esc, and the page reopens through its own open road
 // (open_settings_page: its guards, a fresh session, its modal stop a no-op
 // with playback already stopped for the editor), seated on the row the
-// editor was opened from (GuiSettingsEditor::page_key — the open's key, not
-// a retyped one). A REFUSED commit leaves the editor standing and reopens
-// nothing. THE EXIT ROAD does not come here (GuiPrompt::request_close tears
+// editor was opened from (GuiSettingsEditor::page_key — the open's key, the
+// one the commit wrote, nothing typed naming another since 2026-11-19, send
+// AA). A REFUSED commit leaves the editor standing and reopens nothing. THE EXIT ROAD does not come here (GuiPrompt::request_close tears
 // the editor down through close_modal_editors_no_commit, the picker already
 // closed for the quit): a quit reopens no page.
 // THE TRIM PRESET'S NAME EDITOR RIDES THIS ROUTE AND THIS HOOK (architect

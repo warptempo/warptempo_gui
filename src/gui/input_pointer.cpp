@@ -3970,8 +3970,9 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // THE OPEN ACT (the row click's own second half and Enter on the highlight).
 // Under the player a folder enters and a wav plays; under the project picker
 // the row's project is reopened; under the settings page (2026-10-28) the
-// page closes and the settings editor opens prefilled on the row's line (its
-// OK and Cancel reopening the page on that row, handle_settings_editor_key),
+// page closes and the settings editor opens on the row's key, its entry the
+// key's value (its OK and Cancel reopening the page on that row,
+// handle_settings_editor_key),
 // or the row of a key with a value list swaps that list in; under the value
 // list (2026-10-25, four keys more 2026-10-28 night) the row's value is
 // committed to the listed key and the settings page returns, seated on that

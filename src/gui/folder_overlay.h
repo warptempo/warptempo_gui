@@ -171,8 +171,9 @@
 // highlights under every owner — the picker has no field beside the band):
 // under the PLAYER an open enters a folder or plays a wav; under
 // the PROJECT PICKER it reopens the row's project; under the SETTINGS PAGE
-// it closes the page and opens the settings editor prefilled on the row's
-// line, whose OK and Cancel reopen the page on that row (2026-10-28 night,
+// it closes the page and opens the settings editor on the row's key, its
+// entry the key's value (2026-11-19, send AA), whose OK and Cancel reopen
+// the page on that row (2026-10-28 night,
 // GuiInputHandler::handle_settings_editor_key), or on the row of a key with
 // a value list swaps that list in (settings_page_commit, 2026-10-28); under
 // the VALUE LIST

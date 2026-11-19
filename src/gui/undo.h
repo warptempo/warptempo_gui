@@ -248,7 +248,7 @@ struct Undo {
     // restamp writes holds its value already; the call keeps the entry's
     // landing view the landing's word rather than the push helper's
     // constant.) Every other crossing act (Shift+S,
-    // bare `i`, the typed view keys) crosses before it pushes
+    // bare `i`) crosses before it pushes
     // or pushes nothing. op_mode is NOT restamped: it names the store the
     // entry changed, which recompute_dirty's per-column walk and the
     // post-restore rules read; the column the restore returns to is the

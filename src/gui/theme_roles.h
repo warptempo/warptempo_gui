@@ -565,8 +565,8 @@ std::optional<std::string> load_gui_themes(
 const std::vector<GuiTheme>& gui_themes();
 
 // THE ROW WHOSE SLUG IS `slug`, or nullptr when no row bears it: the
-// settings editor's `theme` commit refuses such a slug (only a typed line
-// can name one), the launch opens in `default` (the head).
+// settings editor's `theme` commit refuses such a slug (the value list
+// names only the list's own), the launch opens in `default` (the head).
 const GuiTheme* find_gui_theme(std::string_view slug);
 
 // The `default` row, Arc-Dark's copy (the list's first; the

@@ -261,8 +261,8 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // map, every end carried to the strip's right edge at the right wall; in a
 // mapped domain only where the edge stands past the image of total-1 —
 // this landing, the endcap drag and the TRIM sweep's ends alike, the wall
-// holding it; (e) the typed `trim_end=` line and a trim preset whose pair
-// holds it, writing the frame they carry. [0, total-1] is the integer pair
+// holding it; (e) a trim preset whose pair holds it, writing the frame it
+// carries. [0, total-1] is the integer pair
 // every full-window compare (trim_is_full_window — Reset Trim's
 // already-full guard, the render's sub-window test, the crossed reset's
 // one-frame exception) reads as full; a trim a few frames short of it is
@@ -399,11 +399,11 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // release runs this same tail through commit_trim_mutation — so a stroke that
 // ends where it began resets to the whole song exactly as a handle dragged
 // onto its twin does. ONE OWNER, this compare, for every former: the endcap
-// drag, the sweep, the bridge and the typed routes all reach the whole-song
-// reset here rather than each spelling an escape of its own.
+// drag, the sweep and the bridge all reach the whole-song reset here rather
+// than each spelling an escape of its own.
 // Every trim commit site — the SWEEP's release, the endcap/bridge drag release,
-// the bound-set click, the settings-editor `trim_*=` commit and the trim
-// presets list's apply (whose preset pair is never crossed) — calls this
+// the bound-set click and the trim presets list's apply (whose preset pair
+// is never crossed) — calls this
 // after its mutation and before its invalidations, so the repaint shows the
 // reset state. (The sweep took the retired set-from-region act's place in this
 // list on 2026-08-18; the per-route inventory is at the head of this file.)
@@ -438,7 +438,7 @@ void GuiInputHandler::commit_trim_mutation() {
     // A TRIM WRITE PUTS THE TRIM ARM LAMP OUT (architect 2026-11-17, send U:
     // a trim written by other means than the sweep the lamp armed — the
     // endcap and bridge drag's release, the bound-set click, a trim preset's
-    // apply, the typed `trim_*=` commit — ends the posture as the sweep
+    // apply — ends the posture as the sweep
     // does; AppState::trim_armed), TRIM alone, its face damaged by its
     // setter. The sweep's own release reaches here having put it out
     // already (commit_region_sweep's own rule), so this is a no-op there.
@@ -1248,9 +1248,9 @@ void GuiInputHandler::commit_trim_drag() {
         // instead of across it — and `end <= begin` already covered the equal
         // case, so a coincident release resets exactly as a crossed one used to.
         // That is the whole implementation of "if they are set coincident, make
-        // trim 0 to EOF": no new arm here, and none wanted. The bridge arm and
-        // the typed routes can still hand it other shapes, which is the other
-        // reason the compare stays as it is.
+        // trim 0 to EOF": no new arm here, and none wanted. The bridge arm
+        // can still hand it other shapes, which is the other reason the
+        // compare stays as it is.
         commit_trim_mutation();
         // THE RELEASE IS A COMMIT, so it takes the setter's deselect and the
         // trim-mutation stop like the motion events did (both already applied by

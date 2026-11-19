@@ -168,7 +168,9 @@
 //     "BPM edit rejected: …" — its line's three (the row's key, the beats
 //     grammar, the low / high grammar: commit_bpm_field) and RENDER's two
 //     bracket walls (bpm_sweep_bracket_admits), flag_editor.cpp; the settings editor's
-//     five "Settings edit rejected: …" (settings_editor.cpp); the commit
+//     four "Settings edit rejected: …" composers (settings_editor.cpp:
+//     commit_gui_setting's, apply_device_setting's, and the engine arm's
+//     invalid value and source-clobber guard); the commit
 //     title's "Enter a title for the checkpoint" (a card and no stderr line);
 //     the text editor's two capacity refusals, reported by text_editor.cpp and
 //     carded by the dispatch ("The pasted text is too long for this field",

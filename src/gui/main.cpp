@@ -1925,8 +1925,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate,
                      save_ops, playback_lifecycle, render_player);
-    GuiSettingsEditor settings_editor(app, audio, viewport, selection,
-                                      active_views, undo,
+    GuiSettingsEditor settings_editor(app, audio, viewport, selection, undo,
                                       target_render, playback_lifecycle,
                                       notifications);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
@@ -1962,9 +1961,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   input_handler);
     // Back-wire the settings editor to the input handler (constructed after the
     // editor, which the input handler holds by reference — the cycle is
-    // resolved with a pointer set here). The editor reaches
-    // handle_active_audio_view_toggle / apply_gui_scale / commit_trim_mutation
-    // through it, so a `:`-typed GUI key funnels into the same gesture code.
+    // resolved with a pointer set here). The editor reaches apply_gui_scale
+    // and the device keys' live acts through it, so a row's commit funnels
+    // into the same code as the key's other door.
     settings_editor.input = &input_handler;
     // The prompt's back-pointer, for the render player's load confirmation
     // (its one reader is recorded at the member, prompt.h).

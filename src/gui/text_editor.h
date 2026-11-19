@@ -219,10 +219,15 @@ constexpr int kMaxPendingCharsBpmField[3] = {
 // Settings prompt. A POLICY CEILING — free text has no widest spelling to be
 // tight against. Sized for the free-text provenance fields (url, notes),
 // which are generous for a typical URL or note. The scalar keys are still
-// bounded by their commit-time validators, not by this cap. 1024 bytes is
-// the editor's growth ceiling: a wider on-disk value still loads, displays,
-// commits and persists unchanged, and can be shortened, but the editor will not
-// grow any pending past the cap.
+// bounded by their commit-time validators, not by this cap. THE CAP BOUNDS
+// THE VALUE ALONE since the entry holds no key (architect 2026-11-19, send
+// AA: "One, agree."): 1024 bytes of value, where the `key=value` line it
+// bounded before left a value 1024 less its key and `=` (1018 for `notes`).
+// No file reader caps a value's length, so a wider on-disk value still
+// loads, shows on the settings page's row and persists unchanged; the
+// editor's prefill of it, a growth past the cap through the one incoming
+// filter, is refused silently (the recall's rule, GuiSettingsEditor::open)
+// and the entry opens empty.
 //
 // THE DIALOG EDITORS' ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY
 // (architect 2026-11-19, send AA: "The pen does have a good way to scroll,
@@ -245,8 +250,10 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // commit-time validator). The flag editor uses FlagPayload (the plain
 // canonical payload — tempo, scale, labels, never a bracket); the BPM
 // form's line editor uses BpmField (the value of one of the form's three
-// fields); the settings-prompt editor uses SettingsAssignment
-// (`key=value`); the trim preset's name editor uses TrimPresetName (free
+// fields); the settings-prompt editor uses SettingsAssignment (the value of
+// the settings page row's key, the value alone since 2026-11-19, send AA:
+// "One, agree."; the key the open's, never typed); the trim preset's name
+// editor uses TrimPresetName (free
 // text, the name); and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
 // State::iter_upper below — judged at its commit against the bracket's walls).
@@ -337,7 +344,7 @@ uint64_t next_session_id();
 struct State {
     // Identifier of the entity being edited. -1 means "not editing".
     // The caller decides what this means (a marker index for the flag
-    // editor; 0 for the settings line and the trim preset's name; the field,
+    // editor; 0 for the settings value and the trim preset's name; the field,
     // GuiBpmField's value, for a BpmField session, whose byte cap reads it —
     // kMaxPendingCharsBpmField).
     int target = -1;

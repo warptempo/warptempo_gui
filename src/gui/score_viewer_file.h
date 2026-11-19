@@ -109,15 +109,17 @@ GuiScoreViewerFile read_score_viewer_file(
     const std::filesystem::path& project_folder);
 
 // THE RANGE'S ONE CROSS-KEY RULE: both bounds named and the first past the
-// last. The reader refuses such a file (the malformed outcome) and the
-// settings editor refuses the commit that would write one; the viewer's
-// START and END grey before it (score_viewer_button_enabled).
+// last. The reader refuses such a file (the malformed outcome); the viewer's
+// START and END, the range's one in-app road, grey before it
+// (score_viewer_button_enabled).
 inline bool score_range_crossed(int64_t first, int64_t last) {
     return first != 0 && last != 0 && first > last;
 }
 
-// THE PER-KEY GRAMMAR, the one owner both the reader and the settings
-// editor's typed commit ask: std::nullopt when `key` is none of the five;
+// THE PER-KEY GRAMMAR, the one owner the reader asks for all five and the
+// settings editor's `score_path` commit for its one (the range and the
+// positions are the viewer's own writes since 2026-11-19, send AA: no
+// typed road): std::nullopt when `key` is none of the five;
 // an error carrying the refusal's reason (no line number) when the value is
 // out of its grammar; otherwise the typed value — `text` for `score_path`,
 // `i64` for the four numbers. The crossing rule is cross-key and is the
@@ -130,7 +132,9 @@ std::optional<std::expected<GuiScoreViewerValue, std::string>>
 validate_score_viewer_value(const std::string& key, const std::string& value);
 
 // THE RECALL: `key`'s live value as the writer writes it, or std::nullopt
-// for a key that is none of the five (the settings editor's Tab recall).
+// for a key that is none of the five (the settings editor's recall falls
+// through it). Its readers: that recall (for `score_path`) and the file's
+// writer (write_score_viewer_file, all five).
 std::optional<std::string> recall_score_viewer_value(const AppState&    app,
                                                      const std::string& key);
 

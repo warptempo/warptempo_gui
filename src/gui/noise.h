@@ -437,8 +437,7 @@ public:
 
     // THE CROSSFADE, LIVE: read at the next transition's draw. Seeded by
     // gui_main from the config, written by the settings editor's arm
-    // (apply_device_setting, the typed line's and the value list's one
-    // body). IT TAKES THE KEY'S SECONDS and this setter is the ONE conversion
+    // (apply_device_setting, reached by the key's value list). IT TAKES THE KEY'S SECONDS and this setter is the ONE conversion
     // to the voice's milliseconds (the voice's lengths, the two fades among
     // them, are ms).
     void set_crossfade_s(int seconds);

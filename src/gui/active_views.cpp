@@ -232,9 +232,8 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
 // 2026-09-15, when the column axis briefly grew a third letter and a toggle
 // stopped naming a destination): the writer above, then the entry's own tail. Its
 // callers are bare 3 / 4 (and the icon row's view pairs, which
-// synthesize them) and the
-// settings editor's typed `active_markers_view=`; the writer's other callers
-// reach it directly (its inventory).
+// synthesize them); the writer's other callers reach it directly (its
+// inventory).
 //
 // THE TAIL RUNS WHENEVER THE COLUMN IS THE TARGET AFTER THE WRITE. The writer
 // refuses only an unknown letter, which no caller names (the settings
@@ -299,9 +298,8 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // only through it; the redundant plate render is one discrete keypress's
     // cost, exactly what `t` and Ctrl+Tab already pay. It subsumes the
     // invalidate_waveform_area this replaces — the rebuild damages the identical
-    // rect on the same road (damage_window_top_rows, viewport.h) — and it
-    // covers the settings active_markers_view= twin by construction, that key
-    // routing through this same function. THE SYNC ALONE below, with no second
+    // rect on the same road (damage_window_top_rows, viewport.h). THE SYNC
+    // ALONE below, with no second
     // damage owner at all: this route MOVES NO PLAYHEAD — the coincidence
     // auto-select only selects the marker the cursor already stands on — so the
     // clock cell has nothing to repaint, and the selection READOUT this site

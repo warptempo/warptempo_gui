@@ -1197,9 +1197,9 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
 
     // A Ctrl+S runs refresh_active_tab_view_from_app before the writer reads
     // the bands, stashing the live viewport / zoom / playhead / trim into the
-    // ACTIVE tab's band. Mirror that stash onto THESE copies — the same const
-    // overlay the settings editor's autocomplete recall uses — so the bytes
-    // match a save exactly while this read mutates nothing. read_only is not
+    // ACTIVE tab's band. Mirror that stash onto THESE copies, a const
+    // overlay, so the bytes match a save exactly while this read mutates
+    // nothing. read_only is not
     // mirrored: it lives in the band already, toggled by bare `o`.
     gui->tab_a = app.tab_a;
     gui->tab_b = app.tab_b;
