@@ -340,10 +340,9 @@ struct TrimRange {
 //                 session 113; THE PLAYHEAD, below); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
-//                 (architect 2026-10-09). THE PANEL'S `face` (2026-10-09:
-//                 the program's band, row 8 and the canvas column's lanes)
-//                 is the flat ground (the theme's `ground` (Default's 242424, materials.h)), no palette
-//                 role.
+//                 (architect 2026-10-09). THE PANEL'S `face` (both icon
+//                 rows, the status bar and the erase) is the theme's body
+//                 tone `body_face` (send Z, 2026-11-19), no palette role.
 // THE FLOATING SURFACES — ARC'S TOOLTIP AND NOTIFYD'S CARDS (architect
 // 2026-11-19, send Z: his "good to build" on tmp/sendZ/VIEW/Z_07, "if we
 // can do the transparency, we might as well"; built in send AA's stage D1),
@@ -366,8 +365,7 @@ struct TrimRange {
 // edge to edge; render.h's THE WELL'S EDGES): its two channels' wells are
 // parted by one line of `well_border` (waveform_divider), its edges the
 // panel's columns, the well's lines above and below (the palette block's
-// well paragraph; the ring of the panel's tones round each well stood
-// 2026-10-09 to 2026-11-02, the well's frame 2026-11-17 to 2026-11-19).
+// well paragraph).
 //
 // THE DISABLED FACES (2026-10-23; the key's own dim tone, Default's 5D5D5D,
 // since 2026-11-02; Arc's disabled button since 2026-11-19, send Z): a dead
@@ -701,7 +699,7 @@ void install_true_colors(bool on);
 // waveform_line_px, 2026-11-04), EACH CENTERED ON ITS OWN EXACT TIME'S
 // PLACE at its exact coverage (architect 2026-11-14, send J; the line rule,
 // waveform_line_span), STANDING ON THE
-// RULER'S FOOT, the major 4 W and the minor 1 W (8 and 2 device rows at
+// RULER'S FOOT, the major 2 W and the minor 1 W (4 and 2 device rows at
 // 200 %, scaled_px), overlaying its bottom pad, NO SHADOW; THE DIGITS the
 // ruler face (GuiFace::Small, BOLD 10 W, 20 device px at 200 %, Arc's
 // `font-size: smaller`) in `ruler_text` (the text at 80 % over the ruler,
@@ -844,9 +842,9 @@ void install_true_colors(bool on);
 // markers get accent color instead of icon glyph color, and we simply tune
 // the accent itself"; 2026-11-01: "one color for all markers" — every cue,
 // the history's added and changed items and a struck marker's included),
-// the OUTLINE its `cue_outline` (Live's
-// dark line, 111111), and THE SELECTED marker's mark THE STEM in the same
-// `cue_outline`. The focused member has no paint of its own: every click
+// NO OUTLINE (2026-11-19, send AA: the bare triangle of the nominal rows,
+// the cue block below), and THE SELECTED marker's mark THE STEM in the
+// `cue_outline` (Live's dark line, 111111). The focused member has no paint of its own: every click
 // and toggle lands the playhead on it (land_playhead_on_marker), and the
 // playhead is its mark.
 // WARP AND PHASE RESET WEAR THE SAME CUE:
@@ -865,7 +863,7 @@ void install_true_colors(bool on);
 // wears the plain cue with its label STRUCK (show_cue_label's bar, the face's own
 // stroke on its own strikeout rows, gui_font_strike_band) — the invalid
 // color of 2026-10-11 retired with its role. THE TABLE — which fill, which
-// outline, which stem, which label, which strike — is resolve_flag_face's
+// stem, which label, which strike — is resolve_flag_face's
 // head (render.cpp), the one resolver every cue goes through.
 //
 // THE LABEL'S SEGMENTS: the marker's payload label, then — while grid
@@ -899,7 +897,7 @@ void install_true_colors(bool on);
 // axis picks the chip's fill and the label's ink, the selection alone the
 // stem — the two never cross (architect 2026-11-11, session 106); the strike
 // rides every row):
-//   UNSELECTED  the `cue_fill` FFAD56 fill in the `cue_outline` 111111 outline,
+//   UNSELECTED  the `cue_fill` FFAD56 fill alone, no outline,
 //             the label in the text tone (materials.h's `text`); no stem,
 //             the playhead on it or not (architect 2026-11-05);
 //   SELECTED  a member of the selection set, enabled or disabled: its own
@@ -948,10 +946,9 @@ void install_true_colors(bool on);
 //             SELECTED IT STANDS THE SELECTED ROW'S STEM (architect
 //             2026-11-11, session 106: "disabled markers also get the dark
 //             stem, same as enabled ones"), the stem the `cue_outline`
-//             whatever the chip's outline, its chip (the disabled outline
-//             too) and label unchanged — so a disable toggle of a selected
-//             marker flips the chip, its outline and the label and leaves
-//             the stem.
+//             whatever the chip's fill, its chip and label unchanged — so a
+//             disable toggle of a selected marker flips the chip's fill and
+//             the label and leaves the stem.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE: the
 // press look of 2026-11-05 is the keys' and the lists' rows' alone
 // (materials.h's head), never a marker's.
@@ -1939,7 +1936,13 @@ inline int program_run_gap_px() {
 //     press, the score viewer's its own claim).
 //   THE DAMAGE: the grab and the lift damage the item; A MOVING KNOB OWES
 //     ITS OLD AND NEW DISCS AND THE TROUGH BETWEEN (the played part changes
-//     there), scale_knob_move_rect, the drag's motion; the tick's
+//     there), scale_knob_move_rect, the drag's motion — THE OLD DISC THE
+//     PUBLISHED CENTER's (ModalDialogGeometry::scrub_thumb_x, the knob the
+//     screen last showed), not the drag's previous carry: two motions
+//     between presents each owe the move from what is on screen, so the
+//     later damage alone covers what the painter owes from its published
+//     center and the painter publishes the new one (paint_scrub_item's
+//     publish rule; input_pointer.cpp's scrub_knob_motion_damage); the tick's
 //     per-position damage while the transport plays stays the item whole
 //     (the tick reads the cursor before the paint reads it again, so a span
 //     from the tick's place could miss the painted one).
@@ -2249,10 +2252,11 @@ inline int cue_above_chip_h_px() {
 inline int cue_fill_h_px() {
     return marker_lane_h_px();
 }
-// THE BOX SEAT'S ONE SOLVER (paint_handler.cpp, where its rule and its other
-// callers stand): the baseline that centers `font`'s cap band in the box
-// [box_y, box_y + box_h) exactly, a real y (no half rounded). The surfaces
-// send Z has not restyled yet keep it (the overlays, the keys' numbers).
+// THE CAP-BAND SEAT (paint_handler.cpp, where its rule stands): the
+// baseline that centers `font`'s cap band in the box [box_y, box_y + box_h)
+// exactly, a real y (no half rounded). Its one caller is the on-screen
+// keyboard's caps; every other text stands on line_box_baseline above or a
+// stated baseline.
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // THE CUE LABEL'S BASELINE AND THE EDITOR'S LINE BOX under the marker
 // lane's top (the lane's rule above): THE BASELINE the line-box rule's,
@@ -2389,14 +2393,14 @@ WellColumns well_columns(const AppState& a);
 // FROM THE 17-W FLAG BOX stood 2026-10-02 to 2026-10-09; git history.)
 
 // Authored pixel geometry of THE BOTTOM ICON ROW — THE UNIFIED BOTTOM ROW,
-// the lane rows 8 and 9 merged into (architect-ruled 2026-08-12): the clock
-// in its flat time field and the active tab's name beside it at the left
-// (architect 2026-10-02 / 2026-10-05; the name 2026-10-22; the state line
-// moved to the status bar 2026-11-19, send Z), and the skips (Go to Start, Go to End;
-// 2026-10-24), the MARKER-VERB GROUP, the step and
+// the lane rows 8 and 9 merged into (architect-ruled 2026-08-12): one
+// plain-text run at the left — the timestamp, a text pipe and the active
+// tab's name (architect 2026-11-19, send AA; paint_handler.cpp's
+// bottom_left_run) — and the COPY / PASTE duo, the skips (Go to Start, Go
+// to End), the MARKER-VERB GROUP, the step and
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
 // (Switch Tab, Center, Left, Right and Play / Stop, the last case; architect
-// 2026-10-18) packed right, each a plain run of cases, the run gap
+// 2026-10-18) packed right, each one linked group, the run gap
 // (program_run_gap_px, the `run_gap` tuning key) of bare ground
 // between two (kMarkerVerbGroup in paint_handler.cpp owns that group's
 // membership), all one lane over the status bar.
@@ -2881,8 +2885,10 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // the span is under two zones wide the begin zone keeps its column and the
 // end zone stands edge to edge right of it, overrunning the end column by
 // the difference — the one place a grab stands past the painted span, kept
-// so a narrow window's two ends are always both grabbable (trim_endcap_rect's
-// rule, 2026-10-03).
+// so a narrow window's two ends stand as two zones (trim_endcap_rect's rule,
+// 2026-10-03); near the strip's right edge, which is the glass's, the lane
+// cuts the end zone, wholly once the begin stands within one zone of it
+// (trim_endcap_rect's body).
 inline constexpr double kViewBarGrabW = 10.0;
 inline int view_bar_grab_w_px() {
     return scaled_px(kViewBarGrabW, 1);

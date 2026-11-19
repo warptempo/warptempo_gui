@@ -1554,8 +1554,9 @@ struct GuiInputHandler {
                             const GuiRect& column);
 
     // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the bypass
-    // chain's lapse, and the wait's ripening showing the box above its
-    // owner's face. The show damages once, the box's own rect as the painter
+    // chain's lapse, and the wait's ripening showing the box off its owner's
+    // face (under a top-row key, above every other; tooltip_box_rect). The
+    // show damages once, the box's own rect as the painter
     // will lay it out (show_tooltip_box, input_pointer.cpp; 2026-11-16).
     void tick_tooltip();
 
@@ -4491,8 +4492,9 @@ private:
     // types into the very editor raising the veil.
     //
     // THE PRESS CLAIMS THE WHOLE RECT and answers true for every press inside
-    // it, key or not: the gaps between keys, the edge pad and the ground
-    // beside the seated block all CONSUME: a finger that
+    // it, key or not: a press on the grid's lines is a key's
+    // (onscreen_keyboard::key_at), and the top line, the edge pad and the
+    // ground beside the seated block all CONSUME: a finger that
     // misses a key must not fall through to the
     // waveform's pan underneath. A key's
     // act runs AT THE PRESS through GuiPlatform::synthesize_key, so the whole

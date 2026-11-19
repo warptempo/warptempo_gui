@@ -39,9 +39,7 @@
 // retired with his pick; the title bar's and the lists' note is Breeze's
 // MusicNote16th since 2026-11-02, icons.h's THE INK BOX.)
 
-// (THE TIME FIELD'S PAINTER — paint_ce_time_field, a flat `key_face` box,
-// no ring, 2026-11-01 night to 2026-11-19 — is retired: every time field is
-// plain text since send AA, 2026-11-19, paint_handler.cpp's THE TIME
+// (Every time field is plain text, no box: paint_handler.cpp's THE TIME
 // FIELDS.)
 
 // (THE TAB STRIP — paint_ce_tab_strip, ce_tab_strip_layout, kCeTabCount and
@@ -129,8 +127,9 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // edge crosses (identical on whole edges). The road's conditions are
 // render.h's THE DIRECT ROAD.
 // THE SHAPES: a rect with real edges — the selection stem's head segment
-// (GuiPaintHandler::paint_marker_stem_heads) and the ruler's ticks
-// (paint_ruler_row); THE ROUNDED RECT, the trim bar's pill
+// (GuiPaintHandler::paint_marker_stem_heads), the ruler's ticks
+// (paint_ruler_row) and a lit linked key's left seam (paint_linked_group);
+// THE ROUNDED RECT, the trim bar's pill
 // (render_trim_flags; architect 2026-11-17, session 140) and Arc's keys'
 // borders, faces and accents (materials.h's paint_linked_group, send Z,
 // 2026-11-19); THE ROUNDED RING, a word button's and an entry's border;

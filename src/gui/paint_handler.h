@@ -126,7 +126,7 @@ std::string status_bar_text(AppState& app);
 //     `reset` live, `#reset` disabled. A phase-reset same-frame CHANGED item
 //     IS a disable toggle, so `reset` (struck) beside `#reset` — or the
 //     reverse — is the toggle in the file's own spelling.
-// (Row 8's walk line spells its own `Scale: [-]<then> [+]<now>`,
+// (The status bar's walk line spells its own `Scale: [-]<then> [+]<now>`,
 // history_walk_line in paint_handler.cpp: a struck run has no road there.)
 //
 // A warp token is rest-of-line, the whole payload. ASCII by construction:
@@ -1218,32 +1218,20 @@ private:
     // bar at the top lane 0, 2026-10-05 to 2026-10-24 — is removed with the
     // lane: the tablet's window has none.)
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
-    // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
-    // 2026-10-09): the clock in its flat time field (2026-10-05; flat
-    // since 2026-11-01 night) at the left, the active tab's name and THE STATE LINE on the ground
-    // past it (architect 2026-10-03: the `h` walk line or the render's
-    // progress line at the normal face, clipped short of the right block),
-    // then the right block packed against the well's right edge
-    // (bottom_row_seats) — the two skips, Go to Start and Go to End
-    // (2026-10-24), the
+    // 2026-08-12; the layout architect 2026-09-29): at the left one
+    // plain-text run — the timestamp, a text pipe and the active tab's name
+    // (architect 2026-11-19, send AA; the .cpp's bottom_left_run) — then the
+    // right block packed against the panel's right inset (bottom_row_seats)
+    // — the COPY / PASTE duo, the two skips, Go to Start and Go to End, the
     // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp),
     // the step and walk and the nudge and play with Play / Stop its last
-    // case (2026-10-18) — each group a plain run, the run gap between two
-    // (the simple layout, 2026-10-22; the bars of 2026-10-21, Cool Edit's
-    // grippers and end bars 2026-10-09 to 2026-10-21, eight Windows px of
-    // bare ground between groups 2026-09-29 to 2026-10-09) — painted onto
-    // the lane
-    // paint_bottom_strip has
-    // already grounded — that painter is the lane's one chrome owner and the
-    // only caller of this body, which keeps the family's fifth button-row
-    // painter separate only because the button cluster's tables and the
-    // clock's metrics live beside it.
+    // case — each group one linked group, the run gap between two —
+    // painted onto the lane paint_bottom_strip has already grounded — that
+    // painter is the lane's one chrome owner and the only caller of this
+    // body, which keeps the family's fifth button-row painter separate only
+    // because the button cluster's tables and the clock's metrics live
+    // beside it.
     void paint_bottom_row_buttons_and_clock(cairo_t* cr);
-    // (paint_status_bar IS DELETED — architect 2026-08-29, the evening of the
-    // day the bar landed. It painted the window's LAST ROW, three bands under
-    // two cells of state; the lane went whole and the STATE TEXT is the body
-    // above's own cell, right of the clock. The record is at that deletion's
-    // note in the .cpp.)
 
     // THE TOOLTIP, painted TOPMOST — after every row pass, so it overlaps the
     // rows it hangs over. It PUBLISHES the rect it painted (its box and its
@@ -1270,11 +1258,9 @@ private:
     // every real run.
     std::vector<AppState::NotificationPainted>* notifications_measured_ =
         nullptr;
-    // (THE ONE BOX PAINTER both floating surfaces shared, paint_popup_chrome
-    // — a flat box in a one-W border — retired with send AA's stage D1,
-    // 2026-11-19: the tooltip is Arc's and the cards notifyd's, each its own
-    // look, both on paint_floating_box's rounded box at its carried
-    // opacity, paint_handler.cpp.)
+    // (The tooltip is Arc's and the cards notifyd's, each its own look, both
+    // on paint_floating_box's rounded box at its carried opacity,
+    // paint_handler.cpp.)
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
     // row 1, painted after the flag editor's box — above every lane and the
     // keyboard slot, below the pointer-transient tooltip and above the modal (the order is on_redraw's step 13). It

@@ -193,19 +193,12 @@
 //                                     Live's own files the partner is
 //                                     near-black, so the print stays dark on
 //                                     the accent; key_ink, materials.h)
-//     (THE LIST PRESS PAIR — SelectionBackground B0DDEB under
-//     SelectionForeground 070707, the press arc's lighter list row of
-//     2026-11-05 — left the derivation and every file with send AA's stage
-//     D2, 2026-11-19: Thunar's pressed row wears the selection pair, so no
-//     tone reads either role.)
 //     limiter lamp           E76942 = Alert, THE LIMITER LAMP's lit face
 //                                     (architect 2026-11-05: "orange for
 //                                     limiter and red for clipper" — a
-//                                     warning; Arc's warning orange). The
-//                                     cards' face too until send AA's stage
-//                                     D1 (2026-11-19), when the cards took
-//                                     their own fills (the CARRIED block) and
-//                                     the lamp kept Alert as its own tone
+//                                     warning; Arc's warning orange), its
+//                                     own tone (the cards wear their own
+//                                     fills, the CARRIED block)
 //     clip lamp              FF0A0A = StandardVuMeter/Maximum, the one NESTED
 //                                     role: Live's own meter clip box — THE
 //                                     CLIP LAMP's lit face (architect
@@ -499,12 +492,12 @@
 // don't think it's worth redoing the presets so that each preset gets its
 // own value"). THE BRIGHT TONES, his list (kBrightTones, theme_roles.cpp):
 // the accent `cue`, the playhead head (RangeDefault), the limiter lamp
-// (Alert; the cards' face until send AA's stage D1), the standing card's
+// (Alert), the standing card's
 // fill (CardStandingBackground, Arc's destructive red, 2026-11-19 — its
 // carried alpha byte riding the mix untouched), the clip lamp
 // (StandardVuMeter/Maximum) and the selection fill
-// (StandbySelectionBackground) ("standby selection should get the rule",
-// beside the list press fill that left with send AA's stage D2). EVERY TONE DERIVED FROM A
+// (StandbySelectionBackground) ("standby selection should get the rule";
+// a pressed list row wears it too). EVERY TONE DERIVED FROM A
 // BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
 // body): the cue fill — the markers wear the mixed accent — the lit dim
 // fill, the inert print over the mixed inert face, and the

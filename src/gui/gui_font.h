@@ -23,12 +23,12 @@
 // main page. THE DIALOGS TAKE GTK'S TWO OTHER SIZES (send AA's stage D2,
 // 2026-11-19; the design's overlays at 12 W text): LARGE 14.4 W (Pango's
 // "large", 1.2 x; 29 device px on the tablet) for a question's and the
-// progress dialog's sentence, CAPTION 10 W (Pango's "small") for the
-// progress dialog's count — the one size not a whole W, GTK's own ratio.
+// progress dialog's sentence — the one size not a whole W, GTK's own ratio
+// — and CAPTION 10 W (Pango's "small") for the progress dialog's count.
 // THE USES: BODY 12 (the lists, the cards, the dialogs' words and entry,
 // the NOISE number, the status bar), PROGRAM 12 (the
-// clocks — the bottom icon row's and the render player's two time fields
-// — the tab's name and the tooltip's name line), LABEL 12 (the cues'
+// clocks — the bottom icon row's timestamp and the render player's two
+// time labels — the tab's name and the tooltip's name line), LABEL 12 (the cues'
 // labels and the lane's editors, the history lane's labels with them),
 // HINT 12 (the tooltip's hint line), BOLD 12 (THE TITLE BAR: the brand and
 // its right group, render.h's title bar block; the dialogs' window titles
@@ -65,9 +65,10 @@
 // truthful one): FreeType's ascender, descender and line height (the
 // file's hhea, read once per file at the install, in em) times the em,
 // each rounded to whole device px (gui_font_ascent_px, gui_font_descent_px,
-// gui_font_line_px). A text's cap band is still centered by
-// redesign_baseline's rule on its seat's rows, the cap the em times the
-// file's own "H" ink per em (gui_font_cap_px). Horizontally the face keeps
+// gui_font_line_px). A text stands on the line-box rule's baseline
+// (line_box_baseline) but the on-screen keyboard's caps, whose cap band
+// redesign_baseline centers on the key, the cap the em times the file's own
+// "H" ink per em (gui_font_cap_px). Horizontally the face keeps
 // its own true advances, TRACKING 0 (the heights-only rule's "no manual
 // kerning — let the spacing be set by the font", architect 2026-10-09), the
 // one shaping chokepoint unchanged (text_shape.h) — the face's own kerning
@@ -235,8 +236,8 @@ struct GuiLineBoxW {
 };
 GuiLineBoxW gui_font_line_box_w(const GuiFont& f);
 // THE CAP BAND in device px at the font's scale, unrounded — what
-// redesign_baseline centers in a chrome box (paint_handler.cpp): the em
-// times the use's file's own "H" ink per em.
+// redesign_baseline centers on an on-screen keyboard key (paint_handler.cpp):
+// the em times the use's file's own "H" ink per em.
 double gui_font_cap_px(const GuiFont& f);
 
 // THE INK BAND OF A GLYPH SET (architect 2026-11-03, the text round: "the

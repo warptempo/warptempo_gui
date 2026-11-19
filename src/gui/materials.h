@@ -136,8 +136,8 @@
 // PAINTED BOX IS THE HIT BOX (point_on_key below), a seam belonging to the
 // key on its left, so a press, a lift and the tooltip answer on the box
 // alone and the ground round it — the run gaps, the pads — answers nothing;
-// the on-screen keyboard's gaps alike (R11; onscreen_keyboard.h's
-// key_gap_px).
+// the on-screen keyboard's band ground round its grid alike, its grid's
+// lines its keys' (onscreen_keyboard::key_at).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
@@ -337,22 +337,29 @@ inline int linked_key_seam_px(int i) {
 // each linked_key_box(x, y, i) — THE KIT'S linked_group, in its paint order,
 // every edge at exact coverage over the ground the caller laid under the
 // same clip: (1) THE BORDER, the group's rounded box (its four outer corners
-// key_corner_px) in `well_border`; (2) a DISABLED member's stretch of it —
-// its box's columns, both seams included, the outer corners where it ends
-// the group — in `key_dim_border`; (3) THE FACES, the group's inner box (its
-// corners key_inner_corner_px) cut at each member's own columns: from one
-// border inside its box's left edge to one border inside the NEXT box's
-// left edge — so A SEAM WEARS THE LEFT KEY'S FACE — the last to one border
-// inside its own right edge, each in its state's face (`key_face` at rest,
-// `key_dim_face` disabled, `lit_dim_fill` lit and inert; a lit member's
-// `key_face`, under its accent); (4) A LIT MEMBER'S ACCENT, `cue`, over its
-// box's whole columns — both seams — between the border's top and bottom
-// rows (the inner box's own columns and corners where it ends the group), so
-// the border stays `well_border` round it and a lit key takes both its seams
-// whatever its neighbors. EVERY PIXEL A MEMBER'S STATE MOVES LIES INSIDE ITS
-// OWN BOX, its corners included (a seam column is inside both boxes it
-// joins): a member's damage is its box, and a repaint under any clip paints
-// every member from its own state as published. THE ROAD: one
+// key_corner_px), EACH MEMBER'S STRETCH OF IT IN ITS OWN RING TONE —
+// `key_dim_border` on a DISABLED member's, `well_border` on every other's —
+// the stretches cut where the faces are: a member's from its box's left edge
+// (one border further in past a group's first, its left seam's border rows
+// the left key's) to its box's right edge, a whole column, the outer corners
+// on the group's first and last; one stamp a run of neighbors sharing a
+// tone, so EVERY RING CELL CARRIES ONE INK AT ITS ONE COVERAGE (a disabled
+// corner's edge cell is the disabled ring alone over the ground, never the
+// ring tone under it); (2) THE FACES, the group's inner box (its corners
+// key_inner_corner_px) cut at each member's own columns: from one border
+// inside its box's left edge to one border inside the NEXT box's left edge —
+// so A SEAM WEARS THE LEFT KEY'S FACE — the last to one border inside its
+// own right edge, each in its state's face (`key_face` at rest, the accent
+// `cue` lit, `key_dim_face` disabled, `lit_dim_fill` lit and inert), each
+// face stamped once, so a lit end member's inner corner is the accent alone
+// over the ring; (3) A LIT MEMBER'S LEFT SEAM, `cue`, its first border's
+// columns between the border's top and bottom rows, whole cells over the
+// left key's face — so the border stays its tone round a lit key and a lit
+// key takes both its seams whatever its neighbors. EVERY PIXEL A MEMBER'S
+// STATE MOVES LIES INSIDE ITS OWN BOX, its corners included (a seam column
+// is inside both boxes it joins): a member's damage is its box, and a
+// repaint under any clip paints every member from its own state as
+// published. THE ROAD: one
 // CoverageStampPass (cool_edit_paint.h), every shape a rounded rect with real
 // edges stamped straight into the target in the order above — NOTHING
 // ELSE IS DRAWN between begin() and end() (the drawings go on after, the
@@ -415,15 +422,15 @@ inline uint32_t mix_word(uint32_t a, uint32_t b, double t) {
 // KEY; architect 2026-11-02, R5 / R11, "ground is not a button"): `key` the
 // PAINTED BOX — border included since send Z ("the border is clickable") —
 // the walk's own rect for every key of the band, the bottom icon row and the
-// controls rows, the on-screen keyboard's walk rect for its own
-// (onscreen_keyboard::for_each_key, its gap already outside it). THE ONE
-// PREDICATE every key hit test asks: the roster's face
-// (AppState::RedesignButtonFace::contains — the press, the lift, the band's
-// modifier gate, the tooltip's owner), the modal family's buttons
-// (GuiInputHandler::modal_dialog_button_hit — the press and the lift) and
-// the keyboard's (onscreen_keyboard::key_at). Each painter PUBLISHES the box
-// it paints, so a reader re-shapes nothing. A gesture already begun keeps
-// its rules: a press that slides off its key reads "outside" as ever.
+// controls rows. THE ONE PREDICATE every key hit test of those surfaces
+// asks: the roster's face (AppState::RedesignButtonFace::contains — the
+// press, the lift, the band's modifier gate, the tooltip's owner) and the
+// modal family's buttons (GuiInputHandler::modal_dialog_button_hit — the
+// press and the lift). The on-screen keyboard's grid keeps the same rule on
+// its own shared lines (onscreen_keyboard::key_at: a line the key's left of
+// it or above it). Each painter PUBLISHES the box it paints, so a reader
+// re-shapes nothing. A gesture already begun keeps its rules: a press that
+// slides off its key reads "outside" as ever.
 inline bool point_on_key(const GuiRect& key, int x, int y) {
     return rect_contains(key, x, y);
 }
@@ -433,12 +440,4 @@ inline bool point_on_key(const GuiRect& key, int x, int y) {
 // groups presses nothing.
 inline bool point_on_key(const GuiRect& key, int seam, int x, int y) {
     return rect_contains(key, x, y) && x >= key.x + seam;
-}
-// THE SAME PREDICATE FOR A FACE WITH REAL EDGES (architect 2026-11-15, the
-// no-grid arc: "yes, I'd like to move to fractional hitboxes."): the
-// on-screen keyboard's faces, whose edges its tuning keys make fractional,
-// asked with the pointer's REAL place — half-open on both axes, so two keys
-// never share a point and the ground between them presses nothing.
-inline bool point_on_key(const GuiRectF& key, double x, double y) {
-    return rect_contains(key, x, y);
 }

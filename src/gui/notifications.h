@@ -31,13 +31,8 @@
 // square, the 10-10 cut-out transcriptions), the mark showing the card's
 // face through one color — then kNotificationGlyphGapW, then THE CLAUSE,
 // Regular 12 W, its first baseline +25 W and further lines one line box
-// (14 W) apart. (Live's status-bar orange box in a one-W ring of the same
-// fill, both classes alike — architect 2026-11-04 night, his pick h1 of
-// tmp/s38 — and its .525 glyph and nine-W pads retired with send AA's
-// stage D1; the box painter it shared with the tooltip, paint_popup_chrome,
-// with them.) THE WHOLE CARD IS ONE BUTTON (architect
-// 2026-10-01, "whole card dismisses, X gone"): the X that stood at its right
-// from 2026-08-29 is retired, and a click or tap anywhere on the card
+// (14 W) apart. THE WHOLE CARD IS ONE BUTTON (architect 2026-10-01,
+// "whole card dismisses, X gone"): a click or tap anywhere on the card
 // dismisses it at the lift (the hit section below). A sentence too long for
 // one line WRAPS DOWNWARD (architect 2026-08-30): the card grows taller and
 // nothing reflows. Two classes and nothing else — no remaining-time bar, no

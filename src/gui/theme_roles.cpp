@@ -41,13 +41,8 @@ namespace {
 // TitleHighlight and ScaleTrough, OUR OWN TWO MORE, the same day (send AA's
 // stage D2: xfwm's title bar's highlight row, the dialogs' frame, and Arc's
 // progress / scale trough), and ScaleSliderBorder, the same day (send AA's
-// stage D3: the rim of Arc's scale's knob, the scrub). (RangeEditField, the NOISE case's fill, and
-// ScaleAwareness, the radio keys' purple, both of 2026-11-11, left the table
-// and every file 2026-11-19, send Z's stage C: Arc's entry progress wears
-// the accent and the radio keys light the one accent, so no tone reads
-// either. SelectionBackground and SelectionForeground, the press arc's
-// lighter list row of 2026-11-05, left the same way with send AA's stage
-// D2, 2026-11-19: Thunar's pressed row wears the selection pair.)
+// stage D3: the rim of Arc's scale's knob, the scrub). A role no tone
+// reads is in no file.
 constexpr std::string_view kThemeRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",

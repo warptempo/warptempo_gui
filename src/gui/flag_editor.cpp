@@ -1089,7 +1089,7 @@ void GuiFlagEditor::wipe_bpm_state() {
 
 // THE BPM FORM'S FIELD COMMIT (the contract is at the declaration). The
 // refusal is the editors' one shape and the settings editor's words' shape:
-// the whole line selected, the editor standing, one composed sentence on
+// the whole value selected, the editor standing, one composed sentence on
 // stderr and the card.
 void GuiFlagEditor::commit_bpm_field() {
     if (!text_editor::is_active(app.settings_editor) ||

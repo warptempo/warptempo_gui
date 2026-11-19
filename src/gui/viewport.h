@@ -632,8 +632,7 @@ struct Viewport {
     // top is covered by one check rather than by a list.
     void invalidate_waveform_area();
     // THE STATUS BAR'S DAMAGE FOR THE PROCESS LINE (architect 2026-11-19,
-    // send Z: the state line moved off the bottom icon row into the status
-    // bar under it): status_bar_area whole, the bar's own lane. The bar is
+    // send Z; the bar under the bottom icon row): status_bar_area whole, the bar's own lane. The bar is
     // STATE — the tick's comparator (refresh_status_bar, main.cpp) holds the
     // composed string against the one last painted and damages this same
     // lane while they differ, so no change of the bar can go stale. These
@@ -694,9 +693,11 @@ struct Viewport {
     // damages the whole window (prompt.cpp), which is what a surface with no
     // published rect before its first paint owes; their CLOSERS that come
     // through here take the family's area by the stash's painted owner. The
-    // rect is the lane whole and the family's area rather than the modal's
-    // stashed box, so a CLOSER that runs between paints still erases what the
-    // last frame drew and the row's own tenants come back with it.
+    // rect is the lane whole and the family's area, and — while the last paint
+    // drew a question, a dialog editor or the progress modal — the window's
+    // stashed box too (its shadow reaches past the area), so a CLOSER that
+    // runs between paints still erases what the last frame drew and the
+    // row's own tenants come back with it.
     //
     // A STANDING DIALOG TOOLTIP RIDES THIS DAMAGE (2026-09-29):
     // a modal button's hint is composed by the row's own paint
@@ -731,11 +732,12 @@ struct Viewport {
     // entry's inner edges, the caret at its padding box). Nothing outside it
     // moves with an edit: the window's Cancel and OK never grey or relabel,
     // their hints with them; a refusal's or a full field's card damages its own
-    // stack (GuiNotifications::notify); the focus ring's walk, the button
-    // press arms and their lifts damage the stash's box themselves
-    // (route_modal_dialog_focus_key, return_modal_focus_to_field,
-    // take_modal_dialog_release) — the entry's focus line among what they
-    // cover; the on-screen keyboard's keys and lamps damage their own band.
+    // stack (GuiNotifications::notify); every move of the focus damages the
+    // stash's box itself (route_modal_dialog_focus_key,
+    // return_modal_focus_to_field, arm_modal_dialog_press) — the entry's
+    // focus line among what it covers — and a button's press and lift its
+    // face (invalidate_modal_press_face); the on-screen keyboard's keys and
+    // lamps damage their own band.
     // THE OPEN, THE CLOSE, the keyboard's show and hide and every geometry
     // change keep their whole damage. ITS CALLERS
     // (re-greped 2026-11-19): TYPING, the on-screen keyboard's LEFT / RIGHT

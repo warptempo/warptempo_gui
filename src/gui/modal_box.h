@@ -225,10 +225,5 @@ inline GuiRect xfwm_shadow_rect(const GuiRect& win) {
                    win.h + l.size - l.delta_y};
 }
 
-// (THE TEXT SEAT — kModalBoxTextSeatW, 9 W in from the pane on all four
-// sides, the prompt's question, the progress sentence and the dialog
-// editors' line on the list rows' text seat, M8b / M14, 2026-11-01 night —
-// AND THE CONTENT'S ONE HAIRLINE OF AIR inside the pane retired with send
-// AA's stage D2, 2026-11-19: the lists stand edge to edge on the view and
-// every dialog's text in its own window, paint_handler.cpp's THE DIALOG
-// WINDOW.)
+// (The lists stand edge to edge on the view, and every dialog's text in
+// its own window, paint_handler.cpp's THE DIALOG WINDOW.)

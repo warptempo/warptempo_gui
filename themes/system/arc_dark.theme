@@ -14,7 +14,7 @@
 # THE CLOSE RED: Arc-Dark's xfwm4 / headerbar close disc, wm_button_close_bg CC575D (hover D7787D,
 # pressed BE3841), on THE CLIP LAMP ALONE (architect 2026-11-14, session 123: red reads as a warning
 # or a close; the limiter lamp stays Arc's warning orange — the cards wear notifyd's grey and Arc's
-# destructive red since send AA's stage D1, 2026-11-19, below). The playhead's head is Arc's
+# destructive red, below). The playhead's head is Arc's
 # fg D3DAE3, the icon glyph color; the markers' chips the accent, Arc's selection blue 5294E2
 # (architect 2026-11-17, session 140: "the marker should take selection blue ... the playhead can be the
 # glyph color"), Arc's own numbers at bright_mix 100 (the default 75 mixes them toward the ground,
@@ -34,7 +34,7 @@
 #   RangeDefault                D3DAE3  $fg_color: the playhead's head, near-white (above)
 #   StandbySelectionBackground  5294E2  $selected_bg_color (Arc has one selection)
 #   StandbySelectionForeground  FFFFFF  $selected_fg_color
-#   Alert                       F27835  $warning_color: the limiter lamp (the cards' face until send AA's stage D1)
+#   Alert                       F27835  $warning_color: the limiter lamp
 #   WaveformColor               262A33  $header_border (darken($header_bg, 4%)): the ink one step above the stem
 #                                       (ControlContrastFrame 21252B), CIELAB L* 2.50 (the stem-over-ink rule's 3.61, ballpark)
 #   DetailViewBackground        404552  $base_color: Arc's content base, Thunar's list view (the canvas and the ruler)
@@ -48,7 +48,7 @@
 #                                       (the trim bar's lane; a NEW required role, session 140's plan)
 #   DetailViewRulerMarkings     D3DAE366 Arc's scale marks, gtkalpha(currentColor, 0.4) of $fg_color, over the ruler (the canvas) -> 7B818C
 #   StandardVuMeter/Maximum     CC575D  $wm_button_close_bg, THE CLOSE RED (the clip lamp)
-#   ClipBorder                  2B2E39  $borders_color: Thunar's pane border, the well's frame and its lines (a NEW
+#   ClipBorder                  2B2E39  $borders_color: Thunar's pane border, the well's lines (a NEW
 #                                       required role, architect 2026-11-17, D2)
 # OUR OWN ROLES (not Live's; src/gui/theme_roles.h's THE FORMAT), architect 2026-11-19, send Z, the Arc page:
 #   WindowBackground            383C4A  $bg_color: THE BODY TONE, the ground of everything under the title bar
@@ -65,8 +65,6 @@
 # OUR OWN ONE MORE, send AA's stage D3, 2026-11-19 (Arc's scale, the scrub; GTK's scale slider):
 #   ScaleSliderBorder           262933  Arc's scale slider's border, the knob's 1 px rim (measured on his Arc-Dark
 #                                       desktop, the scale shot C4g): the scrub's knob at rest
-# (SelectionBackground A9CAF1 and SelectionForeground 2F343F, the lighter list press, left the file with send AA's
-# stage D2: Thunar's pressed row wears the selection pair.)
 # OUR OWN FILLS, CARRYING THEIR ALPHA (the 8-digit word's last byte reaches the painter, the box painted at it over
 # whatever lies under; src/gui/theme_roles.h's CARRIED block), send AA's stage D1, 2026-11-19 (DESIGN §6 / §9, his
 # "good to build" on tmp/sendZ/VIEW/Z_07); .95 is the byte F2 (242.25 rounded, .949):

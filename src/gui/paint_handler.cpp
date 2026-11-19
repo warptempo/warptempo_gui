@@ -54,56 +54,17 @@
 // ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere";
 // gui_font.h): the bottom icon row's clock and its tab name are THE
 // PROGRAM FACE (Regular 12 W, 24 device px on the tablet since send Z,
-// every text 12 W, gui_font.h), and the render player's two time fields
+// every text 12 W, gui_font.h), and the render player's two time labels
 // with them (architect 2026-10-26 ~12:10, "yes" to symmetry with the
 // clock); every modal string and the status bar the body face, 12 W too, a
-// row of its own (gui_font.h's table). The no-wiggle guarantee is the fields' own
-// fixed widths.
+// row of its own (gui_font.h's table). The no-wiggle guarantee is the
+// timestamps' fixed width, the specimen's advance.
 //
-// EVERY STRING THE STATE LINE CARRIES — the queue/render status and the
-// history walk line — IS THE PROGRAM FACE (gui_font(GuiFace::Program)) in
-// the text tone, no shadow (the flat look), on the row's ground a group space
-// right of the clock's field (architect 2026-10-03; the block at the line's painter
-// below and notifications.h are the live record). For 2026-10-02 it stood in
-// a second status panel at the small face; from 2026-08-31 it was the clock's
-// monospace, ONE run behind a literal pipe; before that the redesign's sans
-// at the redesign's size through its three earlier homes — the bottom row to
-// the tab row on 2026-08-13, the tab row to the one-day status bar on
-// 2026-08-29 and the bar back into row 8's own cell that evening — none of
-// which changed a glyph. Every NOTIFICATION CARD's line is the sans,
-// shaped and painted through the ONE chokepoint like every other redesigned
-// row (paint_notifications, 2026-08-29). (The dirty mark that rode this row
-// retired 2026-10-05, Save's grey being the mark.)
-//
-// The no-wiggle DERIVATION — the widest digit, the
-// "DD:DD.DDD" specimen — belongs to the time fields and lives at their own
-// metrics (time_field_metrics), measured on the face rather than trusted to
-// it.
-
-// (The bottom row's faces are named at each of their sites — the program
-// face for row 8's clock, name and state line and the render player's time
-// fields, the body face for the MODAL DIALOG's question, line and button
-// words; a run carries the font it was laid out on, so no context state
-// needs selecting first.)
-
-// (show_row_text, the row's plain-text tier — one run shaped and painted at
-// (x, baseline) — lost its last two callers 2026-10-14: the dialog editor's
-// label, removed, and the choice list's rows, gone with the list.)
-
-// THE STATE TEXT IS ROW 8'S LINE ON THE GROUND (architect 2026-08-29, folding
-// the STATUS BAR that had stood for that one day back into the toolbar he
-// already reads — "status bars are generally the last row" was the bar's
-// reasoning, and seeing it he preferred the text on the row and found the bar a
-// duplicate of that panel's own foot; 2026-08-31, dissolving the separate
-// CELL it had been for those two days into the clock's own monospace string;
-// 2026-10-02, the Windows-95 chrome, giving it a status panel of its own at
-// the small face; and 2026-10-03, taking the panel away again). The lower
-// left is ONE FIELD AND A LINE, the Vegas / ACID pattern: the clock in its
-// time field, the state on the row's ground beside it at the normal face,
-// its first ink one field pad past the field (2026-10-08) and clipped a
-// group space short of the right block — painted by
-// paint_bottom_row_buttons_and_clock, the
-// ruling this block and that painter's own.
+// THE STANDING STATE — the queue/render status and the history walk line —
+// IS THE STATUS BAR'S PROCESS LINE (architect 2026-11-19, send Z;
+// status_bar_text, paint_status_bar), the body face in the text tone, no
+// shadow, on the bar under the bottom icon row; notifications.h's head is
+// its word-for-word record.
 //
 // STATE, NOT EVENTS: what is true right now, replaced as it changes, with NO
 // timeouts and no clear on a key press — which is why the "revealed stale"
@@ -586,8 +547,8 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
 // WHETHER THE CLIP REACHES A RECT AT ALL (2026-10-13): a drawing bounded by
 // `rect` under a clip whose extents miss it lays down no pixel, so a painter
 // may skip it — the same pixels by construction, the cost of cairo walking a
-// fully clipped path saved (the toolbar band's and row 8's keys, row 8's
-// clock group and state line, under the narrow
+// fully clipped path saved (the icon rows' keys, the bottom icon row's
+// left run, under the narrow
 // damage a frame most often carries). Never a gate on a PUBLICATION: the
 // faces, rects and records a painter stashes are written whether or not
 // their pixels are drawn.
@@ -1125,14 +1086,15 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
 // history opener seated against their left with them (kIconRowHistoryOpener).
 // All paint LAST, whole, at their right-anchored places; the runs to
-// their left yield, clipped one run gap short of the opener, and each
-// yielding member PUBLISHES ONLY WHAT IT
-// PAINTED — its box cut at that column, or an empty rect when the clip
-// covers it whole — so a press, a hover and a tooltip land on exactly the
-// pixels on screen (on screen is as painted; paint_icon_row's walks). The
-// widths and scales at which the band holds every run are THE FIT at
-// paint_icon_row's width math, its one statement; the tablet does not reach
-// the rule at its 200 % and the keys' defaults (a key_width past 38 W does).
+// their left yield one run gap short of the opener: A MEMBER WHOSE BOX NO
+// LONGER FITS IS DROPPED WHOLE — it publishes the empty rect and paints
+// nothing, no key cut, its group's ring closing round the members that
+// stand — so a press, a hover and a tooltip land on exactly the pixels on
+// screen (on screen is as painted; paint_icon_row's walks). The widths at
+// which the band holds every run, and which member drops at each width
+// past them, are THE FIT at paint_icon_row's width math, its one
+// statement; the tablet does not reach the rule at its 200 % and the keys'
+// defaults (a key_width of 43 W does, with the default run gap).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource},
      {RedesignButton::ViewTarget}},
@@ -1174,64 +1136,36 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // THE BASELINE FOR A LABEL VERTICALLY CENTERED IN A BOX: the baseline that
 // centers the face's own CAP BAND in the box EXACTLY (architect 2026-11-15,
 // the no-grid arc: no half is rounded, the baseline a real y and the text
-// painted at it — text_raster.h; the upper-row tie of 2026-09-09, a floor,
-// is retired with the grid). What the eye centers in a chrome box is the
-// capital band — the word "File" is cap-height ink and nothing else — so
-// the solver centers exactly that and lets the descender band fall where
-// the face puts it:
+// painted at it — text_raster.h). What the eye centers on a key is the
+// capital band, so the solver centers exactly that and lets the descender
+// band fall where the face puts it:
 //
 //     baseline = box_y + (box_h + cap_height) / 2
 //
 // so the air above the cap band and under the baseline is the same real
-// length. THE ONE BASELINE SOLVER FOR EVERY EXTENTS-CENTERED CHROME LABEL
-// and every time field.
+// length. ITS ONE CALLER IS THE ON-SCREEN KEYBOARD'S CAPS
+// (paint_onscreen_keyboard), a cap centered on its key's face.
 //
 // THE CAP BAND IS THE FACE'S OWN (gui_font.h, gui_font_cap_px): the em
 // times the file's own "H" ink per em (Liberation Sans 1409 / 2048 units),
-// an unrounded double — 16.51 device rows at the tablet's 200 % (the
-// Program face's 12 W, a 24-device-px em, send Z), 8.26 at 100 %.
+// an unrounded double — 16.51 device rows at the tablet's 200 % for the
+// Keys face's default 12 W (a 24-device-px em). On the tablet at osk_key_h
+// 35 (a 70-row key) a cap's baseline stands (70 + 16.51) / 2 = 43.26 rows
+// under the key's top.
 //
-// THE SEATS ON THE TABLET (200 %): a list row (the folder overlay's row box,
-// folder_overlay.h's kListRowW, 26 W, 52 device rows) seats its baseline
-// (52 + 16.51) / 2 = 34.26 rows under the row's top; at 100 % its 26 rows
-// seat at (26 + 8.26) / 2 = 17.13.
-//
-// ONE SEAT FOR EVERY BOXED CHROME LABEL (architect 2026-10-22). THE BOX
-// SEATS: the bottom icon row's clock (in its time field) and the active
-// tab's name beside it (on THE FIELD's box since 2026-10-07), the render player's
-// two time fields and the score viewer's page cell, the modal box's text
-// rows — a prompt's question, the progress modal's sentence, an editor's
-// line (paint_modal_dialog: the first row's band placed so this solver lands
-// on the text seat's baseline, modal_box_text_baseline0) — the dialog
-// editors' lines on their rows, the on-screen keyboard's caps and the
-// folder overlay's rows. The
-// notification card and the hover tooltip seat their lines by the line-box
-// rule under their own pads (paint_notifications, paint_shift_tooltip; send
-// AA's stage D1, 2026-11-19); the title bar's
-// note centers its ink on the bar's rows and its text stands on
-// title_baseline (paint_title_bar).
-//
-// THE WELL'S TEXT TAKES ANOTHER SEAT (2026-10-09, the program is Cool Edit;
-// the flat well 2026-11-01 night): THE RULER'S DIGITS stand on an AUTHORED
-// BASELINE ROW of their lane — render.h's ruler_baseline_px, the pad and the
-// digits' ink above the baseline, the ink centered on the ruler; THE CUES' LABELS
-// stand on THE LANE'S ONE BASELINE by the line-box rule (render.h's
-// marker_lane_h_px and cue_baseline_px), the flag editor's caret and
-// selection band the label face's line box under it
-// (cue_line_box_top_px). (This solver is declared in render.h for its
-// readers there.)
-//
-// TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
-// corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
-// row's content band was 46 at 100% and 104 at 225%, and cap-centring the
-// monospace digits gave row 28 and row 63 — exactly where the old proxy plus
-// the architect's authored drop put them, at both scales. His measured pixel
-// WAS cap-centring, so the offset is gone. (The time fields seat their
-// digits by the line-box rule since send Z's stage C, 2026-11-19: Arc's
-// entry, line_box_baseline.)
-// AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
-// rather than the field band's plus a drop until the label's removal
-// (2026-10-14).
+// EVERY OTHER TEXT TAKES ANOTHER SEAT. THE LINE-BOX RULE (render.h's
+// line_box_baseline, GTK's seat; send Z, 2026-11-19): the face's line box
+// centered in a box of whole W, the baseline its ascent under the box's
+// top — the bottom icon row's left run, the render player's and the score
+// viewer's time labels and page cell, the lists' rows and headings, the
+// dialogs' words and entry, the status bar, the cards, the tooltip, the
+// NOISE number, the ruler's digits (render.h's ruler_baseline_px) and the
+// cues' labels (cue_baseline_px, the flag editor's caret and selection band
+// the label face's line box under it, cue_line_box_top_px). THE TITLE BAR'S
+// TEXT AND A DIALOG WINDOW'S TITLE stand on a stated baseline
+// (kTitleBaselineW, kXfwmTitleBaselineW; paint_title_bar,
+// paint_xfwm_frame). (This solver is declared in render.h for its readers
+// there.)
 } // namespace
 
 double redesign_baseline(const GuiFont& font, double box_y,
@@ -1289,10 +1223,9 @@ static constexpr const char* kSegmentSeparator = " | ";
 // on BOTH walks. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
 // token and `[+]` before the now one, spelled here: the lane's labels lost
 // theirs to the strike (architect 2026-10-26; history_diff_label), and this
-// line, a plain run, has no strike to carry the side. (The "bottom-left corner" of the mode's record read
-// bottom-RIGHT from the 2026-08-12 unification, TOP-RIGHT while the status
-// chain sat in the tab row, bottom-LEFT on the one-day status bar, and reads
-// BOTTOM-CENTRE now, beside the clock — the same line, four surfaces.)
+// line, a plain run, has no strike to carry the side. THE LINE STANDS AT
+// THE STATUS BAR'S LEFT, its first field (paint_status_bar the one painter
+// of it), under the bottom icon row.
 //
 // THE LINE NAMES NO COMMIT (architect 2026-09-28): the short SHA left it, so
 // the position is the line's only reference to the member on either walk.
@@ -1815,7 +1748,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // while any member does. What the view refuses only BY STATE (Save with
     // nothing to commit, Revert with no subject, Load in Place over an empty
     // walk) and what any other mode refuses wears the DEAD FACE, and a window
-    // too narrow for the row covers members otherwise, under the view pairs'
+    // too narrow for the row drops members whole otherwise, under the view pairs'
     // overflow rule — a width, never a state.
     //
     // THE WIDTH MATH, AT THE DEFAULTS — the box the `key_width` tuning key's
@@ -1843,9 +1776,28 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the tablet at 200 % 52 · key_width + 8 · run_gap device px against 2246
     // — so at run_gap 6 it holds whole up to key_width 42 W (2232) and from
     // 43 W the overflow rule (kIconRowViewPairs) answers: every member whose
-    // box would end past the left runs' limit, NOISE's entry first, publishes
-    // the empty rect and paints nothing — no key is cut, so every ring
-    // closes whole — the right group whole.
+    // box would end past the left runs' limit (the right group's first box
+    // less the run gap, 2304 − 12 − linked_group_w_px(5) − 12) publishes the
+    // empty rect and paints nothing — no key is cut, so every ring closes
+    // whole — the right group whole, and every seat where it stood, the
+    // members after a dropped one keeping theirs. ON THE TABLET AT run_gap
+    // 6, outside the view, what stands at each key_width (the third group
+    // seated at 12 + linked_group_w_px(5) + linked_group_w_px(11) + 24):
+    //   36 .. 42 W  every member;
+    //   43, 44 W    NOISE dropped (its entry ends at 1896 / 1938 against
+    //               the limit 1858 / 1848);
+    //   45 W        TIPS too (its box ends at 1890 against 1838);
+    //   46, 47 W    SETUP too (1842 against 1828 at 46 W);
+    //   48, 49 W    SCORE too;
+    //   50 W        LOCK too, PLAYER alone left of its group (key_width's
+    //               ceiling).
+    // Inside the view (groups of 4, 6 and 2 and NOISE) nothing drops up to
+    // 50 W. FROM 46 W SETUP HAS NO BOX, a fact of the rule: committed from
+    // the settings page, the page stands and its rows and Close still work,
+    // but once it is closed nothing on glass opens it again (bare `;` has no
+    // other producer, the on-screen keyboard standing in the editors alone),
+    // so the `key_width` line is then reachable only from the device's
+    // config file.
     // No assert stands on the fit: the empty publication is the whole answer
     // at every width.
     //
@@ -2075,8 +2027,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 //   THE TIMESTAMP, PLAIN TEXT, "  |  " AND THE ACTIVE TAB'S NAME, one run
 //   from 14 W (send AA, 2026-11-19; bottom_left_run below; the face and
-//   the fixed width at THE TIME FIELDS' block) (the state line the status
-//   bar's since 2026-11-19);
+//   the fixed width at THE TIME FIELDS' block);
 //
 //   and, PACKED AGAINST THE RIGHT INSET, five groups, each one linked group (send Z), the run
 //   gap between two (architect 2026-10-22; five since 2026-11-08, his
@@ -2129,7 +2080,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // Drag, and COPY and PASTE (the duo hidden whole, its run gap with it) —
 // and publishes an empty rect, the block
 // closing up from
-// the right margin and the state line taking the room; the row in there is
+// the right margin; the row in there is
 // GO TO START and GO TO END (the mode's own absolute jumps), ADD TO
 // SELECTION alone, the walk pair, and SWITCH TAB, CENTER, OLDER and NEWER:
 // nine cases in four groups (2026-10-24; seven in three while the skips
@@ -2828,8 +2779,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
     // layout: the most-used buttons at the bottom right; the simple layout
     // 2026-10-22): THE LEFT RUN — the timestamp, a text pipe and THE
-    // ACTIVE TAB'S NAME, plain text from kBottomLeftPenW (bottom_left_run;
-    // the state line is the status bar's since 2026-11-19) — then THE
+    // ACTIVE TAB'S NAME, plain text from kBottomLeftPenW (bottom_left_run)
+    // — then THE
     // RIGHT BLOCK, packed against the row's right seat (bottom_row_seats, 6 W
     // inside the panel's right edge), FIVE GROUPS (kRow8Groups, 2026-11-08): the COPY / PASTE
     // DUO (kPhaseResetPropagateGroup), the SKIP
@@ -3960,10 +3911,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //     paragraph and its ruler block): flat `ruler_face` under the trim bar's
 //     frame, no line on its top, the ticks `ruler_tick` one W wide, each
 //     centered on its own exact time's place (architect 2026-11-14, send J;
-//     the line rule at its exact place), STANDING ON ITS FOOT — majors 4
-//     W, minors 1 W (8 and 2 device rows on the tablet), overlaying the
-//     ruler's bottom pad — and the digits Bold Small 8 W in the text tone,
-//     bare, their ink centered on the ruler; then the frame's line. (Kdenlive's
+//     the line rule at its exact place), STANDING ON ITS FOOT — majors 2
+//     W, minors 1 W (4 and 2 device rows on the tablet), overlaying the
+//     ruler's bottom pad — and the digits Bold Small 10 W in `ruler_text`,
+//     bare, on the line-box baseline; then the well's line. (Kdenlive's
 //     look — the majors rising above the flags, the etched ticks — stood
 //     2026-08-01 to 2026-10-09; Cool Edit's E0E0E0 on the dark ground until
 //     the flat well; git history.)
@@ -4281,7 +4232,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // ruler block): each ONE CANVAS LINE wide (waveform_line_px, one W since
     // 2026-11-04, the unit), centered on its time's exact place (the line
     // rule at its exact place, render.h's waveform_line_span), in
-    // `ruler_tick`, rising the major's 4 W or the minor's 1 W (8 and 2 device
+    // `ruler_tick`, rising the major's 2 W or the minor's 1 W (4 and 2 device
     // rows on the tablet; scaled_px) from the foot into the ruler's bottom
     // pad, NO SHADOW.
     const int ruler_bottom = lane.y + std::min(ruler_h, lane.h);   // one past
@@ -4421,7 +4372,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // 2026-10-09; render.h's playhead paragraph) — THE SAME DRAWING AS THE
     // MARKER'S CHIP (architect 2026-11-04, mock k1, "4 accept overlap"): A
     // SMOOTH-EDGED TRIANGLE WITH NO OUTLINE (architect 2026-11-19, send AA:
-    // the chips' outline retired, the head's with it, the outer size kept),
+    // the chips' outline retired, the head's with it; the bare triangle of
+    // the nominal 4 W rows, cue_chip_h_px, 8 device px on the tablet),
     // AT THE PLAYHEAD'S EXACT x, ITS APEX ON THE PLAYHEAD LINE'S CENTER (architect
     // 2026-11-14 night, send J: "I think the chips should also go
     // anti-aliased", "Agree on both."; cool_edit_paint.h's THE CUE'S CHIP
@@ -5622,26 +5574,22 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
 //
-// EVERY MODAL STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
-// (architect 2026-10-14, modal_box.h, the one owner of the shape): a flat
-// pane (no ring) from the trim lane's first row down, and under
-// it the controls row on row 8's rows. NOTHING ABOUT THE
-// RENDERER MOVED for it — one window, one surface, one frame, one painter —
-// so this is emphatically not the scrapped second-toplevel model
-// (closed_questions.md carries that do-not-re-propose). WHILE ANY MODAL
-// STANDS ROW 8 YIELDS WHOLE: all SEVENTEEN buttons — the VERB GROUP'S EIGHT,
-// the step-and-walk group's four and the nudge-and-play group's five — plus the
-// clock's time field and the state line beside it stand down, nothing
-// negotiates for space, and the modal's controls take the content band they
-// left (paint_modal_dialog, every modal's controls row; the box is
-// paint_modal_box's, laid by paint_modal_dialog for the prompts, the dialog
-// editors and the progress modal and by paint_folder_overlay for the render
-// player and the picker). (HISTORY: from 2026-08-13 to 2026-10-14 the modal lived ON THIS
-// ROW ALONE — the architect scrapping the centered box of 2026-08-12, "it
-// looks sloppy — no compositor drop shadow, and faking one wouldn't work" —
-// its rectangle moved from the window's centre into the lane the tenants
-// left, and from 2026-10-10 the prompts and dialog editors stood in the
-// taskbar dialog laid over the window's foot.)
+// EVERY MODAL TAKES THE BOTTOM ICON ROW (modal_box.h, the one owner of the
+// family's shape): an overlay's controls row stands on the row's rows under
+// the family's box, and a question, a dialog editor and the progress modal
+// stand as dialog windows in the room above it (THE DIALOG WINDOW below),
+// the row empty under them. NOTHING ABOUT THE RENDERER MOVED for it — one
+// window, one surface, one frame, one painter — so this is emphatically not
+// the scrapped second-toplevel model (closed_questions.md carries that
+// do-not-re-propose). WHILE ANY MODAL STANDS THE ROW YIELDS WHOLE: all
+// TWENTY-ONE buttons — the COPY / PASTE duo's two, the skips' two, the VERB
+// GROUP'S EIGHT, the step-and-walk group's four and the nudge-and-play
+// group's five — and the left run (the timestamp, the pipe and the tab's
+// name) stand down, nothing negotiates for space, and an overlay's controls
+// take the content band they left (paint_modal_dialog; the box is
+// paint_modal_box's, laid by paint_folder_overlay under the render player
+// and the picker and by paint_modal_dialog for the room and the score
+// viewer's page).
 //
 // The two helpers below are that fork, shared by the row's painter (which
 // wants the boolean, just under here) and by paint_modal_dialog (which wants
@@ -5704,12 +5652,12 @@ static bool modal_owns_bottom_row(AppState& app) {
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
     // into ONE lane, on the WINDOW'S FOOT; THE STRIP since the simple layout,
-    // 2026-10-22, bottom lane 0): the clock in its flat time field, the
-    // active tab's name and THE STATE LINE on the ground beside it at the
-    // left, and — packed against the right edge —
-    // the MARKER-VERB GROUP, the marker walk and the cardinal
-    // arrows with Play last, each Cool Edit's group (the tables above own
-    // those memberships). That is the whole roster. This painter
+    // 2026-10-22; bottom lane 1, over the status bar): one plain-text run
+    // at the left — the timestamp, a text pipe and the active tab's name
+    // (bottom_left_run) — and, packed against the right edge, the COPY /
+    // PASTE duo, the skips, the MARKER-VERB GROUP, the step and walk and the
+    // nudge and play with Play last, each one linked group (the tables
+    // above own those memberships). That is the whole roster. This painter
     // owns the lane's CHROME (its ground) and nothing else; the
     // buttons and the clock are paint_bottom_row_buttons_and_clock, called
     // from here onto the grounded band (the cluster's tables and the clock's
@@ -5733,16 +5681,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     //
     // The row paints on EVERY frame class (blank, loaded) like the
     // redesigned rows above it: with no piece — the open's hold's one frame,
-    // platform.h's head — the clock's field stands empty and no tab is named
+    // platform.h's head — the timestamp stands empty and no tab is named
     // (clock_time_text, the name's block), and the buttons must be visible
     // on every frame class their press claim is live on.
     const GuiRect lane = bottom_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
-    // THE LANE'S GROUND, ON EVERY FRAME WHATEVER STANDS OVER IT: THE FLAT
-    // GROUND (the theme's `ground` (Default's 242424, materials.h), 2026-11-01; bare in the simple layout
-    // 2026-10-22, Cool Edit's dock bar before), the
-    // lane the window's width on its foot. The row's tenants are the
+    // THE LANE'S GROUND, ON EVERY FRAME WHATEVER STANDS OVER IT: THE BODY
+    // TONE (the palette's `face`, the theme's `body_face`; send Z,
+    // 2026-11-19), the lane the window's width over the status bar. The row's tenants are the
     // program's (row 8, and the modal family's controls row — every modal's,
     // modal_box.h, 2026-10-14), so this lane never changes for them. The
     // ground erases whatever render_background laid down, so the strip does
@@ -5788,14 +5735,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // NOTHING READS THESE ZEROES as a bound — since 2026-08-13 nothing on
     // this row is measured from a button stash at all, the status chain having
     // taken its right anchor to the tab row with it.
-    // AND THE ROW YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-10-10, ON SCREEN
-    // IS AS PAINTED): the keyboard's band stands at the view's foot,
-    // directly above the row (onscreen_keyboard.h, send AA's stage D2), and
-    // the row stands EMPTY IN THE BODY TONE under it, as under the line
-    // editor (P2's overlays §E: its answers are the keyboard's Enter and
-    // Esc) — the flag editor's case, the one editor that raises the
-    // keyboard with no dialog — and a button nothing shows must not hover,
-    // wear a tooltip or answer a press (the zero rects).
+    // AND THE ROW YIELDS WHILE THE ON-SCREEN KEYBOARD STANDS (2026-10-10, ON
+    // SCREEN IS AS PAINTED): the keyboard's band stands at the view's foot,
+    // directly above the row (onscreen_keyboard.h), covering none of it; the
+    // row is EMPTY IN THE BODY TONE BECAUSE IT YIELDS here, as under the
+    // line editor (P2's overlays §E: an editor's answers are the keyboard's
+    // Enter and Esc) — the flag editor's case too, the one editor that
+    // raises the keyboard with no dialog — and a button nothing shows must
+    // not hover, wear a tooltip or answer a press (the zero rects).
     if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app)) {
         // The right block's groups stand down together: the SKIPS, the
         // MARKER VERBS, the STEP-AND-WALK GROUP, the NUDGE-AND-PLAY GROUP
@@ -5816,8 +5763,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};
-        // The cell's pixels are the modal's or the keyboard's now, so this
-        // target's record of the clock no longer holds (GuiClockRecord).
+        // The cell's pixels are the yielded row's now, so this target's
+        // record of the clock no longer holds (GuiClockRecord).
         app.clock_painted[static_cast<std::size_t>(gui.painting_target())]
             .valid = false;
         return;
@@ -5953,8 +5900,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // Damage: the openers invalidate the whole window (no surface exists before
 // the first paint); a press edge on a button its face (invalidate_modal_
 // press_face, architect 2026-11-16, the beats); a focus move the dialog's
-// box; a standing dialog editor's edits and caret blink the room grown by
-// the entry's box (Viewport::invalidate_dialog_editor_box: the window never
+// box; a standing dialog editor's edits and caret blink the entry's box as
+// last published (Viewport::invalidate_dialog_editor_box: the window never
 // moves or grows with the text); the progress count the window's extent
 // (set_batch_progress_index); every closer rides
 // invalidate_modal_dialog_area, which takes the bottom icon row's lane and,
@@ -6080,7 +6027,8 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 //     UNDER THE WINDOW (compositor.c's borderClip − borderSize); the mask
 //     built once per window size and kept (xfwm_shadow_mask_cache). Its
 //     reach: 17 W left, right and below and 20 W above at a visible alpha
-//     (.2275 at the window's side edge, .2824 at its top), the mask's rect
+//     (at the window's side edge .2275 at 1x, .2314 at the tablet's
+//     sampling; at its top .2824 at 1x, .2863 on the tablet), the mask's rect
 //     xfwm_shadow_rect (18 W and 21 W) THE DIALOG'S PUBLISHED SURFACE.
 // Every length a whole W through scaled_px at the element; a window's seat
 // whole device px (the kit's integer centering).
@@ -7744,7 +7692,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             // is no last center on this item — left one knob, this one, on
             // screen; a clip that misses it left the last frame's knob
             // standing, so that frame's center is carried while the session
-            // and the item are the same.
+            // and the item are the same. A frame painted once per damage
+            // clip reaches the publish because every damage that moves the
+            // knob starts from this published center (the drag's motion, the
+            // grab, the lift and the live tick's whole item; render.h's
+            // scrub block, THE DAMAGE): the last move's clip covers the
+            // whole owed move, so no run of clips each covering a part of it
+            // leaves the center behind.
             const bool same_item =
                 prev_scrub.x == item.x && prev_scrub.y == item.y &&
                 prev_scrub.w == item.w && prev_scrub.h == item.h;
@@ -8804,7 +8758,8 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // upper rows or the clock cell. Re-derived from on_redraw's paint sequence
 // 2026-10-13: past the lane painters, the ground and the canvas column (each inside its own rows), the passes that paint OUTSIDE
 // their lane are the floating surfaces — the notification cards (row 1
-// down), the tooltip (above its owner's face, tooltip_box_rect) (the
+// down), the tooltip (under a top-row key's face, above every other owner's,
+// tooltip_box_rect) (the
 // Settings dropdown, hanging from its button, until 2026-10-21). (The keyboard slot starts below the toolbar
 // band's foot, and the folder overlay and the modal family's box of a prompt
 // or a dialog editor at the view bar's top row, directly under the band
@@ -8902,12 +8857,12 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
 // THE CLOCK CELL'S LIVE FINGERPRINT — the one function the clock's painter
 // (publishing) and the owed check (comparing) call. The cell's pixels,
 // enumerated from paint_bottom_strip and paint_bottom_row_buttons_and_clock:
-// the row content's face and the time field (the palette and the geometry,
+// the row's body tone under the timestamp (the palette and the geometry,
 // the globals), the cell as published (AppState::clock_cell_rect) and the
 // run (clock_time_text: the scanner or the cursor, the sample rate) in the
-// field's ink; and whether the row yields, when the cell is
+// text tone; and whether the row yields, when the cell is
 // not the clock's at all (modal_owns_bottom_row, or the on-screen keyboard
-// standing over the row).
+// standing).
 GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
     GuiClockFingerprint fp;
     fp.globals = GuiChromeGlobalsFingerprint{
@@ -9370,7 +9325,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // above (main.cpp's vertical rule).
     //
     // THE BOTTOM ROW JOINS THEM (row 7): it is audio-independent in the same
-    // sense — with no source the clock's field is empty and no tab is named
+    // sense — with no source the timestamp is empty and no tab is named
     // (the open's hold's one frame, platform.h's head). Nothing painted
     // later overlaps it except the floating surfaces, which paint over
     // everything by design.
@@ -9650,7 +9605,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because they hang outside their strips (the cards from
-    // the band's foot down, the tooltip above its owner's face) and overlap whatever is
+    // the band's foot down, the tooltip under a top-row key's face and above
+    // every other owner's) and overlap whatever is
     // under them. They are NOT exposure-gated the way the rows are: each
     // writes the rect it painted (or a zero rect) on every run, and a run that
     // skipped would strand a stale rect for the hit tests and the damage to

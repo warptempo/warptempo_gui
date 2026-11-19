@@ -106,7 +106,7 @@ struct ShapedRun {
 // later digits walked as the time ran (11:11.111 measured 3.7 px narrower
 // than 04:49.027 on the tablet, session 40); with `kern` off every digit
 // slot is its advance and every time is the specimen's width. Nothing else
-// loses kerning — the ruler's timestamps, the state line, the labels and
+// loses kerning — the ruler's timestamps, the status bar, the labels and
 // the lists keep the face's.
 enum class Kerning { On, Off };
 

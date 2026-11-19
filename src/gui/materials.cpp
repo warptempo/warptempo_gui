@@ -18,28 +18,38 @@ void paint_linked_group(cairo_t* cr, int x, int y,
     const double h  = static_cast<double>(icon_case_h_px());
     const double x0 = static_cast<double>(x);
     const double y0 = static_cast<double>(y);
-    const double x1 = x0 + static_cast<double>(linked_group_w_px(n));
     const double y1 = y0 + h;
     const auto box_x = [&](int i) {
         return x0 + static_cast<double>(i * key_link_pitch_px());
     };
+    const auto dim_ring = [&](int i) {
+        return states[static_cast<std::size_t>(i)] == KeyState::Disabled;
+    };
     CoverageStampPass pass;
     pass.begin(cr);
-    // (1) THE BORDER, the group's rounded box.
-    pass.rounded_rect(x0, y0, x1, y1, R, R, p.well_border);
-    // (2) A DISABLED MEMBER'S STRETCH OF THE RING: its box's columns, the
-    //     outer corners where it ends the group.
-    for (int i = 0; i < n; ++i) {
-        if (states[static_cast<std::size_t>(i)] != KeyState::Disabled) continue;
-        pass.rounded_rect(box_x(i), y0, box_x(i) + w, y1, i == 0 ? R : 0.0,
-                          i == n - 1 ? R : 0.0, p.key_dim_border);
+    // (1) THE RING, the group's rounded box, ONE STAMP A RUN of neighbors
+    //     sharing a ring tone: a member's stretch from its box's left edge
+    //     (one border in past a group's first, its left seam the left
+    //     key's) to its box's right edge, a whole column; the outer corners
+    //     on the runs that end the group.
+    for (int i = 0; i < n;) {
+        int j = i + 1;
+        while (j < n && dim_ring(j) == dim_ring(i)) ++j;
+        const double sx0 = i == 0 ? x0 : box_x(i) + b;
+        const double sx1 = box_x(j - 1) + w;   // the group's right edge at j == n
+        pass.rounded_rect(sx0, y0, sx1, y1, i == 0 ? R : 0.0,
+                          j == n ? R : 0.0,
+                          dim_ring(i) ? p.key_dim_border : p.well_border);
+        i = j;
     }
-    // (3) THE FACES: each member from one border inside its box to one
+    // (2) THE FACES: each member from one border inside its box to one
     //     border inside the next box (its right seam its own), the last to
-    //     one border inside its own right edge.
+    //     one border inside its own right edge, in its state's face — a lit
+    //     member's the accent.
     for (int i = 0; i < n; ++i) {
         const KeyState s = states[static_cast<std::size_t>(i)];
-        const GuiColor face = s == KeyState::Disabled ? p.key_dim_face
+        const GuiColor face = s == KeyState::Lit      ? p.cue
+                            : s == KeyState::Disabled ? p.key_dim_face
                             : s == KeyState::LitInert ? p.lit_dim_fill
                                                       : p.key_face;
         const double fx0 = box_x(i) + b;
@@ -47,15 +57,11 @@ void paint_linked_group(cairo_t* cr, int x, int y,
         pass.rounded_rect(fx0, y0 + b, fx1, y1 - b, i == 0 ? r : 0.0,
                           i == n - 1 ? r : 0.0, face);
     }
-    // (4) A LIT MEMBER'S ACCENT over its box's whole columns between the
-    //     border's rows, the inner box's own edge and corners where it ends
-    //     the group.
-    for (int i = 0; i < n; ++i) {
+    // (3) A LIT MEMBER'S LEFT SEAM in the accent, between the border's rows:
+    //     whole cells over the left key's face.
+    for (int i = 1; i < n; ++i) {
         if (states[static_cast<std::size_t>(i)] != KeyState::Lit) continue;
-        const double lx0 = i == 0 ? x0 + b : box_x(i);
-        const double lx1 = i == n - 1 ? x1 - b : box_x(i) + w;
-        pass.rounded_rect(lx0, y0 + b, lx1, y1 - b, i == 0 ? r : 0.0,
-                          i == n - 1 ? r : 0.0, p.cue);
+        pass.rect(box_x(i), y0 + b, box_x(i) + b, y1 - b, p.cue);
     }
     pass.end();
 }

@@ -99,6 +99,7 @@
 #include "viewport.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -523,8 +524,9 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // EVERY WORD FITS ITS KEY WITH AIR, at the defaults and at his tuning (his
 // osk_key_w 24 and osk_font_px 12 are the defaults' widths and size; his
 // osk_key_h 35 moves no width), and there is NO FALLBACK: no second form, no
-// measure at paint, no second face. Measured (Liberation Sans Bold, the Keys
-// face's file since 2026-11-04 night, gui_font.h's table; HarfBuzz's
+// measure at paint, no second face. Measured on Liberation Sans Bold, wider
+// than the Regular the Keys face wears (gui_font.h's table), so every
+// advance below is a ceiling of today's (HarfBuzz's
 // unhinted advances through FreeType, text_shape's road) against the key's
 // face — the whole key, no outline (2026-11-04) — in the tablet's device px
 // at 200 %, the key widths the slots' at the one-W gap (2026-11-04): at the
@@ -536,7 +538,8 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // 23). At 100 % the key and the face scale together and every word fits as
 // well. A WORD THAT FAILS ITS KEY UNDER AN EXTREME TUNING SIMPLY OVERHANGS
 // IT — a tuning key's own consequence, centered on its key like every cap:
-// at the default box "&123" is the first to overhang, from osk_font_px 16 W
+// at the default box (Bold's thresholds, the Regular's no lower) "&123" is
+// the first to overhang, from osk_font_px 16 W
 // ("Shift" from 17, "ABC" from 18, "Esc" from 21; each threshold the least
 // whole W at which the word's advance, scaled with the em, exceeds its
 // key's face at the slots' rounding in W of 2026-11-06). (THE RECORD WAS
@@ -896,10 +899,10 @@ inline int modal_keyboard_h_px(const AppState& a) {
 }
 
 // THE KEYBOARD'S CLAIMED SURFACE: its surface, whole — its top line, the
-// pad round the keys, the grid's lines and the ground beside the seated
-// block included, so a press between keys, on a line, the pad or beside the
-// block is the keyboard's consumed nothing
-// rather than a reach into what lies under the band. (Until
+// pad round the grid and the ground beside the seated block included, so a
+// press on the top line, the pad or beside the block is the keyboard's
+// consumed nothing rather than a reach into what lies under the band, and
+// a press on the grid, its lines included, is a key's (key_at). (Until
 // 2026-10-14 the overlay's line above the band joined it when no dialog
 // stood on the keyboard.)
 inline GuiRect claim_rect(const AppState& a) {
@@ -1161,27 +1164,70 @@ inline void for_each_grid_row(const AppState& a, Page page, Fn&& fn) {
     }
 }
 
-// THE KEY UNDER A POINT, or -1, asked of the PAINTED key through the keys'
-// one predicate (point_on_key, materials.h) — THE POINTER'S REAL PLACE
-// against the painted face's real edges (architect 2026-11-15, the no-grid
-// arc: THE PAINTED FACE IS THE HIT BOX, half-open, so two keys never share
-// a point). A
-// press inside the surface but
-// off every key — the gaps, the margins — answers -1 (architect 2026-11-02,
-// R11: the keyboard's gap is dead like the ground round a program key's
-// face) and is still CONSUMED
-// by the surface's own claim (the press router owns that rule); this
-// function answers only "which key", never "whose press".
+// THE KEY UNDER A POINT, or -1 — THE BORDER IS CLICKABLE (architect
+// 2026-11-19, send Z: "the border is clickable"; the main page's linked
+// group, materials.h's point_on_key and linked_key_seam_px), the same rule
+// in both axes on this grid of shared lines (paint_onscreen_keyboard): A
+// KEY'S HIT BOX IS ITS FACE (the walk's rect) AND THE LINE TO ITS RIGHT AND
+// THE LINE UNDER IT — a shared vertical line the LEFT key's, a shared
+// horizontal line the key's ABOVE it — and THE GRID'S OUTER RING ITS
+// OUTERMOST KEYS': a row's first key takes the ring's left line, row 0's
+// keys its top line, a row's last key its right line, the last row's keys
+// its bottom line; the ground the ring's rounded corners leave counts with
+// its key, as a main-page group's box does. WHERE NO KEY STANDS ABOVE A LINE
+// — a wider row's top line past a narrower row's end (rows 3 and 4 are 52
+// quarters, rows 0–2 48: the line over row 3's RIGHT key) — THE LINE IS THE
+// KEY BELOW's, the ring of its own row. So the keys tile the grid's outer
+// rects with no shared point (half-open, THE POINTER'S REAL PLACE against
+// real edges, architect 2026-11-15, the no-grid arc), and a press on the
+// band's ground beside or round the grid answers -1, still CONSUMED by the
+// surface's own claim (the press router owns that rule); this function
+// answers only "which key", never "whose press". The press damage stays
+// the pressed key's painted hull (key_rect).
 //
-// It writes the found key's def through `out_def` so the caller needs no second
-// lookup, and it walks the same for_each_key the painter does.
+// It writes the found key's def through `out_def` so the caller needs no
+// second lookup, and it walks the same for_each_key and for_each_grid_row
+// the painter does.
+//   On the tablet (200 %, osk_key_w 24, osk_key_h 35: the keys 48 x 70, the
+//   line 2): the `5` | `6` line on columns 1151..1152 is the `5`'s — its hit
+//   x [1103, 1153), the `6`'s from 1153; the line under row 0 on y
+//   [998.5, 1000.5) is row 0's — the `1`'s hit y [926.5, 1000.5) with the
+//   ring's top line, row 1's from 1000.5; the line over RIGHT, x
+//   [1503, 1553) on y [1142.5, 1144.5), is RIGHT's.
 inline int key_at(const AppState& a, Page page, double x, double y,
                   KeyDef& out_def) {
+    const double gap = static_cast<double>(key_gap_px());
+    std::array<double, kRowCount> row_x0{};
+    std::array<double, kRowCount> row_x1{};
+    for_each_grid_row(a, page,
+                      [&](int r, double x0, double x1, double, double) {
+                          row_x0[static_cast<std::size_t>(r)] = x0;
+                          row_x1[static_cast<std::size_t>(r)] = x1;
+                      });
     int found = -1;
     KeyDef found_def{};
     for_each_key(a, page,
                  [&](uint32_t index, const KeyDef& k, const GuiRectF& r) {
-                     if (found < 0 && point_on_key(r, x, y)) {
+                     if (found >= 0) return;
+                     // The key's row and column, its index's place in the
+                     // table (key_index).
+                     const int slot = static_cast<int>(index - kStableCodeBase);
+                     const int row  = (slot / kMaxRowKeys) % kRowCount;
+                     const int col  = slot % kMaxRowKeys;
+                     const double x0 = r.x - (col == 0 ? gap : 0.0);
+                     const double x1 = r.x + (r.w + gap);
+                     const double y0 = r.y - (row == 0 ? gap : 0.0);
+                     const double y1 = r.y + (r.h + gap);
+                     const bool across = x >= x0 && x < x1;
+                     bool on = across && y >= y0 && y < y1;
+                     // The line over it where the row above stands no key.
+                     if (!on && across && row > 0 && y >= r.y - gap &&
+                         y < r.y) {
+                         const std::size_t above =
+                             static_cast<std::size_t>(row - 1);
+                         on = x < row_x0[above] || x >= row_x1[above];
+                     }
+                     if (on) {
                          found     = static_cast<int>(index);
                          found_def = k;
                      }

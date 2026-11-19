@@ -5703,10 +5703,10 @@ struct AppState {
         // the publication's coverage test. Empty until the button's first
         // paint and whenever the key does not stand.
         GuiRect painted{0, 0, 0, 0};
-        // THE SECOND RECT — ROW 8'S CLOCK, THE PLAY KEY'S ALONE (architect
-        // 2026-10-27: a press on the clock's field is a press on Play /
-        // Stop): the field as painted, published by the clock's painter
-        // (paint_bottom_row_buttons_and_clock), cut at the right block's
+        // THE SECOND RECT — THE BOTTOM ICON ROW'S TIMESTAMP, THE PLAY KEY'S
+        // ALONE (architect 2026-10-27: a press on the clock is a press on
+        // Play / Stop): the timestamp's own box, published by the row's
+        // painter (paint_bottom_row_buttons_and_clock), cut at the right block's
         // left edge where a narrow window lays the block over it (the
         // block wins in z). EMPTY ON EVERY OTHER MEMBER, and empty on Play
         // whenever its key does not stand — the `h` view's hide and the
@@ -5715,12 +5715,14 @@ struct AppState {
         // exactly where the key answers. Every roster reader asks
         // `contains`, never `rect` alone: the press, the lift, the band's
         // modifier gate and the tooltip's owner. A press on the field arms
-        // the ordinary Roster press on Play (the key wears its press face
+        // the ordinary Roster press on Play (the key wears its lit face
         // while the pointer stays on either rect — `contains`, the walk's
         // inside bit — the clock changes nothing; the act shows).
-        // THE FIELD IS THE CLOCK'S ENTRY AS PAINTED (row8_clock_rect,
-        // paint_handler.cpp; Arc's entry since send Z, 2026-11-19), tested
-        // half-open with the pointer's real place.
+        // THE FIELD IS THE TIMESTAMP'S OWN BOX — the specimen's advance from
+        // its pen by the line box's rows, real edges (bottom_left_run's
+        // `time_box`, paint_handler.cpp; plain text, no entry, architect
+        // 2026-11-19, send AA) — tested half-open with the pointer's real
+        // place.
         GuiRectF field{0.0, 0.0, 0.0, 0.0};
         // `rect` IS THE PAINTED BOX, border included (architect 2026-11-02,
         // R5: the ground is not pressable; send Z, 2026-11-19: "the border
@@ -5914,19 +5916,19 @@ struct AppState {
     DialogEditorText dialog_editor_text;
 
     // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the two dialog
-    // editors, the render player and the picker paint IN THE MODAL FAMILY'S
-    // BOX AND ON ITS CONTROLS ROW since 2026-10-14 (modal_box.h; on the
-    // bottom row from 2026-08-13, the architect scrapping the centered box of
-    // 2026-08-12: "it looks sloppy — no compositor drop shadow, and faking one
-    // wouldn't work"): while one stands row 8's tenants stand down whole and
-    // the modal has the area. This is the
+    // editors and the progress modal paint as DIALOG WINDOWS centered in the
+    // modal family's room (paint_dialog_window, paint_handler.cpp's THE
+    // DIALOG WINDOW); the render player and the picker on the family's
+    // controls row (modal_box.h): while one stands the bottom icon row's
+    // tenants stand down whole. This is the
     // painter's stash of what was drawn, the roster model:
     // paint_modal_dialog rewrites it every run (zero/invalid when no dialog
     // stands), and the pointer path reads it instead of re-deriving layout.
     // `box` is the modal's whole SURFACE — the controls row under the render
-    // player and the picker, the modal family's whole area under a prompt or
-    // a dialog editor (modal_area_rect, modal_box.h, 2026-10-14; the taskbar
-    // overlay 2026-10-10 to 2026-10-14) — which is what the hover
+    // player and the picker, the score viewer's whole area (modal_area_rect,
+    // modal_box.h), and under a question, a dialog editor or the progress
+    // modal THE DIALOG'S WINDOW AND ITS SHADOW'S REACH (xfwm_shadow_rect,
+    // modal_box.h; paint_dialog_window) — which is what the hover
     // invalidation and the damage ride; `field` is the editor's entry, its
     // box border included (zero for prompts) — the click-to-caret /
     // text-drag claim region and a standing editor's edit damage
@@ -6272,7 +6274,9 @@ struct AppState {
         // against (claim_player_scrub_press) rather than the live position a
         // tick ahead. A frame whose clip does not cover what the knob's move
         // owes (scale_knob_move_rect) carries the last painted center
-        // (paint_modal_dialog's paint_scrub_item).
+        // (paint_modal_dialog's paint_scrub_item); a held knob's move
+        // damages from this center (scrub_knob_motion_damage,
+        // input_pointer.cpp).
         double                         scrub_thumb_x = -1.0;
         // (THE SETTINGS EDITOR'S CHOICE COMBO — the combo, its dropped list,
         // the list's rows and its scroll bar, 2026-10-07 to 2026-10-14 — went
@@ -8274,10 +8278,11 @@ struct AppState {
     // ruling is at the TrimState store.
     TrimState trim;
 
-    // The command prompt, THE BOTTOM ROW'S MODAL (paint_modal_dialog,
-    // 2026-08-13 — the row's tenants stand down and the lane carries the
-    // question, its responses real buttons). Active only when a close /
-    // re-detect gesture fires while a confirmation is required.
+    // The command prompt, A QUESTION IN A DIALOG WINDOW (paint_modal_dialog's
+    // paint_dialog_window: the question over its action row of real
+    // buttons, the bottom icon row's tenants standing down). Active only
+    // when a close / re-detect gesture fires while a confirmation is
+    // required.
     PromptState prompt;
 
     // Shared text-editor state for TWO editors distinguished by Kind: the
@@ -8293,16 +8298,18 @@ struct AppState {
     // invalidate the top strip without redundant repaints.
     bool top_flag_editor_blink_last = false;
 
-    // Settings-prompt editor. Opens on `;`, accepts a single `key=value`
-    // line, writes to engine_settings on commit. Paints as the BOTTOM ROW'S
-    // MODAL (2026-08-13); separate from top_flag_editor so the two paint
-    // regions stay independent (the in-practice mutual exclusion comes from the
-    // flag editor swallowing all keys while active).
+    // THE DIALOG LINE EDITOR — a dialog window's entry (paint_dialog_window),
+    // opened from a row of the settings page, the trim presets list or the
+    // BPM form; separate from top_flag_editor so the two paint regions stay
+    // independent (the in-practice mutual exclusion comes from the flag
+    // editor swallowing all keys while active).
     // THE DIALOG LINE EDITOR'S ONE BUFFER, THREE KINDS:
-    // Kind::SettingsAssignment, the settings editor's line;
+    // Kind::SettingsAssignment, the settings editor's `key=value` line
+    // (GuiSettingsEditor::open);
     // Kind::TrimPresetName, the trim preset's name (2026-10-28 night, the
     // trim presets list's Save As, GuiInputHandler::trim_presets_save_as);
-    // and Kind::BpmField, one line of the BPM form (architect 2026-10-29,
+    // and Kind::BpmField, one field of the BPM form, its value alone
+    // (architect 2026-10-29; the value alone since 2026-11-19, send AA;
     // GuiInputHandler::bpm_form_commit, `target` the field) — the settings
     // editor's shape and every road it rides (the paint, the blink, the
     // caret's click, the on-screen keyboard, the modal gate), the kind
@@ -8342,7 +8349,7 @@ struct AppState {
     // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
     // the sweep's ladder; one inert group row and the three `key=value`
     // lines `beats=`, `low=` and `high=`, the open act the line editor
-    // opened PREFILLED on the row's line once the form has closed, its
+    // opened PREFILLED on the row's value once the form has closed, its
     // controls row RENDER · Cancel, BpmFormButtonAct).
     // The struct keeps its shape rather
     // than folding into the overlay's tag, the two saying different things:
@@ -8437,7 +8444,7 @@ struct AppState {
     // Save key while Offline), the
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
-    // row 8's `h` walk line (its `GitHub: <word>` segment), by the Save
+    // the status bar's `h` walk line (its `GitHub: <word>` segment), by the Save
     // button's face in the view (its grey, the Pull glyph while Behind and
     // the Check glyph where the chord asks again —
     // history_checkpoint_actionable, history_pull_actionable,
@@ -14136,7 +14143,7 @@ inline bool history_revert_actionable(const AppState& a) {
 // remote walk and cards the reason) and its FACE (redesign_button_enabled's
 // SessionHistory arm); SAVE'S FACE in the view through the three
 // predicates below, which grey the checkpoint act without a clone (so the
-// act, run_publish_chord, never meets one); row 8's GitHub SEGMENT (history_walk_line), which stands
+// act, run_publish_chord, never meets one); the status bar's walk line's GitHub SEGMENT (history_walk_line), which stands
 // only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
 // (on_history_prefetch_ready), which is the odd one out — it does not refuse
 // an act but CARVES A FALLBACK VISIT OUT of the closer that ends a visit whose
@@ -14209,7 +14216,7 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // GitHub status reads OFFLINE: the reading may be minutes old (the hotspot
 // coming up after the view opened), so the chord and the Save button's lift
 // DISPATCH THE CHECK (dispatch_github_check, its one dispatcher) and nothing
-// else — row 8 reads `checking...` and then the answer, and the next press
+// else — the status bar's walk line reads `checking...` and then the answer, and the next press
 // acts on it (Behind puts the Pull face up). The face is live on these terms
 // (a face that advertises an act dispatches it) and greys under Checking like
 // every other status in flight, and it names the act (2026-10-28): Save's
@@ -18024,7 +18031,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // 2026-10-05 — the icon row's history stand-ins until 2026-10-11,
         // row 8's in Left / Right's seats in the nudge-and-play group since
         // (kTransportHistoryStandIns), the tooltip standing above them as
-        // above every key (tooltip_box_rect).
+        // above every key but a top-row one (tooltip_box_rect).
         case RedesignButton::HistoryOlder:
             return {"Older", "Hold for oldest"};
         case RedesignButton::HistoryNewer:

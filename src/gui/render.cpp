@@ -995,9 +995,15 @@ GuiRectF trim_endcap_rect(bool is_begin, int strip_x,
     // end zone stands edge to edge right of it, overrunning its own by
     // 2 x btn_w − span. THE RULE READS THE PLACES WHEREVER THEY ARE, on
     // screen or off (architect 2026-10-05): a narrow window panned past an
-    // edge keeps its two zones edge to edge and slides off whole. The rect
-    // is the ZONE over the trim lane `row`'s whole height — the hit band,
-    // before the lane's clip.
+    // edge keeps its two zones edge to edge and slides off whole. With the
+    // strip on the glass's edges (waveform_area x 0, the panel's width) a
+    // narrow window near the strip's right edge has its end zone cut by the
+    // lane, and wholly past it once the begin stands within one zone of the
+    // edge — at the song's end at FIT, a window of a few px — so that end
+    // has no grab until a zoom-in makes the window two zones wide or the
+    // begin's stroke widens it (the rule's consequence, input_trim.cpp's
+    // update_trim_drag). The rect is the ZONE over the trim lane `row`'s
+    // whole height — the hit band, before the lane's clip.
     const double span = end.x - begin.x + 1.0;
     const bool narrow = span < 2.0 * btn_w;
     const double sx = static_cast<double>(strip_x);
@@ -1156,7 +1162,9 @@ void render_trim_flags(cairo_t* cr,
     // trim_bridge_gap) — each zone cut to the lane's painted width, the clip
     // the pixels take, so a zone overrunning the lane claims its visible
     // stretch alone; a window wholly off one side publishes no zone on that
-    // side and an empty bridge. REAL EDGES (architect 2026-11-15, the
+    // side and an empty bridge, and a narrow window's end zone standing
+    // wholly past the right edge (trim_endcap_rect's narrow rule) publishes
+    // none though its end is on screen. REAL EDGES (architect 2026-11-15, the
     // no-grid arc): the zones stand on the span's two real ends — the
     // bounds' own places, not the pill's ink the seat inside them (architect
     // 2026-11-18) — AS THE GRABS HAVE THEM, `x`, the EOF-wall clamp in it

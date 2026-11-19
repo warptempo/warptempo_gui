@@ -3042,10 +3042,10 @@ void GuiInputHandler::run_publish_chord() {
         // BE STALE — a view opened while the link was still coming up would
         // read offline for its whole life — so the act never answers from it.
         // The press asks again through the check's one dispatcher and does
-        // nothing else: row 8 turns to `checking...` and then the answer, and
+        // nothing else: the status bar's walk line turns to `checking...` and then the answer, and
         // the next press acts on it (Behind puts the Pull face up; the Save
         // key reads CHECK on these terms, redesign_button_glyph's fourth
-        // glyph, 2026-10-28). No card — row 8 shows the asking.
+        // glyph, 2026-10-28). No card — the walk line shows the asking.
         dispatch_github_check();
         return;
     case GuiGitHubStatus::Refused:
@@ -7120,9 +7120,10 @@ void GuiInputHandler::open_bpm_form(GuiBpmField seat) {
 }
 
 // THE ROWS: the settings page's shape — one inert Group row, "BPM", then one
-// Plain row per field in GuiBpmField's order, its text THE LINE THE EDITOR
-// WOULD OPEN WITH, `<key>=<value>` (bpm_field_text: an unset field the
-// empty value, `beats=`), so row f + 1 is field f. THE SEAT is `seat`'s row,
+// Plain row per field in GuiBpmField's order, its text the field's key and
+// value, `<key>=<value>` (bpm_field_text: an unset field the empty value,
+// `beats=`; the line editor opens on the value past the `=` alone,
+// bpm_form_commit), so row f + 1 is field f. THE SEAT is `seat`'s row,
 // through the one set_highlight, landed centered as far as the listing's
 // ends allow (scroll_row_centered), the settings page's landing.
 void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {

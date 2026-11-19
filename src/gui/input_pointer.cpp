@@ -2964,7 +2964,7 @@ void GuiInputHandler::set_player_hot(int index) {
 // own clear_redesign_button_press and for its reason: a pointer that has left
 // the window is on no button, and an act that has not happened yet must not
 // be left waiting for a release that may never come. The press face's
-// un-press damages the box (2026-11-05).
+// un-press damages that face (invalidate_modal_press_face).
 void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
     const int armed = app.modal_dialog_pressed;
@@ -2987,8 +2987,9 @@ void GuiInputHandler::clear_modal_dialog_press() {
 // (paint_modal_dialog's carry), so the comparator still reads what is on
 // screen. EVERY EDGE OF THE TWO PRESS BITS COMES THROUGH HERE: the pointer
 // arm, its feint and return, its clear and its lift, and the keyboard arm's
-// press, release and cancel. THE FOCUS'S MOVE KEEPS THE BOX
-// (arm_modal_dialog_press: a dialog editor's field reads it). With no stash
+// press, release and cancel. A DIALOG EDITOR'S FOCUS MOVE KEEPS THE BOX
+// (arm_modal_dialog_press: its field reads the focus; no other owner paints
+// one). With no stash
 // standing, or an index it does not hold, the box as before.
 void GuiInputHandler::invalidate_modal_press_face(int index) {
     if (!app.modal_dialog.valid) return;
@@ -3007,7 +3008,7 @@ void GuiInputHandler::invalidate_modal_press_face(int index) {
 // THE KEYBOARD ARM'S HARD END, the twin of the one above: an act that has not
 // happened yet must not be left waiting for a release that will commit
 // nothing (the focus moving off the held button, below). The press face's
-// un-press damages the box (2026-11-05); the contract is at
+// un-press damages that face (invalidate_modal_press_face); the contract is at
 // AppState::modal_dialog_key_pressed.
 void GuiInputHandler::clear_modal_dialog_key_press() {
     if (app.modal_dialog_key_pressed < 0) return;
@@ -3078,7 +3079,15 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
         clear_modal_dialog_key_press();
         app.modal_dialog_focus        = hit;
         app.modal_dialog_focus_active = false;
-        viewport.invalidate_rect(app.modal_dialog.box);
+        // THE FOCUS'S DAMAGE IS A DIALOG EDITOR'S ALONE: its field reads the
+        // focus (the entry's ring and caret, paint_modal_dialog's editor
+        // arm), so the move damages the window as published. A question,
+        // the progress dialog, the player, the picker and the score viewer
+        // paint no focus (the row's NO FOCUS LOOK), so their press owes the
+        // face damaged above and nothing more — never the window and its
+        // shadow.
+        if (app.modal_dialog.owner == AppState::ModalDialogOwner::Editor)
+            viewport.invalidate_rect(app.modal_dialog.box);
     }
     app.modal_dialog_press_ms = monotonic_ms();
     return true;
@@ -3733,9 +3742,9 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     // A PRESS CARRYING THE BARREL'S CTRL IS CONSUMED BEFORE THE HIT TEST, on
     // every key — the letters, Bksp, Shift, the page key, Copy, Paste, Enter,
     // Esc, Tab, LEFT, RIGHT, the pass key, the space bar — exactly as a press
-    // on a gap is: nothing typed,
-    // no lamp toggled, no held key (so no press face and no key-up owed at
-    // the lift), the band's refusal's shape. Copy and Paste keep their OWN
+    // on the band's ground off the grid is: nothing typed, no lamp toggled,
+    // no held key (so no lit face and no key-up owed at the lift), the
+    // band's refusal's shape. Copy and Paste keep their OWN
     // ctrl on an ordinary tap (`carried`, below), and that is the only ctrl
     // a key's press carries (a barrel edge under a held key's repeat only
     // disarms it: no ctrl spelling of a repeating key is the editors', so the
@@ -3754,7 +3763,7 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     onscreen_keyboard::KeyDef def{};
     const int hit =
         onscreen_keyboard::key_at(app, page, at.rx, at.ry, def);
-    if (hit < 0) return true;   // a gap, the margin: consumed, no key
+    if (hit < 0) return true;   // the band's ground off the grid: consumed
 
     using Role = onscreen_keyboard::Role;
 
@@ -4038,8 +4047,8 @@ bool GuiInputHandler::claim_folder_overlay_press(
     press.scroll_at_press = app.folder_overlay.scroll_px;
     press.inside          = true;
     press.scrolling       = false;
-    // THE ARM: the row wears the lists' press pair while the press stands
-    // on it (paint_folder_overlay; the press arc, architect 2026-11-05) —
+    // THE ARM: the row wears the selection pair, the highlight's own, while
+    // the press stands on it (paint_list_view's lit row) —
     // the row damaged here, at every inside crossing (the motion below) and
     // at the lift (finish_folder_overlay_release); an inert row's arm paints
     // nothing, the painter's own gate.
@@ -4080,7 +4089,7 @@ void GuiInputHandler::update_folder_overlay_press_motion(
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
         } else {
             // THE FEINT'S BIT (2026-11-05): the row under the press wears
-            // the press pair while the pointer is on it, each crossing
+            // the selection pair while the pointer is on it, each crossing
             // damaging the row.
             const bool inside =
                 folder_overlay::row_at(app, at.rx, at.ry) == press.row;
@@ -4322,6 +4331,22 @@ static void invalidate_scrub_clock(Viewport& viewport, const AppState& app) {
     if (clock.w > 0 && clock.h > 0) viewport.invalidate_rect(clock);
 }
 
+// A HELD KNOB'S MOVE DAMAGE, the one expression both owners' motions share
+// (render.h's scrub block, THE DAMAGE): the hull from THE PUBLISHED CENTER —
+// the knob the screen last showed (AppState::ModalDialogGeometry::
+// scrub_thumb_x, ON SCREEN IS AS PAINTED) — to the new carried center
+// `to_x`, never from the drag's previous carry, which may not have been
+// presented: two motions between presents (500 -> 530 -> 560) then owe
+// 500 -> 530 and 500 -> 560, so the later clip alone covers what the
+// painter owes from the published center and the painter publishes 560
+// (paint_scrub_item's publish rule). With no published center (-1) the
+// painter owes the whole item, so the motion damages it.
+static GuiRect scrub_knob_motion_damage(const AppState& app, double to_x) {
+    const GuiRect item  = app.modal_dialog.scrub;
+    const double  shown = app.modal_dialog.scrub_thumb_x;
+    return shown >= 0.0 ? scale_knob_move_rect(item, shown, to_x) : item;
+}
+
 // THE DRAG'S CARRIED CENTER, clamped onto the HANDLE'S TRAVEL — the one
 // expression its two writers (the press's arm, the motion) share, so the
 // painted handle sits inside its own track at every point of a drag and the
@@ -4417,9 +4442,10 @@ void GuiInputHandler::update_player_scrub_motion(double x) {
     if (track.w <= 0) return;
     const double mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (mx == drag.marker_x) return;
-    // THE MOVE'S DAMAGE: the knob's old and new discs and the trough between,
-    // where the played part changed (render.h's scrub block).
-    viewport.invalidate_rect(scale_knob_move_rect(track, drag.marker_x, mx));
+    // THE MOVE'S DAMAGE: the shown knob's disc, the new one and the trough
+    // between, where the played part changed — from the published center
+    // (scrub_knob_motion_damage).
+    viewport.invalidate_rect(scrub_knob_motion_damage(app, mx));
     drag.marker_x = mx;
     drag.moved    = true;
     // The timestamp follows the thumb (the block head).
@@ -4595,8 +4621,9 @@ void GuiInputHandler::update_score_scrub_motion(double x) {
     if (track.w <= 0) return;
     const double mx = clamp_player_scrub_marker_x(x - drag.grab_dx);
     if (mx == drag.marker_x) return;
-    // The move's damage (the render player's motion).
-    viewport.invalidate_rect(scale_knob_move_rect(track, drag.marker_x, mx));
+    // The move's damage, from the published center (the render player's
+    // motion, scrub_knob_motion_damage).
+    viewport.invalidate_rect(scrub_knob_motion_damage(app, mx));
     drag.marker_x = mx;
     drag.moved    = true;
     // The soundtrack's timestamp follows the thumb (the block head).
@@ -8019,9 +8046,10 @@ void GuiInputHandler::hide_shift_tooltip() {
 
 // THE SHOW — the one show body, shared by the wait's ripening (tick_tooltip)
 // and the bypass's immediate arrival (note_tooltip_hover): the box takes the
-// hovered owner, SEATED OFF THAT OWNER'S FACE ALONE — above it, its left edge
-// on the face's (architect 2026-11-07, sessions 90 and 91; the placement at
-// tooltip_box_rect) — and the chain is spent into it (`left_ms` 0: the box's
+// hovered owner, SEATED OFF THAT OWNER'S FACE ALONE — under a top-row key,
+// above every other face, its left edge on the face's (architect
+// 2026-11-07, sessions 90 and 91; send Z, 2026-11-19; the placement at
+// tooltip_box_rect, main.cpp) — and the chain is spent into it (`left_ms` 0: the box's
 // own leave re-arms it). The pen's one say in the seat is taken here and held
 // while the box stands: whether the pointer is on row 8's clock field, Play's
 // second rect (`shown_on_field`, the face the box stands over), so motion

@@ -1207,7 +1207,7 @@ enum class GuiHistoryCommitOutcome {
 };
 
 // THE GITHUB STATUS (architect 2026-09-27) — how this device's branch stands
-// against GitHub, as of the last fetch. Row 8's `h` walk line says it as
+// against GitHub, as of the last fetch. The status bar's `h` walk line says it as
 // `GitHub: <word>` (github_status_word), and it selects what the publish
 // chord (Ctrl+Shift+S, the `h` view's Save key) does: UpToDate commits, Ahead
 // commits or retries the push, Behind pulls, Offline asks GitHub again, and
@@ -1237,7 +1237,7 @@ enum class GuiGitHubStatus {
     Refused,
 };
 
-// Row 8's word for a status — "checking...", "up to date", "ahead",
+// The walk line's word for a status — "checking...", "up to date", "ahead",
 // "behind", "diverged", "offline", "refused" — or null for Unchecked.
 const char* github_status_word(GuiGitHubStatus status);
 

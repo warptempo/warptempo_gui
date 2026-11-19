@@ -273,7 +273,8 @@ namespace {
 // ruler's own bottom rows. Every seam — the window top|icon seam,
 // icon|trim (GAP 1's band; where gap 1 is zero the trim lane's
 // own first row is the boundary), trim|ruler, ruler|marker, marker|foot
-// line, well's foot|bottom row, and both outer kFlagBottomLiftPx gaps — is
+// line, well's foot|bottom row, bottom row|status bar, and both outer
+// kFlagBottomLiftPx gaps — is
 // honored structurally by the loop below and by every consumer. (The focused
 // cue's stem and the playhead's line are the canvas's, below the lane's foot
 // line; the
@@ -284,9 +285,10 @@ namespace {
 // — strip_row_rect — is the single geometry owner; every named accessor
 // delegates to it, so a lane is a pure index from its strip's window edge,
 // and a bottom lane's y is its inset flipped about the window midline (THE
-// BOTTOM ROW rests ON the window's foot as bottom lane 0 and the well's
-// foot above it as lane 1 — gap 2 above both, in
-// bottom_strip_h's total rather than in a lane's inset).
+// STATUS BAR — its line and the bar — rests ON the window's foot as bottom
+// lane 0, THE BOTTOM ICON ROW above it as lane 1 and the well's foot above
+// that as lane 2 — gap 2 above all three, in bottom_strip_h's total rather
+// than in a lane's inset).
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
 // any geometry arithmetic so no code path can compute a negative/zero waveform,
@@ -353,7 +355,7 @@ int top_lane_height(int lane) {
         default: return 0;
     }
 }
-// The bottom strip's TWO lanes, indexed from the WINDOW'S FOOT inward like
+// The bottom strip's THREE lanes, indexed from the WINDOW'S FOOT inward like
 // every lane table here: lane 0 is THE STATUS BAR on the window's foot
 // (architect 2026-11-19, send Z: its line and its 22 W; render.h's status
 // bar block), lane 1 THE BOTTOM ICON ROW (2026-08-12, rows 8 and 9 merged:
@@ -365,7 +367,7 @@ int top_lane_height(int lane) {
 // placement block), both standing above the status bar. GAP 2 sits ABOVE the
 // three, in bottom_strip_h's total
 // rather than in a lane's inset, so lane 0 is flush with the window edge
-// like the top strip's own lane 0 (and gap 2 being 0, lane 1's top is the
+// like the top strip's own lane 0 (and gap 2 being 0, lane 2's top is the
 // waveform's bottom).
 constexpr int kBottomStatusLane   = 0;
 constexpr int kBottomRowLane      = 1;
@@ -712,20 +714,21 @@ GuiRect well_foot_area(const AppState& a) {
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
 // render.h's bottom-row block) — THE STRIP since the simple layout
 // (2026-10-22): Arc's inner pad 8 W, the key, the outer pad 7 W on the body
-// tone (send Z, 2026-11-19), the clock at the left in its flat time field
-// with the active tab's name on the ground right of it (THE STATE LINE
-// moved to the status bar that day), and, packed against the
-// right edge, the skips (Go to Start, Go to End; 2026-10-24), the
+// tone (send Z, 2026-11-19), at the left one plain-text run — the timestamp,
+// a text pipe and the active tab's name (paint_handler.cpp's
+// bottom_left_run) — and, packed against the right edge, the COPY / PASTE
+// duo, the skips (Go to Start, Go to End; 2026-10-24), the
 // MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
-// Stop, the last case; architect 2026-10-18), each a plain run of cases,
+// Stop, the last case; architect 2026-10-18), each one linked group,
 // the run gap of bare ground between two (render.h's program_run_gap_px, the
 // `run_gap` tuning key). It is BOTTOM LANE 1, over the status bar (lane 0)
 // and under the well's foot (lane 2, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal
-// family's controls row on its rows and the on-screen keyboard's band over
-// it are never lanes: modal_box.h, onscreen_keyboard.h's placement block).
+// family's controls row on its rows and the on-screen keyboard's band
+// standing above it are never lanes: modal_box.h, onscreen_keyboard.h's
+// placement block).
 // Gap 2 stands above lane 1 inside bottom_strip_h and is zero since the
 // waveform became the whole leftover.
 // THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
@@ -2689,7 +2692,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     with the marker lane's face and the cursor's head, the
             //     flag blit) is the plate branch's, so the lanes show the
             //     window's ground (render_background).
-            //   * THE BOTTOM ICON ROW: the clock's field empty and no tab
+            //   * THE BOTTOM ICON ROW: the timestamp empty and no tab
             //     name (clock_time_text and paint_bottom_row_buttons_and_clock's
             //     no-piece arms); THE STATUS BAR empty (no progress text, no
             //     selection, no `h` view).

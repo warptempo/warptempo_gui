@@ -22,9 +22,9 @@
 // A BOUND SET BY A PEN PLACE IS THE FRAME THE CONVERSION FINDS THERE, THEN
 // THE WALLS, NOTHING RAISING IT TO THE SOURCE'S END (architect 2026-11-19):
 // in a mapped domain an end carried as far as it goes can rest a few frames
-// short of total-1, a truthful sub-window, and Reset Trim is the one road to
-// the exact full window — the rule, its reason and its worked example at
-// trim_bound_frame_at_x, the one owner.
+// short of total-1, a truthful sub-window, and Reset Trim is the direct road
+// to the exact full window — the rule, its reason, its worked example and
+// every road that writes total-1 at trim_bound_frame_at_x, the one owner.
 //
 // PARTNER WALLS ARE NOW PER-ROUTE (architect 2026-08-02, splitting what used to
 // be one blanket "there are no partner walls" clause). What is unchanged
@@ -231,25 +231,43 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // domain's total is the DISPLAYED total, the source end's ROUNDED image
 // (live_total_frames), and the frame at x = w can stand short of the image
 // of total-1, so its inverse — the bound — stops short of the end: a 4.00 x
-// 2.00 speed-up of 1,801,603 source frames ends at target 225,200.375, its
-// displayed total 225,200, and total-1 = 1,801,602 maps to 225,200.25; at
-// Target FIT (w 2252, q 100) the strip's right edge is 225,200 exactly,
-// whose inverse is 1,801,600, so an end carried as far as it goes rests on
-// 1,801,600, two frames short of total-1 — a truthful sub-window, rendered
-// as one. The shortfall is under half the last section's ratio of source
-// frames per displayed frame (the edge stands at most half a displayed
-// frame left of the end's real image), none where that ratio is under 3,
-// and none where the edge stands past the image of total-1. (In Source
-// view at the whole-song zoom q = 800.0625 and the edge is 1,801,740.75:
-// the end rests on total-1.)
+// 2.00 speed-up of 1,843,203 source frames ends at target 230,400.375, its
+// displayed total 230,400, and total-1 = 1,843,202 maps to 230,400.25; at
+// Target FIT (w 2304, q = ceil(230,400 · 16 / 2304) / 16 = 100) the strip's
+// right edge is 230,400 exactly, whose inverse is 1,843,200, so an end
+// carried as far as it goes rests on 1,843,200, two frames short of
+// total-1 — a truthful sub-window, rendered as one. The shortfall is under
+// half the last section's ratio of source frames per displayed frame (the
+// edge stands at most half a displayed frame left of the end's real
+// image), none where that ratio is under 3, and none where the edge stands
+// past the image of total-1 — the fit's ceil to a sixteenth decides it per
+// piece and width: the same map on 1,801,603 frames (displayed total
+// 225,200) fits at q = 97.75, its edge 225,216 past the image of total-1,
+// so there the end rests on total-1. (In Source view at the whole-song zoom
+// of the 1,843,203-frame piece q = 800.0625 and the edge is 1,843,344: the
+// end rests on total-1.)
 //
-// RESET TRIM (PRESETS' hold) IS THE ONE ROAD TO THE EXACT FULL WINDOW
-// [0, total-1], the integer pair every full-window compare
-// (trim_is_full_window — Reset Trim's already-full guard, the render's
-// sub-window test, the crossed reset's one-frame exception) reads as full;
-// a trim a few frames short of it is not the full window and renders as
-// the sub-window it is, with no tolerance anywhere. Degenerate geometry is
-// the callers' to refuse first.
+// THE ROADS THAT WRITE total-1, every one a wall or the full pair, none a
+// raise: (a) RESET TRIM (PRESETS' hold), the direct road to the exact full
+// window [0, total-1], writing it from any trim (handle_trim_clear_both);
+// (b) THE CROSSED RESET, a commit whose end lands on or before its begin
+// writing the same pair (auto_clear_crossed_trim); (c) THE BRIDGE PUSHED
+// PAST THE RIGHT WALL, its proposal past the ceiling's displayed frame,
+// which rests the end on total-1 and keeps the begin what the delta gives
+// it — so a bridge on [0, 1,843,200] above, pushed right at Target FIT,
+// lands the full pair, the delta clamped to 0 keeping the begin on 0
+// (update_trim_drag's pair arm); (d) A PEN PLACE whose conversion answers
+// at or past the last frame — in Source view, or in a target view with no
+// map, every end carried to the strip's right edge at the right wall; in a
+// mapped domain only where the edge stands past the image of total-1 —
+// this landing, the endcap drag and the TRIM sweep's ends alike, the wall
+// holding it; (e) the typed `trim_end=` line and a trim preset whose pair
+// holds it, writing the frame they carry. [0, total-1] is the integer pair
+// every full-window compare (trim_is_full_window — Reset Trim's
+// already-full guard, the render's sub-window test, the crossed reset's
+// one-frame exception) reads as full; a trim a few frames short of it is
+// not the full window and renders as the sub-window it is, with no
+// tolerance anywhere. Degenerate geometry is the callers' to refuse first.
 int64_t trim_bound_frame_at_x(const AppState& app, const GuiAudio& audio,
                               double x) {
     const int64_t wall = audio.total_frames() - 1;
@@ -854,7 +872,8 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // end on total-1. An end whose proposal stands ON the ceiling is no
         // push, and rests where the inverse of its proposal puts it (on
         // Sol's piece 1,801,600, two short of total-1: the truthful
-        // shortfall; Reset Trim is the full window's one exact road). The
+        // shortfall; the roads to the exact full window are listed at
+        // trim_bound_frame_at_x's head). The
         // push is told apart from a pen that has not pushed even where the
         // clamp leaves the delta 0 (a bound already painted on its wall; the
         // zero-delta rule below would otherwise keep it where it rests):
@@ -1043,7 +1062,8 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // displayed total 45,000) drifting left 0.0078125 px at q = 20 tows
         // to 45,000.21875, whose inverse 720,003.5 rounds to 720,004, under a
         // still cap — the truthful frame under the pen, and no longer the
-        // full window (Reset Trim is its one exact road). THE PEN AT ITS
+        // full window (the roads back to it at trim_bound_frame_at_x's
+        // head). THE PEN AT ITS
         // PRESS'S X HAS NOT TRAVELLED
         // (TrimDragState::press_x), and the bound stays as found — the else
         // of this arm: a press that never moves writes nothing, not even the
@@ -1082,33 +1102,38 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // there; in a mapped domain the domain's total is the source end's
     // rounded image and `vp_hi` below is that edge's inverse, which can
     // stand a few frames short of total-1 (the head's worked example: at
-    // Target FIT, 1,801,600 of 1,801,602), and the end rests there, the
+    // Target FIT, 1,843,200 of 1,843,202), and the end rests there, the
     // truthful shortfall. At the left wall the frame at x = 0 is frame 0.
     // THE PEN'S TRAVEL PAST THE EDGE IS
     // THE GRAB'S OWN OFFSET, the towed place reaching x = w once the pen
-    // stands at w + g: an end zone ends one px right of its bound
-    // (trim_endcap_rect), so g < 1 px and the pen reaches the strip edge's
-    // frame under one px past the strip's right edge; a begin zone starts on its bound, so g
-    // >= 0 and the pen reaches frame 0 inside the strip (in a mapped domain
-    // g is measured off the bound's unrounded image, which stands within
-    // half a displayed frame, 1/40 px at most, of the painted place the
-    // zone stands on, so each figure moves by that much);
-    // only a NARROW window's end zone, standing edge to edge right of the
-    // begin's, can carry a g of up to two zones' width (40 device px on the
-    // tablet), more than the 26 px of panel right of the strip's edge
-    // there, so such a grab can stop short of the end. A SECOND STROKE from
-    // the same grab place carries a smaller g — the bound has moved right
-    // under it by the first stroke's travel — and the window may still be
-    // narrow: Sol's round-2 piece (4.00 x 2.00) at Target FIT, q = 100,
-    // the pair [1,775,200, 1,776,000] at waveform-relative x 2219 / 2220,
-    // the end zone 2239 .. 2259 clipped to the lane's 2252; a grab at 2251
-    // carries g = 31, the
-    // first stroke to the panel's last px (x 2277) tows the end to 2246
-    // (1,796,800), the window 28 px, still under two zones; the second grab
-    // at 2251 carries g = 5 and reaches the frame at the strip's right
-    // edge, 1,801,600, two short of total-1 (the head's worked example). The strokes
-    // are the narrow rule's accepted price: both ends of a narrow window
-    // stay grabbable. THE
+    // stands at w + g — AND NO PEN PLACE STANDS RIGHT OF x = w: the strip is
+    // the panel's whole width (waveform_area x 0, edge to edge), so the
+    // glass ends at the strip's right edge and the end's towed place reaches
+    // the frame there only from a grab left of the end's own place (g < 0).
+    // An end zone ends one px right of its bound (trim_endcap_rect), so a
+    // grab anywhere in it but its last px carries g < 0 and the pen reaches
+    // that frame on the glass's last px or before; a begin zone starts on
+    // its bound, so g >= 0 and the pen reaches frame 0 inside the strip (in
+    // a mapped domain g is measured off the bound's unrounded image, which
+    // stands within half a displayed frame, 1/40 px at most, of the painted
+    // place the zone stands on, so each figure moves by that much).
+    // A NARROW WINDOW'S END ZONE stands edge to edge right of the begin's
+    // (trim_endcap_rect's rule), its right edge up to two zones' width (40
+    // device px on the tablet) right of the begin's place, so it stands
+    // partly or wholly right of the end's own place — a grab there carries
+    // g > 0 and cannot tow the end to the strip edge's frame — and near the
+    // strip's right edge the lane cuts it to its visible stretch; once the
+    // begin stands within one zone of that edge the zone is wholly past it
+    // and the end has no zone at all (render_trim_flags publishes none). THE
+    // RULE'S
+    // CONSEQUENCE, accepted: in Source view at the whole-song zoom of a
+    // 1,801,603-frame piece (q = 782), a window [1,790,000, 1,801,602]
+    // stands at x 2289.00 .. 2303.84 (the end's grab place held on 2303),
+    // its end zone 2309.00 .. 2329.00, off the glass whole, and a press on
+    // the pill lands in the begin's zone; such an end is reached by zooming
+    // in until the window is two zones wide, when its zone stands on the
+    // end's own place again, or by the begin's stroke first, widening the
+    // window from the left. THE
     // GRAB CAN BEGIN ON A BOUND JUST OFF SCREEN (architect 2026-10-05): a
     // button sliding off an edge is grabbed by its visible columns
     // (hit_test_trim_endcap tests what the painter published), its bound up
