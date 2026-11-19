@@ -40,8 +40,9 @@ its SOURCE ROLE, the pairs read out of kOwnThemeRoles in the same C++ file
 SidebarForeground its ControlForeground; send AA's stage D1, 2026-11-19:
 TooltipBackground its SurfaceBackground, CardBackground and
 CardStandingBackground its Alert; send AA's stage D2, 2026-11-19:
-TitleHighlight its SurfaceArea, ScaleTrough its ScrollbarInnerTrack), after
-the --set replacements, and a
+TitleHighlight its SurfaceArea, ScaleTrough its ScrollbarInnerTrack; send
+AA's stage D3, 2026-11-19: ScaleSliderBorder its ClipBorder), after the
+--set replacements, and a
 --set on an own role itself wins.
 
 OPTIONS, for the files the app ships modified (a `_mod` theme), so that every

@@ -150,7 +150,7 @@ struct SettingsTrim {
 //   - the RENDER FINGERPRINT: a full window hashes as the old unset bytes, which
 //     is what keeps pre-arc untrimmed renders reusable;
 //   - the CROSSED-PAIR NORMALIZATIONS (the load reset, the shared trim commit
-//     tail, the settings editor's inactive band), where THE ORDER IS THE RULE —
+//     tail), where THE ORDER IS THE RULE —
 //     the recognition runs AHEAD of the crossed compare, so a one-frame source's
 //     canonical [0, 0] is never classified as a crossed pair;
 //   - the GESTURE IDENTITY questions, which ask only whether there is anything
@@ -300,16 +300,16 @@ std::optional<std::expected<void, std::string>> try_engine_key(
     int ln, const std::string& key, const std::string& value,
     EngineSettings& engine);
 
-// The typed result of a GUI-kind (key, value) grammar check. The consumers
-// (the whole-file reader and the settings editor) route by key name / tab
-// suffix, so only the parsed-value members below are read; each member's
-// comment names the key(s) that fill it. (THE `float f` MEMBER WENT WITH
-// `playback_speed` 2026-08-27, architect approval 2026-08-27: it was that key's
-// alone, and no key in the schema carries a float now. THE `std::string text`
-// MEMBER WENT WITH `projects_repo` the same day under the same day's fifth
-// grant: it carried that key and, until 2026-08-09, the four render-environment
-// `*_hash` keys, and no free-text GUI-kind key is left in the schema — the
-// free-text keys that remain are all engine keys, typed into EngineSettings.)
+// The typed result of a GUI-kind (key, value) grammar check. Its one consumer,
+// the whole-file reader, routes by key name / tab suffix, so only the
+// parsed-value members below are read; each member's comment names the key(s)
+// that fill it. (THE `float f` MEMBER WENT WITH `playback_speed` 2026-08-27,
+// architect approval 2026-08-27: it was that key's alone, and no key in the
+// schema carries a float now. THE `std::string text` MEMBER WENT WITH
+// `projects_repo` the same day under the same day's fifth grant: it carried
+// that key and, until 2026-08-09, the four render-environment `*_hash` keys,
+// and no free-text GUI-kind key is left in the schema — the free-text keys that
+// remain are all engine keys, typed into EngineSettings.)
 struct GuiSettingValue {
     bool        b    = false;   // tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
@@ -321,13 +321,13 @@ struct GuiSettingValue {
 // GUI-kind sibling of validate_engine_setting. STATE-FREE: it parses and
 // vocabulary-checks one (key, value) pair; state-dependent rules stay at the
 // boundaries (the load-side trim past-EOF walls live in
-// first_past_eof_wall_defect; the editor adds its own trim walls and
-// active/inactive routing on top). Both the whole-file reader below
-// (load-fatal) and the GUI settings editor (the refusal) call this, so a
-// spelling is loadable iff it commits. Returns std::nullopt when `key` is not
-// a GUI-kind key (the caller falls through to its own unknown-key handling,
-// mirroring try_engine_key); an expected error carries the bad_value-style
-// reason text.
+// first_past_eof_wall_defect). The whole-file reader below (load-fatal) is
+// its one caller: the GUI settings editor types no GUI-kind key since
+// 2026-11-19 (send AA, its line the value of the row's own key alone —
+// settings_editor.h's head), every such key written by its own button or
+// gesture. Returns std::nullopt when `key` is not a GUI-kind key (the caller
+// falls through to its own unknown-key handling, mirroring try_engine_key); an
+// expected error carries the bad_value-style reason text.
 std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     const std::string& key, const std::string& value);
 
